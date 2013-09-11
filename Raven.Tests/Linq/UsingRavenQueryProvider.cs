@@ -491,6 +491,32 @@ namespace Raven.Tests.Linq
 			}
 		}
 
+        [Fact]
+        public void Throws_exception_when_overloaded_distinct_called()
+        {
+            using (var store = new EmbeddableDocumentStore() { RunInMemory = true })
+            {
+                store.Initialize();
+
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new OrderItem { Description = "Test", Cost = 10.0m });
+                    s.Store(new OrderItem { Description = "Test1", Cost = 10.0m });
+
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    var shouldThrow = s.Query<OrderItem>().Distinct(new OrderItemCostComparer());
+                    Assert.Throws<NotSupportedException>(() => shouldThrow.ToArray());
+
+                    var shouldNotThrow = s.Query<OrderItem>().Distinct();
+                    Assert.DoesNotThrow(() => shouldNotThrow.ToArray());
+                }
+            }
+        }
+
 		public class SomeDataProjection
 		{
 			public decimal Cost { get; set; }
@@ -517,6 +543,19 @@ namespace Raven.Tests.Linq
 			public Origin Country { get; set; }
 			public string Description { get; set; }
 		}
+
+        private class OrderItemCostComparer : IEqualityComparer<OrderItem>
+        {
+            public bool Equals(OrderItem x, OrderItem y)
+            {
+                return x.Cost == y.Cost;
+            }
+
+            public int GetHashCode(OrderItem obj)
+            {
+                return obj.Cost.GetHashCode();
+            }
+        }
 
 		private class DateTimeInfo
 		{

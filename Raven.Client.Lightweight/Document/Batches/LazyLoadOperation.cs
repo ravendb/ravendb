@@ -1,10 +1,14 @@
 ﻿using System;
-using System.Collections.Specialized;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Shard;
+#if SILVERLIGHT || NETFX_CORE
+using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Collections.Specialized;
+#endif
 using Raven.Json.Linq;
 using System.Linq;
 
@@ -14,30 +18,45 @@ namespace Raven.Client.Document.Batches
 	{
 		private readonly string key;
 		private readonly LoadOperation loadOperation;
+		private readonly string transformer;
+		private readonly Action<RavenJObject> handleInternalMetadata;
 
-		public LazyLoadOperation(string key, LoadOperation loadOperation)
+		public LazyLoadOperation(string key, LoadOperation loadOperation, Action<RavenJObject> handleInternalMetadata, string transformer = null)
 		{
 			this.key = key;
 			this.loadOperation = loadOperation;
+			this.handleInternalMetadata = handleInternalMetadata;
+			this.transformer = transformer;
 		}
 
 		public GetRequest CreateRequest()
 		{
-			return new GetRequest
+			string path;
+			if (string.IsNullOrEmpty(transformer) == false)
 			{
-				Url = "/docs/" + Uri.EscapeDataString(key)
-			};
+				path = "/queries/" + Uri.EscapeDataString(key);
+				if (!string.IsNullOrEmpty(transformer))
+					path += "&transformer=" + transformer;
+			}
+			else
+			{
+				path = "/docs/" + Uri.EscapeDataString(key);
+			}
+
+			return new GetRequest {Url = path};
 		}
 
 		public object Result { get; set; }
 
 		public bool RequiresRetry { get; set; }
 
+#if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
 			var response = responses.OrderBy(x => x.Status).First(); // this way, 200 response is higher than 404
 			HandleResponse(response);
 		}
+#endif
 
 		public void HandleResponse(GetResponse response)
 		{
@@ -59,7 +78,6 @@ namespace Raven.Client.Document.Batches
 
 		private void HandleResponse(JsonDocument jsonDocument)
 		{
-
 			RequiresRetry = loadOperation.SetResult(jsonDocument);
 			if (RequiresRetry == false)
 				Result = loadOperation.Complete<T>();
@@ -70,13 +88,36 @@ namespace Raven.Client.Document.Batches
 			return loadOperation.EnterLoadContext();
 		}
 
+#if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
+			if (string.IsNullOrEmpty(transformer) == false)
+				return commands.Get(new[] {key}, null, transformer);
+
 			return commands.Get(key);
 		}
+#endif
 
 		public void HandleEmbeddedResponse(object result)
 		{
+			var multiLoadResult = result as MultiLoadResult;
+			if (multiLoadResult != null)
+			{
+				var resultItem = multiLoadResult.Results.FirstOrDefault();
+				var ravenJObject = resultItem.Value<RavenJArray>("$values")
+				                             .Cast<RavenJObject>()
+											 .Select(value =>
+											 {
+												 if (handleInternalMetadata != null)
+													 handleInternalMetadata(value);
+												 return value;
+											 })
+				                             .FirstOrDefault();
+				var jsonDocument = SerializationHelper.RavenJObjectToJsonDocument(ravenJObject);
+				HandleResponse(jsonDocument);
+				return;
+			}
+
 			HandleResponse((JsonDocument) result);
 		}
 	}

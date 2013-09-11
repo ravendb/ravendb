@@ -66,8 +66,8 @@ namespace Raven.Tests.Bugs
 				}, new string[0]);
 
 
-				var tempIndex = store.DocumentDatabase.IndexStorage.Indexes.First(x=>x.StartsWith("Temp"));
-				var results = store.OpenSession().Advanced.LuceneQuery<dynamic>(tempIndex).WaitForNonStaleResults().ToArray();
+				var autoIndex = store.DocumentDatabase.IndexStorage.Indexes.First(x=>x.StartsWith("Auto"));
+				var results = store.OpenSession().Advanced.LuceneQuery<dynamic>(autoIndex).WaitForNonStaleResults().ToArray();
 
 				Assert.Equal(1, results.Length);
 			}

@@ -23,7 +23,7 @@ namespace Raven.Client.Extensions
 	///</summary>
 	public static class MultiTenancyExtensions
 	{
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
 		///</summary>
@@ -71,7 +71,7 @@ namespace Raven.Client.Extensions
 			if (serverClient == null)
 				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
 
-			if(databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
+			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
 				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
 
 			var doc = RavenJObject.FromObject(databaseDocument);
@@ -83,7 +83,7 @@ namespace Raven.Client.Extensions
 		}
 #endif
 
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
 		///</summary>
@@ -137,7 +137,7 @@ namespace Raven.Client.Extensions
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
 		///</summary>
-		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
+		public static async Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
 			var serverClient = self.ForSystemDatabase() as AsyncServerClient;
 			if (serverClient == null)
@@ -148,25 +148,22 @@ namespace Raven.Client.Extensions
 
 			serverClient.ForceReadFromMaster();
 
-			return serverClient.GetAsync(docId)
-			                   .ContinueWith(get =>
-			                   {
-				                   if (get.Result != null)
-					                   return get;
+			var get = await serverClient.GetAsync(docId);
+			if (get != null)
+				return;
 
-				                   var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(name), "PUT");
-				                   req.Write(doc.ToString(Formatting.Indented));
-				                   return req.ExecuteRequestAsync();
-			                   })
-			                   .Unwrap()
-			                   .ContinueWith(x =>
-			                   {
-				                   if (ignoreFailures == false)
-					                   x.AssertNotFailed(); // will throw on error
-
-				                   return new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention());
-			                   }).Unwrap()
-			                   .ObserveException();
+			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(name), "PUT");
+			req.Write(doc.ToString(Formatting.Indented));
+			try
+			{
+				await req.ExecuteRequestAsync();
+			}
+			catch (Exception)
+			{
+				if (ignoreFailures)
+					return;
+			}
+			await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention());
 		}
 
 		public static Task CreateDatabaseAsync(this IAsyncDatabaseCommands self, DatabaseDocument databaseDocument, bool ignoreFailures = false)

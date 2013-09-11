@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
 using System.Text;
@@ -14,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Impl.Clustering;
+using Raven.Database.Plugins;
 using Rhino.Licensing;
 using Rhino.Licensing.Discovery;
 using Raven.Database.Extensions;
@@ -50,7 +52,7 @@ namespace Raven.Database.Commercial
 				Error = false,
 				Message = "No license file was found.\r\n" +
 				          "The AGPL license restrictions apply, only Open Source / Development work is permitted.",
-				Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.InvariantCultureIgnoreCase)
+				Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
 			};
 		}
 
@@ -77,7 +79,7 @@ namespace Raven.Database.Commercial
 
 					AssertForV2(licenseValidator.LicenseAttributes);
 					if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out value) &&
-					    "true".Equals(value, StringComparison.InvariantCultureIgnoreCase))
+					    "true".Equals(value, StringComparison.OrdinalIgnoreCase))
 					{
 						licenseValidator.MultipleLicenseUsageBehavior = AbstractLicenseValidator.MultipleLicenseUsage.AllowSameLicense;
 					}
@@ -93,7 +95,7 @@ namespace Raven.Database.Commercial
 					}
 				});
 
-				var attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.InvariantCultureIgnoreCase);
+				var attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase);
 				foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
 				{
 					attributes[licenseAttribute.Key] = licenseAttribute.Value;
@@ -132,7 +134,7 @@ namespace Raven.Database.Commercial
 					Status = "AGPL - Open Source",
 					Error = true,
 					Message = "Could not validate license: " + licensePath + ", " + licenseText + Environment.NewLine + e,
-					Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.InvariantCultureIgnoreCase)
+					Attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
 				};
 			}
 		}
@@ -175,15 +177,51 @@ namespace Raven.Database.Commercial
 		{
 			string version;
 			if (licenseAttributes.TryGetValue("version", out version) == false)
-				throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
+			{
+				if (licenseValidator.LicenseType != LicenseType.Subscription)
+					throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
 
-			if(version != "1.2" && version != "2.0")
-				throw new LicenseExpiredException("This is not a license for RavenDB 2.0");
+				// Add backward compatibility for the subscription licenses of v1
+				licenseAttributes["version"]= "2.5";
+				licenseAttributes["implicit20StandardLicenseBy10Subscription"]= "true";
+				licenseAttributes["allowWindowsClustering"]= "false";
+				licenseAttributes["numberOfDatabases"]= "unlimited";
+				licenseAttributes["periodicBackup"]= "true";
+				licenseAttributes["encryption"]= "false";
+				licenseAttributes["compression"]= "false";
+				licenseAttributes["quotas"]= "false";
+				licenseAttributes["authorization"]= "true";
+				licenseAttributes["documentExpiration"]= "true";
+				licenseAttributes["replication"]= "true";
+				licenseAttributes["versioning"]= "true";
+				licenseAttributes["maxSizeInMb"]= "unlimited";
+
+				string oem;
+				if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out oem) &&
+				    "true".Equals(oem ,StringComparison.OrdinalIgnoreCase))
+				{
+					licenseAttributes["OEM"]= "true";
+					licenseAttributes["maxRamUtilization"]= "6442450944";
+					licenseAttributes["maxParallelism"]= "3";
+
+				}
+				else
+				{
+					licenseAttributes["OEM"]= "false";
+					licenseAttributes["maxRamUtilization"]= "12884901888";
+					licenseAttributes["maxParallelism"]= "6";
+				}                     
+			}
+			else
+			{
+				if (version != "1.2" && version != "2.0" && version != "2.5")
+					throw new LicenseExpiredException("This is not a license for RavenDB 2.x");
+			}
 
 			string maxRam;
 			if (licenseAttributes.TryGetValue("maxRamUtilization", out maxRam))
 			{
-				if (string.Equals(maxRam, "unlimited",StringComparison.InvariantCultureIgnoreCase) == false)
+				if (string.Equals(maxRam, "unlimited",StringComparison.OrdinalIgnoreCase) == false)
 				{
 					MemoryStatistics.MemoryLimit = (int)(long.Parse(maxRam) / 1024 / 1024);
 				}
@@ -192,7 +230,7 @@ namespace Raven.Database.Commercial
 			string maxParallel;
 			if (licenseAttributes.TryGetValue("maxParallelism", out maxParallel))
 			{
-				if (string.Equals(maxParallel, "unlimited", StringComparison.InvariantCultureIgnoreCase) == false)
+				if (string.Equals(maxParallel, "unlimited", StringComparison.OrdinalIgnoreCase) == false)
 				{
 					MemoryStatistics.MaxParallelism = int.Parse(maxParallel);
 				}
@@ -216,8 +254,15 @@ namespace Raven.Database.Commercial
 			}
 		}
 
-		private static string GetLicenseText(InMemoryRavenConfiguration config)
+		[Import(AllowDefault = true)]
+		private ILicenseProvider LicenseProvider { get; set; }
+
+		private string GetLicenseText(InMemoryRavenConfiguration config)
 		{
+			config.Container.SatisfyImportsOnce(this);
+			if (LicenseProvider != null && !string.IsNullOrEmpty(LicenseProvider.License))
+				return LicenseProvider.License;
+
 			var value = config.Settings["Raven/License"];
 			if (string.IsNullOrEmpty(value) == false)
 				return value;

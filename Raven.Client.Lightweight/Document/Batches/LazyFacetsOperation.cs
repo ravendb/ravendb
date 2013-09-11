@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -6,6 +7,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Shard;
 #endif
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Batches
@@ -13,6 +15,7 @@ namespace Raven.Client.Document.Batches
 	public class LazyFacetsOperation : ILazyOperation
 	{
 		private readonly string index;
+		private readonly IEnumerable<Facet> facets;
 		private readonly string facetSetupDoc;
 		private readonly IndexQuery query;
 		private readonly int start;
@@ -26,16 +29,31 @@ namespace Raven.Client.Document.Batches
 			this.pageSize = pageSize;
 		}
 
+		public LazyFacetsOperation(string index, IEnumerable<Facet> facets, IndexQuery query, int start = 0, int? pageSize = null)
+		{
+			this.index = index;
+			this.facets = facets;
+			this.query = query;
+			this.start = start;
+			this.pageSize = pageSize;
+		}
+
 		public GetRequest CreateRequest()
 		{
+			string addition;
+			if (facetSetupDoc != null)
+				addition = "facetDoc=" + facetSetupDoc;
+			else
+				addition = "facets=" + Uri.EscapeDataString(JsonConvert.SerializeObject(facets));
+
 			return new GetRequest
 			{
 				Url = "/facets/" + index,
-				Query = string.Format( "facetDoc={0}&query={1}&facetStart={2}&facetPageSize={3}",
-										facetSetupDoc,
+				Query = string.Format("&query={0}&facetStart={1}&facetPageSize={2}&{3}",
 										query.Query,
 										start,
-										pageSize )
+										pageSize,
+										addition)
 			};
 		}
 

@@ -27,6 +27,7 @@ using System;
 using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
+using System.Security;
 #if !(NETFX_CORE || PORTABLE)
 using System.Security.Permissions;
 #endif
@@ -114,7 +115,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
     }
 #endif
 
-#if !PocketPC && !NET20
+#if !PocketPC && !NET20 && !MONO
     public static DataContractAttribute GetDataContractAttribute(Type type)
     {
       // DataContractAttribute does not have inheritance
@@ -170,7 +171,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
       if (objectAttribute != null)
         return objectAttribute.MemberSerialization;
 
-#if !PocketPC && !NET20
+#if !PocketPC && !NET20 && !MONO
       DataContractAttribute dataContractAttribute = GetDataContractAttribute(objectType);
       if (dataContractAttribute != null)
         return MemberSerialization.OptIn;
@@ -388,6 +389,9 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
 
     public static bool DynamicCodeGeneration
     {
+#if !(NET20 || NET35 || SILVERLIGHT || NETFX_CORE || PORTABLE)
+      [SecuritySafeCritical]
+#endif
       get
       {
         if (_dynamicCodeGeneration == null)
@@ -423,7 +427,7 @@ namespace Raven.Imports.Newtonsoft.Json.Serialization
         {
 #if (NETFX_CORE || SILVERLIGHT || PORTABLE)
           _fullyTrusted = false;
-#elif !(NET20 || NET35)
+#elif !(NET20 || NET35 || MONO)
           AppDomain appDomain = AppDomain.CurrentDomain;
 
           _fullyTrusted = appDomain.IsHomogenous && appDomain.IsFullyTrusted;

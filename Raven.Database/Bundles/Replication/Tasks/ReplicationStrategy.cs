@@ -44,12 +44,12 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				case TransitiveReplicationOptions.None:
 					var value = metadata.Value<string>(Constants.RavenReplicationSource);
-					var replicateDoc = value == null || (value == CurrentDatabaseId);
-					if (replicateDoc)
+			        if (value != null &&  (value != CurrentDatabaseId))
 					{
 						log.Debug("Will not replicate document '{0}' to '{1}' because it was not created on the current server, and TransitiveReplicationOptions = none", key, destinationId);
+					    return false;
 					}
-					return replicateDoc;
+			        break;
 			}
 			log.Debug("Will replicate '{0}' to '{1}'", key, destinationId);
 			return true;
@@ -58,9 +58,9 @@ namespace Raven.Bundles.Replication.Tasks
 
 		public bool IsSystemDocumentId(string key)
 		{
-			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)) // don't replicate system docs
+			if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase)) // don't replicate system docs
 			{
-				if (key.StartsWith("Raven/Hilo/", StringComparison.InvariantCultureIgnoreCase) == false) // except for hilo documents
+				if (key.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase) == false) // except for hilo documents
 					return true;
 			}
 			return false;
@@ -68,8 +68,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 		public bool FilterAttachments(AttachmentInformation attachment, string destinationInstanceId)
 		{
-			if (attachment.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase) || // don't replicate system attachments
-			    attachment.Key.StartsWith("transactions/recoveryInformation", StringComparison.InvariantCultureIgnoreCase)) // don't replicate transaction recovery information
+			if (attachment.Key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase) || // don't replicate system attachments
+			    attachment.Key.StartsWith("transactions/recoveryInformation", StringComparison.OrdinalIgnoreCase)) // don't replicate transaction recovery information
 				return false;
 
 			// explicitly marked to skip

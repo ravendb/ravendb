@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
+using System.Linq;
 
 namespace Raven.Abstractions.Util
 {
@@ -33,7 +35,7 @@ namespace Raven.Abstractions.Util
 	{
 		private readonly byte[] inner;
 
-		public ComparableByteArray(Guid etag) : this(etag.ToByteArray())
+		public ComparableByteArray(Etag etag) : this(etag.ToByteArray())
 		{
 			
 		}
@@ -79,7 +81,15 @@ namespace Raven.Abstractions.Util
 			var comparableByteArray = obj as ComparableByteArray;
 			if (comparableByteArray != null)
 				return CompareTo(comparableByteArray);
-			return CompareTo((Guid) obj);
+			var etag = obj as Etag;
+			if(etag != null)
+				return CompareTo((Etag)obj);
+			return CompareTo((Guid)obj);
+		}
+
+		public int CompareTo(Etag obj)
+		{
+			return CompareTo(obj.ToByteArray());
 		}
 
 		public int CompareTo(Guid obj)
@@ -90,6 +100,11 @@ namespace Raven.Abstractions.Util
 		public Guid ToGuid()
 		{
 			return new Guid(inner);
+		}
+
+		public Etag ToEtag()
+		{
+			return Etag.Parse(inner);
 		}
 
 		public override string ToString()

@@ -4,11 +4,13 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:Delay="clr-namespace:Delay"
-             xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu" 
+             xmlns:ContextMenu="clr-namespace:Raven.Studio.Infrastructure.ContextMenu"
+             xmlns:behaviors="clr-namespace:Raven.Studio.Behaviors"
+             xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
              mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400">
 
 	<Grid x:Name="LayoutRoot">
-        <Delay:SplitButtonPopup x:Name="ToggleButton" ToolTipService.ToolTip="Switch between views"  Command="{Binding ToggleViewSize}" DropDownToolTip="More Options"
+        <Delay:SplitButtonPopup x:Name="PopupButton" ToolTipService.ToolTip="Switch between views"  Command="{Binding ToggleViewSize}" DropDownToolTip="More Options"
                                 PopupAlignment="Right">
             <Delay:SplitButtonPopup.Content>
 					<Image Source="{StaticResource Image_ChangeView_Tiny}"
@@ -19,7 +21,7 @@
                 <Border Background="#EFEFEF"
                         BorderThickness="1"
                         BorderBrush="Gray"
-                        Margin="0,20,0,0">
+                        Margin="0,0,0,0">
                     <Border.Effect>
                         <DropShadowEffect Opacity="0.4" />
                     </Border.Effect>
@@ -52,7 +54,13 @@
                                 Grid.Column="1" 
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Command="{Binding Path=SetViewSize}"
-                                CommandParameter="Details"/>
+                                CommandParameter="Details">
+                            <i:Interaction.Triggers>
+                                <behaviors:HandledMouseLeftButtonUpTrigger>
+                                    <behaviors:CloseSplitButtonPopupAction TargetName="PopupButton"/>
+                                </behaviors:HandledMouseLeftButtonUpTrigger>
+                            </i:Interaction.Triggers>
+                        </Button>
 
                         <ContextMenu:Separator HorizontalAlignment="Stretch"
                                                VerticalAlignment="Bottom"
@@ -66,7 +74,13 @@
                                 Grid.Column="1" 
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Command="{Binding Path=SetViewSize}"
-                                CommandParameter="IdOnly"/>
+                                CommandParameter="IdOnly">
+                            <i:Interaction.Triggers>
+                                <behaviors:HandledMouseLeftButtonUpTrigger>
+                                    <behaviors:CloseSplitButtonPopupAction TargetName="PopupButton"/>
+                                </behaviors:HandledMouseLeftButtonUpTrigger>
+                            </i:Interaction.Triggers>
+                        </Button>
 
                         <ContextMenu:Separator HorizontalAlignment="Stretch"
                                                VerticalAlignment="Bottom"
@@ -80,7 +94,13 @@
                                 Grid.Column="1"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Command="{Binding Path=SetViewSize}"
-                                CommandParameter="SmallCard"/>
+                                CommandParameter="SmallCard">
+                            <i:Interaction.Triggers>
+                                <behaviors:HandledMouseLeftButtonUpTrigger>
+                                    <behaviors:CloseSplitButtonPopupAction TargetName="PopupButton"/>
+                                </behaviors:HandledMouseLeftButtonUpTrigger>
+                            </i:Interaction.Triggers>
+                        </Button>
 
                         <Button Content="Medium Card"
                                 VerticalAlignment="Top"
@@ -89,7 +109,13 @@
                                 Grid.Column="1"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Command="{Binding Path=SetViewSize}"
-                                CommandParameter="MediumCard"/>
+                                CommandParameter="MediumCard">
+                            <i:Interaction.Triggers>
+                                <behaviors:HandledMouseLeftButtonUpTrigger>
+                                    <behaviors:CloseSplitButtonPopupAction TargetName="PopupButton"/>
+                                </behaviors:HandledMouseLeftButtonUpTrigger>
+                            </i:Interaction.Triggers>
+                        </Button>
 
                         <Button Content="Large Card"
                                 VerticalAlignment="Top"
@@ -98,7 +124,13 @@
                                 Grid.Column="1"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Command="{Binding Path=SetViewSize}"
-                                CommandParameter="LargeCard"/>
+                                CommandParameter="LargeCard">
+                            <i:Interaction.Triggers>
+                                <behaviors:HandledMouseLeftButtonUpTrigger>
+                                    <behaviors:CloseSplitButtonPopupAction TargetName="PopupButton"/>
+                                </behaviors:HandledMouseLeftButtonUpTrigger>
+                            </i:Interaction.Triggers>
+                        </Button>
 
                         <Button Content="Extra Large Card"
                                 VerticalAlignment="Top"
@@ -107,7 +139,13 @@
                                 Grid.Column="1"
                                 Style="{StaticResource Style_Button_MouseOverChrome}"
                                 Command="{Binding Path=SetViewSize}"
-                                CommandParameter="ExtraLargeCard"/>
+                                CommandParameter="ExtraLargeCard">
+                            <i:Interaction.Triggers>
+                                <behaviors:HandledMouseLeftButtonUpTrigger>
+                                    <behaviors:CloseSplitButtonPopupAction TargetName="PopupButton"/>
+                                </behaviors:HandledMouseLeftButtonUpTrigger>
+                            </i:Interaction.Triggers>
+                        </Button>
                     </Grid>
                 </Border>
             </Delay:SplitButtonPopup.PopupContent>

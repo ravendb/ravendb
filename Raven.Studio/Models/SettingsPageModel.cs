@@ -1,19 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reactive;
+using System.Reactive.Linq;
 using System.Windows.Input;
 using Raven.Abstractions.Data;
-using Raven.Client.Connection;
-using Raven.Client.Document;
-using Raven.Database.Plugins;
 using Raven.Json.Linq;
 using Raven.Studio.Commands;
+using Raven.Studio.Extensions;
+using Raven.Studio.Features.Input;
+using Raven.Studio.Features.Settings;
 using Raven.Studio.Infrastructure;
 using System.Linq;
+using Raven.Client.Connection;
 
 namespace Raven.Studio.Models
 {
     public class SettingsPageModel : PageViewModel
     {
+	    private bool firstLoad = true;
+
         public SettingsPageModel()
         {
             Settings = new SettingsModel();
@@ -24,87 +29,148 @@ namespace Raven.Studio.Models
             get { return ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name; }
         }
 
-        protected override void OnViewLoaded()
-        {
-            var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
+	    protected override async void OnViewLoaded()
+	    {
+			if(firstLoad)
+				RegisterToDatabaseChange();
 
-			if(databaseName == Constants.SystemDatabase)
+		    firstLoad = false;
+
+		    var databaseName = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name;
+			Settings.Sections.Clear();
+			OnPropertyChanged(() => CurrentDatabase);
+		    if (databaseName == Constants.SystemDatabase)
+		    {
+			    var apiKeys = new ApiKeysSectionModel();
+			    Settings.Sections.Add(apiKeys);
+			    Settings.SelectedSection.Value = apiKeys;
+			    Settings.Sections.Add(new WindowsAuthSettingsSectionModel());
+
+			    return;
+		    }
+
+		    var debug = await ApplicationModel.DatabaseCommands.CreateRequest("/debug/config".NoCache(), "GET").ReadResponseJsonAsync();
+		    var bundles = ApplicationModel.CreateSerializer()
+		                                  .Deserialize<List<string>>(
+			                                  new RavenJTokenReader(debug.SelectToken("ActiveBundles")));
+		    var addedVersioning = false;
+		    if (ApplicationModel.Current.Server.Value.UserInfo.IsAdminGlobal)
+		    {
+			    var doc = await ApplicationModel.Current.Server.Value.DocumentStore
+			                                    .AsyncDatabaseCommands
+			                                    .ForSystemDatabase()
+			                                    .CreateRequest("/admin/databases/" + databaseName, "GET")
+			                                    .ReadResponseJsonAsync();
+
+			    if (doc != null)
+			    {
+				    var databaseDocument =
+					    ApplicationModel.CreateSerializer().Deserialize<DatabaseDocument>(new RavenJTokenReader(doc));
+				    Settings.DatabaseDocument = databaseDocument;
+
+				    var databaseSettingsSectionViewModel = new DatabaseSettingsSectionViewModel();
+				    Settings.Sections.Add(databaseSettingsSectionViewModel);
+				    Settings.SelectedSection.Value = databaseSettingsSectionViewModel;
+				    Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
+
+					//Bundles that need the database document
+				    if (bundles.Contains("Quotas"))
+					    Settings.Sections.Add(new QuotaSettingsSectionModel());
+
+				    if (bundles.Contains("Versioning"))
+				    {
+					    AddModel(new VersioningSettingsSectionModel());
+					    addedVersioning = true;
+				    }
+
+				    foreach (var settingsSectionModel in Settings.Sections)
+				    {
+					    settingsSectionModel.LoadFor(databaseDocument);
+				    }
+			    }
+		    }
+
+			//Bundles that don't need the database document
+		    if (bundles.Contains("Replication"))
+			    AddModel(new ReplicationSettingsSectionModel());
+
+			 if (bundles.Contains("Versioning") && addedVersioning == false)
+				 AddModel(new VersioningSettingsSectionModel());
+
+		    if (bundles.Contains("SqlReplication"))
+			    AddModel(new SqlReplicationSettingsSectionModel());
+
+		    if (bundles.Contains("ScriptedIndexResults"))
+			    AddModel(new ScriptedIndexSettingsSectionModel());
+
+		    if (bundles.Contains("Authorization"))
+		    {
+			    var triggers = ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Statistics.Value.Triggers;
+			    if (triggers.Any(info => info.Name.Contains("Authorization")))
+			    {
+				    var authModel = new AuthorizationSettingsSectionModel();
+				    Settings.Sections.Add(authModel);
+					authModel.LoadFor(null);
+			    }
+		    }
+
+		    if (Settings.Sections.Count == 0)
+			    Settings.Sections.Add(new NoSettingsSectionModel());
+
+			var url = new UrlParser(UrlUtil.Url);
+
+			var id = url.GetQueryParam("id");
+			if (string.IsNullOrWhiteSpace(id) == false)
 			{
-				var apiKeys = new ApiKeysSectionModel();
-				Settings.Sections.Add(apiKeys);
-				Settings.SelectedSection.Value = apiKeys;
-				Settings.Sections.Add(new WindowsAuthSettingsSectionModel());
-
-				return; 
+				switch (id)
+				{
+					case "scripted":
+						if(Settings.Sections.Any(model => model is ScriptedIndexSettingsSectionModel))
+							Settings.SelectedSection.Value = Settings.Sections.FirstOrDefault(model => model is ScriptedIndexSettingsSectionModel);
+						break;
+				}
 			}
+			else
+				Settings.SelectedSection.Value = Settings.Sections[0];
+	    }
 
-	        ApplicationModel.Current.Server.Value.DocumentStore
-		        .AsyncDatabaseCommands
-				.ForSystemDatabase()
-		        .CreateRequest("/admin/databases/" + databaseName, "GET")
-		        .ReadResponseJsonAsync()
-		        .ContinueOnSuccessInTheUIThread(doc =>
-		        {
-			        if (doc == null)
-				        return;
+	    public override bool CanLeavePage()
+	    {
+		    var unsavedSections = new List<string>();
+		    foreach (var settingsSectionModel in Settings.Sections)
+		    {
+			    settingsSectionModel.CheckForChanges();
+			    if(settingsSectionModel.HasUnsavedChanges)
+					unsavedSections.Add(settingsSectionModel.SectionName);
+		    }
 
-			        var databaseDocument = ApplicationModel.Current.Server.Value.DocumentStore.Conventions.CreateSerializer()
-						.Deserialize<DatabaseDocument>(new RavenJTokenReader(doc));
-			        Settings.DatabaseDocument = databaseDocument;
+		    if (unsavedSections.Count != 0)
+			    return AskUser.Confirmation("Settings",
+				    string.Format("There are unsaved changes in these sections: {0}. Are you sure you want to continue?"
+					    , string.Join(", ", unsavedSections)));
 
-			        var databaseSettingsSectionViewModel = new DatabaseSettingsSectionViewModel();
-			        Settings.Sections.Add(databaseSettingsSectionViewModel);
-			        Settings.SelectedSection.Value = databaseSettingsSectionViewModel;
+		    return base.CanLeavePage();
+	    }
 
-					Settings.Sections.Add(new PeriodicBackupSettingsSectionModel());
+	    private void RegisterToDatabaseChange()
+	    {
+		    var databaseChanged = Database.ObservePropertyChanged()
+		                                  .Select(_ => Unit.Default)
+		                                  .TakeUntil(Unloaded);
 
-			        string activeBundles;
-			        databaseDocument.Settings.TryGetValue("Raven/ActiveBundles", out activeBundles);
+		    databaseChanged
+			    .Subscribe(_ => OnViewLoaded());
+	    }
 
-			        if (activeBundles != null)
-			        {
-						var bundles = activeBundles.Split(';').ToList();
+	    private void AddModel(SettingsSectionModel model)
+		{
+			Settings.Sections.Add(model);
+			model.LoadFor(null);
+		}
 
-				        if (bundles.Contains("Quotas"))
-					        Settings.Sections.Add(new QuotaSettingsSectionModel());
+	    public SettingsModel Settings { get; private set; }
 
-				        if (bundles.Contains("Replication"))
-					        Settings.Sections.Add(new ReplicationSettingsSectionModel());
-
-						if(bundles.Contains("SqlReplication"))
-							Settings.Sections.Add(new SqlReplicationSettingsSectionModel());
-
-				        if (bundles.Contains("Versioning"))
-					        Settings.Sections.Add(new VersioningSettingsSectionModel());
-
-				        if (bundles.Contains("Authorization"))
-					        Settings.Sections.Add(new AuthorizationSettingsSectionModel());
-			        }
-
-			        foreach (var settingsSectionModel in Settings.Sections)
-			        {
-				        settingsSectionModel.LoadFor(databaseDocument);
-			        }
-
-					var req = ApplicationModel.DatabaseCommands.ForSystemDatabase().CreateRequest("/plugins/status".NoCache(), "GET");
-
-					req.ReadResponseJsonAsync().ContinueOnSuccessInTheUIThread(item =>
-					{
-						var plugins = ((RavenJObject)item).Deserialize<PluginsStatus>(new DocumentConvention());
-
-						if (plugins == null || plugins.Plugins.Contains("Raven.Bundles.Authorization", StringComparer.InvariantCultureIgnoreCase) == false)
-							return;
-
-						var authSection = new AuthorizationSettingsSectionModel();
-						Settings.Sections.Add(authSection);
-						authSection.LoadFor(databaseDocument);
-					});
-		        });
-        }
-
-        public SettingsModel Settings { get; private set; }
-
-        private ICommand _saveSettingsCommand;
-        public ICommand SaveSettings { get { return _saveSettingsCommand ?? (_saveSettingsCommand = new SaveSettingsCommand(Settings)); } }
+        private ICommand saveSettingsCommand;
+        public ICommand SaveSettings { get { return saveSettingsCommand ?? (saveSettingsCommand = new SaveSettingsCommand(Settings)); } }
     }
 }

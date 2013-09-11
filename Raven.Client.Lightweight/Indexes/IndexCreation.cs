@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+#if !MONODROID && !NETFX_CORE
+using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Reflection;
@@ -36,11 +38,15 @@ namespace Raven.Client.Indexes
 		/// <param name="catalogToGetnIndexingTasksFrom">The catalog to get indexing tasks from.</param>
 		public static void CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDatabaseCommands databaseCommands, DocumentConvention conventions)
 		{
-			var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
-			foreach (var task in tasks)
+		    foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 			{
 				task.Execute(databaseCommands, conventions);
 			}
+
+		    foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+            {
+                task.Execute(databaseCommands, conventions);
+            }
 		}
 
 		/// <summary>
@@ -50,11 +56,15 @@ namespace Raven.Client.Indexes
 		/// <param name="documentStore">The document store.</param>
 		public static void CreateIndexes(ExportProvider catalogToGetnIndexingTasksFrom, IDocumentStore documentStore)
 		{
-			var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
-			foreach (var task in tasks)
+		    foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
 			{
 				task.Execute(documentStore);
 			}
+
+            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+            {
+                task.Execute(documentStore);
+            }
 		}
 #endif
 
@@ -83,14 +93,17 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Creates the indexes found in the specified catalog
 		/// </summary>
-		public static Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention conventions)
+		public static async Task CreateIndexesAsync(ExportProvider catalogToGetnIndexingTasksFrom, IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention conventions)
 		{
-			var tasks = catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>();
-
-			Task[] array = tasks.Select(task => task.ExecuteAsync(asyncDatabaseCommands, conventions)).ToArray();
-			var indexesAsync = new Task(() => Task.WaitAll(array));
-			indexesAsync.Start();
-			return indexesAsync;
+		    foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractIndexCreationTask>())
+		    {
+		        await task.ExecuteAsync(asyncDatabaseCommands, conventions);
+		    }
+            foreach (var task in catalogToGetnIndexingTasksFrom.GetExportedValues<AbstractTransformerCreationTask>())
+            {
+                await task.ExecuteAsync(asyncDatabaseCommands, conventions);
+            }
 		}
 	}
 }
+#endif

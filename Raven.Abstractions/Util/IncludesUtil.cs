@@ -10,7 +10,7 @@ namespace Raven.Abstractions.Util
 	public class IncludesUtil
 	{
 		private readonly static Regex includePrefixRegex = new Regex(@"(\([^\)]+\))$",
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 			RegexOptions.Compiled | 
 #endif
 			RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -24,12 +24,13 @@ namespace Raven.Abstractions.Util
 				result.Prefix = match.Groups[1].Value;
 				result.Path = result.Path.Replace(result.Prefix, "");
 				result.Prefix = result.Prefix.Substring(1, result.Prefix.Length - 2);
+               
 			}
 			return result;
 		}
 
 
-		private static void ExecuteInternal(RavenJToken token, string prefix, Action<string, string> loadId)
+		private static void ExecuteInternal(RavenJToken token, string prefix, Func<string, string, bool> loadId)
 		{
 			if (token == null)
 				return; // nothing to do
@@ -43,7 +44,9 @@ namespace Raven.Abstractions.Util
 					}
 					break;
 				case JTokenType.String:
-					loadId(token.Value<string>(), prefix);
+			        var value = token.Value<string>();
+                    if (loadId(value, null) == false)
+                        loadId(value, prefix);
 					break;
 				case JTokenType.Integer:
 					try
@@ -67,21 +70,22 @@ namespace Raven.Abstractions.Util
 			public string Prefix;
 		}
 
-		public static void Include(RavenJObject document, string include, Action<string> loadId)
-		{
-			if (string.IsNullOrEmpty(include) || document == null)
-				return;
 
-			var path = GetIncludePath(include);
+        public static void Include(RavenJObject document, string include, Func<string, bool> loadId)
+        {
+            if (string.IsNullOrEmpty(include) || document == null)
+                return;
 
-			foreach (var token in document.SelectTokenWithRavenSyntaxReturningFlatStructure(path.Path))
-			{
-				ExecuteInternal(token.Item1, path.Prefix, (value, prefix) =>
-				{
-					value = (prefix != null ? prefix + value : value);
-					loadId(value);
-				});
-			}
-		}
+            var path = GetIncludePath(include);
+
+            foreach (var token in document.SelectTokenWithRavenSyntaxReturningFlatStructure(path.Path))
+            {
+                ExecuteInternal(token.Item1, path.Prefix, (value, prefix) =>
+                {
+                    value = (prefix != null ? prefix + value : value);
+                    return loadId(value);
+                });
+            }
+        }
 	}
 }

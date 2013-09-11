@@ -1,3 +1,4 @@
+#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -15,7 +16,7 @@ namespace Raven.Abstractions.Connection
 		private readonly string url;
 		private readonly string method;
 		private readonly Action<RavenConnectionStringOptions, WebRequest> configureRequest;
-		private readonly Func<RavenConnectionStringOptions, WebResponse, bool> handleUnauthorizedResponse;
+		private readonly Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse;
 		private readonly RavenConnectionStringOptions connectionStringOptions;
 
 		private HttpWebRequest webRequest;
@@ -34,7 +35,7 @@ namespace Raven.Abstractions.Connection
 			set { webRequest = value; }
 		}
 
-		public HttpRavenRequest(string url, string method, Action<RavenConnectionStringOptions, WebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, bool> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions)
+		public HttpRavenRequest(string url, string method, Action<RavenConnectionStringOptions, WebRequest> configureRequest, Func<RavenConnectionStringOptions, WebResponse, Action<HttpWebRequest>> handleUnauthorizedResponse, RavenConnectionStringOptions connectionStringOptions)
 		{
 			this.url = url;
 			this.method = method;
@@ -168,6 +169,9 @@ namespace Raven.Abstractions.Connection
 			{
 				try
 				{
+					if (WebRequest.Method != "GET" && postedData == null && postedStream == null && postedToken == null)
+						WebRequest.ContentLength = 0;
+						
 					using (var res = WebRequest.GetResponse())
 					{
 						action(res);
@@ -195,30 +199,41 @@ namespace Raven.Abstractions.Connection
 								ravenJObject = RavenJObject.Parse(error);
 							}
 							catch { }
-
+							e.Data["original-value"] = error;
 							if (ravenJObject == null)
 								throw;
-							throw new WebException("Error: " + ravenJObject.Value<string>("Error"), e);
+							throw new WebException("Error: " + ravenJObject.Value<string>("Error"), e)
+							{
+								Data = {{"original-value", error}}
+							};
 						}
 					}
 
-					if (handleUnauthorizedResponse != null && handleUnauthorizedResponse(connectionStringOptions, e.Response))
-					{
-						RecreateWebRequest();
-					}
-					else
-					{
+					if (HandleUnauthorizedResponse(e.Response) == false)
 						throw;
-					}
 				}
 			}
 		}
 
-		private void RecreateWebRequest()
+		private bool HandleUnauthorizedResponse(WebResponse unauthorizedResponse)
+		{
+			if (handleUnauthorizedResponse == null)
+				return false;
+
+			var unauthorizedResponseAction = handleUnauthorizedResponse(connectionStringOptions, unauthorizedResponse);
+			if (unauthorizedResponseAction == null)
+				return false;
+
+			RecreateWebRequest(unauthorizedResponseAction);
+			return true;
+		}
+
+		private void RecreateWebRequest(Action<HttpWebRequest> action)
 		{
 			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
 			var newWebRequest = CreateRequest();
 			HttpRequestHelper.CopyHeaders(WebRequest, newWebRequest);
+			action(newWebRequest);
 
 			if (postedToken != null)
 			{
@@ -244,3 +259,4 @@ namespace Raven.Abstractions.Connection
 
 	}
 }
+#endif

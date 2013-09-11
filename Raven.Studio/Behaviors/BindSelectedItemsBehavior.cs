@@ -26,52 +26,32 @@ namespace Raven.Studio.Behaviors
         {
             var selectedItemsList = GetSelectedItemsList();
 
-            if (selectedItemsList != null)
-            {
-                return selectedItemsList;
-            }
-            else
-            {
-                return new object[0];
-            }
+            return selectedItemsList ?? new object[0];
         }
 
         private IList GetSelectedItemsList()
         {
             if (AssociatedObject is DataGrid)
-            {
                 return ((DataGrid)AssociatedObject).SelectedItems;
-            }
-            else if (AssociatedObject is ListBox)
-            {
+            
+			if (AssociatedObject is ListBox)
                 return ((ListBox)AssociatedObject).SelectedItems;
-            }
-            else
-            {
-                return null;
-            }
+			
+			return null; 
         }
 
         private Action<IEnumerable> GetSelectedItemsListUpdater()
         {
             if (AssociatedObject is DataGrid)
-            {
                 return GetListUpdater(((DataGrid) AssociatedObject).SelectedItems);
-            }
-            else if (AssociatedObject is ListBox && ((ListBox)AssociatedObject).SelectionMode != SelectionMode.Single)
-            {
+            
+			if (AssociatedObject is ListBox && ((ListBox)AssociatedObject).SelectionMode != SelectionMode.Single)
                 return GetListUpdater(((ListBox)AssociatedObject).SelectedItems);
-            }
-            else if (AssociatedObject is ListBox)
-            {
-                return
-                    (newSelection) =>
-                    (AssociatedObject as ListBox).SelectedItem = newSelection.Cast<object>().FirstOrDefault();
-            }
-            else
-            {
-                return null;
-            }
+            
+			if (AssociatedObject is ListBox)
+                return (newSelection) => (AssociatedObject as ListBox).SelectedItem = newSelection.Cast<object>().FirstOrDefault();
+			
+			return null;
         }
 
         private Action<IEnumerable> GetListUpdater(IList selectedItems)
@@ -90,13 +70,9 @@ namespace Raven.Studio.Behaviors
         protected override void OnAttached()
         {
             if (AssociatedObject is DataGrid)
-            {
                 ((DataGrid)AssociatedObject).SelectionChanged += HandleSelectionChanged;
-            }
             else if (AssociatedObject is Selector)
-            {
                 ((ListBox)AssociatedObject).SelectionChanged += HandleSelectionChanged;
-            }
 
             UpdateTarget();
         }
@@ -104,13 +80,9 @@ namespace Raven.Studio.Behaviors
         protected override void OnDetaching()
         {
             if (AssociatedObject is DataGrid)
-            {
                 ((DataGrid)AssociatedObject).SelectionChanged -= HandleSelectionChanged;
-            }
             else if (AssociatedObject is Selector)
-            {
                 ((ListBox)AssociatedObject).SelectionChanged -= HandleSelectionChanged;
-            }
         }
 
         private void HandleSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -121,26 +93,17 @@ namespace Raven.Studio.Behaviors
         private void UpdateTarget()
         {
             if (Target != null)
-            {
                 Target.NotifySelectionChanged(GetSelectedItemsCount(), selectedItemsProvider);
-            }
         }
 
         private int GetSelectedItemsCount()
         {
-            var selectedItemsList = GetSelectedItemsList();
+	        var selectedItemsList = GetSelectedItemsList();
 
-            if (selectedItemsList != null)
-            {
-                return selectedItemsList.Count;
-            }
-            else
-            {
-                return 0;
-            }
+	        return selectedItemsList != null ? selectedItemsList.Count : 0;
         }
 
-        public ItemSelection Target
+	    public ItemSelection Target
         {
             get { return (ItemSelection)GetValue(TargetProperty); }
             set { SetValue(TargetProperty, value); }
@@ -151,9 +114,7 @@ namespace Raven.Studio.Behaviors
             var behavior = d as BindSelectedItemsBehavior;
 
            if (desiredSelectionChangedEventListener != null)
-           {
                desiredSelectionChangedEventListener.Detach();
-           }
 
             if (e.NewValue != null)
             {
@@ -170,15 +131,12 @@ namespace Raven.Studio.Behaviors
             }
         }
 
-
         private void HandleDesiredSelectionChanged(object sender, DesiredSelectionChangedEventArgs e)
         {
             var selectedItemsListUpdater = GetSelectedItemsListUpdater();
 
             if (selectedItemsListUpdater != null)
-            {
                 selectedItemsListUpdater(e.Items);
-            }
         }
     }
 }

@@ -109,10 +109,10 @@ namespace Raven.Tests.Issues
 				}
 				var tx = new TransactionInformation
 					{
-						Id = Guid.NewGuid()
+                        Id = Guid.NewGuid().ToString()
 					};
 				Assert.Throws<ConcurrencyException>(() => 
-					store.DocumentDatabase.Delete("items/1", Guid.NewGuid(), tx));
+					store.DocumentDatabase.Delete("items/1", Etag.InvalidEtag, tx));
 			}
 		}
 
@@ -128,11 +128,11 @@ namespace Raven.Tests.Issues
 				}
 				var tx = new TransactionInformation
 				{
-					Id = Guid.NewGuid()
+                    Id = Guid.NewGuid().ToString()
 				};
 				store.DocumentDatabase.Put("items/1", null, new RavenJObject(), new RavenJObject(), tx);
 				Assert.Throws<ConcurrencyException>(() =>
-					store.DocumentDatabase.Delete("items/1", Guid.NewGuid(), tx));
+					store.DocumentDatabase.Delete("items/1", Etag.InvalidEtag, tx));
 			}
 		}
 
@@ -149,11 +149,11 @@ namespace Raven.Tests.Issues
 				}
 				var tx = new TransactionInformation
 				{
-					Id = Guid.NewGuid()
+                    Id = Guid.NewGuid().ToString()
 				};
 				store.DocumentDatabase.Delete("items/1", null, tx);
 				Assert.Throws<ConcurrencyException>(() =>
-					store.DocumentDatabase.Delete("items/1", Guid.NewGuid(), tx));
+					store.DocumentDatabase.Delete("items/1", Etag.InvalidEtag, tx));
 			}
 		}
 
@@ -170,13 +170,13 @@ namespace Raven.Tests.Issues
 				var jsonDocument = store.DocumentDatabase.Get("items/1", null);
 				store.DocumentDatabase.Delete("items/1", null, new TransactionInformation
 					{
-						Id = Guid.NewGuid(),
+                        Id = Guid.NewGuid().ToString(),
 						Timeout = TimeSpan.FromSeconds(2)
 					});
 				Assert.Throws<ConcurrencyException>(() =>
 					store.DocumentDatabase.Delete("items/1", jsonDocument.Etag, new TransactionInformation
 						{
-							Id = Guid.NewGuid()
+                            Id = Guid.NewGuid().ToString()
 						}));
 			}
 		}
@@ -193,12 +193,12 @@ namespace Raven.Tests.Issues
 				}
 				store.DocumentDatabase.Delete("items/1", null, new TransactionInformation
 					{
-						Id = Guid.NewGuid()
+                        Id = Guid.NewGuid().ToString()
 					});
 				Assert.Throws<ConcurrencyException>(() =>
-					store.DocumentDatabase.Delete("items/1", Guid.NewGuid(), new TransactionInformation
+					store.DocumentDatabase.Delete("items/1", Etag.InvalidEtag, new TransactionInformation
 						{
-							Id = Guid.NewGuid()
+                            Id = Guid.NewGuid().ToString()
 						}));
 			}
 		}

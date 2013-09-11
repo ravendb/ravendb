@@ -16,6 +16,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
+using Raven.Database.Server.Responders.Debugging;
 using Raven.Database.Storage;
 using System.Linq;
 using Raven.Database.Util;
@@ -26,7 +27,7 @@ namespace Raven.Database.Indexing
 	{
 		private readonly ConcurrentSet<FutureBatchStats> futureBatchStats = new ConcurrentSet<FutureBatchStats>();
 
-		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.InvariantCultureIgnoreCase);
+		private readonly SizeLimitedConcurrentSet<string> recentlyDeleted = new SizeLimitedConcurrentSet<string>(100, StringComparer.OrdinalIgnoreCase);
 
 		private readonly SizeLimitedConcurrentSet<ActualIndexingBatchSize> lastActualIndexingBatchSize = new SizeLimitedConcurrentSet<ActualIndexingBatchSize>(25);
 		private readonly ConcurrentQueue<ServerError> serverErrors = new ConcurrentQueue<ServerError>();
@@ -37,8 +38,17 @@ namespace Raven.Database.Indexing
 		private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly ThreadLocal<List<Func<string>>> shouldNotifyOnWork = new ThreadLocal<List<Func<string>>>(() => new List<Func<string>>());
+
+	    public WorkContext()
+	    {
+            ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex = new ConcurrentDictionary<string, ConcurrentBag<string>>();
+            ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex = new ConcurrentDictionary<string, ConcurrentBag<string>>();
+            CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>(StringComparer.OrdinalIgnoreCase);
+	    }
+
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
+        public OrderedPartCollection<AbstractIndexReaderWarmer> IndexReaderWarmers { get; set; }
 		public string DatabaseName { get; set; }
 
 		public DateTime LastWorkTime { get; private set; }
@@ -57,6 +67,18 @@ namespace Raven.Database.Indexing
 		{
 			LastWorkTime = SystemTime.UtcNow;
 		}
+
+        //collection that holds information about currently running queries, in the form of [Index name -> (When query started,IndexQuery data)]
+        public ConcurrentDictionary<string,ConcurrentSet<ExecutingQueryInfo>> CurrentlyRunningQueries { get; private set; }
+
+        public ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex { get; private set; }
+        public ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex { get; private set; }
+
+        /// <summary>
+        /// holds keys of documents that need to be reindexed - since they were added/updated/deleted
+        /// </summary>
+        public ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress_SimpleIndex { get; set; }
+        public ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress_ReduceIndex { get; set; }
 
 		public InMemoryRavenConfiguration Configuration { get; set; }
 		public IndexStorage IndexStorage { get; set; }
@@ -169,13 +191,14 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void AddError(string index, string key, string error)
+		public void AddError(string index, string key, string error, string component)
 		{
 			serverErrors.Enqueue(new ServerError
 			{
 				Document = key,
 				Error = error,
 				Index = index,
+                Action = component,
 				Timestamp = SystemTime.UtcNow
 			});
 			if (serverErrors.Count <= 50)
@@ -221,7 +244,7 @@ namespace Raven.Database.Indexing
 			ServerError error;
 			while (serverErrors.TryDequeue(out error))
 			{
-				if (StringComparer.InvariantCultureIgnoreCase.Equals(error.Index, name) == false)
+				if (StringComparer.OrdinalIgnoreCase.Equals(error.Index, name) == false)
 					list.Add(error);
 			}
 
@@ -416,7 +439,7 @@ namespace Raven.Database.Indexing
 
 		public DocumentDatabase Database { get; set; }
 
-		public void AddFutureBatch(FutureBatchStats futureBatchStat)
+	    public void AddFutureBatch(FutureBatchStats futureBatchStat)
 		{
 			futureBatchStats.Add(futureBatchStat);
 			if (futureBatchStats.Count <= 30)

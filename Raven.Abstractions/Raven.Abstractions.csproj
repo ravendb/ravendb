@@ -20,22 +20,22 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\build\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>1591</NoWarn>
-    <DocumentationFile>bin\Debug\Raven.Abstractions.xml</DocumentationFile>
+    <DocumentationFile>..\build\Raven.Abstractions.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\build\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
-    <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
+    <DocumentationFile>..\build\Raven.Abstractions.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -44,10 +44,17 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Net4">
+      <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\net40\Microsoft.CompilerServices.AsyncTargetingPack.Net4.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Client.Lightweight">
+      <HintPath>..\Raven.Tryouts\bin\Debug\Raven.Client.Lightweight.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Net" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
@@ -59,6 +66,24 @@
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Converters\JsonValueConverter.cs">
+      <Link>Imports\Newtonsoft.Json\Converters\JsonValueConverter.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\DiagnosticsTraceWriter.cs">
+      <Link>Imports\Newtonsoft.Json\Serialization\DiagnosticsTraceWriter.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\ITraceWriter.cs">
+      <Link>Imports\Newtonsoft.Json\Serialization\ITraceWriter.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Serialization\MemoryTraceWriter.cs">
+      <Link>Imports\Newtonsoft.Json\Serialization\MemoryTraceWriter.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\StringEscapeHandling.cs">
+      <Link>Imports\Newtonsoft.Json\StringEscapeHandling.cs</Link>
+    </Compile>
+    <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\TraceLevel.cs">
+      <Link>Imports\Newtonsoft.Json\TraceLevel.cs</Link>
     </Compile>
     <Compile Include="Commands\ScriptedPatchCommandData.cs" />
     <Compile Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Bson\BsonBinaryType.cs">
@@ -560,14 +585,22 @@
     <Compile Include="Connection\OAuthHelper.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
+    <Compile Include="Data\AccessTokenBody.cs" />
+    <Compile Include="Data\AdminStatistics.cs" />
+    <Compile Include="Data\AggregationData.cs" />
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
     <Compile Include="Data\HighlightedField.cs" />
     <Compile Include="Data\BulkInsertOptions.cs" />
+    <Compile Include="Data\Etag.cs" />
+    <Compile Include="Data\IndexFailureInformation.cs" />
     <Compile Include="Data\MoreLikeThisQueryResult.cs" />
     <Compile Include="Data\PeriodicBackupSetup.cs" />
+    <Compile Include="Data\QueryHeaderInformation.cs" />
+    <Compile Include="Data\ReplicationInfoStatus.cs" />
     <Compile Include="Data\RestoreStatus.cs" />
+    <Compile Include="Data\ScriptedIndexResults.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />
     <Compile Include="Data\AggregationOperation.cs" />
     <Compile Include="Data\AggregationOperationExtensions.cs" />
@@ -605,16 +638,26 @@
     <Compile Include="Data\PatchResult.cs" />
     <Compile Include="Data\PutResult.cs" />
     <Compile Include="Data\ServerError.cs" />
-    <Compile Include="Data\SetupDoc.cs" />
     <Compile Include="Data\SortedField.cs" />
     <Compile Include="Data\SpatialIndexQuery.cs" />
     <Compile Include="Data\StopWordsSetup.cs" />
+    <Compile Include="Data\StreamResult.cs" />
     <Compile Include="Data\StringDistanceTypes.cs" />
     <Compile Include="Data\SuggestionQuery.cs" />
     <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
+    <Compile Include="Data\UserInfo.cs" />
+    <Compile Include="Data\UuidType.cs" />
+    <Compile Include="Exceptions\BadRequestException.cs" />
+    <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
+    <Compile Include="Exceptions\TransformCompilationException.cs" />
+    <Compile Include="Exceptions\IndexCompilationException.cs" />
+    <Compile Include="Exceptions\IndexDisabledException.cs" />
+    <Compile Include="Exceptions\IndexDoesNotExistsException.cs" />
+    <Compile Include="Exceptions\OperationVetoedException.cs" />
     <Compile Include="Extensions\AttachmentExtensions.cs" />
+    <Compile Include="Extensions\CharExtensions.cs" />
     <Compile Include="Extensions\CryptoTransformExtensions.cs" />
     <Compile Include="Extensions\ExceptionExtensions.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
@@ -628,8 +671,10 @@
     <Compile Include="Default.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
+    <Compile Include="Imports\Newtonsoft.Json\JsonTextReaderAsync.cs" />
     <Compile Include="Indexing\FieldTermVector.cs" />
     <Compile Include="Indexing\SpatialOptions.cs" />
+    <Compile Include="Indexing\SpatialOptionsFactory.cs" />
     <Compile Include="Indexing\SuggestionOptions.cs" />
     <Compile Include="Json\ConflictsResolver.cs" />
     <Compile Include="Json\JsonDictionaryDateTimeKeysConverter.cs" />
@@ -647,7 +692,6 @@
     <Compile Include="Json\Linq\RavenJValue.cs" />
     <Compile Include="Json\RavenJsonConverter.cs" />
     <Compile Include="Json\RavenJsonTextReader.cs" />
-    <Compile Include="Json\Utilities\MathUtils.cs" />
     <Compile Include="Json\Utilities\MiscellaneousUtils.cs" />
     <Compile Include="Json\Utilities\StringUtils.cs" />
     <Compile Include="Linq\DynamicList.cs" />
@@ -684,9 +728,11 @@
     <Compile Include="MEF\PartMetadata.cs" />
     <Compile Include="Data\QueryResult.cs" />
     <Compile Include="Indexing\SortOptions.cs" />
+    <Compile Include="MissingFromBCL\WinRTCompetability.cs" />
     <Compile Include="OAuth\AbstractAuthenticator.cs" />
     <Compile Include="OAuth\BasicAuthenticator.cs" />
     <Compile Include="OAuth\SecuredAuthenticator.cs" />
+    <Compile Include="Replication\ReplicatedEtagInfo.cs" />
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />
     <Compile Include="Replication\ReplicationStatistics.cs" />
@@ -694,26 +740,32 @@
     <Compile Include="Smuggler\SmugglerAction.cs" />
     <Compile Include="Smuggler\SmugglerApiBase.cs" />
     <Compile Include="Smuggler\SmugglerOptions.cs" />
+    <Compile Include="Spatial\ShapeConverter.cs" />
+    <Compile Include="Spatial\GeoJsonWktConverter.cs" />
+    <Compile Include="Spatial\WktSanitizer.cs" />
     <Compile Include="SystemTime.cs" />
+    <Compile Include="Util\AsyncEnumeratorBridge.cs" />
+    <Compile Include="Util\AsyncManualResetEvent.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />
     <Compile Include="Util\CompletedTask.cs" />
     <Compile Include="Util\ConcurrentSet.cs" />
+    <Compile Include="Util\DocumentHelpers.cs" />
     <Compile Include="Util\EasyReaderWriterLock.cs" />
-    <Compile Include="Util\Etag.cs" />
+    <Compile Include="Util\EtagUtil.cs" />
+    <Compile Include="Util\IAsyncEnumerator.cs" />
     <Compile Include="Util\IncludesUtil.cs" />
     <Compile Include="Util\RavenQuery.cs" />
     <Compile Include="Util\SizeLimitedConcurrentDictionary.cs" />
     <Compile Include="Util\SizeLimitedConcurrentSet.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="..\Imports\Newtonsoft.Json\Src\Newtonsoft.Json\Dynamic.snk">
-      <Link>Imports\Newtonsoft.Json\Dynamic.snk</Link>
-    </EmbeddedResource>
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
+    <EmbeddedResource Include="Imports\Newtonsoft.Json\Dynamic.snk" />
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />

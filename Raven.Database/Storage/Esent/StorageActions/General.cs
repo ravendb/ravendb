@@ -14,6 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Impl;
+using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Extensions;
@@ -35,7 +36,9 @@ namespace Raven.Storage.Esent.StorageActions
 		protected static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		protected readonly Session session;
 		private Transaction transaction;
-		private bool useLazyCommit;
+		private readonly Dictionary<Etag, Etag> etagTouches = new Dictionary<Etag, Etag>();
+		private readonly EsentTransactionContext transactionContext;
+		private readonly Action sessionAndTransactionDisposer;
 
 		public JET_DBID Dbid
 		{
@@ -56,6 +59,7 @@ namespace Raven.Storage.Esent.StorageActions
 			OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
 			IUuidGenerator uuidGenerator,
 			IDocumentCacher cacher,
+			EsentTransactionContext transactionContext,
 			TransactionalStorage transactionalStorage)
 		{
 			this.tableColumnsCache = tableColumnsCache;
@@ -63,15 +67,42 @@ namespace Raven.Storage.Esent.StorageActions
 			this.uuidGenerator = uuidGenerator;
 			this.cacher = cacher;
 			this.transactionalStorage = transactionalStorage;
+			this.transactionContext = transactionContext;
+
 			try
 			{
-				session = new Session(instance);
-				transaction = new Transaction(session);
+				if (transactionContext == null)
+				{
+					session = new Session(instance);
+					transaction = new Transaction(session);
+					sessionAndTransactionDisposer = () =>
+					{
+						if(transaction != null)
+							transaction.Dispose();
+						if(session != null)
+							session.Dispose();
+					};
+				}
+				else
+				{
+					session = transactionContext.Session;
+					transaction = transactionContext.Transaction;
+					var disposable = transactionContext.EnterSessionContext();
+					sessionAndTransactionDisposer = disposable.Dispose;
+				}
 				Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
-				Dispose();
+			    logger.WarnException("Error when trying to open a new DocumentStorageActions", ex);
+			    try
+			    {
+			        Dispose();
+			    }
+			    catch (Exception e)
+			    {
+			        logger.WarnException("Error on dispose when the ctor threw an exception, resources may have leaked", e);
+			    }
 				throw;
 			}
 		}
@@ -106,12 +137,6 @@ namespace Raven.Storage.Esent.StorageActions
 			if (identity != null)
 				identity.Dispose();
 
-			if (transactions != null)
-				transactions.Dispose();
-
-			if (documentsModifiedByTransactions != null)
-				documentsModifiedByTransactions.Dispose();
-
 			if (mappedResults != null)
 				mappedResults.Dispose();
 
@@ -133,11 +158,8 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Equals(dbid, JET_DBID.Nil) == false && session != null)
 				Api.JetCloseDatabase(session.JetSesid, dbid, CloseDatabaseGrbit.None);
 
-			if (transaction != null)
-				transaction.Dispose();
-
-			if (session != null)
-				session.Dispose();
+		    if (sessionAndTransactionDisposer != null)
+		        sessionAndTransactionDisposer();
 		}
 
 		public void UseLazyCommit()
@@ -175,7 +197,10 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public Action Commit(CommitTransactionGrbit txMode)
 		{
-			transaction.Commit(txMode);
+			if (transactionContext == null)
+			{
+				transaction.Commit(txMode);
+			}
 
 			return OnStorageCommit;
 		}
@@ -213,139 +238,6 @@ namespace Raven.Storage.Esent.StorageActions
 			return Api.EscrowUpdate(session, Identity, tableColumnsCache.IdentityColumns["val"], 1) + 1;
 		}
 
-
-		public void RollbackTransaction(Guid txId)
-		{
-			CompleteTransaction(txId, doc =>
-			{
-				Api.JetSetCurrentIndex(session, Documents, "by_key");
-				Api.MakeKey(session, Documents, doc.Key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ))
-				{
-					ResetTransactionOnCurrentDocument();
-				}
-			});
-		}
-
-		public void ModifyTransactionId(Guid fromTxId, Guid toTxId, TimeSpan timeout)
-		{
-			var transactionInformation = new TransactionInformation
-			{
-				Id = toTxId,
-				Timeout = timeout
-			};
-			EnsureTransactionExists(transactionInformation);
-			CompleteTransaction(fromTxId, doc =>
-			{
-				Api.JetSetCurrentIndex(session, Documents, "by_key");
-				Api.MakeKey(session, Documents, doc.Key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-				if (Api.TrySeek(session, Documents, SeekGrbit.SeekEQ))
-				{
-					using (var update = new Update(session, Documents, JET_prep.Replace))
-					{
-						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["locked_by_transaction"], toTxId);
-						update.Save();
-					}
-				}
-
-				if (doc.Delete)
-					DeleteDocumentInTransaction(transactionInformation, doc.Key, null);
-				else
-					AddDocumentInTransaction(doc.Key, null, doc.Data, doc.Metadata, transactionInformation);
-			});
-		}
-
-		public IEnumerable<Guid> GetTransactionIds()
-		{
-			Api.MoveBeforeFirst(session, Transactions);
-			while (Api.TryMoveNext(session, Transactions))
-			{
-				var guid = Api.RetrieveColumnAsGuid(session, Transactions, tableColumnsCache.TransactionsColumns["tx_id"]);
-				yield return (Guid)guid;
-			}
-		}
-
-		public bool TransactionExists(Guid txId)
-		{
-			Api.JetSetCurrentIndex(session, Transactions, "by_tx_id");
-			Api.MakeKey(session, Transactions, txId, MakeKeyGrbit.NewKey);
-			return Api.TrySeek(session, Transactions, SeekGrbit.SeekEQ);
-		}
-
-		public void CompleteTransaction(Guid txId, Action<DocumentInTransactionData> perDocumentModified)
-		{
-			Api.JetSetCurrentIndex(session, Transactions, "by_tx_id");
-			Api.MakeKey(session, Transactions, txId, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, Transactions, SeekGrbit.SeekEQ))
-				Api.JetDelete(session, Transactions);
-
-			Api.JetSetCurrentIndex(session, DocumentsModifiedByTransactions, "by_tx");
-			Api.MakeKey(session, DocumentsModifiedByTransactions, txId, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, DocumentsModifiedByTransactions, SeekGrbit.SeekEQ) == false)
-				return;
-			Api.MakeKey(session, DocumentsModifiedByTransactions, txId, MakeKeyGrbit.NewKey);
-			Api.JetSetIndexRange(session, DocumentsModifiedByTransactions, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
-			var bookmarksToDelete = new List<byte[]>();
-			var documentsInTransaction = new List<DocumentInTransactionData>();
-			do
-			{
-				// esent index ranges are approximate, and we need to check them ourselves as well
-				if (
-					Api.RetrieveColumnAsGuid(session, DocumentsModifiedByTransactions,
-											 tableColumnsCache.DocumentsModifiedByTransactionsColumns["locked_by_transaction"]) != txId)
-					continue;
-				var metadata = Api.RetrieveColumn(session, DocumentsModifiedByTransactions,
-												  tableColumnsCache.DocumentsModifiedByTransactionsColumns["metadata"]);
-				var key = Api.RetrieveColumnAsString(session, DocumentsModifiedByTransactions,
-													 tableColumnsCache.DocumentsModifiedByTransactionsColumns["key"],
-													 Encoding.Unicode);
-
-				RavenJObject dataAsJson;
-				var metadataAsJson = metadata.ToJObject();
-				using (
-					Stream stream = new BufferedStream(new ColumnStream(session, DocumentsModifiedByTransactions,
-													 tableColumnsCache.DocumentsModifiedByTransactionsColumns["data"])))
-				{
-					using (var data = documentCodecs
-						.Aggregate(stream, (dataStream, codec) => codec.Decode(key, metadataAsJson, dataStream)))
-						dataAsJson = data.ToJObject();
-				}
-
-
-				documentsInTransaction.Add(new DocumentInTransactionData
-				{
-					Data = dataAsJson,
-					Delete =
-						Api.RetrieveColumnAsBoolean(session, DocumentsModifiedByTransactions,
-													tableColumnsCache.DocumentsModifiedByTransactionsColumns["delete_document"]).Value,
-					Etag = Api.RetrieveColumn(session, DocumentsModifiedByTransactions,
-											  tableColumnsCache.DocumentsModifiedByTransactionsColumns["etag"]).
-						TransfromToGuidWithProperSorting(),
-					Key = key,
-					Metadata = metadata.ToJObject(),
-				});
-				bookmarksToDelete.Add(Api.GetBookmark(session, DocumentsModifiedByTransactions));
-			} while (Api.TryMoveNext(session, DocumentsModifiedByTransactions));
-
-			foreach (var bookmark in bookmarksToDelete)
-			{
-				Api.JetGotoBookmark(session, DocumentsModifiedByTransactions, bookmark, bookmark.Length);
-				Api.JetDelete(session, DocumentsModifiedByTransactions);
-			}
-			foreach (var documentInTransactionData in documentsInTransaction)
-			{
-				perDocumentModified(documentInTransactionData);
-			}
-		}
-
-		private void ResetTransactionOnCurrentDocument()
-		{
-			using (var update = new Update(session, Documents, JET_prep.Replace))
-			{
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["locked_by_transaction"], null);
-				update.Save();
-			}
-		}
 	}
 
 

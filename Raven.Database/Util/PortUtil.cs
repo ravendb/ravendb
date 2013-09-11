@@ -24,7 +24,7 @@ namespace Raven.Database.Util
 				{
 					var url = HttpContext.Current.Request.Url;
 					if (url.IsDefaultPort)
-						return string.Equals("https", url.Scheme,StringComparison.InvariantCultureIgnoreCase) ?
+						return string.Equals("https", url.Scheme,StringComparison.OrdinalIgnoreCase) ?
 						 443 : 80;
 					return url.Port;
 				}

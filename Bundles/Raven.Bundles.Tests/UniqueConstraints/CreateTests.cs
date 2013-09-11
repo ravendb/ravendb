@@ -1,4 +1,4 @@
-﻿extern alias database;
+﻿using Raven.Abstractions.Exceptions;
 using Raven.Bundles.UniqueConstraints;
 
 namespace Raven.Bundles.Tests.UniqueConstraints
@@ -81,7 +81,7 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 				session.SaveChanges();
 			}
 
-			Assert.Throws<database::Raven.Database.Exceptions.OperationVetoedException>(
+			Assert.Throws<OperationVetoedException>(
 				() =>
 					{
 						using (var session = DocumentStore.OpenSession())
@@ -98,7 +98,7 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 			var user = new User { Email = "foo@bar.com", Name = "Khan" };
 			var sameEmailUser = new User { Email = "foo@bar.com", Name = "James" };
 
-			Assert.Throws<database::Raven.Database.Exceptions.OperationVetoedException>(
+			Assert.Throws<OperationVetoedException>(
 				() =>
 				{
 					using (var session = DocumentStore.OpenSession())

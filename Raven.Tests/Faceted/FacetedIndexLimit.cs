@@ -14,14 +14,14 @@ using Raven.Abstractions.Indexing;
 
 namespace Raven.Tests.Faceted
 {
-	public class FacetedIndexLimit : RavenTest
+	public class FacetedIndexLimit : FacetTestBase
 	{
 		private readonly IList<Camera> _data;
 		private const int NumCameras = 1000;
 
 		public FacetedIndexLimit()
 		{
-			_data = FacetedIndexTestHelper.GetCameras(NumCameras);
+			_data = GetCameras(NumCameras);
 		}
 
 		[Fact]
@@ -54,7 +54,7 @@ namespace Raven.Tests.Faceted
 						Assert.Equal(inMemoryCount, facet.Hits);
 					}
 
-					Assert.Equal(null, facetResults.Results["Manufacturer"].RemainingTerms);
+					Assert.Equal(new List<string>(), facetResults.Results["Manufacturer"].RemainingTerms);
 					Assert.Equal(0, facetResults.Results["Manufacturer"].RemainingTermsCount);
 					Assert.Equal(0, facetResults.Results["Manufacturer"].RemainingHits);
 
@@ -71,7 +71,7 @@ namespace Raven.Tests.Faceted
 						Assert.Equal(inMemoryCount, facet.Hits);
 					}
 
-					Assert.Equal(null, facetResults.Results["Model"].RemainingTerms);
+					Assert.Equal(new List<string>(), facetResults.Results["Model"].RemainingTerms);
 					Assert.Equal(0, facetResults.Results["Model"].RemainingTermsCount);
 					Assert.Equal(0, facetResults.Results["Model"].RemainingHits);
 				}
@@ -301,7 +301,7 @@ namespace Raven.Tests.Faceted
 						Assert.Equal(inMemoryCount, facet.Hits);
 					}
 
-					Assert.Equal(null, facetResults.Results["Manufacturer"].RemainingTerms);
+					Assert.Equal(new List<string>(), facetResults.Results["Manufacturer"].RemainingTerms);
 					Assert.Equal(0, facetResults.Results["Manufacturer"].RemainingTermsCount);
 					Assert.Equal(0, facetResults.Results["Manufacturer"].RemainingHits);
 
@@ -318,7 +318,7 @@ namespace Raven.Tests.Faceted
 						Assert.Equal(inMemoryCount, facet.Hits);
 					}
 
-					Assert.Equal(null, facetResults.Results["Model"].RemainingTerms);
+					Assert.Equal(new List<string>(), facetResults.Results["Model"].RemainingTerms);
 					Assert.Equal(0, facetResults.Results["Model"].RemainingTermsCount);
 					Assert.Equal(0, facetResults.Results["Model"].RemainingHits);
 				}

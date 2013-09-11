@@ -28,35 +28,24 @@ namespace Raven.Studio.Infrastructure
 
 		internal void TimerTicked()
 		{
-			if (ApplicationModel.Current.Server.Value.CreateNewDatabase)
+			if (ApplicationModel.Current.Server.Value.CreateNewDatabase && ApplicationModel.Current.Server.Value.UserInfo != null &&
+			    ApplicationModel.Current.Server.Value.UserInfo.IsAdminGlobal)
 			{
 				ApplicationModel.Current.Server.Value.CreateNewDatabase = false;
 				ApplicationModel.Current.Server.Value.DocumentStore
-					.AsyncDatabaseCommands
-					.ForSystemDatabase()
-					.GetAsync("Raven/StudioConfig")
-					.ContinueWith(task =>
-					{
-						if (task.IsFaulted == false)
-						{
-							Execute.OnTheUI(() =>
-							{
-								if (task.Result != null && task.Result.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
-								{
-									if (task.Result.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
-										return;
-								}
-								Command.ExecuteCommand(new CreateDatabaseCommand());
-							});
-						}
-						else
-						{
-							GC.KeepAlive(task.Exception); // ignoring the exeption
-						}
-					});
+				                .AsyncDatabaseCommands
+				                .ForSystemDatabase()
+				                .GetAsync("Raven/StudioConfig")
+				                .ContinueOnSuccessInTheUIThread(doc =>
+				                {
+					                if (doc != null && doc.DataAsJson.ContainsKey("WarnWhenUsingSystemDatabase"))
+					                {
+						                if (doc.DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase") == false)
+							                return;
+					                }
+					                Command.ExecuteCommand(new CreateDatabaseCommand());
+				                });
 			}
-
-			ApplicationModel.Current.UpdateAlerts();
 
 			if (currentTask != null)
 				return;

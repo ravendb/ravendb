@@ -1,4 +1,4 @@
-﻿#if !SILVERLIGHT
+﻿#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,10 +8,14 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
 using Raven.Client.Listeners;
 using Raven.Client.Connection.Async;
+using Raven.Client.Spatial;
+using Raven.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document
 {
@@ -20,7 +24,9 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>
 	{
-	    /// <summary>
+
+
+		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public DocumentQuery(InMemoryDocumentSessionOperations session
@@ -53,11 +59,35 @@ namespace Raven.Client.Document
 		{
 			var propertyInfos = typeof (TProjection).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 			var projections = propertyInfos.Select(x => x.Name).ToArray();
-			var fields = propertyInfos.Select(x => DocumentConvention.FindIdentityProperty(x) ? Constants.DocumentIdFieldName : x.Name).ToArray();
+			var identityProperty = DocumentConvention.GetIdentityProperty(typeof (TProjection));
+			var fields = propertyInfos.Select(p =>(p == identityProperty) ? Constants.DocumentIdFieldName : p.Name).ToArray();
 			return SelectFields<TProjection>(fields, projections);
 		}
 
-	    /// <summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
+	    {
+	        base.SetResultTransformer(resultsTransformer);
+	        return this;
+	    }
+
+		public IDocumentQuery<T> OrderByScore()
+		{
+			AddOrder(Constants.TemporaryScoreValue, false);
+			return this;
+		}
+
+		public IDocumentQuery<T> OrderByScoreDescending()
+		{
+			AddOrder(Constants.TemporaryScoreValue, true);
+			return this;
+		}
+
+		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+	    {
+	        this.queryInputs = queryInputs;
+	    }
+
+		/// <summary>
 		/// Selects the specified fields directly from the index
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
@@ -102,6 +132,7 @@ namespace Raven.Client.Document
 				spatialFieldName = spatialFieldName,
 				queryShape = queryShape,
 				spatialRelation = spatialRelation,
+				spatialUnits = spatialUnits,
 				distanceErrorPct = distanceErrorPct,
 				rootTypes = {typeof(T)},
 				defaultField = defaultField,
@@ -109,7 +140,12 @@ namespace Raven.Client.Document
 				afterQueryExecutedCallback = afterQueryExecutedCallback,
 				highlightedFields = new List<HighlightedField>(highlightedFields),
 				highlighterPreTags = highlighterPreTags,
-				highlighterPostTags = highlighterPostTags
+				highlighterPostTags = highlighterPostTags,
+                resultsTransformer = resultsTransformer,
+                queryInputs = queryInputs,
+				disableEntitiesTracking = disableEntitiesTracking,
+				disableCaching = disableCaching,
+                lastEquality = lastEquality
 			};
 			return documentQuery;
 		}
@@ -270,6 +306,18 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
 		{
 			UsingDefaultOperator(queryOperator);
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.NoTracking()
+		{
+			NoTracking();
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.NoCaching()
+		{
+			NoCaching();
 			return this;
 		}
 
@@ -662,43 +710,21 @@ namespace Raven.Client.Document
         /// <param name="radiusUnits">The units of the <paramref name="radius"/>.</param>
 		public IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers)
 		{
-			return (IDocumentQuery<T>) GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
+			return GenerateQueryWithinRadiusOf(Constants.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
 		}
 
 		public IDocumentQuery<T> WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers)
 		{
-			return (IDocumentQuery<T>)GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
+			return GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
 		}
 
 		public IDocumentQuery<T> RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = 0.025)
 		{
-			return (IDocumentQuery<T>)GenerateSpatialQueryData(fieldName, shapeWKT, rel, distanceErrorPct);
+			return GenerateSpatialQueryData(fieldName, shapeWKT, rel, distanceErrorPct);
 		}
 
 		/// <summary>
-		///   Filter matches to be inside the specified radius
-		/// </summary>
-		/// <param name = "radius">The radius.</param>
-		/// <param name = "latitude">The latitude.</param>
-		/// <param name = "longitude">The longitude.</param>
-        /// <param name = "radiusUnits">The units of the <paramref name="radius"/>.</param>
-        protected override object GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025, SpatialUnits radiusUnits = SpatialUnits.Kilometers)
-		{
-			return GenerateSpatialQueryData(fieldName, SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius, radiusUnits), SpatialRelation.Within, distanceErrorPct);
-		}
-
-		protected override object GenerateSpatialQueryData(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct)
-		{
-			isSpatialQuery = true;
-			spatialFieldName = fieldName;
-			queryShape = shapeWKT;
-			spatialRelation = relation;
-			this.distanceErrorPct = distanceErrorPct;
-			return this;
-		}
-
-		/// <summary>
-        /// Sorts the query results by distance.
+		/// Sorts the query results by distance.
 		/// </summary>
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance()
 		{
@@ -726,7 +752,13 @@ namespace Raven.Client.Document
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
 		public IDocumentQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
-			OrderBy(propertySelectors.Select(GetMemberQueryPath).ToArray());
+			var orderByfields = propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray();
+			OrderBy(orderByfields);
+			for (int index = 0; index < orderByfields.Length; index++)
+			{
+				var fld = orderByfields[index];
+				sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].ReturnType));
+			}
 			return this;
 		}
 
@@ -750,8 +782,14 @@ namespace Raven.Client.Document
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
 		public IDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
-			OrderByDescending(propertySelectors.Select(GetMemberQueryPath).ToArray());
-			return this;
+            var orderByfields = propertySelectors.Select(expression => MakeFieldSortDescending(GetMemberQueryPathForOrderBy(expression))).ToArray();
+            OrderBy(orderByfields);
+            for (int index = 0; index < orderByfields.Length; index++)
+            {
+                var fld = orderByfields[index];
+                sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].ReturnType));
+            }
+            return this;
 		}
 
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(
@@ -880,7 +918,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
 		/// <returns></returns>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag)
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Etag cutOffEtag)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag);
 			return this;
@@ -891,7 +929,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="cutOffEtag">The cut off etag.</param>
 		/// <param name="waitTimeout">The wait timeout.</param>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Guid cutOffEtag, TimeSpan waitTimeout)
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(Etag cutOffEtag, TimeSpan waitTimeout)
 		{
 			WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
 			return this;
@@ -927,6 +965,17 @@ namespace Raven.Client.Document
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
+		}
+
+		public IDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+		{
+			return Spatial(path.ToPropertyPath(), clause);
+		}
+
+		public IDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+		{
+			var criteria = clause(new SpatialCriteriaFactory());
+			return GenerateSpatialQueryData(fieldName, criteria);
 		}
 
 		/// <summary>

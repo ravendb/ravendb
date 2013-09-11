@@ -123,7 +123,7 @@ namespace Raven.Client.Connection
 		}
 
 
-#if SILVERLIGHT
+#if SILVERLIGHT || NETFX_CORE
 		private Task<int> ReadAsync()
 		{
 			try
@@ -136,19 +136,12 @@ namespace Raven.Client.Connection
 			}
 		}
 #else
-		private Task<int> ReadAsync()
+		private async Task<int> ReadAsync()
 		{
-			try
-			{
-				return Task.Factory.FromAsync<int>(
-					(callback, state) => stream.BeginRead(buffer, posInBuffer, buffer.Length - posInBuffer, callback, state),
-					stream.EndRead,
-					null);
-			}
-			catch (Exception e)
-			{
-				return new CompletedTask<int>(e);
-			}
+		    return await Task.Factory.FromAsync<int>(
+		        (callback, state) => stream.BeginRead(buffer, posInBuffer, buffer.Length - posInBuffer, callback, state),
+		        stream.EndRead,
+		        null);
 		}
 #endif
 

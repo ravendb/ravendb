@@ -55,6 +55,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Bundles.IndexReplicat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Sample.MvcIntegration", "Samples\Raven.Sample.MvcIntegration\Raven.Sample.MvcIntegration.csproj", "{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.MvcIntegration", "Raven.Client.MvcIntegration\Raven.Client.MvcIntegration.csproj", "{AA580048-17C7-4B1E-AA3A-321157CF3511}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -285,6 +287,16 @@ Global
 		{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{8F299EBD-BBFE-4939-ADD0-F2CCBC6E7C57}.Release|x86.ActiveCfg = Release|Any CPU
+		{AA580048-17C7-4B1E-AA3A-321157CF3511}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AA580048-17C7-4B1E-AA3A-321157CF3511}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AA580048-17C7-4B1E-AA3A-321157CF3511}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{AA580048-17C7-4B1E-AA3A-321157CF3511}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{AA580048-17C7-4B1E-AA3A-321157CF3511}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AA580048-17C7-4B1E-AA3A-321157CF3511}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AA580048-17C7-4B1E-AA3A-321157CF3511}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AA580048-17C7-4B1E-AA3A-321157CF3511}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{AA580048-17C7-4B1E-AA3A-321157CF3511}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{AA580048-17C7-4B1E-AA3A-321157CF3511}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -295,6 +307,7 @@ Global
 		{3B90EB20-AEA3-4972-8219-936F1A62768C} = {5A163257-377D-455F-B852-6425B7BAE6EE}
 		{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA} = {5A163257-377D-455F-B852-6425B7BAE6EE}
 		{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B} = {5A163257-377D-455F-B852-6425B7BAE6EE}
+		{AA580048-17C7-4B1E-AA3A-321157CF3511} = {5A163257-377D-455F-B852-6425B7BAE6EE}
 		{2728BBA7-5142-445E-BAA5-142A25E0666D} = {0B4101C0-4DE9-41D6-99D4-74BB7C5B68D8}
 	EndGlobalSection
 EndGlobal

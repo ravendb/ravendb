@@ -27,8 +27,8 @@ namespace Raven.Database.Indexing
 
 		public dynamic Source { get; set; }
 
-		private readonly IDictionary<string, HashSet<string>> referencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.InvariantCultureIgnoreCase); 
-		private readonly IDictionary<string,dynamic> docsCache = new Dictionary<string, dynamic>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly IDictionary<string, HashSet<string>> referencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase); 
+		private readonly IDictionary<string,dynamic> docsCache = new Dictionary<string, dynamic>(StringComparer.OrdinalIgnoreCase);
 
 		public dynamic LoadDocument(string key)
 		{
@@ -51,7 +51,7 @@ namespace Raven.Database.Indexing
 
 			HashSet<string> set;
 			if(referencedDocuments.TryGetValue(id, out set) == false)
-				referencedDocuments.Add(id, set = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase));
+				referencedDocuments.Add(id, set = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 			set.Add(key);
 
 			dynamic value;

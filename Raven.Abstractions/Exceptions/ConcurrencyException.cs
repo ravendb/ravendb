@@ -4,13 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Exceptions
 {
 	/// <summary>
 	/// This exception is raised when a concurrency conflict is encountered
 	/// </summary>
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 	[Serializable]
 #endif
 	public class ConcurrencyException : Exception
@@ -39,7 +40,7 @@ namespace Raven.Abstractions.Exceptions
 		{
 		}
 
-#if SILERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ConcurrencyException"/> class.
 		/// </summary>
@@ -48,8 +49,9 @@ namespace Raven.Abstractions.Exceptions
 		/// <exception cref="T:System.ArgumentNullException">The <paramref name="info"/> parameter is null. </exception>
 		/// <exception cref="T:System.Runtime.Serialization.SerializationException">The class name is null or <see cref="P:System.Exception.HResult"/> is zero (0). </exception>
 		protected ConcurrencyException(
-			SerializationInfo info,
-			StreamingContext context) : base(info, context)
+			System.Runtime.Serialization.SerializationInfo info,
+			System.Runtime.Serialization.StreamingContext context)
+			: base(info, context)
 		{
 		}
 #endif
@@ -58,11 +60,11 @@ namespace Raven.Abstractions.Exceptions
 		/// Gets or sets the expected E tag.
 		/// </summary>
 		/// <value>The expected E tag.</value>
-		public Guid ExpectedETag { get; set; }
+		public Etag ExpectedETag { get; set; }
 		/// <summary>
 		/// Gets or sets the actual E tag.
 		/// </summary>
 		/// <value>The actual E tag.</value>
-		public Guid ActualETag { get; set; }
+		public Etag ActualETag { get; set; }
 	}
 }

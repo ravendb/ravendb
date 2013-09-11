@@ -5,7 +5,11 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 #if SILVERLIGHT
 using System.Windows.Browser;
+#endif
+#if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 
 namespace Raven.Client.Connection
@@ -22,6 +26,11 @@ namespace Raven.Client.Connection
 			return url + "/indexes/" + index + "?definition=yes";
 		}
 
+		public static string Transformer(this string url, string transformer)
+		{
+			return url + "/transformers/" + transformer;
+		}
+
 		public static string IndexNames(this string url, int start, int pageSize)
 		{
 			return url + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize;
@@ -30,6 +39,21 @@ namespace Raven.Client.Connection
 		public static string Stats(this string url)
 		{
 			return url + "/stats";
+		}
+
+		public static string AdminStats(this string url)
+		{
+			return url + "/admin/stats";
+		}
+
+		public static string ReplicationInfo(this string url)
+		{
+			return url + "/replication/info";
+		}
+
+		public static string LastReplicatedEtagFor(this string destinationUrl, string sourceUrl)
+		{
+			return destinationUrl + "/replication/lastEtag?from=" + Uri.EscapeDataString(sourceUrl);
 		}
 
 		//public static string Static(this string url, string key)
@@ -47,12 +71,11 @@ namespace Raven.Client.Connection
 		{
 			return url + "/terms/" + index + "?field=" + field + "&fromValue=" + fromValue + "&pageSize=" + pageSize;
 		}
-#if SILVERLIGHT
-		public static string Docs(this string url, string key)
+
+		public static string Document(this string url, string key)
 		{
-			return url + "/docs/" + HttpUtility.UrlEncode(key);
+			return url + "/docs/" + Uri.EscapeUriString(key);
 		}
-#endif
 
 		public static string Docs(this string url, int start, int pageSize)
 		{

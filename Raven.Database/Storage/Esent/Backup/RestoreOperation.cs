@@ -7,7 +7,6 @@ using System;
 using System.IO;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Logging;
-using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Abstractions.Data;
@@ -15,8 +14,6 @@ using System.Linq;
 
 namespace Raven.Storage.Esent.Backup
 {
-	using System.Threading;
-
 	public class RestoreOperation
 	{
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
@@ -238,6 +235,7 @@ namespace Raven.Storage.Esent.Backup
 		{
 			output(string.Format("Esent Restore: {0} {1} {2}", snp, snt, data));
 			Console.WriteLine("Esent Restore: {0} {1} {2}", snp, snt, data);
+
 			return JET_err.Success;
 		}
 

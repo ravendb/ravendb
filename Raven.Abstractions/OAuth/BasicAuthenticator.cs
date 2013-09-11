@@ -9,6 +9,8 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Silverlight.Connection;
 using System.Net.Browser;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 
 namespace Raven.Abstractions.OAuth
@@ -17,7 +19,7 @@ namespace Raven.Abstractions.OAuth
 	{
 		private readonly string apiKey;
 		private readonly bool enableBasicAuthenticationOverUnsecuredHttp;
-
+	
 		public BasicAuthenticator(string apiKey, bool enableBasicAuthenticationOverUnsecuredHttp)
 		{
 			this.apiKey = apiKey;
@@ -33,10 +35,10 @@ namespace Raven.Abstractions.OAuth
 				.ConvertSecurityExceptionToServerNotFound()
 				.ContinueWith(task =>
 				{
-#if !SILVERLIGHT
-					using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
-#else
+#if SILVERLIGHT
 					using(var stream = task.Result.GetResponseStream())
+#else
+					using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
 #endif
 					using (var reader = new StreamReader(stream))
 					{
@@ -46,7 +48,7 @@ namespace Raven.Abstractions.OAuth
 				});
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource)
 		{
 			var authRequest = PrepareOAuthRequest(oauthSource);
@@ -77,7 +79,7 @@ namespace Raven.Abstractions.OAuth
 			if (String.IsNullOrEmpty(apiKey) == false)
 				SetHeader(authRequest.Headers, "Api-Key", apiKey);
 
-			if (oauthSource.StartsWith("https", StringComparison.InvariantCultureIgnoreCase) == false && enableBasicAuthenticationOverUnsecuredHttp == false)
+			if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false && enableBasicAuthenticationOverUnsecuredHttp == false)
 				throw new InvalidOperationException(BasicOAuthOverHttpError);
 
 			return authRequest;

@@ -3,40 +3,20 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Database.Extensions;
-using Raven.Database.Server;
-using Raven.Server;
 using Xunit;
 
 namespace Raven.Tests.Querying
 {
-	public class UsingDynamicQueryWithRemoteServer : RemoteClientTest, IDisposable
+	public class UsingDynamicQueryWithRemoteServer : RemoteClientTest
 	{
 		private readonly IDocumentStore documentStore;
-		private readonly string path;
-		private readonly RavenDbServer ravenDbServer;
 
 		public UsingDynamicQueryWithRemoteServer()
 		{
-			const int port = 8079;
-			this.path = this.GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-
-			this.ravenDbServer = this.GetNewServer(port, this.path);
-			this.documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize();
-		}
-
-		public override void Dispose()
-		{
-			this.documentStore.Dispose();
-			this.ravenDbServer.Dispose();
-			IOExtensions.DeleteDirectory(this.path);
-			base.Dispose();
+			documentStore = NewRemoteDocumentStore();
 		}
 
 		[Fact]
@@ -58,7 +38,7 @@ namespace Raven.Tests.Querying
 			                		Category = "Rhinos"
 			                	};
 
-			using (var s = this.documentStore.OpenSession())
+			using (var s = documentStore.OpenSession())
 			{
 				s.Store(blogOne);
 				s.Store(blogTwo);
@@ -66,7 +46,7 @@ namespace Raven.Tests.Querying
 				s.SaveChanges();
 			}
 
-			using (var s = this.documentStore.OpenSession())
+			using (var s = documentStore.OpenSession())
 			{
 				var results = s.Query<Blog>()
 					.Customize(x => x.WaitForNonStaleResultsAsOfNow())
@@ -102,7 +82,7 @@ namespace Raven.Tests.Querying
 			                		Category = "Rhinos"
 			                	};
 
-			using (var s = this.documentStore.OpenSession())
+			using (var s = documentStore.OpenSession())
 			{
 				s.Store(blogOne);
 				s.Store(blogTwo);
@@ -110,7 +90,7 @@ namespace Raven.Tests.Querying
 				s.SaveChanges();
 			}
 
-			using (var s = this.documentStore.OpenSession())
+			using (var s = documentStore.OpenSession())
 			{
 				var results = s.Advanced.LuceneQuery<Blog>()
 					.Where("Title.Length:3 AND Category:Rhinos")
@@ -136,13 +116,13 @@ namespace Raven.Tests.Querying
 			              		       	}
 			              	};
 
-			using (var s = this.documentStore.OpenSession())
+			using (var s = documentStore.OpenSession())
 			{
 				s.Store(blogOne);
 				s.SaveChanges();
 			}
 
-			using (var s = this.documentStore.OpenSession())
+			using (var s = documentStore.OpenSession())
 			{
 				var results = s.Query<Blog>()
 					.Where(x => x.Title == "one" && x.Tags.Any(y => y.Name == "tagTwo"))
@@ -161,13 +141,13 @@ namespace Raven.Tests.Querying
 		[Fact]
 		public void QueryForASpecificTypeDoesNotBringBackOtherTypes()
 		{
-			using (var s = this.documentStore.OpenSession())
+			using (var s = documentStore.OpenSession())
 			{
 				s.Store(new Tag());
 				s.SaveChanges();
 			}
 
-			using (var s = this.documentStore.OpenSession())
+			using (var s = documentStore.OpenSession())
 			{
 				var results = s.Query<Blog>()
 					.Select(b => new {b.Category})
@@ -194,7 +174,7 @@ namespace Raven.Tests.Querying
 			                		SortWeight = 1
 			                	};
 
-			using (var s = this.documentStore.OpenSession())
+			using (var s = documentStore.OpenSession())
 			{
 				s.Store(blogOne);
 				s.Store(blogTwo);
@@ -202,7 +182,7 @@ namespace Raven.Tests.Querying
 				s.SaveChanges();
 			}
 
-			using (var s = this.documentStore.OpenSession())
+			using (var s = documentStore.OpenSession())
 			{
 				var resultDescending = (from blog in s.Query<Blog>()
 				                        orderby blog.SortWeight descending
@@ -240,7 +220,7 @@ namespace Raven.Tests.Querying
 			                		Title = "bbbbb"
 			                	};
 
-			using (var s = this.documentStore.OpenSession())
+			using (var s = documentStore.OpenSession())
 			{
 				s.Store(blogOne);
 				s.Store(blogTwo);
@@ -248,7 +228,7 @@ namespace Raven.Tests.Querying
 				s.SaveChanges();
 			}
 
-			using (var s = this.documentStore.OpenSession())
+			using (var s = documentStore.OpenSession())
 			{
 				var resultDescending = (from blog in s.Query<Blog>()
 				                        orderby blog.Title descending

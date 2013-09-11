@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Raven.Abstractions.Exceptions;
+
 namespace Raven.Tests.Issues
 {
 	using System;
@@ -129,7 +131,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void IndexDefinitionBuilderShouldThrow()
 		{
-			var exception = Assert.Throws<InvalidOperationException>(
+			var exception = Assert.Throws<IndexCompilationException>(
 				() =>
 				{
 					using (var store = NewDocumentStore())
@@ -144,7 +146,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ServerShouldThrow()
 		{
-			var exception = Assert.Throws<InvalidOperationException>(
+			var exception = Assert.Throws<IndexCompilationException>(
 				() =>
 				{
 					using (var store = NewDocumentStore())
@@ -156,7 +158,7 @@ namespace Raven.Tests.Issues
 
 			Assert.Equal("Reduce cannot contain Count() methods in grouping.", exception.Message);
 
-			exception = Assert.Throws<InvalidOperationException>(
+            exception = Assert.Throws<IndexCompilationException>(
 				() =>
 				{
 					using (var store = NewDocumentStore())
@@ -172,7 +174,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ServerShouldThrow2()
 		{
-			var exception = Assert.Throws<InvalidOperationException>(
+			var exception = Assert.Throws<IndexCompilationException>(
 				() =>
 				{
 					using (var store = this.NewRemoteDocumentStore())
@@ -190,7 +192,7 @@ namespace Raven.Tests.Issues
 
 			Assert.Contains("Reduce cannot contain Count() methods in grouping.", exception.Message);
 
-			exception = Assert.Throws<InvalidOperationException>(
+			exception = Assert.Throws<IndexCompilationException>(
 				() =>
 				{
 					using (var store = this.NewRemoteDocumentStore())

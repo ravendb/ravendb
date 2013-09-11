@@ -4,17 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 #if !SILVERLIGHT
-using System;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
@@ -142,8 +139,8 @@ namespace Raven.Client.Document
 							max = minNextMax + capacity;
 							document = new JsonDocument
 							{
-								Etag = Guid.Empty,
-								// sending empty guid means - ensure the that the document does NOT exists
+								Etag = Etag.Empty,
+								// sending empty etag means - ensure the that the document does NOT exists
 								Metadata = new RavenJObject(),
 								DataAsJson = RavenJObject.FromObject(new {Max = max}),
 								Key = HiLoDocumentKey

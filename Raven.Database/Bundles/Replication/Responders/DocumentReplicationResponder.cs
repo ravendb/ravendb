@@ -61,7 +61,7 @@ namespace Raven.Bundles.Replication.Responders
 			{
 				Database.TransactionalStorage.Batch(actions =>
 				{
-					string lastEtag = Guid.Empty.ToString();
+					string lastEtag = Etag.Empty.ToString();
 					foreach (RavenJObject document in array)
 					{
 						var metadata = document.Value<RavenJObject>("@metadata");
@@ -79,7 +79,7 @@ namespace Raven.Bundles.Replication.Responders
 
 					var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
 					var replicationDocument = Database.Get(replicationDocKey, null);
-					var lastAttachmentId = Guid.Empty;
+					var lastAttachmentId = Etag.Empty;
 					if (replicationDocument != null)
 					{
 						lastAttachmentId =
@@ -93,7 +93,7 @@ namespace Raven.Bundles.Replication.Responders
 								 RavenJObject.FromObject(new SourceReplicationInformation
 								 {
 									 Source = src,
-									 LastDocumentEtag = new Guid(lastEtag),
+									 LastDocumentEtag = Etag.Parse(lastEtag),
 									 LastAttachmentEtag = lastAttachmentId,
 									 ServerInstanceId = serverInstanceId
 								 }),

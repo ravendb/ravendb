@@ -34,7 +34,11 @@ namespace Raven.Abstractions.OAuth
 			}
 			if (apiKey != null)
 			{
+#if NETFX_CORE
+				e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
+#else
 				e.Request.Headers["Has-Api-Key"] = "true";
+#endif
 			}
 		}
 
@@ -78,22 +82,21 @@ namespace Raven.Abstractions.OAuth
 						{
 							{OAuthHelper.Keys.APIKeyName, apiKeyName},
 							{OAuthHelper.Keys.Challenge, challenge},
-							{
-								OAuthHelper.Keys.Response,
-								OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge, apiSecret))
-							}
+							{OAuthHelper.Keys.Response, OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge, apiSecret))}
 						}))
 					}
 				});
 
 				return Tuple.Create(authRequest, data);
 			}
+#if !NETFX_CORE
 			authRequest.ContentLength = 0;
+#endif
 			return Tuple.Create(authRequest, (string)null);
 		}
 
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource)
 		{
 			string serverRSAExponent = null;
@@ -228,7 +231,9 @@ namespace Raven.Abstractions.OAuth
 							if (string.IsNullOrEmpty(header) || !header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey))
 								throw;
 
+#if !NETFX_CORE
 							authResponse.Close();
+#endif
 
 							var challengeDictionary =
 								OAuthHelper.ParseDictionary(header.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());

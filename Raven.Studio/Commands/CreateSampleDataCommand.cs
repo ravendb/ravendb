@@ -11,8 +11,10 @@ using Raven.Abstractions.Indexing;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Raven.Studio.Extensions;
+using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Models;
+using TaskStatus = Raven.Studio.Models.TaskStatus;
 
 namespace Raven.Studio.Commands
 {
@@ -20,10 +22,12 @@ namespace Raven.Studio.Commands
 	{
 		private readonly Observable<DatabaseModel> database;
 		private IObservable<Unit> databaseChanged;
+		private readonly SampleDataTaskSectionModel sampleDataTaskSectionModel;
 		private Action<string> output;
 
-		public CreateSampleDataCommand(Action<string> output)
+		public CreateSampleDataCommand(SampleDataTaskSectionModel sampleDataTaskSectionModel, Action<string> output)
 		{
+			this.sampleDataTaskSectionModel = sampleDataTaskSectionModel;
 			this.output = output;
 			database = ApplicationModel.Current.Server.Value.SelectedDatabase;
 
@@ -56,13 +60,15 @@ namespace Raven.Studio.Commands
 		{
 			return database.Value != null
 				&& database.Value.Statistics.Value != null
-				   && database.Value.Statistics.Value.CountOfDocuments == 0;
+				&& database.Value.Statistics.Value.CountOfDocuments == 0;
 		}
 
 		public override void Execute(object parameter)
 		{
+			sampleDataTaskSectionModel.TaskStatus = TaskStatus.Started;
 			CreateSampleData().ProcessTasks()
-				.ContinueOnSuccessInTheUIThread(() => output("Sample Data Created") );
+				.ContinueOnSuccessInTheUIThread(() => output("Sample Data Created"))
+				.Finally(() => sampleDataTaskSectionModel.TaskStatus = TaskStatus.Ended);
 		}
 
 		private IEnumerable<Task> CreateSampleData()
@@ -85,9 +91,7 @@ namespace Raven.Studio.Commands
 					var ravenJObject = index.Value<RavenJObject>("definition");
 					output("Adding index " + indexName);
 					var putDoc = commands
-						.PutIndexAsync(indexName,
-									   ravenJObject.JsonDeserialization<IndexDefinition>(),
-									   true);
+						.PutIndexAsync(indexName, ravenJObject.JsonDeserialization<IndexDefinition>(), true);
 					yield return putDoc;
 				}
 

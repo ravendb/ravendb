@@ -54,7 +54,7 @@ namespace Raven.Database.Server.Responders
 				}
 			}
 
-			Guid lastDocEtag = Guid.Empty;
+			Etag lastDocEtag = Etag.Empty;
 			Database.TransactionalStorage.Batch(accessor =>
 			{
 				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
@@ -67,7 +67,7 @@ namespace Raven.Database.Server.Responders
 			else
 			{
 				context.WriteHeaders(new RavenJObject(), lastDocEtag);
-				var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, context.GetStart(),
+				var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, context.GetStart(),
 				                                                        context.GetPageSize(Database.Configuration.MaxPageSize));
 				var data = databases
 					.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))

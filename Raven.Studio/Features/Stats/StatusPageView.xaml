@@ -1,0 +1,49 @@
+﻿<infrastructure:PageView x:Class="Raven.Studio.Features.Stats.StatusPageView" 
+						 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+						 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+						 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+						 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+						 mc:Ignorable="d"
+						 xmlns:infrastructure="clr-namespace:Raven.Studio.Infrastructure"
+                         xmlns:Models="clr-namespace:Raven.Studio.Models"
+                         xmlns:controls="clr-namespace:Raven.Studio.Controls"
+                         xmlns:stats="clr-namespace:Raven.Studio.Features.Stats"
+                         d:DesignWidth="640" d:DesignHeight="480"
+						 Title="StatusPageView Page" 
+						 d:DataContext="{d:DesignInstance Models:StatusPageModel}">
+
+	<Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+		<Border Background="{StaticResource Brush_HeaderBackground}"
+				BorderBrush="{StaticResource Brush_HeaderBorder}"
+				Margin="0,0,0,0"
+				CornerRadius="4,4,0,0"
+				BorderThickness="1,1,1,0"
+				Grid.Row="0"/>
+		<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
+			<Image Style="{StaticResource Style_Image_PageHeader}" Source="{StaticResource Image_Database_Tiny}"/>
+			<HyperlinkButton Content="Databases"
+                             Style="{StaticResource Style_Link_Breadcrumb_Header}"
+                             Command="{StaticResource NavigateToCommand}"
+                             CommandParameter="/Databases"
+                             VerticalAlignment="Center" />
+			<controls:NavTriangle/>
+
+			<TextBlock Text="{Binding CurrentDatabase}"
+					   Margin="0,0,0,0"
+					   VerticalAlignment="Center"
+					   Style="{StaticResource Style_Text_Header}" />
+
+			<controls:NavTriangle/>
+			<TextBlock Text="Status"
+                       Style="{StaticResource Style_Text_Header}"
+                       VerticalAlignment="Center" />
+		</StackPanel>
+
+		<stats:StatusView Grid.Row="3" DataContext="{Binding Status}"/>
+	</Grid>
+</infrastructure:PageView>

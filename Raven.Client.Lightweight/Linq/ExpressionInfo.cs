@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Reflection;
 
 namespace Raven.Client.Linq
 {
@@ -26,8 +27,12 @@ namespace Raven.Client.Linq
 		/// Whatever the expression is of a nested path
 		/// </summary>
 		public bool IsNestedPath { get; private set; }
+        /// <summary>
+        /// Maybe contain the relevant property
+        /// </summary>
+	    public PropertyInfo MaybeProperty { get; set; }
 
-		/// <summary>
+	    /// <summary>
 		/// Creates an ExpressionMemberInfo
 		/// </summary>
 		public ExpressionInfo(string path, Type type, bool isNestedPath)

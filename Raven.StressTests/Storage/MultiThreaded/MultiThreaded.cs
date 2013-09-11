@@ -3,15 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
+using Raven.Abstractions.Data;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Tests;
 using Xunit;
@@ -26,8 +25,7 @@ namespace Raven.StressTests.Storage.MultiThreaded
 
 		private volatile bool run = true;
 		
-		private Guid lastEtagSeen = Guid.Empty;
-		private readonly object Lock = new object();
+		private Etag lastEtagSeen = Etag.Empty;
 
 		public override void Dispose()
 		{
@@ -39,7 +37,7 @@ namespace Raven.StressTests.Storage.MultiThreaded
 		{
 			DocumentDatabase = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = DataDir,
+				DataDirectory = NewDataPath(),
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInUnreliableMode,
 				DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName,
 			});
@@ -52,10 +50,10 @@ namespace Raven.StressTests.Storage.MultiThreaded
 
 		private class GetDocumentState
 		{
-			private readonly Guid etag;
+			private readonly Etag etag;
 			private readonly int count;
 
-			public Guid Etag
+			public Etag Etag
 			{
 				get { return etag; }
 			}
@@ -64,7 +62,7 @@ namespace Raven.StressTests.Storage.MultiThreaded
 				get { return count; }
 			}
 
-			public GetDocumentState(Guid etag, int count)
+			public GetDocumentState(Etag etag, int count)
 			{
 				this.etag = etag;
 				this.count = count;
@@ -76,7 +74,7 @@ namespace Raven.StressTests.Storage.MultiThreaded
 			var task = Task.Factory.StartNew(StartGetDocumentOnBackground);
 			var count = SetupData();
 
-			var final = new Guid("00000001-0000-0100-0000-" + count.ToString("X12"));
+			var final = Etag.Empty.Setup(UuidType.Documents, 1).IncrementBy(count);
 			while (lastEtagSeen != final)
 			{
 				Thread.Sleep(10);
@@ -111,7 +109,7 @@ namespace Raven.StressTests.Storage.MultiThreaded
 					if (documents.Length == 0)
 						return;
 
-					lastEtagSeen = documents.Last().Etag.Value;
+					lastEtagSeen = documents.Last().Etag;
 
 					log.Debug("Docs: {0}", string.Join(", ", documents.Select(x => x.Key)));
 

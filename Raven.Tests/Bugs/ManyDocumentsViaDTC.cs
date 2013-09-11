@@ -76,7 +76,6 @@ namespace Raven.Tests.Bugs
 							missing.Add(i);
 					}
 
-					WaitForUserToContinueTheTest(store);
 					Assert.Equal(expectedCount, items.Count);
 				}
 			}

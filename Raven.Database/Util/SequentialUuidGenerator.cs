@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading;
-using Raven.Database.Extensions;
+using Raven.Abstractions.Data;
 using Raven.Database.Impl;
 
 namespace Raven.Database.Util
@@ -17,6 +17,7 @@ namespace Raven.Database.Util
 		private long sequentialUuidCounterTasks;
 		private long sequentialUuidCounterScheduledReductions;
 		private long sequentialUuidCounterIndexing;
+		private long sequentialUuidEtagSynchronization;
 
 		public long EtagBase
 		{
@@ -28,7 +29,7 @@ namespace Raven.Database.Util
 		}
 
 	
-		public Guid CreateSequentialUuid(UuidType type)
+		public Etag CreateSequentialUuid(UuidType type)
 		{
 			long increment;
 			switch (type)
@@ -60,6 +61,9 @@ namespace Raven.Database.Util
 				case UuidType.Indexing:
 					increment = Interlocked.Increment(ref sequentialUuidCounterIndexing);
 					break;
+				case UuidType.EtagSynchronization:
+					increment = Interlocked.Increment(ref sequentialUuidEtagSynchronization);
+					break;
 				default:
 					throw new ArgumentOutOfRangeException("type", "Cannot understand: " + type);
 			}
@@ -70,8 +74,7 @@ namespace Raven.Database.Util
 			Array.Copy(ticksAsBytes, 0, bytes, 0, ticksAsBytes.Length);
 			Array.Copy(currentAsBytes, 0, bytes, 8, currentAsBytes.Length);
 			bytes[0] = (byte) type; // record the etag type, if we need it for debug later
-			return bytes.TransfromToGuidWithProperSorting();
+			return Etag.Parse(bytes);
 		}
- 
 	}
 }

@@ -9,8 +9,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
-using Raven.Database.Config;
-using Raven.Tests.Storage;
 using Xunit;
 
 namespace Raven.Tests.Transactions
@@ -36,7 +34,7 @@ namespace Raven.Tests.Transactions
 		public void WhileDocumentIsBeingUpdatedInTransactionCannotUpdateOutsideTransaction()
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			Assert.Throws<ConcurrencyException>(
 				() => db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null));
@@ -46,12 +44,12 @@ namespace Raven.Tests.Transactions
 		public void WhileDocumentIsBeingUpdatedInTransactionCannotUpdateInsideAnotherTransaction()
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			Assert.Throws<ConcurrencyException>(
 				() => db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), new TransactionInformation
 				{
-					Id = Guid.NewGuid(),
+                    Id = Guid.NewGuid().ToString(),
 					Timeout = TimeSpan.FromMinutes(1)
 				}));
 		}
@@ -60,12 +58,12 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void WhileCreatingDocumentInTransactionTryingToWriteInAnotherTransactionFail()
 		{
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			Assert.Throws<ConcurrencyException>(
 				() => db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), new TransactionInformation
 				{
-					Id = Guid.NewGuid(),
+                    Id = Guid.NewGuid().ToString(),
 					Timeout = TimeSpan.FromMinutes(1)
 				}));
 		}
@@ -73,7 +71,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void WhileCreatingDocumentInTransactionTryingToWriteOutsideTransactionFail()
 		{
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 			Assert.Throws<ConcurrencyException>(
 				() => db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null));

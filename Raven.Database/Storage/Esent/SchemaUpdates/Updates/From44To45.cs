@@ -1,4 +1,5 @@
-﻿using Microsoft.Isam.Esent.Interop;
+﻿using System;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Database.Impl;
 
 namespace Raven.Storage.Esent.SchemaUpdates.Updates
@@ -11,7 +12,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 		{
 		}
 
-		public void Update(Session session, JET_DBID dbid)
+		public void Update(Session session, JET_DBID dbid, Action<string> output)
 		{
 			using (var table = new Table(session, dbid, "scheduled_reductions", OpenTableGrbit.None))
 			{

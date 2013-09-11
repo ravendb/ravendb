@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Exceptions;
 using Raven.Client.Document;
 using Raven.Client.Util;
 
@@ -49,7 +50,7 @@ namespace Raven.Client.Indexes
 
 			var querySourceName = expr.Parameters.First(x => x.Type != typeof(IClientSideDatabase)).Name;
 
-			var indexOfQuerySource = linqQuery.IndexOf(querySourceName, StringComparison.InvariantCulture);
+			var indexOfQuerySource = linqQuery.IndexOf(querySourceName, StringComparison.Ordinal);
 			if (indexOfQuerySource == -1)
 				throw new InvalidOperationException("Cannot understand how to parse the query");
 
@@ -144,10 +145,10 @@ namespace Raven.Client.Indexes
 								continue;
 
 							if (ContainsMethodInGrouping(lambdaExpression, rootQuery, "Count"))
-								throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
+								throw new IndexCompilationException("Reduce cannot contain Count() methods in grouping.");
 							
 							if (ContainsMethodInGrouping(lambdaExpression, rootQuery, "Average"))
-								throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
+                                throw new IndexCompilationException("Reduce cannot contain Average() methods in grouping.");
 						}
 					}
 					break;

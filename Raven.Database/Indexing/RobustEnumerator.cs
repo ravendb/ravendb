@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using System.Linq;
@@ -17,12 +18,12 @@ namespace Raven.Database.Indexing
 		public Action BeforeMoveNext = delegate { };
 		public Action CancelMoveNext = delegate { };
 		public Action<Exception, object> OnError = delegate { };
-		private readonly WorkContext context;
+		private readonly CancellationToken cancellationToken;
 		private readonly int numberOfConsecutiveErrors;
 
-		public RobustEnumerator(WorkContext context, int numberOfConsecutiveErrors)
+		public RobustEnumerator(CancellationToken cancellationToken, int numberOfConsecutiveErrors)
 		{
-			this.context = context;
+			this.cancellationToken = cancellationToken;
 			this.numberOfConsecutiveErrors = numberOfConsecutiveErrors;
 		}
 
@@ -57,7 +58,7 @@ namespace Raven.Database.Indexing
 						int maxNumberOfConsecutiveErrors = numberOfConsecutiveErrors;
 						do
 						{
-							context.CancellationToken.ThrowIfCancellationRequested();
+							cancellationToken.ThrowIfCancellationRequested();
 							var moveSuccessful = MoveNext(en, wrapped);
 							if (moveSuccessful == false)
 								break;

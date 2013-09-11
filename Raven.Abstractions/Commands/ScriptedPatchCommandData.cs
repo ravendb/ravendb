@@ -26,6 +26,16 @@ namespace Raven.Abstractions.Commands
 		}
 
 		/// <summary>
+		/// Gets or sets the ScriptedPatchRequest (using JavaScript) that is used to patch a default document if the document is missing
+		/// </summary>
+		/// <value>The Script.</value>
+		public ScriptedPatchRequest PatchIfMissing
+		{
+			get;
+			set;
+		}
+
+		/// <summary>
 		/// Gets the key.
 		/// </summary>
 		/// <value>The key.</value>
@@ -47,7 +57,7 @@ namespace Raven.Abstractions.Commands
 		/// Gets or sets the etag.
 		/// </summary>
 		/// <value>The etag.</value>
-		public Guid? Etag
+		public Etag Etag
 		{
 			get; set;
 		}
@@ -92,6 +102,14 @@ namespace Raven.Abstractions.Commands
 					};
 			if (Etag != null)
 				ret.Add("Etag", Etag.ToString());
+			if (PatchIfMissing != null)
+			{
+				ret.Add("PatchIfMissing", new RavenJObject
+						{
+							{ "Script", PatchIfMissing.Script },
+							{ "Values", RavenJObject.FromObject(PatchIfMissing.Values)}
+						});
+			}
 			return ret;
 		}
 	}

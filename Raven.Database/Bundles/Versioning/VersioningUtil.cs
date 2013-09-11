@@ -34,5 +34,16 @@ namespace Raven.Bundles.Versioning
 			var versioningConfiguration = database.GetDocumentVersioningConfiguration(metadata);
 			return versioningConfiguration != null && versioningConfiguration.Exclude == false;
 		}
+
+        public static bool ChangesToRevisionsAllowed(this DocumentDatabase database)
+        {
+            var changesToRevisionsAllowed = database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
+            if (changesToRevisionsAllowed == null)
+                return false;
+            bool result;
+            if (bool.TryParse(changesToRevisionsAllowed, out result) == false)
+                return false;
+            return result;
+        }
 	}
 }

@@ -3,48 +3,25 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using Raven.Client.Document;
-using Raven.Database.Extensions;
-using Raven.Database.Server;
-using Xunit;
 using System.Linq;
+using Raven.Client.Document;
+using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class LinqOnUrls : RemoteClientTest, IDisposable
+	public class LinqOnUrls : RemoteClientTest
 	{
-		private readonly string path;
-		private readonly int port;
-
-		public LinqOnUrls()
-		{
-			port = 8079;
-			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
-		}
-
-
-		public override void Dispose()
-		{
-			IOExtensions.DeleteDirectory(path);
-			base.Dispose();
-		}
-
 		[Fact]
 		public void CanQueryUrlsValuesUsingLinq()
 		{
-			using (GetNewServer(port, path))
+			var port = 8079;
+			using (GetNewServer(port))
 			{
-				using (var documentStore = new DocumentStore { Url = "http://localhost:" + port })
+				using (var store = new DocumentStore { Url = "http://localhost:" + port }.Initialize())
+				using (var session = store.OpenSession())
 				{
-					documentStore.Initialize();
-
-					var documentSession = documentStore.OpenSession();
-
-					documentSession.Query<User>().Where(
-						x => x.Name == "http://www.idontexistinthecacheatall.com?test=xxx&gotcha=1")
-						.FirstOrDefault();
+// ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+					session.Query<User>().FirstOrDefault(x => x.Name == "http://www.idontexistinthecacheatall.com?test=xxx&gotcha=1");
 				}
 			}
 		}

@@ -49,6 +49,11 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
+    <ProjectReference Include="..\..\Raven.Abstractions\Raven.Abstractions.csproj">
+      <Name>Raven.Abstractions</Name>
+      <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <ProjectReference Include="..\..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
       <Name>Raven.Client.Lightweight</Name>
       <Project>{4e087ecb-e7ca-4891-ac3c-3c76702715b6}</Project>

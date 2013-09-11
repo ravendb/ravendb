@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Raven.Abstractions.Logging;
+using Raven.Database.Impl.DTC;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -27,19 +28,28 @@ namespace Raven.Database.Impl
 	{
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
-		private readonly IDictionary<string, JsonDocument> cache = new Dictionary<string, JsonDocument>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
-		private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly IDictionary<string, JsonDocument> cache = new Dictionary<string, JsonDocument>(StringComparer.OrdinalIgnoreCase);
+		private readonly HashSet<string> loadedIdsForRetrieval = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		private readonly HashSet<string> loadedIdsForFilter = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		private readonly IStorageActionsAccessor actions;
 		private readonly OrderedPartCollection<AbstractReadTrigger> triggers;
-		private readonly HashSet<string> itemsToInclude;
+		private readonly InFlightTransactionalState inFlightTransactionalState;
+		private readonly Dictionary<string, RavenJToken> queryInputs;
+	    private readonly HashSet<string> itemsToInclude;
+		private bool disableCache;
 
-		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers,
-			HashSet<string> itemsToInclude = null)
+	    public Etag Etag = Etag.Empty;
+
+		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers, 
+			InFlightTransactionalState inFlightTransactionalState,
+            Dictionary<string, RavenJToken> queryInputs = null,
+            HashSet<string> itemsToInclude = null)
 		{
 			this.actions = actions;
 			this.triggers = triggers;
-			this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
+			this.inFlightTransactionalState = inFlightTransactionalState;
+			this.queryInputs = queryInputs ?? new Dictionary<string, RavenJToken>();
+		    this.itemsToInclude = itemsToInclude ?? new HashSet<string>();
 		}
 
 		public JsonDocument RetrieveDocumentForQuery(IndexQueryResult queryResult, IndexDefinition indexDefinition, FieldsToFetch fieldsToFetch)
@@ -195,11 +205,22 @@ namespace Raven.Database.Impl
 			if (key == null)
 				return null;
 			JsonDocument doc;
-			if (cache.TryGetValue(key, out doc))
+			if (disableCache == false && cache.TryGetValue(key, out doc))
 				return doc;
 			doc = actions.Documents.DocumentByKey(key, null);
 			EnsureIdInMetadata(doc);
-			cache[key] = doc;
+			var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
+			if (nonAuthoritativeInformationBehavior != null)
+				doc = nonAuthoritativeInformationBehavior(doc);
+			if(disableCache == false)
+				cache[key] = doc;
+			if (cache.Count > 2048)
+			{
+				// we are probably doing a stream here, no point in trying to cache things, we might be
+				// going through the entire db here!
+				disableCache = true;
+				cache.Clear();
+			}
 			return doc;
 		}
 
@@ -240,7 +261,7 @@ namespace Raven.Database.Impl
 					case ReadVetoResult.ReadAllow.Deny:
 						return new T
 								{
-									Etag = Guid.Empty,
+									Etag = Etag.Empty,
 									LastModified = DateTime.MinValue,
 									NonAuthoritativeInformation = false,
 									Key = document.Key,
@@ -303,14 +324,21 @@ namespace Raven.Database.Impl
 		{
 			var document = GetDocumentWithCaching(id);
 			if (document == null)
-				return new DynamicNullObject();
+			{
+			    Etag = Etag.HashWith(Etag.Empty);
+			    return new DynamicNullObject();
+			}
+		    Etag = Etag.HashWith(document.Etag);
 			return new DynamicJsonObject(document.ToJson());
 		}
 
 		public dynamic Load(object maybeId)
 		{
 			if (maybeId == null || maybeId is DynamicNullObject)
-				return new DynamicNullObject();
+			{
+			    Etag = Etag.HashWith(Etag.Empty);
+			    return new DynamicNullObject();
+			}
 			var id = maybeId as string;
 			if (id != null)
 				return Load(id);
@@ -325,5 +353,7 @@ namespace Raven.Database.Impl
 			}
 			return new DynamicList(items.Select(x => (object)x).ToArray());
 		}
+
+        public Dictionary<string, RavenJToken> QueryInputs { get { return this.queryInputs; } } 
 	}
 }

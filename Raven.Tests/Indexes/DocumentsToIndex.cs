@@ -47,9 +47,9 @@ namespace Raven.Tests.Indexes
 					select new { doc.some };
 				"
 					   });
-			db.Put("1", Guid.Empty,
-			       RavenJObject.Parse(
-			       	@"{
+			db.Put("1", Etag.Empty,
+				   RavenJObject.Parse(
+					@"{
 				type: 'page', 
 				some: 'val', 
 				other: 'var', 
@@ -87,10 +87,10 @@ namespace Raven.Tests.Indexes
 					select new { doc.name };
 				"
 					   });
-			 db.Put("1", null,
-				   RavenJObject.Parse(
-					@"{ type: 'page', name: 'ayende' }"),
-				   new RavenJObject(), null);
+			db.Put("1", null,
+				  RavenJObject.Parse(
+				   @"{ type: 'page', name: 'ayende' }"),
+				  new RavenJObject(), null);
 
 			QueryResult docs;
 			do
@@ -139,7 +139,7 @@ select new{project_name = prj.name}
 			var document =
 				RavenJObject.Parse(
 					"{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven'}], '@metadata': { '@id': 1}}");
-			db.Put("1", Guid.Empty, document, new RavenJObject(), null);
+			db.Put("1", Etag.Empty, document, new RavenJObject(), null);
 
 			QueryResult docs;
 			do
@@ -173,7 +173,7 @@ select new{project_name = prj.name, project_num = prj.num}
 			var document =
 				RavenJObject.Parse(
 					"{'name':'ayende','email':'ayende@ayende.com','projects':[{'name':'raven', 'num': 5}, {'name':'crow', 'num': 6}], '@metadata': { '@id': 1}}");
-			db.Put("1", Guid.Empty, document, new RavenJObject(), null);
+			db.Put("1", Etag.Empty, document, new RavenJObject(), null);
 
 			QueryResult docs;
 			do
@@ -211,9 +211,9 @@ select new{project_name = prj.name, project_num = prj.num}
 	select new { doc.some };
 "
 					   });
-			db.Put("1", Guid.Empty,
-			       RavenJObject.Parse(
-			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
+			db.Put("1", Etag.Empty,
+				   RavenJObject.Parse(
+					"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
 				   new RavenJObject(), null);
 
 
@@ -253,9 +253,9 @@ select new{project_name = prj.name, project_num = prj.num}
 	select new { doc.other };
 "
 					   });
-			db.Put("1", Guid.Empty,
-			       RavenJObject.Parse(
-			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
+			db.Put("1", Etag.Empty,
+				   RavenJObject.Parse(
+					"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
 				   new RavenJObject(), null);
 
 
@@ -277,9 +277,9 @@ select new{project_name = prj.name, project_num = prj.num}
 		[Fact]
 		public void Can_read_values_from_index_of_documents_already_in_db()
 		{
-			db.Put("1", Guid.Empty,
-			       RavenJObject.Parse(
-			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
+			db.Put("1", Etag.Empty,
+				   RavenJObject.Parse(
+					"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
 				   new RavenJObject(), null);
 
 			db.PutIndex("pagesByTitle",
@@ -309,13 +309,13 @@ select new{project_name = prj.name, project_num = prj.num}
 		[Fact]
 		public void Can_read_values_from_indexes_of_documents_already_in_db_when_multiple_docs_exists()
 		{
-			db.Put(null, Guid.Empty,
-			       RavenJObject.Parse(
-			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
+			db.Put(null, Etag.Empty,
+				   RavenJObject.Parse(
+					"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
 				   new RavenJObject(), null);
-			db.Put(null, Guid.Empty,
-			       RavenJObject.Parse(
-			       	"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
+			db.Put(null, Etag.Empty,
+				   RavenJObject.Parse(
+					"{type: 'page', some: 'val', other: 'var', content: 'this is the content', title: 'hello world', size: 5}"),
 				   new RavenJObject(), null);
 
 			db.PutIndex("pagesByTitle",
@@ -351,10 +351,10 @@ select new{project_name = prj.name, project_num = prj.num}
 					from doc in docs 
 					select new { doc.Region };
 					",
-				Indexes = {{"Region", FieldIndexing.NotAnalyzed}}
+				Indexes = { { "Region", FieldIndexing.NotAnalyzed } }
 			});
 
-			db.Put("1", Guid.Empty, RavenJObject.Parse(
+			db.Put("1", Etag.Empty, RavenJObject.Parse(
 			@"{
 				Region: 'A', 
 			}"),

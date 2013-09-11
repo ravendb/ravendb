@@ -1,4 +1,6 @@
-﻿using Xunit;
+﻿using Raven.Database.Prefetching;
+using Raven.Json.Linq;
+using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Bugs
@@ -40,6 +42,46 @@ namespace Raven.Tests.Bugs
 						.ToList();
 					Assert.Equal(10, users.Count);
 				}
+			}
+		}
+
+		[Fact]
+		public void ShouldHandleUpdateWhenUpdatedDocsAreLoadedFromDisk()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DocumentDatabase.WorkContext.StopIndexing(); // stop indexing to be able manually manage the prefetcher
+				store.DocumentDatabase.WorkContext.Configuration.MaxNumberOfItemsToPreFetchForIndexing = 1;
+
+				var putResult1 = store.DocumentDatabase.Put("key/1", null, new RavenJObject(), new RavenJObject(), null);
+				var putResult2 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null);
+				var putResult3 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null); // update
+
+				var docs = store.DocumentDatabase.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty);
+
+				Assert.Equal(2, docs.Count);
+				Assert.Equal(putResult1.ETag, docs[0].Etag); // the document taken from memory
+
+				Assert.Equal(putResult3.ETag, docs[1].Etag); // the updated doc loaded from disk because we limited MaxNumberOfItemsToIndexInSingleBatch
+			}
+		}
+
+		[Fact]
+		public void ShouldHandleUpdateWhenPrefetchingDocsIsDisabled()
+		{
+			using (var store = NewDocumentStore())
+			{
+				store.DocumentDatabase.WorkContext.Configuration.DisableDocumentPreFetchingForIndexing = true;
+				store.DocumentDatabase.WorkContext.StopIndexing(); // stop indexing to be able manually manage the prefetcher
+
+				var putResult1 = store.DocumentDatabase.Put("key/1", null, new RavenJObject(), new RavenJObject(), null);
+				var putResult2 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null);
+				var putResult3 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null); // update
+
+				var docs = store.DocumentDatabase.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty);
+				Assert.Equal(2, docs.Count);
+				Assert.Equal(putResult1.ETag, docs[0].Etag);
+				Assert.Equal(putResult3.ETag, docs[1].Etag);
 			}
 		}
 	}

@@ -24,6 +24,9 @@ namespace Raven.Database.Server.Responders.Debugging
 		{
 			var cfg = RavenJObject.FromObject(Database.Configuration);
 			cfg["OAuthTokenKey"] = "<not shown>";
+		    var changesAllowed = Database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
+		    if (string.IsNullOrWhiteSpace(changesAllowed) == false)
+		        cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
 			context.WriteJson(cfg);
 		}
 	}

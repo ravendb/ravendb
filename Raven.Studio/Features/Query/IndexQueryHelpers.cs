@@ -10,13 +10,13 @@ namespace Raven.Studio.Features.Query
     {
         public static IndexQuery FromQueryString(string queryString)
         {
-            var fields = queryString.Split(new[] {'&'}, StringSplitOptions.RemoveEmptyEntries)
+			var fields = queryString.Split(new[] { '&' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(segment =>
                             {
-                                var parts = segment.Split(new[] {'='}, StringSplitOptions.RemoveEmptyEntries);
+								var parts = segment.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
                                 if (parts.Length == 1)
                                 {
-                                    return new {Key = parts[0], Value = string.Empty};
+									return new { Key = parts[0], Value = string.Empty };
                                 }
                                 else
                                 {
@@ -47,12 +47,13 @@ namespace Raven.Studio.Features.Query
             };
 
             double lat = fields.GetLat(), lng = fields.GetLng(), radius = fields.GetRadius();
-            SpatialUnits units = fields.GetRadiusUnits();
+            SpatialUnits? units = fields.GetRadiusUnits();
             if (lat != 0 || lng != 0 || radius != 0)
             {
                 return new SpatialIndexQuery(query)
                 {
-					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius, units),
+					QueryShape = SpatialIndexQuery.GetQueryShapeFromLatLon(lat, lng, radius),
+					RadiusUnitOverride = units,
                     SpatialRelation = SpatialRelation.Within, /* TODO */
 					SpatialFieldName = Constants.DefaultSpatialFieldName, /* TODO */
                 };
@@ -60,7 +61,7 @@ namespace Raven.Studio.Features.Query
             return query;
         }
 
-        public static int GetStart(this ILookup<string,string> fields)
+		public static int GetStart(this ILookup<string, string> fields)
         {
             int start;
             int.TryParse(fields["start"].FirstOrDefault(), out start);
@@ -108,18 +109,22 @@ namespace Raven.Studio.Features.Query
             return null;
         }
 
-        public static Guid? GetCutOffEtag(this ILookup<string, string> fields)
+		public static Etag GetCutOffEtag(this ILookup<string, string> fields)
         {
             var etagAsString = fields["cutOffEtag"].FirstOrDefault();
             if (etagAsString != null)
             {
                 etagAsString = Uri.UnescapeDataString(etagAsString);
 
-                Guid result;
-                if (Guid.TryParse(etagAsString, out result))
-                    return result;
+				try
+				{
+					return Etag.Parse(etagAsString);
+				}
+				catch (Exception)
+				{
                 return null;
             }
+			}
 
             return null;
         }
@@ -145,7 +150,7 @@ namespace Raven.Studio.Features.Query
             return radius;
         }
 
-        public static SpatialUnits GetRadiusUnits(this ILookup<string, string> fields)
+        public static SpatialUnits? GetRadiusUnits(this ILookup<string, string> fields)
         {
             var units = fields["units"].FirstOrDefault();
             SpatialUnits parsedUnit;
@@ -154,20 +159,20 @@ namespace Raven.Studio.Features.Query
                 return parsedUnit;
             }
 
-            return SpatialUnits.Kilometers;
-        }
-
-        public static Guid? GetEtagFromQueryString(this ILookup<string, string> fields)
-        {
-            var etagAsString = fields["etag"].FirstOrDefault();
-            if (etagAsString != null)
-            {
-                Guid result;
-                if (Guid.TryParse(etagAsString, out result))
-                    return result;
-                return null;
-            }
             return null;
-        }
-    }
+		}
+
+		public static Guid? GetEtagFromQueryString(this ILookup<string, string> fields)
+		{
+			var etagAsString = fields["etag"].FirstOrDefault();
+			if (etagAsString != null)
+			{
+				Guid result;
+				if (Guid.TryParse(etagAsString, out result))
+					return result;
+				return null;
+			}
+			return null;
+		}
+	}
 }

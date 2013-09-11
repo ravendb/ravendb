@@ -8,10 +8,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Security.Cryptography;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
 using Raven.Client.Document;
+#if NETFX_CORE || SILVERLIGHT
+using Raven.Client.Silverlight.MissingFromSilverlight;
+using Raven.Client.WinRT.MissingFromWinRT;
+#else
+using System.Security.Cryptography;
+
+
+#endif
 
 namespace Raven.Client.Shard
 {
@@ -32,7 +39,7 @@ namespace Raven.Client.Shard
 			if (shards.Count == 0)
 				throw new ArgumentException("Shards collection must have at least one item", "shards");
 
-			this.shards = new Dictionary<string, IDocumentStore>(shards, StringComparer.InvariantCultureIgnoreCase);
+			this.shards = new Dictionary<string, IDocumentStore>(shards, StringComparer.OrdinalIgnoreCase);
 
 
 			Conventions = shards.First().Value.Conventions.Clone();
@@ -57,14 +64,16 @@ namespace Raven.Client.Shard
 		public QueryResult DefaultMergeQueryResults(IndexQuery query, IList<QueryResult> queryResults)
 		{
 			var buffer = queryResults.SelectMany(x => x.IndexEtag.ToByteArray()).ToArray();
-			Guid indexEtag;
-#if !SILVERLIGHT
+			Etag indexEtag;
+#if SILVERLIGHT
+			indexEtag = new Etag(Convert.ToBase64String(MD5Core.GetHash(buffer)));
+#elif  NETFX_CORE
+			indexEtag = new Etag(Convert.ToBase64String(MD5.HashCore(buffer)));			
+#else
 			using (var md5 = MD5.Create())
 			{
-				indexEtag = new Guid(md5.ComputeHash(buffer));
+				indexEtag = Etag.Parse(md5.ComputeHash(buffer));
 			}
-#else
-			indexEtag = new Guid(MD5Core.GetHash(buffer));
 #endif
 			var results = queryResults.SelectMany(x => x.Results);
 
@@ -152,7 +161,7 @@ namespace Raven.Client.Shard
 		{
 			unchecked
 			{
-				return text.Aggregate(11, (current, c) => current * 397 + c);
+				return text.ToCharArray().Aggregate(11, (current, c) => current * 397 + c);
 			}
 		}
 
@@ -193,5 +202,4 @@ namespace Raven.Client.Shard
 		}
 	}
 }
-
 #endif

@@ -46,7 +46,7 @@ namespace Raven.Database.Bundles.MoreLikeThis
 			}
 
 			var result = Database.ExecuteMoreLikeThisQuery(parameters, GetRequestTransaction(context), context.GetPageSize(Database.Configuration.MaxPageSize), context.Request.QueryString.GetValues("include"));
-			
+
 			if (context.MatchEtag(result.Etag))
 			{
 				context.SetStatusToNotModified();
@@ -64,10 +64,13 @@ namespace Raven.Database.Bundles.MoreLikeThis
 				IndexName = query.Get("index"),
 				Fields = query.GetValues("fields"),
 				Boost = query.Get("boost").ToNullableBool(),
+				BoostFactor = query.Get("boostFactor").ToNullableFloat(),
 				MaximumNumberOfTokensParsed = query.Get("maxNumTokens").ToNullableInt(),
 				MaximumQueryTerms = query.Get("maxQueryTerms").ToNullableInt(),
 				MaximumWordLength = query.Get("maxWordLen").ToNullableInt(),
 				MinimumDocumentFrequency = query.Get("minDocFreq").ToNullableInt(),
+				MaximumDocumentFrequency = query.Get("maxDocFreq").ToNullableInt(),
+				MaximumDocumentFrequencyPercentage = query.Get("maxDocFreqPct").ToNullableInt(),
 				MinimumTermFrequency = query.Get("minTermFreq").ToNullableInt(),
 				MinimumWordLength = query.Get("minWordLen").ToNullableInt(),
 				StopWordsDocumentId = query.Get("stopWords"),
@@ -105,6 +108,13 @@ namespace Raven.Database.Bundles.MoreLikeThis
 		{
 			bool ret;
 			if (value == null || !bool.TryParse(value, out ret)) return null;
+			return ret;
+		}
+
+		public static float? ToNullableFloat(this string value)
+		{
+			float ret;
+			if (value == null || !float.TryParse(value, out ret)) return null;
 			return ret;
 		}
 	}

@@ -30,6 +30,12 @@ namespace Raven.Studio.Controls.Editors
         {
             IsTextDataBindingEnabled = true;
             IsLineNumberMarginVisible = false;
+            Unloaded += HandleUnloaded;
+        }
+
+        private void HandleUnloaded(object sender, RoutedEventArgs e)
+        {
+            IntelliPrompt.CloseAllSessions();
         }
     }
 }

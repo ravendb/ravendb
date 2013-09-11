@@ -21,6 +21,8 @@ namespace Raven.Server
 
 			ServiceName = SERVICE_NAME;
 
+		    this.serviceInstaller1.Description = "2nd generation document database from Hibernating Rhinos";
+
 			this.serviceInstaller1.StartType = ServiceStartMode.Automatic;
 
 			this.serviceProcessInstaller1.Account = ServiceAccount.LocalSystem;

@@ -16,7 +16,7 @@ namespace Raven.Abstractions.Data
     {
         private static readonly Regex FieldOptionMatch =
             new Regex(@"^(?<Field>\w+):(?<FragmentLength>\d+),(?<FragmentCount>\d+)(,(?<FragmentsField>\w+))?$",
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
                 RegexOptions.Compiled
 #else
                 RegexOptions.None

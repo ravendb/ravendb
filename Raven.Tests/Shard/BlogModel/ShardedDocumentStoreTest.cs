@@ -55,10 +55,9 @@ namespace Raven.Tests.Shard.BlogModel
 			using (var shardedDocumentStore = GetDocumentStore().Initialize())
 			using (var session = (ShardedDocumentSession)shardedDocumentStore.OpenSession())
 			{
-				var txId = Guid.NewGuid();
+				var txId = Guid.NewGuid().ToString();
 				Assert.Throws<NotSupportedException>(() => session.Commit(txId));
 				Assert.Throws<NotSupportedException>(() => session.Rollback(txId));
-				Assert.Throws<NotSupportedException>(() => session.PromoteTransaction(txId));
 			}
 		}
 	}

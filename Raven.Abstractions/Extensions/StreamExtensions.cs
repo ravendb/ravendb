@@ -7,11 +7,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Abstractions.Extensions
 {
-	using Raven.Abstractions.Logging;
-
 	/// <summary>
 	/// Extensions for working with streams
 	/// </summary>
@@ -42,6 +42,40 @@ namespace Raven.Abstractions.Extensions
 			var currentOffset = 0;
 			int read;
 			while ((read = stream.Read(buffer, currentOffset, buffer.Length - currentOffset)) != 0)
+			{
+				currentOffset += read;
+				if (currentOffset == buffer.Length)
+				{
+					list.Add(buffer);
+					buffer = new byte[defaultBufferSize];
+					currentOffset = 0;
+				}
+			}
+			var totalSize = list.Sum(x => x.Length) + currentOffset;
+			var result = new byte[totalSize];
+			var resultOffset = 0;
+			foreach (var partial in list)
+			{
+				Buffer.BlockCopy(partial, 0, result, resultOffset, partial.Length);
+				resultOffset += partial.Length;
+			}
+			Buffer.BlockCopy(buffer, 0, result, resultOffset, currentOffset);
+			return result;
+		}
+
+		/// <summary>
+		/// Asynchronously reads the entire request buffer to memory and return it as a byte array.
+		/// </summary>
+		/// <param name="stream">The stream to read.</param>
+		/// <returns>A task that, when completed, contains the returned byte array.</returns>
+		public static async Task<byte[]> ReadDataAsync(this Stream stream)
+		{
+			var list = new List<byte[]>();
+			const int defaultBufferSize = 1024 * 16;
+			var buffer = new byte[defaultBufferSize];
+			var currentOffset = 0;
+			int read;
+			while ((read = await stream.ReadAsync(buffer, currentOffset, buffer.Length - currentOffset)) != 0)
 			{
 				currentOffset += read;
 				if (currentOffset == buffer.Length)

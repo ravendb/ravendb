@@ -24,12 +24,17 @@
 #endregion
 
 using System;
+using System.ComponentModel;
 
 namespace Raven.Imports.Newtonsoft.Json
 {
   /// <summary>
   /// Specifies default value handling options for the <see cref="JsonSerializer"/>.
   /// </summary>
+  /// <example>
+  ///   <code lang="cs" source="..\Src\Newtonsoft.Json.Tests\Documentation\SerializationTests.cs" region="ReducingSerializedJsonSizeDefaultValueHandlingObject" title="DefaultValueHandling Class" />
+  ///   <code lang="cs" source="..\Src\Newtonsoft.Json.Tests\Documentation\SerializationTests.cs" region="ReducingSerializedJsonSizeDefaultValueHandlingExample" title="DefaultValueHandling Ignore Example" />
+  /// </example>
   [Flags]
   public enum DefaultValueHandling
   {
@@ -40,7 +45,10 @@ namespace Raven.Imports.Newtonsoft.Json
     Include = 0,
     /// <summary>
     /// Ignore members where the member value is the same as the member's default value when serializing objects
-    /// so that is is not written to JSON, and ignores setting members when the JSON value equals the member's default value.
+    /// so that is is not written to JSON.
+    /// This option will ignore all default values (e.g. <c>null</c> for objects and nullable typesl; <c>0</c> for integers,
+    /// decimals and floating point numbers; and <c>false</c> for booleans). The default value ignored can be changed by
+    /// placing the <see cref="DefaultValueAttribute"/> on the property.
     /// </summary>
     Ignore = 1,
     /// <summary>

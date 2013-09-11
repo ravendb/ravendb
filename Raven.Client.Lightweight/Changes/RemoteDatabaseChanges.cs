@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -12,6 +13,8 @@ using Raven.Client.Document;
 using Raven.Client.Extensions;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+#elif NETFX_CORE
+using Raven.Client.WinRT.Connection;
 #endif
 using Raven.Database.Util;
 using Raven.Json.Linq;
@@ -24,21 +27,32 @@ namespace Raven.Client.Changes
         private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
         private readonly ConcurrentSet<string> watchedIndexes = new ConcurrentSet<string>();
+        private readonly ConcurrentSet<string> watchedBulkInserts = new ConcurrentSet<string>();
         private bool watchAllDocs;
         private bool watchAllIndexes;
-
+        private Timer clientSideHeartbeatTimer;
         private readonly string url;
         private readonly ICredentials credentials;
         private readonly HttpJsonRequestFactory jsonRequestFactory;
         private readonly DocumentConvention conventions;
         private readonly ReplicationInformer replicationInformer;
         private readonly Action onDispose;
-        private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
+        private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.OrdinalIgnoreCase);
+        private IDisposable connection;
+        private DateTime lastHeartbeat;
 
         private static int connectionCounter;
         private readonly string id;
 
-        public RemoteDatabaseChanges(string url, ICredentials credentials, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions, ReplicationInformer replicationInformer, Action onDispose)
+        public RemoteDatabaseChanges(
+            string url,
+            ICredentials credentials,
+            HttpJsonRequestFactory jsonRequestFactory,
+            DocumentConvention conventions,
+            ReplicationInformer replicationInformer,
+            Action onDispose,
+            Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
         {
             ConnectionStatusChanged = LogOnConnectionStatusChanged;
             id = Interlocked.Increment(ref connectionCounter) + "/" +
@@ -49,6 +63,7 @@ namespace Raven.Client.Changes
             this.conventions = conventions;
             this.replicationInformer = replicationInformer;
             this.onDispose = onDispose;
+            this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
             Task = EstablishConnection()
                 .ObserveException()
                 .ContinueWith(task =>
@@ -58,66 +73,104 @@ namespace Raven.Client.Changes
                 });
         }
 
-        private Task EstablishConnection()
+        private async Task EstablishConnection()
         {
             if (disposed)
-                return new CompletedTask();
+                return;
 
-            var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, conventions)
-                                    {
-                                        AvoidCachingRequest = true
-                                    };
+            if (clientSideHeartbeatTimer != null)
+            {
+                clientSideHeartbeatTimer.Dispose();
+                clientSideHeartbeatTimer = null;
+            }
+
+            var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials,
+                                                                conventions)
+            {
+                AvoidCachingRequest = true
+            };
 
             logger.Info("Trying to connect to {0} with id {1}", requestParams.Url, id);
+            bool retry = false;
+            IObservable<string> serverEvents = null;
+            try
+            {
+                serverEvents = await jsonRequestFactory.CreateHttpJsonRequest(requestParams).ServerPullAsync();
+            }
+            catch (Exception e)
+            {
+                logger.WarnException("Could not connect to server: " + url + " and id " + id, e);
+                Connected = false;
+                ConnectionStatusChanged(this, EventArgs.Empty);
 
-            return jsonRequestFactory.CreateHttpJsonRequest(requestParams)
-                .ServerPullAsync()
-                .ContinueWith(task =>
-                                {
-                                    if (disposed)
-                                        throw new ObjectDisposedException("RemoteDatabaseChanges");
-                                    if (task.IsFaulted)
-                                    {
-                                        logger.WarnException("Could not connect to server: " + url + " and id " + id, task.Exception);
-                                        Connected = false;
-                                        ConnectionStatusChanged(this, EventArgs.Empty);
+                if (disposed)
+                    throw;
 
-                                        if (disposed)
-                                            return task;
+                bool timeout;
+                if (replicationInformer.IsServerDown(e, out timeout) == false)
+                    throw;
 
-                                        if (replicationInformer.IsServerDown(task.Exception) == false)
-                                            return task;
 
-                                        if (replicationInformer.IsHttpStatus(task.Exception,
-                                                HttpStatusCode.NotFound,
-                                                HttpStatusCode.Forbidden))
-                                            return task;
+                if (replicationInformer.IsHttpStatus(e, HttpStatusCode.NotFound, HttpStatusCode.Forbidden))
+                    return;
 
-                                        logger.Warn("Failed to connect to {0} with id {1}, will try again in 15 seconds", url, id);
-                                        return Time.Delay(TimeSpan.FromSeconds(15))
-                                            .ContinueWith(_ => EstablishConnection())
-                                            .Unwrap();
-                                    }
+                logger.Warn("Failed to connect to {0} with id {1}, will try again in 15 seconds", url, id);
+                retry = true;
+            }
 
-                                    Connected = true;
-                                    ConnectionStatusChanged(this, EventArgs.Empty);
-                                    connection = (IDisposable)task.Result;
-                                    task.Result.Subscribe(this);
+            if (retry)
+            {
+                await Time.Delay(TimeSpan.FromSeconds(15));
+                await EstablishConnection();
+                return;
+            }
+            if (disposed)
+            {
+                Connected = false;
+                ConnectionStatusChanged(this, EventArgs.Empty);
+                throw new ObjectDisposedException("RemoteDatabaseChanges");
+            }
 
-                                    Task prev = watchAllDocs ? Send("watch-docs", null) : new CompletedTask();
+            Connected = true;
+            ConnectionStatusChanged(this, EventArgs.Empty);
+            connection = (IDisposable)serverEvents;
+            serverEvents.Subscribe(this);
+            clientSideHeartbeatTimer = new Timer(ClientSideHeartbeat, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
 
-                                    if (watchAllIndexes)
-                                        prev = prev.ContinueWith(_ => Send("watch-indexes", null));
+            if (watchAllDocs)
+                await Send("watch-docs", null);
 
-                                    prev = watchedDocs.Aggregate(prev, (cur, docId) => cur.ContinueWith(task1 => Send("watch-doc", docId)));
+            if (watchAllIndexes)
+                await Send("watch-indexes", null);
 
-                                    prev = watchedPrefixes.Aggregate(prev, (cur, prefix) => cur.ContinueWith(task1 => Send("watch-prefix", prefix)));
+            foreach (var watchedDoc in watchedDocs)
+            {
+                await Send("watch-doc", watchedDoc);
+            }
 
-                                    prev = watchedIndexes.Aggregate(prev, (cur, index) => cur.ContinueWith(task1 => Send("watch-indexes", index)));
+            foreach (var watchedPrefix in watchedPrefixes)
+            {
+                await Send("watch-prefix", watchedPrefix);
+            }
+            foreach (var watchedIndex in watchedIndexes)
+            {
+                await Send("watch-indexes", watchedIndex);
+            }
 
-                                    return prev;
-                                })
-                .Unwrap();
+            foreach (var watchedBulkInsert in watchedBulkInserts)
+            {
+                await Send("watch-bulk-operation", watchedBulkInsert);
+            }
+
+        }
+
+        private void ClientSideHeartbeat(object _)
+        {
+            TimeSpan elapsedTimeSinceHeartbeat = SystemTime.UtcNow - lastHeartbeat;
+            if (elapsedTimeSinceHeartbeat.TotalSeconds < 45)
+                return;
+            OnError(new TimeoutException("Over 45 seconds have passed since we got a server heartbeat, even though we should get one every 10 seconds or so.\r\n" +
+                                         "This connection is now presumed dead, and will attempt reconnection"));
         }
 
         public bool Connected { get; private set; }
@@ -162,7 +215,7 @@ namespace Raven.Client.Changes
             counter.Inc();
             var taskedObservable = new TaskedObservable<IndexChangeNotification>(
                 counter,
-                notification => string.Equals(notification.Name, indexName, StringComparison.InvariantCultureIgnoreCase));
+                notification => string.Equals(notification.Name, indexName, StringComparison.OrdinalIgnoreCase));
 
             counter.OnIndexChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
@@ -196,7 +249,10 @@ namespace Raven.Client.Changes
 
                     sendUrl = sendUrl.NoCache();
 
-                    var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions);
+                    var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions)
+                    {
+                        AvoidCachingRequest = true
+                    };
                     var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(requestParams);
                     return lastSendTask =
                         httpJsonRequest.ExecuteRequestAsync()
@@ -231,7 +287,7 @@ namespace Raven.Client.Changes
             });
             var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
                 counter,
-                notification => string.Equals(notification.Id, docId, StringComparison.InvariantCultureIgnoreCase));
+                notification => string.Equals(notification.Id, docId, StringComparison.OrdinalIgnoreCase));
 
             counter.OnDocumentChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
@@ -262,6 +318,38 @@ namespace Raven.Client.Changes
                 notification => true);
 
             counter.OnDocumentChangeNotification += taskedObservable.Send;
+            counter.OnError += taskedObservable.Error;
+
+            return taskedObservable;
+        }
+
+        public IObservableWithTask<BulkInsertChangeNotification> ForBulkInsert(Guid operationId)
+        {
+            var id = operationId.ToString();
+
+            var counter = counters.GetOrAdd("bulk-operations/" + id, s =>
+            {
+                var documentSubscriptionTask = AfterConnection(() =>
+                {
+                    watchedBulkInserts.TryAdd(id);
+                    return Send("watch-bulk-operation", id);
+                });
+
+                return new LocalConnectionState(
+                    () =>
+                    {
+                        watchedBulkInserts.TryRemove(id);
+                        Send("unwatch-bulk-operation", id);
+                        counters.Remove("bulk-operations/" + operationId);
+                    },
+                    documentSubscriptionTask);
+            });
+
+            var taskedObservable = new TaskedObservable<BulkInsertChangeNotification>(counter,
+                                                                                      notification =>
+                                                                                      notification.OperationId == operationId);
+
+            counter.OnBulkInsertChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
 
             return taskedObservable;
@@ -317,12 +405,49 @@ namespace Raven.Client.Changes
             });
             var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
                 counter,
-                notification => notification.Id.StartsWith(docIdPrefix, StringComparison.InvariantCultureIgnoreCase));
+                notification => notification.Id != null && notification.Id.StartsWith(docIdPrefix, StringComparison.OrdinalIgnoreCase));
 
             counter.OnDocumentChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
 
             return taskedObservable;
+        }
+
+        public IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts()
+        {
+            var counter = counters.GetOrAdd("all-replication-conflicts", s =>
+            {
+                var indexSubscriptionTask = AfterConnection(() =>
+                {
+                    watchAllIndexes = true;
+                    return Send("watch-replication-conflicts", null);
+                });
+
+                return new LocalConnectionState(
+                    () =>
+                    {
+                        watchAllIndexes = false;
+                        Send("unwatch-replication-conflicts", null);
+                        counters.Remove("all-replication-conflicts");
+                    },
+                    indexSubscriptionTask);
+            });
+            var taskedObservable = new TaskedObservable<ReplicationConflictNotification>(
+                counter,
+                notification => true);
+
+            counter.OnReplicationConflictNotification += taskedObservable.Send;
+            counter.OnError += taskedObservable.Error;
+
+            return taskedObservable;
+        }
+
+        public void WaitForAllPendingSubscriptions()
+        {
+            foreach (var kvp in counters)
+            {
+                kvp.Value.Task.Wait();
+            }
         }
 
 
@@ -335,7 +460,6 @@ namespace Raven.Client.Changes
         }
 
         private volatile bool disposed;
-        private IDisposable connection;
 
         public Task DisposeAsync()
         {
@@ -344,12 +468,17 @@ namespace Raven.Client.Changes
             disposed = true;
             onDispose();
 
+            if (clientSideHeartbeatTimer != null)
+                clientSideHeartbeatTimer.Dispose();
+            clientSideHeartbeatTimer = null;
+
             return Send("disconnect", null).
                 ContinueWith(_ =>
                                 {
                                     try
                                     {
-                                        connection.Dispose();
+                                        if (connection != null)
+                                            connection.Dispose();
                                     }
                                     catch (Exception e)
                                     {
@@ -361,6 +490,8 @@ namespace Raven.Client.Changes
 
         public void OnNext(string dataFromConnection)
         {
+            lastHeartbeat = SystemTime.UtcNow;
+
             var ravenJObject = RavenJObject.Parse(dataFromConnection);
             var value = ravenJObject.Value<RavenJObject>("Value");
             var type = ravenJObject.Value<string>("Type");
@@ -377,12 +508,50 @@ namespace Raven.Client.Changes
                     }
                     break;
 
+                case "BulkInsertChangeNotification":
+                    var bulkInsertChangeNotification = value.JsonDeserialization<BulkInsertChangeNotification>();
+                    foreach (var counter in counters)
+                    {
+                        counter.Value.Send(bulkInsertChangeNotification);
+                    }
+                    break;
+
                 case "IndexChangeNotification":
                     var indexChangeNotification = value.JsonDeserialization<IndexChangeNotification>();
                     foreach (var counter in counters)
                     {
                         counter.Value.Send(indexChangeNotification);
                     }
+                    break;
+                case "ReplicationConflictNotification":
+                    var replicationConflictNotification = value.JsonDeserialization<ReplicationConflictNotification>();
+                    foreach (var counter in counters)
+                    {
+                        counter.Value.Send(replicationConflictNotification);
+                    }
+
+                    if (replicationConflictNotification.ItemType == ReplicationConflictTypes.DocumentReplicationConflict)
+                    {
+                        tryResolveConflictByUsingRegisteredConflictListenersAsync(replicationConflictNotification.Id,
+                                                                             replicationConflictNotification.Etag,
+                                                                             replicationConflictNotification.Conflicts, null)
+                            .ContinueWith(t =>
+                            {
+                                t.AssertNotFailed();
+
+                                if (t.Result)
+                                {
+                                    logger.Debug("Document replication conflict for {0} was resolved by one of the registered conflict listeners",
+                                                 replicationConflictNotification.Id);
+                                }
+                            });
+                    }
+
+                    break;
+                case "Disconnect":
+                    if (connection != null)
+                        connection.Dispose();
+                    RenewConnection();
                     break;
                 case "Initialized":
                 case "Heartbeat":
@@ -396,19 +565,26 @@ namespace Raven.Client.Changes
         {
             logger.ErrorException("Got error from server connection for " + url + " on id " + id, error);
 
-            EstablishConnection()
-                .ObserveException()
-                .ContinueWith(task =>
-                                {
-                                    if (task.IsFaulted == false)
-                                        return;
+            RenewConnection();
+        }
 
-                                    foreach (var keyValuePair in counters)
-                                    {
-                                        keyValuePair.Value.Error(task.Exception);
-                                    }
-                                    counters.Clear();
-                                });
+        private void RenewConnection()
+        {
+            Time.Delay(TimeSpan.FromSeconds(15))
+               .ContinueWith(_ => EstablishConnection())
+               .Unwrap()
+               .ObserveException()
+               .ContinueWith(task =>
+               {
+                   if (task.IsFaulted == false)
+                       return;
+
+                   foreach (var keyValuePair in counters)
+                   {
+                       keyValuePair.Value.Error(task.Exception);
+                   }
+                   counters.Clear();
+               });
         }
 
         public void OnCompleted()

@@ -198,6 +198,8 @@ namespace Raven.Json.Linq
 			{
 				foreach (var item in parentSnapshot)
 				{
+					if (item.Key == null)
+						continue;
 					if (LocalChanges.ContainsKey(item.Key))
 						continue;
 					yield return item;

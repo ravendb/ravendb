@@ -47,7 +47,7 @@ using Raven.Imports.Newtonsoft.Json.Serialization;
 namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
 #if NETFX_CORE || PORTABLE
-  internal enum MemberTypes
+	public enum MemberTypes
   {
     Property,
     Field,
@@ -56,7 +56,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
     Other
   }
 
-  internal class CustomAttributeProvider
+	public class CustomAttributeProvider
   {
     private readonly object _underlyingObject;
 
@@ -95,7 +95,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
   }
 
   [Flags]
-  internal enum BindingFlags
+  public enum BindingFlags
   {
     Default = 0,
     IgnoreCase = 1,
@@ -120,7 +120,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
   }
 #endif
 
-  internal static class ReflectionUtils
+	public static class ReflectionUtils
   {
     public static readonly Type[] EmptyTypes;
 
@@ -170,7 +170,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
     public static string GetTypeName(Type t, FormatterAssemblyStyle assemblyFormat, SerializationBinder binder)
     {
       string fullyQualifiedTypeName;
-#if !(NET20 || NET35)
+#if !(NET20 || NET35 || MONO)
       if (binder != null)
       {
         string assemblyName, typeName;
@@ -657,23 +657,26 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
       // update: I think this is fixed in .NET 3.5 SP1 - leave this in for now...
       List<MemberInfo> distinctMembers = new List<MemberInfo>(targetMembers.Count);
 
-      var groupedMembers = targetMembers.GroupBy(m => m.Name).Select(g => new { Count = g.Count(), Members = g.Cast<MemberInfo>() });
-      foreach (var groupedMember in groupedMembers)
+      foreach (var groupedMember in targetMembers.GroupBy(m => m.Name))
       {
-        if (groupedMember.Count == 1)
+        int count = groupedMember.Count();
+        IList<MemberInfo> members = groupedMember.ToList();
+
+        if (count == 1)
         {
-          distinctMembers.Add(groupedMember.Members.First());
+          distinctMembers.Add(members.First());
         }
         else
         {
-          var members = groupedMember.Members.Where(m => !IsOverridenGenericMember(m, bindingAttr) || m.Name == "Item");
+          var resolvedMembers = members.Where(m => !IsOverridenGenericMember(m, bindingAttr) || m.Name == "Item");
 
-          distinctMembers.AddRange(members);
+          distinctMembers.AddRange(resolvedMembers);
         }
       }
 
       return distinctMembers;
     }
+
 
     private static bool IsOverridenGenericMember(MemberInfo memberInfo, BindingFlags bindingAttr)
     {
@@ -706,7 +709,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
     {
       T[] attributes = GetAttributes<T>(attributeProvider, inherit);
 
-      return attributes.SingleOrDefault();
+      return (attributes != null) ? attributes.SingleOrDefault() : null;
     }
 
 #if !(NETFX_CORE)
@@ -1011,6 +1014,51 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
         );
 
       return isMethodOverriden;
+    }
+
+    public static object GetDefaultValue(Type type)
+    {
+      if (!type.IsValueType())
+        return null;
+
+      switch (ConvertUtils.GetTypeCode(type))
+      {
+        case TypeCode.Boolean:
+          return false;
+        case TypeCode.Char:
+        case TypeCode.SByte:
+        case TypeCode.Byte:
+        case TypeCode.Int16:
+        case TypeCode.UInt16:
+        case TypeCode.Int32:
+        case TypeCode.UInt32:
+          return 0;
+        case TypeCode.Int64:
+        case TypeCode.UInt64:
+          return 0L;
+        case TypeCode.Single:
+          return 0f;
+        case TypeCode.Double:
+          return 0.0;
+        case TypeCode.Decimal:
+          return 0m;
+        case TypeCode.DateTime:
+          return new DateTime();
+      }
+
+      if (type == typeof(Guid))
+        return new Guid();
+
+#if !NET20
+      if (type == typeof(DateTimeOffset))
+        return new DateTimeOffset();
+#endif
+
+      if (IsNullable(type))
+        return null;
+
+      // possibly use IL initobj for perf here?
+      return Activator.CreateInstance(type);
     }
   }
 }

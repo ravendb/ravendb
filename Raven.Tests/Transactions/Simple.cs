@@ -8,8 +8,6 @@ using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Database;
-using Raven.Database.Config;
-using Raven.Tests.Storage;
 using Xunit;
 
 namespace Raven.Tests.Transactions
@@ -34,9 +32,10 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void PutNewDocInTxCommitAndThenGetIt()
 		{
-			var transactionInformation = new TransactionInformation{Id = Guid.NewGuid(),Timeout = TimeSpan.FromMinutes(1)};
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
+			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 
 			Assert.NotNull(db.Get("ayende", null));
@@ -45,7 +44,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void PutNewDocInTxAndThenGetItBeforeCommitReturnsNull()
 		{
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
 			Assert.True(db.Get("ayende", null).Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
@@ -55,7 +54,7 @@ namespace Raven.Tests.Transactions
 		[Fact]
 		public void PutNewDocInTxAndThenGetItBeforeCommitInSameTransactionReturnsNonNull()
 		{
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
 			Assert.NotNull(db.Get("ayende", transactionInformation));
@@ -65,9 +64,10 @@ namespace Raven.Tests.Transactions
 		public void UpdateDocInTxCommitAndThenGetIt()
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
+			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 
 			Assert.NotNull(db.Get("ayende", null));
@@ -79,7 +79,7 @@ namespace Raven.Tests.Transactions
 		public void UpdateDocInTxAndThenGetItBeforeCommit()
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
 			Assert.NotNull(db.Get("ayende", null));
@@ -90,7 +90,7 @@ namespace Raven.Tests.Transactions
 		public void UpdateDocInTxAndThenGetItBeforeCommitInSameTx()
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien'}"), new RavenJObject(), transactionInformation);
 
 			Assert.NotNull(db.Get("ayende", transactionInformation));
@@ -102,13 +102,15 @@ namespace Raven.Tests.Transactions
 		public void SeveralUpdatesInTheSameTransaction()
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'oren'}"), new RavenJObject(), null);
-			var transactionInformation = new TransactionInformation { Id = Guid.NewGuid(), Timeout = TimeSpan.FromMinutes(1) };
+            var transactionInformation = new TransactionInformation { Id = Guid.NewGuid().ToString(), Timeout = TimeSpan.FromMinutes(1) };
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien1'}"), new RavenJObject(), transactionInformation);
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien2'}"), new RavenJObject(), transactionInformation);
 			db.Put("ayende", null, RavenJObject.Parse("{ayende:'rahien3'}"), new RavenJObject(), transactionInformation);
 
 			Assert.Equal("oren", db.Get("ayende", null).ToJson()["ayende"].Value<string>());
 			Assert.Equal("rahien3", db.Get("ayende", transactionInformation).ToJson()["ayende"].Value<string>());
+
+			db.PrepareTransaction(transactionInformation.Id);
 			db.Commit(transactionInformation.Id);
 
 			Assert.Equal("rahien3", db.Get("ayende", null).ToJson()["ayende"].Value<string>());

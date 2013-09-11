@@ -1,21 +1,25 @@
-﻿using System;
-#if !SILVERLIGHT
-using System.Collections.Specialized;
-#else
+﻿#if !NETFX_CORE && !SILVERLIGHT
+using System;
+#if SILVERLIGHT || NETFX_CORE
 using Raven.Client.Silverlight.MissingFromSilverlight;
+#else
+using System.Collections.Specialized;
 #endif
 using System.Net;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+using System.Linq;
 
 namespace Raven.Client.Connection
 {
-	using Raven.Abstractions.Data;
-
 	///<summary>
 	/// Create the HTTP Json Requests to the RavenDB Server
 	/// and manages the http cache
@@ -43,7 +47,7 @@ namespace Raven.Client.Connection
 		}
 
 		private readonly int maxNumberOfCachedRequests;
-		private SimpleCache<CachedRequest> cache;
+		private SimpleCache cache;
 
 		internal int NumOfCachedRequests;
 
@@ -54,6 +58,7 @@ namespace Raven.Client.Connection
 		{
 			if (disposed)
 				throw new ObjectDisposedException(typeof(HttpJsonRequestFactory).FullName);
+
 			var request = new HttpJsonRequest(createHttpJsonRequestParams, this)
 			{
 				ShouldCacheRequest =
@@ -83,8 +88,10 @@ namespace Raven.Client.Connection
 				if(duration.TotalSeconds > 0)
 					setHeader("Cache-Control", "max-age=" + duration.TotalSeconds);
 
-				if ((DateTimeOffset.Now - cachedRequest.Time) < duration) // can serve directly from local cache
+				if (cachedRequest.ForceServerCheck == false && (SystemTime.UtcNow- cachedRequest.Time) < duration) // can serve directly from local cache
 					skipServerCheck = true;
+
+				cachedRequest.ForceServerCheck = false;
 			}
 
 			setHeader("If-None-Match", cachedRequest.Headers["ETag"]);
@@ -101,11 +108,28 @@ namespace Raven.Client.Connection
 			if (cache != null)
 				cache.Dispose();
 
-			cache = new SimpleCache<CachedRequest>(maxNumberOfCachedRequests);
+			cache = new SimpleCache(maxNumberOfCachedRequests);
 			NumOfCachedRequests = 0;
 		}
 
+		public void ExpireItemsFromCache(string db)
+		{
+			cache.ForceServerCheckOfCachedItemsForDatabase(db);
+			NumberOfCacheResets++;
+		}
 
+		/// <summary>
+		/// The number of cache evictions forced by
+		/// tracking changes if aggressive cache was enabled
+		/// </summary>
+		public int NumberOfCacheResets
+		{
+			get { return numberOfCacheResets; }
+			private set
+			{
+				numberOfCacheResets = value;
+			}
+		}
 
 		/// <summary>
 		/// The number of requests that we got 304 for 
@@ -114,6 +138,14 @@ namespace Raven.Client.Connection
 		public int NumberOfCachedRequests
 		{
 			get { return NumOfCachedRequests; }
+		}
+
+		/// <summary>
+		/// The number of currently held requests in the cache
+		/// </summary>
+		public int CurrentCacheSize
+		{
+			get { return cache.CurrentSize; }
 		}
 
 		/// <summary>
@@ -163,6 +195,7 @@ namespace Raven.Client.Connection
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
 
 		private volatile bool disposed;
+		private volatile int numberOfCacheResets;
 
 		internal RavenJToken GetCachedResponse(HttpJsonRequest httpJsonRequest, NameValueCollection additionalHeaders = null)
 		{
@@ -192,11 +225,13 @@ namespace Raven.Client.Connection
 
 			var clone = data.CloneToken();
 			clone.EnsureCannotBeChangeAndEnableSnapshotting();
+
 			cache.Set(url, new CachedRequest
 			{
 				Data = clone,
-				Time = DateTimeOffset.Now,
-				Headers = new NameValueCollection(headers)
+				Time = SystemTime.UtcNow,
+				Headers = new NameValueCollection(headers),
+				Database = MultiDatabase.GetDatabaseName(url)
 			});
 		}
 
@@ -218,7 +253,7 @@ namespace Raven.Client.Connection
 		{
 			if (httpJsonRequest.CachedRequestDetails == null)
 				throw new InvalidOperationException("Cannot update cached response from a request that has no cached information");
-			httpJsonRequest.CachedRequestDetails.Time = DateTimeOffset.Now;
+			httpJsonRequest.CachedRequestDetails.Time = SystemTime.UtcNow;
 		}
 
 		/// <summary>
@@ -240,3 +275,4 @@ namespace Raven.Client.Connection
 		}
 	}
 }
+#endif

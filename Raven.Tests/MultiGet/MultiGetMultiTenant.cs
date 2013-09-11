@@ -92,7 +92,12 @@ namespace Raven.Tests.MultiGet
 		public void CanAggressivelyCacheLoads()
 		{
 			using (var server = GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079", DefaultDatabase = "test"}.Initialize())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079", 
+				DefaultDatabase = "test",
+				Conventions = {ShouldAggressiveCacheTrackChanges = false}
+			}.Initialize())
 			{
 				store.DatabaseCommands.EnsureDatabaseExists("test");
 				using (var session = store.OpenSession())

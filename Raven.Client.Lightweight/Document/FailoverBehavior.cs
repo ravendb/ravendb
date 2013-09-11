@@ -19,7 +19,7 @@ namespace Raven.Client.Document
 		/// </remarks>
 		AllowReadsFromSecondaries = 1,
 		/// <summary>
-		/// Allow to read from the secondary server(s), and allow writes to the secondary server(s).
+		/// Allow reads from and writes to secondary server(s).
 		/// </summary>
 		/// <remarks>
 		/// Choosing this option requires that you'll have some way of propagating changes

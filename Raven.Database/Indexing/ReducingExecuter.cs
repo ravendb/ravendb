@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Json;
 using Raven.Database.Linq;
@@ -13,7 +14,6 @@ using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database.Indexing
 {
-
 	public class ReducingExecuter : AbstractIndexingExecuter
 	{
 		public ReducingExecuter(WorkContext context)
@@ -176,7 +176,8 @@ namespace Raven.Database.Indexing
 
 						context.CancellationToken.ThrowIfCancellationRequested();
 						var reduceTimeWatcher = Stopwatch.StartNew();
-						context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, level, context, actions, reduceKeys);
+
+						context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, level, context, actions, reduceKeys, persistedResults.Count);
 
 						var batchDuration = batchTimeWatcher.Elapsed;
 						Log.Debug("Indexed {0} reduce keys in {1} with {2} results for index {3} in {4} on level {5}", reduceKeys.Count, batchDuration,
@@ -199,15 +200,17 @@ namespace Raven.Database.Indexing
 		private void SingleStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator,
 												List<object> itemsToDelete)
 		{
-			var needToMoveToSingleStep = new HashSet<string>();
+			var needToMoveToSingleStepQueue = new ConcurrentQueue<HashSet<string>>();
 
 			Log.Debug(() => string.Format("Executing single step reducing for {0} keys [{1}]", keysToReduce.Length, string.Join(", ", keysToReduce)));
 			var batchTimeWatcher = Stopwatch.StartNew();
 			var count = 0;
 			var size = 0;
-			var state = new ConcurrentQueue <Tuple<HashSet<string>, List<MappedResultInfo>>>();
+			var state = new ConcurrentQueue<Tuple<HashSet<string>, List<MappedResultInfo>>>();
 			BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, keysToReduce, enumerator =>
 			{
+				var localNeedToMoveToSingleStep = new HashSet<string>();
+				needToMoveToSingleStepQueue.Enqueue(localNeedToMoveToSingleStep);
 				var localKeys = new HashSet<string>();
 				while (enumerator.MoveNext())
 				{
@@ -222,8 +225,8 @@ namespace Raven.Database.Indexing
 						Take = int.MaxValue// just get all, we do the rate limit when we load the number of keys to reduce, anyway
 					};
 					var scheduledItems = actions.MapReduce.GetItemsToReduce(getItemsToReduceParams).ToList();
-					
-					if (scheduledItems.Count == 0) 
+
+					if (scheduledItems.Count == 0)
 					{
 						if (Log.IsWarnEnabled)
 						{
@@ -247,7 +250,7 @@ namespace Raven.Database.Indexing
 						var lastPerformedReduceType = actions.MapReduce.GetLastPerformedReduceType(index.IndexName, reduceKey);
 
 						if (lastPerformedReduceType != ReduceType.SingleStep)
-							needToMoveToSingleStep.Add(reduceKey);
+							localNeedToMoveToSingleStep.Add(reduceKey);
 
 						if (lastPerformedReduceType != ReduceType.MultiStep)
 							continue;
@@ -283,19 +286,26 @@ namespace Raven.Database.Indexing
 				});
 			});
 
-			var reduceKeys = new HashSet<string>(state.SelectMany(x=>x.Item1));
+			var reduceKeys = new HashSet<string>(state.SelectMany(x => x.Item1));
 
-			var results = state.SelectMany(x=>x.Item2)
+			var results = state.SelectMany(x => x.Item2)
 						.Where(x => x.Data != null)
 						.GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
 						.ToArray();
 			context.ReducedPerSecIncreaseBy(results.Length);
 
-			context.TransactionalStorage.Batch(actions => 
-				context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, 2, context, actions, reduceKeys)
+			context.TransactionalStorage.Batch(actions =>
+				context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, 2, context, actions, reduceKeys, state.Sum(x=>x.Item2.Count))
 				);
-			
+
 			autoTuner.AutoThrottleBatchSize(count, size, batchTimeWatcher.Elapsed);
+
+			var needToMoveToSingleStep = new HashSet<string>();
+			HashSet<string> set;
+			while (needToMoveToSingleStepQueue.TryDequeue(out set))
+			{
+				needToMoveToSingleStep.UnionWith(set);
+			}
 
 			foreach (var reduceKey in needToMoveToSingleStep)
 			{
@@ -305,8 +315,9 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions)
+		protected override bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
 		{
+			onlyFoundIdleWork.Value = false;
 			return actions.Staleness.IsReduceStale(indexesStat.Name);
 		}
 
@@ -320,16 +331,26 @@ namespace Raven.Database.Indexing
 			context.IndexStorage.FlushReduceIndexes();
 		}
 
+		protected override Etag GetSynchronizationEtag()
+		{
+			return Etag.Empty;
+		}
+
+		protected override Etag CalculateSynchronizationEtag(Etag currentEtag, Etag lastProcessedEtag)
+		{
+			return lastProcessedEtag;
+		}
+
 		protected override IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat)
 		{
 			return new IndexToWorkOn
 			{
 				IndexName = indexesStat.Name,
-				LastIndexedEtag = Guid.Empty
+				LastIndexedEtag = Etag.Empty
 			};
 		}
 
-		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn)
+		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag startEtag)
 		{
 			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn,
 				HandleReduceForIndex);
@@ -340,5 +361,25 @@ namespace Raven.Database.Indexing
 			var indexDefinition = context.IndexDefinitionStorage.GetIndexDefinition(indexesStat.Name);
 			return indexDefinition != null && indexDefinition.IsMapReduce;
 		}
+
+        protected override System.Collections.Concurrent.ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress
+        {
+            get
+            {
+                return context.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex;
+            }
+            set
+            {
+                context.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex = value;
+            }
+        }
+
+        protected override ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing
+        {
+            get
+            {
+                return context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex;
+            }
+        }
 	}
 }

@@ -122,7 +122,7 @@ namespace Raven.Studio.Features.Documents
 			var propertyNames = new[] { "Id", "Name" };
 			foreach (var propertyName in propertyNames)
 			{
-				selectedProperty = inner.DataAsJson.FirstOrDefault(x => x.Key.EndsWith(propertyName, StringComparison.InvariantCultureIgnoreCase));
+				selectedProperty = inner.DataAsJson.FirstOrDefault(x => x.Key.EndsWith(propertyName, StringComparison.OrdinalIgnoreCase));
 				if (selectedProperty.Key != null)
 					break;
 			}
@@ -148,15 +148,15 @@ namespace Raven.Studio.Features.Documents
 			var display = Id;
 
 			var prefixToRemoves = new[]
-			                      {
-				                      "Raven/",
-				                      CollectionType + "/",
-				                      CollectionType + "-"
-			                      };
+			{
+				"Raven/",
+				CollectionType + "/",
+				CollectionType + "-"
+			};
 
 			foreach (var prefixToRemove in prefixToRemoves)
 			{
-				if (display.StartsWith(prefixToRemove, StringComparison.InvariantCultureIgnoreCase))
+				if (display.StartsWith(prefixToRemove, StringComparison.OrdinalIgnoreCase))
 					display = display.Substring(prefixToRemove.Length);
 			}
 			return display;

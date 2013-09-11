@@ -39,7 +39,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\build\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -52,7 +52,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\build\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -72,6 +72,9 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Net4">
+      <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\net40\Microsoft.CompilerServices.AsyncTargetingPack.Net4.dll</HintPath>
+    </Reference>
     <Reference Include="Mono.Cecil">
       <HintPath>..\packages\Mono.Cecil.0.9.5.3\lib\net40\Mono.Cecil.dll</HintPath>
     </Reference>
@@ -100,6 +103,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\System.Management.Automation.dll</HintPath>
     </Reference>
+    <Reference Include="System.Net" />
     <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Web" />
     <Reference Include="System.Windows.Forms" />
@@ -119,9 +123,7 @@
     <Compile Include="..\Raven.Client.Lightweight\Extensions\MultiDatabase.cs">
       <Link>Smuggler\Imports\MultiDatabase.cs</Link>
     </Compile>
-    <Compile Include="..\Raven.Smuggler\SmugglerApi.cs">
-      <Link>Smuggler\SmugglerApi.cs</Link>
-    </Compile>
+    <Compile Include="Discovery\ClusterDiscoveryHost.cs" />
     <Compile Include="FromMono\Options.cs" />
     <Compile Include="RavenDbServer.cs" />
     <Compile Include="Program.cs" />

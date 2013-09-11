@@ -64,7 +64,7 @@ namespace Raven.Tests.Abstractions.Logging
 
 			const string message = "message";
 			ILog logger = LogManager.GetLogger(GetType());
-			logger.Log(LogLevel.Debug, () => message);
+			logger.Log(LogLevel.Error, () => message);
 
 			Assert.Equal(message, LogManager.GetTarget<TestTarget>().LastMessage);
 		}

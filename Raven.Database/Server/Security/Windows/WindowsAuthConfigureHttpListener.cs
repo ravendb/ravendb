@@ -35,7 +35,11 @@ namespace Raven.Database.Server.Security.Windows
 			}
 			if (NeverSecret.Urls.Contains(request.Url.AbsolutePath))
 				return AuthenticationSchemes.Anonymous;
-					
+
+			//CORS pre-flight.
+			if(!String.IsNullOrEmpty(configuration.AccessControlAllowOrigin) && request.HttpMethod == "OPTIONS") 
+				{ return AuthenticationSchemes.Anonymous; }
+
 			if (IsAdminRequest.IsMatch(request.RawUrl) && 
 				configuration.AnonymousUserAccessMode != AnonymousUserAccessMode.Admin)
 				return AuthenticationSchemes.IntegratedWindowsAuthentication;

@@ -4,14 +4,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
 using System.Linq;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Database.Exceptions;
-using Raven.Database.Indexing;
+using Raven.Abstractions.Exceptions;
+using Raven.Database.Impl;
+using Raven.Database.Impl.Synchronization;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
-using Raven.Munin;
 using Raven.Storage.Managed.Impl;
 
 namespace Raven.Storage.Managed
@@ -25,11 +25,12 @@ namespace Raven.Storage.Managed
 			this.storage = storage;
 		}
 
-		public bool IsIndexStale(string name, DateTime? cutOff, Guid? cutoffEtag)
+		public bool IsIndexStale(string name, DateTime? cutOff, Etag cutoffEtag)
 		{
-			var readResult = storage.IndexingStats.Read(name);
+			var indexingStatsReadResult = storage.IndexingStats.Read(name);
+			var lastIndexedEtagsReadResult = storage.LastIndexedEtags.Read(name);
 
-			if (readResult == null)
+			if (indexingStatsReadResult == null)
 				return false;// index does not exists
 
 
@@ -37,19 +38,19 @@ namespace Raven.Storage.Managed
 			{
 				if (cutOff != null)
 				{
-					var lastIndexedTime = readResult.Key.Value<DateTime>("lastTimestamp");
+					var lastIndexedTime = lastIndexedEtagsReadResult.Key.Value<DateTime>("lastTimestamp");
 					if (cutOff.Value >= lastIndexedTime)
 						return true;
 
-					var lastReducedTime = readResult.Key.Value<DateTime?>("lastReducedTimestamp");
+					var lastReducedTime = indexingStatsReadResult.Key.Value<DateTime?>("lastReducedTimestamp");
 					if (lastReducedTime != null && cutOff.Value >= lastReducedTime.Value)
 						return true;
 				}
 				else if (cutoffEtag != null)
 				{
-					var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
+					var lastIndexedEtag = lastIndexedEtagsReadResult.Key.Value<byte[]>("lastEtag");
 
-					if (Buffers.Compare(lastIndexedEtag, cutoffEtag.Value.ToByteArray()) < 0)
+					if (Buffers.Compare(lastIndexedEtag, cutoffEtag.ToByteArray()) < 0)
 						return true;
 				}
 				else
@@ -57,8 +58,8 @@ namespace Raven.Storage.Managed
 					return true;
 				}
 			}
-			
-			var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(new RavenJObject{{"index", name}});
+
+			var tasksAfterCutoffPoint = storage.Tasks["ByIndexAndTime"].SkipTo(new RavenJObject { { "index", name } });
 			if (cutOff != null)
 				tasksAfterCutoffPoint = tasksAfterCutoffPoint
 					.Where(x => x.Value<DateTime>("time") <= cutOff.Value);
@@ -71,45 +72,48 @@ namespace Raven.Storage.Managed
 			{
 				{ "view", name }
 			})
-			.TakeWhile(token => string.Equals(name, token.Value<string>("view"), StringComparison.InvariantCultureIgnoreCase))
+			.TakeWhile(token => string.Equals(name, token.Value<string>("view"), StringComparison.OrdinalIgnoreCase))
 			.Any();
 		}
 
 		public bool IsMapStale(string name)
 		{
-			var readResult = storage.IndexingStats.Read(name);
+			var readResult = storage.LastIndexedEtags.Read(name);
 
 			if (readResult == null)
-				return false;// index does not exists
+				return false;
 
 			var lastIndexedEtag = readResult.Key.Value<byte[]>("lastEtag");
 
-			return storage.Documents["ByEtag"].SkipFromEnd(0)
+			var isStale =
+				storage.Documents["ByEtag"]
+				.SkipFromEnd(0)
 				.Select(doc => doc.Value<byte[]>("etag"))
 				.Select(docEtag => Buffers.Compare(docEtag, lastIndexedEtag) > 0)
 				.FirstOrDefault();
+
+			return isStale;
 		}
 
-		public Tuple<DateTime,Guid> IndexLastUpdatedAt(string name)
+		public Tuple<DateTime, Etag> IndexLastUpdatedAt(string name)
 		{
-			var readResult = storage.IndexingStats.Read(name);
+			var indexingStatsReadResult = storage.IndexingStats.Read(name);
 
-			if (readResult == null)
+			if (indexingStatsReadResult == null)
 				throw new IndexDoesNotExistsException("Could not find index named: " + name);
 
+			var lastIndexedEtagReadResult = storage.LastIndexedEtags.Read(name);
 
-			if (readResult.Key.Value<object>("lastReducedTimestamp") != null)
+			if (indexingStatsReadResult.Key.Value<object>("lastReducedTimestamp") != null)
 			{
 				return Tuple.Create(
-					readResult.Key.Value<DateTime>("lastReducedTimestamp"),
-					new Guid(readResult.Key.Value<byte[]>("lastReducedEtag"))
+					indexingStatsReadResult.Key.Value<DateTime>("lastReducedTimestamp"),
+					Etag.Parse(indexingStatsReadResult.Key.Value<byte[]>("lastReducedEtag"))
 					);
 			}
 
-			return Tuple.Create(
-				readResult.Key.Value<DateTime>("lastTimestamp"),
-				new Guid(readResult.Key.Value<byte[]>("lastEtag"))
-				);
+			return Tuple.Create(lastIndexedEtagReadResult.Key.Value<DateTime>("lastTimestamp"),
+				Etag.Parse(lastIndexedEtagReadResult.Key.Value<byte[]>("lastEtag")));
 		}
 
 		public int GetIndexTouchCount(string name)
@@ -122,24 +126,24 @@ namespace Raven.Storage.Managed
 			return readResult.Key.Value<int>("touches");
 		}
 
-		public Guid GetMostRecentDocumentEtag()
+		public Etag GetMostRecentDocumentEtag()
 		{
 			foreach (var doc in storage.Documents["ByEtag"].SkipFromEnd(0))
 			{
 				var docEtag = doc.Value<byte[]>("etag");
-				return new Guid(docEtag);
+				return Etag.Parse(docEtag);
 			}
-			return Guid.Empty;
+			return Etag.Empty;
 		}
 
-		public Guid GetMostRecentAttachmentEtag()
+		public Etag GetMostRecentAttachmentEtag()
 		{
 			foreach (var doc in storage.Attachments["ByEtag"].SkipFromEnd(0))
 			{
 				var docEtag = doc.Value<byte[]>("etag");
-				return new Guid(docEtag);
+				return Etag.Parse(docEtag);
 			}
-			return Guid.Empty;
+			return Etag.Empty;
 		}
 	}
 }

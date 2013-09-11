@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Xunit;
 
@@ -16,19 +17,19 @@ namespace Raven.Tests.Bugs
 		{
 			using (var store = NewDocumentStore())
 			{
-				Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				Assert.Throws<IndexCompilationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { Field1 = 1, Field2NameDoesNotMatch = 1 }",
 					Reduce = "from result in results group result by \"constant\" into g select new { Field1NameDoesNotMatch = g.Sum(x => x.Field1), Field2 = g.Sum(x => x.Field2) }"
 				}));
 
-				Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				Assert.Throws<IndexCompilationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { Field1 = 1, Field2 = 1 }",
 					Reduce = "from result in results group result by \"constant\" into g select new { Field1NameDoesNotMatch = g.Sum(x => x.Field1), Field2 = g.Sum(x => x.Field2) }"
 				}));
 
-				Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
+				Assert.Throws<IndexCompilationException>(() => store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
 					Map = "from doc in docs select new { Field1 = 1, Field2NameDoesNotMatch = 1 }",
 					Reduce = "from result in results group result by \"constant\" into g select new { Field1 = g.Sum(x => x.Field1), Field2 = g.Sum(x => x.Field2) }"

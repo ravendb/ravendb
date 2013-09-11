@@ -36,7 +36,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
-using Raven.Database.Exceptions;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins.Builtins.Tenants;
@@ -49,7 +48,7 @@ namespace Raven.Database.Server
 	{
 		private readonly DateTime startUpTime = SystemTime.UtcNow;
 		private DateTime lastWriteRequest;
-		private const int MaxConcurrentRequests = 192;
+		private const int MaxConcurrentRequests = 10 * 1024;
 		public DocumentDatabase SystemDatabase { get; private set; }
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
 		readonly MixedModeRequestAuthorizer requestAuthorizer;
@@ -63,13 +62,24 @@ namespace Raven.Database.Server
 		private readonly ThreadLocal<InMemoryRavenConfiguration> currentConfiguration = new ThreadLocal<InMemoryRavenConfiguration>();
 
 		protected readonly ConcurrentSet<string> LockedDatabases =
-			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+			new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		protected readonly AtomicDictionary<Task<DocumentDatabase>> ResourcesStoresCache =
-			new AtomicDictionary<Task<DocumentDatabase>>(StringComparer.InvariantCultureIgnoreCase);
+			new AtomicDictionary<Task<DocumentDatabase>>(StringComparer.OrdinalIgnoreCase);
 
-		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
+
+        private readonly ConcurrentDictionary<string, TransportState> databaseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
+
+#if DEBUG
+		private readonly ConcurrentQueue<string> recentRequests = new ConcurrentQueue<string>();
+
+		public ConcurrentQueue<string> RecentRequests
+		{
+			get { return recentRequests; }
+		}
+#endif
 
 		public int NumberOfRequests
 		{
@@ -145,7 +155,7 @@ namespace Raven.Database.Server
 
 			requestAuthorizer = new MixedModeRequestAuthorizer();
 
-			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
+			requestAuthorizer.Initialize(SystemDatabase, SystemConfiguration, () => currentTenantId.Value, this);
 
 			foreach (var task in configuration.Container.GetExportedValues<IServerStartupTask>())
 			{
@@ -190,7 +200,7 @@ namespace Raven.Database.Server
 			CleanupDatabase(@event.Name, skipIfActive: false);
 		}
 
-		public object Statistics
+		public AdminStatistics Statistics
 		{
 			get
 			{
@@ -199,45 +209,43 @@ namespace Raven.Database.Server
 					Name = x.Key,
 					Database = x.Value.Result
 				});
-				var allDbs = activeDatabases.Concat(new[] {new {Name = "System", Database = SystemDatabase}}).ToArray();
-				return new
+				var allDbs = activeDatabases.Concat(new[] { new { Name = Constants.SystemDatabase, Database = SystemDatabase } }).ToArray();
+				return new AdminStatistics
 				{
+					ServerName = currentConfiguration.Value.ServerName,
+					ClusterName = currentConfiguration.Value.ClusterName,
 					TotalNumberOfRequests = NumberOfRequests,
 					Uptime = SystemTime.UtcNow - startUpTime,
-					Memory = new
+					Memory = new AdminMemoryStatistics
 					{
 						DatabaseCacheSizeInMB = ConvertBytesToMBs(SystemDatabase.TransactionalStorage.GetDatabaseCacheSizeInBytes()),
 						ManagedMemorySizeInMB = ConvertBytesToMBs(GetCurrentManagedMemorySize()),
 						TotalProcessMemorySizeInMB = ConvertBytesToMBs(GetCurrentProcessPrivateMemorySize64()),
-						Databases = allDbs.Select(db => new
-						{
-							db.Name,
-							DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(db.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
-						})
 					},
 					LoadedDatabases =
 						from documentDatabase in allDbs
 						let indexStorageSize = documentDatabase.Database.GetIndexStorageSizeOnDisk()
 						let transactionalStorageSize = documentDatabase.Database.GetTransactionalStorageSizeOnDisk()
 						let totalDatabaseSize = indexStorageSize + transactionalStorageSize
-						let lastUsed = databaseLastRecentlyUsed.GetOrDefault( documentDatabase.Name )
-						select new
+						let lastUsed = databaseLastRecentlyUsed.GetOrDefault(documentDatabase.Name)
+						select new LoadedDatabaseStatistics
 						{
-							documentDatabase.Name,
+							Name = documentDatabase.Name,
 							LastActivity = new[]
 							{
-								lastUsed, 
+								lastUsed,
 								documentDatabase.Database.WorkContext.LastWorkTime
 							}.Max(),
 							TransactionalStorageSize = transactionalStorageSize,
-							TransactionalStorageSizeHumaneSize = DatabaseSize.Humane( transactionalStorageSize ),
+							TransactionalStorageSizeHumaneSize = DatabaseSize.Humane(transactionalStorageSize),
 							IndexStorageSize = indexStorageSize,
-							IndexStorageHumaneSize = DatabaseSize.Humane( indexStorageSize ),
+							IndexStorageHumaneSize = DatabaseSize.Humane(indexStorageSize),
 							TotalDatabaseSize = totalDatabaseSize,
-							TotalDatabaseHumaneSize = DatabaseSize.Humane( totalDatabaseSize ),
-							documentDatabase.Database.Statistics.CountOfDocuments,
+							TotalDatabaseHumaneSize = DatabaseSize.Humane(totalDatabaseSize),
+							CountOfDocuments = documentDatabase.Database.Statistics.CountOfDocuments,
 							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.RequestsPerSecond, 2),
-							documentDatabase.Database.WorkContext.ConcurrentRequests
+							ConcurrentRequests = documentDatabase.Database.WorkContext.ConcurrentRequests,
+							DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 						}
 				};
 			}
@@ -274,6 +282,13 @@ namespace Raven.Database.Server
 			{
 				TenantDatabaseModified.Occured -= TenantDatabaseRemoved;
 				var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
+                exceptionAggregator.Execute(() =>
+                {
+                    foreach (var databaseTransportState in databaseTransportStates)
+                    {
+                        databaseTransportState.Value.Dispose();
+                    }
+                });
 				exceptionAggregator.Execute(() =>
 				{
 					if (serverTimer != null)
@@ -282,7 +297,7 @@ namespace Raven.Database.Server
 				exceptionAggregator.Execute(() =>
 				{
 					if (listener != null && listener.IsListening)
-						listener.Stop();
+						listener.Close();
 				});
 				disposed = true;
 
@@ -341,7 +356,8 @@ namespace Raven.Database.Server
 			string virtualDirectory = SystemConfiguration.VirtualDirectory;
 			if (virtualDirectory.EndsWith("/") == false)
 				virtualDirectory = virtualDirectory + "/";
-			var uri = "http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
+		    var prefix = Configuration.UseSsl ? "https://" : "http://";
+            var uri = prefix + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
 			listener.Prefixes.Add(uri);
 
 			foreach (var configureHttpListener in ConfigureHttpListeners)
@@ -352,8 +368,72 @@ namespace Raven.Database.Server
 			Init();
 			listener.Start();
 
+			Task.Factory.StartNew(async () =>
+			{
+				while (listener.IsListening)
+				{
+					HttpListenerContext context = null;
+					try
+					{
+					    context = await listener.GetContextAsync();
+					}
+					catch (ObjectDisposedException)
+					{
+					    break;
+					}
+					catch (Exception)
+					{
+                        continue;
+					}
 
-			listener.BeginGetContext(GetContext, null);
+					ProcessRequest(context);
+				}
+			}, TaskCreationOptions.LongRunning);
+		}
+
+		private void ProcessRequest(HttpListenerContext context)
+		{
+			if (context == null)
+				return;
+
+			Task.Factory.StartNew(() =>
+			{
+				var ctx = new HttpListenerContextAdpater(context, SystemConfiguration, bufferPool);
+
+				if (concurrentRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
+				{
+					try
+					{
+						HandleTooBusyError(ctx);
+					}
+					catch (Exception e)
+					{
+						logger.WarnException("Could not send a too busy error to the client", e);
+					}
+					return;
+				}
+				try
+				{
+					Interlocked.Increment(ref physicalRequestsCount);
+#if DEBUG
+					recentRequests.Enqueue(ctx.Request.RawUrl);
+					while (recentRequests.Count > 50)
+					{
+						string _;
+						recentRequests.TryDequeue(out _);
+					}
+#endif
+
+					if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
+						HandleChangesRequest(ctx, () => { });
+					else
+						HandleActualRequest(ctx);
+				}
+				finally
+				{
+					concurrentRequestSemaphore.Release();
+				}
+			});
 		}
 
 		public void Init()
@@ -453,50 +533,6 @@ namespace Raven.Database.Server
 			}
 		}
 
-		private void GetContext(IAsyncResult ar)
-		{
-			HttpListenerContextAdpater ctx;
-			try
-			{
-				HttpListenerContext httpListenerContext = listener.EndGetContext(ar);
-				ctx = new HttpListenerContextAdpater(httpListenerContext, SystemConfiguration, bufferPool);
-				//setup waiting for the next request
-				listener.BeginGetContext(GetContext, null);
-			}
-			catch (Exception)
-			{
-				// can't get current request / end new one, probably
-				// listener shutdown
-				return;
-			}
-
-			if (concurrentRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
-			{
-				try
-				{
-					HandleTooBusyError(ctx);
-				}
-				catch (Exception e)
-				{
-					logger.WarnException("Could not send a too busy error to the client", e);
-				}
-				return;
-			}
-			try
-			{
-				Interlocked.Increment(ref physicalRequestsCount);
-				if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
-					HandleChangesRequest(ctx, () => { });
-				else
-					HandleActualRequest(ctx);
-			}
-			finally
-			{
-				concurrentRequestSemaphore.Release();
-			}
-		}
-
-
 		public Task HandleChangesRequest(IHttpContext context, Action onDisconnect)
 		{
 			var sw = Stopwatch.StartNew();
@@ -525,7 +561,7 @@ namespace Raven.Database.Server
 			{
 				try
 				{
-					HandleException(context, e);
+					ExceptionHandler.TryHandleException(context, e);
 					LogException(e);
 				}
 				finally
@@ -610,7 +646,7 @@ namespace Raven.Database.Server
 				}
 				catch (Exception e)
 				{
-					HandleException(ctx, e);
+					ExceptionHandler.TryHandleException(ctx, e);
 					if (ShouldLogException(e))
 						logger.WarnException("Error on request", e);
 				}
@@ -676,6 +712,9 @@ namespace Raven.Database.Server
 
 		private void LogHttpRequestStats(LogHttpRequestStatsParams logHttpRequestStatsParams)
 		{
+			if (logger.IsDebugEnabled == false)
+				return;
+
 			// we filter out requests for the UI because they fill the log with information
 			// we probably don't care about them anyway. That said, we do output them if they take too
 			// long.
@@ -693,135 +732,15 @@ namespace Raven.Database.Server
 							   currentTenantId.Value);
 		}
 
-		private void HandleException(IHttpContext ctx, Exception e)
-		{
-			try
-			{
-				if (e is BadRequestException)
-					HandleBadRequest(ctx, (BadRequestException)e);
-				else if (e is ConcurrencyException)
-					HandleConcurrencyException(ctx, (ConcurrencyException)e);
-				else if (e is JintException)
-					HandleJintException(ctx, (JintException)e);
-				else if (TryHandleException(ctx, e) == false)
-					HandleGenericException(ctx, e);
-			}
-			catch (Exception)
-			{
-				logger.ErrorException("Failed to properly handle error, further error handling is ignored", e);
-			}
-		}
-
-		private void HandleJintException(IHttpContext ctx, JintException e)
-		{
-			while (e.InnerException is JintException)
-			{
-				e = (JintException)e.InnerException;
-			}
-
-			ctx.SetStatusToBadRequest();
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RawUrl,
-				Error = e.Message
-			});
-		}
-
-		protected bool TryHandleException(IHttpContext ctx, Exception exception)
-		{
-			var indexDisabledException = exception as IndexDisabledException;
-			if (indexDisabledException != null)
-			{
-				HandleIndexDisabledException(ctx, indexDisabledException);
-				return true;
-			}
-			var indexDoesNotExistsException = exception as IndexDoesNotExistsException;
-			if (indexDoesNotExistsException != null)
-			{
-				HandleIndexDoesNotExistsException(ctx, indexDoesNotExistsException);
-				return true;
-			}
-
-			return false;
-		}
-
-		private static void HandleIndexDoesNotExistsException(IHttpContext ctx, Exception e)
-		{
-			ctx.SetStatusToNotFound();
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RawUrl,
-				Error = e.Message
-			});
-		}
-
-		private static void HandleIndexDisabledException(IHttpContext ctx, IndexDisabledException e)
-		{
-			ctx.Response.StatusCode = 503;
-			ctx.Response.StatusDescription = "Service Unavailable";
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RawUrl,
-				Error = e.Information.GetErrorMessage(),
-				Index = e.Information.Name,
-			});
-		}
-
 		private static void HandleTooBusyError(IHttpContext ctx)
 		{
 			ctx.Response.StatusCode = 503;
 			ctx.Response.StatusDescription = "Service Unavailable";
-			SerializeError(ctx, new
+			ExceptionHandler.SerializeError(ctx, new
 			{
 				Url = ctx.Request.RawUrl,
 				Error = "The server is too busy, could not acquire transactional access"
 			});
-		}
-
-
-		private static void HandleGenericException(IHttpContext ctx, Exception e)
-		{
-			ctx.Response.StatusCode = 500;
-			ctx.Response.StatusDescription = "Internal Server Error";
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RawUrl,
-				Error = e.ToString()
-			});
-		}
-
-		private static void HandleBadRequest(IHttpContext ctx, BadRequestException e)
-		{
-			ctx.SetStatusToBadRequest();
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RawUrl,
-				e.Message,
-				Error = e.Message
-			});
-		}
-
-		private static void HandleConcurrencyException(IHttpContext ctx, ConcurrencyException e)
-		{
-			ctx.Response.StatusCode = 409;
-			ctx.Response.StatusDescription = "Conflict";
-			SerializeError(ctx, new
-			{
-				Url = ctx.Request.RawUrl,
-				e.ActualETag,
-				e.ExpectedETag,
-				Error = e.Message
-			});
-		}
-
-		protected static void SerializeError(IHttpContext ctx, object error)
-		{
-			var sw = new StreamWriter(ctx.Response.OutputStream);
-			JsonExtensions.CreateDefaultJsonSerializer().Serialize(new JsonTextWriter(sw)
-			{
-				Formatting = Formatting.Indented,
-			}, error);
-			sw.Flush();
 		}
 
 		private bool DispatchRequest(IHttpContext ctx)
@@ -862,7 +781,10 @@ namespace Raven.Database.Server
 						var sp = Stopwatch.StartNew();
 						requestResponder.ReplicationAwareRespond(ctx);
 						sp.Stop();
-						ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0 ms", CultureInfo.InvariantCulture));
+						if (ctx.Response.BufferOutput)
+						{
+							ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture));
+						}
 						return requestResponder.IsUserInterfaceRequest;
 					}
 				}
@@ -1055,7 +977,7 @@ namespace Raven.Database.Server
 
 		private static void OutputDatabaseOpenFailure(IHttpContext ctx, string tenantId, Exception e)
 		{
-			var msg = "Could open database named: " + tenantId;
+			var msg = "Could not open database named: " + tenantId;
 			logger.WarnException(msg, e);
 			ctx.SetStatusToNotAvailable();
 			ctx.WriteJson(new
@@ -1118,8 +1040,10 @@ namespace Raven.Database.Server
 
 			database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 			{
-				var documentDatabase = new DocumentDatabase(config);
-				AssertLicenseParameters(config);
+			    var transportState = databaseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+			    var documentDatabase = new DocumentDatabase(config, transportState);
+
+			    AssertLicenseParameters(config);
 				documentDatabase.SpinBackgroundWorkers();
 				InitializeRequestResponders(documentDatabase);
 
@@ -1142,11 +1066,11 @@ namespace Raven.Database.Server
 			string maxDatabases;
 			if (ValidateLicense.CurrentLicense.Attributes.TryGetValue("numberOfDatabases", out maxDatabases))
 			{
-				if (string.Equals(maxDatabases, "unlimited", StringComparison.InvariantCultureIgnoreCase) == false)
+				if (string.Equals(maxDatabases, "unlimited", StringComparison.OrdinalIgnoreCase) == false)
 				{
 					var numberOfAllowedDbs = int.Parse(maxDatabases);
 
-					var databases = SystemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, 0, numberOfAllowedDbs).ToList();
+					var databases = SystemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, numberOfAllowedDbs).ToList();
 					if (databases.Count >= numberOfAllowedDbs)
 						throw new InvalidOperationException(
 							"You have reached the maximum number of databases that you can have according to your license: " + numberOfAllowedDbs + Environment.NewLine +
@@ -1159,7 +1083,7 @@ namespace Raven.Database.Server
 			{
 				var bundlesList = bundles.Split(';').ToList();
 
-				foreach (var bundle in bundlesList)
+				foreach (var bundle in bundlesList.Where(s => string.IsNullOrWhiteSpace(s) == false && s != "PeriodicBackup"))
 				{
 					string value;
 					if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))
@@ -1243,7 +1167,17 @@ namespace Raven.Database.Server
 		{
 			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlAllowOrigin))
 				return;
-			ctx.Response.AddHeader("Access-Control-Allow-Origin", SystemConfiguration.AccessControlAllowOrigin);
+
+			ctx.Response.AddHeader("Access-Control-Allow-Credentials", "true");
+
+			bool originAllowed = SystemConfiguration.AccessControlAllowOrigin == "*" ||
+					SystemConfiguration.AccessControlAllowOrigin.Split(' ')
+						.Any(o => o == ctx.Request.Headers["Origin"]);
+			if(originAllowed)
+			{
+				ctx.Response.AddHeader("Access-Control-Allow-Origin", ctx.Request.Headers["Origin"]);
+			}
+			
 			ctx.Response.AddHeader("Access-Control-Max-Age", SystemConfiguration.AccessControlMaxAge);
 			ctx.Response.AddHeader("Access-Control-Allow-Methods", SystemConfiguration.AccessControlAllowMethods);
 			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlRequestHeaders))
@@ -1267,7 +1201,7 @@ namespace Raven.Database.Server
 
 			// The Studio xap is already a compressed file, it's a waste of time to try to compress it further.
 			var requestUrl = ctx.GetRequestUrl();
-			if (String.Equals(requestUrl, "/silverlight/Raven.Studio.xap", StringComparison.InvariantCultureIgnoreCase))
+			if (String.Equals(requestUrl, "/silverlight/Raven.Studio.xap", StringComparison.OrdinalIgnoreCase))
 				return;
 
 			// gzip must be first, because chrome has an issue accepting deflate data
@@ -1289,11 +1223,18 @@ namespace Raven.Database.Server
 		{
 			Interlocked.Exchange(ref reqNum, 0);
 			Interlocked.Exchange(ref physicalRequestsCount, 0);
+#if DEBUG
+			while (recentRequests.Count > 0)
+			{
+				string _;
+				recentRequests.TryDequeue(out _);
+			}
+#endif
 		}
 
 		public Task<DocumentDatabase> GetDatabaseInternal(string name)
 		{
-			if (string.Equals("System", name, StringComparison.InvariantCultureIgnoreCase))
+			if (string.Equals("System", name, StringComparison.OrdinalIgnoreCase))
 				return new CompletedTask<DocumentDatabase>(SystemDatabase);
 
 			Task<DocumentDatabase> db;
@@ -1306,13 +1247,13 @@ namespace Raven.Database.Server
 		{
 			if (databaseDocument.SecuredSettings == null)
 			{
-				databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+				databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 				return;
 			}
 
 			foreach (var prop in databaseDocument.SecuredSettings.ToList())
 			{
-				if(prop.Value == null)
+				if (prop.Value == null)
 					continue;
 				var bytes = Encoding.UTF8.GetBytes(prop.Value);
 				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
@@ -1325,13 +1266,13 @@ namespace Raven.Database.Server
 		{
 			if (databaseDocument.SecuredSettings == null)
 			{
-				databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+				databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 				return;
 			}
 
 			foreach (var prop in databaseDocument.SecuredSettings.ToList())
 			{
-				if(prop.Value == null)
+				if (prop.Value == null)
 					continue;
 				var bytes = Convert.FromBase64String(prop.Value);
 				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
@@ -1342,10 +1283,135 @@ namespace Raven.Database.Server
 				}
 				catch (Exception e)
 				{
-					logger.WarnException("Could not unprotect secured db data " + prop.Key +" setting the value to '<data could not be decrypted>'", e);
+					logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
 					databaseDocument.SecuredSettings[prop.Key] = "<data could not be decrypted>";
 				}
 			}
+		}
+
+
+		static class ExceptionHandler
+		{
+			private static readonly Dictionary<Type, Action<IHttpContext, Exception>> handlers =
+				new Dictionary<Type, Action<IHttpContext, Exception>>
+			{
+				{typeof (BadRequestException), (ctx, e) => HandleBadRequest(ctx, e as BadRequestException)},
+				{typeof (ConcurrencyException), (ctx, e) => HandleConcurrencyException(ctx, e as ConcurrencyException)},
+				{typeof (JintException), (ctx, e) => HandleJintException(ctx, e as JintException)},
+				{typeof (IndexDisabledException), (ctx, e) => HandleIndexDisabledException(ctx, e as IndexDisabledException)},
+				{typeof (IndexDoesNotExistsException), (ctx, e) => HandleIndexDoesNotExistsException(ctx, e as IndexDoesNotExistsException)},
+			};
+
+			internal static void TryHandleException(IHttpContext ctx, Exception e)
+			{
+				var exceptionType = e.GetType();
+
+				try
+				{
+					if (handlers.ContainsKey(exceptionType))
+					{
+						handlers[exceptionType](ctx, e);
+						return;
+					}
+
+					var baseType = handlers.Keys.FirstOrDefault(t => t.IsInstanceOfType(e));
+					if (baseType != null)
+					{
+						handlers[baseType](ctx, e);
+						return;
+					}
+
+					DefaultHandler(ctx, e);
+				}
+				catch (Exception)
+				{
+					logger.ErrorException("Failed to properly handle error, further error handling is ignored", e);
+				}
+			}
+
+			public static void SerializeError(IHttpContext ctx, object error)
+			{
+				var sw = new StreamWriter(ctx.Response.OutputStream);
+				JsonExtensions.CreateDefaultJsonSerializer().Serialize(new JsonTextWriter(sw)
+				{
+					Formatting = Formatting.Indented,
+				}, error);
+				sw.Flush();
+			}
+
+			private static void DefaultHandler(IHttpContext ctx, Exception e)
+			{
+				ctx.Response.StatusCode = 500;
+				ctx.Response.StatusDescription = "Internal Server Error";
+				SerializeError(ctx, new
+				{
+					//ExceptionType = e.GetType().AssemblyQualifiedName,					
+					Url = ctx.Request.RawUrl,
+					Error = e.ToString(),
+				});
+			}
+
+			private static void HandleBadRequest(IHttpContext ctx, BadRequestException e)
+			{
+				ctx.SetStatusToBadRequest();
+				SerializeError(ctx, new
+				{
+					Url = ctx.Request.RawUrl,
+					e.Message,
+					Error = e.Message
+				});
+			}
+
+			private static void HandleConcurrencyException(IHttpContext ctx, ConcurrencyException e)
+			{
+				ctx.Response.StatusCode = 409;
+				ctx.Response.StatusDescription = "Conflict";
+				SerializeError(ctx, new
+				{
+					Url = ctx.Request.RawUrl,
+					e.ActualETag,
+					e.ExpectedETag,
+					Error = e.Message
+				});
+			}
+
+			private static void HandleJintException(IHttpContext ctx, JintException e)
+			{
+				while (e.InnerException is JintException)
+				{
+					e = (JintException)e.InnerException;
+				}
+
+				ctx.SetStatusToBadRequest();
+				SerializeError(ctx, new
+				{
+					Url = ctx.Request.RawUrl,
+					Error = e.Message
+				});
+			}
+
+			private static void HandleIndexDoesNotExistsException(IHttpContext ctx, IndexDoesNotExistsException e)
+			{
+				ctx.SetStatusToNotFound();
+				SerializeError(ctx, new
+				{
+					Url = ctx.Request.RawUrl,
+					Error = e.Message
+				});
+			}
+
+			private static void HandleIndexDisabledException(IHttpContext ctx, IndexDisabledException e)
+			{
+				ctx.Response.StatusCode = 503;
+				ctx.Response.StatusDescription = "Service Unavailable";
+				SerializeError(ctx, new
+				{
+					Url = ctx.Request.RawUrl,
+					Error = e.Information.GetErrorMessage(),
+					Index = e.Information.Name,
+				});
+			}
+
 		}
 	}
 }

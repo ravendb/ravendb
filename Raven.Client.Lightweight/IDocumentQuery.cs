@@ -5,7 +5,11 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using Raven.Abstractions.Data;
+using Raven.Client.Linq;
+using Raven.Client.Spatial;
+using Raven.Json.Linq;
 
 namespace Raven.Client
 {
@@ -34,6 +38,11 @@ namespace Raven.Client
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
 		IDocumentQuery<TProjection> SelectFields<TProjection>();
 
+		/// <summary>
+		/// Sets user defined inputs to the query
+		/// </summary>
+		/// <param name="queryInputs"></param>
+		void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs);
 
 #if !SILVERLIGHT
 		/// <summary>
@@ -43,6 +52,8 @@ namespace Raven.Client
 		/// <value>The query result.</value>
 		QueryResult QueryResult { get; }
 #endif
+
+		AggregationOperation AggregationOperation { get; }
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
@@ -61,5 +72,19 @@ namespace Raven.Client
 		/// Create the index query object for this query
 		/// </summary>
 		IndexQuery GetIndexQuery(bool isAsync);
+
+		IDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+		IDocumentQuery<T> Spatial(string name, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+		/// <summary>
+		/// Get the facets as per the specified doc with the given start and pageSize
+		/// </summary>
+		FacetResults GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize);
+
+		/// <summary>
+		/// Get the facets as per the specified facets with the given start and pageSize
+		/// </summary>
+		FacetResults GetFacets(List<Facet> facets, int facetStart, int? facetPageSize);
 	}
 }

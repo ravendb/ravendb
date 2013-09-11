@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.Runtime.Caching;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -41,7 +42,7 @@ namespace Raven.Database.Impl
 			return new DisposableAction(() => skipSettingDocumentInCache = old);
 		}
 
-		public CachedDocument GetCachedDocument(string key, Guid etag)
+		public CachedDocument GetCachedDocument(string key, Etag etag)
 		{
 			CachedDocument cachedDocument;
 			try
@@ -65,7 +66,7 @@ namespace Raven.Database.Impl
 			};
 		}
 
-		public void SetCachedDocument(string key, Guid etag, RavenJObject doc, RavenJObject metadata, int size)
+		public void SetCachedDocument(string key, Etag etag, RavenJObject doc, RavenJObject metadata, int size)
 		{
 			if (skipSettingDocumentInCache)
 				return;
@@ -95,7 +96,7 @@ namespace Raven.Database.Impl
 
 		}
 
-		public void RemoveCachedDocument(string key, Guid etag)
+		public void RemoveCachedDocument(string key, Etag etag)
 		{
 			try
 			{

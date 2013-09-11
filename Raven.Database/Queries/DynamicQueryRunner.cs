@@ -18,24 +18,19 @@ namespace Raven.Database.Queries
 	public class DynamicQueryRunner
 	{
 		private readonly DocumentDatabase documentDatabase;
-		private readonly ConcurrentDictionary<string, TemporaryIndexInfo> temporaryIndexes;
 		private readonly object createIndexLock = new object();
 
 		public DynamicQueryRunner(DocumentDatabase database)
 		{
 			documentDatabase = database;
-			temporaryIndexes = new ConcurrentDictionary<string, TemporaryIndexInfo>();
 		}
 
 		public QueryResultWithIncludes ExecuteDynamicQuery(string entityName, IndexQuery query)
 		{
 			// Create the map
 			var map = DynamicQueryMapping.Create(documentDatabase, query, entityName);
-
 			var touchTemporaryIndexResult = GetAppropriateIndexToQuery(entityName, query, map);
 
-			map.IndexName = touchTemporaryIndexResult.Item1;
-			// Re-write the query
 			string realQuery = map.Items.Aggregate(query.Query,
 												   (current, mapItem) => current.Replace(mapItem.QueryFrom, mapItem.To));
 
@@ -79,27 +74,8 @@ namespace Raven.Database.Queries
 			var sp = Stopwatch.StartNew();
 			while (true)
 			{
-				result = documentDatabase.Query(map.IndexName,
-												new IndexQuery
-												{
-													Cutoff = query.Cutoff,
-													PageSize = query.PageSize,
-													Query = realQuery,
-													Start = query.Start,
-													FieldsToFetch = query.FieldsToFetch,
-													GroupBy = query.GroupBy,
-													AggregationOperation = query.AggregationOperation,
-													SortedFields = query.SortedFields,
-													DefaultField = query.DefaultField,
-													CutoffEtag = query.CutoffEtag,
-													DebugOptionGetIndexEntries = query.DebugOptionGetIndexEntries,
-													DefaultOperator = query.DefaultOperator,
-													SkipTransformResults = query.SkipTransformResults,
-													SkippedResults = query.SkippedResults,
-													HighlighterPreTags = query.HighlighterPreTags,
-													HighlighterPostTags = query.HighlighterPostTags,
-													HighlightedFields = query.HighlightedFields
-												});
+				var indexQuery = CreateIndexQuery(query, map, realQuery);
+				result = documentDatabase.Query(map.IndexName, indexQuery);
 
 				if (!touchTemporaryIndexResult.Item2 ||
 					!result.IsStale ||
@@ -113,116 +89,89 @@ namespace Raven.Database.Queries
 			}
 		}
 
+		private static IndexQuery CreateIndexQuery(IndexQuery query, DynamicQueryMapping map, string realQuery)
+		{
+			var indexQuery = new IndexQuery
+			{
+				Cutoff = query.Cutoff,
+				PageSize = query.PageSize,
+				Query = realQuery,
+				Start = query.Start,
+				FieldsToFetch = query.FieldsToFetch,
+				GroupBy = query.GroupBy,
+				AggregationOperation = query.AggregationOperation,
+				SortedFields = query.SortedFields,
+				DefaultField = query.DefaultField,
+				CutoffEtag = query.CutoffEtag,
+				DebugOptionGetIndexEntries = query.DebugOptionGetIndexEntries,
+				DefaultOperator = query.DefaultOperator,
+				SkipTransformResults = query.SkipTransformResults,
+				SkippedResults = query.SkippedResults,
+				HighlighterPreTags = query.HighlighterPreTags,
+				HighlighterPostTags = query.HighlighterPostTags,
+				HighlightedFields = query.HighlightedFields,
+				ResultsTransformer = query.ResultsTransformer,
+				QueryInputs = query.QueryInputs
+			};
+			if (indexQuery.SortedFields == null)
+				return indexQuery;
+
+			for (int index = 0; index < indexQuery.SortedFields.Length; index++)
+			{
+				var sortedField = indexQuery.SortedFields[index];
+				var fieldName = sortedField.Field;
+				bool hasRange = false;
+				if (fieldName.EndsWith("_Range"))
+				{
+					fieldName = fieldName.Substring(0, fieldName.Length - "_Range".Length);
+					hasRange = true;
+				}
+			
+				var item = map.Items.FirstOrDefault(x => string.Equals(x.QueryFrom, fieldName, StringComparison.InvariantCultureIgnoreCase));
+				if (item == null)
+					continue;
+
+				indexQuery.SortedFields[index] = new SortedField(hasRange ? item.To + "_Range" : item.To);
+				indexQuery.SortedFields[index].Descending = sortedField.Descending;
+			}
+			return indexQuery;
+		}
+
 		private Tuple<string, bool> GetAppropriateIndexToQuery(string entityName, IndexQuery query, DynamicQueryMapping map)
 		{
 			var appropriateIndex = new DynamicQueryOptimizer(documentDatabase).SelectAppropriateIndex(entityName, query);
-			if (appropriateIndex != null)
+			if (appropriateIndex.MatchType == DynamicQueryMatchType.Complete)
 			{
-				if (appropriateIndex.StartsWith("Temp/"))// temporary index, we need to increase its usage
-				{
-					return TouchTemporaryIndex(appropriateIndex, "Auto/" + appropriateIndex.Substring(5),
-																	() => documentDatabase.IndexDefinitionStorage.GetIndexDefinition(appropriateIndex));
-				}
-				return Tuple.Create(appropriateIndex, false);
+			    map.IndexName = appropriateIndex.IndexName;
+				return Tuple.Create(appropriateIndex.IndexName, false);
 			}
-			return TouchTemporaryIndex(map.TemporaryIndexName, map.PermanentIndexName,
-															map.CreateIndexDefinition);
+            else if (appropriateIndex.MatchType == DynamicQueryMatchType.Partial)
+            {
+                // At this point, we found an index that has some fields we need and
+                // isn't incompatible with anything else we're asking for
+                // We need to clone that other index 
+                // We need to add all our requested indexes information to our cloned index
+                // We can then use our new index instead
+                var currentIndex = documentDatabase.IndexDefinitionStorage.GetIndexDefinition(appropriateIndex.IndexName);
+                map.AddExistingIndexDefinition(currentIndex, documentDatabase, query);
+            }
+			return CreateAutoIndex(map.IndexName, map.CreateIndexDefinition);
 		}
 
-		public void CleanupCache()
-		{
-			foreach (var indexInfo in from index in temporaryIndexes
-									  let indexInfo = index.Value
-									  let timeSinceRun = SystemTime.UtcNow.Subtract(indexInfo.LastRun)
-									  where timeSinceRun > documentDatabase.Configuration.TempIndexCleanupThreshold
-									  select indexInfo)
-			{
-				documentDatabase.DeleteIndex(indexInfo.Name);
-				TemporaryIndexInfo ignored;
-				temporaryIndexes.TryRemove(indexInfo.Name, out ignored);
-			}
-		}
 
-		private Tuple<string, bool> TouchTemporaryIndex(string temporaryIndexName, string permanentIndexName, Func<IndexDefinition> createDefinition)
+	    private Tuple<string, bool> CreateAutoIndex(string permanentIndexName, Func<IndexDefinition> createDefinition)
 		{
-			var indexInfo = IncrementUsageCount(temporaryIndexName);
-
 			if (documentDatabase.GetIndexDefinition(permanentIndexName) != null)
 				return Tuple.Create(permanentIndexName, false);
 
-			if (TemporaryIndexShouldBeMadePermanent(indexInfo))
-			{
-				TempIndexToPermanentIndex(temporaryIndexName, permanentIndexName, createDefinition);
-				return Tuple.Create(permanentIndexName, false);
-			}
-
-			// we make the check here to avoid locking if the index already exists
-			var temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
-			if (temporaryIndex != null)
-				return Tuple.Create(temporaryIndexName, false);
-
-			lock (createIndexLock)
-			{
-				// double checked locking, to ensure that we only create the index once
-				temporaryIndex = documentDatabase.GetIndexDefinition(temporaryIndexName);
-				if (temporaryIndex != null)
-					return Tuple.Create(temporaryIndexName, false);
-
-				documentDatabase.PutIndex(temporaryIndexName, createDefinition());
-
-				return Tuple.Create(temporaryIndexName, true);
-			}
-
-		}
-
-		private void TempIndexToPermanentIndex(string temporaryIndexName, string permanentIndexName, Func<IndexDefinition> createDefinition)
-		{
-			if (documentDatabase.GetIndexDefinition(permanentIndexName) != null)
-				return;
-
-			lock (createIndexLock)
-			{
-				if (documentDatabase.GetIndexDefinition(permanentIndexName) != null)
-					return;
-
-				var indexDefinition = createDefinition();
-				documentDatabase.DeleteIndex(temporaryIndexName);
-				documentDatabase.PutIndex(permanentIndexName, indexDefinition);
-				TemporaryIndexInfo ignored;
-				temporaryIndexes.TryRemove(temporaryIndexName, out ignored);
-			}
-		}
-
-		private TemporaryIndexInfo IncrementUsageCount(string temporaryIndexName)
-		{
-			var indexInfo = temporaryIndexes.GetOrAdd(temporaryIndexName, s => new TemporaryIndexInfo
-			{
-				Created = SystemTime.UtcNow,
-				RunCount = 0,
-				Name = temporaryIndexName
-			});
-			indexInfo.LastRun = SystemTime.UtcNow;
-			Interlocked.Increment(ref indexInfo.RunCount);
-			return indexInfo;
-		}
-
-		private bool TemporaryIndexShouldBeMadePermanent(TemporaryIndexInfo indexInfo)
-		{
-			if (indexInfo.RunCount < documentDatabase.Configuration.TempIndexPromotionMinimumQueryCount)
-				return false;
-
-			var timeSinceCreation = SystemTime.UtcNow.Subtract(indexInfo.Created);
-			var score = timeSinceCreation.TotalMilliseconds / indexInfo.RunCount;
-
-			return score < documentDatabase.Configuration.TempIndexPromotionThreshold;
-		}
-
-		private class TemporaryIndexInfo
-		{
-			public string Name;
-			public DateTime LastRun;
-			public DateTime Created;
-			public int RunCount;
+            lock (createIndexLock)
+            {
+                var indexDefinition = createDefinition();
+                documentDatabase.PutIndex(permanentIndexName, indexDefinition);
+            }
+            
+            return Tuple.Create(permanentIndexName, true);
+		
 		}
 	}
 }

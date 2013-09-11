@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Jint;
+using Raven.Abstractions.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 using Raven.Client.Document;
@@ -110,7 +111,7 @@ this.Parts = this.Email.split('@');";
 		{
 			const string email = "somebody@somewhere.com";
 			var doc = RavenJObject.Parse("{\"Contact\":null}");
-			const string script = "this.Contact = contact;";
+			const string script = "this.Contact = contact.Email;";
 			var patch = new ScriptedPatchRequest()
 			{
 				Script = script,
@@ -159,11 +160,11 @@ this.Parts = this.Email.split('@');";
 		{
 			var doc = RavenJObject.FromObject(test);
 			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
-																							{
-																								Script = @"
+			{
+				Script = @"
 this.Comments.Remove('two');
 "
-																							});
+			});
 			var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
 
 			Assert.Equal(new[] { "one", "seven" }.ToList(), result.Comments);
@@ -190,10 +191,10 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		{
 			var doc = RavenJObject.FromObject(test);
 			var resultJson = new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest
-																							{
-																								Script = "this.TheName = Name",
-																								Values = { { "Name", "ayende" } }
-																							});
+			{
+				Script = "this.TheName = Name",
+				Values = { { "Name", "ayende" } }
+			});
 			Assert.Equal("ayende", resultJson.Value<string>("TheName"));
 		}
 
@@ -222,9 +223,9 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 			var doc = RavenJObject.FromObject(test);
 			var advancedJsonPatcher = new ScriptedJsonPatcher();
 			advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
-																			{
-																				Script = "output(this.Id)"
-																			});
+			{
+				Script = "output(this.Id)"
+			});
 
 			Assert.Equal("someId", advancedJsonPatcher.Debug[0]);
 		}
@@ -300,13 +301,13 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 				}
 
 				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
-																{
-																	Script = @"
+				{
+					Script = @"
 var another = LoadDocument(anotherId);
 this.Value = another.Value;
 ",
-																	Values = { { "anotherId", "CustomTypes/2" } }
-																});
+					Values = { { "anotherId", "CustomTypes/2" } }
+				});
 
 				var resultDoc = store.DatabaseCommands.Get("CustomTypes/1");
 				var resultJson = resultDoc.DataAsJson;
@@ -315,6 +316,36 @@ this.Value = another.Value;
 				Assert.Equal(1, result.Value);
 			}
 		}
+
+        [Fact]
+        public void CanPatchMetadata()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new CustomType { Value = 2 });
+                    s.Store(new CustomType { Value = 1 });
+                    s.SaveChanges();
+                }
+
+                store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
+                {
+                    Script = @"
+this.Owner = this['@metadata']['Raven-Clr-Type'];
+this['@metadata']['Raven-Entity-Name'] = 'New-Entity';
+",                   
+                });
+
+                var resultDoc = store.DatabaseCommands.Get("CustomTypes/1");
+                var resultJson = resultDoc.DataAsJson;
+                var result = JsonConvert.DeserializeObject<CustomType>(resultJson.ToString());
+                var metadata = resultDoc.Metadata;
+
+                Assert.Equal(metadata["Raven-Clr-Type"], result.Owner);
+                Assert.Equal("New-Entity", metadata["Raven-Entity-Name"]);
+            }
+        }
 
 		[Fact]
 		public void CanUpdateOnMissingProperty()
@@ -327,13 +358,11 @@ this.Value = another.Value;
 					s.SaveChanges();
 				}
 
-
 				store.DatabaseCommands.Patch("products/1",
-														 new ScriptedPatchRequest
-														 {
-															 Script = "this.Test = 'a';"
-														 });
-
+				new ScriptedPatchRequest
+				{
+					Script = "this.Test = 'a';"
+				});
 
 				var resultDoc = store.DatabaseCommands.Get("products/1");
 
@@ -348,11 +377,254 @@ this.Value = another.Value;
 			using (var store = NewDocumentStore())
 			{
 				store.DatabaseCommands.Patch("products/1",
-														 new ScriptedPatchRequest
-														 {
-															 Script = "this.Test = 'a';"
-														 });
+				new ScriptedPatchRequest
+				{
+					Script = "this.Test = 'a';"
+				});
+			}
+		}
 
+		[Fact]
+		public void CanCreateDocument()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new CustomType { Value = 10 });
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
+				{
+					Script = @"PutDocument(
+'NewTypes/1', 
+{ 'CopiedValue':  this.Value },
+{'CreatedBy': 'JS_Script'});",
+				});
+
+				var resultDoc = store.DatabaseCommands.Get("NewTypes/1");
+
+				Assert.Equal(10, resultDoc.DataAsJson.Value<int>("CopiedValue"));
+				Assert.Equal("JS_Script", resultDoc.Metadata.Value<string>("CreatedBy"));
+			}
+		}
+
+        [Fact]
+        public void CanUpdateDocument()
+        {
+            using (var store = NewDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new CustomType { Value = 10 });
+                    s.SaveChanges();
+                }
+
+                store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
+                {
+                    Script = @"PutDocument(
+'NewTypes/1', 
+{ 'CopiedValue':this.Value },
+{'CreatedBy': 'JS_Script'});
+
+PutDocument(
+'NewTypes/1', 
+{ 'CopiedValue': this.Value },
+{'CreatedBy': 'JS_Script 2'});",
+                });
+
+                var resultDoc = store.DatabaseCommands.Get("NewTypes/1");
+
+                Assert.Equal(10, resultDoc.DataAsJson.Value<int>("CopiedValue"));
+                Assert.Equal("JS_Script 2", resultDoc.Metadata.Value<string>("CreatedBy"));
+            }
+        }
+
+		[Fact]
+		public void CanCreateMultipleDocuments()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new CustomType { Id = "Items/1", Value = 10, Comments = new List<string>(new[] { "one", "two", "three" }) });
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.Patch("Items/1", new ScriptedPatchRequest
+				{
+                    Script = @"_(this.Comments).forEach(function(comment){PutDocument(
+						'Comments/', 
+						    { 'Comment':comment }
+                        );
+					});",
+				});
+
+				var resultDoc = store.DatabaseCommands.GetDocuments(0, 10);
+
+				Assert.Equal(4, resultDoc.Length);
+
+				Assert.Equal("one", store.DatabaseCommands.Get("Comments/1").DataAsJson.Value<string>("Comment"));
+				Assert.Equal("two", store.DatabaseCommands.Get("Comments/2").DataAsJson.Value<string>("Comment"));
+				Assert.Equal("three", store.DatabaseCommands.Get("Comments/3").DataAsJson.Value<string>("Comment"));
+			}
+		}
+
+		[Fact]
+		public void CreateDocumentWillAssignKeyAndEtagIfNotProvided()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new CustomType { Id = "CustomTypes/1", Value = 10 });
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
+				{
+					Script = @"PutDocument(null, { 'Property': 'Value'});",
+				});
+
+				var resultDocs = store.DatabaseCommands.GetDocuments(0, 10);
+
+				Assert.Equal(2, resultDocs.Length);
+
+				var newDoc = resultDocs.First(x => x.DataAsJson.Value<string>("Property") == "Value");
+				Assert.NotNull(newDoc.Key);
+				Assert.NotEqual(string.Empty, newDoc.Key);
+
+				var newDocEtag = newDoc.Etag;
+				Assert.NotNull(newDocEtag);
+				Assert.NotEqual(Etag.Empty, newDocEtag);
+			}
+		}
+
+
+		[Fact]
+		public void CreateDocumentShouldThrowInvalidEtagException()
+		{
+			var doc = RavenJObject.FromObject(test);
+			var advancedJsonPatcher = new ScriptedJsonPatcher();
+			var x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
+			{
+                Script = @"PutDocument('Items/1', { Property: 1}, {'@etag': 'invalid-etag' });"
+			}));
+
+			Assert.Contains("Invalid ETag value 'invalid-etag' for document 'Items/1'", x.InnerException.Message);
+		}
+
+		[Fact]
+		public void ShouldThrowConcurrencyExceptionIfNonCurrentEtagWasSpecified()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new CustomType { Value = 10 });
+					s.SaveChanges();
+				}
+
+				var x = Assert.Throws<ConcurrencyException>(() => store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
+				{
+                    Script = @"PutDocument(
+'Items/1', 
+{ 'Property':'Value'},
+{'@etag': '01000000-0000-0003-0000-0000000000A0'} );",
+				}));
+
+				Assert.Contains("PUT attempted on document 'Items/1' using a non current etag", x.Message);
+			}
+		}
+
+		[Fact]
+		public void CanCreateEmptyDocument()
+		{
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(new CustomType { Value = 10 });
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.Patch("CustomTypes/1", new ScriptedPatchRequest
+				{
+                    Script = @"PutDocument('NewTypes/1', { });",
+				});
+
+				var resultDoc = store.DatabaseCommands.Get("NewTypes/1");
+
+				Assert.Equal(0, resultDoc.DataAsJson.Keys.Count);
+			}
+		}
+
+		[Fact]
+		public void CreateDocumentShouldThrowIfSpecifiedJsonIsNullOrEmptyString()
+		{
+			var doc = RavenJObject.FromObject(test);
+			var advancedJsonPatcher = new ScriptedJsonPatcher();
+			var x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
+			{
+                Script = @"PutDocument('Items/1', null);"
+			}));
+
+			Assert.Contains("Created document cannot be null or empty. Document key: 'Items/1'", x.InnerException.Message);
+
+			x = Assert.Throws<InvalidOperationException>(() => advancedJsonPatcher.Apply(doc, new ScriptedPatchRequest
+			{
+                Script = @"PutDocument('Items/1', null, null);"
+			}));
+
+			Assert.Contains("Created document cannot be null or empty. Document key: 'Items/1'", x.InnerException.Message);
+		}
+
+		[Fact]
+		public void CanCreateDocumentsIfPatchingAppliedByIndex()
+		{
+			var item1 = new CustomType
+			{
+				Id = "Item/1",
+				Value = 1
+			};
+			var item2 = new CustomType
+			{
+				Id = "Item/2",
+				Value = 2
+			};
+
+			using (var store = NewDocumentStore())
+			{
+				using (var s = store.OpenSession())
+				{
+					s.Store(item1);
+					s.Store(item2);
+					s.SaveChanges();
+				}
+
+				store.DatabaseCommands.PutIndex("TestIndex",
+				                                new IndexDefinition
+				                                {
+					                                Map = @"from doc in docs 
+									select new { doc.Value }"
+												});
+
+				store.OpenSession().Advanced.LuceneQuery<CustomType>("TestIndex")
+				     .WaitForNonStaleResults().ToList();
+
+				store.DatabaseCommands.UpdateByIndex("TestIndex",
+				                                     new IndexQuery {Query = "Value:1"},
+                                                     new ScriptedPatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" })
+				     .WaitForCompletion();
+
+				var jsonDocuments = store.DatabaseCommands.GetDocuments(0, 10);
+
+				Assert.Equal(3, jsonDocuments.Length);
+
+				var jsonDocument = store.DatabaseCommands.Get("NewItem/3");
+
+				Assert.Equal(1, jsonDocument.DataAsJson.Value<int>("CopiedValue"));
 			}
 		}
 
@@ -414,7 +686,8 @@ this.Value = another.Value;
 
 			store.DatabaseCommands.UpdateByIndex("TestIndex",
 											new IndexQuery { Query = "Owner:Bob" },
-											new ScriptedPatchRequest { Script = sampleScript });
+											new ScriptedPatchRequest { Script = sampleScript })
+											.WaitForCompletion();
 
 			var item1ResultJson = store.DatabaseCommands.Get(item1.Id).DataAsJson;
 			var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());
@@ -433,13 +706,12 @@ this.Value = another.Value;
 			Assert.Equal("seven", item2Result.Comments[2]);
 		}
 
-
 		class CustomType
 		{
 			public string Id { get; set; }
 			public string Owner { get; set; }
 			public int Value { get; set; }
 			public List<string> Comments { get; set; }
-		}
-	}
+		}        
+    }
 }

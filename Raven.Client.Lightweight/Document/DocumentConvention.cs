@@ -20,12 +20,16 @@ using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection;
 using Raven.Client.Converters;
 using Raven.Client.Util;
 using Raven.Json.Linq;
+#if NETFX_CORE
+using Raven.Client.WinRT.MissingFromWinRT;
+#endif
 
 namespace Raven.Client.Document
 {
@@ -66,7 +70,7 @@ namespace Raven.Client.Document
 			DisableProfiling = true;
 			EnlistInDistributedTransactions = true;
 			UseParallelMultiGet = true;
-			DefaultQueryingConsistency = ConsistencyOptions.MonotonicRead;
+			DefaultQueryingConsistency = ConsistencyOptions.None;
 			FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			ShouldCacheRequest = url => true;
 			FindIdentityProperty = q => q.Name == "Id";
@@ -86,13 +90,17 @@ namespace Raven.Client.Document
 			IdentityPartsSeparator = "/";
 			JsonContractResolver = new DefaultRavenContractResolver(shareCache: true)
 			{
+#if !NETFX_CORE
 				DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+#endif
 			};
 			MaxNumberOfRequestsPerSession = 30;
 			ApplyReduceFunction = DefaultApplyReduceFunction;
 			ReplicationInformerFactory = url => new ReplicationInformer(this);
 			CustomizeJsonSerializer = serializer => { };
 			FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
+			ShouldAggressiveCacheTrackChanges = true;
+			ShouldSaveChangesForceAggressiveCacheCheck = true;
 		}
 
 		private IEnumerable<object> DefaultApplyReduceFunction(
@@ -123,7 +131,11 @@ namespace Raven.Client.Document
 
 		public static string DefaultTransformTypeTagNameToDocumentKeyPrefix(string typeTagName)
 		{
+#if NETFX_CORE
+			var count = typeTagName.ToCharArray().Count(char.IsUpper);
+#else
 			var count = typeTagName.Count(char.IsUpper);
+#endif
 
 			if (count <= 1) // simple name, just lower case it
 				return typeTagName.ToLowerInvariant();
@@ -232,7 +244,7 @@ namespace Raven.Client.Document
 
 			if (t.Name.Contains("<>"))
 				return null;
-			if (t.IsGenericType)
+			if (t.IsGenericType())
 			{
 				var name = t.GetGenericTypeDefinition().Name;
 				if (name.Contains('`'))
@@ -267,7 +279,7 @@ namespace Raven.Client.Document
 			return FindTypeTagName(type) ?? DefaultTypeTagName(type);
 		}
 
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Generates the document key.
 		/// </summary>
@@ -284,7 +296,7 @@ namespace Raven.Client.Document
 
 			if (listOfRegisteredIdConventionsAsync.Any(x => x.Item1.IsAssignableFrom(type)))
 			{
-				throw new InvalidOperationException("Id covention for synchronous operation was not found for entity " + type.FullName + ", but convention for asynchronous operation exists.");
+				throw new InvalidOperationException("Id convention for synchronous operation was not found for entity " + type.FullName + ", but convention for asynchronous operation exists.");
 			}
 
 			return DocumentKeyGenerator(dbName, databaseCommands, entity);
@@ -303,7 +315,7 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			if (listOfRegisteredIdConventions.Any(x => x.Item1.IsAssignableFrom(type)))
 			{
-				throw new InvalidOperationException("Id covention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
+				throw new InvalidOperationException("Id convention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
 			}
 #endif
 
@@ -351,7 +363,7 @@ namespace Raven.Client.Document
 
 		private static IEnumerable<PropertyInfo> GetPropertiesForType(Type type)
 		{
-			foreach (var propertyInfo in type.GetProperties())
+			foreach (var propertyInfo in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
 			{
 				yield return propertyInfo;
 			}
@@ -439,6 +451,24 @@ namespace Raven.Client.Document
 		/// when handling lazy requests
 		/// </summary>
 		public bool UseParallelMultiGet { get; set; }
+
+		/// <summary>
+		/// Whatever or not RavenDB should in the aggressive cache mode use Changes API to track
+		/// changes and rebuild the cache. This will make that outdated data will be revalidated
+		/// to make the cache more updated, however it is still possible to get a state result because of the time
+		/// needed to receive the notification and forcing to check for cached data.
+		/// </summary>
+		public bool ShouldAggressiveCacheTrackChanges { get; set; }
+
+		/// <summary>
+		/// Whatever or not RavenDB should in the aggressive cache mode should force the aggresive cache
+		/// to check with the server after we called SaveChanges() on a non empty data set.
+		/// This will make any outdated data revalidated, and will work nicely as long as you have just a 
+		/// single client. For multiple clients, <see cref="ShouldAggressiveCacheTrackChanges"/>.
+		/// </summary>
+		public bool ShouldSaveChangesForceAggressiveCacheCheck { get; set; }
+
+
 #if !SILVERLIGHT
 		/// <summary>
 		/// Register an id convention for a single type (and all of its derived types.
@@ -714,12 +744,20 @@ namespace Raven.Client.Document
 			}
 		}
 
-		public bool UsesRangeType(Object o)
+		public bool UsesRangeType(object o)
 		{
-			if (o is int || o is long || o is double || o is float || o is decimal || o is TimeSpan)
+			if (o == null)
+				return false;
+			var type = o as Type ?? o.GetType();
+			var nonNullable = Nullable.GetUnderlyingType(type);
+			if (nonNullable != null)
+				type = nonNullable;
+
+			if (type == typeof (int) || type == typeof (long) || type == typeof (double) || type == typeof (float) ||
+			    type == typeof (decimal) || type == typeof (TimeSpan))
 				return true;
 
-			return customRangeTypes.Contains(o.GetType());
+			return customRangeTypes.Contains(type);
 		}
 
 		public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
@@ -782,10 +820,20 @@ namespace Raven.Client.Document
 		/// of the index at a time prior to T.
 		/// This is ensured by the server, and require no action from the client
 		/// </summary>
-		MonotonicRead,
+		None,
 		/// <summary>
 		///  After updating a documents, will only accept queries which already indexed the updated value.
 		/// </summary>
-		QueryYourWrites,
+		AlwaysWaitForNonStaleResultsAsOfLastWrite,
+		/// <summary>
+		/// Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead
+		/// </summary>
+		[Obsolete("Use AlwaysWaitForNonStaleResultsAsOfLastWrite, instead")]
+		QueryYourWrites = AlwaysWaitForNonStaleResultsAsOfLastWrite,
+		/// <summary>
+		/// Use None, instead
+		/// </summary>
+		[Obsolete("Use None, instead")]
+		MonotonicRead = None
 	}
 }

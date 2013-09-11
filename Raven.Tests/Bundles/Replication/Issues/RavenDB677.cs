@@ -20,12 +20,13 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			 store1.DatabaseCommands.Delete("ayende", null);
 			 servers[0].Database.TransactionalStorage.Batch(accessor =>
 			 {
-				 Assert.NotEmpty(accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Guid.Empty, null, 10));
+				 Assert.NotEmpty(accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, null, 10));
 			 });
 
+			 Etag last = Etag.Empty.Setup(UuidType.Documents, 1).IncrementBy(3);
 			 var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
 			                                                                   servers[0].Database.ServerUrl +
-																			   "admin/replication/purge-tombstones?docEtag=00000001-0000-0100-0000-000000000003",
+																			   "admin/replication/purge-tombstones?docEtag=" + last,
 			                                                                   "POST",
 			                                                                   CredentialCache.DefaultCredentials,
 			                                                                   store1.Conventions);
@@ -34,7 +35,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
 			 servers[0].Database.TransactionalStorage.Batch(accessor =>
 			 {
-				 Assert.Empty(accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Guid.Empty, null, 10));
+				 Assert.Empty(accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, null, 10).ToArray());
 			 });
 		 }
 
@@ -48,12 +49,14 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			 store1.DatabaseCommands.Delete("rahien", null);
 			 servers[0].Database.TransactionalStorage.Batch(accessor =>
 			 {
-				 Assert.Equal(2, accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Guid.Empty, null, 10).Count());
+				 Assert.Equal(2, accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, null, 10).Count());
 			 });
 
+			 Etag last = Etag.Empty.Setup(UuidType.Documents, 1).IncrementBy(3);
+			
 			 var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(null,
 																			   servers[0].Database.ServerUrl +
-																			   "admin/replication/purge-tombstones?docEtag=00000001-0000-0100-0000-000000000003",
+																			   "admin/replication/purge-tombstones?docEtag=" + last,
 																			   "POST",
 																			   CredentialCache.DefaultCredentials,
 																			   store1.Conventions);
@@ -62,7 +65,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
 			 servers[0].Database.TransactionalStorage.Batch(accessor =>
 			 {
-				 Assert.Equal(1, accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Guid.Empty, null, 10).Count());
+				 Assert.Equal(1, accessor.Lists.Read(Constants.RavenReplicationDocsTombstones, Etag.Empty, null, 10).Count());
 			 });
 		 }
 	}

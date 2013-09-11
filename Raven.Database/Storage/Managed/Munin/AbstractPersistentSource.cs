@@ -15,15 +15,31 @@ namespace Raven.Munin
 	{
 		private volatile IList<PersistentDictionaryState> globalStates = new List<PersistentDictionaryState>();
 
-		private readonly ThreadLocal<IList<PersistentDictionaryState>> currentStates =
-			new ThreadLocal<IList<PersistentDictionaryState>>(() => null);
+        private readonly ThreadLocal<Stack<IList<PersistentDictionaryState>>> currentStates =
+            new ThreadLocal<Stack<IList<PersistentDictionaryState>>>(() => new Stack<IList<PersistentDictionaryState>>());
 
 		private bool disposed;
 
 		public IList<PersistentDictionaryState> CurrentStates
 		{
-			get { return currentStates.Value; }
-			set { currentStates.Value = value; }
+			get
+			{
+			    if (currentStates.Value.Count == 0)
+			        return null;
+			    return currentStates.Value.Peek();
+			}
+			set
+			{
+                if (value == null)
+                {
+                    if (currentStates.Value.Count > 0)
+                        currentStates.Value.Pop();
+                }
+                else
+                {
+                    currentStates.Value.Push(value);
+                }
+			}
 		}
 
 		public bool CreatedNew

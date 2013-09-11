@@ -12,6 +12,11 @@ namespace Raven.Abstractions.Linq
 		private readonly DynamicJsonObject parent;
 		private readonly IEnumerable<object> inner;
 
+		public DynamicList(IEnumerable inner)
+		{
+			this.inner = inner.Cast<object>();
+		}
+
 		public DynamicList(IEnumerable<object> inner)
 		{
 			this.inner = inner;
@@ -22,6 +27,27 @@ namespace Raven.Abstractions.Linq
 		{
 			this.parent = parent;
 		}
+#if !SILVERLIGHT
+        public override bool TryConvert(ConvertBinder binder, out object result)
+        {
+            if (binder.ReturnType.IsArray)
+            {
+                var elementType = binder.ReturnType.GetElementType();
+                var count = Count;
+                var array = Array.CreateInstance(elementType, count);
+
+                for (int i = 0; i < count; i++)
+                {
+                    array.SetValue(Convert.ChangeType(this[i], elementType), i);
+                }
+
+                result = array;
+
+                return true;
+            }
+            return base.TryConvert(binder, out result);
+        }
+#endif
 
 		public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
 		{
@@ -175,6 +201,16 @@ namespace Raven.Abstractions.Linq
 			return new DynamicList(Enumerate().OrderByDescending(comparable));
 		}
 
+		public dynamic GroupBy(Func<dynamic, dynamic> keySelector)
+		{
+			return new DynamicList(Enumerable.GroupBy(inner, keySelector).Select(x => new WrapperGrouping(x)));
+		}
+
+		public dynamic GroupBy(Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> selector)
+		{
+			return new DynamicList(Enumerable.GroupBy(inner, keySelector, selector).Select(x => new WrapperGrouping(x)));
+		}
+
 		public dynamic Last()
 		{
 			return Enumerate().Last();
@@ -195,6 +231,42 @@ namespace Raven.Abstractions.Linq
 			return Enumerate().LastOrDefault(predicate) ?? new DynamicNullObject();
 		}
 
+		public dynamic IndexOf(dynamic item)
+		{
+			var items = Enumerate().ToList();
+			return items.IndexOf(item);
+		}
+
+		public dynamic IndexOf(dynamic item, int index)
+		{
+			var items = Enumerate().ToList();
+			return items.IndexOf(item, index);
+		}
+
+		public dynamic IndexOf(dynamic item, int index, int count)
+		{
+			var items = Enumerate().ToList();
+			return items.IndexOf(item, index, count);
+		}
+
+		public dynamic LastIndexOf(dynamic item)
+		{
+			var items = Enumerate().ToList();
+			return items.LastIndexOf(item);
+		}
+
+		public dynamic LastIndexOf(dynamic item, int index)
+		{
+			var items = Enumerate().ToList();
+			return items.LastIndexOf(item, index);
+		}
+
+		public dynamic LastIndexOf(dynamic item, int index, int count)
+		{
+			var items = Enumerate().ToList();
+			return items.LastIndexOf(item, index, count);
+		}
+
 		/// <summary>
 		/// Gets the length.
 		/// </summary>
@@ -209,6 +281,11 @@ namespace Raven.Abstractions.Linq
 			return new DynamicList(parent, inner.Select(func));
 		}
 
+		public IEnumerable<object> Select(Func<IGrouping<object,object>, object> func)
+		{
+			return new DynamicList(parent, inner.Select(o => func((IGrouping<object, object>)o)));
+		}
+
 		public IEnumerable<object> Select(Func<object, int, object> func)
 		{
 			return new DynamicList(parent, inner.Select(func));
@@ -217,6 +294,11 @@ namespace Raven.Abstractions.Linq
 		public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func)
 		{
 			return new DynamicList(parent, inner.SelectMany(func));
+		}
+
+		public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func, Func<object, object, object> selector)
+		{
+			return new DynamicList(parent, inner.SelectMany(func, selector));
 		}
 
 		public IEnumerable<object> SelectMany(Func<object, int, IEnumerable<object>> func)
@@ -239,4 +321,26 @@ namespace Raven.Abstractions.Linq
 			return inner.DefaultIfEmpty(defaultValue ?? new DynamicNullObject());
 		}
 	}
+
+	public class WrapperGrouping : DynamicList, IGrouping<object, object>
+	{
+		private readonly IGrouping<dynamic, dynamic> inner;
+
+		public WrapperGrouping(IGrouping<dynamic, dynamic> inner)
+			: base(inner)
+		{
+			this.inner = inner;
+		}
+
+		public dynamic Key
+		{
+			get { return inner.Key; }
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
+	}
+
 }

@@ -51,7 +51,7 @@ namespace Raven.Client.Document
 			var fieldInfo = info as FieldInfo;
 			if (fieldInfo != null && !fieldInfo.IsPublic)
 				return true;
-			return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute),true).Length > 0;
+			return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute),true).Any();
 		}
 	}
 }

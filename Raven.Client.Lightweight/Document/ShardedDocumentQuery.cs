@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
+#if !SILVERLIGHT && !NETFX_CORE
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -46,7 +46,7 @@ namespace Raven.Client.Document
 		}
 
 		private IndexQuery indexQuery;
-		private IndexQuery IndexQuery
+	    private IndexQuery IndexQuery
 		{
 			get { return indexQuery ?? (indexQuery = GenerateIndexQuery(queryText.ToString())); }
 		}
@@ -127,8 +127,11 @@ namespace Raven.Client.Document
 				queryShape = queryShape,
 				spatialFieldName = spatialFieldName,
 				spatialRelation = spatialRelation,
+				spatialUnits = spatialUnits,
 				databaseCommands = databaseCommands,
 				indexQuery = indexQuery,
+				disableEntitiesTracking = disableEntitiesTracking,
+				disableCaching = disableCaching
 			};
 			return documentQuery;
 		}
@@ -179,7 +182,7 @@ namespace Raven.Client.Document
 
 		internal static void AssertNoDuplicateIdsInResults(List<QueryOperation> shardQueryOperations)
 		{
-			var shardsPerId = new Dictionary<string, HashSet<QueryOperation>>(StringComparer.InvariantCultureIgnoreCase);
+			var shardsPerId = new Dictionary<string, HashSet<QueryOperation>>(StringComparer.OrdinalIgnoreCase);
 
 			foreach (var shardQueryOperation in shardQueryOperations)
 			{

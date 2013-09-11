@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -12,7 +10,6 @@ using System.Windows.Markup;
 using Raven.Studio.Extensions;
 using Raven.Studio.Features.Documents;
 using System.Linq;
-using Raven.Studio.Infrastructure.Converters;
 using ColumnDefinition = Raven.Studio.Features.Documents.ColumnDefinition;
 
 namespace Raven.Studio.Behaviors
@@ -24,14 +21,14 @@ namespace Raven.Studio.Behaviors
 
         private static readonly DependencyProperty AssociatedColumnProperty =
             DependencyProperty.RegisterAttached("AssociatedModel", typeof(ColumnDefinition), typeof(BindColumnsToColumnSetBehavior), new PropertyMetadata(null));
+        
+        public static readonly DependencyProperty ColumnGeneratorProperty =
+            DependencyProperty.Register("ColumnGenerator", typeof(IDataGridColumnGenerator), typeof(BindColumnsToColumnSetBehavior), new PropertyMetadata(null));
 
-        public static readonly DependencyProperty InvalidBindingHeaderStyleProperty =
-            DependencyProperty.Register("InvalidBindingHeaderStyle", typeof (Style), typeof (BindColumnsToColumnSetBehavior), new PropertyMetadata(default(Style)));
-
-        public Style InvalidBindingHeaderStyle
+        public IDataGridColumnGenerator ColumnGenerator
         {
-            get { return (Style) GetValue(InvalidBindingHeaderStyleProperty); }
-            set { SetValue(InvalidBindingHeaderStyleProperty, value); }
+            get { return (IDataGridColumnGenerator)GetValue(ColumnGeneratorProperty); }
+            set { SetValue(ColumnGeneratorProperty, value); }
         }
 
         private static ColumnDefinition GetAssociatedColumn(DependencyObject obj)
@@ -75,12 +72,15 @@ namespace Raven.Studio.Behaviors
         {
             // we need to ensure that the column set doesn't get changed whilst the user is interacting with one
             // of the columns
-            Columns.Source = ColumnsSource.User;
+			if (Columns.Source == ColumnsSource.Automatic)
+				Columns.Source = ColumnsSource.Resize;
+            //Columns.Source = ColumnsSource.User;
         }
 
         private void HandleColumnHeadersMouseLeftButtonUp(object sender, RoutedEventArgs e)
         {
             internalColumnUpdate = true;
+			
 
             Columns.LoadFromColumnDefinitions(GetColumnDefinitionsFromColumns());
 
@@ -137,7 +137,7 @@ namespace Raven.Studio.Behaviors
         {
             return AssociatedObject.Columns
                 .Where(c => GetAssociatedColumn(c) != null)
-                .ToDictionary(c => GetAssociatedColumn(c), c => c.ActualWidth);
+                .ToDictionary(GetAssociatedColumn, c => c.ActualWidth);
         }
 
         private void StopObservingColumnsModel()
@@ -157,12 +157,6 @@ namespace Raven.Studio.Behaviors
             }
 
             ScheduleColumnReset();
-        }
-
-        private int GetIndexOfAssociatedColumn(ColumnDefinition columnModel)
-        {
-            var column = FindAssociatedColumn(columnModel);
-            return column == null ? -1 : AssociatedObject.Columns.IndexOf(column);
         }
 
         private void ScheduleColumnReset()
@@ -190,7 +184,7 @@ namespace Raven.Studio.Behaviors
 
         private void AddColumns()
         {
-            if (Columns == null)
+            if (Columns == null || ColumnGenerator == null)
             {
                 return;
             } 
@@ -213,33 +207,7 @@ namespace Raven.Studio.Behaviors
 
         private void AddColumn(ColumnDefinition columnDefinition, int? index = null)
         {
-            var cellTemplate = CreateCellTemplate(columnDefinition);
-
-            DataGridColumn column;
-            
-            if (cellTemplate != null)
-            {
-                column = new DataGridTemplateColumn()
-                             {
-                                 ClipboardContentBinding = columnDefinition.CreateBinding("Item.Document."),
-                                 Header = columnDefinition.Header,
-                                 CellTemplate = cellTemplate,
-                             };
-            }
-            else
-            {
-                column = new DataGridTextColumn()
-                                 {
-                                     Binding = new Binding( "NonExistantProperty"),
-                                     Header = columnDefinition,
-                                     HeaderStyle = InvalidBindingHeaderStyle,
-                                 };
-            }
-
-            if (!string.IsNullOrEmpty(columnDefinition.DefaultWidth))
-            {
-                column.Width = ParseWidth(columnDefinition.DefaultWidth);
-            }
+            var column = ColumnGenerator.CreateColumnForDefinition(columnDefinition);
 
             SetAssociatedColumn(column, columnDefinition);
 
@@ -253,59 +221,9 @@ namespace Raven.Studio.Behaviors
             }
         }
 
-        private DataGridLength ParseWidth(string defaultWidth)
-        {
-            if (string.IsNullOrEmpty(defaultWidth))
-            {
-                return new DataGridLength(100);
-            }
-            else
-            {
-                var converter = new DataGridLengthConverter();
-
-                return (DataGridLength)converter.ConvertFromString(defaultWidth);
-            }
-        }
-
-        private void RemoveColumn(ColumnDefinition columnDefinition)
-        {
-            DataGridTemplateColumn column = FindAssociatedColumn(columnDefinition);
-
-            if (column != null)
-            {
-                AssociatedObject.Columns.Remove(column);
-            }
-        }
-
         private DataGridTemplateColumn FindAssociatedColumn(ColumnDefinition columnDefinition)
         {
             return AssociatedObject.Columns.FirstOrDefault(c => GetAssociatedColumn(c) == columnDefinition) as DataGridTemplateColumn;
-        }
-
-        private DataTemplate CreateCellTemplate(ColumnDefinition columnDefinition)
-        {
-            var templateString =
-                @"<DataTemplate  xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:Behaviors=""clr-namespace:Raven.Studio.Behaviors;assembly=Raven.Studio""
- xmlns:m=""clr-namespace:Raven.Studio.Infrastructure.MarkupExtensions;assembly=Raven.Studio""
-                                    xmlns:Converters=""clr-namespace:Raven.Studio.Infrastructure.Converters;assembly=Raven.Studio"">
-                                    <TextBlock Text=""{Binding $$$BindingPath$$$, Converter={m:Static Member=Converters:DocumentPropertyToSingleLineStringConverter.Trimmed}}""
-                                               Behaviors:FadeTrimming.IsEnabled=""True"" Behaviors:FadeTrimming.ShowTextInToolTipWhenTrimmed=""True""
-                                               VerticalAlignment=""Center""
-                                               Margin=""5,0""/>
-                                </DataTemplate>";
-
-            templateString = templateString.Replace("$$$BindingPath$$$", columnDefinition.GetBindingPath("Item.Document."));
-
-            try
-            {
-                var template = XamlReader.Load(templateString) as DataTemplate;
-                template.LoadContent();
-                return template;
-            }
-            catch (XamlParseException)
-            {
-                return null;
-            }
         }
 
         private static void HandleColumnsModelChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -319,8 +237,9 @@ namespace Raven.Studio.Behaviors
                 if (e.NewValue != null)
                 {
                     behavior.StartObservingColumnsModel(e.NewValue as ColumnsModel);
-                    behavior.ScheduleColumnReset();
                 }
+
+                behavior.ScheduleColumnReset();
             }
         }
 

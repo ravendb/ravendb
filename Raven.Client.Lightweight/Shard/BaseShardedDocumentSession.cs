@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !SILVERLIGHT
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Commands;
@@ -74,7 +75,7 @@ namespace Raven.Client.Shard
 			{
 				// Only load items which aren't already loaded
 				idsToLoad = ids.Where(id => IsLoaded(id) == false)
-					.Distinct(StringComparer.InvariantCultureIgnoreCase)
+					.Distinct(StringComparer.OrdinalIgnoreCase)
 					.ToArray();
 			}
 
@@ -164,7 +165,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		protected override void StoreEntityInUnitOfWork(string id, object entity, Guid? etag, RavenJObject metadata, bool forceConcurrencyCheck)
+        protected override void StoreEntityInUnitOfWork(string id, object entity, Etag etag, RavenJObject metadata, bool forceConcurrencyCheck)
 		{
 			string modifyDocumentId = null;
 			if (id != null)
@@ -191,22 +192,17 @@ namespace Raven.Client.Shard
 
 		#region Transaction methods (not supported)
 
-		public override void Commit(Guid txId)
+		public override void Commit(string txId)
 		{
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
-		public override void Rollback(Guid txId)
+		public override void Rollback(string txId)
 		{
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
-		/// <summary>
-		/// Promotes a transaction specified to a distributed transaction
-		/// </summary>
-		/// <param name="fromTxId">From tx id.</param>
-		/// <returns>The token representing the distributed transaction</returns>
-		public override byte[] PromoteTransaction(Guid fromTxId)
+		public void PrepareTransaction(string txId)
 		{
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
@@ -222,11 +218,13 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
+#if !NETFX_CORE && !SILVERLIGHT
 		protected override void TryEnlistInAmbientTransaction()
 		{
 			// we DON'T support enlisting at the sharded document store level, only at the managed document stores, which 
 			// turns out to be pretty much the same thing
 		}
+#endif
 
 		#endregion
 
@@ -242,9 +240,19 @@ namespace Raven.Client.Shard
 		{
 			var ravenQueryStatistics = new RavenQueryStatistics();
 			var highlightings = new RavenQueryHighlightings();
+#if !SILVERLIGHT
 			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, null, isMapReduce);
-			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, null, isMapReduce);
+#else
+			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, isMapReduce);
+#endif
+			return CreateRavenQueryInspector(indexName, isMapReduce, provider, ravenQueryStatistics, highlightings);
 		}
+
+		protected abstract RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce,
+		                                                                              RavenQueryProvider<T> provider,
+		                                                                              RavenQueryStatistics
+			                                                                              ravenQueryStatistics,
+		                                                                              RavenQueryHighlightings highlightings);
 
 		/// <summary>
 		/// Query RavenDB dynamically using LINQ
@@ -258,7 +266,9 @@ namespace Raven.Client.Shard
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
 			return Query<T>(indexName)
+#pragma warning disable 612,618
 				.Customize(x => x.TransformResults((query, results) => results.Take(query.PageSize)));
+#pragma warning restore 612,618
 		}
 
 		/// <summary>
@@ -274,7 +284,9 @@ namespace Raven.Client.Shard
 				Conventions = Conventions
 			};
 			return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce)
+#pragma warning disable 612,618
 				.Customize(x => x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
+#pragma warning restore 612,618
 		}
 
 		/// <summary>
@@ -328,3 +340,4 @@ namespace Raven.Client.Shard
 		}
 	}
 }
+#endif

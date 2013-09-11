@@ -24,7 +24,9 @@ namespace Raven.Bundles.Versioning.Triggers
 			if (jsonDocument == null)
 				return VetoResult.Allowed;
 
-			if (jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical" && Database.IsVersioningActive(metadata))
+            if (Database.ChangesToRevisionsAllowed() == false && 
+                jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical" &&
+                Database.IsVersioningActive(metadata))
 			{
 				return VetoResult.Deny("Modifying a historical revision is not allowed");
 			}
@@ -52,7 +54,7 @@ namespace Raven.Bundles.Versioning.Triggers
 			metadata[VersioningUtil.RavenDocumentRevision] = RavenJToken.FromObject(revision);
 		}
 
-		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Guid etag, TransactionInformation transactionInformation)
+		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Etag etag, TransactionInformation transactionInformation)
 		{
 			VersioningConfiguration versioningConfiguration;
 			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
@@ -102,8 +104,14 @@ namespace Raven.Bundles.Versioning.Triggers
 						if (latestRevisionsDoc != null)
 						{
 							var id = latestRevisionsDoc["@metadata"].Value<string>("@id");
-							var revisionNum = id.Substring((key + "/revisions/").Length);
-							revision = Int32.Parse(revisionNum) + 1;
+							if(id.StartsWith(key, StringComparison.CurrentCultureIgnoreCase))
+							{
+								var revisionNum = id.Substring((key + "/revisions/").Length);
+								int result;
+								if (int.TryParse(revisionNum, out result))
+									revision = result + 1;
+							}
+							
 						}
 					}
 
@@ -124,7 +132,7 @@ namespace Raven.Bundles.Versioning.Triggers
 
 			while (true)
 			{
-				var docs = Database.GetDocumentsWithIdStartingWith(key + "/revisions/", null, start, pageSize);
+				var docs = Database.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize);
 				if (!docs.Any())
 					break;
 
@@ -143,7 +151,7 @@ namespace Raven.Bundles.Versioning.Triggers
 												   out VersioningConfiguration versioningConfiguration)
 		{
 			versioningConfiguration = null;
-			if (key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase))
+			if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
 				return false;
 
 			if (metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical")

@@ -22,32 +22,40 @@ namespace Raven.Database.Server.Security
 		private class OneTimeToken
 		{
 			private IPrincipal user;
-			private IntPtr? windowsUserToken;
 			public string DatabaseName { get; set; }
 			public DateTime GeneratedAt { get; set; }
 			public IPrincipal User
 			{
 				get
 				{
-					if (windowsUserToken != null)
-					{
-						return new WindowsPrincipal(new WindowsIdentity(windowsUserToken.Value));
-					}
 					return user;
 				}
 				set
 				{
-					var windowsPrincipal = value as WindowsPrincipal;
-					if (windowsPrincipal != null)
+					if (value == null)
 					{
 						user = null;
-						windowsUserToken = ((WindowsIdentity)windowsPrincipal.Identity).Token;
 						return;
 					}
-					windowsUserToken = null;
-					user = value;
+					user = new OneTimetokenPrincipal
+					{
+						Name = value.Identity.Name
+					};
 				}
 			}
+		}
+
+		public class OneTimetokenPrincipal : IPrincipal, IIdentity
+		{
+			public bool IsInRole(string role)
+			{
+				return false;
+			}
+
+			public IIdentity Identity { get { return this; } }
+			public string Name { get; set; }
+			public string AuthenticationType { get { return "one-time-token"; } }
+			public bool IsAuthenticated { get { return true; } }
 		}
 
 		protected override void Initialize()
@@ -60,19 +68,23 @@ namespace Raven.Database.Server.Security
 		public bool Authorize(IHttpContext context)
 		{
 			var requestUrl = context.GetRequestUrl();
-			if ( NeverSecret.Urls.Contains(requestUrl))
+			if (NeverSecret.Urls.Contains(requestUrl))
 				return true;
+
+			//CORS pre-flight (ignore creds if using cors).
+			if (!String.IsNullOrEmpty(Settings.AccessControlAllowOrigin) && context.Request.HttpMethod == "OPTIONS")
+			{ return true; }
 
 			var oneTimeToken = context.Request.Headers["Single-Use-Auth-Token"];
 			if (string.IsNullOrEmpty(oneTimeToken) == false)
 			{
-				return AuthorizeOSingleUseAuthToken(context, oneTimeToken);
+				return AuthorizeUsingleUseAuthToken(context, oneTimeToken);
 			}
 
 			var authHeader = context.Request.Headers["Authorization"];
 			var hasApiKey = "True".Equals(context.Request.Headers["Has-Api-Key"], StringComparison.CurrentCultureIgnoreCase);
 			var hasOAuthTokenInCookie = context.Request.HasCookie("OAuth-Token");
-			if (hasApiKey || hasOAuthTokenInCookie || 
+			if (hasApiKey || hasOAuthTokenInCookie ||
 				string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
 				return oAuthRequestAuthorizer.Authorize(context, hasApiKey, IgnoreDb.Urls.Contains(requestUrl));
@@ -80,7 +92,7 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.Authorize(context, IgnoreDb.Urls.Contains(requestUrl));
 		}
 
-		private bool AuthorizeOSingleUseAuthToken(IHttpContext context, string token)
+		private bool AuthorizeUsingleUseAuthToken(IHttpContext context, string token)
 		{
 			OneTimeToken value;
 			if (singleUseAuthTokens.TryRemove(token, out value) == false)
@@ -98,7 +110,7 @@ namespace Raven.Database.Server.Security
 				context.WriteJson(new
 				{
 					Error = "This single use token cannot be used for this database"
-				}); 
+				});
 				return false;
 			}
 			if ((SystemTime.UtcNow - value.GeneratedAt).TotalMinutes > 2.5)
@@ -107,7 +119,7 @@ namespace Raven.Database.Server.Security
 				context.WriteJson(new
 				{
 					Error = "This single use token has expired"
-				}); 
+				});
 				return false;
 			}
 
@@ -162,7 +174,7 @@ namespace Raven.Database.Server.Security
 
 			singleUseAuthTokens.TryAdd(tokenString, token);
 
-			if(singleUseAuthTokens.Count > 25)
+			if (singleUseAuthTokens.Count > 25)
 			{
 				foreach (var oneTimeToken in singleUseAuthTokens.Where(x => (x.Value.GeneratedAt - SystemTime.UtcNow).TotalMinutes > 5))
 				{

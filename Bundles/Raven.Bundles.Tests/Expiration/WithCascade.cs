@@ -10,6 +10,7 @@ using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Bundles.Tests.Expiration
 {
@@ -83,6 +84,69 @@ namespace Raven.Bundles.Tests.Expiration
 
 			ravenDbServer.Database.TransactionalStorage.Batch(accessor => Assert.Null(accessor.Attachments.GetAttachment("item")));
 		
+		}
+
+		[Fact]
+		public void CanDeleteAndCascadeAtTheSameTimeDocuemnts()
+		{
+		//	documentStore.DatabaseCommands.Put("doc/1", new Etag(), new RavenJObject(), new RavenJObject());
+			using (var session = documentStore.OpenSession())
+			{
+				var doc1 = new { Id = "doc/1" };
+				var doc2 = new { Id = "doc/2" };
+				session.Store(doc1);
+				session.Store(doc2);
+				session.Advanced.GetMetadataFor(doc1)["Raven-Expiration-Date"] = DateTime.Now.AddDays(-15);
+				session.Advanced.GetMetadataFor(doc1)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray(new[] { "doc/2" });
+				session.SaveChanges();
+			}
+
+			JsonDocument documentByKey = null;
+			for (int i = 0; i < 50; i++)
+			{
+				ravenDbServer.Database.TransactionalStorage.Batch(accessor =>
+				{
+					documentByKey = accessor.Documents.DocumentByKey("doc/1", null);
+
+				});
+				if (documentByKey == null)
+					break;
+				Thread.Sleep(100);
+			}
+
+			Assert.Null(documentByKey);
+
+
+			ravenDbServer.Database.TransactionalStorage.Batch(accessor => Assert.Null(accessor.Documents.DocumentByKey("doc/2", null)));
+		}
+
+		[Fact]
+		public void CanDeleteMultiChildrenWithCascade()
+		{
+			using (var session = documentStore.OpenSession())
+			{
+				var parent = new Foo();
+				var child1 = new Foo();
+				var child2 = new Foo();
+				session.Store(parent, "parentId1");
+				session.Store(child1, "childId1");
+				session.Store(child2, "childId2");
+				session.Advanced.GetMetadataFor(parent)["Raven-Cascade-Delete-Documents"] = RavenJToken.FromObject(new[] { "childId1", "childId2" });
+				session.Advanced.GetMetadataFor(parent)["Raven-Expiration-Date"] = new RavenJValue(DateTime.UtcNow.AddSeconds(4));
+				session.SaveChanges();
+			}
+
+			Thread.Sleep(5000);
+			using (var session = documentStore.OpenSession())
+			{
+				var list = session.Query<Foo>().ToList();
+				Assert.Empty(list);
+			}
+		}
+
+		public class Foo
+		{
+
 		}
 
 		/// <summary>

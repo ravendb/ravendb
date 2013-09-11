@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Serialization;
+using Raven.Imports.Newtonsoft.Json.Utilities;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Extensions
@@ -27,7 +28,7 @@ namespace Raven.Abstractions.Extensions
 				return dynamicJsonObject.Inner;
 			if (result is string || result is ValueType)
 				return new RavenJObject { { "Value", new RavenJValue(result) } };
-			return RavenJObject.FromObject(result);
+			return RavenJObject.FromObject(result, CreateDefaultJsonSerializer());
 		}
 
 		/// <summary>
@@ -87,6 +88,17 @@ namespace Raven.Abstractions.Extensions
 		{
 			return CreateDefaultJsonSerializer().Deserialize<T>(self);
 		}
+		
+		/// <summary>
+		/// Deserialize a <param name="self"/> to an instance of<typeparam name="T"/>
+		/// </summary>
+		public static T JsonDeserialization<T>(this Stream stream)
+		{
+			using (var reader = new StreamReader(stream))
+			{
+				return reader.JsonDeserialization<T>();
+			}
+		}
 
 		public static T Deserialize<T>(this JsonSerializer self, TextReader reader)
 		{
@@ -95,7 +107,9 @@ namespace Raven.Abstractions.Extensions
 
 		private static readonly IContractResolver contractResolver = new DefaultServerContractResolver(shareCache: true)
 		{
+#if !NETFX_CORE
 			DefaultMembersSearchFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+#endif
 		};
 
 		private class DefaultServerContractResolver : DefaultContractResolver
@@ -123,7 +137,7 @@ namespace Raven.Abstractions.Extensions
 				var fieldInfo = info as FieldInfo;
 				if (fieldInfo != null && !fieldInfo.IsPublic)
 					return true;
-				return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Length > 0;
+				return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Any();
 			} 
 		}
 

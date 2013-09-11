@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+  <Property Id="WEBSITE_DESCRIPTION">
+    <RegistrySearch Id="WebsiteDescriptionFromRegistry"
+                     Root="HKLM"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]"
+                     Name="WEBSITE_DESCRIPTION"
+                     Type="raw" />
+  </Property>
+  <Property Id="WEBSITE_ID">
+    <RegistrySearch Id="WebsiteIdFromRegistry"
+                     Root="HKLM"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]"
+                     Name="WEBSITE_ID"
+                     Type="raw" />
+  </Property>
+
+  <Property Id="WEBSITE_VD" Value="RavenDB">
+    <RegistrySearch Id="WebsiteVirtualDirectoryFromRegistry"
+                     Root="HKLM"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]"
+                     Name="WEBSITE_VD"
+                     Type="raw" />
+  </Property>
+
+  <Property Id="WEBSITE_PATH">
+    <RegistrySearch Id="WebsitePathFromRegistry"
+                     Root="HKLM"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]"
+                     Name="WEBSITE_PATH"
+                     Type="raw" />
+  </Property>
+
+  <Property Id="WEB_APP_POOL_NAME" Value="RavenApplicationPool" />
+  <Property Id="WEB_APP_POOL_IDENTITY_PWD" Hidden="yes" />
+
+  <Property Id="WEBSITE_PORT" Value="80">
+    <RegistrySearch Id="WebsitePortFromRegistry"
+                     Root="HKLM"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]"
+                     Name="WEBSITE_PORT"
+                     Type="raw" />
+  </Property>
+  <Property Id="WEBSITE_HOSTNAME">
+    <RegistrySearch Id="WebsiteHostNameFromRegistry"
+                     Root="HKLM"
+                     Key="SOFTWARE\[Manufacturer]\[ProductName]"
+                     Name="WEBSITE_HOSTNAME"
+                     Type="raw" />
+  </Property>
+  
+  <SetProperty Id="WEB_APP_POOL_IDENTITY_DOMAIN" Value="[%USERDOMAIN]" Before="CostFinalize" Sequence="ui"/>
+  <SetProperty Id="WEB_APP_POOL_IDENTITY_NAME" Value="[%USERNAME]" Before="CostFinalize" Sequence="ui"/>
+
+  <CustomTable Id="AvailableWebSites">
+    <Column Id="WebSiteID" Category="Identifier" PrimaryKey="yes" Type="int" Width="4" />
+    <Column Id="WebSiteDescription" Category="Text" Type="string" PrimaryKey="no"/>
+    <Column Id="WebSitePath" Category="Text" Type="string" PrimaryKey="no" Nullable="yes" />
+    <Column Id="WebDefaultAppPool" Category="Text" Type="string" PrimaryKey="no" Nullable="yes" />
+    <Row>
+      <Data Column="WebSiteID">0</Data>
+      <Data Column="WebSiteDescription">Dummy</Data>
+      <Data Column="WebSitePath"></Data>
+      <Data Column="WebDefaultAppPool"></Data>
+    </Row>
+  </CustomTable>
+
+  <CustomTable Id="AvailableApplicationPools">
+    <Column Id="PoolID" Category="Identifier" PrimaryKey="yes" Type="int" Width="4" />
+    <Column Id="PoolName" Category="Text" Type="string" PrimaryKey="no"/>
+    <Row>
+      <Data Column="PoolID">-1</Data>
+      <Data Column="PoolName">Dummy</Data>
+    </Row>
+  </CustomTable>
+</Include>
