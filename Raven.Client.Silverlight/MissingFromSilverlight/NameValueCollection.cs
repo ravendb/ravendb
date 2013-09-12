@@ -67,5 +67,10 @@ namespace System.Collections.Specialized
 		{
 			return inner.ContainsKey(key);
 		}
+
+		public string Get(string key)
+		{
+			return this[key];
+		}
 	}
 }
