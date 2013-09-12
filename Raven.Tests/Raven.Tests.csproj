@@ -1051,7 +1051,6 @@
     <Compile Include="Faceted\Camera.cs" />
     <Compile Include="Faceted\FacetedIndex.cs" />
     <Compile Include="Indexes\BoostingDuringIndexing.cs" />
-    <Compile Include="Indexes\CompiledIndex.cs" />
     <Compile Include="Indexes\ComplexIndexOnNotAnalyzedField.cs" />
     <Compile Include="Indexes\CreateIndexesWithCasting.cs" />
     <Compile Include="Indexes\CustomAnalyzer.cs" />
