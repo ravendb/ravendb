@@ -44,6 +44,7 @@ import raven.client.document.batches.ILazySessionOperations;
 import raven.client.document.batches.LazyMultiLoadOperation;
 import raven.client.document.sessionoperations.LoadOperation;
 import raven.client.document.sessionoperations.MultiLoadOperation;
+import raven.client.exceptions.ConflictException;
 import raven.client.indexes.AbstractIndexCreationTask;
 import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.linq.IDocumentQueryGenerator;
@@ -149,6 +150,8 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
       loadOperation.logOperation();
       try (AutoCloseable close = loadOperation.enterLoadContext()) {
         retry = loadOperation.setResult(databaseCommands.get(id));
+      } catch (ConflictException e) {
+        throw e;
       } catch (Exception e) {
         throw new RuntimeException(e);
       }

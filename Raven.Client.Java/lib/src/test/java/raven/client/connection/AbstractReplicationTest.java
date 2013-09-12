@@ -54,9 +54,13 @@ public abstract class AbstractReplicationTest extends RavenDBAwareTests{
   }
 
   protected ReplicationDocument createReplicationDocument() {
+    return createReplicationDocument(DEFAULT_SERVER_URL_2, TARGET);
+  }
+
+  protected ReplicationDocument createReplicationDocument(String url, String database) {
     ReplicationDestination rep = new ReplicationDestination();
-    rep.setUrl(DEFAULT_SERVER_URL_2);
-    rep.setDatabase(TARGET);
+    rep.setUrl(url);
+    rep.setDatabase(database);
     rep.setTransitiveReplicationBehavior(TransitiveReplicationOptions.NONE);
     rep.setIgnoredClient(Boolean.FALSE);
     rep.setDisabled(Boolean.FALSE);

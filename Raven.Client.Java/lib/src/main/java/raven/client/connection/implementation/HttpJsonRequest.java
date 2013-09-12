@@ -99,8 +99,6 @@ public class HttpJsonRequest {
     return url;
   }
 
-
-
   private Action3<Map<String, String>, String, String> handleReplicationStatusChanges = Delegates.delegate3();
 
   /**
@@ -121,7 +119,8 @@ public class HttpJsonRequest {
     this.method = requestParams.getMethod();
     this.webRequest = createWebRequest(requestParams.getUrl(), requestParams.getMethod());
     if (factory.isDisableRequestCompression() == false && requestParams.isDisableRequestCompression() == false) {
-      if (method == HttpMethods.POST || method == HttpMethods.PUT || method == HttpMethods.PATCH || method == HttpMethods.EVAL) {
+      if (method == HttpMethods.POST || method == HttpMethods.PUT || method == HttpMethods.PATCH
+        || method == HttpMethods.EVAL) {
         webRequest.addHeader("Content-Encoding", "gzip");
       }
       // Accept-Encoding Parameters are handled by HttpClient
@@ -141,7 +140,7 @@ public class HttpJsonRequest {
       return;
     }
 
-    for (Entry<String, RavenJToken> prop: metadata) {
+    for (Entry<String, RavenJToken> prop : metadata) {
       if (prop.getValue() == null) {
         continue;
       }
@@ -158,11 +157,11 @@ public class HttpJsonRequest {
       String value = prop.getValue().value(Object.class).toString();
 
       switch (headerName) {
-      case "Content-Length":
-        contentLength = prop.getValue().value(int.class);
-        break;
-      default:
-        webRequest.addHeader(headerName, value);
+        case "Content-Length":
+          contentLength = prop.getValue().value(int.class);
+          break;
+        default:
+          webRequest.addHeader(headerName, value);
 
       }
     }
@@ -177,35 +176,37 @@ public class HttpJsonRequest {
     HttpUriRequest baseMethod = null;
 
     switch (method) {
-    case GET:
-      baseMethod = new HttpGet(url);
-      break;
-    case POST:
-      baseMethod = new HttpPost(url);
-      if (owner != null) {
-        baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE, owner.isExpect100Continue());
-      }
-      break;
-    case PUT:
-      baseMethod = new HttpPut(url);
-      if (owner != null) {
-        baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE, owner.isExpect100Continue());
-      }
-      break;
-    case DELETE:
-      baseMethod = new HttpDelete(url);
-      break;
-    case PATCH:
-      baseMethod = new HttpPatch(url);
-      break;
-    case HEAD:
-      baseMethod = new HttpHead(url);
-      break;
-    case RESET:
-      baseMethod = new HttpReset(url);
-      break;
-    default:
-      throw new IllegalArgumentException("Unknown method: " + method);
+      case GET:
+        baseMethod = new HttpGet(url);
+        break;
+      case POST:
+        baseMethod = new HttpPost(url);
+        if (owner != null) {
+          baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE,
+            owner.isExpect100Continue());
+        }
+        break;
+      case PUT:
+        baseMethod = new HttpPut(url);
+        if (owner != null) {
+          baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE,
+            owner.isExpect100Continue());
+        }
+        break;
+      case DELETE:
+        baseMethod = new HttpDelete(url);
+        break;
+      case PATCH:
+        baseMethod = new HttpPatch(url);
+        break;
+      case HEAD:
+        baseMethod = new HttpHead(url);
+        break;
+      case RESET:
+        baseMethod = new HttpReset(url);
+        break;
+      default:
+        throw new IllegalArgumentException("Unknown method: " + method);
     }
 
     /*TODO credentials
@@ -219,25 +220,22 @@ public class HttpJsonRequest {
     return this.cachedRequestDetails;
   }
 
-
   public void executeRequest() throws IOException {
     readResponseJson();
   }
 
   public byte[] readResponseBytes() throws IOException {
-    try {
-      innerExecuteHttpClient();
-      InputStream response = httpResponse.getEntity().getContent();
-      responseHeaders = extractHeaders(httpResponse.getAllHeaders());
-      return IOUtils.toByteArray(response);
-    } finally {
-      EntityUtils.consumeQuietly(httpResponse.getEntity());
-    }
+    innerExecuteHttpClient();
+    InputStream response = httpResponse.getEntity().getContent();
+    responseHeaders = extractHeaders(httpResponse.getAllHeaders());
+    byte[] result = IOUtils.toByteArray(response);
+    EntityUtils.consumeQuietly(httpResponse.getEntity());
+    return result;
   }
 
   public static Map<String, String> extractHeaders(Header[] httpResponseHeaders) {
     Map<String, String> result = new HashMap<>();
-    for (Header header: httpResponseHeaders) {
+    for (Header header : httpResponseHeaders) {
       result.put(header.getName(), header.getValue());
     }
     return result;
@@ -250,7 +248,8 @@ public class HttpJsonRequest {
       throw new RuntimeException(e.getMessage(), e);
     }
     if (httpResponse.getStatusLine().getStatusCode() >= 300) {
-      throw new HttpOperationException("Invalid status code:" + httpResponse.getStatusLine().getStatusCode(),null, webRequest, httpResponse);
+      throw new HttpOperationException("Invalid status code:" + httpResponse.getStatusLine().getStatusCode(), null,
+        webRequest, httpResponse);
     }
   }
 
@@ -292,10 +291,10 @@ public class HttpJsonRequest {
         }
 
         if (e instanceof HttpOperationException) {
-          HttpOperationException httpOpException = (HttpOperationException) e ;
-          if (httpOpException.getStatusCode() != HttpStatus.SC_UNAUTHORIZED &&
-              httpOpException.getStatusCode() != HttpStatus.SC_FORBIDDEN &&
-              httpOpException.getStatusCode() != HttpStatus.SC_PRECONDITION_FAILED) {
+          HttpOperationException httpOpException = (HttpOperationException) e;
+          if (httpOpException.getStatusCode() != HttpStatus.SC_UNAUTHORIZED
+            && httpOpException.getStatusCode() != HttpStatus.SC_FORBIDDEN
+            && httpOpException.getStatusCode() != HttpStatus.SC_PRECONDITION_FAILED) {
             throw e;
           }
           if (httpOpException.getStatusCode() == HttpStatus.SC_FORBIDDEN) {
@@ -309,7 +308,6 @@ public class HttpJsonRequest {
           throw e;
         }
 
-
       }
     }
   }
@@ -317,7 +315,6 @@ public class HttpJsonRequest {
   public double calculateDuration() {
     return sp.getTime();
   }
-
 
   /**
    * @return
@@ -328,19 +325,16 @@ public class HttpJsonRequest {
   }
 
   protected void handleForbiddenResponse(HttpResponse forbiddenResponse) {
-    if (conventions.getHandleForbiddenResponse() == null)
-      return;
+    if (conventions.getHandleForbiddenResponse() == null) return;
 
     conventions.handleForbiddenResponse(forbiddenResponse);
   }
 
   private boolean handleUnauthorizedResponse(HttpResponse unauthorizedResponse) {
-    if (conventions.getHandleUnauthorizedResponse() == null)
-      return false;
+    if (conventions.getHandleUnauthorizedResponse() == null) return false;
 
     Action1<HttpRequest> handleUnauthorizedResponse = conventions.handleUnauthorizedResponse(unauthorizedResponse);
-    if (handleUnauthorizedResponse == null)
-      return false;
+    if (handleUnauthorizedResponse == null) return false;
 
     recreateWebRequest(handleUnauthorizedResponse);
     return true;
@@ -366,7 +360,7 @@ public class HttpJsonRequest {
         streamEntity.setChunked(true);
         requestMethod.setEntity(streamEntity);
       } catch (IOException e) {
-        throw new RuntimeException("Unable to reset input stream", e  );
+        throw new RuntimeException("Unable to reset input stream", e);
       }
     }
     webRequest = newWebRequest;
@@ -418,7 +412,7 @@ public class HttpJsonRequest {
       args.setMethod(method);
       args.setHttpResult(getResponseStatusCode());
       args.setStatus(RequestStatus.SEND_TO_SERVER);
-      args.setResult((data!= null) ? data.toString() :"");
+      args.setResult((data != null) ? data.toString() : "");
       args.setUrl(getPathAndQuery(webRequest.getURI()));
       args.setPostedData(postedData);
 
@@ -431,14 +425,14 @@ public class HttpJsonRequest {
       }
     }
   }
+
   private RavenJToken handleErrors(Exception e) {
     if (e instanceof HttpOperationException) {
       HttpOperationException httpWebException = (HttpOperationException) e;
       HttpResponse httpWebResponse = httpWebException.getHttpResponse();
-      if (httpWebResponse == null ||
-          httpWebException.getStatusCode() == HttpStatus.SC_UNAUTHORIZED ||
-          httpWebException.getStatusCode() == HttpStatus.SC_NOT_FOUND ||
-          httpWebException.getStatusCode() == HttpStatus.SC_CONFLICT) {
+      if (httpWebResponse == null || httpWebException.getStatusCode() == HttpStatus.SC_UNAUTHORIZED
+        || httpWebException.getStatusCode() == HttpStatus.SC_NOT_FOUND
+        || httpWebException.getStatusCode() == HttpStatus.SC_CONFLICT) {
         int httpResult = httpWebException.getStatusCode();
 
         RequestResultArgs requestResultArgs = new RequestResultArgs();
@@ -456,8 +450,7 @@ public class HttpJsonRequest {
 
       }
 
-      if (httpWebException.getStatusCode() == HttpStatus.SC_NOT_MODIFIED
-          && cachedRequestDetails != null) {
+      if (httpWebException.getStatusCode() == HttpStatus.SC_NOT_MODIFIED && cachedRequestDetails != null) {
         factory.updateCacheTime(this);
         RavenJToken result = factory.getCachedResponse(this, extractHeaders(httpWebResponse.getAllHeaders()));
         handleReplicationStatusChanges.apply(extractHeaders(httpWebResponse.getAllHeaders()), primaryUrl, operationUrl);
@@ -480,7 +473,6 @@ public class HttpJsonRequest {
         if (httpEntity != null) {
           readToEnd = IOUtils.toString(httpEntity.getContent());
         }
-
 
         RequestResultArgs requestResultArgs = new RequestResultArgs();
         requestResultArgs.setDurationMilliseconds(calculateDuration());
@@ -510,13 +502,14 @@ public class HttpJsonRequest {
           throw ex;
         }
 
-        if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_BAD_REQUEST && ravenJObject.containsKey("Message")) {
+        if (httpWebResponse.getStatusLine().getStatusCode() == HttpStatus.SC_BAD_REQUEST
+          && ravenJObject.containsKey("Message")) {
           throw new BadRequestException(ravenJObject.value(String.class, "Message"), e);
         }
 
         if (ravenJObject.containsKey("Error")) {
           StringBuilder sb = new StringBuilder();
-          for (Entry<String, RavenJToken> prop: ravenJObject) {
+          for (Entry<String, RavenJToken> prop : ravenJObject) {
             if ("Error".equals(prop.getKey())) {
               continue;
             }
@@ -545,7 +538,7 @@ public class HttpJsonRequest {
   }
 
   public HttpJsonRequest addOperationHeaders(Map<String, String> operationsHeaders) {
-    for (Entry<String, String> header: operationsHeaders.entrySet()) {
+    for (Entry<String, String> header : operationsHeaders.entrySet()) {
       webRequest.addHeader(header.getKey(), header.getValue());
     }
     return this;
@@ -580,7 +573,6 @@ public class HttpJsonRequest {
     //TODO: webRequest.AllowWriteStreamBuffering = false;
   }
 
-
   /**
    * Remember to release resources in HttpResponse entity!
    */
@@ -592,8 +584,10 @@ public class HttpJsonRequest {
     }
     if (httpResponse.getStatusLine().getStatusCode() >= 300) {
       try {
-        String rawResponse = (httpResponse.getEntity() != null) ? IOUtils.toString(httpResponse.getEntity().getContent()) :"";
-        throw new HttpOperationException("Server error response:" + httpResponse.getStatusLine().getStatusCode() + rawResponse, null, webRequest, httpResponse);
+        String rawResponse = (httpResponse.getEntity() != null) ? IOUtils.toString(httpResponse.getEntity()
+          .getContent()) : "";
+        throw new HttpOperationException("Server error response:" + httpResponse.getStatusLine().getStatusCode()
+          + rawResponse, null, webRequest, httpResponse);
       } catch (IOException e) {
         throw new RuntimeException("Unable to read response", e);
       } finally {
@@ -611,7 +605,7 @@ public class HttpJsonRequest {
   }
 
   public void setShouldCacheRequest(boolean b) {
-    this.shouldCacheRequest  = b;
+    this.shouldCacheRequest = b;
   }
 
   public boolean getShouldCacheRequest() {
@@ -641,8 +635,9 @@ public class HttpJsonRequest {
     this.responseHeaders = map;
   }
 
-  public HttpJsonRequest addReplicationStatusHeaders(String thePrimaryUrl, String currentUrl, ReplicationInformer replicationInformer, EnumSet<FailoverBehavior> failoverBehavior,
-      HandleReplicationStatusChangesCallback handleReplicationStatusChangesCallback) {
+  public HttpJsonRequest addReplicationStatusHeaders(String thePrimaryUrl, String currentUrl,
+    ReplicationInformer replicationInformer, EnumSet<FailoverBehavior> failoverBehavior,
+    HandleReplicationStatusChangesCallback handleReplicationStatusChangesCallback) {
 
     if (thePrimaryUrl.equalsIgnoreCase(currentUrl)) {
       return this;

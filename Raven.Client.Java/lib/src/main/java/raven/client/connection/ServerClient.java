@@ -25,6 +25,8 @@ import org.apache.http.util.EntityUtils;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 
+import de.undercouch.bson4jackson.BsonParser;
+
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.SharpEnum;
@@ -675,10 +677,10 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
             EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
           }
 
-          RavenJObject conflictsDoc = (RavenJObject) RavenJObject.tryLoad(new ByteArrayInputStream(baos.toByteArray()));
+          RavenJObject conflictsDoc = (RavenJObject) RavenJObject.load(new BsonParser(0, 0, new ByteArrayInputStream(baos.toByteArray())));
           List<String> conflictIds = conflictsDoc.value(RavenJArray.class, "Conflicts").values(String.class);
 
-          ConflictException ex = new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachement will be accessible", true);
+          ConflictException ex = new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachment will be accessible", true);
           ex.setConflictedVersionIds(conflictIds.toArray(new String[0]));
           ex.setEtag(HttpExtensions.getEtagHeader(e.getHttpResponse()));
           throw ex;
