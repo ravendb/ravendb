@@ -187,93 +187,109 @@
 							   Style="{StaticResource Style_Text_Header}"/>
 				</StackPanel>
 				<Border toolkit:DockPanel.Dock="Top" Background="{StaticResource Brush_ToolbarBackground}" UseLayoutRounding="True">
-					<StackPanel Orientation="Horizontal"
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="*"/>
+							<ColumnDefinition Width="Auto"/>
+						</Grid.ColumnDefinitions>
+						<StackPanel Orientation="Horizontal"
 								VerticalAlignment="Center"
 								Margin="0,4,4,4">
-						<HyperlinkButton Command="{StaticResource NavigateToCommand}"
+							<HyperlinkButton Command="{StaticResource NavigateToCommand}"
 										 CommandParameter="/indexes/new?mode=new"
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
 										 VerticalAlignment="Center"
 										 ToolTipService.ToolTip="Create a new index (Ctrl+N)">
-							<HyperlinkButton.Content>
-								<StackPanel Orientation="Horizontal">
-									<Image Source="{StaticResource Image_AddIndex_Tiny}"
+								<HyperlinkButton.Content>
+									<StackPanel Orientation="Horizontal">
+										<Image Source="{StaticResource Image_AddIndex_Tiny}"
 										   Stretch="None"
 										   VerticalAlignment="Center"
 										   Margin="4,0,4,0" />
-									<TextBlock Text="New Index"
+										<TextBlock Text="New Index"
 											   VerticalAlignment="Center" />
-								</StackPanel>
-							</HyperlinkButton.Content>
-						</HyperlinkButton>
+									</StackPanel>
+								</HyperlinkButton.Content>
+							</HyperlinkButton>
 
-						<HyperlinkButton Command="{StaticResource NavigateToCommand}"
+							<HyperlinkButton Command="{StaticResource NavigateToCommand}"
 										 CommandParameter="/query?mode=dynamic"
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
 										 VerticalAlignment="Center">
-							<HyperlinkButton.Content>
-								<StackPanel Orientation="Horizontal">
-									<Image Source="{StaticResource Image_Query_Small}"
+								<HyperlinkButton.Content>
+									<StackPanel Orientation="Horizontal">
+										<Image Source="{StaticResource Image_Query_Small}"
 										   Stretch="None"
 										   VerticalAlignment="Center"
 										   Margin="4,0,4,0" />
-									<TextBlock Text="Dynamic Query"
+										<TextBlock Text="Dynamic Query"
 											   VerticalAlignment="Center" />
-								</StackPanel>
-							</HyperlinkButton.Content>
-						</HyperlinkButton>
+									</StackPanel>
+								</HyperlinkButton.Content>
+							</HyperlinkButton>
 
-						<Controls1:RecentQueriesButton VerticalAlignment="Center"/>
-						
-						<HyperlinkButton Command="{Binding CollapseAll}"
+							<Controls1:RecentQueriesButton VerticalAlignment="Center"/>
+
+							<HyperlinkButton Command="{Binding CollapseAll}"
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
 										 VerticalAlignment="Center">
-							<HyperlinkButton.Content>
-								<StackPanel Orientation="Horizontal">
-									<Image Source="{StaticResource Image_Expand_Tiny}"
+								<HyperlinkButton.Content>
+									<StackPanel Orientation="Horizontal">
+										<Image Source="{StaticResource Image_Expand_Tiny}"
 										   Stretch="None"
 										   VerticalAlignment="Center"
 										   Margin="4,0,4,0" />
-									<TextBlock Text="Collapse All Groups"
+										<TextBlock Text="Collapse All Groups"
 											   VerticalAlignment="Center" />
-								</StackPanel>
-							</HyperlinkButton.Content>
-						</HyperlinkButton>
+									</StackPanel>
+								</HyperlinkButton.Content>
+							</HyperlinkButton>
 
-						<HyperlinkButton Command="{Binding ExpandAll}"
+							<HyperlinkButton Command="{Binding ExpandAll}"
 										 Style="{StaticResource Style_Button_MouseOverChrome}"
 										 VerticalAlignment="Center">
-							<HyperlinkButton.Content>
-								<StackPanel Orientation="Horizontal">
-									<Image Source="{StaticResource Image_ToggleExpansion_Tiny}"
+								<HyperlinkButton.Content>
+									<StackPanel Orientation="Horizontal">
+										<Image Source="{StaticResource Image_ToggleExpansion_Tiny}"
 										   Stretch="None"
 										   VerticalAlignment="Center"
 										   Margin="4,0,4,0" />
-									<TextBlock Text="Expand All Groups"
+										<TextBlock Text="Expand All Groups"
 											   VerticalAlignment="Center" />
-								</StackPanel>
-							</HyperlinkButton.Content>
-						</HyperlinkButton>
+									</StackPanel>
+								</HyperlinkButton.Content>
+							</HyperlinkButton>
 
-						<Delay:SplitButton Command="{Binding DeleteIndexes}"
+							<Delay:SplitButton Command="{Binding DeleteIndexes}"
 										   CommandParameter="Idle"
 										   DropDownToolTip="More Options"
 										   Margin="12,6,4,6" Padding="4,5" 
 										   VerticalAlignment="Center" Style="{StaticResource Style_SplitButton_MouseOverChrome}">
-							<Delay:SplitButton.ButtonMenuItemsSource>
-								<ContextMenu:MenuItem Header="Delete All Idle Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Idle"/>
-								<ContextMenu:MenuItem Header="Delete All Disabled Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Disabled"/>
-								<ContextMenu:MenuItem Header="Delete All Abandoned Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Abandoned"/>
-								<ContextMenu:Separator/>
-								<ContextMenu:MenuItem Header="Delete All Indexes" Command="{Binding DeleteIndexes}" CommandParameter="All"/>
-							</Delay:SplitButton.ButtonMenuItemsSource>
-							<StackPanel Orientation="Horizontal" Background="Transparent" ToolTipService.ToolTip="Delete All Idle Indexes">
-								<Image Source="{StaticResource Image_DeleteIndex_Tiny}" Width="14" Height="14"
+								<Delay:SplitButton.ButtonMenuItemsSource>
+									<ContextMenu:MenuItem Header="Delete All Idle Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Idle"/>
+									<ContextMenu:MenuItem Header="Delete All Disabled Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Disabled"/>
+									<ContextMenu:MenuItem Header="Delete All Abandoned Indexes" Command="{Binding DeleteIndexes}" CommandParameter="Abandoned"/>
+									<ContextMenu:Separator/>
+									<ContextMenu:MenuItem Header="Delete All Indexes" Command="{Binding DeleteIndexes}" CommandParameter="All"/>
+								</Delay:SplitButton.ButtonMenuItemsSource>
+								<StackPanel Orientation="Horizontal" Background="Transparent" ToolTipService.ToolTip="Delete All Idle Indexes">
+									<Image Source="{StaticResource Image_DeleteIndex_Tiny}" Width="14" Height="14"
 									   VerticalAlignment="Center" Margin="0,0,4,0"/>
-								<TextBlock Text="Delete All Idle Indexes" VerticalAlignment="Center" />
-							</StackPanel>
-						</Delay:SplitButton>
-					</StackPanel>
+									<TextBlock Text="Delete All Idle Indexes" VerticalAlignment="Center" />
+								</StackPanel>
+							</Delay:SplitButton>
+						</StackPanel>
+						
+						<StackPanel Orientation="Horizontal" Grid.Column="2">
+							<TextBlock Text="Filter by name: " VerticalAlignment="Center"/>
+							<TextBox Text="{Binding SearchText.Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Margin="5" 
+									 VerticalAlignment="Center"
+									 MinWidth="100"/>
+						</StackPanel>
+
+					</Grid>
 				</Border>
 			</toolkit:DockPanel>
 		</toolkit:HeaderedContentControl.Header>
