@@ -1159,7 +1159,6 @@
     <Compile Include="MailingList\Maverix2.cs" />
     <Compile Include="MailingList\MissingIncludes.cs" />
     <Compile Include="MailingList\MultiMapIndexWithDynamicFieldsTests.cs" />
-    <Compile Include="MailingList\NestedIndexDynamic.cs" />
     <Compile Include="MailingList\Nick.cs" />
     <Compile Include="MailingList\NoBuiltinDuplicates.cs" />
     <Compile Include="MailingList\NonHttpBackupRestore.cs" />
