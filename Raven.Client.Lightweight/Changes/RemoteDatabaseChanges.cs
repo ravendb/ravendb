@@ -114,9 +114,8 @@ namespace Raven.Client.Changes
 				if (replicationInformer.IsServerDown(e, out timeout) == false)
 					throw;
 
-
-				if (replicationInformer.IsHttpStatus(e, HttpStatusCode.NotFound, HttpStatusCode.Forbidden))
-					return;
+				if (replicationInformer.IsHttpStatus(e, HttpStatusCode.NotFound, HttpStatusCode.Forbidden, HttpStatusCode.ServiceUnavailable))
+					throw;
 
 				logger.Warn("Failed to connect to {0} with id {1}, will try again in 15 seconds", url, id);
 				retry = true;

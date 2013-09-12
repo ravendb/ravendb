@@ -746,6 +746,11 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 				e = aggregateException.ExtractSingleInnerException();
 			}
 
+			var ere = e as ErrorResponseException ?? e.InnerException as ErrorResponseException;
+		    if (ere != null)
+		    {
+			    return httpStatusCode.Contains(ere.StatusCode);
+		    }
 			var webException = (e as WebException) ?? (e.InnerException as WebException);
 			if (webException != null)
 			{
