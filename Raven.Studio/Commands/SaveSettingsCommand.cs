@@ -95,14 +95,15 @@ namespace Raven.Studio.Commands
 				}
 				try
 				{
-					await CheckDestinations(document);
+					if(document.Destinations.Count != 0 && document.Destinations.Any(destination => destination.Disabled == false))
+						await CheckDestinations(document);
 
 					await session.StoreAsync(document);
 					needToSaveChanges = true;
 				}
 				catch (Exception e)
 				{
-					ApplicationModel.Current.AddErrorNotification(e);
+					ApplicationModel.Current.AddErrorNotification(e.GetBaseException());
 				}
 			
 			}
@@ -191,6 +192,9 @@ namespace Raven.Studio.Commands
 							const string ravenSqlreplicationStatus = "Raven/SqlReplication/Status";
 
 							var status = await session.LoadAsync<SqlReplicationStatus>(ravenSqlreplicationStatus);
+							if(status == null)
+								status = new SqlReplicationStatus();
+
 							foreach (var name in resetReplication.Selected)
 							{
 								var lastReplicatedEtag = status.LastReplicatedEtags.FirstOrDefault(etag => etag.Name == name);
