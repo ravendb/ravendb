@@ -29,18 +29,22 @@ namespace Raven.Studio.Features.Tasks
     {
         const int BatchSize = 512;
 
-        private bool includeAttachements, includeDocuments, includeIndexes, includeTransformers;
+        private bool includeAttachements, includeDocuments, includeIndexes;
+        private readonly bool removeAnalyzers;
+        private readonly bool includeTransformers;
         private readonly bool shouldExcludeExpired;
         private readonly int batchSize;
         private readonly string transformScript;
         private readonly List<FilterSetting> filterSettings;
 
         public ExportDatabaseTask(IAsyncDatabaseCommands databaseCommands, string databaseName, bool includeAttachements, bool includeDocuments, bool includeIndexes,
-                                  bool includeTransformers, bool shouldExcludeExpired, int batchSize, string transformScript, List<FilterSetting> filterSettings) : base(databaseCommands, databaseName, "Export Database")
+                bool removeAnalyzers, bool includeTransformers, bool shouldExcludeExpired, int batchSize, string transformScript, List<FilterSetting> filterSettings)
+                    : base(databaseCommands, databaseName, "Export Database")
         {
             this.includeAttachements = includeAttachements;
             this.includeDocuments = includeDocuments;
             this.includeIndexes = includeIndexes;
+            this.removeAnalyzers = removeAnalyzers;
             this.includeTransformers = includeTransformers;
             this.shouldExcludeExpired = shouldExcludeExpired;
             this.batchSize = batchSize;
@@ -75,134 +79,141 @@ namespace Raven.Studio.Features.Tasks
 
             using (var stream = saveFile.OpenFile())
             {
-	            ItemType operateOnTypes = 0;
+                ItemType operateOnTypes = 0;
 
-	            if (includeDocuments)
-	            {
-		            operateOnTypes |= ItemType.Documents;
-	            }
+                if (includeDocuments)
+                {
+                    operateOnTypes |= ItemType.Documents;
+                }
 
-	            if (includeAttachements)
-	            {
-		            operateOnTypes |= ItemType.Attachments;
-	            }
+                if (includeAttachements)
+                {
+                    operateOnTypes |= ItemType.Attachments;
+                }
 
-	            if (includeIndexes)
-	            {
-		            operateOnTypes |= ItemType.Indexes;
-	            }
+                if (includeIndexes)
+                {
+                    operateOnTypes |= ItemType.Indexes;
+                }
 
-	            if (includeTransformers)
-	            {
-		            operateOnTypes |= ItemType.Transformers;
-	            }
+                if (removeAnalyzers)
+                {
+                    operateOnTypes |= ItemType.RemoveAnalyzers;
+                }
 
-	            var smuggler = new SmugglerApi(new SmugglerOptions
-	            {
-		            BatchSize = batchSize
-	            },
-	                                           DatabaseCommands,
-	                                           message => Report(message));
+                if (includeTransformers)
+                {
+                    operateOnTypes |= ItemType.Transformers;
+                }
 
-				var forwardtoUiBoundStream = new ForwardtoUIBoundStream(stream);
-	            var taskGeneration = new Task<Task>(() => smuggler.ExportData(forwardtoUiBoundStream, new SmugglerOptions
-	            {
-		            BatchSize = batchSize,
-		            Filters = filterSettings,
-		            TransformScript = transformScript,
-		            ShouldExcludeExpired = shouldExcludeExpired,
-		            OperateOnTypes = operateOnTypes
-	            }, false));
+                var smuggler = new SmugglerApi(new SmugglerOptions
+                {
+                    BatchSize = batchSize
+                },
+                                               DatabaseCommands,
+                                               message => Report(message));
 
-	            ThreadPool.QueueUserWorkItem(state => taskGeneration.Start());
+                var forwardtoUiBoundStream = new ForwardtoUIBoundStream(stream);
+                var taskGeneration = new Task<Task>(() => smuggler.ExportData(forwardtoUiBoundStream, new SmugglerOptions
+                {
+                    BatchSize = batchSize,
+                    Filters = filterSettings,
+                    TransformScript = transformScript,
+                    ShouldExcludeExpired = shouldExcludeExpired,
+                    OperateOnTypes = operateOnTypes
+                }, false));
+
+                ThreadPool.QueueUserWorkItem(state => taskGeneration.Start());
 
 
-	            await taskGeneration.Unwrap();
-	            forwardtoUiBoundStream.Flush();
+                await taskGeneration.Unwrap();
+                forwardtoUiBoundStream.Flush();
                 stream.Flush();
             }
 
-	        return DatabaseTaskOutcome.Succesful;
+            return DatabaseTaskOutcome.Succesful;
         }
 
-		public class ForwardtoUIBoundStream : Stream
-		{
-			readonly byte[] localBuffer = new byte[4 * 1024 * 1024];
-			private int pos;
+        public class ForwardtoUIBoundStream : Stream
+        {
+            readonly byte[] localBuffer = new byte[4 * 1024 * 1024];
+            private int pos;
 
-			private readonly Stream inner;
+            private readonly Stream inner;
 
-			public ForwardtoUIBoundStream(Stream inner)
-			{
-				this.inner = inner;
-			}
+            public ForwardtoUIBoundStream(Stream inner)
+            {
+                this.inner = inner;
+            }
 
-			public override void Flush()
-			{
-				Execute.OnTheUI(() =>
-				{
-					inner.Write(localBuffer, 0, pos);
-					pos = 0;
-					inner.Flush();
-				}).Wait();
-			}
+            public override void Flush()
+            {
+                Execute.OnTheUI(() =>
+                {
+                    inner.Write(localBuffer, 0, pos);
+                    pos = 0;
+                    inner.Flush();
+                }).Wait();
+            }
 
-			public override long Seek(long offset, SeekOrigin origin)
-			{
-				throw new NotSupportedException();
-			}
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                throw new NotSupportedException();
+            }
 
-			public override void SetLength(long value)
-			{
-				throw new NotSupportedException();
-			}
+            public override void SetLength(long value)
+            {
+                throw new NotSupportedException();
+            }
 
-			public override int Read(byte[] buffer, int offset, int count)
-			{
-				throw new NotSupportedException();
-			}
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                throw new NotSupportedException();
+            }
 
-			public override void Write(byte[] buffer, int offset, int count)
-			{
-				while (count > 0)
-				{
-					var bytes = Math.Min(localBuffer.Length - pos, count);
-					Buffer.BlockCopy(buffer, offset, localBuffer, pos, bytes);
-					pos += bytes;
-				    offset += bytes;
-					count -= bytes;
-					if (pos == localBuffer.Length)
-						Flush();
-				}
-			}
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                while (count > 0)
+                {
+                    var bytes = Math.Min(localBuffer.Length - pos, count);
+                    Buffer.BlockCopy(buffer, offset, localBuffer, pos, bytes);
+                    pos += bytes;
+                    offset += bytes;
+                    count -= bytes;
+                    if (pos == localBuffer.Length)
+                        Flush();
+                }
+            }
 
-			public override bool CanRead
-			{
-				get { return false; }
-			}
-			public override bool CanSeek
-			{
-				get { return false; }
-			}
-			public override bool CanWrite
-			{
-				get { return true; }
-			}
-			public override long Length
-			{
-				get { throw new NotSupportedException(); }
-			}
-			public override long Position 
-			{ get{ throw new NotSupportedException();} 
-				set
-				{
-					throw new NotSupportedException();
-				} }
-		}
+            public override bool CanRead
+            {
+                get { return false; }
+            }
+            public override bool CanSeek
+            {
+                get { return false; }
+            }
+            public override bool CanWrite
+            {
+                get { return true; }
+            }
+            public override long Length
+            {
+                get { throw new NotSupportedException(); }
+            }
+            public override long Position
+            {
+                get { throw new NotSupportedException(); }
+                set
+                {
+                    throw new NotSupportedException();
+                }
+            }
+        }
 
-		public override void OnError()
-		{
+        public override void OnError()
+        {
 
-		}
+        }
     }
 }

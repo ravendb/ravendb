@@ -618,7 +618,7 @@ namespace Raven.Abstractions.Smuggler
 
 			while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
 			{
-				var index = RavenJToken.ReadFrom(jsonReader);
+				var index = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
 				if ((options.OperateOnTypes & ItemType.Indexes) != ItemType.Indexes)
 					continue;
 
@@ -627,6 +627,11 @@ namespace Raven.Abstractions.Smuggler
 					continue;
 				if (index.Value<RavenJObject>("definition").Value<bool>("IsCompiled"))
 					continue; // can't import compiled indexes
+
+			    if ((options.OperateOnTypes & ItemType.RemoveAnalyzers) == ItemType.RemoveAnalyzers)
+			    {
+			        index.Value<RavenJObject>("definition").Remove("Analyzers");
+			    }
 
 				await PutIndex(indexName, index);
 
