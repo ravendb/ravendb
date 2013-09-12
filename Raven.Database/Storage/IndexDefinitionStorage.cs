@@ -310,11 +310,15 @@ namespace Raven.Database.Storage
             var indexDefinition = GetIndexDefinition(indexDef.Name);
             if (indexDefinition != null)
             {
-                return indexDefinition.Equals(indexDef)
+	            var old = indexDef.IndexId;
+	            indexDef.IndexId = indexDefinition.IndexId;	
+	            bool result = indexDefinition.Equals(indexDef);
+	            indexDef.IndexId = old;
+	            return result
                     ? IndexCreationOptions.Noop
                     : IndexCreationOptions.Update;
             }
-            return IndexCreationOptions.Create;
+	        return IndexCreationOptions.Create;
         }
 
         public bool Contains(string indexName)
