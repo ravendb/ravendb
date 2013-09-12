@@ -110,8 +110,6 @@ namespace Raven.Storage.Esent.StorageActions
 			do
 			{
 				// esent index ranges are approximate, and we need to check them ourselves as well
-				if (Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["for_index"]) != task.Index)
-					continue;
 				if (Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"]) != expectedTaskType)
 					continue;
 

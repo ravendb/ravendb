@@ -85,7 +85,7 @@ namespace Raven.Storage.Managed
 			})
 			.Where(x => new Guid(x.Value<byte[]>("id")) != new Guid(taskId))
 				.TakeWhile(x =>
-						   StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("index"), task.Index) &&
+						   task.Index.Equals(x.Value<int>("index")) &&
 						   StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("type"), taskType)
 				);
 
