@@ -42,7 +42,12 @@
 								  IsChecked="{Binding IncludeTransforms.Value, Mode=TwoWay}" 
 								  VerticalAlignment="Center" Margin="5" Content=" Include Transformers"/>
 
-					</StackPanel>
+
+                    <CheckBox Grid.Column="0" 
+								  IsChecked="{Binding RemoveAnalyzers.Value, Mode=TwoWay}" 
+								  VerticalAlignment="Center" Margin="5" Content=" Remove Analyzers"/>
+
+                </StackPanel>
 				</Grid>
 			</controls:TabItem>
 
