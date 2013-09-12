@@ -3,7 +3,6 @@ package raven.abstractions.extensions;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.text.SimpleDateFormat;
 import java.util.EnumSet;
 import java.util.Iterator;
 
@@ -38,6 +37,7 @@ import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
+import raven.abstractions.util.NetDateFormat;
 import raven.abstractions.util.ValueTypeUtils;
 
 public class JsonExtensions {
@@ -54,8 +54,8 @@ public class JsonExtensions {
         objectMapper.enable(Feature.WRITE_ENUMS_USING_INDEX);
         objectMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
         objectMapper.configure(Feature.WRITE_DATES_AS_TIMESTAMPS, false);
-        objectMapper.setSerializationConfig(objectMapper.getSerializationConfig().withDateFormat(new SimpleDateFormat(Default.DATE_TIME_FORMATS_TO_WRITE)));
-        objectMapper.setDeserializationConfig(objectMapper.getDeserializationConfig().withDateFormat(new SimpleDateFormat(Default.DATE_TIME_FORMATS_TO_WRITE)));
+        objectMapper.setSerializationConfig(objectMapper.getSerializationConfig().withDateFormat(new NetDateFormat()));
+        objectMapper.setDeserializationConfig(objectMapper.getDeserializationConfig().withDateFormat(new NetDateFormat()));
         jsonFactory = objectMapper.getJsonFactory();
 
         objectMapper.registerModule(createCustomSerializeModule());
@@ -148,7 +148,6 @@ public class JsonExtensions {
     public T deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
       return (T) RavenJToken.load(jp);
     }
-
   }
 
 
@@ -188,17 +187,11 @@ public class JsonExtensions {
 
     @Override
     public String nameForGetterMethod(MapperConfig< ? > config, AnnotatedMethod method, String defaultName) {
-      if (method.getAnnotated().getReturnType() == Boolean.TYPE) {
-        defaultName = "is" + StringUtils.capitalize(defaultName);
-      }
       return StringUtils.capitalize(defaultName);
     }
 
     @Override
     public String nameForSetterMethod(MapperConfig< ? > config, AnnotatedMethod method, String defaultName) {
-      if (method.getParameterCount() == 1 && method.getParameterClass(0).equals(Boolean.TYPE)) {
-        defaultName = "is" + StringUtils.capitalize(defaultName);
-      }
       return StringUtils.capitalize(defaultName);
     }
 

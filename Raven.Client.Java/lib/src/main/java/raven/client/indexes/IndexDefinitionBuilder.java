@@ -167,11 +167,6 @@ public class IndexDefinitionBuilder {
       throw new IllegalStateException(
         String.format("Map is required to generate an index, you cannot create an index without a valid Map property (in index %s).", getClass().getSimpleName()));
 
-    /*TODO:
-    if (reduce != null)
-      IndexDefinitionHelper.ValidateReduce(Reduce);
-      */
-
     IndexDefinition indexDefinition = new IndexDefinition();
     if (reduce != null) {
       indexDefinition.setReduce(reduce);

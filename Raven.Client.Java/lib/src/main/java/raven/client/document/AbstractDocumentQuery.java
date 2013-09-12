@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,10 +19,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.time.DateUtils;
-import org.apache.commons.lang.time.FastDateFormat;
 
-import raven.abstractions.Default;
 import raven.abstractions.basic.Lazy;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
@@ -49,6 +47,8 @@ import raven.abstractions.indexing.SpatialOptions.SpatialUnits;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJTokenWriter;
 import raven.abstractions.spatial.WktSanitizer;
+import raven.abstractions.util.NetDateFormat;
+import raven.abstractions.util.NetISO8601Utils;
 import raven.abstractions.util.RavenQuery;
 import raven.abstractions.util.ValueTypeUtils;
 import raven.client.EscapeQueryOptions;
@@ -702,9 +702,20 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (IDocumentQuery<T>) this;
   }
 
-
-
-  //TODO public virtual IEnumerator<T> GetEnumerator() {
+  @Override
+  public Iterator<T> iterator() {
+    initSync();
+    while (true) {
+      try {
+        return queryOperation.complete(clazz).iterator();
+      } catch (Exception e) {
+        if (!queryOperation.shouldQueryAgain(e)) {
+          throw e;
+        }
+        executeActualQuery(); // retry the query, note that we explicitly not incrementing the session request count here
+      }
+    }
+  }
 
   @SuppressWarnings("unchecked")
   @Override
@@ -1453,16 +1464,10 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     if (Boolean.class.equals(type)) {
       return (boolean) whereParams.getValue() ? "true" : "false";
     }
-    /*TODO
-    if (type == typeof(DateTime))
-    {
-      var val = (DateTime)whereParams.Value;
-      var s = val.ToString(Default.DateTimeFormatsToWrite);
-      if (val.Kind == DateTimeKind.Utc)
-        s += "Z";
-      return s;
+    if (Date.class.equals(type)) {
+      Date val = (Date) whereParams.getValue();
+      return NetISO8601Utils.format(val, true);
     }
-     */
     if (Number.class.isAssignableFrom(type)) {
       return RavenQuery.escape(whereParams.getValue().toString(), false, false);
     }
@@ -1522,7 +1527,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     }
     if (whereParams.getValue() instanceof Date) {
       Date dateTime = (Date) whereParams.getValue();
-      FastDateFormat fdf = FastDateFormat.getInstance(Default.DATE_TIME_FORMATS_TO_WRITE);
+      NetDateFormat fdf = new NetDateFormat();
       String dateStr = fdf.format(dateTime);
       return dateStr;
     }

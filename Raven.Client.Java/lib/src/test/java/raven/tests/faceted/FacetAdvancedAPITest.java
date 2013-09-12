@@ -176,7 +176,7 @@ public class FacetAdvancedAPITest {
 
     assertEquals(2, facet.getRanges().size());
     assertTrue(StringUtils.isNotEmpty(facet.getRanges().get(0)));
-    assertEquals("[2010\\-12\\-05T00\\:00\\:00.0000000 TO 2001\\-12\\-05T00\\:00\\:00.0000000]", facet.getRanges().get(1));
+    assertEquals("[2010\\-12\\-04T23\\:00\\:00.0000000Z TO 2001\\-12\\-04T23\\:00\\:00.0000000Z]", facet.getRanges().get(1));
 
   }
 

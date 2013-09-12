@@ -2,7 +2,6 @@ package raven.client.connection;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -18,7 +17,6 @@ import org.codehaus.jackson.map.type.ArrayType;
 import org.codehaus.jackson.map.type.MapType;
 import org.codehaus.jackson.map.type.SimpleType;
 import org.codehaus.jackson.map.type.TypeFactory;
-import org.codehaus.jackson.type.JavaType;
 
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.Constants;
@@ -32,6 +30,7 @@ import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.abstractions.util.NetDateFormat;
 
 public class SerializationHelper {
 
@@ -94,7 +93,7 @@ public class SerializationHelper {
     }
     if (StringUtils.isNotEmpty(ravenLastModified)) {
       try {
-        return new SimpleDateFormat(Constants.RAVEN_LAST_MODIFIED_DATE_FORMAT).parse(ravenLastModified);
+        return new NetDateFormat().parse(ravenLastModified);
       } catch (ParseException e) {
         throw new IllegalArgumentException(e.getMessage(), e);
       }

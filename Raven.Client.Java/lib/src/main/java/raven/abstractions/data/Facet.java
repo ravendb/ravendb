@@ -9,7 +9,9 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.FastDateFormat;
 
 import raven.abstractions.Default;
+import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.indexing.NumberUtil;
+import raven.abstractions.util.NetDateFormat;
 import raven.abstractions.util.RavenQuery;
 
 import com.mysema.query.types.Constant;
@@ -218,7 +220,7 @@ public class Facet {
 
     switch (clazzName) {
     case "java.util.Date":
-      FastDateFormat fdf = FastDateFormat.getInstance(Default.DATE_TIME_FORMATS_TO_WRITE);
+      NetDateFormat fdf = new NetDateFormat();
       return RavenQuery.escape(fdf.format(value));
     case "java.lang.Integer":
       return NumberUtil.numberToString(((int)value));

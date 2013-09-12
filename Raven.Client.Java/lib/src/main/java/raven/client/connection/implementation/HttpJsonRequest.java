@@ -8,7 +8,6 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -52,6 +51,7 @@ import raven.abstractions.exceptions.IndexCompilationException;
 import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.abstractions.util.NetDateFormat;
 import raven.client.connection.CachedRequest;
 import raven.client.connection.CreateHttpJsonRequestParams;
 import raven.client.connection.ReplicationInformer;
@@ -654,7 +654,7 @@ public class HttpJsonRequest {
     Date lastPrimaryCheck = replicationInformer.getFailureLastCheck(thePrimaryUrl);
     webRequest.addHeader(Constants.RAVEN_CLIENT_PRIMARY_SERVER_URL, toRemoteUrl(thePrimaryUrl));
 
-    SimpleDateFormat sdf = new SimpleDateFormat(Constants.RAVEN_S_DATE_FORMAT);
+    NetDateFormat sdf = new NetDateFormat();
     webRequest.addHeader(Constants.RAVEN_CLIENT_PRIMARY_SERVER_LAST_CHECK, sdf.format(lastPrimaryCheck));
 
     primaryUrl = thePrimaryUrl;

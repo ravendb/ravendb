@@ -21,7 +21,6 @@ public class AggregationQueryDsl extends AggregationQuery {
     this.ranges = ranges;
   }
 
-  //TODO: name clash with parent static method
   public static List<Facet> getDslFacets(List<AggregationQueryDsl> aggregationQueries) {
     List<Facet> facetsList = new ArrayList<>();
     for (AggregationQueryDsl aggregationQuery : aggregationQueries) {

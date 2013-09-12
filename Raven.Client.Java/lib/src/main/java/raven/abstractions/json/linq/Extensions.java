@@ -1,7 +1,6 @@
 package raven.abstractions.json.linq;
 
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -10,8 +9,8 @@ import java.util.UUID;
 
 import org.apache.commons.beanutils.ConvertUtils;
 
-import raven.abstractions.data.Constants;
 import raven.abstractions.data.Etag;
+import raven.abstractions.util.NetDateFormat;
 
 public class Extensions {
 
@@ -127,7 +126,7 @@ public class Extensions {
       return (U) (Object) value.getValue().toString();
     }
     if (clazz.equals(Date.class) && value.getValue().getClass().equals(String.class)) {
-      SimpleDateFormat sdf = new SimpleDateFormat(Constants.RAVEN_S_DATE_FORMAT);
+      NetDateFormat sdf = new NetDateFormat();
       try {
         return (U) (Object) sdf.parse((String) value.getValue());
       } catch (ParseException e) {

@@ -80,8 +80,6 @@ public class DynamicQueriesWithStaticIndexesTest extends RemoteClientTest {
 
         QDynamicQueriesWithStaticIndexesTest_Foo f= QDynamicQueriesWithStaticIndexesTest_Foo.foo;
 
-        //TODO: \exists (x) <= \exists (x) \and \exists(y)
-
         List<Foo> result = session.query(Foo.class, "Foos/TestDynamicQueries")
             .where(
                 f.bar.someDictionary.containsKey("KeyOne").and(f.bar.someDictionary.containsValue("ValueOne"))

@@ -1,6 +1,5 @@
 package raven.abstractions.data;
 
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -11,6 +10,7 @@ import org.apache.commons.lang.StringUtils;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.SharpEnum;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.abstractions.util.NetDateFormat;
 import raven.client.utils.UrlUtils;
 
 /**
@@ -388,7 +388,7 @@ public class IndexQuery {
     }
 
     if (cutoff != null) {
-      SimpleDateFormat sdf = new SimpleDateFormat(Constants.RAVEN_LAST_MODIFIED_DATE_FORMAT);
+      NetDateFormat sdf = new NetDateFormat();
       String cutOffAsString = UrlUtils.escapeDataString(sdf.format(cutoff));
       path.append("&cufOff=").append(cutOffAsString);
       //TODO: test date format

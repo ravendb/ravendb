@@ -7,6 +7,7 @@ import org.apache.commons.lang.time.FastDateFormat;
 import raven.abstractions.Default;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
+import raven.abstractions.util.NetDateFormat;
 
 /**
  * A document representation:
@@ -138,7 +139,7 @@ public class JsonDocument implements IJsonDocumentMetadata {
     RavenJObject metadata = this.metadata.createSnapshot();
 
     if (lastModified != null) {
-      FastDateFormat fdf = FastDateFormat.getInstance(Default.DATE_TIME_FORMATS_TO_WRITE);
+      NetDateFormat fdf = new NetDateFormat();
       metadata.add(Constants.LAST_MODIFIED, new RavenJValue(this.lastModified));
       metadata.add(Constants.RAVEN_LAST_MODIFIED, new RavenJValue(fdf.format(this.lastModified)));
     }

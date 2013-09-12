@@ -3,6 +3,7 @@ package raven.client.document;
 import java.util.Collection;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.Iterator;
 
 import com.mysema.query.types.Path;
 
@@ -391,5 +392,7 @@ public interface IAbstractDocumentQuery<T> {
   public IDocumentQuery<T> intersect();
 
   public void addRootType(Class<T> type);
+
+  public Iterator<T> iterator();
 
 }

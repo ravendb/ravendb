@@ -13,6 +13,7 @@ import org.codehaus.jackson.JsonGenerator;
 
 import raven.abstractions.Default;
 import raven.abstractions.exceptions.JsonWriterException;
+import raven.abstractions.util.NetDateFormat;
 
 public class RavenJValue extends RavenJToken {
 
@@ -265,7 +266,7 @@ public class RavenJValue extends RavenJToken {
         writer.writeString((String) value);
         return;
       case DATE:
-        writer.writeString(FastDateFormat.getInstance(Default.DATE_TIME_FORMATS_TO_WRITE).format(value));
+        writer.writeString(new NetDateFormat().format(value));
         break;
       default:
         throw new JsonWriterException("Unexpected token:" + valueType);

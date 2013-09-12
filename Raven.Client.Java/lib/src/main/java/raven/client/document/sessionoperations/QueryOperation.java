@@ -235,7 +235,9 @@ public class QueryOperation {
         if (nested instanceof RavenJArray) {
           RavenJArray array = (RavenJArray) nested;
           for (RavenJToken token : array) {
-            handleInternalMetadata((RavenJObject) token);
+            if (token instanceof RavenJObject) {
+              handleInternalMetadata((RavenJObject) token);
+            }
           }
         }
       }

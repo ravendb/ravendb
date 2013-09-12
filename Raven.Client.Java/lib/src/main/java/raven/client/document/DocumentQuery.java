@@ -369,23 +369,6 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
     return null;
   }
 
-  @Override
-  public Iterator<T> iterator() {
-    initSync();
-    while (true) {
-      try {
-        return queryOperation.complete(clazz).iterator();
-      } catch (Exception e) {
-        if (!queryOperation.shouldQueryAgain(e)) {
-          throw e;
-        }
-        executeActualQuery(); // retry the query, note that we explicitly not incrementing the session request count here
-      }
-    }
-  }
-
-
-
   public String toString() {
     String query = super.toString();
     if (isSpatialQuery) {
