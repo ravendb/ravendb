@@ -16,13 +16,27 @@ namespace Raven.Database.Linq
 		protected string basePath;
 		protected readonly InMemoryRavenConfiguration configuration;
 		protected string name;
+		private string cSharpSafeName;
 		public string CompiledQueryText { get; set; }
 		public Type GeneratedType { get; set; }
 		public string Name
 		{
           get { return name; }
 		}
-		public string CSharpSafeName { get; set; }
+		public string CSharpSafeName
+		{
+			get { return cSharpSafeName; }
+			set
+			{
+				cSharpSafeName = value;
+				if (cSharpSafeName == null)
+					return;
+				if (cSharpSafeName.Length > 256)
+				{
+					cSharpSafeName = cSharpSafeName.Substring(0, 256);
+				}
+			}
+		}
 
 		public DynamicCompilerBase(InMemoryRavenConfiguration configuration, OrderedPartCollection<AbstractDynamicCompilationExtension> extensions, string name, string basePath)
 		{
