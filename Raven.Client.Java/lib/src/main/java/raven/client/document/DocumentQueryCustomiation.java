@@ -200,6 +200,10 @@ public class DocumentQueryCustomiation implements IDocumentQueryCustomization {
     return this;
   }
 
+  @Override
+  public String toString() {
+    return delegate.toString();
+  }
 
 
 }

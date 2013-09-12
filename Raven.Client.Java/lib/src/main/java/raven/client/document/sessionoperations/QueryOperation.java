@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
 
+import raven.abstractions.basic.SharpEnum;
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action2;
 import raven.abstractions.closure.Function2;
@@ -305,7 +306,7 @@ public class QueryOperation {
         continue;
       }
       setOperationHeaders.apply(String.format("SortHint-%s", UrlUtils.escapeDataString(StringUtils.strip(sortByHint.getItem1(), "-"))),
-          sessionOperations.getConventions().getDefaultSortOption(sortByHint.getClass().getCanonicalName()).toString());
+          SharpEnum.value(sessionOperations.getConventions().getDefaultSortOption(sortByHint.getClass().getCanonicalName())));
     }
 
   }

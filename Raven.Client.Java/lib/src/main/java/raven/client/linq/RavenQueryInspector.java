@@ -1,7 +1,6 @@
 package raven.client.linq;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -412,18 +411,13 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   @Override
   public Iterator<T> iterator() {
     Object execute = provider.execute(expression);
-    if (execute instanceof Iterable) {
-      return ((Iterable) execute).iterator();
-    } else {
-      return (Iterator<T>) Arrays.asList(execute).iterator();
-    }
+    return ((Iterable<T>) execute).iterator();
   }
 
   @SuppressWarnings("unchecked")
   @Override
   public T firstOrDefault() {
-    Object execute = provider.execute(Expressions.operation(Object.class, LinqOps.Query.FIRST_OR_DEFAULT, getExpression()));
-    return (T) execute;
+    return (T) provider.execute(Expressions.operation(Object.class, LinqOps.Query.FIRST_OR_DEFAULT, getExpression()));
   }
 
   @Override
@@ -431,34 +425,32 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     return EnumerableUtils.toList(iterator());
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public T first() {
-    IRavenQueryable<T> firstQuery = provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.FIRST, getExpression()));
-    return EnumerableUtils.first(firstQuery.iterator());
+    return (T) provider.execute(Expressions.operation(Object.class, LinqOps.Query.FIRST, getExpression()));
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public T singleOrDefault() {
-    IRavenQueryable<T> firstQuery = provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SINGLE_OR_DEFAULT, getExpression()));
-    return EnumerableUtils.first(firstQuery.iterator());
+    return (T) provider.execute(Expressions.operation(Object.class, LinqOps.Query.SINGLE_OR_DEFAULT, getExpression()));
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public T single() {
-    IRavenQueryable<T> firstQuery = provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SINGLE, getExpression()));
-    return EnumerableUtils.first(firstQuery.iterator());
+    return (T) provider.execute(Expressions.operation(Object.class, LinqOps.Query.SINGLE, getExpression()));
   }
 
   @Override
   public int count() {
-    // TODO Auto-generated method stub
-    return 0;
+    return (int) provider.execute(Expressions.operation(Object.class, LinqOps.Query.COUNT, getExpression()));
   }
 
   @Override
   public long longCount() {
-    // TODO Auto-generated method stub
-    return 0;
+    return (long) provider.execute(Expressions.operation(Object.class, LinqOps.Query.LONG_COUNT, getExpression()));
   }
 
 
