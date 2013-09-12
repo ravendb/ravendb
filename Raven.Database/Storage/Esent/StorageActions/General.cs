@@ -92,9 +92,17 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 				Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
-				Dispose();
+			    logger.WarnException("Error when trying to open a new DocumentStorageActions", ex);
+			    try
+			    {
+			        Dispose();
+			    }
+			    catch (Exception e)
+			    {
+			        logger.WarnException("Error on dispose when the ctor threw an exception, resources may have leaked", e);
+			    }
 				throw;
 			}
 		}
