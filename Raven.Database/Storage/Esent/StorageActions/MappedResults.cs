@@ -872,13 +872,6 @@ namespace Raven.Storage.Esent.StorageActions
 
 			do
 			{
-				var indexFromDb = Api.RetrieveColumnAsString(session, ReduceKeysStatus,
-															 tableColumnsCache.ReduceKeysStatusColumns["view"], Encoding.Unicode,
-															 RetrieveColumnGrbit.RetrieveFromIndex);
-
-				if (StringComparer.InvariantCultureIgnoreCase.Equals(view, indexFromDb) == false)
-					break;
-
 				var reduceKey = Api.RetrieveColumnAsString(session, ReduceKeysStatus,
 											   tableColumnsCache.ReduceKeysStatusColumns["reduce_key"]);
 
