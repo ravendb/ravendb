@@ -1,36 +1,24 @@
 package raven.client.connection;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.TestName;
 
 import raven.abstractions.closure.Functions;
-import raven.abstractions.json.linq.RavenJObject;
-import raven.abstractions.json.linq.RavenJValue;
+import raven.abstractions.replication.ReplicationDestination;
+import raven.abstractions.replication.ReplicationDocument;
+import raven.abstractions.replication.ReplicationDestination.TransitiveReplicationOptions;
 import raven.client.RavenDBAwareTests;
-import raven.client.connection.implementation.HttpJsonRequestFactory;
-import raven.client.document.DocumentConvention;
 import raven.client.listeners.IDocumentConflictListener;
-import raven.client.utils.UrlUtils;
 
 
 public abstract class AbstractReplicationTest extends RavenDBAwareTests{
 
   protected ServerClient serverClient2;
+  protected static final String SOURCE = "source";
+  protected static final String TARGET = "target";
 
 
   @Before
@@ -63,6 +51,22 @@ public abstract class AbstractReplicationTest extends RavenDBAwareTests{
     } finally {
 
     }
+  }
+
+  protected ReplicationDocument createReplicationDocument() {
+    return createReplicationDocument(DEFAULT_SERVER_URL_2, TARGET);
+  }
+
+  protected ReplicationDocument createReplicationDocument(String url, String database) {
+    ReplicationDestination rep = new ReplicationDestination();
+    rep.setUrl(url);
+    rep.setDatabase(database);
+    rep.setTransitiveReplicationBehavior(TransitiveReplicationOptions.NONE);
+    rep.setIgnoredClient(Boolean.FALSE);
+    rep.setDisabled(Boolean.FALSE);
+    ReplicationDocument repDoc = new ReplicationDocument();
+    repDoc.getDestinations().add(rep);
+    return repDoc;
   }
 
 }

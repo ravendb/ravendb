@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.commons.lang.CharUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -99,10 +100,6 @@ public abstract class RavenDBAwareTests {
   }
 
   protected void useFiddler(IDocumentStore store){
-    /*System.setProperty("http.proxyHost", "127.0.0.1");
-    System.setProperty("https.proxyHost", "127.0.0.1");
-    System.setProperty("http.proxyPort", "8888");
-    System.setProperty("https.proxyPort", "8888");*/
     HttpHost proxy = new HttpHost("127.0.0.1", 8888, "http");
     store.getJsonRequestFactory().getHttpClient().getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, proxy);
   }
@@ -129,6 +126,22 @@ public abstract class RavenDBAwareTests {
     HttpPut put = null;
     try {
       put = new HttpPut(getServerUrl(i) + "/admin/databases/" + UrlUtils.escapeDataString(dbName));
+      put.setEntity(new StringEntity(getCreateDbDocument(dbName), ContentType.APPLICATION_JSON));
+      HttpResponse httpResponse = client.execute(put);
+      if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+        throw new IllegalStateException("Invalid response on put:" + httpResponse.getStatusLine().getStatusCode());
+      }
+    } finally {
+      if (put != null) {
+        put.releaseConnection();
+      }
+    }
+  }
+
+  protected void createDbAtPort(String dbName, int port) throws Exception {
+    HttpPut put = null;
+    try {
+      put = new HttpPut("http://" + DEFAULT_HOST + ":" + port + "/admin/databases/" + UrlUtils.escapeDataString(dbName));
       put.setEntity(new StringEntity(getCreateDbDocument(dbName), ContentType.APPLICATION_JSON));
       HttpResponse httpResponse = client.execute(put);
       if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
@@ -222,7 +235,27 @@ public abstract class RavenDBAwareTests {
 
 
   protected String getDbName() {
-    return testName.getMethodName();
+    String method = testName.getMethodName();
+    StringBuilder dbName = new StringBuilder();
+    if (method.length() > 15) {
+      dbName.append(method.substring(0, 10));
+      for (int i = 10; i < method.length() - 2; i++) {
+        if (CharUtils.isAsciiAlphaUpper(method.charAt(i))) {
+          dbName.append(method.charAt(i));
+          if (CharUtils.isAsciiAlphaLower(method.charAt(i+1))) {
+            dbName.append(method.charAt(i+1));
+          }
+        }
+        if ('_' == method.charAt(i)) {
+          dbName.append(CharUtils.toString(method.charAt(i+1)).toUpperCase());
+          dbName.append(method.charAt(i+2));
+          i++;
+        }
+      }
+    } else {
+      return method;
+    }
+    return dbName.toString();
   }
 
 

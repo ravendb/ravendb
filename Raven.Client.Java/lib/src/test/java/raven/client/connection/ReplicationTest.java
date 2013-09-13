@@ -15,15 +15,10 @@ import raven.abstractions.data.PutResult;
 import raven.abstractions.data.UuidType;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
-import raven.abstractions.replication.ReplicationDestination;
-import raven.abstractions.replication.ReplicationDestination.TransitiveReplicationOptions;
 import raven.abstractions.replication.ReplicationDocument;
 
 
 public class ReplicationTest extends AbstractReplicationTest {
-
-  private static final String SOURCE = "source";
-  private static final String TARGET = "target";
 
   @Test
   public void testCreateDb() throws Exception {
@@ -42,9 +37,6 @@ public class ReplicationTest extends AbstractReplicationTest {
       ReplicationDocument repDoc = createReplicationDocument();
 
       RavenJObject o = new RavenJObject();
-     // List<RavenJObject> destinations = new ArrayList<>();
-     // RavenJObject dest = new RavenJObject();
-     // dest.add("Url", );
       List<String> destinations = new ArrayList<>();
       destinations.add(DEFAULT_SERVER_URL_2);
       o.add("Destinations", new RavenJArray(destinations));
@@ -71,17 +63,7 @@ public class ReplicationTest extends AbstractReplicationTest {
     }
   }
 
-  protected ReplicationDocument createReplicationDocument() {
-    ReplicationDestination rep = new ReplicationDestination();
-    rep.setUrl(DEFAULT_SERVER_URL_2);
-    rep.setDatabase(TARGET);
-    rep.setTransitiveReplicationBehavior(TransitiveReplicationOptions.NONE);
-    rep.setIgnoredClient(Boolean.FALSE);
-    rep.setDisabled(Boolean.FALSE);
-    ReplicationDocument repDoc = new ReplicationDocument();
-    repDoc.getDestinations().add(rep);
-    return repDoc;
-  }
+
 
 
 }
