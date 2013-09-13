@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -345,7 +346,7 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
       try (IDocumentSession session = store.openSession()) {
         //Just issue a blank query to make sure there are no stale results
         session.query(DateTimeInfo.class, "DateTime").customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
-          .where(x.timeOfDay.gt(currentTime)).toList();
+        .where(x.timeOfDay.gt(currentTime)).toList();
 
         IRavenQueryable<DateTimeInfo> testFail = session.query(DateTimeInfo.class, "DateTime").where(x.timeOfDay.gt(new Date(0)));
 
@@ -377,7 +378,7 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
       try (IDocumentSession session = store.openSession()) {
         //Just issue a blank query to make sure there are no stale results
         session.query(DateTimeInfo.class, "DateTime").customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
-          .where(x.timeOfDay.gt(currentTime)).toList();
+        .where(x.timeOfDay.gt(currentTime)).toList();
 
         int count = session.query(DateTimeInfo.class, "DateTime").where(x.timeOfDay.gt(new Date())).count();
         assertEquals(2, count);
@@ -409,7 +410,7 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
       try (IDocumentSession session = store.openSession()) {
         //Just issue a blank query to make sure there are no stale results
         session.query(DateTimeInfo.class, "DateTime").customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
-          .where(x.timeOfDay.gt(currentTime)).toList();
+        .where(x.timeOfDay.gt(currentTime)).toList();
 
         List<DateTimeInfo> list = session.query(DateTimeInfo.class, "DateTime").where(x.timeOfDay.ne(new Date(0))).toList();
         assertTrue(list.size() > 0);
@@ -456,20 +457,20 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
         session.saveChanges();
       }
       try (IDocumentSession session = store.openSession()) {
-      //  Just issue a blank query to make sure there are no stale results
+        //  Just issue a blank query to make sure there are no stale results
         session.query(SomeDataProjection.class).customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults()).toList();
 
-      //This is the lucene query we want to mimic
+        //This is the lucene query we want to mimic
         List<SomeDataProjection> luceneResult = session.advanced().luceneQuery(OrderItem.class, "ByLineCost")
-          .where("Cost_Range:{Dx1 TO NULL}")
-          .selectFields(SomeDataProjection.class)
-          .toList();
+            .where("Cost_Range:{Dx1 TO NULL}")
+            .selectFields(SomeDataProjection.class)
+            .toList();
 
         QUsingRavenQueryProviderTest_OrderItem x = QUsingRavenQueryProviderTest_OrderItem.orderItem;
         List<SomeDataProjection> projectionResult = session.query(OrderItem.class, "ByLineCost")
-          .where(x.cost.gt(1))
-          .select(SomeDataProjection.class)
-          .toList();
+            .where(x.cost.gt(1))
+            .select(SomeDataProjection.class)
+            .toList();
 
         assertEquals(luceneResult.size(), projectionResult.size());
 
@@ -511,8 +512,6 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
       }
     }
   }
-
-  //TODO: finish me
 
   @QueryEntity
   public static class SomeDataProjection {
@@ -645,7 +644,375 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
     session.saveChanges();
   }
 
-  //TODO finish me
+  @Test
+  //TODO: in index we have integer quantity, in data we have double quantity, in query parameters we have double quantity
+  //TODO: server can't convert int to double (??)
+  public void can_Use_In_Array_In_Where_Clause() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        OrderItem orderItem1 = new OrderItem();
+        orderItem1.setCost(1.59);
+        orderItem1.setQuantity(5);
+        session.store(orderItem1);
+
+        OrderItem orderItem2 = new OrderItem();
+        orderItem2.setCost(7.59);
+        orderItem2.setQuantity(3);
+        session.store(orderItem2);
+
+        OrderItem orderItem3 = new OrderItem();
+        orderItem3.setCost(1.59);
+        orderItem3.setQuantity(4);
+        session.store(orderItem3);
+
+        OrderItem orderItem4 = new OrderItem();
+        orderItem4.setCost(1.39);
+        orderItem4.setQuantity(3);
+        session.store(orderItem4);
+
+        session.saveChanges();
+      }
+      try (IDocumentSession session = store.openSession()) {
+        QUsingRavenQueryProviderTest_OrderItem x = QUsingRavenQueryProviderTest_OrderItem.orderItem;
+
+        List<OrderItem> items = session.query(OrderItem.class)
+            .where(x.quantity.in(3.0, 5.0))
+            .toList();
+
+        assertEquals(3, items.size());
+      }
+    }
+  }
+
+  @Test
+  public void can_Use_Strings_In_Array_In_Where_Clause() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        OrderItem orderItem1 = new OrderItem();
+        orderItem1.setCost(1.59);
+        orderItem1.setQuantity(5);
+        orderItem1.setDescription("First");
+        session.store(orderItem1);
+
+        OrderItem orderItem2 = new OrderItem();
+        orderItem2.setCost(7.59);
+        orderItem2.setQuantity(3);
+        orderItem2.setDescription("Second");
+        session.store(orderItem2);
+
+        OrderItem orderItem3 = new OrderItem();
+        orderItem3.setCost(1.59);
+        orderItem3.setQuantity(4);
+        orderItem3.setDescription("Third");
+        session.store(orderItem3);
+
+        OrderItem orderItem4 = new OrderItem();
+        orderItem4.setCost(1.39);
+        orderItem4.setQuantity(3);
+        orderItem4.setDescription("Fourth");
+        session.store(orderItem4);
+
+        session.saveChanges();
+      }
+      try (IDocumentSession session = store.openSession()) {
+        QUsingRavenQueryProviderTest_OrderItem x = QUsingRavenQueryProviderTest_OrderItem.orderItem;
+
+        List<OrderItem> items = session.query(OrderItem.class)
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+            .where(x.description.in("", "First"))
+            .toList();
+
+        assertEquals(1, items.size());
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        QUsingRavenQueryProviderTest_OrderItem x = QUsingRavenQueryProviderTest_OrderItem.orderItem;
+
+        List<OrderItem> items = session.query(OrderItem.class)
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+            .where(x.description.in("First", ""))
+            .toList();
+
+        assertEquals(1, items.size());
+      }
+    }
+  }
+
+  @Test
+  public void can_Use_Enums_In_Array_In_Where_Clause() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        OrderItem orderItem1 = new OrderItem();
+        orderItem1.setCost(1.59);
+        orderItem1.setQuantity(5);
+        orderItem1.setCountry(Origin.AFRICA);
+        session.store(orderItem1);
+
+        OrderItem orderItem2 = new OrderItem();
+        orderItem2.setCost(7.59);
+        orderItem2.setQuantity(3);
+        orderItem2.setCountry(Origin.AFRICA);
+        session.store(orderItem2);
+
+        OrderItem orderItem3 = new OrderItem();
+        orderItem3.setCost(1.59);
+        orderItem3.setQuantity(4);
+        orderItem3.setCountry(Origin.UNITED_STATES);
+        session.store(orderItem3);
+
+        OrderItem orderItem4 = new OrderItem();
+        orderItem4.setCost(1.39);
+        orderItem4.setQuantity(3);
+        orderItem4.setCountry(Origin.AFRICA);
+        session.store(orderItem4);
+
+        session.saveChanges();
+      }
+      try (IDocumentSession session = store.openSession()) {
+        QUsingRavenQueryProviderTest_OrderItem x = QUsingRavenQueryProviderTest_OrderItem.orderItem;
+
+        List<OrderItem> items = session.query(OrderItem.class)
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+            .where(x.country.in(Origin.UNITED_STATES))
+            .toList();
+
+        assertEquals(1, items.size());
+
+        items = session.query(OrderItem.class)
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+            .where(x.country.in(Origin.AFRICA))
+            .toList();
+
+        assertEquals(3, items.size());
+      }
+    }
+  }
+
+  @Test
+  public void can_Use_Enums_In_IEnumerable_In_Where_Clause() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        OrderItem orderItem1 = new OrderItem();
+        orderItem1.setCost(1.59);
+        orderItem1.setQuantity(5);
+        orderItem1.setCountry(Origin.AFRICA);
+        session.store(orderItem1);
+
+        OrderItem orderItem2 = new OrderItem();
+        orderItem2.setCost(7.59);
+        orderItem2.setQuantity(3);
+        orderItem2.setCountry(Origin.AFRICA);
+        session.store(orderItem2);
+
+        OrderItem orderItem3 = new OrderItem();
+        orderItem3.setCost(1.59);
+        orderItem3.setQuantity(4);
+        orderItem3.setCountry(Origin.UNITED_STATES);
+        session.store(orderItem3);
+
+        OrderItem orderItem4 = new OrderItem();
+        orderItem4.setCost(1.39);
+        orderItem4.setQuantity(3);
+        orderItem4.setCountry(Origin.AFRICA);
+        session.store(orderItem4);
+
+        session.saveChanges();
+      }
+      try (IDocumentSession session = store.openSession()) {
+        QUsingRavenQueryProviderTest_OrderItem x = QUsingRavenQueryProviderTest_OrderItem.orderItem;
+
+        List<Origin> list = new ArrayList<>();
+        list.add(Origin.AFRICA);
+
+        List<OrderItem> items = session.query(OrderItem.class)
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+            .where(x.country.in(list))
+            .toList();
+
+        assertEquals(3, items.size());
+
+      }
+    }
+  }
+
+  @Test //TODO: this test also has issue with int/double mapping
+  public void can_Use_In_IEnumerable_In_Where_Clause_with_negation() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        OrderItem orderItem1 = new OrderItem();
+        orderItem1.setCost(1.59);
+        orderItem1.setQuantity(5.0);
+        session.store(orderItem1);
+
+        OrderItem orderItem2 = new OrderItem();
+        orderItem2.setCost(7.59);
+        orderItem2.setQuantity(3.0);
+        session.store(orderItem2);
+
+        OrderItem orderItem3 = new OrderItem();
+        orderItem3.setCost(1.59);
+        orderItem3.setQuantity(4);
+        session.store(orderItem3);
+
+        OrderItem orderItem4 = new OrderItem();
+        orderItem4.setCost(1.39);
+        orderItem4.setQuantity(3);
+        session.store(orderItem4);
+
+        session.saveChanges();
+      }
+      try (IDocumentSession session = store.openSession()) {
+        QUsingRavenQueryProviderTest_OrderItem x = QUsingRavenQueryProviderTest_OrderItem.orderItem;
+
+        List<Double> list = new ArrayList<>();
+        list.add(3.0);
+        list.add(5.0);
+
+        List<OrderItem> items = session.query(OrderItem.class)
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+            .where(x.quantity.notIn(list))
+            .toList();
+
+        assertEquals(1, items.size());
+
+      }
+    }
+  }
+
+  @Test
+  public void can_Use_In_Params_In_Where_Clause() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        OrderItem orderItem1 = new OrderItem();
+        orderItem1.setCost(1.59);
+        orderItem1.setQuantity(5);
+        session.store(orderItem1);
+
+        OrderItem orderItem2 = new OrderItem();
+        orderItem2.setCost(7.59);
+        orderItem2.setQuantity(3);
+        session.store(orderItem2);
+
+        OrderItem orderItem3 = new OrderItem();
+        orderItem3.setCost(1.59);
+        orderItem3.setQuantity(4);
+        session.store(orderItem3);
+
+        OrderItem orderItem4 = new OrderItem();
+        orderItem4.setCost(1.39);
+        orderItem4.setQuantity(3);
+        session.store(orderItem4);
+
+        session.saveChanges();
+      }
+      try (IDocumentSession session = store.openSession()) {
+        QUsingRavenQueryProviderTest_OrderItem x = QUsingRavenQueryProviderTest_OrderItem.orderItem;
+
+        List<OrderItem> items = session.query(OrderItem.class)
+            .where(x.quantity.in(3.0, 5.0))
+            .toList();
+
+        assertEquals(3, items.size());
+      }
+    }
+  }
+
+  @Test
+  public void can_Use_In_IEnumerable_In_Where_Clause() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        OrderItem orderItem1 = new OrderItem();
+        orderItem1.setCost(1.59);
+        orderItem1.setQuantity(5);
+        session.store(orderItem1);
+
+        OrderItem orderItem2 = new OrderItem();
+        orderItem2.setCost(7.59);
+        orderItem2.setQuantity(3);
+        session.store(orderItem2);
+
+        OrderItem orderItem3 = new OrderItem();
+        orderItem3.setCost(1.59);
+        orderItem3.setQuantity(4);
+        session.store(orderItem3);
+
+        OrderItem orderItem4 = new OrderItem();
+        orderItem4.setCost(1.39);
+        orderItem4.setQuantity(3);
+        session.store(orderItem4);
+
+        session.saveChanges();
+      }
+      try (IDocumentSession session = store.openSession()) {
+        QUsingRavenQueryProviderTest_OrderItem x = QUsingRavenQueryProviderTest_OrderItem.orderItem;
+
+        List<Double> list = new ArrayList<>();
+        list.add(3.0);
+        list.add(5.0);
+
+        List<OrderItem> items = session.query(OrderItem.class)
+            .where(x.quantity.in(list))
+            .toList();
+
+        assertEquals(3, items.size());
+      }
+    }
+  }
+
+  @Test
+  public void can_Use_In_IEnumerable_Not_In_Where_Clause_on_Id() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+
+      UUID guid1 = UUID.randomUUID();
+      UUID guid2 = UUID.randomUUID();
+      UUID customerId = UUID.randomUUID();
+
+      try (IDocumentSession session = store.openSession()) {
+        OrderItem orderItem1 = new OrderItem();
+        orderItem1.setId(UUID.randomUUID());
+        orderItem1.setCustomerId(customerId);
+        orderItem1.setCost(1.59);
+        orderItem1.setQuantity(5);
+        session.store(orderItem1);
+
+        OrderItem orderItem2 = new OrderItem();
+        orderItem2.setId(guid1);
+        orderItem2.setCustomerId(customerId);
+        orderItem2.setCost(7.59);
+        orderItem2.setQuantity(3);
+        session.store(orderItem2);
+
+        OrderItem orderItem3 = new OrderItem();
+        orderItem3.setId(guid2);
+        orderItem3.setCustomerId(customerId);
+        orderItem3.setCost(1.59);
+        orderItem3.setQuantity(4);
+        session.store(orderItem3);
+
+        OrderItem orderItem4 = new OrderItem();
+        orderItem4.setId(UUID.randomUUID());
+        orderItem4.setCustomerId(customerId);
+        orderItem4.setCost(1.39);
+        orderItem4.setQuantity(3);
+        session.store(orderItem4);
+
+        session.saveChanges();
+      }
+
+      List<UUID> list = new ArrayList<>();
+      list.add(guid1);
+
+      try (IDocumentSession session = store.openSession()) {
+        QUsingRavenQueryProviderTest_OrderItem item = QUsingRavenQueryProviderTest_OrderItem.orderItem;
+        List<OrderItem> items = session.query(OrderItem.class)
+          .where(item.quantity.gt(4).and(item.customerId.eq(customerId)).and(item.id.notIn(list)))
+          .toList();
+
+        assertEquals(1, items.size());
+      }
+    }
+  }
+
 
 
 }

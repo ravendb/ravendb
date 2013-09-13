@@ -5,6 +5,7 @@ import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -214,7 +215,13 @@ public class RavenQueryProviderProcessor<T> {
     } else if (expression.getOperator().equals(Ops.COL_IS_EMPTY)) {
       visitCollectionEmpty(expression.getArg(0), true);
     } else if (expression.getOperator().equals(Ops.IN)) {
-      visitContains(expression);
+      if (expression.getArg(0) instanceof Constant && expression.getArg(1) instanceof Path) {
+        visitContains(expression);
+      } else if (expression.getArg(0) instanceof Path && expression.getArg(1) instanceof Constant) {
+        visitIn(expression);
+      } else {
+        throw new IllegalStateException("Unable to handle in/contains expression: " + expression);
+      }
     } else if (expression.getOperator().equals(Ops.CONTAINS_KEY)) {
       visitContainsKey(expression);
     } else if (expression.getOperator().equals(Ops.CONTAINS_VALUE)) {
@@ -231,6 +238,13 @@ public class RavenQueryProviderProcessor<T> {
     }
   }
 
+
+  @SuppressWarnings("unchecked")
+  private void visitIn(Operation<Boolean> expression) {
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+    Object objects = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
+    luceneQuery.whereIn(memberInfo.getPath(), (Collection<Object>)objects);
+  }
 
   private void visitIsNull(Operation<Boolean> expression) {
 

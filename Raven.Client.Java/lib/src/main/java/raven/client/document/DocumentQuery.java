@@ -9,7 +9,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -361,12 +360,6 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   @Override
   public IDocumentQuery<T> spatial(Path< ? > path, Function1<SpatialCriteriaFactory, SpatialCriteria> clause) {
     return spatial(getMemberQueryPath(path), clause);
-  }
-
-  @Override
-  public IDocumentQuery<T> whereIn(String fieldName, Collection<Object> values) {
-    // TODO Auto-generated method stub
-    return null;
   }
 
   public String toString() {
