@@ -543,7 +543,7 @@ namespace Raven.Json.Linq
 					return guid1.CompareTo(guid2);
 				case JTokenType.Uri:
 					if (objB is string)
-						objB = new Uri((string)objB);
+						objB = new Uri((string)objB, UriKind.RelativeOrAbsolute);
 
 					if (!(objB is Uri))
 						throw new ArgumentException("Object must be of type Uri.");
