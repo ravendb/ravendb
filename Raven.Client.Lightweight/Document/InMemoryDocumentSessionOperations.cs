@@ -461,58 +461,60 @@ more responsive application.
         /// <returns></returns>
         object ConvertToEntity(Type entityType, string id, RavenJObject documentFound, RavenJObject metadata)
         {
-            try
-            {
-                if (entityType == typeof (RavenJObject))
-                    return documentFound.CloneToken();
+	        try
+	        {
+		        if (entityType == typeof (RavenJObject))
+			        return documentFound.CloneToken();
 
-                var defaultValue = GetDefaultValue(entityType);
-                var entity = defaultValue;
-                EnsureNotReadVetoed(metadata);
+		        var defaultValue = GetDefaultValue(entityType);
+		        var entity = defaultValue;
+		        EnsureNotReadVetoed(metadata);
 
-			IDisposable disposable = null;
-			var defaultRavenContractResolver = Conventions.JsonContractResolver as DefaultRavenContractResolver;
-			if (defaultRavenContractResolver != null)
-			{
-				disposable = defaultRavenContractResolver.RegisterForExtensionData(RegisterMissingProperties);
-			}
+		        IDisposable disposable = null;
+		        var defaultRavenContractResolver = Conventions.JsonContractResolver as DefaultRavenContractResolver;
+		        if (defaultRavenContractResolver != null)
+		        {
+			        disposable = defaultRavenContractResolver.RegisterForExtensionData(RegisterMissingProperties);
+		        }
 
-			using (disposable)
-			{
-                var documentType = Conventions.GetClrType(id, documentFound, metadata);
-                if (documentType != null)
-                {
-                    var type = Type.GetType(documentType);
-                    if (type != null)
-                        entity = documentFound.Deserialize(type, Conventions);
-                }
+		        using (disposable)
+		        {
+			        var documentType = Conventions.GetClrType(id, documentFound, metadata);
+			        if (documentType != null)
+			        {
+				        var type = Type.GetType(documentType);
+				        if (type != null)
+					        entity = documentFound.Deserialize(type, Conventions);
+			        }
 
-                if (Equals(entity, defaultValue))
-                {
-                    entity = documentFound.Deserialize(entityType, Conventions);
-                    var document = entity as RavenJObject;
-                    if (document != null)
-                    {
-                        entity = (object) (new DynamicJsonObject(document));
-                    }
-                }
-                GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
+			        if (Equals(entity, defaultValue))
+			        {
+				        entity = documentFound.Deserialize(entityType, Conventions);
+				        var document = entity as RavenJObject;
+				        if (document != null)
+				        {
+					        entity = (object) (new DynamicJsonObject(document));
+				        }
+			        }
+			        GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
 
-                foreach (var documentConversionListener in listeners.ConversionListeners)
-                {
-                    documentConversionListener.DocumentToEntity(id, entity, documentFound, metadata);
-                }
+			        foreach (var documentConversionListener in listeners.ConversionListeners)
+			        {
+				        documentConversionListener.DocumentToEntity(id, entity, documentFound, metadata);
+			        }
 
-                return entity;
-            }
-            catch (ReadVetoException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Could not convert document " + id + " to entity of type " + entityType, ex);
-            }
+			        return entity;
+		        }
+	        }
+	        catch (ReadVetoException)
+	        {
+		        throw;
+	        }
+	        catch (Exception ex)
+	        {
+		        throw new InvalidOperationException("Could not convert document " + id + " to entity of type " + entityType,
+		                                            ex);
+	        }
         }
 
 		private void RegisterMissingProperties(object o, string key, JToken value)
@@ -581,62 +583,64 @@ more responsive application.
         /// <returns></returns>
         protected object ConvertToEntity<T>(string id, RavenJObject documentFound, RavenJObject metadata)
         {
-            try
-            {
-                if (typeof(T) == typeof(RavenJObject))
-                    return (T)(object)documentFound.CloneToken();
+	        try
+	        {
+		        if (typeof (T) == typeof (RavenJObject))
+			        return (T) (object) documentFound.CloneToken();
 
-                foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
-                {
-                    extendedDocumentConversionListener.BeforeConversionToEntity(id, documentFound, metadata);
-                }
+		        foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
+		        {
+			        extendedDocumentConversionListener.BeforeConversionToEntity(id, documentFound, metadata);
+		        }
 
-                var entity = default(T);
-                EnsureNotReadVetoed(metadata);
+		        var entity = default(T);
+		        EnsureNotReadVetoed(metadata);
 
-			IDisposable disposable = null;
-			var defaultRavenContractResolver = Conventions.JsonContractResolver as DefaultRavenContractResolver;
-			if (defaultRavenContractResolver != null)
-			{
-				disposable = defaultRavenContractResolver.RegisterForExtensionData(RegisterMissingProperties);
-			}
-			using (disposable)
-			{
+		        IDisposable disposable = null;
+		        var defaultRavenContractResolver = Conventions.JsonContractResolver as DefaultRavenContractResolver;
+		        if (defaultRavenContractResolver != null)
+		        {
+			        disposable = defaultRavenContractResolver.RegisterForExtensionData(RegisterMissingProperties);
+		        }
+		        using (disposable)
+		        {
 
-                var documentType = Conventions.GetClrType(id, documentFound, metadata);
-                if (documentType != null)
-                {
-                    var type = Type.GetType(documentType);
-                    if (type != null)
-                        entity = (T)documentFound.Deserialize(type, Conventions);
-                }
-                if (Equals(entity, default(T)))
-                {
-                    entity = documentFound.Deserialize<T>(Conventions);
-                    var document = entity as RavenJObject;
-                    if (document != null)
-                    {
-                        entity = (T)(object)(new DynamicJsonObject(document));
-                    }
-                }
-                GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
+			        var documentType = Conventions.GetClrType(id, documentFound, metadata);
+			        if (documentType != null)
+			        {
+				        var type = Type.GetType(documentType);
+				        if (type != null)
+					        entity = (T) documentFound.Deserialize(type, Conventions);
+			        }
+			        if (Equals(entity, default(T)))
+			        {
+				        entity = documentFound.Deserialize<T>(Conventions);
+				        var document = entity as RavenJObject;
+				        if (document != null)
+				        {
+					        entity = (T) (object) (new DynamicJsonObject(document));
+				        }
+			        }
+			        GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
 
-                foreach (var documentConversionListener in listeners.ConversionListeners)
-                {
-                    documentConversionListener.DocumentToEntity(id, entity, documentFound, metadata);
-                }
+			        foreach (var documentConversionListener in listeners.ConversionListeners)
+			        {
+				        documentConversionListener.DocumentToEntity(id, entity, documentFound, metadata);
+			        }
 
-                foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
-                {
-                    extendedDocumentConversionListener.AfterConversionToEntity(id, documentFound, metadata, entity);
-                }
+			        foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
+			        {
+				        extendedDocumentConversionListener.AfterConversionToEntity(id, documentFound, metadata, entity);
+			        }
 
-                return entity;
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Could not convert document " + id + " to entity of type " + typeof(T), ex);
-            }
+			        return entity;
+		        }
+	        }
+	        catch (Exception ex)
+	        {
+		        throw new InvalidOperationException("Could not convert document " + id + " to entity of type " + typeof (T),
+		                                            ex);
+	        }
         }
 
         private static void EnsureNotReadVetoed(RavenJObject metadata)

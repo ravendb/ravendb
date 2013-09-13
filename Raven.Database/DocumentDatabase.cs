@@ -1215,9 +1215,7 @@ namespace Raven.Database
             if (name == null)
                 throw new ArgumentNullException("name");
 
-	        var fixedName = IndexDefinitionStorage.FixupIndexName(name);
-
-			var existingIndex = IndexDefinitionStorage.GetIndexDefinition(fixedName);
+			var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
 
             if (existingIndex != null)
             {
@@ -1245,7 +1243,7 @@ namespace Raven.Database
                     break;
             }
 
-			IndexDefinitionStorage.RegisterNewIndexInThisSession(fixedName, definition);
+			IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
             // this has to happen in this fashion so we will expose the in memory status after the commit, but 
             // before the rest of the world is notified about this.
@@ -1263,9 +1261,9 @@ namespace Raven.Database
             // index, then we add it to the storage in a way that make it public
             IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
 
-			InvokeSuggestionIndexing(fixedName, definition);
+			InvokeSuggestionIndexing(name, definition);
 
-			workContext.ClearErrorsFor(fixedName);
+			workContext.ClearErrorsFor(name);
 
             TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
             {
@@ -2382,16 +2380,16 @@ namespace Raven.Database
 
         public Etag GetIndexEtag(string indexName, Etag previousEtag, string resultTransformer = null)
         {
-	        var fixedName = IndexDefinitionStorage.FixupIndexName(indexName);
-
             Etag lastDocEtag = Etag.Empty;
             Etag lastReducedEtag = null;
             bool isStale = false;
             int touchCount = 0;
             TransactionalStorage.Batch(accessor =>
             {
-				var indexInstance = IndexStorage.GetIndexInstance(fixedName);
-	            isStale = (indexInstance != null && indexInstance.IsMapIndexingInProgress) ||
+				var indexInstance = IndexStorage.GetIndexInstance(indexName);
+	            if (indexInstance == null)
+		            return;
+	            isStale = (indexInstance.IsMapIndexingInProgress) ||
 	                      accessor.Staleness.IsIndexStale(indexInstance.indexId, null, null);
                 lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
                 var indexStats = accessor.Indexing.GetIndexStats(indexInstance.indexId);
@@ -2403,7 +2401,7 @@ namespace Raven.Database
             });
 
 
-			var indexDefinition = GetIndexDefinition(fixedName);
+			var indexDefinition = GetIndexDefinition(indexName);
             if (indexDefinition == null)
                 return Etag.Empty; // this ensures that we will get the normal reaction of IndexNotFound later on.
             using (var md5 = MD5.Create())
