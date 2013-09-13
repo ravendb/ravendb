@@ -254,9 +254,9 @@ namespace Raven.Client.Connection
 					&& CachedRequestDetails != null)
 				{
 					factory.UpdateCacheTime(this);
-					var result = factory.GetCachedResponse(this, Response.Headers);
+					var result = factory.GetCachedResponse(this, ResponseHeaders);
 
-					HandleReplicationStatusChanges(Response.Headers.GetFirstValue(Constants.RavenForcePrimaryServerCheck), primaryUrl, operationUrl);
+					HandleReplicationStatusChanges(ResponseHeaders.Get(Constants.RavenForcePrimaryServerCheck), primaryUrl, operationUrl);
 
 					factory.InvokeLogRequest(owner, () => new RequestResultArgs
 					{
@@ -564,7 +564,7 @@ namespace Raven.Client.Connection
 
 		private async Task<RavenJToken> ReadJsonInternalAsync()
 		{
-			HandleReplicationStatusChanges(Response.Headers.GetFirstValue(Constants.RavenForcePrimaryServerCheck), primaryUrl, operationUrl);
+			HandleReplicationStatusChanges(ResponseHeaders.Get(Constants.RavenForcePrimaryServerCheck), primaryUrl, operationUrl);
 
 			using (var responseStream = await Response.GetResponseStreamWithHttpDecompression())
 			{
@@ -572,7 +572,7 @@ namespace Raven.Client.Connection
 
 				if (Method == "GET" && ShouldCacheRequest)
 				{
-					factory.CacheResponse(Url, data, Response.Headers);
+					factory.CacheResponse(Url, data, ResponseHeaders);
 				}
 
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs

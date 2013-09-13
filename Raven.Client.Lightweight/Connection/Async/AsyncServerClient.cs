@@ -706,8 +706,7 @@ namespace Raven.Client.Connection.Async
             AddTransactionInformation(metadata);
             var request =
                 jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-                                                                                         (opUrl + "/docs/" +
-                                                                                          Uri.EscapeDataString(key)).NoCache(),
+                                                                                         (opUrl + "/docs/" + Uri.EscapeDataString(key)),
                                                                                          "GET", metadata, credentials, convention)
                 .AddOperationHeaders(OperationsHeaders));
 
