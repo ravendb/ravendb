@@ -209,7 +209,7 @@ public class QueryOperation {
 
   private <T> T deserializedResult(Class<T> clazz, RavenJObject result) {
     if (projectionFields != null && projectionFields.length == 1) { // we only select a single field
-      if (String.class.equals(clazz) || Number.class.equals(clazz) || clazz.isEnum()) {
+      if (String.class.equals(clazz) || Number.class.isAssignableFrom(clazz) || clazz.isEnum()) {
         return result.value(clazz, projectionFields[0]);
       }
     }

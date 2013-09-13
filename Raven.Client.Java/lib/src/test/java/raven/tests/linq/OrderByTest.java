@@ -1,7 +1,6 @@
 package raven.tests.linq;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
@@ -56,8 +55,6 @@ public class OrderByTest extends RemoteClientTest {
 
   @Test
   public void canDescOrderBy_AProjection() throws Exception {
-    fail();
-/*TODO uncomment
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       try (IDocumentSession session = store.openSession()) {
         for (int i = 0; i < 10; i++) {
@@ -74,13 +71,11 @@ public class OrderByTest extends RemoteClientTest {
 
         assertEquals(9, lastPosition);
       }
-    }*/
+    }
   }
 
   @Test
   public void canAscOrderBy_AProjection() throws Exception {
-    fail();
-/*TODO uncomment
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       try (IDocumentSession session = store.openSession()) {
         for (int i = 5; i < 10; i++) {
@@ -103,7 +98,7 @@ public class OrderByTest extends RemoteClientTest {
 
         assertEquals(0, lastPosition);
       }
-    }*/
+    }
   }
 
 

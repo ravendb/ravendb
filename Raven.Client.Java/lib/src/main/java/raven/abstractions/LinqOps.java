@@ -23,6 +23,8 @@ public class LinqOps {
     public static final Operator<Object> SINGLE_OR_DEFAULT = new OperatorImpl<>("QUERY_SINGLE_OR_DEFAULT");
     public static final Operator<Object> SKIP = new OperatorImpl<>("QUERY_SKIP");
     public static final Operator<Object> TAKE = new OperatorImpl<>("QUERY_TAKE");
+    public static final Operator<Object> DISTINCT = new OperatorImpl<>("QUERY_DISTINCT");
+    public static final Operator<Object> SELECT = new OperatorImpl<>("QUERY_SELECT");
 
     public static final Operator<Object> ANY = new OperatorImpl<>("QUERY_ANY");
 

@@ -80,7 +80,7 @@ public class FacetedIndexTest extends FacetTestBase {
       ConditionalGetHelper conditionalGetHelper = new ConditionalGetHelper();
       Reference<Etag> firstEtagRef = new Reference<>();
 
-      String queryUrl = store.getUrl() + "/databases/remoteFacetedSearchHonorsConditionalGet/facets/CameraCost?facetDoc=facets%%2FCameraFacets&query=Manufacturer%%253A%s&facetStart=0&facetPageSize=";
+      String queryUrl = store.getUrl() + "/databases/" + getDefaultDb() + "/facets/CameraCost?facetDoc=facets%%2FCameraFacets&query=Manufacturer%%253A%s&facetStart=0&facetPageSize=";
       String url = String.format(queryUrl, "canon");
 
       assertEquals(HttpStatus.SC_OK, conditionalGetHelper.performGet(url, null, firstEtagRef));

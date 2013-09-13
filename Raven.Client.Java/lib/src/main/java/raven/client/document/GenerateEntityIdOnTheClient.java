@@ -1,11 +1,13 @@
 package raven.client.document;
 
 import java.lang.reflect.Field;
+import java.util.UUID;
 
 import org.apache.commons.lang.reflect.FieldUtils;
 
 import raven.abstractions.basic.Reference;
 import raven.abstractions.closure.Function1;
+import raven.abstractions.data.Constants;
 import raven.client.IDocumentStore;
 import raven.client.converters.ITypeConverter;
 
@@ -35,6 +37,10 @@ public class GenerateEntityIdOnTheClient {
         Object value = FieldUtils.readField(identityProperty, entity, true);
         if (value instanceof String) {
           idHolder.value = (String) value;
+        }
+        if (idHolder.value == null && value == null && identityProperty.getType().equals(UUID.class)) {
+          // fix for UUID as UUID is nullable type in Java
+          value = Constants.EMPTY_UUID;
         }
         if (idHolder.value == null && value != null) { //need convertion
           idHolder.value = documentStore.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(value, entity.getClass(), true);

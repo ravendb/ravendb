@@ -29,7 +29,7 @@ public class ReplicationBase extends RavenDBAwareTests {
       stores.add(store);
       return store;
     } catch (Exception e) {
-      Assert.fail("Couldn't create the store");
+      Assert.fail("Couldn't create the store" + e);
     }
     return null;
   }

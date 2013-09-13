@@ -72,7 +72,7 @@ public class DynamicFacetsTest extends FacetTestBase {
       String jsonFacets = JsonConvert.serializeObject(facets);
       Reference<Etag> firstEtagRef = new Reference<>();
 
-      String queryUrl = store.getUrl() + "/databases/remoteDynamicFacetedSearchHonorsConditionalGet/facets/CameraCost?query=Manufacturer%%253A%s&facetStart=0&facetPageSize=";
+      String queryUrl = store.getUrl() + "/databases/" + getDefaultDb() + "/facets/CameraCost?query=Manufacturer%%253A%s&facetStart=0&facetPageSize=";
       String requestUrl = String.format(queryUrl, "canon");
 
       assertEquals(HttpStatus.SC_OK, conditionalGetHelper.performPost(requestUrl, jsonFacets, null, firstEtagRef));

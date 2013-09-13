@@ -1,7 +1,11 @@
 package raven.client.linq;
 
+import java.beans.IntrospectionException;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +15,7 @@ import raven.abstractions.LinqOps;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action1;
+import raven.abstractions.data.AggregationOperation;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.QueryResult;
 import raven.abstractions.json.linq.RavenJToken;
@@ -27,7 +32,7 @@ import raven.querydsl.CollectionAnyVisitor;
 import raven.querydsl.StackBasedContext;
 
 import com.google.common.collect.Lists;
-import com.mysema.query.support.Context;
+import com.mysema.codegen.StringUtils;
 import com.mysema.query.support.Expressions;
 import com.mysema.query.types.Constant;
 import com.mysema.query.types.Expression;
@@ -69,7 +74,7 @@ public class RavenQueryProviderProcessor<T> {
   private Set<String> fieldsToFetch;
   private List<RenamedField> fieldsToRename;
 
-  private boolean insideSelect;
+  private boolean insideSelect = false;
   private final boolean isMapReduce;
 
 
@@ -220,7 +225,7 @@ public class RavenQueryProviderProcessor<T> {
       visitStringEmpty(expression.getArg(0), false);
     } else if (expression.getOperator().equals(Ops.STRING_CONTAINS)) {
       throw new IllegalStateException("Contains is not supported, doing a substring match over a text field is a" +
-      		" very slow operation, and is not allowed using the Linq API. The recommended method is to use full text search (mark the field as Analyzed and use the search() method to query it.");
+          " very slow operation, and is not allowed using the Linq API. The recommended method is to use full text search (mark the field as Analyzed and use the search() method to query it.");
     } else {
       throw new IllegalArgumentException("Expression is not supported: " + expression.getOperator());
     }
@@ -449,7 +454,30 @@ public class RavenQueryProviderProcessor<T> {
   }
 
   private void visitNotEquals(Operation<Boolean> expression) {
-    //TODO: implement me
+    if (!isMemberAccessForQuerySource(expression.getArg(0)) && isMemberAccessForQuerySource(expression.getArg(1))) {
+      visitEquals((BooleanOperation) Expressions.booleanOperation(Ops.NE, expression.getArg(1), expression.getArg(0)));
+      return ;
+    }
+
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+
+    luceneQuery.openSubclause();
+    luceneQuery.negateNext();
+
+    WhereParams whereParams = new WhereParams();
+    whereParams.setFieldName(memberInfo.getPath());
+    whereParams.setValue(getValueFromExpression(expression.getArg(1), getMemberType(memberInfo)));
+    whereParams.setAnalyzed(true);
+    whereParams.setAllowWildcards(false);
+    luceneQuery.whereEquals(whereParams);
+    luceneQuery.andAlso();
+    whereParams = new WhereParams();
+    whereParams.setFieldName(memberInfo.getPath());
+    whereParams.setValue("*");
+    whereParams.setAnalyzed(true);
+    whereParams.setAllowWildcards(true);
+    luceneQuery.whereEquals(whereParams);
+    luceneQuery.closeSubclause();
   }
 
   private Class<?> getMemberType(ExpressionInfo memberInfo) {
@@ -622,6 +650,8 @@ public class RavenQueryProviderProcessor<T> {
     } else if (operatorId.equals(LinqOps.Query.TAKE.getId())) {
       visitExpression(expression.getArg(0));
       visitTake((Constant<Integer>) expression.getArg(1));
+    } else if (operatorId.equals(LinqOps.Query.DISTINCT.getId())) {
+      luceneQuery.groupBy(EnumSet.of(AggregationOperation.DISTINCT));
     } else if (operatorId.equals(LinqOps.Query.FIRST_OR_DEFAULT.getId())) {
       visitExpression(expression.getArg(0));
       visitFirstOrDefault();
@@ -640,7 +670,7 @@ public class RavenQueryProviderProcessor<T> {
     } else if (operatorId.equals(LinqOps.Query.LONG_COUNT.getId())) {
       visitExpression(expression.getArg(0));
       visitLongCount();
-      //TODO: all, any, distinct, order by, then by, then by descinding, order by descending
+      //TODO: all, any
     } else if (operatorId.equals(LinqOps.Query.ORDER_BY.getId())) {
       visitExpression(expression.getArg(0));
       Expression< ? > orderSpecExpression = expression.getArg(1);
@@ -652,12 +682,132 @@ public class RavenQueryProviderProcessor<T> {
       }
     } else if (operatorId.equals(LinqOps.Query.SEARCH.getId())) {
       visitSearch(expression);
+    } else if (operatorId.equals(LinqOps.Query.SELECT.getId())) {
+
+      Class<?> rootType = extractRootTypeForSelect(expression.getArg(1));
+      if (rootType != null) {
+        luceneQuery.addRootType((Class<T>) rootType);
+      }
+
+      visitExpression(expression.getArg(0));
+      visitSelect(expression);
     } else if (operatorId.equals(LinqOps.Query.ANY.getId())) {
       visitAny(expression);
     } else {
       throw new IllegalStateException("Unhandled expression: " + expression);
     }
-    // TODO Auto-generated method stub
+  }
+
+  private Class<?> extractRootTypeForSelect(Expression<?> expression) {
+    if (expression instanceof Path) {
+      Path<?> path = (Path<?>) expression;
+      return path.getType();
+    } else if (expression instanceof Constant) {
+      Constant<?> constant = (Constant<?>) expression;
+      return (Class< ? >) constant.getConstant();
+    } else {
+      throw new IllegalStateException("Don't know how to fetch root type for select: " + expression);
+    }
+  }
+
+  private void visitSelect(Operation< ? > expression) {
+    Expression< ? > projectionExpr = expression.getArg(1);
+    if (projectionExpr instanceof Path) {
+      // projection via x.someProperty
+      Path<?> path = (Path<?>)projectionExpr;
+      addToFieldsToFetch(getSelectPath(path), getSelectPath(path));
+      if (insideSelect == false) {
+        Set<RenamedField> toDelete = new HashSet<>();
+        for (RenamedField renamedField : fieldsToRename) {
+          if (renamedField.getOriginalField().equals(StringUtils.capitalize(path.getMetadata().getName()))) {
+            toDelete.add(renamedField);
+          }
+          fieldsToRename.removeAll(toDelete);
+        }
+
+        RenamedField renamedField = new RenamedField();
+        renamedField.setNewField(null);
+        renamedField.setOriginalField(StringUtils.capitalize(path.getMetadata().getName()));
+        fieldsToRename.add(renamedField);
+      }
+
+    } else if (projectionExpr instanceof Constant) {
+      // projection via Class<TProjection>
+      Constant< ? > projectionClassConst = (Constant< ? >) expression.getArg(1);
+      Class<?> projectionClass = (Class< ? >) projectionClassConst.getConstant();
+
+      int astArgCount = expression.getArgs().size();
+
+      String[] fields = null;
+      String[] projections = null;
+
+      switch (astArgCount) {
+      case 2:
+        // extract mappings using reflection
+        List<String> fieldsList = new ArrayList<>();
+
+        try {
+          for (PropertyDescriptor propertyDescriptor : Introspector.getBeanInfo(projectionClass).getPropertyDescriptors()) {
+            if (propertyDescriptor.getWriteMethod() != null && propertyDescriptor.getReadMethod() != null) {
+              fieldsList.add(StringUtils.capitalize(propertyDescriptor.getName()));
+            }
+          }
+        } catch (IntrospectionException e) {
+          throw new RuntimeException(e);
+        }
+        fields = fieldsList.toArray(new String[0]);
+        projections = fieldsList.toArray(new String[0]);
+
+        break;
+      case 4:
+        // we have already extracted projections
+        fields = (String[]) ((Constant<?>)expression.getArg(2)).getConstant();
+        projections = (String[]) ((Constant<?>)expression.getArg(3)).getConstant();
+        break;
+      default:
+        throw new IllegalStateException("Unexpected number of nodes in select: " + expression);
+      }
+
+      for (int i = 0; i < fields.length; i++) {
+        addToFieldsToFetch(fields[i], projections[i]);
+      }
+
+
+    } else {
+      throw new IllegalStateException("Unhandled select expression: " + expression);
+    }
+  }
+
+  private void addToFieldsToFetch(String docField, String renamedField) {
+    Field identityProperty = luceneQuery.getDocumentConvention().getIdentityProperty(clazz);
+    if (identityProperty != null && identityProperty.getName().equals(docField)) {
+      fieldsToFetch.add(Constants.DOCUMENT_ID_FIELD_NAME);
+      if (!identityProperty.getName().equals(renamedField)) {
+        docField = Constants.DOCUMENT_ID_FIELD_NAME;
+      }
+    } else {
+      fieldsToFetch.add(docField);
+    }
+    if (!docField.equals(renamedField)) {
+      if (identityProperty == null) {
+        String idPropName = luceneQuery.getDocumentConvention().getFindIdentityPropertyNameFromEntityName().apply(luceneQuery.getDocumentConvention().getTypeTagName(clazz));
+        if (docField.equals(idPropName)) {
+          RenamedField renamedField2 = new RenamedField();
+          renamedField2.setNewField(renamedField);
+          renamedField2.setOriginalField(Constants.DOCUMENT_ID_FIELD_NAME);
+          fieldsToRename.add(renamedField2);
+        }
+      }
+      RenamedField renamedField3 = new RenamedField();
+      renamedField3.setNewField(renamedField);
+      renamedField3.setOriginalField(docField);
+      fieldsToRename.add(renamedField3);
+    }
+  }
+
+  private String getSelectPath(Path<?> expression) {
+    ExpressionInfo expressionInfo = getMember(expression);
+    return expressionInfo.getPath();
   }
 
   public void visitSearch(Operation<?> searchExpression) {
@@ -863,15 +1013,16 @@ public class RavenQueryProviderProcessor<T> {
 
   private <TProjection> Object executeQuery(Class<TProjection> projectionClass) {
     List<String> renamedFields = new ArrayList<>();
-    for (String field :fieldsToFetch) {
-      for (RenamedField renamedField : fieldsToRename) {
-        if (renamedField.getOriginalField().equals(field)) {
-          renamedFields.add(renamedField.getNewField());
-          break;
+    outer:
+      for (String field :fieldsToFetch) {
+        for (RenamedField renamedField : fieldsToRename) {
+          if (renamedField.getOriginalField().equals(field)) {
+            renamedFields.add(renamedField.getNewField() != null ? renamedField.getNewField() : field);
+            continue outer;
+          }
         }
+        renamedFields.add(field);
       }
-      renamedFields.add(field);
-    }
 
     IDocumentQuery<TProjection> finalQuery = ((IDocumentQuery<T>)luceneQuery).selectFields(projectionClass, fieldsToFetch.toArray(new String[0]), renamedFields.toArray(new String[0]));
     finalQuery.setResultTransformer(this.resultsTransformer);

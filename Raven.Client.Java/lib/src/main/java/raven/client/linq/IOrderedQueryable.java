@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.mysema.query.types.Expression;
 import com.mysema.query.types.OrderSpecifier;
+import com.mysema.query.types.Path;
 import com.mysema.query.types.Predicate;
 //TODO java doc
 public interface IOrderedQueryable<T> extends Iterable<T> {
@@ -13,6 +14,49 @@ public interface IOrderedQueryable<T> extends Iterable<T> {
    * @return
    */
   public IRavenQueryable<T> where(Predicate predicate);
+
+  /**
+   * Projects results
+   * @param projectionClass
+   * @return
+   */
+  public <TProjection> IRavenQueryable<TProjection> select(Class<TProjection> projectionClass);
+
+  /**
+   * Projects results
+   * @param projectionClass
+   * @return
+   */
+  public <TProjection> IRavenQueryable<TProjection> select(Class<TProjection> projectionClass, String... fields);
+
+  /**
+   * Projects results
+   * @param projectionClass
+   * @return
+   */
+  public <TProjection> IRavenQueryable<TProjection> select(Class<TProjection> projectionClass, String[] fields, String[] projections);
+
+  /**
+   * Projects results
+   * @param projectionClass
+   * @return
+   */
+  public <TProjection> IRavenQueryable<TProjection> select(Class<TProjection> projectionClass, Path<?>... fields);
+
+  /**
+   * Projects results
+   * @param projectionClass
+   * @return
+   */
+  public <TProjection> IRavenQueryable<TProjection> select(Class<TProjection> projectionClass, Path<?>[] fields, Path<?>[] projections);
+
+
+  /**
+   * Projects results based on projection path
+   * @param projectionPath
+   * @return
+   */
+  public <TProjection> IRavenQueryable<TProjection> select(Path<TProjection> projectionPath);
 
   /**
    * Changes order of result elements

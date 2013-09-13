@@ -50,4 +50,10 @@ public interface IRavenQueryable<T> extends IOrderedQueryable<T>, LinqExtensions
 
   IRavenQueryable<T> spatial(Path<?> path, Function1<SpatialCriteriaFactory, SpatialCriteria> clause);
 
+  /**
+   * Returns distinct results
+   * @return
+   */
+  IRavenQueryable<T> distinct();
+
 }

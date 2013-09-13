@@ -453,5 +453,55 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     return (long) provider.execute(Expressions.operation(Object.class, LinqOps.Query.LONG_COUNT, getExpression()));
   }
 
+  @Override
+  public IRavenQueryable<T> distinct() {
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.DISTINCT, getExpression()));
+  }
+
+  @Override
+  public <TProjection> IRavenQueryable<TProjection> select(Class<TProjection> projectionClass) {
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SELECT, getExpression(), Expressions.constant(projectionClass) )).as(projectionClass);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public <TProjection> IRavenQueryable<TProjection> select(Path<TProjection> projectionPath) {
+    return (IRavenQueryable<TProjection>) provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SELECT, getExpression(), projectionPath )).as(projectionPath.getType());
+  }
+
+  @Override
+  public <TProjection> IRavenQueryable<TProjection> select(Class<TProjection> projectionClass, String... fields) {
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SELECT, getExpression(),
+        Expressions.constant(projectionClass), Expressions.constant(fields), Expressions.constant(fields))).as(projectionClass);
+  }
+
+  @Override
+  public <TProjection> IRavenQueryable<TProjection> select(Class<TProjection> projectionClass, String[] fields, String[] projections) {
+    return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SELECT, getExpression(),
+        Expressions.constant(projectionClass), Expressions.constant(fields), Expressions.constant(projections))).as(projectionClass);
+  }
+
+  @Override
+  public <TProjection> IRavenQueryable<TProjection> select(Class<TProjection> projectionClass, Path< ? >... fields) {
+    List<String> fieldsAsString = new ArrayList<>();
+    for (Path<?> path : fields) {
+      fieldsAsString.add(ExpressionExtensions.toPropertyPath(path));
+    }
+    return select(projectionClass, fieldsAsString.toArray(new String[0]));
+  }
+
+  @Override
+  public <TProjection> IRavenQueryable<TProjection> select(Class<TProjection> projectionClass, Path< ? >[] fields, Path< ? >[] projections) {
+    List<String> fieldsAsString = new ArrayList<>();
+    for (Path<?> path : fields) {
+      fieldsAsString.add(ExpressionExtensions.toPropertyPath(path));
+    }
+    List<String> projectionsAsString = new ArrayList<>();
+    for (Path<?> path : projections) {
+      projectionsAsString.add(ExpressionExtensions.toPropertyPath(path));
+    }
+    return select(projectionClass, fieldsAsString.toArray(new String[0]), projectionsAsString.toArray(new String[0]));
+  }
+
 
 }

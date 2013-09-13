@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -15,6 +16,7 @@ import org.apache.commons.lang.time.DateUtils;
 import org.junit.Test;
 
 import raven.abstractions.indexing.FieldIndexing;
+import raven.abstractions.indexing.FieldStorage;
 import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.indexing.SortOptions;
 import raven.client.IDocumentSession;
@@ -83,7 +85,9 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
         store.getDatabaseCommands().putIndex(indexName, indexDefinitionBuilder, true);
         waitForAllRequestsToComplete();
 
-        User firstItem = session.query(User.class, indexName).orderBy(x.name.asc()).first();
+        User firstItem = session.query(User.class, indexName)
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+            .orderBy(x.name.asc()).first();
         assertEquals(firstUser, firstItem);
 
         //This should pull out the 1st parson ages 60, i.e. "Bob"
@@ -153,8 +157,6 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
   @Test
   public void can_perform_boolean_queries() throws Exception {
 
-
-    //TODO: user.active is mapped as IsActive
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       String indexName = "UserIndex";
 
@@ -335,7 +337,7 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
         session.store(new DateTimeInfo(DateUtils.addHours(currentTime, 1)));
         session.store(new DateTimeInfo(DateUtils.addHours(currentTime, 2)));
         session.store(new DateTimeInfo(DateUtils.addMinutes(currentTime, 1)));
-        session.store(new DateTimeInfo(DateUtils.addMinutes(currentTime, 10)));
+        session.store(new DateTimeInfo(DateUtils.addSeconds(currentTime, 10)));
         session.saveChanges();
       }
       QUsingRavenQueryProviderTest_DateTimeInfo x = QUsingRavenQueryProviderTest_DateTimeInfo.dateTimeInfo;
@@ -354,9 +356,165 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
     }
   }
 
+  @Test
+  public void can_Use_Static_Properties_In_Where_Clauses() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+
+      IndexDefinition indexDefinition = new IndexDefinition();
+      indexDefinition.setMap("from info in docs.DateTimeInfos select new {info.TimeOfDay}");
+      store.getDatabaseCommands().putIndex("DateTime", indexDefinition);
+
+      Date currentTime = new Date();
+
+      try (IDocumentSession session = store.openSession()) {
+        session.store(new DateTimeInfo(DateUtils.addDays(currentTime, 1)));
+        session.store(new DateTimeInfo(DateUtils.addDays(currentTime, -1)));
+        session.store(new DateTimeInfo(DateUtils.addDays(currentTime, 1)));
+        session.saveChanges();
+      }
+      QUsingRavenQueryProviderTest_DateTimeInfo x = QUsingRavenQueryProviderTest_DateTimeInfo.dateTimeInfo;
+
+      try (IDocumentSession session = store.openSession()) {
+        //Just issue a blank query to make sure there are no stale results
+        session.query(DateTimeInfo.class, "DateTime").customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+          .where(x.timeOfDay.gt(currentTime)).toList();
+
+        int count = session.query(DateTimeInfo.class, "DateTime").where(x.timeOfDay.gt(new Date())).count();
+        assertEquals(2, count);
+      }
+    }
+  }
+
+  @Test  // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
+  public void can_use_inequality_to_compare_dates() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+
+      IndexDefinition indexDefinition = new IndexDefinition();
+      indexDefinition.setMap("from info in docs.DateTimeInfos select new {info.TimeOfDay}");
+      store.getDatabaseCommands().putIndex("DateTime", indexDefinition);
+
+      Date currentTime = new Date();
+
+      Date date1 = DateUtils.addHours(currentTime, 1);
+
+      try (IDocumentSession session = store.openSession()) {
+        session.store(new DateTimeInfo(date1));
+        session.store(new DateTimeInfo(DateUtils.addHours(currentTime, 2)));
+        session.store(new DateTimeInfo(DateUtils.addMinutes(currentTime, 1)));
+        session.store(new DateTimeInfo(DateUtils.addSeconds(currentTime, 10)));
+        session.saveChanges();
+      }
+      QUsingRavenQueryProviderTest_DateTimeInfo x = QUsingRavenQueryProviderTest_DateTimeInfo.dateTimeInfo;
+
+      try (IDocumentSession session = store.openSession()) {
+        //Just issue a blank query to make sure there are no stale results
+        session.query(DateTimeInfo.class, "DateTime").customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+          .where(x.timeOfDay.gt(currentTime)).toList();
+
+        List<DateTimeInfo> list = session.query(DateTimeInfo.class, "DateTime").where(x.timeOfDay.ne(new Date(0))).toList();
+        assertTrue(list.size() > 0);
+
+        list = session.query(DateTimeInfo.class, "DateTime").where(x.timeOfDay.ne(date1)).toList();
+        assertEquals(3, list.size());
+      }
+    }
+  }
+
+  @Test // See issue #91 http://github.com/ravendb/ravendb/issues/issue/91 and
+  //discussion here http://groups.google.com/group/ravendb/browse_thread/thread/3df57d19d41fc21
+  public void can_do_projection_in_query_result() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+
+      IndexDefinition indexDefinition = new IndexDefinition();
+      indexDefinition.setMap("from order in docs.Orders from line in order.Lines select new {Cost = line.Cost}");
+      indexDefinition.getStores().put("Cost", FieldStorage.YES);
+
+      store.getDatabaseCommands().putIndex("ByLineCost", indexDefinition);
+
+
+      try (IDocumentSession session = store.openSession()) {
+        Order order1 = new Order();
+        OrderItem item1 = new OrderItem();
+        item1.setCost(1.59);
+        item1.setQuantity(5);
+
+        OrderItem item2 = new OrderItem();
+        item2.setCost(7.59);
+        item2.setQuantity(3);
+
+        order1.setLines(Arrays.asList(item1, item2));
+
+        Order order2 = new Order();
+        OrderItem item3 = new OrderItem();
+        item3.setCost(0.59);
+        item3.setQuantity(9);
+
+        order2.setLines(Arrays.asList(item3));
+
+        session.store(order1);
+        session.store(order2);
+        session.saveChanges();
+      }
+      try (IDocumentSession session = store.openSession()) {
+      //  Just issue a blank query to make sure there are no stale results
+        session.query(SomeDataProjection.class).customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults()).toList();
+
+      //This is the lucene query we want to mimic
+        List<SomeDataProjection> luceneResult = session.advanced().luceneQuery(OrderItem.class, "ByLineCost")
+          .where("Cost_Range:{Dx1 TO NULL}")
+          .selectFields(SomeDataProjection.class)
+          .toList();
+
+        QUsingRavenQueryProviderTest_OrderItem x = QUsingRavenQueryProviderTest_OrderItem.orderItem;
+        List<SomeDataProjection> projectionResult = session.query(OrderItem.class, "ByLineCost")
+          .where(x.cost.gt(1))
+          .select(SomeDataProjection.class)
+          .toList();
+
+        assertEquals(luceneResult.size(), projectionResult.size());
+
+        int counter = 0;
+        for (SomeDataProjection item : luceneResult) {
+          assertEquals(item.getCost(), projectionResult.get(counter).getCost(), 0.001);
+          counter++;
+        }
+      }
+    }
+  }
+
+  @Test
+  public void throws_exception_when_overloaded_distinct_called() throws Exception {
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+
+        OrderItem order1 = new OrderItem();
+        order1.setDescription("Test");
+        order1.setCost(10.0);
+        session.store(order1);
+
+        OrderItem order2 = new OrderItem();
+        order2.setDescription("Test1");
+        order2.setCost(10.0);
+        session.store(order2);
+
+        OrderItem order3 = new OrderItem();
+        order3.setDescription("Test1");
+        order3.setCost(10.0);
+        session.store(order3);
+
+        session.saveChanges();
+      }
+      try (IDocumentSession session = store.openSession()) {
+        // since we don't have overridden version of distinct we test plain distinct here
+        session.query(OrderItem.class).distinct().toList();
+      }
+    }
+  }
 
   //TODO: finish me
 
+  @QueryEntity
   public static class SomeDataProjection {
     private double cost;
 
@@ -390,6 +548,7 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
     AFRICA, UNITED_STATES;
   }
 
+  @QueryEntity
   public static class OrderItem {
     private UUID id;
     private UUID customerId;
