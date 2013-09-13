@@ -339,7 +339,9 @@ namespace Raven.Client.Connection
 		{
 			if (writeCalled == false)
 				webRequest.ContentLength = 0;
-			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url));
+			var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+			CopyHeadersToHttpRequestMessage(httpRequestMessage);
+			Response = await httpClient.SendAsync(httpRequestMessage);
 			using (var stream = await Response.GetResponseStreamWithHttpDecompression())
 			{
 				SetResponseHeaders(Response);
