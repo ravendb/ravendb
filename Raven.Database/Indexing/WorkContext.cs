@@ -193,7 +193,7 @@ namespace Raven.Database.Indexing
 
 		public void AddError(int index, string indexName, string key, string error )
 		{
-            AddError(index, indexName, key, "Unknown");
+            AddError(index, indexName, key, "Unknown", "Unknown");
 		}
 
 		public void AddError(int index, string indexName, string key, string error, string component)
