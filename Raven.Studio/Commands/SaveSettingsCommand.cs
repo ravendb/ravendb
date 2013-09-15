@@ -207,8 +207,10 @@ namespace Raven.Studio.Commands
 
 						foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
 						{
-							sqlReplicationConfig.Id = "Raven/SqlReplication/Configuration/" + sqlReplicationConfig.Name;
-							session.Store(sqlReplicationConfig.ToSqlReplicationConfig());
+							var id = "Raven/SqlReplication/Configuration/" + sqlReplicationConfig.Name;
+							var config = await session.LoadAsync<SqlReplicationConfig>(id);
+							config  = UpdateConfig(config, sqlReplicationConfig);
+							session.Store(config);
 						}
 					}
 					needToSaveChanges = true;
@@ -279,7 +281,32 @@ namespace Raven.Studio.Commands
 
 			if(needToSaveChanges)
 				await session.SaveChangesAsync();
+			foreach (var settingsSectionModel in settingsModel.Sections)
+			{
+				settingsSectionModel.MarkAsSaved();
+			}
+
 			ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName));
+		}
+
+		private SqlReplicationConfig UpdateConfig(SqlReplicationConfig config, SqlReplicationConfigModel sqlReplicationConfig)
+		{
+			if (config == null)
+			{
+				return sqlReplicationConfig.ToSqlReplicationConfig();
+			}
+			config.ConnectionString = sqlReplicationConfig.ConnectionString;
+			config.ConnectionStringName = sqlReplicationConfig.ConnectionStringName;
+			config.ConnectionStringSettingName = sqlReplicationConfig.ConnectionStringSettingName;
+			config.Disabled = sqlReplicationConfig.Disabled;
+			config.FactoryName = sqlReplicationConfig.FactoryName;
+			config.Id = sqlReplicationConfig.Id;
+			config.Name = sqlReplicationConfig.Name;
+			config.RavenEntityName = sqlReplicationConfig.RavenEntityName;
+			config.Script = sqlReplicationConfig.Script;
+			config.SqlReplicationTables = new List<SqlReplicationTable>(sqlReplicationConfig.SqlReplicationTables);
+
+			return config;
 		}
 
 		private async Task CheckDestinations(ReplicationDocument replicationDocument)

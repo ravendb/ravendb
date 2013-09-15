@@ -50,6 +50,13 @@ namespace Raven.Studio.Features.Settings
 			}
 		}
 
+		public override void MarkAsSaved()
+		{
+			HasUnsavedChanges = false;
+
+			OriginalVersioningConfigurations = VersioningConfigurations;
+		}
+
 		public VersioningConfiguration SelectedVersioning { get; set; }
 		public bool IsCreation { get; set; }
 
