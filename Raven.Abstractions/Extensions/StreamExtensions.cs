@@ -32,11 +32,27 @@ namespace Raven.Abstractions.Extensions
 			}
 		}
 
-	    public static void Write(this Stream stream, int value)
-		{
-			var buffer = BitConverter.GetBytes(value);
+        public static void Write(this Stream stream, long value)
+        {
+            var buffer = BitConverter.GetBytes(value);
             stream.Write(buffer, 0, buffer.Length);
-		}
+        }
+
+        public static void Write(this Stream stream, int value)
+        {
+            var buffer = BitConverter.GetBytes(value);
+            stream.Write(buffer, 0, buffer.Length);
+        }
+
+        public static long ReadInt64(this Stream stream)
+        {
+            var int64Size = Marshal.SizeOf(typeof(long));
+            var buffer = new byte[int64Size];
+            stream.Read(buffer, 0, int64Size);
+
+            return BitConverter.ToInt64(buffer, 0);
+        }
+
 
 		public static int ReadInt32(this Stream stream)
 		{

@@ -459,7 +459,8 @@ namespace Voron.Trees
 				var p = FindPageFor(tx, key, cursor);
 				var node = p.Search(key, _cmp);
 
-				if (node == null)
+                //if the key of node found is not the exact key that was requested --> version should be 0 (not contains key)
+				if (node == null || new Slice(node).Compare(key, _cmp) != 0)
 					return 0;
 
 				return node->Version;

@@ -22,6 +22,11 @@ namespace Raven.Database.Storage.Voron.Impl
 			}
 		}
 
+	    public class General
+	    {
+	        public const string TableName = "general";
+	    }
+
 		public class IndexingStats
 		{
 			public const string TableName = "indexing_stats";

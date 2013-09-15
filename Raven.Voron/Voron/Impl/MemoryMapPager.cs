@@ -123,7 +123,12 @@ namespace Voron.Impl
 				_fileStream.Flush(true);
 		}
 
-		private IEnumerable<Tuple<long, long>> GetPageRangesToFlush(List<long> sortedPagesToFlush)
+	    public override long StorageSizeInBytes
+	    {
+	        get { return PagerState.Accessor.Capacity; }
+	    }
+
+	    private IEnumerable<Tuple<long, long>> GetPageRangesToFlush(List<long> sortedPagesToFlush)
 		{
 			// here we try to optimize the amount of work we do, we will only 
 			// flush the actual dirty pages, and we will do so in sequential order

@@ -1,4 +1,8 @@
-﻿namespace Raven.Database.Storage.Voron
+﻿using System.Diagnostics;
+using System.Linq;
+using Raven.Abstractions;
+
+namespace Raven.Database.Storage.Voron
 {
 	using System;
 	using System.Collections.Generic;
@@ -16,8 +20,7 @@
 
 	public class StorageActionsAccessor : IStorageActionsAccessor
 	{
-		private readonly WriteBatch writeBatch;
-		private readonly SnapshotReader snapshot;
+        private readonly DateTime createdAt = SystemTime.UtcNow;
 
 		public StorageActionsAccessor(IUuidGenerator generator,
 									  OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
@@ -26,8 +29,6 @@
 									  SnapshotReader snapshot,
 									  TableStorage storage)
 		{
-			this.writeBatch = writeBatch;
-			this.snapshot = snapshot;
 			Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatch, snapshot, storage.Documents);
 			Indexing = new IndexingStorageActions(storage, generator, snapshot, writeBatch);
 			Queue = new QueueStorageActions(storage, generator, snapshot, writeBatch);
@@ -36,6 +37,7 @@
 			Staleness = new StalenessStorageActions(storage, snapshot);
 			MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshot, writeBatch);
 			Attachments = new AttachmentsStorageActions(storage.Attachments, writeBatch, snapshot, generator);
+            General = new GeneralStorageActions(storage.General,writeBatch,snapshot);
 		}
 
 
@@ -70,13 +72,28 @@
 			return exception is ConcurrencyException;
 		}
 
-		public T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Task
-		{
-			throw new NotImplementedException();
-		}
+        private readonly List<Task> tasks = new List<Task>();
+
+        public T GetTask<T>(Func<T, bool> predicate, T newTask) where T : Task
+        {
+            var task = tasks.OfType<T>().FirstOrDefault(predicate);
+            
+            if (task != null) return task;
+
+            tasks.Add(newTask);
+            return newTask;
+        }
 
 		private Action<JsonDocument[]> afterCommitAction;
 		private List<JsonDocument> docsForCommit;
+
+	    internal void ExecuteOnStorageCommit()
+	    {
+	        if (OnStorageCommit != null)
+	        {
+	            OnStorageCommit();
+	        }
+	    }
 
 		public void AfterStorageCommitBeforeWorkNotifications(JsonDocument doc, Action<JsonDocument[]> afterCommit)
 		{
@@ -89,9 +106,13 @@
 			docsForCommit.Add(doc);
 		}
 
+        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
 		public void SaveAllTasks()
 		{
-			//method stub
+            foreach (var task in tasks)
+            {
+                Tasks.AddTask(task, createdAt);
+            }
 		}
 	}
 }

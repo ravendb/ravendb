@@ -41,8 +41,12 @@ namespace Voron.Impl
 			PagerState.AddRef();
 		}
 
+	    public override long StorageSizeInBytes
+	    {
+	        get { return _allocatedSize; }
+	    }
 
-		public override void Dispose()
+	    public override void Dispose()
 		{
             base.Dispose();
 			PagerState.Release();

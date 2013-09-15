@@ -1,24 +1,27 @@
-﻿namespace Raven.Database.Storage.Voron
+﻿using System.Linq;
+using Raven.Database;
+using Raven.Database.Storage;
+using Raven.Database.Storage.Voron;
+using Raven.Database.Storage.Voron.Backup;
+using Task = System.Threading.Tasks.Task;
+
+namespace Raven.Storage.Voron
 {
-	using System;
-	using System.Collections.Generic;
-	using System.Diagnostics;
-	using System.IO;
-	using System.Threading;
-
-	using Raven.Abstractions.Data;
-	using Raven.Abstractions.Extensions;
-	using Raven.Abstractions.MEF;
-	using Raven.Database.Config;
-	using Raven.Database.Impl;
-	using Raven.Database.Impl.DTC;
-	using Raven.Database.Plugins;
-	using Raven.Database.Storage.Voron.Impl;
-
-	using Storage;
-	using Raven.Json.Linq;
-
-	using global::Voron.Impl;
+    using global::Voron.Impl;
+    using Raven.Abstractions.Data;
+    using Raven.Abstractions.Extensions;
+    using Raven.Abstractions.MEF;
+    using Raven.Database.Config;
+    using Raven.Database.Impl;
+    using Raven.Database.Impl.DTC;
+    using Raven.Database.Plugins;
+    using Raven.Database.Storage.Voron.Impl;
+    using Raven.Json.Linq;
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Threading;
 
 	public class TransactionalStorage : ITransactionalStorage
 	{
@@ -29,8 +32,8 @@
 		private readonly DisposableAction exitLockDisposable;
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
-		private OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
-		private readonly IDocumentCacher documentCacher;
+		private OrderedPartCollection<AbstractDocumentCodec> _documentCodecs;
+		private IDocumentCacher documentCacher;
 		private IUuidGenerator uuidGenerator;
 
 		private readonly InMemoryRavenConfiguration configuration;
@@ -119,7 +122,7 @@
 			using (var snapshot = tableStorage.CreateSnapshot())
 			using (var writeBatch = new WriteBatch())
 			{
-				var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, documentCodecs,
+				var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
 					documentCacher, writeBatch, snapshot, tableStorage);
 
 				if (disableBatchNesting.Value == null)
@@ -128,20 +131,31 @@
 				action(storageActionsAccessor);
 				storageActionsAccessor.SaveAllTasks();
 
-				tableStorage.Write(writeBatch);
+			    tableStorage.Write(writeBatch);
+
+                storageActionsAccessor.ExecuteOnStorageCommit(); //tODO : check whether this should be done here
+
 				return storageActionsAccessor;
 			}
 		}
 
 		public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
 		{
-			throw new NotImplementedException();
-		}
+            if (current.Value == null)
+            {
+                action();
+                return;
+            }
+            current.Value.OnStorageCommit += action;
+        }
 
 		public bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs)
 		{
-			uuidGenerator = generator;
-			this.documentCodecs = documentCodecs;
+		    if (generator == null) throw new ArgumentNullException("generator");
+		    if (documentCodecs == null) throw new ArgumentNullException("documentCodecs");
+
+		    uuidGenerator = generator;
+			_documentCodecs = documentCodecs;
 
 			var persistanceSource = configuration.RunInMemory ? (IPersistanceSource)new MemoryPersistanceSource() : new MemoryMapPersistanceSource(configuration);
 
@@ -175,20 +189,24 @@
 		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup,
 			DatabaseDocument documentDatabase)
 		{
-			throw new NotImplementedException();
-		}
+		    var backupOperation = new BackupOperation(database, database.Configuration.DataDirectory,
+		        backupDestinationDirectory, tableStorage, incrementalBackup);
+
+            Task.Factory.StartNew(backupOperation.Execute);
+		}       
 
 		public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
-			throw new NotImplementedException();
+            new RestoreOperation(backupLocation, configuration, output).Execute();
 		}
 
 		public long GetDatabaseSizeInBytes()
 		{
-			throw new NotImplementedException();
+		    Debug.Assert(tableStorage != null, "tableStorage should not be null"); //uneasy to leave this without some kind of a check
+		    return tableStorage.StorageSizeInBytes;
 		}
 
-		public long GetDatabaseCacheSizeInBytes()
+	    public long GetDatabaseCacheSizeInBytes()
 		{
 			return -1;
 		}
@@ -204,13 +222,13 @@
 		}
 
 		public bool HandleException(Exception exception)
-		{
-			return false;
+		{            
+			return false; //false returned --> all exceptions (if any) are properly rethrown in DocumentDatabase
 		}
 
 		public void Compact(InMemoryRavenConfiguration configuration)
 		{
-			throw new NotImplementedException();
+			//Voron storage does not support compaction
 		}
 
 		public Guid ChangeId()
@@ -230,21 +248,26 @@
 
 		public void ClearCaches()
 		{
+		    var oldDocumentCacher = documentCacher;
+		    documentCacher = new DocumentCacher(configuration);
+		    oldDocumentCacher.Dispose();
 		}
 
 		public void DumpAllStorageTables()
 		{
-			throw new NotImplementedException();
-		}
+            throw new NotSupportedException("Not valid for Voron storage");
+        }
 
 		public InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
-		{
-			throw new NotImplementedException();
+		{            
+		    return new VoronInFlightTransactionalState(put, delete, this);
 		}
 
 		public IList<string> ComputeDetailedStorageInformation()
 		{
-			throw new NotImplementedException();
+		    return tableStorage.GenerateReportOnStorage()
+		                       .Select(kvp => String.Format("{0} -> {1}", kvp.Key, kvp.Value))
+		                       .ToList();
 		}
 	}
 }

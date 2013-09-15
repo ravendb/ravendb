@@ -1,4 +1,6 @@
-﻿namespace Raven.Database.Storage.Voron.StorageActions
+﻿using Raven.Abstractions.Extensions;
+
+namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System.Linq;
 
@@ -9,10 +11,12 @@
 
 		public static string OriginalKey(string dataOrMetadataKey)
 		{
-			return dataOrMetadataKey.Split('/').First();
+		    var keyParts = dataOrMetadataKey.Split('/').ToHashSet();
+		    keyParts.RemoveWhere(str => str == keyParts.Last());
+		    return string.Join("/",keyParts);
 		}
 
-		public static string DataKey(string key)
+	    public static string DataKey(string key)
 		{
 			return key + "/" + DataSuffix;
 		}

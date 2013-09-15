@@ -31,6 +31,14 @@ namespace Voron
 
         public TransactionMergingWriter Writer { get; private set; }
 
+        public long StorageSizeInBytes
+        {
+            get
+            {
+                return _pager.StorageSizeInBytes;
+            }
+        }
+
         public SnapshotReader CreateSnapshot()
         {
             return new SnapshotReader(NewTransaction(TransactionFlags.Read));

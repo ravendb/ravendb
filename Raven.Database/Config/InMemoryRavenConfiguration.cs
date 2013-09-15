@@ -23,6 +23,7 @@ using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Storage.Voron;
 
 namespace Raven.Database.Config
 {

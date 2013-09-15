@@ -181,8 +181,12 @@
                     if(dataKey.Contains(Util.MetadataSuffix)) continue;				    
 					if (alreadySkippedCount++ < start) continue;
 
-					fetchedDocumentCount++;
-					yield return DocumentByKey(Util.OriginalKey(dataKey), null);
+				    var originalKey = Util.OriginalKey(dataKey);
+				    var fetchedDocument = DocumentByKey(originalKey, null);
+				    if (fetchedDocument == null) continue;
+				    
+                    fetchedDocumentCount++;
+				    yield return fetchedDocument;
 				} while (iter.MoveNext() && fetchedDocumentCount < take);
 			}
         }
@@ -227,7 +231,8 @@
             var metadataDocument = ReadDocumentMetadata(metadataKey);
             if (metadataDocument == null)
             {
-                throw new ApplicationException(String.Format("metadata of document with key='{0} was not found. Data corruption?",key));
+                logger.Warn(String.Format("Metadata of document with key='{0} was not found, but the document itself exists.",key));
+                return null;
             }
 
             var documentData = ReadDocumentData(dataKey, metadataDocument.Etag, metadataDocument.Metadata);

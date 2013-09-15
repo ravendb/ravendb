@@ -22,7 +22,20 @@ namespace Raven.Tests.Storage.Voron
 
 	public class IndexingStorageActionsTests : TransactionalStorageTestBase
 	{
-		[Theory]
+	    [Theory]
+	    [PropertyData("Storages")]
+	    public void IndexCreation_In_DifferentBatches(string requestedStorage)
+	    {
+	        using (var storage = NewTransactionalStorage(requestedStorage))
+	        {
+                storage.Batch(accessor => accessor.Indexing.AddIndex("index1", false));
+                
+                //make sure that index already exists check works correctly
+                Assert.DoesNotThrow(() => storage.Batch(accessor => accessor.Indexing.AddIndex("index2", false)));
+            }
+	    }
+
+	    [Theory]
 		[PropertyData("Storages")]
 		public void IndexCreation(string requestedStorage)
 		{

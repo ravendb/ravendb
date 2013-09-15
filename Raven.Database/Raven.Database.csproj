@@ -734,6 +734,7 @@
     <Compile Include="Server\Connections\TransportState.cs" />
     <Compile Include="Server\Connections\TimeSensitiveStore.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />
+    <Compile Include="Storage\BaseRestoreOperation.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />
     <Compile Include="Storage\Esent\Backup\EsentBackup.cs" />
@@ -824,9 +825,12 @@
     <Compile Include="Storage\Managed\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Managed\TasksStorageActions.cs" />
     <Compile Include="Storage\Managed\TransactionalStorage.cs" />
+    <Compile Include="Storage\Voron\Backup\BackupOperation.cs" />
+    <Compile Include="Storage\Voron\Backup\RestoreOperation.cs" />
     <Compile Include="Storage\Voron\StorageActions\DocumentsStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\AttachmentsStorageActions.cs" />
     <Compile Include="Storage\Voron\Impl\Index.cs" />
+    <Compile Include="Storage\Voron\StorageActions\GeneralStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\IndexingStorageActions.cs" />
     <Compile Include="Storage\Voron\Impl\Table.cs" />
     <Compile Include="Storage\Voron\Impl\IPersistanceSource.cs" />
@@ -844,6 +848,7 @@
     <Compile Include="Storage\Voron\StorageActions\TasksStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\Util.cs" />
     <Compile Include="Storage\Voron\TransactionalStorage.cs" />
+    <Compile Include="Storage\Voron\VoronInFlightTransactionalState.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />

@@ -14,6 +14,8 @@ using System.Linq;
 
 namespace Raven.Storage.Esent.Backup
 {
+    //TODO : refactor this class to use Raven.Database.Storage.BaseRestoreOperation as base class
+    // (this will decrease code duplication between this class and similar class in Voron storage implementations)
 	public class RestoreOperation
 	{
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();

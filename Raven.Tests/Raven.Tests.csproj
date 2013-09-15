@@ -852,6 +852,7 @@
     <Compile Include="NestedIndexing\CanTrackWhatCameFromWhat.cs" />
     <Compile Include="NestedIndexing\Item.cs" />
     <Compile Include="NestedIndexing\WithMapReduce.cs" />
+    <Compile Include="NonIncrementalBackupRestoreTest.cs" />
     <Compile Include="Notifications\ReplicationConflicts.cs" />
     <Compile Include="Notifications\ReplicationConflicts_Embedded.cs" />
     <Compile Include="Patching\BigDoc.cs" />
@@ -1204,6 +1205,7 @@
     <Compile Include="Storage\Lists.cs" />
     <Compile Include="Storage\TransactionalStorageTestBase.cs" />
     <Compile Include="Storage\Voron\AttachmentActionsStorageTests.cs" />
+    <Compile Include="Storage\Voron\GeneralStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\IndexingStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\MappedResultsStorageActionsTests.cs" />
     <Compile Include="Storage\Voron\StorageIntegrationTests.cs" />

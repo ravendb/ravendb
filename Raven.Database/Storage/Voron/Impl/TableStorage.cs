@@ -3,6 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Collections.Generic;
+using System.IO;
+using System.Web.Management;
+using Raven.Database.Server.Responders;
+
 namespace Raven.Database.Storage.Voron.Impl
 {
 	using System;
@@ -20,10 +25,45 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			this.persistanceSource = persistanceSource;
 			env = new StorageEnvironment(persistanceSource.Pager, ownsPager: false);
-
+            
 			Initialize();
 			CreateSchema();
 		}
+
+	    public void ExecuteBackup(Stream outputStream)
+	    {
+	        if (outputStream == null) throw new ArgumentNullException("outputStream");
+            if (!outputStream.CanWrite) throw new ArgumentException("must be writable stream","outputStream");
+
+	        env.Backup(outputStream);
+	    }
+
+	    public long StorageSizeInBytes
+	    {
+	        get
+	        {
+	            return env.StorageSizeInBytes;
+	        }
+	    }
+
+	    internal Dictionary<string, object> GenerateReportOnStorage()
+	    {
+	        var reportData = new Dictionary<string, object>
+	        {
+	            {"MaxNodeSize", persistanceSource.Pager.MaxNodeSize},
+	            {"NumberOfAllocatedPages", persistanceSource.Pager.NumberOfAllocatedPages},
+	            {"PageMaxSpace", persistanceSource.Pager.PageMaxSpace},
+	            {"PageMinSpace", persistanceSource.Pager.PageMinSpace},
+	            {"PageSize", persistanceSource.Pager.PageSize},
+	            {"StorageSizeInBytes", persistanceSource.Pager.StorageSizeInBytes},
+                {"Documents", GetEntriesCount(Documents)},
+                {"Indexes", GetEntriesCount(IndexingStats)},
+                {"Attachments", GetEntriesCount(Attachments)},
+
+	        };
+
+	        return reportData;
+	    }
 
 		public SnapshotReader CreateSnapshot()
 		{
@@ -57,6 +97,8 @@ namespace Raven.Database.Storage.Voron.Impl
 		public Table ReduceKeyCounts { get; private set; }
 
 		public Table ReduceKeyTypes { get; private set; }
+
+        public Table General { get; private set; }
 
 		public void Write(WriteBatch writeBatch)
 		{
@@ -100,6 +142,7 @@ namespace Raven.Database.Storage.Voron.Impl
 				CreateReduceKeyCountsSchema(tx);
 				CreateReduceKeyTypesSchema(tx);
 				CreateReduceResultsSchema(tx);
+                CreateGeneralSchema(tx);
 
 				tx.Commit();
 			}
@@ -196,6 +239,11 @@ namespace Raven.Database.Storage.Voron.Impl
 			env.CreateTree(tx, Documents.GetIndexKey(Tables.Documents.Indices.KeyByEtag));
 		}
 
+	    private void CreateGeneralSchema(Transaction tx)
+	    {
+	        env.CreateTree(tx, Tables.General.TableName);
+	    }
+
 		private void Initialize()
 		{
 			Documents = new Table(Tables.Documents.TableName, Tables.Documents.Indices.KeyByEtag);
@@ -212,6 +260,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, Tables.ReduceKeyTypes.Indices.ByView);
 			Attachments = new Table(Tables.Attachments.TableName,Tables.Attachments.Indices.ByEtag); 
 			ReduceResults = new Table(Tables.ReduceResults.TableName);
+            General = new Table(Tables.General.TableName);
 		}
 	}
 }

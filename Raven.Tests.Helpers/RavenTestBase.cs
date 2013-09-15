@@ -29,13 +29,12 @@ using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Storage.Voron;
 using Xunit;
 using Xunit.Sdk;
 
 namespace Raven.Tests.Helpers
 {
-	using Raven.Database.Storage.Voron;
-
 	public class RavenTestBase : IDisposable
 	{
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();

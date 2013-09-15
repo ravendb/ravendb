@@ -20,7 +20,7 @@
 		{
 			this.configuration = configuration;
 			directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
-			filePath = Path.Combine(directoryPath, "Data");
+            filePath = directoryPath;
 		    var filePathFolder = new DirectoryInfo(filePath);
 		    if (filePathFolder.Exists == false)
 		        filePathFolder.Create();

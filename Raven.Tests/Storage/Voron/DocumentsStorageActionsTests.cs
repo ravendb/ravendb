@@ -191,15 +191,18 @@ namespace Raven.Tests.Storage.Voron
             }
         }
 
-        [Fact]
-        public void DocumentStorage_DocumentAdd_And_DocumentRead()
+        //separate test for a key with forward slashes --> special case in Voron storage implementation --> need to test how internal key parsers manage to do that
+        [Theory]
+        [InlineData("Foo")]
+        [InlineData("Foo/Bar/Test")]
+        public void DocumentStorage_DocumentAdd_And_DocumentRead(string documentKey)
         {
             using (var voronStorage = NewVoronStorage())
             {
-                voronStorage.Batch(mutator => mutator.Documents.AddDocument("Foo", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()));
+                voronStorage.Batch(mutator => mutator.Documents.AddDocument(documentKey, Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()));
 
                 RavenJObject document = null;
-                voronStorage.Batch(viewer => document = viewer.Documents.DocumentByKey("Foo", null).DataAsJson);
+                voronStorage.Batch(viewer => document = viewer.Documents.DocumentByKey(documentKey, null).DataAsJson);
 
                 Assert.NotNull(document);
                 Assert.Equal("Bar", document.Value<string>("Name"));
@@ -207,29 +210,29 @@ namespace Raven.Tests.Storage.Voron
 
         }
 
-        [Fact]
-        public void DocumentStorage_DocumentAdd_And_DocumentDeleted()
+        [Theory]
+        [InlineData("Foo")]
+        [InlineData("Foo/Bar/Test")]
+        public void DocumentStorage_DocumentAdd_And_DocumentDeleted(string documentKey)
         {
             using (var voronStorage = NewVoronStorage())
             {
                 AddDocumentResult addResult = null;
-                const string TEST_DOCUMENT_KEY = "Foo";
-
                 voronStorage.Batch(mutator =>
-                    addResult = mutator.Documents.AddDocument(TEST_DOCUMENT_KEY, Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "Data" })));
+                    addResult = mutator.Documents.AddDocument(documentKey, Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "Data" })));
 
                 JsonDocumentMetadata fetchedMetadata = null;
-                voronStorage.Batch(viewer => fetchedMetadata = viewer.Documents.DocumentMetadataByKey(TEST_DOCUMENT_KEY, null));
+                voronStorage.Batch(viewer => fetchedMetadata = viewer.Documents.DocumentMetadataByKey(documentKey, null));
 
                 Etag deletedEtag = null;
                 RavenJObject deletedMetadata = null;
-                voronStorage.Batch(mutator => mutator.Documents.DeleteDocument(TEST_DOCUMENT_KEY,null,out deletedMetadata,out deletedEtag));
+                voronStorage.Batch(mutator => mutator.Documents.DeleteDocument(documentKey, null, out deletedMetadata, out deletedEtag));
 
                 JsonDocument documentAfterDelete = null;
-                voronStorage.Batch(viewer => documentAfterDelete = viewer.Documents.DocumentByKey(TEST_DOCUMENT_KEY, null));
+                voronStorage.Batch(viewer => documentAfterDelete = viewer.Documents.DocumentByKey(documentKey, null));
 
                 JsonDocumentMetadata metadataAfterDelete = null;
-                voronStorage.Batch(viewer => metadataAfterDelete = viewer.Documents.DocumentMetadataByKey(TEST_DOCUMENT_KEY, null));
+                voronStorage.Batch(viewer => metadataAfterDelete = viewer.Documents.DocumentMetadataByKey(documentKey, null));
 
                 //after delete --> DocumentByKey()/DocumentMetadataByKey() methods should return null
                 Assert.Null(documentAfterDelete);
@@ -244,15 +247,17 @@ namespace Raven.Tests.Storage.Voron
 
         }
 
-        [Fact]
-        public void DocumentStorage_InsertDocument_And_DocumentRead()
+        [Theory]
+        [InlineData("Foo")]
+        [InlineData("Foo/Bar/Test")]
+        public void DocumentStorage_InsertDocument_And_DocumentRead(string documentKey)
         {
             using (var voronStorage = NewVoronStorage())
             {
-                voronStorage.Batch(mutator => mutator.Documents.InsertDocument("Foo", RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(),true));
+                voronStorage.Batch(mutator => mutator.Documents.InsertDocument(documentKey, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true));
 
                 RavenJObject document = null;
-                voronStorage.Batch(viewer => document = viewer.Documents.DocumentByKey("Foo", null).DataAsJson);
+                voronStorage.Batch(viewer => document = viewer.Documents.DocumentByKey(documentKey, null).DataAsJson);
 
                 Assert.NotNull(document);
                 Assert.Equal("Bar", document.Value<string>("Name"));
@@ -407,6 +412,34 @@ namespace Raven.Tests.Storage.Voron
             using (var voronStorage = NewVoronStorage())
             {
                 Assert.Throws<InvalidOperationException>(() => voronStorage.Batch(mutator => mutator.Documents.PutDocumentMetadata("Foo", new RavenJObject())));
+            }
+        }
+
+        //this test makes sure that document.contains internal check works properly
+        [Fact]
+        public void DocumentStorage_PutDocumentMetadata_WrongKey_ExceptionThrown()
+        {
+            using (var voronStorage = NewVoronStorage())
+            {
+                voronStorage.Batch(mutator => mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "Data" })));
+
+                Assert.Throws<InvalidOperationException>(() => voronStorage.Batch(mutator => mutator.Documents.PutDocumentMetadata("Foo2", new RavenJObject())));
+            }
+        }
+
+        [Fact]
+        public void DocumentStorage_DocumentAdd_DocumentByDifferentKey_NullReturned()
+        {
+            using (var voronStorage = NewVoronStorage())
+            {
+                voronStorage.Batch(mutator => mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "Data" })));
+
+                JsonDocumentMetadata metadata = null;
+                Assert.DoesNotThrow(
+                    () => voronStorage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo2", null)));
+                
+                Assert.Equal(null,metadata);
+
             }
         }
 
