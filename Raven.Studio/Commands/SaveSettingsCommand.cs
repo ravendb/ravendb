@@ -202,7 +202,7 @@ namespace Raven.Studio.Commands
 									lastReplicatedEtag.LastDocEtag = Etag.Empty;
 							}
 
-							session.Store(status);
+							session.Store(status, ravenSqlreplicationStatus);
 						}
 
 						foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
