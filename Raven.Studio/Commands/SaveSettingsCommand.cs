@@ -202,7 +202,7 @@ namespace Raven.Studio.Commands
 									lastReplicatedEtag.LastDocEtag = Etag.Empty;
 							}
 
-							await session.StoreAsync(status);
+							await session.StoreAsync(status,  ravenSqlreplicationStatus);
 						}
 
 						foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
