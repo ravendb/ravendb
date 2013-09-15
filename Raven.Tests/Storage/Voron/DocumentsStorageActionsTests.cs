@@ -193,19 +193,32 @@ namespace Raven.Tests.Storage.Voron
 
         //separate test for a key with forward slashes --> special case in Voron storage implementation --> need to test how internal key parsers manage to do that
         [Theory]
-        [InlineData("Foo")]
         [InlineData("Foo/Bar/Test")]
+        [InlineData("Foo")]
+        [InlineData("Foo/Bar")]
         public void DocumentStorage_DocumentAdd_And_DocumentRead(string documentKey)
         {
             using (var voronStorage = NewVoronStorage())
             {
-                voronStorage.Batch(mutator => mutator.Documents.AddDocument(documentKey, Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()));
+                AddDocumentResult addResult = null;
+                voronStorage.Batch(mutator => addResult = mutator.Documents.AddDocument(documentKey, Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()));
 
                 RavenJObject document = null;
-                voronStorage.Batch(viewer => document = viewer.Documents.DocumentByKey(documentKey, null).DataAsJson);
+                JsonDocument jsonDocument = null;
+                voronStorage.Batch(viewer =>
+                {
+                    jsonDocument = viewer.Documents.DocumentByKey(documentKey, null);
+                    document = jsonDocument.DataAsJson;
+                });
 
                 Assert.NotNull(document);
+                Assert.NotNull(jsonDocument);
                 Assert.Equal("Bar", document.Value<string>("Name"));
+
+                //verify correctness of LastModified return value
+                Assert.True(jsonDocument.LastModified.HasValue);
+                // ReSharper disable once PossibleInvalidOperationException (checked HasValue already)
+                Assert.Equal(addResult.SavedAt, jsonDocument.LastModified.Value);
             }
 
         }

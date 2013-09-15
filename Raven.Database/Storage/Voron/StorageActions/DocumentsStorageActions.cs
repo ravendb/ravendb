@@ -248,7 +248,8 @@
                 Etag = metadataDocument.Etag,
                 Key = metadataDocument.Key, //original key - with user specified casing, etc.
                 Metadata = metadataDocument.Metadata,
-                SerializedSizeOnDisk = docSize + metadataSize
+                SerializedSizeOnDisk = docSize + metadataSize,
+                LastModified = metadataDocument.LastModified
             };
         }
 
@@ -324,11 +325,11 @@
 
             Etag newEtag;
 
-            var isUpdate = WriteDocumentData(dataKey, key, etag, data, metadata, out newEtag);
+            DateTime savedAt;
+            var isUpdate = WriteDocumentData(dataKey, key, etag, data, metadata, out newEtag, out savedAt);
 
             logger.Debug("AddDocument() - {0} document with key = '{1}'", isUpdate ? "Updated" : "Added", key);
 
-            var savedAt = SystemTime.UtcNow;
             
             return new AddDocumentResult
             {
@@ -477,7 +478,12 @@
 			var metadataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream
 
 			metadataStream.Write(metadata.Etag);
-			metadataStream.Write(metadata.Key);
+            metadataStream.Write(metadata.Key);
+            
+            if (metadata.LastModified.HasValue)
+                metadataStream.Write(metadata.LastModified.Value.ToBinary());
+            else
+                metadataStream.Write((long)0);
 
 			metadata.Metadata.WriteTo(metadataStream);
 
@@ -500,21 +506,25 @@
 				metadataReadResult.Stream.Position = 0;
 				var etag = metadataReadResult.Stream.ReadEtag();
 				var originalKey = metadataReadResult.Stream.ReadString();
+			    var lastModifiedDateTimeBinary = metadataReadResult.Stream.ReadInt64();
 
+                
 				var existingCachedDocument = documentCacher.GetCachedDocument(metadataKey, etag);
 
 				var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : metadataReadResult.Stream.ToJObject();
+			    var lastModified = lastModifiedDateTimeBinary > 0 ? DateTime.FromBinary(lastModifiedDateTimeBinary) : (DateTime?)null;
 
 				return new JsonDocumentMetadata
 				{
 					Key = originalKey, 
 					Etag = etag,
-					Metadata = metadata                   
+					Metadata = metadata,
+                    LastModified = lastModified
 				};
 			}
         }
 
-        private bool WriteDocumentData(string dataKey,string originalKey, Etag etag, RavenJObject data, RavenJObject metadata,out Etag newEtag)
+        private bool WriteDocumentData(string dataKey, string originalKey, Etag etag, RavenJObject data, RavenJObject metadata, out Etag newEtag, out DateTime savedAt)
         {
             var isUpdate = documentsTable.Contains(snapshot, dataKey);
 
@@ -537,7 +547,7 @@
             documentsTable.Add(writeBatch, dataKey, finalDataStream);
 
             newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
-            var savedAt = SystemTime.UtcNow;
+            savedAt = SystemTime.UtcNow;
 
             var isUpdated = PutDocumentMetadataInternal(originalKey, metadata, newEtag, savedAt);
 
