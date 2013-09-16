@@ -750,6 +750,19 @@ namespace Raven.Client.Embedded
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			database.PrepareTransaction(txId);
 		}
+
+		/// <summary>
+		/// Gets the build number
+		/// </summary>
+		public BuildNumber GetBuildNumber()
+		{
+			return new BuildNumber
+			       {
+				       BuildVersion = DocumentDatabase.BuildVersion,
+					   ProductVersion = DocumentDatabase.ProductVersion
+			       };
+		}
+
 		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>

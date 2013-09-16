@@ -50,6 +50,13 @@ namespace Raven.Studio.Features.Settings
 			}
 		}
 
+		public override void MarkAsSaved()
+		{
+			HasUnsavedChanges = false;
+			OriginalAuthorizationRoles = AuthorizationRoles;
+			OriginalAuthorizationUsers = AuthorizationUsers;
+		}
+
 		public AuthorizationRole SelectedRole { get; set; }
 		public AuthorizationUser SelectedUser { get; set; }
 		public string NewRoleForUser { get; set; }
