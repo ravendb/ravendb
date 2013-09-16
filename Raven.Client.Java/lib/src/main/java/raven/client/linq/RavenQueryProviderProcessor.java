@@ -52,6 +52,8 @@ import com.mysema.query.types.expr.Param;
  *
  * @param <T>
  */
+
+//TODO: support for ANY
 public class RavenQueryProviderProcessor<T> {
   private Class<T> clazz;
   private final DocumentQueryCustomizationFactory customizeQuery;
@@ -154,19 +156,19 @@ public class RavenQueryProviderProcessor<T> {
         visitConstant((Constant<?>) expression, true);
       }
     } else if (expression instanceof Path) {
-      visitMemberAccess((Path<?>)expression);
+      visitMemberAccess((Path<?>)expression, true);
     } else {
       throw new IllegalArgumentException("Expression is not supported:" + expression);
     }
   }
 
-  private void visitMemberAccess(Path< ? > expression) {
+  private void visitMemberAccess(Path< ? > expression, boolean boolValue) {
     if (expression.getType().equals(Boolean.class)) {
       ExpressionInfo memberInfo = getMember(expression);
 
       WhereParams whereParams = new WhereParams();
       whereParams.setFieldName(memberInfo.getPath());
-      whereParams.setValue(true);
+      whereParams.setValue(boolValue);
       whereParams.setAnalyzed(true);
       whereParams.setAllowWildcards(false);
       luceneQuery.whereEquals(whereParams);
@@ -185,6 +187,10 @@ public class RavenQueryProviderProcessor<T> {
       visitNotEquals(expression);
     } else if (expression.getOperator().equals(Ops.EQ)) {
       visitEquals(expression);
+    } else if (expression.getOperator().equals(Ops.EQ_IGNORE_CASE)) {
+      visitEqualsIgnoreCase(expression);
+    } else if (expression.getOperator().equals(LinqOps.Ops.EQ_NOT_IGNORE_CASE)) {
+      visitEqualsNotIgnoreCase(expression);
     } else if (expression.getOperator().equals(Ops.GT)) {
       visitGreatherThan(expression);
     } else if (expression.getOperator().equals(Ops.GOE)) {
@@ -203,7 +209,11 @@ public class RavenQueryProviderProcessor<T> {
           return;
         } else if (subOp1.getOperator().equals(Ops.STRING_IS_EMPTY)) {
           visitStringEmpty(subOp1.getArg(0), true);
+          return;
         }
+      } else if (subExpr1 instanceof Path) {
+        visitMemberAccess((Path< ? >) subExpr1, false);
+        return;
       }
 
       luceneQuery.openSubclause();
@@ -233,6 +243,8 @@ public class RavenQueryProviderProcessor<T> {
     } else if (expression.getOperator().equals(Ops.STRING_CONTAINS)) {
       throw new IllegalStateException("Contains is not supported, doing a substring match over a text field is a" +
           " very slow operation, and is not allowed using the Linq API. The recommended method is to use full text search (mark the field as Analyzed and use the search() method to query it.");
+    } else if (expression.getOperator().equals(Ops.STARTS_WITH)) {
+      visitStartsWith(expression);
     } else {
       throw new IllegalArgumentException("Expression is not supported: " + expression.getOperator());
     }
@@ -421,6 +433,26 @@ public class RavenQueryProviderProcessor<T> {
 
   }
 
+  private void visitEqualsIgnoreCase(Operation<Boolean> expression) {
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+    WhereParams whereParams = new WhereParams();
+    whereParams.setFieldName(memberInfo.getPath());
+    whereParams.setValue(getValueFromExpression(expression.getArg(1), getMemberType(memberInfo)));
+    whereParams.setAnalyzed(true);
+    whereParams.setAllowWildcards(false);
+    luceneQuery.whereEquals(whereParams);
+  }
+
+  private void visitEqualsNotIgnoreCase(Operation<Boolean> expression) {
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+    WhereParams whereParams = new WhereParams();
+    whereParams.setFieldName(memberInfo.getPath());
+    whereParams.setValue(getValueFromExpression(expression.getArg(1), getMemberType(memberInfo)));
+    whereParams.setAnalyzed(false);
+    whereParams.setAllowWildcards(false);
+    luceneQuery.whereEquals(whereParams);
+  }
+
   private void visitEquals(Operation<Boolean> expression) {
     Constant<?> constantExpression = null;
     if (expression.getArg(1) instanceof Constant<?>) {
@@ -431,7 +463,8 @@ public class RavenQueryProviderProcessor<T> {
       return ;
     }
 
-    if (constantExpression != null && Boolean.FALSE.equals(constantExpression.getConstant())) { //TODO: and expression.Left.NodeType != ExpressionType.MemberAccess
+    if (constantExpression != null && Boolean.FALSE.equals(constantExpression.getConstant())
+        && !(expression.getArg(0) instanceof Path)) {
       luceneQuery.openSubclause();
       luceneQuery.where("*:*");
       luceneQuery.andAlso();
@@ -539,13 +572,15 @@ public class RavenQueryProviderProcessor<T> {
     return null;
   }
 
+  private void visitStartsWith(Operation<Boolean> operation) {
+    Expression< ? > expression = operation.getArg(0);
+    ExpressionInfo memberInfo = getMember(expression);
+    luceneQuery.whereStartsWith(memberInfo.getPath(), getValueFromExpression(operation.getArg(1), getMemberType(memberInfo)));
+  }
+
   //TODO: private void VisitStringContains(MethodCallExpression _)
 
-  //TODO: private void VisitStartsWith(MethodCallExpression expression)
-
   //TODO: private void VisitEndsWith(MethodCallExpression expression)
-
-  //TODO: private void VisitIsNullOrEmpty(MethodCallExpression expression) (in query DSL we have isNull, isNotNull, isEmpty, isNotEmpty
 
   private void visitGreatherThan(Operation<Boolean> expression) {
     if (!isMemberAccessForQuerySource(expression.getArg(0)) &&  isMemberAccessForQuerySource(expression.getArg(1))) {
@@ -657,7 +692,6 @@ public class RavenQueryProviderProcessor<T> {
       }
       chanedWhere = true;
       insideWhere--;
-      //TODO: select
     } else if (operatorId.equals(LinqOps.Query.SKIP.getId())) {
       visitExpression(expression.getArg(0));
       visitSkip((Constant<Integer>) expression.getArg(1));
@@ -923,8 +957,6 @@ public class RavenQueryProviderProcessor<T> {
 
     }
   }
-
-  //TODO: private void VisitSelect(Expression operand)
 
   private void visitSkip(Constant<Integer> constantExpression) {
     //Don't have to worry about the cast failing, the Skip() extension method only takes an int

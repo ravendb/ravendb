@@ -15,6 +15,7 @@ public class NumberUtil {
     return "Ix" + number;
   }
 
+
   /**
    * Translate a number to an indexable string
    * @param number
@@ -30,7 +31,7 @@ public class NumberUtil {
    * @return
    */
   public static String numberToString(float number) {
-    return "Fx" + trimZeros(Float.toString(number));
+    return "Fx" + trimZeros(String.format("%.11f", number));
   }
 
   /**
@@ -39,7 +40,7 @@ public class NumberUtil {
    * @return
    */
   public static String numberToString(double number) {
-    return "Dx" + trimZeros(Double.toString(number));
+    return "Dx" + trimZeros(String.format("%.11f", number));
   }
 
   /**
@@ -48,7 +49,7 @@ public class NumberUtil {
    * @param input
    * @return
    */
-  private static String trimZeros(String input) {
+  public static String trimZeros(String input) {
     if (!input.contains(".")) {
       return input;
     }

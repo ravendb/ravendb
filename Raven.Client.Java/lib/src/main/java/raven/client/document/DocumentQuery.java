@@ -238,7 +238,7 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   @Override
   public IDocumentQuery<T> not() {
     negateNext();
-    return null;
+    return this;
   }
 
   @Override

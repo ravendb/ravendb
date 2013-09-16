@@ -79,12 +79,13 @@
         <version>1.1.1</version>
         <executions>
           <execution>
+            <id>querydsl-test</id>
             <goals>
               <goal>test-process</goal>
             </goals>
             <configuration>
               <outputDirectory>target/generated-test-sources/java</outputDirectory>
-              <processor>com.mysema.query.apt.QuerydslAnnotationProcessor</processor>
+              <processor>raven.querydsl.RavenDBAnnotationProcessor</processor>
               <options>
                 <querydsl.entityAccessors>true</querydsl.entityAccessors>
               </options>

@@ -281,7 +281,11 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     this.theDatabaseCommands = databaseCommands;
     this.projectionFields = projectionFields;
     this.fieldsToFetch = fieldsToFetch;
-    this.queryListeners = queryListeners.toArray(new IDocumentQueryListener[0]);
+    if (queryListeners != null) {
+      this.queryListeners = queryListeners.toArray(new IDocumentQueryListener[0]);
+    } else {
+      this.queryListeners = new IDocumentQueryListener[0];
+    }
     this.isMapReduce = isMapReduce;
     this.indexName = indexName;
     this.theSession = theSession;
@@ -1469,7 +1473,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       return NetISO8601Utils.format(val, true);
     }
     if (Number.class.isAssignableFrom(type)) {
-      return RavenQuery.escape(whereParams.getValue().toString(), false, false);
+      return NumberUtil.trimZeros(RavenQuery.escape(whereParams.getValue().toString(), false, false));
     }
 
     if (whereParams.getFieldName().equals(Constants.DOCUMENT_ID_FIELD_NAME) && !(whereParams.getValue() instanceof String)) {
