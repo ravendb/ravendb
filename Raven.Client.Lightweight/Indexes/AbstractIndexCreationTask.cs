@@ -263,6 +263,7 @@ namespace Raven.Client.Indexes
 			{
 				Indexes = Indexes,
 				IndexesStrings = IndexesStrings,
+                SortOptionsStrings = IndexSortOptionsStrings,
 				SortOptions = IndexSortOptions,
 				Analyzers = Analyzers,
 				AnalyzersStrings = AnalyzersStrings,

@@ -66,6 +66,12 @@ namespace Raven.Client.Indexes
 		/// <value>The sort options.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> SortOptions { get; set; }
 
+        /// <summary>
+        /// Gets or sets the sort options.
+        /// </summary>
+        /// <value>The sort options.</value>
+        public Dictionary<string, SortOptions> SortOptionsStrings { get; set; }
+
 		/// <summary>
 		/// Get os set the analyzers
 		/// </summary>
@@ -106,6 +112,7 @@ namespace Raven.Client.Indexes
 		/// <value>The spatial options.</value>
 		public IDictionary<string, SpatialOptions> SpatialIndexesStrings { get; set; }
 
+
 		/// <summary>
 		/// Max number of allowed indexing outputs per one source document
 		/// </summary>
@@ -121,7 +128,8 @@ namespace Raven.Client.Indexes
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
 			IndexesStrings = new Dictionary<string, FieldIndexing>();
 			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
-			Suggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
+            SortOptionsStrings = new Dictionary<string, SortOptions>();
+            Suggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 			AnalyzersStrings = new Dictionary<string, string>();
 			TermVectors = new Dictionary<Expression<Func<TReduceResult, object>>, FieldTermVector>();
@@ -193,6 +201,13 @@ namespace Raven.Client.Indexes
 					throw new InvalidOperationException("There is a duplicate key in spatial indexes: " + spatialString.Key);
 				indexDefinition.SpatialIndexes.Add(spatialString);
 			}
+
+            foreach (var sortOption in SortOptionsStrings)
+            {
+                if (indexDefinition.SortOptions.ContainsKey(sortOption.Key))
+                    throw new InvalidOperationException("There is a duplicate key in sort options: " + sortOption.Key);
+                indexDefinition.SortOptions.Add(sortOption);
+            }
 
 			if (Map != null)
 				indexDefinition.Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Map, convention,
