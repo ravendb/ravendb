@@ -260,6 +260,7 @@ namespace Raven.Client.Indexes
 			{
 				Indexes = Indexes,
 				IndexesStrings = IndexesStrings,
+                SortOptionsStrings = IndexSortOptionsStrings,
 				SortOptions = IndexSortOptions,
 				Analyzers = Analyzers,
 				AnalyzersStrings = AnalyzersStrings,
@@ -278,7 +279,7 @@ namespace Raven.Client.Indexes
 			}.ToIndexDefinition(Conventions);
 		}
 
-		public override bool IsMapReduce
+	    public override bool IsMapReduce
 		{
 			get { return Reduce != null; }
 		}
