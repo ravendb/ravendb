@@ -174,6 +174,11 @@ namespace Raven.Abstractions.Data
 		public bool DisableCaching { get; set; }
 
 		/// <summary>
+		/// Allow to skip duplicate checking during queries
+		/// </summary>
+		public bool SkipDuplicateChecking { get; set; }
+
+		/// <summary>
 		/// Whatever a query result should contains an explanation about how docs scored against query
 		/// </summary>
 		public bool ExplainScores { get; set; }

@@ -907,13 +907,10 @@ namespace Raven.Database.Indexing
 						int skippedResultsInCurrentLoop = 0;
 						bool readAll;
 						bool adjustStart = true;
-
-						var recorder = new DuplicateDocumentRecorder(indexSearcher,
-													  parent,
-													  documentsAlreadySeenInPreviousPage,
-													  alreadyReturned,
-													  fieldsToFetch,
-													  parent.IsMapReduce || fieldsToFetch.IsProjection);
+						DuplicateDocumentRecorder recorder = null;
+						if (indexQuery.SkipDuplicateChecking)
+							recorder = new DuplicateDocumentRecorder(indexSearcher, parent, documentsAlreadySeenInPreviousPage,
+								alreadyReturned, fieldsToFetch, parent.IsMapReduce || fieldsToFetch.IsProjection);
 
 						do
 						{
@@ -926,13 +923,18 @@ namespace Raven.Database.Indexing
 								skippedResultsInCurrentLoop = 0;
 							}
 							TopDocs search;
-							int moreRequired;
+							int moreRequired = 0;
 							do
 							{
 								search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
-								moreRequired = recorder.RecordResultsAlreadySeenForDistinctQuery(search, adjustStart, pageSize, ref start);
-								pageSize += moreRequired * 2;
+
+								if (recorder != null)
+								{
+									moreRequired = recorder.RecordResultsAlreadySeenForDistinctQuery(search, adjustStart, pageSize, ref start);
+									pageSize += moreRequired*2;
+								}
 							} while (moreRequired > 0);
+
 							indexQuery.TotalSize.Value = search.TotalHits;
 							adjustStart = false;
 
