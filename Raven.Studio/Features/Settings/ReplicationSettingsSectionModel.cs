@@ -41,6 +41,13 @@ namespace Raven.Studio.Features.Settings
 		    }
 	    }
 
+	    public override void MarkAsSaved()
+	    {
+		    HasUnsavedChanges = false;
+
+		    OriginalReplicationDestinations = ReplicationDestinations;
+	    }
+
 	    public ICommand DeleteReplication
         {
             get { return deleteReplicationCommand ?? (deleteReplicationCommand = new ActionCommand(HandleDeleteReplication)); }

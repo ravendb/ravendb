@@ -48,7 +48,12 @@ namespace Raven.Studio.Features.Settings
             OnPropertyChanged(() => DatabaseEditor);
         }
 
-        private string Serialize(DatabaseDocument document)
+	    public override void MarkAsSaved()
+	    {
+		    HasUnsavedChanges = false;
+	    }
+
+	    private string Serialize(DatabaseDocument document)
         {
             using (var streamWriter = new StringWriter())
             {
