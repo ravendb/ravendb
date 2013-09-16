@@ -256,7 +256,10 @@ namespace Raven.Client.Connection
 					factory.UpdateCacheTime(this);
 					var result = factory.GetCachedResponse(this, ResponseHeaders);
 
-					HandleReplicationStatusChanges(ResponseHeaders.Get(Constants.RavenForcePrimaryServerCheck), primaryUrl, operationUrl);
+                    // here we explicitly need to get Response.Headers, and NOT ResponseHeaders because we are 
+                    // getting the value _right now_ from the secondary, and don't care about the 304, the force check
+                    // is still valid
+					HandleReplicationStatusChanges(Response.Headers.GetFirstValue(Constants.RavenForcePrimaryServerCheck), primaryUrl, operationUrl);
 
 					factory.InvokeLogRequest(owner, () => new RequestResultArgs
 					{
