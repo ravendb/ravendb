@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Specialized;
 using System.Net;
 using System.Net.Http;
 using Raven.Abstractions.Data;
@@ -15,43 +16,48 @@ using Raven.Client.WinRT.Connection;
 
 namespace Raven.Client.Connection
 {
-	public static class HttpExtensions
-	{
-		public static Etag GetEtagHeader(this HttpWebResponse response)
-		{
+    public static class HttpExtensions
+    {
+        public static Etag GetEtagHeader(this NameValueCollection headers)
+        {
+            return EtagHeaderToEtag(headers["ETag"]);
+        }
+
+        public static Etag GetEtagHeader(this HttpWebResponse response)
+        {
 #if SILVERLIGHT || NETFX_CORE
 			return EtagHeaderToEtag(response.Headers["ETag"]);
 #else
-			return EtagHeaderToEtag(response.GetResponseHeader("ETag"));
+            return EtagHeaderToEtag(response.GetResponseHeader("ETag"));
 #endif
-		}
+        }
 
-		public static Etag GetEtagHeader(this HttpResponseMessage response)
-		{
-			return EtagHeaderToEtag(response.Headers.ETag.Tag);
-		}
+        public static Etag GetEtagHeader(this HttpResponseMessage response)
+        {
+            return EtagHeaderToEtag(response.Headers.ETag.Tag);
+        }
 
-		public static Etag GetEtagHeader(this GetResponse response)
-		{
-			return EtagHeaderToEtag(response.Headers["ETag"]);
-		}
+        public static Etag GetEtagHeader(this GetResponse response)
+        {
+            return EtagHeaderToEtag(response.Headers["ETag"]);
+        }
 
 #if !SILVERLIGHT && !NETFX_CORE
-		public static Etag GetEtagHeader(this HttpJsonRequest request)
-		{
-			return EtagHeaderToEtag(request.ResponseHeaders["ETag"]);
-		}
+        public static Etag GetEtagHeader(this HttpJsonRequest request)
+        {
+            return EtagHeaderToEtag(request.ResponseHeaders["ETag"]);
+        }
 #endif
 
-		internal static Etag EtagHeaderToEtag(string responseHeader)
-		{
-			if (string.IsNullOrEmpty(responseHeader))
-				throw new InvalidOperationException("Response didn't had an ETag header");
+        internal static Etag EtagHeaderToEtag(string responseHeader)
+        {
+            if (string.IsNullOrEmpty(responseHeader))
+                throw new InvalidOperationException("Response didn't had an ETag header");
 
-			if (responseHeader[0] == '\"')
-				return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
+            if (responseHeader[0] == '\"')
+                return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
 
-			return Etag.Parse(responseHeader);
-		}
-	}
+            return Etag.Parse(responseHeader);
+        }
+    }
 }

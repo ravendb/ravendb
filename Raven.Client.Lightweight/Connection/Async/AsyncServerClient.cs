@@ -1157,7 +1157,7 @@ namespace Raven.Client.Connection.Async
             try
             {
                 var result = (RavenJObject)await request.ReadResponseJsonAsync();
-                return SerializationHelper.ToQueryResult(result, request.Response.GetEtagHeader(),
+                return SerializationHelper.ToQueryResult(result, request.ResponseHeaders.GetEtagHeader(),
                                                          request.ResponseHeaders.Get("Temp-Request-Time"));
             }
             catch (ErrorResponseException e)
