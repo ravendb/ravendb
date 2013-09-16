@@ -23,12 +23,9 @@ using Raven.Database.Server;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Storage.Voron;
 
 namespace Raven.Database.Config
 {
-	using Raven.Database.Storage.Voron;
-
 	public class InMemoryRavenConfiguration
 	{
 		private CompositionContainer container;
@@ -841,7 +838,7 @@ namespace Raven.Database.Config
 					storageEngine = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 					break;
                 case "voron":
-                    storageEngine = typeof(TransactionalStorage).AssemblyQualifiedName;
+                    storageEngine = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
                     break;
             }
 			var type = Type.GetType(storageEngine);
@@ -855,7 +852,7 @@ namespace Raven.Database.Config
 		private string SelectStorageEngine()
 		{
 			if (RunInMemory)
-				return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+				return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
 
 			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{
@@ -865,7 +862,7 @@ namespace Raven.Database.Config
 				}
                 if (File.Exists(Path.Combine(DataDirectory, "Raven.voron")))
                 {
-                    return typeof(TransactionalStorage).AssemblyQualifiedName;
+                    return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
                 }
 				if (File.Exists(Path.Combine(DataDirectory, "Data")))
 					return typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;

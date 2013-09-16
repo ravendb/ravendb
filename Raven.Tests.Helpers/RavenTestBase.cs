@@ -154,7 +154,7 @@ namespace Raven.Tests.Helpers
 			else if (requestedStorage != null)
 				defaultStorageType = requestedStorage;
 			else
-				defaultStorageType = "munin";
+				defaultStorageType = "voron";
 			return defaultStorageType;
 		}
 

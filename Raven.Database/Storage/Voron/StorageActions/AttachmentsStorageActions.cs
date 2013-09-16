@@ -78,13 +78,35 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 
 			var newETag = uuidGenerator.CreateSequentialUuid(UuidType.Attachments);
-	
-			data.Position = 0;
-			attachmentsTable.Add(writeBatch, dataKey, data);
+
+		    if (data.CanSeek) //some streams do not support seeks - for example GZipStream
+		    {
+		        data.Seek(0, SeekOrigin.Begin);
+                attachmentsTable.Add(writeBatch, dataKey, data);
+            }
+		    else
+		    {
+		        var tempMemoryStream = new MemoryStream();
+                try
+                {
+                    data.CopyTo(tempMemoryStream);
+                    attachmentsTable.Add(writeBatch, dataKey, tempMemoryStream);
+                }
+                finally
+                {
+                    data.Dispose();
+                }         
+		    }
+
 			keyByETagIndice.Add(writeBatch, newETag.ToString(), key);
 
 			WriteAttachmentMetadata(metadataKey, newETag, headers);
-            logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key, data.Length);
+
+		    if (data.CanSeek)
+		        logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key, data.Length);
+		    else
+                logger.Debug("Fetched document attachment (key = '{0}')", key); 
+            
             return newETag;
 		}
 
