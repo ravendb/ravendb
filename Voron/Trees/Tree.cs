@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
@@ -413,9 +414,21 @@ namespace Voron.Trees
 			}
 		}
 
-		public TreeIterator Iterate(Transaction tx)
+	    public TreeIterator Iterate(Transaction tx)
+	    {
+            return new TreeIterator(this, tx, _cmp);
+        }
+
+	    public IIterator Iterate(Transaction tx, WriteBatch writeBatch)
 		{
-			return new TreeIterator(this, tx, _cmp);
+            var treeIterator = new TreeIterator(this, tx, _cmp);
+            if (writeBatch == null || String.IsNullOrWhiteSpace(Name))
+                return treeIterator;
+
+	        var removedKeys = new HashSet<Slice>(writeBatch.GetDeletedValues(Name)
+	                                                       .Select(kvp => kvp.Key));	        
+	        	                                                
+	        return new CombinedIterator(writeBatch.GetAddedValues(Name), removedKeys, treeIterator, _cmp);
 		}
 
 		public ReadResult Read(Transaction tx, Slice key)
@@ -430,10 +443,8 @@ namespace Voron.Trees
 
 				var item = new Slice(node);
 
-				if (item.Compare(key, _cmp) != 0)
-					return null;
-
-				return new ReadResult(NodeHeader.Stream(tx, node), node->Version);
+				return item.Compare(key, _cmp) == 0 ? 
+                    new ReadResult(NodeHeader.Stream(tx, node), node->Version) : null;
 			}
 		}
 

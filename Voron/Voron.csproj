@@ -64,6 +64,7 @@
     <Compile Include="Impl\WriteBatch.cs" />
     <Compile Include="ReadResult.cs" />
     <Compile Include="TransactionFlags.cs" />
+    <Compile Include="Trees\CombinedIterator.cs" />
     <Compile Include="Trees\Cursor.cs" />
     <Compile Include="Debugging\DebugStuff.cs" />
     <Compile Include="Impl\NativeMethods.cs" />
