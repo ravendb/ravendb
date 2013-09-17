@@ -2,7 +2,7 @@
            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
            xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
-           Width="400" Height="300" 
+           Width="400" Height="Auto" 
            Title="ResetReplication">
 	<Grid x:Name="LayoutRoot" Margin="2">
 		<Grid.RowDefinitions>
@@ -11,7 +11,7 @@
 			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 
-		<TextBlock Margin="5" Text="The configuration for the following sql replication tasks had changed. You can select the replication tasks you want to reset, so they would re-replicate from scratch. For large databases, this may take a long time." TextWrapping="Wrap"/>
+		<TextBlock Margin="5" Text="The configuration for the following sql replication tasks had changed. In order to save the changes you must reset the replication. You can select the replication tasks you want to reset. For large databases, this may take a long time." TextWrapping="Wrap"/>
 
 		<ItemsControl Grid.Row="1" ItemsSource="{Binding HasChanges}">
 			<ItemsControl.ItemTemplate>
