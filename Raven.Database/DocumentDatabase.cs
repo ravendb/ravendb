@@ -1308,8 +1308,10 @@ namespace Raven.Database
             return findIndexCreationOptions;
         }
 
+	    private bool shouldSkipDuplicateChecking = false;
         public QueryResultWithIncludes Query(string index, IndexQuery query)
         {
+	        shouldSkipDuplicateChecking = query.SkipDuplicateChecking;
             var list = new List<RavenJObject>();
             var result = Query(index, query, null, list.Add);
             result.Results = list;
@@ -1378,14 +1380,14 @@ namespace Raven.Database
                                                                 ? Constants.DocumentIdFieldName
                                                                 : Constants.ReduceKeyFieldName);
                         Func<IndexQueryResult, bool> shouldIncludeInResults =
-                            result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch);
+                            result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, shouldSkipDuplicateChecking);
                         var indexQueryResults = IndexStorage.Query(indexName, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers);
                         indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
 
                         var transformerErrors = new List<string>();
                         var results = GetQueryResults(query, viewGenerator, docRetriever,
                                                       from queryResult in indexQueryResults
-                                                      let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch)
+                                                      let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch, shouldSkipDuplicateChecking)
                                                       where doc != null
                                                       let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
                                                       let __ = tryRecordHighlightingAndScoreExplanation(queryResult)

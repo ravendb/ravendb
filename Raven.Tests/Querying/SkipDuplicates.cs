@@ -36,7 +36,6 @@ namespace Raven.Tests.Querying
 					Assert.Equal(1, result.Count);
 				}
 			}
-			
 		}
 
 		[Fact]
@@ -64,10 +63,9 @@ namespace Raven.Tests.Querying
 					WaitForIndexing(store);
 
 					var result = store.DocumentDatabase.Query("BlogPosts/PostsCountByTag", new IndexQuery{SkipDuplicateChecking = true});
-					Assert.Equal(1, result.Results.Count);
+					Assert.Equal(2, result.Results.Count);
 				}
 			}
-
 		}
 	}
 }

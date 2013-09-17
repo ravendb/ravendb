@@ -908,7 +908,7 @@ namespace Raven.Database.Indexing
 						bool readAll;
 						bool adjustStart = true;
 						DuplicateDocumentRecorder recorder = null;
-						if (indexQuery.SkipDuplicateChecking)
+						if (indexQuery.SkipDuplicateChecking == false)
 							recorder = new DuplicateDocumentRecorder(indexSearcher, parent, documentsAlreadySeenInPreviousPage,
 								alreadyReturned, fieldsToFetch, parent.IsMapReduce || fieldsToFetch.IsProjection);
 
