@@ -13,6 +13,232 @@
 
 	public class Batches : StorageTest
 	{
+        [Fact]
+        public void ReadVersion_Items_From_Both_WriteBatch_And_Snapshot()
+        {
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(tx, "tree");
+                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+
+                tx.Commit();
+            }
+
+            using (var writeBatch = new WriteBatch())
+            using (var snapshot = Env.CreateSnapshot())
+            {
+                writeBatch.Add("foo2", StreamFor("foo2"), "tree",1);
+
+                var foor1Version = snapshot.ReadVersion("tree", "foo1", writeBatch);
+                var foo2Version = snapshot.ReadVersion("tree", "foo2", writeBatch);
+                var foo2VersionThatShouldBe0 = snapshot.ReadVersion("tree", "foo2");
+
+                Assert.Equal(1,foor1Version);
+                Assert.Equal(2,foo2Version); //is not committed yet
+                Assert.Equal(0,foo2VersionThatShouldBe0);
+
+            }
+        }
+
+        [Fact]
+        public void ReadVersion_Items_From_Both_WriteBatch_And_Snapshot_WithoutVersionNumber()
+        {
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(tx, "tree");
+                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+
+                tx.Commit();
+            }
+
+            using (var writeBatch = new WriteBatch())
+            using (var snapshot = Env.CreateSnapshot())
+            {
+                writeBatch.Add("foo2", StreamFor("foo2"), "tree");
+
+                var foor1Version = snapshot.ReadVersion("tree", "foo1", writeBatch);
+                var foo2Version = snapshot.ReadVersion("tree", "foo2", writeBatch);
+                var foo2VersionThatShouldBe0 = snapshot.ReadVersion("tree", "foo2");
+
+                Assert.Equal(1, foor1Version);
+                Assert.Equal(0, foo2Version); //added to write batch without version number, so 0 is version number that is fetched
+                Assert.Equal(0, foo2VersionThatShouldBe0);
+
+            }
+        }
+
+        [Fact]
+        public void Read_Items_From_Both_WriteBatch_And_Snapshot()
+        {
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(tx, "tree");
+                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+                
+                tx.Commit();
+            }
+
+            using(var writeBatch = new WriteBatch())
+            using (var snapshot = Env.CreateSnapshot())
+            {
+                writeBatch.Add("foo2", StreamFor("foo2"), "tree");
+
+                var foo1ReadResult = snapshot.Read("tree", "foo1", writeBatch);
+                var foo2ReadResult = snapshot.Read("tree", "foo2", writeBatch);
+                var foo2ReadResultThatShouldBeNull = snapshot.Read("tree", "foo2");
+
+                Assert.NotNull(foo1ReadResult);
+                Assert.NotNull(foo2ReadResult);
+                Assert.Null(foo2ReadResultThatShouldBeNull);
+
+                Assert.Equal(foo1ReadResult.Stream.ReadData(), Encoding.UTF8.GetBytes("foo1"));
+                Assert.Equal(foo2ReadResult.Stream.ReadData(), Encoding.UTF8.GetBytes("foo2"));
+            }
+        }
+
+        [Fact]
+        public void Read_Items_From_Both_WriteBatch_And_Snapshot_Deleted_Key_Returns_Null()
+        {
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(tx, "tree");
+                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+
+                tx.Commit();
+            }
+
+            using (var writeBatch = new WriteBatch())
+            using (var snapshot = Env.CreateSnapshot())
+            {
+                writeBatch.Delete("foo1","tree");
+
+                var foo1ReadResult = snapshot.Read("tree", "foo1", writeBatch);
+                var foo1ReadResultWithoutWriteBatch = snapshot.Read("tree", "foo1");
+
+                Assert.Null(foo1ReadResult);
+                Assert.NotNull(foo1ReadResultWithoutWriteBatch);
+
+                Assert.Equal(foo1ReadResultWithoutWriteBatch.Stream.ReadData(), Encoding.UTF8.GetBytes("foo1"));
+            }
+        }
+
+        [Fact]
+        public void ReadVersion_Items_From_Both_WriteBatch_And_Snapshot_Deleted_Key_Returns_Version0()
+        {
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(tx, "tree");
+                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+
+                tx.Commit();
+            }
+
+            using (var writeBatch = new WriteBatch())
+            using (var snapshot = Env.CreateSnapshot())
+            {
+                writeBatch.Delete("foo1", "tree");
+
+                var foo1Version = snapshot.ReadVersion("tree", "foo1", writeBatch);
+                var foo1VersionThatShouldBe1 = snapshot.ReadVersion("tree", "foo1");
+
+                Assert.Equal(0,foo1Version);
+                Assert.Equal(1,foo1VersionThatShouldBe1);
+
+            }
+        }
+
+        //if item with the same key is in both tree and writebatch, it can be assumed that the item in write batch has priority, and it will be returned
+        [Fact]
+        public void Read_The_Same_Item_Both_WriteBatch_And_Snapshot_WriteBatch_Takes_Precedence()
+        {
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(tx, "tree");
+                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+
+                tx.Commit();
+            }
+
+            using (var writeBatch = new WriteBatch())
+            using (var snapshot = Env.CreateSnapshot())
+            {
+                writeBatch.Add("foo1", StreamFor("updated foo1"), "tree");
+
+                var foo1ReadResult = snapshot.Read("tree", "foo1", writeBatch);
+                var foo1ReadResultWithoutWriteBatch = snapshot.Read("tree", "foo1");
+
+                Assert.NotNull(foo1ReadResult);
+                Assert.NotNull(foo1ReadResultWithoutWriteBatch);
+
+                Assert.Equal(foo1ReadResult.Stream.ReadData(), Encoding.UTF8.GetBytes("updated foo1"));
+                Assert.Equal(foo1ReadResultWithoutWriteBatch.Stream.ReadData(), Encoding.UTF8.GetBytes("foo1"));
+            }
+        }
+
+        [Fact]
+        public void ReadVersion_The_Same_Item_Both_WriteBatch_And_Snapshot_WriteBatch_Takes_Precedence()
+        {
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(tx, "tree");
+                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("updated foo1"));
+
+                tx.Commit();
+            }
+
+            using (var writeBatch = new WriteBatch())
+            using (var snapshot = Env.CreateSnapshot())
+            {
+                writeBatch.Add("foo1",StreamFor("updated foo1 2"), "tree",2);
+
+                var foo1Version = snapshot.ReadVersion("tree", "foo1", writeBatch);
+                var foo1VersionThatShouldBe2 = snapshot.ReadVersion("tree", "foo1");
+
+                Assert.Equal(3, foo1Version);
+                Assert.Equal(2, foo1VersionThatShouldBe2);
+
+            }
+        }
+
+        [Fact]
+        public void ReadVersion_The_Same_Item_Both_WriteBatch_And_Snapshot_WriteBatch_Takes_Precedence_WithoutVersionNumber_In_WriteBatch()
+        {
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(tx, "tree");
+                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("updated foo1"));
+
+                tx.Commit();
+            }
+
+            using (var writeBatch = new WriteBatch())
+            using (var snapshot = Env.CreateSnapshot())
+            {
+                writeBatch.Add("foo1", StreamFor("updated foo1 2"), "tree");
+
+                var foo1Version = snapshot.ReadVersion("tree", "foo1", writeBatch);
+                var foo1VersionThatShouldBe2 = snapshot.ReadVersion("tree", "foo1");
+
+                Assert.Equal(0, foo1Version); //written to write batch without version number, so 0 is returned as version
+                Assert.Equal(2, foo1VersionThatShouldBe2);
+
+            }
+        }
+
 		[Fact]
 		public async Task SingleItemBatchTest()
 		{
