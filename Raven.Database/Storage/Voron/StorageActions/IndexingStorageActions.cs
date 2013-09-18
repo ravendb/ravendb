@@ -83,7 +83,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public void AddIndex(string name, bool createMapReduce)
 		{
-			if (tableStorage.IndexingStats.Contains(Snapshot, name))
+			if (tableStorage.IndexingStats.Contains(Snapshot, name,writeBatch))
 				throw new ArgumentException(string.Format("There is already an index with the name: '{0}'", name));
 
 			tableStorage.IndexingStats.Add(

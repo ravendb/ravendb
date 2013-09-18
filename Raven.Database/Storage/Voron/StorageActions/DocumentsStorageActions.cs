@@ -221,7 +221,7 @@
             var lowerKey = key.ToLowerInvariant();
             var dataKey = Util.DataKey(lowerKey);
 			var metadataKey = Util.MetadataKey(lowerKey);
-            if (!documentsTable.Contains(snapshot, dataKey))
+            if (!documentsTable.Contains(snapshot, dataKey,writeBatch))
             {
                 logger.Debug("Document with key='{0}' was not found",key);
                 return null;
@@ -262,7 +262,7 @@
 			var dataKey = Util.DataKey(lowerKey);
 			var metadataKey = Util.MetadataKey(lowerKey);
 
-            if (documentsTable.Contains(snapshot, dataKey))
+            if (documentsTable.Contains(snapshot, dataKey,writeBatch))
                 return ReadDocumentMetadata(metadataKey);
 
             logger.Debug("Document with key='{0}' was not found", key);
@@ -278,7 +278,7 @@
 			var dataKey = Util.DataKey(lowerKey);
 			var metadataKey = Util.MetadataKey(lowerKey);
 
-            if (!documentsTable.Contains(snapshot, dataKey))
+            if (!documentsTable.Contains(snapshot, dataKey,writeBatch))
             {
                 logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
                 metadata = null;
@@ -286,7 +286,7 @@
                 return false;
             }            
 
-            if (!documentsTable.Contains(snapshot, metadataKey)) //data exists, but metadata is not --> precaution, should never be true
+            if (!documentsTable.Contains(snapshot, metadataKey, writeBatch)) //data exists, but metadata is not --> precaution, should never be true
             {
                 var errorString = String.Format("Document with key '{0}' was found, but its metadata wasn't found --> possible data corruption",key);
                 throw new ApplicationException(errorString);
@@ -346,7 +346,7 @@
                 throw new ArgumentNullException("key");
 
 			var metadataKey = Util.MetadataKey(key.ToLowerInvariant());
-	        if (!documentsTable.Contains(snapshot, metadataKey))
+	        if (!documentsTable.Contains(snapshot, metadataKey,writeBatch))
             {
                 throw new InvalidOperationException("Updating document metadata is only valid for existing documents, but " + key +
                                                                     " does not exists"); 
@@ -390,7 +390,7 @@
             if (String.IsNullOrEmpty(key))
                 throw new ArgumentNullException("key");
 
-			if (!checkForUpdates && documentsTable.Contains(snapshot, Util.DataKey(key.ToLowerInvariant())))
+			if (!checkForUpdates && documentsTable.Contains(snapshot, Util.DataKey(key.ToLowerInvariant()),writeBatch))
             {
                 throw new ApplicationException(String.Format("InsertDocument() - checkForUpdates is false and document with key = '{0}' already exists", key));
             }
@@ -407,7 +407,7 @@
 			var dataKey = Util.DataKey(lowerKey);
 			var metadataKey = Util.MetadataKey(lowerKey);
 
-            if (!documentsTable.Contains(snapshot, dataKey))
+            if (!documentsTable.Contains(snapshot, dataKey, writeBatch))
             {
                 logger.Debug("Document with dataKey='{0}' was not found", key);
                 preTouchEtag = null;
@@ -492,9 +492,8 @@
 			var metadataKey = Util.MetadataKey(metadata.Key.ToLowerInvariant());
 			documentsTable.Add(writeBatch, metadataKey, metadataStream);
 
-			return documentsTable.Contains(snapshot, metadataKey);
+			return documentsTable.Contains(snapshot, metadataKey, writeBatch);
         }
-
 
         private JsonDocumentMetadata ReadDocumentMetadata(string metadataKey)
         {
@@ -526,7 +525,7 @@
 
         private bool WriteDocumentData(string dataKey, string originalKey, Etag etag, RavenJObject data, RavenJObject metadata, out Etag newEtag, out DateTime savedAt)
         {
-            var isUpdate = documentsTable.Contains(snapshot, dataKey);
+            var isUpdate = documentsTable.Contains(snapshot, dataKey, writeBatch);
 
             if (isUpdate)
             {

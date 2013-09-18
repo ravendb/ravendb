@@ -28,7 +28,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if (String.IsNullOrWhiteSpace(name)) throw new ArgumentNullException("name");
 
             var lowerKeyName = name.ToLowerInvariant();
-            if (!generalTable.Contains(snapshot, lowerKeyName))
+            if (!generalTable.Contains(snapshot, lowerKeyName, writeBatch))
             {
                 generalTable.Add(writeBatch, lowerKeyName, BitConverter.GetBytes((long) 1));
                 return 1;

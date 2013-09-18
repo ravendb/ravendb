@@ -14,7 +14,6 @@ using Raven.Abstractions.Data;
 using Raven.Tests.Bundles.MoreLikeThis;
 using Xunit;
 using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Data;
 using Xunit.Extensions;
 
 namespace Raven.Tests.Storage.Voron

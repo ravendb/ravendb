@@ -48,10 +48,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var metadataKey = Util.MetadataKey(lowercaseKey);
 
 			var keyByETagIndice = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag);
-			var isUpdate = attachmentsTable.Contains(snapshot, lowercaseKey);			
+			var isUpdate = attachmentsTable.Contains(snapshot, lowercaseKey,writeBatch);			
 			if (isUpdate)
 			{
-				if (!attachmentsTable.Contains(snapshot, metadataKey)) //precaution
+				if (!attachmentsTable.Contains(snapshot, metadataKey,writeBatch)) //precaution
 				{
 					throw new ApplicationException(String.Format(@"Headers for attachment with key = '{0}' were not found, 
 																		but the attachment itself was found. Data corruption?",key));
@@ -119,7 +119,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var dataKey = Util.DataKey(lowerKey);
             var metadataKey = Util.MetadataKey(lowerKey);
 		    
-            if (!attachmentsTable.Contains(snapshot, dataKey))
+            if (!attachmentsTable.Contains(snapshot, dataKey,writeBatch))
 		    {
                 logger.Debug("Attachment with key '{0}' was not found, and considered deleted", key);
                 return;
@@ -151,7 +151,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var lowerKey = key.ToLowerInvariant();
 			var dataKey = Util.DataKey(lowerKey);
 			var metadataKey = Util.MetadataKey(lowerKey);
-			if (!attachmentsTable.Contains(snapshot, dataKey))
+			if (!attachmentsTable.Contains(snapshot, dataKey,writeBatch))
 				return null;
 
 			using (var dataReadResult = attachmentsTable.Read(snapshot, dataKey))
