@@ -681,6 +681,11 @@ namespace Raven.Storage.Esent
             current.Value.OnStorageCommit += action;
         }
 
+	    public bool IsAlreadyInBatch
+	    {
+			get { return current.Value != null; }
+	    }
+
         internal StorageActionsAccessor GetCurrentBatch()
         {
             var batch = current.Value;

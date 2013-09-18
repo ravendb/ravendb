@@ -133,8 +133,23 @@ namespace Raven.Database.Indexing
 				}
 
 				var fieldWithCaching = CreateFieldWithCaching(name, string.Empty, Field.Store.NO, fieldIndexingOptions, termVector);
-				var streamReader = new StreamReader(attachment.Data());
-				fieldWithCaching.SetValue(streamReader);
+				
+				if (database.TransactionalStorage.IsAlreadyInBatch)
+				{
+					var streamReader = new StreamReader(attachment.Data());
+					fieldWithCaching.SetValue(streamReader);
+				}
+				else
+				{
+					// we are not in batch operation so we have to create it be able to read attachment's data
+					database.TransactionalStorage.Batch(accessor =>
+					{
+						var streamReader = new StreamReader(attachment.Data());
+						// we have to read it into memory because we after exiting the batch an attachment's data stream will be closed
+						fieldWithCaching.SetValue(streamReader.ReadToEnd()); 
+					});
+				}
+
 				yield return fieldWithCaching;
 				yield break;
 			}
