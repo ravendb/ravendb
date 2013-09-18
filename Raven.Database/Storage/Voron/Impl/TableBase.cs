@@ -70,7 +70,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public virtual TreeIterator Iterate(SnapshotReader snapshot)
 		{
-			return snapshot.Iterate(TableName);
+			return snapshot.Iterate(TableName) as TreeIterator;
 		}
 
 		public bool Contains(SnapshotReader snapshot, Slice key)
