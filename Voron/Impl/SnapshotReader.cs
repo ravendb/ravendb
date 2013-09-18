@@ -39,6 +39,25 @@
 			return tree.GetDataSize(Transaction, key);
 		}
 
+		public bool Contains(string treeName, Slice key, WriteBatch writeBatch = null)
+		{
+			if (writeBatch != null)
+			{
+				var addedValues = writeBatch.GetAddedValues(treeName);
+				var deletedValues = writeBatch.GetDeletedValues(treeName);
+
+				if (deletedValues.ContainsKey(key))
+					return false;
+
+				if (addedValues.ContainsKey(key))
+					return true;
+			}
+
+			var tree = GetTree(treeName);
+			return tree.ReadVersion(Transaction, key) > 0;			
+
+		}
+
         public ushort ReadVersion(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
             if (writeBatch != null)
