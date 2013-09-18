@@ -186,7 +186,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 throw new ArgumentException("must have zero or positive value", "start");
 
 	        using (var iter = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag)
-	            .Iterate(snapshot))
+										      .Iterate(snapshot,writeBatch))
 	        {
 	            if (!iter.Seek(Slice.AfterAllKeys))
 	                yield break;
@@ -223,7 +223,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if(take == 0) yield break; //edge case
 
             using (var iter = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag)
-		                                      .Iterate(snapshot))
+		                                      .Iterate(snapshot,writeBatch))
 		    {
 		        if (!iter.Seek(Slice.BeforeAllKeys))
 		            yield break;
@@ -276,7 +276,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if(pageSize == 0) //edge case
                 yield break;
 
-            using (var iter = attachmentsTable.Iterate(snapshot))
+            using (var iter = attachmentsTable.Iterate(snapshot,writeBatch))
             {
                 iter.RequiredPrefix = idPrefix.ToLowerInvariant();
                 if (iter.Seek(iter.RequiredPrefix) == false)

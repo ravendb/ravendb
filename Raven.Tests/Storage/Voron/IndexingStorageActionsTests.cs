@@ -20,6 +20,7 @@ namespace Raven.Tests.Storage.Voron
 
 	using global::Voron.Exceptions;
 
+	[Trait("VoronTest", "StorageActionsTests")]
 	public class IndexingStorageActionsTests : TransactionalStorageTestBase
 	{
 	    [Theory]

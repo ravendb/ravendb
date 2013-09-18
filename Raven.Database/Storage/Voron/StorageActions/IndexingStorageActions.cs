@@ -44,8 +44,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public IEnumerable<IndexStats> GetIndexesStats()
 		{
-			using (var indexingStatsIterator = tableStorage.IndexingStats.Iterate(Snapshot))
-			using (var lastIndexedEtagIterator = tableStorage.LastIndexedEtags.Iterate(Snapshot))
+			using (var indexingStatsIterator = tableStorage.IndexingStats.Iterate(Snapshot,writeBatch))
+			using (var lastIndexedEtagIterator = tableStorage.LastIndexedEtags.Iterate(Snapshot,writeBatch))
 			{
 				if (!indexingStatsIterator.Seek(Slice.BeforeAllKeys))
 					yield break;

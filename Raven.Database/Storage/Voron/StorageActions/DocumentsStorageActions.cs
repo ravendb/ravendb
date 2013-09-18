@@ -62,7 +62,7 @@
             if (take == 0) yield break;
 
 			using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
-										    .Iterate(snapshot))
+										    .Iterate(snapshot,writeBatch))
 			{
 				int fetchedDocumentCount = 0;
                 if(!iter.Seek(Slice.AfterAllKeys))
@@ -100,7 +100,7 @@
                 throw new ArgumentNullException("etag");
 
 			using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
-											.Iterate(snapshot))
+											.Iterate(snapshot,writeBatch))
 			{
 			    if (!iter.Seek(Slice.BeforeAllKeys))
 			    {
@@ -147,7 +147,7 @@
 			}
         }
 
-		private static string GetKeyFromCurrent(global::Voron.Trees.TreeIterator iter)
+		private static string GetKeyFromCurrent(global::Voron.Trees.IIterator iter)
 		{
 			var key = String.Empty;
 			using (var currentDataStream = iter.CreateStreamForCurrent())
@@ -167,7 +167,7 @@
             if (take < 0)
                 throw new ArgumentException("must have zero or positive value", "take");
 
-			using (var iter = documentsTable.Iterate(snapshot))
+			using (var iter = documentsTable.Iterate(snapshot,writeBatch))
 			{
 				iter.RequiredPrefix = idPrefix.ToLowerInvariant();
 				if (take == 0 || iter.Seek(iter.RequiredPrefix) == false)
@@ -194,7 +194,7 @@
         public long GetDocumentsCount()
         {
 			using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
-										    .Iterate(snapshot))
+										    .Iterate(snapshot,writeBatch))
 			{
 				long documentCount = 0;
 
@@ -437,7 +437,7 @@
             if (etag == null) throw new ArgumentNullException("etag");
 
             using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
-                                            .Iterate(snapshot))
+                                            .Iterate(snapshot,writeBatch))
             {
                 if (!iter.Seek(etag.ToString()) && 
                     !iter.Seek(Slice.BeforeAllKeys)) //if parameter etag not found, scan from beginning. if empty --> return original etag

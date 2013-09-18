@@ -8,7 +8,8 @@ using Xunit;
 
 namespace Raven.Tests.Storage.Voron
 {
-    public class GeneralStorageActionsTests : RavenTest
+	[Trait("VoronTest", "StorageActionsTests")]
+	public class GeneralStorageActionsTests : RavenTest
     {
         private ITransactionalStorage NewVoronStorage()
         {

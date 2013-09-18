@@ -68,9 +68,9 @@ namespace Raven.Database.Storage.Voron.Impl
 			return snapshot.MultiRead(TableName, key);
 		}
 
-		public virtual TreeIterator Iterate(SnapshotReader snapshot)
+		public virtual IIterator Iterate(SnapshotReader snapshot,WriteBatch writeBatch)
 		{
-			return snapshot.Iterate(TableName) as TreeIterator;
+			return snapshot.Iterate(TableName,writeBatch);
 		}
 
 		public bool Contains(SnapshotReader snapshot, Slice key)

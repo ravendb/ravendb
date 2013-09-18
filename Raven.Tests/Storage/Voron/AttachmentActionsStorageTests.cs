@@ -19,6 +19,7 @@ using Xunit.Extensions;
 
 namespace Raven.Tests.Storage.Voron
 {
+	[Trait("VoronTest","StorageActionsTests")]
 	[Trait("VoronTest", "AttachementStorage")]
 	public	class AttachmentActionsStorageTests : RavenTest
 	{

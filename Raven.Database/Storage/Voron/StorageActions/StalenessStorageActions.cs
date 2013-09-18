@@ -13,11 +13,13 @@
 	public class StalenessStorageActions : StorageActionsBase, IStalenessStorageActions
 	{
 		private readonly TableStorage tableStorage;
+		private readonly WriteBatch writeBatch;
 
-		public StalenessStorageActions(TableStorage tableStorage, SnapshotReader snapshot)
+		public StalenessStorageActions(TableStorage tableStorage, SnapshotReader snapshot, WriteBatch writeBatch)
 			: base(snapshot)
 		{
 			this.tableStorage = tableStorage;
+			this.writeBatch = writeBatch;
 		}
 
 		public bool IsIndexStale(string name, DateTime? cutOff, Etag cutoffEtag)
@@ -124,7 +126,7 @@
 		public Etag GetMostRecentDocumentEtag()
 		{
 			var documentsByEtag = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
-			using (var iterator = documentsByEtag.Iterate(Snapshot))
+			using (var iterator = documentsByEtag.Iterate(Snapshot,writeBatch))
 			{
 				if (!iterator.Seek(Slice.AfterAllKeys))
 					return Etag.Empty;
@@ -136,7 +138,7 @@
 		public Etag GetMostRecentAttachmentEtag()
 		{
 			var attachmentsByEtag = tableStorage.Attachments.GetIndex(Tables.Attachments.Indices.ByEtag);
-			using (var iterator = attachmentsByEtag.Iterate(Snapshot))
+			using (var iterator = attachmentsByEtag.Iterate(Snapshot, writeBatch))
 			{
 				if (!iterator.Seek(Slice.AfterAllKeys))
 					return Etag.Empty;

@@ -7,6 +7,7 @@ using Xunit;
 
 namespace Raven.Tests.Voron
 {
+	[Trait("VoronTest", "StorageActionsTests")]
 	public class StorageIntegrationTests : RavenTest
 	{
 		[Fact]

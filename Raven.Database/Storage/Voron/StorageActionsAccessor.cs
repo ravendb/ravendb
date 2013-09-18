@@ -34,7 +34,7 @@ namespace Raven.Database.Storage.Voron
 			Queue = new QueueStorageActions(storage, generator, snapshot, writeBatch);
 			Lists = new ListsStorageActions(storage, generator, snapshot, writeBatch);
 			Tasks = new TasksStorageActions(storage, generator, snapshot, writeBatch);
-			Staleness = new StalenessStorageActions(storage, snapshot);
+			Staleness = new StalenessStorageActions(storage, snapshot, writeBatch);
 			MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshot, writeBatch);
 			Attachments = new AttachmentsStorageActions(storage.Attachments, writeBatch, snapshot, generator);
             General = new GeneralStorageActions(storage.General,writeBatch,snapshot);
