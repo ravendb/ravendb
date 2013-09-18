@@ -1,4 +1,5 @@
 Include ".\build_utils.ps1"
+Include ".\build_utils.ps1"
 
 properties {
 	$base_dir  = resolve-path .
@@ -138,8 +139,8 @@ task Test -depends Compile {
 	
 	$test_prjs | ForEach-Object { 
 		if($global:full_storage_test) {
-			$env:raventest_storage_engine = 'esent';
-			Write-Host "Testing $build_dir\$_ (esent)"
+			$env:raventest_storage_engine = 'voron';
+			Write-Host "Testing $build_dir\$_ (voron)"
 			exec { &"$xUnit" "$build_dir\$_" }
 		}
 		else {
@@ -159,8 +160,8 @@ task StressTest -depends Compile {
 		Write-Host "Testing $build_dir\$_"
 		
 		if($global:full_storage_test) {
-			$env:raventest_storage_engine = 'esent';
-			Write-Host "Testing $build_dir\$_ (esent)"
+			$env:raventest_storage_engine = 'voron';
+			Write-Host "Testing $build_dir\$_ (voron)"
 			&"$xUnit" "$build_dir\$_"
 		}
 		else {
@@ -212,8 +213,8 @@ task TestWinRT -depends Compile, CopyServer {
 			Write-Host "Testing $build_dir\$_"
 			
 			if($global:full_storage_test) {
-				$env:raventest_storage_engine = 'esent';
-				Write-Host "Testing $build_dir\$_ (esent)"
+				$env:raventest_storage_engine = 'voron';
+				Write-Host "Testing $build_dir\$_ (voron)"
 				&"$xUnit" "$build_dir\$_"
 			}
 			else {
