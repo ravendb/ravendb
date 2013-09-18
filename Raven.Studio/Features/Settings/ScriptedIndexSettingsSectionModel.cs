@@ -92,6 +92,13 @@ namespace Raven.Studio.Features.Settings
 			}
 		}
 
+		public override void MarkAsSaved()
+		{
+			HasUnsavedChanges = false;
+
+			OriginalScriptedIndexes = ScriptedIndexes;
+		}
+
 		private void LoadScriptForIndex()
 		{
 			if (IndexName == null)

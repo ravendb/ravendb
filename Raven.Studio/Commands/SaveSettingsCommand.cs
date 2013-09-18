@@ -95,14 +95,15 @@ namespace Raven.Studio.Commands
 				}
 				try
 				{
-					await CheckDestinations(document);
+					if(document.Destinations.Count != 0 && document.Destinations.Any(destination => destination.Disabled == false))
+						await CheckDestinations(document);
 
 					await session.StoreAsync(document);
 					needToSaveChanges = true;
 				}
 				catch (Exception e)
 				{
-					ApplicationModel.Current.AddErrorNotification(e);
+					ApplicationModel.Current.AddErrorNotification(e.GetBaseException());
 				}
 			
 			}
@@ -191,6 +192,9 @@ namespace Raven.Studio.Commands
 							const string ravenSqlreplicationStatus = "Raven/SqlReplication/Status";
 
 							var status = await session.LoadAsync<SqlReplicationStatus>(ravenSqlreplicationStatus);
+							if(status == null)
+								status = new SqlReplicationStatus();
+
 							foreach (var name in resetReplication.Selected)
 							{
 								var lastReplicatedEtag = status.LastReplicatedEtags.FirstOrDefault(etag => etag.Name == name);
@@ -198,13 +202,15 @@ namespace Raven.Studio.Commands
 									lastReplicatedEtag.LastDocEtag = Etag.Empty;
 							}
 
-							await session.StoreAsync(status);
+							await session.StoreAsync(status,  ravenSqlreplicationStatus);
 						}
 
 						foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
 						{
-							sqlReplicationConfig.Id = "Raven/SqlReplication/Configuration/" + sqlReplicationConfig.Name;
-							await session.StoreAsync(sqlReplicationConfig.ToSqlReplicationConfig());
+							var id = "Raven/SqlReplication/Configuration/" + sqlReplicationConfig.Name;
+							var config = await session.LoadAsync<SqlReplicationConfig>(id);
+							config  = UpdateConfig(config, sqlReplicationConfig);
+							await session.StoreAsync(config);
 						}
 					}
 					needToSaveChanges = true;
@@ -275,7 +281,32 @@ namespace Raven.Studio.Commands
 
 			if(needToSaveChanges)
 				await session.SaveChangesAsync();
+			foreach (var settingsSectionModel in settingsModel.Sections)
+			{
+				settingsSectionModel.MarkAsSaved();
+			}
+
 			ApplicationModel.Current.AddNotification(new Notification("Updated Settings for: " + databaseName));
+		}
+
+		private SqlReplicationConfig UpdateConfig(SqlReplicationConfig config, SqlReplicationConfigModel sqlReplicationConfig)
+		{
+			if (config == null)
+			{
+				return sqlReplicationConfig.ToSqlReplicationConfig();
+			}
+			config.ConnectionString = sqlReplicationConfig.ConnectionString;
+			config.ConnectionStringName = sqlReplicationConfig.ConnectionStringName;
+			config.ConnectionStringSettingName = sqlReplicationConfig.ConnectionStringSettingName;
+			config.Disabled = sqlReplicationConfig.Disabled;
+			config.FactoryName = sqlReplicationConfig.FactoryName;
+			config.Id = sqlReplicationConfig.Id;
+			config.Name = sqlReplicationConfig.Name;
+			config.RavenEntityName = sqlReplicationConfig.RavenEntityName;
+			config.Script = sqlReplicationConfig.Script;
+			config.SqlReplicationTables = new List<SqlReplicationTable>(sqlReplicationConfig.SqlReplicationTables);
+
+			return config;
 		}
 
 		private async Task CheckDestinations(ReplicationDocument replicationDocument)

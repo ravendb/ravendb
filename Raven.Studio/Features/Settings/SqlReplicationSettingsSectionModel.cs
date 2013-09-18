@@ -87,6 +87,13 @@ namespace Raven.Studio.Features.Settings
 			}
 		}
 
+		public override void MarkAsSaved()
+		{
+			HasUnsavedChanges = false;
+
+			OriginalSqlReplicationConfigs = SqlReplicationConfigs;
+		}
+
 		private void UpdateScript()
 		{
 			if (SelectedReplication.Value == null)

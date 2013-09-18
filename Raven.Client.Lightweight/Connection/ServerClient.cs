@@ -1479,6 +1479,17 @@ namespace Raven.Client.Connection
 			});
 		}
 
+		public BuildNumber GetBuildNumber()
+		{
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, url + "/build/version", "GET", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+					.AddReplicationStatusHeaders(Url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+			var result = httpJsonRequest.ReadResponseJson();
+
+			return ((RavenJObject)result).Deserialize<BuildNumber>(convention);
+		}
+
 		private void DirectPrepareTransaction(string txId, string operationUrl)
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(

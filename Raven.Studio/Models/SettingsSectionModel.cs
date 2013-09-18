@@ -3,7 +3,7 @@ using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-    public class SettingsSectionModel : ViewModel
+    public abstract class SettingsSectionModel : ViewModel
     {
         public string SectionName { get; protected set; }
 
@@ -16,5 +16,7 @@ namespace Raven.Studio.Models
 	    public virtual void CheckForChanges()
 	    {		    
 	    }
+
+	    public abstract void MarkAsSaved();
     }
 }
