@@ -253,6 +253,11 @@ namespace Raven.Storage.Managed
 			return false;
 		}
 
+		public bool IsAlreadyInBatch
+		{
+			get { return current.Value != null; }
+		}
+
 		public void Compact(InMemoryRavenConfiguration compactConfiguration)
 		{
 			using (var ps = new FileBasedPersistentSource(compactConfiguration.DataDirectory, "Raven", configuration.TransactionMode == TransactionMode.Safe))
