@@ -6,6 +6,7 @@ import com.mysema.query.types.Expression;
 import com.mysema.query.types.OrderSpecifier;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.Predicate;
+import com.mysema.query.types.expr.BooleanExpression;
 //TODO java doc
 public interface IOrderedQueryable<T> extends Iterable<T> {
   /**
@@ -73,15 +74,27 @@ public interface IOrderedQueryable<T> extends Iterable<T> {
 
   public T first();
 
+  public T first(BooleanExpression predicate);
+
   public T firstOrDefault();
+
+  public T firstOrDefault(BooleanExpression predicate);
 
   public T single();
 
+  public T single(BooleanExpression predicate);
+
   public T singleOrDefault();
+
+  public T singleOrDefault(BooleanExpression predicate);
 
   public int count();
 
+  public int count(BooleanExpression predicate);
+
   public long longCount();
+
+  public long longCount(BooleanExpression predicate);
 
   public Class<?> getElementType();
 

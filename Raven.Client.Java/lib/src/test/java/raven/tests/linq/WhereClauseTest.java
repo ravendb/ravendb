@@ -11,11 +11,9 @@ import java.util.TimeZone;
 import org.apache.commons.lang.time.DateUtils;
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.mysema.query.annotations.QueryEntity;
-import com.mysema.query.support.Expressions;
 
 import raven.client.IDocumentQuery;
 import raven.client.IDocumentSession;
@@ -398,195 +396,165 @@ public class WhereClauseTest {
     assertEquals("-(IsPublished:true AND Tags.Length:0)", query.toString());
   }
 
-  /*
+  @Test
+  public void canUnderstandEqualOnDate() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.birthday.eq(mkDate(2010, 5, 15)));
+    assertEquals("Birthday:2010-05-15T00:00:00.0000000Z", q.toString());
+  }
 
+  @Test
+  public void canUnderstandLessThanOrEqualsTo() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.birthday.loe(mkDate(2010, 5, 15)));
+    assertEquals("Birthday:[* TO 2010-05-15T00:00:00.0000000Z]", q.toString());
+  }
 
-[Fact]
-public void CanUnderstandEqualOnDate()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = from user in indexedUsers
-where user.Birthday == new DateTime(2010, 05, 15)
-select user;
-Assert.Equal("Birthday:2010-05-15T00:00:00.0000000", q.ToString());
-}
+  @Test
+  public void canUnderstandGreaterThan() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.birthday.gt(mkDate(2010, 5, 15)));
+    assertEquals("Birthday:{2010-05-15T00:00:00.0000000Z TO NULL}", q.toString());
+  }
 
-[Fact]
-public void CanUnderstandLessThanOrEqualsTo()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = from user in indexedUsers
-where user.Birthday <= new DateTime(2010, 05, 15)
-select user;
-Assert.Equal("Birthday:[* TO 2010-05-15T00:00:00.0000000]", q.ToString());
-}
+  @Test
+  public void canUnderstandGreaterThanOrEqualsTo() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.birthday.goe(mkDate(2010, 5, 15)));
+    assertEquals("Birthday:[2010-05-15T00:00:00.0000000Z TO NULL]", q.toString());
+  }
 
-[Fact]
-public void CanUnderstandGreaterThan()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = from user in indexedUsers
-where user.Birthday > new DateTime(2010, 05, 15)
-select user;
-Assert.Equal("Birthday:{2010-05-15T00:00:00.0000000 TO NULL}", q.ToString());
-}
+  @Test
+  public void canUnderstandProjectionOfOneField() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<String> q = indexedUsers.where(user.birthday.goe(mkDate(2010, 5, 15))).select(user.name);
+    assertEquals("<Name>: Birthday:[2010-05-15T00:00:00.0000000Z TO NULL]", q.toString());
+  }
 
-[Fact]
-public void CanUnderstandGreaterThanOrEqualsTo()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = from user in indexedUsers
-where user.Birthday >= new DateTime(2010, 05, 15)
-select user;
-Assert.Equal("Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", q.ToString());
-}
+  @Test
+  public void canUnderstandProjectionOfMultipleFields() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.birthday.goe(mkDate(2010, 5, 15))).select(IndexedUser.class, user.name, user.age);
+    assertEquals("<Name, Age>: Birthday:[2010-05-15T00:00:00.0000000Z TO NULL]", q.toString());
+  }
 
-[Fact]
-public void CanUnderstandProjectionOfOneField()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = from user in indexedUsers
-where user.Birthday >= new DateTime(2010, 05, 15)
-select user.Name;
-Assert.Equal("<Name>: Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", q.ToString());
-}
+  @Test
+  public void canUnderstandSimpleEqualityOnInt() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.age.eq(3));
+    assertEquals("Age:3", q.toString());
+  }
 
-[Fact]
-public void CanUnderstandProjectionOfMultipleFields()
-{
-var indexedUsers = GetRavenQueryInspector();
-var dateTime = new DateTime(2010, 05, 15);
-var q = from user in indexedUsers
-where user.Birthday >= dateTime
-select new { user.Name, user.Age };
-Assert.Equal("<Name, Age>: Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", q.ToString());
-}
+  @Test
+  public void canUnderstandGreaterThanOnInt() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.age.gt(3));
+    assertEquals("Age_Range:{Ix3 TO NULL}", q.toString());
+  }
 
-[Fact]
-public void CanUnderstandSimpleEqualityOnInt()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = from user in indexedUsers
-where user.Age == 3
-select user;
-Assert.Equal("Age:3", q.ToString());
-}
+  @Test
+  public void canUnderstandMethodCalls() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.birthday.goe(mkDate(2010, 5, 15))).select(IndexedUser.class, user.name, user.age);
+    assertEquals("<Name, Age>: Birthday:[2010-05-15T00:00:00.0000000Z TO NULL]", q.toString());
+  }
 
+  @Test
+  public void canUnderstandConvertExpressions() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.age.eq(3));
+    assertEquals("Age:3", q.toString());
+  }
 
-[Fact]
-public void CanUnderstandGreaterThanOnInt()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = from user in indexedUsers
-where user.Age > 3
-select user;
-Assert.Equal("Age_Range:{Ix3 TO NULL}", q.ToString());
-}
+  @Test
+  public void canChainMultipleWhereClauses() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.age.eq(3)).where(user.name.eq("ayende"));
+    assertEquals("(Age:3) AND (Name:ayende)", q.toString());
+  }
 
-[Fact]
-public void CanUnderstandMethodCalls()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = from user in indexedUsers
-where user.Birthday >= DateTime.Parse("2010-05-15")
-select new { user.Name, user.Age };
-Assert.Equal("<Name, Age>: Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", q.ToString());
-}
+  @Test
+  public void canUnderstandSimpleAny_Dynamic() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.properties.any().key.eq("first"));
+    assertEquals("Properties,Key:first", q.toString());
+  }
 
-[Fact]
-public void CanUnderstandConvertExpressions()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = from user in indexedUsers
-where user.Age == Convert.ToInt16("3")
-select user;
-Assert.Equal("Age:3", q.ToString());
-}
+  @Test
+  public void canUnderstandSimpleAny_Static() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.properties.any().key.eq("first"));
+    assertEquals("Properties_Key:first", q.toString());
+  }
 
+  @Test
+  public void anyOnCollection() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.properties.isNotEmpty());
+    assertEquals("Properties:*", q.toString());
+  }
 
-[Fact]
-public void CanChainMultipleWhereClauses()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = indexedUsers
-.Where(x => x.Age == 3)
-.Where(x => x.Name == "ayende");
-Assert.Equal("(Age:3) AND (Name:ayende)", q.ToString());
-}
+  @Test
+  public void anyOnCollectionEqTrue() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.properties.isNotEmpty().eq(true));
+    assertEquals("Properties:*", q.toString());
+  }
 
-[Fact]
-public void CanUnderstandSimpleAny_Dynamic()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = indexedUsers.Where(x => x.Properties.Any(y => y.Key == "first"));
-Assert.Equal("Properties,Key:first", q.ToString());
-}
+  @Test
+  public void anyOnCollectionEqFalse() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.properties.isNotEmpty().eq(false));
+    assertEquals("(*:* AND -Properties:*)", q.toString());
+  }
 
-[Fact]
-public void CanUnderstandSimpleAny_Static()
-{
-var indexedUsers = GetRavenQueryInspectorStatic();
-var q = indexedUsers.Where(x => x.Properties.Any(y => y.Key == "first"));
-Assert.Equal("Properties_Key:first", q.ToString());
-}
+  @Test
+  public void willWrapLuceneSaveKeyword_NOT() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.name.eq("NOT"));
+    assertEquals("Name:\"NOT\"", q.toString());
+  }
 
-[Fact]
-public void AnyOnCollection()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = indexedUsers.Where(x => x.Properties.Any());
-Assert.Equal("Properties:*", q.ToString());
-}
-[Fact]
-public void AnyOnCollectionEqTrue()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = indexedUsers.Where(x => x.Properties.Any() == true);
-Assert.Equal("Properties:*", q.ToString());
-}
+  @Test
+  public void willWrapLuceneSaveKeyword_OR() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.name.eq("OR"));
+    assertEquals("Name:\"OR\"", q.toString());
+  }
 
-[Fact]
-public void AnyOnCollectionEqFalse()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = indexedUsers.Where(x => x.Properties.Any() == false);
-Assert.Equal("(*:* AND -Properties:*)", q.ToString());
-}
+  @Test
+  public void willWrapLuceneSaveKeyword_AND() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.name.eq("AND"));
+    assertEquals("Name:\"AND\"", q.toString());
+  }
 
-[Fact]
-public void WillWrapLuceneSaveKeyword_NOT()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = indexedUsers.Where(x => x.Name == "NOT");
-Assert.Equal("Name:\"NOT\"", q.ToString());
-}
-
-[Fact]
-public void WillWrapLuceneSaveKeyword_OR()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = indexedUsers.Where(x => x.Name == "OR");
-Assert.Equal("Name:\"OR\"", q.ToString());
-}
-
-[Fact]
-public void WillWrapLuceneSaveKeyword_AND()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = indexedUsers.Where(x => x.Name == "AND");
-Assert.Equal("Name:\"AND\"", q.ToString());
-}
-
-[Fact]
-public void WillNotWrapCaseNotMatchedLuceneSaveKeyword_And()
-{
-var indexedUsers = GetRavenQueryInspector();
-var q = indexedUsers.Where(x => x.Name == "And");
-Assert.Equal("Name:And", q.ToString());
-}
-   */
-
-//TODO: other tests
+  @Test
+  public void willNotWrapCaseNotMatchedLuceneSaveKeyword_And() {
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.name.eq("And"));
+    assertEquals("Name:And", q.toString());
+  }
 
   @QueryEntity
   public static class IndexedUser {
@@ -668,6 +636,7 @@ Assert.Equal("Name:And", q.ToString());
 
   }
 
+  @QueryEntity
   public static class UserProperty {
     private String key;
     private String value;

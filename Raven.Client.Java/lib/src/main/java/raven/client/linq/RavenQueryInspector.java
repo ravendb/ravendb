@@ -12,6 +12,7 @@ import com.mysema.query.types.Expression;
 import com.mysema.query.types.OrderSpecifier;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.Predicate;
+import com.mysema.query.types.expr.BooleanExpression;
 
 import raven.abstractions.LinqOps;
 import raven.abstractions.basic.Lazy;
@@ -503,5 +504,34 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     return select(projectionClass, fieldsAsString.toArray(new String[0]), projectionsAsString.toArray(new String[0]));
   }
 
+  @Override
+  public T first(BooleanExpression condition) {
+    return where(condition).first();
+  }
+
+  @Override
+  public T firstOrDefault(BooleanExpression predicate) {
+    return where(predicate).firstOrDefault();
+  }
+
+  @Override
+  public T single(BooleanExpression predicate) {
+    return where(predicate).single();
+  }
+
+  @Override
+  public T singleOrDefault(BooleanExpression predicate) {
+    return where(predicate).singleOrDefault();
+  }
+
+  @Override
+  public int count(BooleanExpression predicate) {
+    return where(predicate).count();
+  }
+
+  @Override
+  public long longCount(BooleanExpression predicate) {
+    return where(predicate).longCount();
+  }
 
 }

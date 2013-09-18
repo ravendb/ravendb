@@ -92,11 +92,11 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
         assertEquals(firstUser, firstItem);
 
         //This should pull out the 1st parson ages 60, i.e. "Bob"
-        User firstAgeItem = session.query(User.class, indexName).where(x.age.eq(60)).first();
+        User firstAgeItem = session.query(User.class, indexName).first(x.age.eq(60));
         assertEquals("Bob", firstAgeItem.getName());
 
         //No-one is aged 15, so we should get null
-        User firstDefaultItem = session.query(User.class, indexName).where(x.age.eq(15)).firstOrDefault();
+        User firstDefaultItem = session.query(User.class, indexName).firstOrDefault(x.age.eq(15));
         assertNull(firstDefaultItem);
       }
     }
@@ -119,7 +119,7 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
         store.getDatabaseCommands().putIndex(indexName, indexDefinitionBuilder, true);
         waitForAllRequestsToComplete();
 
-        User singleItem = session.query(User.class, indexName).where(x.name.eq("James")).single();
+        User singleItem = session.query(User.class, indexName).single(x.name.eq("James"));
         assertEquals(25, singleItem.getAge());
         assertEquals("James", singleItem.getName());
 
@@ -133,7 +133,7 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
 
         //A query of age = 30 should return for 2 results, so Single() should throw
         try {
-          session.query(User.class, indexName).where(x.age.eq(30)).single();
+          session.query(User.class, indexName).single(x.age.eq(30));
           fail();
         } catch (IllegalStateException e) {
           //ok
@@ -141,14 +141,14 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
 
         //A query of age = 30 should return for 2 results, so SingleOrDefault() should also throw
         try {
-          session.query(User.class, indexName).where(x.age.eq(30)).singleOrDefault();
+          session.query(User.class, indexName).singleOrDefault(x.age.eq(30));
           fail();
         } catch (IllegalStateException e) {
           //ok
         }
 
         //A query of age = 75 should return for NO results, so SingleOrDefault() should return a default value
-        User singleOrDefaultItem = session.query(User.class, indexName).where(x.age.eq(75)).singleOrDefault();
+        User singleOrDefaultItem = session.query(User.class, indexName).singleOrDefault(x.age.eq(75));
         assertNull(singleOrDefaultItem);
 
       }

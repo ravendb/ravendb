@@ -4,7 +4,6 @@ import raven.abstractions.LinqOps;
 
 import com.mysema.query.types.ConstantImpl;
 import com.mysema.query.types.Expression;
-import com.mysema.query.types.Ops;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.PathMetadata;
 import com.mysema.query.types.expr.BooleanExpression;
@@ -51,4 +50,6 @@ public class RavenString extends StringPath {
   public BooleanExpression equalsNotIgnoreCase(String str) {
       return equalsNotIgnoreCase(ConstantImpl.create(str));
   }
+
+
 }
