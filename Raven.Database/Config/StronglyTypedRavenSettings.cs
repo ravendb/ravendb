@@ -39,6 +39,8 @@ namespace Raven.Database.Config
 				                    TimeSpanArgumentType.FromParse);
 			MaxIndexWritesBeforeRecreate =
 				new IntegerSetting(settings["Raven/MaxIndexWritesBeforeRecreate"], 256 * 1024);
+			MaxIndexOutputsPerDocument = 
+				new IntegerSetting(settings["Raven/MaxIndexOutputsPerDocument"], 5);
 
 			MaxNumberOfItemsToIndexInSingleBatch =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"],
@@ -240,5 +242,7 @@ namespace Raven.Database.Config
 		public IntegerSetting AdditionalStepsForScriptBasedOnDocumentSize { get; private set; }
 
 		public IntegerSetting MaxIndexWritesBeforeRecreate { get; private set; }
+
+		public IntegerSetting MaxIndexOutputsPerDocument { get; private set; }
 	}
 }
