@@ -1262,7 +1262,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
   @Test
   public void using_attachments_can_properly_set_WebRequest_Headers() throws Exception {
-    String key = String.format("%s-%s", "test", "SystemTime.UtcNow.ToFileTimeUtc()");//TODO get sample invocation
+    String key = String.format("%s-%d", "test", new Date().getTime());
     RavenJObject metadata = new RavenJObject();
     metadata.add("owner", 5);
     metadata.add("Content-Type", "text/plain");

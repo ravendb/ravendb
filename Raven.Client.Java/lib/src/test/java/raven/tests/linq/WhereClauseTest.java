@@ -22,6 +22,7 @@ import raven.client.document.DocumentQuery;
 import raven.client.document.DocumentStore;
 import raven.client.linq.IRavenQueryable;
 import raven.client.linq.RavenQueryInspector;
+import raven.tests.bugs.QUser;
 
 public class WhereClauseTest {
 
@@ -55,6 +56,7 @@ public class WhereClauseTest {
     String q = session.query(Renamed.class).where(x.name.eq("red")).toString();
     assertEquals("Yellow:red", q);
   }
+
 
   @Test
   public void handlesNegative() {
@@ -494,7 +496,7 @@ public class WhereClauseTest {
 
   @Test
   public void canUnderstandSimpleAny_Static() {
-    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
+    RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspectorStatic();
     QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
     IRavenQueryable<IndexedUser> q = indexedUsers.where(user.properties.any().key.eq("first"));
     assertEquals("Properties_Key:first", q.toString());

@@ -1,17 +1,20 @@
 package raven.tests.bugs.entities;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.util.List;
 
 import org.junit.Test;
 
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
+import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.DocumentStore;
 
 public class CanSaveUpdateAndReadTest extends RemoteClientTest {
-
-
 
   @Test
   public void canReadEntityNameAfterUpdate() throws Exception  {
@@ -36,7 +39,53 @@ public class CanSaveUpdateAndReadTest extends RemoteClientTest {
     }
   }
 
-  //TODO: finish other tests
+  @Test
+  public void can_read_entity_name_after_update_from_query() throws Exception  {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession s = store.openSession()) {
+        Event e = new Event();
+        e.setHappy(true);
+        s.store(e);
+        s.saveChanges();
+      }
+
+      try (IDocumentSession s = store.openSession()) {
+        s.load(Event.class, "events/1").happy = false;
+        s.saveChanges();
+      }
+
+      try (IDocumentSession s = store.openSession()) {
+        List<Event> events = s.query(Event.class).customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults()).toList();
+        assertFalse(events.isEmpty());
+      }
+    }
+  }
+
+  @Test
+  public void can_read_entity_name_after_update_from_query_after_entity_is_in_cache() throws Exception  {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession s = store.openSession()) {
+        Event e = new Event();
+        e.setHappy(true);
+        s.store(e);
+        s.saveChanges();
+      }
+
+      try (IDocumentSession s = store.openSession()) {
+        s.load(Event.class, "events/1"); // load into cache
+      }
+
+      try (IDocumentSession s = store.openSession()) {
+        s.load(Event.class, "events/1").happy = false;
+        s.saveChanges();
+      }
+
+      try (IDocumentSession s = store.openSession()) {
+        List<Event> events = s.query(Event.class).customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults()).toList();
+        assertFalse(events.isEmpty());
+      }
+    }
+  }
 
   public static class Event {
     private String id;

@@ -126,6 +126,15 @@ public class CollectionAnyVisitor implements Visitor<Expression<?>,StackBasedCon
           Operation<?> anyOp = (Operation< ? >) Expressions.operation(Object.class, LinqOps.Query.ANY, parent, newOp);
           context.setReplace(true);
           return anyOp;
+        } else if (expr.getMetadata().getParent() != null) {
+          StackBasedContext c = new StackBasedContext(context);
+          Path<?> parent = (Path< ? >) expr.getMetadata().getParent().accept(this, c);
+
+          if (c.isReplace()) {
+            //TODO: handle me
+            System.out.println(parent);
+
+          }
         }
         return expr;
       } finally {

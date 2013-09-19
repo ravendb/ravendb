@@ -673,7 +673,6 @@ public class FacetPagingTest extends FacetTestBase {
       }
     }
   }
-  //TODO:
 
   private List<GroupResult> mapToTuple(Map<String, Integer> map) {
     List<GroupResult> list=  new ArrayList<>();

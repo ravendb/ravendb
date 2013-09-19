@@ -7,6 +7,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import raven.abstractions.closure.Action1;
 import raven.abstractions.data.AggregationOperation;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.QueryResult;
+import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.EscapeQueryOptions;
 import raven.client.IDocumentQuery;
@@ -31,6 +33,7 @@ import raven.client.document.IAbstractDocumentQuery;
 import raven.client.linq.LinqPathProvider.Result;
 import raven.querydsl.CollectionAnyVisitor;
 import raven.querydsl.StackBasedContext;
+import raven.tests.bugs.QUser;
 
 import com.google.common.collect.Lists;
 import com.mysema.codegen.StringUtils;
@@ -52,7 +55,6 @@ import com.mysema.query.types.expr.Param;
  *
  * @param <T>
  */
-
 //TODO: support for ANY
 public class RavenQueryProviderProcessor<T> {
   private Class<T> clazz;
@@ -245,6 +247,8 @@ public class RavenQueryProviderProcessor<T> {
           " very slow operation, and is not allowed using the Linq API. The recommended method is to use full text search (mark the field as Analyzed and use the search() method to query it.");
     } else if (expression.getOperator().equals(Ops.STARTS_WITH)) {
       visitStartsWith(expression);
+    } else if (expression.getOperator().equals(Ops.ENDS_WITH)) {
+      visitEndsWith(expression);
     } else {
       throw new IllegalArgumentException("Expression is not supported: " + expression.getOperator());
     }
@@ -553,6 +557,7 @@ public class RavenQueryProviderProcessor<T> {
 
     //for standard queries, we take just the last part. But for dynamic queries, we take the whole part
     result.setPath(result.getPath().substring(result.getPath().indexOf('.') + 1));
+
     //TODO: result.Path = castingRemover.Replace(result.Path, ""); // removing cast remains
 
     //TODO:array length
@@ -578,9 +583,11 @@ public class RavenQueryProviderProcessor<T> {
     luceneQuery.whereStartsWith(memberInfo.getPath(), getValueFromExpression(operation.getArg(1), getMemberType(memberInfo)));
   }
 
-  //TODO: private void VisitStringContains(MethodCallExpression _)
-
-  //TODO: private void VisitEndsWith(MethodCallExpression expression)
+  private void visitEndsWith(Operation<Boolean> operation) {
+    Expression< ? > expression = operation.getArg(0);
+    ExpressionInfo memberInfo = getMember(expression);
+    luceneQuery.whereEndsWith(memberInfo.getPath(), getValueFromExpression(operation.getArg(1), getMemberType(memberInfo)));
+  }
 
   private void visitGreatherThan(Operation<Boolean> expression) {
     if (!isMemberAccessForQuerySource(expression.getArg(0)) &&  isMemberAccessForQuerySource(expression.getArg(1))) {
@@ -654,14 +661,9 @@ public class RavenQueryProviderProcessor<T> {
     }
   }
 
-  //TODO: private void VisitMethodCall(MethodCallExpression expression, bool negated = false)
-
-
-
   private void visitOperation(Operation<?> expression) {
     if (expression.getOperator().getId().startsWith(LinqOps.Query.QUERY_OPERATORS_PREFIX)) {
       visitQueryableMethodCall(expression);
-      //TODO: finish me
     } else {
       throw new IllegalArgumentException("Expression is not supported:" + expression);
     }
@@ -669,9 +671,6 @@ public class RavenQueryProviderProcessor<T> {
 
   @SuppressWarnings("unchecked")
   private void visitQueryableMethodCall(Operation< ? > expression) {
-    //TODO finish me
-
-    //TODO of type
     String operatorId = expression.getOperator().getId();
     if (operatorId.equals(LinqOps.Query.WHERE.getId())) {
       insideWhere++;
@@ -718,7 +717,7 @@ public class RavenQueryProviderProcessor<T> {
     } else if (operatorId.equals(LinqOps.Query.LONG_COUNT.getId())) {
       visitExpression(expression.getArg(0));
       visitLongCount();
-      //TODO: all, any
+      //TODO: all
     } else if (operatorId.equals(LinqOps.Query.ORDER_BY.getId())) {
       visitExpression(expression.getArg(0));
       Expression< ? > orderSpecExpression = expression.getArg(1);
@@ -1026,6 +1025,8 @@ public class RavenQueryProviderProcessor<T> {
     IDocumentQuery<T> q = queryGenerator.luceneQuery(clazz, indexName, isMapReduce);
     luceneQuery = (IAbstractDocumentQuery<T>) q;
 
+    expression = tranformAny(expression);
+
     visitExpression(expression);
     if (customizeQuery != null) {
       customizeQuery.customize(new DocumentQueryCustomiation((DocumentQuery< ? >) luceneQuery));
@@ -1035,8 +1036,6 @@ public class RavenQueryProviderProcessor<T> {
 
   @SuppressWarnings("unchecked")
   public Object execute(Expression<?> expression) {
-
-    expression = tranformAny(expression);
 
     chanedWhere = false;
 
@@ -1093,48 +1092,50 @@ public class RavenQueryProviderProcessor<T> {
     return executeQuery;
   }
 
-  public void renameResults(QueryResult queryResult)
-  {
-    /*TODO
-    for (int index = 0; index < queryResult.Results.Count; index++)
-    {
-      var result = queryResult.Results[index];
-      var safeToModify = (RavenJObject) result.CreateSnapshot();
-      bool changed = false;
-      var values = new Dictionary<string, RavenJToken>();
-      foreach (var renamedField in FieldsToRename.Select(x=>x.OriginalField).Distinct())
-      {
-        RavenJToken value;
-        if (safeToModify.TryGetValue(renamedField, out value) == false)
-          continue;
-        values[renamedField] = value;
-        safeToModify.Remove(renamedField);
+  public void renameResults(QueryResult queryResult) {
+
+    for (int index = 0; index < queryResult.getResults().size(); index++) {
+      RavenJObject result = queryResult.getResults().get(index);
+      RavenJObject safeToModify = result.createSnapshot();
+      boolean changed = false;
+      Map<String, RavenJToken> values = new HashMap<String, RavenJToken>();
+
+      Set<String> renamedFieldSet = new HashSet<>();
+      for (RenamedField field : fieldsToRename) {
+        renamedFieldSet.add(field.getOriginalField());
       }
-      foreach (var rename in FieldsToRename)
-      {
-        RavenJToken val;
-        if (values.TryGetValue(rename.OriginalField, out val) == false)
+
+      for(String renamedField : renamedFieldSet) {
+        Reference<RavenJToken> valueRef = new Reference<>();
+        if (safeToModify.tryGetValue(renamedField, valueRef) == false) {
           continue;
+        }
+        values.put(renamedField, valueRef.value);
+        safeToModify.remove(renamedField);
+      }
+      for (RenamedField rename : fieldsToRename) {
+        if (!values.containsKey(rename.getOriginalField())) {
+          continue;
+        }
+        RavenJToken val = values.get(rename.getOriginalField());
         changed = true;
-        var ravenJObject = val as RavenJObject;
-        if (rename.NewField == null && ravenJObject != null)
-        {
+        RavenJObject ravenJObject = (RavenJObject) ((val instanceof RavenJObject) ? val : null);
+        if (rename.getNewField() == null && ravenJObject != null) {
           safeToModify = ravenJObject;
-        }
-        else if (rename.NewField != null)
-        {
-          safeToModify[rename.NewField] = val;
-        }
-        else
-        {
-          safeToModify[rename.OriginalField] = val;
+        } else if (rename.getNewField() != null) {
+          safeToModify.set(rename.getNewField(), val);
+        } else {
+          safeToModify.set(rename.getOriginalField(), val);
         }
       }
-      if (!changed)
+
+      if (!changed) {
         continue;
-      safeToModify.EnsureCannotBeChangeAndEnableSnapshotting();
-      queryResult.Results[index] = safeToModify;
-    }*/
+      }
+      safeToModify.ensureCannotBeChangeAndEnableShapshotting();
+      queryResult.getResults().set(index, safeToModify);
+
+    }
   }
 
   private <TProjection> Object getQueryResult(IDocumentQuery<TProjection> finalQuery) {

@@ -645,8 +645,6 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
   }
 
   @Test
-  //TODO: in index we have integer quantity, in data we have double quantity, in query parameters we have double quantity
-  //TODO: server can't convert int to double (??)
   public void can_Use_In_Array_In_Where_Clause() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       try (IDocumentSession session = store.openSession()) {
