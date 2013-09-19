@@ -39,6 +39,8 @@ namespace Raven.Database.Config
 				                    TimeSpanArgumentType.FromParse);
 			MaxIndexWritesBeforeRecreate =
 				new IntegerSetting(settings["Raven/MaxIndexWritesBeforeRecreate"], 256 * 1024);
+			PreventAutomaticSuggestionCreation =
+				new BooleanSetting(settings["Raven/PreventAutomaticSuggestionCreation"], false);
 			MaxIndexOutputsPerDocument = 
 				new IntegerSetting(settings["Raven/MaxIndexOutputsPerDocument"], 15);
 
@@ -243,6 +245,7 @@ namespace Raven.Database.Config
 
 		public IntegerSetting MaxIndexWritesBeforeRecreate { get; private set; }
 
+		public BooleanSetting PreventAutomaticSuggestionCreation { get; set; }
 		public IntegerSetting MaxIndexOutputsPerDocument { get; private set; }
 	}
 }

@@ -40,6 +40,18 @@ namespace Raven.Database.Queries
 					suggestionQuery.Distance = suggestion.Distance;
 			}
 
+			var indexDefinition = self.GetIndexDefinition(index);
+			if (indexDefinition == null)
+				throw new InvalidOperationException(string.Format("Could not find specified index '{0}'.", index));
+
+			if (indexDefinition.Suggestions.ContainsKey(suggestionQuery.Field) == false && self.Configuration.PreventAutomaticSuggestionCreation)
+			{
+				// if index does not have suggestions defined for this field and server configuration does not allow to create it on the fly
+				// then just return empty result
+				return new SuggestionQueryResult();
+			}
+
+
 			return new SuggestionQueryRunner(self).ExecuteSuggestionQuery(index, suggestionQuery);
 		}
 

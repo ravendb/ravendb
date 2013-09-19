@@ -102,6 +102,8 @@ namespace Raven.Database.Config
 			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
 			MaxIndexOutputsPerDocument = ravenSettings.MaxIndexOutputsPerDocument.Value;
 
+			PreventAutomaticSuggestionCreation = ravenSettings.PreventAutomaticSuggestionCreation.Value;
+
 			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
 
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
@@ -789,6 +791,11 @@ namespace Raven.Database.Config
 		public int AdditionalStepsForScriptBasedOnDocumentSize { get; set; }
 
 		public int MaxIndexWritesBeforeRecreate { get; set; }
+
+		/// <summary>
+		/// If True the server will not create suggestions automatically based on the suggestion query. Default: false.
+		/// </summary>
+		public bool PreventAutomaticSuggestionCreation { get; set; }
 
 		/// <summary>
 		/// Limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to the one document
