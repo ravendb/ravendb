@@ -6,6 +6,7 @@ using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
 using System.Linq;
@@ -143,6 +144,19 @@ namespace Raven.Database.Server.Security
 				return oAuthRequestAuthorizer.GetUser(context, hasApiKey);
 			}
 			return windowsRequestAuthorizer.GetUser(context);
+		}
+
+		public IPrincipal GetUser(RavenApiController controller)
+		{
+			var hasApiKey = "True".Equals(controller.GetQueryStringValue("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
+			var authHeader = controller.GetHeader("Authorization");
+			var hasOAuthTokenInCookie = controller.HasCookie("OAuth-Token");
+			if (hasApiKey || hasOAuthTokenInCookie ||
+				string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+			{
+				return oAuthRequestAuthorizer.GetUser(controller, hasApiKey);
+			}
+			return windowsRequestAuthorizer.GetUser(controller);
 		}
 
 		public List<string> GetApprovedDatabases(IPrincipal user, IHttpContext context)

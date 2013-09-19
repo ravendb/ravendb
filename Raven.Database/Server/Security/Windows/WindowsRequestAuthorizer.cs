@@ -1,11 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
 using System.Security.Principal;
+using System.Threading;
+using System.Web;
+using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using System.Linq;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Server.Controllers;
 
 namespace Raven.Database.Server.Security.Windows
 {
@@ -157,6 +163,54 @@ namespace Raven.Database.Server.Security.Windows
 			return true;
 		}
 
+		private bool TryCreateUser(RavenApiController controller, string databaseName, out Action onRejectingRequest)
+		{
+			var invalidUser = (controller.User == null || controller.User.Identity.IsAuthenticated == false);
+			if (invalidUser)
+			{
+				onRejectingRequest = () =>
+				{
+					var msg = ProvideDebugAuthInfo(controller, new
+					{
+						Reason = "User is null or not authenticated"
+					});
+					controller.AddHeader("Raven-Required-Auth", "Windows", msg);
+					if (string.IsNullOrEmpty(controller.DatabasesLandlord.SystemConfiguration.OAuthTokenServer) == false)
+					{
+						controller.AddHeader("OAuth-Source", controller.DatabasesLandlord.SystemConfiguration.OAuthTokenServer, msg);
+					}
+					msg.StatusCode = HttpStatusCode.Unauthorized;
+
+					throw new HttpResponseException(msg);
+				};
+				return false;
+			}
+
+			var dbUsersIaAllowedAccessTo = requiredUsers
+				.Where(data => controller.User.Identity.Name.Equals(data.Name, StringComparison.InvariantCultureIgnoreCase))
+				.SelectMany(source => source.Databases)
+				.Concat(requiredGroups.Where(data => controller.User.IsInRole(data.Name)).SelectMany(x => x.Databases))
+				.ToList();
+			var user = UpdateUserPrincipal(controller, dbUsersIaAllowedAccessTo);
+
+			onRejectingRequest = () =>
+			{
+				var msg = ProvideDebugAuthInfo(controller, new
+				{
+					user.Identity.Name,
+					user.AdminDatabases,
+					user.ReadOnlyDatabases,
+					user.ReadWriteDatabases,
+					DatabaseName = databaseName
+				});
+
+				msg.StatusCode = HttpStatusCode.Forbidden;
+
+				throw new HttpResponseException(msg);
+			};
+			return true;
+		}
+
 		private static void ProvideDebugAuthInfo(IHttpContext ctx, object msg)
 		{
 			string debugAuth = ctx.Request.QueryString["debug-auth"];
@@ -168,6 +222,21 @@ namespace Raven.Database.Server.Security.Windows
 			{
 				ctx.WriteJson(msg);
 			}
+		}
+
+		private static HttpResponseMessage ProvideDebugAuthInfo(RavenApiController controller, object msg)
+		{
+			string debugAuth = controller.GetQueryStringValue("debug-auth");
+			if (debugAuth == null)
+				return controller.GetMessageWithString("");
+
+			bool shouldProvideDebugAuthInformation;
+			if (bool.TryParse(debugAuth, out shouldProvideDebugAuthInformation) && shouldProvideDebugAuthInformation)
+			{
+				return controller.GetMessageWithObject(msg);
+			}
+
+			return controller.GetMessageWithString("");
 		}
 
 		private PrincipalWithDatabaseAccess UpdateUserPrincipal(IHttpContext ctx, List<DatabaseAccess> databaseAccessLists)
@@ -192,6 +261,29 @@ namespace Raven.Database.Server.Security.Windows
 			return user;
 		}
 
+		private PrincipalWithDatabaseAccess UpdateUserPrincipal(RavenApiController controller, List<DatabaseAccess> databaseAccessLists)
+		{
+			var access = controller.User as PrincipalWithDatabaseAccess;
+			if (access != null)
+				return access;
+
+			var user = new PrincipalWithDatabaseAccess((WindowsPrincipal)controller.User);
+
+			foreach (var databaseAccess in databaseAccessLists)
+			{
+				if (databaseAccess.Admin)
+					user.AdminDatabases.Add(databaseAccess.TenantId);
+				else if (databaseAccess.ReadOnly)
+					user.ReadOnlyDatabases.Add(databaseAccess.TenantId);
+				else
+					user.ReadWriteDatabases.Add(databaseAccess.TenantId);
+			}
+
+			HttpContext.Current.User = user;
+			Thread.CurrentPrincipal = user;
+
+			return user;
+		}
 
 		public List<string> GetApprovedDatabases(IPrincipal user)
 		{
@@ -218,6 +310,16 @@ namespace Raven.Database.Server.Security.Windows
 			var databaseName = TenantId ?? Constants.SystemDatabase;
 			var userCreated = TryCreateUser(ctx, databaseName, out onRejectingRequest);
 			return userCreated ? ctx.User : null;
+		}
+
+		public IPrincipal GetUser(RavenApiController controller)
+		{
+			Action onRejectingRequest;
+			var databaseName = controller.DatabaseName ?? Constants.SystemDatabase;
+			var userCreated = TryCreateUser(controller, databaseName, out onRejectingRequest);
+			if (userCreated == false)
+				onRejectingRequest();
+			return userCreated ? controller.User : null;
 		}
 	}
 }

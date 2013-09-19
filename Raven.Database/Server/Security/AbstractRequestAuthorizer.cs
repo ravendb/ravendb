@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Security.Principal;
 using Raven.Database.Config;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.WebApi;
 
 namespace Raven.Database.Server.Security
 {
@@ -13,7 +14,7 @@ namespace Raven.Database.Server.Security
 		[CLSCompliant(false)]
 		protected DocumentDatabase database;
 		[CLSCompliant(false)]
-		protected HttpServer server;
+		protected IRavenServer server;
 		[CLSCompliant(false)]
 		protected Func<string> tenantId;
 
@@ -21,7 +22,7 @@ namespace Raven.Database.Server.Security
 		public InMemoryRavenConfiguration Settings { get { return settings; } }
 		public string TenantId { get { return tenantId(); } }
 
-		public void Initialize(DocumentDatabase database, InMemoryRavenConfiguration settings, Func<string> tenantIdGetter, HttpServer theServer)
+		public void Initialize(DocumentDatabase database, InMemoryRavenConfiguration settings, Func<string> tenantIdGetter, IRavenServer theServer)
 		{
 			server = theServer;
 			this.database = database;
@@ -29,6 +30,12 @@ namespace Raven.Database.Server.Security
 			this.tenantId = tenantIdGetter;
 
 			Initialize();
+		}
+
+		public void Initialize(DocumentDatabase database, IRavenServer theServer)
+		{
+			this.database = database;
+			this.server = theServer;
 		}
 
 		protected virtual void Initialize()
