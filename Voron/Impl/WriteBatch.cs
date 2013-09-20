@@ -51,11 +51,6 @@
 			_operations = new List<BatchOperation>();
 		}
 
-	    public bool ContainsChangedValue(Slice key, BatchOperationType operationType)
-	    {
-	        return _operations.Any(operation => operation.Key.Equals(key) && operation.Type == operationType);
-	    }
-	   
 		public void Add(Slice key, Stream value, string treeName, ushort? version = null)
 		{
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
