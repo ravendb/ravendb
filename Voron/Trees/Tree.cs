@@ -414,15 +414,10 @@ namespace Voron.Trees
 			}
 		}
 
-	    public TreeIterator Iterate(Transaction tx)
-	    {
-            return new TreeIterator(this, tx, _cmp);
-        }
-
-	    public IIterator Iterate(Transaction tx, WriteBatch writeBatch)
+	    public IIterator Iterate(Transaction tx, WriteBatch writeBatch = null)
 		{
             var treeIterator = new TreeIterator(this, tx, _cmp);
-            if (writeBatch == null || String.IsNullOrWhiteSpace(Name))
+            if (writeBatch == null)
                 return treeIterator;
 
 	        var removedKeys = new HashSet<Slice>(writeBatch.GetDeletedValues(Name)

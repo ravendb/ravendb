@@ -25,8 +25,9 @@
 		        if (deletedValues.ContainsKey(key))
 		            return null;
 
-		        if (addedValues.ContainsKey(key))
-                    return addedValues[key];
+		        ReadResult value;
+		        if (addedValues.TryGetValue(key, out value))
+                    return value;
 		    }
 
 		    var tree = GetTree(treeName);
@@ -68,8 +69,9 @@
                 if (deletedValues.ContainsKey(key))
                     return 0;
 
-                if (addedValues.ContainsKey(key))
-                    return (addedValues[key].Version == 0) ? (ushort)0 : (ushort)(addedValues[key].Version + 1); 
+                ReadResult value;
+                if (addedValues.TryGetValue(key, out value))
+                    return (value.Version == 0) ? (ushort)0 : (ushort)(value.Version + 1); 
             }
 
             var tree = GetTree(treeName);
@@ -79,7 +81,7 @@
         public IIterator Iterate(string treeName, WriteBatch writeBatch = null)
 		{
 			var tree = GetTree(treeName);
-			return tree.Iterate(Transaction,writeBatch);
+            return tree.Iterate(Transaction, writeBatch);
 		}
 
 		public void Dispose()
