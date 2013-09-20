@@ -593,11 +593,13 @@ namespace Raven.Storage.Esent
 			});
 		}
 
-        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+        //[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         [CLSCompliant(false)]
         public void Batch(Action<IStorageActionsAccessor> action)
         {
-            if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
+	        var batchNestingAllowed = disableBatchNesting.Value == null;
+
+            if (disposerLock.IsReadLockHeld && batchNestingAllowed) // we are currently in a nested Batch call and allow to nest batches
             {
                 if (current.Value != null) // check again, just to be sure
                 {
@@ -612,7 +614,7 @@ namespace Raven.Storage.Esent
             disposerLock.EnterReadLock();
             try
             {
-                afterStorageCommit = ExecuteBatch(action, dtcTransactionContext.Value);
+				afterStorageCommit = ExecuteBatch(action, batchNestingAllowed ? dtcTransactionContext.Value : null);
 
 				if (dtcTransactionContext.Value != null)
 				{
@@ -649,7 +651,7 @@ namespace Raven.Storage.Esent
             onCommit(); // call user code after we exit the lock
         }
 
-        [DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
+        //[DebuggerHidden, DebuggerNonUserCode, DebuggerStepThrough]
         private Action ExecuteBatch(Action<IStorageActionsAccessor> action, EsentTransactionContext transactionContext)
         {
             var txMode = configuration.TransactionMode == TransactionMode.Lazy
@@ -680,6 +682,11 @@ namespace Raven.Storage.Esent
             }
             current.Value.OnStorageCommit += action;
         }
+
+	    public bool IsAlreadyInBatch
+	    {
+			get { return current.Value != null; }
+	    }
 
         internal StorageActionsAccessor GetCurrentBatch()
         {

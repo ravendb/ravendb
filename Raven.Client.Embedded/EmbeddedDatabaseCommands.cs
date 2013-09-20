@@ -465,7 +465,8 @@ namespace Raven.Client.Embedded
 		/// <param name="indexEntriesOnly">Include index entries</param>
 		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-			query.PageSize = Math.Min(query.PageSize, database.Configuration.MaxPageSize);
+            if(query.PageSizeSet)
+			    query.PageSize = Math.Min(query.PageSize, database.Configuration.MaxPageSize);
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 
 			// metadataOnly is not supported for embedded
@@ -749,6 +750,19 @@ namespace Raven.Client.Embedded
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			database.PrepareTransaction(txId);
 		}
+
+		/// <summary>
+		/// Gets the build number
+		/// </summary>
+		public BuildNumber GetBuildNumber()
+		{
+			return new BuildNumber
+			       {
+				       BuildVersion = DocumentDatabase.BuildVersion,
+					   ProductVersion = DocumentDatabase.ProductVersion
+			       };
+		}
+
 		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
 		/// </summary>

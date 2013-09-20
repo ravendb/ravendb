@@ -28,6 +28,7 @@ namespace Raven.Studio.Features.Tasks
 			Filters = new ObservableCollection<FilterSetting>();
 			IncludeDocuments = new Observable<bool> {Value = true};
 			IncludeIndexes = new Observable<bool> {Value = true};
+            RemoveAnalyzers = new Observable<bool>{Value = false};
 			IncludeAttachments = new Observable<bool>();
 			IncludeTransforms = new Observable<bool> {Value = true};
 			UseCollections = new Observable<bool>();
@@ -52,6 +53,7 @@ namespace Raven.Studio.Features.Tasks
 		public Observable<bool> IncludeIndexes { get; set; }
 		public Observable<bool> IncludeAttachments { get; set; }
 		public Observable<bool> IncludeTransforms { get; set; }
+        public Observable<bool> RemoveAnalyzers { get; set; }
 		public Observable<bool> UseCollections { get; set; }
 		public List<CollectionSelectionInfo> Collections { get; set; } 
 

@@ -14,7 +14,6 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 		private readonly IDocumentStore store;
 
 		private readonly string javascriptBookId;
-		private string phpBookId;
 		private readonly string eclipseBookId;
 
 		public MoreLikeThisShouldSupportMapReduceIndexes()
@@ -31,7 +30,6 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 				session.Store(eclipseBook);
 
 				javascriptBookId = javascriptBook.Id;
-				phpBookId = phpBook.Id;
 				eclipseBookId = eclipseBook.Id;
 
 				session.Store(new Author { BookId = javascriptBook.Id, Name = "Douglas Crockford" });

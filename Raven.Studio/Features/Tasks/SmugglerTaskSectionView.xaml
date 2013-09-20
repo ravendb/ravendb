@@ -42,7 +42,12 @@
 								  IsChecked="{Binding IncludeTransforms.Value, Mode=TwoWay}" 
 								  VerticalAlignment="Center" Margin="5" Content=" Include Transformers"/>
 
-					</StackPanel>
+
+                    <CheckBox Grid.Column="0" 
+								  IsChecked="{Binding RemoveAnalyzers.Value, Mode=TwoWay}" 
+								  VerticalAlignment="Center" Margin="5" Content=" Remove Analyzers"/>
+
+                </StackPanel>
 				</Grid>
 			</controls:TabItem>
 
@@ -129,29 +134,69 @@
 						</Grid>
 					</StackPanel>
 
-					<Grid Grid.Column="2" Margin="5">
+					<Grid Grid.Column="2" Margin="5" x:Name="CollectionGrid">
 						<Grid.RowDefinitions>
 							<RowDefinition Height="Auto"/>
 							<RowDefinition Height="Auto"/>
 						</Grid.RowDefinitions>
 						
 						<CheckBox IsChecked="{Binding UseCollections.Value, Mode=TwoWay}"
-								  Content="Include only specified collections"/>
+								  Margin="5"
+								  Content="Include only documents from specific collections (from the list below)"
+								  VerticalAlignment="Center"/>
 						
-						<ListBox Visibility="{Binding UseCollections.Value, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
-								 ItemsSource="{Binding Collections}"
+						<ListBox ItemsSource="{Binding Collections}"
 								 MaxHeight="156"
 								 Grid.Row="1">
 							<ListBox.ItemTemplate>
 								<DataTemplate>
-									<CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" Content="{Binding Name}"/>
+									<CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" Content="{Binding Name}"
+											  IsEnabled="{Binding DataContext.UseCollections.Value, ElementName=CollectionGrid}"/>
 								</DataTemplate>
 							</ListBox.ItemTemplate>
 						</ListBox>
 					</Grid>
-					
-					<TextBlock Grid.Row="1" Grid.ColumnSpan="4" Text="Transform Script:" Style="{StaticResource Style_TextBlock_PagePartHeader}"></TextBlock>
-					<Editors:JsonEditor  Grid.Row="2" Grid.ColumnSpan="4"  BoundDocument="{Binding Script}" Margin="5"/>
+
+				<StackPanel Orientation="Horizontal" Grid.Row="1" Grid.ColumnSpan="4" >
+					<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
+						<i:Interaction.Behaviors>
+							<behaviors:ShowPopupWhilstMouseOver>
+								<behaviors:ShowPopupWhilstMouseOver.Popup>
+									<Popup>
+										<ContentControl Style="{StaticResource Style_InfoToolTip}">
+											<RichTextBlock MaxWidth="370" Margin="5">
+												<Paragraph>Scripts are written in JScript.</Paragraph>
+												<Paragraph>Example:
+													<LineBreak/>
+													<Span FontFamily="Consolas">
+														<LineBreak/>
+														<Span Foreground="Blue">var</Span> company = LoadDocument(
+														<Span Foreground="Blue">this</Span> .Company);
+														<LineBreak/>
+														<Span Foreground="Blue">if</Span> (company == null)
+														<Span Foreground="Blue">return;</Span>
+														<LineBreak/>
+														company.Orders = { Count:
+														<Span Foreground="Blue">this</Span> .Count, Total:
+														<Span Foreground="Blue">this</Span> .Total };
+														<LineBreak/>
+														PutDocument(
+														<Span Foreground="Blue">this</Span> .Company, company);
+													</Span>
+													<LineBreak/>
+												</Paragraph>
+											</RichTextBlock>
+										</ContentControl>
+									</Popup>
+								</behaviors:ShowPopupWhilstMouseOver.Popup>
+							</behaviors:ShowPopupWhilstMouseOver>
+						</i:Interaction.Behaviors>
+					</Image>
+
+					<TextBlock Text="Transform Script:" Style="{StaticResource Style_TextBlock_PagePartHeader}"></TextBlock>
+
+				</StackPanel>
+				<Editors:JsonEditor  Grid.Row="2" Grid.ColumnSpan="4"  BoundDocument="{Binding Script}" Margin="5"/>
 				</Grid>
 			
 			</controls:TabItem>

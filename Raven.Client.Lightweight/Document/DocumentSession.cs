@@ -176,8 +176,8 @@ namespace Raven.Client.Document
 		{
 			var transformer = new TTransformer().TransformerName;
 			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(id, transformer,
-			                                                                  new LoadTransformerOperation(this, transformer, 1),
-																			  singleResult: true);
+																		  new LoadTransformerOperation(this, transformer, 1),
+																		  singleResult: true);
 			return AddLazyOperation<TResult>(lazyLoadOperation, null);
 		}
 
@@ -321,6 +321,7 @@ namespace Raven.Client.Document
 			return Load<T>(documentKeys);
 		}
 
+
 		private T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			if (ids.Length == 0)
@@ -328,7 +329,7 @@ namespace Raven.Client.Document
 
 			IncrementRequestCount();
 
-			var multiLoadResult = DatabaseCommands.Get(ids, new string[] {}, transformer, queryInputs);
+			var multiLoadResult = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs);
 			return new LoadTransformerOperation(this, transformer, ids.Length).Complete<T>(multiLoadResult);
 		}
 
@@ -351,6 +352,8 @@ namespace Raven.Client.Document
 			return instance;
 		}
 
+
+	
 		public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
 			if (ids.Length == 0)
@@ -572,7 +575,7 @@ namespace Raven.Client.Document
 		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
 		{
 			QueryHeaderInformation _;
-			return Stream(query, out _);
+			return Stream<T>(query, out _);
 		}
 
 		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)

@@ -8,5 +8,10 @@ namespace Raven.Studio.Features.Settings
 		{
 			SectionName = "No Settings available";
 		}
+
+		public override void MarkAsSaved()
+		{
+			HasUnsavedChanges = false;
+		}
 	}
 }

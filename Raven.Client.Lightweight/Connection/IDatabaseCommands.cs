@@ -500,6 +500,11 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="txId">The tx id.</param>
 		void PrepareTransaction(string txId);
+
+		/// <summary>
+		/// Gets the build number
+		/// </summary>
+		BuildNumber GetBuildNumber();
 	}
 }
 #endif

@@ -142,6 +142,11 @@ namespace Raven.Studio.Features.Settings
 			OnPropertyChanged(() => RequiredUsers);
 			OnPropertyChanged(() => RequiredGroups);
 		}
+
+		public override void MarkAsSaved()
+		{
+			throw new System.NotImplementedException();
+		}
 	}
 
 	public class DatabaseSuggestionProvider : IAutoCompleteSuggestionProvider

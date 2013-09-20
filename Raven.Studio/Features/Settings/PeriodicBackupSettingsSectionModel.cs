@@ -63,6 +63,13 @@ namespace Raven.Studio.Features.Settings
 				HasUnsavedChanges = true;
 		}
 
+		public override void MarkAsSaved()
+		{
+			HasUnsavedChanges = false;
+			OriginalPeriodicBackupSettings = PeriodicBackupSettings;
+			OriginalPeriodicBackupSetup = PeriodicBackupSetup;
+		}
+
 		public PeriodicBackupSetup PeriodicBackupSetup { get; set; }
 		public PeriodicBackupSetup OriginalPeriodicBackupSetup { get; set; }
 		public PeriodicBackupSettings PeriodicBackupSettings { get; set; }

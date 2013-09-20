@@ -22,6 +22,7 @@ namespace Raven.Studio.Features.Tasks
                 includeAttachements: IncludeAttachments.Value,
                 includeDocuments: IncludeDocuments.Value,
                 includeIndexes: IncludeIndexes.Value,
+                removeAnalyzers: this.RemoveAnalyzers.Value,
                 includeTransformers: IncludeTransforms.Value,
                 shouldExcludeExpired: Options.Value.ShouldExcludeExpired,
                 batchSize: Options.Value.BatchSize,

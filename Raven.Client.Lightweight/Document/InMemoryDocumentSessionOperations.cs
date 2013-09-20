@@ -13,6 +13,7 @@ using System.Transactions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
@@ -157,7 +158,7 @@ namespace Raven.Client.Document
 		/// <value>The store identifier.</value>
 		public string StoreIdentifier
 		{
-			get { return documentStore.Identifier +";" + DatabaseName; }
+            get { return documentStore.Identifier + ";" + DatabaseName; }
 		}
 
 		/// <summary>
@@ -354,14 +355,14 @@ more responsive application.
 		/// <returns></returns>
 		public T TrackEntity<T>(string key, RavenJObject document, RavenJObject metadata, bool noTracking)
 		{
-			var entity = TrackEntity(typeof (T), key, document, metadata, noTracking);
+            var entity = TrackEntity(typeof(T), key, document, metadata, noTracking);
 			try
 			{
-				return (T) entity;
+                return (T)entity;
 			}
 			catch (InvalidCastException e)
 			{
-				var actual = typeof (T).Name;
+                var actual = typeof(T).Name;
 				var expected = entity.GetType().Name;
 				var message = string.Format("The query results type is '{0}' but you expected to get results of type '{1}'. If you want to return a projection, you should use .AsProjection<{1}>() before calling to .ToList().", expected, actual);
 				throw new InvalidOperationException(message, e);
@@ -387,7 +388,7 @@ more responsive application.
 			{
 				return GetDefaultValue(entityType); // document is not really there.
 			}
-			if (documentFound.Etag != null && !documentFound.Metadata.ContainsKey("@etag"))
+            if (documentFound.Etag != null && !documentFound.Metadata.ContainsKey("@etag"))
 			{
 				documentFound.Metadata["@etag"] = documentFound.Etag.ToString();
 			}
@@ -408,6 +409,10 @@ more responsive application.
 		/// <returns></returns>
 		object TrackEntity(Type entityType, string key, RavenJObject document, RavenJObject metadata, bool noTracking)
 		{
+            if (string.IsNullOrEmpty(key))
+            {
+                return JsonObjectToClrInstancesWithoutTracking(entityType, document);
+            }
 			document.Remove("@metadata");
 			object entity;
 			if (entitiesByKey.TryGetValue(key, out entity) == false)
@@ -456,8 +461,8 @@ more responsive application.
 		{
 			try
 			{
-				if (entityType == typeof(RavenJObject))
-					return (object)documentFound.CloneToken();
+                if (entityType == typeof (RavenJObject))
+                    return documentFound.CloneToken();
 
 				var defaultValue = GetDefaultValue(entityType);
 				var entity = defaultValue;
@@ -477,7 +482,7 @@ more responsive application.
 					var document = entity as RavenJObject;
 					if (document != null)
 					{
-						entity = (object)(new DynamicJsonObject(document));
+                        entity = (object) (new DynamicJsonObject(document));
 					}
 				}
 				GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
@@ -489,6 +494,10 @@ more responsive application.
 
 				return entity;
 			}
+            catch (ReadVetoException)
+            {
+                throw;
+            }
 			catch (Exception ex)
 			{
 				throw new InvalidOperationException("Could not convert document " + id + " to entity of type " + entityType, ex);
@@ -592,9 +601,9 @@ more responsive application.
 
 				return entity;
 			}
-			catch(Exception ex)
+            catch (Exception ex)
 			{
-				throw new InvalidOperationException("Could not convert document " + id + " to entity of type " + typeof (T), ex);
+                throw new InvalidOperationException("Could not convert document " + id + " to entity of type " + typeof(T), ex);
 			}
 		}
 
@@ -998,7 +1007,7 @@ more responsive application.
 						if (documentStore.WasDisposed)
 							throw new ObjectDisposedException("RavenDB Session");
 					});
-				if(documentStore.TransactionRecoveryStorage is VolatileOnlyTransactionRecoveryStorage)
+                if (documentStore.TransactionRecoveryStorage is VolatileOnlyTransactionRecoveryStorage)
 					Transaction.Current.EnlistVolatile(ravenClientEnlistment, EnlistmentOptions.None);
 				else
 					Transaction.Current.EnlistDurable(ResourceManagerId, ravenClientEnlistment, EnlistmentOptions.None);
@@ -1267,5 +1276,64 @@ more responsive application.
 
 	        result[idPropName] = new RavenJValue(metadata.Value<string>("@id"));
 	    }
+
+        protected object JsonObjectToClrInstancesWithoutTracking(Type type, RavenJObject val)
+        {
+            if (val == null)
+                return null;
+            if (type.IsArray)
+            {
+                // Returns array, public APIs don't surface that yet though as we only support Transform
+                // With a single Id
+                var elementType = type.GetElementType();
+                var array = val.Value<RavenJArray>("$values").Cast<RavenJObject>()
+                               .Where(x => x != null)
+                               .Select(y =>
+                               {
+                                   HandleInternalMetadata(y);
+
+                                   return ProjectionToInstance(y, elementType);
+                               })
+                               .ToArray();
+
+                var newArray = Array.CreateInstance(elementType, array.Length);
+                Array.Copy(array, newArray, array.Length);
+                return newArray;
+            }
+
+            var items = (val.Value<RavenJArray>("$values") ?? new RavenJArray(val))
+                .Select(JsonExtensions.ToJObject)
+                .Where(x => x != null)
+                .Select(x =>
+                {
+                    HandleInternalMetadata(x);
+                    return ProjectionToInstance(x, type);
+                })
+                .ToArray();
+
+            if (items.Length == 1)
+                return items[0];
+
+            return items;
+        }
+
+        private object ProjectionToInstance(RavenJObject y, Type type)
+        {
+            foreach (var conversionListener in listeners.ExtendedConversionListeners)
+            {
+                conversionListener.BeforeConversionToEntity(null, y, null);
+            }
+            var instance = y.Deserialize(type, Conventions);
+            foreach (var conversionListener in listeners.ConversionListeners)
+            {
+                conversionListener.DocumentToEntity(null, instance, y, null);
+            }
+            foreach (var conversionListener in listeners.ExtendedConversionListeners)
+            {
+                conversionListener.AfterConversionToEntity(null, y, null, instance);
+            }
+            return instance;
+        }
+
 	}
 }

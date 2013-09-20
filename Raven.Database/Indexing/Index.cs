@@ -1249,7 +1249,8 @@ namespace Raven.Database.Indexing
 					indexSearcher.Search(luceneQuery, gatherAllCollector);
 					return gatherAllCollector.ToTopDocs();
 				}
-				var minPageSize = Math.Max(pageSize + start, 1);
+			    int absFullPage = Math.Abs(pageSize + start); // need to protect against ridicilously high values of pageSize + start that overflow
+			    var minPageSize = Math.Max(absFullPage, 1);
 
 				// NOTE: We get Start + Pagesize results back so we have something to page on
 				if (sort != null)
