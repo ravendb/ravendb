@@ -1526,5 +1526,37 @@ namespace Raven.Database.Indexing
 		{
 			forceWriteToDisk = true;
 		}
+
+        protected void EnsureValidNumberOfOutputsForDocument(string sourceDocumentId, int numberOfAlreadyProducedOutputs)
+        {
+            var maxNumberOfIndexOutputs = context.Configuration.MaxIndexOutputsPerDocument;
+
+            if (maxNumberOfIndexOutputs == -1)
+                return;
+
+            if (numberOfAlreadyProducedOutputs <= maxNumberOfIndexOutputs) 
+                return;
+
+            Priority = IndexingPriority.Disabled;
+
+            // this cannot happen in the current transaction, since we are going to throw in just a bit.
+            using (context.Database.TransactionalStorage.DisableBatchNesting())
+            {
+                context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Disabled));    
+            }
+
+            context.Database.RaiseNotifications(new IndexChangeNotification()
+            {
+                Name = PublicName,
+                Type = IndexChangeTypes.IndexDemotedToDisabled
+            });
+
+            throw new InvalidOperationException(
+                string.Format(
+                    "Index '{0}' has already produced {1} map results for a source document '{2}', while the allowed max number of outputs is {3} per one document. " +
+                    "Index will be disabled.  Please verify this index definition and consider a re-design of your entities.",
+                    PublicName, maxNumberOfIndexOutputs, sourceDocumentId, maxNumberOfIndexOutputs));
+        }
+
 	}
 }

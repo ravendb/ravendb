@@ -127,7 +127,7 @@ namespace Raven.Database.Indexing
                             }
                             currentDocumentResults.Add(new DynamicJsonObject(RavenJObject.FromObject(currentDoc, jsonSerializer)));
 
-							EnsureValidNumberOfOutputsForDocument(documentId, currentDocumentResults.Count, accessor);
+							EnsureValidNumberOfOutputsForDocument(documentId, currentDocumentResults.Count);
 
 	                        Interlocked.Increment(ref localStats.IndexingSuccesses);
                         }
@@ -329,32 +329,6 @@ namespace Raven.Database.Indexing
                 }
             });
         }
-
-		private void EnsureValidNumberOfOutputsForDocument(string sourceDocumentId, int numberOfAlreadyProducedOutputs, IStorageActionsAccessor accessor)
-		{
-			var maxNumberOfIndexOutputs = context.Configuration.MaxIndexOutputsPerDocument;
-
-			if (maxNumberOfIndexOutputs == -1)
-				return;
-
-			if (numberOfAlreadyProducedOutputs > maxNumberOfIndexOutputs)
-			{
-				Priority = IndexingPriority.Disabled;
-				accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Disabled);
-
-				context.Database.RaiseNotifications(new IndexChangeNotification()
-				{
-					Name = PublicName,
-					Type = IndexChangeTypes.IndexDemotedToDisabled
-				});
-
-				throw new InvalidOperationException(
-					string.Format(
-						"Index '{0}' has already produced {1} map results for a source document '{2}', while the allowed max number of outputs is {3} per one document. " +
-						"Index will be disabled.  Please verify this index definition and consider a design of your entities.",
-						PublicName, maxNumberOfIndexOutputs, sourceDocumentId, maxNumberOfIndexOutputs));
-			}
-		}
 
         public class ReduceDocuments
         {
