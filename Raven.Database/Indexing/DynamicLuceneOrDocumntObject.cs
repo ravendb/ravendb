@@ -14,49 +14,63 @@ using System.Linq;
 namespace Raven.Database.Indexing
 {
 	[JsonObject]
-	public class DynamicLuceneOrParentDocumntObject : DynamicJsonObject
-	{
-		private readonly DocumentRetriever retriever;
-		private dynamic parentDoc;
+    public class DynamicLuceneOrParentDocumntObject : DynamicJsonObject
+    {
+        private readonly DocumentRetriever retriever;
+        private dynamic parentDoc;
 
-		public DynamicLuceneOrParentDocumntObject(DocumentRetriever retriever, RavenJObject inner)
-			: base(inner)
-		{
-			this.retriever = retriever;
-		}
+        public DynamicLuceneOrParentDocumntObject(DocumentRetriever retriever,RavenJObject inner) : base(inner)
+        {
+            this.retriever = retriever;
+        }
 
-		public override void WriteTo(JsonWriter writer)
-		{
-			var dynamicJsonObject = parentDoc as IDynamicJsonObject;
-			if (dynamicJsonObject != null)
-			{
-				dynamicJsonObject.WriteTo(writer);
-			}
-			else
-			{
-				base.WriteTo(writer);
-			}
-		}
+        public override void WriteTo(JsonWriter writer)
+        {
+            var dynamicJsonObject = parentDoc as IDynamicJsonObject;
+            if (dynamicJsonObject != null)
+            {
+                dynamicJsonObject.WriteTo(writer);
+            }
+            else
+            {
+                base.WriteTo(writer);
+            }
+        }
 
-		public override object GetValue(string name)
-		{
-			object result = null;
-			if (name != Constants.Metadata)
-			{
-				result = base.GetValue(name);
-				if (result is DynamicNullObject == false)
-					return result;
-			}
-			if (parentDoc != null)
-				return parentDoc[name];
+        public override object GetValue(string name)
+        {
+            if (name == Constants.Metadata)
+            {
+                if (parentDoc == null)
+                {
+                    if (TryLoadParentDoc() == false)
+                        return new DynamicNullObject();
+                }
+                return parentDoc[name];
+            }
+            var result = base.GetValue(name);
+            if (result is DynamicNullObject == false)
+                return result;
 
-			object documentId = GetDocumentId() as string;
-			if (documentId == null)
-				return result ?? new DynamicNullObject();
+            if (parentDoc != null)
+                return parentDoc[name];
 
-			parentDoc = retriever.Load(documentId);
+            if (TryLoadParentDoc()) 
+                return result;
 
-			return parentDoc[name];
-		}
-	}
+            return parentDoc[name];
+        }
+
+	    private bool TryLoadParentDoc()
+	    {
+	        object documentId = GetDocumentId() as string;
+	        if (documentId == null)
+	        {
+	            return true;
+	        }
+
+	        parentDoc = retriever.Load(documentId);
+	        return false;
+	    }
+    }
 }
