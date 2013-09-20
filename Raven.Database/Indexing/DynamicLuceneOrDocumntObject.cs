@@ -55,7 +55,7 @@ namespace Raven.Database.Indexing
             if (parentDoc != null)
                 return parentDoc[name];
 
-            if (TryLoadParentDoc()) 
+            if (TryLoadParentDoc() == false) 
                 return result;
 
             return parentDoc[name];
@@ -66,11 +66,11 @@ namespace Raven.Database.Indexing
 	        object documentId = GetDocumentId() as string;
 	        if (documentId == null)
 	        {
-	            return true;
+	            return false;
 	        }
 
 	        parentDoc = retriever.Load(documentId);
-	        return false;
+	        return true;
 	    }
     }
 }
