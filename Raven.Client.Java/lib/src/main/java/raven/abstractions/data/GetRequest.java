@@ -7,20 +7,18 @@ import org.codehaus.jackson.annotate.JsonIgnore;
 
 public class GetRequest {
   private String url;
-  private Map<String, String> headers;
+  private Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
   private String query;
 
   public GetRequest() {
-    this.headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    //empty by design
   }
 
   public GetRequest(String url) {
-    super();
     this.url = url;
   }
 
   public GetRequest(String url, String query) {
-    super();
     this.url = url;
     this.query = query;
   }

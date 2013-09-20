@@ -1,6 +1,7 @@
 package raven.client.connection.profiling;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
@@ -20,6 +21,11 @@ public class RequestResultArgs extends EventArgs {
   private String postedData;
   private int httpResult;
   private String result;
+
+  public RequestResultArgs() {
+    at = new Date();
+    additionalInformation = new HashMap<String, String>();
+  }
 
   /**
    * Any additional information that might be required

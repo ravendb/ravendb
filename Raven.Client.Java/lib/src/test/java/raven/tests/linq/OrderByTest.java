@@ -9,6 +9,7 @@ import com.mysema.query.annotations.QueryEntity;
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
+import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.DocumentStore;
 
 public class OrderByTest extends RemoteClientTest {
@@ -89,9 +90,11 @@ public class OrderByTest extends RemoteClientTest {
           session.saveChanges();
         }
       }
+
       try (IDocumentSession session = store.openSession()) {
         QOrderByTest_Section x = QOrderByTest_Section.section;
         int lastPosition = session.query(Section.class)
+          .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
           .orderBy(x.position.asc())
           .select(x.position)
           .firstOrDefault();

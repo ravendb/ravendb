@@ -157,8 +157,6 @@ public interface LinqExtensionsQueryable<T> {
 
   //TODO: public static IRavenQueryable<TResult> ProjectFromIndexFieldsInto<TResult>(this IQueryable queryable)
 
-  //TODO: public static IRavenQueryable<TResult> AsProjection<TResult>(this IQueryable queryable)
-
   public SuggestionQueryResult suggest();
 
   public SuggestionQueryResult suggest(SuggestionQuery query);

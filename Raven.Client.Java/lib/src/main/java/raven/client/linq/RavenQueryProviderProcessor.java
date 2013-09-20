@@ -85,6 +85,11 @@ public class RavenQueryProviderProcessor<T> {
     requireOrderByToUseRange.add(long.class);
     requireOrderByToUseRange.add(float.class);
     requireOrderByToUseRange.add(double.class);
+    requireOrderByToUseRange.add(Integer.class);
+    requireOrderByToUseRange.add(Long.class);
+    requireOrderByToUseRange.add(Float.class);
+    requireOrderByToUseRange.add(Double.class);
+    requireOrderByToUseRange.add(Number.class);
   }
 
   /**

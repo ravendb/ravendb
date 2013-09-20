@@ -3,18 +3,22 @@ package raven.tests.linq;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
 import org.apache.commons.lang.time.DateUtils;
+import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.annotate.JsonProperty;
+import org.codehaus.jackson.map.JsonMappingException;
 import org.junit.After;
 import org.junit.Test;
 
 import com.mysema.query.annotations.QueryEntity;
 
+import raven.abstractions.extensions.JsonExtensions;
 import raven.client.IDocumentQuery;
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
@@ -50,9 +54,13 @@ public class WhereClauseTest {
   }
 
   @Test
-  public void willRespectRenames() {
+  public void willRespectRenames() throws JsonGenerationException, JsonMappingException, IOException {
     QWhereClauseTest_Renamed x = QWhereClauseTest_Renamed.renamed;
     String q = session.query(Renamed.class).where(x.name.eq("red")).toString();
+    Renamed r = new Renamed();
+    r.setName("N");
+    String valueAsString = JsonExtensions.getDefaultObjectMapper().writeValueAsString(r);
+    assertEquals("{\"Yellow\":\"N\"}", valueAsString);
     assertEquals("Yellow:red", q);
   }
 

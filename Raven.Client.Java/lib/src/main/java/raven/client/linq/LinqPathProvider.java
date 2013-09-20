@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
+import org.codehaus.jackson.annotate.JsonProperty;
 
 import raven.abstractions.basic.Reference;
 import raven.client.document.DocumentConvention;
@@ -134,7 +135,13 @@ public class LinqPathProvider {
   }
 
   public static String handlePropertyRenames(Path<?> member, String name) {
-    // TODO Auto-generated method stub
+    JsonProperty jsonProperty = member.getAnnotatedElement().getAnnotation(JsonProperty.class);
+    if (jsonProperty != null) {
+      String propertyName = jsonProperty.value();
+      if (StringUtils.isNotEmpty(propertyName)) {
+        return name.substring(0, name.length() - member.getMetadata().getName().length()) + propertyName;
+      }
+    }
     return name;
   }
 

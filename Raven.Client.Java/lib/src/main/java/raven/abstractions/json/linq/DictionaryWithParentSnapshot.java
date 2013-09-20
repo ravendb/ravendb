@@ -269,7 +269,7 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
       unsafeVal.value = getLocalChanges().get(key);
       if (DELETED_MARKER.equals(unsafeVal.value)) return false;
 
-      value = unsafeVal;
+      value.value = unsafeVal.value;
       return true;
     }
 
@@ -277,7 +277,7 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
       !parentSnapshot.tryGetValue(key, unsafeVal) ||
       DELETED_MARKER.equals(unsafeVal.value)) return false;
 
-    if (isSnapshot() && unsafeVal.value != null) {
+    if (!isSnapshot() && unsafeVal.value != null) {
       if (unsafeVal.value.isSnapshot() && JTokenType.OBJECT.equals(unsafeVal.value.getType()))
         unsafeVal.value.ensureCannotBeChangeAndEnableShapshotting();
     }

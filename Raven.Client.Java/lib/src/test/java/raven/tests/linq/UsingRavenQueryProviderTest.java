@@ -50,6 +50,7 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
         store.getDatabaseCommands().deleteIndex(indexName);
         store.getDatabaseCommands().putIndex(indexName, indexDefinitionBuilder, true);
         waitForAllRequestsToComplete();
+        waitForNonStaleIndexes(store.getDatabaseCommands());
 
         IRavenQueryable<User> allResults = session.query(User.class, indexName).orderBy(x.name.asc()).where(x.age.gt(0));
         assertEquals(4, allResults.toList().size());
@@ -190,6 +191,7 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
         store.getDatabaseCommands().deleteIndex(indexName);
         store.getDatabaseCommands().putIndex(indexName, indexDefinitionBuilder, true);
         waitForAllRequestsToComplete();
+        waitForNonStaleIndexes(store.getDatabaseCommands());
 
         IRavenQueryable<User> testQuery = session.query(User.class, indexName).where(x.name.eq("Matt").and(x.active));
         assertEquals(1, testQuery.toList().size());
@@ -253,6 +255,7 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
         store.getDatabaseCommands().deleteIndex(indexName);
         store.getDatabaseCommands().putIndex(indexName, indexDefinitionBuilder, true);
         waitForAllRequestsToComplete();
+        waitForNonStaleIndexes(store.getDatabaseCommands());
 
         assertEquals(3, session.query(User.class, indexName).toList().size());
 
