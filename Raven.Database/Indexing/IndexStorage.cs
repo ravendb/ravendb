@@ -670,6 +670,8 @@ namespace Raven.Database.Indexing
 				return;
 
 			IOExtensions.DeleteDirectory(dirOnDisk);
+
+			UpdateIndexMappingFile();
 		}
 
 		public void CreateIndexImplementation(IndexDefinition indexDefinition)
@@ -684,6 +686,8 @@ namespace Raven.Database.Indexing
 			    var directory = OpenOrCreateLuceneDirectory(indexDefinition);
 				return CreateIndexImplementation(indexDefinition, directory);
 			}, (s, index) => index);
+
+			UpdateIndexMappingFile();
 		}
 
 		private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
@@ -1059,6 +1063,21 @@ namespace Raven.Database.Indexing
 				Name = thisItem.Name,
 				Type = IndexChangeTypes.IndexDemotedToIdle
 			});
+		}
+
+		private void UpdateIndexMappingFile()
+		{
+			if(configuration.RunInMemory)
+				return;
+			
+			var sb = new StringBuilder();
+
+			foreach (var index in indexes)
+			{
+				sb.Append(string.Format("{0} - {1}{2}", index.Value.IndexId, index.Value.PublicName, Environment.NewLine));
+			}
+
+			File.WriteAllText(Path.Combine(path, "indexes.txt"), sb.ToString());
 		}
 
 		public void FlushMapIndexes()
