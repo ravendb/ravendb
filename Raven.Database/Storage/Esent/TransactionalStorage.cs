@@ -597,7 +597,9 @@ namespace Raven.Storage.Esent
         [CLSCompliant(false)]
         public void Batch(Action<IStorageActionsAccessor> action)
         {
-            if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
+	        var batchNestingAllowed = disableBatchNesting.Value == null;
+
+            if (disposerLock.IsReadLockHeld && batchNestingAllowed) // we are currently in a nested Batch call and allow to nest batches
             {
                 if (current.Value != null) // check again, just to be sure
                 {
@@ -612,7 +614,7 @@ namespace Raven.Storage.Esent
             disposerLock.EnterReadLock();
             try
             {
-                afterStorageCommit = ExecuteBatch(action, dtcTransactionContext.Value);
+				afterStorageCommit = ExecuteBatch(action, batchNestingAllowed ? dtcTransactionContext.Value : null);
 
 				if (dtcTransactionContext.Value != null)
 				{
