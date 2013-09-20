@@ -689,6 +689,13 @@ namespace Raven.Database
 			return exitSerialLock;
 		}
 
+        internal IDisposable TryPutSerialLock(int timeout)
+        {
+            if (Monitor.TryEnter(putSerialLock, timeout) == false)
+                return null;
+            return exitSerialLock;
+        }
+
 		public PutResult Put(string key, Guid? etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			workContext.DocsPerSecIncreaseBy(1);

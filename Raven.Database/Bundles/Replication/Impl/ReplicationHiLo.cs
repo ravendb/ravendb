@@ -41,7 +41,12 @@ namespace Raven.Bundles.Replication.Impl
 				{
 					if (current > currentMax.Value)
 					{
-						currentMax = new Hodler(GetNextMax());
+					    using (var tryPutSerialLock = Database.TryPutSerialLock(250))
+					    {
+                            if(tryPutSerialLock == null)
+                                continue;
+                            currentMax = new Hodler(GetNextMax());
+					    }
 					}
 					return Interlocked.Increment(ref current);
 				}
