@@ -15,8 +15,10 @@ import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.DocumentStore;
+import raven.querydsl.RavenString;
 
 import com.mysema.query.annotations.QueryEntity;
+import com.mysema.query.types.expr.Param;
 
 public class AnyTest extends RemoteClientTest {
 
@@ -59,8 +61,10 @@ public class AnyTest extends RemoteClientTest {
         otherDoc.setSomeProperty("foo");
 
         QAnyTest_TestDoc x = QAnyTest_TestDoc.testDoc;
+        
+        RavenString s = new RavenString("s");
 
-        TestDoc doc = session.query(TestDoc.class).where(x.stringArray.any().eq(otherDoc.someProperty)).firstOrDefault();
+        TestDoc doc = session.query(TestDoc.class).where(x.stringArray.any(s.eq(otherDoc.someProperty))).firstOrDefault();
 
         assertNotNull(doc);
         assertEquals(2, doc.stringArray.size());

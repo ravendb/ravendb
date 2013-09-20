@@ -31,9 +31,6 @@ import raven.client.document.DocumentQueryCustomiation;
 import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.IAbstractDocumentQuery;
 import raven.client.linq.LinqPathProvider.Result;
-import raven.querydsl.CollectionAnyVisitor;
-import raven.querydsl.StackBasedContext;
-import raven.tests.bugs.QUser;
 
 import com.google.common.collect.Lists;
 import com.mysema.codegen.StringUtils;
@@ -55,7 +52,6 @@ import com.mysema.query.types.expr.Param;
  *
  * @param <T>
  */
-//TODO: support for ANY
 public class RavenQueryProviderProcessor<T> {
   private Class<T> clazz;
   private final DocumentQueryCustomizationFactory customizeQuery;
@@ -249,6 +245,8 @@ public class RavenQueryProviderProcessor<T> {
       visitStartsWith(expression);
     } else if (expression.getOperator().equals(Ops.ENDS_WITH)) {
       visitEndsWith(expression);
+    } else if (expression.getOperator().equals(LinqOps.Query.ANY)) {
+      visitAny(expression);
     } else {
       throw new IllegalArgumentException("Expression is not supported: " + expression.getOperator());
     }
@@ -570,10 +568,16 @@ public class RavenQueryProviderProcessor<T> {
         return expressionInfo;
   }
 
-  private static Param<?> getParameterExpressionIncludingConvertions(Expression expression) {
+  private static Param<?> getParameterExpressionIncludingConvertions(Expression<?> expression) {
     if (expression instanceof ParamExpression){
       return (Param< ? >) expression;
+    } else if (expression instanceof Path) {
+      Path<?> path = (Path<?>) expression;
+      if (path.getMetadata().getParent() == null) {
+        return new Param<>(path.getType(), path.getMetadata().getName());
+      }
     }
+
     return null;
   }
 
@@ -738,8 +742,6 @@ public class RavenQueryProviderProcessor<T> {
 
       visitExpression(expression.getArg(0));
       visitSelect(expression);
-    } else if (operatorId.equals(LinqOps.Query.ANY.getId())) {
-      visitAny(expression);
     } else {
       throw new IllegalStateException("Unhandled expression: " + expression);
     }
@@ -1025,8 +1027,6 @@ public class RavenQueryProviderProcessor<T> {
     IDocumentQuery<T> q = queryGenerator.luceneQuery(clazz, indexName, isMapReduce);
     luceneQuery = (IAbstractDocumentQuery<T>) q;
 
-    expression = tranformAny(expression);
-
     visitExpression(expression);
     if (customizeQuery != null) {
       customizeQuery.customize(new DocumentQueryCustomiation((DocumentQuery< ? >) luceneQuery));
@@ -1049,13 +1049,7 @@ public class RavenQueryProviderProcessor<T> {
     return null; //TODO:
   }
 
-  private Expression< ? > tranformAny(Expression< ? > expression) {
-    CollectionAnyVisitor visitor = new CollectionAnyVisitor();
-    StackBasedContext context = new StackBasedContext();
-    Expression< ? > afterAny = expression.accept(visitor, context);
-    return afterAny;
-  }
-
+  @SuppressWarnings("unchecked")
   private <TProjection> Object executeQuery(Class<TProjection> projectionClass) {
     List<String> renamedFields = new ArrayList<>();
     outer:

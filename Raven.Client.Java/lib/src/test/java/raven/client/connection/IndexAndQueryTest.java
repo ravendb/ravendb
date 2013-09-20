@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
@@ -457,19 +458,19 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
 
   private void insertSampleCompaniesEmployees(IDatabaseCommands dbCommands) {
     Company c1 = new Company("1", "Coca Cola", Arrays.asList(
-        new Employee("John", new String[] {  }, new Date(), 100.0) )
+        new Employee("John", new ArrayList<String>(), new Date(), 100.0) )
         , "US", 5000 );
 
     Company c2 = new Company("2", "Twitter",  Arrays.asList(
-        new Employee("Mark", new String[] { "Java", "C#" }, new Date(), 100.0) ,
-        new Employee("Jonatan", new String[] { "Java"}, new Date(), 100.0) ,
-        new Employee("Greg", new String[] { "C#"}, new Date(), 100.0) )
+        new Employee("Mark", Arrays.asList( "Java", "C#" ), new Date(), 100.0) ,
+        new Employee("Jonatan", Arrays.asList( "Java"), new Date(), 100.0) ,
+        new Employee("Greg", Arrays.asList( "C#"), new Date(), 100.0) )
         , "US", 300);
 
     Company c3 = new Company("3", "Google",  Arrays.asList(
-        new Employee("Taylor", new String[] { "C#" }, new Date(), 100.0) ,
-        new Employee("Alice", new String[] { }, new Date(), 100.0) ,
-        new Employee("John", new String[] { "C#"}, new Date(), 100.0)
+        new Employee("Taylor", Arrays.asList( "C#" ), new Date(), 100.0) ,
+        new Employee("Alice", new ArrayList<String>(), new Date(), 100.0) ,
+        new Employee("John", Arrays.asList( "C#"), new Date(), 100.0)
         ), "US", 200000);
 
 

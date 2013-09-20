@@ -9,7 +9,6 @@ import org.junit.Test;
 
 import raven.client.IDocumentQueryCustomization;
 import raven.client.IDocumentSession;
-import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
 import raven.client.listeners.IDocumentQueryListener;

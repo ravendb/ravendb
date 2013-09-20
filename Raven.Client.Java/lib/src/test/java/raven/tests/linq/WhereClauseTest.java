@@ -22,7 +22,6 @@ import raven.client.document.DocumentQuery;
 import raven.client.document.DocumentStore;
 import raven.client.linq.IRavenQueryable;
 import raven.client.linq.RavenQueryInspector;
-import raven.tests.bugs.QUser;
 
 public class WhereClauseTest {
 
@@ -490,7 +489,8 @@ public class WhereClauseTest {
   public void canUnderstandSimpleAny_Dynamic() {
     RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspector();
     QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
-    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.properties.any().key.eq("first"));
+    QWhereClauseTest_UserProperty p = QWhereClauseTest_UserProperty.userProperty;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.properties.any(p.key.eq("first")));
     assertEquals("Properties,Key:first", q.toString());
   }
 
@@ -498,7 +498,8 @@ public class WhereClauseTest {
   public void canUnderstandSimpleAny_Static() {
     RavenQueryInspector<IndexedUser> indexedUsers = getRavenQueryInspectorStatic();
     QWhereClauseTest_IndexedUser user = QWhereClauseTest_IndexedUser.indexedUser;
-    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.properties.any().key.eq("first"));
+    QWhereClauseTest_UserProperty p = QWhereClauseTest_UserProperty.userProperty;
+    IRavenQueryable<IndexedUser> q = indexedUsers.where(user.properties.any(p.key.eq("first")));
     assertEquals("Properties_Key:first", q.toString());
   }
 

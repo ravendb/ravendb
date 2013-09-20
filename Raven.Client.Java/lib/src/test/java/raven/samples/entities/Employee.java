@@ -1,6 +1,7 @@
 package raven.samples.entities;
 
 import java.util.Date;
+import java.util.List;
 
 import com.mysema.query.annotations.QueryEntity;
 
@@ -10,7 +11,7 @@ public class Employee {
   public Employee() {
     super();
   }
-  public Employee(String name, String[] specialties, Date hiredAt, double hourlyRate) {
+  public Employee(String name, List<String> specialties, Date hiredAt, double hourlyRate) {
     super();
     this.name = name;
     this.specialties = specialties;
@@ -18,7 +19,7 @@ public class Employee {
     this.hourlyRate = hourlyRate;
   }
   private String name;
-  private String[] specialties;
+  private List<String> specialties;
   private Date hiredAt;
   private double hourlyRate;
   public String getName() {
@@ -27,10 +28,10 @@ public class Employee {
   public void setName(String name) {
     this.name = name;
   }
-  public String[] getSpecialties() {
+  public List<String> getSpecialties() {
     return specialties;
   }
-  public void setSpecialties(String[] specialties) {
+  public void setSpecialties(List<String> specialties) {
     this.specialties = specialties;
   }
   public Date getHiredAt() {
