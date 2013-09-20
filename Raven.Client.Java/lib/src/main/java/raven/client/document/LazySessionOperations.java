@@ -33,7 +33,7 @@ public class LazySessionOperations implements ILazySessionOperations {
    */
   @Override
   public ILazyLoaderWithInclude include(Path<?> path) {
-    return new LazyMultiLoaderWithInclude(delegate).lazyInclude(path);
+    return new LazyMultiLoaderWithInclude(delegate).include(path);
   }
 
   /**
@@ -141,7 +141,7 @@ public class LazySessionOperations implements ILazySessionOperations {
    * Begin a load while including the specified path
    */
   public ILazyLoaderWithInclude include(String path) {
-    return new LazyMultiLoaderWithInclude(delegate).lazyInclude(path);
+    return new LazyMultiLoaderWithInclude(delegate).include(path);
   }
 
   public <T> Lazy<T> load(Class<T> clazz, Number id) {

@@ -19,14 +19,14 @@ public interface ILazyLoaderWithInclude {
    * @param path
    * @return
    */
-  public ILazyLoaderWithInclude lazyInclude(String path);
+  public ILazyLoaderWithInclude include(String path);
 
   /**
    * Includes the specified path
    * @param path
    * @return
    */
-  public ILazyLoaderWithInclude lazyInclude(Path<?> path);
+  public ILazyLoaderWithInclude include(Path<?> path);
 
 
   /**
@@ -35,14 +35,14 @@ public interface ILazyLoaderWithInclude {
    * @param ids
    * @return
    */
-  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, String... ids);
+  public <TResult> Lazy<TResult[]> load(Class<TResult> clazz, String... ids);
 
   /**
    * Loads the specified ids.
    * @param ids
    * @return
    */
-  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, Collection<String> ids);
+  public <TResult> Lazy<TResult[]> load(Class<TResult> clazz, Collection<String> ids);
 
   /**
    * Loads the specified id.
@@ -50,7 +50,7 @@ public interface ILazyLoaderWithInclude {
    * @param id
    * @return
    */
-  public <TResult> Lazy<TResult> lazyLoad(Class<TResult> clazz, String id);
+  public <TResult> Lazy<TResult> load(Class<TResult> clazz, String id);
 
   /**
    * Loads the specified entity with the specified id after applying
@@ -64,7 +64,7 @@ public interface ILazyLoaderWithInclude {
    * @param id
    * @return
    */
-  public <TResult> Lazy<TResult> lazyLoad(Class<TResult> clazz, Number id);
+  public <TResult> Lazy<TResult> load(Class<TResult> clazz, Number id);
 
   /**
    * Loads the specified entity with the specified id after applying
@@ -78,7 +78,7 @@ public interface ILazyLoaderWithInclude {
    * @param id
    * @return
    */
-  public <TResult> Lazy<TResult> lazyLoad(Class<TResult> clazz, UUID id);
+  public <TResult> Lazy<TResult> load(Class<TResult> clazz, UUID id);
 
   /**
    * Loads the specified entities with the specified id after applying
@@ -91,7 +91,7 @@ public interface ILazyLoaderWithInclude {
    *
    * Or whatever your conventions specify.
    */
-  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, Number... ids);
+  public <TResult> Lazy<TResult[]> load(Class<TResult> clazz, Number... ids);
 
   /**
    * Loads the specified entities with the specified id after applying
@@ -104,6 +104,6 @@ public interface ILazyLoaderWithInclude {
    *
    * Or whatever your conventions specify.
    */
-  public <TResult> Lazy<TResult[]> lazyLoad(Class<TResult> clazz, UUID... ids);
+  public <TResult> Lazy<TResult[]> load(Class<TResult> clazz, UUID... ids);
 
 }

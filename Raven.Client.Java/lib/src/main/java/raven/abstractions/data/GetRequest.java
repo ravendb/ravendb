@@ -14,6 +14,17 @@ public class GetRequest {
     this.headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
   }
 
+  public GetRequest(String url) {
+    super();
+    this.url = url;
+  }
+
+  public GetRequest(String url, String query) {
+    super();
+    this.url = url;
+    this.query = query;
+  }
+
   public Map<String, String> getHeaders() {
     return headers;
   }
