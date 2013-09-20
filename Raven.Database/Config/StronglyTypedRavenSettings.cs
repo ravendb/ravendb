@@ -20,7 +20,7 @@ namespace Raven.Database.Config
 			this.settings = settings;
 		}
 
-		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
+		public void Setup(int defaultMaxIndexOutputsPerDocumentMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
@@ -40,7 +40,7 @@ namespace Raven.Database.Config
 			MaxIndexWritesBeforeRecreate =
 				new IntegerSetting(settings["Raven/MaxIndexWritesBeforeRecreate"], 256 * 1024);
 			MaxIndexOutputsPerDocument = 
-				new IntegerSetting(settings["Raven/MaxIndexOutputsPerDocument"], 5);
+				new IntegerSetting(settings["Raven/MaxIndexOutputsPerDocument"], 15);
 
 			MaxNumberOfItemsToIndexInSingleBatch =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"],
