@@ -15,7 +15,6 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.TimeZone;
 
 import org.apache.commons.lang.time.DateUtils;
 import org.junit.Test;
@@ -37,6 +36,7 @@ import raven.abstractions.exceptions.DocumentDoesNotExistsException;
 import raven.abstractions.indexing.FieldIndexing;
 import raven.abstractions.indexing.FieldStorage;
 import raven.abstractions.indexing.IndexDefinition;
+import raven.abstractions.indexing.SortOptions;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
@@ -61,8 +61,6 @@ import raven.tests.spatial.SpatialIndexTest;
 import raven.tests.spatial.SpatialIndexTestHelper;
 
 public class DocumentStoreServerTest extends RemoteClientTest {
-
-  //TODO can_create_index_using_linq_from_client_using_map_reduce(raven.tests.document.DocumentStoreServerTest): java.lang.RuntimeException: Waited for 15015ms for the query to return non stale result.
 
   @Test
   public void should_insert_into_db_and_set_id() throws Exception {
@@ -151,6 +149,7 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
       IndexDefinition indexDefinition = new IndexDefinition();
       indexDefinition.setMap("from company in docs.Companies select new { company.Name, company.Phone }");
+      indexDefinition.getSortOptions().put("Phone", SortOptions.INT);
       store.getDatabaseCommands().putIndex("CompaniesByName", indexDefinition);
 
       try (IDocumentSession session = store.openSession()) {
@@ -877,12 +876,13 @@ public class DocumentStoreServerTest extends RemoteClientTest {
         session.saveChanges();
 
         String companyId = company.getId();
-        IDocumentSession session2 = store.openSession();
-        Company companyFound = session2.load(Company.class, companyId);
-        companyFound.setName("New Name");
-        session2.saveChanges();
+        try (IDocumentSession session2 = store.openSession()) {
+          Company companyFound = session2.load(Company.class, companyId);
+          companyFound.setName("New Name");
+          session2.saveChanges();
+          assertEquals("New Name", session2.load(Company.class, companyId).getName());
+        }
 
-        assertEquals("New Name", session2.load(Company.class, companyId).getName());
       }
     }
   }
@@ -897,10 +897,11 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
         session.saveChanges();
 
-        IDocumentSession session2 = store.openSession();
-        List<Company> companyFound = session2.advanced().luceneQuery(Company.class).waitForNonStaleResults().toList();
+        try (IDocumentSession session2 = store.openSession()) {
+          List<Company> companyFound = session2.advanced().luceneQuery(Company.class).waitForNonStaleResults().toList();
+          assertEquals(2, companyFound.size());
+        }
 
-        assertEquals(2, companyFound.size());
 
       }
     }
@@ -1303,9 +1304,9 @@ public class DocumentStoreServerTest extends RemoteClientTest {
 
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       store.getDatabaseCommands().patch("Company/1", new PatchRequest[] {
-        new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
+          new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
       }, new PatchRequest[] {
-        new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("New"))
+          new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("New"))
       }, new RavenJObject());
 
       try (IDocumentSession session = store.openSession()) {
@@ -1320,12 +1321,12 @@ public class DocumentStoreServerTest extends RemoteClientTest {
   public void should_not_throw_when_ignore_missing_true() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       store.getDatabaseCommands().patch("Company/1", new PatchRequest[] {
-         new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
+          new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
       });
 
       store.getDatabaseCommands().patch("Company/1", new PatchRequest[] {
           new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
-       }, true);
+      }, true);
     }
   }
 
@@ -1333,12 +1334,12 @@ public class DocumentStoreServerTest extends RemoteClientTest {
   public void should_throw_when_ignore_missing_false() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       store.getDatabaseCommands().patch("Company/1", new PatchRequest[] {
-         new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
+          new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
       });
 
       store.getDatabaseCommands().patch("Company/1", new PatchRequest[] {
           new PatchRequest(PatchCommandType.SET, "Name", new RavenJValue("Existing"))
-       }, false);
+      }, false);
     }
   }
 
