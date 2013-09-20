@@ -100,6 +100,7 @@ namespace Raven.Database.Config
 			// Index settings
 			MaxIndexingRunLatency = ravenSettings.MaxIndexingRunLatency.Value;
 			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
+			MaxIndexOutputsPerDocument = ravenSettings.MaxIndexOutputsPerDocument.Value;
 
 			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
 
@@ -791,6 +792,13 @@ namespace Raven.Database.Config
 		public int AdditionalStepsForScriptBasedOnDocumentSize { get; set; }
 
 		public int MaxIndexWritesBeforeRecreate { get; set; }
+
+		/// <summary>
+		/// Limits the number of map outputs that an map-reduce index is allowed to create for a one source document. If a map operation applied to the one document
+		/// produces more outputs than this number then an index definition will be considered as a suspicious and the index will be disabled.
+		/// Default value: 5. In order to disable this check set value to -1.
+		/// </summary>
+		public int MaxIndexOutputsPerDocument { get; set; }
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
