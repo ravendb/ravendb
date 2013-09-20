@@ -8,10 +8,8 @@ import java.util.Arrays;
 import java.util.Date;
 
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.lang.time.FastDateFormat;
 import org.codehaus.jackson.JsonGenerator;
 
-import raven.abstractions.Default;
 import raven.abstractions.exceptions.JsonWriterException;
 import raven.abstractions.util.NetDateFormat;
 

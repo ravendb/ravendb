@@ -28,7 +28,6 @@ import org.codehaus.jackson.map.introspect.AnnotatedParameter;
 import org.codehaus.jackson.map.module.SimpleModule;
 import org.codehaus.jackson.map.ser.std.SerializerBase;
 
-import raven.abstractions.Default;
 import raven.abstractions.basic.SerializeUsingValue;
 import raven.abstractions.basic.SharpAwareJacksonAnnotationIntrospector;
 import raven.abstractions.data.Etag;

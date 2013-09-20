@@ -11,7 +11,6 @@ import org.junit.Test;
 
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.JsonDocument;
-import raven.abstractions.data.PutResult;
 import raven.abstractions.data.UuidType;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
@@ -46,7 +45,7 @@ public class ReplicationTest extends AbstractReplicationTest {
       Etag etag = new Etag();
       etag.setup(UuidType.DOCUMENTS, System.currentTimeMillis());
 
-      PutResult putResult = source.put("testVal1", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"), new RavenJObject());
+      source.put("testVal1", etag, RavenJObject.parse("{ \"key\" : \"val1\"}"), new RavenJObject());
       assertNotNull(result);
 
       JsonDocument jsonDocument = source.get("testVal1");

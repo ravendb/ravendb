@@ -30,7 +30,6 @@ import raven.client.connection.ReplicationInformer;
 import raven.client.connection.ServerClient;
 import raven.client.connection.implementation.HttpJsonRequestFactory;
 import raven.client.document.DocumentConvention;
-import raven.client.document.DocumentStore;
 import raven.client.listeners.IDocumentConflictListener;
 import raven.client.utils.UrlUtils;
 

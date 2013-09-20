@@ -2,9 +2,6 @@ package raven.abstractions.data;
 
 import java.util.Date;
 
-import org.apache.commons.lang.time.FastDateFormat;
-
-import raven.abstractions.Default;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.abstractions.util.NetDateFormat;

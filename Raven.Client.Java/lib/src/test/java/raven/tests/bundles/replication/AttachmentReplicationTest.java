@@ -109,7 +109,7 @@ public class AttachmentReplicationTest extends ReplicationBase {
 
     try {
       for (int i = 0; i < retriesCount; i++) {
-        Attachment attachment = store2.getDatabaseCommands().getAttachment("ayende");
+        store2.getDatabaseCommands().getAttachment("ayende");
         fail();
 
       }

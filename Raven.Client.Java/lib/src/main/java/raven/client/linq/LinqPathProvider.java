@@ -128,6 +128,10 @@ public class LinqPathProvider {
     List<String> items = new ArrayList<>();
 
     while (expression != null) {
+      if (expression.getMetadata().getPathType() == PathType.DELEGATE) {
+        expression = expression.getMetadata().getParent();
+        continue;
+      }
       items.add(0, StringUtils.capitalize(expression.getMetadata().getName()));
       expression = expression.getMetadata().getParent();
     }

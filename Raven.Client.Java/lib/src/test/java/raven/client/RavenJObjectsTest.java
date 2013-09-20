@@ -238,7 +238,7 @@ public class RavenJObjectsTest {
     obj.add("Id", new RavenJValue(5));
     obj.remove("Id");
     int count = 0;
-    for (Entry<String, RavenJToken> prop: obj) {
+    for (@SuppressWarnings("unused") Entry<String, RavenJToken> prop: obj) {
       count ++;
     }
     assertEquals(0, count);

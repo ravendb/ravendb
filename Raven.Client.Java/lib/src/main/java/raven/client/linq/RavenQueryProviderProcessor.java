@@ -561,8 +561,6 @@ public class RavenQueryProviderProcessor<T> {
     //for standard queries, we take just the last part. But for dynamic queries, we take the whole part
     result.setPath(result.getPath().substring(result.getPath().indexOf('.') + 1));
 
-    //TODO: result.Path = castingRemover.Replace(result.Path, ""); // removing cast remains
-
     //TODO:array length
     String propertyName = indexName == null  || indexName.toLowerCase().startsWith("dynamic/")
         ? queryGenerator.getConventions().getFindPropertyNameForDynamicIndex().apply(clazz, indexName, currentPath, result.getPath())

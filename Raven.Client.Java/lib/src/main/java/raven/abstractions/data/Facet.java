@@ -1,15 +1,11 @@
 package raven.abstractions.data;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.time.FastDateFormat;
 
-import raven.abstractions.Default;
-import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.indexing.NumberUtil;
 import raven.abstractions.util.NetDateFormat;
 import raven.abstractions.util.RavenQuery;
