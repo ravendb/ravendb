@@ -41,8 +41,8 @@ namespace Raven.Database.Storage.Voron.Impl
 	    public long StorageSizeInBytes
 	    {
 	        get
-	        {
-	            return env.StorageSizeInBytes;
+	        {//TODO : check with Oren if this is supposed to be not supported
+		        throw new NotSupportedException("fetching storage size in bytes is not supported in Voron");
 	        }
 	    }
 
@@ -55,7 +55,6 @@ namespace Raven.Database.Storage.Voron.Impl
 	            {"PageMaxSpace", persistanceSource.Pager.PageMaxSpace},
 	            {"PageMinSpace", persistanceSource.Pager.PageMinSpace},
 	            {"PageSize", persistanceSource.Pager.PageSize},
-	            {"StorageSizeInBytes", persistanceSource.Pager.StorageSizeInBytes},
                 {"Documents", GetEntriesCount(Documents)},
                 {"Indexes", GetEntriesCount(IndexingStats)},
                 {"Attachments", GetEntriesCount(Attachments)},
