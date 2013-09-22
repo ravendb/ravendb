@@ -1,7 +1,8 @@
 ﻿namespace Voron.Impl
 {
 	using System;
-	using Trees;
+
+	using Voron.Trees;
 
 	public class SnapshotReader : IDisposable
 	{
@@ -15,21 +16,9 @@
 
 		public Transaction Transaction { get; private set; }
 
-		public ReadResult Read(string treeName, Slice key, WriteBatch writeBatch = null)
+		public ReadResult Read(string treeName, Slice key)
 		{
-		    if (writeBatch != null)
-		    {
-		        var addedValues = writeBatch.GetAddedValues(treeName);
-		        var deletedValues = writeBatch.GetDeletedValues(treeName);
-
-		        if (deletedValues.ContainsKey(key))
-		            return null;
-
-		        if (addedValues.ContainsKey(key))
-                    return addedValues[key];
-		    }
-
-		    var tree = GetTree(treeName);
+			var tree = GetTree(treeName);
 			return tree.Read(Transaction, key);
 		}
 
@@ -39,47 +28,16 @@
 			return tree.GetDataSize(Transaction, key);
 		}
 
-		public bool Contains(string treeName, Slice key, WriteBatch writeBatch = null)
+		public ushort ReadVersion(string treeName, Slice key)
 		{
-			if (writeBatch != null)
-			{
-				var addedValues = writeBatch.GetAddedValues(treeName);
-				var deletedValues = writeBatch.GetDeletedValues(treeName);
-
-				if (deletedValues.ContainsKey(key))
-					return false;
-
-				if (addedValues.ContainsKey(key))
-					return true;
-			}
-
 			var tree = GetTree(treeName);
-			return tree.ReadVersion(Transaction, key) > 0;			
-
-		}
-
-        public ushort ReadVersion(string treeName, Slice key, WriteBatch writeBatch = null)
-		{
-            if (writeBatch != null)
-            {
-                var addedValues = writeBatch.GetAddedValues(treeName);
-                var deletedValues = writeBatch.GetDeletedValues(treeName);
-
-                if (deletedValues.ContainsKey(key))
-                    return 0;
-
-                if (addedValues.ContainsKey(key))
-                    return (addedValues[key].Version == 0) ? (ushort)0 : (ushort)(addedValues[key].Version + 1); 
-            }
-
-            var tree = GetTree(treeName);
 			return tree.ReadVersion(Transaction, key);
 		}
 
-        public IIterator Iterate(string treeName, WriteBatch writeBatch = null)
+		public TreeIterator Iterate(string treeName)
 		{
 			var tree = GetTree(treeName);
-			return tree.Iterate(Transaction,writeBatch);
+			return tree.Iterate(Transaction);
 		}
 
 		public void Dispose()
@@ -87,7 +45,7 @@
 			Transaction.Dispose();
 		}
 
-        public IIterator MultiRead(string treeName, Slice key)
+		public IIterator MultiRead(string treeName, Slice key)
 		{
 			var tree = GetTree(treeName);
 			return tree.MultiRead(Transaction, key);

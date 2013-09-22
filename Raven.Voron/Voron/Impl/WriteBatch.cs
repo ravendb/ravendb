@@ -26,36 +26,11 @@
 			}
 		}
 
-	    public Dictionary<Slice, ReadResult> GetAddedValues(string treeName)
-	    {
-	        return GetItemsByOperationTypeAndTreeName(BatchOperationType.Add,treeName);
-	    }
-
-        public Dictionary<Slice, ReadResult> GetAddedMultiValues(string treeName)
-	    {
-	        return GetItemsByOperationTypeAndTreeName(BatchOperationType.MultiAdd, treeName);
-	    }
-
-        public Dictionary<Slice, ReadResult> GetDeletedValues(string treeName)
-	    {
-	        return GetItemsByOperationTypeAndTreeName(BatchOperationType.Delete, treeName);
-	    }
-
-        public Dictionary<Slice, ReadResult> GetDeletedMultiValues(string treeName)
-	    {
-	        return GetItemsByOperationTypeAndTreeName(BatchOperationType.MultiDelete, treeName);
-	    }
-
-	    public WriteBatch()
+		public WriteBatch()
 		{
 			_operations = new List<BatchOperation>();
 		}
 
-	    public bool ContainsChangedValue(Slice key, BatchOperationType operationType)
-	    {
-	        return _operations.Any(operation => operation.Key.Equals(key) && operation.Type == operationType);
-	    }
-	   
 		public void Add(Slice key, Stream value, string treeName, ushort? version = null)
 		{
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
@@ -176,12 +151,5 @@
 					disposable.Dispose();
 			}
 		}
-
-        private Dictionary<Slice, ReadResult> GetItemsByOperationTypeAndTreeName(BatchOperationType operationType, string treeName)
-        {
-            return _operations.Where(operation => operation.Type == operationType && operation.TreeName == treeName)
-                              .ToDictionary(operation => operation.Key, operation => new ReadResult(operation.Value as Stream,operation.Version ?? 0));
-        }
-
 	}
 }

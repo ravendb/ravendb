@@ -12,8 +12,6 @@
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
-    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
-    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -38,12 +36,6 @@
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject />
-  </PropertyGroup>
-  <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
-  <PropertyGroup>
-    <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -72,7 +64,6 @@
     <Compile Include="Impl\WriteBatch.cs" />
     <Compile Include="ReadResult.cs" />
     <Compile Include="TransactionFlags.cs" />
-    <Compile Include="Trees\CombinedIterator.cs" />
     <Compile Include="Trees\Cursor.cs" />
     <Compile Include="Debugging\DebugStuff.cs" />
     <Compile Include="Impl\NativeMethods.cs" />
@@ -100,7 +91,16 @@
     <Compile Include="Trees\TreeRebalancer.cs" />
     <Compile Include="Util\UnmanagedBits.cs" />
   </ItemGroup>
-  <ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
+<<<<<<< .mine
     <None Include="RavenDB.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
@@ -113,3 +113,17 @@
   </Target>
   -->
 </Project>
+=======
+
+
+
+
+
+
+
+
+
+
+
+
+>>>>>>> .theirs

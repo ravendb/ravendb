@@ -51,7 +51,6 @@ namespace Voron.Impl
         public abstract void Flush(List<long> sortedPagesToFlush);
         public abstract void Flush(long headerPageId);
         public abstract void Sync();
-        public abstract long StorageSizeInBytes { get; }
 
         public virtual PagerState TransactionBegan()
         {
