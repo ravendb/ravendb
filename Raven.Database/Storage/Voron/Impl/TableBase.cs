@@ -70,7 +70,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public virtual IIterator Iterate(SnapshotReader snapshot,WriteBatch writeBatch)
 		{
-			throw new NotSupportedException("iteration with write batch currently not supported");
+			return snapshot.Iterate(TableName);
 		}
 
 		public bool Contains(SnapshotReader snapshot, Slice key, WriteBatch writeBatch)

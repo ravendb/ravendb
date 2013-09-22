@@ -90,6 +90,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 try
                 {
                     data.CopyTo(tempMemoryStream);
+	                tempMemoryStream.Position = 0;
                     attachmentsTable.Add(writeBatch, dataKey, tempMemoryStream);
                 }
                 finally

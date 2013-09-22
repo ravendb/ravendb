@@ -38,7 +38,7 @@
 				_pendingWrites.Enqueue(mine);
 
 				//await _semaphore.WaitAsync();
-				_semaphore.Wait();
+				_semaphore.Wait(); //await async method = sync method
 
 				HandleActualWrites(mine);
 			}
