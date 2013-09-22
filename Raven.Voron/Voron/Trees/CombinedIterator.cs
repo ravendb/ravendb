@@ -39,7 +39,7 @@ namespace Voron.Trees
             if (treeIterator == null) throw new ArgumentNullException("treeIterator");
 
             if (addedValues.Values.Any(readResult => !readResult.Stream.CanSeek))
-                throw new ArgumentException("One or more of streams in added values does not support seek. Cannot create iterator");
+                throw new ArgumentException("One or more of streams in added values does not support seeking. Cannot create iterator");
 
             alreadyIteratedKeys = new HashSet<Slice>();
             _addedValues = addedValues;

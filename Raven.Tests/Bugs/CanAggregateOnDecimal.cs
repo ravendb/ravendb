@@ -4,6 +4,7 @@ using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
 using Raven.Client.Linq;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
@@ -78,10 +79,12 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		[Fact]
-		public void Reduce()
+		[Theory]
+		[InlineData("voron")]
+//		[InlineData("esent")]
+		public void Reduce(string storageName)
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage:storageName))
 			{
 				new DecimalAggregation_Reduce().Execute(store);
 				using (var session = store.OpenSession())
@@ -101,6 +104,7 @@ namespace Raven.Tests.Bugs
 				}
 				WaitForIndexing(store);
 				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
+				var stats = store.DatabaseCommands.GetStatistics();
 				using (var session = store.OpenSession())
 				{
 					var bankTotal = session.Query<BankTotal, DecimalAggregation_Reduce>()

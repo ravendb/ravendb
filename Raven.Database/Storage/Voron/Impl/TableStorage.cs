@@ -36,15 +36,7 @@ namespace Raven.Database.Storage.Voron.Impl
             if (!outputStream.CanWrite) throw new ArgumentException("must be writable stream","outputStream");
 
 	        env.Backup(outputStream);
-	    }
-
-	    public long StorageSizeInBytes
-	    {
-	        get
-	        {//TODO : check with Oren if this is supposed to be not supported
-		        throw new NotSupportedException("fetching storage size in bytes is not supported in Voron");
-	        }
-	    }
+	    }	  
 
 	    internal Dictionary<string, object> GenerateReportOnStorage()
 	    {
