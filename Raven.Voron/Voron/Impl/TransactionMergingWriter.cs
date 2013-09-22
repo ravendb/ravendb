@@ -37,7 +37,8 @@
 				var mine = new OutstandingWrite(batch);
 				_pendingWrites.Enqueue(mine);
 
-				await _semaphore.WaitAsync();
+				//await _semaphore.WaitAsync();
+				_semaphore.Wait();
 
 				HandleActualWrites(mine);
 			}

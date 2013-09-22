@@ -202,8 +202,7 @@ namespace Raven.Storage.Voron
 
 		public long GetDatabaseSizeInBytes()
 		{
-		    Debug.Assert(tableStorage != null, "tableStorage should not be null"); //uneasy to leave this without some kind of a check
-		    return tableStorage.StorageSizeInBytes;
+			throw new NotSupportedException("Database size fetching is not supported in Voron");
 		}
 
 	    public long GetDatabaseCacheSizeInBytes()

@@ -36,15 +36,7 @@ namespace Raven.Database.Storage.Voron.Impl
             if (!outputStream.CanWrite) throw new ArgumentException("must be writable stream","outputStream");
 
 	        env.Backup(outputStream);
-	    }
-
-	    public long StorageSizeInBytes
-	    {
-	        get
-	        {
-	            return env.StorageSizeInBytes;
-	        }
-	    }
+	    }	  
 
 	    internal Dictionary<string, object> GenerateReportOnStorage()
 	    {
@@ -55,7 +47,6 @@ namespace Raven.Database.Storage.Voron.Impl
 	            {"PageMaxSpace", persistanceSource.Pager.PageMaxSpace},
 	            {"PageMinSpace", persistanceSource.Pager.PageMinSpace},
 	            {"PageSize", persistanceSource.Pager.PageSize},
-	            {"StorageSizeInBytes", persistanceSource.Pager.StorageSizeInBytes},
                 {"Documents", GetEntriesCount(Documents)},
                 {"Indexes", GetEntriesCount(IndexingStats)},
                 {"Attachments", GetEntriesCount(Attachments)},
