@@ -13,7 +13,6 @@ namespace Voron.Impl
 
         Page TempPage { get; }
 
-        long StorageSizeInBytes { get; }
         long NumberOfAllocatedPages { get; }
         int PageSize { get; }
         int MaxNodeSize { get; }
@@ -26,6 +25,7 @@ namespace Voron.Impl
 	    void Sync();
 
         PagerState TransactionBegan();
+
         void EnsureContinious(Transaction tx, long requestedPageNumber, int pageCount);
     }
 }

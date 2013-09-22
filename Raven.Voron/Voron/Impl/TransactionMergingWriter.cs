@@ -27,6 +27,22 @@
 			_semaphore = new SemaphoreSlim(1, 1);
 		}
 
+		public async Task WriteAsync(WriteBatch batch)
+		{
+			if (batch.Operations.Count == 0)
+				return;
+
+			using (batch)
+			{
+				var mine = new OutstandingWrite(batch);
+				_pendingWrites.Enqueue(mine);
+
+				await _semaphore.WaitAsync();
+
+				HandleActualWrites(mine);
+			}
+		}
+
 		public void Write(WriteBatch batch)
 		{
 			if (batch.Operations.Count == 0)
