@@ -136,7 +136,6 @@ namespace Raven.Database.Indexing
                 }
             });
 
-            var dic = context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex;
 
             IDictionary<string, HashSet<string>> result;
             while (allReferencedDocs.TryDequeue(out result))
