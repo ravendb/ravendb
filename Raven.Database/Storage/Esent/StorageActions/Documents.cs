@@ -269,11 +269,25 @@ namespace Raven.Storage.Esent.StorageActions
 			preTouchEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 			Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			afterTouchEtag = newEtag;
-			using (var update = new Update(session, Documents, JET_prep.Replace))
-			{
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
-				update.Save();
-			}
+		    try
+		    {
+		        using (var update = new Update(session, Documents, JET_prep.Replace))
+		        {
+		            Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
+		            update.Save();
+		        }
+		    }
+		    catch (EsentErrorException e)
+		    {
+		        switch (e.Error)
+		        {
+		            case JET_err.WriteConflict:
+                    case JET_err.WriteConflictPrimaryIndex:
+		                throw new ConcurrencyException("Cannot touch document " + key + " because it is already modified");
+                    default:
+		                throw;
+		        }
+		    }
 
 			etagTouches.Add(preTouchEtag, afterTouchEtag);
 		}
