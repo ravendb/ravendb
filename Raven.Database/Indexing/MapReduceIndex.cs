@@ -99,6 +99,29 @@ namespace Raven.Database.Indexing
             if (documentsWrapped.Count > 0)
                 actions.MapReduce.UpdateRemovedMapReduceStats(indexId, deleted);
 
+		public override void IndexDocuments(
+			AbstractViewGenerator viewGenerator,
+			IndexingBatch batch,
+			IStorageActionsAccessor actions,
+			DateTime minimumTimestamp)
+		{
+			var count = 0;
+			var sourceCount = 0;
+			var sw = Stopwatch.StartNew();
+			var start = SystemTime.UtcNow;
+			var deleted = new Dictionary<ReduceKeyAndBucket, int>();
+			RecordCurrentBatch("Current Map", batch.Docs.Count);
+			var documentsWrapped = batch.Docs.Select(doc =>
+			{
+				sourceCount++;
+				var documentId = doc.__document_id;
+				actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, name, deleted);
+				return doc;
+			})
+				.Where(x => x is FilteredDocument == false)
+				.ToList();
+			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
+            var missingReferencedDocs = new ConcurrentQueue<HashSet<string>>();
             var allState = new ConcurrentQueue<Tuple<HashSet<ReduceKeyAndBucket>, IndexingWorkStats, Dictionary<string, int>>>();
             BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, partition =>
             {
@@ -137,20 +160,9 @@ namespace Raven.Database.Indexing
             });
 
 
-            IDictionary<string, HashSet<string>> result;
-            while (allReferencedDocs.TryDequeue(out result))
-            {
-                foreach (var referencedDocument in result)
-                {
-                    actions.Indexing.UpdateDocumentReferences(indexId, referencedDocument.Key, referencedDocument.Value);
-                    actions.General.MaybePulseTransaction();
-                    foreach (var childDocumentKey in referencedDocument.Value)
-                    {
-                        dic.GetOrAdd(childDocumentKey, (s => new ConcurrentBag<string>())).Add(referencedDocument.Key);
-                    }
-                }
-            }
-
+			
+			UpdateDocumentReferences(actions, allReferencedDocs, missingReferencedDocs);
+           
             var changed = allState.SelectMany(x => x.Item1).Concat(deleted.Keys)
                     .Distinct()
                     .ToList();
@@ -193,12 +205,13 @@ namespace Raven.Database.Indexing
             logIndexing.Debug("Mapped {0} documents for {1}", count, indexId);
         }
 
-        private int ProcessBatch(AbstractViewGenerator viewGenerator, List<object> currentDocumentResults, string currentKey, HashSet<ReduceKeyAndBucket> changes,
-            IStorageActionsAccessor actions,
-            IDictionary<string, int> statsPerKey)
-        {
-            if (currentKey == null || currentDocumentResults.Count == 0)
-                return 0;
+		private int ProcessBatch(AbstractViewGenerator viewGenerator, List<object> currentDocumentResults, string currentKey, HashSet<ReduceKeyAndBucket> changes,
+			IStorageActionsAccessor actions,
+			IDictionary<string, int> statsPerKey)
+		{
+			if (currentKey == null || currentDocumentResults.Count == 0)
+				return 0;
+       
 
             int count = 0;
             var results = RobustEnumerationReduceDuringMapPhase(currentDocumentResults.GetEnumerator(), viewGenerator.ReduceDefinition);

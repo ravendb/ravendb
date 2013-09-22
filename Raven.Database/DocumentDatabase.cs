@@ -888,7 +888,15 @@ namespace Raven.Database
             {
                 Etag preTouchEtag;
                 Etag afterTouchEtag;
-                actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+                try
+                {
+                    actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+                }
+                catch (ConcurrencyException)
+                {
+                    continue;
+                }
+
                 if (preTouchEtag == null || afterTouchEtag == null)
                     continue;
 

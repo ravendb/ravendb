@@ -833,6 +833,7 @@
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
+    <Compile Include="Tasks\TouchMissingReferenceDocumentTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
     <Compile Include="Util\OutputTicker.cs" />
