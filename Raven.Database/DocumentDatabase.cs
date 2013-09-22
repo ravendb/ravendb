@@ -826,7 +826,6 @@ namespace Raven.Database
                                 }, metadata);
                             });
 
-                        ScheduleDocumentsForReindexIfNeeded(key);
                         workContext.ShouldNotifyAboutWork(() => "PUT " + key);
                     }
                     else
@@ -1072,37 +1071,12 @@ namespace Raven.Database
                         deleted = doc != null;
                     }
 
-                    ScheduleDocumentsForReindexIfNeeded(key);
                     workContext.ShouldNotifyAboutWork(() => "DEL " + key);
                 });
 
                 metadata = metadataVar;
                 return deleted;
             }
-        }
-
-        private void ScheduleDocumentsForReindexIfNeeded(string key)
-        {
-            log.Debug("[Document Reindexing] DocumentDatabase::ScheduleDocumentsForReindexIfNeeded() started (key = {0})",key);
-
-            bool wasKeyEnqueued = false;
-            var queue = workContext.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex;
-            if (queue != null)
-            {
-                log.Debug("[Document Reindexing] workContext.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex is not null, key enqueued (key = {0})", key);
-                wasKeyEnqueued = true;
-                queue.Enqueue(key);
-            }
-
-            queue = workContext.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex;
-            if (queue != null)
-            {
-                log.Debug("[Document Reindexing] workContext.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex is not null, key enqueued (key = {0})", key);
-                wasKeyEnqueued = true;
-                queue.Enqueue(key);
-            }
-
-            if (!wasKeyEnqueued) log.Debug("[Document Reindexing] DocumentDatabase::ScheduleDocumentsForReindexIfNeeded() finished without key enqueue (key = {0})", key);
         }
 
         public bool HasTransaction(string txId)
@@ -2427,8 +2401,6 @@ namespace Raven.Database
 	                    {
 							RemoveReservedProperties(doc.DataAsJson);
 							RemoveMetadataReservedProperties(doc.Metadata);                                                       
-
-                            ScheduleDocumentsForReindexIfNeeded(doc.Key);
 
 							if (options.CheckReferencesInIndexes)
 								keys.Add(doc.Key);

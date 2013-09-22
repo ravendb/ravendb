@@ -41,17 +41,16 @@ namespace Raven.Tests.Indexes
 					var results = session.Query<EmailIndexDoc, EmailIndex>().Count(e => e.Body.StartsWith("MessageBody"));
 				    try
 				    {
-                        Assert.Equal(results, iterations);
+                        Assert.Equal(iterations, results);
 				    }
-				    catch (AssertException)
+				    catch (Exception ex)
 				    {
                         var missingDocs = session.Query<EmailIndexDoc, EmailIndex>().AsProjection<EmailIndexDoc>()
                                                                                     .Where(e => !e.Body.StartsWith("MessageBody"))
                                                                                     .ToList();
                         Console.WriteLine(string.Join(", ", missingDocs.Select(doc => doc.Id).ToArray()));
-				        Console.Beep();
-				        Console.ReadLine();
-                        Environment.Exit(0);
+				        Console.WriteLine(ex.Message);
+				        throw;
 				    }
 				}
 			}

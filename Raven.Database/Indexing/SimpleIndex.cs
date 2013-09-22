@@ -137,17 +137,13 @@ namespace Raven.Database.Indexing
                         }
                     });
 
-                    var dic = context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex;
                     IDictionary<string, HashSet<string>> result;
                     while (allReferencedDocs.TryDequeue(out result))
                     {
                         foreach (var referencedDocument in result)
                         {
                             actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
-                            foreach (var childDocumentKey in referencedDocument.Value)
-                            {
-                                dic.GetOrAdd(childDocumentKey, k => new ConcurrentBag<string>()).Add(referencedDocument.Key);
-                            }
+                            actions.General.MaybePulseTransaction();
                         }
                     }
 

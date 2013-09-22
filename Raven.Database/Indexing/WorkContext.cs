@@ -41,8 +41,6 @@ namespace Raven.Database.Indexing
 
 	    public WorkContext()
 	    {
-            ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex = new ConcurrentDictionary<string, ConcurrentBag<string>>();
-            ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex = new ConcurrentDictionary<string, ConcurrentBag<string>>();
             CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>(StringComparer.OrdinalIgnoreCase);
 	    }
 
@@ -70,15 +68,6 @@ namespace Raven.Database.Indexing
 
         //collection that holds information about currently running queries, in the form of [Index name -> (When query started,IndexQuery data)]
         public ConcurrentDictionary<string,ConcurrentSet<ExecutingQueryInfo>> CurrentlyRunningQueries { get; private set; }
-
-        public ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex { get; private set; }
-        public ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex { get; private set; }
-
-        /// <summary>
-        /// holds keys of documents that need to be reindexed - since they were added/updated/deleted
-        /// </summary>
-        public ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress_SimpleIndex { get; set; }
-        public ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress_ReduceIndex { get; set; }
 
 		public InMemoryRavenConfiguration Configuration { get; set; }
 		public IndexStorage IndexStorage { get; set; }

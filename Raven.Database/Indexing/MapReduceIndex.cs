@@ -133,7 +133,6 @@ namespace Raven.Database.Indexing
 				}
 			});
 
-            var dic = context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex;
 
 			IDictionary<string, HashSet<string>> result;
 			while (allReferencedDocs.TryDequeue(out result))
@@ -142,10 +141,6 @@ namespace Raven.Database.Indexing
 				{
 					actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
 					actions.General.MaybePulseTransaction();
-                    foreach (var childDocumentKey in referencedDocument.Value)
-                    {
-                        dic.GetOrAdd(childDocumentKey, (s =>new ConcurrentBag<string>())).Add(referencedDocument.Key);
-                    }
 				}
 			}
 
