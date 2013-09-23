@@ -96,7 +96,7 @@
 					{ "timestamp", SystemTime.UtcNow }
 				}, 0);
 
-			mappedResultsData.Add(writeBatch, idAsString, ms, 0);
+			mappedResultsData.Add(writeBatch, idAsString, ms.ToArray(), 0);
 
 			mappedResultsByViewAndDocumentId.MultiAdd(writeBatch, CreateKey(view, docId), idAsString);
 			mappedResultsByView.MultiAdd(writeBatch, view, idAsString);
@@ -118,6 +118,23 @@
 			AddReduceKeyCount(key, view, reduceKey, newValue, version);
 		}
 
+		private void DecrementReduceKeyCounter(string view, string reduceKey, int val)
+		{
+			var key = CreateKey(view, reduceKey);
+
+			ushort version;
+			var value = LoadJson(tableStorage.ReduceKeyCounts, key, out version);
+
+			var newValue = -val;
+			if (value != null)
+				newValue += value.Value<int>("mappedItemsCount");
+
+			if (newValue > 0)
+				AddReduceKeyCount(key, view, reduceKey, newValue, version);
+			else
+				DeleteReduceKeyCount(key, view, version);
+		}
+
 		public void DeleteMappedResultsForDocumentId(string documentId, string view, Dictionary<ReduceKeyAndBucket, int> removed)
 		{
 			var viewAndDocumentId = CreateKey(view, documentId);
@@ -130,12 +147,14 @@
 
 				do
 				{
+					var id = iterator.CurrentKey.Clone();
+
 					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.MappedResults, id, out version);
 					var reduceKey = value.Value<string>("reduceKey");
 					var bucket = value.Value<int>("bucket");
 
-					DeleteMappedResult(iterator.CurrentKey, view, documentId, reduceKey, bucket.ToString(CultureInfo.InvariantCulture));
+					DeleteMappedResult(id, view, documentId, reduceKey, bucket.ToString(CultureInfo.InvariantCulture));
 
 					var reduceKeyAndBucket = new ReduceKeyAndBucket(bucket, reduceKey);
 					removed[reduceKeyAndBucket] = removed.GetOrDefault(reduceKeyAndBucket) + 1;
@@ -146,15 +165,9 @@
 
 		public void UpdateRemovedMapReduceStats(string view, Dictionary<ReduceKeyAndBucket, int> removed)
 		{
-			var statsByKey = new Dictionary<string, int>();
-			foreach (var reduceKeyAndBucket in removed)
+			foreach (var keyAndBucket in removed)
 			{
-				statsByKey[reduceKeyAndBucket.Key.ReduceKey] = statsByKey.GetOrDefault(reduceKeyAndBucket.Key.ReduceKey) - reduceKeyAndBucket.Value;
-			}
-
-			foreach (var reduceKeyStat in statsByKey)
-			{
-				IncrementReduceKeyCounter(view, reduceKeyStat.Key, reduceKeyStat.Value);
+				DecrementReduceKeyCounter(view, keyAndBucket.Key.ReduceKey, keyAndBucket.Value);
 			}
 		}
 
@@ -618,6 +631,14 @@
 			AddReduceKeyType(key, view, reduceKey, reduceType, version);
 		}
 
+		private void DeleteReduceKeyCount(string key, string view, ushort? expectedVersion)
+		{
+			var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
+
+			tableStorage.ReduceKeyCounts.Delete(writeBatch, key, expectedVersion);
+			reduceKeyCountsByView.MultiDelete(writeBatch, view, key);
+		}
+
 		private void AddReduceKeyCount(string key, string view, string reduceKey, int count, ushort? expectedVersion)
 		{
 			var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
@@ -719,7 +740,15 @@
 						var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
 						var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
-						yield return ConvertToMappedResultInfo(iterator.CurrentKey, value, size, loadData, mappedResultsData);
+						yield return new MappedResultInfo
+						{
+							Bucket = value.Value<int>("bucket"),
+							ReduceKey = value.Value<string>("reduceKey"),
+							Etag = Etag.Parse(value.Value<byte[]>("etag")),
+							Timestamp = value.Value<DateTime>("timestamp"),
+							Data = loadData ? LoadMappedResult(iterator.CurrentKey, value, mappedResultsData) : null,
+							Size = size
+						};
 					}
 					while (iterator.MoveNext());
 				}

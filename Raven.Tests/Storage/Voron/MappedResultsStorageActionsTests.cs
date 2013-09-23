@@ -5,8 +5,11 @@
 // -----------------------------------------------------------------------
 namespace Raven.Tests.Storage.Voron
 {
+	using System;
+	using System.Collections.Generic;
 	using System.Linq;
 
+	using Raven.Abstractions.Data;
 	using Raven.Database.Storage;
 	using Raven.Json.Linq;
 
@@ -330,7 +333,213 @@ namespace Raven.Tests.Storage.Voron
 		[PropertyData("Storages")]
 		public void PutMappedResult(string requestedStorage)
 		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(x => x.MapReduce.PutMappedResult("view1", "doc1", "reduceKey1", new RavenJObject { { "data", "data1" } }));
 
+				storage.Batch(x =>
+				{
+					var results = x.MapReduce
+						.GetMappedResults("view1", new List<string> { "reduceKey1" }, true)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+
+					var result = results[0];
+					Assert.NotEqual(Etag.InvalidEtag, result.Etag);
+					Assert.Equal("reduceKey1", result.ReduceKey);
+					Assert.True(result.Size > 0);
+					Assert.Null(result.Source);
+					Assert.True((DateTime.UtcNow - result.Timestamp).TotalMilliseconds < 100);
+					Assert.Equal("data1", result.Data["data"]);
+				});
+
+				storage.Batch(x => x.MapReduce.PutMappedResult("view1", "doc1", "reduceKey1", new RavenJObject { { "data", "data2" } }));
+
+				storage.Batch(x =>
+				{
+					var results = x.MapReduce
+						.GetMappedResults("view1", new List<string> { "reduceKey1" }, true)
+						.ToList();
+
+					Assert.Equal(2, results.Count);
+
+					var result1 = results[0];
+					Assert.NotEqual(Etag.InvalidEtag, result1.Etag);
+					Assert.Equal("reduceKey1", result1.ReduceKey);
+					Assert.True(result1.Size > 0);
+					Assert.Null(result1.Source);
+					Assert.True((DateTime.UtcNow - result1.Timestamp).TotalMilliseconds < 100);
+					Assert.Equal("data1", result1.Data["data"]);
+
+					var result2 = results[1];
+					Assert.NotEqual(Etag.InvalidEtag, result2.Etag);
+					Assert.Equal("reduceKey1", result2.ReduceKey);
+					Assert.True(result2.Size > 0);
+					Assert.Null(result2.Source);
+					Assert.True((DateTime.UtcNow - result2.Timestamp).TotalMilliseconds < 100);
+					Assert.Equal("data2", result2.Data["data"]);
+				});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void DeleteMappedResultsForDocumentId(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(x =>
+				{
+					var removed = new Dictionary<ReduceKeyAndBucket, int>();
+					x.MapReduce.DeleteMappedResultsForDocumentId("doc1", "view1", removed);
+
+					Assert.Equal(0, removed.Count);
+				});
+
+				storage.Batch(x => x.MapReduce.PutMappedResult("view1", "doc1", "reduceKey1", new RavenJObject { { "data", "data1" } }));
+				storage.Batch(
+					x =>
+					{
+						var results = x.MapReduce
+							.GetMappedResults("view1", new List<string> { "reduceKey1" }, true)
+							.ToList();
+
+						Assert.Equal(1, results.Count);
+					});
+
+				storage.Batch(x =>
+				{
+					var removed = new Dictionary<ReduceKeyAndBucket, int>();
+					x.MapReduce.DeleteMappedResultsForDocumentId("doc1", "view1", removed);
+
+					Assert.Equal(1, removed.Count);
+				});
+
+				storage.Batch(
+					x =>
+					{
+						var results = x.MapReduce
+							.GetMappedResults("view1", new List<string> { "reduceKey1" }, true)
+							.ToList();
+
+						Assert.Equal(0, results.Count);
+					});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void DeleteMappedResultsForDocumentIdMultipleMappedResults(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(x => x.MapReduce.PutMappedResult("view1", "doc1", "reduceKey1", new RavenJObject { { "data", "data1" } }));
+				storage.Batch(x => x.MapReduce.PutMappedResult("view1", "doc1", "reduceKey1", new RavenJObject { { "data", "data2" } }));
+				storage.Batch(x => x.MapReduce.PutMappedResult("view1", "doc2", "reduceKey1", new RavenJObject { { "data", "data3" } }));
+				storage.Batch(
+					x =>
+					{
+						var results = x.MapReduce
+							.GetMappedResults("view1", new List<string> { "reduceKey1", "reduceKey2" }, true)
+							.ToList();
+
+						Assert.Equal(3, results.Count);
+					});
+
+				storage.Batch(x =>
+				{
+					var removed = new Dictionary<ReduceKeyAndBucket, int>();
+					x.MapReduce.DeleteMappedResultsForDocumentId("doc1", "view1", removed);
+
+					Assert.Equal(1, removed.Count);
+					var item = removed.First();
+
+					Assert.Equal("reduceKey1", item.Key.ReduceKey);
+					Assert.Equal(2, item.Value);
+				});
+
+				storage.Batch(
+					x =>
+					{
+						var results = x.MapReduce
+							.GetMappedResults("view1", new List<string> { "reduceKey1", "reduceKey2" }, true)
+							.ToList();
+
+						Assert.Equal(1, results.Count);
+					});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void UpdateRemovedMapReduceStats(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter("view1", "reduceKey1", 7));
+
+				storage.Batch(accessor =>
+				{
+					var removed = new Dictionary<ReduceKeyAndBucket, int>();
+					accessor.MapReduce.UpdateRemovedMapReduceStats("view1", removed);
+				});
+
+				storage.Batch(accessor =>
+				{
+					var reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 0, 10).ToList();
+					Assert.Equal(0, reduceKeysAndTypes.Count);
+
+					var keyStats = accessor.MapReduce.GetKeysStats("view1", 0, 10).ToList();
+					Assert.Equal(1, keyStats.Count);
+
+					var k1 = keyStats[0];
+					Assert.Equal("reduceKey1", k1.Key);
+					Assert.Equal(7, k1.Count);
+				});
+
+				storage.Batch(accessor =>
+				{
+					var removed = new Dictionary<ReduceKeyAndBucket, int>
+					              {
+						              { new ReduceKeyAndBucket(123, "reduceKey1"), 3 }
+					              };
+
+					accessor.MapReduce.UpdateRemovedMapReduceStats("view1", removed);
+				});
+
+				storage.Batch(accessor =>
+				{
+					var reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 0, 10).ToList();
+					Assert.Equal(0, reduceKeysAndTypes.Count);
+
+					var keyStats = accessor.MapReduce.GetKeysStats("view1", 0, 10).ToList();
+					Assert.Equal(1, keyStats.Count);
+
+					var k1 = keyStats[0];
+					Assert.Equal("reduceKey1", k1.Key);
+					Assert.Equal(4, k1.Count);
+				});
+
+				storage.Batch(accessor =>
+				{
+					var removed = new Dictionary<ReduceKeyAndBucket, int>
+					              {
+						              { new ReduceKeyAndBucket(123, "reduceKey1"), 5 }
+					              };
+
+					accessor.MapReduce.UpdateRemovedMapReduceStats("view1", removed);
+				});
+
+				storage.Batch(accessor =>
+				{
+					var reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 0, 10).ToList();
+					Assert.Equal(0, reduceKeysAndTypes.Count);
+
+					var keyStats = accessor.MapReduce.GetKeysStats("view1", 0, 10).ToList();
+					Assert.Equal(0, keyStats.Count);
+				});
+			}
 		}
 	}
 }
