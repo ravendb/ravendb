@@ -478,6 +478,7 @@ namespace Raven.Tests.Storage.Voron
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter("view1", "reduceKey1", 7));
+				storage.Batch(accessor => accessor.MapReduce.IncrementReduceKeyCounter("view2", "reduceKey1", 3));
 
 				storage.Batch(accessor =>
 				{
@@ -525,10 +526,11 @@ namespace Raven.Tests.Storage.Voron
 				{
 					var removed = new Dictionary<ReduceKeyAndBucket, int>
 					              {
-						              { new ReduceKeyAndBucket(123, "reduceKey1"), 5 }
+						              { new ReduceKeyAndBucket(123, "reduceKey1"), 4 }
 					              };
 
 					accessor.MapReduce.UpdateRemovedMapReduceStats("view1", removed);
+					accessor.MapReduce.UpdateRemovedMapReduceStats("view2", removed);
 				});
 
 				storage.Batch(accessor =>
@@ -538,6 +540,16 @@ namespace Raven.Tests.Storage.Voron
 
 					var keyStats = accessor.MapReduce.GetKeysStats("view1", 0, 10).ToList();
 					Assert.Equal(0, keyStats.Count);
+
+					reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view2", 0, 10).ToList();
+					Assert.Equal(0, reduceKeysAndTypes.Count);
+
+					keyStats = accessor.MapReduce.GetKeysStats("view2", 0, 10).ToList();
+					Assert.Equal(1, keyStats.Count);
+
+					var k1 = keyStats[0];
+					Assert.Equal("reduceKey1", k1.Key);
+					Assert.Equal(-1, k1.Count);
 				});
 			}
 		}

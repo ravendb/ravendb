@@ -127,12 +127,18 @@
 
 			var newValue = -val;
 			if (value != null)
-				newValue += value.Value<int>("mappedItemsCount");
+			{
+				var currentValue = value.Value<int>("mappedItemsCount");
+				if (currentValue == val)
+				{
+					DeleteReduceKeyCount(key, view, version);
+					return;
+				}
 
-			if (newValue > 0)
-				AddReduceKeyCount(key, view, reduceKey, newValue, version);
-			else
-				DeleteReduceKeyCount(key, view, version);
+				newValue += currentValue;
+			}
+
+			AddReduceKeyCount(key, view, reduceKey, newValue, version);
 		}
 
 		public void DeleteMappedResultsForDocumentId(string documentId, string view, Dictionary<ReduceKeyAndBucket, int> removed)
