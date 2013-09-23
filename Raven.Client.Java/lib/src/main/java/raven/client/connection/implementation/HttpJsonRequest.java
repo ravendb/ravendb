@@ -62,6 +62,7 @@ import raven.client.connection.profiling.RequestStatus;
 import raven.client.document.DocumentConvention;
 import raven.client.document.FailoverBehavior;
 import raven.java.http.client.GzipHttpEntity;
+import raven.java.http.client.HttpEval;
 import raven.java.http.client.HttpReset;
 
 public class HttpJsonRequest {
@@ -204,6 +205,9 @@ public class HttpJsonRequest {
         break;
       case RESET:
         baseMethod = new HttpReset(url);
+        break;
+      case EVAL:
+        baseMethod = new HttpEval(url);
         break;
       default:
         throw new IllegalArgumentException("Unknown method: " + method);

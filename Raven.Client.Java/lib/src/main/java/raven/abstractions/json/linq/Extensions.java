@@ -9,6 +9,8 @@ import java.util.UUID;
 
 import org.apache.commons.beanutils.ConvertUtils;
 
+import com.google.common.base.Defaults;
+
 import raven.abstractions.data.Etag;
 import raven.abstractions.util.NetDateFormat;
 
@@ -54,6 +56,9 @@ public class Extensions {
 
   @SuppressWarnings("unchecked")
   public static <U> U convert(Class<U> clazz, RavenJToken token) {
+    if (token.getType() == JTokenType.NULL) {
+      return Defaults.defaultValue(clazz);
+    }
     if (token instanceof RavenJArray && RavenJObject.class.equals(clazz)) {
       RavenJArray ar = (RavenJArray) token;
       RavenJObject o = new RavenJObject();

@@ -1,6 +1,8 @@
 package raven.tests.patching;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.Arrays;
@@ -10,11 +12,12 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.JsonDocument;
-import raven.abstractions.data.PatchRequest;
 import raven.abstractions.data.ScriptedPatchRequest;
 import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.extensions.JsonExtensions;
+import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
@@ -155,12 +158,114 @@ public class AdvancedPatchingTest extends RemoteClientTest {
         fail();
       } catch (ConcurrencyException e) {
         //ok
-        //TOOD: finish me
+        assertTrue(e.getMessage().contains("PUT attempted on document 'Items/1' using a non current etag (document deleted)"));
       }
     }
   }
 
+  @Test
+  public void canCreateDocumentsIfPatchingAppliedByIndex() throws Exception {
+    CustomType item1 = new CustomType();
+    item1.setId("Item/1");
+    item1.setValue(1);
 
+    CustomType item2 = new CustomType();
+    item2.setId("Item/2");
+    item2.setValue(2);
+
+
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        session.store(item1);
+        session.store(item2);
+        session.saveChanges();
+      }
+
+      IndexDefinition indexDefinition = new IndexDefinition();
+      indexDefinition.setMap("from doc in docs select new { doc.Value }");
+
+      store.getDatabaseCommands().putIndex("TestIndex", indexDefinition);
+
+      store.openSession().advanced().luceneQuery(CustomType.class, "TestIndex")
+      .waitForNonStaleResults().toList();
+
+      ScriptedPatchRequest patchRequest = new ScriptedPatchRequest();
+      patchRequest.setScript("PutDocument('NewItem/3', {'CopiedValue': this.Value});");
+
+      store.getDatabaseCommands().updateByIndex("TestIndex", new IndexQuery("Value:1"), patchRequest).waitForCompletion();
+
+      List<JsonDocument> jsonDocuments = store.getDatabaseCommands().getDocuments(0, 10);
+      assertEquals(3, jsonDocuments.size());
+
+      JsonDocument jsonDocument = store.getDatabaseCommands().get("NewItem/3");
+      assertEquals(new Integer(1), jsonDocument.getDataAsJson().value(int.class, "CopiedValue"));
+
+    }
+  }
+
+  public void executeTest(IDocumentStore store) throws Exception {
+    try (IDocumentSession s = store.openSession()) {
+      s.store(test);
+      s.saveChanges();
+    }
+
+    store.getDatabaseCommands().patch(test.getId(), new ScriptedPatchRequest(sampleScript));
+
+    JsonDocument resultDoc = store.getDatabaseCommands().get(test.getId());
+    RavenJObject resultJson = resultDoc.getDataAsJson();
+    CustomType result = JsonExtensions.getDefaultObjectMapper().readValue(resultJson.toString(), CustomType.class);
+
+    assertNotEquals("Something new", resultDoc.getMetadata().value(String.class, "@id"));
+    assertEquals(2, result.getComments().size());
+    assertEquals("one test", result.getComments().get(0));
+    assertEquals("two", result.getComments().get(1));
+    assertEquals(12144, result.getValue());
+    assertEquals("err!!", resultJson.get("newValue").toString());
+  }
+
+  private void executeSetBasedTest(IDocumentStore store) throws Exception {
+    CustomType item1 = new CustomType();
+    item1.setId("someId/");
+    item1.setOwner("bob");
+    item1.setValue(12143);
+    item1.setComments(Arrays.asList("one", "two", "seven"));
+
+    CustomType item2 = new CustomType();
+    item2.setId("someId/");
+    item2.setOwner("NOT bob");
+    item2.setValue(9999);
+    item2.setComments(Arrays.asList("one", "two", "seven"));
+
+    try (IDocumentSession session = store.openSession()) {
+      session.store(item1);
+      session.store(item2);
+      session.saveChanges();
+    }
+    IndexDefinition indexDefinition = new IndexDefinition();
+    indexDefinition.setMap("from doc in docs select new { doc.Owner} ");
+    store.getDatabaseCommands().putIndex("TestIndex", indexDefinition);
+
+    store.openSession().advanced().luceneQuery(CustomType.class, "TestIndex").waitForNonStaleResults().toList();
+
+    store.getDatabaseCommands().updateByIndex("TestIndex", new IndexQuery("Owner:Bob"), new ScriptedPatchRequest(sampleScript)).waitForCompletion();
+
+    RavenJObject item1ResultJson = store.getDatabaseCommands().get(item1.getId()).getDataAsJson();
+    CustomType item1Result = JsonExtensions.getDefaultObjectMapper().readValue(item1ResultJson.toString(), CustomType.class);
+    assertEquals(2, item1Result.getComments().size());
+    assertEquals("one test", item1Result.getComments().get(0));
+    assertEquals("two", item1Result.getComments().get(1));
+    assertEquals(12144, item1Result.getValue());
+    assertEquals("err!!", item1ResultJson.get("newValue").toString());
+
+    RavenJObject item2ResultJson = store.getDatabaseCommands().get(item2.getId()).getDataAsJson();
+    CustomType item2Result = JsonExtensions.getDefaultObjectMapper().readValue(item2ResultJson.toString(), CustomType.class);
+    assertEquals(9999, item2Result.getValue());
+    assertEquals(3, item2Result.getComments().size());
+    assertEquals("one", item2Result.getComments().get(0));
+    assertEquals("two", item2Result.getComments().get(1));
+    assertEquals("seven", item2Result.getComments().get(2));
+
+  }
 
   public static class CustomType {
     private String id;

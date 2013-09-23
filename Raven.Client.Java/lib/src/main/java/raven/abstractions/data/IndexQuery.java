@@ -28,6 +28,13 @@ public class IndexQuery {
     pageSize = 128;
   }
 
+  public IndexQuery(String query) {
+    this();
+    this.query = query;
+  }
+
+
+
   private boolean pageSizeSet;
   private String query;
   private Reference<Integer> totalSize;

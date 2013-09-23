@@ -18,6 +18,17 @@ public class ScriptedPatchRequest {
   private String script;
   private Map<String, Object> values;
 
+
+
+  public ScriptedPatchRequest(String script) {
+    this();
+    this.script = script;
+  }
+  public ScriptedPatchRequest(String script, Map<String, Object> values) {
+    this();
+    this.script = script;
+    this.values = values;
+  }
   public ScriptedPatchRequest() {
     values = new HashMap<String, Object>();
   }
