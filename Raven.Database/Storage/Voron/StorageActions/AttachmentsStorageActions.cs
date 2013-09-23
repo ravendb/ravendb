@@ -289,7 +289,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 {
                     var dataKey = iter.CurrentKey.ToString();
                     if (dataKey.Contains(Util.MetadataSuffix)) continue;
-                    if (alreadySkippedCount++ < start) continue;
+					if (start > 0 && alreadySkippedCount++ < start) continue;
 
                     fetchedDocumentCount++;
                     yield return AttachmentInfoByKey(Util.OriginalKey(dataKey));
