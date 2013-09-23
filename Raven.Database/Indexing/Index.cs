@@ -1555,7 +1555,7 @@ namespace Raven.Database.Indexing
                 string.Format(
                     "Index '{0}' has already produced {1} map results for a source document '{2}', while the allowed max number of outputs is {3} per one document. " +
                     "Index will be disabled.  Please verify this index definition and consider a re-design of your entities.",
-                    PublicName, maxNumberOfIndexOutputs, sourceDocumentId, maxNumberOfIndexOutputs));
+					PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs));
         }
 
 	}

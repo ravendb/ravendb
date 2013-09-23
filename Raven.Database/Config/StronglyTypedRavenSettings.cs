@@ -20,7 +20,7 @@ namespace Raven.Database.Config
 			this.settings = settings;
 		}
 
-		public void Setup(int defaultMaxIndexOutputsPerDocumentMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
+		public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
 		{
 			MaxPageSize =
 				new IntegerSettingWithMin(settings["Raven/MaxPageSize"], 1024, 10);
