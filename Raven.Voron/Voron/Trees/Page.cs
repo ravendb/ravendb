@@ -91,19 +91,20 @@ namespace Voron.Trees
 
             if (matched == false)
             {
-                node = GetNode(position);
                 LastMatch = key.Compare(pageKey, cmp);
             }
 
-            if (LastMatch > 0) // found entry less than key
-                position++; // move to the smallest entry larger than the key
+	        if (LastMatch > 0) // found entry less than key
+	        {
+		        position++; // move to the smallest entry larger than the key
+	        }
 
-            Debug.Assert(position < ushort.MaxValue);
+	        Debug.Assert(position < ushort.MaxValue);
             LastSearchPosition = position;
 
             if (position >= NumberOfEntries)
                 return null;
-            return node;
+			return GetNode(position);
         }
 
         public NodeHeader* GetNode(int n)
