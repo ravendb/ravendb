@@ -1551,6 +1551,8 @@ namespace Raven.Database.Indexing
             {
                 foreach (var doc in docs)
                 {
+                    if(context.DoNotTouchAgainIfMissingReferences.TryRemove(doc))
+                        continue;
                     task.Keys.Add(doc);
                 }
             }

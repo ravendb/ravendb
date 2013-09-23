@@ -10,7 +10,7 @@ namespace Raven.Database.Tasks
 {
     public class TouchMissingReferenceDocumentTask : Task
     {
-        private static ILog logger = LogManager.GetCurrentClassLogger();
+        private static readonly ILog logger = LogManager.GetCurrentClassLogger();
         public HashSet<string> Keys { get; set; }
 
         public override string ToString()
@@ -20,7 +20,7 @@ namespace Raven.Database.Tasks
 
         public override void Merge(Task task)
         {
-            var t = (TouchMissingReferenceDocumentTask) task;
+            var t = (TouchMissingReferenceDocumentTask)task;
             Keys.UnionWith(t.Keys);
         }
 
@@ -31,21 +31,22 @@ namespace Raven.Database.Tasks
                 logger.Debug("Going to touch the following documents (missing references, need to check for concurrent transactions): {0}",
                     string.Join(", ", Keys));
             }
-           context.TransactionalStorage.Batch(accessor =>
-           {
-               foreach (var key in Keys)
-               {
-                   try
-                   {
-                       Etag preTouchEtag;
-                       Etag afterTouchEtag;
-                       accessor.Documents.TouchDocument(key, out preTouchEtag, out afterTouchEtag);
-                   }
-                   catch (ConcurrencyException)
-                   {
-                   }
-               }
-           });
+            context.TransactionalStorage.Batch(accessor =>
+            {
+                foreach (var key in Keys)
+                {
+                    context.DoNotTouchAgainIfMissingReferences.Add(key);
+                    try
+                    {
+                        Etag preTouchEtag;
+                        Etag afterTouchEtag;
+                        accessor.Documents.TouchDocument(key, out preTouchEtag, out afterTouchEtag);
+                    }
+                    catch (ConcurrencyException)
+                    {
+                    }
+                }
+            });
         }
 
         public override Task Clone()
