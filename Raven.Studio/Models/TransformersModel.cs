@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Studio.Features.Input;
 using Raven.Studio.Infrastructure;
@@ -16,6 +17,8 @@ namespace Raven.Studio.Models
 		private Group selectedGroup;
 		public ObservableCollection<Group> GroupedTransformers { get; private set; }
 		public ObservableCollection<TransformerDefinition> Transformers { get; set; }
+		private string currentDatabase;
+		private string currentSearch;
 
 		public ICommand DeleteTransformer
 		{
@@ -61,6 +64,9 @@ namespace Raven.Studio.Models
 			ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
 														   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
 														   "/transformers";
+			ApplicationModel.Database.PropertyChanged += (sender, args) => TimerTickedAsync();
+			SearchText = new Observable<string>();
+			SearchText.PropertyChanged += (sender, args) => TimerTickedAsync();
 
 		}
 
@@ -76,10 +82,20 @@ namespace Raven.Studio.Models
 			DatabaseCommands.GetTransformersAsync(0, 256).ContinueOnSuccessInTheUIThread(transformers =>
 			{
 				Transformers.Clear();
-				Transformers = new ObservableCollection<TransformerDefinition>(transformers);
 
 				CleanGroup();
-				foreach (var transformer in transformers.OrderBy(definition => definition.Name))
+
+				if (string.IsNullOrWhiteSpace(SearchText.Value))
+					Transformers = new ObservableCollection<TransformerDefinition>(transformers);
+
+				else
+				{
+					Transformers = new ObservableCollection<TransformerDefinition>(transformers
+						.Where(definition => definition.Name.IndexOf(SearchText.Value, StringComparison.InvariantCultureIgnoreCase) != -1));
+					
+				}
+
+				foreach (var transformer in Transformers.OrderBy(definition => definition.Name))
 				{
 					var groupName = DetermineName(transformer);
 					var groupItem =
@@ -110,6 +126,14 @@ namespace Raven.Studio.Models
 
 		private void CleanGroup()
 		{
+			if (currentDatabase != ApplicationModel.Database.Value.Name || currentSearch != SearchText.Value)
+			{
+				currentDatabase = ApplicationModel.Database.Value.Name;
+				currentSearch = SearchText.Value;
+				GroupedTransformers.Clear();
+				return;
+			}
+
 			foreach (var groupedTransformer in GroupedTransformers)
 			{
 				groupedTransformer.Items.Clear();
@@ -154,6 +178,8 @@ namespace Raven.Studio.Models
 				});
 			}
 		}
+
+		public Observable<string> SearchText { get; set; }
 
 		public ICommand DeleteGroupTransformers
 		{
