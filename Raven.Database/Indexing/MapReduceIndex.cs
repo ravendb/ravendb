@@ -95,6 +95,7 @@ namespace Raven.Database.Indexing
 				.Where(x => x is FilteredDocument == false)
 				.ToList();
 			var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
+            var missingReferencedDocs = new ConcurrentQueue<HashSet<string>>();
 
 			if (documentsWrapped.Count > 0)
 				actions.MapReduce.UpdateRemovedMapReduceStats(name, deleted);
@@ -107,7 +108,11 @@ namespace Raven.Database.Indexing
 				var statsPerKey = new Dictionary<string, int>();
 				allState.Enqueue(Tuple.Create(localChanges, localStats, statsPerKey));
 
-				using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
+				using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, (references, missing) =>
+				{
+				    allReferencedDocs.Enqueue(references);
+                    missingReferencedDocs.Enqueue(missing);
+				}))
 				{
 					// we are writing to the transactional store from multiple threads here, and in a streaming fashion
 					// should result in less memory and better perf
@@ -133,23 +138,10 @@ namespace Raven.Database.Indexing
 				}
 			});
 
-            var dic = context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex;
 
-			IDictionary<string, HashSet<string>> result;
-			while (allReferencedDocs.TryDequeue(out result))
-			{
-				foreach (var referencedDocument in result)
-				{
-					actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
-					actions.General.MaybePulseTransaction();
-                    foreach (var childDocumentKey in referencedDocument.Value)
-                    {
-                        dic.GetOrAdd(childDocumentKey, (s =>new ConcurrentBag<string>())).Add(referencedDocument.Key);
-                    }
-				}
-			}
+			UpdateDocumentReferences(actions, allReferencedDocs, missingReferencedDocs);
 
-			var changed = allState.SelectMany(x => x.Item1).Concat(deleted.Keys)
+		    var changed = allState.SelectMany(x => x.Item1).Concat(deleted.Keys)
 					.Distinct()
 					.ToList();
 
@@ -191,7 +183,7 @@ namespace Raven.Database.Indexing
 			logIndexing.Debug("Mapped {0} documents for {1}", count, name);
 		}
 
-		private int ProcessBatch(AbstractViewGenerator viewGenerator, List<object> currentDocumentResults, string currentKey, HashSet<ReduceKeyAndBucket> changes,
+	    private int ProcessBatch(AbstractViewGenerator viewGenerator, List<object> currentDocumentResults, string currentKey, HashSet<ReduceKeyAndBucket> changes,
 			IStorageActionsAccessor actions,
 			IDictionary<string, int> statsPerKey)
 		{

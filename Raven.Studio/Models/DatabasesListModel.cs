@@ -16,6 +16,7 @@ namespace Raven.Studio.Models
 	public class DatabasesListModel : PageViewModel, IAutoCompleteSuggestionProvider
     {
         private readonly ChangeDatabaseCommand changeDatabase;
+		private string currentSearch;
 
         public DatabasesListModel()
         {
@@ -24,7 +25,11 @@ namespace Raven.Studio.Models
 			GoToDatabaseName = new Observable<string>();
             changeDatabase = new ChangeDatabaseCommand();
             DatabasesWithEditableBundles = new List<string>();
-            Databases = new BindableCollection<DatabaseListItemModel>(m => m.Name);
+			Databases = new BindableCollection<DatabaseListItemModel>(m => m.Name);
+			DatabasesToShow = new BindableCollection<DatabaseListItemModel>(m => m.Name);
+			SearchText = new Observable<string>();
+
+	        SearchText.PropertyChanged += (sender, args) => RefreshDatabaseList();
             ApplicationModel.Current.Server.Value.SelectedDatabase.PropertyChanged += (sender, args) =>
             {
                 OnPropertyChanged(() => SelectedDatabase);
@@ -32,8 +37,10 @@ namespace Raven.Studio.Models
             };
         }
 
-        public BindableCollection<DatabaseListItemModel> Databases { get; private set; }
+		public BindableCollection<DatabaseListItemModel> Databases { get; private set; }
+		public BindableCollection<DatabaseListItemModel> DatabasesToShow { get; set; } 
         public List<string> DatabasesWithEditableBundles { get; set; }
+		public Observable<string> SearchText { get; set; }
 
         public DatabaseListItemModel SelectedDatabase
         {
@@ -101,9 +108,18 @@ namespace Raven.Studio.Models
 
         private void RefreshDatabaseList()
         {
-            Databases.Match(
-                ApplicationModel.Current.Server.Value.Databases.Where(s => s != Constants.SystemDatabase).Select(
-                    name => new DatabaseListItemModel(name)).ToArray());
+			Databases.Match(
+				ApplicationModel.Current.Server.Value.Databases.Where(s => s != Constants.SystemDatabase).Select(
+					name => new DatabaseListItemModel(name)).ToArray());
+	        if (string.IsNullOrWhiteSpace(SearchText.Value))
+		        DatabasesToShow.Match(Databases);
+
+			else
+	        {
+		        DatabasesToShow.Match(
+			        Databases.Where(model => model.Name.IndexOf(SearchText.Value, StringComparison.InvariantCultureIgnoreCase) != -1).ToList());
+	        }
+          
             OnPropertyChanged(() => SelectedDatabase);
         }
 
