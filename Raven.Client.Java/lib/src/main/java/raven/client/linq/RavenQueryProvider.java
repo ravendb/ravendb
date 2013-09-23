@@ -163,18 +163,19 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
 
   @Override
   public <S> Lazy<List<S>> lazily(Class<S> clazz, Expression< ? > expression, Action1<List<S>> onEval) {
-    final RavenQueryProviderProcessor<S> processor = getQueryProviderProcessor(clazz); //TODO: not sure which class to use
+    final RavenQueryProviderProcessor<S> processor = getQueryProviderProcessor(clazz);
     IDocumentQuery<S> query = processor.getLuceneQueryFor(expression);
     if (afterQueryExecuted != null) {
       query.afterQueryExecuted(afterQueryExecuted);
     }
 
     List<String> renamedFields = new ArrayList<>();
+    outer:
     for (String field :fieldsToFetch) {
       for (RenamedField renamedField : fieldsToRename) {
         if (renamedField.getOriginalField().equals(field)) {
-          renamedFields.add(renamedField.getNewField());
-          break;
+          renamedFields.add(renamedField.getNewField() != null ? renamedField.getNewField() : field);
+          continue outer;
         }
       }
       renamedFields.add(field);

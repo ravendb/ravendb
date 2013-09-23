@@ -317,7 +317,12 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
         store.getDatabaseCommands().putIndex(indexName, indexDefinitionBuilder, true);
         waitForAllRequestsToComplete();
 
-        List<User> result = session.query(User.class, indexName).orderBy(x.name.asc()).where(x.age.goe(18)).toList();
+        List<User> result = session
+            .query(User.class, indexName)
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+            .orderBy(x.name.asc())
+            .where(x.age.goe(18))
+            .toList();
         assertEquals(2, result.size());
 
         assertEquals("Second", result.get(0).getName());

@@ -42,7 +42,7 @@ import raven.client.indexes.AbstractIndexCreationTask;
 import raven.client.linq.LinqPathProvider;
 import raven.client.util.Inflector;
 
-// TODO: finish me (copy java docs)
+// TODO: finish me (copy java docs) and introduce interfaces instead of FuncN types
 /**
  * Note: we removed logic related to applyReduceFunction because we don't support map/reduce on shards
  * we also don't support contractResolver - Jackson customiazation can be performed via {@link JsonExtensions#getDefaultObjectMapper()} instance

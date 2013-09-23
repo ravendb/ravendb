@@ -837,7 +837,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
     for (Class<?> rootType : rootTypes) {
       Field identityProperty = theSession.getConventions().getIdentityProperty(rootType);
-      if (identityProperty != null && identityProperty.getName().equals(whereParams.getFieldName())) {
+      if (identityProperty != null && identityProperty.getName().equalsIgnoreCase(whereParams.getFieldName())) {
         whereParams.setFieldTypeForIdentifier(rootType);
         whereParams.setFieldName(Constants.DOCUMENT_ID_FIELD_NAME);
         return Constants.DOCUMENT_ID_FIELD_NAME;
