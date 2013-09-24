@@ -120,7 +120,9 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
         store.getDatabaseCommands().putIndex(indexName, indexDefinitionBuilder, true);
         waitForAllRequestsToComplete();
 
-        User singleItem = session.query(User.class, indexName).single(x.name.eq("James"));
+        User singleItem = session.query(User.class, indexName)
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+            .single(x.name.eq("James"));
         assertEquals(25, singleItem.getAge());
         assertEquals("James", singleItem.getName());
 

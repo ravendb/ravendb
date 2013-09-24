@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotNull;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import raven.abstractions.data.FacetResult;
@@ -21,6 +22,7 @@ import raven.client.indexes.AbstractIndexCreationTask;
 
 import com.mysema.query.annotations.QueryEntity;
 
+@Ignore
 public class AggregationTest extends RemoteClientTest {
 
   @QueryEntity
@@ -153,6 +155,7 @@ public class AggregationTest extends RemoteClientTest {
 
       try (IDocumentSession session = store.openSession()) {
         FacetResults r = session.query(Order.class, "Orders/All")
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
             .aggregateBy(o.product)
             .sumOn(o.total)
             .andAggregateOn(o.currency)
@@ -213,6 +216,7 @@ public class AggregationTest extends RemoteClientTest {
 
       try (IDocumentSession session = store.openSession()) {
         FacetResults r = session.query(Order.class, "Orders/All")
+            .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
             .aggregateBy(o.product)
             .maxOn(o.total)
             .minOn(o.total)

@@ -736,6 +736,10 @@ public class RavenQueryProviderProcessor<T> {
       }
     } else if (operatorId.equals(LinqOps.Query.SEARCH.getId())) {
       visitSearch(expression);
+    } else if (operatorId.equals(LinqOps.Query.INTERSECT.getId())) {
+      visitExpression(expression.getArg(0));
+      luceneQuery.intersect();
+      chanedWhere = false;
     } else if (operatorId.equals(LinqOps.Query.SELECT.getId())) {
 
       Class<?> rootType = extractRootTypeForSelect(expression.getArg(1));

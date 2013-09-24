@@ -67,7 +67,7 @@ public class HighlightTest extends RemoteClientTest {
 
         Reference<FieldHighlightings> nameHighlightingRef = new Reference<>();
         List<SearchItem> results = session.advanced().luceneQuery(SearchItem.class, "ContentSearchIndex")
-            .waitForNonStaleResults()
+            .waitForNonStaleResults(5 * 60 * 1000)
             .highlight("Name", 128, 1, nameHighlightingRef)
             .search("Name", searchFor)
             .toList();

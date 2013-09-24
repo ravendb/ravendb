@@ -34,7 +34,6 @@ public abstract class RemoteClientTest extends RavenDBAwareTests {
     assertEquals("Expected " + i + " requests. Got: " + (currentReqCount - prevValue), i, currentReqCount - prevValue);
   }
 
-  //TODO: looks like this is not working as expected
   protected void waitForAllRequestsToComplete() throws Exception {
     HttpGet get = new HttpGet(DEFAULT_SERVER_RUNNER_URL + "?port=" + DEFAULT_SERVER_PORT_1 + "&action=waitForAllRequestsToComplete");
     HttpResponse httpResponse = null;

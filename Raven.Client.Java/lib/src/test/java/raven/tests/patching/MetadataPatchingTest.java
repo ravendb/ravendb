@@ -2,6 +2,7 @@ package raven.tests.patching;
 
 import static org.junit.Assert.assertEquals;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import raven.abstractions.data.IndexQuery;
@@ -33,7 +34,8 @@ public class MetadataPatchingTest extends RemoteClientTest {
 
       store.getDatabaseCommands().updateByIndex("Raven/DocumentsByEntityName", new IndexQuery(), new PatchRequest[] {
         patchRequest
-      }, false);
+      }, false).waitForCompletion();
+      waitForNonStaleIndexes(store.getDatabaseCommands());
 
       JsonDocument jsonDocument = store.getDatabaseCommands().get("foos/1");
       assertEquals("Bars", jsonDocument.getMetadata().value(String.class, "Raven-Entity-Name"));

@@ -32,7 +32,7 @@ public class UsingWhereConditionsTest extends RemoteClientTest {
         store.getDatabaseCommands().putIndex(indexName, definitionBuilder, true);
 
         // wait for index
-        session.query(CommitInfo.class).customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults()).toList();
+        session.query(CommitInfo.class).customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults(5 * 60 * 1000)).toList();
 
         QCommitInfo x = QCommitInfo.commitInfo;
         IRavenQueryable<CommitInfo> results = session.query(CommitInfo.class).where(x.revision.eq(1));

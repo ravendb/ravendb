@@ -39,7 +39,7 @@ public class MapReduceIndexOnLargeDataSetTest extends RemoteClientTest {
 
       try (IDocumentSession s = store.openSession()) {
         List<GroupResult> ret = s.query(GroupResult.class, "test" )
-          .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
+          .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults(5 * 60 * 1000))
           .toList();
 
         assertEquals(25, ret.size());

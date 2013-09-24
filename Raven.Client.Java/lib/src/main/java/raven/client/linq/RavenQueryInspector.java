@@ -333,7 +333,7 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   }
 
   @Override
-  public IRavenQueryable<T> intersect(IRavenQueryable<T> self) {
+  public IRavenQueryable<T> intersect() {
     return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.INTERSECT, getExpression()));
   }
 

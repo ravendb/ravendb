@@ -153,7 +153,7 @@ public interface LinqExtensionsQueryable<T> {
    */
   public FacetResults toFacets(String facetSetupDoc, int start, Integer pageSize);
 
-  public IRavenQueryable<T> intersect(IRavenQueryable<T> self);
+  public IRavenQueryable<T> intersect();
 
   //TODO: public static IRavenQueryable<TResult> ProjectFromIndexFieldsInto<TResult>(this IQueryable queryable)
 

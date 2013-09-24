@@ -51,9 +51,12 @@ public abstract class RavenDBAwareTests {
 
   public final static int DEFAULT_RUNNER_PORT = 8585;
 
+  public final static boolean RUN_IN_MEMORY = true;
+
   public final static String DEFAULT_SERVER_RUNNER_URL = "http://" + DEFAULT_HOST + ":" + DEFAULT_RUNNER_PORT + "/servers";
 
   protected static HttpClient client = new DefaultHttpClient();
+
 
   public String getServerUrl() {
     return DEFAULT_SERVER_URL_1;
@@ -68,20 +71,12 @@ public abstract class RavenDBAwareTests {
 
   @BeforeClass
   public static void startServerBefore() throws Exception {
-    try {
-      startServer(DEFAULT_SERVER_PORT_1);
-    } finally {
-
-    }
+    startServer(DEFAULT_SERVER_PORT_1);
   }
 
   @AfterClass
   public static void stopServerAfter() throws Exception {
-    try {
-      stopServer(DEFAULT_SERVER_PORT_1);
-    } finally {
-
-    }
+    stopServer(DEFAULT_SERVER_PORT_1);
   }
 
   @Before
@@ -207,7 +202,7 @@ public abstract class RavenDBAwareTests {
   protected static String getCreateServerDocument(int port) {
     RavenJObject doc = new RavenJObject();
     doc.add("Port", new RavenJValue(port));
-    doc.add("RunInMemory", new RavenJValue(true));
+    doc.add("RunInMemory", new RavenJValue(RUN_IN_MEMORY));
     return doc.toString();
   }
 
