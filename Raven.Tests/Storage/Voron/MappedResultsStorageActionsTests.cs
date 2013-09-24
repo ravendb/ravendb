@@ -690,5 +690,442 @@ namespace Raven.Tests.Storage.Voron
 				});
 			}
 		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void GetKeysForIndexForDebug(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor =>
+				{
+					accessor.MapReduce.PutMappedResult("view1", "doc1", "reduceKey1", new RavenJObject { { "data", "data1" } });
+					accessor.MapReduce.PutMappedResult("view1", "doc2", "reduceKey2", new RavenJObject { { "data", "data2" } });
+					accessor.MapReduce.PutMappedResult("view1", "doc3", "reduceKey3", new RavenJObject { { "data", "data3" } });
+					accessor.MapReduce.PutMappedResult("view2", "doc1", "reduceKey4", new RavenJObject { { "data", "data4" } });
+				});
+
+				storage.Batch(accessor =>
+				{
+					var keys = accessor.MapReduce
+						.GetKeysForIndexForDebug("view1", 0, 10)
+						.ToList();
+
+					Assert.Equal(3, keys.Count);
+					Assert.True(keys.Contains("reduceKey1"));
+					Assert.True(keys.Contains("reduceKey2"));
+					Assert.True(keys.Contains("reduceKey3"));
+
+					keys = accessor.MapReduce
+						.GetKeysForIndexForDebug("view2", 0, 10)
+						.ToList();
+
+					Assert.Equal(1, keys.Count);
+					Assert.Equal("reduceKey4", keys[0]);
+
+					keys = accessor.MapReduce
+						.GetKeysForIndexForDebug("view3", 0, 10)
+						.ToList();
+
+					Assert.Equal(0, keys.Count);
+				});
+
+				storage.Batch(accessor =>
+				{
+					var keys = accessor.MapReduce
+						.GetKeysForIndexForDebug("view1", 0, 10)
+						.ToList();
+
+					var k1 = keys[0];
+					var k2 = keys[1];
+					var k3 = keys[2];
+
+					keys = accessor.MapReduce
+						.GetKeysForIndexForDebug("view1", 0, 1)
+						.ToList();
+
+					Assert.Equal(1, keys.Count);
+					Assert.Equal(k1, keys[0]);
+
+					keys = accessor.MapReduce
+						.GetKeysForIndexForDebug("view1", 1, 1)
+						.ToList();
+
+					Assert.Equal(1, keys.Count);
+					Assert.Equal(k2, keys[0]);
+
+					keys = accessor.MapReduce
+						.GetKeysForIndexForDebug("view1", 2, 1)
+						.ToList();
+
+					Assert.Equal(1, keys.Count);
+					Assert.Equal(k3, keys[0]);
+
+					keys = accessor.MapReduce
+						.GetKeysForIndexForDebug("view1", 3, 1)
+						.ToList();
+
+					Assert.Equal(0, keys.Count);
+
+					keys = accessor.MapReduce
+						.GetKeysForIndexForDebug("view1", 0, 2)
+						.ToList();
+
+					Assert.Equal(2, keys.Count);
+					Assert.Equal(k1, keys[0]);
+					Assert.Equal(k2, keys[1]);
+
+					keys = accessor.MapReduce
+						.GetKeysForIndexForDebug("view1", 1, 2)
+						.ToList();
+
+					Assert.Equal(2, keys.Count);
+					Assert.Equal(k2, keys[0]);
+					Assert.Equal(k3, keys[1]);
+
+					keys = accessor.MapReduce
+						.GetKeysForIndexForDebug("view1", 2, 2)
+						.ToList();
+
+					Assert.Equal(1, keys.Count);
+					Assert.Equal(k3, keys[0]);
+				});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void GetMappedResultsForDebug(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor =>
+				{
+					accessor.MapReduce.PutMappedResult("view1", "doc1", "reduceKey1", new RavenJObject { { "data", "data1" } });
+					accessor.MapReduce.PutMappedResult("view1", "doc2", "reduceKey2", new RavenJObject { { "data", "data2" } });
+					accessor.MapReduce.PutMappedResult("view1", "doc3", "reduceKey1", new RavenJObject { { "data", "data3" } });
+					accessor.MapReduce.PutMappedResult("view1", "doc4", "reduceKey1", new RavenJObject { { "data", "data4" } });
+					accessor.MapReduce.PutMappedResult("view2", "doc1", "reduceKey4", new RavenJObject { { "data", "data5" } });
+				});
+
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetMappedResultsForDebug("view1", "reduceKey1", 0, 10)
+						.ToList();
+
+					Assert.Equal(3, results.Count);
+
+					results = accessor.MapReduce
+						.GetMappedResultsForDebug("view1", "reduceKey2", 0, 10)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+
+					results = accessor.MapReduce
+						.GetMappedResultsForDebug("view2", "reduceKey4", 0, 10)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+
+					results = accessor.MapReduce
+						.GetMappedResultsForDebug("view3", "reduceKey1", 0, 10)
+						.ToList();
+
+					Assert.Equal(0, results.Count);
+				});
+
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetMappedResultsForDebug("view1", "reduceKey1", 0, 10)
+						.ToList();
+
+					var r1 = results[0];
+					var r2 = results[1];
+					var r3 = results[2];
+
+					results = accessor.MapReduce
+						.GetMappedResultsForDebug("view1", "reduceKey1", 0, 1)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(r1.Data["data"], results[0].Data["data"]);
+
+					results = accessor.MapReduce
+						.GetMappedResultsForDebug("view1", "reduceKey1", 1, 1)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(r2.Data["data"], results[0].Data["data"]);
+
+					results = accessor.MapReduce
+						.GetMappedResultsForDebug("view1", "reduceKey1", 2, 1)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(r3.Data["data"], results[0].Data["data"]);
+
+					results = accessor.MapReduce
+						.GetMappedResultsForDebug("view1", "reduceKey1", 4, 1)
+						.ToList();
+
+					Assert.Equal(0, results.Count);
+
+					results = accessor.MapReduce
+						.GetMappedResultsForDebug("view1", "reduceKey1", 0, 2)
+						.ToList();
+
+					Assert.Equal(2, results.Count);
+					Assert.Equal(r1.Data["data"], results[0].Data["data"]);
+					Assert.Equal(r2.Data["data"], results[1].Data["data"]);
+
+					results = accessor.MapReduce
+						.GetMappedResultsForDebug("view1", "reduceKey1", 1, 2)
+						.ToList();
+
+					Assert.Equal(2, results.Count);
+					Assert.Equal(r2.Data["data"], results[0].Data["data"]);
+					Assert.Equal(r3.Data["data"], results[1].Data["data"]);
+
+					results = accessor.MapReduce
+						.GetMappedResultsForDebug("view1", "reduceKey1", 2, 2)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(r3.Data["data"], results[0].Data["data"]);
+				});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void GetReducedResultsForDebug(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor =>
+				{
+					accessor.MapReduce.PutReducedResult("view1", "doc1", 1, 1, 1, new RavenJObject { { "data", "data1" } });
+					accessor.MapReduce.PutReducedResult("view1", "doc2", 1, 1, 1, new RavenJObject { { "data", "data2" } });
+					accessor.MapReduce.PutReducedResult("view1", "doc1", 2, 2, 1, new RavenJObject { { "data", "data3" } });
+					accessor.MapReduce.PutReducedResult("view1", "doc1", 1, 1, 1, new RavenJObject { { "data", "data4" } });
+					accessor.MapReduce.PutReducedResult("view1", "doc1", 1, 2, 1, new RavenJObject { { "data", "data5" } });
+					accessor.MapReduce.PutReducedResult("view1", "doc1", 2, 1, 1, new RavenJObject { { "data", "data6" } });
+					accessor.MapReduce.PutReducedResult("view2", "doc1", 1, 1, 1, new RavenJObject { { "data", "data7" } });
+				});
+
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetReducedResultsForDebug("view1", "doc1", 1, 0, 10)
+						.ToList();
+
+					Assert.Equal(3, results.Count);
+
+					results = accessor.MapReduce
+						.GetReducedResultsForDebug("view1", "doc2", 1, 0, 10)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+
+					results = accessor.MapReduce
+						.GetReducedResultsForDebug("view1", "doc1", 2, 0, 10)
+						.ToList();
+
+					Assert.Equal(2, results.Count);
+
+					results = accessor.MapReduce
+						.GetReducedResultsForDebug("view2", "doc1", 1, 0, 10)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+
+					results = accessor.MapReduce
+						.GetReducedResultsForDebug("view1", "doc5", 1, 0, 10)
+						.ToList();
+
+					Assert.Equal(0, results.Count);
+				});
+
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetReducedResultsForDebug("view1", "doc1", 1, 0, 10)
+						.ToList();
+
+					var r1 = results[0];
+					var r2 = results[1];
+					var r3 = results[2];
+
+					results = accessor.MapReduce
+						.GetReducedResultsForDebug("view1", "doc1", 1, 0, 1)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(r1.Data["data"], results[0].Data["data"]);
+
+					results = accessor.MapReduce
+						.GetReducedResultsForDebug("view1", "doc1", 1, 1, 1)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(r2.Data["data"], results[0].Data["data"]);
+
+					results = accessor.MapReduce
+						.GetReducedResultsForDebug("view1", "doc1", 1, 2, 1)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(r3.Data["data"], results[0].Data["data"]);
+
+					results = accessor.MapReduce
+						.GetReducedResultsForDebug("view1", "doc1", 1, 4, 1)
+						.ToList();
+
+					Assert.Equal(0, results.Count);
+
+					results = accessor.MapReduce
+						.GetReducedResultsForDebug("view1", "doc1", 1, 0, 2)
+						.ToList();
+
+					Assert.Equal(2, results.Count);
+					Assert.Equal(r1.Data["data"], results[0].Data["data"]);
+					Assert.Equal(r2.Data["data"], results[1].Data["data"]);
+
+					results = accessor.MapReduce
+						.GetReducedResultsForDebug("view1", "doc1", 1, 1, 2)
+						.ToList();
+
+					Assert.Equal(2, results.Count);
+					Assert.Equal(r2.Data["data"], results[0].Data["data"]);
+					Assert.Equal(r3.Data["data"], results[1].Data["data"]);
+
+					results = accessor.MapReduce
+						.GetReducedResultsForDebug("view1", "doc1", 1, 2, 2)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(r3.Data["data"], results[0].Data["data"]);
+				});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void GetScheduledReductionForDebug(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor =>
+				{
+					accessor.MapReduce.ScheduleReductions("view1", 1, new ReduceKeyAndBucket(1, "reduceKey1"));
+					accessor.MapReduce.ScheduleReductions("view1", 2, new ReduceKeyAndBucket(1, "reduceKey2"));
+					accessor.MapReduce.ScheduleReductions("view1", 3, new ReduceKeyAndBucket(2, "reduceKey2"));
+					accessor.MapReduce.ScheduleReductions("view2", 1, new ReduceKeyAndBucket(1, "reduceKey3"));
+				});
+
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view1", 0, 10)
+						.ToList();
+
+					Assert.Equal(3, results.Count);
+
+					var r1 = results[0];
+					var r2 = results[1];
+					var r3 = results[2];
+
+					results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view1", 0, 1)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(r1.Key, results[0].Key);
+
+					results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view1", 1, 1)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(r2.Key, results[0].Key);
+
+					results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view1", 2, 1)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(r3.Key, results[0].Key);
+
+					results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view1", 3, 1)
+						.ToList();
+
+					Assert.Equal(0, results.Count);
+
+					results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view1", 0, 2)
+						.ToList();
+
+					Assert.Equal(2, results.Count);
+					Assert.Equal(r1.Key, results[0].Key);
+					Assert.Equal(r2.Key, results[1].Key);
+
+					results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view1", 1, 2)
+						.ToList();
+
+					Assert.Equal(2, results.Count);
+					Assert.Equal(r2.Key, results[0].Key);
+					Assert.Equal(r3.Key, results[1].Key);
+
+					results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view1", 2, 2)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal(r3.Key, results[0].Key);
+
+					results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view2", 0, 10)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal("reduceKey3", results[0].Key);
+
+					results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view3", 0, 10)
+						.ToList();
+
+					Assert.Equal(0, results.Count);
+				});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void ScheduleReductions(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor => accessor.MapReduce.ScheduleReductions("view1", 1, new ReduceKeyAndBucket(1, "reduceKey1")));
+
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view1", 0, 10)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+
+					var r1 = results[0];
+
+					Assert.Equal(1, r1.Level);
+					Assert.Equal("reduceKey1", r1.Key);
+					Assert.True((DateTime.UtcNow - r1.Timestamp).TotalMilliseconds < 100);
+				});
+			}
+		}
 	}
 }

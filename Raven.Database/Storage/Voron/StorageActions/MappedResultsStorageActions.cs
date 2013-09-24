@@ -131,14 +131,14 @@
 				var currentValue = value.Value<int>("mappedItemsCount");
 				if (currentValue == val)
 				{
-					DeleteReduceKeyCount(key, view, null);
+					DeleteReduceKeyCount(key, view, version);
 					return;
 				}
 
 				newValue += currentValue;
 			}
 
-			AddReduceKeyCount(key, view, reduceKey, newValue, null);
+			AddReduceKeyCount(key, view, reduceKey, newValue, version);
 		}
 
 		public void DeleteMappedResultsForDocumentId(string documentId, string view, Dictionary<ReduceKeyAndBucket, int> removed)
@@ -556,7 +556,7 @@
 				},
 				0);
 
-			reduceResultsData.Add(writeBatch, idAsString, ms, 0);
+			reduceResultsData.Add(writeBatch, idAsString, ms.ToArray(), 0);
 
 			var viewAndReduceKeyAndLevelAndSourceBucket = CreateKey(view, reduceKey, level, sourceBucket);
 			var viewAndReduceKeyAndLevel = CreateKey(view, reduceKey, level);
