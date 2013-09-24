@@ -19,11 +19,6 @@ namespace Raven.Abstractions.Json
 			else if (value is DateTimeOffset)
 			{
 				var dateTimeOffset = ((DateTimeOffset) value);
-				if (dateTimeOffset.Offset == TimeSpan.Zero)
-				{
-					WriteJson(writer, dateTimeOffset.UtcDateTime, serializer);
-					return;
-				}
 				writer.WriteValue(dateTimeOffset.ToString(Default.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
 			}
 			else
