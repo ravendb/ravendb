@@ -293,6 +293,7 @@ public class IncludesTest extends RemoteClientTest {
         Order2 order = new Order2();
         order.setSupplier2Ids(Arrays.asList(supp1.getId(), supp2.getId(), supp3.getId()));
         session.store(order, "orders/1234");
+        session.saveChanges();
       }
 
       QIncludesTest_Order2 x = QIncludesTest_Order2.order2;
@@ -335,7 +336,159 @@ public class IncludesTest extends RemoteClientTest {
     }
   }
 
-  //TODO: tests
+  @Test
+  public void can_include_by_secondary_valuetype_property() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        Customer2 customer = new Customer2();
+        customer.setId(1);
+        session.store(customer);
+
+        Referral2 referral = new Referral2();
+        referral.setCustomer2Id(1);
+        Order2 order = new Order2();
+        order.setRefferal2(referral);
+        session.store(order, "orders/1234");
+
+        session.saveChanges();
+      }
+      try (IDocumentSession session = store.openSession()) {
+        QIncludesTest_Order2 x = QIncludesTest_Order2.order2;
+        Order2 order = session.include(Customer2.class, x.refferal2.customer2Id).load(Order2.class, "orders/1234");
+        // this will not require querying the server!
+        Customer2 referrer2 = session.load(Customer2.class, order.getRefferal2().getCustomer2Id());
+        assertNotNull(referrer2);
+        assertEquals(1, session.advanced().getNumberOfRequests());
+      }
+    }
+  }
+
+  @Test
+  public void can_include_by_list_of_secondary_string_property() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        Product prod1 = new Product();
+        prod1.setName("1");
+        session.store(prod1);
+
+        Product prod2 = new Product();
+        prod2.setName("2");
+        session.store(prod2);
+
+        Product prod3 = new Product();
+        prod3.setName("3");
+        session.store(prod3);
+
+        Order order = new Order();
+        LineItem lineItem1 = new LineItem();
+        lineItem1.setProductId("products/1");
+
+        LineItem lineItem2 = new LineItem();
+        lineItem2.setProductId("products/2");
+
+        LineItem lineItem3 = new LineItem();
+        lineItem3.setProductId("products/3");
+
+        order.setLineItems(Arrays.asList(lineItem1, lineItem2, lineItem3));
+        session.store(order, "orders/1234");
+        session.saveChanges();
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        QIncludesTest_Order x = QIncludesTest_Order.order;
+
+        Order order = session.include(x.lineItems.select().productId).load(Order.class, "orders/1234");
+        for (LineItem lineItem : order.getLineItems()) {
+          // this will not require querying the server!
+          Product product = session.load(Product.class, lineItem.productId);
+          assertNotNull(product);
+        }
+        assertEquals(1, session.advanced().getNumberOfRequests());
+      }
+    }
+  }
+
+  @Test
+  public void can_include_by_list_of_secondary_valuetype_property() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        UUID guid1 = UUID.randomUUID();
+        UUID guid2 = UUID.randomUUID();
+        UUID guid3 = UUID.randomUUID();
+
+        Product2 prod1 = new Product2();
+        prod1.setId(guid1);
+        prod1.setName("1");
+        session.store(prod1);
+
+        Product2 prod2 = new Product2();
+        prod2.setId(guid2);
+        prod2.setName("2");
+        session.store(prod2);
+
+        Product2 prod3 = new Product2();
+        prod3.setId(guid3);
+        prod3.setName("3");
+        session.store(prod3);
+
+        Order2 order = new Order2();
+        LineItem2 item1 = new LineItem2();
+        item1.setProduct2Id(guid1);
+
+        LineItem2 item2 = new LineItem2();
+        item2.setProduct2Id(guid2);
+
+        LineItem2 item3 = new LineItem2();
+        item3.setProduct2Id(guid3);
+
+        order.setLineItem2s(Arrays.asList(item1, item2, item3));
+        session.store(order, "orders/1234");
+        session.saveChanges();
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        QIncludesTest_Order2 x = QIncludesTest_Order2.order2;
+        Order2 order = session.include(Product2.class, x.lineItem2s.select().product2Id).load(Order2.class, "orders/1234");
+
+        for (LineItem2 lineItem2 : order.getLineItem2s()) {
+          // this will not require querying the server!
+          Product2 product2 = session.load(Product2.class, lineItem2.getProduct2Id());
+          assertNotNull(product2);
+        }
+        assertEquals(1, session.advanced().getNumberOfRequests());
+      }
+    }
+  }
+
+  @Test
+  public void can_include_by_denormalized_property() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        Customer2 customer2 = new Customer2();
+        customer2.setId(1);
+        session.store(customer2);
+
+        Order3 order = new Order3();
+        DenormalizedCustomer customer = new DenormalizedCustomer();
+        customer.setId(1);
+        order.setCustomer(customer);
+        session.store(order, "orders/1234");
+
+        session.saveChanges();
+      }
+
+      try (IDocumentSession session = store.openSession()) {
+        QIncludesTest_Order3 x = QIncludesTest_Order3.order3;
+        Order3 order = session.include(Customer2.class, x.customer.id).load(Order3.class, "orders/1234");
+        // this will not require querying the server!
+
+        Customer2 fullCustomer = session.load(Customer2.class, order.customer.id);
+        assertNotNull(fullCustomer);
+        assertEquals(1, session.advanced().getNumberOfRequests());
+      }
+    }
+
+  }
 
   @QueryEntity
   public static class Order {

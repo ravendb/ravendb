@@ -15,16 +15,16 @@ import raven.abstractions.json.linq.RavenJToken;
 
 public class IncludesUtil {
 
-  private final static Pattern INCLUDE_PREFIX_REGEX = Pattern.compile("(\\([^\\)]+\\))$"); //TOOD: is it  correct translation?
+  private final static Pattern INCLUDE_PREFIX_REGEX = Pattern.compile("[^(]*(\\([^(]+\\))");
 
   private static IncludePath getIncludePath(String include) {
     IncludePath result = new IncludePath();
     result.setPath(include);
     Matcher matcher = INCLUDE_PREFIX_REGEX.matcher(include);
-    if (matcher.matches() && matcher.groupCount() >= 2) {
+    if (matcher.matches() && matcher.groupCount() >= 1) {
       result.setPrefix(matcher.group(1));
       result.setPath(result.getPath().replace(result.getPrefix(), ""));
-      result.setPrefix(result.getPrefix().substring(1, result.getPrefix().length() - 2));
+      result.setPrefix(result.getPrefix().substring(1, result.getPrefix().length() - 1));
     }
     return result;
   }

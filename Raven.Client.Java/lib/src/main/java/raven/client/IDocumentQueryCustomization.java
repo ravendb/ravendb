@@ -104,6 +104,13 @@ public interface IDocumentQueryCustomization {
   public IDocumentQueryCustomization include(String path);
 
   /**
+   * Includes the specified path in the query, loading the document specified in that path
+   * @param path
+   * @return
+   */
+  public IDocumentQueryCustomization include(Class<?> targetClass, Path<?> path);
+
+  /**
    * EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
    * This shouldn't be used outside of unit tests unless you are well aware of the implications
    * @param waitTimeout

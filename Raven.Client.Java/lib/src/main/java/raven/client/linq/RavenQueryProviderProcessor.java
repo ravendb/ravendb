@@ -27,7 +27,7 @@ import raven.client.IDocumentQuery;
 import raven.client.SearchOptions;
 import raven.client.WhereParams;
 import raven.client.document.DocumentQuery;
-import raven.client.document.DocumentQueryCustomiation;
+import raven.client.document.DocumentQueryCustomization;
 import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.IAbstractDocumentQuery;
 import raven.client.linq.LinqPathProvider.Result;
@@ -1032,7 +1032,7 @@ public class RavenQueryProviderProcessor<T> {
 
     visitExpression(expression);
     if (customizeQuery != null) {
-      customizeQuery.customize(new DocumentQueryCustomiation((DocumentQuery< ? >) luceneQuery));
+      customizeQuery.customize(new DocumentQueryCustomization((DocumentQuery< ? >) luceneQuery));
     }
     return q.selectFields(clazz, fieldsToFetch.toArray(new String[0]));
   }

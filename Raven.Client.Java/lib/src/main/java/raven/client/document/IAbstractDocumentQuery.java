@@ -86,6 +86,12 @@ public interface IAbstractDocumentQuery<T> {
    */
   public IDocumentQuery<T> include(String path);
 
+  /**
+   * Includes the specified path in the query, loading the document specified in that path
+   * @param path
+   * @return
+   */
+  public IDocumentQuery<T> include(Class<?> targetClass, Path<?> path);
 
   /**
    * Takes the specified count.

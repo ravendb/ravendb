@@ -356,6 +356,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (IDocumentQuery<T>) this;
   }
 
+
   @SuppressWarnings("unchecked")
   @Override
   public IDocumentQuery<T> waitForNonStaleResults(long waitTimeout) {
@@ -462,7 +463,17 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (IDocumentQuery<T>) this;
   }
 
-  //TODO: we omit  public IDocumentQueryCustomization Include<TResult, TInclude>(Expression<Func<TResult, object>> path)
+  @SuppressWarnings("unchecked")
+  @Override
+  public IDocumentQuery<T> include(Class<?> targetClass, Path<?> path) {
+    String fullId = getDocumentConvention().getFindFullDocumentKeyFromNonStringIdentifier().apply(-1, targetClass, false);
+    String idPrefix = fullId.replace("-1", "");
+    String id = ExpressionExtensions.toPropertyPath(path) +  "(" + idPrefix + ")";
+    include(id);
+    return (IDocumentQuery<T>) this;
+  }
+
+
   @SuppressWarnings("unchecked")
   @Override
   public IDocumentQuery<T> include(Path< ? > path) {
@@ -598,7 +609,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
   protected void executeBeforeQueryListeners() {
     for (IDocumentQueryListener documentQueryListener : queryListeners) {
-      documentQueryListener.beforeQueryExecuted(new DocumentQueryCustomiation((DocumentQuery< ? >) this));
+      documentQueryListener.beforeQueryExecuted(new DocumentQueryCustomization((DocumentQuery< ? >) this));
     }
   }
 

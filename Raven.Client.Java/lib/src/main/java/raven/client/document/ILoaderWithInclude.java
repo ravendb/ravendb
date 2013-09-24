@@ -28,6 +28,13 @@ public interface ILoaderWithInclude {
   public MultiLoaderWithInclude include(Path<?> path);
 
   /**
+   * Includes the specified path.
+   * @param path
+   * @return
+   */
+  public MultiLoaderWithInclude include(Class<?> targetClass, Path<?> path);
+
+  /**
    * Loads the specified ids.
    * @param clazz
    * @param ids

@@ -57,11 +57,11 @@ public class RavenJPath {
       }
 
       if (this.currentIndex > currentPartStartIndex) {
-        String member = this.expression.substring(currentPartStartIndex, this.currentIndex - currentPartStartIndex);
+        String member = this.expression.substring(currentPartStartIndex, this.currentIndex);
         parts.add(member);
       }
     } catch (Exception e) {
-      throw new RuntimeException("Unable to evaluate path");
+      throw new RuntimeException("Unable to evaluate path:" + expression, e);
     }
   }
 

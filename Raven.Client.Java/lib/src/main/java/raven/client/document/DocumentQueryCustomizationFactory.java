@@ -200,6 +200,21 @@ public class DocumentQueryCustomizationFactory {
   }
 
   /**
+   * Includes the specified path in the query, loading the document specified in that path
+   * @param targetEntityClass
+   * @param path
+   * @return
+   */
+  public DocumentQueryCustomizationFactory include(final Class<?> targetEntityClass, final Path<?> path) {
+    return new DocumentQueryCustomizationFactory(actions, new Action1<IDocumentQueryCustomization>() {
+      @Override
+      public void apply(IDocumentQueryCustomization documentQuery) {
+        documentQuery.include(targetEntityClass, path);
+      }
+    });
+  }
+
+  /**
    * EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
    * This shouldn't be used outside of unit tests unless you are well aware of the implications
    * @param waitTimeout

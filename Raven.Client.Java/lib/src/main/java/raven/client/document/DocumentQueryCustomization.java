@@ -18,10 +18,10 @@ import raven.client.IDocumentQueryCustomization;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
 
-public class DocumentQueryCustomiation implements IDocumentQueryCustomization {
+public class DocumentQueryCustomization implements IDocumentQueryCustomization {
   private DocumentQuery<?> delegate;
 
-  public DocumentQueryCustomiation(DocumentQuery< ? > delegate) {
+  public DocumentQueryCustomization(DocumentQuery< ? > delegate) {
     super();
     this.delegate = delegate;
   }
@@ -89,6 +89,12 @@ public class DocumentQueryCustomiation implements IDocumentQueryCustomization {
   @Override
   public IDocumentQueryCustomization include(String path) {
     delegate.include(path);
+    return this;
+  }
+
+  @Override
+  public IDocumentQueryCustomization include(Class<?> targetClass, Path< ? > path) {
+    delegate.include(targetClass, path);
     return this;
   }
 

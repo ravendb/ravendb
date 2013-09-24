@@ -170,6 +170,14 @@ public interface IDocumentSession extends AutoCloseable {
   public ILoaderWithInclude include(Path<?> path);
 
   /**
+   * Begin a load while include the specified path
+   * @param targetEntityClass Target entity class (used for id generation)
+   * @param path
+   * @return
+   */
+  public ILoaderWithInclude include(Class<?> targetEntityClass, Path<?> path);
+
+  /**
    * Performs a load that will use the specified results transformer against the specified id
    * @param tranformerClass The transformer to use in this load operation
    * @param clazz The results shape to return after the load operation

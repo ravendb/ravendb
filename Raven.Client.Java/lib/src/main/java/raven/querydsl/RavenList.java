@@ -46,7 +46,8 @@ public class RavenList<E, Q extends SimpleExpression<? super E>> extends ListPat
     return BooleanOperation.create(LinqOps.Query.ANY, mixin, boolExpr);
   }
 
-
-
+  public Q select() {
+    return get(0);
+  }
 
 }

@@ -26,6 +26,18 @@ public class MultiLoaderWithInclude implements ILoaderWithInclude {
     this.session = session;
   }
 
+  @Override
+  public MultiLoaderWithInclude include(Class<?> targetClass, Path<?> path) {
+    Class< ? > type = path.getType();
+    String fullId = session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(-1, targetClass, false);
+    String id = ExpressionExtensions.toPropertyPath(path);
+    if (!String.class.equals(type)) {
+      String idPrefix = fullId.replace("-1", "");
+      id += "(" + idPrefix + ")";
+    }
+    return include(id, targetClass);
+  }
+
   /**
    * Includes the specified path.
    */

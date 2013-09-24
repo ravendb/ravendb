@@ -28,7 +28,6 @@ public interface ILazyLoaderWithInclude {
    */
   public ILazyLoaderWithInclude include(Path<?> path);
 
-
   /**
    * Loads the specified ids.
    * @param clazz

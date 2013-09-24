@@ -443,6 +443,15 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return new MultiLoaderWithInclude(this).include(path);
   }
 
+  /**
+   * Begin a load while including the specified path
+   * @param path
+   * @return
+   */
+  public ILoaderWithInclude include(Class<?> targetClass, Path<?> path) {
+    return new MultiLoaderWithInclude(this).include(targetClass, path);
+  }
+
   public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult load(Class<TTransformer> tranformerClass,
       Class<TResult> clazz, String id) {
     try {
