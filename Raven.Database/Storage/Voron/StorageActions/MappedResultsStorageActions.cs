@@ -278,7 +278,17 @@
 					var value = LoadJson(tableStorage.ReduceResults, iterator.CurrentKey, out version);
 					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
-					yield return ConvertToMappedResultInfo(iterator.CurrentKey, value, size, true, reduceResultsData);
+					yield return
+						new MappedResultInfo
+						{
+							ReduceKey = value.Value<string>("reduceKey"),
+							Etag = Etag.Parse(value.Value<byte[]>("etag")),
+							Timestamp = value.Value<DateTime>("timestamp"),
+							Bucket = value.Value<int>("bucket"),
+							Source = value.Value<string>("sourceBucket"),
+							Size = size,
+							Data = LoadMappedResult(iterator.CurrentKey, value, reduceResultsData)
+						};
 
 					count++;
 				}
@@ -479,6 +489,9 @@
 
 		public ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete)
 		{
+			if (itemsToDelete == null)
+				return null;
+
 			var result = new ScheduledReductionInfo();
 			var hasResult = false;
 			var currentEtag = Etag.Empty;

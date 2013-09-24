@@ -1127,5 +1127,107 @@ namespace Raven.Tests.Storage.Voron
 				});
 			}
 		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void GetItemsToReduce(string requestedStorage)
+		{
+			throw new NotImplementedException();
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void DeleteScheduledReduction1(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				ScheduledReductionDebugInfo r1 = null;
+				ScheduledReductionDebugInfo r2 = null;
+				ScheduledReductionDebugInfo r3 = null;
+
+				storage.Batch(accessor => accessor.MapReduce.DeleteScheduledReduction("view1", 1, "reduceKey1"));
+
+				storage.Batch(accessor =>
+				{
+					accessor.MapReduce.ScheduleReductions("view1", 1, new ReduceKeyAndBucket(1, "reduceKey1"));
+					accessor.MapReduce.ScheduleReductions("view1", 2, new ReduceKeyAndBucket(1, "reduceKey2"));
+					accessor.MapReduce.ScheduleReductions("view1", 3, new ReduceKeyAndBucket(2, "reduceKey2"));
+					accessor.MapReduce.ScheduleReductions("view2", 1, new ReduceKeyAndBucket(1, "reduceKey3"));
+				});
+
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view1", 0, 10)
+						.ToList();
+
+					Assert.Equal(3, results.Count);
+
+					r1 = results[0];
+					r2 = results[1];
+					r3 = results[2];
+				});
+
+				storage.Batch(accessor => accessor.MapReduce.DeleteScheduledReduction("view1", 3, "reduceKey3"));
+				storage.Batch(accessor => Assert.Equal(3, accessor.MapReduce.GetScheduledReductionForDebug("view1", 0, 10).Count()));
+
+				storage.Batch(accessor => accessor.MapReduce.DeleteScheduledReduction("view1", 3, "reduceKey2"));
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view1", 0, 10)
+						.ToList();
+
+					Assert.Equal(2, results.Count);
+					Assert.Equal(r1.Key, results[0].Key);
+					Assert.Equal(r2.Key, results[1].Key);
+
+					results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view2", 0, 10)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+					Assert.Equal("reduceKey3", results[0].Key);
+				});
+
+				storage.Batch(accessor => accessor.MapReduce.DeleteScheduledReduction("view2", 1, "reduceKey3"));
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetScheduledReductionForDebug("view2", 0, 10)
+						.ToList();
+
+					Assert.Equal(0, results.Count);
+				});
+			}
+		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void PutReducedResult(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor => accessor.MapReduce.PutReducedResult("view1", "reduceKey1", 1, 2, 3, new RavenJObject { { "data", "data1" } }));
+
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetReducedResultsForDebug("view1", "reduceKey1", 1, 0, 10)
+						.ToList();
+
+					Assert.Equal(1, results.Count);
+
+					var r1 = results[0];
+
+					Assert.NotEqual(Etag.InvalidEtag, r1.Etag);
+					Assert.Equal("reduceKey1", r1.ReduceKey);
+					Assert.True(r1.Size > 0);
+					Assert.Equal("2", r1.Source);
+					Assert.True((DateTime.UtcNow - r1.Timestamp).TotalMilliseconds < 100);
+					Assert.Equal("data1", r1.Data["data"]);
+				});
+			}
+		}
 	}
 }
