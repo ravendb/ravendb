@@ -100,18 +100,18 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT
 			var expect100Continue = operationClient.Expect100Continue();
 #endif
-			var operationUrl = CreateOperationUrl(options);
-			var token = await GetToken(operationUrl);
-			try
-			{
-				token = await ValidateThatWeCanUseAuthenticateTokens(operationUrl, token);
-			}
-			catch (Exception e)
-			{
-				throw new InvalidOperationException(
-					"Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
-					e);
-			}
+            var operationUrl = CreateOperationUrl(options);
+            var token = await GetToken();
+            try
+            {
+                token = await ValidateThatWeCanUseAuthenticateTokens(token);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(
+                    "Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+                    e);
+            }
 
 			operationRequest = CreateOperationRequest(operationUrl, token);
 
@@ -138,34 +138,35 @@ namespace Raven.Client.Document
 			return cancellationTokenSource.Token;
 		}
 
-		private async Task<string> GetToken(string operationUrl)
-		{
-			// this will force the HTTP layer to authenticate, meaning that our next request won't have to
-			var jsonToken = await GetAuthToken(operationUrl);
+        private async Task<string> GetToken()
+        {
+            // this will force the HTTP layer to authenticate, meaning that our next request won't have to
+            var jsonToken = await GetAuthToken();
 
 			return jsonToken.Value<string>("Token");
 		}
 
-		private Task<RavenJToken> GetAuthToken(string operationUrl)
-		{
+        private Task<RavenJToken> GetAuthToken()
+        {
 #if !SILVERLIGHT
-			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST", 
-														disableRequestCompression: true);
+			var request = operationClient.CreateRequest("GET", "/singleAuthToken",
+                                                        disableRequestCompression: true);
 
 			return new CompletedTask<RavenJToken>(request.ReadResponseJson());
 #else
-			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST",
+			var request = operationClient.CreateRequest("/singleAuthToken", "GET",
 														disableRequestCompression: true);
 
 			return request.ReadResponseJsonAsync();
 #endif
 		}
 
-		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string operationUrl, string token)
-		{
-			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST", disableRequestCompression: true);
+        private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
+        {
 
-            request.DisableAuthentication();
+			var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+
+			request.DisableAuthentication();
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 			var result = await request.ReadResponseJsonAsync();
 			return result.Value<string>("Token");

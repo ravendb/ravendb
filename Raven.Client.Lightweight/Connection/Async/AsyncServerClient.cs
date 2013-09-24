@@ -1537,6 +1537,7 @@ namespace Raven.Client.Connection.Async
                                                                          convention.FailoverBehavior,
                                                                          HandleReplicationStatusChanges);
 
+			request.RemoveAuthorizationHeader();
             var webResponse = await request.RawExecuteRequestAsync();
             queryHeaderInfo.Value = new QueryHeaderInformation
             {
@@ -1548,6 +1549,22 @@ namespace Raven.Client.Connection.Async
                 IsStable = bool.Parse(webResponse.Headers["Raven-Is-Stale"]),
                 TotalResults = int.Parse(webResponse.Headers["Raven-Total-Results"])
             };
+
+			var token = await GetSingleAuthToken();
+
+			try
+			{
+				token = await ValidateThatWeCanUseAuthenticateTokens(token);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+					e);
+			}
+
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+
 
             return new YieldStreamResults(webResponse);
         }
@@ -1656,6 +1673,31 @@ namespace Raven.Client.Connection.Async
                 sb.Append("pageSize=").Append(pageSize).Append("&");
 
 
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, sb.ToString().NoCache(), "GET", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+				.AddReplicationStatusHeaders(Url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+			request.RemoveAuthorizationHeader();
+
+			var token = await GetSingleAuthToken();
+
+			try
+			{
+				token = await ValidateThatWeCanUseAuthenticateTokens(token);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate token for docs streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+					e);
+			}
+
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+
+			
+			var webResponse = await request.RawExecuteRequestAsync();
+			return new YieldStreamResults(webResponse);
+		}
             var request = jsonRequestFactory.CreateHttpJsonRequest(
                 new CreateHttpJsonRequestParams(this, sb.ToString().NoCache(), "GET", credentials, convention)
                     .AddOperationHeaders(OperationsHeaders))
@@ -1926,9 +1968,17 @@ namespace Raven.Client.Connection.Async
 
         #endregion
 
+		public async Task<string> GetSingleAuthToken()
+		{
+			var tokenRequest = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+      
+			var response = await tokenRequest.ReadResponseJsonAsync();
+			return response.Value<string>("Token");
+		}
+
         #region IAsyncAdminDatabaseCommands
 
-        /// <summary>
+  		/// <summary>
         /// Admin operations, like create/delete database.
         /// </summary>
         public IAsyncAdminDatabaseCommands Admin
@@ -1936,16 +1986,26 @@ namespace Raven.Client.Connection.Async
             get { return this; }
         }
 
+		
         public Task CreateDatabaseAsync(DatabaseDocument databaseDocument)
         {
             if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
                 throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
 
+		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
+		{
+			var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
             var dbname = databaseDocument.Id.Replace("Raven/Databases/", "");
             MultiDatabase.AssertValidDatabaseName(dbname);
             var doc = RavenJObject.FromObject(databaseDocument);
             doc.Remove("Id");
 
+			request.DisableAuthentication();
+			request.webRequest.ContentLength = 0;
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+			var result = await request.ReadResponseJsonAsync();
+			return result.Value<string>("Token");
+		}
             var req = CreateRequest("/admin/databases/" + Uri.EscapeDataString(dbname), "PUT");
             return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
         }
