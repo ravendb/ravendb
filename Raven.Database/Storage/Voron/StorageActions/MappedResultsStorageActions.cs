@@ -131,14 +131,14 @@
 				var currentValue = value.Value<int>("mappedItemsCount");
 				if (currentValue == val)
 				{
-					DeleteReduceKeyCount(key, view, version);
+					DeleteReduceKeyCount(key, view, null);
 					return;
 				}
 
 				newValue += currentValue;
 			}
 
-			AddReduceKeyCount(key, view, reduceKey, newValue, version);
+			AddReduceKeyCount(key, view, reduceKey, newValue, null);
 		}
 
 		public void DeleteMappedResultsForDocumentId(string documentId, string view, Dictionary<ReduceKeyAndBucket, int> removed)
@@ -179,7 +179,7 @@
 
 		public void DeleteMappedResultsForView(string view)
 		{
-			var statsByKey = new Dictionary<string, int>();
+			var deletedReduceKeys = new List<string>();
 			var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
 
 			using (var iterator = mappedResultsByView.MultiRead(Snapshot, view))
@@ -189,21 +189,23 @@
 
 				do
 				{
+					var id = iterator.CurrentKey.Clone();
+
 					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.MappedResults, id, out version);
 					var reduceKey = value.Value<string>("reduceKey");
 					var bucket = value.Value<string>("bucket");
 
-					DeleteMappedResult(iterator.CurrentKey, view, value.Value<string>("docId"), reduceKey, bucket);
+					DeleteMappedResult(id, view, value.Value<string>("docId"), reduceKey, bucket);
 
-					statsByKey[reduceKey] = statsByKey.GetOrDefault(reduceKey) - 1;
+					deletedReduceKeys.Add(reduceKey);
 				}
 				while (iterator.MoveNext());
 			}
 
-			foreach (var reduceKeyStat in statsByKey)
+			foreach (var g in deletedReduceKeys.GroupBy(x => x, StringComparer.InvariantCultureIgnoreCase))
 			{
-				IncrementReduceKeyCounter(view, reduceKeyStat.Key, reduceKeyStat.Value);
+				DecrementReduceKeyCounter(view, g.Key, g.Count());
 			}
 		}
 
