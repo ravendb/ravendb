@@ -145,6 +145,9 @@ namespace Voron.Trees
 				var item = page.GetNode(page.LastSearchPosition);
 
 				CheckConcurrency(key, version, item->Version, TreeActionType.Add);
+				var existingValue = new Slice(DirectRead(tx, key), (ushort)item->DataSize);
+				if (existingValue.Compare(value, _cmp) == 0)
+					return; //nothing to do, the exact value is already there				
 
 				if (item->Flags == NodeFlags.MultiValuePageRef)
 				{
