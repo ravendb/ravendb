@@ -218,6 +218,7 @@
     <Compile Include="Server\Responders\Debugging\DebugLists.cs" />
     <Compile Include="Server\Responders\Debugging\DebugQueries.cs" />
     <Compile Include="Server\Responders\Debugging\ExecutingQueryInfo.cs" />
+    <Compile Include="Server\Responders\SingleAuthToken.cs" />
     <Compile Include="Server\Responders\TransactionPrepare.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
