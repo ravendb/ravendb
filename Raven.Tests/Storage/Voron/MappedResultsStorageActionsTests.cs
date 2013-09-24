@@ -553,5 +553,142 @@ namespace Raven.Tests.Storage.Voron
 				});
 			}
 		}
+
+		[Theory]
+		[PropertyData("Storages")]
+		public void DeleteMappedResultsForView(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor => accessor.MapReduce.DeleteMappedResultsForView("view1"));
+
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetMappedResults("view1", new List<string> { "reduceKey1", "reduceKey2" }, true)
+						.ToList();
+
+					Assert.Equal(0, results.Count);
+
+					results = accessor.MapReduce
+					   .GetMappedResults("view2", new List<string> { "reduceKey1", "reduceKey2" }, true)
+					   .ToList();
+
+					Assert.Equal(0, results.Count);
+				});
+
+				storage.Batch(accessor =>
+				{
+					accessor.MapReduce.PutMappedResult("view1", "doc1", "reduceKey1", new RavenJObject { { "data", "data1" } });
+					accessor.MapReduce.PutMappedResult("view1", "doc2", "reduceKey1", new RavenJObject { { "data", "data2" } });
+					accessor.MapReduce.PutMappedResult("view1", "doc1", "reduceKey2", new RavenJObject { { "data", "data3" } });
+					accessor.MapReduce.PutMappedResult("view2", "doc1", "reduceKey1", new RavenJObject { { "data", "data4" } });
+					accessor.MapReduce.IncrementReduceKeyCounter("view1", "reduceKey1", 2);
+					accessor.MapReduce.IncrementReduceKeyCounter("view1", "reduceKey2", 1);
+					accessor.MapReduce.IncrementReduceKeyCounter("view2", "reduceKey1", 1);
+				});
+
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetMappedResults("view1", new List<string> { "reduceKey1", "reduceKey2" }, true)
+						.ToList();
+
+					Assert.Equal(3, results.Count);
+
+					var reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 0, 10).ToList();
+					Assert.Equal(0, reduceKeysAndTypes.Count);
+
+					var keyStats = accessor.MapReduce.GetKeysStats("view1", 0, 10).ToList();
+					Assert.Equal(2, keyStats.Count);
+
+					var k1 = keyStats[0];
+					Assert.Equal("reduceKey1", k1.Key);
+					Assert.Equal(2, k1.Count);
+
+					var k2 = keyStats[1];
+					Assert.Equal("reduceKey2", k2.Key);
+					Assert.Equal(1, k2.Count);
+
+					results = accessor.MapReduce
+					   .GetMappedResults("view2", new List<string> { "reduceKey1", "reduceKey2" }, true)
+					   .ToList();
+
+					Assert.Equal(1, results.Count);
+
+					reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view2", 0, 10).ToList();
+					Assert.Equal(0, reduceKeysAndTypes.Count);
+
+					keyStats = accessor.MapReduce.GetKeysStats("view2", 0, 10).ToList();
+					Assert.Equal(1, keyStats.Count);
+
+					k1 = keyStats[0];
+					Assert.Equal("reduceKey1", k1.Key);
+					Assert.Equal(1, k1.Count);
+				});
+
+				storage.Batch(accessor => accessor.MapReduce.DeleteMappedResultsForView("view1"));
+
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetMappedResults("view1", new List<string> { "reduceKey1", "reduceKey2" }, true)
+						.ToList();
+
+					Assert.Equal(0, results.Count);
+
+					var reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 0, 10).ToList();
+					Assert.Equal(0, reduceKeysAndTypes.Count);
+
+					var keyStats = accessor.MapReduce.GetKeysStats("view1", 0, 10).ToList();
+					Assert.Equal(0, keyStats.Count);
+
+					results = accessor.MapReduce
+					   .GetMappedResults("view2", new List<string> { "reduceKey1", "reduceKey2" }, true)
+					   .ToList();
+
+					Assert.Equal(1, results.Count);
+
+					reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view2", 0, 10).ToList();
+					Assert.Equal(0, reduceKeysAndTypes.Count);
+
+					keyStats = accessor.MapReduce.GetKeysStats("view2", 0, 10).ToList();
+					Assert.Equal(1, keyStats.Count);
+
+					var k1 = keyStats[0];
+					Assert.Equal("reduceKey1", k1.Key);
+					Assert.Equal(1, k1.Count);
+				});
+
+				storage.Batch(accessor => accessor.MapReduce.DeleteMappedResultsForView("view2"));
+
+				storage.Batch(accessor =>
+				{
+					var results = accessor.MapReduce
+						.GetMappedResults("view1", new List<string> { "reduceKey1", "reduceKey2" }, true)
+						.ToList();
+
+					Assert.Equal(0, results.Count);
+
+					var reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view1", 0, 10).ToList();
+					Assert.Equal(0, reduceKeysAndTypes.Count);
+
+					var keyStats = accessor.MapReduce.GetKeysStats("view1", 0, 10).ToList();
+					Assert.Equal(0, keyStats.Count);
+
+					results = accessor.MapReduce
+					   .GetMappedResults("view2", new List<string> { "reduceKey1", "reduceKey2" }, true)
+					   .ToList();
+
+					Assert.Equal(0, results.Count);
+
+					reduceKeysAndTypes = accessor.MapReduce.GetReduceKeysAndTypes("view2", 0, 10).ToList();
+					Assert.Equal(0, reduceKeysAndTypes.Count);
+
+					keyStats = accessor.MapReduce.GetKeysStats("view2", 0, 10).ToList();
+					Assert.Equal(0, keyStats.Count);
+				});
+			}
+		}
 	}
 }
