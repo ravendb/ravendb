@@ -878,7 +878,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param values
    */
   @SuppressWarnings("unchecked")
-  public IDocumentQuery<T> whereIn(String fieldName, Collection<? super Object> values) {
+  public IDocumentQuery<T> whereIn(String fieldName, Collection<?> values) {
     appendSpaceIfNeeded(queryText.length() > 0 && !Character.isWhitespace(queryText.charAt(queryText.length() - 1)));
     negateIfNeeded();
 

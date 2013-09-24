@@ -21,6 +21,11 @@ public class NameEnforcerTest {
 
 
     for (Method method: annotatedWithTest) {
+
+      if (Character.isUpperCase(method.getName().charAt(0))) {
+        fail("Method name should start with lower case!:" + method);
+      }
+
       if (!method.getDeclaringClass().getName().endsWith("Test")) {
         classesWithIssues.add(method.getDeclaringClass().getName());
       }

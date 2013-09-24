@@ -2,7 +2,6 @@ package raven.tests.bugs.metadata;
 
 import static org.junit.Assert.assertEquals;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import raven.abstractions.json.linq.RavenJObject;

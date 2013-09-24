@@ -127,7 +127,7 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @param values
    * @return
    */
-  public TSelf whereIn(String fieldName, Collection<Object> values);
+  public TSelf whereIn(String fieldName, Collection<?> values);
 
   /**
    * Check that the field has one of the specified value

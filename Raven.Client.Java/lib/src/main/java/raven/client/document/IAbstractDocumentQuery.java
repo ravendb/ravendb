@@ -176,7 +176,7 @@ public interface IAbstractDocumentQuery<T> {
    * @param values
    * @return
    */
-  public IDocumentQuery<T> whereIn(String fieldName, Collection<Object> values);
+  public IDocumentQuery<T> whereIn(String fieldName, Collection<?> values);
 
   /**
    * Matches fields which starts with the specified value.

@@ -20,7 +20,7 @@ import raven.client.document.DocumentStore;
 public class IntersectionQueryWithLargeDatasetTest extends RemoteClientTest {
 
   @Test
-  public void CanPerformIntersectionQuery_Remotely() throws Exception {
+  public void canPerformIntersectionQuery_Remotely() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       executeTest(store);
     }
