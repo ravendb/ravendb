@@ -254,6 +254,30 @@ namespace Voron.Tests
 		}
 
 		[Fact]
+		public void MultiAdd_Twice_TheSame_KeyValue_MultiDelete_NotThrowsException_MultiTree_Deleted()
+		{
+			const string CHILDTREE_KEY = "ChildTree";
+			const string CHILDTREE_VALUE = "Foo";
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.Root.MultiAdd(tx, CHILDTREE_KEY, CHILDTREE_VALUE);
+				Env.Root.MultiAdd(tx, CHILDTREE_KEY, CHILDTREE_VALUE);
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Assert.DoesNotThrow(() => Env.Root.MultiDelete(tx, CHILDTREE_KEY, CHILDTREE_VALUE));
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				Assert.Equal(0, Env.Root.ReadVersion(tx, CHILDTREE_KEY));
+			}
+		}
+		
+		[Fact]
 		public void Multiple_MultiAdd_MultiDelete_Once_And_Read_EntryDeleted()
 		{
 			const int INPUT_COUNT = 25;

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
@@ -146,7 +147,7 @@ namespace Voron.Trees
 
 				CheckConcurrency(key, version, item->Version, TreeActionType.Add);
 				var existingValue = new Slice(DirectRead(tx, key), (ushort)item->DataSize);
-				if (existingValue.Compare(value, _cmp) == 0)
+				if(existingValue.Compare(value,_cmp) == 0)
 					return; //nothing to do, the exact value is already there				
 
 				if (item->Flags == NodeFlags.MultiValuePageRef)
@@ -416,7 +417,7 @@ namespace Voron.Trees
 			}
 		}
 
-		public TreeIterator Iterate(Transaction tx)
+	    public TreeIterator Iterate(Transaction tx, WriteBatch writeBatch = null)
 		{
 			return new TreeIterator(this, tx, _cmp);
 		}
@@ -433,10 +434,8 @@ namespace Voron.Trees
 
 				var item = new Slice(node);
 
-				if (item.Compare(key, _cmp) != 0)
-					return null;
-
-				return new ReadResult(NodeHeader.Stream(tx, node), node->Version);
+				return item.Compare(key, _cmp) == 0 ? 
+                    new ReadResult(NodeHeader.Stream(tx, node), node->Version) : null;
 			}
 		}
 

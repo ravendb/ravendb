@@ -63,7 +63,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			var nameAndKey = CreateKey(name, key);
 
-			using (var read = listsByNameAndKey.Read(Snapshot, nameAndKey))
+			using (var read = listsByNameAndKey.Read(Snapshot, nameAndKey,writeBatch))
 			{
 				if (read == null)
 					return;
@@ -113,7 +113,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 			var nameAndKey = CreateKey(name, key);
 
-			using (var read = listsByNameAndKey.Read(Snapshot, nameAndKey))
+			using (var read = listsByNameAndKey.Read(Snapshot, nameAndKey, writeBatch))
 			{
 				if (read == null)
 					return null;
