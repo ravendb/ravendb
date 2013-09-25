@@ -125,8 +125,8 @@ namespace Raven.Tests.Storage.Voron
 				exception1Type = typeof(ArgumentException);
 				exception1Message = "There is already an index with the name: 'index1'";
 
-				exception2Type = typeof(ConcurrencyException);
-				exception2Message = "Cannot add 'index2'. Version mismatch. Expected: 0. Actual: 1.";
+				exception2Type = typeof(ArgumentException);
+				exception2Message = "There is already an index with the name: 'index2'";
 			}
 
 			using (var storage = NewTransactionalStorage(requestedStorage))
