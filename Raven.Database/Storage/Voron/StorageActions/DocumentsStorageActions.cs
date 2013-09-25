@@ -497,7 +497,7 @@
 
         private JsonDocumentMetadata ReadDocumentMetadata(string metadataKey)
         {
-			using (var metadataReadResult = documentsTable.Read(snapshot, metadataKey))
+			using (var metadataReadResult = documentsTable.Read(snapshot, metadataKey, writeBatch))
 			{
 				if (metadataReadResult == null)
 					return null;
@@ -562,7 +562,7 @@
 	        if (existingCachedDocument != null)
 	            return existingCachedDocument.Document;
 
-	        using (var documentReadResult = documentsTable.Read(snapshot, dataKey))
+	        using (var documentReadResult = documentsTable.Read(snapshot, dataKey, writeBatch))
 	        {
 	            if (documentReadResult == null) //non existing document
 	                return null;

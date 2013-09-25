@@ -794,7 +794,7 @@
 		{
 			var reduceKey = value.Value<string>("reduceKey");
 
-			using (var read = dataIndex.Read(Snapshot, key))
+			using (var read = dataIndex.Read(Snapshot, key, writeBatch))
 			{
 				if (read == null)
 					return null;

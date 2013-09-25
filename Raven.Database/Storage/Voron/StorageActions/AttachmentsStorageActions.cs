@@ -155,7 +155,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (!attachmentsTable.Contains(snapshot, dataKey,writeBatch))
 				return null;
 
-			using (var dataReadResult = attachmentsTable.Read(snapshot, dataKey))
+			using (var dataReadResult = attachmentsTable.Read(snapshot, dataKey, writeBatch))
 			{
 				if (dataReadResult == null) return null;
 				Etag currentEtag;
@@ -317,13 +317,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
         
         private Etag ReadCurrentEtag(string metadataKey)
 		{
-			using (var metadataReadResult = attachmentsTable.Read(snapshot, metadataKey))
+			using (var metadataReadResult = attachmentsTable.Read(snapshot, metadataKey, writeBatch))
 			    return metadataReadResult == null ? null : metadataReadResult.Stream.ReadEtag();
 		}
 
 	    private RavenJObject ReadAttachmentMetadata(string metadataKey, out Etag etag)
 		{
-			using (var metadataReadResult = attachmentsTable.Read(snapshot, metadataKey))
+			using (var metadataReadResult = attachmentsTable.Read(snapshot, metadataKey, writeBatch))
 			{
 				if (metadataReadResult == null) //precaution
 				{

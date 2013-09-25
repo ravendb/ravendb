@@ -34,7 +34,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 return 1;
             }
             
-            using (var readResult = generalTable.Read(snapshot, lowerKeyName))
+            using (var readResult = generalTable.Read(snapshot, lowerKeyName, writeBatch))
             {
                 var newValue = readResult.Stream.ReadInt64() + 1;
 

@@ -42,7 +42,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		protected RavenJObject LoadJson(Table table, Slice key, out ushort version)
 		{
-			using (var read = table.Read(Snapshot, key))
+			using (var read = table.Read(Snapshot, key, null))
 			{
 				if (read == null)
 				{
