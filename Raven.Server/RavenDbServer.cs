@@ -10,6 +10,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
+using Raven.Database.Server.WebApi;
 using Raven.Server.Discovery;
 
 namespace Raven.Server
@@ -18,7 +19,7 @@ namespace Raven.Server
 	{
 		private static ILog logger = LogManager.GetCurrentClassLogger();
 		private readonly DocumentDatabase database;
-		private readonly HttpServer server;
+		private readonly WebApiServer server;
 		private ClusterDiscoveryHost discoveryHost;
 
 		public DocumentDatabase Database
@@ -26,7 +27,7 @@ namespace Raven.Server
 			get { return database; }
 		}
 
-		public HttpServer Server
+		public WebApiServer Server
 		{
 			get { return server; }
 		}
@@ -38,7 +39,7 @@ namespace Raven.Server
 			try
 			{
 				database.SpinBackgroundWorkers();
-				server = new HttpServer(settings, database);
+				server = new WebApiServer(settings, database);
 				server.StartListening();
 			}
 			catch (Exception)

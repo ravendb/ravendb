@@ -232,6 +232,8 @@
     <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\Controllers\Admin\AdminController.cs" />
     <Compile Include="Server\Controllers\Admin\BaseAdminController.cs" />
+    <Compile Include="Server\Controllers\BuildController.cs" />
+    <Compile Include="Server\Controllers\DebugController.cs" />
     <Compile Include="Server\Controllers\RavenApiController.cs" />
     <Compile Include="Server\Responders\Admin\AdminDetailedSizeBreakdown.cs" />
     <Compile Include="Server\Responders\Debugging\DebugIndexFields.cs" />
