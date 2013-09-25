@@ -587,7 +587,7 @@ public class FacetedIndexLimitTest extends FacetTestBase {
       }
       s.saveChanges();
 
-      s.query(Camera.class, "CameraCost").customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults()).toList();
+      s.query(Camera.class, "CameraCost").customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults(5 * 60 *1000)).toList();
     }
   }
 }

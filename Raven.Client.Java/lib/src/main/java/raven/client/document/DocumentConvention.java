@@ -18,6 +18,7 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.codehaus.jackson.map.DeserializationProblemHandler;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.SerializationConfig.Feature;
 
 import com.mysema.query.types.Expression;
 
@@ -1067,6 +1068,12 @@ public class DocumentConvention implements Serializable {
         }
       }
     }
+    if (saveEnumsAsIntegers) {
+      objectMapper.enable(Feature.WRITE_ENUMS_USING_INDEX);
+    } else {
+      objectMapper.disable(Feature.WRITE_ENUMS_USING_INDEX);
+    }
+
     return objectMapper;
   }
 

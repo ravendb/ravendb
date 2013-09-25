@@ -177,8 +177,8 @@ public class AggregationTest extends RemoteClientTest {
         for (FacetValue facetValue : facetResult.getValues()) {
           sumLookup.put(facetValue.getRange(), facetValue.getSum());
         }
-        assertEquals(Double.valueOf(3336), sumLookup.get(Integer.toString(Currency.EUR.ordinal())), 0.001);
-        assertEquals(Double.valueOf(9), sumLookup.get(Integer.toString(Currency.NIS.ordinal())), 0.001);
+        assertEquals(Double.valueOf(3336), sumLookup.get(Currency.EUR.name().toLowerCase()), 0.001);
+        assertEquals(Double.valueOf(9), sumLookup.get(Currency.NIS.name().toLowerCase()), 0.001);
 
       }
     }
