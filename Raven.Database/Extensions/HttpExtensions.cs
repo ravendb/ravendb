@@ -243,10 +243,10 @@ namespace Raven.Database.Extensions
 			var obj = value.Value;
 
 			if (obj is DateTime)
-				return ((DateTime) obj).ToString(format);
+				return ((DateTime)obj).ToString(format, CultureInfo.InvariantCulture);
 
 			if (obj is DateTimeOffset)
-				return ((DateTimeOffset) obj).ToString(format);
+				return ((DateTimeOffset)obj).ToString(format, CultureInfo.InvariantCulture);
 
 			return obj.ToString();
 		}
@@ -578,7 +578,7 @@ namespace Raven.Database.Extensions
 		public static void WriteFile(this IHttpContext context, string filePath)
 		{
 			var etagValue = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-None-Match"];
-			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
+			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G", CultureInfo.InvariantCulture);
 			if (etagValue == fileEtag)
 			{
 				context.SetStatusToNotModified();

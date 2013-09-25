@@ -9,6 +9,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Lucene.Net.Analysis;
@@ -272,7 +273,7 @@ namespace Raven.Database.Indexing
             return (string)documentId;
         }
 
-        internal static string ReduceKeyToString(object reduceValue)
+		internal static string ReduceKeyToString(object reduceValue)
         {
             if (reduceValue is string)
             {
