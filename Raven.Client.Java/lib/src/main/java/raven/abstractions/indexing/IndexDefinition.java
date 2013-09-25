@@ -29,6 +29,11 @@ public class IndexDefinition {
     spatialIndexes = new HashMap<String, SpatialOptions>();
   }
 
+  public IndexDefinition(String map) {
+    this();
+    this.maps.add(map);
+  }
+
   private String name;
   private IndexLockMode lockMode;
   private Set<String> maps;

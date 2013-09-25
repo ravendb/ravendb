@@ -12,6 +12,7 @@ import raven.client.document.DocumentConvention;
 
 import com.mysema.query.types.Constant;
 import com.mysema.query.types.Expression;
+import com.mysema.query.types.Operation;
 import com.mysema.query.types.Ops;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.PathType;
@@ -84,6 +85,15 @@ public class LinqPathProvider {
 
     }
 
+    if (expression instanceof Operation) {
+      Operation<?> operation = (Operation< ? >) expression;
+      if (operation.getOperator().equals(Ops.STRING_LENGTH)) {
+        Result result = getPath(operation.getArg(0));
+        result.setPath(result.getPath() + ".Length");
+        return result;
+      }
+    }
+
     if (expression instanceof Path) {
       Path<?> path = (Path<?>) expression;
 
@@ -94,7 +104,7 @@ public class LinqPathProvider {
         Result newResult = new Result();
         newResult.setMemberType(expression.getType());
         newResult.setNestedPath(false);
-        newResult.setPath(parent.getPath() + "." + getValueFromExpression(path.getMetadata().getElement(), mapPath.getKeyType()));
+        newResult.setPath(parent.getPath() + "." + getValueFromExpression(path, mapPath.getKeyType()));
 
         return newResult;
       }
@@ -154,22 +164,36 @@ public class LinqPathProvider {
     return expression;
   }
 
-  public Object getValueFromExpression(Object object, Class< ? > type) {
-    if (object == null) {
+  public Object getValueFromExpression(Expression<?> expression, Class< ? > type) {
+    if (expression == null) {
       return new IllegalArgumentException("Value is missing");
     }
-    // TODO Auto-generated method stub
-    if (object instanceof Constant<?>) {
-      return ((Constant<?>)object).getConstant();
-    }
+    // get object
+    Reference<Object> valueRef= new Reference<>();
+    if (getValueFromExpressionWithoutConversion(expression, valueRef)) {
+      if (valueRef.value == null) {
+        return null;
+      }
+      if (valueRef.value instanceof Enum) {
+        if (!conventions.isSaveEnumsAsIntegers()) {
+          return ((Enum<?>)valueRef.value).name();
+        }
+        return ((Enum<?>)valueRef.value).ordinal();
+      }
 
-    return object;
+      return valueRef.value;
+    }
+    throw new IllegalStateException("Can't extract value from expression of type:" + expression);
   }
 
   public Path<?> getMemberExpression(Expression<?> expression) {
-
-    //TODO: finish me
-    return (Path< ? >) expression;
+    if (expression instanceof Path) {
+      return (Path< ? >) expression;
+    }
+    throw new IllegalStateException("Could not understand how to translate '" + expression + "' to a RavenDB query.\n" +
+        "Are you trying to do computation during the query?\n" +
+        "RavenDB doesn't allow computation during the query, computation is only allowed during index. Consider moving the operation to an index."
+        );
   }
 
   public static boolean getValueFromExpressionWithoutConversion(Expression<?> expression, Reference<Object> valueRef) {
@@ -181,18 +205,13 @@ public class LinqPathProvider {
     return false;
   }
 
-  private static Object getNewExpressionValue(Expression<?> expression) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
   private static Object getMemberValue(Path<?> memberExpression) {
     // TODO Auto-generated method stub
     return null;
   }
 
   private void assertNoComputation(Path<?> expression) {
-    //TODO
+    //empty
   }
 
 }

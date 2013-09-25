@@ -1,9 +1,9 @@
 package raven.client.document;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import javax.annotation.concurrent.Immutable;
 
@@ -28,13 +28,13 @@ import com.mysema.query.types.Path;
 @Immutable
 public class DocumentQueryCustomizationFactory {
 
-  private List<Action1<IDocumentQueryCustomization>> actions = new ArrayList<>();
+  private Set<Action1<IDocumentQueryCustomization>> actions = new LinkedHashSet<>();
 
   public DocumentQueryCustomizationFactory() {
     super();
   }
 
-  protected DocumentQueryCustomizationFactory(List<Action1<IDocumentQueryCustomization>> actions, Action1<IDocumentQueryCustomization> newAction) {
+  protected DocumentQueryCustomizationFactory(Set<Action1<IDocumentQueryCustomization>> actions, Action1<IDocumentQueryCustomization> newAction) {
     this.actions.addAll(actions);
     this.actions.add(newAction);
   }

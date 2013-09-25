@@ -885,6 +885,7 @@ public class RavenQueryProviderProcessor<T> {
       }
       Expression< ? > maybeInnerOperation = search.getArg(0);
       if (maybeInnerOperation instanceof Operation) {
+        search = (Operation< ? >) maybeInnerOperation;
         Operation<?> innerOperation = (Operation<?>) maybeInnerOperation;
         if (LinqOps.Query.SEARCH.getId().equals(innerOperation.getOperator().getId())) {
           target = search.getArg(0);

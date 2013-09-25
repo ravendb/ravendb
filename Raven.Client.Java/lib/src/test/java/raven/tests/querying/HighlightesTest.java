@@ -161,46 +161,5 @@ public class HighlightesTest extends RemoteClientTest {
     }
   }
 
-  /*
-   * [Theory]
-    [InlineData("session")]
-    public void SearchWithHighlightes(string q)
-    {
-      using(var store = NewDocumentStore())
-      {
-        using (var session = store.OpenSession())
-        {
-
-          var orderedResults = new List<SearchResults>();
-
-          foreach (var searchable in results)
-          {
-
-            var docId = session.Advanced.GetDocumentId(searchable);
-
-            var highlights = new List<string>();
-            string title = null;
-            var titles = titleHighlighting.GetFragments(docId);
-            if (titles.Count() == 1)
-            {
-              title = titles[0];
-            }
-            else
-            {
-              highlights.AddRange(titleHighlighting.GetFragments(docId));
-            }
-            highlights.AddRange(slugHighlighting.GetFragments(docId));
-            highlights.AddRange(contentHighlighting.GetFragments(docId));
-
-
-            orderedResults.Add(new SearchResults { Result = searchable, Highlights = highlights, Title = title });
-          }
-        }
-      }
-    }
-  }
-   */
-
-
 
 }
