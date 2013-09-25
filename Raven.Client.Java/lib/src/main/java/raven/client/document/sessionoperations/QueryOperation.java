@@ -215,7 +215,7 @@ public class QueryOperation {
     }
 
     try {
-      return JsonExtensions.getDefaultObjectMapper().readValue(result.toString(), clazz);
+      return JsonExtensions.createDefaultJsonSerializer().readValue(result.toString(), clazz);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

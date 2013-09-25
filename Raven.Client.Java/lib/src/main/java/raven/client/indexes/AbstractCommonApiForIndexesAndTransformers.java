@@ -39,7 +39,7 @@ public class AbstractCommonApiForIndexesAndTransformers {
     }
     ReplicationDocument replicationDocument = null;
     try {
-      replicationDocument = JsonExtensions.getDefaultObjectMapper().readValue(doc.getDataAsJson().toString(), ReplicationDocument.class);
+      replicationDocument = JsonExtensions.createDefaultJsonSerializer().readValue(doc.getDataAsJson().toString(), ReplicationDocument.class);
     } catch(IOException e) {
       throw new RuntimeException("Unable to read replicationDocument", e);
     }

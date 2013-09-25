@@ -46,7 +46,7 @@ public class MultiGetBasicTest extends RemoteClientTest {
 
       HttpPost post = new HttpPost(getDefaultUrl() + "/multi_get");
 
-      String requestString = JsonExtensions.getDefaultObjectMapper().writeValueAsString(new GetRequest[] {
+      String requestString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(new GetRequest[] {
           new GetRequest("/docs/users/1"),
           new GetRequest("/docs/users/2")
       });
@@ -86,7 +86,7 @@ public class MultiGetBasicTest extends RemoteClientTest {
 
       HttpPost post = new HttpPost(getDefaultUrl() + "/multi_get");
 
-      String requestString = JsonExtensions.getDefaultObjectMapper().writeValueAsString(new GetRequest[] {
+      String requestString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(new GetRequest[] {
           new GetRequest("/indexes/dynamic/Users", "query=Name:Ayende"),
           new GetRequest("/indexes/dynamic/Users", "query=Name:Oren")
       });
@@ -121,7 +121,7 @@ public class MultiGetBasicTest extends RemoteClientTest {
 
       HttpPost post = new HttpPost(getDefaultUrl() + "/multi_get");
 
-      String requestString = JsonExtensions.getDefaultObjectMapper().writeValueAsString(new GetRequest[] {
+      String requestString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(new GetRequest[] {
           new GetRequest("/docs/users/1"),
           new GetRequest("/docs/users/2")
       });
@@ -131,7 +131,7 @@ public class MultiGetBasicTest extends RemoteClientTest {
       String response = IOUtils.toString(httpResponse.getEntity().getContent());
       EntityUtils.consumeQuietly(httpResponse.getEntity());
 
-      GetResponse[] results = JsonExtensions.getDefaultObjectMapper().readValue(response, GetResponse[].class);
+      GetResponse[] results = JsonExtensions.createDefaultJsonSerializer().readValue(response, GetResponse[].class);
       assertTrue(results[0].getHeaders().containsKey("ETag"));
       assertTrue(results[1].getHeaders().containsKey("ETag"));
 
@@ -143,7 +143,7 @@ public class MultiGetBasicTest extends RemoteClientTest {
       get2.getHeaders().put("If-None-Match", results[1].getHeaders().get("ETag"));
 
 
-      requestString = JsonExtensions.getDefaultObjectMapper().writeValueAsString(new GetRequest[] {
+      requestString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(new GetRequest[] {
           get1, get2
       });
       post.setEntity(new StringEntity(requestString, ContentType.APPLICATION_JSON));
@@ -153,7 +153,7 @@ public class MultiGetBasicTest extends RemoteClientTest {
       response = IOUtils.toString(httpResponse.getEntity().getContent());
       EntityUtils.consumeQuietly(httpResponse.getEntity());
 
-      results = JsonExtensions.getDefaultObjectMapper().readValue(response, GetResponse[].class);
+      results = JsonExtensions.createDefaultJsonSerializer().readValue(response, GetResponse[].class);
       assertEquals(304, results[0].getStatus());
       assertEquals(304, results[1].getStatus());
 

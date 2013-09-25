@@ -91,7 +91,7 @@ public class LazyFacetsOperation implements ILazyOperation {
     }
     try {
       RavenJObject result =  (RavenJObject) response.getResult();
-      this.result = JsonExtensions.getDefaultObjectMapper().readValue(result.toString(), FacetResults.class);
+      this.result = JsonExtensions.createDefaultJsonSerializer().readValue(result.toString(), FacetResults.class);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

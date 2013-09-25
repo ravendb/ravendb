@@ -9,6 +9,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
+import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
@@ -20,6 +21,7 @@ import raven.abstractions.basic.Reference;
 import raven.abstractions.exceptions.JsonReaderException;
 import raven.abstractions.exceptions.JsonWriterException;
 import raven.abstractions.extensions.JsonExtensions;
+import raven.abstractions.json.RavenJsonTextReader;
 
 public class RavenJObject extends RavenJToken implements Iterable<Entry<String, RavenJToken>> {
 
@@ -30,7 +32,7 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
    * @return A {@link RavenJObject} with the values of the specified object.
    */
   public static RavenJObject fromObject(Object o) {
-    return fromObject(o, JsonExtensions.getDefaultObjectMapper());
+    return fromObject(o, JsonExtensions.createDefaultJsonSerializer());
   }
 
   /**
@@ -39,7 +41,7 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
    * @param objectMapper The {@link ObjectMapper} that will be used to read the object.
    * @return {@link RavenJObject} with the values of the specified object.
    */
-  private static RavenJObject fromObject(Object o, ObjectMapper objectMapper) {
+  public static RavenJObject fromObject(Object o, ObjectMapper objectMapper) {
     RavenJToken token = fromObjectInternal(o, objectMapper);
 
     if (token != null && token.getType() != JTokenType.OBJECT)
@@ -123,7 +125,7 @@ public class RavenJObject extends RavenJToken implements Iterable<Entry<String, 
    */
   public static RavenJObject parse(String json) {
     try {
-      JsonParser jsonParser = JsonExtensions.getDefaultJsonFactory().createJsonParser(json);
+      JsonParser jsonParser = new RavenJsonTextReader().createJsonParser(json);
       return load(jsonParser);
     } catch (IOException e) {
       throw new JsonReaderException(e.getMessage(), e);

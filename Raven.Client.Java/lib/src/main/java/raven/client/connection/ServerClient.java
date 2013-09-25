@@ -22,6 +22,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.util.EntityUtils;
+import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 
@@ -856,7 +857,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
       }
 
       RavenJObject value = transformerDef.value(RavenJObject.class, "Transformer");
-      return JsonExtensions.getDefaultObjectMapper().readValue(value.toString(), TransformerDefinition.class);
+      return convention.createSerializer().readValue(value.toString(), TransformerDefinition.class);
     } catch (IOException e){
       throw new ServerClientException("unable to get transformer:" + transformerName, e);
     }
@@ -936,7 +937,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
     }
     RavenJObject value = indexDef.value(RavenJObject.class, "Index");
     try {
-      return JsonExtensions.getDefaultObjectMapper().readValue(value.toString(), IndexDefinition.class);
+      return convention.createSerializer().readValue(value.toString(), IndexDefinition.class);
     } catch (Exception e) {
       throw new ServerClientException(e);
     }
@@ -1238,7 +1239,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
     HttpEntity httpEntity = webResponse.getEntity();
     try {
       InputStream stream = httpEntity.getContent();
-      JsonParser jsonParser = JsonExtensions.getDefaultJsonFactory().createJsonParser(stream);
+      JsonParser jsonParser = new JsonFactory().createJsonParser(stream);
       if (jsonParser.nextToken() == null || jsonParser.getCurrentToken() != JsonToken.START_OBJECT) {
         throw new IllegalStateException("Unexpected data at start of stream");
       }
@@ -1535,7 +1536,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
           EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
         }
       }
-      return JsonExtensions.getDefaultObjectMapper().readValue(response.toString(), BatchResult[].class);
+      return convention.createSerializer().readValue(response.toString(), BatchResult[].class);
     } catch (ConcurrencyException e) {
       throw e;
     } catch (Exception e) {
@@ -1905,7 +1906,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
     try {
       RavenJObject jo = (RavenJObject)httpJsonRequest.readResponseJson();
-      return JsonExtensions.getDefaultObjectMapper().readValue(jo.toString(), DatabaseStatistics.class);
+      return convention.createSerializer().readValue(jo.toString(), DatabaseStatistics.class);
     } catch (IOException e) {
       throw new ServerClientException(e);
     }
@@ -2039,7 +2040,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
       GetRequest[] requestsForServer =
           multiGetOperation.preparingForCachingRequest(jsonRequestFactory);
 
-      String postedData = JsonExtensions.getDefaultObjectMapper().writeValueAsString(requestsForServer);
+      String postedData = JsonConvert.serializeObject(requestsForServer);
 
       if (multiGetOperation.canFullyCache(jsonRequestFactory, httpJsonRequest, postedData)) {
         return multiGetOperation.handleCachingResponse(new GetResponse[requests.length],
@@ -2049,7 +2050,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
       httpJsonRequest.write(postedData);
       RavenJArray results = (RavenJArray)httpJsonRequest.readResponseJson();
 
-      GetResponse[] responses = JsonExtensions.getDefaultObjectMapper().readValue(results.toString(), GetResponse[].class);
+      GetResponse[] responses = convention.createSerializer().readValue(results.toString(), GetResponse[].class);
 
       /*
       List<GetResponse> responsesList = new ArrayList<>();
@@ -2142,7 +2143,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
     try {
       RavenJObject json = (RavenJObject)request.readResponseJson();
-      return JsonExtensions.getDefaultObjectMapper().readValue(json.toString(), FacetResults.class);
+      return JsonExtensions.createDefaultJsonSerializer().readValue(json.toString(), FacetResults.class);
     } catch (Exception e) {
       throw new ServerClientException(e);
     }
@@ -2189,7 +2190,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
         request.write(facetsJson);
 
       RavenJObject json = (RavenJObject)request.readResponseJson();
-      return JsonExtensions.getDefaultObjectMapper().readValue(json.toString(), FacetResults.class);
+      return JsonExtensions.createDefaultJsonSerializer().readValue(json.toString(), FacetResults.class);
     } catch (Exception e) {
       throw new ServerClientException(e);
     }

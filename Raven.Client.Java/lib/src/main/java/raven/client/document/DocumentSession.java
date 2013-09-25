@@ -26,7 +26,6 @@ import raven.abstractions.data.GetResponse;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.MultiLoadResult;
 import raven.abstractions.exceptions.ConcurrencyException;
-import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
@@ -230,7 +229,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
           List<RavenJObject> values = result.value(RavenJArray.class, "$values").values(RavenJObject.class);
           List<Object> innerTypes = new ArrayList<>();
           for (RavenJObject value: values) {
-            innerTypes.add(JsonExtensions.getDefaultObjectMapper().readValue(value.toString(), innerType));
+            innerTypes.add(getConventions().createSerializer().readValue(value.toString(), innerType));
           }
           Object[] innerArray = (Object[]) Array.newInstance(innerType, innerTypes.size());
           for (int i = 0; i < innerTypes.size(); i++) {
@@ -252,7 +251,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
       try {
         for (RavenJObject object : results) {
           for (RavenJToken token : object.value(RavenJArray.class, "$values")) {
-            items.add(JsonExtensions.getDefaultObjectMapper().readValue(token.toString(), clazz));
+            items.add(getConventions().createSerializer().readValue(token.toString(), clazz));
           }
         }
       } catch (IOException e) {

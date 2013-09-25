@@ -33,7 +33,6 @@ import raven.abstractions.data.HttpMethods;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.exceptions.ReadVetoException;
-import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
@@ -490,12 +489,12 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
         if (documentType != null) {
           Class< ? > type = Class.forName(documentType);
           if (type != null) {
-            entity = JsonExtensions.getDefaultObjectMapper().readValue(documentFound.toString(), type);
+            entity = getConventions().createSerializer().readValue(documentFound.toString(), type);
           }
         }
 
         if (Objects.equals(entity, defaultValue)) {
-          entity = JsonExtensions.getDefaultObjectMapper().readValue(documentFound.toString(), entityType);
+          entity = getConventions().createSerializer().readValue(documentFound.toString(), entityType);
         }
 
         generateEntityIdOnTheClient.trySetIdentity(entity, id);

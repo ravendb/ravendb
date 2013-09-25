@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Stack;
 
 import org.codehaus.jackson.FormatSchema;
+import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -35,7 +36,7 @@ public abstract class RavenJToken {
    * @return
    */
   public static RavenJToken fromObject(Object o) {
-    return fromObjectInternal(o, JsonExtensions.getDefaultObjectMapper());
+    return fromObjectInternal(o, JsonExtensions.createDefaultJsonSerializer());
   }
 
   @SuppressWarnings("unused")
@@ -71,7 +72,7 @@ public abstract class RavenJToken {
    */
   public static RavenJToken parse(String json) throws JsonReaderException {
     try {
-      JsonParser jsonParser = JsonExtensions.getDefaultJsonFactory().createJsonParser(json);
+      JsonParser jsonParser = new JsonFactory().createJsonParser(json);
       return load(jsonParser);
     } catch (IOException e) {
       throw new JsonReaderException(e.getMessage(), e);
@@ -85,7 +86,7 @@ public abstract class RavenJToken {
    */
   public static RavenJToken tryLoad(InputStream json) throws JsonReaderException {
     try {
-      JsonParser jsonParser = JsonExtensions.getDefaultJsonFactory().createJsonParser(json);
+      JsonParser jsonParser = new JsonFactory().createJsonParser(json);
       if (!jsonParser.hasCurrentToken()) {
         if (jsonParser.nextToken() == null) {
           return null;
@@ -143,7 +144,7 @@ public abstract class RavenJToken {
   public String toString() {
     try {
       StringWriter stringWriter = new StringWriter();
-      JsonGenerator jsonGenerator = JsonExtensions.getDefaultJsonFactory().createJsonGenerator(stringWriter);
+      JsonGenerator jsonGenerator = new JsonFactory().createJsonGenerator(stringWriter);
       writeTo(jsonGenerator);
       jsonGenerator.close();
       return stringWriter.toString();

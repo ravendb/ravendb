@@ -32,6 +32,7 @@ import java.util.Map.Entry;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
+import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParseException;
@@ -39,7 +40,6 @@ import org.codehaus.jackson.map.JsonMappingException;
 import org.junit.Test;
 
 import raven.abstractions.exceptions.JsonWriterException;
-import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
@@ -512,7 +512,7 @@ public class RavenJObjectsTest {
     RavenJObject object = RavenJObject.parse("{\"a\": [1,2,3,4]}");
 
     ByteArrayOutputStream baos =new ByteArrayOutputStream();
-    try (JsonGenerator jsonGenerator = JsonExtensions.getDefaultJsonFactory().createJsonGenerator(baos)) {
+    try (JsonGenerator jsonGenerator = new JsonFactory().createJsonGenerator(baos)) {
       object.writeTo(jsonGenerator);
     }
     assertEquals("{\"a\":[1,2,3,4]}",baos.toString());
@@ -549,7 +549,7 @@ public class RavenJObjectsTest {
     String longString = StringUtils.repeat("a", 10000);
     RavenJArray jArray = RavenJArray.parse("[1,2,3, \"" + longString + "\"]");
 
-    try (JsonGenerator generator = JsonExtensions.getDefaultJsonFactory().createJsonGenerator(new ByteArrayOutputStream())) {
+    try (JsonGenerator generator = new JsonFactory().createJsonGenerator(new ByteArrayOutputStream())) {
       jArray.writeTo(generator);
     }
 
@@ -557,7 +557,7 @@ public class RavenJObjectsTest {
     OutputStream outputStream = mock(OutputStream.class);
     doThrow(new IOException()).when(outputStream).write(any(byte[].class),anyInt(),anyInt());
 
-    try (JsonGenerator generator = JsonExtensions.getDefaultJsonFactory().createJsonGenerator(outputStream)) {
+    try (JsonGenerator generator = new JsonFactory().createJsonGenerator(outputStream)) {
       jArray.writeTo(generator);
     }
 

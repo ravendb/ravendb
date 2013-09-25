@@ -13,6 +13,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
 import org.apache.http.impl.cookie.DateParseException;
 import org.apache.http.impl.cookie.DateUtils;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.type.ArrayType;
 import org.codehaus.jackson.map.type.MapType;
 import org.codehaus.jackson.map.type.SimpleType;
@@ -199,11 +200,12 @@ public class SerializationHelper {
       highlighings = new RavenJObject();
     }
     try {
-      TypeFactory typeFactory = JsonExtensions.getDefaultObjectMapper().getTypeFactory();
+      ObjectMapper defaultJsonSerializer = JsonExtensions.createDefaultJsonSerializer();
+      TypeFactory typeFactory = defaultJsonSerializer.getTypeFactory();
       ArrayType arrayType = typeFactory.constructArrayType(String.class);
       MapType innerMapType = typeFactory.constructMapType(Map.class, SimpleType.construct(String.class), arrayType);
       MapType mapType = typeFactory.constructMapType(Map.class, SimpleType.construct(String.class), innerMapType);
-      Map<String, Map<String, String[]>> readValue = JsonExtensions.getDefaultObjectMapper().readValue(highlighings.toString(), mapType);
+      Map<String, Map<String, String[]>> readValue = defaultJsonSerializer.readValue(highlighings.toString(), mapType);
       result.setHighlightings(readValue);
     } catch (IOException e) {
       throw new RuntimeException("Unable to read highlighings info", e);

@@ -82,7 +82,7 @@ public class EntityToJson {
       return cachedJsonDocs.get(entity).createSnapshot();
     }
 
-    RavenJObject jObject = RavenJObject.fromObject(entity);
+    RavenJObject jObject = RavenJObject.fromObject(entity, documentStore.getConventions().createSerializer());
     if (missingDictionary.containsKey(entity)) {
       Map<String, RavenJToken> value = missingDictionary.get(entity);
       for (Map.Entry<String, RavenJToken> item: value.entrySet()) {

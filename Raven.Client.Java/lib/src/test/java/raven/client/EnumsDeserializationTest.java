@@ -27,7 +27,7 @@ public class EnumsDeserializationTest {
 
   @Test
   public void test() throws JsonParseException, JsonMappingException, IOException {
-    LockInfo lockInfo = JsonExtensions.getDefaultObjectMapper().readValue("{\"LockMode\" : \"LockedIgnore\"  }", LockInfo.class);
+    LockInfo lockInfo = JsonExtensions.createDefaultJsonSerializer().readValue("{\"LockMode\" : \"LockedIgnore\"  }", LockInfo.class);
     assertEquals(IndexLockMode.LOCKED_IGNORE, lockInfo.getLockMode());
   }
 }

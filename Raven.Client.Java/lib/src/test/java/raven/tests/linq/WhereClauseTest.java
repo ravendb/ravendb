@@ -59,7 +59,7 @@ public class WhereClauseTest {
     String q = session.query(Renamed.class).where(x.name.eq("red")).toString();
     Renamed r = new Renamed();
     r.setName("N");
-    String valueAsString = JsonExtensions.getDefaultObjectMapper().writeValueAsString(r);
+    String valueAsString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(r);
     assertEquals("{\"Yellow\":\"N\"}", valueAsString);
     assertEquals("Yellow:red", q);
   }

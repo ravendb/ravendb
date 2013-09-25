@@ -44,7 +44,7 @@ public class MultiGetProfilingTest extends RemoteClientTest {
       ProfilingInformation profilingInformation = ((DocumentStore)store).getProfilingInformationFor(id);
       assertEquals(1, profilingInformation.getRequests().size());
 
-      GetResponse[] responses = JsonExtensions.getDefaultObjectMapper().readValue(profilingInformation.getRequests().get(0).getResult(), GetResponse[].class);
+      GetResponse[] responses = JsonExtensions.createDefaultJsonSerializer().readValue(profilingInformation.getRequests().get(0).getResult(), GetResponse[].class);
       assertEquals(3, responses.length);
 
       for (GetResponse response : responses) {
@@ -90,7 +90,7 @@ public class MultiGetProfilingTest extends RemoteClientTest {
       ProfilingInformation profilingInformation = ((DocumentStore) store).getProfilingInformationFor(id);
       assertEquals(1, profilingInformation.getRequests().size());
 
-      GetResponse[] responses = JsonExtensions.getDefaultObjectMapper().readValue(profilingInformation.getRequests().get(0).getResult(), GetResponse[].class);
+      GetResponse[] responses = JsonExtensions.createDefaultJsonSerializer().readValue(profilingInformation.getRequests().get(0).getResult(), GetResponse[].class);
       assertEquals(304, responses[0].getStatus());
       assertTrue(responses[0].getResult().toString().contains("oren"));
 
@@ -136,7 +136,7 @@ public class MultiGetProfilingTest extends RemoteClientTest {
       ProfilingInformation profilingInformation = ((DocumentStore) store).getProfilingInformationFor(id);
       assertEquals(1, profilingInformation.getRequests().size());
 
-      GetResponse[] responses = JsonExtensions.getDefaultObjectMapper().readValue(profilingInformation.getRequests().get(0).getResult(), GetResponse[].class);
+      GetResponse[] responses = JsonExtensions.createDefaultJsonSerializer().readValue(profilingInformation.getRequests().get(0).getResult(), GetResponse[].class);
       assertEquals(304, responses[0].getStatus());
       assertTrue(responses[0].getResult().toString().contains("oren"));
 
@@ -183,7 +183,7 @@ public class MultiGetProfilingTest extends RemoteClientTest {
       ProfilingInformation profilingInformation = ((DocumentStore) store).getProfilingInformationFor(id);
       assertEquals(1, profilingInformation.getRequests().size());
 
-      GetResponse[] responses = JsonExtensions.getDefaultObjectMapper().readValue(profilingInformation.getRequests().get(0).getResult(), GetResponse[].class);
+      GetResponse[] responses = JsonExtensions.createDefaultJsonSerializer().readValue(profilingInformation.getRequests().get(0).getResult(), GetResponse[].class);
       assertEquals(0, responses[0].getStatus());
       assertTrue(responses[0].getResult().toString().contains("oren"));
 
@@ -231,7 +231,7 @@ public class MultiGetProfilingTest extends RemoteClientTest {
       ProfilingInformation profilingInformation = ((DocumentStore) store).getProfilingInformationFor(id);
       assertEquals(1, profilingInformation.getRequests().size());
 
-      GetResponse[] responses = JsonExtensions.getDefaultObjectMapper().readValue(profilingInformation.getRequests().get(0).getResult(), GetResponse[].class);
+      GetResponse[] responses = JsonExtensions.createDefaultJsonSerializer().readValue(profilingInformation.getRequests().get(0).getResult(), GetResponse[].class);
       assertEquals(0, responses[0].getStatus());
       assertTrue(responses[0].getResult().toString().contains("oren"));
 
@@ -273,7 +273,7 @@ public class MultiGetProfilingTest extends RemoteClientTest {
       ProfilingInformation profilingInformation = ((DocumentStore) store).getProfilingInformationFor(id);
       assertEquals(1, profilingInformation.getRequests().size());
 
-      GetResponse[] responses = JsonExtensions.getDefaultObjectMapper().readValue(profilingInformation.getRequests().get(0).getResult(), GetResponse[].class);
+      GetResponse[] responses = JsonExtensions.createDefaultJsonSerializer().readValue(profilingInformation.getRequests().get(0).getResult(), GetResponse[].class);
       assertEquals(500, responses[0].getStatus());
       assertTrue(responses[0].getResult().toString().contains("The field 'Not' is not indexed, cannot query on fields that are not indexed"));
 

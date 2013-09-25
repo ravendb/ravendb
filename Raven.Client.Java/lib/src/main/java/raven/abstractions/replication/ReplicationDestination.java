@@ -107,6 +107,10 @@ public class ReplicationDestination {
       this.description = description;
     }
 
+    public String getDescription() {
+      return description;
+    }
+
   }
 
 }

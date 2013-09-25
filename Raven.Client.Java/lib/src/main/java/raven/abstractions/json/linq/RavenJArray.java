@@ -7,13 +7,13 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 
 import raven.abstractions.exceptions.JsonReaderException;
 import raven.abstractions.exceptions.JsonWriterException;
-import raven.abstractions.extensions.JsonExtensions;
 
 /**
  * Represents a JSON array.
@@ -156,7 +156,7 @@ public class RavenJArray extends RavenJToken implements Iterable<RavenJToken> {
    */
   public static RavenJArray parse(String json) {
     try {
-      JsonParser jsonParser = JsonExtensions.getDefaultJsonFactory().createJsonParser(json);
+      JsonParser jsonParser = new JsonFactory().createJsonParser(json);
       return load(jsonParser);
     } catch (IOException e) {
       throw new JsonReaderException(e.getMessage(), e);

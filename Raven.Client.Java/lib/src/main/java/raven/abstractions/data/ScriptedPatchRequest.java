@@ -47,7 +47,7 @@ public class ScriptedPatchRequest {
 
   public static ScriptedPatchRequest fromJson(RavenJObject patchRequestJson) {
     try {
-      return JsonExtensions.getDefaultObjectMapper().readValue(patchRequestJson.toString(), ScriptedPatchRequest.class);
+      return JsonExtensions.createDefaultJsonSerializer().readValue(patchRequestJson.toString(), ScriptedPatchRequest.class);
     } catch (IOException e ){
       throw new RuntimeException("Unable to parse ScriptedPatchRequest", e);
     }

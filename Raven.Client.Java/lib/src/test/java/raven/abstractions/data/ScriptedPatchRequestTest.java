@@ -25,7 +25,7 @@ public class ScriptedPatchRequestTest {
     request.setScript("javascript");
     request.setValues(values);
 
-    String valueAsString = JsonExtensions.getDefaultObjectMapper().writeValueAsString(request);
+    String valueAsString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(request);
 
     ScriptedPatchRequest parsedRequest = ScriptedPatchRequest.fromJson(RavenJObject.parse(valueAsString));
     assertEquals("javascript", parsedRequest.getScript());

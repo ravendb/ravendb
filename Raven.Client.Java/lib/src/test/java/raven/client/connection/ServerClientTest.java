@@ -150,7 +150,7 @@ public class ServerClientTest extends RavenDBAwareTests {
       dbCommands.put(longKey, null, RavenJObject.fromObject(d1), new RavenJObject());
 
       JsonDocument developerDocument = dbCommands.get(longKey);
-      Developer readDeveloper = JsonExtensions.getDefaultObjectMapper().readValue(developerDocument.getDataAsJson().toString(), Developer.class);
+      Developer readDeveloper = JsonExtensions.createDefaultJsonSerializer().readValue(developerDocument.getDataAsJson().toString(), Developer.class);
       assertEquals("john", readDeveloper.getNick());
 
       RavenJObject objectWithOutKey = new RavenJObject();

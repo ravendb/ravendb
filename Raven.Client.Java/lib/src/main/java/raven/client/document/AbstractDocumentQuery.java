@@ -40,7 +40,6 @@ import raven.abstractions.data.QueryResult;
 import raven.abstractions.data.SortedField;
 import raven.abstractions.data.SpatialIndexQuery;
 import raven.abstractions.extensions.ExpressionExtensions;
-import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.indexing.NumberUtil;
 import raven.abstractions.indexing.SpatialOptions.SpatialRelation;
 import raven.abstractions.indexing.SpatialOptions.SpatialUnits;
@@ -1511,7 +1510,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
     try {
       RavenJTokenWriter ravenJTokenWriter = new RavenJTokenWriter();
-      JsonExtensions.getDefaultObjectMapper().writeValue(ravenJTokenWriter, whereParams.getValue());
+      conventions.createSerializer().writeValue(ravenJTokenWriter, whereParams.getValue());
       String term = ravenJTokenWriter.getToken().toString();
 
       if(term.length() > 1 && term.charAt(0) == '"' && term.charAt(term.length() - 1) == '"') {
@@ -1573,7 +1572,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       return RavenQuery.escape(whereParams.getValue().toString(), false, true);
     }
     try {
-      String term = JsonExtensions.getDefaultObjectMapper().writeValueAsString(whereParams.getValue());
+      String term = conventions.createSerializer().writeValueAsString(whereParams.getValue());
       if(term.length() > 1 && term.charAt(0) == '"' && term.charAt(term.length() - 1) == '"') {
         term = term.substring(1, term.length() - 2);
       }

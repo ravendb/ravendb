@@ -22,7 +22,6 @@ import org.junit.Test;
 
 import com.mysema.query.annotations.QueryEntity;
 
-import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.indexing.NumberUtil;
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
@@ -36,7 +35,7 @@ public class CanQueryOnCustomClassTest extends RemoteClientTest {
   public void usingConverter() throws Exception {
 
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
-      JsonExtensions.getDefaultObjectMapper().registerModule(setupMoneyModule());
+      store.getConventions().createSerializer().registerModule(setupMoneyModule());
 
       try (IDocumentSession session = store.openSession()) {
         session.store(new Order(new Money("$", 50.0)));

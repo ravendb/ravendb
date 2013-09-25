@@ -17,7 +17,7 @@ import raven.abstractions.json.linq.RavenJToken;
 public class JsonConvert {
   public static String serializeObject(Object obj) {
     try {
-      return JsonExtensions.getDefaultObjectMapper().writer().writeValueAsString(obj);
+      return JsonExtensions.createDefaultJsonSerializer().writer().writeValueAsString(obj);
     } catch (IOException e) {
       throw new RuntimeException("Unable to serialize object.", e);
     }
@@ -36,7 +36,7 @@ public class JsonConvert {
   public static <T> Collection<T> deserializeObject(RavenJArray array, Class<T> targetClass, String propertyName) throws JsonParseException, JsonMappingException, IOException {
     List<T> result = new ArrayList<>();
 
-    ObjectMapper objectMapper = JsonExtensions.getDefaultObjectMapper();
+    ObjectMapper objectMapper = JsonExtensions.createDefaultJsonSerializer();
 
     for (RavenJToken token: array) {
       RavenJObject object = (RavenJObject) token;

@@ -17,6 +17,7 @@ import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.codehaus.jackson.map.DeserializationProblemHandler;
+import org.codehaus.jackson.map.ObjectMapper;
 
 import com.mysema.query.types.Expression;
 
@@ -127,6 +128,7 @@ public class DocumentConvention implements Serializable {
 
   private final List<Tuple<Class<?>, TryConvertValueForQueryDelegate<?>>> listOfQueryValueConverters = new ArrayList<>();
 
+  private ObjectMapper objectMapper;
 
   public DocumentConvention() {
 
@@ -1055,6 +1057,17 @@ public class DocumentConvention implements Serializable {
       }
     }
     return null;
+  }
+
+  public ObjectMapper createSerializer() {
+    if (objectMapper == null) {
+      synchronized (this) {
+        if (objectMapper == null) {
+          objectMapper = JsonExtensions.createDefaultJsonSerializer();
+        }
+      }
+    }
+    return objectMapper;
   }
 
 

@@ -7,7 +7,6 @@ import java.util.EnumSet;
 import java.util.Iterator;
 
 import org.apache.commons.lang.StringUtils;
-import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
@@ -40,27 +39,20 @@ import raven.abstractions.util.NetDateFormat;
 import raven.abstractions.util.ValueTypeUtils;
 
 public class JsonExtensions {
-  private static ObjectMapper objectMapper;
 
-  private static JsonFactory jsonFactory;
+  public static ObjectMapper createDefaultJsonSerializer() {
+    ObjectMapper objectMapper = new ObjectMapper();
+    objectMapper.setPropertyNamingStrategy(new DotNetNamingStrategy());
+    objectMapper.disable(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES);
+    objectMapper.enable(Feature.WRITE_ENUMS_USING_INDEX);
+    objectMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+    objectMapper.configure(Feature.WRITE_DATES_AS_TIMESTAMPS, false);
+    objectMapper.setSerializationConfig(objectMapper.getSerializationConfig().withDateFormat(new NetDateFormat()));
+    objectMapper.setDeserializationConfig(objectMapper.getDeserializationConfig().withDateFormat(new NetDateFormat()));
 
-  private static void init() {
-    synchronized (JsonExtensions.class) {
-      if (objectMapper == null) {
-        objectMapper = new ObjectMapper();
-        objectMapper.setPropertyNamingStrategy(new DotNetNamingStrategy());
-        objectMapper.disable(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES);
-        objectMapper.enable(Feature.WRITE_ENUMS_USING_INDEX);
-        objectMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
-        objectMapper.configure(Feature.WRITE_DATES_AS_TIMESTAMPS, false);
-        objectMapper.setSerializationConfig(objectMapper.getSerializationConfig().withDateFormat(new NetDateFormat()));
-        objectMapper.setDeserializationConfig(objectMapper.getDeserializationConfig().withDateFormat(new NetDateFormat()));
-        jsonFactory = objectMapper.getJsonFactory();
-
-        objectMapper.registerModule(createCustomSerializeModule());
-        objectMapper.setAnnotationIntrospector(new SharpAwareJacksonAnnotationIntrospector());
-      }
-    }
+    objectMapper.registerModule(createCustomSerializeModule());
+    objectMapper.setAnnotationIntrospector(new SharpAwareJacksonAnnotationIntrospector());
+    return objectMapper;
   }
 
   private static SimpleModule createCustomSerializeModule() {
@@ -163,20 +155,6 @@ public class JsonExtensions {
 
   }
 
-  public static ObjectMapper getDefaultObjectMapper() {
-    if (objectMapper == null) {
-      init();
-    }
-    return objectMapper;
-  }
-
-  public static JsonFactory getDefaultJsonFactory() {
-    if (objectMapper == null) {
-      init();
-    }
-    return jsonFactory;
-  }
-
   public static class DotNetNamingStrategy extends PropertyNamingStrategy {
 
     @Override
@@ -198,8 +176,6 @@ public class JsonExtensions {
     public String nameForConstructorParameter(MapperConfig< ? > config, AnnotatedParameter ctorParam, String defaultName) {
       return StringUtils.capitalize(defaultName);
     }
-
-
   }
 
 

@@ -74,7 +74,7 @@ public class AdvancedPatchingTest extends RemoteClientTest {
 
       JsonDocument resultDoc = store.getDatabaseCommands().get("CustomTypes/1");
       RavenJObject resultJson = resultDoc.getDataAsJson();
-      CustomType result = JsonExtensions.getDefaultObjectMapper().readValue(resultJson.toString(), CustomType.class);
+      CustomType result = JsonExtensions.createDefaultJsonSerializer().readValue(resultJson.toString(), CustomType.class);
 
       assertEquals(1, result.getValue());
     }
@@ -99,7 +99,7 @@ public class AdvancedPatchingTest extends RemoteClientTest {
 
       JsonDocument resultDoc = store.getDatabaseCommands().get("CustomTypes/1");
       RavenJObject resultJson = resultDoc.getDataAsJson();
-      CustomType result = JsonExtensions.getDefaultObjectMapper().readValue(resultJson.toString(), CustomType.class);
+      CustomType result = JsonExtensions.createDefaultJsonSerializer().readValue(resultJson.toString(), CustomType.class);
       RavenJObject metadata = resultDoc.getMetadata();
 
       assertEquals(metadata.get("Raven-Clr-Type").toString(), result.getOwner());
@@ -213,7 +213,7 @@ public class AdvancedPatchingTest extends RemoteClientTest {
 
     JsonDocument resultDoc = store.getDatabaseCommands().get(test.getId());
     RavenJObject resultJson = resultDoc.getDataAsJson();
-    CustomType result = JsonExtensions.getDefaultObjectMapper().readValue(resultJson.toString(), CustomType.class);
+    CustomType result = JsonExtensions.createDefaultJsonSerializer().readValue(resultJson.toString(), CustomType.class);
 
     assertNotEquals("Something new", resultDoc.getMetadata().value(String.class, "@id"));
     assertEquals(2, result.getComments().size());
@@ -250,7 +250,7 @@ public class AdvancedPatchingTest extends RemoteClientTest {
     store.getDatabaseCommands().updateByIndex("TestIndex", new IndexQuery("Owner:Bob"), new ScriptedPatchRequest(sampleScript)).waitForCompletion();
 
     RavenJObject item1ResultJson = store.getDatabaseCommands().get(item1.getId()).getDataAsJson();
-    CustomType item1Result = JsonExtensions.getDefaultObjectMapper().readValue(item1ResultJson.toString(), CustomType.class);
+    CustomType item1Result = JsonExtensions.createDefaultJsonSerializer().readValue(item1ResultJson.toString(), CustomType.class);
     assertEquals(2, item1Result.getComments().size());
     assertEquals("one test", item1Result.getComments().get(0));
     assertEquals("two", item1Result.getComments().get(1));
@@ -258,7 +258,7 @@ public class AdvancedPatchingTest extends RemoteClientTest {
     assertEquals("err!!", item1ResultJson.get("newValue").toString());
 
     RavenJObject item2ResultJson = store.getDatabaseCommands().get(item2.getId()).getDataAsJson();
-    CustomType item2Result = JsonExtensions.getDefaultObjectMapper().readValue(item2ResultJson.toString(), CustomType.class);
+    CustomType item2Result = JsonExtensions.createDefaultJsonSerializer().readValue(item2ResultJson.toString(), CustomType.class);
     assertEquals(9999, item2Result.getValue());
     assertEquals(3, item2Result.getComments().size());
     assertEquals("one", item2Result.getComments().get(0));

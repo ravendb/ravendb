@@ -25,9 +25,9 @@ public class ProjectionFromDynamicQueryTest extends RemoteClientTest {
 
       try (IDocumentSession s = store.openSession()) {
         RavenJObject result = s.advanced().luceneQuery(User.class)
-        .whereEquals("Name", "Ayende", true)
-        .selectFields(RavenJObject.class, "Email")
-        .first();
+            .whereEquals("Name", "Ayende", true)
+            .selectFields(RavenJObject.class, "Email")
+            .first();
 
         assertEquals("Ayende@ayende.com", result.value(String.class, "Email"));
       }
@@ -51,9 +51,10 @@ public class ProjectionFromDynamicQueryTest extends RemoteClientTest {
 
       try (IDocumentSession s = store.openSession()) {
         RavenJObject result = s.advanced().luceneQuery(Person.class)
-        .whereEquals("Name", "Ayende", true)
-        .selectFields(RavenJObject.class, "BillingAddress")
-        .first();
+            .waitForNonStaleResults()
+            .whereEquals("Name", "Ayende", true)
+            .selectFields(RavenJObject.class, "BillingAddress")
+            .first();
 
         assertEquals("Bologna", result.value(RavenJObject.class, "BillingAddress").value(String.class, "City"));
       }
@@ -76,9 +77,9 @@ public class ProjectionFromDynamicQueryTest extends RemoteClientTest {
 
       try (IDocumentSession s = store.openSession()) {
         RavenJObject result = s.advanced().luceneQuery(Person.class)
-        .whereEquals("Name", "Ayende", true)
-        .selectFields(RavenJObject.class, "BillingAddress.City")
-        .first();
+            .whereEquals("Name", "Ayende", true)
+            .selectFields(RavenJObject.class, "BillingAddress.City")
+            .first();
 
         assertEquals("Bologna", result.value(String.class, "BillingAddress.City"));
       }
@@ -106,9 +107,9 @@ public class ProjectionFromDynamicQueryTest extends RemoteClientTest {
 
       try (IDocumentSession s = store.openSession()) {
         RavenJObject result = s.advanced().luceneQuery(Person.class)
-        .whereEquals("Name", "Ayende", true)
-        .selectFields(RavenJObject.class, "Addresses[0].City")
-        .first();
+            .whereEquals("Name", "Ayende", true)
+            .selectFields(RavenJObject.class, "Addresses[0].City")
+            .first();
 
         assertEquals("Old York", result.value(String.class, "Addresses[0].City"));
       }

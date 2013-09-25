@@ -35,7 +35,7 @@ public class EtagTest {
 
   @Test
   public void testParseEtagUsingDefaultFactor() throws JsonParseException, JsonMappingException, IOException {
-    EtagHolder etagHolder = JsonExtensions.getDefaultObjectMapper().readValue("{\"Tag\": \"00000001-0000-0100-0000-000000000002\"}", EtagHolder.class);
+    EtagHolder etagHolder = JsonExtensions.createDefaultJsonSerializer().readValue("{\"Tag\": \"00000001-0000-0100-0000-000000000002\"}", EtagHolder.class);
     assertEquals(Etag.parse("00000001-0000-0100-0000-000000000002"), etagHolder.tag);
   }
 

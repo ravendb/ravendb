@@ -143,7 +143,7 @@ public class ReplicationInformer implements AutoCloseable {
   }
 
   public <T> T executeWithReplication(HttpMethods method, String primaryUrl, int currentRequest,
-    int currentReadStripingBase, Function1<String, T> operation) throws ServerClientException {
+      int currentReadStripingBase, Function1<String, T> operation) throws ServerClientException {
 
     Reference<T> resultHolder = new Reference<>();
     Reference<Boolean> timeoutThrown = new Reference<>();
@@ -152,7 +152,7 @@ public class ReplicationInformer implements AutoCloseable {
     List<String> localReplicationDestinations = getReplicationDestinationsUrls(); // thread safe copy
 
     boolean shouldReadFromAllServers = conventions.getFailoverBehavior().contains(
-      FailoverBehavior.READ_FROM_ALL_SERVERS);
+        FailoverBehavior.READ_FROM_ALL_SERVERS);
     if (shouldReadFromAllServers && HttpMethods.GET.equals(method)) {
       int replicationIndex = currentReadStripingBase % (localReplicationDestinations.size() + 1);
       // if replicationIndex == destinations count, then we want to use the master
@@ -161,7 +161,7 @@ public class ReplicationInformer implements AutoCloseable {
         // if it is failing, ignore that, and move to the master or any of the replicas
         if (shouldExecuteUsing(localReplicationDestinations.get(replicationIndex), currentRequest, method, false)) {
           if (tryOperation(operation, localReplicationDestinations.get(replicationIndex), true, resultHolder,
-            timeoutThrown)) return resultHolder.value;
+              timeoutThrown)) return resultHolder.value;
         }
       }
     }
@@ -169,11 +169,11 @@ public class ReplicationInformer implements AutoCloseable {
     if (shouldExecuteUsing(primaryUrl, currentRequest, method, true)) {
 
       if (tryOperation(operation, primaryUrl, !timeoutThrown.value && localReplicationDestinations.size() > 0, resultHolder,
-        timeoutThrown)) {
+          timeoutThrown)) {
         return resultHolder.value;
       }
       if (!timeoutThrown.value && isFirstFailure(primaryUrl)
-        && tryOperation(operation, primaryUrl, localReplicationDestinations.size() > 0, resultHolder, timeoutThrown)) {
+          && tryOperation(operation, primaryUrl, localReplicationDestinations.size() > 0, resultHolder, timeoutThrown)) {
         return resultHolder.value;
       }
       incrementFailureCount(primaryUrl);
@@ -188,9 +188,9 @@ public class ReplicationInformer implements AutoCloseable {
         return resultHolder.value;
       }
       if (!timeoutThrown.value
-        && isFirstFailure(replicationDestination)
-        && tryOperation(operation, replicationDestination, localReplicationDestinations.size() > i + 1, resultHolder,
-          timeoutThrown)) {
+          && isFirstFailure(replicationDestination)
+          && tryOperation(operation, replicationDestination, localReplicationDestinations.size() > i + 1, resultHolder,
+              timeoutThrown)) {
         return resultHolder.value;
       }
       incrementFailureCount(replicationDestination);
@@ -201,7 +201,7 @@ public class ReplicationInformer implements AutoCloseable {
   }
 
   protected <T> boolean tryOperation(Function1<String, T> operation, String operationUrl, boolean avoidThrowing,
-    Reference<T> result, Reference<Boolean> wasTimeout) {
+      Reference<T> result, Reference<Boolean> wasTimeout) {
     try {
       result.value = operation.apply(operationUrl);
       resetFailureCount(operationUrl);
@@ -245,10 +245,10 @@ public class ReplicationInformer implements AutoCloseable {
 
   public void dispose() throws InterruptedException
   {
-      Future<Void> replicationInformationTaskCopy = refreshReplicationInformationTask;
-      if (replicationInformationTaskCopy != null) {
-          replicationInformationTaskCopy.wait();
-      }
+    Future<Void> replicationInformationTaskCopy = refreshReplicationInformationTask;
+    if (replicationInformationTaskCopy != null) {
+      replicationInformationTaskCopy.wait();
+    }
   }
 
 
@@ -277,7 +277,7 @@ public class ReplicationInformer implements AutoCloseable {
     }
 
     if ((System.currentTimeMillis() - failureCounter.getLastCheck().getTime()) > conventions
-      .getMaxFailoverCheckPeriod()) {
+        .getMaxFailoverCheckPeriod()) {
       failureCounter.setLastCheck(new Date());
       return true;
     }
@@ -302,7 +302,7 @@ public class ReplicationInformer implements AutoCloseable {
       }
     }
     if (conventions.getFailoverBehaviorWithoutFlags().contains(
-      FailoverBehavior.ALLOW_READS_FROM_SECONDARIES_AND_WRITES_TO_SECONDARIES)) {
+        FailoverBehavior.ALLOW_READS_FROM_SECONDARIES_AND_WRITES_TO_SECONDARIES)) {
       return;
     }
     if (conventions.getFailoverBehaviorWithoutFlags().contains(FailoverBehavior.FAIL_IMMEDIATELY)) {
@@ -313,7 +313,7 @@ public class ReplicationInformer implements AutoCloseable {
       }
     }
     throw new IllegalStateException("Could not replicate " + method
-      + " operation to secondary node, failover behavior is: " + conventions.getFailoverBehavior());
+        + " operation to secondary node, failover behavior is: " + conventions.getFailoverBehavior());
   }
 
   public boolean isFirstFailure(String operationUrl) {
@@ -332,8 +332,8 @@ public class ReplicationInformer implements AutoCloseable {
 
   private static boolean isInvalidDestinationsDocument(JsonDocument document) {
     return document == null || document.getDataAsJson().containsKey("Destinations") == false
-      || document.getDataAsJson().get("Destinations") == null
-      || JTokenType.NULL.equals(document.getDataAsJson().get("Destinations").getType());
+        || document.getDataAsJson().get("Destinations") == null
+        || JTokenType.NULL.equals(document.getDataAsJson().get("Destinations").getType());
   }
 
   public void refreshReplicationInformation(ServerClient commands) {
@@ -362,8 +362,8 @@ public class ReplicationInformer implements AutoCloseable {
   private void updateReplicationInformationFromDocument(JsonDocument document) {
     ReplicationDocument replicationDocument = null;
     try {
-      replicationDocument = JsonExtensions.getDefaultObjectMapper().readValue(document.getDataAsJson().toString(),
-        ReplicationDocument.class);
+      replicationDocument = JsonExtensions.createDefaultJsonSerializer().readValue(document.getDataAsJson().toString(),
+          ReplicationDocument.class);
     } catch (IOException e) {
       log.error("Mapping Exception", e);
       return;
@@ -379,7 +379,7 @@ public class ReplicationInformer implements AutoCloseable {
         return;
       }
       replicationDestinations.add(new ReplicationDestinationData(MultiDatabase.getRootDatabaseUrl(url) + "/databases/"
-        + x.getDatabase()));
+          + x.getDatabase()));
     }
     for (ReplicationDestinationData replicationDestination : replicationDestinations) {
       if (!failureCounts.containsKey(replicationDestination.getUrl())) {
