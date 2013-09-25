@@ -251,7 +251,16 @@
 					ushort version;
 					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
 					var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
-					yield return ConvertToMappedResultInfo(iterator.CurrentKey, value, size, true, mappedResultsData);
+					yield return new MappedResultInfo
+					{
+						ReduceKey = value.Value<string>("reduceKey"),
+						Etag = Etag.Parse(value.Value<byte[]>("etag")),
+						Timestamp = value.Value<DateTime>("timestamp"),
+						Bucket = value.Value<int>("bucket"),
+						Source = value.Value<string>("docId"),
+						Size = size,
+						Data = LoadMappedResult(key, value, mappedResultsData)
+					};
 
 					count++;
 				}
@@ -364,6 +373,9 @@
 
 					do
 					{
+						if (getItemsToReduceParams.Take <= 0)
+							break;
+
 						ushort version;
 						var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, out version);
 
@@ -449,7 +461,16 @@
 					var value = LoadJson(tableStorage.ReduceResults, iterator.CurrentKey, out version);
 					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
-					yield return ConvertToMappedResultInfo(iterator.CurrentKey, value, size, loadData, reduceResultsData);
+					yield return new MappedResultInfo
+					{
+						ReduceKey = value.Value<string>("reduceKey"),
+						Etag = Etag.Parse(value.Value<byte[]>("etag")),
+						Timestamp = value.Value<DateTime>("timestamp"),
+						Bucket = value.Value<int>("bucket"),
+						Source = null,
+						Size = size,
+						Data = loadData ? LoadMappedResult(iterator.CurrentKey, value, reduceResultsData) : null
+					};
 				}
 				while (iterator.MoveNext());
 			}
@@ -481,7 +502,16 @@
 					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
 					var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
-					yield return ConvertToMappedResultInfo(iterator.CurrentKey, value, size, loadData, mappedResultsData);
+					yield return new MappedResultInfo
+					{
+						ReduceKey = value.Value<string>("reduceKey"),
+						Etag = Etag.Parse(value.Value<byte[]>("etag")),
+						Timestamp = value.Value<DateTime>("timestamp"),
+						Bucket = value.Value<int>("bucket"),
+						Source = null,
+						Size = size,
+						Data = loadData ? LoadMappedResult(iterator.CurrentKey, value, mappedResultsData) : null
+					};
 				}
 				while (iterator.MoveNext());
 			}
@@ -599,6 +629,9 @@
 
 		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string view, int take, int limitOfItemsToReduceInSingleStep)
 		{
+			if (take <= 0)
+				take = 1;
+
 			var allKeysToReduce = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 			var viewAndLevel = CreateKey(view, 0);
@@ -629,7 +662,9 @@
 				}
 			}
 
-			return reduceTypesPerKeys.Select(x => new ReduceTypePerKey(x.Key, x.Value));
+			return reduceTypesPerKeys
+				.Select(x => new ReduceTypePerKey(x.Key, x.Value))
+				.Take(take);
 		}
 
 		private int GetNumberOfMappedItemsPerReduceKey(string view, string reduceKey)
@@ -694,18 +729,6 @@
 			reduceKeyTypesByView.MultiAdd(writeBatch, view, key);
 		}
 
-		private void DeleteReduceKey(string key, string view, ushort? expectedVersion)
-		{
-			var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
-			var reduceKeTypesByView = tableStorage.ReduceKeyTypes.GetIndex(Tables.ReduceKeyTypes.Indices.ByView);
-
-			tableStorage.ReduceKeyCounts.Delete(writeBatch, key, expectedVersion);
-			reduceKeyCountsByView.MultiDelete(writeBatch, view, key);
-
-			tableStorage.ReduceKeyTypes.Delete(writeBatch, key, expectedVersion);
-			reduceKeTypesByView.MultiDelete(writeBatch, view, key);
-		}
-
 		public ReduceType GetLastPerformedReduceType(string view, string reduceKey)
 		{
 			var key = CreateKey(view, reduceKey);
@@ -726,19 +749,16 @@
 			using (var iterator = mappedResultsByViewAndReduceKey.MultiRead(Snapshot, viewAndReduceKey))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
-					return Enumerable.Empty<int>();
+					yield break;
 
-				var results = new List<int>();
 				do
 				{
 					ushort version;
 					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
 
-					results.Add(value.Value<int>("bucket"));
+					yield return value.Value<int>("bucket");
 				}
 				while (iterator.MoveNext());
-
-				return results.Distinct();
 			}
 		}
 
@@ -774,20 +794,6 @@
 					while (iterator.MoveNext());
 				}
 			}
-		}
-
-		private MappedResultInfo ConvertToMappedResultInfo(Slice key, RavenJObject value, int size, bool loadData, Index dataIndex)
-		{
-			return new MappedResultInfo
-			{
-				ReduceKey = value.Value<string>("reduceKey"),
-				Etag = Etag.Parse(value.Value<byte[]>("etag")),
-				Timestamp = value.Value<DateTime>("timestamp"),
-				Bucket = value.Value<int>("bucket"),
-				Source = value.Value<string>("docId"),
-				Size = size,
-				Data = loadData ? LoadMappedResult(key, value, dataIndex) : null
-			};
 		}
 
 		private RavenJObject LoadMappedResult(Slice key, RavenJObject value, Index dataIndex)
