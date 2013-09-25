@@ -22,7 +22,6 @@ import raven.client.indexes.AbstractIndexCreationTask;
 
 import com.mysema.query.annotations.QueryEntity;
 
-@Ignore
 public class AggregationTest extends RemoteClientTest {
 
   @QueryEntity

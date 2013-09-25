@@ -2,6 +2,9 @@ package raven.tests.querying;
 
 import java.util.Date;
 
+import com.mysema.query.annotations.QueryEntity;
+
+@QueryEntity
 public class IndexedUser {
   private int age;
   private Date birthday;
