@@ -17,8 +17,6 @@ namespace Raven.Database.Indexing
 {
     public abstract class AbstractIndexingExecuter
     {
-        const string DocumentReindexingWorkReason = "Some documents need reindexing. (One or more document touches)";
-
         protected WorkContext context;
         protected TaskScheduler scheduler;
         protected static readonly ILog Log = LogManager.GetCurrentClassLogger();
@@ -205,60 +203,53 @@ namespace Raven.Database.Indexing
         protected bool ExecuteIndexing(bool isIdle, out bool onlyFoundIdleWork)
         {
             Etag synchronizationEtag = null;
-            DocumentKeysAddedWhileIndexingInProgress = new ConcurrentQueue<string>();
-            try
-            {
 
-                var indexesToWorkOn = new List<IndexToWorkOn>();
-                var localFoundOnlyIdleWork = new Reference<bool> { Value = true };
-                transactionalStorage.Batch(actions =>
+            var indexesToWorkOn = new List<IndexToWorkOn>();
+            var localFoundOnlyIdleWork = new Reference<bool> {Value = true};
+            transactionalStorage.Batch(actions =>
+            {
+                foreach (var indexesStat in actions.Indexing.GetIndexesStats().Where(IsValidIndex))
                 {
-                    foreach (var indexesStat in actions.Indexing.GetIndexesStats().Where(IsValidIndex))
+                    var failureRate = actions.Indexing.GetFailureRate(indexesStat.Name);
+                    if (failureRate.IsInvalidIndex)
                     {
-                        var failureRate = actions.Indexing.GetFailureRate(indexesStat.Name);
-                        if (failureRate.IsInvalidIndex)
-                        {
-                            Log.Info("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
-                                           indexesStat.Name,
-                                           failureRate.FailureRate);
-                            continue;
-                        }
-
-                        synchronizationEtag = synchronizationEtag ?? GetSynchronizationEtag();
-
-                        if (IsIndexStale(indexesStat, synchronizationEtag, actions, isIdle, localFoundOnlyIdleWork) == false)
-                            continue;
-                        var indexToWorkOn = GetIndexToWorkOn(indexesStat);
-                        var index = context.IndexStorage.GetIndexInstance(indexesStat.Name);
-                        if (index == null || // not there
-                            index.CurrentMapIndexingTask != null) // busy doing indexing work already, not relevant for this batch
-                            continue;
-
-                        indexToWorkOn.Index = index;
-                        indexesToWorkOn.Add(indexToWorkOn);
+                        Log.Info("Skipped indexing documents for index: {0} because failure rate is too high: {1}",
+                                 indexesStat.Name,
+                                 failureRate.FailureRate);
+                        continue;
                     }
-                });
-                onlyFoundIdleWork = localFoundOnlyIdleWork.Value;
-                if (indexesToWorkOn.Count == 0)
-                    return false;
 
-                context.UpdateFoundWork();
-                context.CancellationToken.ThrowIfCancellationRequested();
+                    synchronizationEtag = synchronizationEtag ?? GetSynchronizationEtag();
 
-                using (context.IndexDefinitionStorage.CurrentlyIndexing())
-                {
-                    var lastIndexedGuidForAllIndexes = indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
-                    var startEtag = CalculateSynchronizationEtag(synchronizationEtag, lastIndexedGuidForAllIndexes);
+                    if (IsIndexStale(indexesStat, synchronizationEtag, actions, isIdle, localFoundOnlyIdleWork) == false)
+                        continue;
+                    var indexToWorkOn = GetIndexToWorkOn(indexesStat);
+                    var index = context.IndexStorage.GetIndexInstance(indexesStat.Name);
+                    if (index == null || // not there
+                        index.CurrentMapIndexingTask != null)
+                        // busy doing indexing work already, not relevant for this batch
+                        continue;
 
-                    ExecuteIndexingWork(indexesToWorkOn, startEtag);
+                    indexToWorkOn.Index = index;
+                    indexesToWorkOn.Add(indexToWorkOn);
                 }
+            });
+            onlyFoundIdleWork = localFoundOnlyIdleWork.Value;
+            if (indexesToWorkOn.Count == 0)
+                return false;
 
-                ScheduleRelevantDocumentsForReindexIfNeeded();
-            }
-            finally
+            context.UpdateFoundWork();
+            context.CancellationToken.ThrowIfCancellationRequested();
+
+            using (context.IndexDefinitionStorage.CurrentlyIndexing())
             {
-                DocumentKeysAddedWhileIndexingInProgress = null;
+                var lastIndexedGuidForAllIndexes =
+                    indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
+                var startEtag = CalculateSynchronizationEtag(synchronizationEtag, lastIndexedGuidForAllIndexes);
+
+                ExecuteIndexingWork(indexesToWorkOn, startEtag);
             }
+
             return true;
         }
 
@@ -269,45 +260,5 @@ namespace Raven.Database.Indexing
         protected abstract void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag startEtag);
 
         protected abstract bool IsValidIndex(IndexStats indexesStat);
-
-        protected abstract ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress { get; set; }        
-
-        protected abstract ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing { get; }
-
-        private void ScheduleRelevantDocumentsForReindexIfNeeded()
-        {
-            try
-            {
-                var documentKeysAddedWhileIndexingInProgress = DocumentKeysAddedWhileIndexingInProgress;
-                if (documentKeysAddedWhileIndexingInProgress == null || documentKeysAddedWhileIndexingInProgress.Count == 0)
-                    return;
-
-                transactionalStorage.Batch(actions =>
-                {
-                    bool touched = false;
-                    string result;
-                    while (documentKeysAddedWhileIndexingInProgress.TryDequeue(out result))
-                    {
-                        ConcurrentBag<string> bag;
-                        if (ReferencingDocumentsByChildKeysWhichMightNeedReindexing.TryGetValue(result, out bag) == false)
-                            continue;
-                        foreach (var docKey in bag)
-                        {
-                            touched = true;
-                            Etag etag;
-                            Etag touchEtag;
-                            actions.Documents.TouchDocument(docKey, out etag, out touchEtag);
-                        }
-                    }
-
-                    if (touched)
-                        context.ShouldNotifyAboutWork(() => DocumentReindexingWorkReason);
-                });
-            }
-            finally
-            {
-                ReferencingDocumentsByChildKeysWhichMightNeedReindexing.Clear();
-            }
-        }
     }
 }

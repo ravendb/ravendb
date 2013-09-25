@@ -13,9 +13,10 @@ namespace Raven.Tryouts
 			for (int i = 0; i < 100; i++)
 			{
 				Console.WriteLine(i);
-                using (var x = new WithIIS())
+                Environment.SetEnvironmentVariable("run", i.ToString("000"));
+                using (var x = new RavenDB_1280())
 				{
-					x.CheckNotificationInIIS();
+					x.Referenced_Docs_Are_Indexed_During_Heavy_Writing();
 				}
 			}
 			

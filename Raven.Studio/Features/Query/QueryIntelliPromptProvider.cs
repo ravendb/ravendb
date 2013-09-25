@@ -11,6 +11,7 @@ using ActiproSoftware.Text.Utility;
 using ActiproSoftware.Windows.Controls.SyntaxEditor;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.IntelliPrompt.Implementation;
+using Raven.Abstractions.Util;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Query
@@ -119,7 +120,7 @@ namespace Raven.Studio.Features.Query
 
 			foreach (var term in terms)
 			{
-				var maybeQuotedTerm = term.IndexOfAny(new[] {' ', '\t'}) == -1 ? term : "\"" + term + "\"";
+				var maybeQuotedTerm = RavenQuery.Escape(term);
 				session.Items.Add(new CompletionItem
 				{
 					Text = term,

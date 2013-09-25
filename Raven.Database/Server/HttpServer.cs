@@ -1369,8 +1369,8 @@ namespace Raven.Database.Server
 				SerializeError(ctx, new
 				{
 					Url = ctx.Request.RawUrl,
-					e.ActualETag,
-					e.ExpectedETag,
+                    ActualETag = e.ActualETag ?? Etag.Empty,
+                    ExpectedETag = e.ExpectedETag ?? Etag.Empty,
 					Error = e.Message
 				});
 			}

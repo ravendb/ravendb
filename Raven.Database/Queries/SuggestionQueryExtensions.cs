@@ -24,6 +24,18 @@ namespace Raven.Database.Queries
 					throw new InvalidOperationException("Could find no index for the specified query, suggestions will not create a dynamic index, and cannot suggest without an index. Did you forget to query before calling Suggest?");
 			}
 
+			var indexDefinition = self.GetIndexDefinition(index);
+			if (indexDefinition == null)
+				throw new InvalidOperationException(string.Format("Could not find specified index '{0}'.", index));
+
+			if (indexDefinition.Suggestions.ContainsKey(suggestionQuery.Field) == false && self.Configuration.PreventAutomaticSuggestionCreation)
+			{
+				// if index does not have suggestions defined for this field and server configuration does not allow to create it on the fly
+				// then just return empty result
+				return new SuggestionQueryResult();
+			}
+
+
 			return new SuggestionQueryRunner(self).ExecuteSuggestionQuery(index, suggestionQuery);
 		}
 

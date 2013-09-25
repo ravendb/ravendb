@@ -1012,15 +1012,6 @@ namespace Raven.Client.Connection.Async
 				.ContinueWith(task => convention.CreateSerializer().Deserialize<LicensingStatus>(new RavenJTokenReader(task.Result)));
 		}
 
-		public Task<BuildNumber> GetBuildNumberAsync()
-		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/build/version").NoCache(), "GET", credentials, convention));
-			request.AddOperationHeaders(OperationsHeaders);
-
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task => convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(task.Result)));
-		}
-
 		public async Task<LicensingStatus> GetLicenseStatus()
 		{
 			var actualUrl = string.Format("{0}/license/status", url).NoCache();
@@ -1037,7 +1028,7 @@ namespace Raven.Client.Connection.Async
 			};
 		}
 
-		public async Task<BuildNumber> GetBuildNumber()
+		public async Task<BuildNumber> GetBuildNumberAsync()
 		{
 			var actualUrl = string.Format("{0}/build/version", url).NoCache();
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -1639,6 +1630,23 @@ namespace Raven.Client.Connection.Async
 																		 convention.FailoverBehavior,
 																		 HandleReplicationStatusChanges);
 
+			request.RemoveAuthorizationHeader();
+
+			var token = await GetSingleAuthToken();
+
+			try
+			{
+				token = await ValidateThatWeCanUseAuthenticateTokens(token);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+					e);
+			}
+
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+
 			var webResponse = await request.RawExecuteRequestAsync();
 			queryHeaderInfo.Value = new QueryHeaderInformation
 			{
@@ -1760,6 +1768,24 @@ namespace Raven.Client.Connection.Async
 				new CreateHttpJsonRequestParams(this, sb.ToString().NoCache(), "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 				.AddReplicationStatusHeaders(Url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+			request.RemoveAuthorizationHeader();
+
+			var token = await GetSingleAuthToken();
+
+			try
+			{
+				token = await ValidateThatWeCanUseAuthenticateTokens(token);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate token for docs streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+					e);
+			}
+
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+
+			
 			var webResponse = await request.RawExecuteRequestAsync();
 			return new YieldStreamResults(webResponse);
 		}
@@ -2012,6 +2038,25 @@ namespace Raven.Client.Connection.Async
 							  }
 							  return task.Result;
 						  });
+		}
+
+		public async Task<string> GetSingleAuthToken()
+		{
+			var tokenRequest = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+
+			var response = await tokenRequest.ReadResponseJsonAsync();
+			return response.Value<string>("Token");
+		}
+
+		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
+		{
+			var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+
+			request.DisableAuthentication();
+			request.webRequest.ContentLength = 0;
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+			var result = await request.ReadResponseJsonAsync();
+			return result.Value<string>("Token");
 		}
 
 		#region IAsyncGlobalAdminDatabaseCommands

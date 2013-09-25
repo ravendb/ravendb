@@ -34,7 +34,7 @@ namespace Raven.Database.Impl.DTC
 			timer = new Timer(CleanupOldTransactions, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
 		}
 
-		private EsentTransactionContext CreateEsentTransactionContext()
+	    public EsentTransactionContext CreateEsentTransactionContext()
 		{
 			var newTransactionNumber = Interlocked.Increment(ref transactionContextNumber);
 			return new EsentTransactionContext(new Session(storage.Instance),
@@ -115,11 +115,7 @@ namespace Raven.Database.Impl.DTC
 			if (transactionContexts.TryRemove(id, out context) == false)
 				return;
 
-			using(context.Session)
-			using (context.EnterSessionContext())
-			{
-				context.Transaction.Dispose(); // will rollback the transaction if it was not committed
-			}
+			context.Dispose();
 		}
 
 		public void Dispose()

@@ -81,7 +81,8 @@ namespace Raven.Database.Indexing
 
 		protected override Task GetApplicableTask(IStorageActionsAccessor actions)
 		{
-			return actions.Tasks.GetMergedTask<RemoveFromIndexTask>();
+		    return (Task)actions.Tasks.GetMergedTask<RemoveFromIndexTask>() ??
+		           actions.Tasks.GetMergedTask<TouchMissingReferenceDocumentTask>();
 		}
 
 		protected override void FlushAllIndexes()
@@ -523,25 +524,5 @@ namespace Raven.Database.Indexing
 			indexingCompletedEvent = new ManualResetEventSlim(false);
 			base.Init();
 		}
-
-        protected override ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress
-        {
-            get
-            {
-                return context.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex;
-            }
-            set
-            {
-                context.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex = value;
-            }
-        }
-
-        protected override ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing
-        {
-            get
-            {
-                return context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex;
-            }
-        }
     }
 }

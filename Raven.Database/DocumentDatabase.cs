@@ -826,7 +826,6 @@ namespace Raven.Database
                                 }, metadata);
                             });
 
-                        ScheduleDocumentsForReindexIfNeeded(key);
                         workContext.ShouldNotifyAboutWork(() => "PUT " + key);
                     }
                     else
@@ -859,7 +858,15 @@ namespace Raven.Database
             {
                 Etag preTouchEtag;
                 Etag afterTouchEtag;
-                actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+                try
+                {
+                    actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+                }
+                catch (ConcurrencyException)
+                {
+                    continue;
+                }
+
                 if (preTouchEtag == null || afterTouchEtag == null)
                     continue;
 
@@ -1072,24 +1079,12 @@ namespace Raven.Database
                         deleted = doc != null;
                     }
 
-                    ScheduleDocumentsForReindexIfNeeded(key);
                     workContext.ShouldNotifyAboutWork(() => "DEL " + key);
                 });
 
                 metadata = metadataVar;
                 return deleted;
             }
-        }
-
-        private void ScheduleDocumentsForReindexIfNeeded(string key)
-        {
-            var queue = workContext.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex;
-            if (queue != null)
-                queue.Enqueue(key);
-
-            queue = workContext.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex;
-            if (queue!= null)
-                queue.Enqueue(key);
         }
 
         public bool HasTransaction(string txId)
@@ -2414,8 +2409,6 @@ namespace Raven.Database
 	                    {
 							RemoveReservedProperties(doc.DataAsJson);
 							RemoveMetadataReservedProperties(doc.Metadata);                                                       
-
-                            ScheduleDocumentsForReindexIfNeeded(doc.Key);
 
 							if (options.CheckReferencesInIndexes)
 								keys.Add(doc.Key);

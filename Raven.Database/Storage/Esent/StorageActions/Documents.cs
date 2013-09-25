@@ -269,11 +269,25 @@ namespace Raven.Storage.Esent.StorageActions
 			preTouchEtag = Etag.Parse(Api.RetrieveColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"]));
 			Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			afterTouchEtag = newEtag;
-			using (var update = new Update(session, Documents, JET_prep.Replace))
-			{
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
-				update.Save();
-			}
+		    try
+		    {
+		        using (var update = new Update(session, Documents, JET_prep.Replace))
+		        {
+		            Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
+		            update.Save();
+		        }
+		    }
+		    catch (EsentErrorException e)
+		    {
+		        switch (e.Error)
+		        {
+		            case JET_err.WriteConflict:
+                    case JET_err.WriteConflictPrimaryIndex:
+		                throw new ConcurrencyException("Cannot touch document " + key + " because it is already modified");
+                    default:
+		                throw;
+		        }
+		    }
 
 			etagTouches.Add(preTouchEtag, afterTouchEtag);
 		}
@@ -331,6 +345,19 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.JetSetCurrentIndex(session, Documents, "by_key");
 				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
+                if (isUpdate)
+                {
+                    // need to check for keys > 127 
+                    var keyFromDb = Api.RetrieveColumnAsString(session, Documents,
+                                                               tableColumnsCache.DocumentsColumns["key"]);
+
+                    if (keyFromDb != key)
+                    {
+                       throw new NotSupportedException("Got a request to update a document with id [" + key + "] that matches already existing document [" + keyFromDb +
+                           "] in the first 127 chars. Unfortunately, Esent doesn't allow such keys and this isn't supported.");
+                    }
+
+                }
 
 				Etag existingEtag = null;
 				if (isUpdate)
@@ -414,7 +441,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
+	    public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
 		{
 			var prep = JET_prep.Insert;
 			bool isUpdate = false;

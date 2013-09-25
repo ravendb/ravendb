@@ -41,6 +41,16 @@ namespace Raven.Studio.Features.Settings
 			    HasUnsavedChanges = true;
 	    }
 
+	    public override void MarkAsSaved()
+	    {
+		    HasUnsavedChanges = false;
+
+			OriginalMaxSize = MaxSize;
+			OriginalWarnSize = WarnSize;
+			OriginalMaxDocs = MaxDocs;
+			OriginalWarnDocs = WarnDocs;
+	    }
+
 	    private static long ReadSettingAsInt(DatabaseDocument document, string settingName)
         {
 			long value;
@@ -51,5 +61,7 @@ namespace Raven.Studio.Features.Settings
 
             return value;
         }
+
+	   
     }
 }

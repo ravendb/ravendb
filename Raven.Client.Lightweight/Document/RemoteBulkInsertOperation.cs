@@ -103,10 +103,10 @@ namespace Raven.Client.Document
             var expect100Continue = operationClient.Expect100Continue();
 #endif
             var operationUrl = CreateOperationUrl(options);
-            var token = await GetToken(operationUrl);
+            var token = await GetToken();
             try
             {
-                token = await ValidateThatWeCanUseAuthenticateTokens(operationUrl, token);
+                token = await ValidateThatWeCanUseAuthenticateTokens(token);
             }
             catch (Exception e)
             {
@@ -140,38 +140,38 @@ namespace Raven.Client.Document
             return cancellationTokenSource.Token;
         }
 
-        private async Task<string> GetToken(string operationUrl)
+        private async Task<string> GetToken()
         {
             // this will force the HTTP layer to authenticate, meaning that our next request won't have to
-            var jsonToken = await GetAuthToken(operationUrl);
+            var jsonToken = await GetAuthToken();
 
             return jsonToken.Value<string>("Token");
         }
 
-        private Task<RavenJToken> GetAuthToken(string operationUrl)
+        private Task<RavenJToken> GetAuthToken()
         {
 #if !SILVERLIGHT
-            var request = operationClient.CreateRequest("POST", operationUrl + "&op=generate-single-use-auth-token",
+			var request = operationClient.CreateRequest("GET", "/singleAuthToken",
                                                         disableRequestCompression: true);
 
             return new CompletedTask<RavenJToken>(request.ReadResponseJson());
 #else
-			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST",
+			var request = operationClient.CreateRequest("/singleAuthToken", "GET",
 														disableRequestCompression: true);
 			request.webRequest.ContentLength = 0;
 
 			return request.ReadResponseJsonAsync();
 #endif
-        }
+		}
 
-        private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string operationUrl, string token)
+        private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
         {
 #if !SILVERLIGHT
-            var request = operationClient.CreateRequest("POST", operationUrl + "&op=generate-single-use-auth-token", disableRequestCompression: true);
+			var request = operationClient.CreateRequest("GET", "/singleAuthToken", disableRequestCompression: true);
 #else
-			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST", disableRequestCompression: true);
+			var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
 #endif
-            request.DisableAuthentication();
+			request.DisableAuthentication();
             request.webRequest.ContentLength = 0;
             request.AddOperationHeader("Single-Use-Auth-Token", token);
             var result = await request.ReadResponseJsonAsync();

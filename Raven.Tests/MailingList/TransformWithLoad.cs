@@ -44,6 +44,7 @@ namespace Raven.Tests.MailingList
 				    }
 			    };
 			    session.Store(contact);
+		        session.Advanced.GetMetadataFor(contact)["Val"] = "hello";
 			    session.SaveChanges();
 		    }
 	    }
@@ -77,6 +78,29 @@ namespace Raven.Tests.MailingList
 			{
 				var contactViewModel = session.Advanced.Lazily.Load<ContactTransformer, ContactDto>("contacts/1");
 				var contactDto = contactViewModel.Value;
+				foreach (var detail in contactDto.ContactDetails)
+				{
+					Assert.NotNull(detail.Id);
+				}
+			}
+		}
+
+        [Fact]
+        public void WithMetadata()
+        {
+            using (var session = store.OpenSession())
+            {
+                var c = session.Load<ContactTransformer, ContactDto>("contacts/1");
+                Assert.Equal("hello", c.MetaVal);
+            }
+        }
+
+		[Fact]
+        public void EagerLoadById()
+		{
+			using (var session = store.OpenSession())
+			{
+				var contactDto = session.Load<ContactTransformer, ContactDto>("contacts/1");
 				foreach (var detail in contactDto.ContactDetails)
 				{
 					Assert.NotNull(detail.Id);
@@ -118,6 +142,7 @@ namespace Raven.Tests.MailingList
             public string ContactId { get; set; }
             public string ContactName { get; set; }
             public List<Detail> ContactDetails { get; set; }
+            public string MetaVal { get; set; }
         }
 
         public class ContactTransformer : AbstractTransformerCreationTask<Contact>
@@ -129,7 +154,8 @@ namespace Raven.Tests.MailingList
 	                                           {
 		                                           ContactId = c.Id,
 		                                           ContactName = c.Name,
-		                                           ContactDetails = LoadDocument<Detail>(c.DetailIds)
+		                                           ContactDetails = LoadDocument<Detail>(c.DetailIds),
+                                                   MetaVal = MetadataFor(c).Value<string>("Val")
 	                                           };
             }
         }

@@ -57,6 +57,12 @@ namespace Raven.Studio.Features.Settings
 			}
 		}
 
+		public override void MarkAsSaved()
+		{
+			HasUnsavedChanges = false;
+			OriginalApiKeys = ApiKeys;
+		}
+
 		public ObservableCollection<ApiKeyDefinition> ApiKeys { get; set; }
 		public ObservableCollection<ApiKeyDefinition> OriginalApiKeys { get; set; }
 		public string SearchApiKeys { get; set; }

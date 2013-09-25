@@ -21,6 +21,8 @@ namespace Raven.Studio.Models
 		private Group selectedGroup;
 		public ObservableCollection<IndexItem> Indexes { get; private set; }
 		public ObservableCollection<Group> GroupedIndexes { get; private set; }
+		private string currentDatabase;
+		private string currentSearch;
 
 		public IndexesModel()
 		{
@@ -30,6 +32,8 @@ namespace Raven.Studio.Models
 																	   "/indexes";
 			Indexes = new ObservableCollection<IndexItem>();
 			GroupedIndexes = new ObservableCollection<Group>();
+			SearchText = new Observable<string>();
+			SearchText.PropertyChanged += (sender, args) => TimerTickedAsync();
 		}
 
 		public override Task TimerTickedAsync()
@@ -95,10 +99,17 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		public Observable<string> SearchText { get; set; }
+
 		private void UpdateGroupedIndexList(DatabaseStatistics statistics)
 		{
 			Indexes.Clear();
-			Indexes.AddRange(statistics.Indexes.Select(stats => new IndexItem{Name = stats.Name, GroupName = GetIndexGroup(stats), IndexStats = stats}));
+			if(string.IsNullOrWhiteSpace(SearchText.Value))
+				Indexes.AddRange(statistics.Indexes.Select(stats => new IndexItem { Name = stats.Name, GroupName = GetIndexGroup(stats), IndexStats = stats }));
+			else
+				Indexes.AddRange(statistics.Indexes
+					.Where(stats => stats.Name.IndexOf(SearchText.Value, StringComparison.InvariantCultureIgnoreCase) != -1)
+					.Select(stats => new IndexItem { Name = stats.Name, GroupName = GetIndexGroup(stats), IndexStats = stats }));
 			
 			CleanGroupIndexes();
 			foreach (var indexItem in Indexes)
@@ -118,6 +129,14 @@ namespace Raven.Studio.Models
 
 		private void CleanGroupIndexes()
 		{
+			if (currentDatabase != ApplicationModel.Database.Value.Name || currentSearch != SearchText.Value)
+			{
+				currentDatabase = ApplicationModel.Database.Value.Name;
+				currentSearch = SearchText.Value;
+				GroupedIndexes.Clear();
+				return;
+			}
+
 			foreach (var groupedIndex in GroupedIndexes)
 			{
 				groupedIndex.Items.Clear();
