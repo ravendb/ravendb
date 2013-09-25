@@ -259,7 +259,7 @@
 						Bucket = value.Value<int>("bucket"),
 						Source = value.Value<string>("docId"),
 						Size = size,
-						Data = LoadMappedResult(key, value, mappedResultsData)
+						Data = LoadMappedResult(iterator.CurrentKey, value, mappedResultsData)
 					};
 
 					count++;

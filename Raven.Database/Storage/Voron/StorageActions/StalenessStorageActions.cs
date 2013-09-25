@@ -29,10 +29,12 @@
 			if (indexingStats == null)
 				return false; // index does not exists
 
-			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, name, out version);
+			var hasReduce = indexingStats.Value<byte[]>("lastReducedEtag") != null;
 
-			if (IsMapStale(name) || IsReduceStale(name))
+			if (IsMapStale(name) || hasReduce && IsReduceStale(name))
 			{
+				var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, name, out version);
+
 				if (cutOff != null)
 				{
 					var lastIndexedTime = lastIndexedEtags.Value<DateTime>("lastTimestamp");
@@ -111,13 +113,14 @@
 			if (indexingStats == null)
 				throw new IndexDoesNotExistsException("Could not find index named: " + name);
 
-			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, name, out version);
-			if (lastIndexedEtags.Value<object>("lastReducedTimestamp") != null)
+			if (indexingStats.Value<object>("lastReducedTimestamp") != null)
 			{
 				return Tuple.Create(
-					lastIndexedEtags.Value<DateTime>("lastReducedTimestamp"),
-					Etag.Parse(lastIndexedEtags.Value<byte[]>("lastReducedEtag")));
+					indexingStats.Value<DateTime>("lastReducedTimestamp"),
+					Etag.Parse(indexingStats.Value<byte[]>("lastReducedEtag")));
 			}
+
+			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, name, out version);
 
 			return Tuple.Create(lastIndexedEtags.Value<DateTime>("lastTimestamp"),
 				Etag.Parse(lastIndexedEtags.Value<byte[]>("lastEtag")));
@@ -126,7 +129,7 @@
 		public Etag GetMostRecentDocumentEtag()
 		{
 			var documentsByEtag = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
-			using (var iterator = documentsByEtag.Iterate(Snapshot,writeBatch))
+			using (var iterator = documentsByEtag.Iterate(Snapshot, writeBatch))
 			{
 				if (!iterator.Seek(Slice.AfterAllKeys))
 					return Etag.Empty;
@@ -153,7 +156,7 @@
 			var indexingStats = LoadJson(tableStorage.IndexingStats, name, out version);
 
 			if (indexingStats == null)
-				throw new IndexDoesNotExistsException("Could not find index named: " + name);
+				return -1;
 
 			return indexingStats.Value<int>("touches");
 		}
