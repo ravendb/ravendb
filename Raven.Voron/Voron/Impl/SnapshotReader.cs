@@ -30,9 +30,9 @@ namespace Voron.Impl
 				if (addedValues.ContainsKey(key))
 				{
 					var relevantReadResult = addedValues[key];
-					
+
 					//when the returned ReadResult is disposed - prevent from stream currently in WriteBatch to be disposed as well
-					return new ReadResult(CloneStream(relevantReadResult.Stream),relevantReadResult.Version);
+					return new ReadResult(CloneStream(relevantReadResult.Stream), (ushort)(relevantReadResult.Version + 1));
 				}
 			}
 
@@ -108,11 +108,13 @@ namespace Voron.Impl
 			return tree;
 		}
 
-		private Stream CloneStream(Stream cloneSrc)
+		private static Stream CloneStream(Stream source)
 		{
-			var cloneResult = new MemoryStream();
-			cloneSrc.CopyTo(cloneResult);
-			return cloneResult;
+			var destination = new MemoryStream();
+			source.CopyTo(destination);
+			destination.Position = 0;
+
+			return destination;
 		}
 	}
 }

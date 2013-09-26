@@ -26,22 +26,22 @@
 			}
 		}
 
-		public Dictionary<Slice, ReadResult> GetAddedValues(string treeName)
+		internal Dictionary<Slice, ReadResult> GetAddedValues(string treeName)
 		{
 			return GetItemsByOperationTypeAndTreeName(BatchOperationType.Add, treeName);
 		}
 
-		public Dictionary<Slice, ReadResult> GetAddedMultiValues(string treeName)
+		internal Dictionary<Slice, ReadResult> GetAddedMultiValues(string treeName)
 		{
 			return GetItemsByOperationTypeAndTreeName(BatchOperationType.MultiAdd, treeName);
 		}
 
-		public Dictionary<Slice, ReadResult> GetDeletedValues(string treeName)
+		internal Dictionary<Slice, ReadResult> GetDeletedValues(string treeName)
 		{
 			return GetItemsByOperationTypeAndTreeName(BatchOperationType.Delete, treeName);
 		}
 
-		public Dictionary<Slice, ReadResult> GetDeletedMultiValues(string treeName)
+		internal Dictionary<Slice, ReadResult> GetDeletedMultiValues(string treeName)
 		{
 			return GetItemsByOperationTypeAndTreeName(BatchOperationType.MultiDelete, treeName);
 		}
@@ -174,8 +174,20 @@
 
 		private Dictionary<Slice, ReadResult> GetItemsByOperationTypeAndTreeName(BatchOperationType operationType, string treeName)
 		{
-			return _operations.Where(operation => operation.Type == operationType && operation.TreeName == treeName)
-							  .ToDictionary(operation => operation.Key, operation => new ReadResult(operation.Value as Stream, operation.Version ?? 0));
+			var result = new Dictionary<Slice, ReadResult>();
+
+			foreach (var operation in _operations
+				.Where(operation => operation.Type == operationType && operation.TreeName == treeName))
+			{
+				var value = new ReadResult(operation.Value as Stream, operation.Version ?? 0);
+
+				if (result.ContainsKey(operation.Key))
+					result[operation.Key] = value;
+				else
+					result.Add(operation.Key, value);
+			}
+
+			return result;
 		}
 
 	}
