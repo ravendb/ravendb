@@ -76,14 +76,14 @@ public class LazySessionOperations implements ILazySessionOperations {
   @Override
   public <T> Lazy<T> load(final Class<T> clazz, final String id, Action1<T> onEval) {
     if (delegate.isLoaded(id)) {
-      return new Lazy<T>(new Function0<T>() {
+      return new Lazy<>(new Function0<T>() {
         @Override
         public T apply() {
           return delegate.load(clazz, id);
         }
       });
     }
-    LazyLoadOperation<T> lazyLoadOperation = new LazyLoadOperation<T>(clazz, id, new LoadOperation(delegate,  delegate.new DisableAllCachingCallback(), id));
+    LazyLoadOperation<T> lazyLoadOperation = new LazyLoadOperation<>(clazz, id, new LoadOperation(delegate,  delegate.new DisableAllCachingCallback(), id));
     return delegate.addLazyOperation(lazyLoadOperation, onEval);
   }
 
@@ -108,6 +108,7 @@ public class LazySessionOperations implements ILazySessionOperations {
     return load(clazz, documentKeys, null);
   }
 
+  @Override
   public <T> Lazy<T[]> load(Class<T> clazz, UUID... ids) {
     List<String> documentKeys = new ArrayList<>();
     for (UUID id : ids) {
@@ -140,32 +141,39 @@ public class LazySessionOperations implements ILazySessionOperations {
   /**
    * Begin a load while including the specified path
    */
+  @Override
   public ILazyLoaderWithInclude include(String path) {
     return new LazyMultiLoaderWithInclude(delegate).include(path);
   }
 
+  @Override
   public <T> Lazy<T> load(Class<T> clazz, Number id) {
     return load(clazz, id, (Action1<T>) null);
   }
 
+  @Override
   public <T> Lazy<T> load(Class<T> clazz, UUID id) {
     return load(clazz, id, (Action1<T>) null);
   }
 
+  @Override
   public <T> Lazy<T[]> loadStartingWith(Class<T> clazz, String keyPrefix) {
     return loadStartingWith(clazz, keyPrefix, null, 0, 25);
   }
 
+  @Override
   public <T> Lazy<T[]> loadStartingWith(Class<T> clazz, String keyPrefix, String matches) {
     return loadStartingWith(clazz, keyPrefix, matches, 0, 25);
   }
 
+  @Override
   public <T> Lazy<T[]> loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start) {
     return loadStartingWith(clazz, keyPrefix, matches, start, 25);
   }
 
+  @Override
   public <T> Lazy<T[]> loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize) {
-    LazyStartsWithOperation<T> operation = new LazyStartsWithOperation<T>(clazz, keyPrefix, matches, start, pageSize, delegate);
+    LazyStartsWithOperation<T> operation = new LazyStartsWithOperation<>(clazz, keyPrefix, matches, start, pageSize, delegate);
     return delegate.addLazyOperation(operation, null);
   }
 

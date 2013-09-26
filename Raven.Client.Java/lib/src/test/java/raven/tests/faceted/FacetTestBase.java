@@ -38,6 +38,7 @@ public abstract class FacetTestBase extends RemoteClientTest {
       return def;
     }
 
+    @Override
     public String getIndexName() {
       return new CameraCostIndex().createIndexDefinition().getName();
     }

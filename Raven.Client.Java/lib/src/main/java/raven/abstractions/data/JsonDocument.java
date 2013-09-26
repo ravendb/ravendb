@@ -41,6 +41,7 @@ public class JsonDocument implements IJsonDocumentMetadata {
   /**
    * @return the etag
    */
+  @Override
   public Etag getEtag() {
     return etag;
   }
@@ -50,6 +51,7 @@ public class JsonDocument implements IJsonDocumentMetadata {
   /**
    * @return the key
    */
+  @Override
   public String getKey() {
     return key;
   }
@@ -57,6 +59,7 @@ public class JsonDocument implements IJsonDocumentMetadata {
   /**
    * @return the lastModified
    */
+  @Override
   public Date getLastModified() {
     return lastModified;
   }
@@ -64,6 +67,7 @@ public class JsonDocument implements IJsonDocumentMetadata {
   /**
    * @return the metadata
    */
+  @Override
   public RavenJObject getMetadata() {
     if (metadata == null) {
       metadata = new RavenJObject(String.CASE_INSENSITIVE_ORDER);
@@ -78,6 +82,7 @@ public class JsonDocument implements IJsonDocumentMetadata {
   /**
    * @return the nonAuthoritativeInformation
    */
+  @Override
   public Boolean getNonAuthoritativeInformation() {
     return nonAuthoritativeInformation;
   }
@@ -92,6 +97,7 @@ public class JsonDocument implements IJsonDocumentMetadata {
   /**
    * @param etag the etag to set
    */
+  @Override
   public void setEtag(Etag etag) {
     this.etag = etag;
   }
@@ -99,6 +105,7 @@ public class JsonDocument implements IJsonDocumentMetadata {
   /**
    * @param key the key to set
    */
+  @Override
   public void setKey(String key) {
     this.key = key;
   }
@@ -106,6 +113,7 @@ public class JsonDocument implements IJsonDocumentMetadata {
   /**
    * @param lastModified the lastModified to set
    */
+  @Override
   public void setLastModified(Date lastModified) {
     this.lastModified = lastModified;
   }
@@ -113,6 +121,7 @@ public class JsonDocument implements IJsonDocumentMetadata {
   /**
    * @param metadata the metadata to set
    */
+  @Override
   public void setMetadata(RavenJObject metadata) {
     this.metadata = metadata;
   }
@@ -120,6 +129,7 @@ public class JsonDocument implements IJsonDocumentMetadata {
   /**
    * @param nonAuthoritativeInformation the nonAuthoritativeInformation to set
    */
+  @Override
   public void setNonAuthoritativeInformation(Boolean nonAuthoritativeInformation) {
     this.nonAuthoritativeInformation = nonAuthoritativeInformation;
   }
@@ -132,7 +142,7 @@ public class JsonDocument implements IJsonDocumentMetadata {
     dataAsJson.ensureCannotBeChangeAndEnableShapshotting();
     metadata.ensureCannotBeChangeAndEnableShapshotting();
 
-    RavenJObject doc = (RavenJObject)dataAsJson.createSnapshot();
+    RavenJObject doc = dataAsJson.createSnapshot();
     RavenJObject metadata = this.metadata.createSnapshot();
 
     if (lastModified != null) {

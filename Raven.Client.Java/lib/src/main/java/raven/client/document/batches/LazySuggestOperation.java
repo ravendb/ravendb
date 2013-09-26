@@ -34,6 +34,7 @@ public class LazySuggestOperation implements ILazyOperation {
     this.suggestionQuery = suggestionQuery;
   }
 
+  @Override
   public GetRequest createRequest() {
     String query = String.format("term=%s&field=%s&max=%d", suggestionQuery.getTerm(), suggestionQuery.getField(), suggestionQuery.getMaxSuggestions());
     if (suggestionQuery.getAccuracy() != null) {
@@ -49,6 +50,7 @@ public class LazySuggestOperation implements ILazyOperation {
     return getRequest;
   }
 
+  @Override
   public void handleResponse(GetResponse response) {
     if (response.getStatus() != HttpStatus.SC_OK && response.getStatus() != HttpStatus.SC_NOT_MODIFIED) {
       throw new IllegalStateException("Got an unexpected response code for the request: " + response.getStatus() + "\n" + response.getResult());

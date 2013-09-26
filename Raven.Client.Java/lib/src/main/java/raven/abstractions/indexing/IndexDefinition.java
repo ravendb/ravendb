@@ -18,15 +18,15 @@ public class IndexDefinition {
    * Initializes a new instance of the {@link IndexDefinition} class.
    */
   public IndexDefinition() {
-    maps = new HashSet<String>();
-    indexes = new HashMap<String, FieldIndexing>();
-    stores = new HashMap<String, FieldStorage>();
-    analyzers = new HashMap<String, String>();
-    sortOptions = new HashMap<String, SortOptions>();
-    fields = new ArrayList<String>();
-    suggestions = new HashMap<String, SuggestionOptions>();
-    termVectors = new HashMap<String, FieldTermVector>();
-    spatialIndexes = new HashMap<String, SpatialOptions>();
+    maps = new HashSet<>();
+    indexes = new HashMap<>();
+    stores = new HashMap<>();
+    analyzers = new HashMap<>();
+    sortOptions = new HashMap<>();
+    fields = new ArrayList<>();
+    suggestions = new HashMap<>();
+    termVectors = new HashMap<>();
+    spatialIndexes = new HashMap<>();
   }
 
   public IndexDefinition(String map) {
@@ -453,6 +453,7 @@ public class IndexDefinition {
   }
 
 
+  @Override
   public String toString() {
     if (name != null) {
       return name;
@@ -461,6 +462,7 @@ public class IndexDefinition {
   }
 
 
+  @Override
   public IndexDefinition clone() {
     IndexDefinition indexDefinition = new IndexDefinition();
     indexDefinition.setName(name);

@@ -58,6 +58,7 @@ public abstract class DocumentStoreBase implements IDocumentStore {
     sessionCreatedInternal.remove(action);
   }
 
+  @Override
   public boolean getWasDisposed() {
     return wasDisposed;
   }
@@ -68,6 +69,7 @@ public abstract class DocumentStoreBase implements IDocumentStore {
 
   public abstract boolean hasJsonRequestFactory();
 
+  @Override
   public Map<String, String> getSharedOperationsHeaders() {
     return sharedOperationsHeaders;
   }
@@ -76,13 +78,16 @@ public abstract class DocumentStoreBase implements IDocumentStore {
     this.sharedOperationsHeaders = sharedOperationsHeaders;
   }
 
+  @Override
   public void executeIndex(AbstractIndexCreationTask indexCreationTask) {
     indexCreationTask.execute(getDatabaseCommands(), getConventions());
   }
+  @Override
   public void executeTransformer(AbstractTransformerCreationTask transformerCreationTask) {
     transformerCreationTask.execute(getDatabaseCommands(), getConventions());
   }
 
+  @Override
   public DocumentConvention getConventions() {
     if (conventions == null) {
       conventions = new DocumentConvention();
@@ -99,6 +104,7 @@ public abstract class DocumentStoreBase implements IDocumentStore {
     return (DocumentStore) this;
   }
 
+  @Override
   public String getUrl() {
     return url;
   }
@@ -128,6 +134,7 @@ public abstract class DocumentStoreBase implements IDocumentStore {
    *  Gets the etag of the last document written by any session belonging to this
    *  document store
    */
+  @Override
   public Etag getLastWrittenEtag() {
     return lastEtagHolder.getLastWrittenEtag();
   }
@@ -273,6 +280,7 @@ public abstract class DocumentStoreBase implements IDocumentStore {
   /**
    * Setup the context for aggressive caching.
    */
+  @Override
   public AutoCloseable aggressivelyCache() {
     return aggressivelyCacheFor(24 * 3600 * 1000);
   }

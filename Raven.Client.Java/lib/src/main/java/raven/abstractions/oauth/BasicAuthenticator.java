@@ -20,6 +20,7 @@ public class BasicAuthenticator extends AbstractAuthenticator {
     this.enableBasicAuthenticationOverUnsecuredHttp = enableBasicAuthenticationOverUnsecuredHttp;
   }
 
+  @Override
   public Action1<HttpUriRequest> doOAuthRequest(String oauthSource) {
     HttpClient httpClient = new DefaultHttpClient();
     try {

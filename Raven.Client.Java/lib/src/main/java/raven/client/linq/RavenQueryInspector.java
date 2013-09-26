@@ -44,7 +44,7 @@ import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.spatial.SpatialCriteria;
 import raven.client.spatial.SpatialCriteriaFactory;
 
-public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector, Iterable<T> {
+public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector {
 
   private Class<T> clazz;
   private final Expression<?> expression;
@@ -128,7 +128,7 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     try {
       AbstractTransformerCreationTask transformer = transformerClazz.newInstance();
       provider.transformWith(transformer.getTransformerName());
-      return (IRavenQueryable<S>) as(resultClass);
+      return as(resultClass);
     } catch (Exception e){
       throw new RuntimeException(e);
     }
@@ -219,6 +219,7 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     return provider.lazily(clazz, expression, null);
   }
 
+  @Override
   @SuppressWarnings("unchecked")
   public <S> IRavenQueryable<S> as(Class<S> resultClass) {
     this.clazz = (Class<T>) resultClass;
@@ -415,7 +416,6 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     return ((Iterable<T>) execute).iterator();
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public T firstOrDefault() {
     return (T) provider.execute(Expressions.operation(Object.class, LinqOps.Query.FIRST_OR_DEFAULT, getExpression()));
@@ -426,19 +426,16 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     return EnumerableUtils.toList(iterator());
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public T first() {
     return (T) provider.execute(Expressions.operation(Object.class, LinqOps.Query.FIRST, getExpression()));
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public T singleOrDefault() {
     return (T) provider.execute(Expressions.operation(Object.class, LinqOps.Query.SINGLE_OR_DEFAULT, getExpression()));
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public T single() {
     return (T) provider.execute(Expressions.operation(Object.class, LinqOps.Query.SINGLE, getExpression()));
@@ -464,7 +461,6 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SELECT, getExpression(), Expressions.constant(projectionClass) )).as(projectionClass);
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public <TProjection> IRavenQueryable<TProjection> select(Path<TProjection> projectionPath) {
     return (IRavenQueryable<TProjection>) provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SELECT, getExpression(), projectionPath )).as(projectionPath.getType());

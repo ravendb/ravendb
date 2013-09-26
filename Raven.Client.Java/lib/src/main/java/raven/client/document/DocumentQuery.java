@@ -97,16 +97,19 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
     }
   }
 
+  @Override
   public IDocumentQuery<T> setResultTransformer(String resultsTransformer) {
     this.resultsTransformer = resultsTransformer;
     return this;
   }
 
+  @Override
   public IDocumentQuery<T> orderByScore() {
     addOrder(Constants.TEMPORARY_SCORE_VALUE, false);
     return this;
   }
 
+  @Override
   public IDocumentQuery<T> orderByScoreDescending() {
     addOrder(Constants.TEMPORARY_SCORE_VALUE, true);
     return this;
@@ -122,7 +125,7 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   @Override
   public IDocumentQuery<T> sortByDistance() {
     orderBy(Constants.DISTANCE_FIELD_NAME);
-    return (IDocumentQuery<T>) this;
+    return this;
   }
 
   @Override
@@ -136,6 +139,7 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
    * @param fields The fields.
    * @return
    */
+  @Override
   public <TProjection> IDocumentQuery<TProjection> selectFields(Class<TProjection> projectionClass, String... fields) {
     return selectFields(projectionClass, fields, fields);
   }
@@ -147,9 +151,10 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
    * @param projections
    * @return
    */
+  @Override
   public <TProjection> IDocumentQuery<TProjection> selectFields(Class<TProjection> projectionClass, String[] fields, String[] projections) {
 
-    DocumentQuery<TProjection> documentQuery = new DocumentQuery<TProjection>(projectionClass, theSession,
+    DocumentQuery<TProjection> documentQuery = new DocumentQuery<>(projectionClass, theSession,
         theDatabaseCommands,
         indexName,
         fields,
@@ -232,7 +237,7 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
 
   public IDocumentQuery<T> transformResults(Function2<IndexQuery, Collection<Object>, Collection<Object>> resultsTransformer) {
     this.transformResultsFunc = resultsTransformer;
-    return (IDocumentQuery<T>) this;
+    return this;
   }
 
   @Override
@@ -362,6 +367,7 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
     return spatial(getMemberQueryPath(path), clause);
   }
 
+  @Override
   public String toString() {
     String query = super.toString();
     if (isSpatialQuery) {

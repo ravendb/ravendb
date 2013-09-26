@@ -199,7 +199,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
       throw new IllegalStateException("Cannot get cached response from a request that has no cached information");
     }
     httpJsonRequest.setResponseStatusCode(HttpStatus.SC_NOT_MODIFIED);
-    httpJsonRequest.setResponseHeaders(new HashMap<String, String>(httpJsonRequest.getCachedRequestDetails().getHeaders()));
+    httpJsonRequest.setResponseHeaders(new HashMap<>(httpJsonRequest.getCachedRequestDetails().getHeaders()));
 
     if (additionalHeaders != null && additionalHeaders.containsKey(Constants.RAVEN_FORCE_PRIMARY_SERVER_CHECK)) {
       httpJsonRequest.getResponseHeaders().put(Constants.RAVEN_FORCE_PRIMARY_SERVER_CHECK, additionalHeaders.get(Constants.RAVEN_FORCE_PRIMARY_SERVER_CHECK));

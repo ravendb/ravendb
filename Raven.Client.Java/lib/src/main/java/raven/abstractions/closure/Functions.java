@@ -35,11 +35,11 @@ public class Functions {
 
 
   public static <T> Function1<T, Boolean> alwaysTrue() {
-    return new AlwaysTrue<T>();
+    return new AlwaysTrue<>();
   }
 
   public static <T> Function1<T, Boolean> alwaysFalse() {
-    return new AlwaysFalse<T>();
+    return new AlwaysFalse<>();
   }
 
 }

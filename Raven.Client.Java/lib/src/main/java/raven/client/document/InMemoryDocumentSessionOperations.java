@@ -98,7 +98,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   private boolean useOptimisticConcurrency;
   private boolean allowNonAuthoritativeInformation;
 
-  private final List<ICommandData> deferedCommands = new ArrayList<ICommandData>();
+  private final List<ICommandData> deferedCommands = new ArrayList<>();
   private GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
   public EntityToJson entityToJson;
 
@@ -130,7 +130,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
 
   public Map<String, Object> getExternalState() {
     if (externalState == null)  {
-      externalState = new HashMap<String, Object>();
+      externalState = new HashMap<>();
     }
     return externalState;
   }
@@ -288,7 +288,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     } else {
       Reference<String> idHolder = new Reference<>();
 
-      if (generateEntityIdOnTheClient.tryGetIdFromInstance((Object)instance, idHolder)) {
+      if (generateEntityIdOnTheClient.tryGetIdFromInstance(instance, idHolder)) {
         assertNoNonUniqueInstance(instance, idHolder.value);
         JsonDocument jsonDocument = getJsonDocument(idHolder.value);
         entitiesByKey.put(idHolder.value, instance);
@@ -791,7 +791,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
 
     SaveChangesData result = new SaveChangesData();
     result.setEntities(new ArrayList<>());
-    result.setCommands(new ArrayList<ICommandData>(deferedCommands));
+    result.setCommands(new ArrayList<>(deferedCommands));
     result.setDeferredCommandsCount(deferedCommands.size());
 
     deferedCommands.clear();
@@ -847,6 +847,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
         existingEntity = entitiesByKey.get(key);
         if (entitiesAndMetadata.containsKey(existingEntity)) {
           metadata = entitiesAndMetadata.get(existingEntity);
+          etag = metadata.getEtag();
         }
         entitiesAndMetadata.remove(existingEntity);
         entitiesByKey.remove(key);
@@ -981,6 +982,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   /**
    * Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
    */
+  @Override
   public void close() {
     //empty by design
   }

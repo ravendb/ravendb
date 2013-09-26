@@ -24,7 +24,7 @@ public class RequestResultArgs extends EventArgs {
 
   public RequestResultArgs() {
     at = new Date();
-    additionalInformation = new HashMap<String, String>();
+    additionalInformation = new HashMap<>();
   }
 
   /**

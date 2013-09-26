@@ -108,7 +108,7 @@ public class DynamicFacetsTest extends FacetTestBase {
     //Go through the expected (in-memory) results and check that there is a corresponding facet result
     //Not the prettiest of code, but it works!!!
     List<FacetValue> costFacets = facetResults.getResults().get("Cost_Range").getValues();
-    Map<String, FacetValue> costLookup = new HashMap<String, FacetValue>();
+    Map<String, FacetValue> costLookup = new HashMap<>();
     for (FacetValue costFacet : costFacets) {
       costLookup.put(costFacet.getRange(), costFacet);
     }

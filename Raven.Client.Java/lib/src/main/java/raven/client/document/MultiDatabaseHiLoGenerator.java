@@ -9,7 +9,7 @@ import raven.client.connection.IDatabaseCommands;
 public class MultiDatabaseHiLoGenerator {
 
   private final int capacity;
-  private final ConcurrentMap<String, MultiTypeHiLoKeyGenerator> generators = new ConcurrentHashMap<String, MultiTypeHiLoKeyGenerator>();
+  private final ConcurrentMap<String, MultiTypeHiLoKeyGenerator> generators = new ConcurrentHashMap<>();
 
   public MultiDatabaseHiLoGenerator(int capacity) {
     this.capacity = capacity;

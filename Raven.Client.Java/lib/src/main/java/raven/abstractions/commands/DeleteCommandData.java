@@ -25,30 +25,37 @@ public class DeleteCommandData implements ICommandData {
     super();
   }
 
+  @Override
   public RavenJObject getAdditionalData() {
     return additionalData;
   }
 
+  @Override
   public Etag getEtag() {
     return etag;
   }
 
+  @Override
   public String getKey() {
     return key;
   }
 
+  @Override
   public RavenJObject getMetadata() {
     return null;
   }
 
+  @Override
   public HttpMethods getMethod() {
     return HttpMethods.DELETE;
   }
 
+  @Override
   public TransactionInformation getTransactionInformation() {
     return transactionInformation;
   }
 
+  @Override
   public void setAdditionalData(RavenJObject additionalData) {
     this.additionalData = additionalData;
   }
@@ -61,6 +68,7 @@ public class DeleteCommandData implements ICommandData {
     this.key = key;
   }
 
+  @Override
   public void setTransactionInformation(TransactionInformation transactionInformation) {
     this.transactionInformation = transactionInformation;
   }

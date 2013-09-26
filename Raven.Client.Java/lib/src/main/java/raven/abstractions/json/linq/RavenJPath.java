@@ -95,6 +95,7 @@ public class RavenJPath {
     this.parts.add(Integer.parseInt(indexer));
   }
 
+  @SuppressWarnings("null")
   public RavenJToken evaluate(RavenJToken root, boolean errorWhenNoMatch) {
     RavenJToken current = root;
 

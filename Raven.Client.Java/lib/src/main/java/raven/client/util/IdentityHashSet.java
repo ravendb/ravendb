@@ -34,10 +34,9 @@ public class IdentityHashSet<T> implements Set<T> {
     return inner.keySet().toArray();
   }
 
-  @SuppressWarnings({ "unchecked", "hiding" })
   @Override
-  public <T> T[] toArray(T[] a) {
-    return (T[]) inner.keySet().toArray();
+  public <S> S[] toArray(S[] a) {
+    return inner.keySet().toArray(a);
   }
 
   @Override

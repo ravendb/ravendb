@@ -17,6 +17,7 @@ public class GlobalLastEtagHolder implements ILastEtagHolder {
   private volatile EtagHolder lastEtag;
   protected final Object lastEtagLocker = new Object();
 
+  @Override
   public void updateLastWrittenEtag(Etag etag) {
     if (etag == null) {
       return;
@@ -46,6 +47,7 @@ public class GlobalLastEtagHolder implements ILastEtagHolder {
   }
 
 
+  @Override
   public Etag getLastWrittenEtag() {
     EtagHolder etagHolder = lastEtag;
     if (etagHolder == null)

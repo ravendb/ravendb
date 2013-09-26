@@ -45,12 +45,8 @@ public class Delegates {
 
       @Override
       public void apply(X input) {
-        if (first != null) {
           first.apply(input);
-        }
-        if (second != null) {
           second.apply(input);
-        }
       }
     };
   }

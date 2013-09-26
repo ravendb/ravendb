@@ -79,7 +79,7 @@ public class RavenQueryProviderProcessor<T> {
   private final boolean isMapReduce;
 
 
-  static final Set<Class<?>> requireOrderByToUseRange = new HashSet<Class<?>>();
+  static final Set<Class<?>> requireOrderByToUseRange = new HashSet<>();
   static {
     requireOrderByToUseRange.add(int.class);
     requireOrderByToUseRange.add(long.class);
@@ -101,8 +101,8 @@ public class RavenQueryProviderProcessor<T> {
   }
 
   public RavenQueryProviderProcessor(Class<T> clazz, IDocumentQueryGenerator queryGenerator, DocumentQueryCustomizationFactory customizeQuery,
-      Action1<QueryResult> afterQueryExecuted, String indexName, Set<String> fieldsToFetch, List<RenamedField> fieldsToRename, boolean isMapReduce,
-      String resultsTransformer, Map<String, RavenJToken> queryInputs) {
+    Action1<QueryResult> afterQueryExecuted, String indexName, Set<String> fieldsToFetch, List<RenamedField> fieldsToRename, boolean isMapReduce,
+    String resultsTransformer, Map<String, RavenJToken> queryInputs) {
     this.clazz = clazz;
     this.fieldsToFetch = fieldsToFetch;
     this.fieldsToRename = fieldsToRename;
@@ -155,9 +155,9 @@ public class RavenQueryProviderProcessor<T> {
       if ("root".equals(((Constant<?>) expression).getConstant())) {
         // we have root node - just skip it
         return;
-      } else {
-        visitConstant((Constant<?>) expression, true);
       }
+      visitConstant((Constant<?>) expression, true);
+
     } else if (expression instanceof Path) {
       visitMemberAccess((Path<?>)expression, true);
     } else {
@@ -245,7 +245,7 @@ public class RavenQueryProviderProcessor<T> {
       visitStringEmpty(expression.getArg(0), false);
     } else if (expression.getOperator().equals(Ops.STRING_CONTAINS)) {
       throw new IllegalStateException("Contains is not supported, doing a substring match over a text field is a" +
-          " very slow operation, and is not allowed using the Linq API. The recommended method is to use full text search (mark the field as Analyzed and use the search() method to query it.");
+        " very slow operation, and is not allowed using the Linq API. The recommended method is to use full text search (mark the field as Analyzed and use the search() method to query it.");
     } else if (expression.getOperator().equals(Ops.STARTS_WITH)) {
       visitStartsWith(expression);
     } else if (expression.getOperator().equals(Ops.ENDS_WITH)) {
@@ -377,10 +377,10 @@ public class RavenQueryProviderProcessor<T> {
     }
 
     boolean isPossibleBetween =
-        (left.getOperator().equals(Ops.GT) && right.getOperator().equals(Ops.LT)) ||
-        (left.getOperator().equals(Ops.GOE) && right.getOperator().equals(Ops.LOE)) ||
-        (left.getOperator().equals(Ops.LT) && right.getOperator().equals(Ops.GT)) ||
-        (left.getOperator().equals(Ops.LOE) && right.getOperator().equals(Ops.GT));
+      (left.getOperator().equals(Ops.GT) && right.getOperator().equals(Ops.LT)) ||
+      (left.getOperator().equals(Ops.GOE) && right.getOperator().equals(Ops.LOE)) ||
+      (left.getOperator().equals(Ops.LT) && right.getOperator().equals(Ops.GT)) ||
+      (left.getOperator().equals(Ops.LOE) && right.getOperator().equals(Ops.GT));
 
     if (!isPossibleBetween) {
       return false;
@@ -471,7 +471,7 @@ public class RavenQueryProviderProcessor<T> {
     }
 
     if (constantExpression != null && Boolean.FALSE.equals(constantExpression.getConstant())
-        && !(expression.getArg(0) instanceof Path)) {
+      && !(expression.getArg(0) instanceof Path)) {
       luceneQuery.openSubclause();
       luceneQuery.where("*:*");
       luceneQuery.andAlso();
@@ -563,12 +563,12 @@ public class RavenQueryProviderProcessor<T> {
 
     //TODO:array length
     String propertyName = indexName == null  || indexName.toLowerCase().startsWith("dynamic/")
-        ? queryGenerator.getConventions().getFindPropertyNameForDynamicIndex().apply(clazz, indexName, currentPath, result.getPath())
-            : queryGenerator.getConventions().getFindPropertyNameForIndex().apply(clazz, indexName, currentPath, result.getPath());
+      ? queryGenerator.getConventions().getFindPropertyNameForDynamicIndex().apply(clazz, indexName, currentPath, result.getPath())
+        : queryGenerator.getConventions().getFindPropertyNameForIndex().apply(clazz, indexName, currentPath, result.getPath());
 
-        ExpressionInfo expressionInfo = new ExpressionInfo(propertyName, result.getMemberType(), result.isNestedPath());
-        expressionInfo.setMaybeProperty(result.getMaybeProperty());
-        return expressionInfo;
+      ExpressionInfo expressionInfo = new ExpressionInfo(propertyName, result.getMemberType(), result.isNestedPath());
+      expressionInfo.setMaybeProperty(result.getMaybeProperty());
+      return expressionInfo;
   }
 
   private static Param<?> getParameterExpressionIncludingConvertions(Expression<?> expression) {
@@ -798,30 +798,30 @@ public class RavenQueryProviderProcessor<T> {
       String[] projections = null;
 
       switch (astArgCount) {
-      case 2:
-        // extract mappings using reflection
-        List<String> fieldsList = new ArrayList<>();
+        case 2:
+          // extract mappings using reflection
+          List<String> fieldsList = new ArrayList<>();
 
-        try {
-          for (PropertyDescriptor propertyDescriptor : Introspector.getBeanInfo(projectionClass).getPropertyDescriptors()) {
-            if (propertyDescriptor.getWriteMethod() != null && propertyDescriptor.getReadMethod() != null) {
-              fieldsList.add(StringUtils.capitalize(propertyDescriptor.getName()));
+          try {
+            for (PropertyDescriptor propertyDescriptor : Introspector.getBeanInfo(projectionClass).getPropertyDescriptors()) {
+              if (propertyDescriptor.getWriteMethod() != null && propertyDescriptor.getReadMethod() != null) {
+                fieldsList.add(StringUtils.capitalize(propertyDescriptor.getName()));
+              }
             }
+          } catch (IntrospectionException e) {
+            throw new RuntimeException(e);
           }
-        } catch (IntrospectionException e) {
-          throw new RuntimeException(e);
-        }
-        fields = fieldsList.toArray(new String[0]);
-        projections = fieldsList.toArray(new String[0]);
+          fields = fieldsList.toArray(new String[0]);
+          projections = fieldsList.toArray(new String[0]);
 
-        break;
-      case 4:
-        // we have already extracted projections
-        fields = (String[]) ((Constant<?>)expression.getArg(2)).getConstant();
-        projections = (String[]) ((Constant<?>)expression.getArg(3)).getConstant();
-        break;
-      default:
-        throw new IllegalStateException("Unexpected number of nodes in select: " + expression);
+          break;
+        case 4:
+          // we have already extracted projections
+          fields = (String[]) ((Constant<?>)expression.getArg(2)).getConstant();
+          projections = (String[]) ((Constant<?>)expression.getArg(3)).getConstant();
+          break;
+        default:
+          throw new IllegalStateException("Unexpected number of nodes in select: " + expression);
       }
 
       for (int i = 0; i < fields.length; i++) {
@@ -969,12 +969,12 @@ public class RavenQueryProviderProcessor<T> {
 
   private void visitSkip(Constant<Integer> constantExpression) {
     //Don't have to worry about the cast failing, the Skip() extension method only takes an int
-    luceneQuery.skip((int) constantExpression.getConstant());
+    luceneQuery.skip(constantExpression.getConstant());
   }
 
   private void visitTake(Constant<Integer> constantExpression) {
     //Don't have to worry about the cast failing, the Take() extension method only takes an int
-    luceneQuery.take((int) constantExpression.getConstant());
+    luceneQuery.take(constantExpression.getConstant());
   }
 
   //TODO: visit all
@@ -1100,7 +1100,7 @@ public class RavenQueryProviderProcessor<T> {
       RavenJObject result = queryResult.getResults().get(index);
       RavenJObject safeToModify = result.createSnapshot();
       boolean changed = false;
-      Map<String, RavenJToken> values = new HashMap<String, RavenJToken>();
+      Map<String, RavenJToken> values = new HashMap<>();
 
       Set<String> renamedFieldSet = new HashSet<>();
       for (RenamedField field : fieldsToRename) {
@@ -1144,36 +1144,36 @@ public class RavenQueryProviderProcessor<T> {
     List<TProjection> list = null;
     switch (queryType)
     {
-    case FIRST:
-      return finalQuery.first();
-    case FIRST_OR_DEFAULT:
-      return finalQuery.firstOrDefault();
-    case SINGLE:
-      list = finalQuery.toList();
-      if (list.size() != 1) {
-        throw new IllegalStateException("Expected one result. Got: " + list.size());
-      }
-      return list.get(0);
-    case SINGLE_OR_DEFAULT:
-      list = finalQuery.toList();
-      if (list.size() > 1) {
-        throw new IllegalStateException("Expected one result. Got: " + list.size());
-      }
-      return list.isEmpty() ? null : list.get(0);
-    case ALL:
-      //TODO:
-      //        var pred = predicate.Compile();
-      //        return finalQuery.AsQueryable().All(projection => pred((T) (object) projection));
-      return null;
-    case ANY:
-      //TODO: return finalQuery.Any();
-      return null;
-    case COUNT:
-      return finalQuery.getQueryResult().getTotalResults();
-    case LONG_COUNT:
-      return (long)finalQuery.getQueryResult().getTotalResults();
-    default:
-      return finalQuery;
+      case FIRST:
+        return finalQuery.first();
+      case FIRST_OR_DEFAULT:
+        return finalQuery.firstOrDefault();
+      case SINGLE:
+        list = finalQuery.toList();
+        if (list.size() != 1) {
+          throw new IllegalStateException("Expected one result. Got: " + list.size());
+        }
+        return list.get(0);
+      case SINGLE_OR_DEFAULT:
+        list = finalQuery.toList();
+        if (list.size() > 1) {
+          throw new IllegalStateException("Expected one result. Got: " + list.size());
+        }
+        return list.isEmpty() ? null : list.get(0);
+      case ALL:
+        //TODO:
+        //        var pred = predicate.Compile();
+        //        return finalQuery.AsQueryable().All(projection => pred((T) (object) projection));
+        return null;
+      case ANY:
+        //TODO: return finalQuery.Any();
+        return null;
+      case COUNT:
+        return finalQuery.getQueryResult().getTotalResults();
+      case LONG_COUNT:
+        return (long)finalQuery.getQueryResult().getTotalResults();
+      default:
+        return finalQuery;
     }
   }
 

@@ -7,7 +7,7 @@ package raven.abstractions.basic;
  */
 public class Tuple<T, S> {
   public static <T, S> Tuple<T, S> create(T item1, S item2) {
-    return new Tuple<T, S>(item1, item2);
+    return new Tuple<>(item1, item2);
   }
 
   private T item1;

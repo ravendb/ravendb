@@ -63,6 +63,7 @@ public class LazyFacetsOperation implements ILazyOperation {
     this.facetSetupDoc = null;
   }
 
+  @Override
   public GetRequest createRequest() {
     String addition = null;
     if (facetSetupDoc != null) {
@@ -77,14 +78,17 @@ public class LazyFacetsOperation implements ILazyOperation {
     return getRequest;
   }
 
+  @Override
   public Object getResult() {
     return result;
   }
 
+  @Override
   public boolean isRequiresRetry() {
     return requiresRetry;
   }
 
+  @Override
   public void handleResponse(GetResponse response) {
     if (response.getStatus() != HttpStatus.SC_OK && response.getStatus() != HttpStatus.SC_NOT_MODIFIED) {
       throw new IllegalStateException("Got an unexpected response code for the request: " + response.getStatus() + "\n" + response.getResult());
@@ -97,6 +101,7 @@ public class LazyFacetsOperation implements ILazyOperation {
     }
   }
 
+  @Override
   public AutoCloseable enterContext() {
     return null;
   }

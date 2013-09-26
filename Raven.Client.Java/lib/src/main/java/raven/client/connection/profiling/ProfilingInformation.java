@@ -70,7 +70,7 @@ public class ProfilingInformation {
 
   private ProfilingInformation(UUID sessionId) {
     id = sessionId != null ? sessionId : UUID.randomUUID();
-    context = new HashMap<String, String>();
+    context = new HashMap<>();
   }
 
 

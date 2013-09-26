@@ -14,7 +14,7 @@ public class FieldHighlightings {
 
   public FieldHighlightings(String fieldName) {
     this.fieldName = fieldName;
-    this.highlightings = new HashMap<String, String[]>();
+    this.highlightings = new HashMap<>();
   }
 
   public String getFieldName() {

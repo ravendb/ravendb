@@ -85,7 +85,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
   protected final Set<Class<?>> rootTypes;
 
-  static Map<Class< ? >, Function1<Object, String>> implicitStringsCache = new HashMap<Class< ? >, Function1<Object, String>>();
+  static Map<Class< ? >, Function1<Object, String>> implicitStringsCache = new HashMap<>();
 
   /**
    * Whatever to negate the next operation
@@ -146,7 +146,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * The fields to highlight
    */
-  protected List<HighlightedField> highlightedFields = new ArrayList<HighlightedField>();
+  protected List<HighlightedField> highlightedFields = new ArrayList<>();
 
   /**
    * Highlighter pre tags
@@ -242,6 +242,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Get the name of the index being queried
    */
+  @Override
   public String getIndexQueried() {
     return indexName;
   }
@@ -249,6 +250,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Grant access to the database commands
    */
+  @Override
   public IDatabaseCommands getDatabaseCommands() {
     return theDatabaseCommands;
   }
@@ -257,6 +259,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * Gets the document convention from the query session
    * @return
    */
+  @Override
   public DocumentConvention getDocumentConvention() {
     return conventions;
   }
@@ -264,8 +267,9 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Gets the session associated with this document query
    */
+  @Override
   public InMemoryDocumentSessionOperations getSession() {
-    return (InMemoryDocumentSessionOperations) theSession;
+    return theSession;
   }
 
   private long getDefaultTimeout() {
@@ -499,12 +503,14 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
         disableEntitiesTracking);
   }
 
+  @Override
   public IndexQuery getIndexQuery() {
     String query = queryText.toString();
     IndexQuery indexQuery = generateIndexQuery(query);
     return indexQuery;
   }
 
+  @Override
   public FacetResults getFacets(String facetSetupDoc, int facetStart, Integer facetPageSize) {
     IndexQuery q = getIndexQuery();
     return getDatabaseCommands().getFacets(indexName, q, facetSetupDoc, facetStart, facetPageSize);
@@ -600,7 +606,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       });
     }
 
-    LazyQueryOperation<T> lazyQueryOperation = new LazyQueryOperation<T>(clazz, queryOperation, afterQueryExecutedCallback, includes);
+    LazyQueryOperation<T> lazyQueryOperation = new LazyQueryOperation<>(clazz, queryOperation, afterQueryExecutedCallback, includes);
     lazyQueryOperation.setHeaders(headers);
 
     return ((DocumentSession) theSession).addLazyOperation(lazyQueryOperation, onEval);
@@ -616,6 +622,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * Gets the fields for projection
    * @return
    */
+  @Override
   public Collection<String> getProjectionFields() {
     return (projectionFields != null) ? Arrays.asList(projectionFields) : Collections.<String> emptyList();
   }
@@ -663,12 +670,14 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return ((IDocumentQuery<T>) this);
   }
 
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> setHighlighterTags(String preTag, String postTag) {
     this.setHighlighterTags(new String[] { preTag }, new String[] { postTag });
     return (IDocumentQuery<T>) this;
   }
 
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> setHighlighterTags(String[] preTags, String[] postTags) {
     highlighterPreTags = preTags;
@@ -693,6 +702,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param descending If set to true [descending]
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> addOrder(String fieldName, boolean descending) {
     addOrder(fieldName, descending, null);
@@ -705,6 +715,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param descending If set to true [descending]
    * @param fieldType The type of the field to be sorted.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> addOrder(String fieldName, boolean descending, Class< ? > fieldType) {
     WhereParams whereParamas = new WhereParams();
@@ -745,6 +756,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (IDocumentQuery<T>) this;
   }
 
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> where(String whereClause) {
     appendSpaceIfNeeded(queryText.length() > 0 && queryText.charAt(queryText.length() - 1) != '(');
@@ -764,6 +776,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param value
    * @return
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereEquals(String fieldName, Object value) {
     WhereParams whereParams = new WhereParams();
@@ -774,6 +787,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return (IDocumentQuery<T>) this;
   }
 
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereEquals(String fieldName, Object value, boolean isAnalyzed) {
     WhereParams whereParams = new WhereParams();
@@ -788,6 +802,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Simplified method for opening a new clause within the query
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> openSubclause() {
     currentClauseDepth++;
@@ -804,6 +819,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param aggregationOperation
    * @param string
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> groupBy(EnumSet<AggregationOperation> aggregationOperation, String... fieldsToGroupBy) {
     groupByFields = fieldsToGroupBy;
@@ -814,6 +830,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Simplified method for closing a clause within the query
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> closeSubclause() {
     currentClauseDepth--;
@@ -825,11 +842,12 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * Matches exact value
    * @param whereParams
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereEquals(WhereParams whereParams) {
     ensureValidFieldName(whereParams);
     String transformToEqualValue = transformToEqualValue(whereParams);
-    lastEquality = new Tuple<String, String>(whereParams.getFieldName(), transformToEqualValue);
+    lastEquality = new Tuple<>(whereParams.getFieldName(), transformToEqualValue);
 
     appendSpaceIfNeeded(queryText.length() > 0 && queryText.charAt(queryText.length() - 1) != '(');
     negateIfNeeded();
@@ -859,6 +877,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Negate the next operation
    */
+  @Override
   public void negateNext() {
     negate = !negate;
   }
@@ -876,6 +895,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName
    * @param values
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereIn(String fieldName, Collection<?> values) {
     appendSpaceIfNeeded(queryText.length() > 0 && !Character.isWhitespace(queryText.charAt(queryText.length() - 1)));
@@ -922,6 +942,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value The value.s
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereStartsWith(String fieldName, Object value) {
     // NOTE: doesn't fully match startsWith semantics
@@ -939,6 +960,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field
    * @param value The value.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereEndsWith(String fieldName, Object value) {
     // http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Wildcard%20Searches
@@ -960,6 +982,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param start The start.
    * @param end The end.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereBetween(String fieldName, Object start, Object end) {
     appendSpaceIfNeeded(queryText.length() > 0);
@@ -993,6 +1016,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param start The start.
    * @param end The end.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereBetweenOrEqual(String fieldName, Object start, Object end) {
     appendSpaceIfNeeded(queryText.length() > 0);
@@ -1039,6 +1063,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value The value.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereGreaterThan(String fieldName, Object value) {
     whereBetween(fieldName, value, null);
@@ -1050,6 +1075,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value The value.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereGreaterThanOrEqual(String fieldName, Object value) {
     whereBetweenOrEqual(fieldName, value, null);
@@ -1061,6 +1087,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value The value.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereLessThan(String fieldName, Object value) {
     whereBetween(fieldName, null, value);
@@ -1072,6 +1099,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param fieldName Name of the field.
    * @param value the value.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereLessThanOrEqual(String fieldName, Object value) {
     whereBetweenOrEqual(fieldName, null, value);
@@ -1081,6 +1109,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    *  Add an AND to the query
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> andAlso() {
     if (queryText.length() < 1)
@@ -1093,6 +1122,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Add an OR to the query
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> orElse() {
     if (queryText.length() < 1) {
@@ -1110,6 +1140,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    *  http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Boosting%20a%20Term
    * @param boost boosting factor where 1.0 is default, less than 1.0 is lower weight, greater than 1.0 is higher weight
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> boost(Double boost) {
     if (queryText.length() < 1) {
@@ -1133,6 +1164,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Fuzzy%20Searches
    * @param fuzzy 0.0 to 1.0 where 1.0 means closer match
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> fuzzy(Double fuzzy) {
     if (queryText.length() < 1) {
@@ -1163,6 +1195,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    *  http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Proximity%20Searches
    * @param proximity number of words within
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> proximity(int proximity) {
     if (queryText.length() < 1) {
@@ -1188,6 +1221,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
    * @param fields The fields.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> orderBy(String... fields) {
     orderByFields = (String[]) ArrayUtils.addAll(orderByFields, fields);
@@ -1220,6 +1254,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Instructs the query to wait for non stale results as of now.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> waitForNonStaleResultsAsOfNow() {
     theWaitForNonStaleResults = true;
@@ -1232,6 +1267,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * Instructs the query to wait for non stale results as of now for the specified timeout.
    * @param waitTimeout The wait timeout in milis
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> waitForNonStaleResultsAsOfNow(long waitTimeout) {
     theWaitForNonStaleResults = true;
@@ -1244,6 +1280,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * Instructs the query to wait for non stale results as of the cutoff date.
    * @param cutOff The cut off.
    */
+  @Override
   public IDocumentQuery<T> waitForNonStaleResultsAsOf(Date cutOff) {
     return waitForNonStaleResultsAsOf(cutOff, getDefaultTimeout());
   }
@@ -1253,6 +1290,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param cutOff The cut off.
    * @param waitTimeout the wait timeout in milis
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> waitForNonStaleResultsAsOf(Date cutOff, long waitTimeout) {
     theWaitForNonStaleResults = true;
@@ -1307,6 +1345,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * EXPERT ONLY: Instructs the query to wait for non stale results.
    * This shouldn't be used outside of unit tests unless you are well aware of the implications
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> waitForNonStaleResults() {
     waitForNonStaleResults(getDefaultTimeout());
@@ -1424,6 +1463,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return indexQuery;
   }
 
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> search(String fieldName, String searchTerms) {
     search(fieldName, searchTerms, EscapeQueryOptions.RAW_QUERY);
@@ -1438,6 +1478,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * @param searchTerms
    * @param escapeQueryOptions
    */
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> search(String fieldName, String searchTerms, EscapeQueryOptions escapeQueryOptions) {
     queryText.append(' ');
@@ -1586,6 +1627,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * Returns a {@link String} that represents the query for this instance.
    */
+  @Override
   public String toString() {
     if (currentClauseDepth != 0) {
       throw new IllegalStateException("A clause was not closed correctly within this query, current clause depth = " + currentClauseDepth);
@@ -1597,16 +1639,19 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   /**
    * The last term that we asked the query to use equals on
    */
+  @Override
   public Tuple<String, String> getLastEqualityTerm() {
     return lastEquality;
   }
 
+  @Override
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> intersect() {
     queryText.append(Constants.INTERSECT_SEPARATOR);
     return (IDocumentQuery<T>) this;
   }
 
+  @Override
   public void addRootType(Class<T> type) {
     rootTypes.add(type);
   }

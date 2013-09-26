@@ -1,14 +1,11 @@
 package raven.client.connection;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.http.HttpStatus;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.map.JsonMappingException;
 
 import raven.abstractions.closure.Action2;
 import raven.abstractions.data.GetRequest;
@@ -100,7 +97,7 @@ public class MultiGetOperation {
     return false;
   }
 
-  public GetResponse[] handleCachingResponse(GetResponse[] responses, HttpJsonRequestFactory jsonRequestFactory) throws JsonGenerationException, JsonMappingException, IOException {
+  public GetResponse[] handleCachingResponse(GetResponse[] responses, HttpJsonRequestFactory jsonRequestFactory) {
     boolean hasCachedRequests = false;
     RequestStatus[] requestStatuses = new RequestStatus[responses.length];
     for (int i = 0; i < responses.length; i++) {
@@ -121,7 +118,7 @@ public class MultiGetOperation {
       } else {
         requestStatuses[i] = responses[i].isRequestHasErrors() ? RequestStatus.ERROR_ON_SERVER : RequestStatus.SEND_TO_SERVER;
 
-        Map<String, String> nameValueCollection = new HashMap<String, String>();
+        Map<String, String> nameValueCollection = new HashMap<>();
         for (Map.Entry<String, String> header: responses[i].getHeaders().entrySet()) {
           nameValueCollection.put(header.getKey(), header.getValue());
         }

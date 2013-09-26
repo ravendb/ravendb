@@ -30,7 +30,7 @@ public class QueryResult {
   public QueryResult() {
     results = new ArrayList<>();
     includes = new ArrayList<>();
-    highlightings = new HashMap<String, Map<String,String[]>>();
+    highlightings = new HashMap<>();
   }
 
   /**

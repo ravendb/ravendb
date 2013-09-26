@@ -26,6 +26,7 @@ import org.codehaus.jackson.map.introspect.AnnotatedMethod;
 import org.codehaus.jackson.map.introspect.AnnotatedParameter;
 import org.codehaus.jackson.map.module.SimpleModule;
 import org.codehaus.jackson.map.ser.std.SerializerBase;
+import org.codehaus.jackson.type.JavaType;
 
 import raven.abstractions.basic.SerializeUsingValue;
 import raven.abstractions.basic.SharpAwareJacksonAnnotationIntrospector;
@@ -58,11 +59,15 @@ public class JsonExtensions {
   private static SimpleModule createCustomSerializeModule() {
     SimpleModule module = new SimpleModule("customSerializers", new Version(1, 0, 0, null));
     module.addDeserializer(Etag.class, new EtagDeserializer(Etag.class));
-    module.addDeserializer(RavenJObject.class, new RavenJTokenDeserializer<RavenJObject>(RavenJObject.class));
-    module.addDeserializer(RavenJToken.class, new RavenJTokenDeserializer<RavenJToken>(RavenJToken.class));
-    module.addDeserializer(RavenJArray.class, new RavenJTokenDeserializer<RavenJArray>(RavenJArray.class));
-    module.addDeserializer(RavenJValue.class, new RavenJTokenDeserializer<RavenJValue>(RavenJValue.class));
+    module.addDeserializer(RavenJObject.class, new RavenJTokenDeserializer<>(RavenJObject.class));
+    module.addDeserializer(RavenJToken.class, new RavenJTokenDeserializer<>(RavenJToken.class));
+    module.addDeserializer(RavenJArray.class, new RavenJTokenDeserializer<>(RavenJArray.class));
+    module.addDeserializer(RavenJValue.class, new RavenJTokenDeserializer<>(RavenJValue.class));
     module.addSerializer(EnumSet.class, new RavenEnumSetSerializer());
+    module.addSerializer(RavenJObject.class, new RavenJTokenSerializer<>(RavenJObject.class));
+    module.addSerializer(RavenJToken.class, new RavenJTokenSerializer<>(RavenJToken.class));
+    module.addSerializer(RavenJArray.class, new RavenJTokenSerializer<>(RavenJArray.class));
+    module.addSerializer(RavenJValue.class, new RavenJTokenSerializer<>(RavenJValue.class));
     //TODO: add deserializer for enumset and enum!
     module.addSerializer(SortOptions.class, new RavenEnumSerializer(SortOptions.class));
     return module;
@@ -99,7 +104,6 @@ public class JsonExtensions {
       super(EnumSet.class);
     }
 
-    @SuppressWarnings({ "unchecked" })
     @Override
     public void serialize(EnumSet value, JsonGenerator jgen, SerializerProvider provider) throws IOException, JsonGenerationException {
       try {
@@ -111,7 +115,7 @@ public class JsonExtensions {
           if (serializeAsFlags != null) {
             Method method = firstEnum.getClass().getMethod("getValue");
             int result = 0;
-            Iterator<Enum> iterator = (Iterator<Enum>) value.iterator();
+            Iterator<Enum> iterator = value.iterator();
             while (iterator.hasNext()) {
               Object next = iterator.next();
               result |= (int)method.invoke(next);
@@ -128,13 +132,34 @@ public class JsonExtensions {
     }
   }
 
+  public static class RavenJTokenSerializer<T extends RavenJToken> extends SerializerBase<T> {
+
+    public RavenJTokenSerializer(Class<?> t, boolean dummy) {
+      super(t, dummy);
+    }
+
+    public RavenJTokenSerializer(Class<T> t) {
+      super(t);
+    }
+
+    public RavenJTokenSerializer(JavaType type) {
+      super(type);
+    }
+
+    @Override
+    public void serialize(T value, JsonGenerator jgen, SerializerProvider provider) throws IOException,
+      JsonGenerationException {
+      jgen.writeString(value.toString());
+    }
+
+  }
+
   public static class RavenJTokenDeserializer<T extends RavenJToken> extends StdDeserializer<T> {
 
     protected RavenJTokenDeserializer(Class< T > vc) {
       super(vc);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public T deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
       return (T) RavenJToken.load(jp);

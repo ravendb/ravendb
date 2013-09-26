@@ -26,7 +26,7 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
 
   public Map<String, RavenJToken> getLocalChanges() {
     if (localChanges == null) {
-      localChanges = new TreeMap<String, RavenJToken> (comparer);
+      localChanges = new TreeMap<> (comparer);
     }
     return localChanges;
   }
@@ -264,7 +264,7 @@ public class DictionaryWithParentSnapshot implements Map<String, RavenJToken>, I
 
   public boolean tryGetValue(String key, Reference<RavenJToken> value) {
     value.value = null;
-    Reference<RavenJToken> unsafeVal = new Reference<RavenJToken>();
+    Reference<RavenJToken> unsafeVal = new Reference<>();
     if (getLocalChanges() != null && getLocalChanges().containsKey(key)) {
       unsafeVal.value = getLocalChanges().get(key);
       if (DELETED_MARKER.equals(unsafeVal.value)) return false;

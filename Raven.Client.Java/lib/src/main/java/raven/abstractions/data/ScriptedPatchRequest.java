@@ -30,7 +30,7 @@ public class ScriptedPatchRequest {
     this.values = values;
   }
   public ScriptedPatchRequest() {
-    values = new HashMap<String, Object>();
+    values = new HashMap<>();
   }
   public String getScript() {
     return script;

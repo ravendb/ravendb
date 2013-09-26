@@ -19,6 +19,6 @@ public class FacetResults {
   }
 
   public FacetResults() {
-    results = new HashMap<String, FacetResult>();
+    results = new HashMap<>();
   }
 }

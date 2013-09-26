@@ -73,7 +73,6 @@ public class MultiLoadOperation {
     return true;
   }
 
-  @SuppressWarnings("unchecked")
   public <T> T[] complete(Class<T> clazz) {
     for (int i = 0; i < includeResults.length; i++) {
       JsonDocument include = includeResults[i];

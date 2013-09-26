@@ -12,7 +12,7 @@ public class ConnectionStringParser<T extends RavenConnectionStringOptions> {
 
 
   public static <S extends RavenConnectionStringOptions> ConnectionStringParser<S> fromConnectionString(Class<S> class1, String connString) {
-    return new ConnectionStringParser<S>(class1, connString);
+    return new ConnectionStringParser<>(class1, connString);
   }
 
   private static Pattern connectionStringRegex = Pattern.compile("(\\w+)\\s*=\\s*(.*)");

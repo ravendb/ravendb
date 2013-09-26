@@ -16,10 +16,11 @@ public class Parallel {
 
   public static <T> void forEach(Iterable<T> parameters, final LoopBody<T> loopBody) {
     ExecutorService executor = Executors.newFixedThreadPool(cpus);
-    List<Future< ? >> futures = new LinkedList<Future< ? >>();
+    List<Future< ? >> futures = new LinkedList<>();
 
     for (final T param : parameters) {
       Future< ? > future = executor.submit(new Runnable() {
+        @Override
         public void run() {
           loopBody.run(param);
         }
@@ -41,11 +42,12 @@ public class Parallel {
 
   public static void For(int start, int stop, final LoopBody<Integer> loopBody) {
     ExecutorService executor = Executors.newFixedThreadPool(cpus);
-    List<Future< ? >> futures = new LinkedList<Future< ? >>();
+    List<Future< ? >> futures = new LinkedList<>();
 
     for (int i = start; i < stop; i++) {
       final Integer k = i;
       Future< ? > future = executor.submit(new Runnable() {
+        @Override
         public void run() {
           loopBody.run(k);
         }

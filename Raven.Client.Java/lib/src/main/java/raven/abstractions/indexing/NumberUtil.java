@@ -2,6 +2,8 @@ package raven.abstractions.indexing;
 
 import org.apache.commons.lang.StringUtils;
 
+import raven.abstractions.data.Constants;
+
 /**
  * Helper function for numeric to indexed string and vice versa
  */
@@ -31,7 +33,7 @@ public class NumberUtil {
    * @return
    */
   public static String numberToString(float number) {
-    return "Fx" + trimZeros(String.format("%.11f", number));
+    return "Fx" + trimZeros(String.format(Constants.getDefaultLocale(), "%.11f", number));
   }
 
   /**
@@ -40,7 +42,7 @@ public class NumberUtil {
    * @return
    */
   public static String numberToString(double number) {
-    return "Dx" + trimZeros(String.format("%.11f", number));
+    return "Dx" + trimZeros(String.format(Constants.getDefaultLocale(), "%.11f", number));
   }
 
   /**
@@ -62,6 +64,7 @@ public class NumberUtil {
    * @param number
    * @return
    */
+  //TODO: test parsing on different locale
   public static Object stringToNumber(String number)
   {
     if (number == null)

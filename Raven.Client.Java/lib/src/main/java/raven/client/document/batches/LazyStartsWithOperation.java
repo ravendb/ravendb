@@ -33,6 +33,7 @@ public class LazyStartsWithOperation<T> implements ILazyOperation {
     this.sessionOperations = sessionOperations;
   }
 
+  @Override
   public GetRequest createRequest() {
     GetRequest getRequest = new GetRequest();
     getRequest.setUrl("/docs");
@@ -41,6 +42,7 @@ public class LazyStartsWithOperation<T> implements ILazyOperation {
     return getRequest;
   }
 
+  @Override
   public Object getResult() {
     return result;
   }
@@ -49,6 +51,7 @@ public class LazyStartsWithOperation<T> implements ILazyOperation {
     this.result = result;
   }
 
+  @Override
   public boolean isRequiresRetry() {
     return requiresRetry;
   }
@@ -57,6 +60,7 @@ public class LazyStartsWithOperation<T> implements ILazyOperation {
     this.requiresRetry = requiresRetry;
   }
 
+  @Override
   public void handleResponse(GetResponse response) {
     if (response.isRequestHasErrors()) {
       result = null;
@@ -73,6 +77,7 @@ public class LazyStartsWithOperation<T> implements ILazyOperation {
     result = resultList.toArray();
   }
 
+  @Override
   public AutoCloseable enterContext() {
     return null;
   }

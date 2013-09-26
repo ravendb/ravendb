@@ -63,7 +63,7 @@ import com.mysema.query.types.Path;
 public class DocumentSession extends InMemoryDocumentSessionOperations implements IDocumentSessionImpl, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator {
 
   protected final List<ILazyOperation> pendingLazyOperations = new ArrayList<>();
-  protected final Map<ILazyOperation, Action1<Object>> onEvaluateLazy = new HashMap<ILazyOperation, Action1<Object>>();
+  protected final Map<ILazyOperation, Action1<Object>> onEvaluateLazy = new HashMap<>();
 
   private IDatabaseCommands databaseCommands;
 
@@ -79,6 +79,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * Access the lazy operations
    * @return
    */
+  @Override
   public ILazySessionOperations lazily() {
     return new LazySessionOperations(this);
   }
@@ -86,6 +87,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   /**
    * Access the eager operations
    */
+  @Override
   public IEagerSessionOperations eagerly() {
     return this;
   }
@@ -112,6 +114,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * Note: Those operations are rarely needed, and have been moved to a separate
    * property to avoid cluttering the API
    */
+  @Override
   public ISyncAdvancedSessionOperation advanced() {
     return this;
   }
@@ -128,6 +131,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   /**
    * Loads the specified entity with the specified id.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public <T> T load(Class<T> clazz, String id) {
     if (id == null) {
@@ -176,16 +180,19 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   }
 
 
+  @Override
   public <T> T load(Class<T> clazz, Number id) {
     String documentKey = getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
     return load(clazz, documentKey);
   }
 
+  @Override
   public <T> T load(Class<T> clazz, UUID id) {
     String documentKey = getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
     return load(clazz, documentKey);
   }
 
+  @Override
   public <T> T[] load(Class<T> clazz, Number... ids) {
     List<String> documentKeys = new ArrayList<>();
     for (Number id: ids) {
@@ -194,6 +201,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return load(clazz, documentKeys.toArray(new String[0]));
   }
 
+  @Override
   public <T> T[] load(Class<T> clazz, UUID... ids) {
     List<String> documentKeys = new ArrayList<>();
     for (UUID id: ids) {
@@ -269,7 +277,8 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
 
 
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("null")
+  @Override
   public <T> T[] loadInternal(Class<T> clazz, String[] ids, Tuple<String, Class<?>>[] includes) {
     if (ids.length == 0) {
       return (T[]) Array.newInstance(clazz, 0);
@@ -299,7 +308,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return multiLoadOperation.complete(clazz);
   }
 
-  @SuppressWarnings("unchecked")
+  @Override
   public <T> T[] loadInternal(Class<T> clazz, String[] ids) {
     if (ids.length == 0) {
       return (T[]) Array.newInstance(clazz, 0);
@@ -342,6 +351,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * @param indexName
    * @return
    */
+  @Override
   public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName) {
     return query(clazz, indexName, false);
   }
@@ -353,11 +363,12 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * @param isMapReduce Whatever we are querying a map/reduce index (modify how we treat identifier properties)
    * @return
    */
+  @Override
   public <T> IRavenQueryable<T> query(Class<T> clazz, String indexName, boolean isMapReduce) {
     RavenQueryStatistics ravenQueryStatistics = new RavenQueryStatistics();
     RavenQueryHighlightings highlightings = new RavenQueryHighlightings();
-    RavenQueryProvider<T> ravenQueryProvider = new RavenQueryProvider<T>(clazz, this, indexName, ravenQueryStatistics, highlightings, getDatabaseCommands(), isMapReduce);
-    return new RavenQueryInspector<T>(clazz, ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, null, this, getDatabaseCommands(), isMapReduce);
+    RavenQueryProvider<T> ravenQueryProvider = new RavenQueryProvider<>(clazz, this, indexName, ravenQueryStatistics, highlightings, getDatabaseCommands(), isMapReduce);
+    return new RavenQueryInspector<>(clazz, ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, null, this, getDatabaseCommands(), isMapReduce);
   }
 
   /**
@@ -366,6 +377,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * @param tIndexCreator The type of the index creator
    * @return
    */
+  @Override
   public <T> IRavenQueryable<T> query(Class<T> clazz, Class<? extends AbstractIndexCreationTask> tIndexCreator) {
     try {
       AbstractIndexCreationTask indexCreator = tIndexCreator.newInstance();
@@ -379,6 +391,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   /**
    * Refreshes the specified entity from Raven server.
    */
+  @Override
   public <T> void refresh(T entity) {
     DocumentMetadata value;
     if (!entitiesAndMetadata.containsKey(entity)) {
@@ -413,6 +426,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   /**
    * Get the json document by key from the store
    */
+  @Override
   protected JsonDocument getJsonDocument(String documentKey) {
     JsonDocument jsonDocument = databaseCommands.get(documentKey);
     if (jsonDocument == null) {
@@ -421,6 +435,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return jsonDocument;
   }
 
+  @Override
   protected String generateKey(Object entity) {
     return getConventions().generateDocumentKey(dbName, databaseCommands, entity);
   }
@@ -429,6 +444,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   /**
    * Begin a load while including the specified path
    */
+  @Override
   public ILoaderWithInclude include(String path) {
     return new MultiLoaderWithInclude(this).include(path);
   }
@@ -438,6 +454,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * @param path
    * @return
    */
+  @Override
   public ILoaderWithInclude include(Path<?> path) {
     return new MultiLoaderWithInclude(this).include(path);
   }
@@ -447,10 +464,12 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * @param path
    * @return
    */
+  @Override
   public ILoaderWithInclude include(Class<?> targetClass, Path<?> path) {
     return new MultiLoaderWithInclude(this).include(targetClass, path);
   }
 
+  @Override
   public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult load(Class<TTransformer> tranformerClass,
       Class<TResult> clazz, String id) {
     try {
@@ -465,6 +484,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     }
   }
 
+  @Override
   public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult load(Class<TTransformer> tranformerClass,
       Class<TResult> clazz, String id, Action1<ILoadConfiguration> configure) {
     try {
@@ -481,6 +501,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     }
   }
 
+  @Override
   public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult[] load(Class<TTransformer> tranformerClass,
       Class<TResult> clazz, String... ids) {
     try {
@@ -491,6 +512,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     }
   }
 
+  @Override
   public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult[] load(Class<TTransformer> tranformerClass,
       Class<TResult> clazz, List<String> ids, Action1<ILoadConfiguration> configure) {
     try {
@@ -506,6 +528,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   /**
    * Gets the document URL for the specified entity.
    */
+  @Override
   public String getDocumentUrl(Object entity) {
     if (!entitiesAndMetadata.containsKey(entity)) {
       throw new IllegalStateException("Could not figure out identifier for transient instance");
@@ -591,6 +614,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   /**
    * Saves all the changes to the Raven server.
    */
+  @Override
   public void saveChanges() {
     try (AutoCloseable scope = entityToJson.entitiesToJsonCachingScope()) {
       SaveChangesData data = prepareForSaveChanges();
@@ -617,6 +641,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * @param indexClazz The type of the index creator.
    * @return
    */
+  @Override
   public <T, TIndexCreator extends AbstractIndexCreationTask> IDocumentQuery<T> luceneQuery(Class<T> clazz, Class<TIndexCreator> indexClazz) {
     try {
       TIndexCreator index = indexClazz.newInstance();
@@ -626,6 +651,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     }
   }
 
+  @Override
   public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName) {
     return luceneQuery(clazz, indexName, false);
   }
@@ -637,14 +663,16 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * @param isMapReduce
    * @return
    */
+  @Override
   public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName, boolean isMapReduce) {
-    return new DocumentQuery<T>(clazz, this, getDatabaseCommands(), indexName, null, null, listeners.getQueryListeners(), isMapReduce);
+    return new DocumentQuery<>(clazz, this, getDatabaseCommands(), indexName, null, null, listeners.getQueryListeners(), isMapReduce);
   }
 
   /**
    * Commits the specified tx id.
    * @param txId
    */
+  @Override
   public void commit(String txId) {
     incrementRequestCount();
     getDatabaseCommands().commit(txId);
@@ -655,12 +683,14 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * Rollbacks the specified tx id.
    * @param txId
    */
+  @Override
   public void rollback(String txId) {
     incrementRequestCount();
     getDatabaseCommands().rollback(txId);
     clearEnlistment();
   }
 
+  @Override
   public void prepareTransaction(String txId) {
     incrementRequestCount();
     getDatabaseCommands().prepareTransaction(txId);
@@ -672,6 +702,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
    * @param clazz
    * @return
    */
+  @Override
   public <T> IRavenQueryable<T> query(Class<T> clazz) {
     String indexName = "dynamic";
     if (Types.isEntityType(clazz)) {
@@ -684,6 +715,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   /**
    * Dynamically query RavenDB using Lucene syntax
    */
+  @Override
   public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz) {
     String indexName = "dynamic";
     if (Types.isEntityType(clazz)) {
@@ -717,12 +749,14 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   /**
    * Register to lazily load documents and include
    */
+  @Override
   public <T> Lazy<T[]> lazyLoadInternal(Class<T> clazz, String[] ids, Tuple<String, Class<?>>[] includes, Action1<T[]> onEval) {
     MultiLoadOperation multiLoadOperation = new MultiLoadOperation(this, new DisableAllCachingCallback(), ids, includes);
-    LazyMultiLoadOperation<T> lazyOp = new LazyMultiLoadOperation<T>(clazz, multiLoadOperation, ids, includes);
+    LazyMultiLoadOperation<T> lazyOp = new LazyMultiLoadOperation<>(clazz, multiLoadOperation, ids, includes);
     return addLazyOperation(lazyOp, onEval);
   }
 
+  @Override
   public void executeAllPendingLazyOperations() {
     if (pendingLazyOperations.size() == 0)
       return;
@@ -778,19 +812,22 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     }
   }
 
+  @Override
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix) {
     return loadStartingWith(clazz, keyPrefix, null, 0, 25);
   }
 
+  @Override
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches) {
     return loadStartingWith(clazz, keyPrefix, matches, 0, 25);
   }
 
+  @Override
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start) {
     return loadStartingWith(clazz, keyPrefix, matches, start, 25);
   }
 
-  @SuppressWarnings("unchecked")
+  @Override
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize) {
     List<JsonDocument> results = getDatabaseCommands().startsWith(keyPrefix, matches, start, pageSize);
     for (JsonDocument doc: results) {

@@ -15,6 +15,7 @@ import raven.client.exceptions.ConflictException;
 
 public class AttachmentReplicationTest extends ReplicationBase {
 
+  @SuppressWarnings("null")
   @Test
   public void can_replicate_between_two_instances() throws Exception {
 

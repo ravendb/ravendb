@@ -32,6 +32,7 @@ public class LazyQueryOperation<T> implements ILazyOperation {
     this.includes = includes;
   }
 
+  @Override
   public GetRequest createRequest() {
     StringBuilder stringBuilder = new StringBuilder();
     queryOperation.getIndexQuery().appendQueryString(stringBuilder);
@@ -51,6 +52,7 @@ public class LazyQueryOperation<T> implements ILazyOperation {
     return request;
   }
 
+  @Override
   public Object getResult() {
     return result;
   }
@@ -59,6 +61,7 @@ public class LazyQueryOperation<T> implements ILazyOperation {
     this.result = result;
   }
 
+  @Override
   public boolean isRequiresRetry() {
     return requiresRetry;
   }
@@ -67,6 +70,7 @@ public class LazyQueryOperation<T> implements ILazyOperation {
     this.requiresRetry = requiresRetry;
   }
 
+  @Override
   public void handleResponse(GetResponse response) {
     if (response.getStatus() == HttpStatus.SC_NOT_FOUND) {
       throw new IllegalStateException("There is no index named: " + queryOperation.getIndexName() + "\n" + response.getResult());
@@ -87,6 +91,7 @@ public class LazyQueryOperation<T> implements ILazyOperation {
     result = queryOperation.complete(clazz);
   }
 
+  @Override
   public AutoCloseable enterContext() {
     return queryOperation.enterQueryContext();
   }

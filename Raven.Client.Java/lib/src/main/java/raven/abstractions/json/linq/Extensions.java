@@ -68,7 +68,7 @@ public class Extensions {
         o.set(value(String.class, key), value);
 
       }
-      return (U) ((Object) o);
+      return (U) o;
     }
     boolean cast = RavenJToken.class.isAssignableFrom(clazz);
     return convert(clazz, token, cast);
@@ -88,7 +88,7 @@ public class Extensions {
   public static <U> U convert(Class<U> clazz, RavenJToken token, boolean cast) {
     if (cast || Object.class.equals(clazz)) {
       // HACK
-      return (U) (Object) token;
+      return (U) token;
     }
     if (token == null) {
       return null;
@@ -128,12 +128,12 @@ public class Extensions {
       if (value.getValue() == null) {
         return (U) new String();
       }
-      return (U) (Object) value.getValue().toString();
+      return (U) value.getValue().toString();
     }
     if (clazz.equals(Date.class) && value.getValue().getClass().equals(String.class)) {
       NetDateFormat sdf = new NetDateFormat();
       try {
-        return (U) (Object) sdf.parse((String) value.getValue());
+        return (U) sdf.parse((String) value.getValue());
       } catch (ParseException e) {
         // TODO implement
       }
@@ -168,7 +168,7 @@ public class Extensions {
 
     @Override
     public Iterator<U> iterator() {
-      return new RavenJTokenIterator<U>();
+      return new RavenJTokenIterator<>();
     }
 
     private class RavenJTokenIterator<T> implements Iterator<T> {

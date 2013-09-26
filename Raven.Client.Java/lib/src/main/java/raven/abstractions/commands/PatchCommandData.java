@@ -18,22 +18,27 @@ public class PatchCommandData implements ICommandData {
   private RavenJObject metadata;
   private RavenJObject additionalData;
 
+  @Override
   public RavenJObject getAdditionalData() {
     return additionalData;
   }
 
+  @Override
   public Etag getEtag() {
     return etag;
   }
 
+  @Override
   public String getKey() {
     return key;
   }
 
+  @Override
   public RavenJObject getMetadata() {
     return metadata;
   }
 
+  @Override
   public HttpMethods getMethod() {
     return HttpMethods.PATCH;
   }
@@ -46,10 +51,12 @@ public class PatchCommandData implements ICommandData {
     return patchesIfMissing;
   }
 
+  @Override
   public TransactionInformation getTransactionInformation() {
     return transactionInformation;
   }
 
+  @Override
   public void setAdditionalData(RavenJObject additionalData) {
     this.additionalData = additionalData;
   }
@@ -74,6 +81,7 @@ public class PatchCommandData implements ICommandData {
     this.patchesIfMissing = patchesIfMissing;
   }
 
+  @Override
   public void setTransactionInformation(TransactionInformation transactionInformation) {
     this.transactionInformation = transactionInformation;
   }

@@ -16,7 +16,6 @@ public class VolatileOnlyTransactionRecoveryStorage implements ITransactionRecov
   public void deleteFile(String name) {
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public List<String> getFileNames(String filter) {
     return Collections.EMPTY_LIST;

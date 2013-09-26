@@ -20,6 +20,7 @@ public class ScriptedPatchCommandData implements ICommandData {
   private boolean debugMode;
   private RavenJObject additionalData;
 
+  @Override
   public HttpMethods getMethod() {
     return HttpMethods.EVAL;
   }
@@ -40,6 +41,7 @@ public class ScriptedPatchCommandData implements ICommandData {
     this.patchIfMissing = patchIfMissing;
   }
 
+  @Override
   public String getKey() {
     return key;
   }
@@ -48,6 +50,7 @@ public class ScriptedPatchCommandData implements ICommandData {
     this.key = key;
   }
 
+  @Override
   public Etag getEtag() {
     return etag;
   }
@@ -56,6 +59,7 @@ public class ScriptedPatchCommandData implements ICommandData {
     this.etag = etag;
   }
 
+  @Override
   public RavenJObject getMetadata() {
     return metadata;
   }
@@ -72,18 +76,22 @@ public class ScriptedPatchCommandData implements ICommandData {
     this.debugMode = debugMode;
   }
 
+  @Override
   public RavenJObject getAdditionalData() {
     return additionalData;
   }
 
+  @Override
   public void setAdditionalData(RavenJObject additionalData) {
     this.additionalData = additionalData;
   }
 
+  @Override
   public TransactionInformation getTransactionInformation() {
     return transactionInformation;
   }
 
+  @Override
   public void setTransactionInformation(TransactionInformation transactionInformation) {
     this.transactionInformation = transactionInformation;
   }

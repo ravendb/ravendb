@@ -21,14 +21,13 @@ public class LogManager {
   private static ILogManager getCurrentLogManager() {
     if (currentLogManager != null) {
       return currentLogManager;
-    } else {
-      synchronized (LogManager.class) {
-        if (currentLogManager == null) {
-          currentLogManager = new CommonsLoggingProvider();
-        }
-      }
-      return currentLogManager;
     }
+    synchronized (LogManager.class) {
+      if (currentLogManager == null) {
+        currentLogManager = new CommonsLoggingProvider();
+      }
+    }
+    return currentLogManager;
   }
 
 }

@@ -32,6 +32,7 @@ public class LazyMultiLoaderWithInclude implements ILazyLoaderWithInclude {
    * @param path
    * @return
    */
+  @Override
   public ILazyLoaderWithInclude include(String path) {
     includes.add(Tuple.<String, Class<?>> create(path, Object.class));
     return this;
@@ -42,6 +43,7 @@ public class LazyMultiLoaderWithInclude implements ILazyLoaderWithInclude {
    * @param path
    * @return
    */
+  @Override
   public ILazyLoaderWithInclude include(Path<?> path) {
     return include(ExpressionExtensions.toPropertyPath(path));
   }
@@ -61,7 +63,7 @@ public class LazyMultiLoaderWithInclude implements ILazyLoaderWithInclude {
   @Override
   public <TResult> Lazy<TResult> load(final Class<TResult> clazz, String id) {
     final Lazy<TResult[]> lazy = load(clazz, Arrays.asList(id));
-    return new Lazy<TResult>(new Function0<TResult>() {
+    return new Lazy<>(new Function0<TResult>() {
       @Override
       public TResult apply() {
         TResult[] results = lazy.getValue();

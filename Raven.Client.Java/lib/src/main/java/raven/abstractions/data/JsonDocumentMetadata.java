@@ -15,6 +15,7 @@ public class JsonDocumentMetadata implements IJsonDocumentMetadata {
   /**
    * @return the etag
    */
+  @Override
   public Etag getEtag() {
     return etag;
   }
@@ -22,6 +23,7 @@ public class JsonDocumentMetadata implements IJsonDocumentMetadata {
   /**
    * @return the key
    */
+  @Override
   public String getKey() {
     return key;
   }
@@ -29,6 +31,7 @@ public class JsonDocumentMetadata implements IJsonDocumentMetadata {
   /**
    * @return the lastModified
    */
+  @Override
   public Date getLastModified() {
     return lastModified;
   }
@@ -36,6 +39,7 @@ public class JsonDocumentMetadata implements IJsonDocumentMetadata {
   /**
    * @return the metadata
    */
+  @Override
   public RavenJObject getMetadata() {
     return metadata;
   }
@@ -43,6 +47,7 @@ public class JsonDocumentMetadata implements IJsonDocumentMetadata {
   /**
    * @return the monAuthoritativeInformation
    */
+  @Override
   public Boolean getNonAuthoritativeInformation() {
     return nonAuthoritativeInformation;
   }
@@ -50,6 +55,7 @@ public class JsonDocumentMetadata implements IJsonDocumentMetadata {
   /**
    * @param etag the etag to set
    */
+  @Override
   public void setEtag(Etag etag) {
     this.etag = etag;
   }
@@ -57,6 +63,7 @@ public class JsonDocumentMetadata implements IJsonDocumentMetadata {
   /**
    * @param key the key to set
    */
+  @Override
   public void setKey(String key) {
     this.key = key;
   }
@@ -64,6 +71,7 @@ public class JsonDocumentMetadata implements IJsonDocumentMetadata {
   /**
    * @param lastModified the lastModified to set
    */
+  @Override
   public void setLastModified(Date lastModified) {
     this.lastModified = lastModified;
   }
@@ -71,6 +79,7 @@ public class JsonDocumentMetadata implements IJsonDocumentMetadata {
   /**
    * @param metadata the metadata to set
    */
+  @Override
   public void setMetadata(RavenJObject metadata) {
     this.metadata = metadata;
   }
@@ -78,6 +87,7 @@ public class JsonDocumentMetadata implements IJsonDocumentMetadata {
   /**
    * @param monAuthoritativeInformation the nonAuthoritativeInformation to set
    */
+  @Override
   public void setNonAuthoritativeInformation(Boolean nonAuthoritativeInformation) {
     this.nonAuthoritativeInformation = nonAuthoritativeInformation;
   }

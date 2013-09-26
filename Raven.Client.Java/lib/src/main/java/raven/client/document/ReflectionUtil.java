@@ -8,7 +8,7 @@ import java.util.Map;
  */
 public class ReflectionUtil {
 
-  private static Map<Class<?>, String> fullnameCache = new HashMap<Class<?>, String>();
+  private static Map<Class<?>, String> fullnameCache = new HashMap<>();
 
   /**
    * Note: we can't fetch generic types information in Java - hence we are limited to simple getName on class object

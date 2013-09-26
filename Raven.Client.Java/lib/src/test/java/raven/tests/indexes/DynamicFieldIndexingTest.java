@@ -46,7 +46,7 @@ public class DynamicFieldIndexingTest extends RemoteClientTest {
       new WithDynamicIndex().execute(store);
       try (IDocumentSession session = store.openSession()) {
         Item item1 = new Item();
-        Map<String, String> values = new HashMap<String, String>();
+        Map<String, String> values = new HashMap<>();
         values.put("Name", "Fitzchak");
         values.put("User", "Admin");
 
@@ -71,7 +71,7 @@ public class DynamicFieldIndexingTest extends RemoteClientTest {
       new WithDynamicIndex().execute(store);
       try (IDocumentSession session = store.openSession()) {
         Item item1 = new Item();
-        Map<String, String> values = new HashMap<String, String>();
+        Map<String, String> values = new HashMap<>();
         values.put("First Name", "Fitzchak");
         values.put("User", "Admin");
 

@@ -54,10 +54,10 @@ import raven.client.util.Inflector;
  */
 public class DocumentConvention implements Serializable {
 
-  private Map<Class<?>, Field> idPropertyCache = new HashMap<Class<?>, Field>();
+  private Map<Class<?>, Field> idPropertyCache = new HashMap<>();
 
   private final List<Tuple<Class<?>, Function3<String, IDatabaseCommands, Object, String>>> listOfRegisteredIdConventions =
-      new ArrayList<Tuple<Class<?>, Function3<String, IDatabaseCommands, Object, String>>>();
+      new ArrayList<>();
 
   private EnumSet<FailoverBehavior> failoverBehavior = EnumSet.of(FailoverBehavior.FAIL_IMMEDIATELY);
 
@@ -73,7 +73,7 @@ public class DocumentConvention implements Serializable {
 
   public ConsistencyOptions defaultQueryingConsistency;
 
-  private static Map<Class<?>, String> CACHED_DEFAULT_TYPE_TAG_NAMES = new HashMap<Class<?>, String>();
+  private static Map<Class<?>, String> CACHED_DEFAULT_TYPE_TAG_NAMES = new HashMap<>();
   private AtomicInteger requestCount = new AtomicInteger(0);
 
   private Function3<String, RavenJObject, RavenJObject, String> findClrType;
@@ -995,7 +995,6 @@ public class DocumentConvention implements Serializable {
       */
   }
 
-  @SuppressWarnings("unchecked")
   public boolean tryConvertValueForQuery(String fieldName, Object value, QueryValueConvertionType convertionType, Reference<String> strValue) {
     for (Tuple<Class<?>, TryConvertValueForQueryDelegate<?>> queryValueConverterTuple : listOfQueryValueConverters) {
       if (queryValueConverterTuple.getItem1().isInstance(value)) {

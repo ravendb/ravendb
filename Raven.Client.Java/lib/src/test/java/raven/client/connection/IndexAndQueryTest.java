@@ -361,7 +361,6 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
     }
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void testDynamicQuery() throws Exception {
     try {

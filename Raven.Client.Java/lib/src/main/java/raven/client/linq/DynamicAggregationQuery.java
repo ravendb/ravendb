@@ -18,7 +18,7 @@ import com.mysema.query.types.expr.BooleanExpression;
 public class DynamicAggregationQuery<T> {
   private final IRavenQueryable<T> queryable;
   private final List<AggregationQueryDsl> facets;
-  private final Map<String, String> renames = new HashMap<String, String>();
+  private final Map<String, String> renames = new HashMap<>();
 
   public DynamicAggregationQuery(IRavenQueryable<T> queryable, Path<?> path) {
     this(queryable, path, null);

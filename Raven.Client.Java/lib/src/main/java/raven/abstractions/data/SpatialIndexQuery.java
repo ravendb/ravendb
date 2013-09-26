@@ -83,6 +83,7 @@ public class SpatialIndexQuery extends IndexQuery {
   /**
    *  Gets the custom query string variables.
    */
+  @Override
   protected String getCustomQueryStringVariables() {
     String unitsParam = "";
     if (radiusUnitOverride != null) {

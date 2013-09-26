@@ -83,7 +83,7 @@ public class CloningTest {
     f.add("1", new RavenJValue(1));
     f.add("2", new RavenJValue(2));
 
-    RavenJObject f1 = (RavenJObject)f.cloneToken();
+    RavenJObject f1 = f.cloneToken();
     f1.add("2", new RavenJValue(3));
 
     RavenJValue val = (RavenJValue) f.get("2");
@@ -91,12 +91,12 @@ public class CloningTest {
     val = (RavenJValue)f1.get("2");
     assertEquals(3, val.getValue());
 
-    RavenJObject f2 = (RavenJObject)f1.cloneToken();
+    RavenJObject f2 = f1.cloneToken();
     val = (RavenJValue)f2.get("2");
     assertEquals(3, val.getValue());
 
     f.add("2", f2);
-    f1 = (RavenJObject) f.cloneToken();
+    f1 = f.cloneToken();
     f.remove("2");
     assertNull(f.get("2"));
     assertNotNull(f1.get("2"));
@@ -128,7 +128,7 @@ public class CloningTest {
       current = temp;
     }
 
-    RavenJObject anotherRoot = (RavenJObject)root.cloneToken();
+    RavenJObject anotherRoot = root.cloneToken();
     do
     {
       anotherRoot.add("Inner", new RavenJValue(0));

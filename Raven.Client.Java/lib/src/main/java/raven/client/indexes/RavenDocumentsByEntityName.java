@@ -27,7 +27,7 @@ public class RavenDocumentsByEntityName extends AbstractIndexCreationTask {
   public IndexDefinition createIndexDefinition() {
     IndexDefinition def = new IndexDefinition();
     def.setMap("from doc in docs let Tag = doc[\"@metadata\"][\"Raven-Entity-Name\"] select new { Tag, LastModified = (DateTime)doc[\"@metadata\"][\"Last-Modified\"] };");
-    Map<String, FieldIndexing> indexes = new HashMap<String, FieldIndexing>();
+    Map<String, FieldIndexing> indexes = new HashMap<>();
     indexes.put("Tag", FieldIndexing.NOT_ANALYZED);
     indexes.put("LastModified", FieldIndexing.NOT_ANALYZED);
     def.setIndexes(indexes);

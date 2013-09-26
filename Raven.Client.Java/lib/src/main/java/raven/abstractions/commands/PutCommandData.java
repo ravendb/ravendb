@@ -30,6 +30,7 @@ public class PutCommandData implements ICommandData {
     this.metadata = metadata;
   }
 
+  @Override
   public RavenJObject getAdditionalData() {
     return additionalData;
   }
@@ -38,26 +39,32 @@ public class PutCommandData implements ICommandData {
     return document;
   }
 
+  @Override
   public Etag getEtag() {
     return etag;
   }
 
+  @Override
   public String getKey() {
     return key;
   }
 
+  @Override
   public RavenJObject getMetadata() {
     return metadata;
   }
 
+  @Override
   public HttpMethods getMethod() {
     return HttpMethods.PUT;
   }
 
+  @Override
   public TransactionInformation getTransactionInformation() {
     return transactionInformation;
   }
 
+  @Override
   public void setAdditionalData(RavenJObject additionalData) {
     this.additionalData = additionalData;
   }
@@ -78,6 +85,7 @@ public class PutCommandData implements ICommandData {
     this.metadata = metadata;
   }
 
+  @Override
   public void setTransactionInformation(TransactionInformation transactionInformation) {
     this.transactionInformation = transactionInformation;
   }

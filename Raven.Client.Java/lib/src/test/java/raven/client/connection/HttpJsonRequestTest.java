@@ -8,7 +8,6 @@ import static org.junit.Assert.fail;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -245,7 +244,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
 
   }
 
-  private void getSampleDocument(Map<String, String> operationHeaders) throws IOException, Exception {
+  private void getSampleDocument(Map<String, String> operationHeaders) throws Exception {
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL_1 + "/databases/" + getDbName() + "/docs/persons/1", HttpMethods.GET,
         new RavenJObject(), null, convention).addOperationHeaders(operationHeaders));
     RavenJToken responseJson = jsonRequest.readResponseJson();
@@ -254,7 +253,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
 
 
   @Test(expected = IllegalStateException.class)
-  public void testBadRequest() throws IOException {
+  public void testBadRequest() {
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL_1 + "/admin/noSuchEndpoint", HttpMethods.GET,
         new RavenJObject() , null, convention).addOperationHeaders(new HashMap<String, String>()));
     jsonRequest.readResponseJson();
@@ -438,7 +437,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
 
   }
 
-  private RavenJToken putSampleDocument(Map<String, String> operationHeaders) throws UnsupportedEncodingException, IOException, Exception {
+  private RavenJToken putSampleDocument(Map<String, String> operationHeaders) throws Exception {
     HttpJsonRequest jsonRequest = jsonRequestFactory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL_1 + "/databases/" + getDbName() + "/docs/persons/1", HttpMethods.PUT,
         new RavenJObject(), null, convention).addOperationHeaders(operationHeaders));
     Person person = new Person("5", "John", "Smith");

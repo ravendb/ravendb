@@ -18,7 +18,7 @@ public class GeoJsonWktConverter {
 
   public boolean tryConvert(RavenJObject json, Reference<String> result) {
     StringBuilder builder = new StringBuilder();
-    Reference<StringBuilder> builderRef = new Reference<StringBuilder>(builder);
+    Reference<StringBuilder> builderRef = new Reference<>(builder);
     if (tryParseGeometry(json, builderRef)) {
       result.value = builder.toString();
       return true;
@@ -31,8 +31,9 @@ public class GeoJsonWktConverter {
     return false;
   }
 
+  @SuppressWarnings("null")
   private boolean tryParseTypeString(RavenJObject obj, Reference<String> result) {
-    Reference<RavenJToken> typeRef = new Reference<RavenJToken>();
+    Reference<RavenJToken> typeRef = new Reference<>();
     if (obj != null) {
       obj.tryGetValue("type", typeRef);
     }
@@ -299,7 +300,7 @@ public class GeoJsonWktConverter {
     }
     if (obj instanceof RavenJObject) {
       RavenJObject ravenJObject = (RavenJObject) obj;
-      Map<String, Object> map = new HashMap<String, Object>();
+      Map<String, Object> map = new HashMap<>();
       for (Entry<String, RavenJToken> entry: ravenJObject) {
         map.put(entry.getKey(), santizeRavenJObjects(entry.getValue()));
       }

@@ -132,7 +132,7 @@ public class RavenQuery {
     return buffer.toString();
   }
 
-  private static final Set<Character> fieldChars = new HashSet<Character>(Arrays.asList('*', '?', '+', '&', '|', '!', '(', ')', '{', '}', '[', ']', '^', '"',  '~', '\\', ':', ' ', '\t'));
+  private static final Set<Character> fieldChars = new HashSet<>(Arrays.asList('*', '?', '+', '&', '|', '!', '(', ')', '{', '}', '[', ']', '^', '"',  '~', '\\', ':', ' ', '\t'));
 
   /**
    * Escapes Lucene field

@@ -30,7 +30,7 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
   private final RavenQueryHighlightings highlightings;
   private final IDatabaseCommands databaseCommands;
   private final boolean isMapReduce;
-  private final Map<String, RavenJToken> queryInputs = new HashMap<String, RavenJToken>();
+  private final Map<String, RavenJToken> queryInputs = new HashMap<>();
   private final Class<T> clazz;
 
   private Set<String> fieldsToFetch = new HashSet<>();
@@ -64,6 +64,7 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
   /**
    * Gets the name of the index.
    */
+  @Override
   public String getIndexName() {
     return indexName;
   }
@@ -71,14 +72,17 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
   /**
    * Get the query generator
    */
+  @Override
   public IDocumentQueryGenerator getQueryGenerator() {
     return queryGenerator;
   }
 
+  @Override
   public DocumentQueryCustomizationFactory getCustomizeQuery() {
     return customizeQuery;
   }
 
+  @Override
   public Set<String> getFieldsToFetch() {
     return fieldsToFetch;
   }
@@ -86,14 +90,17 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
   /**
    * Gets the results transformer to use
    */
+  @Override
   public String getResultTranformer() {
     return resultTranformer;
   }
 
+  @Override
   public Map<String, RavenJToken> getQueryInputs() {
     return queryInputs;
   }
 
+  @Override
   public void addQueryInput(String name, RavenJToken value) {
     queryInputs.put(name, value);
   }
@@ -102,6 +109,7 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
     return fieldsToRename;
   }
 
+  @Override
   public <S> IRavenQueryProvider forClass(Class<S> clazz) {
     if (this.clazz.equals(clazz)) {
       return this;
@@ -115,6 +123,7 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
     return ravenQueryProvider;
   }
 
+  @Override
   public Object execute(Expression<?> expression) {
     return getQueryProviderProcessor(clazz).execute(expression);
   }
@@ -122,6 +131,7 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
   /**
    *  Callback to get the results of the query
    */
+  @Override
   public void afterQueryExecuted(Action1<QueryResult> afterQueryExecutedCallback) {
     this.afterQueryExecuted = afterQueryExecutedCallback;
   }
@@ -129,6 +139,7 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
   /**
    *  Customizes the query using the specified action
    */
+  @Override
   public void customize(DocumentQueryCustomizationFactory factory) {
     if (factory == null) {
       return;
@@ -140,20 +151,21 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
     customizeQuery = DocumentQueryCustomizationFactory.join(customizeQuery, factory);
   }
 
+  @Override
   public void transformWith(String transformerName) {
     this.resultTranformer = transformerName;
   }
 
 
   protected <S> RavenQueryProviderProcessor<S> getQueryProviderProcessor(Class<S> clazz) {
-    return new RavenQueryProviderProcessor<S>(clazz, queryGenerator, customizeQuery, afterQueryExecuted, indexName,
+    return new RavenQueryProviderProcessor<>(clazz, queryGenerator, customizeQuery, afterQueryExecuted, indexName,
         fieldsToFetch, fieldsToRename, isMapReduce, resultTranformer, queryInputs);
   }
 
   /**
    * Convert the expression to a Lucene query
    */
-  @SuppressWarnings("unchecked")
+  @Override
   public <S> IDocumentQuery<S> toLuceneQuery(Class<S> clazz, Expression<?> expression) {
     RavenQueryProviderProcessor<T> processor = getQueryProviderProcessor(this.clazz);
     IDocumentQuery<S> result = (IDocumentQuery<S>) processor.getLuceneQueryFor(expression);
@@ -198,7 +210,7 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
   @SuppressWarnings("unchecked")
   @Override
   public <S> IRavenQueryable<S> createQuery(Expression< ? > expression) {
-    return new RavenQueryInspector<S>((Class<S>) clazz, this,
+    return new RavenQueryInspector<>((Class<S>) clazz, this,
         ravenQueryStatistics, highlightings, indexName, expression, (InMemoryDocumentSessionOperations) queryGenerator, databaseCommands, isMapReduce);
 
   }

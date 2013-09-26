@@ -46,7 +46,7 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
 
 
   public AbstractIndexCreationTask() {
-    this.stores = new HashMap<Path<?>, FieldStorage>();
+    this.stores = new HashMap<>();
     this.storesStrings = new HashMap<>();
     this.indexes = new HashMap<>();
     this.indexesStrings = new HashMap<>();

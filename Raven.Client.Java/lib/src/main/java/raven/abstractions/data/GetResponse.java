@@ -11,7 +11,7 @@ public class GetResponse {
   private Map<String, String> headers;
   private int status;
   public GetResponse() {
-    headers = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
+    headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
   }
   public Map<String, String> getHeaders() {
     return headers;

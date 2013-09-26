@@ -41,6 +41,7 @@ public class MultiLoaderWithInclude implements ILoaderWithInclude {
   /**
    * Includes the specified path.
    */
+  @Override
   public MultiLoaderWithInclude include(String path) {
     return include(path, Object.class);
   }
@@ -53,23 +54,24 @@ public class MultiLoaderWithInclude implements ILoaderWithInclude {
   /**
    * Includes the specified path
    */
+  @Override
   public MultiLoaderWithInclude include(Path<?> path) {
     return include(ExpressionExtensions.toPropertyPath(path));
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("cast")
   @Override
   public <TResult> TResult[] load(Class<TResult> clazz, String... ids) {
     return session.loadInternal(clazz, ids, (Tuple<String, Class<?>>[])includes.toArray(new Tuple[0]));
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("cast")
   @Override
   public <TResult> TResult[] load(Class<TResult> clazz, Collection<String> ids) {
     return session.loadInternal(clazz, ids.toArray(new String[0]), (Tuple<String, Class<?>>[])includes.toArray(new Tuple[0]));
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("cast")
   @Override
   public <TResult> TResult load(Class<TResult> clazz, String id) {
     TResult[] results = session.loadInternal(clazz, new String[] { id }, (Tuple<String, Class<?>>[])includes.toArray(new Tuple[0]));

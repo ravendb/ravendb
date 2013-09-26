@@ -22,6 +22,7 @@ import org.junit.Test;
 
 import com.mysema.query.annotations.QueryEntity;
 
+import raven.abstractions.data.Constants;
 import raven.abstractions.indexing.NumberUtil;
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
@@ -38,13 +39,13 @@ public class CanQueryOnCustomClassTest extends RemoteClientTest {
       store.getConventions().createSerializer().registerModule(setupMoneyModule());
 
       try (IDocumentSession session = store.openSession()) {
-        session.store(new Order(new Money("$", 50.0)));
+        session.store(new Order(new Money("$", 50.2)));
         session.saveChanges();
       }
       try (IDocumentSession session = store.openSession()) {
         QCanQueryOnCustomClassTest_Order x = QCanQueryOnCustomClassTest_Order.order;
-        IRavenQueryable<Order> q = session.query(Order.class).where(x.value.eq(new Money("$", 50.0)));
-        assertEquals("Value:$\\:50", q.toString());
+        IRavenQueryable<Order> q = session.query(Order.class).where(x.value.eq(new Money("$", 50.2)));
+        assertEquals("Value:$\\:50.2", q.toString());
         List<Order> orders = q.toList();
         assertTrue(orders.size() > 0);
       }
@@ -118,7 +119,7 @@ public class CanQueryOnCustomClassTest extends RemoteClientTest {
 
     @Override
     public void serialize(Money value, JsonGenerator jgen, SerializerProvider provider) throws IOException, JsonGenerationException {
-      jgen.writeString(value.getCurrency() + ":" +  NumberUtil.trimZeros(String.format("%.11f",value.getAmount())));
+      jgen.writeString(value.getCurrency() + ":" +  NumberUtil.trimZeros(String.format(Constants.getDefaultLocale(), "%.11f",value.getAmount())));
     }
 
   }

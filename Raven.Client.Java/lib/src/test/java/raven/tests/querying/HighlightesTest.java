@@ -42,21 +42,27 @@ public class HighlightesTest extends RemoteClientTest {
     public void setId(int id) {
       this.id = id;
     }
+    @Override
     public String getTitle() {
       return title;
     }
+    @Override
     public void setTitle(String title) {
       this.title = title;
     }
+    @Override
     public String getSlug() {
       return slug;
     }
+    @Override
     public void setSlug(String slug) {
       this.slug = slug;
     }
+    @Override
     public String getContent() {
       return content;
     }
+    @Override
     public void setContent(String content) {
       this.content = content;
     }

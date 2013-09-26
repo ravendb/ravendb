@@ -26,7 +26,7 @@ public class ConcurrentLruSet<T> {
   public void push(T item) {
     do {
       List<T> current = items.get();
-      List<T> newList = new LinkedList<T>(current);
+      List<T> newList = new LinkedList<>(current);
 
       // this ensures the item is at the head of the list
       newList.remove(item);

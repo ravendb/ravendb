@@ -3,7 +3,6 @@ package raven.client.connection.implementation;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -224,7 +223,7 @@ public class HttpJsonRequest {
     return this.cachedRequestDetails;
   }
 
-  public void executeRequest() throws IOException {
+  public void executeRequest() {
     readResponseJson();
   }
 
@@ -268,7 +267,7 @@ public class HttpJsonRequest {
     return src.getPath() + ((src.getQuery() != null) ? "?" + src.getQuery() : "");
   }
 
-  public RavenJToken readResponseJson() throws IOException {
+  public RavenJToken readResponseJson() {
     if (skipServerCheck) {
       RavenJToken result = factory.getCachedResponse(this, null);
 
@@ -531,7 +530,7 @@ public class HttpJsonRequest {
       } catch (IOException ee) {
         throw new RuntimeException("Unable to get web response", ee);
       } finally {
-        if (httpWebResponse != null && httpWebResponse.getEntity() != null) {
+        if (httpWebResponse.getEntity() != null) {
           EntityUtils.consumeQuietly(httpWebResponse.getEntity());
         }
       }
@@ -603,7 +602,7 @@ public class HttpJsonRequest {
     return httpResponse;
   }
 
-  public void write(String data) throws UnsupportedEncodingException {
+  public void write(String data) {
     postedData = data;
     HttpRequestHelper.writeDataToRequest(webRequest, data, factory.isDisableRequestCompression());
   }

@@ -22,6 +22,7 @@ public class RavenJValue extends RavenJToken {
   /**
    * Gets the node type for this {@link RavenJToken}
    */
+  @Override
   public JTokenType getType() {
     return valueType;
   }
@@ -230,44 +231,44 @@ public class RavenJValue extends RavenJToken {
         return;
       }
       switch (valueType) {
-      case NULL:
-        writer.writeNull();
-        return;
-      case BOOLEAN:
-        writer.writeBoolean((Boolean) value);
-        return;
-      case BYTES:
-        writer.writeBinary((byte[]) value);
-        return;
-      case FLOAT:
-        if (value instanceof Double) {
-          writer.writeNumber((Double) value);
-        } else if (value instanceof BigDecimal) {
-          writer.writeNumber((BigDecimal) value);
-        } else {
-          throw new JsonWriterException("Unexpected numeric class: " + value.getClass());
-        }
-        return;
-      case INTEGER:
-        if (value instanceof Long) {
-          writer.writeNumber((Long) value);
-        } else if (value instanceof Integer) {
-          writer.writeNumber((Integer) value);
-        } else if (value instanceof BigInteger) {
-          writer.writeNumber((BigInteger) value);
-        } else {
-          throw new JsonWriterException("Unexpected numeric class: " + value.getClass());
-        }
+        case NULL:
+          writer.writeNull();
+          return;
+        case BOOLEAN:
+          writer.writeBoolean((Boolean) value);
+          return;
+        case BYTES:
+          writer.writeBinary((byte[]) value);
+          return;
+        case FLOAT:
+          if (value instanceof Double) {
+            writer.writeNumber((Double) value);
+          } else if (value instanceof BigDecimal) {
+            writer.writeNumber((BigDecimal) value);
+          } else {
+            throw new JsonWriterException("Unexpected numeric class: " + value.getClass());
+          }
+          return;
+        case INTEGER:
+          if (value instanceof Long) {
+            writer.writeNumber((Long) value);
+          } else if (value instanceof Integer) {
+            writer.writeNumber((Integer) value);
+          } else if (value instanceof BigInteger) {
+            writer.writeNumber((BigInteger) value);
+          } else {
+            throw new JsonWriterException("Unexpected numeric class: " + value.getClass());
+          }
 
-        return;
-      case STRING:
-        writer.writeString((String) value);
-        return;
-      case DATE:
-        writer.writeString(new NetDateFormat().format(value));
-        break;
-      default:
-        throw new JsonWriterException("Unexpected token:" + valueType);
+          return;
+        case STRING:
+          writer.writeString((String) value);
+          return;
+        case DATE:
+          writer.writeString(new NetDateFormat().format(value));
+          break;
+        default:
+          throw new JsonWriterException("Unexpected token:" + valueType);
       }
     } catch (IOException e) {
       throw new JsonWriterException(e.getMessage(), e);
@@ -313,24 +314,23 @@ public class RavenJValue extends RavenJToken {
     // please note that already check for equality when items has the same type
     // the only change to return true left in different types
     switch (v1.getType()) {
-    case INTEGER:
-    case FLOAT:
-      if (v2.getType() != JTokenType.INTEGER && v2.getType() != JTokenType.FLOAT) {
-        return false;
-      }
-      return compareNumbers(v1, v2);
+      case INTEGER:
+      case FLOAT:
+        if (v2.getType() != JTokenType.INTEGER && v2.getType() != JTokenType.FLOAT) {
+          return false;
+        }
+        return compareNumbers(v1, v2);
 
-    case STRING:
-      if (v2.getType() == JTokenType.BYTES) {
+      case STRING:
+        if (v2.getType() == JTokenType.BYTES) {
+          return compareBytes(v1, v2);
+        }
+        return false;
+      case BYTES:
+        if (v2.getType() != JTokenType.STRING && v2.getType() != JTokenType.BYTES) {
+          return false;
+        }
         return compareBytes(v1, v2);
-      } else {
-        return false;
-      }
-    case BYTES:
-      if (v2.getType() != JTokenType.STRING && v2.getType() != JTokenType.BYTES) {
-        return false;
-      }
-      return compareBytes(v1, v2);
     }
 
     return false;

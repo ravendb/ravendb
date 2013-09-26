@@ -17,7 +17,7 @@ public class ScriptedPatchRequestTest {
 
   @Test
   public void testScriptedPatchRequest() throws JsonGenerationException, JsonMappingException, IOException {
-    Map<String, Object> values = new HashMap<String, Object>();
+    Map<String, Object> values = new HashMap<>();
     values.put("key1", 10);
     values.put("key2", "string");
 

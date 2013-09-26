@@ -27,8 +27,8 @@ public class AtomicDictionary<T> implements Iterable<Entry<String, T>> {
   }
 
   public AtomicDictionary() {
-    items = new ConcurrentHashMap<String, T>();
-    locks = new ConcurrentHashMap<String, Object>();
+    items = new ConcurrentHashMap<>();
+    locks = new ConcurrentHashMap<>();
   }
 
   public Collection<T> values() {

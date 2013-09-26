@@ -23,8 +23,8 @@ public class IndexQuery {
    * Initializes a new instance of the {@link IndexQuery} class.
    */
   public IndexQuery() {
-    totalSize = new Reference<Integer>();
-    skippedResults = new Reference<Integer>();
+    totalSize = new Reference<>();
+    skippedResults = new Reference<>();
     pageSize = 128;
   }
 
@@ -446,6 +446,7 @@ public class IndexQuery {
     return "";
   }
 
+  @Override
   public IndexQuery clone() {
     try {
 
@@ -471,7 +472,7 @@ public class IndexQuery {
       clone.defaultField = defaultField;
       clone.defaultOperator = defaultOperator;
       clone.skipTransformResults = skipTransformResults;
-      clone.skippedResults = new Reference<Integer>(skippedResults.value);
+      clone.skippedResults = new Reference<>(skippedResults.value);
       clone.debugOptionGetIndexEntires = debugOptionGetIndexEntires;
       clone.highlightedFields = new HighlightedField[highlightedFields.length];
       for (int i = 0; i < highlightedFields.length; i++) {
@@ -488,6 +489,7 @@ public class IndexQuery {
     }
   }
 
+  @Override
   public String toString() {
     return query;
   }

@@ -77,6 +77,7 @@ public class DocumentStore extends DocumentStoreBase {
    * Called after dispose is completed
    * @param event
    */
+  @Override
   public void addAfterDisposeEventHandler(EventHandler<VoidArgs> event) {
     this.afterDispose.add(event);
   }
@@ -93,19 +94,23 @@ public class DocumentStore extends DocumentStoreBase {
    * Remove event handler
    * @param event
    */
+  @Override
   public void removeAfterDisposeEventHandler(EventHandler<VoidArgs> event) {
     this.afterDispose.remove(event);
   }
 
 
+  @Override
   public boolean hasJsonRequestFactory() {
     return true;
   }
 
+  @Override
   public HttpJsonRequestFactory getJsonRequestFactory() {
     return jsonRequestFactory;
   }
 
+  @Override
   public IDatabaseCommands getDatabaseCommands() {
     assertInitialized();
     IDatabaseCommands commands = databaseCommandsGenerator.apply();
@@ -147,6 +152,7 @@ public class DocumentStore extends DocumentStoreBase {
     this.credentials = credentials;
   }
 
+  @Override
   public String getIdentifier() {
     if (identifier != null) {
       return identifier;
@@ -160,6 +166,7 @@ public class DocumentStore extends DocumentStoreBase {
     return url;
   }
 
+  @Override
   public void setIdentifier(String value) {
     this.identifier = value;
   }
@@ -458,6 +465,7 @@ public class DocumentStore extends DocumentStoreBase {
   /**
    *  Subscribe to change notifications from the server
    */
+  @Override
   public IDatabaseChanges changes() {
     return changes(null);
   }

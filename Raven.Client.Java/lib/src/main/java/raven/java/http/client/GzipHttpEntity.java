@@ -20,6 +20,7 @@ public class GzipHttpEntity implements HttpEntity {
    * @return
    * @see org.apache.http.HttpEntity#isRepeatable()
    */
+  @Override
   public boolean isRepeatable() {
     return inner.isRepeatable();
   }
@@ -28,6 +29,7 @@ public class GzipHttpEntity implements HttpEntity {
    * @return
    * @see org.apache.http.HttpEntity#isChunked()
    */
+  @Override
   public boolean isChunked() {
     return inner.isChunked();
   }
@@ -36,6 +38,7 @@ public class GzipHttpEntity implements HttpEntity {
    * @return
    * @see org.apache.http.HttpEntity#getContentLength()
    */
+  @Override
   public long getContentLength() {
     return inner.getContentLength();
   }
@@ -44,6 +47,7 @@ public class GzipHttpEntity implements HttpEntity {
    * @return
    * @see org.apache.http.HttpEntity#getContentType()
    */
+  @Override
   public Header getContentType() {
     return inner.getContentType();
   }
@@ -52,6 +56,7 @@ public class GzipHttpEntity implements HttpEntity {
    * @return
    * @see org.apache.http.HttpEntity#getContentEncoding()
    */
+  @Override
   public Header getContentEncoding() {
     return inner.getContentEncoding();
   }
@@ -62,6 +67,7 @@ public class GzipHttpEntity implements HttpEntity {
    * @throws IllegalStateException
    * @see org.apache.http.HttpEntity#getContent()
    */
+  @Override
   public InputStream getContent() throws IOException, IllegalStateException {
     return inner.getContent();
   }
@@ -71,6 +77,7 @@ public class GzipHttpEntity implements HttpEntity {
    * @throws IOException
    * @see org.apache.http.HttpEntity#writeTo(java.io.OutputStream)
    */
+  @Override
   public void writeTo(OutputStream outstream) throws IOException {
     GZIPOutputStream gzipOs = new GZIPOutputStream(outstream);
     inner.writeTo(gzipOs);
@@ -81,6 +88,7 @@ public class GzipHttpEntity implements HttpEntity {
    * @return
    * @see org.apache.http.HttpEntity#isStreaming()
    */
+  @Override
   public boolean isStreaming() {
     return inner.isStreaming();
   }
@@ -90,6 +98,8 @@ public class GzipHttpEntity implements HttpEntity {
    * @deprecated
    * @see org.apache.http.HttpEntity#consumeContent()
    */
+  @Deprecated
+  @Override
   public void consumeContent() throws IOException {
     inner.consumeContent();
   }

@@ -60,7 +60,9 @@ public class InheritanceTest extends RemoteClientTest {
       this.kernelVersion = kernelVersion;
     }
 
+    @Override
     public void start() {
+      //empty by design
     }
   }
 
@@ -80,6 +82,7 @@ public class InheritanceTest extends RemoteClientTest {
       this.productKey = productKey;
     }
 
+    @Override
     public void start() {
     }
   }

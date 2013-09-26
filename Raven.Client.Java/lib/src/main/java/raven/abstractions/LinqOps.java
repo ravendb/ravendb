@@ -33,7 +33,7 @@ public class LinqOps {
 
   public static final class Ops {
 
-    public static final Operator<Boolean> EQ_NOT_IGNORE_CASE = new OperatorImpl<Boolean>("EQ_NOT_IGNORE_CASE");
+    public static final Operator<Boolean> EQ_NOT_IGNORE_CASE = new OperatorImpl<>("EQ_NOT_IGNORE_CASE");
 
   }
 

@@ -27,12 +27,14 @@ public class LazyLoadOperation<T> implements ILazyOperation {
     this.clazz = clazz;
   }
 
+  @Override
   public GetRequest createRequest() {
     GetRequest request = new GetRequest();
     request.setUrl("/docs/" + UrlUtils.escapeDataString(key));
     return request;
   }
 
+  @Override
   public Object getResult() {
     return result;
   }
@@ -41,6 +43,7 @@ public class LazyLoadOperation<T> implements ILazyOperation {
     this.result = result;
   }
 
+  @Override
   public boolean isRequiresRetry() {
     return requiresRetry;
   }
@@ -49,6 +52,7 @@ public class LazyLoadOperation<T> implements ILazyOperation {
     this.requiresRetry = requiresRetry;
   }
 
+  @Override
   public void handleResponse(GetResponse response) {
     if(response.getStatus() == HttpStatus.SC_NOT_FOUND) {
       result = null;
@@ -68,6 +72,7 @@ public class LazyLoadOperation<T> implements ILazyOperation {
     }
   }
 
+  @Override
   public AutoCloseable enterContext() {
     return loadOperation.enterLoadContext();
   }
