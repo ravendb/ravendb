@@ -490,9 +490,11 @@
 			metadataStream.Position = 0;
 
 			var metadataKey = Util.MetadataKey(metadata.Key.ToLowerInvariant());
+
+			var isUpdate = documentsTable.Contains(snapshot, metadataKey, writeBatch);
 			documentsTable.Add(writeBatch, metadataKey, metadataStream);
 
-			return documentsTable.Contains(snapshot, metadataKey, writeBatch);
+	        return isUpdate;
         }
 
         private JsonDocumentMetadata ReadDocumentMetadata(string metadataKey)
