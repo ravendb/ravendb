@@ -118,6 +118,8 @@ namespace Raven.Tests.Storage.Voron
 				var date2 = DateTime.Now.AddSeconds(100);
 				var date3 = DateTime.Now.AddSeconds(1000);
 
+				storage.Batch(accessor => Assert.Throws<IndexDoesNotExistsException>(() => accessor.Staleness.IndexLastUpdatedAt("index1")));
+
 				storage.Batch(accessor =>
 				{
 					accessor.Indexing.AddIndex("index1", false);
