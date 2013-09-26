@@ -200,6 +200,24 @@ namespace Raven.Client.Shard
 			});
 		}
 
+		/// <summary>
+		/// Setup the WebRequest timeout for the session
+		/// </summary>
+		/// <param name="timeout">Specify the timeout duration</param>
+		/// <remarks>
+		/// Sets the timeout for the JsonRequest.  Scoped to the Current Thread.
+		/// </remarks>
+		public override IDisposable SetTimeoutFor(TimeSpan timeout) {
+			var disposables =
+				ShardStrategy.Shards.Select(shard => shard.Value.SetTimeoutFor(timeout)).ToList();
+
+			return new DisposableAction(() => {
+				foreach (var disposable in disposables) {
+					disposable.Dispose();
+				}
+			});
+		}
+
 #if !SILVERLIGHT && !NETFX_CORE
 
 		/// <summary>
