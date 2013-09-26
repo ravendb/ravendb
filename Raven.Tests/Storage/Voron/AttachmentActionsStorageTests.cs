@@ -420,10 +420,6 @@
 
 		[Theory]
 		[PropertyData("Storages")]
-		[InlineData(10, 0)]
-		[InlineData(10, 5)]
-		[InlineData(5, 6)]
-		[InlineData(0, 1)]
 		public void AttachmentStorage_GetAttachmentsByReverseUpdateOrder(string requestedStorage)
 		{
 			var input = new List<dynamic>

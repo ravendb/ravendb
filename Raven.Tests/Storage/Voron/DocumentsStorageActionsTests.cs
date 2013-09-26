@@ -4,6 +4,8 @@
 	using System.Collections.Generic;
 	using System.Linq;
 
+	using Microsoft.Isam.Esent.Interop;
+
 	using Raven.Abstractions.Data;
 	using Raven.Abstractions.Exceptions;
 	using Raven.Database.Storage;
@@ -393,10 +395,20 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_InsertDocument_Twice_WithCheckForUpdatesFalse_ExceptionThrown(string requestedStorage)
 		{
+			Type expectedException = null;
+			if (requestedStorage == "voron")
+			{
+				expectedException = typeof(ApplicationException);
+			}
+			else if (requestedStorage == "esent")
+			{
+				expectedException = typeof(EsentKeyDuplicateException);
+			}
+
 			using (var voronStorage = NewTransactionalStorage(requestedStorage))
 			{
 				voronStorage.Batch(mutator => mutator.Documents.InsertDocument("Foo", RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true));
-				Assert.Throws<ApplicationException>(() =>
+				Assert.Throws(expectedException, () =>
 					voronStorage.Batch(mutator => mutator.Documents.InsertDocument("Foo", RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), false)));
 			}
 		}
@@ -591,12 +603,13 @@
 				var documentEtagsAfterSkip =
 					documentAddResults.Select(row => row.Etag).Skip(DOCUMENT_SKIP_COUNT).ToArray();
 
-				IEnumerable<JsonDocument> fetchedDocuments = null;
+				IList<JsonDocument> fetchedDocuments = null;
 				voronStorage.Batch(
 					viewer =>
 						fetchedDocuments =
-							viewer.Documents.GetDocumentsAfter(documentEtagsAfterSkip.First(),
-								documentEtagsAfterSkip.Length));
+							viewer.Documents
+							.GetDocumentsAfter(documentEtagsAfterSkip.First(), documentEtagsAfterSkip.Length)
+							.ToList());
 
 				var fetchedEtagList = fetchedDocuments.OrderBy(row => row.Etag)
 													  .Select(row => row.Etag)
@@ -631,12 +644,13 @@
 					.Take(DOCUMENT_COUNT - (DOCUMENT_SKIP_COUNT * 2))
 					.ToArray();
 
-				IEnumerable<JsonDocument> fetchedDocuments = null;
+				IList<JsonDocument> fetchedDocuments = null;
 				voronStorage.Batch(
 					viewer =>
 						fetchedDocuments =
-							viewer.Documents.GetDocumentsAfter(documentEtagsAfterSkip.First(),
-								documentEtagsAfterSkip.Length, null, documentEtagsAfterSkip.Last()));
+							viewer.Documents
+							.GetDocumentsAfter(documentEtagsAfterSkip.First(), documentEtagsAfterSkip.Length, null, documentEtagsAfterSkip.Last())
+							.ToList());
 
 				var fetchedEtagList = fetchedDocuments.OrderBy(row => row.Etag)
 													  .Select(row => row.Etag)
@@ -677,12 +691,13 @@
 																.Take(DOCUMENT_TAKE_VALUE)
 																.ToList();
 
-				IEnumerable<JsonDocument> fetchedDocuments = null;
+				IList<JsonDocument> fetchedDocuments = null;
 				voronStorage.Batch(
 					viewer =>
 						fetchedDocuments =
-							viewer.Documents.GetDocumentsAfter(documentEtagsAfterSkip.First(),
-								DOCUMENT_TAKE_VALUE, null, documentEtagsAfterSkip.Last()));
+							viewer.Documents
+							.GetDocumentsAfter(documentEtagsAfterSkip.First(), DOCUMENT_TAKE_VALUE, null, documentEtagsAfterSkip.Last())
+							.ToList());
 
 				var fetchedEtagList = fetchedDocuments.OrderBy(row => row.Etag)
 													  .Select(row => row.Etag)
@@ -733,12 +748,13 @@
 						break;
 				}
 
-				IEnumerable<JsonDocument> fetchedDocuments = null;
+				IList<JsonDocument> fetchedDocuments = null;
 				voronStorage.Batch(
 					viewer =>
 						fetchedDocuments =
-							viewer.Documents.GetDocumentsAfter(documentAfterSkip.First().Etag,
-								documentAfterSkip.Length, MAX_SIZE, documentAfterSkip.Last().Etag));
+							viewer.Documents
+							.GetDocumentsAfter(documentAfterSkip.First().Etag, documentAfterSkip.Length, MAX_SIZE, documentAfterSkip.Last().Etag)
+							.ToList());
 
 				var fetchedEtagList = fetchedDocuments.OrderBy(row => row.Etag)
 													   .Select(row => row.Etag)
@@ -880,10 +896,10 @@
 				var relevantInputKeys =
 					new HashSet<string>(
 						inputData.Where(kvp => kvp.Key.StartsWith("Bar"))
-						         .OrderBy(kvp => kvp.Key)
-						         .Select(row => row.Key)
-						         .Skip(start)
-						         .Take(take));
+								 .OrderBy(kvp => kvp.Key)
+								 .Select(row => row.Key)
+								 .Skip(start)
+								 .Take(take));
 
 				var fetchedDocumentKeys = new HashSet<string>(fetchedDocuments.Select(doc => doc.Key));
 
