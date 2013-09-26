@@ -66,6 +66,15 @@ namespace Raven.Client
 		IDisposable DisableAggressiveCaching();
 
 		/// <summary>
+		/// Setup the WebRequest timeout for the session
+		/// </summary>
+		/// <param name="timeout">Specify the timeout duration</param>
+		/// <remarks>
+		/// Sets the timeout for the JsonRequest.  Scoped to the Current Thread.
+		/// </remarks>
+		IDisposable SetTimeoutFor(TimeSpan timeout);
+
+		/// <summary>
 		/// Gets the shared operations headers.
 		/// </summary>
 		/// <value>The shared operations headers.</value>
