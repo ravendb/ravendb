@@ -84,18 +84,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			using (var iterator = listsByName.MultiRead(Snapshot, name))
 			{
-				if (!iterator.Seek(start.ToString()) || !iterator.MoveNext())
+				if (!iterator.Seek(start.ToString()))
 					yield break;
 
 				int count = 0;
 
 				do
 				{
-					if (count >= take)
-						yield break;
-
 					var etag = Etag.Parse(iterator.CurrentKey.ToString());
-					if (start.CompareTo(etag) > 0)
+					if (start.CompareTo(etag) >= 0)
 						continue;
 
 					if (end != null && end.CompareTo(etag) <= 0)
@@ -104,7 +101,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					count++;
 					yield return ReadInternal(etag);
 				}
-				while (iterator.MoveNext());
+				while (iterator.MoveNext() && count < take);
 			}
 		}
 
@@ -143,7 +140,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					if (currentEtag.CompareTo(etag) < 0)
 					{
 						ushort version;
-						var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, out version);
+						var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch, out version);
 
 						var key = value.Value<string>("key");
 
@@ -159,7 +156,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private ListItem ReadInternal(string id)
 		{
 			ushort version;
-			var value = LoadJson(tableStorage.Lists, id, out version);
+			var value = LoadJson(tableStorage.Lists, id, writeBatch, out version);
 			if (value == null)
 				return null;
 

@@ -52,7 +52,7 @@
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.ReduceKeyCounts, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.ReduceKeyCounts, iterator.CurrentKey, writeBatch, out version);
 
 					yield return new ReduceKeyAndCount
 								 {
@@ -109,7 +109,7 @@
 			var key = CreateKey(view, reduceKey);
 
 			ushort version;
-			var value = LoadJson(tableStorage.ReduceKeyCounts, key, out version);
+			var value = LoadJson(tableStorage.ReduceKeyCounts, key, writeBatch, out version);
 
 			var newValue = val;
 			if (value != null)
@@ -123,7 +123,7 @@
 			var key = CreateKey(view, reduceKey);
 
 			ushort version;
-			var value = LoadJson(tableStorage.ReduceKeyCounts, key, out version);
+			var value = LoadJson(tableStorage.ReduceKeyCounts, key, writeBatch, out version);
 
 			var newValue = -val;
 			if (value != null)
@@ -156,7 +156,7 @@
 					var id = iterator.CurrentKey.Clone();
 
 					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, id, out version);
+					var value = LoadJson(tableStorage.MappedResults, id, writeBatch, out version);
 					var reduceKey = value.Value<string>("reduceKey");
 					var bucket = value.Value<int>("bucket");
 
@@ -192,7 +192,7 @@
 					var id = iterator.CurrentKey.Clone();
 
 					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, id, out version);
+					var value = LoadJson(tableStorage.MappedResults, id, writeBatch, out version);
 					var reduceKey = value.Value<string>("reduceKey");
 					var bucket = value.Value<string>("bucket");
 
@@ -221,7 +221,7 @@
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch, out version);
 
 					results.Add(value.Value<string>("reduceKey"));
 				}
@@ -249,7 +249,7 @@
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch, out version);
 					var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 					yield return new MappedResultInfo
 					{
@@ -284,7 +284,7 @@
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.ReduceResults, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.ReduceResults, iterator.CurrentKey, writeBatch, out version);
 					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 					yield return
@@ -317,7 +317,7 @@
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch, out version);
 
 					yield return new ScheduledReductionDebugInfo
 					{
@@ -377,7 +377,7 @@
 							break;
 
 						ushort version;
-						var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, out version);
+						var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch, out version);
 
 						var indexFromDb = value.Value<string>("view");
 						var levelFromDb = value.Value<int>("level");
@@ -458,7 +458,7 @@
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.ReduceResults, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.ReduceResults, iterator.CurrentKey, writeBatch, out version);
 					var size = tableStorage.ReduceResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 					yield return new MappedResultInfo
@@ -499,7 +499,7 @@
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch, out version);
 					var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 					yield return new MappedResultInfo
@@ -531,7 +531,7 @@
 				var etagAsString = etag.ToString();
 
 				ushort version;
-				var value = LoadJson(tableStorage.ScheduledReductions, etagAsString, out version);
+				var value = LoadJson(tableStorage.ScheduledReductions, etagAsString, writeBatch, out version);
 				if (value == null)
 					continue;
 
@@ -644,7 +644,7 @@
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch, out version);
 
 					allKeysToReduce.Add(value.Value<string>("reduceKey"));
 				}
@@ -672,7 +672,7 @@
 			var key = CreateKey(view, reduceKey);
 
 			ushort version;
-			var value = LoadJson(tableStorage.ReduceKeyCounts, key, out version);
+			var value = LoadJson(tableStorage.ReduceKeyCounts, key, writeBatch, out version);
 			if (value == null)
 				return 0;
 
@@ -734,7 +734,7 @@
 			var key = CreateKey(view, reduceKey);
 
 			ushort version;
-			var value = LoadJson(tableStorage.ReduceKeyTypes, key, out version);
+			var value = LoadJson(tableStorage.ReduceKeyTypes, key, writeBatch, out version);
 			if (value == null)
 				return ReduceType.None;
 
@@ -754,7 +754,7 @@
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch, out version);
 
 					yield return value.Value<int>("bucket");
 				}
@@ -778,7 +778,7 @@
 					do
 					{
 						ushort version;
-						var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, out version);
+						var value = LoadJson(tableStorage.MappedResults, iterator.CurrentKey, writeBatch, out version);
 						var size = tableStorage.MappedResults.GetDataSize(Snapshot, iterator.CurrentKey);
 
 						yield return new MappedResultInfo
@@ -822,7 +822,7 @@
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.ReduceKeyTypes, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.ReduceKeyTypes, iterator.CurrentKey, writeBatch, out version);
 
 					yield return new ReduceTypePerKey(value.Value<string>("reduceKey"), (ReduceType)value.Value<int>("reduceType"));
 

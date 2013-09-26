@@ -25,7 +25,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
         public long GetNextIdentityValue(string name)
         {
-            if (String.IsNullOrWhiteSpace(name)) throw new ArgumentNullException("name");
+            if (string.IsNullOrEmpty(name)) 
+				throw new ArgumentNullException("name");
 
             var lowerKeyName = name.ToLowerInvariant();
             if (!generalTable.Contains(snapshot, lowerKeyName, writeBatch))

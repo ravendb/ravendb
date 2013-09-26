@@ -40,9 +40,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return key;
 		}
 
-		protected RavenJObject LoadJson(Table table, Slice key, out ushort version)
+		protected RavenJObject LoadJson(Table table, Slice key, WriteBatch writeBatch, out ushort version)
 		{
-			using (var read = table.Read(Snapshot, key, null))
+			using (var read = table.Read(Snapshot, key, writeBatch))
 			{
 				if (read == null)
 				{

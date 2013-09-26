@@ -89,7 +89,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch, out version);
 
 					Task task;
 					try
@@ -135,7 +135,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 						continue;
 
 					ushort version;
-					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch, out version);
 
 					Task existingTask;
 					try

@@ -36,7 +36,7 @@ namespace Raven.Database.Storage.Voron.Impl
 		public virtual void Add(WriteBatch writeBatch, string key, byte[] value, ushort? expectedVersion = null)
 		{
 			var stream = new MemoryStream(value) { Position = 0 };
-		    writeBatch.Add(key, stream, TableName, expectedVersion);
+			writeBatch.Add(key, stream, TableName, expectedVersion);
 		}
 
 		public virtual void Add(WriteBatch writeBatch, Slice key, Stream value, ushort? expectedVersion = null)
@@ -58,7 +58,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			writeBatch.MultiAdd(key, value, TableName, expectedVersion);
 		}
 
-		public virtual ReadResult Read(SnapshotReader snapshot, Slice key,WriteBatch writeBatch)
+		public virtual ReadResult Read(SnapshotReader snapshot, Slice key, WriteBatch writeBatch)
 		{
 			return snapshot.Read(TableName, key, writeBatch);
 		}
@@ -68,14 +68,14 @@ namespace Raven.Database.Storage.Voron.Impl
 			return snapshot.MultiRead(TableName, key);
 		}
 
-		public virtual IIterator Iterate(SnapshotReader snapshot,WriteBatch writeBatch)
+		public virtual IIterator Iterate(SnapshotReader snapshot, WriteBatch writeBatch)
 		{
 			return snapshot.Iterate(TableName);
 		}
 
 		public bool Contains(SnapshotReader snapshot, Slice key, WriteBatch writeBatch)
 		{
-			return snapshot.Contains(TableName,key,writeBatch);
+			return snapshot.Contains(TableName, key, writeBatch);
 		}
 
 		public int GetDataSize(SnapshotReader snapshot, Slice key)

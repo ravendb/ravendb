@@ -66,7 +66,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					var key = iterator.CurrentKey;
 
 					ushort version;
-					var value = LoadJson(tableStorage.Queues, key, out version);
+					var value = LoadJson(tableStorage.Queues, key, writeBatch, out version);
 
 					if (value == null)
 						yield break;

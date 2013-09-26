@@ -272,7 +272,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.DocumentReferences, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch, out version);
 
 					result.Add(value.Value<string>("key"));
 				}
@@ -317,7 +317,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				do
 				{
 					ushort version;
-					var value = LoadJson(tableStorage.DocumentReferences, iterator.CurrentKey, out version);
+					var value = LoadJson(tableStorage.DocumentReferences, iterator.CurrentKey, writeBatch, out version);
 
 					result.Add(value.Value<string>("ref"));
 				}
@@ -329,7 +329,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private RavenJObject Load(Table table, string name, out ushort version)
 		{
-			var value = LoadJson(table, name, out version);
+			var value = LoadJson(table, name, writeBatch, out version);
 			if (value == null)
 				throw new IndexDoesNotExistsException(string.Format("There is no index with the name: '{0}'", name));
 
@@ -375,10 +375,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				do
 				{
-					var currentKey = iterator.CurrentKey;
+					var currentKey = iterator.CurrentKey.Clone();
 
 					ushort version;
-					var value = LoadJson(tableStorage.DocumentReferences, currentKey, out version);
+					var value = LoadJson(tableStorage.DocumentReferences, currentKey, writeBatch, out version);
 
 					Debug.Assert(value.Value<string>("key") == key.ToString());
 					var reference = value.Value<string>("ref");
