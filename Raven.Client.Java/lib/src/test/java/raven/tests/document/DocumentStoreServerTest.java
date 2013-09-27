@@ -412,6 +412,12 @@ public class DocumentStoreServerTest extends RemoteClientTest {
     }
   }
 
+  public static void main(String[] args) {
+    byte[] bytes = "Fran�ais".getBytes();
+
+    System.out.println(bytes);
+  }
+
   @Test
   public void can_query_indexes_returning_complex_objects() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {

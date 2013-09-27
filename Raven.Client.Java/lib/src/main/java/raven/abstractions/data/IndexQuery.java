@@ -410,13 +410,13 @@ public class IndexQuery {
     }
     if (highlighterPreTags != null) {
       for(String preTag: highlighterPreTags) {
-        path.append("&preTags=").append(preTag);
+        path.append("&preTags=").append(UrlUtils.escapeUriString(preTag));
       }
     }
 
     if (highlighterPostTags != null) {
       for (String postTag: highlighterPostTags) {
-        path.append("&postTags=").append(postTag);
+        path.append("&postTags=").append(UrlUtils.escapeUriString(postTag));
       }
     }
 

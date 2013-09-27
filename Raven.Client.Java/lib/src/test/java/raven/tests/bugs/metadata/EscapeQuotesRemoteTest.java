@@ -28,11 +28,12 @@ public class EscapeQuotesRemoteTest extends RemoteClientTest {
         RavenJObject metadata = session.advanced().getMetadataFor(user);
         assertEquals("\"Bar\"", metadata.value(String.class, "Foo"));
       }
+
     }
   }
 
   @Test
-  public void canProperlyEscapeQuotesInMetadata_Remote_2() throws Exception {
+  public void canProperlyEscapeQuotesInMetadata_2() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       try (IDocumentSession session = store.openSession()) {
           User user = new User();

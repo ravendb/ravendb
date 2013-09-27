@@ -139,7 +139,7 @@ public class HighlightesTest extends RemoteClientTest {
           .highlight("Title", 128, 2, titleHighlighting)
           .highlight("Slug", 128, 2, slugHighlighting)
           .highlight("Content", 128, 2, contentHighlighting)
-          .setHighlighterTags("<span style='background: yellow'>", "</span>")
+          .setHighlighterTags("<span style='background: yellow'>", " ")
           .search("Slug", q).boost(15.0)
           .search("Title", q).boost(12.0)
           .search("Content", q)
