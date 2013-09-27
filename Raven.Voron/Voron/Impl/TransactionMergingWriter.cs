@@ -82,7 +82,7 @@
 			}
 			catch (Exception)
 			{
-				if (writes == null)
+				if (writes == null || writes.Count <= 1)
 					throw;
 
 				SplitWrites(writes);
@@ -172,7 +172,9 @@
 			if (mine.Size < 128 * 1024)
 				maxSize = mine.Size + (128 * 1024);
 
-			var list = new List<OutstandingWrite> { mine };
+			var list = new List<OutstandingWrite>();
+			var indexOfMine = -1;
+			var index = 0;
 
 			foreach (var write in _pendingWrites)
 			{
@@ -180,12 +182,20 @@
 					break;
 
 				if (write == mine)
+				{
+					indexOfMine = index;
 					continue;
+				}
 
 				list.Add(write);
 
 				maxSize -= write.Size;
+				index++;
 			}
+
+			Debug.Assert(indexOfMine >= 0);
+
+			list.Insert(indexOfMine, mine);
 
 			return list;
 		}
