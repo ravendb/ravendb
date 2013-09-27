@@ -1,9 +1,9 @@
-﻿using System.IO;
-
-namespace Voron.Impl
+﻿namespace Voron.Impl
 {
 	using System;
-	using Trees;
+	using System.IO;
+
+	using Voron.Trees;
 
 	public class SnapshotReader : IDisposable
 	{
@@ -21,18 +21,18 @@ namespace Voron.Impl
 		{
 			if (writeBatch != null)
 			{
-				var addedValues = writeBatch.GetAddedValues(treeName);
-				var deletedValues = writeBatch.GetDeletedValues(treeName);
-
-				if (deletedValues.ContainsKey(key))
-					return null;
-
-				if (addedValues.ContainsKey(key))
+				WriteBatch.BatchOperationType operationType;
+				ReadResult result;
+				if (writeBatch.TryGetValue(treeName, key, out result, out operationType))
 				{
-					var relevantReadResult = addedValues[key];
-
-					//when the returned ReadResult is disposed - prevent from stream currently in WriteBatch to be disposed as well
-					return new ReadResult(CloneStream(relevantReadResult.Stream), (ushort)(relevantReadResult.Version + 1));
+					switch (operationType)
+					{
+						case WriteBatch.BatchOperationType.Add:
+							//when the returned ReadResult is disposed - prevent from stream currently in WriteBatch to be disposed as well
+							return new ReadResult(CloneStream(result.Stream), (ushort)(result.Version + 1));
+						case WriteBatch.BatchOperationType.Delete:
+							return null;
+					}
 				}
 			}
 
@@ -51,14 +51,19 @@ namespace Voron.Impl
 		{
 			if (writeBatch != null)
 			{
-				var addedValues = writeBatch.GetAddedValues(treeName);
-				var deletedValues = writeBatch.GetDeletedValues(treeName);
-
-				if (deletedValues.ContainsKey(key))
-					return false;
-
-				if (addedValues.ContainsKey(key))
-					return true;
+				WriteBatch.BatchOperationType operationType;
+				ReadResult result;
+				if (writeBatch.TryGetValue(treeName, key, out result, out operationType))
+				{
+					switch (operationType)
+					{
+						case WriteBatch.BatchOperationType.Add:
+							//when the returned ReadResult is disposed - prevent from stream currently in WriteBatch to be disposed as well
+							return true;
+						case WriteBatch.BatchOperationType.Delete:
+							return false;
+					}
+				}
 			}
 
 			var tree = GetTree(treeName);
@@ -70,14 +75,18 @@ namespace Voron.Impl
 		{
 			if (writeBatch != null)
 			{
-				var addedValues = writeBatch.GetAddedValues(treeName);
-				var deletedValues = writeBatch.GetDeletedValues(treeName);
-
-				if (deletedValues.ContainsKey(key))
-					return 0;
-
-				if (addedValues.ContainsKey(key))
-					return (addedValues[key].Version == 0) ? (ushort)0 : (ushort)(addedValues[key].Version + 1);
+				WriteBatch.BatchOperationType operationType;
+				ReadResult result;
+				if (writeBatch.TryGetValue(treeName, key, out result, out operationType))
+				{
+					switch (operationType)
+					{
+						case WriteBatch.BatchOperationType.Add:
+							return (result.Version == 0) ? (ushort)0 : (ushort)(result.Version + 1);
+						case WriteBatch.BatchOperationType.Delete:
+							return 0;
+					}
+				}
 			}
 
 			var tree = GetTree(treeName);
