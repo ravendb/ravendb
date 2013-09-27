@@ -24,16 +24,18 @@
 
 		public bool IsIndexStale(string name, DateTime? cutOff, Etag cutoffEtag)
 		{
+			var key = CreateKey(name);
+
 			ushort version;
-			var indexingStats = LoadJson(tableStorage.IndexingStats, name, writeBatch, out version);
+			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch, out version);
 			if (indexingStats == null)
 				return false; // index does not exists
 
 			var hasReduce = indexingStats.Value<byte[]>("lastReducedEtag") != null;
 
-			if (IsMapStale(name) || hasReduce && IsReduceStale(name))
+			if (IsMapStale(key) || hasReduce && IsReduceStale(key))
 			{
-				var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, name, writeBatch, out version);
+				var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch, out version);
 
 				if (cutOff != null)
 				{
@@ -59,7 +61,7 @@
 			}
 
 			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
-			using (var iterator = tasksByIndex.MultiRead(Snapshot, name))
+			using (var iterator = tasksByIndex.MultiRead(Snapshot, key))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return false;
@@ -95,8 +97,10 @@
 
 		public bool IsMapStale(string name)
 		{
+			var key = CreateKey(name);
+
 			ushort version;
-			var read = LoadJson(tableStorage.LastIndexedEtags, name, writeBatch, out version);
+			var read = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch, out version);
 			if (read == null)
 				return false;
 
@@ -108,8 +112,10 @@
 
 		public Tuple<DateTime, Etag> IndexLastUpdatedAt(string name)
 		{
+			var key = CreateKey(name);
+
 			ushort version;
-			var indexingStats = LoadJson(tableStorage.IndexingStats, name, writeBatch, out version);
+			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch, out version);
 			if (indexingStats == null)
 				throw new IndexDoesNotExistsException("Could not find index named: " + name);
 
@@ -120,7 +126,7 @@
 					Etag.Parse(indexingStats.Value<byte[]>("lastReducedEtag")));
 			}
 
-			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, name, writeBatch, out version);
+			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch, out version);
 
 			return Tuple.Create(lastIndexedEtags.Value<DateTime>("lastTimestamp"),
 				Etag.Parse(lastIndexedEtags.Value<byte[]>("lastEtag")));
@@ -152,8 +158,10 @@
 
 		public int GetIndexTouchCount(string name)
 		{
+			var key = CreateKey(name);
+
 			ushort version;
-			var indexingStats = LoadJson(tableStorage.IndexingStats, name, writeBatch, out version);
+			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch, out version);
 
 			if (indexingStats == null)
 				return -1;

@@ -37,7 +37,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					key += "/";
 			}
 
-			return key;
+			return key.ToLowerInvariant();
 		}
 
 		protected RavenJObject LoadJson(Table table, Slice key, WriteBatch writeBatch, out ushort version)
