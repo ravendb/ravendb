@@ -12,6 +12,15 @@ public class SuggestionQuery {
     maxSuggestions = SuggestionQuery.DEFAULT_MAX_SUGGESTIONS;
   }
 
+
+  public SuggestionQuery(String field, String term) {
+    this();
+    this.term = term;
+    this.field = field;
+  }
+
+
+
   private String term;
   private String field;
   private int maxSuggestions;

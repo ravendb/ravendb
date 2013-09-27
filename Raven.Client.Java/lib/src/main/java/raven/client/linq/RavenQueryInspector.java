@@ -371,7 +371,15 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   }
 
   private static void setSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query) {
-    //TODO: implement me!
+    if (StringUtils.isNotEmpty(query.getField()) && StringUtils.isNotEmpty(query.getTerm())) {
+      return;
+    }
+    Tuple<String, String> lastEqualityTerm = queryInspector.getLastEqualityTerm();
+    if (lastEqualityTerm.getItem1() == null) {
+      throw new IllegalStateException("Could not suggest on a query that doesn't have a single equality check");
+    }
+    query.setField(lastEqualityTerm.getItem1());
+    query.setTerm(lastEqualityTerm.getItem2());
   }
 
   @Override
