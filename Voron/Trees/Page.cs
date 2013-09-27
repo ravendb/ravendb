@@ -41,70 +41,71 @@ namespace Voron.Trees
             get { return (ushort*)(_base + Constants.PageHeaderSize); }
         }
 
-        public NodeHeader* Search(Slice key, SliceComparer cmp)
-        {
-            if (NumberOfEntries == 0)
-            {
-                LastSearchPosition = 0;
-                LastMatch = 1;
-                return null;
-            }
+		public NodeHeader* Search(Slice key, SliceComparer cmp)
+		{
+			if (NumberOfEntries == 0)
+			{
+				LastSearchPosition = 0;
+				LastMatch = 1;
+				return null;
+			}
 
-            if (key.Options == SliceOptions.BeforeAllKeys)
-            {
-                LastSearchPosition = 0;
-                LastMatch = 1;
-                return GetNode(0);
-            }
+			if (key.Options == SliceOptions.BeforeAllKeys)
+			{
+				LastSearchPosition = 0;
+				LastMatch = 1;
+				return GetNode(0);
+			}
 
-            if (key.Options == SliceOptions.AfterAllKeys)
-            {
-                LastMatch = -1;
-                LastSearchPosition = NumberOfEntries - 1;
-                return GetNode(LastSearchPosition);
-            }
+			if (key.Options == SliceOptions.AfterAllKeys)
+			{
+				LastMatch = -1;
+				LastSearchPosition = NumberOfEntries - 1;
+				return GetNode(LastSearchPosition);
+			}
 
-            int low = IsLeaf ? 0 : 1;
-            int high = NumberOfEntries - 1;
-            int position = 0;
+			int low = IsLeaf ? 0 : 1;
+			int high = NumberOfEntries - 1;
+			int position = 0;
 
-            var pageKey = new Slice(SliceOptions.Key);
-            bool matched = false;
-            NodeHeader* node = null;
-            while (low <= high)
-            {
-                position = (low + high) >> 1;
+			var pageKey = new Slice(SliceOptions.Key);
+			bool matched = false;
+			NodeHeader* node = null;
+			while (low <= high)
+			{
+				position = (low + high) >> 1;
 
-                node = GetNode(position);
-                pageKey.Set(node);
+				node = GetNode(position);
+				pageKey.Set(node);
 
-                LastMatch = key.Compare(pageKey, cmp);
-                matched = true;
-                if (LastMatch == 0)
-                    break;
+				LastMatch = key.Compare(pageKey, cmp);
+				matched = true;
+				if (LastMatch == 0)
+					break;
 
-                if (LastMatch > 0)
-                    low = position + 1;
-                else
-                    high = position - 1;
-            }
+				if (LastMatch > 0)
+					low = position + 1;
+				else
+					high = position - 1;
+			}
 
-            if (matched == false)
-            {
-                node = GetNode(position);
-                LastMatch = key.Compare(pageKey, cmp);
-            }
+			if (matched == false)
+			{
+				LastMatch = key.Compare(pageKey, cmp);
+			}
 
-            if (LastMatch > 0) // found entry less than key
-                position++; // move to the smallest entry larger than the key
+			if (LastMatch > 0) // found entry less than key
+			{
+				position++; // move to the smallest entry larger than the key
+			}
 
-            Debug.Assert(position < ushort.MaxValue);
-            LastSearchPosition = position;
+			Debug.Assert(position < ushort.MaxValue);
+			LastSearchPosition = position;
 
-            if (position >= NumberOfEntries)
-                return null;
-            return node;
-        }
+			if (position >= NumberOfEntries)
+				return null;
+			return GetNode(position);
+		}
 
         public NodeHeader* GetNode(int n)
         {

@@ -146,6 +146,9 @@ namespace Voron.Trees
 				var item = page.GetNode(page.LastSearchPosition);
 
 				CheckConcurrency(key, version, item->Version, TreeActionType.Add);
+				var existingValue = new Slice(DirectRead(tx, key), (ushort)item->DataSize);
+				if(existingValue.Compare(value,_cmp) == 0)
+					return; //nothing to do, the exact value is already there				
 
 				if (item->Flags == NodeFlags.MultiValuePageRef)
 				{
@@ -414,21 +417,9 @@ namespace Voron.Trees
 			}
 		}
 
-	    public TreeIterator Iterate(Transaction tx)
-	    {
-            return new TreeIterator(this, tx, _cmp);
-        }
-
-	    public IIterator Iterate(Transaction tx, WriteBatch writeBatch)
+	    public TreeIterator Iterate(Transaction tx, WriteBatch writeBatch = null)
 		{
-            var treeIterator = new TreeIterator(this, tx, _cmp);
-            if (writeBatch == null || String.IsNullOrWhiteSpace(Name))
-                return treeIterator;
-
-	        var removedKeys = new HashSet<Slice>(writeBatch.GetDeletedValues(Name)
-	                                                       .Select(kvp => kvp.Key));	        
-	        	                                                
-	        return new CombinedIterator(writeBatch.GetAddedValues(Name), removedKeys, treeIterator, _cmp);
+			return new TreeIterator(this, tx, _cmp);
 		}
 
 		public ReadResult Read(Transaction tx, Slice key)
@@ -455,7 +446,7 @@ namespace Voron.Trees
 				var p = FindPageFor(tx, key, cursor);
 				var node = p.Search(key, _cmp);
 
-				if (node == null)
+				if (node == null || new Slice(node).Compare(key, _cmp) != 0)
 					return -1;
 
 				return node->DataSize;
@@ -470,7 +461,7 @@ namespace Voron.Trees
 				var p = FindPageFor(tx, key, cursor);
 				var node = p.Search(key, _cmp);
 
-				if (node == null)
+				if (node == null || new Slice(node).Compare(key, _cmp) != 0)
 					return 0;
 
 				return node->Version;
