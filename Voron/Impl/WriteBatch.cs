@@ -50,10 +50,10 @@
 				operationType = operation.Type;
 
 				if (operation.Type == BatchOperationType.Delete)
-					return false;
+					return true;
 
 				if (operation.Type == BatchOperationType.MultiDelete)
-					return false;
+					return true;
 
 				result = new ReadResult(operation.Value as Stream, operation.Version ?? 0);
 
