@@ -6,3 +6,4 @@ packages/
 /*.user
 
 /Voron/*.user
+*.DotSettings

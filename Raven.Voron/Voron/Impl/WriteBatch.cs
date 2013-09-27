@@ -50,10 +50,10 @@
 				operationType = operation.Type;
 
 				if (operation.Type == BatchOperationType.Delete)
-					return false;
+					return true;
 
 				if (operation.Type == BatchOperationType.MultiDelete)
-					return false;
+					return true;
 
 				result = new ReadResult(operation.Value as Stream, operation.Version ?? 0);
 
@@ -76,6 +76,8 @@
 		{
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 			if (value == null) throw new ArgumentNullException("value");
+			if (value.Length == 0)
+				throw new ArgumentException("Cannot add empty value");
 			if (value.Length > int.MaxValue)
 				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
@@ -122,6 +124,9 @@
 		{
 			var treeName = operation.TreeName;
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
+
+			if (treeName == null)
+				treeName = Constants.RootTreeName;
 
 			_operations.AddOrUpdate(
 				treeName,
@@ -205,28 +210,6 @@
 				if (disposable != null)
 					disposable.Dispose();
 			}
-		}
-
-		private Dictionary<Slice, ReadResult> GetItemsByOperationTypeAndTreeName(BatchOperationType operationType, string treeName)
-		{
-			var result = new Dictionary<Slice, ReadResult>();
-
-			if (_operations.ContainsKey(treeName) == false)
-				return result;
-
-			foreach (var operation in _operations[treeName]
-				.AsParallel()
-				.Where(operation => operation.Type == operationType))
-			{
-				var value = new ReadResult(operation.Value as Stream, operation.Version ?? 0);
-
-				if (result.ContainsKey(operation.Key))
-					result[operation.Key] = value;
-				else
-					result.Add(operation.Key, value);
-			}
-
-			return result;
 		}
 	}
 }

@@ -119,9 +119,11 @@
 
 		private static Stream CloneStream(Stream source)
 		{
+			var sourcePosition = source.Position;
 			var destination = new MemoryStream();
+
 			source.CopyTo(destination);
-			destination.Position = 0;
+			destination.Position = sourcePosition;
 
 			return destination;
 		}
