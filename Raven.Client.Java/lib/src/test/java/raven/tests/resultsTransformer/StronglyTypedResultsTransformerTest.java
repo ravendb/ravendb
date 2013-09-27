@@ -348,11 +348,6 @@ public class StronglyTypedResultsTransformerTest extends RemoteClientTest {
       }
     }
 
-
-
   }
-
-
-
 
 }

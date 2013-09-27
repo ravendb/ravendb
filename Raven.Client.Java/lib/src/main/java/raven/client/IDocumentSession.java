@@ -196,7 +196,7 @@ public interface IDocumentSession extends AutoCloseable {
    * @return
    */
   public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult load(Class<TTransformer> tranformerClass,
-      Class<TResult> clazz, String id, Action1<ILoadConfiguration> configure);
+      Class<TResult> clazz, String id, LoadConfigurationFactory configure);
 
   /**
    * Performs a load that will use the specified results transformer against the specified id
@@ -217,7 +217,7 @@ public interface IDocumentSession extends AutoCloseable {
    * @return
    */
   public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult[] load(Class<TTransformer> tranformerClass,
-      Class<TResult> clazz, List<String> ids, Action1<ILoadConfiguration> configure);
+      Class<TResult> clazz, List<String> ids, LoadConfigurationFactory configure);
 
   /**
    * Saves all the changes to the Raven server.

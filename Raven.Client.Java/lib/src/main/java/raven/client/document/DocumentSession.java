@@ -34,6 +34,7 @@ import raven.client.IDocumentSessionImpl;
 import raven.client.ILoadConfiguration;
 import raven.client.ISyncAdvancedSessionOperation;
 import raven.client.ITransactionalDocumentSession;
+import raven.client.LoadConfigurationFactory;
 import raven.client.RavenQueryHighlightings;
 import raven.client.RavenQueryStatistics;
 import raven.client.connection.IDatabaseCommands;
@@ -486,11 +487,11 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
 
   @Override
   public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult load(Class<TTransformer> tranformerClass,
-      Class<TResult> clazz, String id, Action1<ILoadConfiguration> configure) {
+      Class<TResult> clazz, String id, LoadConfigurationFactory configureFactory) {
     try {
       String transformer = tranformerClass.newInstance().getTransformerName();
       RavenLoadConfiguration configuration = new RavenLoadConfiguration();
-      configure.apply(configuration);
+      configureFactory.configure(configuration);
       TResult[] loadResult = loadInternal(clazz, new String[] { id} , transformer, configuration.getQueryInputs());
       if (loadResult != null && loadResult.length > 0 ) {
         return loadResult[0];
@@ -514,11 +515,11 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
 
   @Override
   public <TResult, TTransformer extends AbstractTransformerCreationTask> TResult[] load(Class<TTransformer> tranformerClass,
-      Class<TResult> clazz, List<String> ids, Action1<ILoadConfiguration> configure) {
+      Class<TResult> clazz, List<String> ids, LoadConfigurationFactory configureFactory) {
     try {
       String transformer = tranformerClass.newInstance().getTransformerName();
       RavenLoadConfiguration configuration = new RavenLoadConfiguration();
-      configure.apply(configuration);
+      configureFactory.configure(configuration);
       return loadInternal(clazz, ids.toArray(new String[0]) , transformer, configuration.getQueryInputs());
     } catch (Exception e) {
       throw new RuntimeException(e);

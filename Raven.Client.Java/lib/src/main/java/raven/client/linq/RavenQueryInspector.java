@@ -28,6 +28,7 @@ import raven.abstractions.data.SuggestionQuery;
 import raven.abstractions.data.SuggestionQueryResult;
 import raven.abstractions.extensions.ExpressionExtensions;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.abstractions.json.linq.RavenJValue;
 import raven.client.EscapeQueryOptions;
 import raven.client.IDocumentQuery;
 import raven.client.RavenQueryHighlightings;
@@ -138,6 +139,12 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   @Override
   public IRavenQueryable<T> addQueryInput(String name, RavenJToken value) {
     provider.addQueryInput(name, value);
+    return this;
+  }
+
+  @Override
+  public IRavenQueryable<T> addQueryInput(String name, Object value) {
+    provider.addQueryInput(name, new RavenJValue(value));
     return this;
   }
 

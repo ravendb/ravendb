@@ -43,10 +43,10 @@ public class UrlUtils {
     '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
   };
 
-  final static short c_MaxAsciiCharsReallocate   = 40;
-  final static short c_MaxUnicodeCharsReallocate = 40;
-  final static short c_MaxUTF_8BytesPerUnicodeChar  = 4;
-  final static short c_EncodedCharsPerByte = 3;
+  private final static short c_MaxAsciiCharsReallocate   = 40;
+  private final static short c_MaxUnicodeCharsReallocate = 40;
+  private final static short c_MaxUTF_8BytesPerUnicodeChar  = 4;
+  private final static short c_EncodedCharsPerByte = 3;
 
   private static char[] escapeString(String input, int start, int end, char[] dest,
     Reference<Integer> destPos, boolean isUriString) {
