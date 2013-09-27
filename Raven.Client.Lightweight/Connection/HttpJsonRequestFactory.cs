@@ -73,10 +73,11 @@ namespace Raven.Client.Connection
 				request.SkipServerCheck = cachedRequestDetails.SkipServerCheck;
 			}
 
+            ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs { Request = request.webRequest });
+
 			if (SessionTimeout != null && SessionTimeout.HasValue && SessionTimeout.Value.TotalSeconds > 1)
 				request.Timeout = SessionTimeout.Value;
 
-			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs {Request = request.webRequest});
 			return request;
 		}
 
