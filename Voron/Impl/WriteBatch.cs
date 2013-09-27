@@ -125,6 +125,9 @@
 			var treeName = operation.TreeName;
 			if (treeName != null && treeName.Length == 0) throw new ArgumentException("treeName must not be empty", "treeName");
 
+			if (treeName == null)
+				treeName = Constants.RootTreeName;
+
 			_operations.AddOrUpdate(
 				treeName,
 				new List<BatchOperation> { operation },

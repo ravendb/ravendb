@@ -20,5 +20,7 @@ namespace Voron.Impl
 
 		public static int NodeOffsetSize = sizeof(ushort);
 	    public const int CurrentVersion = 0x00010009;
+
+		public const string RootTreeName = "Root";
 	}
 }
