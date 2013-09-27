@@ -1,7 +1,9 @@
 ﻿namespace Voron.Impl
 {
 	using System;
-	using Trees;
+	using System.IO;
+
+	using Voron.Trees;
 
 	public class SnapshotReader : IDisposable
 	{
@@ -17,20 +19,24 @@
 
 		public ReadResult Read(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
-		    if (writeBatch != null)
-		    {
-		        var addedValues = writeBatch.GetAddedValues(treeName);
-		        var deletedValues = writeBatch.GetDeletedValues(treeName);
+			if (writeBatch != null)
+			{
+				WriteBatch.BatchOperationType operationType;
+				ReadResult result;
+				if (writeBatch.TryGetValue(treeName, key, out result, out operationType))
+				{
+					switch (operationType)
+					{
+						case WriteBatch.BatchOperationType.Add:
+							//when the returned ReadResult is disposed - prevent from stream currently in WriteBatch to be disposed as well
+							return new ReadResult(CloneStream(result.Stream), (ushort)(result.Version + 1));
+						case WriteBatch.BatchOperationType.Delete:
+							return null;
+					}
+				}
+			}
 
-		        if (deletedValues.ContainsKey(key))
-		            return null;
-
-		        ReadResult value;
-		        if (addedValues.TryGetValue(key, out value))
-                    return value;
-		    }
-
-		    var tree = GetTree(treeName);
+			var tree = GetTree(treeName);
 			return tree.Read(Transaction, key);
 		}
 
@@ -40,48 +46,57 @@
 			return tree.GetDataSize(Transaction, key);
 		}
 
+		//similar to read version, but ReadVersion returns 0 for items that are in WriteBatch
 		public bool Contains(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
 			if (writeBatch != null)
 			{
-				var addedValues = writeBatch.GetAddedValues(treeName);
-				var deletedValues = writeBatch.GetDeletedValues(treeName);
-
-				if (deletedValues.ContainsKey(key))
-					return false;
-
-				if (addedValues.ContainsKey(key))
-					return true;
+				WriteBatch.BatchOperationType operationType;
+				ReadResult result;
+				if (writeBatch.TryGetValue(treeName, key, out result, out operationType))
+				{
+					switch (operationType)
+					{
+						case WriteBatch.BatchOperationType.Add:
+							//when the returned ReadResult is disposed - prevent from stream currently in WriteBatch to be disposed as well
+							return true;
+						case WriteBatch.BatchOperationType.Delete:
+							return false;
+					}
+				}
 			}
 
 			var tree = GetTree(treeName);
-			return tree.ReadVersion(Transaction, key) > 0;			
+			return tree.ReadVersion(Transaction, key) > 0;
 
 		}
 
-        public ushort ReadVersion(string treeName, Slice key, WriteBatch writeBatch = null)
+		public ushort ReadVersion(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
-            if (writeBatch != null)
-            {
-                var addedValues = writeBatch.GetAddedValues(treeName);
-                var deletedValues = writeBatch.GetDeletedValues(treeName);
+			if (writeBatch != null)
+			{
+				WriteBatch.BatchOperationType operationType;
+				ReadResult result;
+				if (writeBatch.TryGetValue(treeName, key, out result, out operationType))
+				{
+					switch (operationType)
+					{
+						case WriteBatch.BatchOperationType.Add:
+							return (result.Version == 0) ? (ushort)0 : (ushort)(result.Version + 1);
+						case WriteBatch.BatchOperationType.Delete:
+							return 0;
+					}
+				}
+			}
 
-                if (deletedValues.ContainsKey(key))
-                    return 0;
-
-                ReadResult value;
-                if (addedValues.TryGetValue(key, out value))
-                    return (value.Version == 0) ? (ushort)0 : (ushort)(value.Version + 1); 
-            }
-
-            var tree = GetTree(treeName);
+			var tree = GetTree(treeName);
 			return tree.ReadVersion(Transaction, key);
 		}
 
-        public IIterator Iterate(string treeName, WriteBatch writeBatch = null)
+		public IIterator Iterate(string treeName, WriteBatch writeBatch = null)
 		{
 			var tree = GetTree(treeName);
-            return tree.Iterate(Transaction, writeBatch);
+			return tree.Iterate(Transaction, writeBatch);
 		}
 
 		public void Dispose()
@@ -89,7 +104,7 @@
 			Transaction.Dispose();
 		}
 
-        public IIterator MultiRead(string treeName, Slice key)
+		public IIterator MultiRead(string treeName, Slice key)
 		{
 			var tree = GetTree(treeName);
 			return tree.MultiRead(Transaction, key);
@@ -100,6 +115,15 @@
 		{
 			var tree = treeName == null ? _env.Root : Transaction.Environment.GetTree(Transaction, treeName);
 			return tree;
+		}
+
+		private static Stream CloneStream(Stream source)
+		{
+			var destination = new MemoryStream();
+			source.CopyTo(destination);
+			destination.Position = 0;
+
+			return destination;
 		}
 	}
 }
