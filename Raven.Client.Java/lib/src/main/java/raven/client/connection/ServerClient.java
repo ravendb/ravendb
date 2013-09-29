@@ -180,16 +180,16 @@ public class ServerClient implements IDatabaseCommands {
 
   @Override
   public List<JsonDocument> startsWith(final String keyPrefix, final String matches, final int start, final int pageSize, final boolean metadataOnly) throws ServerClientException {
-    return startsWith(keyPrefix, matches, start, pageSize, false, null);
+    return startsWith(keyPrefix, matches, start, pageSize, metadataOnly, null);
   }
 
   @Override
-  public List<JsonDocument> startsWith(final String keyPrefix, final String matches, final int start, final int pageSize, final boolean metadataOnly, final String transformer) throws ServerClientException {
+  public List<JsonDocument> startsWith(final String keyPrefix, final String matches, final int start, final int pageSize, final boolean metadataOnly, final String exclude) throws ServerClientException {
     ensureIsNotNullOrEmpty(keyPrefix, "keyPrefix");
     return executeWithReplication(HttpMethods.GET, new Function1<String, List<JsonDocument>>() {
       @Override
       public List<JsonDocument> apply(String u) {
-        return directStartsWith(u, keyPrefix, matches, start, pageSize, metadataOnly, transformer);
+        return directStartsWith(u, keyPrefix, matches, start, pageSize, metadataOnly, exclude);
       }
     });
   }
@@ -433,11 +433,12 @@ public class ServerClient implements IDatabaseCommands {
     });
   }
 
-  private List<JsonDocument> directStartsWith(String operationUrl, String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly, String transformer) throws ServerClientException {
+  private List<JsonDocument> directStartsWith(String operationUrl, String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly, String exclude) throws ServerClientException {
     RavenJObject metadata = new RavenJObject();
     addTransactionInformation(metadata);
-    String actualUrl = operationUrl + String.format("/docs?startsWith=%s&matches=%s&start=%d&pageSize=%d", UrlUtils.escapeDataString(keyPrefix),
-      UrlUtils.escapeDataString(StringUtils.trimToEmpty(matches)), start, pageSize);
+    String actualUrl = operationUrl + String.format("/docs?startsWith=%s&matches=%s&exclude=%s&start=%d&pageSize=%d", UrlUtils.escapeDataString(keyPrefix),
+      UrlUtils.escapeDataString(StringUtils.trimToEmpty(matches)),
+      UrlUtils.escapeDataString(StringUtils.trimToEmpty(exclude)),start, pageSize);
     if (metadataOnly) {
       actualUrl += "&metadata-only=true";
     }

@@ -13,6 +13,9 @@ import raven.abstractions.data.HttpMethods;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.connection.implementation.HttpJsonRequest;
+import raven.client.document.DocumentConvention;
+import raven.client.extensions.MultiDatabase;
+import raven.client.indexes.RavenDocumentsByEntityName;
 
 //TODO: check if response is consumed
 public class AdminServerClient implements IAdminDatabaseCommands, IGlobalAdminDatabaseCommands {
@@ -151,7 +154,28 @@ public class AdminServerClient implements IAdminDatabaseCommands, IGlobalAdminDa
 
   @Override
   public void ensureDatabaseExists(String name, boolean ignoreFailures) {
-    // TODO Auto-generated method stub
+
+    ServerClient serverClient = (ServerClient) innerServerClient.forSystemDatabase();
+
+    serverClient.forceReadFromMaster();
+    DatabaseDocument doc = MultiDatabase.createDatabaseDocument(name);
+
+    try {
+      if (serverClient.get(doc.getId()) != null) {
+        return;
+      }
+      serverClient.getGlobalAdmin().createDatabase(doc);
+    } catch (Exception e) {
+      if (!ignoreFailures) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    try {
+      new RavenDocumentsByEntityName().execute(serverClient.forDatabase(name), new DocumentConvention());
+    } catch (Exception e) {
+      // we really don't care if this fails, and it might, if the user doesn't have permissions on the new db
+    }
 
   }
 
