@@ -404,7 +404,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     if (Boolean.TRUE.equals(documentFound.getMetadata().value(Boolean.class, Constants.RAVEN_DOCUMENT_DOES_NOT_EXISTS))) {
       return getDefaultValue(entityType); // document is not really there.
     }
-    if (!documentFound.getMetadata().containsKey("@etag")) {
+    if (documentFound.getEtag() != null && !documentFound.getMetadata().containsKey("@etag")) {
       documentFound.getMetadata().add("@etag", new RavenJValue(documentFound.getEtag().toString()));
     }
     if (!documentFound.getMetadata().containsKey(Constants.LAST_MODIFIED)) {
@@ -738,7 +738,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
    * @param saveChangesData
    */
   protected void updateBatchResults(List<BatchResult> batchResults, SaveChangesData saveChangesData) {
-    if (documentStore.hasJsonRequestFactory() && getConventions().isShouldAggressiveCacheTrackChanges() && batchResults.size() != 0) {
+    if (documentStore.hasJsonRequestFactory() && getConventions().isShouldSaveChangesForceAggressiveCacheCheck() && batchResults.size() != 0) {
       documentStore.getJsonRequestFactory().expireItemsFromCache(databaseName != null ? databaseName : Constants.SYSTEM_DATABASE);
     }
     for (int i = saveChangesData.getDeferredCommandsCount(); i < batchResults.size(); i++) {
@@ -960,6 +960,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     entitiesAndMetadata.clear();
     deletedEntities.clear();
     entitiesByKey.clear();
+    knownMissingIds.clear();
   }
 
   public EntityToJson getEntityToJson() {

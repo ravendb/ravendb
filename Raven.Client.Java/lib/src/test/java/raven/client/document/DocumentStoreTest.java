@@ -36,7 +36,7 @@ public class DocumentStoreTest {
     }
   }
 
-  private static class Animal {
+  public static class Animal {
     private Integer id;
     private String name;
 

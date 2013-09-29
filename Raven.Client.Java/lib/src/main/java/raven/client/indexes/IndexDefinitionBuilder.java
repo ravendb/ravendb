@@ -162,6 +162,7 @@ public class IndexDefinitionBuilder {
     return toIndexDefinition(convention, true);
   }
 
+  @SuppressWarnings("deprecation")
   public IndexDefinition toIndexDefinition(DocumentConvention convention, boolean validateMap) {
     if (map == null && validateMap)
       throw new IllegalStateException(

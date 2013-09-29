@@ -10,6 +10,7 @@ import com.google.common.collect.ImmutableList;
 import raven.abstractions.basic.EventHelper;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.data.Etag;
+import raven.abstractions.data.FailoverServers;
 import raven.client.connection.profiling.ProfilingContext;
 import raven.client.connection.profiling.ProfilingInformation;
 import raven.client.document.DocumentConvention;
@@ -49,6 +50,15 @@ public abstract class DocumentStoreBase implements IDocumentStore {
   private ILastEtagHolder lastEtagHolder;
   private ITransactionRecoveryStorage transactionRecoveryStorage;
   private List<Action1<InMemoryDocumentSessionOperations>> sessionCreatedInternal = new ArrayList<>();
+  protected FailoverServers failoverServers;
+
+  public FailoverServers getFailoverServers() {
+    return failoverServers;
+  }
+
+  public void setFailoverServers(FailoverServers failoverServers) {
+    this.failoverServers = failoverServers;
+  }
 
   public void addSessionCreatedInternal(Action1<InMemoryDocumentSessionOperations> action) {
     sessionCreatedInternal.add(action);

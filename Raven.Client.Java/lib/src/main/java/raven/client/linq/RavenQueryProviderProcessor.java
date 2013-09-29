@@ -79,19 +79,6 @@ public class RavenQueryProviderProcessor<T> {
   private final boolean isMapReduce;
 
 
-  static final Set<Class<?>> requireOrderByToUseRange = new HashSet<>();
-  static {
-    requireOrderByToUseRange.add(int.class);
-    requireOrderByToUseRange.add(long.class);
-    requireOrderByToUseRange.add(float.class);
-    requireOrderByToUseRange.add(double.class);
-    requireOrderByToUseRange.add(Integer.class);
-    requireOrderByToUseRange.add(Long.class);
-    requireOrderByToUseRange.add(Float.class);
-    requireOrderByToUseRange.add(Double.class);
-    requireOrderByToUseRange.add(Number.class);
-  }
-
   /**
    * Gets the current path in the case of expressions within collections
    * @return
@@ -959,7 +946,7 @@ public class RavenQueryProviderProcessor<T> {
         fieldType = String.class;
       }
 
-      if (requireOrderByToUseRange.contains(fieldType)) {
+      if (queryGenerator.getConventions().usesRangeType(fieldType)) {
         fieldName += "_Range";
       }
       luceneQuery.addOrder(fieldName, orderSpec.getOrder() == Order.DESC, fieldType);
@@ -1035,6 +1022,7 @@ public class RavenQueryProviderProcessor<T> {
     IDocumentQuery<T> q = queryGenerator.luceneQuery(clazz, indexName, isMapReduce);
     luceneQuery = (IAbstractDocumentQuery<T>) q;
 
+    q.setResultTransformer(resultsTransformer);
     visitExpression(expression);
     if (customizeQuery != null) {
       customizeQuery.customize(new DocumentQueryCustomization((DocumentQuery< ? >) luceneQuery));

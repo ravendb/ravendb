@@ -138,7 +138,7 @@ public class DocumentConvention implements Serializable {
     setDisableProfiling(true);
     setEnlistInDistributedTransactions(true);
     setUseParallelMultiGet(true);
-    setDefaultQueryingConsistency(ConsistencyOptions.MONOTONIC_READ);
+    setDefaultQueryingConsistency(ConsistencyOptions.NONE);
     setFailoverBehavior(EnumSet.of(FailoverBehavior.ALLOW_READS_FROM_SECONDARIES));
     shouldCacheRequest = Functions.alwaysTrue();
     setFindIdentityProperty(new Function1<Field, Boolean>() {
@@ -1037,7 +1037,8 @@ public class DocumentConvention implements Serializable {
       type = (Class< ? >) o;
     }
 
-    if (Integer.class.equals(type) || Long.class.equals(type) || Double.class.equals(type) || Float.class.equals(type)) {
+    if (Integer.class.equals(type) || Long.class.equals(type) || Double.class.equals(type) || Float.class.equals(type)
+      || int.class.equals(type) || long.class.equals(type) || double.class.equals(type) || float.class.equals(type)) {
       return true;
     }
     return customRangeTypes.contains(type);

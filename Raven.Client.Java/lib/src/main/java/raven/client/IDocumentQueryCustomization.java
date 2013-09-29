@@ -199,9 +199,12 @@ public interface IDocumentQueryCustomization {
 
   /**
    * Execute the transformation function on the results of this query.
+   *
+   * Use Result Transformers instead.
    * @param resultsTransformer
    * @return
    */
+  @Deprecated
   public IDocumentQueryCustomization transformResults(Function2<IndexQuery, Collection<Object>, Collection<Object>> resultsTransformer);
 
   /**

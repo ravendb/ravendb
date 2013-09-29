@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import com.mysema.query.types.Path;
 
-import raven.abstractions.closure.Action1;
 import raven.abstractions.data.Etag;
 import raven.client.document.ILoaderWithInclude;
 import raven.client.indexes.AbstractIndexCreationTask;

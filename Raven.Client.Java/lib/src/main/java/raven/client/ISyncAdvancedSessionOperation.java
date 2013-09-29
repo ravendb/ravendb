@@ -52,6 +52,17 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    */
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize);
 
+  /**
+   * Load documents with the specified key prefix
+   * @param clazz
+   * @param keyPrefix
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize, String exclude);
+
 
   /**
    * Access the lazy operations

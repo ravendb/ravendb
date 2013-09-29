@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import raven.abstractions.basic.Lazy;
 import raven.abstractions.closure.Action1;
+import raven.client.indexes.AbstractTransformerCreationTask;
 
 import com.mysema.query.types.Path;
 
@@ -219,6 +220,23 @@ public interface ILazySessionOperations {
    * @return
    */
   public <TResult> Lazy<TResult[]> loadStartingWith(Class<TResult> clazz, String keyPrefix, String matches, int start, int pageSize);
+
+  /**
+   * Load documents with the specified key prefix
+   * @param clazz
+   * @param keyPrefix
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public <TResult> Lazy<TResult[]> loadStartingWith(Class<TResult> clazz, String keyPrefix, String matches, int start, int pageSize, String exclude);
+
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> Lazy<TResult> load(Class<TTransformer> tranformerClass,
+    Class<TResult> clazz, String id);
+
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> Lazy<TResult[]> load(Class<TTransformer> tranformerClass,
+    Class<TResult> clazz, String... ids);
 
 
 }

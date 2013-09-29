@@ -3,6 +3,7 @@ package raven.client.document.batches;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
 
 import raven.abstractions.data.GetRequest;
@@ -17,20 +18,35 @@ public class LazyLoadOperation<T> implements ILazyOperation {
 
   private final String key;
   private final LoadOperation loadOperation;
+  private final String transformer;
   private Object result;
   private boolean requiresRetry;
   private Class<T> clazz;
-
   public LazyLoadOperation(Class<T> clazz, String key, LoadOperation loadOperation) {
+    this (clazz, key, loadOperation, null);
+  }
+
+  public LazyLoadOperation(Class<T> clazz, String key, LoadOperation loadOperation, String transformer) {
     this.key = key;
     this.loadOperation = loadOperation;
     this.clazz = clazz;
+    this.transformer = transformer;
   }
 
   @Override
   public GetRequest createRequest() {
+    String path = null;
+    if (StringUtils.isNotEmpty(transformer)) {
+      path = "/queries/"     + UrlUtils.escapeDataString(key);
+      if (StringUtils.isNotEmpty(transformer)) {
+        path += "&transformer=" + transformer;
+      }
+    } else {
+      path = "/docs/" + UrlUtils.escapeDataString(key);
+    }
+
     GetRequest request = new GetRequest();
-    request.setUrl("/docs/" + UrlUtils.escapeDataString(key));
+    request.setUrl(path);
     return request;
   }
 

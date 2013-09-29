@@ -18,17 +18,19 @@ import raven.client.utils.UrlUtils;
 public class LazyMultiLoadOperation<T> implements ILazyOperation {
   private final MultiLoadOperation loadOperation;
   private final String[] ids;
+  private final String transformer;
   private final Tuple<String, Class<?>>[] includes;
   private final Class<T> clazz;
 
   private Object result;
   private boolean requiresRetry;
 
-  public LazyMultiLoadOperation(Class<T> clazz, MultiLoadOperation loadOperation, String[] ids, Tuple<String, Class<?>>[] includes) {
+  public LazyMultiLoadOperation(Class<T> clazz, MultiLoadOperation loadOperation, String[] ids, Tuple<String, Class<?>>[] includes, String transformer) {
     this.loadOperation = loadOperation;
     this.ids = ids;
     this.includes = includes;
     this.clazz = clazz;
+    this.transformer = transformer;
   }
 
   @Override
@@ -46,6 +48,10 @@ public class LazyMultiLoadOperation<T> implements ILazyOperation {
       idTokens.add("id=" + UrlUtils.escapeDataString(id));
     }
     query += "&" + StringUtils.join(idTokens, "&");
+
+    if (StringUtils.isNotEmpty(transformer)) {
+      query += "&transformer=" + transformer;
+    }
 
     GetRequest request = new GetRequest();
     request.setUrl("/queries/");

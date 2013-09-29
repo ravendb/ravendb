@@ -208,6 +208,9 @@ public class DocumentStore extends DocumentStoreBase {
     if (StringUtils.isNotEmpty(options.getApiKey())) {
       apiKey = options.getApiKey();
     }
+    if (options.getFailoverServers() != null) {
+      failoverServers = options.getFailoverServers();
+    }
     setEnlistInDistributedTransactions(options.isEnlistInDistributedTransactions());
   }
 
@@ -331,7 +334,7 @@ public class DocumentStore extends DocumentStoreBase {
       recoverPendingTransactions();
 
       if (StringUtils.isNotEmpty(defaultDatabase)) {
-        getDatabaseCommands().forSystemDatabase().getAdmin().ensureDatabaseExists(defaultDatabase, true);
+        getDatabaseCommands().forSystemDatabase().getGlobalAdmin().ensureDatabaseExists(defaultDatabase, true);
       }
     } catch (Exception e) {
       Closer.close(this);

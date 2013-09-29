@@ -1,0 +1,159 @@
+package raven.client.connection;
+
+import java.io.IOException;
+
+
+import raven.abstractions.basic.Reference;
+import raven.abstractions.closure.Function1;
+import raven.abstractions.closure.Function2;
+import raven.abstractions.closure.Function3;
+import raven.abstractions.data.AdminStatistics;
+import raven.abstractions.data.DatabaseDocument;
+import raven.abstractions.data.HttpMethods;
+import raven.abstractions.json.linq.RavenJObject;
+import raven.abstractions.json.linq.RavenJToken;
+import raven.client.connection.implementation.HttpJsonRequest;
+
+//TODO: check if response is consumed
+public class AdminServerClient implements IAdminDatabaseCommands, IGlobalAdminDatabaseCommands {
+
+  private final ServerClient innerServerClient;
+  private final AdminRequestCreator adminRequest;
+
+  public AdminServerClient(ServerClient serverClient) {
+    innerServerClient = serverClient;
+    adminRequest = new AdminRequestCreator(new Function2<String, HttpMethods, HttpJsonRequest>() {
+
+      @Override
+      public HttpJsonRequest apply(String url, HttpMethods method) {
+        return ((ServerClient)innerServerClient.forSystemDatabase()).createRequest(method, url);
+      }
+    }, new Function2<String, HttpMethods, HttpJsonRequest>() {
+
+      @Override
+      public HttpJsonRequest apply(String url, HttpMethods method) {
+        return innerServerClient.createRequest(method, url);
+      }
+    }, new Function3<String, String, HttpMethods, HttpJsonRequest>() {
+
+      @Override
+      public HttpJsonRequest apply(String currentServerUrl, String requestUrl, HttpMethods method) {
+        return innerServerClient.createReplicationAwareRequest(currentServerUrl, requestUrl, method);
+      }
+    });
+  }
+
+  @Override
+  public void createDatabase(DatabaseDocument databaseDocument) {
+    Reference<RavenJObject> docRef = new Reference<>();
+    HttpJsonRequest req = adminRequest.createDatabase(databaseDocument, docRef);
+
+    req.write(docRef.value.toString());
+    req.executeRequest();
+  }
+
+  @Override
+  public void deleteDatabase(String databaseName)  {
+    deleteDatabase(databaseName, false);
+
+  }
+  @Override
+  public void deleteDatabase(String databaseName, boolean hardDelete) {
+    adminRequest.deleteDatabase(databaseName, hardDelete).executeRequest();
+  }
+
+  @Override
+  public IDatabaseCommands getCommands() {
+    return innerServerClient;
+  }
+
+  @Override
+  public void compactDatabase(String databaseName) {
+    adminRequest.compactDatabase(databaseName).executeRequest();
+  }
+
+  @Override
+  public void stopIndexing() {
+    innerServerClient.executeWithReplication(HttpMethods.POST, new Function1<String, Void>() {
+
+      @Override
+      public Void apply(String operationUrl) {
+        adminRequest.stopIndexing(operationUrl).executeRequest();
+        return null;
+      }
+    });
+  }
+
+  @Override
+  public void startIndexing() {
+    innerServerClient.executeWithReplication(HttpMethods.POST, new Function1<String, Void>() {
+
+      @Override
+      public Void apply(String operationUrl) {
+        adminRequest.startIndexing(operationUrl).executeRequest();
+        return null;
+      }
+    });
+  }
+
+
+  @Override
+  public void startBackup(String backupLocation, DatabaseDocument databaseDocument) {
+    Reference<RavenJObject> backupSettingsRef = new Reference<>();
+    HttpJsonRequest request = adminRequest.startBackup(backupLocation, databaseDocument, backupSettingsRef);
+
+    request.write(backupSettingsRef.value.toString());
+    request.executeRequest();
+  }
+
+  @Override
+  public void startRestore(String restoreLocation, String databaseLocation) {
+    startRestore(restoreLocation, databaseLocation, null, false);
+  }
+
+  @Override
+  public void startRestore(String restoreLocation, String databaseLocation, String databaseName) {
+    startRestore(restoreLocation, databaseLocation, databaseName, false);
+  }
+
+  @Override
+  public void startRestore(String restoreLocation, String databaseLocation, String databaseName, boolean defrag) {
+    Reference<RavenJObject> restoreSettingsRef = new Reference<>();
+
+    HttpJsonRequest request = adminRequest.startRestore(restoreLocation, databaseLocation, databaseName, defrag, restoreSettingsRef);
+
+    request.write(restoreSettingsRef.value.toString());
+    request.executeRequest();
+  }
+
+
+  @Override
+  public String getIndexingStatus() {
+    return innerServerClient.executeWithReplication(HttpMethods.GET, new Function1<String, String>() {
+
+      @Override
+      public String apply(String operationUrl) {
+        RavenJToken result = adminRequest.indexingStatus(operationUrl).readResponseJson();
+        return result.value(String.class, "IndexingStatus");
+      }
+    });
+  }
+
+  @Override
+  public AdminStatistics getStatistics() {
+    try {
+      RavenJObject json = (RavenJObject)adminRequest.adminStats().readResponseJson();
+      return innerServerClient.convention.createSerializer().readValue(json.toString(), AdminStatistics.class);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public void ensureDatabaseExists(String name, boolean ignoreFailures) {
+    // TODO Auto-generated method stub
+
+  }
+
+
+}

@@ -45,10 +45,15 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
   public Map<String, String> getOperationsHeaders();
 
   /**
-   * Admin operations, like create/delete database
+   * Admin operations for current database
    * @return
    */
   public IAdminDatabaseCommands getAdmin();
+
+  /**
+   * Admin operations performed against system database, like create/delete database
+   */
+  public IGlobalAdminDatabaseCommands getGlobalAdmin();
 
   /**
    * Sets the operations headers
@@ -77,6 +82,17 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @return
    */
   public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly);
+
+  /**
+   * Retrieves documents for the specified key prefix
+   * @param keyPrefix
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @param metadataOnly
+   * @return
+   */
+  public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly, String exclude);
 
   /**
    * Retrieves the document for the specified key
@@ -338,6 +354,51 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
   /**
    * Streams the documents by etag OR starts with the prefix and match the matches
    * Will return *all* results, regardless of the number of items that might be returned.
+   * @return
+   */
+  public Iterator<RavenJObject> streamDocs();
+
+  /**
+   * Streams the documents by etag OR starts with the prefix and match the matches
+   * Will return *all* results, regardless of the number of items that might be returned.
+   * @param fromEtag
+   * @return
+   */
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag);
+
+  /**
+   * Streams the documents by etag OR starts with the prefix and match the matches
+   * Will return *all* results, regardless of the number of items that might be returned.
+   * @param fromEtag
+   * @param startsWith
+   * @return
+   */
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith);
+
+  /**
+   * Streams the documents by etag OR starts with the prefix and match the matches
+   * Will return *all* results, regardless of the number of items that might be returned.
+   * @param fromEtag
+   * @param startsWith
+   * @param matches
+   * @return
+   */
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches);
+
+  /**
+   * Streams the documents by etag OR starts with the prefix and match the matches
+   * Will return *all* results, regardless of the number of items that might be returned.
+   * @param fromEtag
+   * @param startsWith
+   * @param matches
+   * @param start
+   * @return
+   */
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start);
+
+  /**
+   * Streams the documents by etag OR starts with the prefix and match the matches
+   * Will return *all* results, regardless of the number of items that might be returned.
    * @param fromEtag
    * @param startsWith
    * @param matches
@@ -346,6 +407,18 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @return
    */
   public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize);
+
+  /**
+   * Streams the documents by etag OR starts with the prefix and match the matches
+   * Will return *all* results, regardless of the number of items that might be returned.
+   * @param fromEtag
+   * @param startsWith
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize, String exclude);
 
   /**
    * Delete index

@@ -23,6 +23,7 @@ public class QueryResult {
   private boolean nonAuthoritativeInformation;
   private Date lastQueryTime;
   private long durationMiliseconds;
+  private Map<String, String> scoreExplanations;
 
   /**
    * Initializes a new instance of the {@link QueryResult} class.
@@ -31,6 +32,16 @@ public class QueryResult {
     results = new ArrayList<>();
     includes = new ArrayList<>();
     highlightings = new HashMap<>();
+    scoreExplanations = new HashMap<>();
+  }
+
+  public Map<String, String> getScoreExplanations() {
+    return scoreExplanations;
+  }
+
+
+  public void setScoreExplanations(Map<String, String> scoreExplanations) {
+    this.scoreExplanations = scoreExplanations;
   }
 
   /**
@@ -54,6 +65,10 @@ public class QueryResult {
 
     for (Map.Entry<String, Map<String, String[]>> entry: highlightings.entrySet()) {
       snapshot.getHighlightings().put(entry.getKey(), new HashMap<>(entry.getValue()));
+    }
+
+    for (Map.Entry<String, String> entry: scoreExplanations.entrySet()) {
+      snapshot.getScoreExplanations().put(entry.getKey(), entry.getValue());
     }
     return snapshot;
   }

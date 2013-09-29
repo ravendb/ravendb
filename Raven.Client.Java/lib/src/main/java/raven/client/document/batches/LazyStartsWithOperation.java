@@ -16,6 +16,7 @@ import raven.client.utils.UrlUtils;
 public class LazyStartsWithOperation<T> implements ILazyOperation {
   private final String keyPrefix;
   private final String matches;
+  private final String exclude;
   private final int start;
   private final int pageSize;
   private final InMemoryDocumentSessionOperations sessionOperations;
@@ -24,10 +25,11 @@ public class LazyStartsWithOperation<T> implements ILazyOperation {
   private Object result;
   private boolean requiresRetry;
 
-  public LazyStartsWithOperation(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations) {
+  public LazyStartsWithOperation(Class<T> clazz, String keyPrefix, String matches, String exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations) {
     this.clazz = clazz;
     this.keyPrefix = keyPrefix;
     this.matches = matches;
+    this.exclude = exclude;
     this.start = start;
     this.pageSize = pageSize;
     this.sessionOperations = sessionOperations;
@@ -37,8 +39,10 @@ public class LazyStartsWithOperation<T> implements ILazyOperation {
   public GetRequest createRequest() {
     GetRequest getRequest = new GetRequest();
     getRequest.setUrl("/docs");
-    getRequest.setQuery(String.format("startsWith=%s&matches=%s&start=%d&pageSize=%d", UrlUtils.escapeDataString(keyPrefix),
-        UrlUtils.escapeDataString(matches != null ? matches : ""), start, pageSize));
+    getRequest.setQuery(String.format("startsWith=%s&matches=%s&exclude=%s&start=%d&pageSize=%d", UrlUtils.escapeDataString(keyPrefix),
+        UrlUtils.escapeDataString(matches != null ? matches : ""),
+        UrlUtils.escapeDataString(exclude != null ? exclude : ""),
+        start, pageSize));
     return getRequest;
   }
 

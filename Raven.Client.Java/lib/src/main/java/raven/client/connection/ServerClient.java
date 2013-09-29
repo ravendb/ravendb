@@ -40,7 +40,6 @@ import raven.abstractions.commands.ScriptedPatchCommandData;
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.BatchResult;
 import raven.abstractions.data.Constants;
-import raven.abstractions.data.DatabaseDocument;
 import raven.abstractions.data.DatabaseStatistics;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.Facet;
@@ -85,16 +84,15 @@ import raven.client.document.DocumentConvention;
 import raven.client.exceptions.ConflictException;
 import raven.client.extensions.MultiDatabase;
 import raven.client.indexes.IndexDefinitionBuilder;
-import raven.client.indexes.RavenDocumentsByEntityName;
 import raven.client.listeners.IDocumentConflictListener;
 import raven.client.utils.TimeSpan;
 import raven.client.utils.UrlUtils;
 import raven.imports.json.JsonConvert;
 
-public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
+public class ServerClient implements IDatabaseCommands {
 
   private String url;
-  private final DocumentConvention convention;
+  final DocumentConvention convention;
   private final ICredentials credentials;
   private final Function1<String, ReplicationInformer> replicationInformerGetter;
   private String databaseName;
@@ -182,11 +180,16 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
   @Override
   public List<JsonDocument> startsWith(final String keyPrefix, final String matches, final int start, final int pageSize, final boolean metadataOnly) throws ServerClientException {
+    return startsWith(keyPrefix, matches, start, pageSize, false, null);
+  }
+
+  @Override
+  public List<JsonDocument> startsWith(final String keyPrefix, final String matches, final int start, final int pageSize, final boolean metadataOnly, final String transformer) throws ServerClientException {
     ensureIsNotNullOrEmpty(keyPrefix, "keyPrefix");
     return executeWithReplication(HttpMethods.GET, new Function1<String, List<JsonDocument>>() {
       @Override
       public List<JsonDocument> apply(String u) {
-        return directStartsWith(u, keyPrefix, matches, start, pageSize, metadataOnly);
+        return directStartsWith(u, keyPrefix, matches, start, pageSize, metadataOnly, transformer);
       }
     });
   }
@@ -222,7 +225,24 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
     return jsonRequestFactory.createHttpJsonRequest(createHttpJsonRequestParams);
   }
 
-  private <T> T executeWithReplication(HttpMethods method, Function1<String, T> operation) throws ServerClientException {
+  public HttpJsonRequest createReplicationAwareRequest(String currentServerUrl, String requestUrl, HttpMethods method) {
+    return createReplicationAwareRequest(currentServerUrl, requestUrl, method, false);
+  }
+
+  public HttpJsonRequest createReplicationAwareRequest(String currentServerUrl, String requestUrl, HttpMethods method, boolean disableRequestCompression) {
+    RavenJObject metadata = new RavenJObject();
+    addTransactionInformation(metadata);
+
+    CreateHttpJsonRequestParams createHttpJsonRequestParams =
+      new CreateHttpJsonRequestParams(this,  RavenUrlExtensions.noCache(url + requestUrl), method, metadata, credentials, convention)
+    .addOperationHeaders(operationsHeaders);
+    createHttpJsonRequestParams.setDisableRequestCompression(disableRequestCompression);
+    return jsonRequestFactory.createHttpJsonRequest(createHttpJsonRequestParams).addReplicationStatusHeaders(url, currentServerUrl, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+  }
+
+
+  <T> T executeWithReplication(HttpMethods method, Function1<String, T> operation) throws ServerClientException {
     int currentRequest = convention.incrementRequestCount();
     return replicationInformer.executeWithReplication(method, url, currentRequest, readStripingBase, operation);
   }
@@ -413,7 +433,7 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
     });
   }
 
-  private List<JsonDocument> directStartsWith(String operationUrl, String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly) throws ServerClientException {
+  private List<JsonDocument> directStartsWith(String operationUrl, String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly, String transformer) throws ServerClientException {
     RavenJObject metadata = new RavenJObject();
     addTransactionInformation(metadata);
     String actualUrl = operationUrl + String.format("/docs?startsWith=%s&matches=%s&start=%d&pageSize=%d", UrlUtils.escapeDataString(keyPrefix),
@@ -1193,7 +1213,36 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
   }
 
   @Override
+  public Iterator<RavenJObject> streamDocs() {
+    return streamDocs(null, null, null, 0, Integer.MAX_VALUE);
+  }
+
+  @Override
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag) {
+    return streamDocs(fromEtag, null, null, 0, Integer.MAX_VALUE, null);
+  }
+
+  @Override
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith) {
+    return streamDocs(fromEtag, startsWith, null, 0, Integer.MAX_VALUE, null);
+  }
+
+  @Override
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches) {
+    return streamDocs(fromEtag, startsWith, matches, 0, Integer.MAX_VALUE, null);
+  }
+
+  @Override
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start) {
+    return streamDocs(fromEtag, startsWith, matches, start, Integer.MAX_VALUE, null);
+  }
+  @Override
   public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize) {
+    return streamDocs(fromEtag, startsWith, matches, start, pageSize, null);
+  }
+
+  @Override
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize, String exclude) {
     if (fromEtag != null && startsWith != null)
       throw new IllegalArgumentException("Either fromEtag or startsWith must be null, you can't specify both");
 
@@ -2379,58 +2428,14 @@ public class ServerClient implements IDatabaseCommands, IAdminDatabaseCommands {
 
   @Override
   public IAdminDatabaseCommands getAdmin() {
-    return (IAdminDatabaseCommands) forSystemDatabase();
+    return new AdminServerClient(this);
   }
 
   @Override
-  public void createDatabase(DatabaseDocument databaseDocument) {
-    if (!databaseDocument.getSettings().containsKey("Raven/DataDir")) {
-      throw new IllegalStateException("The Raven/DataDir setting is mandatory");
-    }
-
-    String dbname = databaseDocument.getId().replaceAll("Raven/Databases/", "");
-    MultiDatabase.assertValidDatabaseName(dbname);
-
-    RavenJObject doc = RavenJObject.fromObject(databaseDocument);
-    doc.remove("Id");
-
-    try {
-      HttpJsonRequest req = createRequest(HttpMethods.PUT, "/admin/databases/" + UrlUtils.escapeDataString(dbname));
-      req.write(doc.toString());
-      req.executeRequest();
-    } catch (HttpOperationException e) {
-      EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
-      throw new ServerClientException(e);
-    } catch (Exception e) {
-      throw new ServerClientException(e);
-    }
-
+  public IGlobalAdminDatabaseCommands getGlobalAdmin() {
+    return new AdminServerClient(this);
   }
 
-  @Override
-  public void ensureDatabaseExists(String name, boolean ignoreFailures) {
-    ServerClient serverClient = (ServerClient) forSystemDatabase();
-    serverClient.forceReadFromMaster();
 
-    DatabaseDocument doc = MultiDatabase.createDatabaseDocument(name);
-
-    try {
-      if (serverClient.get(doc.getId()) != null) {
-        return;
-      }
-
-      serverClient.getAdmin().createDatabase(doc);
-    } catch (Exception e) {
-      if (ignoreFailures == false) {
-        throw e;
-      }
-    }
-
-    try {
-      new RavenDocumentsByEntityName().execute(serverClient.forDatabase(name), new DocumentConvention());
-    } catch (Exception e) {
-      // we really don't care if this fails, and it might, if the user doesn't have permissions on the new db
-    }
-  }
 
 }

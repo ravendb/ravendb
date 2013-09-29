@@ -39,7 +39,7 @@ import raven.client.extensions.MultiDatabase;
 
 import com.google.common.util.concurrent.FutureCallback;
 
-// TODO: finish me
+// TODO: finish me - sync with most recent version - failover servers
 public class ReplicationInformer implements AutoCloseable {
 
   private static Log log = LogFactory.getLog(ReplicationInformer.class.getCanonicalName());

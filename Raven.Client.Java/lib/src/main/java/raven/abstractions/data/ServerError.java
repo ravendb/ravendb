@@ -3,18 +3,30 @@ package raven.abstractions.data;
 import java.util.Date;
 
 public class ServerError {
-  private String index;
+  private int index;
+  private String indexName;
   private String error;
   private Date timestamp;
   private String document;
   private String action;
 
-  public String getIndex() {
+  public int getIndex() {
     return index;
   }
 
-  public void setIndex(String index) {
+
+  public void setIndex(int index) {
     this.index = index;
+  }
+
+
+  public String getIndexName() {
+    return indexName;
+  }
+
+
+  public void setIndexName(String indexName) {
+    this.indexName = indexName;
   }
 
   public String getError() {

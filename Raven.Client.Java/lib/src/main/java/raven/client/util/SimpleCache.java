@@ -59,7 +59,7 @@ public class SimpleCache implements AutoCloseable {
       Date lastWrite;
       if (lastWritePerDb.containsKey(value.getDatabase())) {
         lastWrite = lastWritePerDb.get(value.getDatabase());
-        if (value.getTime().before(lastWrite)) {
+        if (value.getTime().before(lastWrite) || value.getTime().equals(lastWrite)) {
           value.setForceServerCheck(true);
         }
       }

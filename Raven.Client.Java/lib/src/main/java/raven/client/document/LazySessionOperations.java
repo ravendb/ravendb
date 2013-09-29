@@ -13,9 +13,12 @@ import raven.abstractions.closure.Function0;
 import raven.client.document.batches.ILazyLoaderWithInclude;
 import raven.client.document.batches.ILazySessionOperations;
 import raven.client.document.batches.LazyLoadOperation;
+import raven.client.document.batches.LazyMultiLoadOperation;
 import raven.client.document.batches.LazyMultiLoaderWithInclude;
 import raven.client.document.batches.LazyStartsWithOperation;
 import raven.client.document.sessionoperations.LoadOperation;
+import raven.client.document.sessionoperations.MultiLoadOperation;
+import raven.client.indexes.AbstractTransformerCreationTask;
 
 import com.mysema.query.types.Path;
 
@@ -138,6 +141,43 @@ public class LazySessionOperations implements ILazySessionOperations {
   }
 
 
+
+  @Override
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> Lazy<TResult> load(
+    Class<TTransformer> tranformerClass, Class<TResult> clazz, String id) {
+    try {
+      String transformer = tranformerClass.newInstance().getTransformerName();
+      LoadOperation loadOperation = new LoadOperation(delegate, new Function0<AutoCloseable>() {
+        @Override
+        public AutoCloseable apply() {
+          return delegate.getDatabaseCommands().disableAllCaching();
+        }
+      }, id);
+      LazyLoadOperation<TResult> lazyLoadOperation = new LazyLoadOperation<>(clazz, id, loadOperation, transformer);
+      return delegate.addLazyOperation(lazyLoadOperation, null);
+    } catch (IllegalAccessException | InstantiationException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public <TResult, TTransformer extends AbstractTransformerCreationTask> Lazy<TResult[]> load(
+    Class<TTransformer> tranformerClass, Class<TResult> clazz, String... ids) {
+    try {
+      String transformer = tranformerClass.newInstance().getTransformerName();
+      MultiLoadOperation multiLoadOperation = new MultiLoadOperation(delegate, new Function0<AutoCloseable>() {
+        @Override
+        public AutoCloseable apply() {
+          return delegate.getDatabaseCommands().disableAllCaching();
+        }
+      }, ids, null);
+      LazyMultiLoadOperation<TResult> lazyLoadOperation = new LazyMultiLoadOperation<>(clazz,  multiLoadOperation, ids, null, transformer);
+      return delegate.addLazyOperation(lazyLoadOperation, null);
+    } catch (IllegalAccessException | InstantiationException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   /**
    * Begin a load while including the specified path
    */
@@ -173,9 +213,17 @@ public class LazySessionOperations implements ILazySessionOperations {
 
   @Override
   public <T> Lazy<T[]> loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize) {
-    LazyStartsWithOperation<T> operation = new LazyStartsWithOperation<>(clazz, keyPrefix, matches, start, pageSize, delegate);
+    return loadStartingWith(clazz, keyPrefix, matches, start, 25, null);
+  }
+
+  @Override
+  public <TResult> Lazy<TResult[]> loadStartingWith(Class<TResult> clazz, String keyPrefix, String matches, int start,
+    int pageSize, String exclude) {
+    LazyStartsWithOperation<TResult> operation = new LazyStartsWithOperation<>(clazz, keyPrefix, matches, exclude, start, pageSize, delegate);
     return delegate.addLazyOperation(operation, null);
   }
+
+
 
 
 }

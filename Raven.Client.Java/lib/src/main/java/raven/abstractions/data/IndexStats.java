@@ -1,6 +1,7 @@
 package raven.abstractions.data;
 
 import java.util.Date;
+import java.util.List;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
@@ -9,7 +10,8 @@ import raven.abstractions.basic.UseSharpEnum;
 import raven.abstractions.indexing.IndexLockMode;
 
 public class IndexStats {
-  private String name;
+  private String id;
+  private String publicName;
   private int indexingAttempts;
   private int indexingSuccesses;
   private int indexingErrors;
@@ -27,16 +29,50 @@ public class IndexStats {
   private Date lastIndexingTime;
   private String isOnRam;
   private IndexLockMode lockMode;
+  private List<String> forEntityName;
 
   private IndexingPerformanceStats[] performance;
+  public int docsCount;
 
 
-  public String getName() {
-    return name;
+  public List<String> getForEntityName() {
+    return forEntityName;
   }
 
-  public void setName(String name) {
-    this.name = name;
+
+
+  public void setForEntityName(List<String> forEntityName) {
+    this.forEntityName = forEntityName;
+  }
+
+
+
+  public int getDocsCount() {
+    return docsCount;
+  }
+
+
+
+  public void setDocsCount(int docsCount) {
+    this.docsCount = docsCount;
+  }
+
+
+  public String getPublicName() {
+    return publicName;
+  }
+
+
+  public void setPublicName(String publicName) {
+    this.publicName = publicName;
+  }
+
+  public String getId() {
+    return id;
+  }
+
+  public void setId(String id) {
+    this.id = id;
   }
 
   public int getIndexingAttempts() {
@@ -183,10 +219,12 @@ public class IndexStats {
     this.performance = performance;
   }
 
+
   @Override
   public String toString() {
-    return "IndexStats [name=" + name + "]";
+    return "IndexStats [id=" + id + "]";
   }
+
 
   @UseSharpEnum
   public static enum IndexingPriority {

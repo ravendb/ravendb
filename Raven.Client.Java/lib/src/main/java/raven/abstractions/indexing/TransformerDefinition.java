@@ -1,8 +1,21 @@
 package raven.abstractions.indexing;
 
 public class TransformerDefinition implements Cloneable {
-  public String transformResults;
-  public String name;
+  private String transformResults;
+  private int indexId;
+  private String name;
+
+
+  public int getIndexId() {
+    return indexId;
+  }
+
+
+
+  public void setIndexId(int indexId) {
+    this.indexId = indexId;
+  }
+
 
   @Override
   public String toString() {

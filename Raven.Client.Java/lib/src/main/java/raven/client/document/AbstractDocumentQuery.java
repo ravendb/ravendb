@@ -223,7 +223,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    */
   protected boolean disableEntitiesTracking;
 
-  /*
+  /**
    * Determine if query results should be cached.
    */
   protected boolean disableCaching;
@@ -302,7 +302,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     conventions = theSession == null ? new DocumentConvention() : theSession.getConventions();
     linqPathProvider = new LinqPathProvider(conventions);
 
-    if (conventions.getDefaultQueryingConsistency() == ConsistencyOptions.QUERY_YOUR_WRITES) {
+    if (conventions.getDefaultQueryingConsistency() == ConsistencyOptions.ALWAYS_WAIT_FOR_NON_STALE_RESULTS_AS_OF_LAST_WRITE) {
       waitForNonStaleResultsAsOfLastWrite();
     }
   }
@@ -1695,5 +1695,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
             : conventions.getFindPropertyNameForIndex().apply(clazz, indexName, "", result.getPath());
         return propertyName;
   }
+
+
 
 }

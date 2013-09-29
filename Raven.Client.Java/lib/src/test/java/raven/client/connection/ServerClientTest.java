@@ -53,7 +53,7 @@ public class ServerClientTest extends RavenDBAwareTests {
       DatabaseDocument databaseDocument = new DatabaseDocument();
       databaseDocument.setId("testingDb");
       databaseDocument.getSettings().put("Raven/DataDir", "~\\Databases\\testingDb");
-      dbCommands.getAdmin().createDatabase(databaseDocument);
+      dbCommands.getGlobalAdmin().createDatabase(databaseDocument);
     } finally {
       deleteDb("testingDb");
     }

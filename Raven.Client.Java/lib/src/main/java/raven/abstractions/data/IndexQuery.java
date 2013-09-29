@@ -66,19 +66,13 @@ public class IndexQuery {
     this.resultsTransformer = resultsTransformer;
   }
 
-
-
   public HighlightedField[] getHighlightedFields() {
     return highlightedFields;
   }
 
-
-
   public void setHighlightedFields(HighlightedField[] highlightedFields) {
     this.highlightedFields = highlightedFields;
   }
-
-
 
   public String[] getHighlighterPreTags() {
     return highlighterPreTags;

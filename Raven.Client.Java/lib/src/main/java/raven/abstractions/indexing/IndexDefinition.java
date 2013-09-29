@@ -34,6 +34,7 @@ public class IndexDefinition {
     this.maps.add(map);
   }
 
+  private int indexId;
   private String name;
   private IndexLockMode lockMode;
   private Set<String> maps;
@@ -51,6 +52,16 @@ public class IndexDefinition {
   private Integer cachedHashCode;
 
 
+
+
+  public int getIndexId() {
+    return indexId;
+  }
+
+
+  public void setIndexId(int indexId) {
+    this.indexId = indexId;
+  }
 
   /**
    * @return the termVectors
@@ -238,15 +249,19 @@ public class IndexDefinition {
   }
 
   /**
+   * Use Result Transformers instead.
    * @return the transformResults
    */
+  @Deprecated
   public String getTransformResults() {
     return transformResults;
   }
 
   /**
+   * Use Result Transformers instead.
    * @param transformResults the transformResults to set
    */
+  @Deprecated
   public void setTransformResults(String transformResults) {
     this.transformResults = transformResults;
   }
@@ -465,6 +480,7 @@ public class IndexDefinition {
   @Override
   public IndexDefinition clone() {
     IndexDefinition indexDefinition = new IndexDefinition();
+    indexDefinition.setIndexId(indexId);
     indexDefinition.setName(name);
     indexDefinition.setReduce(reduce);
     indexDefinition.setTransformResults(transformResults);

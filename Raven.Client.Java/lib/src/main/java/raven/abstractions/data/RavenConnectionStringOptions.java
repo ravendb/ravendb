@@ -13,7 +13,17 @@ public class RavenConnectionStringOptions {
   private String url;
   private String apiKey;
   private String currentOAuthToken;
+  private FailoverServers failoverServers;
 
+
+  public FailoverServers getFailoverServers() {
+    return failoverServers;
+  }
+
+
+  public void setFailoverServers(FailoverServers failoverServers) {
+    this.failoverServers = failoverServers;
+  }
 
   public String getUrl() {
     return url;

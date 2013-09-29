@@ -5,6 +5,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -199,14 +200,24 @@ public class SerializationHelper {
     if (highlighings == null) {
       highlighings = new RavenJObject();
     }
+    ObjectMapper defaultJsonSerializer = JsonExtensions.createDefaultJsonSerializer();
+    TypeFactory typeFactory = defaultJsonSerializer.getTypeFactory();
     try {
-      ObjectMapper defaultJsonSerializer = JsonExtensions.createDefaultJsonSerializer();
-      TypeFactory typeFactory = defaultJsonSerializer.getTypeFactory();
       ArrayType arrayType = typeFactory.constructArrayType(String.class);
       MapType innerMapType = typeFactory.constructMapType(Map.class, SimpleType.construct(String.class), arrayType);
       MapType mapType = typeFactory.constructMapType(Map.class, SimpleType.construct(String.class), innerMapType);
       Map<String, Map<String, String[]>> readValue = defaultJsonSerializer.readValue(highlighings.toString(), mapType);
       result.setHighlightings(readValue);
+
+
+      if (json.value(RavenJObject.class, "ScoreExplanations") != null) {
+        Map<String, String> map = defaultJsonSerializer
+          .readValue(json.value(RavenJObject.class, "ScoreExplanations").toString(),
+            typeFactory.constructMapType(Map.class, SimpleType.construct(String.class), SimpleType.construct(String.class)));
+        result.setScoreExplanations(map);
+      } else {
+        result.setScoreExplanations(new HashMap<String, String>());
+      }
     } catch (IOException e) {
       throw new RuntimeException("Unable to read highlighings info", e);
     }

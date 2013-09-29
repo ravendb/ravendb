@@ -31,7 +31,6 @@ import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.IDocumentQuery;
 import raven.client.IDocumentSessionImpl;
-import raven.client.ILoadConfiguration;
 import raven.client.ISyncAdvancedSessionOperation;
 import raven.client.ITransactionalDocumentSession;
 import raven.client.LoadConfigurationFactory;
@@ -753,7 +752,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   @Override
   public <T> Lazy<T[]> lazyLoadInternal(Class<T> clazz, String[] ids, Tuple<String, Class<?>>[] includes, Action1<T[]> onEval) {
     MultiLoadOperation multiLoadOperation = new MultiLoadOperation(this, new DisableAllCachingCallback(), ids, includes);
-    LazyMultiLoadOperation<T> lazyOp = new LazyMultiLoadOperation<>(clazz, multiLoadOperation, ids, includes);
+    LazyMultiLoadOperation<T> lazyOp = new LazyMultiLoadOperation<>(clazz, multiLoadOperation, ids, includes, null);
     return addLazyOperation(lazyOp, onEval);
   }
 
@@ -830,7 +829,12 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
 
   @Override
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize) {
-    List<JsonDocument> results = getDatabaseCommands().startsWith(keyPrefix, matches, start, pageSize);
+    return loadStartingWith(clazz, keyPrefix, matches, start, 25, null);
+  }
+
+  @Override
+  public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize, String exclude) {
+    List<JsonDocument> results = getDatabaseCommands().startsWith(keyPrefix, matches, start, pageSize, false, exclude);
     for (JsonDocument doc: results) {
       trackEntity(clazz, doc);
     }

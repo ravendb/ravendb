@@ -4,15 +4,47 @@ import raven.abstractions.data.DatabaseDocument;
 
 public interface IAdminDatabaseCommands {
   /**
-   * Creates new database
-   * @param databaseDocument
+   *  Disables all indexing
    */
-  public void createDatabase(DatabaseDocument databaseDocument);
+  public void stopIndexing();
 
   /**
-   *  Ensures that the database exists, creating it if needed
-   * @param name
-   * @param ignoreFailures
+   * Enables indexing
    */
-  public void ensureDatabaseExists(String name, boolean ignoreFailures);
+  public void startIndexing();
+
+  /**
+   * Begins a backup operation
+   * @param backupLocation
+   * @param databaseDocument
+   */
+  public void startBackup(String backupLocation, DatabaseDocument databaseDocument);
+
+  /**
+   * Begins a restore operation
+   * @param restoreLocation
+   * @param databaseLocation
+   */
+  public void startRestore(String restoreLocation, String databaseLocation);
+
+  /**
+   * Begins a restore operation
+   * @param restoreLocation
+   * @param databaseLocation
+   */
+  public void startRestore(String restoreLocation, String databaseLocation, String databaseName);
+
+  /**
+   * Begins a restore operation
+   * @param restoreLocation
+   * @param databaseLocation
+   */
+  public void startRestore(String restoreLocation, String databaseLocation, String databaseName, boolean defrag);
+
+  /**
+   *  Get the indexing status
+   * @return
+   */
+  public String getIndexingStatus();
+
 }
