@@ -1,8 +1,14 @@
 package raven.abstractions.indexing;
 
 import raven.abstractions.data.StringDistanceTypes;
+import raven.abstractions.data.SuggestionQuery;
 
 public class SuggestionOptions {
+
+  public SuggestionOptions() {
+    distance = SuggestionQuery.DEFAULT_DISTANCE;
+    accuracy = SuggestionQuery.DEFAULT_ACCURACY;
+  }
 
   private StringDistanceTypes distance;
   private float accuracy;

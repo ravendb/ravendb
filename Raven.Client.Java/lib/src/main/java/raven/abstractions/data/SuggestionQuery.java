@@ -2,12 +2,19 @@ package raven.abstractions.data;
 
 public class SuggestionQuery {
 
+  public static float DEFAULT_ACCURACY = 0.5f;
+
+  public static int DEFAULT_MAX_SUGGESTIONS = 15;
+
+  public static StringDistanceTypes DEFAULT_DISTANCE = StringDistanceTypes.LEVENSHTEIN;
+
+
   /**
    * Create a new instance of {@link SuggestionQuery}
    */
   public SuggestionQuery() {
-    maxSuggestions = 15;
-    distance = StringDistanceTypes.DEFAULT;
+    maxSuggestions = DEFAULT_MAX_SUGGESTIONS;
+    distance = StringDistanceTypes.LEVENSHTEIN;
   }
 
 

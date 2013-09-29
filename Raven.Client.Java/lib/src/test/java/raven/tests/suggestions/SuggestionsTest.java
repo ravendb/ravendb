@@ -127,7 +127,7 @@ public class SuggestionsTest extends RemoteClientTest {
   @Test
   public void withTypo() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
-
+      createIndexAndData(store);
       SuggestionQuery query = new SuggestionQuery("Name", "Oern");// intentional typo
       query.setMaxSuggestions(10);
       query.setAccuracy(0.2f);

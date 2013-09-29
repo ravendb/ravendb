@@ -36,7 +36,7 @@ public class IndexDefinition {
 
   private int indexId;
   private String name;
-  private IndexLockMode lockMode;
+  private IndexLockMode lockMode = IndexLockMode.UNLOCK;
   private Set<String> maps;
   private String reduce;
   private String transformResults;
