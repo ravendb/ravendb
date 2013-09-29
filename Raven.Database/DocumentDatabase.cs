@@ -1215,7 +1215,9 @@ namespace Raven.Database
             if (name == null)
                 throw new ArgumentNullException("name");
 
-			var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
+	        var fixedName = IndexDefinitionStorage.FixupIndexName(name);
+
+			var existingIndex = IndexDefinitionStorage.GetIndexDefinition(fixedName);
 
             if (existingIndex != null)
             {
@@ -1243,7 +1245,7 @@ namespace Raven.Database
                     break;
             }
 
-			IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
+			IndexDefinitionStorage.RegisterNewIndexInThisSession(fixedName, definition);
 
             // this has to happen in this fashion so we will expose the in memory status after the commit, but 
             // before the rest of the world is notified about this.
@@ -1544,8 +1546,8 @@ namespace Raven.Database
 
 
         public void DeleteTransfom(string name)
-        {
-            IndexDefinitionStorage.RemoveTransformer(name);
+		{
+			IndexDefinitionStorage.RemoveTransformer(name);
         }
 
         public void DeleteIndex(string name)
@@ -2380,13 +2382,15 @@ namespace Raven.Database
 
         public Etag GetIndexEtag(string indexName, Etag previousEtag, string resultTransformer = null)
         {
+	        var fixedName = IndexDefinitionStorage.FixupIndexName(indexName);
+
             Etag lastDocEtag = Etag.Empty;
             Etag lastReducedEtag = null;
             bool isStale = false;
             int touchCount = 0;
             TransactionalStorage.Batch(accessor =>
             {
-				var indexInstance = IndexStorage.GetIndexInstance(indexName);
+				var indexInstance = IndexStorage.GetIndexInstance(fixedName);
 	            if (indexInstance == null)
 		            return;
 	            isStale = (indexInstance.IsMapIndexingInProgress) ||
