@@ -74,8 +74,8 @@ namespace Raven.Client.Connection
 				request.SkipServerCheck = cachedRequestDetails.SkipServerCheck;
 			}
 
-			if (SessionTimeout != null && SessionTimeout.HasValue && SessionTimeout.Value.TotalSeconds > 1)
-				request.Timeout = SessionTimeout.Value;
+			if (RequestTimeout != null)
+				request.Timeout = RequestTimeout.Value;
 
 			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs {Request = request.webRequest});
 			return request;
@@ -180,9 +180,9 @@ namespace Raven.Client.Connection
 		///<summary>
 		/// Session timeout - Thread Local
 		///</summary>
-		public TimeSpan? SessionTimeout {
-			get { return sessionTimeout.Value; }
-			set { sessionTimeout.Value = value; }
+		public TimeSpan? RequestTimeout {
+			get { return requestTimeout.Value; }
+			set { requestTimeout.Value = value; }
 		}
 
 		/// <summary>
@@ -204,7 +204,7 @@ namespace Raven.Client.Connection
 		public bool EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
 
 		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
-		private readonly ThreadLocal<TimeSpan?> sessionTimeout = new ThreadLocal<TimeSpan?>(() => null);
+		private readonly ThreadLocal<TimeSpan?> requestTimeout = new ThreadLocal<TimeSpan?>(() => null);
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
 
 		private volatile bool disposed;
@@ -306,7 +306,7 @@ namespace Raven.Client.Connection
 			cache.Dispose();
 			aggressiveCacheDuration.Dispose();
 			disableHttpCaching.Dispose();
-			sessionTimeout.Dispose();
+			requestTimeout.Dispose();
 		}
 
 		internal void UpdateCacheTime(HttpJsonRequest httpJsonRequest)

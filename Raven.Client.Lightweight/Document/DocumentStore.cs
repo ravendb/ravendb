@@ -810,17 +810,15 @@ namespace Raven.Client.Document
 		/// <remarks>
 		/// Sets the timeout for the JsonRequest.  Scoped to the Current Thread.
 		/// </remarks>
-		public override IDisposable SetTimeoutFor(TimeSpan timeout) {
+		public override IDisposable SetRequestsTimeoutFor(TimeSpan timeout) {
 			AssertInitialized();
 #if !SILVERLIGHT && !NETFX_CORE
-			if (timeout.TotalSeconds < 1)
-				throw new ArgumentException("timeout must be longer than a single second");
 
-			var old = jsonRequestFactory.SessionTimeout;
-			jsonRequestFactory.SessionTimeout = timeout;
+			var old = jsonRequestFactory.RequestTimeout;
+			jsonRequestFactory.RequestTimeout = timeout;
 
 			return new DisposableAction(() => {
-				jsonRequestFactory.SessionTimeout = old;
+				jsonRequestFactory.RequestTimeout = old;
 			});
 #else
 			// TODO: with silverlight, we don't currently support session timeout

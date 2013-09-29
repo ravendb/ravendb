@@ -207,9 +207,9 @@ namespace Raven.Client.Shard
 		/// <remarks>
 		/// Sets the timeout for the JsonRequest.  Scoped to the Current Thread.
 		/// </remarks>
-		public override IDisposable SetTimeoutFor(TimeSpan timeout) {
+		public override IDisposable SetRequestsTimeoutFor(TimeSpan timeout) {
 			var disposables =
-				ShardStrategy.Shards.Select(shard => shard.Value.SetTimeoutFor(timeout)).ToList();
+				ShardStrategy.Shards.Select(shard => shard.Value.SetRequestsTimeoutFor(timeout)).ToList();
 
 			return new DisposableAction(() => {
 				foreach (var disposable in disposables) {

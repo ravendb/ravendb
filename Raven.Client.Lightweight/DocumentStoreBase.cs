@@ -64,7 +64,7 @@ namespace Raven.Client
 
 		public abstract IDisposable DisableAggressiveCaching();
 
-		public abstract IDisposable SetTimeoutFor(TimeSpan timeout);
+		public abstract IDisposable SetRequestsTimeoutFor(TimeSpan timeout);
 
 #if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
