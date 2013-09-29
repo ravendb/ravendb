@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Text;
@@ -386,7 +387,7 @@ namespace Raven.Studio.Models
 				            var expiration = result.Document.Metadata["Raven-Expiration-Date"];
 				            if (expiration != null)
 				            {
-				                ExpireAt.Value = DateTime.Parse(expiration.ToString());
+				                ExpireAt.Value = DateTime.Parse(expiration.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 				                EnableExpiration.Value = true;
 				                HasExpiration = true;
 				            }

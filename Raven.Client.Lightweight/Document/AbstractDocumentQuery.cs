@@ -1860,7 +1860,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (type == typeof(DateTime))
 			{
 				var val = (DateTime)whereParams.Value;
-				var s = val.ToString(Default.DateTimeFormatsToWrite);
+				var s = val.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
 				if (val.Kind == DateTimeKind.Utc)
 					s += "Z";
 				return s;
@@ -1868,7 +1868,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (type == typeof(DateTimeOffset))
 			{
 				var val = (DateTimeOffset)whereParams.Value;
-				return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
+				return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
 			}
 			
 			if(type == typeof(decimal))
@@ -1972,13 +1972,13 @@ If you really want to do in memory filtering on the data returned from the query
 			if (whereParams.Value is DateTime)
 			{
 				var dateTime = (DateTime) whereParams.Value;
-				var dateStr = dateTime.ToString(Default.DateTimeFormatsToWrite);
+				var dateStr = dateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
 				if(dateTime.Kind == DateTimeKind.Utc)
 					dateStr += "Z";
 				return dateStr;
 			}
 			if (whereParams.Value is DateTimeOffset)
-				return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
+				return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
 
 			if (whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{
