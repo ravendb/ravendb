@@ -72,7 +72,7 @@ namespace Raven.Client
 		/// <remarks>
 		/// Sets the timeout for the JsonRequest.  Scoped to the Current Thread.
 		/// </remarks>
-		IDisposable SetTimeoutFor(TimeSpan timeout);
+		IDisposable SetRequestsTimeoutFor(TimeSpan timeout);
 
 		/// <summary>
 		/// Gets the shared operations headers.
