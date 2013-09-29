@@ -112,7 +112,13 @@ namespace Raven.Database.Data
 												realMappings.Concat(new[] { AggregationMapPart() }).Where(x => x != null))),
 				Reduce = DynamicAggregation ? null : AggregationReducePart(),
 				TransformResults = DynamicAggregation ? AggregationReducePart() : null,
+                InternalFieldsMapping = new Dictionary<string,string>()
 			};
+
+		    foreach (var item in Items)
+		    {
+		        index.InternalFieldsMapping[item.To] = item.From;
+		    }
 
 			if (DynamicAggregation)
 			{
@@ -281,23 +287,23 @@ namespace Raven.Database.Data
 			}
 		}
 
-		public void AddExistingIndexDefinition(IndexDefinition indexDefinition, DocumentDatabase database, IndexQuery query)
+      	public void AddExistingIndexDefinition(IndexDefinition indexDefinition, DocumentDatabase database, IndexQuery query)
 		{
 			var abstractViewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexDefinition.IndexId);
 			if (abstractViewGenerator == null) return; // No biggy, it just means we'll have two small indexes and we'll do this again later
 
             this.Items = this.Items.Union(
-                abstractViewGenerator.Fields
-                   .Where(field => this.Items.All(item => item.To != field) && !field.StartsWith("__"))
+                existing.InternalFieldsMapping
+                   .Where(field => this.Items.All(item => item.To != field.Key) && !field.Key.StartsWith("__"))
                    .Select(field => new DynamicQueryMappingItem()
                    {
-                       From = field,
-                       To = ReplaceInvalidCharactersForFields(field),
-                       QueryFrom = EscapeParentheses(field)
+                       From = field.Value,
+                       To = ReplaceInvalidCharactersForFields(field.Key),
+                       QueryFrom = EscapeParentheses(field.Key)
                    })
            ).ToArray();
 
-            this.SortDescriptors = this.SortDescriptors.Union(
+          this.SortDescriptors = this.SortDescriptors.Union(
                 indexDefinition.SortOptions
                     .Where(option => this.SortDescriptors.All(desc => desc.Field != option.Key))
                     .Select(option => new DynamicSortInfo()
@@ -307,19 +313,19 @@ namespace Raven.Database.Data
                     })
                 ).ToArray();
 
-            foreach (var fieldStorage in abstractViewGenerator.Stores)
+            foreach (var fieldStorage in existing.Stores)
             {
                 KeyValuePair<string, FieldStorage> storage = fieldStorage;
                 extraActionsToPerform.Add(def=> def.Stores[storage.Key] = storage.Value);
             }
 
-            foreach (var fieldIndex in abstractViewGenerator.Indexes)
+            foreach (var fieldIndex in existing.Indexes)
             {
                 KeyValuePair<string, FieldIndexing> index = fieldIndex;
                 extraActionsToPerform.Add(def=> def.Indexes[index.Key] = index.Value);
             }
 
-            foreach (var fieldTermVector in abstractViewGenerator.TermVectors)
+            foreach (var fieldTermVector in existing.TermVectors)
             {
                 KeyValuePair<string, FieldTermVector> vector = fieldTermVector;
                 extraActionsToPerform.Add(def=> def.TermVectors[vector.Key] = vector.Value);

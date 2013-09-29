@@ -142,6 +142,12 @@ namespace Raven.Abstractions.Indexing
 		/// <value>The spatial options.</value>
 		public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
 
+        /// <summary>
+        /// Internal map of field names to expressions generating them
+        /// Only relevant for auto indexes and only used internally
+        /// </summary>
+        public IDictionary<string, string> InternalFieldsMapping { get; set; }
+
 		/// <summary>
 		/// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
 		/// the one document produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
