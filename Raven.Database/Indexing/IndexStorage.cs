@@ -105,11 +105,9 @@ namespace Raven.Database.Indexing
 		{
 			if (indexName == null) throw new ArgumentNullException("indexName");
 
-			var fixedName = indexDefinitionStorage.FixupIndexName(indexName);
-
 			startupLog.Debug("Loading saved index {0}", indexName);
 
-			var indexDefinition = indexDefinitionStorage.GetIndexDefinition(fixedName);
+			var indexDefinition = indexDefinitionStorage.GetIndexDefinition(indexName);
 			if (indexDefinition == null)
 				return;
 
@@ -132,7 +130,7 @@ namespace Raven.Database.Indexing
 						simpleIndex.RemoveDirectlyFromIndex(keysToDeleteAfterRecovery);
 					}
 
-					LoadExistingSuggestionsExtentions(fixedName, indexImplementation);
+					LoadExistingSuggestionsExtentions(indexName, indexImplementation);
 					documentDatabase.TransactionalStorage.Batch(accessor =>
 					{
 						IndexStats indexStats = accessor.Indexing.GetIndexStats(indexDefinition.IndexId);
@@ -142,7 +140,7 @@ namespace Raven.Database.Indexing
 						}
 
 
-						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", fixedName);
+                        var read = accessor.Lists.Read("Raven/Indexes/QueryTime", indexName);
 						if (read == null)
 							return;
 
@@ -163,13 +161,13 @@ namespace Raven.Database.Indexing
 						recoveryTried = true;
 						startupLog.WarnException("Could not open index " + indexName + ". Trying to recover index", e);
 
-						keysToDeleteAfterRecovery = TryRecoveringIndex(fixedName, indexDefinition, luceneDirectory);
+						keysToDeleteAfterRecovery = TryRecoveringIndex(indexName, indexDefinition, luceneDirectory);
 					}
 					else
 					{
 						resetTried = true;
 						startupLog.WarnException("Could not open index " + indexName + ". Recovery operation failed, forcibly resetting index", e);
-						TryResettingIndex(fixedName, indexDefinition);
+                        TryResettingIndex(indexName, indexDefinition);
 					}
 				}
 			}
