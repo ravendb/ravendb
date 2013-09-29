@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Xunit;
-
-namespace Raven.Tests.Voron
+﻿namespace Raven.Tests.Storage.Voron
 {
+	using Xunit;
+
 	[Trait("VoronTest", "StorageActionsTests")]
 	public class StorageIntegrationTests : RavenTest
 	{

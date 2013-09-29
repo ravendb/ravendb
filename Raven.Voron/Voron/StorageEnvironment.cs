@@ -48,7 +48,7 @@ namespace Voron
                 Setup(pager);
 
                 FreeSpaceRoot.Name = "Free Space";
-                Root.Name = "Root";
+	            Root.Name = Constants.RootTreeName;
 
                 Writer = new TransactionMergingWriter(this);
             }

@@ -34,9 +34,11 @@
 
 		private void Initialize()
 		{
+		    var storageFilePath = Path.Combine(filePath, PAGER_FILENAME);
+
 			if (Directory.Exists(directoryPath))
 			{
-				CreatedNew = !File.Exists(this.filePath);
+				CreatedNew = !File.Exists(storageFilePath);
 			}
 			else
 			{
@@ -44,7 +46,6 @@
 				CreatedNew = true;
 			}
 
-		    var storageFilePath = Path.Combine(filePath, PAGER_FILENAME);
 		    Pager = new MemoryMapPager(storageFilePath);
 		}
 
