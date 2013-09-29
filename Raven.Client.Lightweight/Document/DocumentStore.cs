@@ -762,6 +762,31 @@ namespace Raven.Client.Document
 #endif
 		}
 
+		/// <summary>
+		/// Setup the WebRequest timeout for the session
+		/// </summary>
+		/// <param name="timeout">Specify the timeout duration</param>
+		/// <remarks>
+		/// Sets the timeout for the JsonRequest.  Scoped to the Current Thread.
+		/// </remarks>
+		public override IDisposable SetTimeoutFor(TimeSpan timeout) {
+			AssertInitialized();
+#if !SILVERLIGHT && !NETFX_CORE
+			if (timeout.TotalSeconds < 1)
+				throw new ArgumentException("timeout must be longer than a single second");
+
+			var old = jsonRequestFactory.SessionTimeout;
+			jsonRequestFactory.SessionTimeout = timeout;
+
+			return new DisposableAction(() => {
+				jsonRequestFactory.SessionTimeout = old;
+			});
+#else
+			// TODO: with silverlight, we don't currently support session timeout
+			return new DisposableAction(() => { });
+#endif
+		}
+
 		private IAsyncDocumentSession OpenAsyncSessionInternal(string dbName, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
 			AssertInitialized();
@@ -776,7 +801,7 @@ namespace Raven.Client.Document
 
 				var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, listeners, sessionId)
 				{
-				    DatabaseName = dbName ?? DefaultDatabase
+					DatabaseName = dbName ?? DefaultDatabase
 				};
 				AfterSessionCreated(session);
 				return session;
@@ -810,7 +835,7 @@ namespace Raven.Client.Document
 
 		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
 		{
-            return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
+			return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
 		}
 
 		/// <summary>
