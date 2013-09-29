@@ -257,7 +257,7 @@
 				{
 					var data = RavenJObject.FromObject(new { Name = "Bar" });
 					data.WriteTo(dataStream);
-
+					dataStream.Position = 0;
 					storage.Batch(mutator => mutator.Attachments.AddAttachment("Foo", null, dataStream, new RavenJObject()));
 
 					Attachment fetchedAttachment = null;
@@ -267,10 +267,11 @@
 
 					RavenJObject fetchedAttachmentData = null;
 					Assert.DoesNotThrow(() =>
+						storage.Batch(viewer =>
 						{
 							using (var fetchedDataStream = fetchedAttachment.Data())
 								fetchedAttachmentData = fetchedDataStream.ToJObject();
-						});
+						}));
 					Assert.NotNull(fetchedAttachmentData);
 
 					Assert.Equal(fetchedAttachmentData.Keys, data.Keys);
@@ -299,6 +300,7 @@
 						{
 							var dataStream = new MemoryStream();
 							item.WriteTo(dataStream);
+							dataStream.Position = 0; 
 							// ReSharper disable once RedundantAssignment
 							mutator.Attachments.AddAttachment("Foo_" + (index++), null, dataStream, new RavenJObject());
 						});
@@ -320,11 +322,12 @@
 				for (int itemIndex = 0; itemIndex < ITEM_COUNT; itemIndex++)
 				{
 					RavenJObject fetchedAttachmentData = null;
-					Assert.DoesNotThrow(() =>
-					{
-						using (var dataStream = fetchedAttachments.First(row => row.Key == "Foo_" + itemIndex).Data())
-							fetchedAttachmentData = dataStream.ToJObject();
-					});
+					Assert.DoesNotThrow(() => 
+						storage.Batch(viewer =>
+						{
+							using (var dataStream = fetchedAttachments.First(row => row.Key == "Foo_" + itemIndex).Data())
+								fetchedAttachmentData = dataStream.ToJObject();
+						}));
 					Assert.NotNull(fetchedAttachmentData);
 
 					Assert.Equal(inputData[itemIndex].Value<string>("Name"), fetchedAttachmentData.Value<string>("Name"));

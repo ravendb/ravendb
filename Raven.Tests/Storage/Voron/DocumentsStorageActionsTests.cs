@@ -348,9 +348,9 @@
 				voronStorage.Batch(mutator =>
 				{
 					for (int docIndex = 0; docIndex < DOCUMENT_COUNT; docIndex++)
-						mutator.Documents.InsertDocument("Foo" + docIndex, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true);
+						mutator.Documents.AddDocument("Foo" + docIndex, null, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject());
 				});
-
+				
 				long documentCount = 0;
 				voronStorage.Batch(viewer => documentCount = viewer.Documents.GetDocumentsCount());
 
@@ -366,15 +366,15 @@
 			const int DOCUMENT_DELETION_COUNT = 4;
 			const int DELETION_START_INDEX = DOCUMENT_COUNT / 3;
 
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 				{
 					for (int docIndex = 0; docIndex < DOCUMENT_COUNT; docIndex++)
-						mutator.Documents.InsertDocument("Foo" + docIndex, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true);
+						mutator.Documents.AddDocument("Foo" + docIndex,null, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()); 									
 				});
 
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 				{
 					for (int docIndex = DELETION_START_INDEX; docIndex < DELETION_START_INDEX + DOCUMENT_DELETION_COUNT; docIndex++)
 					{
@@ -385,7 +385,7 @@
 				});
 
 				long documentCount = 0;
-				voronStorage.Batch(viewer => documentCount = viewer.Documents.GetDocumentsCount());
+				storage.Batch(viewer => documentCount = viewer.Documents.GetDocumentsCount());
 
 				Assert.Equal(DOCUMENT_COUNT - DOCUMENT_DELETION_COUNT, documentCount); //implicitly also check whether DeleteDocument also deletes properly all related document data (from indices)
 			}
