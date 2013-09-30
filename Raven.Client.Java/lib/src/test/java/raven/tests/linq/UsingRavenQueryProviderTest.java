@@ -843,7 +843,7 @@ public class UsingRavenQueryProviderTest extends RemoteClientTest {
     }
   }
 
-  @Test //TODO: this test also has issue with int/double mapping
+  @Test
   public void can_Use_In_IEnumerable_In_Where_Clause_with_negation() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
       try (IDocumentSession session = store.openSession()) {

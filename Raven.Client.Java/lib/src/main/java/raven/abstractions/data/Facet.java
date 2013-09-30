@@ -177,7 +177,6 @@ public class Facet {
       return right.getConstant();
     }
 
-    //TODO: handle other types like x.total.gt(someExtenal variable)
     throw new IllegalArgumentException("Unable to parse expression: " + operation);
   }
   private static String getStringRepresentation(Operator<? super Boolean> op, Object value) {

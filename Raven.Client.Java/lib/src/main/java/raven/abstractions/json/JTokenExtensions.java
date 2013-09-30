@@ -12,8 +12,6 @@ import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 
 public class JTokenExtensions {
-   //TODO: finish me
-
 
   public static Iterable<Tuple<RavenJToken, RavenJToken>> selectTokenWithRavenSyntaxReturningFlatStructure(RavenJToken self, String path) {
     List<Tuple<RavenJToken, RavenJToken>> resultList = new ArrayList<>();

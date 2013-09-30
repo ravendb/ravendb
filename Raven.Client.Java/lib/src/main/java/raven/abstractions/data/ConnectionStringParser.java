@@ -65,23 +65,18 @@ public class ConnectionStringParser<T extends RavenConnectionStringOptions> {
     case "url":
       connectionStringOptions.setUrl(value);
       break;
-      /*TODO:
-       * case "failoverurl":
-                    if (ConnectionStringOptions.FailoverServers == null)
-                        ConnectionStringOptions.FailoverServers = new FailoverServers();
+    case "failoverurl":
+      if (connectionStringOptions.getFailoverServers() == null) {
+        connectionStringOptions.setFailoverServers(new FailoverServers());
+      }
 
-                    var databaseNameAndFailoverUrl = value.Split('|');
-
-                    if (databaseNameAndFailoverUrl.Length == 1)
-                    {
-                        ConnectionStringOptions.FailoverServers.AddForDefaultDatabase(urls: databaseNameAndFailoverUrl[0]);
-                    }
-                    else
-                    {
-                        ConnectionStringOptions.FailoverServers.AddForDatabase(databaseName: databaseNameAndFailoverUrl[0], urls: databaseNameAndFailoverUrl[1]);
-                    }
-                    break;
-       */
+      String[] databaseNameAndFailoverUrl = value.split("|");
+      if (databaseNameAndFailoverUrl.length == 1) {
+        connectionStringOptions.getFailoverServers().addForDefaultDatabase(databaseNameAndFailoverUrl[0]);
+      } else {
+        connectionStringOptions.getFailoverServers().addForDatabase(databaseNameAndFailoverUrl[0], databaseNameAndFailoverUrl[1]);
+      }
+      break;
     case "database":
     case "defaultdatabase":
       connectionStringOptions.setDefaultDatabase(value);
