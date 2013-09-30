@@ -70,6 +70,7 @@ import raven.abstractions.exceptions.TransformCompilationException;
 import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.extensions.MetadataExtensions;
 import raven.abstractions.indexing.IndexDefinition;
+import raven.abstractions.indexing.NumberUtil;
 import raven.abstractions.indexing.TransformerDefinition;
 import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJArray;
@@ -1923,7 +1924,7 @@ public class ServerClient implements IDatabaseCommands {
       requestUri += "&distance=" + UrlUtils.escapeDataString(SharpEnum.value(suggestionQuery.getDistance()));
     }
     if (suggestionQuery.getAccuracy() != null) {
-      requestUri += "&accuracy=" + String.format(Constants.getDefaultLocale(), "%.4f", suggestionQuery.getAccuracy());
+      requestUri += "&accuracy=" + NumberUtil.trimZeros(String.format(Constants.getDefaultLocale(), "%.4f", suggestionQuery.getAccuracy()));
     }
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(

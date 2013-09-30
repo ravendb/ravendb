@@ -2,6 +2,7 @@ package raven.tests.suggestions;
 
 import static org.junit.Assert.assertEquals;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import raven.abstractions.data.StringDistanceTypes;
@@ -124,6 +125,7 @@ public class SuggestionsTest extends RemoteClientTest {
     }
   }
 
+  @Ignore("server currently has bug - supports variant numbers only - see RavenDB-1382")
   @Test
   public void withTypo() throws Exception {
     try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
