@@ -16,14 +16,7 @@ namespace Raven.Database.Linq.PrivateExtensions
 	/// </summary>
 	public static class LinqOnDynamic
 	{
-        public static object GetValueOrDefault(this object o)
-        {
-            if (o is DynamicNullObject)
-                return o;
-            return o ?? new DynamicNullObject();
-        }
-
-		public static IEnumerable<IGrouping<dynamic, dynamic>> GroupBy(this IEnumerable<dynamic> source, Func<dynamic, dynamic> keySelector)
+        public static IEnumerable<IGrouping<dynamic, dynamic>> GroupBy(this IEnumerable<dynamic> source, Func<dynamic, dynamic> keySelector)
 		{
 			return Enumerable.GroupBy(source, keySelector).Select(inner => new WrapperGrouping(inner));
 		}

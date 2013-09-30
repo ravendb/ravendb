@@ -1455,6 +1455,12 @@ namespace Raven.Client.Indexes
 					return node;
 				}
 			}
+            if (node.Method.Name == "GetValueOrDefault" && Nullable.GetUnderlyingType(node.Method.DeclaringType) != null)
+            {
+                Visit(node.Object);
+                return node; // we don't do anything here on the server
+            }
+			
 			var num = 0;
 			var expression = node.Object;
 			if (IsExtensionMethod(node))
@@ -1495,7 +1501,7 @@ namespace Raven.Client.Indexes
 					Out(".");
 				}
 			}
-			if (node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node))
+            if (node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node))
 			{
 				Out("DynamicEnumerable.");
 			}
