@@ -72,7 +72,7 @@ public class LinqPathProvider {
       if (numberOperation.getOperator().equals(Ops.MAP_SIZE) || numberOperation.getOperator().equals(Ops.ARRAY_SIZE)) {
         if (numberOperation.getArgs().size() != 1) {
           throw new IllegalArgumentException("Invalid computation: " + numberOperation
-              + ". You cannot use computation (only simple member expression are allowed) in RavenDB queries.");
+            + ". You cannot use computation (only simple member expression are allowed) in RavenDB queries.");
         }
         Result target = getPath(numberOperation.getArg(0));
 
@@ -87,9 +87,13 @@ public class LinqPathProvider {
 
     if (expression instanceof Operation) {
       Operation<?> operation = (Operation< ? >) expression;
-      if (operation.getOperator().equals(Ops.STRING_LENGTH)) {
+      if (operation.getOperator().equals(Ops.STRING_LENGTH) || operation.getOperator().equals(Ops.ARRAY_SIZE)) {
         Result result = getPath(operation.getArg(0));
         result.setPath(result.getPath() + ".Length");
+        return result;
+      } else if (operation.getOperator().equals(Ops.COL_SIZE)) {
+        Result result = getPath(operation.getArg(0));
+        result.setPath(result.getPath() + ".Count");
         return result;
       }
     }
@@ -124,14 +128,38 @@ public class LinqPathProvider {
         newResult.setPath(extractPath(memberExpression));
         newResult.setNestedPath(memberExpression.getMetadata().getParent().getMetadata().getPathType().equals(PathType.PROPERTY));
         newResult.setMemberType(memberExpression.getType());
-        //TODO:newResult.setMaybeProperty(memberExpression.get) do we need it?
 
+
+        newResult.setMaybeProperty(fetchMaybeProperty(memberExpression));
         newResult.setPath(handlePropertyRenames(memberExpression, newResult.getPath()));
         return newResult;
       }
-
     }
     throw new IllegalArgumentException("Don't know how to translate: " + expression);
+  }
+
+  private Field fetchMaybeProperty(Path<?> memberExpression) {
+    try {
+      Path<?> parent = memberExpression.getMetadata().getParent();
+      if (parent == null) {
+        return null;
+      }
+      String fieldName = memberExpression.getMetadata().getName();
+      Field declaredField = null;
+      Class<?> type = parent.getType();
+      while (true) {
+        declaredField = type.getDeclaredField(fieldName);
+        if (declaredField != null) {
+          return declaredField;
+        }
+        type = type.getSuperclass();
+        if (Object.class.equals(type)) {
+          return null;
+        }
+      }
+    } catch (NoSuchFieldException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private String extractPath(Path<?> expression) {
@@ -191,23 +219,17 @@ public class LinqPathProvider {
       return (Path< ? >) expression;
     }
     throw new IllegalStateException("Could not understand how to translate '" + expression + "' to a RavenDB query.\n" +
-        "Are you trying to do computation during the query?\n" +
-        "RavenDB doesn't allow computation during the query, computation is only allowed during index. Consider moving the operation to an index."
-        );
+      "Are you trying to do computation during the query?\n" +
+      "RavenDB doesn't allow computation during the query, computation is only allowed during index. Consider moving the operation to an index."
+      );
   }
 
   public static boolean getValueFromExpressionWithoutConversion(Expression<?> expression, Reference<Object> valueRef) {
-    //TODO: update me
     if (expression instanceof Constant) {
       valueRef.value = ((Constant<?>) expression).getConstant();
       return true;
     }
     return false;
-  }
-
-  private static Object getMemberValue(Path<?> memberExpression) {
-    // TODO Auto-generated method stub
-    return null;
   }
 
   private void assertNoComputation(Path<?> expression) {

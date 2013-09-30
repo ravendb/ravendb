@@ -21,7 +21,7 @@ import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
 
-public class Patching extends RemoteClientTest {
+public class PatchingTest extends RemoteClientTest {
   @QueryEntity
   public static class Post {
     private String id;

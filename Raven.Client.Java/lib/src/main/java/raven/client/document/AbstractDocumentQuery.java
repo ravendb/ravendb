@@ -1689,11 +1689,6 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     LinqPathProvider.Result result = linqPathProvider.getPath(expression);
     result.setPath(result.getPath().substring(result.getPath().indexOf('.') + 1));
 
-    /*TODO:
-    if (expression.NodeType == ExpressionType.ArrayLength)
-      result.Path += ".Length";
-     */
-
     String propertyName = indexName == null || indexName.toLowerCase().startsWith("dynamic/")
         ? conventions.getFindPropertyNameForDynamicIndex().apply(clazz, indexName, "", result.getPath())
             : conventions.getFindPropertyNameForIndex().apply(clazz, indexName, "", result.getPath());

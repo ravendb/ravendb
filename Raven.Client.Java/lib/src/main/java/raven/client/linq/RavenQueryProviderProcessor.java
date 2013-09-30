@@ -60,7 +60,6 @@ public class RavenQueryProviderProcessor<T> {
   private boolean chanedWhere;
   private int insideWhere;
   private IAbstractDocumentQuery<T> luceneQuery;
-  private Expression<?> predicate;
   private SpecialQueryType queryType = SpecialQueryType.NONE;
   private Class<?> newExpressionType;
   private String currentPath = "";
@@ -168,7 +167,6 @@ public class RavenQueryProviderProcessor<T> {
   }
 
   private void visitBooleanOperation(Operation<Boolean> expression) {
-    //TODO: support for QueryDSL between
     if (expression.getOperator().equals(Ops.OR)) {
       visitOrElse(expression);
     } else if (expression.getOperator().equals(Ops.AND)) {
@@ -487,7 +485,6 @@ public class RavenQueryProviderProcessor<T> {
 
 
   private boolean isMemberAccessForQuerySource(Expression< ? > arg) {
-    //TODO: parameter
     if (!(arg instanceof Path<?>)) {
       return false;
     }
@@ -548,7 +545,6 @@ public class RavenQueryProviderProcessor<T> {
     //for standard queries, we take just the last part. But for dynamic queries, we take the whole part
     result.setPath(result.getPath().substring(result.getPath().indexOf('.') + 1));
 
-    //TODO:array length
     String propertyName = indexName == null  || indexName.toLowerCase().startsWith("dynamic/")
       ? queryGenerator.getConventions().getFindPropertyNameForDynamicIndex().apply(clazz, indexName, currentPath, result.getPath())
         : queryGenerator.getConventions().getFindPropertyNameForIndex().apply(clazz, indexName, currentPath, result.getPath());
@@ -638,8 +634,6 @@ public class RavenQueryProviderProcessor<T> {
   }
 
   private void visitConstant(Constant< ? > expression, boolean boolValue) {
-    //TODO: handle non-strings
-
     if (String.class.equals(expression.getType())) {
       if (currentPath.endsWith(",")) {
         currentPath = currentPath.substring(0, currentPath.length() - 1);
@@ -652,6 +646,8 @@ public class RavenQueryProviderProcessor<T> {
       whereParams.setAllowWildcards(false);
       whereParams.setNestedPath(false);
       luceneQuery.whereEquals(whereParams);
+    } else {
+      throw new IllegalStateException("Unable to handle constant:" + expression.getConstant());
     }
   }
 
@@ -1038,11 +1034,9 @@ public class RavenQueryProviderProcessor<T> {
     luceneQuery = (IAbstractDocumentQuery<T>) getLuceneQueryFor(expression);
     if (newExpressionType.equals(clazz)) {
       return executeQuery(clazz);
+    } else {
+      throw new IllegalStateException("Don't know how to handle expression:" + expression);
     }
-    /*TODOvar genericExecuteQuery = typeof (RavenQueryProviderProcessor<T>).GetMethod("ExecuteQuery", BindingFlags.Instance | BindingFlags.NonPublic);
-    var executeQueryWithProjectionType = genericExecuteQuery.MakeGenericMethod(newExpressionType);
-    return executeQueryWithProjectionType.Invoke(this, new object[0]);*/
-    return null; //TODO:
   }
 
   @SuppressWarnings("unchecked")
