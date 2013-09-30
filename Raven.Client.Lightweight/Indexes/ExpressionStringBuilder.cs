@@ -227,7 +227,6 @@ namespace Raven.Client.Indexes
 
 		private void OutMember(Expression instance, MemberInfo member, Type exprType)
 		{
-			OutputTypeIfNeeded(member);
 			var name = GetPropertyName(member.Name, exprType);
 			if (translateIdentityProperty &&
 				convention.GetIdentityProperty(member.DeclaringType) == member &&
@@ -258,7 +257,6 @@ namespace Raven.Client.Indexes
 
 				Out(member.DeclaringType.Name + "." + name);
 			}
-			CloseOutputTypeIfNeeded(member);
 		}
 
 		private string GetPropertyName(string name, Type exprType)
@@ -289,29 +287,6 @@ namespace Raven.Client.Indexes
 			return name;
 		}
 
-		private void CloseOutputTypeIfNeeded(MemberInfo member)
-		{
-			var memberType = GetMemberType(member);
-			var nonNullable = Nullable.GetUnderlyingType(memberType);
-			if (nonNullable != null && nonNullable != typeof(Guid) && nonNullable.IsEnum == false && TypeExistsOnServer(nonNullable))
-			{
-				Out(")");
-			}
-		}
-
-		private void OutputTypeIfNeeded(MemberInfo member)
-		{
-			// we need to to handle things such as:
-			// foo.NullableDatetime.GetValueOrDefault().Date
-			var memberType = GetMemberType(member);
-			var nonNullable = Nullable.GetUnderlyingType(memberType);
-			if (nonNullable != null && nonNullable != typeof(Guid) && nonNullable.IsEnum == false && TypeExistsOnServer(nonNullable))
-			{
-				Out("((");
-				Out(ConvertTypeToCSharpKeyword(nonNullable));
-				Out("?) ");
-			}
-		}
 
 		private static Type GetMemberType(MemberInfo member)
 		{
@@ -1321,10 +1296,20 @@ namespace Raven.Client.Indexes
 		protected override Expression VisitMember(MemberExpression node)
 		{
 
-			if (Nullable.GetUnderlyingType(node.Member.DeclaringType) != null && node.Member.Name == "Value")
+			if (Nullable.GetUnderlyingType(node.Member.DeclaringType) != null)
 			{
-				Visit(node.Expression);
-				return node; // we don't have nullable type on the server side, we can safely ignore this.
+                switch (node.Member.Name)
+			    {
+                    case "HasValue":
+                        // we don't have nullable type on the server side, we just compare to null
+                        Out("(");
+                        Visit(node.Expression);
+                        Out(" != null)");
+			            return node;
+                    case "Value":
+                        Visit(node.Expression);
+                        return node; // we don't have nullable type on the server side, we can safely ignore this.
+			    }
 			}
 
 			OutMember(node.Expression, node.Member, node.Expression == null ? node.Type : node.Expression.Type);
