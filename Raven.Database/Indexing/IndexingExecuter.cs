@@ -59,7 +59,8 @@ namespace Raven.Database.Indexing
 				return true;
 			}
 
-			if (indexingPriority.HasFlag(IndexingPriority.Disabled))
+			if (indexingPriority.HasFlag(IndexingPriority.Disabled) || 
+                indexingPriority.HasFlag(IndexingPriority.Error))
 				return false;
 
 			if (isIdle == false)

@@ -972,6 +972,7 @@ namespace Raven.Database.Indexing
 					var thisItem = autoIndexesSortedByLastQueryTime[i];
 
 					if (thisItem.Priority.HasFlag(IndexingPriority.Disabled) || // we don't really have much to say about those in here
+                        thisItem.Priority.HasFlag(IndexingPriority.Error) || // no need to touch erroring indexes
 						thisItem.Priority.HasFlag(IndexingPriority.Forced))// if it is forced, we can't change it
 						continue;
 

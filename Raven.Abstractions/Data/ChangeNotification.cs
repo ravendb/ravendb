@@ -56,7 +56,9 @@ namespace Raven.Abstractions.Data
 
 		IndexDemotedToAbandoned = 128,
 
-		IndexDemotedToDisabled = 256
+		IndexDemotedToDisabled = 256,
+
+        IndexMarkedAsErrored = 512
 	}
 
 	public class IndexChangeNotification : EventArgs
