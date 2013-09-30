@@ -1201,15 +1201,14 @@ namespace Raven.Client.Connection.Async
             return ExecuteWithReplication("GET", async operationUrl =>
             {
                 var requestUri = operationUrl + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&popularity={4}",
-                    Uri.EscapeUriString(index),
-                    Uri.EscapeDataString(suggestionQuery.Term),
-                    Uri.EscapeDataString(suggestionQuery.Field),
-                                                              Uri.EscapeDataString(
-                                                                  suggestionQuery.MaxSuggestions.ToInvariantString()),
-                                                     suggestionQuery.Popularity);
+                                                              Uri.EscapeUriString(index),
+                                                              Uri.EscapeDataString(suggestionQuery.Term),
+                                                              Uri.EscapeDataString(suggestionQuery.Field),
+                                                              Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToInvariantString()),
+                                                              suggestionQuery.Popularity);
 
                 if (suggestionQuery.Accuracy.HasValue)
-                    requestUri += "&accuracy=" + suggestionQuery.Accuracy.Value;
+                    requestUri += "&accuracy=" + suggestionQuery.Accuracy.Value.ToInvariantString();
 
                 if (suggestionQuery.Distance.HasValue)
                     requestUri += "&distance=" + suggestionQuery.Distance;
