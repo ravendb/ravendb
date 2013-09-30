@@ -9,6 +9,11 @@ namespace Raven.Tests.MailingList
 {
 	public class MultiMapIndexWithDynamicFieldsTests : RavenTest
 	{
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        {
+            configuration.MaxIndexOutputsPerDocument = 100;
+        }
+
 		[Fact]
 		public void CanSortDynamically()
 		{
