@@ -7,8 +7,11 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -38,6 +41,13 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
+		public override Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
+		{
+			var landlord = (DatabasesLandlord) controllerContext.Configuration.Properties[typeof (DatabasesLandlord)];
+			landlord.IncrementRequestCount();
+			return base.ExecuteAsync(controllerContext, cancellationToken);
+		}
+
 		public DatabasesLandlord DatabasesLandlord
 		{
 			get
@@ -48,7 +58,10 @@ namespace Raven.Database.Server.Controllers
 
 		public DocumentDatabase Database
 		{
-			get { return DatabasesLandlord.GetDatabaseInternal(DatabaseName).Result; }
+			get
+			{
+				return DatabasesLandlord.GetDatabaseInternal(DatabaseName).Result;
+			}
 		}
 
 		public async Task<T> ReadJsonObjectAsync<T>()
@@ -135,7 +148,7 @@ namespace Raven.Database.Server.Controllers
 
 		internal Etag EtagHeaderToEtag()
 		{
-			var responseHeader = GetQueryStringValue("If-None-Match");
+			var responseHeader = GetHeader("If-None-Match");
 			if (string.IsNullOrEmpty(responseHeader))
 				return Etag.InvalidEtag;
 
@@ -382,7 +395,7 @@ namespace Raven.Database.Server.Controllers
 		public void AddHeader(string key, string value, HttpResponseMessage msg)
 		{
 			if (msg.Content == null)
-				msg.Content = new StringContent("");
+				msg.Content = new JsonContent();
 			msg.Content.Headers.Add(key, value);
 		}
 
@@ -417,14 +430,11 @@ namespace Raven.Database.Server.Controllers
 
 		public HttpResponseMessage GetMessageWithObject(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
+			var token = item as RavenJToken ?? RavenJToken.FromObject(item);
 			var msg = new HttpResponseMessage(code)
 			{
-				Content = new StringContent(RavenJToken.FromObject(item).ToString())
-				//TODO: change to object content with our own media type formatter
-				//	Content = new ObjectContent(typeof(object), item, new JsonMediaTypeFormatter(), new MediaTypeHeaderValue("application/json"))
+				Content = new JsonContent(token),
 			};
-
-
 
 			WriteETag(etag, msg);
 
@@ -435,7 +445,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var resMsg = new HttpResponseMessage(code)
 			{
-				Content = new StringContent(msg)
+				Content = new JsonContent(msg)
 			};
 			WriteETag(etag, resMsg);
 
@@ -447,28 +457,27 @@ namespace Raven.Database.Server.Controllers
 		{
 			if (msg == null)
 				msg = new HttpResponseMessage(status);
-			var str = data.ToString(Formatting.None);
+
+			var jsonContent = ((JsonContent) msg.Content);
 			var jsonp = GetQueryStringValue("jsonp");
+
+			WriteHeaders(headers, etag, msg);
+
 			if (string.IsNullOrEmpty(jsonp) == false)
 			{
-				str = jsonp + "(" + str + ");";
-
-				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/javascript") { CharSet = "utf-8" };
+				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/javascript") {CharSet = "utf-8"};
+				jsonContent.Jsonp = jsonp;
 			}
 			else
 			{
 				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
 			}
 
-			return WriteData(DefaultEncoding.GetBytes(str), headers, etag, msg);
-		}
+			jsonContent.Token = data;
 
-		public HttpResponseMessage WriteData(byte[] data, RavenJObject headers, Etag etag, HttpResponseMessage msg)
-		{
-			msg.Content = new ByteArrayContent(data);
-			WriteHeaders(headers, etag, msg);
 			return msg;
 		}
+
 
 		public Etag GetEtag()
 		{

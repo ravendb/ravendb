@@ -35,6 +35,7 @@ namespace Raven.Database.Server.Security
 		public void Initialize(DocumentDatabase database, IRavenServer theServer)
 		{
 			this.database = database;
+			this.settings = database.Configuration;
 			this.server = theServer;
 		}
 

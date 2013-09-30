@@ -22,19 +22,19 @@ namespace Raven.Database.Server.Security.OAuth
 			var isGetRequest = IsGetRequest(httpRequest.HttpMethod, httpRequest.Url.AbsolutePath);
 			var allowUnauthenticatedUsers = // we need to auth even if we don't have to, for bundles that want the user 
 				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.All ||
-				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin || 
-			        Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
-			        isGetRequest;
+				Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin ||
+					Settings.AnonymousUserAccessMode == AnonymousUserAccessMode.Get &&
+					isGetRequest;
 
 			var token = GetToken(ctx);
-			
+
 			if (token == null)
 			{
 				if (allowUnauthenticatedUsers)
 					return true;
 
 				WriteAuthorizationChallenge(ctx, hasApiKey ? 412 : 401, "invalid_request", "The access token is required");
-				
+
 				return false;
 			}
 
@@ -58,19 +58,19 @@ namespace Raven.Database.Server.Security.OAuth
 			}
 
 			var writeAccess = isGetRequest == false;
-			if(!tokenBody.IsAuthorized(TenantId, writeAccess))
+			if (!tokenBody.IsAuthorized(TenantId, writeAccess))
 			{
 				if (allowUnauthenticatedUsers || ignoreDbAccess)
 					return true;
 
-				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope", 
+				WriteAuthorizationChallenge(ctx, 403, "insufficient_scope",
 					writeAccess ?
 					"Not authorized for read/write access for tenant " + TenantId :
 					"Not authorized for tenant " + TenantId);
-	   
+
 				return false;
 			}
-			
+
 			ctx.User = new OAuthPrincipal(tokenBody, TenantId);
 			CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = tokenBody.UserId;
 			CurrentOperationContext.User.Value = ctx.User;
@@ -87,7 +87,7 @@ namespace Raven.Database.Server.Security.OAuth
 
 		public override void Dispose()
 		{
-			
+
 		}
 
 		static string GetToken(IHttpContext ctx)
@@ -95,7 +95,7 @@ namespace Raven.Database.Server.Security.OAuth
 			const string bearerPrefix = "Bearer ";
 
 			var auth = ctx.Request.Headers["Authorization"];
-			if(auth == null)
+			if (auth == null)
 			{
 				auth = ctx.Request.GetCookie("OAuth-Token");
 				if (auth != null)
@@ -106,7 +106,7 @@ namespace Raven.Database.Server.Security.OAuth
 				return null;
 
 			var token = auth.Substring(bearerPrefix.Length, auth.Length - bearerPrefix.Length);
-			
+
 			return token;
 		}
 
@@ -115,7 +115,7 @@ namespace Raven.Database.Server.Security.OAuth
 			const string bearerPrefix = "Bearer ";
 
 			var auth = controller.GetHeader("Authorization");
-			if(auth == null)
+			if (auth == null)
 			{
 				auth = controller.GetCookie("OAuth-Token");
 				if (auth != null)
@@ -126,7 +126,7 @@ namespace Raven.Database.Server.Security.OAuth
 				return null;
 
 			var token = auth.Substring(bearerPrefix.Length, auth.Length - bearerPrefix.Length);
-			
+
 			return token;
 		}
 
@@ -145,14 +145,14 @@ namespace Raven.Database.Server.Security.OAuth
 						Host = ctx.Request.Url.Host,
 						Port = ctx.Request.Url.Port
 					}.Uri.ToString());
-			
+
 				}
 			}
 			ctx.Response.StatusCode = statusCode;
 			ctx.Response.AddHeader("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));
 		}
 
-			void WriteAuthorizationChallenge(RavenApiController controller, int statusCode, string error, string errorDescription)
+		void WriteAuthorizationChallenge(RavenApiController controller, int statusCode, string error, string errorDescription)
 		{
 			var msg = new HttpResponseMessage();
 
@@ -169,10 +169,10 @@ namespace Raven.Database.Server.Security.OAuth
 						Host = controller.Request.RequestUri.Host,
 						Port = controller.Request.RequestUri.Port
 					}.Uri.ToString(), msg);
-			
+
 				}
 			}
-			msg.StatusCode = (HttpStatusCode) statusCode;
+			msg.StatusCode = (HttpStatusCode)statusCode;
 			controller.AddHeader("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription), msg);
 
 			throw new HttpResponseException(msg);
@@ -200,7 +200,7 @@ namespace Raven.Database.Server.Security.OAuth
 			return new OAuthPrincipal(tokenBody, null);
 		}
 
-			public IPrincipal GetUser(RavenApiController controller, bool hasApiKey)
+		public IPrincipal GetUser(RavenApiController controller, bool hasApiKey)
 		{
 			var token = GetToken(controller);
 
@@ -222,7 +222,7 @@ namespace Raven.Database.Server.Security.OAuth
 			return new OAuthPrincipal(tokenBody, null);
 		}
 	}
-	}
+}
 
 public class OAuthPrincipal : IPrincipal, IIdentity
 {

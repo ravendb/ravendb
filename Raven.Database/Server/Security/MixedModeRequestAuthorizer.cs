@@ -199,5 +199,29 @@ namespace Raven.Database.Server.Security
 
 			return tokenString;
 		}
+
+		public string GenerateSingleUseAuthToken(DocumentDatabase db, IPrincipal user, RavenApiController controller)
+		{
+			var token = new OneTimeToken
+			{
+				DatabaseName = controller.DatabaseName,
+				GeneratedAt = SystemTime.UtcNow,
+				User = user
+			};
+			var tokenString = Guid.NewGuid().ToString();
+
+			singleUseAuthTokens.TryAdd(tokenString, token);
+
+			if (singleUseAuthTokens.Count > 25)
+			{
+				foreach (var oneTimeToken in singleUseAuthTokens.Where(x => (x.Value.GeneratedAt - SystemTime.UtcNow).TotalMinutes > 5))
+				{
+					OneTimeToken value;
+					singleUseAuthTokens.TryRemove(oneTimeToken.Key, out value);
+				}
+			}
+
+			return tokenString;
+		}
 	}
 }

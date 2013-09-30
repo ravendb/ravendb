@@ -27,6 +27,8 @@ namespace Raven.Database.Server.WebApi
 		private HttpSelfHostServer server;
 		private readonly DatabasesLandlord databasesLandlord;
 
+		public DatabasesLandlord Landlord{get { return databasesLandlord; }}
+
 		public WebApiServer(InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
 		{
 			this.configuration = configuration;
@@ -74,30 +76,18 @@ namespace Raven.Database.Server.WebApi
 			server = new HttpSelfHostServer(cfg);
 			return server.OpenAsync();
 		}
-
-		private int reqNum;
+		
 		public void ResetNumberOfRequests()
 		{
-			//TODO: implement method
-			Interlocked.Exchange(ref reqNum, 0);
-			Interlocked.Exchange(ref physicalRequestsCount, 0);
-			//#if DEBUG
-			//			while (recentRequests.Count > 0)
-			//			{
-			//				string _;
-			//				recentRequests.TryDequeue(out _);
-			//			}
-			//#endif
+			Landlord.ResetNumberOfRequests();
+		}
+
+		public int NumberOfRequests
+		{
+			get { return Landlord.NumberOfRequests; }
 		}
 
 		public static readonly Regex ChangesQuery = new Regex("^(/databases/([^/]+))?/changes/events", RegexOptions.IgnoreCase);
-
-
-		private int physicalRequestsCount;
-		public int NumberOfRequests
-		{
-			get { return Thread.VolatileRead(ref physicalRequestsCount); }
-		}
 
 		public Task<DocumentDatabase> GetDatabaseInternal(string name)
 		{

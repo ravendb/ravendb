@@ -49,7 +49,10 @@ namespace Raven.Database.Server.WebApi.Handlers
 			// Copy all headers from original content in to new one
 			foreach (var header in origContent.Headers)
 			{
-				request.Content.Headers.Add(header.Key, header.Value);
+				foreach (var val in header.Value)
+				{
+					request.Content.Headers.Add(header.Key, val);
+				}
 			}
 
 			// Replace the original content-type with content type

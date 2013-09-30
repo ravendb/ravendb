@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Database.Server.Security;
 using Raven.Database.Util.Streams;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
@@ -36,11 +37,13 @@ namespace Raven.Database.Server.Controllers
 				// a single use token for them.
 
 				//TODO: after adding the authorzier
-				//var token = DatabasesLandlord.RequestAuthorizer.GenerateSingleUseAuthToken(Database, User);
-				//return GetMessageWithObject(new
-				//{
-				//	Token = token
-				//});
+				var authorizer = (MixedModeRequestAuthorizer)Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+
+				var token = authorizer.GenerateSingleUseAuthToken(Database, User, this);
+				return GetMessageWithObject(new
+				{
+					Token = token
+				});
 
 				return new HttpResponseMessage(HttpStatusCode.OK);
 			}

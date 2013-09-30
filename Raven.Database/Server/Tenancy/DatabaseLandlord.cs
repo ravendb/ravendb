@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions;
@@ -432,6 +433,32 @@ namespace Raven.Database.Server.Tenancy
 
 		public void Dispose()
 		{
+		}
+
+		private int reqNum;
+		private int physicalRequestsCount;
+		public int NumberOfRequests
+		{
+			get { return Thread.VolatileRead(ref physicalRequestsCount); }
+		}
+
+		public void ResetNumberOfRequests()
+		{
+			//TODO: implement method
+			Interlocked.Exchange(ref reqNum, 0);
+			Interlocked.Exchange(ref physicalRequestsCount, 0);
+			//#if DEBUG
+			//			while (recentRequests.Count > 0)
+			//			{
+			//				string _;
+			//				recentRequests.TryDequeue(out _);
+			//			}
+			//#endif
+		}
+
+		public void IncrementRequestCount()
+		{
+			Interlocked.Increment(ref physicalRequestsCount);
 		}
 	}
 }

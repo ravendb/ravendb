@@ -221,7 +221,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			Database.StopIndexingWorkers();			
 		}
 
-		[HttpGet("stats")]
+		[HttpGet("admin/stats")]
 		public HttpResponseMessage Stats()
 		{
 			if (Database != DatabasesLandlord.SystemDatabase)

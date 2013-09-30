@@ -244,7 +244,7 @@ namespace Raven.Abstractions.Extensions
 		}
 #endif
 
-		public static RavenJObject FilterHeadersAttachment(this HttpResponseHeaders self)
+		public static RavenJObject FilterHeadersAttachment(this HttpHeaders self)
 		{
 			var filterHeaders = self.FilterHeaders();
 
@@ -260,7 +260,7 @@ namespace Raven.Abstractions.Extensions
 		/// </summary>
 		/// <param name="self">The self.</param>
 		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeaders(this HttpResponseHeaders self)
+		public static RavenJObject FilterHeaders(this HttpHeaders self)
 		{
 			var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
 			foreach (var a in self)

@@ -57,7 +57,7 @@ namespace Raven.Tests.Issues
             int[] streamDocsRequestCounter = {0};
             using (var ravenServer = GetNewServer())
             {
-                ravenServer.Server.BeforeRequest += (sender, args) =>
+                ravenServer.Server.Landlord.BeforeRequest += (sender, args) =>
                 {
                     if (args.Context.Request.RawUrl.Contains("/streams/docs?"))
                     {

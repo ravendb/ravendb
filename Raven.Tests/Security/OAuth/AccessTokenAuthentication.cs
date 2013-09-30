@@ -140,8 +140,6 @@ namespace Raven.Tests.Security.OAuth
 
 				using (var response = request.MakeRequest())
 				{
-
-
 					Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 					var challenge = response.Headers["WWW-Authenticate"];
 					Assert.NotEmpty(challenge);
