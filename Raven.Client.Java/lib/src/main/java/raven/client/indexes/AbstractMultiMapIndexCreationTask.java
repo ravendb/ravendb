@@ -3,6 +3,8 @@ package raven.client.indexes;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.reflections.Reflections;
+
 import raven.abstractions.indexing.IndexDefinition;
 import raven.client.document.DocumentConvention;
 

@@ -241,4 +241,10 @@ public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<
    */
   public T singleOrDefault();
 
+  /**
+   * Returns if any entry matches query
+   * @return
+   */
+  public boolean any();
+
 }

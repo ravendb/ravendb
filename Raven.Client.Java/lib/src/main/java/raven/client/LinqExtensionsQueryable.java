@@ -155,8 +155,6 @@ public interface LinqExtensionsQueryable<T> {
 
   public IRavenQueryable<T> intersect();
 
-  //TODO: public static IRavenQueryable<TResult> ProjectFromIndexFieldsInto<TResult>(this IQueryable queryable)
-
   public SuggestionQueryResult suggest();
 
   public SuggestionQueryResult suggest(SuggestionQuery query);

@@ -707,7 +707,6 @@ public class RavenQueryProviderProcessor<T> {
     } else if (operatorId.equals(LinqOps.Query.LONG_COUNT.getId())) {
       visitExpression(expression.getArg(0));
       visitLongCount();
-      //TODO: all
     } else if (operatorId.equals(LinqOps.Query.ORDER_BY.getId())) {
       visitExpression(expression.getArg(0));
       Expression< ? > orderSpecExpression = expression.getArg(1);
@@ -960,8 +959,6 @@ public class RavenQueryProviderProcessor<T> {
     luceneQuery.take(constantExpression.getConstant());
   }
 
-  //TODO: visit all
-
   private void visitAny(Operation<?> exp) {
     ExpressionInfo memberInfo = getMember(exp.getArg(0));
 
@@ -1142,14 +1139,8 @@ public class RavenQueryProviderProcessor<T> {
           throw new IllegalStateException("Expected one result. Got: " + list.size());
         }
         return list.isEmpty() ? null : list.get(0);
-      case ALL:
-        //TODO:
-        //        var pred = predicate.Compile();
-        //        return finalQuery.AsQueryable().All(projection => pred((T) (object) projection));
-        return null;
       case ANY:
-        //TODO: return finalQuery.Any();
-        return null;
+        return finalQuery.any();
       case COUNT:
         return finalQuery.getQueryResult().getTotalResults();
       case LONG_COUNT:

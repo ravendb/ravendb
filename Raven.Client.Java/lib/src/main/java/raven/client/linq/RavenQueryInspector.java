@@ -543,4 +543,9 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
     return where(predicate).longCount();
   }
 
+  @Override
+  public boolean any() {
+    return (boolean) provider.execute(Expressions.operation(Object.class, LinqOps.Query.ANY, getExpression()));
+  }
+
 }

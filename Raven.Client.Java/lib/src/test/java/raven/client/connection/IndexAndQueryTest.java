@@ -122,11 +122,6 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
   }
 
   @Test
-  public void testAsDocument() {
-    //TODO provide logic + test for it + MetadataFor (http://ravendb.net/docs/2.0/client-api/querying/static-indexes/defining-static-index)
-  }
-
-  @Test
   public void testStreamQuery() throws Exception {
     try {
       createDb();

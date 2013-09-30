@@ -54,4 +54,8 @@ public class EnumerableUtils {
     return iterator.next();
   }
 
+  public static <T> boolean any(Iterator<T> iterator) {
+    return iterator.hasNext();
+  }
+
 }

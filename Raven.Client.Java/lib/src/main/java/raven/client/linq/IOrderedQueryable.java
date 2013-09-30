@@ -161,6 +161,13 @@ public interface IOrderedQueryable<T> extends Iterable<T> {
   public int count();
 
   /**
+   * Performs any query.
+   * Returns true is any entry would be returned in normal query.
+   * @return
+   */
+  public boolean any();
+
+  /**
    * Performs count query - each result must match specified predicate.
    * @param predicate
    * @return

@@ -465,6 +465,11 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   }
 
   @Override
+  public boolean any() {
+    return EnumerableUtils.any(iterator());
+  }
+
+  @Override
   public T firstOrDefault() {
     return EnumerableUtils.firstOrDefault(iterator());
   }

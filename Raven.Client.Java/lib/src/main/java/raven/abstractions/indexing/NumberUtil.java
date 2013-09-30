@@ -64,7 +64,6 @@ public class NumberUtil {
    * @param number
    * @return
    */
-  //TODO: test parsing on different locale
   public static Object stringToNumber(String number)
   {
     if (number == null)
