@@ -3,7 +3,6 @@ package raven.tests.indexes;
 import com.mysema.query.annotations.QueryEntity;
 
 public class LinqIndexesFromClient {
-  //TODO: finish me
 
   public static enum Gender {
     /**

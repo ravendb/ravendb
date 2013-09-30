@@ -1,8 +1,15 @@
 package raven.client;
 
+import java.util.Iterator;
+
+import raven.abstractions.basic.Reference;
+import raven.abstractions.data.Etag;
+import raven.abstractions.data.QueryHeaderInformation;
+import raven.abstractions.data.StreamResult;
 import raven.client.document.batches.IEagerSessionOperations;
 import raven.client.document.batches.ILazySessionOperations;
 import raven.client.indexes.AbstractIndexCreationTask;
+import raven.client.linq.IRavenQueryable;
 
 /**
  * Advanced synchronous session operations
@@ -115,38 +122,106 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    */
   public String getDocumentUrl(Object entity);
 
-  /*TODO
-  /// <summary>
-  /// Stream the results on the query to the client, converting them to
-  /// CLR types along the way.
-  /// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
-  /// </summary>
-  IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query);
-  /// <summary>
-  /// Stream the results on the query to the client, converting them to
-  /// CLR types along the way.
-  /// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
-  /// </summary>
-  IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation);
+  /**
+   * Stream the results on the query to the client, converting them to
+   * Java types along the way.
+   * Does NOT track the entities in the session, and will not includes changes there when saveChanges() is called
+   * @param query
+   * @return
+   */
+  public <T> Iterator<StreamResult<T>> stream(IRavenQueryable<T> query);
 
-  /// <summary>
-  /// Stream the results on the query to the client, converting them to
-  /// CLR types along the way.
-  /// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
-  /// </summary>
-  IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query);
+  /**
+   * Stream the results on the query to the client, converting them to
+   * Java types along the way.
+   * Does NOT track the entities in the session, and will not includes changes there when saveChanges() is called
+   * @param query
+   * @param queryHeaderInformation
+   * @return
+   */
+  public <T> Iterator<StreamResult<T>> stream(IRavenQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
 
-  /// <summary>
-  /// Stream the results on the query to the client, converting them to
-  /// CLR types along the way.
-  /// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
-  /// </summary>
-  IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation);
+  /**
+   * Stream the results on the query to the client, converting them to
+   * Java types along the way.
+   * Does NOT track the entities in the session, and will not includes changes there when saveChanges() is called
+   * @param query
+   * @return
+   */
+  public <T> Iterator<StreamResult<T>> stream(IDocumentQuery<T> query);
 
-  /// <summary>
-  /// Stream the results of documents searhcto the client, converting them to CLR types along the way.
-  /// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
-  /// </summary>
-  IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag = null, string startsWith = null, string matches = null,
-                                          int start = 0, int pageSize = int.MaxValue);*/
+  /**
+   * Stream the results on the query to the client, converting them to
+   * Java types along the way.
+   * Does NOT track the entities in the session, and will not includes changes there when saveChanges() is called
+   * @param query
+   * @return
+   */
+  public <T> Iterator<StreamResult<T>> stream(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
+
+  /**
+   * Stream the results on the query to the client, converting them to
+   * Java types along the way.
+   * Does NOT track the entities in the session, and will not includes changes there when saveChanges() is called
+   * @param fromEtag
+   * @return
+   */
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass);
+
+
+  /**
+   * Stream the results on the query to the client, converting them to
+   * Java types along the way.
+   * Does NOT track the entities in the session, and will not includes changes there when saveChanges() is called
+   * @param fromEtag
+   * @return
+   */
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag);
+
+  /**
+   * Stream the results on the query to the client, converting them to
+   * Java types along the way.
+   * Does NOT track the entities in the session, and will not includes changes there when saveChanges() is called
+   * @param fromEtag
+   * @param startsWith
+   * @return
+   */
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith);
+
+  /**
+   * Stream the results on the query to the client, converting them to
+   * Java types along the way.
+   * Does NOT track the entities in the session, and will not includes changes there when saveChanges() is called
+   * @param fromEtag
+   * @param startsWith
+   * @param matches
+   * @return
+   */
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches);
+
+  /**
+   * Stream the results on the query to the client, converting them to
+   * Java types along the way.
+   * Does NOT track the entities in the session, and will not includes changes there when saveChanges() is called
+   * @param fromEtag
+   * @param startsWith
+   * @param matches
+   * @param start
+   * @return
+   */
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start);
+
+  /**
+   * Stream the results on the query to the client, converting them to
+   * Java types along the way.
+   * Does NOT track the entities in the session, and will not includes changes there when saveChanges() is called
+   * @param fromEtag
+   * @param startsWith
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize);
+
 }

@@ -276,6 +276,10 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     return 15 * 1000;
   }
 
+  public Class<T> getElementType() {
+    return clazz;
+  }
+
   public AbstractDocumentQuery(Class<T> clazz, InMemoryDocumentSessionOperations theSession, IDatabaseCommands databaseCommands, String indexName, String[] fieldsToFetch, String[] projectionFields,
       List<IDocumentQueryListener> queryListeners, boolean isMapReduce) {
     this.clazz = clazz;

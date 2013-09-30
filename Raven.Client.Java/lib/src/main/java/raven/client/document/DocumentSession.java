@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -17,14 +18,20 @@ import java.util.TreeSet;
 import java.util.UUID;
 
 import raven.abstractions.basic.Lazy;
+import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function0;
 import raven.abstractions.data.BatchResult;
+import raven.abstractions.data.Constants;
+import raven.abstractions.data.Etag;
 import raven.abstractions.data.GetRequest;
 import raven.abstractions.data.GetResponse;
+import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.JsonDocument;
 import raven.abstractions.data.MultiLoadResult;
+import raven.abstractions.data.QueryHeaderInformation;
+import raven.abstractions.data.StreamResult;
 import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
@@ -37,16 +44,20 @@ import raven.client.LoadConfigurationFactory;
 import raven.client.RavenQueryHighlightings;
 import raven.client.RavenQueryStatistics;
 import raven.client.connection.IDatabaseCommands;
+import raven.client.connection.IRavenQueryInspector;
+import raven.client.connection.SerializationHelper;
 import raven.client.document.batches.IEagerSessionOperations;
 import raven.client.document.batches.ILazyOperation;
 import raven.client.document.batches.ILazySessionOperations;
 import raven.client.document.batches.LazyMultiLoadOperation;
 import raven.client.document.sessionoperations.LoadOperation;
 import raven.client.document.sessionoperations.MultiLoadOperation;
+import raven.client.document.sessionoperations.QueryOperation;
 import raven.client.exceptions.ConflictException;
 import raven.client.indexes.AbstractIndexCreationTask;
 import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.linq.IDocumentQueryGenerator;
+import raven.client.linq.IRavenQueryProvider;
 import raven.client.linq.IRavenQueryable;
 import raven.client.linq.RavenQueryInspector;
 import raven.client.linq.RavenQueryProvider;
@@ -537,79 +548,145 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return databaseCommands.urlFor(value.getKey());
   }
 
-  /*TODO
-  public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query)
-  {
-    QueryHeaderInformation _;
-    return Stream(query, out _);
+  @Override
+  public <T> Iterator<StreamResult<T>> stream(IRavenQueryable<T> query) {
+    Reference<QueryHeaderInformation> _ = new Reference<>();
+    return stream(query, _);
   }
 
-  public IEnumerator<StreamResult<T>> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation)
-  {
-          var queryProvider = (IRavenQueryProvider)query.Provider;
-          var docQuery = queryProvider.ToLuceneQuery<T>(query.Expression);
-      return Stream(docQuery, out queryHeaderInformation);
+  @Override
+  public <T> Iterator<StreamResult<T>> stream(IRavenQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformationRef) {
+    IRavenQueryProvider queryProvider = (IRavenQueryProvider)query.getProvider();
+    IDocumentQuery<T> docQuery = (IDocumentQuery<T>) queryProvider.toLuceneQuery(query.getElementType(), query.getExpression());
+    return stream(docQuery, queryHeaderInformationRef);
   }
 
-  public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
-  {
-    QueryHeaderInformation _;
-    return Stream<T>(query, out _);
+  @Override
+  public <T> Iterator<StreamResult<T>> stream(IDocumentQuery<T> query) {
+    Reference<QueryHeaderInformation> _ = new Reference<>();
+    return stream(query, _);
   }
 
-  public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)
-  {
-    var ravenQueryInspector = ((IRavenQueryInspector)query);
-    var indexQuery = ravenQueryInspector.GetIndexQuery(false);
-      var enumerator = DatabaseCommands.StreamQuery(ravenQueryInspector.IndexQueried, indexQuery, out queryHeaderInformation);
-      return YieldQuery(query, enumerator);
+  @Override
+  public <T> Iterator<StreamResult<T>> stream(IDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation) {
+    IRavenQueryInspector ravenQueryInspector = (IRavenQueryInspector) query;
+    IndexQuery indexQuery = ravenQueryInspector.getIndexQuery();
+    Iterator<RavenJObject> iterator = databaseCommands.streamQuery(ravenQueryInspector.getIndexQueried(), indexQuery, queryHeaderInformation);
+    return new StreamIterator<>(query, iterator);
   }
 
-      private static IEnumerator<StreamResult<T>> YieldQuery<T>(IDocumentQuery<T> query, IEnumerator<RavenJObject> enumerator)
-    {
-        var queryOperation = ((DocumentQuery<T>) query).InitializeQueryOperation(null);
-    queryOperation.DisableEntitiesTracking = true;
-    while (enumerator.MoveNext())
-        {
-            var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
+  private static class StreamIterator<T> implements Iterator<StreamResult<T>> {
 
-            string key = null;
-            Etag etag = null;
-            if (meta != null)
-            {
-                key = meta.Value<string>(Constants.DocumentIdFieldName);
-                var value = meta.Value<string>("@etag");
-                if (value != null)
-                    etag = Etag.Parse(value);
-            }
+    private Iterator<RavenJObject> innerIterator;
+    private DocumentQuery<T> query;
+    private QueryOperation queryOperation;
 
-            yield return new StreamResult<T>
-            {
-                Document = queryOperation.Deserialize<T>(enumerator.Current),
-                Etag = etag,
-                Key = key,
-                Metadata = meta
-            };
+    public StreamIterator(IDocumentQuery<T> query, Iterator<RavenJObject> innerIterator) {
+      super();
+      this.innerIterator = innerIterator;
+      this.query = (DocumentQuery<T>) query;
+      queryOperation = ((DocumentQuery<T>)query).initializeQueryOperation(null);
+      queryOperation.setDisableEntitiesTracking(true);
+    }
+
+    @Override
+    public boolean hasNext() {
+      return innerIterator.hasNext();
+    }
+
+    @Override
+    public StreamResult<T> next() {
+      RavenJObject nextValue = innerIterator.next();
+      RavenJObject meta = nextValue.value(RavenJObject.class, Constants.METADATA);
+
+      String key = null;
+      Etag etag = null;
+      if (meta != null) {
+        key = meta.value(String.class, Constants.DOCUMENT_ID_FIELD_NAME);
+        String value = meta.value(String.class, "@etag");
+        if (value != null) {
+          etag = Etag.parse(value);
         }
+      }
+
+      StreamResult<T> streamResult = new StreamResult<>();
+      streamResult.setDocument(queryOperation.deserialize(query.getElementType(), nextValue));
+      streamResult.setEtag(etag);
+      streamResult.setKey(key);
+      streamResult.setMetadata(meta);
+      return streamResult;
     }
 
-    public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = Int32.MaxValue)
-  {
-    var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
-
-    while (enumerator.MoveNext())
-    {
-      var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
-
-      yield return new StreamResult<T>
-      {
-        Document = (T) ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
-        Etag = document.Etag,
-        Key = document.Key,
-        Metadata = document.Metadata
-      };
+    @Override
+    public void remove() {
+      throw new IllegalStateException("Not implemented!");
     }
-  }*/
+
+  }
+
+  @Override
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass) {
+    return stream(entityClass, null, null, null, 0, Integer.MAX_VALUE);
+  }
+
+  @Override
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag) {
+    return stream(entityClass, fromEtag, null, null, 0, Integer.MAX_VALUE);
+  }
+
+  @Override
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith) {
+    return stream(entityClass, fromEtag, startsWith, null, 0, Integer.MAX_VALUE);
+  }
+
+  @Override
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches) {
+    return stream(entityClass, fromEtag, startsWith, matches, 0, Integer.MAX_VALUE);
+  }
+
+  @Override
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start) {
+    return stream(entityClass, fromEtag, startsWith, matches, start, Integer.MAX_VALUE);
+  }
+
+  @Override
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize) {
+    Iterator<RavenJObject> iterator = databaseCommands.streamDocs(fromEtag, startsWith, matches, start, pageSize);
+    return new SimpleSteamIterator<>(iterator, entityClass);
+  }
+
+  private class SimpleSteamIterator<T> implements Iterator<StreamResult<T>> {
+    private Iterator<RavenJObject> innerIterator;
+    private Class<T> entityClass;
+
+    public SimpleSteamIterator(Iterator<RavenJObject> innerIterator, Class<T> entityClass) {
+      super();
+      this.innerIterator = innerIterator;
+      this.entityClass = entityClass;
+    }
+
+    @Override
+    public boolean hasNext() {
+      return innerIterator.hasNext();
+    }
+
+    @Override
+    public StreamResult<T> next() {
+      RavenJObject next = innerIterator.next();
+      JsonDocument document = SerializationHelper.ravenJObjectToJsonDocument(next);
+      StreamResult<T> streamResult = new StreamResult<>();
+      streamResult.setDocument((T) convertToEntity(entityClass, document.getKey(), document.getDataAsJson(), document.getMetadata()));
+      streamResult.setEtag(document.getEtag());
+      streamResult.setKey(document.getKey());
+      streamResult.setMetadata(document.getMetadata());
+      return streamResult;
+    }
+
+    @Override
+    public void remove() {
+      throw new IllegalStateException("Not implemented!");
+    }
+  }
 
   /**
    * Saves all the changes to the Raven server.
