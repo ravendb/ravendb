@@ -81,8 +81,9 @@
                             <Grid VerticalAlignment="Center" Margin="0,4,4,4">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
+									<ColumnDefinition Width="Auto"/>
+									<ColumnDefinition Width="Auto"/>
+									<ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <HyperlinkButton Command="{StaticResource CreateDatabaseCommand}" 
@@ -99,12 +100,20 @@
                                 </HyperlinkButton>
 
 								<controls:GoToDatabaseControl Grid.Column="1" Margin="6,6,4,6" Width="200"/>
-								
+
+								<StackPanel Orientation="Horizontal" Grid.Column="2">
+									<TextBlock Text="Filter by name: " VerticalAlignment="Center"/>
+									<TextBox Text="{Binding SearchText.Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Margin="5" 
+									 VerticalAlignment="Center"
+									 MinWidth="100"/>
+								</StackPanel>
+
 								<HyperlinkButton Command="{StaticResource SelectSystemDatabaseCommand}" 
                                                  CommandParameter="{Binding}"
                                                  Style="{StaticResource Style_Button_MouseOverChrome}"
                                                  VerticalAlignment="Center"
-                                                 Grid.Column="3">
+                                                 Grid.Column="4">
                                     <HyperlinkButton.Content>
                                         <StackPanel Orientation="Horizontal">
                                             <Image Source="{StaticResource Image_Database_System_Tiny}" Stretch="None" VerticalAlignment="Center" Margin="4,0,4,0"/>
@@ -118,7 +127,7 @@
                 </toolkit:HeaderedContentControl.Header>
 				
                 <ListBox Style="{StaticResource Databases_FluidList}"
-                         ItemsSource="{Binding Databases}"
+                         ItemsSource="{Binding DatabasesToShow}"
                          SelectedItem="{Binding SelectedDatabase, Mode=TwoWay}"
                          ItemContainerStyle="{StaticResource Style_ListBoxItem_Database}"
                          ItemTemplate="{StaticResource DatabaseItemTemplate}"
