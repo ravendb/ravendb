@@ -135,21 +135,10 @@ public class Extensions {
       try {
         return (U) sdf.parse((String) value.getValue());
       } catch (ParseException e) {
-        // TODO implement
+        throw new RuntimeException(e);
       }
 
     }
-    //TODO:
-    /*
-    if (targetType == typeof(DateTimeOffset) && value.Value is string)
-    {
-        DateTimeOffset dateTimeOffset;
-        if (DateTimeOffset.TryParseExact((string)value.Value, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTimeOffset))
-            return (U)(object)dateTimeOffset;
-
-        return default(U);
-    }*/
-    //return (U)System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
     return (U) ConvertUtils.convert(value.getValue(), clazz);
   }
 

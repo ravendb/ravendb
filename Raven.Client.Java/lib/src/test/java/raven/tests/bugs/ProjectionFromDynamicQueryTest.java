@@ -9,6 +9,7 @@ import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
+import raven.client.linq.IRavenQueryable;
 
 public class ProjectionFromDynamicQueryTest extends RemoteClientTest {
 
@@ -33,7 +34,27 @@ public class ProjectionFromDynamicQueryTest extends RemoteClientTest {
       }
     }
   }
-  //TODO: ProjectNameFromDynamicQueryUsingLinq
+
+  @Test
+  public void projectNameFromDynamicQueryUsingLinq() throws Exception {
+    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
+      try (IDocumentSession session = store.openSession()) {
+        User user = new User();
+        user.setName("Ayende");
+        user.setEmail("Ayende@ayende.com");
+        session.store(user);
+        session.saveChanges();
+      }
+      try (IDocumentSession session = store.openSession()) {
+        QUser x = QUser.user;
+        IRavenQueryable<String> result = session.query(User.class)
+          .where(x.name.eq("Ayende"))
+          .select(x.email);
+
+        assertEquals("Ayende@ayende.com", result.first());
+      }
+    }
+  }
 
   @Test
   public void projectNameFromDynamicQueryUsingLuceneUsingNestedObject() throws Exception {

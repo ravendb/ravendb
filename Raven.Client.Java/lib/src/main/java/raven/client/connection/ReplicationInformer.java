@@ -518,8 +518,10 @@ public class ReplicationInformer implements AutoCloseable {
 
   @Override
   public void close() throws Exception {
-    // TODO Auto-generated method stub
-
+    Future<Void> informationTask = refreshReplicationInformationTask;
+    if (informationTask != null) {
+      informationTask.get();
+    }
   }
 
 }

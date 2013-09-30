@@ -16,9 +16,6 @@ import com.mysema.query.types.TemplateExpression;
 import com.mysema.query.types.Visitor;
 
 public class ExpressionExtensions {
-  //TODO: public static Type ExtractTypeFromPath<T>(this Expression<Func<T, object>> path)
-
-  //TODO: public static PropertyInfo ToProperty(this LambdaExpression expr)
 
   public static String toPropertyPath(Expression<?> expr) {
     return toPropertyPath(expr, '.', ',');
