@@ -1757,32 +1757,39 @@ namespace Raven.Database
             idPrefix = idPrefix.Trim();
             TransactionalStorage.Batch(actions =>
             {
-                bool returnedDocs = false;
-                while (true)
+				int docCount = 0;
+	            int innerStart = 0;
+	            int skipCount = 0;
+				while (true)
                 {
-                    int docCount = 0;
-                    var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
+					int currentfetchedDocs = 0;
+
+					var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, innerStart, pageSize);
                     var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
                     foreach (var doc in documents)
                     {
-                        docCount++;
-                        string keyTest = doc.Key.Substring(idPrefix.Length);
+						if (docCount >= pageSize)
+							break;
+
+						currentfetchedDocs++; 
+						string keyTest = doc.Key.Substring(idPrefix.Length);
                         if (!WildcardMatcher.Matches(matches, keyTest) || WildcardMatcher.MatchesExclusion(exclude, keyTest))
                             continue;
                         DocumentRetriever.EnsureIdInMetadata(doc);
                         var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
                         JsonDocument document = nonAuthoritativeInformationBehavior != null ? nonAuthoritativeInformationBehavior(doc) : doc;
-                        document = documentRetriever
-                            .ExecuteReadTriggers(doc, null, ReadOperation.Load);
-                        if (document == null)
+                        document = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+                        if (document == null || (skipCount++) < start)
                             continue;
 
-                        addDoc(document.ToJson());
-                        returnedDocs = true;
+						docCount++;					
+						addDoc(document.ToJson());
                     }
-                    if (returnedDocs || docCount == 0)
+
+					if (currentfetchedDocs == 0 || docCount >= pageSize)
                         break;
-                    start += docCount;
+					
+					innerStart += currentfetchedDocs;
                 }
             });
         }
