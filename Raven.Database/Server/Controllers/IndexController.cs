@@ -240,10 +240,11 @@ namespace Raven.Database.Server.Controllers
 		private HttpResponseMessage GetIndexQueryResult(string index)
 		{
 			Etag indexEtag;
-			var queryResult = ExecuteQuery(index, out indexEtag);
+			var msg = new HttpResponseMessage();
+			var queryResult = ExecuteQuery(index, out indexEtag, msg);
 
 			if (queryResult == null)
-				return null;
+				return msg;
 
 			var includes = GetQueryStringValues("include") ?? new string[0];
 			var loadedIds = new HashSet<string>(
@@ -266,15 +267,15 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(queryResult, HttpStatusCode.OK, indexEtag);
 		}
 
-		private QueryResultWithIncludes ExecuteQuery(string index, out Etag indexEtag)
+		private QueryResultWithIncludes ExecuteQuery(string index, out Etag indexEtag, HttpResponseMessage msg)
 		{
 			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
 			RewriteDateQueriesFromOldClients(indexQuery);
 
 			var sp = Stopwatch.StartNew();
 			var result = index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) || index.Equals("dynamic", StringComparison.OrdinalIgnoreCase) ?
-				PerformQueryAgainstDynamicIndex(index, indexQuery, out indexEtag) :
-				PerformQueryAgainstExistingIndex(index, indexQuery, out indexEtag);
+				PerformQueryAgainstDynamicIndex(index, indexQuery, out indexEtag, msg) :
+				PerformQueryAgainstExistingIndex(index, indexQuery, out indexEtag, msg);
 
 			sp.Stop();
 
@@ -299,12 +300,13 @@ namespace Raven.Database.Server.Controllers
 			return result;
 		}
 
-		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(string index, IndexQuery indexQuery, out Etag indexEtag)
+		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(string index, IndexQuery indexQuery, out Etag indexEtag, HttpResponseMessage msg)
 		{
 			indexEtag = Database.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
 			if (MatchEtag(indexEtag))
 			{
 				Database.IndexStorage.MarkCachedQuery(index);
+				msg.StatusCode = HttpStatusCode.NotModified;
 				return null;
 			}
 
@@ -313,7 +315,7 @@ namespace Raven.Database.Server.Controllers
 			return queryResult;
 		}
 
-		private QueryResultWithIncludes PerformQueryAgainstDynamicIndex(string index, IndexQuery indexQuery, out Etag indexEtag)
+		private QueryResultWithIncludes PerformQueryAgainstDynamicIndex(string index, IndexQuery indexQuery, out Etag indexEtag, HttpResponseMessage msg)
 		{
 			string entityName;
 			var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
@@ -324,6 +326,7 @@ namespace Raven.Database.Server.Controllers
 				if (MatchEtag(indexEtag))
 				{
 					Database.IndexStorage.MarkCachedQuery(dynamicIndexName);
+					msg.StatusCode = HttpStatusCode.NotModified;
 					return null;
 				}
 			}
@@ -333,14 +336,19 @@ namespace Raven.Database.Server.Controllers
 			{
 				indexEtag = Etag.InvalidEtag;
 				var explanations = Database.ExplainDynamicIndexSelection(entityName, indexQuery);
-				//TODO: msg?
-				//context.SetStatusToBadRequest();
-				//var target = entityName == null ? "all documents" : entityName + " documents";
-				//context.WriteJson(new
-				//{
-				//	Error = "Executing the query " + indexQuery.Query + " on " + target + " require creation of temporary index, and it has been explicitly disabled.",
-				//	Explanations = explanations
-				//});
+
+				msg.StatusCode = HttpStatusCode.BadRequest;
+				
+				var target = entityName == null ? "all documents" : entityName + " documents";
+
+				msg.Content = new JsonContent(RavenJToken.FromObject(
+					new
+					{
+						Error =
+							"Executing the query " + indexQuery.Query + " on " + target +
+							" require creation of temporary index, and it has been explicitly disabled.",
+						Explanations = explanations
+					}));
 				return null;
 			}
 
