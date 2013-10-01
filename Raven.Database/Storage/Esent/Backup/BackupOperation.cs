@@ -53,7 +53,7 @@ namespace Raven.Storage.Esent.Backup
 					if (!incrementalBackup)
 						throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
 
-					incrementalTag = SystemTime.UtcNow.ToString("Inc yyyy-MM-dd hh-mm-ss");
+					incrementalTag = SystemTime.UtcNow.ToString("Inc yyyy-MM-dd HH-mm-ss");
 					to = Path.Combine(to, incrementalTag);
 				}
 				else
