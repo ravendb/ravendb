@@ -54,6 +54,8 @@ namespace Raven.Abstractions.Data
 		
 		Abandoned = 8,
 
+        Error = 16,
+
         Forced = 512,
     }
 

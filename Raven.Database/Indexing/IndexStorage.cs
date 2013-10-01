@@ -140,7 +140,7 @@ namespace Raven.Database.Indexing
 						}
 
 
-						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", indexName);
+                        var read = accessor.Lists.Read("Raven/Indexes/QueryTime", indexName);
 						if (read == null)
 							return;
 
@@ -167,7 +167,7 @@ namespace Raven.Database.Indexing
 					{
 						resetTried = true;
 						startupLog.WarnException("Could not open index " + indexName + ". Recovery operation failed, forcibly resetting index", e);
-						TryResettingIndex(indexName, indexDefinition);
+                        TryResettingIndex(indexName, indexDefinition);
 					}
 				}
 			}
@@ -670,6 +670,8 @@ namespace Raven.Database.Indexing
 				return;
 
 			IOExtensions.DeleteDirectory(dirOnDisk);
+
+			UpdateIndexMappingFile();
 		}
 
 		public void CreateIndexImplementation(IndexDefinition indexDefinition)
@@ -684,6 +686,8 @@ namespace Raven.Database.Indexing
 			    var directory = OpenOrCreateLuceneDirectory(indexDefinition);
 				return CreateIndexImplementation(indexDefinition, directory);
 			}, (s, index) => index);
+
+			UpdateIndexMappingFile();
 		}
 
 		private static void AssertAnalyzersValid(IndexDefinition indexDefinition)
@@ -968,6 +972,7 @@ namespace Raven.Database.Indexing
 					var thisItem = autoIndexesSortedByLastQueryTime[i];
 
 					if (thisItem.Priority.HasFlag(IndexingPriority.Disabled) || // we don't really have much to say about those in here
+                        thisItem.Priority.HasFlag(IndexingPriority.Error) || // no need to touch erroring indexes
 						thisItem.Priority.HasFlag(IndexingPriority.Forced))// if it is forced, we can't change it
 						continue;
 
@@ -1059,6 +1064,21 @@ namespace Raven.Database.Indexing
 				Name = thisItem.Name,
 				Type = IndexChangeTypes.IndexDemotedToIdle
 			});
+		}
+
+		private void UpdateIndexMappingFile()
+		{
+			if(configuration.RunInMemory)
+				return;
+			
+			var sb = new StringBuilder();
+
+			foreach (var index in indexes)
+			{
+				sb.Append(string.Format("{0} - {1}{2}", index.Value.IndexId, index.Value.PublicName, Environment.NewLine));
+			}
+
+			File.WriteAllText(Path.Combine(path, "indexes.txt"), sb.ToString());
 		}
 
 		public void FlushMapIndexes()

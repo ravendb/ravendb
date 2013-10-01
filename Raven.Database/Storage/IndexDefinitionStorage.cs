@@ -232,12 +232,16 @@ namespace Raven.Database.Storage
                 return definition;
             });
             indexNameToId[definition.Name] = id;
+
+			UpdateIndexMappingFile();
         }
 
         public void AddTransform(int id, TransformerDefinition definition)
         {
             transformDefinitions.AddOrUpdate(id, definition, (s1, def) => definition);
             transformNameToId[definition.Name] = id;
+
+			UpdateTransformerMappingFile();
         }
 
         public void RemoveIndex(int id)
@@ -252,6 +256,7 @@ namespace Raven.Database.Storage
             if (configuration.RunInMemory)
                 return;
             File.Delete(GetIndexSourcePath(id) + ".index");
+			UpdateIndexMappingFile();
         }
 
         private string GetIndexSourcePath(int id )
@@ -379,6 +384,7 @@ namespace Raven.Database.Storage
             if (configuration.RunInMemory)
                 return;
             File.Delete(GetIndexSourcePath(id) + ".transform");
+			UpdateTransformerMappingFile();
         }
 
         public AbstractTransformer GetTransformer(int id)
@@ -401,5 +407,35 @@ namespace Raven.Database.Storage
 	    {
 	        return indexDefinitions.Any() ? indexDefinitions.Values.Max(x => x.IndexId) + 1 : 0;
 	    }
+
+		private void UpdateIndexMappingFile()
+		{
+			if(configuration.RunInMemory)
+				return;
+
+			var sb = new StringBuilder();
+
+			foreach (var index in indexNameToId)
+			{
+				sb.Append(string.Format("{0} - {1}{2}", index.Value, index.Key, Environment.NewLine));
+			}
+
+			File.WriteAllText(Path.Combine(path, "indexes.txt"), sb.ToString());
+		}
+
+		private void UpdateTransformerMappingFile()
+		{
+			if (configuration.RunInMemory)
+				return;
+
+			var sb = new StringBuilder();
+
+			foreach (var transform in transformNameToId)
+			{
+				sb.Append(string.Format("{0} - {1}{2}", transform.Value, transform.Key, Environment.NewLine));
+			}
+
+			File.WriteAllText(Path.Combine(path, "transformers.txt"), sb.ToString());
+		}
     }
 }

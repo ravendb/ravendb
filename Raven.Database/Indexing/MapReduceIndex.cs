@@ -126,7 +126,10 @@ namespace Raven.Database.Indexing
                                 currentKey = documentId;
                             }
                             currentDocumentResults.Add(new DynamicJsonObject(RavenJObject.FromObject(currentDoc, jsonSerializer)));
-                            Interlocked.Increment(ref localStats.IndexingSuccesses);
+
+							EnsureValidNumberOfOutputsForDocument(documentId, currentDocumentResults.Count);
+
+	                        Interlocked.Increment(ref localStats.IndexingSuccesses);
                         }
                         count += ProcessBatch(viewGenerator, currentDocumentResults, currentKey, localChanges, accessor, statsPerKey);
                     });

@@ -98,39 +98,49 @@ namespace Raven.Database.Indexing
 
                         using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
                         {
+                            string currentDocId = null;
+                            int outputPerDocId = 0;
                             foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats))
                             {
                                 float boost;
                                 var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
-
-                                if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
+                                if (indexingResult.NewDocId == null || indexingResult.ShouldSkip != false)
                                 {
-                                    Interlocked.Increment(ref count);
-                                    luceneDoc.GetFields().Clear();
-                                    luceneDoc.Boost = boost;
-                                    documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
-                                    luceneDoc.Add(documentIdField);
-                                    foreach (var field in indexingResult.Fields)
-                                    {
-                                        luceneDoc.Add(field);
-                                    }
-                                    batchers.ApplyAndIgnoreAllErrors(
-                                        exception =>
-                                        {
-                                            logIndexing.WarnException(
-                                                string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-                                                              indexId, indexingResult.NewDocId),
-                                                exception);
-                                            context.AddError(indexId,
-                                                             indexingResult.NewDocId,
-                                                             exception.Message,
-                                                             "OnIndexEntryCreated Trigger"
-                                                );
-                                        },
-                                        trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
-                                    LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
-                                    AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+                                    continue;
                                 }
+                                if (currentDocId != indexingResult.NewDocId)
+                                {
+                                    currentDocId = indexingResult.NewDocId;
+                                    outputPerDocId = 0;
+                                }
+                                outputPerDocId++;
+                                EnsureValidNumberOfOutputsForDocument(currentDocId, outputPerDocId);
+                                Interlocked.Increment(ref count);
+                                luceneDoc.GetFields().Clear();
+                                luceneDoc.Boost = boost;
+                                documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
+                                luceneDoc.Add(documentIdField);
+                                foreach (var field in indexingResult.Fields)
+                                {
+                                    luceneDoc.Add(field);
+                                }
+                                batchers.ApplyAndIgnoreAllErrors(
+                                    exception =>
+                                    {
+                                        logIndexing.WarnException(
+                                            string.Format(
+                                                "Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
+                                                indexId, indexingResult.NewDocId),
+                                            exception);
+                                        context.AddError(indexId,
+                                                         indexingResult.NewDocId,
+                                                         exception.Message,
+                                                         "OnIndexEntryCreated Trigger"
+                                            );
+                                    },
+                                    trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
+                                LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
+                                AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
 
                                 Interlocked.Increment(ref stats.IndexingSuccesses);
                             }

@@ -23,6 +23,7 @@ using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -891,6 +892,9 @@ namespace Raven.Database.Indexing
 
 			public IEnumerable<IndexQueryResult> Query()
 			{
+			    if (parent.Priority.HasFlag(IndexingPriority.Error))
+			        throw new IndexDisabledException("The index has been disabled due to errors");
+
 				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
 				{
@@ -1528,5 +1532,41 @@ namespace Raven.Database.Indexing
 		{
 			forceWriteToDisk = true;
 		}
+
+        protected void EnsureValidNumberOfOutputsForDocument(string sourceDocumentId, int numberOfAlreadyProducedOutputs)
+        {
+            var maxNumberOfIndexOutputs = context.Configuration.MaxIndexOutputsPerDocument;
+
+            if (maxNumberOfIndexOutputs == -1)
+                return;
+
+            if (numberOfAlreadyProducedOutputs <= maxNumberOfIndexOutputs) 
+                return;
+
+            Priority = IndexingPriority.Error;
+
+            // this cannot happen in the current transaction, since we are going to throw in just a bit.
+            using (context.Database.TransactionalStorage.DisableBatchNesting())
+            {
+                context.Database.TransactionalStorage.Batch(accessor =>
+                {
+                    accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error);
+                    accessor.Indexing.TouchIndexEtag(indexId);
+                });    
+            }
+
+            context.Database.RaiseNotifications(new IndexChangeNotification()
+            {
+                Name = PublicName,
+                Type = IndexChangeTypes.IndexMarkedAsErrored 
+            });
+
+            throw new InvalidOperationException(
+                string.Format(
+                    "Index '{0}' has already produced {1} map results for a source document '{2}', while the allowed max number of outputs is {3} per one document. " +
+                    "Index will be disabled.  Please verify this index definition and consider a re-design of your entities.",
+					PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs));
+        }
+
 	}
 }

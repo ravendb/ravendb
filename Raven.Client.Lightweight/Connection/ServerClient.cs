@@ -1724,7 +1724,7 @@ namespace Raven.Client.Connection
 													 suggestionQuery.Popularity);
 
 				if (suggestionQuery.Accuracy.HasValue)
-					requestUri += "&accuracy=" + suggestionQuery.Accuracy.Value;
+					requestUri += "&accuracy=" + suggestionQuery.Accuracy.Value.ToInvariantString();
 
 				if (suggestionQuery.Distance.HasValue)
 					requestUri += "&distance=" + suggestionQuery.Distance;

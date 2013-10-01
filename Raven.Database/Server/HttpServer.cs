@@ -1405,11 +1405,10 @@ namespace Raven.Database.Server
 			{
 				ctx.Response.StatusCode = 503;
 				ctx.Response.StatusDescription = "Service Unavailable";
-				SerializeError(ctx, new
+			    SerializeError(ctx, new
 				{
 					Url = ctx.Request.RawUrl,
-					Error = e.Information.GetErrorMessage(),
-					Index = e.Information.Id,
+					Error = e.Information == null ? e.Message : e.Information.GetErrorMessage(),
 				});
 			}
 
