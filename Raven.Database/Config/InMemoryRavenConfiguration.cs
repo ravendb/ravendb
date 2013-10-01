@@ -250,12 +250,9 @@ namespace Raven.Database.Config
 		{
 			get
 			{
-				var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
+				var activeBundles = Settings[Constants.ActiveBundles] ?? "";
 
-				return activeBundles.Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries)
-				                    .Select(x => x.Trim())
-				                    .ToList();
-
+				return activeBundles.GetSemicolonSeparatedValues();
 			}
 		} 
 
