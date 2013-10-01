@@ -10,6 +10,9 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Future;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.Header;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 
@@ -19,9 +22,12 @@ import raven.abstractions.basic.VoidArgs;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function0;
 import raven.abstractions.closure.Function1;
+import raven.abstractions.connection.WebRequestEventArgs;
 import raven.abstractions.data.ConnectionStringParser;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.RavenConnectionStringOptions;
+import raven.abstractions.oauth.BasicAuthenticator;
+import raven.abstractions.oauth.SecuredAuthenticator;
 import raven.abstractions.util.AtomicDictionary;
 import raven.client.DocumentStoreBase;
 import raven.client.IDocumentSession;
@@ -315,6 +321,7 @@ public class DocumentStore extends DocumentStoreBase {
 
     jsonRequestFactory = new HttpJsonRequestFactory(getMaxNumberOfCachedRequests());
     try {
+      initializeEncryptor();
       initializeSecurity();
 
       initializeInternal();
@@ -380,7 +387,51 @@ public class DocumentStore extends DocumentStoreBase {
   }
 
   private void initializeSecurity() {
-    /*TODO: initializeSecurity*/
+    if (conventions.getHandleUnauthorizedResponse() != null) {
+      return ; // already setup by the user
+    }
+
+    if (StringUtils.isNotEmpty(apiKey))  {
+      credentials = null;
+    }
+    final BasicAuthenticator basicAuthenticator = new BasicAuthenticator(apiKey, jsonRequestFactory.isEnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers());
+    final SecuredAuthenticator securedAuthenticator = new SecuredAuthenticator(apiKey, jsonRequestFactory);
+
+    jsonRequestFactory.addConfigureRequestEventHandler(new EventHandler<WebRequestEventArgs>() {
+      @Override
+      public void handle(Object sender, WebRequestEventArgs event) {
+        basicAuthenticator.configureRequest(sender, event);
+      }
+    });
+    jsonRequestFactory.addConfigureRequestEventHandler(new EventHandler<WebRequestEventArgs>() {
+      @Override
+      public void handle(Object sender, WebRequestEventArgs event) {
+        securedAuthenticator.configureRequest(sender, event);
+      }
+    });
+
+    conventions.setHandleUnauthorizedResponse(new Function1<HttpResponse, Action1<HttpRequest>>() {
+      @SuppressWarnings("null")
+      @Override
+      public Action1<HttpRequest> apply(HttpResponse response) {
+        Header oauthSourceHeader = response.getFirstHeader("OAuth-Source");
+        String oauthSource = null;
+        if (oauthSourceHeader != null) {
+          oauthSource = oauthSourceHeader.getValue();
+        }
+        if (StringUtils.isNotEmpty(oauthSource) && !oauthSource.toLowerCase().endsWith("/OAuth/API-Key".toLowerCase())) {
+          return basicAuthenticator.doOAuthRequest(oauthSource);
+        }
+        if (apiKey == null) {
+          //AssertUnauthorizedCredentialSupportWindowsAuth(response);
+          return null;
+        }
+        if (StringUtils.isEmpty(oauthSource)) {
+          oauthSource = getUrl() + "/OAuth/API-Key";
+        }
+        return securedAuthenticator.doOAuthRequest(oauthSource);
+      }
+    });
   }
 
   /**
@@ -587,6 +638,16 @@ public class DocumentStore extends DocumentStoreBase {
     public void apply(String db) {
       jsonRequestFactory.expireItemsFromCache(db);
     }
+  }
+
+  public IDocumentStore useFips(boolean value) {
+    this.useFips = value;
+    return this;
+  }
+
+  public IDocumentStore withApiKey(String apiKey) {
+    this.apiKey = apiKey;
+    return this;
   }
 
 

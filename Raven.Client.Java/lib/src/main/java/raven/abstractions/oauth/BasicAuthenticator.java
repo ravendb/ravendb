@@ -2,6 +2,7 @@ package raven.abstractions.oauth;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
@@ -21,7 +22,7 @@ public class BasicAuthenticator extends AbstractAuthenticator {
   }
 
   @Override
-  public Action1<HttpUriRequest> doOAuthRequest(String oauthSource) {
+  public Action1<HttpRequest> doOAuthRequest(String oauthSource) {
     HttpClient httpClient = new DefaultHttpClient();
     try {
 
@@ -29,10 +30,10 @@ public class BasicAuthenticator extends AbstractAuthenticator {
       HttpResponse httpResponse = httpClient.execute(authRequest);
       try {
         final String response = IOUtils.toString(httpResponse.getEntity().getContent());
-        return new Action1<HttpUriRequest>() {
+        return new Action1<HttpRequest>() {
 
           @Override
-          public void apply(HttpUriRequest request) {
+          public void apply(HttpRequest request) {
             request.setHeader("Authorization", "Bearer " + response);
           }
         };

@@ -164,6 +164,7 @@ public class DocumentQueryCustomization implements IDocumentQueryCustomization {
     return this;
   }
 
+  @Deprecated
   @Override
   public IDocumentQueryCustomization transformResults(Function2<IndexQuery, Collection<Object>, Collection<Object>> resultsTransformer) {
     delegate.transformResults(resultsTransformer);

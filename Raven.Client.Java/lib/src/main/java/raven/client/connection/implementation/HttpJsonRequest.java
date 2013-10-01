@@ -345,7 +345,8 @@ public class HttpJsonRequest {
 
   private void recreateWebRequest(Action1<HttpRequest> action) {
     // we now need to clone the request, since just calling getRequest again wouldn't do anything
-
+    sp.reset();
+    sp.start();
     HttpUriRequest newWebRequest = createWebRequest(this.url, this.method);
     HttpRequestHelper.copyHeaders(webRequest, newWebRequest);
     //TODO:newWebRequest.UseDefaultCredentials = webRequest.UseDefaultCredentials;

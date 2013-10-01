@@ -383,6 +383,7 @@ public class DocumentQueryCustomizationFactory {
    * @param resultsTransformer
    * @return
    */
+  @Deprecated
   public DocumentQueryCustomizationFactory transformResults(final Function2<IndexQuery, Collection<Object>, Collection<Object>> resultsTransformer) {
     return new DocumentQueryCustomizationFactory(actions, new Action1<IDocumentQueryCustomization>() {
       @Override

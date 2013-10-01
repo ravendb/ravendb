@@ -29,16 +29,19 @@ import raven.client.listeners.IDocumentStoreListener;
 import raven.client.listeners.IExtendedDocumentConversionListener;
 import raven.client.util.GlobalLastEtagHolder;
 import raven.client.util.ILastEtagHolder;
+import raven.client.utils.encryptors.Encryptor;
 
 /**
  * Contains implementation of some IDocumentStore operations shared by DocumentStore implementations
  */
 public abstract class DocumentStoreBase implements IDocumentStore {
   protected DocumentStoreBase() {
+
     lastEtagHolder = new GlobalLastEtagHolder();
     transactionRecoveryStorage = new VolatileOnlyTransactionRecoveryStorage();
   }
 
+  protected boolean useFips = false;
   private boolean wasDisposed;
   private Map<String, String> sharedOperationsHeaders;
   protected DocumentConvention conventions;
@@ -295,5 +298,8 @@ public abstract class DocumentStoreBase implements IDocumentStore {
     return aggressivelyCacheFor(24 * 3600 * 1000);
   }
 
+  public void initializeEncryptor() {
+    Encryptor.initialize(useFips);
+  }
 
 }

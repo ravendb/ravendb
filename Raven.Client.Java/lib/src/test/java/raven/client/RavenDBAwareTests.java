@@ -203,8 +203,11 @@ public abstract class RavenDBAwareTests {
     RavenJObject doc = new RavenJObject();
     doc.add("Port", new RavenJValue(port));
     doc.add("RunInMemory", new RavenJValue(RUN_IN_MEMORY));
+    doc.add("ApiKeyName", new RavenJValue("java"));
+//    doc.add("ApiKeySecret", new RavenJValue("6B4G51NrO0P")); //TODO: parametrize this!
     return doc.toString();
   }
+
 
   protected void waitForNonStaleIndexes(IDatabaseCommands dbCommands) {
     while (true) {

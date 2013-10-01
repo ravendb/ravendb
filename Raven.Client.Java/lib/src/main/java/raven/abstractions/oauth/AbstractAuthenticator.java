@@ -1,6 +1,7 @@
 package raven.abstractions.oauth;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpRequest;
 import org.apache.http.client.methods.HttpUriRequest;
 
 import raven.abstractions.closure.Action1;
@@ -21,6 +22,6 @@ public abstract class AbstractAuthenticator {
     request.setHeader(key, value);
   }
 
-  public abstract Action1<HttpUriRequest> doOAuthRequest(String oauthSource);
+  public abstract Action1<HttpRequest> doOAuthRequest(String oauthSource);
 
 }
