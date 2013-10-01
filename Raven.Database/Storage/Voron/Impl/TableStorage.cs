@@ -237,6 +237,7 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			env.CreateTree(tx, Tables.Documents.TableName);
 			env.CreateTree(tx, Documents.GetIndexKey(Tables.Documents.Indices.KeyByEtag));
+			env.CreateTree(tx, Documents.GetIndexKey(Tables.Documents.Indices.Metadata));
 		}
 
 	    private void CreateGeneralSchema(Transaction tx)
@@ -246,7 +247,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		private void Initialize()
 		{
-			Documents = new Table(Tables.Documents.TableName, Tables.Documents.Indices.KeyByEtag);
+			Documents = new Table(Tables.Documents.TableName, Tables.Documents.Indices.KeyByEtag, Tables.Documents.Indices.Metadata);
 			Details = new Table(Tables.Details.TableName);
 			IndexingStats = new Table(Tables.IndexingStats.TableName);
 			LastIndexedEtags = new Table(Tables.LastIndexedEtags.TableName);

@@ -5,8 +5,6 @@
 	using Raven.Abstractions.Logging;
 	using Raven.Abstractions.Util;
 
-	using Voron;
-
 	using System;
 	using System.Collections.Generic;
 	using System.IO;
@@ -27,12 +25,9 @@
 
 	using Constants = Raven.Abstractions.Data.Constants;
 
-	public class DocumentsStorageActions : IDocumentStorageActions
+	public class DocumentsStorageActions : StorageActionsBase, IDocumentStorageActions
 	{
-		private readonly Table documentsTable;
-
 		private readonly WriteBatch writeBatch;
-		private readonly SnapshotReader snapshot;
 
 		private readonly IUuidGenerator uuidGenerator;
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
@@ -40,19 +35,25 @@
 
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
+		private readonly TableStorage tableStorage;
+
+		private readonly Index metadataIndex;
+
 		public DocumentsStorageActions(IUuidGenerator uuidGenerator,
 			OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
 			IDocumentCacher documentCacher,
 			WriteBatch writeBatch,
 			SnapshotReader snapshot,
-			Table documentsTable)
+			TableStorage tableStorage)
+			: base(snapshot)
 		{
-			this.snapshot = snapshot;
 			this.uuidGenerator = uuidGenerator;
 			this.documentCodecs = documentCodecs;
 			this.documentCacher = documentCacher;
 			this.writeBatch = writeBatch;
-			this.documentsTable = documentsTable;
+			this.tableStorage = tableStorage;
+
+			metadataIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.Metadata);
 		}
 
 		public IEnumerable<JsonDocument> GetDocumentsByReverseUpdateOrder(int start, int take)
@@ -63,32 +64,32 @@
 				throw new ArgumentException("must have zero or positive value", "take");
 			if (take == 0) yield break;
 
-			using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
-											.Iterate(snapshot, writeBatch))
+			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+											.Iterate(Snapshot, writeBatch))
 			{
 				int fetchedDocumentCount = 0;
-				if (!iter.Seek(Slice.AfterAllKeys))
+				if (!iterator.Seek(Slice.AfterAllKeys))
 					yield break;
 
-				if (!iter.Skip(-start))
+				if (!iterator.Skip(-start))
 					yield break;
 				do
 				{
-					if (iter.CurrentKey == null || iter.CurrentKey.Equals(Slice.Empty))
+					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
 						yield break;
 
-					var key = GetKeyFromCurrent(iter);
+					var key = GetKeyFromCurrent(iterator);
 
 					var document = DocumentByKey(key, null);
 					if (document == null) //precaution - should never be true
 					{
-						throw new ApplicationException(String.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
+						throw new ApplicationException(string.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
 					}
 
 					yield return document;
 
 					fetchedDocumentCount++;
-				} while (iter.MovePrev() && fetchedDocumentCount < take);
+				} while (iterator.MovePrev() && fetchedDocumentCount < take);
 			}
 		}
 
@@ -98,13 +99,13 @@
 				throw new ArgumentException("must have zero or positive value", "take");
 			if (take == 0) yield break;
 
-			if (String.IsNullOrEmpty(etag))
+			if (string.IsNullOrEmpty(etag))
 				throw new ArgumentNullException("etag");
 
-			using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
-											.Iterate(snapshot, writeBatch))
+			using (var iterator = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+											.Iterate(Snapshot, writeBatch))
 			{
-				if (!iter.Seek(Slice.BeforeAllKeys))
+				if (!iterator.Seek(Slice.BeforeAllKeys))
 				{
 					yield break;
 				}
@@ -114,10 +115,10 @@
 
 				do
 				{
-					if (iter.CurrentKey == null || iter.CurrentKey.Equals(Slice.Empty))
+					if (iterator.CurrentKey == null || iterator.CurrentKey.Equals(Slice.Empty))
 						yield break;
 
-					var docEtag = Etag.Parse(iter.CurrentKey.ToString());
+					var docEtag = Etag.Parse(iterator.CurrentKey.ToString());
 
 					if (!EtagUtil.IsGreaterThan(docEtag, etag)) continue;
 
@@ -127,12 +128,12 @@
 							yield break;
 					}
 
-					var key = GetKeyFromCurrent(iter);
+					var key = GetKeyFromCurrent(iterator);
 
 					var document = DocumentByKey(key, null);
 					if (document == null) //precaution - should never be true
 					{
-						throw new ApplicationException(String.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
+						throw new ApplicationException(string.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
 					}
 
 					fetchedDocumentTotalSize += document.SerializedSizeOnDisk;
@@ -145,14 +146,14 @@
 					}
 
 					yield return document;
-				} while (iter.MoveNext() && fetchedDocumentCount < take);
+				} while (iterator.MoveNext() && fetchedDocumentCount < take);
 			}
 		}
 
-		private static string GetKeyFromCurrent(global::Voron.Trees.IIterator iter)
+		private static string GetKeyFromCurrent(global::Voron.Trees.IIterator iterator)
 		{
-			var key = String.Empty;
-			using (var currentDataStream = iter.CreateStreamForCurrent())
+			string key;
+			using (var currentDataStream = iterator.CreateStreamForCurrent())
 			{
 				var keyBytes = currentDataStream.ReadData();
 				key = Encoding.UTF8.GetString(keyBytes);
@@ -162,87 +163,67 @@
 
 		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
 		{
-			if (String.IsNullOrEmpty(idPrefix))
+			if (string.IsNullOrEmpty(idPrefix))
 				throw new ArgumentNullException("idPrefix");
 			if (start < 0)
 				throw new ArgumentException("must have zero or positive value", "start");
 			if (take < 0)
 				throw new ArgumentException("must have zero or positive value", "take");
 
-			using (var iter = documentsTable.Iterate(snapshot, writeBatch))
+			if (take == 0)
+				yield break;
+
+			using (var iterator = tableStorage.Documents.Iterate(Snapshot, writeBatch))
 			{
-				iter.RequiredPrefix = idPrefix.ToLowerInvariant();
-				if (take == 0 || iter.Seek(iter.RequiredPrefix) == false)
+				iterator.RequiredPrefix = idPrefix.ToLowerInvariant();
+				if (iterator.Seek(iterator.RequiredPrefix) == false || !iterator.Skip(start))
 					yield break;
 
 				var fetchedDocumentCount = 0;
-				var alreadySkippedCount = 0; //we have to do it this way since we store in the same tree both data and metadata entries
 				do
 				{
-					var dataKey = iter.CurrentKey.ToString();
-					if (dataKey.Contains(Util.MetadataSuffix)) continue;
-					if (alreadySkippedCount++ < start) continue;
+					var key = iterator.CurrentKey.ToString();
 
-					var originalKey = Util.OriginalKey(dataKey);
-					var fetchedDocument = DocumentByKey(originalKey, null);
+					var fetchedDocument = DocumentByKey(key, null);
 					if (fetchedDocument == null) continue;
 
 					fetchedDocumentCount++;
 					yield return fetchedDocument;
-				} while (iter.MoveNext() && fetchedDocumentCount < take);
+				} while (iterator.MoveNext() && fetchedDocumentCount < take);
 			}
 		}
 
 		public long GetDocumentsCount()
 		{
-			using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
-											.Iterate(snapshot, writeBatch))
-			{
-				long documentCount = 0;
-
-				if (!iter.Seek(Slice.BeforeAllKeys))
-				{
-					return 0;
-				}
-
-				do
-				{
-					if (iter.CurrentKey != null && !iter.CurrentKey.Equals(Slice.Empty))
-						++documentCount;
-				} while (iter.MoveNext());
-
-				return documentCount;
-			}
+			return tableStorage.GetEntriesCount(tableStorage.Documents);
 		}
 
 		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
 		{
-			if (String.IsNullOrEmpty(key))
+			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var lowerKey = key.ToLowerInvariant();
-			var dataKey = Util.DataKey(lowerKey);
-			var metadataKey = Util.MetadataKey(lowerKey);
-			if (!documentsTable.Contains(snapshot, dataKey, writeBatch))
+			var lowerKey = CreateKey(key);
+			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch))
 			{
 				logger.Debug("Document with key='{0}' was not found", key);
 				return null;
 			}
 
-
-			var metadataDocument = ReadDocumentMetadata(metadataKey);
+			var metadataDocument = ReadDocumentMetadata(key);
 			if (metadataDocument == null)
 			{
-				logger.Warn(String.Format("Metadata of document with key='{0} was not found, but the document itself exists.", key));
+				logger.Warn(string.Format("Metadata of document with key='{0} was not found, but the document itself exists.", key));
 				return null;
 			}
 
-			var documentData = ReadDocumentData(dataKey, metadataDocument.Etag, metadataDocument.Metadata);
+			var documentData = ReadDocumentData(key, metadataDocument.Etag, metadataDocument.Metadata);
 
 			logger.Debug("DocumentByKey() by key ='{0}'", key);
 
-			var docSize = documentsTable.GetDataSize(snapshot, dataKey);
-			var metadataSize = documentsTable.GetDataSize(snapshot, metadataKey);
+			var docSize = tableStorage.Documents.GetDataSize(Snapshot, lowerKey);
+
+			var metadataSize = metadataIndex.GetDataSize(Snapshot, lowerKey);
 
 			return new JsonDocument
 			{
@@ -257,15 +238,13 @@
 
 		public JsonDocumentMetadata DocumentMetadataByKey(string key, TransactionInformation transactionInformation)
 		{
-			if (String.IsNullOrEmpty(key))
+			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var lowerKey = key.ToLowerInvariant();
-			var dataKey = Util.DataKey(lowerKey);
-			var metadataKey = Util.MetadataKey(lowerKey);
+			var lowerKey = CreateKey(key);
 
-			if (documentsTable.Contains(snapshot, dataKey, writeBatch))
-				return ReadDocumentMetadata(metadataKey);
+			if (tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch))
+				return ReadDocumentMetadata(key);
 
 			logger.Debug("Document with key='{0}' was not found", key);
 			return null;
@@ -273,14 +252,12 @@
 
 		public bool DeleteDocument(string key, Etag etag, out RavenJObject metadata, out Etag deletedETag)
 		{
-			if (String.IsNullOrEmpty(key))
+			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var lowerKey = key.ToLowerInvariant();
-			var dataKey = Util.DataKey(lowerKey);
-			var metadataKey = Util.MetadataKey(lowerKey);
+			var lowerKey = CreateKey(key);
 
-			if (!documentsTable.Contains(snapshot, dataKey, writeBatch))
+			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch))
 			{
 				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
 				metadata = null;
@@ -288,26 +265,25 @@
 				return false;
 			}
 
-			if (!documentsTable.Contains(snapshot, metadataKey, writeBatch)) //data exists, but metadata is not --> precaution, should never be true
+			if (!metadataIndex.Contains(Snapshot, lowerKey, writeBatch)) //data exists, but metadata is not --> precaution, should never be true
 			{
-				var errorString = String.Format("Document with key '{0}' was found, but its metadata wasn't found --> possible data corruption", key);
+				var errorString = string.Format("Document with key '{0}' was found, but its metadata wasn't found --> possible data corruption", key);
 				throw new ApplicationException(errorString);
 			}
 
-
 			var existingEtag = EnsureDocumentEtagMatch(key, etag);
-			var documentMetadata = ReadDocumentMetadata(metadataKey);
+			var documentMetadata = ReadDocumentMetadata(key);
 			metadata = documentMetadata.Metadata;
 
 			deletedETag = etag != null ? existingEtag : documentMetadata.Etag;
 
-			documentsTable.Delete(writeBatch, dataKey);
-			documentsTable.Delete(writeBatch, metadataKey);
+			tableStorage.Documents.Delete(writeBatch, lowerKey);
+			tableStorage.Documents.Delete(writeBatch, lowerKey);
 
-			documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
+			tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
 						  .Delete(writeBatch, deletedETag);
 
-			documentCacher.RemoveCachedDocument(dataKey, etag);
+			documentCacher.RemoveCachedDocument(lowerKey, etag);
 
 			logger.Debug("Deleted document with key = '{0}'", key);
 
@@ -322,14 +298,11 @@
 			if (key != null && Encoding.UTF8.GetByteCount(key) >= UInt16.MaxValue)
 				throw new ArgumentException(string.Format("The dataKey must be a maximum of {0} bytes in Unicode, key is: '{1}'", UInt16.MaxValue, key), "key");
 
-			var lowerKey = key.ToLowerInvariant();
-			var dataKey = Util.DataKey(lowerKey);
-
 			Etag existingEtag;
 			Etag newEtag;
 
 			DateTime savedAt;
-			var isUpdate = WriteDocumentData(dataKey, key, etag, data, metadata, out newEtag, out existingEtag, out savedAt);
+			var isUpdate = WriteDocumentData(key, etag, data, metadata, out newEtag, out existingEtag, out savedAt);
 
 			logger.Debug("AddDocument() - {0} document with key = '{1}'", isUpdate ? "Updated" : "Added", key);
 
@@ -347,8 +320,8 @@
 			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var metadataKey = Util.MetadataKey(key.ToLowerInvariant());
-			if (!documentsTable.Contains(snapshot, metadataKey, writeBatch))
+			var lowerKey = CreateKey(key);
+			if (!metadataIndex.Contains(Snapshot, lowerKey, writeBatch))
 			{
 				throw new InvalidOperationException("Updating document metadata is only valid for existing documents, but " + key +
 																	" does not exists");
@@ -389,12 +362,12 @@
 
 		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
 		{
-			if (String.IsNullOrEmpty(key))
+			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			if (!checkForUpdates && documentsTable.Contains(snapshot, Util.DataKey(key.ToLowerInvariant()), writeBatch))
+			if (!checkForUpdates && tableStorage.Documents.Contains(Snapshot, CreateKey(key), writeBatch))
 			{
-				throw new ApplicationException(String.Format("InsertDocument() - checkForUpdates is false and document with key = '{0}' already exists", key));
+				throw new ApplicationException(string.Format("InsertDocument() - checkForUpdates is false and document with key = '{0}' already exists", key));
 			}
 
 			return AddDocument(key, null, data, metadata);
@@ -402,14 +375,12 @@
 
 		public void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag)
 		{
-			if (String.IsNullOrEmpty(key))
+			if (string.IsNullOrEmpty(key))
 				throw new ArgumentNullException("key");
 
-			var lowerKey = key.ToLowerInvariant();
-			var dataKey = Util.DataKey(lowerKey);
-			var metadataKey = Util.MetadataKey(lowerKey);
+			var lowerKey = CreateKey(key);
 
-			if (!documentsTable.Contains(snapshot, dataKey, writeBatch))
+			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch))
 			{
 				logger.Debug("Document with dataKey='{0}' was not found", key);
 				preTouchEtag = null;
@@ -417,7 +388,7 @@
 				return;
 			}
 
-			var metadata = ReadDocumentMetadata(metadataKey);
+			var metadata = ReadDocumentMetadata(key);
 
 			var newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			afterTouchEtag = newEtag;
@@ -426,10 +397,10 @@
 
 			WriteDocumentMetadata(metadata);
 
-			var keyByEtagDocumentIndice = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag);
+			var keyByEtagIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
 
-			keyByEtagDocumentIndice.Delete(writeBatch, preTouchEtag);
-			keyByEtagDocumentIndice.Add(writeBatch, newEtag, Encoding.UTF8.GetBytes(lowerKey));
+			keyByEtagIndex.Delete(writeBatch, preTouchEtag);
+			keyByEtagIndex.Add(writeBatch, newEtag, lowerKey);
 
 			logger.Debug("TouchDocument() - document with key = '{0}'", key);
 		}
@@ -438,8 +409,8 @@
 		{
 			if (etag == null) throw new ArgumentNullException("etag");
 
-			using (var iter = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag)
-											.Iterate(snapshot, writeBatch))
+			using (var iter = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
+											.Iterate(Snapshot, writeBatch))
 			{
 				if (!iter.Seek(etag.ToString()) &&
 					!iter.Seek(Slice.BeforeAllKeys)) //if parameter etag not found, scan from beginning. if empty --> return original etag
@@ -458,7 +429,7 @@
 
 		private Etag EnsureDocumentEtagMatch(string key, Etag etag)
 		{
-			var metadata = ReadDocumentMetadata(Util.MetadataKey(key.ToLowerInvariant()));
+			var metadata = ReadDocumentMetadata(key);
 
 			if (metadata == null)
 				return Etag.InvalidEtag;
@@ -506,17 +477,19 @@
 
 			metadataStream.Position = 0;
 
-			var metadataKey = Util.MetadataKey(metadata.Key.ToLowerInvariant());
+			var loweredKey = CreateKey(metadata.Key);
 
-			var isUpdate = documentsTable.Contains(snapshot, metadataKey, writeBatch);
-			documentsTable.Add(writeBatch, metadataKey, metadataStream);
+			var isUpdate = metadataIndex.Contains(Snapshot, loweredKey, writeBatch);
+			metadataIndex.Add(writeBatch, loweredKey, metadataStream);
 
 			return isUpdate;
 		}
 
-		private JsonDocumentMetadata ReadDocumentMetadata(string metadataKey)
+		private JsonDocumentMetadata ReadDocumentMetadata(string key)
 		{
-			using (var metadataReadResult = documentsTable.Read(snapshot, metadataKey, writeBatch))
+			var loweredKey = CreateKey(key);
+
+			using (var metadataReadResult = metadataIndex.Read(Snapshot, loweredKey, writeBatch))
 			{
 				if (metadataReadResult == null)
 					return null;
@@ -526,8 +499,7 @@
 				var originalKey = metadataReadResult.Stream.ReadString();
 				var lastModifiedDateTimeBinary = metadataReadResult.Stream.ReadInt64();
 
-
-				var existingCachedDocument = documentCacher.GetCachedDocument(metadataKey, etag);
+				var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, etag);
 
 				var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : metadataReadResult.Stream.ToJObject();
 				var lastModified = lastModifiedDateTimeBinary > 0 ? DateTime.FromBinary(lastModifiedDateTimeBinary) : (DateTime?)null;
@@ -542,59 +514,62 @@
 			}
 		}
 
-		private bool WriteDocumentData(string dataKey, string originalKey, Etag etag, RavenJObject data, RavenJObject metadata, out Etag newEtag, out Etag existingEtag, out DateTime savedAt)
+		private bool WriteDocumentData(string key, Etag etag, RavenJObject data, RavenJObject metadata, out Etag newEtag, out Etag existingEtag, out DateTime savedAt)
 		{
-			var keyByEtagDocumentIndex = documentsTable.GetIndex(Tables.Documents.Indices.KeyByEtag);
+			var keyByEtagDocumentIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
+			var loweredKey = CreateKey(key);
 
-			var isUpdate = documentsTable.Contains(snapshot, dataKey, writeBatch);
+			var isUpdate = tableStorage.Documents.Contains(Snapshot, loweredKey, writeBatch);
 			existingEtag = null;
 
 			if (isUpdate)
 			{
-				existingEtag = EnsureDocumentEtagMatch(originalKey, etag);
+				existingEtag = EnsureDocumentEtagMatch(loweredKey, etag);
 				keyByEtagDocumentIndex.Delete(writeBatch, existingEtag);
 			}
 			else if (etag != null && etag != Etag.Empty)
 			{
-				throw new ConcurrencyException(String.Format("Attempted to write document with non-current etag (key = {0})", dataKey));
+				throw new ConcurrencyException(string.Format("Attempted to write document with non-current etag (key = {0})", key));
 			}
 
 			Stream dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream            
 			data.WriteTo(dataStream);
 
 			var finalDataStream = documentCodecs.Aggregate(dataStream,
-				(current, codec) => codec.Encode(dataKey, data, metadata, current));
+				(current, codec) => codec.Encode(loweredKey, data, metadata, current));
 
 			finalDataStream.Position = 0;
-			documentsTable.Add(writeBatch, dataKey, finalDataStream);
+			tableStorage.Documents.Add(writeBatch, loweredKey, finalDataStream);
 
 			newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			savedAt = SystemTime.UtcNow;
 
-			var isUpdated = PutDocumentMetadataInternal(originalKey, metadata, newEtag, savedAt);
+			var isUpdated = PutDocumentMetadataInternal(key, metadata, newEtag, savedAt);
 
-			keyByEtagDocumentIndex.Add(writeBatch, newEtag, Encoding.UTF8.GetBytes(originalKey));
+			keyByEtagDocumentIndex.Add(writeBatch, newEtag, loweredKey);
 
 			return isUpdated;
 		}
 
-		private RavenJObject ReadDocumentData(string dataKey, Etag existingEtag, RavenJObject metadata)
+		private RavenJObject ReadDocumentData(string key, Etag existingEtag, RavenJObject metadata)
 		{
-			var existingCachedDocument = documentCacher.GetCachedDocument(dataKey, existingEtag);
+			var loweredKey = CreateKey(key);
+
+			var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, existingEtag);
 			if (existingCachedDocument != null)
 				return existingCachedDocument.Document;
 
-			using (var documentReadResult = documentsTable.Read(snapshot, dataKey, writeBatch))
+			using (var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch))
 			{
 				if (documentReadResult == null) //non existing document
 					return null;
 
 				var decodedDocumentStream = documentCodecs.Aggregate(documentReadResult.Stream,
-							(current, codec) => codec.Value.Decode(dataKey, metadata, documentReadResult.Stream));
+							(current, codec) => codec.Value.Decode(loweredKey, metadata, documentReadResult.Stream));
 
 				var documentData = decodedDocumentStream.ToJObject();
 
-				documentCacher.SetCachedDocument(dataKey, existingEtag, documentData, metadata, (int)documentReadResult.Stream.Length);
+				documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, (int)documentReadResult.Stream.Length);
 
 				return documentData;
 			}
