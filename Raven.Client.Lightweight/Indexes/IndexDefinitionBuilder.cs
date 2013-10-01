@@ -106,6 +106,10 @@ namespace Raven.Client.Indexes
 		/// <value>The spatial options.</value>
 		public IDictionary<string, SpatialOptions> SpatialIndexesStrings { get; set; }
 
+		/// <summary>
+		/// Max number of allowed indexing outputs per one source document
+		/// </summary>
+		public int? MaxIndexOutputsPerDocument { get; set; }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
@@ -151,7 +155,8 @@ namespace Raven.Client.Indexes
 				Analyzers = ConvertToStringDictionary(Analyzers),
 				Suggestions = ConvertToStringDictionary(Suggestions),
 				TermVectors =  ConvertToStringDictionary(TermVectors),
-				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes)
+				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes),
+				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
 			};
 
 			foreach (var indexesString in IndexesStrings)

@@ -277,9 +277,15 @@ namespace Raven.Client.Indexes
 				TermVectors = TermVectors,
 				TermVectorsStrings = TermVectorsStrings,
 				SpatialIndexes = SpatialIndexes,
-				SpatialIndexesStrings = SpatialIndexesStrings
+				SpatialIndexesStrings = SpatialIndexesStrings,
+				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
 			}.ToIndexDefinition(Conventions);
 		}
+
+		/// <summary>
+		/// Max number of allowed indexing outputs per one source document
+		/// </summary>
+		public int? MaxIndexOutputsPerDocument { get; set; }
 
 		public override bool IsMapReduce
 		{

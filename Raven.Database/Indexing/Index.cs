@@ -1533,7 +1533,7 @@ namespace Raven.Database.Indexing
 
         protected void EnsureValidNumberOfOutputsForDocument(string sourceDocumentId, int numberOfAlreadyProducedOutputs)
         {
-            var maxNumberOfIndexOutputs = context.Configuration.MaxIndexOutputsPerDocument;
+            var maxNumberOfIndexOutputs = indexDefinition.MaxIndexOutputsPerDocument ?? context.Configuration.MaxIndexOutputsPerDocument;
 
             if (maxNumberOfIndexOutputs == -1)
                 return;
