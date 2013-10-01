@@ -83,19 +83,26 @@ namespace Voron.Impl
 			_base = newBase;
 			_ptr = newPtr;
 
-			var oldPager = PagerState;
-
-			var newPager = new PagerState { Ptr = newPtr };
-			newPager.AddRef(); // one for the pager
+			PagerState.Release(); // when the last transaction using this is over, will dispose it
+			PagerState newPager = CreateNewPagerState(newPtr);
 
 			if (tx != null) // we only pass null during startup, and we don't need it there
 			{
 				newPager.AddRef(); // one for the current transaction
-				tx.AddPagerState(PagerState);
+				tx.AddPagerState(newPager);
 			}
 
 			PagerState = newPager;
-			oldPager.Release();
+		}
+
+		private PagerState CreateNewPagerState(IntPtr ptr)
+		{
+			var newPager = new PagerState
+			{
+				Ptr = ptr
+			};
+			newPager.AddRef(); // one for the pager
+			return newPager;
 		}
 	}
 }
