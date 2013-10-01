@@ -12,6 +12,11 @@ namespace Raven.Tests.MailingList
 {
 	public class DataSetIndexTests : RavenTestBase
 	{
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        {
+            configuration.MaxIndexOutputsPerDocument = 100;
+        }
+
 		[Fact]
 		public void can_execute_query_default()
 		{
@@ -25,6 +30,8 @@ namespace Raven.Tests.MailingList
 					CreateDataSet(session, "stations/rtl", "T2");
 					CreateDataSet(session, "stations/energy", "EX");
 				}
+
+                WaitForUserToContinueTheTest();
 
 				using (var session = store.OpenSession())
 				{

@@ -23,6 +23,7 @@ using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -891,6 +892,9 @@ namespace Raven.Database.Indexing
 
 			public IEnumerable<IndexQueryResult> Query()
 			{
+			    if (parent.Priority.HasFlag(IndexingPriority.Error))
+			        throw new IndexDisabledException("The index has been disabled due to errors");
+
 				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
 				{
@@ -1537,18 +1541,22 @@ namespace Raven.Database.Indexing
             if (numberOfAlreadyProducedOutputs <= maxNumberOfIndexOutputs) 
                 return;
 
-            Priority = IndexingPriority.Disabled;
+            Priority = IndexingPriority.Error;
 
             // this cannot happen in the current transaction, since we are going to throw in just a bit.
             using (context.Database.TransactionalStorage.DisableBatchNesting())
             {
-                context.Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Disabled));    
+                context.Database.TransactionalStorage.Batch(accessor =>
+                {
+                    accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error);
+                    accessor.Indexing.TouchIndexEtag(indexId);
+                });    
             }
 
             context.Database.RaiseNotifications(new IndexChangeNotification()
             {
                 Name = PublicName,
-                Type = IndexChangeTypes.IndexDemotedToDisabled
+                Type = IndexChangeTypes.IndexMarkedAsErrored 
             });
 
             throw new InvalidOperationException(
