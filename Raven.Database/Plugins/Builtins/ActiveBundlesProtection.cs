@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
@@ -17,12 +18,12 @@ namespace Raven.Database.Plugins.Builtins
 
 		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			if (key.StartsWith(RavenDatabasesPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
+            if (Database.Name != null && Database.Name != Constants.SystemDatabase)
+                return VetoResult.Allowed;
+            
+            if (key.StartsWith(RavenDatabasesPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
 				return VetoResult.Allowed;
-
-			if(Database.Name != null && Database.Name != Constants.SystemDatabase)
-				return VetoResult.Allowed;
-
+			
 			var tempPermission = metadata[Constants.AllowBundlesChange];
 
 			if (tempPermission != null)
@@ -39,10 +40,16 @@ namespace Raven.Database.Plugins.Builtins
 				return VetoResult.Allowed;
 
 			var currentDbDocument = existingDbDoc.DataAsJson.JsonDeserialization<DatabaseDocument>();
-			var currentBundles = (currentDbDocument.Settings[Constants.ActiveBundles] ?? "").GetSemicolonSeparatedValues();
+			
+            var currentBundles = new List<string>();
+		    string value;
+            if(currentDbDocument.Settings.TryGetValue(Constants.ActiveBundles, out value))
+                currentBundles = value.GetSemicolonSeparatedValues();
 
-			var newDbDocument = document.JsonDeserialization<DatabaseDocument>();
-			var newBundles = (newDbDocument.Settings[Constants.ActiveBundles] ?? "").GetSemicolonSeparatedValues();
+		    var newDbDocument = document.JsonDeserialization<DatabaseDocument>();
+		    var newBundles = new List<string>();
+		    if(newDbDocument.Settings.TryGetValue(Constants.ActiveBundles, out value))
+                newBundles = value.GetSemicolonSeparatedValues();
 
 			if (currentBundles.Count != newBundles.Count || currentBundles.TrueForAll(x => newBundles.Contains(x) == false))
 			{
