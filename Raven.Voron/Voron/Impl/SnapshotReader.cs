@@ -58,9 +58,11 @@
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
+						case WriteBatch.BatchOperationType.MultiAdd:
 							//when the returned ReadResult is disposed - prevent from stream currently in WriteBatch to be disposed as well
 							return true;
 						case WriteBatch.BatchOperationType.Delete:
+						case WriteBatch.BatchOperationType.MultiDelete:
 							return false;
 					}
 				}

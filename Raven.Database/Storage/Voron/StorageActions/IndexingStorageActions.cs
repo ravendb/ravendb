@@ -106,7 +106,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					{ "reduce_attempts", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
 					{ "reduce_successes", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
 					{ "reduce_failures", createMapReduce ? 0 : (RavenJToken)RavenJValue.Null },
-					{ "lastReducedEtag", createMapReduce ? Etag.Empty.ToByteArray() : (RavenJToken)RavenJValue.Null },
+					{ "lastReducedEtag", createMapReduce ? Etag.Empty.ToString() : String.Empty },
 					{ "lastReducedTimestamp", createMapReduce ? DateTime.MinValue : (RavenJToken)RavenJValue.Null }
 				}, 0);
 
@@ -116,7 +116,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				new RavenJObject
 				{
 					{ "index", name },
-					{ "lastEtag", Etag.Empty.ToByteArray() },
+					{ "lastEtag", Etag.Empty.ToString() },
 					{ "lastTimestamp", DateTime.MinValue },
 				}, 0);
 		}
@@ -169,10 +169,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			ushort version;
 			var index = Load(tableStorage.LastIndexedEtags, key, out version);
 
-			if (Buffers.Compare(index.Value<byte[]>("lastEtag"), etag.ToByteArray()) >= 0)
+			var lastEtag = Etag.Parse(index.Value<string>("lastEtag"));
+			if(lastEtag.CompareTo(etag) >= 0)
 				return;
 
-			index["lastEtag"] = etag.ToByteArray();
+			index["lastEtag"] = etag.ToString();
 			index["lastTimestamp"] = timestamp;
 
 			tableStorage.LastIndexedEtags.Add(writeBatch, key, index, version);
@@ -185,10 +186,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			ushort version;
 			var index = Load(tableStorage.IndexingStats, key, out version);
 
-			if (Buffers.Compare(index.Value<byte[]>("lastReducedEtag"), etag.ToByteArray()) >= 0)
+			if (Buffers.Compare(Etag.Parse(index.Value<string>("lastReducedEtag")).ToByteArray(), etag.ToByteArray()) >= 0)
 				return;
 
-			index["lastReducedEtag"] = etag.ToByteArray();
+			index["lastReducedEtag"] = etag.ToString();
 			index["lastReducedTimestamp"] = timestamp;
 
 			tableStorage.IndexingStats.Add(writeBatch, key, index, version);
@@ -369,13 +370,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				ReduceIndexingSuccesses = indexingStats.Value<int?>("reduce_successes"),
 				Name = indexingStats.Value<string>("index"),
 				Priority = (IndexingPriority)indexingStats.Value<int>("priority"),
-				LastIndexedEtag = Etag.Parse(lastIndexedEtags.Value<byte[]>("lastEtag")),
+				LastIndexedEtag = Etag.Parse(lastIndexedEtags.Value<string>("lastEtag")),
 				LastIndexedTimestamp = lastIndexedEtags.Value<DateTime>("lastTimestamp"),
 				CreatedTimestamp = indexingStats.Value<DateTime>("createdTimestamp"),
 				LastIndexingTime = indexingStats.Value<DateTime>("lastIndexingTime"),
 				LastReducedEtag =
-					indexingStats.Value<byte[]>("lastReducedEtag") != null
-						? Etag.Parse(indexingStats.Value<byte[]>("lastReducedEtag"))
+					!String.IsNullOrEmpty(indexingStats.Value<string>("lastReducedEtag"))
+						? Etag.Parse(indexingStats.Value<string>("lastReducedEtag"))
 						: null,
 				LastReducedTimestamp = indexingStats.Value<DateTime?>("lastReducedTimestamp")
 			};

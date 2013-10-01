@@ -1,14 +1,12 @@
-﻿namespace Raven.Database.Storage.Voron.StorageActions
+﻿
+namespace Raven.Database.Storage.Voron.StorageActions
 {
-	using System;
-
-	using Raven.Abstractions.Data;
-	using Raven.Abstractions.Exceptions;
-	using Raven.Abstractions.Extensions;
-	using Raven.Database.Storage.Voron.Impl;
-
 	using global::Voron;
 	using global::Voron.Impl;
+	using Raven.Abstractions.Data;
+	using Raven.Abstractions.Exceptions;
+	using Raven.Database.Storage.Voron.Impl;
+	using System;
 
 	public class StalenessStorageActions : StorageActionsBase, IStalenessStorageActions
 	{
@@ -31,8 +29,8 @@
 			if (indexingStats == null)
 				return false; // index does not exists
 
-			var hasReduce = indexingStats.Value<byte[]>("lastReducedEtag") != null;
-
+			var hasReduce = !String.IsNullOrEmpty(indexingStats.Value<string>("lastReducedEtag"));
+			
 			if (IsMapStale(key) || hasReduce && IsReduceStale(key))
 			{
 				var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch, out version);
@@ -49,9 +47,9 @@
 				}
 				else if (cutoffEtag != null)
 				{
-					var lastIndexedEtag = lastIndexedEtags.Value<byte[]>("lastEtag");
+					var lastIndexedEtag = Etag.Parse(lastIndexedEtags.Value<string>("lastEtag"));
 
-					if (Buffers.Compare(lastIndexedEtag, cutoffEtag.ToByteArray()) < 0)
+					if (lastIndexedEtag.CompareTo(cutoffEtag) < 0)
 						return true;
 				}
 				else
@@ -61,7 +59,7 @@
 			}
 
 			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
-			using (var iterator = tasksByIndex.MultiRead(Snapshot, key))
+			using (var iterator = tasksByIndex.MultiRead(Snapshot, name))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return false;
@@ -86,7 +84,7 @@
 		public bool IsReduceStale(string view)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
-			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, view))
+			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, view.ToLowerInvariant()))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return false;
@@ -104,7 +102,7 @@
 			if (read == null)
 				return false;
 
-			var lastIndexedEtag = Etag.Parse(read.Value<byte[]>("lastEtag"));
+			var lastIndexedEtag = Etag.Parse(read.Value<string>("lastEtag"));
 			var lastDocumentEtag = GetMostRecentDocumentEtag();
 
 			return lastDocumentEtag.CompareTo(lastIndexedEtag) > 0;
@@ -123,13 +121,13 @@
 			{
 				return Tuple.Create(
 					indexingStats.Value<DateTime>("lastReducedTimestamp"),
-					Etag.Parse(indexingStats.Value<byte[]>("lastReducedEtag")));
+					Etag.Parse(indexingStats.Value<string>("lastReducedEtag")));
 			}
 
 			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch, out version);
 
 			return Tuple.Create(lastIndexedEtags.Value<DateTime>("lastTimestamp"),
-				Etag.Parse(lastIndexedEtags.Value<byte[]>("lastEtag")));
+				Etag.Parse(lastIndexedEtags.Value<string>("lastEtag")));
 		}
 
 		public Etag GetMostRecentDocumentEtag()

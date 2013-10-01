@@ -353,7 +353,7 @@
 				{"timestamp", SystemTime.UtcNow}
 			});
 
-			scheduledReductionsByView.MultiAdd(writeBatch, view, idAsString);
+			scheduledReductionsByView.MultiAdd(writeBatch, view.ToLowerInvariant(), idAsString);
 			scheduledReductionsByViewAndLevelAndReduceKey.MultiAdd(writeBatch, CreateKey(view, level, reduceKeysAndBuckets.ReduceKey), idAsString);
 			scheduledReductionsByViewAndLevel.MultiAdd(writeBatch, CreateKey(view, level), idAsString);
 		}
@@ -839,7 +839,7 @@
 			var scheduledReductionsByViewAndLevel = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevel);
 
 			tableStorage.ScheduledReductions.Delete(writeBatch, id);
-			scheduledReductionsByView.MultiDelete(writeBatch, view, id);
+			scheduledReductionsByView.MultiDelete(writeBatch, view.ToLowerInvariant(), id);
 			scheduledReductionsByViewAndLevelAndReduceKey.MultiDelete(writeBatch, CreateKey(view, level, reduceKey), id);
 			scheduledReductionsByViewAndLevel.MultiDelete(writeBatch, CreateKey(view, level), id);
 		}

@@ -81,7 +81,7 @@ namespace Raven.Tests.Bugs
 
 		[Theory]
 		[InlineData("voron")]
-//		[InlineData("esent")]
+		[InlineData("esent")]
 		public void Reduce(string storageName)
 		{
 			using (var store = NewDocumentStore(requestedStorage:storageName))
@@ -103,8 +103,9 @@ namespace Raven.Tests.Bugs
 					session.SaveChanges();
 				}
 				WaitForIndexing(store);
-				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
 				var stats = store.DatabaseCommands.GetStatistics();
+				Assert.Empty(stats.Errors);
+
 				using (var session = store.OpenSession())
 				{
 					var bankTotal = session.Query<BankTotal, DecimalAggregation_Reduce>()

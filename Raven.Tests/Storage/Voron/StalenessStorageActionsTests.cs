@@ -246,6 +246,29 @@ namespace Raven.Tests.Storage.Voron
 
 		[Theory]
 		[PropertyData("Storages")]
+		public void IsReduceStale_UpperAndLowerCasingOfIndexNames(string requestedStorage)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage))
+			{
+				storage.Batch(accessor => Assert.False(accessor.Staleness.IsReduceStale("index1")));
+
+				storage.Batch(accessor => accessor.MapReduce.ScheduleReductions("index1", 0, new ReduceKeyAndBucket(1, "reduceKey1")));
+
+				storage.Batch(accessor => Assert.True(accessor.Staleness.IsReduceStale("index1")));
+				storage.Batch(accessor => Assert.True(accessor.Staleness.IsReduceStale("Index1")));
+				storage.Batch(accessor => Assert.True(accessor.Staleness.IsReduceStale("inDEx1")));
+
+				storage.Batch(accessor => accessor.MapReduce.DeleteScheduledReduction("index1", 0, "reduceKey1"));
+
+				storage.Batch(accessor => Assert.False(accessor.Staleness.IsReduceStale("index1")));
+				storage.Batch(accessor => Assert.False(accessor.Staleness.IsReduceStale("Index1")));
+				storage.Batch(accessor => Assert.False(accessor.Staleness.IsReduceStale("inDEx1")));
+			}
+		}
+
+
+		[Theory]
+		[PropertyData("Storages")]
 		public void IsIndexStale1(string requestedStorage)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))

@@ -19,7 +19,7 @@ namespace Voron.Trees
 
 		public int GetCurrentDataSize()
 		{
-			throw new NotSupportedException("There is no value for single entry iterator");
+			return NodeHeader.GetDataSize(_tx, Current);
 		}
 
 		public Slice CurrentKey
@@ -75,7 +75,7 @@ namespace Voron.Trees
 
 		public Stream CreateStreamForCurrent()
 		{
-			throw new NotSupportedException("There is no value for single entry iterator");
+			return NodeHeader.Stream(_tx, Current);
 		}
 
 		public void Dispose()

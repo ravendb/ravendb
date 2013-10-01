@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Collections.Generic;
+
 namespace Raven.Database.Storage.Voron.Impl
 {
 	using System;
@@ -101,6 +103,46 @@ namespace Raven.Database.Storage.Voron.Impl
 		public virtual ushort ReadVersion(SnapshotReader snapshot, Slice key)
 		{
 			return snapshot.ReadVersion(TableName, key);
+		}
+
+		//for debugging purposes
+		public Dictionary<string, string> Dump(SnapshotReader snapshot)
+		{
+			using (var iterator = snapshot.Iterate(TableName))
+			{
+				if (!iterator.Seek(Slice.BeforeAllKeys))
+					return new Dictionary<string, string>();
+				var results = new Dictionary<string, string>();
+				do
+				{
+					bool isMultiTreeKey;
+					using (var multiIterator = snapshot.MultiRead(TableName, iterator.CurrentKey))
+					{
+						if (!multiIterator.Seek(Slice.BeforeAllKeys))
+						{
+							isMultiTreeKey = false;
+						}
+						else
+						{
+							isMultiTreeKey = true;
+							const string subtreeKeyPrefix = "[sub tree val: ]";
+
+							do
+							{
+								results.Add(subtreeKeyPrefix + iterator.CurrentKey + " " + results.Count , new StreamReader(multiIterator.CreateStreamForCurrent()).ReadToEnd());
+							} while (multiIterator.MoveNext());
+
+						}
+
+					}
+
+					if(!isMultiTreeKey)
+						results.Add(iterator.CurrentKey.ToString(), new StreamReader(iterator.CreateStreamForCurrent()).ReadToEnd());
+
+				} while (iterator.MoveNext());
+
+				return results;
+			}
 		}
 	}
 }
