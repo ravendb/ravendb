@@ -120,7 +120,8 @@ namespace Raven.Client.Connection
 				}
 			}
 
-			if (hasCachedRequests == false || convention.DisableProfiling)
+			if (hasCachedRequests == false || convention.DisableProfiling ||
+                holdProfilingInformation.ProfilingInformation.Requests.Count == 0)
 				return responses;
 
 			var lastRequest = holdProfilingInformation.ProfilingInformation.Requests.Last();
