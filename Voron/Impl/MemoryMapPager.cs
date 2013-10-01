@@ -12,9 +12,9 @@ namespace Voron.Impl
 	{
 		private readonly FlushMode _flushMode;
 		private readonly FileStream _fileStream;
-	    private int numberOfFlushes;
+		private int numberOfFlushes;
 
-	    [DllImport("kernel32.dll", SetLastError = true)]
+		[DllImport("kernel32.dll", SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
 		extern static bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
 
@@ -30,7 +30,7 @@ namespace Voron.Impl
 			}
 			else
 			{
-                NumberOfAllocatedPages = fileInfo.Length / PageSize;
+				NumberOfAllocatedPages = fileInfo.Length / PageSize;
 				PagerState.Release();
 				PagerState = CreateNewPagerState();
 			}
@@ -46,8 +46,8 @@ namespace Voron.Impl
 			if (newLength < _fileStream.Length)
 				throw new ArgumentException("Cannot set the legnth to less than the current length");
 
-		    if (newLength == _fileStream.Length)
-		        return;
+			if (newLength == _fileStream.Length)
+				return;
 
 			// need to allocate memory again
 			_fileStream.SetLength(newLength);
@@ -73,16 +73,16 @@ namespace Voron.Impl
 			accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
 
 			var newPager = new PagerState
-				 {
-					 Accessor = accessor,
-					 File = mmf,
-					 Base = p
-				 };
+			{
+				Accessor = accessor,
+				File = mmf,
+				Base = p
+			};
 			newPager.AddRef(); // one for the pager
 			return newPager;
 		}
 
-	    
+
 		public override void Flush(List<long> sortedPagesToFlush)
 		{
 			if (_flushMode == FlushMode.None || sortedPagesToFlush.Count == 0)
@@ -93,23 +93,23 @@ namespace Voron.Impl
 			{
 				FlushPages(tuple.Item1, tuple.Item2);
 			}
-            //numberOfFlushes++;
-            //if (
-            //    new[] { 1, 2, 3, 27, 28, 29, 1153, 1154, 1155, 4441, 4442, 4443, 7707, 7708, 7709, 9069, 9070, 9071 }.Contains(
-            //        numberOfFlushes) == false)
-            //    return;
+			//numberOfFlushes++;
+			//if (
+			//    new[] { 1, 2, 3, 27, 28, 29, 1153, 1154, 1155, 4441, 4442, 4443, 7707, 7708, 7709, 9069, 9070, 9071 }.Contains(
+			//        numberOfFlushes) == false)
+			//    return;
 
-            //var pages = sortedPagesToFlush.Select(Get).ToList();
+			//var pages = sortedPagesToFlush.Select(Get).ToList();
 
-            //Console.WriteLine("Flush {3,6:#,#} with {0,3:#,#} pages - {1,3:#,#} kb writes and {2,3} seeks ({4,3:#,#;;0} leaves, {5,3:#,#;;0} branches, {6,3:#,#;;0} overflows)",
-            //                sortedPagesToFlush.Count,
-            //                  (sortedPagesToFlush.Count * PageSize) / 1024,
-            //                  pageRangesToFlush.Count,
-            //                  numberOfFlushes,
-            //                  pages.Count(x => x.IsLeaf),
-            //                  pages.Count(x => x.IsBranch),
-            //                  pages.Count(x => x.IsOverflow)
-            //                  );
+			//Console.WriteLine("Flush {3,6:#,#} with {0,3:#,#} pages - {1,3:#,#} kb writes and {2,3} seeks ({4,3:#,#;;0} leaves, {5,3:#,#;;0} branches, {6,3:#,#;;0} overflows)",
+			//                sortedPagesToFlush.Count,
+			//                  (sortedPagesToFlush.Count * PageSize) / 1024,
+			//                  pageRangesToFlush.Count,
+			//                  numberOfFlushes,
+			//                  pages.Count(x => x.IsLeaf),
+			//                  pages.Count(x => x.IsBranch),
+			//                  pages.Count(x => x.IsOverflow)
+			//                  );
 		}
 
 		public override void Flush(long headerPageId)
@@ -139,27 +139,32 @@ namespace Voron.Impl
 				// we call flush, so we need to balance those needs.
 				if (difference < 32)
 				{
-				    count += difference;
+					count += difference;
 					continue;
 				}
 				yield return Tuple.Create(start, count);
 				start = sortedPagesToFlush[i];
 				count = 1;
 			}
-			yield return  Tuple.Create(start, count);
+			yield return Tuple.Create(start, count);
 		}
 
 
-	    private void FlushPages(long startPage, long count)
+		private void FlushPages(long startPage, long count)
 		{
-			long numberOfBytesToFlush = count*PageSize;
-			long start = startPage*PageSize;
+			long numberOfBytesToFlush = count * PageSize;
+			long start = startPage * PageSize;
 			FlushViewOfFile(PagerState.Base + start, new IntPtr(numberOfBytesToFlush));
+		}
+
+		public override void EnsureEnoughSpace(Transaction tx, int len)
+		{
+			// no need to do anything
 		}
 
 		public override void Dispose()
 		{
-            base.Dispose();
+			base.Dispose();
 			if (PagerState != null)
 			{
 				PagerState.Release();
