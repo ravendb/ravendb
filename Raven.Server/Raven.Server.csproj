@@ -184,7 +184,9 @@
     <EmbeddedResource Include="DefaultLogging.config">
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <None Include="NLog.config" />
+    <Content Include="NLog.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <None Include="NLog.xsd">
       <SubType>Designer</SubType>
     </None>
