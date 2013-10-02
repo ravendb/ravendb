@@ -46,7 +46,6 @@ public abstract class DocumentStoreBase implements IDocumentStore {
   private Map<String, String> sharedOperationsHeaders;
   protected DocumentConvention conventions;
   protected String url;
-  private UUID resourceManagerId;
   protected boolean initialized;
   protected final DocumentSessionListeners listeners = new DocumentSessionListeners();
   protected ProfilingContext profilingContext = new ProfilingContext();
@@ -124,23 +123,6 @@ public abstract class DocumentStoreBase implements IDocumentStore {
 
   public void setUrl(String url) {
     this.url = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
-  }
-
-
-  public boolean getEnlistInDistributedTransactions() {
-    return getConventions().isEnlistInDistributedTransactions();
-  }
-
-  public void setEnlistInDistributedTransactions(boolean value) {
-    getConventions().setEnlistInDistributedTransactions(value);
-  }
-
-  public UUID getResourceManagerId() {
-    return resourceManagerId;
-  }
-
-  public void setResourceManagerId(UUID resourceManagerId) {
-    this.resourceManagerId = resourceManagerId;
   }
 
   /**

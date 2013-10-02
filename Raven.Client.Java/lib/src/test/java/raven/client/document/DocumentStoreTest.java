@@ -1,10 +1,5 @@
 package raven.client.document;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import raven.client.IDocumentSession;
-
 public class DocumentStoreTest {
 
   public static class Animal {

@@ -7,7 +7,6 @@ import raven.abstractions.exceptions.ConcurrencyException;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.connection.IDatabaseCommands;
-import raven.client.connection.RavenTransactionAccessor;
 import raven.client.exceptions.ConflictException;
 
 /**
@@ -61,14 +60,7 @@ public class HiLoKeyGenerator extends HiLoKeyGeneratorBase {
   }
 
   private RangeValue getNextRange(IDatabaseCommands databaseCommands) {
-    /*TODO
-    using (new TransactionScope(TransactionScopeOption.Suppress))
-    {
-     */
-
-    try (
-        AutoCloseable close2 = RavenTransactionAccessor.supressExplicitRavenTransaction();
-        AutoCloseable close3 = databaseCommands.forceReadFromMaster()) {
+    try (AutoCloseable close3 = databaseCommands.forceReadFromMaster()) {
 
       modifyCapacityIfRequired();
       while (true) {

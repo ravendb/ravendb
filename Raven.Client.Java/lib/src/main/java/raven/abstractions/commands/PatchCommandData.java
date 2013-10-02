@@ -3,7 +3,6 @@ package raven.abstractions.commands;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.data.PatchRequest;
-import raven.abstractions.data.TransactionInformation;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
@@ -14,7 +13,6 @@ public class PatchCommandData implements ICommandData {
   private PatchRequest[] patchesIfMissing;
   private String key;
   private Etag etag;
-  private TransactionInformation transactionInformation;
   private RavenJObject metadata;
   private RavenJObject additionalData;
 
@@ -52,11 +50,6 @@ public class PatchCommandData implements ICommandData {
   }
 
   @Override
-  public TransactionInformation getTransactionInformation() {
-    return transactionInformation;
-  }
-
-  @Override
   public void setAdditionalData(RavenJObject additionalData) {
     this.additionalData = additionalData;
   }
@@ -79,11 +72,6 @@ public class PatchCommandData implements ICommandData {
 
   public void setPatchesIfMissing(PatchRequest[] patchesIfMissing) {
     this.patchesIfMissing = patchesIfMissing;
-  }
-
-  @Override
-  public void setTransactionInformation(TransactionInformation transactionInformation) {
-    this.transactionInformation = transactionInformation;
   }
 
   @Override

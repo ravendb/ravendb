@@ -75,10 +75,6 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
 
   private Map<String, Object> externalState;
 
-  private boolean hasEnlisted;
-
-  private static ThreadLocal<Map<String, Set<String>>> _registeredStoresInTransaction;
-
   // hold the data required to manage the data for RavenDB's Unit of Work
   protected final Map<Object, DocumentMetadata> entitiesAndMetadata = new IdentityHashMap<>();
 
@@ -93,7 +89,6 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
 
   private int numberOfRequests;
   private Long nonAuthoritativeInformationTimeout;
-  private UUID resourceManagerId;
   private int maxNumberOfRequestsPerSession;
   private boolean useOptimisticConcurrency;
   private boolean allowNonAuthoritativeInformation;
@@ -119,13 +114,6 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   // The document store associated with this session
   public IDocumentStore getDocumentStore() {
     return documentStore;
-  }
-
-  private static Map<String, Set<String>> getRegisteredStoresInTransaction() {
-    if (_registeredStoresInTransaction.get() == null) {
-      _registeredStoresInTransaction.set(new HashMap<String, Set<String>>());
-    }
-    return _registeredStoresInTransaction.get();
   }
 
   public Map<String, Object> getExternalState() {
@@ -162,7 +150,6 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     this.dbName = dbName;
     this.documentStore = documentStore;
     this.listeners = listeners;
-    this.resourceManagerId = documentStore.getResourceManagerId();
     this.useOptimisticConcurrency = false;
     this.allowNonAuthoritativeInformation = true;
     this.nonAuthoritativeInformationTimeout = 15 * 1000L;
@@ -210,14 +197,6 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
    */
   public DocumentConvention getConventions() {
     return documentStore.getConventions();
-  }
-
-  /**
-   * The transaction resource manager identifier
-   * @return
-   */
-  public UUID getResourceManagerId() {
-    return resourceManagerId;
   }
 
   /**
@@ -796,10 +775,6 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
 
     deferedCommands.clear();
 
-    if (documentStore.getEnlistInDistributedTransactions()) {
-      tryEnlistInAmbientTransaction();
-    }
-
     prepareForEntitiesDeletion(result);
     prepareForEntitiesPuts(result);
 
@@ -866,38 +841,6 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     }
     deletedEntities.clear();
   }
-
-  protected void tryEnlistInAmbientTransaction() {
-    /*TODO:
-    if (hasEnlisted || Transaction.Current == null)
-      return;
-
-    HashSet<string> registered;
-    var localIdentifier = Transaction.Current.TransactionInformation.LocalIdentifier;
-    if (RegisteredStoresInTransaction.TryGetValue(localIdentifier, out registered) == false)
-    {
-      RegisteredStoresInTransaction[localIdentifier] =
-          registered = new HashSet<string>();
-    }
-
-    if (registered.Add(StoreIdentifier))
-    {
-      var transactionalSession = (ITransactionalDocumentSession)this;
-      var ravenClientEnlistment = new RavenClientEnlistment(documentStore, transactionalSession, () =>
-      {
-        RegisteredStoresInTransaction.Remove(localIdentifier);
-        if (documentStore.WasDisposed)
-          throw new ObjectDisposedException("RavenDB Session");
-      });
-      if(documentStore.TransactionRecoveryStorage is VolatileOnlyTransactionRecoveryStorage)
-        Transaction.Current.EnlistVolatile(ravenClientEnlistment, EnlistmentOptions.None);
-      else
-        Transaction.Current.EnlistDurable(ResourceManagerId, ravenClientEnlistment, EnlistmentOptions.None);
-    }
-    hasEnlisted = true;
-     */
-  }
-
 
   /**
    * Mark the entity as read only, change tracking won't apply
@@ -986,13 +929,6 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
   @Override
   public void close() {
     //empty by design
-  }
-
-  /**
-   * Clears the enlistment.
-   */
-  protected void clearEnlistment() {
-    hasEnlisted = false;
   }
 
   protected void logBatch(SaveChangesData data) {

@@ -434,25 +434,6 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
   public BatchResult[] batch(final List<ICommandData> commandDatas);
 
   /**
-   * Commits the specified tx id.
-   * @param txId
-   */
-  public void commit(final String txId);
-
-  /**
-   * Rollbacks the specified tx id.
-   * @param txId
-   */
-  public void rollback(final String txId);
-
-  /**
-   * Returns a new {@link IDatabaseCommands} using the specified credentials
-   * @param credentialsForSession
-   * @return
-   */
-  public IDatabaseCommands with(ICredentials credentialsForSession);
-
-  /**
    * Perform a set based deletes using the specified index.
    * @param indexName
    * @param queryToDelete
@@ -712,12 +693,6 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @param name
    */
   public void deleteTransformer(String name);
-
-  /**
-   * Prepares the transaction on the server.
-   * @param txId
-   */
-  public void prepareTransaction(final String txId);
 
 
 }

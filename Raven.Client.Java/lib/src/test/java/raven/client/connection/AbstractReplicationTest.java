@@ -26,7 +26,7 @@ public abstract class AbstractReplicationTest extends RavenDBAwareTests{
   public void init() {
     super.init();
 
-    serverClient2 = new ServerClient(DEFAULT_SERVER_URL_2, convention, null,
+    serverClient2 = new ServerClient(DEFAULT_SERVER_URL_2, convention,
       new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
       UUID.randomUUID(), new IDocumentConflictListener[0]);
 

@@ -167,10 +167,6 @@ public class HttpJsonRequest {
     }
   }
 
-  public void disableAuthentication() {
-    //TODO: rewrite and test!
-  }
-
   private HttpUriRequest createWebRequest(String url, HttpMethods method) {
 
     HttpUriRequest baseMethod = null;
@@ -212,10 +208,6 @@ public class HttpJsonRequest {
         throw new IllegalArgumentException("Unknown method: " + method);
     }
 
-    /*TODO credentials
-    webRequest.UseDefaultCredentials = true;
-    webRequest.Credentials = requestParams.Credentials;
-     */
     return baseMethod;
   }
 
@@ -349,8 +341,6 @@ public class HttpJsonRequest {
     sp.start();
     HttpUriRequest newWebRequest = createWebRequest(this.url, this.method);
     HttpRequestHelper.copyHeaders(webRequest, newWebRequest);
-    //TODO:newWebRequest.UseDefaultCredentials = webRequest.UseDefaultCredentials;
-    //TODO: newWebRequest.Credentials = webRequest.Credentials;
 
     action.apply(newWebRequest);
     if (postedData != null) {

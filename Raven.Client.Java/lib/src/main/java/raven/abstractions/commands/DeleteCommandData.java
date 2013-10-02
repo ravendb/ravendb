@@ -2,7 +2,6 @@ package raven.abstractions.commands;
 
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.HttpMethods;
-import raven.abstractions.data.TransactionInformation;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 
@@ -12,7 +11,6 @@ import raven.abstractions.json.linq.RavenJValue;
 public class DeleteCommandData implements ICommandData {
   private String key;
   private Etag etag;
-  private TransactionInformation transactionInformation;
   private RavenJObject additionalData;
 
   public DeleteCommandData(String key, Etag etag) {
@@ -51,11 +49,6 @@ public class DeleteCommandData implements ICommandData {
   }
 
   @Override
-  public TransactionInformation getTransactionInformation() {
-    return transactionInformation;
-  }
-
-  @Override
   public void setAdditionalData(RavenJObject additionalData) {
     this.additionalData = additionalData;
   }
@@ -66,11 +59,6 @@ public class DeleteCommandData implements ICommandData {
 
   public void setKey(String key) {
     this.key = key;
-  }
-
-  @Override
-  public void setTransactionInformation(TransactionInformation transactionInformation) {
-    this.transactionInformation = transactionInformation;
   }
 
   @Override

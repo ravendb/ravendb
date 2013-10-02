@@ -114,8 +114,6 @@ public class DocumentConvention implements Serializable {
 
   private Function1<String, String> transformTypeTagNameToDocumentKeyPrefix;
 
-  private boolean enlistInDistributedTransactions;
-
   private Function1<String, ReplicationInformer> replicationInformerFactory;
 
   /* The maximum amount of time that we will wait before checking
@@ -136,7 +134,6 @@ public class DocumentConvention implements Serializable {
     setIdentityTypeConvertors(Arrays.<ITypeConverter> asList(new UUIDConverter(), new Int32Converter(), new Int64Converter()));
     setMaxFailoverCheckPeriod(5 * 60 * 1000); // 5 minutes
     setDisableProfiling(true);
-    setEnlistInDistributedTransactions(true);
     setUseParallelMultiGet(true);
     setDefaultQueryingConsistency(ConsistencyOptions.NONE);
     setFailoverBehavior(EnumSet.of(FailoverBehavior.ALLOW_READS_FROM_SECONDARIES));
@@ -904,23 +901,6 @@ public class DocumentConvention implements Serializable {
    */
   public void setMaxFailoverCheckPeriod(long maxFailoverCheckPeriod) {
     this.maxFailoverCheckPeriod = maxFailoverCheckPeriod;
-  }
-
-
-  /**
-   * Whatever or not RavenDB will automatically enlist in distributed transactions
-   * @return
-   */
-  public boolean isEnlistInDistributedTransactions() {
-    return enlistInDistributedTransactions;
-  }
-
-  /**
-   * Whatever or not RavenDB will automatically enlist in distributed transactions
-   * @param enlistInDistributedTransactions
-   */
-  public void setEnlistInDistributedTransactions(boolean enlistInDistributedTransactions) {
-    this.enlistInDistributedTransactions = enlistInDistributedTransactions;
   }
 
   public int incrementRequestCount() {

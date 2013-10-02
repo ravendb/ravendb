@@ -83,12 +83,11 @@ public abstract class RavenDBAwareTests {
   public void init() {
     System.setProperty("java.net.preferIPv4Stack" , "true");
     convention = new DocumentConvention();
-    convention.setEnlistInDistributedTransactions(false);
     factory = new HttpJsonRequestFactory(10);
 
     replicationInformer = new ReplicationInformer(convention);
 
-    serverClient = new ServerClient(DEFAULT_SERVER_URL_1, convention, null,
+    serverClient = new ServerClient(DEFAULT_SERVER_URL_1, convention,
         new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
         UUID.randomUUID(), new IDocumentConflictListener[0]);
   }

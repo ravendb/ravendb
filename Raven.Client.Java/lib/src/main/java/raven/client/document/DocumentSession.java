@@ -39,7 +39,6 @@ import raven.abstractions.json.linq.RavenJToken;
 import raven.client.IDocumentQuery;
 import raven.client.IDocumentSessionImpl;
 import raven.client.ISyncAdvancedSessionOperation;
-import raven.client.ITransactionalDocumentSession;
 import raven.client.LoadConfigurationFactory;
 import raven.client.RavenQueryHighlightings;
 import raven.client.RavenQueryStatistics;
@@ -71,7 +70,7 @@ import com.mysema.query.types.Path;
  * Implements Unit of Work for accessing the RavenDB server
  *
  */
-public class DocumentSession extends InMemoryDocumentSessionOperations implements IDocumentSessionImpl, ITransactionalDocumentSession, ISyncAdvancedSessionOperation, IDocumentQueryGenerator {
+public class DocumentSession extends InMemoryDocumentSessionOperations implements IDocumentSessionImpl, ISyncAdvancedSessionOperation, IDocumentQueryGenerator {
 
   protected final List<ILazyOperation> pendingLazyOperations = new ArrayList<>();
   protected final Map<ILazyOperation, Action1<Object>> onEvaluateLazy = new HashMap<>();
@@ -743,35 +742,6 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   @Override
   public <T> IDocumentQuery<T> luceneQuery(Class<T> clazz, String indexName, boolean isMapReduce) {
     return new DocumentQuery<>(clazz, this, getDatabaseCommands(), indexName, null, null, listeners.getQueryListeners(), isMapReduce);
-  }
-
-  /**
-   * Commits the specified tx id.
-   * @param txId
-   */
-  @Override
-  public void commit(String txId) {
-    incrementRequestCount();
-    getDatabaseCommands().commit(txId);
-    clearEnlistment();
-  }
-
-  /**
-   * Rollbacks the specified tx id.
-   * @param txId
-   */
-  @Override
-  public void rollback(String txId) {
-    incrementRequestCount();
-    getDatabaseCommands().rollback(txId);
-    clearEnlistment();
-  }
-
-  @Override
-  public void prepareTransaction(String txId) {
-    incrementRequestCount();
-    getDatabaseCommands().prepareTransaction(txId);
-    clearEnlistment();
   }
 
   /**

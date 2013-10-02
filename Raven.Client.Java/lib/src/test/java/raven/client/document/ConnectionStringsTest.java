@@ -14,10 +14,7 @@ public class ConnectionStringsTest {
 
       Assert.assertEquals("http://localhost:8079", store.getUrl());
       Assert.assertEquals("http://localhost:8079", store.getIdentifier());
-      Assert.assertNotNull(store.getResourceManagerId());
-      Assert.assertNotNull(store.getCredentials());
       Assert.assertNull(store.getDefaultDatabase());
-      Assert.assertTrue(store.getEnlistInDistributedTransactions());
     } catch (Exception e) {
       throw e;
     }
@@ -40,13 +37,11 @@ public class ConnectionStringsTest {
   @Test
   public void checkUrlAndRmid() throws Exception {
     try (DocumentStore store = new DocumentStore()) {
-      store.parseConnectionString("Url=http://localhost:8079/;ResourceManagerId=d5723e19-92ad-4531-adad-8611e6e05c8a;");
+      store.parseConnectionString("Url=http://localhost:8079/;");
 
       Assert.assertEquals("http://localhost:8079", store.getUrl());
       Assert.assertEquals("http://localhost:8079", store.getIdentifier());
-      Assert.assertNotNull(store.getCredentials());
       Assert.assertNull(store.getDefaultDatabase());
-      Assert.assertTrue(store.getEnlistInDistributedTransactions());
     } catch (Exception e) {
       throw e;
     }
@@ -59,10 +54,7 @@ public class ConnectionStringsTest {
 
       Assert.assertNull(store.getUrl());
       Assert.assertNull(store.getIdentifier());
-      Assert.assertNotNull(store.getResourceManagerId());
-      Assert.assertNotNull(store.getCredentials());
       Assert.assertEquals("DevMachine", store.getDefaultDatabase());
-      Assert.assertTrue(store.getEnlistInDistributedTransactions());
     } catch (Exception e) {
       throw e;
     }
@@ -75,10 +67,7 @@ public class ConnectionStringsTest {
 
       Assert.assertEquals("http://localhost:8079", store.getUrl());
       Assert.assertEquals("http://localhost:8079 (DB: DevMachine)", store.getIdentifier());
-      Assert.assertNotNull(store.getResourceManagerId());
-      Assert.assertNotNull(store.getCredentials());
       Assert.assertEquals("DevMachine", store.getDefaultDatabase());
-      Assert.assertTrue(store.getEnlistInDistributedTransactions());
     } catch (Exception e) {
       throw e;
     }
@@ -87,13 +76,11 @@ public class ConnectionStringsTest {
   @Test
   public void canWorkWithDefaultDb() throws Exception {
     try (DocumentStore store = new DocumentStore()) {
-      store.parseConnectionString("Url=http://localhost:8079/;DefaultDatabase=DevMachine;ResourceManagerId=d5723e19-92ad-4531-adad-8611e6e05c8a;");
+      store.parseConnectionString("Url=http://localhost:8079/;DefaultDatabase=DevMachine;");
 
       Assert.assertEquals("http://localhost:8079", store.getUrl());
       Assert.assertEquals("http://localhost:8079 (DB: DevMachine)", store.getIdentifier());
-      Assert.assertNotNull(store.getCredentials());
       Assert.assertEquals("DevMachine", store.getDefaultDatabase());
-      Assert.assertTrue(store.getEnlistInDistributedTransactions());
     } catch (Exception e) {
       throw e;
     }

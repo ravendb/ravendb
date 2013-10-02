@@ -33,9 +33,7 @@ import raven.client.DocumentStoreBase;
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
 import raven.client.changes.IDatabaseChanges;
-import raven.client.connection.ICredentials;
 import raven.client.connection.IDatabaseCommands;
-import raven.client.connection.NetworkCredential;
 import raven.client.connection.ReplicationInformer;
 import raven.client.connection.ServerClient;
 import raven.client.connection.implementation.HttpJsonRequestFactory;
@@ -62,8 +60,6 @@ public class DocumentStore extends DocumentStoreBase {
 
   private final ConcurrentMap<String, ReplicationInformer> replicationInformers =  new ConcurrentSkipListMap<>(String.CASE_INSENSITIVE_ORDER);
   private String identifier;
-  private ICredentials credentials;
-
 
   private final AtomicDictionary<IDatabaseChanges> databaseChanges = new AtomicDictionary<>(String.CASE_INSENSITIVE_ORDER);
   private HttpJsonRequestFactory jsonRequestFactory = new HttpJsonRequestFactory(DEFAULT_NUMBER_OF_CACHED_REQUESTS);
@@ -132,9 +128,6 @@ public class DocumentStore extends DocumentStoreBase {
   }
 
   public DocumentStore() {
-    credentials = new NetworkCredential();
-    setResourceManagerId(UUID.fromString("E749BAA6-6F76-4EEF-A069-40A4378954F8"));
-
     setSharedOperationsHeaders(new HashMap<String, String>());
     setConventions(new DocumentConvention());
   }
@@ -148,15 +141,6 @@ public class DocumentStore extends DocumentStoreBase {
     this();
     this.url = url;
     this.defaultDatabase = defaultDb;
-  }
-
-
-  public ICredentials getCredentials() {
-    return credentials;
-  }
-
-  public void setCredentials(ICredentials credentials) {
-    this.credentials = credentials;
   }
 
   @Override
@@ -200,12 +184,6 @@ public class DocumentStore extends DocumentStoreBase {
    *  Copy the relevant connection string settings
    */
   protected void setConnectionStringSettings(RavenConnectionStringOptions options) {
-    if (options.getResourceManagerId() != null) {
-      setResourceManagerId(options.getResourceManagerId());
-    }
-    if (options.getCredentials() != null) {
-      setCredentials(options.getCredentials());
-    }
     if (StringUtils.isNotEmpty(options.getUrl())) {
       setUrl(options.getUrl());
     }
@@ -218,7 +196,6 @@ public class DocumentStore extends DocumentStoreBase {
     if (options.getFailoverServers() != null) {
       failoverServers = options.getFailoverServers();
     }
-    setEnlistInDistributedTransactions(options.isEnlistInDistributedTransactions());
   }
 
 
@@ -289,7 +266,7 @@ public class DocumentStore extends DocumentStoreBase {
     currentSessionId.set(sessionId);
     try {
       DocumentSession session = new DocumentSession(options.getDatabase(), this, listeners, sessionId,
-          setupCommands(getDatabaseCommands(), options.getDatabase(), options.getCredentials(), options));
+          setupCommands(getDatabaseCommands(), options.getDatabase(), options));
       session.setDatabaseName(options.getDatabase() != null ? options.getDatabase() : defaultDatabase);
 
       afterSessionCreated(session);
@@ -299,12 +276,9 @@ public class DocumentStore extends DocumentStoreBase {
     }
   }
 
-  private static IDatabaseCommands setupCommands(IDatabaseCommands databaseCommands, String database, ICredentials credentialsForSession, OpenSessionOptions options) {
+  private static IDatabaseCommands setupCommands(IDatabaseCommands databaseCommands, String database, OpenSessionOptions options) {
     if (database != null) {
       databaseCommands = databaseCommands.forDatabase(database);
-    }
-    if (credentialsForSession != null) {
-      databaseCommands = databaseCommands.with(credentialsForSession);
     }
     if (options.isForceReadFromMaster()) {
       databaseCommands.forceReadFromMaster();
@@ -338,8 +312,6 @@ public class DocumentStore extends DocumentStoreBase {
       }
 
       initialized = true;
-
-      recoverPendingTransactions();
 
       if (StringUtils.isNotEmpty(defaultDatabase)) {
         getDatabaseCommands().forSystemDatabase().getGlobalAdmin().ensureDatabaseExists(defaultDatabase, true);
@@ -377,24 +349,11 @@ public class DocumentStore extends DocumentStoreBase {
     });
   }
 
-  private void recoverPendingTransactions() {
-    if (!getEnlistInDistributedTransactions())
-      return;
-
-    /*TODO:
-    var pendingTransactionRecovery = new PendingTransactionRecovery(this);
-    pendingTransactionRecovery.Execute(ResourceManagerId, DatabaseCommands);
-     */
-  }
-
   private void initializeSecurity() {
     if (conventions.getHandleUnauthorizedResponse() != null) {
       return ; // already setup by the user
     }
 
-    if (StringUtils.isNotEmpty(apiKey))  {
-      credentials = null;
-    }
     final BasicAuthenticator basicAuthenticator = new BasicAuthenticator(apiKey, jsonRequestFactory.isEnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers());
     final SecuredAuthenticator securedAuthenticator = new SecuredAuthenticator(apiKey, jsonRequestFactory);
 
@@ -463,7 +422,7 @@ public class DocumentStore extends DocumentStoreBase {
           databaseUrl += "/databases/" + defaultDatabase;
         }
 
-        return new ServerClient(databaseUrl, conventions, getCredentials(),
+        return new ServerClient(databaseUrl, conventions,
             new ReplicationInformerGetter()
         , null, jsonRequestFactory, currentSessionId.get(), listeners.getConflictListeners().toArray(new IDocumentConflictListener[0]));
       }

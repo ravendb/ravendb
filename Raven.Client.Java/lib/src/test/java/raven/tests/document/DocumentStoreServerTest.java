@@ -842,10 +842,6 @@ public class DocumentStoreServerTest extends RemoteClientTest {
     }
   }
 
-  //TODO: Can_insert_with_transaction
-
-  //TODO: Can_rollback_transaction_on_insert
-
   @Test
   public void should_update_stored_entity() throws Exception {
 

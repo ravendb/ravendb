@@ -2,7 +2,6 @@ package raven.abstractions.commands;
 
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.HttpMethods;
-import raven.abstractions.data.TransactionInformation;
 import raven.abstractions.json.linq.RavenJObject;
 
 /**
@@ -28,18 +27,6 @@ public interface ICommandData {
    * @return
    */
   public Etag getEtag();
-
-  /**
-   * Sets the transactionInformation
-   * @param transactionInformation
-   */
-  public void setTransactionInformation(TransactionInformation transactionInformation);
-
-  /**
-   * Gets the transactionInformation
-   * @return
-   */
-  public TransactionInformation getTransactionInformation();
 
   /**
    * Gets the metadata.

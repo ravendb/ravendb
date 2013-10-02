@@ -3,7 +3,6 @@ package raven.abstractions.commands;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.data.ScriptedPatchRequest;
-import raven.abstractions.data.TransactionInformation;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 
@@ -15,7 +14,6 @@ public class ScriptedPatchCommandData implements ICommandData {
   private ScriptedPatchRequest patchIfMissing;
   private String key;
   private Etag etag;
-  private TransactionInformation transactionInformation;
   private RavenJObject metadata;
   private boolean debugMode;
   private RavenJObject additionalData;
@@ -84,16 +82,6 @@ public class ScriptedPatchCommandData implements ICommandData {
   @Override
   public void setAdditionalData(RavenJObject additionalData) {
     this.additionalData = additionalData;
-  }
-
-  @Override
-  public TransactionInformation getTransactionInformation() {
-    return transactionInformation;
-  }
-
-  @Override
-  public void setTransactionInformation(TransactionInformation transactionInformation) {
-    this.transactionInformation = transactionInformation;
   }
 
   @Override

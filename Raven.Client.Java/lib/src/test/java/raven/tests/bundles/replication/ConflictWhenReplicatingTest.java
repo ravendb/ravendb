@@ -230,35 +230,6 @@ public class ConflictWhenReplicatingTest extends ReplicationBase {
       session2.saveChanges();
     }
 
-
-    //TODO: finish me if possible
-    /*
-      servers[1].Database.TransactionalStorage.Batch(
-      accessor => Assert.NotNull(accessor.Lists.Read("Raven/Replication/Docs/Tombstones", "companies/1")));
-
-      TellFirstInstanceToReplicateToSecondInstance();
-
-      Assert.Throws<ConflictException>(() =>
-      {
-          for (int i = 0; i < RetriesCount; i++)
-          {
-              using (var session = store2.OpenSession())
-              {
-                  session.Load<Company>("companies/1");
-                  Thread.Sleep(100);
-              }
-          }
-      });
-
-      using (var session = store2.OpenSession())
-      {
-          session.Store(new Company(), "companies/1");
-          session.SaveChanges();
-      }
-      servers[1].Database.TransactionalStorage.Batch(
-          accessor => Assert.Null(accessor.Lists.Read("Raven/Replication/Docs/Tombstones", "companies/1")));
-  }
-     */
   }
 
   public static class Company implements Serializable {

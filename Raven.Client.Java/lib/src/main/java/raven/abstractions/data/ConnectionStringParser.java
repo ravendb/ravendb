@@ -1,12 +1,9 @@
 package raven.abstractions.data;
 
-import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
-
-import raven.client.connection.NetworkCredential;
 
 public class ConnectionStringParser<T extends RavenConnectionStringOptions> {
 
@@ -50,17 +47,11 @@ public class ConnectionStringParser<T extends RavenConnectionStringOptions> {
    * @param key
    * @param value
    */
-  protected void processConnectionStringOption(NetworkCredential networkCredentials, String key, String value) {
+  protected void processConnectionStringOption(String key, String value) {
     switch (key)
     {
     case "apikey":
       connectionStringOptions.setApiKey(value);
-      break;
-    case "enlist":
-      connectionStringOptions.setEnlistInDistributedTransactions(Boolean.valueOf(value));
-      break;
-    case "resourcemanagerid":
-      connectionStringOptions.setResourceManagerId(UUID.fromString(value));
       break;
     case "url":
       connectionStringOptions.setUrl(value);
@@ -81,17 +72,6 @@ public class ConnectionStringParser<T extends RavenConnectionStringOptions> {
     case "defaultdatabase":
       connectionStringOptions.setDefaultDatabase(value);
       break;
-    case "user":
-      networkCredentials.setUserName(value);
-      setupUsernameInConnectionString = true;
-      break;
-    case "password":
-      networkCredentials.setPassword(value);
-      setupPasswordInConnectionString = true;
-      break;
-    case "domain":
-      networkCredentials.setDomain(value);
-      break;
     default:
       throw new IllegalArgumentException(String.format("Connection string : '%s' could not be parsed, unknown option: '%s'", connectionString, key));
     }
@@ -102,7 +82,6 @@ public class ConnectionStringParser<T extends RavenConnectionStringOptions> {
       throw new IllegalArgumentException("connection string is blank.");
     }
     String[] strings = connectionString.split(";");
-    NetworkCredential networkCredential = new NetworkCredential();
     for (String str: strings) {
       String arg = str.trim();
       if (StringUtils.isEmpty(arg) || !arg.contains("=")) {
@@ -112,7 +91,7 @@ public class ConnectionStringParser<T extends RavenConnectionStringOptions> {
       if (!matcher.matches()) {
         throw new IllegalArgumentException(String.format("Connection string name: '%s' could not be parsed", connectionString));
       }
-      processConnectionStringOption(networkCredential, matcher.group(1).toLowerCase(), matcher.group(2).trim());
+      processConnectionStringOption(matcher.group(1).toLowerCase(), matcher.group(2).trim());
     }
 
     if (setupUsernameInConnectionString == false && setupPasswordInConnectionString == false)
@@ -121,7 +100,6 @@ public class ConnectionStringParser<T extends RavenConnectionStringOptions> {
     if (setupUsernameInConnectionString == false || setupPasswordInConnectionString == false) {
       throw new IllegalArgumentException(String.format("User and Password must both be specified in the connection string: '%s'", connectionString));
     }
-    connectionStringOptions.setCredentials(networkCredential);
   }
 
 }

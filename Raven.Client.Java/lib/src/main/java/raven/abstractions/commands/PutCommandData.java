@@ -2,7 +2,6 @@ package raven.abstractions.commands;
 
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.HttpMethods;
-import raven.abstractions.data.TransactionInformation;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 
@@ -13,7 +12,6 @@ public class PutCommandData implements ICommandData {
   private String key;
   private Etag etag;
   private RavenJObject document;
-  private TransactionInformation transactionInformation;
   private RavenJObject metadata;
   private RavenJObject additionalData;
 
@@ -60,11 +58,6 @@ public class PutCommandData implements ICommandData {
   }
 
   @Override
-  public TransactionInformation getTransactionInformation() {
-    return transactionInformation;
-  }
-
-  @Override
   public void setAdditionalData(RavenJObject additionalData) {
     this.additionalData = additionalData;
   }
@@ -83,11 +76,6 @@ public class PutCommandData implements ICommandData {
 
   public void setMetadata(RavenJObject metadata) {
     this.metadata = metadata;
-  }
-
-  @Override
-  public void setTransactionInformation(TransactionInformation transactionInformation) {
-    this.transactionInformation = transactionInformation;
   }
 
   @Override

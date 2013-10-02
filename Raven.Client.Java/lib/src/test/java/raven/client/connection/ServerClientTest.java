@@ -59,63 +59,6 @@ public class ServerClientTest extends RavenDBAwareTests {
     }
   }
 
-  @Test
-  public void testTransactionsToIsolateSaves() throws Exception {
-    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
-    try {
-      createDb();
-
-      RavenJObject company = new RavenJObject();
-      company.add("Name", new RavenJValue("Company Name"));
-      RavenJObject meta = new RavenJObject();
-      meta.add(Constants.RAVEN_ENTITY_NAME, new RavenJValue("companies"));
-
-      try (AutoCloseable transaction = RavenTransactionAccessor.startTransaction()) {
-        convention.setEnlistInDistributedTransactions(true);
-        dbCommands.put("company/1", null, company, meta);
-
-        try (AutoCloseable tx2 = RavenTransactionAccessor.startTransaction()) {
-          assertTrue(dbCommands.get("company/1").getMetadata().containsKey(Constants.RAVEN_DOCUMENT_DOES_NOT_EXISTS));
-        }
-        assertNotNull(dbCommands.get("company/1"));
-        dbCommands.prepareTransaction(RavenTransactionAccessor.getTransactionInformation().getId());
-        dbCommands.commit(RavenTransactionAccessor.getTransactionInformation().getId());
-        convention.setEnlistInDistributedTransactions(false);
-      }
-
-      assertNotNull(dbCommands.get("company/1"));
-
-    } finally {
-      deleteDb();
-    }
-  }
-
-  @Test
-  public void testTransactionRollback() throws Exception {
-    IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());
-    try {
-      createDb();
-
-      RavenJObject company = new RavenJObject();
-      company.add("Name", new RavenJValue("Company Name"));
-      RavenJObject meta = new RavenJObject();
-      meta.add(Constants.RAVEN_ENTITY_NAME, new RavenJValue("companies"));
-
-      try (AutoCloseable transaction = RavenTransactionAccessor.startTransaction()) {
-        convention.setEnlistInDistributedTransactions(true);
-        dbCommands.put("company/1", null, company, meta);
-
-        assertNotNull(dbCommands.get("company/1"));
-        dbCommands.rollback(RavenTransactionAccessor.getTransactionInformation().getId());
-        convention.setEnlistInDistributedTransactions(false);
-      }
-
-      assertNull(dbCommands.get("company/1"));
-
-    } finally {
-      deleteDb();
-    }
-  }
 
 
   @Test
