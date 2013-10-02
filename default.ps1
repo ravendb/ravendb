@@ -13,22 +13,29 @@ properties {
 	$global:configuration = "Release"
 	
 	$core_db_dlls = @(
-        "Raven.Abstractions.???", 
+        "$base_dir\Raven.Database\bin\Release\Raven.Abstractions.???", 
         (Get-DependencyPackageFiles 'NLog.2'), 
         (Get-DependencyPackageFiles Microsoft.Web.Infrastructure), 
-        "Jint.Raven.???",
-				"Lucene.Net.???",
-				"Microsoft.Data.Edm.???",
-				"Microsoft.WindowsAzure.Storage.???",
-				"Microsoft.Data.OData.???",
-				"Microsoft.WindowsAzure.ConfigurationManager.???",
-				"Lucene.Net.Contrib.Spatial.NTS.???", "Spatial4n.Core.NTS.???", "GeoAPI.dll", "NetTopologySuite.dll", "PowerCollections.dll", 
-				"ICSharpCode.NRefactory.???", "ICSharpCode.NRefactory.CSharp.???", "Mono.Cecil.???", 
-				"Esent.Interop.???", 
-				"Raven.Database.???", 
-				"AWS.Extensions.???", "AWSSDK.???" ) 
+        "$base_dir\Raven.Database\bin\Release\Jint.Raven.???",
+				"$base_dir\Raven.Database\bin\Release\Lucene.Net.???",
+				"$base_dir\Raven.Database\bin\Release\Microsoft.Data.Edm.???",
+				"$base_dir\Raven.Database\bin\Release\Microsoft.WindowsAzure.Storage.???",
+				"$base_dir\Raven.Database\bin\Release\Microsoft.Data.OData.???",
+				"$base_dir\Raven.Database\bin\Release\Microsoft.WindowsAzure.ConfigurationManager.???",
+				"$base_dir\Raven.Database\bin\Release\Lucene.Net.Contrib.Spatial.NTS.???", 
+				"$base_dir\Raven.Database\bin\Release\Spatial4n.Core.NTS.???", 
+				"$base_dir\Raven.Database\bin\Release\GeoAPI.dll", 
+				"$base_dir\Raven.Database\bin\Release\NetTopologySuite.dll", 
+				"$base_dir\Raven.Database\bin\Release\PowerCollections.dll", 
+				"$base_dir\Raven.Database\bin\Release\ICSharpCode.NRefactory.???", 
+				"$base_dir\Raven.Database\bin\Release\ICSharpCode.NRefactory.CSharp.???", 
+				"$base_dir\Raven.Database\bin\Release\Mono.Cecil.???", 
+				"$base_dir\Raven.Database\bin\Release\Esent.Interop.???", 
+				"$base_dir\Raven.Database\bin\Release\Raven.Database.???", 
+				"$base_dir\Raven.Database\bin\Release\AWS.Extensions.???", 
+				"$base_dir\Raven.Database\bin\Release\AWSSDK.???" ) 
 	
-	$web_dlls = ( @( "$base_dir\Raven.Web\bin\Release\Raven.Web.???"  ) + $core_db_dlls)
+	$web_dlls = ( @( "$base_dir\Raven.Web\bin\Raven.Web.???"  ) + $core_db_dlls)
 	
 	$web_files = @("..\DefaultConfigs\web.config", "..\DefaultConfigs\NLog.Ignored.config" )
 	
@@ -542,7 +549,7 @@ task CreateNugetPackages -depends Compile {
 	
 	New-Item $nuget_dir\RavenDB.AspNetHost\content -Type directory | Out-Null
 	New-Item $nuget_dir\RavenDB.AspNetHost\lib\net45 -Type directory | Out-Null
-	@("Raven.Web.???") |% { Copy-Item "$base_dir\Raven.Web.$_\bin\Release\$_" $nuget_dir\RavenDB.AspNetHost\lib\net45 }
+	@("Raven.Web.???") |% { Copy-Item "$base_dir\Raven.Web.$_\bin\$_" $nuget_dir\RavenDB.AspNetHost\lib\net45 }
 	Copy-Item $base_dir\NuGet\RavenDB.AspNetHost.nuspec $nuget_dir\RavenDB.AspNetHost\RavenDB.AspNetHost.nuspec
 	Copy-Item $base_dir\DefaultConfigs\NuGet.AspNetHost.Web.config $nuget_dir\RavenDB.AspNetHost\content\Web.config.transform
 	
