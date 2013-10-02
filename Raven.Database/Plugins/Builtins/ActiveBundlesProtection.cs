@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
@@ -17,41 +18,57 @@ namespace Raven.Database.Plugins.Builtins
 
 		public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			if (key.StartsWith(RavenDatabasesPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
-				return VetoResult.Allowed;
+		    if (Database.Name != null && Database.Name != Constants.SystemDatabase)
+		        return VetoResult.Allowed;
 
-			if(Database.Name != null && Database.Name != Constants.SystemDatabase)
-				return VetoResult.Allowed;
+		    if (key.StartsWith(RavenDatabasesPrefix, StringComparison.InvariantCultureIgnoreCase) == false)
+		        return VetoResult.Allowed;
 
-			var tempPermission = metadata[Constants.AllowBundlesChange];
+		    var tempPermission = metadata[Constants.AllowBundlesChange];
 
-			if (tempPermission != null)
-				metadata.Remove(Constants.AllowBundlesChange); // this is a temp marker so do not persist this medatada
+		    if (tempPermission != null)
+		        metadata.Remove(Constants.AllowBundlesChange); // this is a temp marker so do not persist this medatada
 
-			var bundlesChangesAllowed = tempPermission != null && tempPermission.Value<string>().Equals("true", StringComparison.InvariantCultureIgnoreCase);
+		    var bundlesChangesAllowed = tempPermission != null &&
+		                                tempPermission.Value<string>()
+		                                              .Equals("true", StringComparison.InvariantCultureIgnoreCase);
 
-			if(bundlesChangesAllowed)
-				return VetoResult.Allowed;
+		    if (bundlesChangesAllowed)
+		        return VetoResult.Allowed;
 
-			var existingDbDoc = Database.Get(key, transactionInformation);
+		    var existingDbDoc = Database.Get(key, transactionInformation);
 
-			if(existingDbDoc == null)
-				return VetoResult.Allowed;
+		    if (existingDbDoc == null)
+		        return VetoResult.Allowed;
 
-			var currentDbDocument = existingDbDoc.DataAsJson.JsonDeserialization<DatabaseDocument>();
-			var currentBundles = (currentDbDocument.Settings[Constants.ActiveBundles] ?? "").GetSemicolonSeparatedValues();
+		    var currentDbDocument = existingDbDoc.DataAsJson.JsonDeserialization<DatabaseDocument>();
 
-			var newDbDocument = document.JsonDeserialization<DatabaseDocument>();
-			var newBundles = (newDbDocument.Settings[Constants.ActiveBundles] ?? "").GetSemicolonSeparatedValues();
+		    var currentBundles = new List<string>();
+		    string value;
+		    if (currentDbDocument.Settings.TryGetValue(Constants.ActiveBundles, out value))
+		        currentBundles = value.GetSemicolonSeparatedValues();
 
-			if (currentBundles.Count != newBundles.Count || currentBundles.TrueForAll(x => newBundles.Contains(x) == false))
-			{
-				return VetoResult.Deny(
-					"You should not change 'Raven/ActiveBundles' setting for a database. This setting should be set only once when a database is created. " +
-					"If you really need to override it you have to specify {'" + Constants.ActiveBundles + "':'true'} in metadata of a database document every time when you send it.");
-			}
+		    var newDbDocument = document.JsonDeserialization<DatabaseDocument>();
+		    var newBundles = new List<string>();
+		    if (newDbDocument.Settings.TryGetValue(Constants.ActiveBundles, out value))
+		        newBundles = value.GetSemicolonSeparatedValues();
 
-			return VetoResult.Allowed;
+
+		    if (currentBundles.Count == newBundles.Count)
+		        return VetoResult.Allowed;
+
+		    if (currentBundles.Count == 0)
+		        return VetoResult.Allowed;
+
+		    if (currentBundles.TrueForAll(x => newBundles.Contains(x)))
+                return VetoResult.Allowed;
+
+		    return VetoResult.Deny(
+		        "You should not change 'Raven/ActiveBundles' setting for a database. This setting should be set only once when a database is created. " +
+		        "If you really need to override it you have to specify {'" + Constants.ActiveBundles +
+		        "':'true'} in metadata of a database document every time when you send it." + Environment.NewLine +
+		        "Current: " + string.Join("; ", currentBundles) + Environment.NewLine +
+		        "New: " + string.Join("; '", newBundles));
 		}
 	}
 }

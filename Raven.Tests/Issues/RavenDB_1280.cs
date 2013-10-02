@@ -10,7 +10,7 @@ namespace Raven.Tests.Indexes
 {
 	public class RavenDB_1280 : RavenTest
 	{
-		[Fact(Skip = "current fails")]
+		[Fact]
 		public void Referenced_Docs_Are_Indexed_During_Heavy_Writing()
 		{
 			const int iterations = 8000;
