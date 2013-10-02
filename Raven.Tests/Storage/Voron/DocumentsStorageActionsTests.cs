@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Storage.Voron
+﻿using System.Text;
+
+namespace Raven.Tests.Storage.Voron
 {
 	using System;
 	using System.Collections.Generic;
@@ -22,11 +24,10 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_Initialized_CorrectStorageInitialized_DocumentStorageActions_Is_NotNull(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				Assert.Equal(voronStorage.FriendlyName, requestedStorage, StringComparer.InvariantCultureIgnoreCase);
-				voronStorage.Batch(accessor => Assert.NotNull(accessor.Documents));
-				//TODO : add here "not null" assertions for StorageAction accessors after they were implemented
+				Assert.Equal(storage.FriendlyName, requestedStorage, StringComparer.InvariantCultureIgnoreCase);
+				storage.Batch(accessor => Assert.NotNull(accessor.Documents));
 			}
 		}
 
@@ -34,10 +35,10 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_GetBestNextDocumentEtag_NoDocuments_Returns_OriginalEtag(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				Etag resultEtag = null;
-				voronStorage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(Etag.Empty));
+				storage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(Etag.Empty));
 				Assert.Equal(resultEtag, Etag.Empty);
 			}
 		}
@@ -46,21 +47,21 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_GetBestNextDocumentEtag_ExistingDocumentEtag_AlreadyTheLargestEtag(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				Etag etag3 = null;
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 					mutator.Documents.AddDocument("Foo", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
 						new RavenJObject()));
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 					mutator.Documents.AddDocument("Foo2", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
 						new RavenJObject()));
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 					etag3 = mutator.Documents.AddDocument("Foo3", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
 						new RavenJObject()).Etag);
 
 				Etag resultEtag = null;
-				voronStorage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(etag3));
+				storage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(etag3));
 
 				Assert.Equal(resultEtag, etag3);
 			}
@@ -71,22 +72,22 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_GetBestNextDocumentEtag_ExistingDocumentEtag(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				Etag etag2 = null;
 				Etag etag3 = null;
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 					mutator.Documents.AddDocument("Foo", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
 						new RavenJObject()));
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 					etag2 = mutator.Documents.AddDocument("Foo2", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
 						new RavenJObject()).Etag);
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 					etag3 = mutator.Documents.AddDocument("Foo3", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
 						new RavenJObject()).Etag);
 
 				Etag resultEtag = null;
-				voronStorage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(etag2));
+				storage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(etag2));
 
 				Assert.Equal(resultEtag, etag3);
 			}
@@ -96,26 +97,26 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_GetBestNextDocumentEtag_NonExistingDocumentEtag_SmallerThan_MaxDocumentEtag(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				Etag etag2 = null;
 				Etag etag3 = null;
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 					mutator.Documents.AddDocument("Foo", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
 						new RavenJObject()));
 
 
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 					etag2 = mutator.Documents.AddDocument("Foo2", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
 						new RavenJObject()).Etag);
 
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 					etag3 = mutator.Documents.AddDocument("Foo3", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
 						new RavenJObject()).Etag);
 
 				Etag resultEtag = null;
 				var nonExistingDocumentEtag = new Etag(etag2.ToString()); //make sure the nonExistingDocumentEtag is between etag2 and etag3
-				voronStorage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(nonExistingDocumentEtag));
+				storage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(nonExistingDocumentEtag));
 
 				Assert.Equal(resultEtag, etag3);
 			}
@@ -125,26 +126,26 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_GetBestNextDocumentEtag_NonExistingDocumentEtag_LargerThan_MaxDocumentEtag(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				Etag etag2 = null;
 				Etag etag3 = null;
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 					mutator.Documents.AddDocument("Foo", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
 						new RavenJObject()));
 
 
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 					etag2 = mutator.Documents.AddDocument("Foo2", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
 						new RavenJObject()).Etag);
 
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 					etag3 = mutator.Documents.AddDocument("Foo3", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
 						new RavenJObject()).Etag);
 
 				Etag resultEtag = null;
 				var nonExistingDocumentEtag = new Etag(UuidType.Documents, 0, 0);
-				voronStorage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(nonExistingDocumentEtag));
+				storage.Batch(viewer => resultEtag = viewer.Documents.GetBestNextDocumentEtag(nonExistingDocumentEtag));
 
 				Assert.Equal(resultEtag, nonExistingDocumentEtag);
 			}
@@ -155,12 +156,12 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_DocumentAdd_With_InvalidEtag_ExceptionThrown(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 					mutator.Documents.AddDocument("Foo", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()));
 				Assert.Throws<ConcurrencyException>(() =>
-					voronStorage.Batch(mutator =>
+					storage.Batch(mutator =>
 						mutator.Documents.AddDocument("Foo", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject())));
 			}
 		}
@@ -169,10 +170,10 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_DocumentRead_NonExistingKey_NullReturned(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				JsonDocument document = null;
-				voronStorage.Batch(viewer => document = viewer.Documents.DocumentByKey("Foo", null));
+				storage.Batch(viewer => document = viewer.Documents.DocumentByKey("Foo", null));
 				Assert.Null(document);
 			}
 		}
@@ -181,11 +182,11 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_DocumentTouch_NonExistingKey_NullEtagsReturned(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				Etag before = null;
 				Etag after = null;
-				voronStorage.Batch(mutator => mutator.Documents.TouchDocument("Foo", out before, out after));
+				storage.Batch(mutator => mutator.Documents.TouchDocument("Foo", out before, out after));
 
 				Assert.Null(before);
 				Assert.Null(after);
@@ -204,10 +205,10 @@
 
 		private void DocumentStorage_DocumentAdd_And_DocumentRead_Internal(string requestedStorage, string documentKey)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				AddDocumentResult addResult = null;
-				voronStorage.Batch(
+				storage.Batch(
 					mutator =>
 					addResult =
 					mutator.Documents.AddDocument(
@@ -215,7 +216,7 @@
 
 				RavenJObject document = null;
 				JsonDocument jsonDocument = null;
-				voronStorage.Batch(
+				storage.Batch(
 					viewer =>
 					{
 						jsonDocument = viewer.Documents.DocumentByKey(documentKey, null);
@@ -243,10 +244,10 @@
 
 		private void DocumentStorage_DocumentAdd_And_DocumentDeleted_Internal(string requestedStorage, string documentKey)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				AddDocumentResult addResult = null;
-				voronStorage.Batch(
+				storage.Batch(
 					mutator =>
 					addResult =
 					mutator.Documents.AddDocument(
@@ -256,18 +257,18 @@
 						RavenJObject.FromObject(new { Meta = "Data" })));
 
 				JsonDocumentMetadata fetchedMetadata = null;
-				voronStorage.Batch(viewer => fetchedMetadata = viewer.Documents.DocumentMetadataByKey(documentKey, null));
+				storage.Batch(viewer => fetchedMetadata = viewer.Documents.DocumentMetadataByKey(documentKey, null));
 
 				Etag deletedEtag = null;
 				RavenJObject deletedMetadata = null;
-				voronStorage.Batch(
+				storage.Batch(
 					mutator => mutator.Documents.DeleteDocument(documentKey, null, out deletedMetadata, out deletedEtag));
 
 				JsonDocument documentAfterDelete = null;
-				voronStorage.Batch(viewer => documentAfterDelete = viewer.Documents.DocumentByKey(documentKey, null));
+				storage.Batch(viewer => documentAfterDelete = viewer.Documents.DocumentByKey(documentKey, null));
 
 				JsonDocumentMetadata metadataAfterDelete = null;
-				voronStorage.Batch(viewer => metadataAfterDelete = viewer.Documents.DocumentMetadataByKey(documentKey, null));
+				storage.Batch(viewer => metadataAfterDelete = viewer.Documents.DocumentMetadataByKey(documentKey, null));
 
 				//after delete --> DocumentByKey()/DocumentMetadataByKey() methods should return null
 				Assert.Null(documentAfterDelete);
@@ -291,15 +292,15 @@
 
 		private void DocumentStorage_InsertDocument_And_DocumentRead_Internal(string requestedStorage, string documentKey)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(
+				storage.Batch(
 					mutator =>
 					mutator.Documents.InsertDocument(
 						documentKey, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true));
 
 				RavenJObject document = null;
-				voronStorage.Batch(viewer => document = viewer.Documents.DocumentByKey(documentKey, null).DataAsJson);
+				storage.Batch(viewer => document = viewer.Documents.DocumentByKey(documentKey, null).DataAsJson);
 
 				Assert.NotNull(document);
 				Assert.Equal("Bar", document.Value<string>("Name"));
@@ -310,13 +311,13 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_InsertDocument_Twice_WithCheckForUpdatesTrue_And_DocumentRead(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(mutator => mutator.Documents.InsertDocument("Foo", RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true));
-				voronStorage.Batch(mutator => mutator.Documents.InsertDocument("Foo", RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true));
+				storage.Batch(mutator => mutator.Documents.InsertDocument("Foo", RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true));
+				storage.Batch(mutator => mutator.Documents.InsertDocument("Foo", RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true));
 
 				RavenJObject document = null;
-				voronStorage.Batch(viewer => document = viewer.Documents.DocumentByKey("Foo", null).DataAsJson);
+				storage.Batch(viewer => document = viewer.Documents.DocumentByKey("Foo", null).DataAsJson);
 
 				Assert.NotNull(document);
 				Assert.Equal("Bar", document.Value<string>("Name"));
@@ -328,9 +329,9 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_GetDocumentCount_NoDocuments_ZeroReturned(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(viewer =>
+				storage.Batch(viewer =>
 				{
 					var documentsCount = viewer.Documents.GetDocumentsCount();
 					Assert.Equal(0, documentsCount);
@@ -339,20 +340,53 @@
 		}
 
 		[Theory]
+		[InlineData("voron")]
+		public void DocumentStorage_Massive_AddDocuments_DeleteDocuments_No_Errors(string storageName)
+		{
+			const int DOCUMENT_COUNT = 750;
+			var rand = new Random();
+			var testBuffer = new byte[500];
+			rand.NextBytes(testBuffer);
+			var testString = Encoding.Unicode.GetString(testBuffer);
+			for (int i = 0; i < 50; i++)
+			{
+				using (var storage = NewTransactionalStorage(storageName))
+				{
+					storage.Batch(mutator =>
+					{
+						for (int docIndex = 0; docIndex < DOCUMENT_COUNT; docIndex++)
+							mutator.Documents.AddDocument("Foo" + docIndex, null, RavenJObject.FromObject(new { Name = testString }),
+								new RavenJObject());
+					});
+
+					storage.Batch(mutator =>
+					{
+						for (var docIndex = 0; docIndex < DOCUMENT_COUNT; docIndex++)
+						{
+							Etag deletedEtag;
+							RavenJObject metadata;
+							mutator.Documents.DeleteDocument("Foo" + docIndex, null, out metadata, out deletedEtag);
+						}
+					});									
+				}
+			}
+		}
+
+		[Theory]
 		[PropertyData("Storages")]
 		public void DocumentStorage_GetDocumentCount_CountReturned(string requestedStorage)
 		{
 			const int DOCUMENT_COUNT = 10;
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 				{
 					for (int docIndex = 0; docIndex < DOCUMENT_COUNT; docIndex++)
 						mutator.Documents.AddDocument("Foo" + docIndex, null, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject());
 				});
 				
 				long documentCount = 0;
-				voronStorage.Batch(viewer => documentCount = viewer.Documents.GetDocumentsCount());
+				storage.Batch(viewer => documentCount = viewer.Documents.GetDocumentsCount());
 
 				Assert.Equal(DOCUMENT_COUNT, documentCount);
 			}
@@ -405,11 +439,11 @@
 				expectedException = typeof(EsentKeyDuplicateException);
 			}
 
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(mutator => mutator.Documents.InsertDocument("Foo", RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true));
+				storage.Batch(mutator => mutator.Documents.InsertDocument("Foo", RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true));
 				Assert.Throws(expectedException, () =>
-					voronStorage.Batch(mutator => mutator.Documents.InsertDocument("Foo", RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), false)));
+					storage.Batch(mutator => mutator.Documents.InsertDocument("Foo", RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), false)));
 			}
 		}
 
@@ -418,13 +452,13 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_DocumentAdd_And_DocumentRead_Twice_ReturnsCachedObject(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(mutator => mutator.Documents.AddDocument("Foo", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()));
+				storage.Batch(mutator => mutator.Documents.AddDocument("Foo", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()));
 
 				RavenJObject document1 = null, document2 = null;
-				voronStorage.Batch(viewer => document1 = viewer.Documents.DocumentByKey("Foo", null).DataAsJson);
-				voronStorage.Batch(viewer => document2 = viewer.Documents.DocumentByKey("Foo", null).DataAsJson);
+				storage.Batch(viewer => document1 = viewer.Documents.DocumentByKey("Foo", null).DataAsJson);
+				storage.Batch(viewer => document2 = viewer.Documents.DocumentByKey("Foo", null).DataAsJson);
 
 				Assert.NotNull(document1);
 				Assert.Equal("Bar", document1.Value<string>("Name"));
@@ -437,15 +471,15 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_DocumentAdd_MetadataRead(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(
+				storage.Batch(
 					mutator =>
 						mutator.Documents.AddDocument("Foo", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }),
 							RavenJObject.FromObject(new { Meta = "Data" })));
 
 				JsonDocumentMetadata metadata = null;
-				voronStorage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo", null));
+				storage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo", null));
 
 				Assert.NotNull(metadata);
 				Assert.NotNull(metadata.Metadata);
@@ -457,10 +491,10 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_MetadataRead_NonExistingKey_NullReturned(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				JsonDocumentMetadata metadata = null;
-				voronStorage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo", null));
+				storage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo", null));
 				Assert.Null(metadata);
 			}
 		}
@@ -470,9 +504,9 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_PutDocumentMetadata_NonExistingKey_ExceptionThrown(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				Assert.Throws<InvalidOperationException>(() => voronStorage.Batch(mutator => mutator.Documents.PutDocumentMetadata("Foo", new RavenJObject())));
+				Assert.Throws<InvalidOperationException>(() => storage.Batch(mutator => mutator.Documents.PutDocumentMetadata("Foo", new RavenJObject())));
 			}
 		}
 
@@ -481,11 +515,11 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_PutDocumentMetadata_WrongKey_ExceptionThrown(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(mutator => mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "Data" })));
+				storage.Batch(mutator => mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "Data" })));
 
-				Assert.Throws<InvalidOperationException>(() => voronStorage.Batch(mutator => mutator.Documents.PutDocumentMetadata("Foo2", new RavenJObject())));
+				Assert.Throws<InvalidOperationException>(() => storage.Batch(mutator => mutator.Documents.PutDocumentMetadata("Foo2", new RavenJObject())));
 			}
 		}
 
@@ -493,13 +527,13 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_DocumentAdd_DocumentByDifferentKey_NullReturned(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(mutator => mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "Data" })));
+				storage.Batch(mutator => mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "Data" })));
 
 				JsonDocumentMetadata metadata = null;
 				Assert.DoesNotThrow(
-					() => voronStorage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo2", null)));
+					() => storage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo2", null)));
 
 				Assert.Equal(null, metadata);
 
@@ -510,15 +544,15 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_DocumentAdd_MetadataUpdated_MetadataRead(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(mutator => mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "Data" })));
+				storage.Batch(mutator => mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "Data" })));
 
-				voronStorage.Batch(mutator => mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "NotData" })));
+				storage.Batch(mutator => mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "NotData" })));
 
 
 				JsonDocumentMetadata metadata = null;
-				voronStorage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo", null));
+				storage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo", null));
 				Assert.Equal("NotData", metadata.Metadata.Value<string>("Meta"));
 
 			}
@@ -528,20 +562,20 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_DocumentUpdate_WithSpecifiedEtag_And_DocumentRead(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				const string TEST_DOCUMENT_KEY = "Foo";
 				const string TEST_DOCUMENT_EXPECTED_NAME = "Bar2";
 
 				//add document
 				AddDocumentResult addResult = null;
-				voronStorage.Batch(mutator => addResult = mutator.Documents.AddDocument(TEST_DOCUMENT_KEY, Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()));
+				storage.Batch(mutator => addResult = mutator.Documents.AddDocument(TEST_DOCUMENT_KEY, Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()));
 
 				//then update document
-				voronStorage.Batch(mutator => mutator.Documents.AddDocument(TEST_DOCUMENT_KEY, addResult.Etag, RavenJObject.FromObject(new { Name = TEST_DOCUMENT_EXPECTED_NAME }), new RavenJObject()));
+				storage.Batch(mutator => mutator.Documents.AddDocument(TEST_DOCUMENT_KEY, addResult.Etag, RavenJObject.FromObject(new { Name = TEST_DOCUMENT_EXPECTED_NAME }), new RavenJObject()));
 
 				RavenJObject document = null;
-				voronStorage.Batch(viewer => document = viewer.Documents.DocumentByKey(TEST_DOCUMENT_KEY, null).DataAsJson);
+				storage.Batch(viewer => document = viewer.Documents.DocumentByKey(TEST_DOCUMENT_KEY, null).DataAsJson);
 
 				Assert.NotNull(document);
 				Assert.Equal(TEST_DOCUMENT_EXPECTED_NAME, document.Value<string>("Name"));
@@ -554,14 +588,14 @@
 		public void DocumentStorage_DocumentTouch_EtagUpdated(string requestedStorage)
 		{
 			const string TEST_DOCUMENT_KEY = "Foo";
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				AddDocumentResult initialAddResult = null;
-				voronStorage.Batch(mutator => initialAddResult = mutator.Documents.AddDocument(TEST_DOCUMENT_KEY, Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()));
+				storage.Batch(mutator => initialAddResult = mutator.Documents.AddDocument(TEST_DOCUMENT_KEY, Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()));
 
 				Etag preTouchEtag = null;
 				Etag afterTouchEtag = null;
-				voronStorage.Batch(mutator => mutator.Documents.TouchDocument(TEST_DOCUMENT_KEY, out preTouchEtag, out afterTouchEtag));
+				storage.Batch(mutator => mutator.Documents.TouchDocument(TEST_DOCUMENT_KEY, out preTouchEtag, out afterTouchEtag));
 
 				Assert.NotNull(preTouchEtag);
 				Assert.NotNull(afterTouchEtag);
@@ -575,9 +609,9 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_GetDocumentsAfter_NoDocuments_EmptyCollectionReturned(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(viewer => Assert.Empty(viewer.Documents.GetDocumentsAfter(Etag.Empty, 25)));
+				storage.Batch(viewer => Assert.Empty(viewer.Documents.GetDocumentsAfter(Etag.Empty, 25)));
 			}
 		}
 
@@ -588,10 +622,10 @@
 			const int DOCUMENT_COUNT = 12;
 			const int DOCUMENT_SKIP_COUNT = DOCUMENT_COUNT / 4;
 
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				var documentAddResults = new List<AddDocumentResult>();
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 				{
 					for (int docIndex = 0; docIndex < DOCUMENT_COUNT; docIndex++)
 						documentAddResults.Add(mutator.Documents.InsertDocument("Foo" + docIndex,
@@ -604,7 +638,7 @@
 					documentAddResults.Select(row => row.Etag).Skip(DOCUMENT_SKIP_COUNT).ToArray();
 
 				IList<JsonDocument> fetchedDocuments = null;
-				voronStorage.Batch(
+				storage.Batch(
 					viewer =>
 						fetchedDocuments =
 							viewer.Documents
@@ -627,10 +661,10 @@
 			const int DOCUMENT_COUNT = 12;
 			const int DOCUMENT_SKIP_COUNT = DOCUMENT_COUNT / 4;
 
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				var documentAddResults = new List<AddDocumentResult>();
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 				{
 					for (int docIndex = 0; docIndex < DOCUMENT_COUNT; docIndex++)
 						documentAddResults.Add(mutator.Documents.InsertDocument("Foo" + docIndex,
@@ -645,7 +679,7 @@
 					.ToArray();
 
 				IList<JsonDocument> fetchedDocuments = null;
-				voronStorage.Batch(
+				storage.Batch(
 					viewer =>
 						fetchedDocuments =
 							viewer.Documents
@@ -670,10 +704,10 @@
 			const int DOCUMENT_SKIP_COUNT = DOCUMENT_COUNT / 4;
 			const int DOCUMENT_TAKE_VALUE = DOCUMENT_COUNT / 3;
 
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				var documentAddResults = new List<AddDocumentResult>();
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 				{
 					for (int docIndex = 0; docIndex < DOCUMENT_COUNT; docIndex++)
 						documentAddResults.Add(mutator.Documents.InsertDocument("Foo" + docIndex,
@@ -692,7 +726,7 @@
 																.ToList();
 
 				IList<JsonDocument> fetchedDocuments = null;
-				voronStorage.Batch(
+				storage.Batch(
 					viewer =>
 						fetchedDocuments =
 							viewer.Documents
@@ -717,16 +751,16 @@
 			const int DOCUMENT_SKIP_COUNT = DOCUMENT_COUNT / 4;
 			const int MAX_SIZE = 100;
 
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 				{
 					for (int docIndex = 0; docIndex < DOCUMENT_COUNT; docIndex++)
 						mutator.Documents.InsertDocument("Foo" + docIndex, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject(), true);
 				});
 
 				var existingDocuments = new List<JsonDocument>();
-				voronStorage.Batch(viewer =>
+				storage.Batch(viewer =>
 				{
 					for (int docIndex = 0; docIndex < DOCUMENT_COUNT; docIndex++)
 						existingDocuments.Add(viewer.Documents.DocumentByKey("Foo" + docIndex, null));
@@ -749,7 +783,7 @@
 				}
 
 				IList<JsonDocument> fetchedDocuments = null;
-				voronStorage.Batch(
+				storage.Batch(
 					viewer =>
 						fetchedDocuments =
 							viewer.Documents
@@ -772,10 +806,10 @@
 		{
 			const int DOCUMENT_COUNT = 12;
 
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				var documentAddResults = new List<AddDocumentResult>();
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 				{
 					for (int docIndex = 0; docIndex < DOCUMENT_COUNT; docIndex++)
 						documentAddResults.Add(mutator.Documents.InsertDocument("Foo" + docIndex,
@@ -785,7 +819,7 @@
 				documentAddResults.Reverse();
 
 				List<JsonDocument> documentReverseOrderFetchResults = null;
-				voronStorage.Batch(viewer => documentReverseOrderFetchResults = viewer.Documents.GetDocumentsByReverseUpdateOrder(0, documentAddResults.Count).ToList());
+				storage.Batch(viewer => documentReverseOrderFetchResults = viewer.Documents.GetDocumentsByReverseUpdateOrder(0, documentAddResults.Count).ToList());
 
 				Assert.NotNull(documentReverseOrderFetchResults);
 
@@ -800,9 +834,9 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_GetDocumentsByReverseUpdateOrder_NoDocuments_EmptyCollectionReturned(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(viewer =>
+				storage.Batch(viewer =>
 				{
 					var fetchedDocuments = viewer.Documents.GetDocumentsByReverseUpdateOrder(0, 125);
 					Assert.Empty(fetchedDocuments);
@@ -822,10 +856,10 @@
 		private void DocumentStorage_GetDocumentsByReverseUpdateOrder_RetrievedWithCorrectOrder_DifferentSkipParameters_Internal(string requestedStorage,
 			int itemCount, int skip)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				var documentAddResults = new List<AddDocumentResult>();
-				voronStorage.Batch(
+				storage.Batch(
 					mutator =>
 					{
 						for (int docIndex = 0; docIndex < itemCount; docIndex++)
@@ -841,7 +875,7 @@
 				documentAddResults = documentAddResults.Skip(skip).ToList();
 
 				List<JsonDocument> documentReverseOrderFetchResults = null;
-				voronStorage.Batch(
+				storage.Batch(
 					viewer =>
 					documentReverseOrderFetchResults =
 					viewer.Documents.GetDocumentsByReverseUpdateOrder(skip, documentAddResults.Count).ToList());
@@ -872,10 +906,10 @@
 
 		private void DocumentStorage_GetDocumentsWithIdStartingWith_Internal(string requestedStorage, int itemCount, int start, int take)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
 				var inputData = new Dictionary<string, RavenJObject>();
-				voronStorage.Batch(
+				storage.Batch(
 					mutator =>
 					{
 						for (int itemIndex = 0; itemIndex < itemCount; itemIndex++)
@@ -889,7 +923,7 @@
 					});
 
 				IList<JsonDocument> fetchedDocuments = null;
-				voronStorage.Batch(
+				storage.Batch(
 					viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", start, take).ToList());
 
 				Assert.NotNull(fetchedDocuments);
@@ -912,9 +946,9 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_GetDocumentsWithIdStartingWith_NoDocuments_EmptyCollectionReturned(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(viewer => Assert.Empty(viewer.Documents.GetDocumentsWithIdStartingWith("Foo", 0, 25).ToList()));
+				storage.Batch(viewer => Assert.Empty(viewer.Documents.GetDocumentsWithIdStartingWith("Foo", 0, 25).ToList()));
 			}
 		}
 
@@ -922,9 +956,9 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_GetDocumentsWithIdStartingWith_WithNonZeroStart(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 				{
 					mutator.Documents.AddDocument("Foo1", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar11" }), new RavenJObject());
 					mutator.Documents.AddDocument("Bar1", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar22" }), new RavenJObject());
@@ -935,7 +969,7 @@
 				});
 
 				IList<JsonDocument> fetchedDocuments = null;
-				voronStorage.Batch(viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", 1, 3).ToList());
+				storage.Batch(viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", 1, 3).ToList());
 
 				Assert.NotNull(fetchedDocuments);
 
@@ -949,9 +983,9 @@
 		[PropertyData("Storages")]
 		public void DocumentStorage_GetDocumentsWithIdStartingWith_WithTake(string requestedStorage)
 		{
-			using (var voronStorage = NewTransactionalStorage(requestedStorage))
+			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				voronStorage.Batch(mutator =>
+				storage.Batch(mutator =>
 				{
 					mutator.Documents.AddDocument("Foo1", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar11" }), new RavenJObject());
 					mutator.Documents.AddDocument("Bar1", Etag.Empty, RavenJObject.FromObject(new { Name = "Bar22" }), new RavenJObject());
@@ -968,7 +1002,7 @@
 				});
 
 				IList<JsonDocument> fetchedDocuments = null;
-				voronStorage.Batch(viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", 2, 3).ToList());
+				storage.Batch(viewer => fetchedDocuments = viewer.Documents.GetDocumentsWithIdStartingWith("Bar", 2, 3).ToList());
 
 				Assert.NotNull(fetchedDocuments);
 
