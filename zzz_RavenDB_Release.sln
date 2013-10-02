@@ -65,6 +65,11 @@ Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "Raven.Setup", "Raven.Setup\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Setup.CustomActions", "Raven.Setup.CustomActions\Raven.Setup.CustomActions.csproj", "{C36D71A5-F8F3-45A5-A632-80854926E55E}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{8C530C28-C04C-408B-87E0-63046873D623}"
+	ProjectSection(SolutionItems) = preProject
+		.nuget\packages.config = .nuget\packages.config
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
