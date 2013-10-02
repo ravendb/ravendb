@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -43,9 +44,7 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		public static readonly Regex ChangesQuery = new Regex("^(/databases/([^/]+))?/changes/events", RegexOptions.IgnoreCase);
-
-		public override Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
+		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			var landlord = (DatabasesLandlord) controllerContext.Configuration.Properties[typeof (DatabasesLandlord)];
 			landlord.IncrementRequestCount();
@@ -60,17 +59,52 @@ namespace Raven.Database.Server.Controllers
 
 			if (name != null && landlord.GetDatabaseInternal(name) == null)
 			{
-				return new CompletedTask<HttpResponseMessage>(GetMessageWithObject(new
-				                                                                   {
-					                                                                   Error = msg
-				                                                                   }, HttpStatusCode.ServiceUnavailable));
-			}
-			if (ChangesQuery.IsMatch(controllerContext.Request.RequestUri.AbsolutePath))
-			{
-				throw new NotImplementedException();
+				return GetMessageWithObject(new {Error = msg}, HttpStatusCode.ServiceUnavailable);
 			}
 
-			return base.ExecuteAsync(controllerContext, cancellationToken);
+			var sp = Stopwatch.StartNew();
+			var result = await base.ExecuteAsync(controllerContext, cancellationToken);
+			sp.Stop();
+			AddRavenHeader(result, sp, landlord);
+
+			return result;
+		}
+
+		private void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp, DatabasesLandlord landlord)
+		{
+			AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion, msg);
+			AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
+			AddAccessControlHeaders(msg, landlord);
+
+		}
+
+		private void AddAccessControlHeaders(HttpResponseMessage msg, DatabasesLandlord landlord)
+		{
+			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlAllowOrigin))
+				return;
+
+			AddHeader("Access-Control-Allow-Credentials", "true", msg);
+
+			bool originAllowed = landlord.SystemConfiguration.AccessControlAllowOrigin == "*" ||
+					landlord.SystemConfiguration.AccessControlAllowOrigin.Split(' ')
+						.Any(o => o == GetHeader("Origin", ControllerContext.Request));
+			if (originAllowed)
+			{
+				AddHeader("Access-Control-Allow-Origin", GetHeader("Origin", ControllerContext.Request), msg);
+			}
+
+			AddHeader("Access-Control-Max-Age", landlord.SystemConfiguration.AccessControlMaxAge, msg);
+			AddHeader("Access-Control-Allow-Methods", landlord.SystemConfiguration.AccessControlAllowMethods, msg);
+			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlRequestHeaders))
+			{
+				// allow whatever headers are being requested
+				var hdr = GetHeader("Access-Control-Request-Headers", ControllerContext.Request); // typically: "x-requested-with"
+				if (hdr != null) AddHeader("Access-Control-Allow-Headers", hdr, msg);
+			}
+			else
+			{
+				AddHeader("Access-Control-Request-Headers", landlord.SystemConfiguration.AccessControlRequestHeaders, msg);
+			}
 		}
 
 		public DatabasesLandlord DatabasesLandlord
@@ -529,11 +563,13 @@ namespace Raven.Database.Server.Controllers
 			return null;
 		}
 
-		public string GetHeader(string key)
+		public string GetHeader(string key, HttpRequestMessage request = null)
 		{
-			if (Request.Headers.Contains(key) == false)
+			if (request == null)
+				request = Request;
+			if (request.Headers.Contains(key) == false)
 				return null;
-			return Request.Headers.GetValues(key).FirstOrDefault();
+			return request.Headers.GetValues(key).FirstOrDefault();
 		}
 
 		public List<string> GetHeaders(string key)

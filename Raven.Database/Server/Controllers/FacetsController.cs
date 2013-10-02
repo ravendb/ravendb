@@ -29,16 +29,15 @@ namespace Raven.Database.Server.Controllers
 			return await Facets(id, "POST");
 		}
 
+		private Etag etag;
+
 		private async Task<HttpResponseMessage> Facets(string index, string method)
 		{
 			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
 			var facetStart = GetFacetStart();
 			var facetPageSize = GetFacetPageSize();
 
-			var facets = new List<Facet>();
-
-			var etag = new Etag();
-			var msg = await TryGetFacets(index, etag, facets, method);
+			var msg = await TryGetFacets(index, method);
 			if (msg.StatusCode != HttpStatusCode.OK)
 				return msg;
 
@@ -48,11 +47,9 @@ namespace Raven.Database.Server.Controllers
 				return msg;
 			}
 
-			WriteETag(etag, msg);
-
 			try
 			{
-				return GetMessageWithObject(Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize));
+				return GetMessageWithObject(Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize), HttpStatusCode.OK, etag);
 			}
 			catch (Exception ex)
 			{
@@ -65,7 +62,8 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		private async Task<HttpResponseMessage> TryGetFacets(string index, Etag etag, List<Facet> facets, string method)
+		private List<Facet> facets; 
+		private async Task<HttpResponseMessage> TryGetFacets(string index, string method)
 		{
 			etag = null;
 			facets = null;

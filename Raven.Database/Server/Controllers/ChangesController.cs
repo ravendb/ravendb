@@ -94,6 +94,66 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(connectionState);
 		}
 
+		[HttpGet("changes/events")]
+		public HttpResponseMessage ChangesEvents()
+		{
+			//	var sw = Stopwatch.StartNew();
+			//try
+			//{
+			//	if (SetupRequestToProperDatabase(context) == false)
+			//	{
+			//		FinalizeRequestSafe(context);
+			//		onDisconnect();
+			//		return new CompletedTask();
+			//	}
+
+			//	if (!SetThreadLocalState(context))
+			//	{
+			//		FinalizeRequestSafe(context);
+			//		onDisconnect();
+			//		return new CompletedTask();
+			//	}
+			//	var eventsTransport = new EventsTransport(context);
+			//	eventsTransport.Disconnected += onDisconnect;
+			//	var handleChangesRequest = eventsTransport.ProcessAsync();
+			//	CurrentDatabase.TransportState.Register(eventsTransport);
+			//	return handleChangesRequest;
+			//}
+			//catch (Exception e)
+			//{
+			//	try
+			//	{
+			//		ExceptionHandler.TryHandleException(context, e);
+			//		LogException(e);
+			//	}
+			//	finally
+			//	{
+			//		FinalizeRequestSafe(context);
+			//	}
+			//	onDisconnect();
+			//	return new CompletedTask();
+			//}
+			//finally
+			//{
+			//	try
+			//	{
+			//		LogHttpRequestStats(new LogHttpRequestStatsParams(
+			//								sw,
+			//								context.Request.Headers,
+			//								context.Request.HttpMethod,
+			//								context.Response.StatusCode,
+			//								context.Request.Url.PathAndQuery));
+			//	}
+			//	catch (Exception e)
+			//	{
+			//		logger.WarnException("Could not gather information to log request stats", e);
+			//	}
+			//	ResetThreadLocalState();
+			//}
+
+			throw new NotImplementedException();
+		}
+
 		private bool Match(string x, string y)
 		{
 			return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);

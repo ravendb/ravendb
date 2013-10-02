@@ -59,7 +59,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage StaticHead(string id)
 		{
 			var filename = id;
-			var result = new HttpResponseMessage(HttpStatusCode.OK);
+			var result = new HttpResponseMessage(HttpStatusCode.OK){Content = new JsonContent()};
 			Database.TransactionalStorage.Batch(_ => // have to keep the session open for reading of the attachment stream
 			{
 				var attachmentAndHeaders = Database.GetStatic(filename);

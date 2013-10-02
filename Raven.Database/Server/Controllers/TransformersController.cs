@@ -21,7 +21,10 @@ namespace Raven.Database.Server.Controllers
 				if (transformerDefinition == null)
 					return new HttpResponseMessage(HttpStatusCode.NotFound);
 
-				return GetMessageWithObject(RavenJObject.FromObject(transformerDefinition));
+				return GetMessageWithObject(new
+				{
+					Transformer = transformerDefinition,
+				});
 			}
 			return new HttpResponseMessage();
 		}

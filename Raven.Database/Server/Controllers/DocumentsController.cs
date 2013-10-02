@@ -137,7 +137,7 @@ namespace Raven.Database.Server.Controllers
 
 		[HttpPut("docs/{*id}")]
 		[HttpPut("databases/{databaseName}/docs/{*id}")]
-		public async Task<HttpResponseMessage> DocPut(string id)
+		public async Task<HttpResponseMessage> DocPut([FromBody]string id)
 		{
 			var docId = id;
 			var json = await ReadJsonAsync();
