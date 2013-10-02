@@ -123,7 +123,7 @@ namespace Raven.Storage.Voron
 			using (var writeBatch = new WriteBatch())
 			{
 				var storageActionsAccessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
-					documentCacher, writeBatch, snapshot, tableStorage);
+					documentCacher, writeBatch, snapshot, tableStorage,this);
 
 				if (disableBatchNesting.Value == null)
 					current.Value = storageActionsAccessor;
@@ -267,6 +267,14 @@ namespace Raven.Storage.Voron
 		    return tableStorage.GenerateReportOnStorage()
 		                       .Select(kvp => String.Format("{0} -> {1}", kvp.Key, kvp.Value))
 		                       .ToList();
+		}
+
+		internal IStorageActionsAccessor GetCurrentBatch()
+		{
+			var batch = current.Value;
+			if (batch == null)
+				throw new InvalidOperationException("Batch was not started, you are not supposed to call this method");
+			return batch;
 		}
 	}
 }

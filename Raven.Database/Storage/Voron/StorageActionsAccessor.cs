@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions;
+using Raven.Storage.Voron;
 
 namespace Raven.Database.Storage.Voron
 {
@@ -22,12 +23,7 @@ namespace Raven.Database.Storage.Voron
 	{
         private readonly DateTime createdAt = SystemTime.UtcNow;
 
-		public StorageActionsAccessor(IUuidGenerator generator,
-									  OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
-									  IDocumentCacher documentCacher,
-									  WriteBatch writeBatch,
-									  SnapshotReader snapshot,
-									  TableStorage storage)
+		public StorageActionsAccessor(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, IDocumentCacher documentCacher, WriteBatch writeBatch, SnapshotReader snapshot, TableStorage storage, TransactionalStorage transactionalStorage)
 		{
 			Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatch, snapshot, storage);
 			Indexing = new IndexingStorageActions(storage, generator, snapshot, writeBatch);
@@ -36,8 +32,8 @@ namespace Raven.Database.Storage.Voron
 			Tasks = new TasksStorageActions(storage, generator, snapshot, writeBatch);
 			Staleness = new StalenessStorageActions(storage, snapshot, writeBatch);
 			MapReduce = new MappedResultsStorageActions(storage, generator, documentCodecs, snapshot, writeBatch);
-			Attachments = new AttachmentsStorageActions(storage.Attachments, writeBatch, snapshot, generator);
-            General = new GeneralStorageActions(storage.General,writeBatch,snapshot);
+			Attachments = new AttachmentsStorageActions(storage.Attachments, writeBatch, snapshot, generator, transactionalStorage);
+            General = new GeneralStorageActions(storage.General, writeBatch, snapshot);
 		}
 
 

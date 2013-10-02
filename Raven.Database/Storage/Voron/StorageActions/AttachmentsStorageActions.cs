@@ -26,14 +26,21 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private readonly WriteBatch writeBatch;
 		private readonly SnapshotReader snapshot;
 		private readonly IUuidGenerator uuidGenerator;
+		private readonly Raven.Storage.Voron.TransactionalStorage transactionalStorage;
+
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
-		public AttachmentsStorageActions(Table attachmentsTable, WriteBatch writeBatch, SnapshotReader snapshot, IUuidGenerator uuidGenerator)
+		public AttachmentsStorageActions(Table attachmentsTable, 
+										 WriteBatch writeBatch, 
+										 SnapshotReader snapshot, 
+									     IUuidGenerator uuidGenerator, 
+										 Raven.Storage.Voron.TransactionalStorage transactionalStorage)
 		{
 			this.attachmentsTable = attachmentsTable;
 			this.writeBatch = writeBatch;
 			this.snapshot = snapshot;
 			this.uuidGenerator = uuidGenerator;
+			this.transactionalStorage = transactionalStorage;
 		}
 
 		public Etag AddAttachment(string key, Etag etag, Stream data, RavenJObject headers)
@@ -161,24 +168,39 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				Etag currentEtag;
 				var headers = ReadAttachmentMetadata(metadataKey, out currentEtag);
 				if (headers == null) //precaution --> should never be null at this stage
-					throw new InvalidDataException("The attachment exists, but failed reading metadata. Data corruption?");
+					throw new InvalidDataException("The attachment exists, but failed reading metadata. Data corruption?");				
 
-				var attachmentStream = new MemoryStream((int)dataReadResult.Stream.Length);
-				dataReadResult.Stream.CopyTo(attachmentStream);
-
-				attachmentStream.Position = 0;
 				var attachment = new Attachment()
 				{
 					Key = key,
 					Etag = currentEtag,
 					Metadata = headers,
-					Data = () => attachmentStream,
-					Size = (int)attachmentStream.Length
+					Data = () =>
+					{
+						var storageActions = transactionalStorage.GetCurrentBatch();
+						var attachmentStorageActions = storageActions.Attachments as AttachmentsStorageActions;
+						if (attachmentStorageActions == null)
+							throw new InvalidOperationException("Something is very wrong here. Storage actions define invalid attachment storage actions object");
+
+						var attachmentDataStream = attachmentStorageActions.GetAttachmentStream(dataKey);
+												
+						return attachmentDataStream;
+					},
+					Size = (int)dataReadResult.Stream.Length
 				};
 
-				logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key, attachmentStream.Length);
+				logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key, dataReadResult.Stream.Length);
 				return attachment;
 			}
+		}
+
+		internal Stream GetAttachmentStream(string dataKey)
+		{
+			if (!attachmentsTable.Contains(snapshot, dataKey, writeBatch))
+				return new MemoryStream();
+
+			var dataReadResult = attachmentsTable.Read(snapshot, dataKey, writeBatch);
+			return dataReadResult.Stream;
 		}
 
 		public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)
