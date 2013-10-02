@@ -113,24 +113,4 @@ public class OAuthHelper {
     return Base64.encodeBase64String(data);
   }
 
-
-  public static void main(String[] args) throws Exception {
-    //TODO: delete me
-//    OAuthHelper.encryptAsymmetric(exponent, modulus, data)
-
-    String encodeBase64 = Base64.encodeBase64String(new byte[] { 1,2,3});
-
-    String modulus = "oLG/fa+JA7scV7rj290GM651EzyrAHDG6vyzPwqxAwNgfcTzG4i9RuQ41q+So4Qg9NX1oQHq4ieYx9NjTAeM4qzIQR5QJnj2i4D6FLWMxzUdkliiBC2GDJ/5uxFYK/TPJMvg7+yhayZcXeuiRq8KtK1GBLiAeb1Q3kIEvxn1M6eGgK134Zbxtr8skuViKqxMkJw3OJrqI/IuMnW9aEHEEyA9kjVXokgx1C0u0ypaLxpKCj0mu/KAWc7r5x4M2qjSd0G6TVea4suTt5UM5/Pq/DhmPu2jGHAwxMJ5rfqXRUBtYirgJ/KqIZlZMWuHSbBMUg0aSOmikPycv3uUIbgSbw";
-    String exp = "AQAB";
-
-    byte[] decodeModulus = Base64.decodeBase64(modulus);
-    byte[] decodeExp = Base64.decodeBase64(exp);
-
-    IAsymmetricalEncryptor encryptor = Encryptor.getCurrent().createAsymmetrical(decodeExp, decodeModulus);
-    byte[] encrypt = encryptor.encrypt(new byte[] { 1,2,3});
-
-
-    String asymmetric = OAuthHelper.encryptAsymmetric(decodeExp, decodeModulus, "XXXX");
-    System.out.println(asymmetric);
-  }
 }

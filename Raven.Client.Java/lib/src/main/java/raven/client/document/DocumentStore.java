@@ -44,6 +44,7 @@ import raven.client.extensions.MultiDatabase;
 import raven.client.listeners.IDocumentConflictListener;
 import raven.client.util.EvictItemsFromCacheBasedOnChanges;
 import raven.client.utils.Closer;
+import raven.client.utils.RequirementsChecker;
 
 /**
  * Manages access to RavenDB and open sessions to work with RavenDB.
@@ -646,6 +647,7 @@ public class DocumentStore extends DocumentStoreBase {
   }
 
   public IDocumentStore withApiKey(String apiKey) {
+    RequirementsChecker.checkOAuthDeps();
     this.apiKey = apiKey;
     return this;
   }

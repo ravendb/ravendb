@@ -156,6 +156,22 @@ public abstract class RavenDBAwareTests {
     stopServer(DEFAULT_SERVER_PORT_1);
   }
 
+  protected static void startServerWithOAuth(int port) throws Exception {
+    HttpPut put = null;
+    try {
+      put = new HttpPut(DEFAULT_SERVER_RUNNER_URL);
+      put.setEntity(new StringEntity(getCreateServerDocumentWithApiKey(port), ContentType.APPLICATION_JSON));
+      HttpResponse httpResponse = client.execute(put);
+      if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+        throw new IllegalStateException("Invalid response on put:" + httpResponse.getStatusLine().getStatusCode());
+      }
+    } finally {
+      if (put != null) {
+        put.releaseConnection();
+      }
+    }
+  }
+
   protected static void startServer(int port) throws Exception {
     HttpPut put = null;
     try {
@@ -204,7 +220,15 @@ public abstract class RavenDBAwareTests {
     doc.add("Port", new RavenJValue(port));
     doc.add("RunInMemory", new RavenJValue(RUN_IN_MEMORY));
     doc.add("ApiKeyName", new RavenJValue("java"));
-//    doc.add("ApiKeySecret", new RavenJValue("6B4G51NrO0P")); //TODO: parametrize this!
+    return doc.toString();
+  }
+
+  protected static String getCreateServerDocumentWithApiKey(int port) {
+    RavenJObject doc = new RavenJObject();
+    doc.add("Port", new RavenJValue(port));
+    doc.add("RunInMemory", new RavenJValue(RUN_IN_MEMORY));
+    doc.add("ApiKeyName", new RavenJValue("java"));
+    doc.add("ApiKeySecret", new RavenJValue("6B4G51NrO0P"));
     return doc.toString();
   }
 
