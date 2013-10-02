@@ -87,7 +87,6 @@ namespace Raven.Database.Server.WebApi
 			get { return Landlord.NumberOfRequests; }
 		}
 
-		public static readonly Regex ChangesQuery = new Regex("^(/databases/([^/]+))?/changes/events", RegexOptions.IgnoreCase);
 
 		public Task<DocumentDatabase> GetDatabaseInternal(string name)
 		{

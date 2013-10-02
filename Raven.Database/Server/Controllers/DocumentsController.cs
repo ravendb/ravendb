@@ -171,6 +171,11 @@ namespace Raven.Database.Server.Controllers
 
 		private HttpResponseMessage GetDocumentDirectly(string docId, HttpResponseMessage msg)
 		{
+			if (Database == null)
+			{
+				msg.StatusCode = HttpStatusCode.NotFound;
+				return msg;
+			}
 			var doc = Database.Get(docId, GetRequestTransaction());
 			if (doc == null)
 			{

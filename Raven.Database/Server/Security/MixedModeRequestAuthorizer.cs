@@ -170,6 +170,18 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.GetApprovedDatabases(user);
 		}
 
+		public List<string> GetApprovedDatabases(IPrincipal user, RavenApiController controller)
+		{
+			var authHeader = controller.GetHeader("Authorization");
+
+			if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+			{
+				return oAuthRequestAuthorizer.GetApprovedDatabases(user);
+			}
+
+			return windowsRequestAuthorizer.GetApprovedDatabases(user);
+		}
+
 		public override void Dispose()
 		{
 			windowsRequestAuthorizer.Dispose();

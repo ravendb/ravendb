@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -17,6 +18,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Tenancy;
@@ -41,10 +43,33 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
+		public static readonly Regex ChangesQuery = new Regex("^(/databases/([^/]+))?/changes/events", RegexOptions.IgnoreCase);
+
 		public override Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			var landlord = (DatabasesLandlord) controllerContext.Configuration.Properties[typeof (DatabasesLandlord)];
 			landlord.IncrementRequestCount();
+			var values = controllerContext.Request.GetRouteData().Values;
+			string name;
+			if (values.ContainsKey("databaseName"))
+				name = controllerContext.Request.GetRouteData().Values["databaseName"] as string;
+			else
+				name = null;
+
+			var msg = "Could not find a database named: " + name;
+
+			if (name != null && landlord.GetDatabaseInternal(name) == null)
+			{
+				return new CompletedTask<HttpResponseMessage>(GetMessageWithObject(new
+				                                                                   {
+					                                                                   Error = msg
+				                                                                   }, HttpStatusCode.ServiceUnavailable));
+			}
+			if (ChangesQuery.IsMatch(controllerContext.Request.RequestUri.AbsolutePath))
+			{
+				throw new NotImplementedException();
+			}
+
 			return base.ExecuteAsync(controllerContext, cancellationToken);
 		}
 
@@ -60,7 +85,14 @@ namespace Raven.Database.Server.Controllers
 		{
 			get
 			{
-				return DatabasesLandlord.GetDatabaseInternal(DatabaseName).Result;
+				var database = DatabasesLandlord.GetDatabaseInternal(DatabaseName);
+				if (database == null)
+				{
+					return null;
+					throw new InvalidOperationException("Could not find a database named: " + DatabaseName);
+				}
+
+				return database.Result;
 			}
 		}
 

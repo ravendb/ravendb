@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
+using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
@@ -45,8 +46,9 @@ namespace Raven.Database.Server.Controllers
 
 				if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
-					//TODO: fix when request authorizer has been moved to the web api server
-					//approvedDatabases = server.RequestAuthorizer.GetApprovedDatabases(user, context);
+					var authorizer = (MixedModeRequestAuthorizer)this.ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+
+					approvedDatabases = authorizer.GetApprovedDatabases(user, this);
 				}
 			}
 
