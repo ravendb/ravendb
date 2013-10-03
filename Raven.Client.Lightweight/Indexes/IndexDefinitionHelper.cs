@@ -37,7 +37,7 @@ namespace Raven.Client.Indexes
 					switch (methodCallExpression.Method.Name)
 					{
 						case "Select":
-							queryRootName = TryCaptureQueryRoot(methodCallExpression.Arguments[0]);
+							queryRootName = TryCaptureQueryRoot(methodCallExpression.Arguments[1]);
 							break;
 						case "SelectMany":
 							queryRootName = TryCaptureQueryRoot(methodCallExpression.Arguments[1]);

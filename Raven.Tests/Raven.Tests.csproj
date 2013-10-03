@@ -817,6 +817,7 @@
     <Compile Include="MailingList\LateBoundValue.cs" />
     <Compile Include="MailingList\RavenDB_Stream_SelectFields_Test.cs" />
     <Compile Include="MailingList\RavenDeserializationBug.cs" />
+    <Compile Include="MailingList\RavenDynamicTests.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
     <Compile Include="MailingList\RenamedProperty.cs" />
     <Compile Include="MailingList\ResultTransformerMetaData .cs" />
