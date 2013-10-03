@@ -29,7 +29,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (indexingStats == null)
 				return false; // index does not exists
 
-			var hasReduce = !String.IsNullOrEmpty(indexingStats.Value<string>("lastReducedEtag"));
+			var hasReduce = indexingStats.Value<byte[]>("lastReducedEtag") != null;
 			
 			if (IsMapStale(key) || hasReduce && IsReduceStale(key))
 			{
@@ -47,7 +47,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				}
 				else if (cutoffEtag != null)
 				{
-					var lastIndexedEtag = Etag.Parse(lastIndexedEtags.Value<string>("lastEtag"));
+					var lastIndexedEtag = Etag.Parse(lastIndexedEtags.Value<byte[]>("lastEtag"));
 
 					if (lastIndexedEtag.CompareTo(cutoffEtag) < 0)
 						return true;
@@ -102,7 +102,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (read == null)
 				return false;
 
-			var lastIndexedEtag = Etag.Parse(read.Value<string>("lastEtag"));
+			var lastIndexedEtag = Etag.Parse(read.Value<byte[]>("lastEtag"));
 			var lastDocumentEtag = GetMostRecentDocumentEtag();
 
 			return lastDocumentEtag.CompareTo(lastIndexedEtag) > 0;
@@ -121,13 +121,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			{
 				return Tuple.Create(
 					indexingStats.Value<DateTime>("lastReducedTimestamp"),
-					Etag.Parse(indexingStats.Value<string>("lastReducedEtag")));
+					Etag.Parse(indexingStats.Value<byte[]>("lastReducedEtag")));
 			}
 
 			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch, out version);
 
 			return Tuple.Create(lastIndexedEtags.Value<DateTime>("lastTimestamp"),
-				Etag.Parse(lastIndexedEtags.Value<string>("lastEtag")));
+				Etag.Parse(lastIndexedEtags.Value<byte[]>("lastEtag")));
 		}
 
 		public Etag GetMostRecentDocumentEtag()
