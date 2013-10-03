@@ -213,8 +213,8 @@
 			var metadataDocument = ReadDocumentMetadata(key);
 			if (metadataDocument == null)
 			{
-				logger.Warn(string.Format("Metadata of document with key='{0} was not found, but the document itself exists.", key));
-				return null;
+				//metadata non-existing when document record exists should never occur - hence the exception
+				throw new InvalidDataException(string.Format("Metadata of document with key='{0} was not found, but the document itself exists.", key));
 			}
 
 			var documentData = ReadDocumentData(key, metadataDocument.Etag, metadataDocument.Metadata);
@@ -278,10 +278,12 @@
 			deletedETag = etag != null ? existingEtag : documentMetadata.Etag;
 
 			tableStorage.Documents.Delete(writeBatch, lowerKey);
-			tableStorage.Documents.Delete(writeBatch, lowerKey);
 
 			tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-						  .Delete(writeBatch, deletedETag);
+								  .Delete(writeBatch, deletedETag);
+
+			tableStorage.Documents.GetIndex(Tables.Documents.Indices.Metadata)
+								  .Delete(writeBatch, lowerKey);
 
 			documentCacher.RemoveCachedDocument(lowerKey, etag);
 
@@ -533,13 +535,16 @@
 			}
 
 			Stream dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream            
-			data.WriteTo(dataStream);
+			
 
 			var finalDataStream = documentCodecs.Aggregate(dataStream,
 				(current, codec) => codec.Encode(loweredKey, data, metadata, current));
+			data.WriteTo(finalDataStream);
+				finalDataStream.Flush();
+			
 
-			finalDataStream.Position = 0;
-			tableStorage.Documents.Add(writeBatch, loweredKey, finalDataStream);
+			dataStream.Position = 0;
+			tableStorage.Documents.Add(writeBatch, loweredKey, dataStream);
 
 			newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			savedAt = SystemTime.UtcNow;

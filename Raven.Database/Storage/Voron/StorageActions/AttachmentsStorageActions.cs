@@ -46,16 +46,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public Etag AddAttachment(string key, Etag etag, Stream data, RavenJObject headers)
 		{
 			if (String.IsNullOrEmpty(key))
-				throw new ArgumentNullException("key");
-			if (data == null)
-				throw new InvalidOperationException("When adding new attachment, the attachment data must be specified");
+				throw new ArgumentNullException("key");			
 
 			var lowercaseKey = key.ToLowerInvariant();
 			var dataKey = Util.DataKey(lowercaseKey);
 			var metadataKey = Util.MetadataKey(lowercaseKey);
 
 			var keyByETagIndice = attachmentsTable.GetIndex(Tables.Attachments.Indices.ByEtag);
-			var isUpdate = attachmentsTable.Contains(snapshot, lowercaseKey, writeBatch);
+			var isUpdate = attachmentsTable.Contains(snapshot, dataKey, writeBatch);
 			if (isUpdate)
 			{
 				if (!attachmentsTable.Contains(snapshot, metadataKey, writeBatch)) //precaution
@@ -68,7 +66,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				if (etag != null && !IsAttachmentEtagMatch(metadataKey, etag, out existingEtag))
 				{
 					throw new ConcurrencyException("PUT attempted on attachment '" + key +
-											"' using a non current etag")
+					                               "' using a non current etag")
 					{
 						ActualETag = existingEtag,
 						ExpectedETag = etag
@@ -83,26 +81,29 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					keyByETagIndice.Delete(writeBatch, currentEtag.ToString());
 				}
 			}
+			else
+			{
+				if (data == null)
+					throw new InvalidOperationException("When adding new attachment, the attachment data must be specified");
+			
+				if (!data.CanRead) //precaution
+					throw new ArgumentException("Attachment data stream must be readable");
+			}
 
 			var newETag = uuidGenerator.CreateSequentialUuid(UuidType.Attachments);
 
-			if (data.CanSeek) //some streams do not support seeks - for example GZipStream
+			if (data != null)
 			{
-				data.Seek(0, SeekOrigin.Begin);
-				attachmentsTable.Add(writeBatch, dataKey, data);
-			}
-			else
-			{
-				var tempMemoryStream = new MemoryStream();
-				try
+				if (data.CanSeek) 
 				{
-					data.CopyTo(tempMemoryStream);
-					tempMemoryStream.Position = 0;
-					attachmentsTable.Add(writeBatch, dataKey, tempMemoryStream);
+					data.Seek(0, SeekOrigin.Begin);
+					attachmentsTable.Add(writeBatch, dataKey, data);
 				}
-				finally
+				else //handle streams like GzipStream
 				{
-					data.Dispose();
+					var tempStream = new MemoryStream();
+					data.CopyTo(tempStream);
+					attachmentsTable.Add(writeBatch, dataKey, tempStream);
 				}
 			}
 
@@ -110,7 +111,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			WriteAttachmentMetadata(metadataKey, newETag, headers);
 
-			if (data.CanSeek)
+			if (data != null && data.CanSeek)
 				logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key, data.Length);
 			else
 				logger.Debug("Fetched document attachment (key = '{0}')", key);
