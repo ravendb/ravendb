@@ -59,7 +59,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 
 			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
-			using (var iterator = tasksByIndex.MultiRead(Snapshot, name))
+			using (var iterator = tasksByIndex.MultiRead(Snapshot, key))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return false;
@@ -84,7 +84,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public bool IsReduceStale(string view)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
-			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, view.ToLowerInvariant()))
+			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, CreateKey(view)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return false;

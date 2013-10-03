@@ -58,8 +58,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					{ "task", task.AsBytes() }
 				}, 0);
 
-			tasksByType.MultiAdd(writeBatch, type, idAsString);
-			tasksByIndex.MultiAdd(writeBatch, index, idAsString);
+			tasksByType.MultiAdd(writeBatch, CreateKey(type), idAsString);
+			tasksByIndex.MultiAdd(writeBatch, CreateKey(index), idAsString);
 			tasksByIndexAndType.MultiAdd(writeBatch, CreateKey(index, type), idAsString);
 		}
 
@@ -78,7 +78,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public T GetMergedTask<T>() where T : Task
 		{
-			var type = typeof(T).FullName;
+			var type = CreateKey(typeof(T).FullName);
 			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
 
 			using (var iterator = tasksByType.MultiRead(Snapshot, type))
@@ -171,8 +171,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
 
 			tableStorage.Tasks.Delete(writeBatch, taskId);
-			tasksByType.MultiDelete(writeBatch, type, taskId);
-			tasksByIndex.MultiDelete(writeBatch, index, taskId);
+			tasksByType.MultiDelete(writeBatch, CreateKey(type), taskId);
+			tasksByIndex.MultiDelete(writeBatch, CreateKey(index), taskId);
 			tasksByIndexAndType.MultiDelete(writeBatch, CreateKey(index, type), taskId);
 		}
 	}

@@ -43,7 +43,7 @@
 		public IEnumerable<ReduceKeyAndCount> GetKeysStats(string view, int start, int pageSize)
 		{
 			var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
-			using (var iterator = reduceKeyCountsByView.MultiRead(Snapshot, view))
+			using (var iterator = reduceKeyCountsByView.MultiRead(Snapshot, CreateKey(view)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
 					yield break;
@@ -99,7 +99,7 @@
 			mappedResultsData.Add(writeBatch, idAsString, ms.ToArray(), 0);
 
 			mappedResultsByViewAndDocumentId.MultiAdd(writeBatch, CreateKey(view, docId), idAsString);
-			mappedResultsByView.MultiAdd(writeBatch, view, idAsString);
+			mappedResultsByView.MultiAdd(writeBatch, CreateKey(view), idAsString);
 			mappedResultsByViewAndReduceKey.MultiAdd(writeBatch, CreateKey(view, reduceKey), idAsString);
 			mappedResultsByViewAndReduceKeyAndSourceBucket.MultiAdd(writeBatch, CreateKey(view, reduceKey, bucket), idAsString);
 		}
@@ -182,7 +182,7 @@
 			var deletedReduceKeys = new List<string>();
 			var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
 
-			using (var iterator = mappedResultsByView.MultiRead(Snapshot, view))
+			using (var iterator = mappedResultsByView.MultiRead(Snapshot, CreateKey(view)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return;
@@ -212,7 +212,7 @@
 		public IEnumerable<string> GetKeysForIndexForDebug(string view, int start, int take)
 		{
 			var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
-			using (var iterator = mappedResultsByView.MultiRead(Snapshot, view))
+			using (var iterator = mappedResultsByView.MultiRead(Snapshot, CreateKey(view)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return Enumerable.Empty<string>();
@@ -308,7 +308,7 @@
 		public IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(string view, int start, int take)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
-			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, view))
+			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, CreateKey(view)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
 					yield break;
@@ -353,7 +353,7 @@
 				{"timestamp", SystemTime.UtcNow}
 			});
 
-			scheduledReductionsByView.MultiAdd(writeBatch, view.ToLowerInvariant(), idAsString);
+			scheduledReductionsByView.MultiAdd(writeBatch, CreateKey(view), idAsString);
 			scheduledReductionsByViewAndLevelAndReduceKey.MultiAdd(writeBatch, CreateKey(view, level, reduceKeysAndBuckets.ReduceKey), idAsString);
 			scheduledReductionsByViewAndLevel.MultiAdd(writeBatch, CreateKey(view, level), idAsString);
 		}
@@ -692,7 +692,7 @@
 			var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
 
 			tableStorage.ReduceKeyCounts.Delete(writeBatch, key, expectedVersion);
-			reduceKeyCountsByView.MultiDelete(writeBatch, view, key);
+			reduceKeyCountsByView.MultiDelete(writeBatch, CreateKey(view), key);
 		}
 
 		private void AddReduceKeyCount(string key, string view, string reduceKey, int count, ushort? expectedVersion)
@@ -709,7 +709,7 @@
 							{ "mappedItemsCount", count }
 						}, expectedVersion);
 
-			reduceKeyCountsByView.MultiAdd(writeBatch, view, key);
+			reduceKeyCountsByView.MultiAdd(writeBatch, CreateKey(view), key);
 		}
 
 		private void AddReduceKeyType(string key, string view, string reduceKey, ReduceType status, ushort? expectedVersion)
@@ -726,7 +726,7 @@
 							{ "reduceType", (int)status }
 						}, expectedVersion);
 
-			reduceKeyTypesByView.MultiAdd(writeBatch, view, key);
+			reduceKeyTypesByView.MultiAdd(writeBatch, CreateKey(view), key);
 		}
 
 		public ReduceType GetLastPerformedReduceType(string view, string reduceKey)
@@ -813,7 +813,7 @@
 		public IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(string view, int start, int take)
 		{
 			var reduceKeyTypesByView = tableStorage.ReduceKeyTypes.GetIndex(Tables.ReduceKeyTypes.Indices.ByView);
-			using (var iterator = reduceKeyTypesByView.MultiRead(Snapshot, view))
+			using (var iterator = reduceKeyTypesByView.MultiRead(Snapshot, CreateKey(view)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys) || !iterator.Skip(start))
 					yield break;
@@ -839,7 +839,7 @@
 			var scheduledReductionsByViewAndLevel = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevel);
 
 			tableStorage.ScheduledReductions.Delete(writeBatch, id);
-			scheduledReductionsByView.MultiDelete(writeBatch, view.ToLowerInvariant(), id);
+			scheduledReductionsByView.MultiDelete(writeBatch, CreateKey(view), id);
 			scheduledReductionsByViewAndLevelAndReduceKey.MultiDelete(writeBatch, CreateKey(view, level, reduceKey), id);
 			scheduledReductionsByViewAndLevel.MultiDelete(writeBatch, CreateKey(view, level), id);
 		}
@@ -857,7 +857,7 @@
 
 			tableStorage.MappedResults.Delete(writeBatch, id);
 			mappedResultsByViewAndDocumentId.MultiDelete(writeBatch, viewAndDocumentId, id);
-			mappedResultsByView.MultiDelete(writeBatch, view, id);
+			mappedResultsByView.MultiDelete(writeBatch, CreateKey(view), id);
 			mappedResultsByViewAndReduceKey.MultiDelete(writeBatch, viewAndReduceKey, id);
 			mappedResultsByViewAndReduceKeyAndSourceBucket.MultiDelete(writeBatch, viewAndReduceKeyAndSourceBucket, id);
 			mappedResultsData.Delete(writeBatch, id);
