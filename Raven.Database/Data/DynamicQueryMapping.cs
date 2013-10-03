@@ -39,23 +39,23 @@ namespace Raven.Database.Data
 
 		public IndexDefinition CreateIndexDefinition()
 		{
-			var fromClauses = new HashSet<string>();
+		    var fromClause = string.Empty;
 			var realMappings = new HashSet<string>();
 
 			if (!string.IsNullOrEmpty(ForEntityName))
 			{
-				fromClauses.Add("from doc in docs." + ForEntityName);
+				fromClause = "from doc in docs." + ForEntityName;
 			}
 			else
 			{
-				fromClauses.Add("from doc in docs");
+        fromClause = "from doc in docs";
 			}
 
 			foreach (var map in Items)
 			{
 				var currentDoc = "doc";
 				var currentExpression = new StringBuilder();
-
+        var mapFromClauses = new List<String>();
 				int currentIndex = 0;
 				while (currentIndex < map.From.Length)
 				{
@@ -72,7 +72,7 @@ namespace Raven.Database.Data
 
 							// from docNewDocItemsItem in doc.NewDoc.Items
 							String docInclude = string.Format("from {0} in ((IEnumerable<dynamic>){1}).DefaultIfEmpty()", newDoc, newDocumentSource);
-							fromClauses.Add(docInclude);
+              mapFromClauses.Add(docInclude);
 
 							// Start building the property again
 							currentExpression.Clear();
@@ -91,29 +91,23 @@ namespace Raven.Database.Data
 				{
 					currentExpression.Insert(0, '.');
 				}
-				// We get rid of any _Range(s) etc
+
 				var indexedMember = currentExpression.ToString().Replace("_Range", "");
-				if (indexedMember.Length == 0)
-				{
+                var rightHandSide =
+                    indexedMember.Length == 0 ? currentDoc
+                    : mapFromClauses.Count > 0 ? String.Format("({0} select {1}{2}).ToArray()", String.Join("\n", mapFromClauses), currentDoc, indexedMember)
+                    : String.Format("{0}{1}", currentDoc, indexedMember);
+
 					realMappings.Add(string.Format("{0} = {1}",
 						map.To.Replace("_Range", ""),
-						currentDoc
+						rightHandSide
 						));
-				}
-				else
-				{
-					realMappings.Add(string.Format("{0} = {1}{2}",
-						map.To.Replace("_Range", ""),
-						currentDoc,
-						indexedMember
-						));
-				}
 			}
 
 			var index = new IndexDefinition
 			{
 				Map = string.Format("{0}\r\nselect new {{ {1} }}",
-									string.Join("\r\n", fromClauses.ToArray()),
+                  fromClause,
 									string.Join(", ",
 												realMappings.Concat(new[] { AggregationMapPart() }).Where(x => x != null))),
 				Reduce = DynamicAggregation ? null : AggregationReducePart(),

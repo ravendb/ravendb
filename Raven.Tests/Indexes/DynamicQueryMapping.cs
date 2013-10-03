@@ -133,7 +133,7 @@ namespace Raven.Tests.Indexes
 			IndexDefinition definition = mapping.CreateIndexDefinition();
 
 			Assert.Equal(
-				"from doc in docs\r\nfrom docTagsItem in ((IEnumerable<dynamic>)doc.Tags).DefaultIfEmpty()\r\nselect new { docTagsName = docTagsItem.Name }",
+        "from doc in docs\r\nselect new { docTagsName = (from docTagsItem in ((IEnumerable<dynamic>)doc.Tags).DefaultIfEmpty() select docTagsItem.Name).ToArray() }",
 				definition.Map);
 		}
 
