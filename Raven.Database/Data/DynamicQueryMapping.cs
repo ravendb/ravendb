@@ -39,16 +39,16 @@ namespace Raven.Database.Data
 
 		public IndexDefinition CreateIndexDefinition()
 		{
-			var fromClauses = new HashSet<string>();
+		    var fromClause = string.Empty;
 			var realMappings = new HashSet<string>();
 
 			if (!string.IsNullOrEmpty(ForEntityName))
 			{
-				fromClauses.Add("from doc in docs." + ForEntityName);
+				fromClause = "from doc in docs." + ForEntityName;
 			}
 			else
 			{
-				fromClauses.Add("from doc in docs");
+        fromClause = "from doc in docs";
 			}
 
 			foreach (var map in Items)
@@ -107,7 +107,7 @@ namespace Raven.Database.Data
 			var index = new IndexDefinition
 			{
 				Map = string.Format("{0}\r\nselect new {{ {1} }}",
-									string.Join("\r\n", fromClauses.ToArray()),
+                  fromClause,
 									string.Join(", ",
 												realMappings.Concat(new[] { AggregationMapPart() }).Where(x => x != null))),
 				Reduce = DynamicAggregation ? null : AggregationReducePart(),
