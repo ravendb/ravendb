@@ -8,21 +8,21 @@ namespace Raven.Database.Server.WebApi.Handlers
 {
 	public class GZipToJsonHandler : DelegatingHandler
 	{
-		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
 															   CancellationToken cancellationToken)
 		{
 			// Handle only if content type is 'application/gzip'
 			if (request.Content.Headers.ContentEncoding == null ||
 				request.Content.Headers.ContentEncoding.Contains("gzip") == false)
 			{
-				return base.SendAsync(request, cancellationToken);
+				return await base.SendAsync(request, cancellationToken);
 			}
 
 			// Read in the input stream, then decompress in to the outputstream.
 			// Doing this asynronously, but not really required at this point
 			// since we end up waiting on it right after this.
 			Stream outputStream = new MemoryStream();
-			Task task = request.Content.ReadAsStreamAsync().ContinueWith(t =>
+			await request.Content.ReadAsStreamAsync().ContinueWith(t =>
 			{
 				Stream inputStream = t.Result;
 				var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress);
@@ -32,11 +32,6 @@ namespace Raven.Database.Server.WebApi.Handlers
 
 				outputStream.Seek(0, SeekOrigin.Begin);
 			}, cancellationToken);
-
-			// Wait for inputstream and decompression to complete. Would be nice
-			// to not block here and work async when ready instead, but I couldn't 
-			// figure out how to do it in context of a DelegatingHandler.
-			task.Wait();
 
 			// This next section is the key...
 
@@ -62,7 +57,7 @@ namespace Raven.Database.Server.WebApi.Handlers
 			request.Content.Headers.Remove("Content-Type");
 			request.Content.Headers.Add("Content-Type", "application/json");
 
-			return base.SendAsync(request, cancellationToken);
+			return await base.SendAsync(request, cancellationToken);
 		}
 	}
 }
