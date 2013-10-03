@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Web.Http;
+using Raven.Database.Server.Connections;
 
 namespace Raven.Database.Server.Controllers
 {
@@ -95,63 +98,15 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet("changes/events")]
-		public HttpResponseMessage ChangesEvents()
+		public async Task<HttpResponseMessage> ChangesEvents()
 		{
-			//	var sw = Stopwatch.StartNew();
-			//try
-			//{
-			//	if (SetupRequestToProperDatabase(context) == false)
-			//	{
-			//		FinalizeRequestSafe(context);
-			//		onDisconnect();
-			//		return new CompletedTask();
-			//	}
 
-			//	if (!SetThreadLocalState(context))
-			//	{
-			//		FinalizeRequestSafe(context);
-			//		onDisconnect();
-			//		return new CompletedTask();
-			//	}
-			//	var eventsTransport = new EventsTransport(context);
-			//	eventsTransport.Disconnected += onDisconnect;
-			//	var handleChangesRequest = eventsTransport.ProcessAsync();
-			//	CurrentDatabase.TransportState.Register(eventsTransport);
-			//	return handleChangesRequest;
-			//}
-			//catch (Exception e)
-			//{
-			//	try
-			//	{
-			//		ExceptionHandler.TryHandleException(context, e);
-			//		LogException(e);
-			//	}
-			//	finally
-			//	{
-			//		FinalizeRequestSafe(context);
-			//	}
-			//	onDisconnect();
-			//	return new CompletedTask();
-			//}
-			//finally
-			//{
-			//	try
-			//	{
-			//		LogHttpRequestStats(new LogHttpRequestStatsParams(
-			//								sw,
-			//								context.Request.Headers,
-			//								context.Request.HttpMethod,
-			//								context.Response.StatusCode,
-			//								context.Request.Url.PathAndQuery));
-			//	}
-			//	catch (Exception e)
-			//	{
-			//		logger.WarnException("Could not gather information to log request stats", e);
-			//	}
-			//	ResetThreadLocalState();
-			//}
-
-			throw new NotImplementedException();
+			var msg = new HttpResponseMessage {Content = new JsonContent()};
+			var eventsTransport = new WebApiEventsTransport(this);
+		//	eventsTransport.Disconnected += onDisconnect;
+			await eventsTransport.ProcessAsync(msg);
+			Database.TransportState.Register(eventsTransport);
+			return msg;
 		}
 
 		private bool Match(string x, string y)

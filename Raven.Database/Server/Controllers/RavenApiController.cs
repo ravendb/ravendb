@@ -35,13 +35,7 @@ namespace Raven.Database.Server.Controllers
 	{
 		public string DatabaseName
 		{
-			get
-			{
-				var values = Request.GetRouteData().Values;
-				if (values.ContainsKey("databaseName"))
-					return Request.GetRouteData().Values["databaseName"] as string;
-				return null;
-			}
+			get; private set;
 		}
 
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
@@ -49,23 +43,27 @@ namespace Raven.Database.Server.Controllers
 			var landlord = (DatabasesLandlord) controllerContext.Configuration.Properties[typeof (DatabasesLandlord)];
 			landlord.IncrementRequestCount();
 			var values = controllerContext.Request.GetRouteData().Values;
-			string name;
 			if (values.ContainsKey("databaseName"))
-				name = controllerContext.Request.GetRouteData().Values["databaseName"] as string;
+				DatabaseName = controllerContext.Request.GetRouteData().Values["databaseName"] as string;
 			else
-				name = null;
+				DatabaseName = null;
 
-			var msg = "Could not find a database named: " + name;
 
-			if (name != null && landlord.GetDatabaseInternal(name) == null)
+			if (DatabaseName != null && await landlord.GetDatabaseInternal(DatabaseName) == null)
 			{
-				return GetMessageWithObject(new {Error = msg}, HttpStatusCode.ServiceUnavailable);
+				var msg = "Could not find a database named: " + DatabaseName;
+				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
 			}
 
 			var sp = Stopwatch.StartNew();
 			var result = await base.ExecuteAsync(controllerContext, cancellationToken);
 			sp.Stop();
 			AddRavenHeader(result, sp, landlord);
+
+			if (result.StatusCode == HttpStatusCode.BadRequest)
+			{
+				
+			}
 
 			return result;
 		}
@@ -543,7 +541,6 @@ namespace Raven.Database.Server.Controllers
 
 			return msg;
 		}
-
 
 		public Etag GetEtag()
 		{

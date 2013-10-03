@@ -38,7 +38,7 @@ namespace Raven.Database.Server.Connections
 				value.Dispose();
 		}
 
-		public ConnectionState Register(EventsTransport transport)
+		public ConnectionState Register(IEventsTransport transport)
 		{
 			timeSensitiveStore.Seen(transport.Id);
 			transport.Disconnected += () => TimeSensitiveStore.Missing(transport.Id);
