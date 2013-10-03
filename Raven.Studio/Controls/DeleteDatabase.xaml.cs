@@ -34,7 +34,13 @@ namespace Raven.Studio.Controls
 		private async void Export_Click(object sender, RoutedEventArgs e)
 		{
 		    var exportTask = new ExportDatabaseTask(ApplicationModel.DatabaseCommands.ForDatabase(DatabaseName), DatabaseName,
-		                                            includeAttachements:true, includeDocuments:true,includeIndexes: true,includeTransformers: true, shouldExcludeExpired:false, batchSize:512, transformScript:"",filterSettings: new List<FilterSetting>());
+		        includeAttachements: true, includeDocuments: true, includeIndexes: true,
+		        removeAnalyzers: false,
+		        includeTransformers: true, 
+                shouldExcludeExpired: false, 
+                batchSize: 512, 
+                transformScript: "",
+		        filterSettings: new List<FilterSetting>());
             exportTask.MessageOutput += (s, messageArgs) => exportLog.Text = messageArgs.Message + "\n" + exportLog.Text;
 
 		    OKButton.IsEnabled = false;

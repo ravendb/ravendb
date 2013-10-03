@@ -205,7 +205,9 @@ namespace Raven.Database.Indexing
         protected bool ExecuteIndexing(bool isIdle, out bool onlyFoundIdleWork)
         {
             Etag synchronizationEtag = null;
+            Log.Debug("[Document Reindexing] ({0}) AbstractIndexingExecuter::ExecuteIndexing() started --> setting new (empty) value to DocumentKeysAddedWhileIndexingInProgress", GetType().Name);
             DocumentKeysAddedWhileIndexingInProgress = new ConcurrentQueue<string>();
+            Log.Debug("[Document Reindexing] ({0}) AbstractIndexingExecuter::ExecuteIndexing() --> after setting new value to DocumentKeysAddedWhileIndexingInProgress", GetType().Name);
             try
             {
 
@@ -253,11 +255,14 @@ namespace Raven.Database.Indexing
                     ExecuteIndexingWork(indexesToWorkOn, startEtag);
                 }
 
+                Log.Debug("[Document Reindexing] ({0}) AbstractIndexingExecuter::ExecuteIndexing() executing ScheduleRelevantDocumentsForReindexIfNeeded() method", GetType().Name);
                 ScheduleRelevantDocumentsForReindexIfNeeded();
             }
             finally
             {
+                Log.Debug("[Document Reindexing] ({0}) AbstractIndexingExecuter::ExecuteIndexing() finished --> setting null value to DocumentKeysAddedWhileIndexingInProgress property", GetType().Name);
                 DocumentKeysAddedWhileIndexingInProgress = null;
+                Log.Debug("[Document Reindexing] ({0}) AbstractIndexingExecuter::ExecuteIndexing() finished --> after setting null value to DocumentKeysAddedWhileIndexingInProgress property", GetType().Name);
             }
             return true;
         }
@@ -279,9 +284,17 @@ namespace Raven.Database.Indexing
             try
             {
                 var documentKeysAddedWhileIndexingInProgress = DocumentKeysAddedWhileIndexingInProgress;
-                if (documentKeysAddedWhileIndexingInProgress == null || documentKeysAddedWhileIndexingInProgress.Count == 0)
+                Log.Debug("[Document Reindexing] ({0}) AbstractIndexingExecuter::ScheduleRelevantDocumentsForReindexIfNeeded() started", GetType().Name);
+                if (documentKeysAddedWhileIndexingInProgress == null ||
+                    documentKeysAddedWhileIndexingInProgress.Count == 0)
+                {
+                    Log.Debug("[Document Reindexing] ({0}) AbstractIndexingExecuter::ScheduleRelevantDocumentsForReindexIfNeeded() --> no documents for reindex. Exiting..", GetType().Name);
                     return;
+                }
 
+
+                Log.Debug("[Document Reindexing] ({1}) AbstractIndexingExecuter::ScheduleRelevantDocumentsForReindexIfNeeded() --> starting reindex batch ({0} documents might be touched)", documentKeysAddedWhileIndexingInProgress.Count, GetType().Name);
+                var actuallyTouchedCount = 0;
                 transactionalStorage.Batch(actions =>
                 {
                     bool touched = false;
@@ -301,12 +314,19 @@ namespace Raven.Database.Indexing
                     }
 
                     if (touched)
+                    {
                         context.ShouldNotifyAboutWork(() => DocumentReindexingWorkReason);
+                        actuallyTouchedCount++;
+                    }
                 });
+
+                Log.Debug("[Document Reindexing] ({1}) AbstractIndexingExecuter::ScheduleRelevantDocumentsForReindexIfNeeded() --> finished reindex batch (actually {0} documents touched)", actuallyTouchedCount, GetType().Name);
             }
             finally
             {
+                Log.Debug("[Document Reindexing] ({0}) AbstractIndexingExecuter::ScheduleRelevantDocumentsForReindexIfNeeded() --> clearing ReferencingDocumentsByChildKeysWhichMightNeedReindexing collection", GetType().Name);
                 ReferencingDocumentsByChildKeysWhichMightNeedReindexing.Clear();
+                Log.Debug("[Document Reindexing] ({0}) AbstractIndexingExecuter::ScheduleRelevantDocumentsForReindexIfNeeded() finished",GetType().Name);
             }
         }
     }

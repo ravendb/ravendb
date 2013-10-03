@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Dynamic;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Linq;
 using Raven.Database.Impl;
 using Raven.Imports.Newtonsoft.Json;
@@ -38,6 +39,8 @@ namespace Raven.Database.Indexing
 
         public override object GetValue(string name)
         {
+            if (name == Constants.Metadata)
+                return parentDoc[name];
             var result = base.GetValue(name);
             if (result is DynamicNullObject == false)
                 return result;
