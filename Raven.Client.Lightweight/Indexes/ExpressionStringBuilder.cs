@@ -1544,6 +1544,10 @@ namespace Raven.Client.Indexes
 						break;
 					default:
 						Out(node.Method.Name);
+                        if (node.Method.IsGenericMethod)
+                        {
+                            OutputGenericMethodArgumentsIfNeeded(node.Method);
+                        }
 						break;
 				}
 				Out("(");
@@ -1611,7 +1615,34 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
-		private static bool IsIndexerCall(MethodCallExpression node)
+	    private void OutputGenericMethodArgumentsIfNeeded(MethodInfo method)
+	    {
+	        var genericArguments = method.GetGenericArguments();
+	        if (genericArguments.All(TypeExistsOnServer) == false)
+	            return; // no point if the types aren't on the server
+	        switch (method.DeclaringType.Name)
+	        {
+                case "Enumerable":
+                case "Queryable":
+	                return; // we don't need thos, we have LinqOnDynamic for it
+	        }
+
+            Out("<");
+	        bool first = true;
+	        foreach (var genericArgument in genericArguments)
+	        {
+                if (first == false)
+                {
+                    Out(", ");
+                }
+                first = false;
+
+	            VisitType(genericArgument);
+	        }
+            Out(">");
+	    }
+
+	    private static bool IsIndexerCall(MethodCallExpression node)
 		{
 			return node.Method.IsSpecialName && (node.Method.Name.StartsWith("get_") || node.Method.Name.StartsWith("set_"));
 		}
