@@ -36,7 +36,7 @@ namespace Raven.Database.Server.WebApi
 			mixedModeRequestAuthorizer.Initialize(documentDatabase, this);
 		}
 
-		public void SetupConfig(HttpConfiguration cfg)
+	    internal static void SetupConfig(HttpConfiguration cfg, DatabasesLandlord databasesLandlord, MixedModeRequestAuthorizer mixedModeRequestAuthorizer)
 		{
 			cfg.Properties[typeof(DatabasesLandlord)] = databasesLandlord;
 			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = mixedModeRequestAuthorizer;
@@ -72,7 +72,7 @@ namespace Raven.Database.Server.WebApi
 		public Task StartListening()
 		{
 			var cfg = new HttpSelfHostConfiguration(configuration.ServerUrl);
-			SetupConfig(cfg);
+			SetupConfig(cfg, databasesLandlord, mixedModeRequestAuthorizer);
 			server = new HttpSelfHostServer(cfg);
 			return server.OpenAsync();
 		}

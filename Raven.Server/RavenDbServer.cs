@@ -6,94 +6,145 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Threading.Tasks;
+using Microsoft.Owin.Hosting;
+using Owin;
 using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Server;
-using Raven.Database.Server.WebApi;
+using Raven.Database.Server.Tenancy;
 using Raven.Server.Discovery;
 
 namespace Raven.Server
 {
-	public class RavenDbServer : IDisposable
-	{
-		private static ILog logger = LogManager.GetCurrentClassLogger();
-		private readonly DocumentDatabase database;
-		private readonly WebApiServer server;
-		private ClusterDiscoveryHost discoveryHost;
+    public class RavenDbServer : IDisposable
+    {
+        private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+        private readonly DocumentDatabase database;
+        private readonly IDisposable server;
+        private readonly IServerThingsForTests serverThingsForTests;
+        private ClusterDiscoveryHost discoveryHost;
 
-		public DocumentDatabase Database
-		{
-			get { return database; }
-		}
+        public RavenDbServer(InMemoryRavenConfiguration settings)
+        {
+            database = new DocumentDatabase(settings);
+            try
+            {
+                database.SpinBackgroundWorkers();
+                var options = new RavenDbOwinOptions(settings, database);
+                server = WebApp.Start("http://+:8079", app => app.UseRavenDB(options));
+                serverThingsForTests = new ServerThingsForTests(options);
+            }
+            catch (Exception)
+            {
+                database.Dispose();
+                database = null;
 
-		public WebApiServer Server
-		{
-			get { return server; }
-		}
+                throw;
+            }
 
-		public RavenDbServer(InMemoryRavenConfiguration settings)
-		{
-			database = new DocumentDatabase(settings);
+            ClusterDiscovery(settings);
+        }
 
-			try
-			{
-				database.SpinBackgroundWorkers();
-				server = new WebApiServer(settings, database);
-				server.StartListening();
-			}
-			catch (Exception)
-			{
-				database.Dispose();
-				database = null;
-				
-				throw;
-			}
+        public DocumentDatabase Database
+        {
+            get { return database; }
+        }
 
-			ClusterDiscovery(settings);
-		}
+        public IServerThingsForTests Server
+        {
+            get { return serverThingsForTests; }
+        }
 
-		private void ClusterDiscovery(InMemoryRavenConfiguration settings)
-		{
-			if (settings.DisableClusterDiscovery == false)
-			{
-				discoveryHost = new ClusterDiscoveryHost();
-				try
-				{
-					discoveryHost.Start();
-					discoveryHost.ClientDiscovered += async (sender, args) =>
-					{
-						var httpClient = new HttpClient(new HttpClientHandler());
-						var values = new Dictionary<string, string>
-						{
-							{"Url", settings.ServerUrl},
-							{"ClusterName", settings.ClusterName},
-						};
-						try
-						{
-							var result = await httpClient.PostAsync(args.ClusterManagerUrl, new FormUrlEncodedContent(values));
-							result.EnsureSuccessStatusCode();
-						}
-						catch (Exception e)
-						{
-							logger.ErrorException("Cannot post notification for cluster discovert to: " + settings.ServerUrl, e);
-						}
-					};
-				}
-				catch (Exception e)
-				{
-					discoveryHost.Dispose();
-					discoveryHost = null;
+        public void Dispose()
+        {
+            server.Dispose();
+            database.Dispose();
+        }
 
-					logger.ErrorException("Cannot setup cluster discovery" , e);
-				}
-			}
-		}
+        private void ClusterDiscovery(InMemoryRavenConfiguration settings)
+        {
+            if (settings.DisableClusterDiscovery == false)
+            {
+                discoveryHost = new ClusterDiscoveryHost();
+                try
+                {
+                    discoveryHost.Start();
+                    discoveryHost.ClientDiscovered += async (sender, args) =>
+                    {
+                        var httpClient = new HttpClient(new HttpClientHandler());
+                        var values = new Dictionary<string, string>
+                        {
+                            {"Url", settings.ServerUrl},
+                            {"ClusterName", settings.ClusterName},
+                        };
+                        try
+                        {
+                            HttpResponseMessage result =
+                                await httpClient.PostAsync(args.ClusterManagerUrl, new FormUrlEncodedContent(values));
+                            result.EnsureSuccessStatusCode();
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.ErrorException(
+                                "Cannot post notification for cluster discovert to: " + settings.ServerUrl, e);
+                        }
+                    };
+                }
+                catch (Exception e)
+                {
+                    discoveryHost.Dispose();
+                    discoveryHost = null;
 
-		public void Dispose()
-		{
-			server.Dispose();
-			database.Dispose();
-		}
-	}
+                    Logger.ErrorException("Cannot setup cluster discovery", e);
+                }
+            }
+        }
+
+        //TODO need a better name
+        private class ServerThingsForTests : IServerThingsForTests
+        {
+            private readonly RavenDbOwinOptions options;
+
+            public ServerThingsForTests(RavenDbOwinOptions options)
+            {
+                this.options = options;
+            }
+
+            public bool HasPendingRequests
+            {
+                get { return false; } //TODO: fix (copied from WebApiServer
+            }
+
+            public int NumberOfRequests
+            {
+                get { return options.Landlord.NumberOfRequests; }
+            }
+
+            public DatabasesLandlord Landlord
+            {
+                get { return options.Landlord; }
+            }
+
+            public void ResetNumberOfRequests()
+            {
+                options.Landlord.ResetNumberOfRequests();
+            }
+
+            public Task<DocumentDatabase> GetDatabaseInternal(string databaseName)
+            {
+                return options.Landlord.GetDatabaseInternal(databaseName);
+            }
+        }
+    }
+
+    //TODO need a better name
+    public interface IServerThingsForTests
+    {
+        bool HasPendingRequests { get; }
+        int NumberOfRequests { get; }
+        DatabasesLandlord Landlord { get; }
+        void ResetNumberOfRequests();
+        Task<DocumentDatabase> GetDatabaseInternal(string databaseName);
+    }
 }

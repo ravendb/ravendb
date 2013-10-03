@@ -96,12 +96,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
     </Reference>
-    <Reference Include="Lucene.Net.Contrib.FastVectorHighlighter">
-      <HintPath>..\SharedLibs\Lucene.Net.Contrib.FastVectorHighlighter.dll</HintPath>
-    </Reference>
-    <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
-      <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
-    </Reference>
     <Reference Include="Lucene.Net.Contrib.FastVectorHighlighter, Version=3.0.3.0, Culture=neutral, PublicKeyToken=85089178b9ac3181, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.FastVectorHighlighter.dll</HintPath>
@@ -134,9 +128,6 @@
     </Reference>
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.0.2000\lib\net40\NLog.dll</HintPath>
-    </Reference>
-    <Reference Include="Rhino.Mocks">
-      <HintPath>..\SharedLibs\Rhino.Mocks.dll</HintPath>
     </Reference>
     <Reference Include="Rhino.Mocks, Version=3.6.0.0, Culture=neutral, PublicKeyToken=0b3305902db7183f, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
