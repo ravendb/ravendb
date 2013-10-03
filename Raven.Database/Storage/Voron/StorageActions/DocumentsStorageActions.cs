@@ -271,7 +271,7 @@
 				throw new ApplicationException(errorString);
 			}
 
-			var existingEtag = EnsureDocumentEtagMatch(key, etag);
+			var existingEtag = EnsureDocumentEtagMatch(key, etag, "DELETE");
 			var documentMetadata = ReadDocumentMetadata(key);
 			metadata = documentMetadata.Metadata;
 
@@ -427,7 +427,7 @@
 			return etag; //if not found, return the original etag
 		}
 
-		private Etag EnsureDocumentEtagMatch(string key, Etag etag)
+		private Etag EnsureDocumentEtagMatch(string key, Etag etag, string method)
 		{
 			var metadata = ReadDocumentMetadata(key);
 
@@ -449,7 +449,8 @@
 						}
 					}
 
-					throw new ConcurrencyException(string.Format("Attempted to change document (key = {0}) with non-current etag (etag = {1})", key, etag))
+					throw new ConcurrencyException(method + " attempted on document '" + key +
+												   "' using a non current etag")
 					{
 						ActualETag = existingEtag,
 						ExpectedETag = etag
@@ -524,12 +525,16 @@
 
 			if (isUpdate)
 			{
-				existingEtag = EnsureDocumentEtagMatch(loweredKey, etag);
+				existingEtag = EnsureDocumentEtagMatch(loweredKey, etag, "PUT");
 				keyByEtagDocumentIndex.Delete(writeBatch, existingEtag);
 			}
 			else if (etag != null && etag != Etag.Empty)
 			{
-				throw new ConcurrencyException(string.Format("Attempted to write document with non-current etag (key = {0})", key));
+				throw new ConcurrencyException("PUT attempted on document '" + key +
+													   "' using a non current etag (document deleted)")
+				{
+					ExpectedETag = etag
+				};
 			}
 
 			Stream dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream            
