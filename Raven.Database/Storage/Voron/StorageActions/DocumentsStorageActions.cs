@@ -537,14 +537,16 @@
 				};
 			}
 
-			Stream dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream            
-			data.WriteTo(dataStream);
-
-			var finalDataStream = documentCodecs.Aggregate(dataStream,
-				(current, codec) => codec.Encode(loweredKey, data, metadata, current));
-
-			finalDataStream.Position = 0;
-			tableStorage.Documents.Add(writeBatch, loweredKey, finalDataStream);
+			Stream dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream                  
+ 
+		    var finalDataStream = documentCodecs.Aggregate(dataStream,
+					(current, codec) => codec.Encode(loweredKey, data, metadata, current));
+						data.WriteTo(finalDataStream);
+			finalDataStream.Flush();
+      
+ 
+			dataStream.Position = 0;
+			tableStorage.Documents.Add(writeBatch, loweredKey, dataStream); 
 
 			newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			savedAt = SystemTime.UtcNow;
