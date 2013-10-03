@@ -840,6 +840,7 @@
     <Compile Include="MailingList\TertiaryOperator.cs" />
     <Compile Include="MailingList\ThorTimeRange\Repro.cs" />
     <Compile Include="MailingList\TransfomerLoadCaching.cs" />
+    <Compile Include="MailingList\TransformerQueryInputTests.cs" />
     <Compile Include="MailingList\TransformersAndEtags.cs" />
     <Compile Include="MailingList\TransformWithConversionListener.cs" />
     <Compile Include="MailingList\TransformWithLoad.cs" />
@@ -852,6 +853,7 @@
     <Compile Include="MailingList\UrlInIdsRepro.cs" />
     <Compile Include="MailingList\Vitaliy.cs" />
     <Compile Include="MailingList\Wayne.cs" />
+    <Compile Include="MailingList\When_trying_to_load_a_non_existing_document.cs" />
     <Compile Include="MailingList\WhereInTests.cs" />
     <Compile Include="MailingList\WhereStringEqualsInCollection.cs" />
     <Compile Include="MailingList\WildCardQuery.cs" />
