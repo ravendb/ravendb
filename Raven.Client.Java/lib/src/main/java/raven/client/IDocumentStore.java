@@ -2,9 +2,11 @@ package raven.client;
 
 import java.util.Map;
 
+import raven.abstractions.data.BulkInsertOptions;
 import raven.abstractions.data.Etag;
 import raven.client.changes.IDatabaseChanges;
 import raven.client.connection.implementation.HttpJsonRequestFactory;
+import raven.client.document.BulkInsertOperation;
 import raven.client.document.DocumentConvention;
 import raven.client.document.OpenSessionOptions;
 import raven.client.indexes.AbstractIndexCreationTask;
@@ -147,6 +149,25 @@ public interface IDocumentStore extends IDisposalNotification {
    */
   public Etag getLastWrittenEtag();
 
-  //TODO:public BulkInsertOperation bulkInsert(string database = null, BulkInsertOptions options = null);
+  /**
+   * Performs bulk insert
+   * @return
+   */
+  public BulkInsertOperation bulkInsert();
+
+  /**
+   * Performs bulk insert
+   * @param database
+   * @return
+   */
+  public BulkInsertOperation bulkInsert(String database);
+
+  /**
+   * Performs bulk insert
+   * @param database
+   * @param options
+   * @return
+   */
+  public BulkInsertOperation bulkInsert(String database, BulkInsertOptions options);
 
 }

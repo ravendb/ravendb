@@ -10,6 +10,7 @@ import raven.abstractions.basic.Reference;
 import raven.abstractions.commands.ICommandData;
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.BatchResult;
+import raven.abstractions.data.BulkInsertOptions;
 import raven.abstractions.data.DatabaseStatistics;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.Facet;
@@ -33,7 +34,9 @@ import raven.abstractions.indexing.IndexDefinition;
 import raven.abstractions.indexing.TransformerDefinition;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
+import raven.client.changes.IDatabaseChanges;
 import raven.client.connection.profiling.IHoldProfilingInformation;
+import raven.client.document.ILowLevelBulkInsertOperation;
 import raven.client.indexes.IndexDefinitionBuilder;
 
 public interface IDatabaseCommands extends IHoldProfilingInformation {
@@ -671,7 +674,7 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    */
   public AutoCloseable forceReadFromMaster();
 
-  //TODO: public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
+  public ILowLevelBulkInsertOperation getBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
 
   /**
    * Gets the transformers from the server

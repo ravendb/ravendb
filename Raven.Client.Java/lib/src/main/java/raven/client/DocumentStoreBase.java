@@ -134,8 +134,6 @@ public abstract class DocumentStoreBase implements IDocumentStore {
     return lastEtagHolder.getLastWrittenEtag();
   }
 
-  //TODO: public abstract BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null);
-
   protected void ensureNotClosed() {
     if (wasDisposed) {
       throw new IllegalStateException("The document store has already been disposed and cannot be used");

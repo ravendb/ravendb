@@ -39,6 +39,7 @@ import raven.abstractions.commands.PatchCommandData;
 import raven.abstractions.commands.ScriptedPatchCommandData;
 import raven.abstractions.data.Attachment;
 import raven.abstractions.data.BatchResult;
+import raven.abstractions.data.BulkInsertOptions;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.DatabaseStatistics;
 import raven.abstractions.data.Etag;
@@ -76,11 +77,14 @@ import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
+import raven.client.changes.IDatabaseChanges;
 import raven.client.connection.ReplicationInformer.FailoverStatusChangedEventArgs;
 import raven.client.connection.implementation.HttpJsonRequest;
 import raven.client.connection.implementation.HttpJsonRequestFactory;
 import raven.client.connection.profiling.ProfilingInformation;
 import raven.client.document.DocumentConvention;
+import raven.client.document.ILowLevelBulkInsertOperation;
+import raven.client.document.RemoteBulkInsertOperation;
 import raven.client.exceptions.ConflictException;
 import raven.client.extensions.MultiDatabase;
 import raven.client.indexes.IndexDefinitionBuilder;
@@ -1566,7 +1570,10 @@ public class ServerClient implements IDatabaseCommands {
   }
 
 
-  //TODO: public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
+  @Override
+  public ILowLevelBulkInsertOperation getBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes) {
+    return new RemoteBulkInsertOperation(options, this, changes);
+  }
 
   @Override
   public AutoCloseable forceReadFromMaster() {
@@ -1587,7 +1594,7 @@ public class ServerClient implements IDatabaseCommands {
     }
 
     String databaseUrl = MultiDatabase.getRootDatabaseUrl(url);
-    databaseUrl = url + "/databases/" + database;
+    databaseUrl = databaseUrl + "/databases/" + database;
     if (databaseUrl.equals(url)) {
       return this;
     }

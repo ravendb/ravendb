@@ -564,7 +564,6 @@ public class HttpJsonRequest {
 
   public void prepareForLongRequest() {
     setTimeout(6 * 3600 * 1000);
-    //TODO: webRequest.AllowWriteStreamBuffering = false;
   }
 
   /**

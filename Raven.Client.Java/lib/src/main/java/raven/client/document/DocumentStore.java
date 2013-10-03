@@ -19,10 +19,12 @@ import org.apache.http.params.HttpParams;
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.EventHelper;
 import raven.abstractions.basic.VoidArgs;
+import raven.abstractions.closure.Action0;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function0;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.connection.WebRequestEventArgs;
+import raven.abstractions.data.BulkInsertOptions;
 import raven.abstractions.data.ConnectionStringParser;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.RavenConnectionStringOptions;
@@ -33,6 +35,7 @@ import raven.client.DocumentStoreBase;
 import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
 import raven.client.changes.IDatabaseChanges;
+import raven.client.changes.RemoteDatabaseChanges;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.ReplicationInformer;
 import raven.client.connection.ServerClient;
@@ -505,7 +508,6 @@ public class DocumentStore extends DocumentStoreBase {
   }
 
   protected IDatabaseChanges createDatabaseChanges(String database) {
-    /*TODO:
       if (StringUtils.isEmpty(url)) {
         throw new IllegalStateException("Changes API requires usage of server/client");
       }
@@ -514,20 +516,24 @@ public class DocumentStore extends DocumentStoreBase {
         database = defaultDatabase;
       }
 
+
       String dbUrl = MultiDatabase.getRootDatabaseUrl(url);
       if (StringUtils.isNotEmpty(database)) {
         dbUrl = dbUrl + "/databases/" + database;
       }
+      final String databaseClousure = database;
 
       return new RemoteDatabaseChanges(dbUrl,
-          Credentials,
           jsonRequestFactory,
-          Conventions,
-          GetReplicationInformerForDatabase(database),
-          () => databaseChanges.Remove(database),
-          ((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
-     */
-    return null; //TODO:
+          getConventions(),
+          getReplicationInformerForDatabase(database),
+          new Action0() {
+            @Override
+            public void apply() {
+              databaseChanges.remove(databaseClousure);
+            }
+          });
+//TODO          ((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
   }
 
   /**
@@ -573,11 +579,21 @@ public class DocumentStore extends DocumentStoreBase {
   }
 
 
-  /*TODO:
-  public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
-  {
-    return new BulkInsertOperation(database ?? DefaultDatabase, this, listeners, options ?? new BulkInsertOptions(), Changes(database ?? DefaultDatabase));
-  }*/
+  @Override
+  public BulkInsertOperation bulkInsert() {
+    return bulkInsert(null, null);
+  }
+
+  @Override
+  public BulkInsertOperation bulkInsert(String database) {
+    return bulkInsert(database, null);
+  }
+
+  @Override
+  public BulkInsertOperation bulkInsert(String database, BulkInsertOptions options) {
+    return new BulkInsertOperation(database != null ? database : getDefaultDatabase(), this, listeners, options != null ? options : new BulkInsertOptions(),
+      changes(database != null ? database : getDefaultDatabase()));
+  }
 
   @Override
   protected void afterSessionCreated(InMemoryDocumentSessionOperations session) {
