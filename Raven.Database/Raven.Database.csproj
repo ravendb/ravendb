@@ -244,6 +244,8 @@
     <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="RavenDbMiddleware.cs" />
     <Compile Include="RavenDbOwinOptions.cs" />
+    <Compile Include="Server\Connections\IEventsTransport.cs" />
+    <Compile Include="Server\Connections\WebApiEventsTransport.cs" />
     <Compile Include="Server\Controllers\Admin\AdminController.cs" />
     <Compile Include="Server\Controllers\Admin\AdminDatabasesController.cs" />
     <Compile Include="Server\Controllers\Admin\BaseAdminController.cs" />
