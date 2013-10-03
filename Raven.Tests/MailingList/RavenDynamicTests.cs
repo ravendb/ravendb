@@ -15,29 +15,29 @@ namespace Raven.Tests.MailingList
 {
     public class RavenDynamicTests
     {
-        private static readonly Person Dad = new Person() { Name = "Dad" };
+        private static readonly Person Dad = new Person { Name = "Dad" };
 
-        private static readonly Person Sally = new Person
+	    private static readonly Person Sally = new Person
+	    {
+		    Name = "sally",
+		    UserId = Guid.NewGuid(),
+		    Family = new Dictionary<string, Person>
+		    {
+			    {"Dad", Dad},
+		    }
+	    };
+
+        public class WhenUsingIdCopy : RavenTest
         {
-            Name = "sally",
-            UserId = Guid.NewGuid(),
-            Family = new Dictionary<string, Person>()
-                                                                    {
-                                                                        {"Dad", Dad},
-                                                                    }
-        };
+            private readonly EmbeddableDocumentStore store;
 
-        public class When_using_IdCopy : RavenTestBase
-        {
-            private readonly EmbeddableDocumentStore _store;
-
-            public When_using_IdCopy()
+            public WhenUsingIdCopy()
             {
-                _store = NewDocumentStore();
+                store = NewDocumentStore();
 
-                new Person_IdCopy_Index().Execute(_store);
+                new Person_IdCopy_Index().Execute(store);
 
-                using (var session = _store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(Sally);
                     session.Store(new Person { Name = "bob", UserId = Guid.NewGuid() });
@@ -49,14 +49,14 @@ namespace Raven.Tests.MailingList
 
             public override void Dispose()
             {
-                _store.Dispose();
+                store.Dispose();
                 base.Dispose();
             }
 
             [Fact]
             public void It_should_be_stored_in_index()
             {
-                using (var session = _store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     //WaitForUserToContinueTheTest(store);
 
@@ -75,7 +75,7 @@ namespace Raven.Tests.MailingList
             [Fact]
             public void It_should_be_stored_be_able_to_be_searched()
             {
-                using (var session = _store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     //WaitForUserToContinueTheTest(store);
 
@@ -106,17 +106,17 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        public class When_using_Id : RavenTestBase
+        public class When_using_Id : RavenTest
         {
-            private readonly EmbeddableDocumentStore _store;
+            private readonly EmbeddableDocumentStore store;
 
             public When_using_Id()
             {
-                _store = NewDocumentStore();
+                store = NewDocumentStore();
 
-                new Person_Id_Index().Execute(_store);
+                new Person_Id_Index().Execute(store);
 
-                using (var session = _store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(Sally);
                     session.Store(new Person { Name = "bob", UserId = Guid.NewGuid() });
@@ -128,14 +128,14 @@ namespace Raven.Tests.MailingList
 
             public override void Dispose()
             {
-                _store.Dispose();
+                store.Dispose();
                 base.Dispose();
             }
 
             [Fact]
             public void It_should_be_stored_in_index()
             {
-                using (var session = _store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     //WaitForUserToContinueTheTest(store);
 
@@ -154,7 +154,7 @@ namespace Raven.Tests.MailingList
             [Fact]
             public void It_should_be_stored_be_able_to_be_searched()
             {
-                using (var session = _store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     //WaitForUserToContinueTheTest(store);
 
