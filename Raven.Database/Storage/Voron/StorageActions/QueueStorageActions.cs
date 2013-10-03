@@ -49,14 +49,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}, 0);
 
 			queuesData.Add(writeBatch, key, data, 0);
-			queuesByName.MultiAdd(writeBatch, name, key);
+			queuesByName.MultiAdd(writeBatch, CreateKey(name), key);
 		}
 
 		public IEnumerable<Tuple<byte[], object>> PeekFromQueue(string name)
 		{
 			var queuesByName = tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
 
-			using (var iterator = queuesByName.MultiRead(Snapshot, name))
+			using (var iterator = queuesByName.MultiRead(Snapshot, CreateKey(name)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					yield break;
@@ -71,13 +71,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					if (value == null)
 						yield break;
 
-					if (value.Value<int>("reads") > 5) // read too much, probably poison message, remove it
+					var reads = value.Value<int>("reads");
+					if (reads > 5) // read too much, probably poison message, remove it
 					{
-						DeleteQueue(key);
+						DeleteQueue(key, value.Value<string>("name"));
 						continue;
 					}
 
-					value["reads"] = value.Value<int>("reads") + 1;
+					value["reads"] = reads + 1;
 					tableStorage.Queues.Add(writeBatch, key, value);
 
 					yield return new Tuple<byte[], object>(ReadDataFromQueue(key), value.Value<byte[]>("id"));
@@ -92,15 +93,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			var key = CreateKey(name, Etag.Parse((byte[])id));
 			tableStorage.Queues.Delete(writeBatch, key);
-			queuesByName.MultiDelete(writeBatch, name, key);
+			queuesByName.MultiDelete(writeBatch, CreateKey(name), key);
 		}
 
-		private void DeleteQueue(Slice key)
+		private void DeleteQueue(Slice key, string name)
 		{
 			var queuesData = tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
+			var queuesByName = tableStorage.Queues.GetIndex(Tables.Queues.Indices.ByName);
 
 			tableStorage.Queues.Delete(writeBatch, key);
 			queuesData.Delete(writeBatch, key);
+			queuesByName.MultiDelete(writeBatch, CreateKey(name), key);
 		}
 
 		private byte[] ReadDataFromQueue(Slice key)

@@ -237,7 +237,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public void RemoveAllDocumentReferencesFrom(string key)
 		{
-			RemoveDocumentReference(key);
+			RemoveDocumentReferenceByKey(key);
 		}
 
 		public void UpdateDocumentReferences(string view, string key, HashSet<string> references)
@@ -253,7 +253,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					do
 					{
-						RemoveDocumentReference(iterator.CurrentKey);
+						RemoveDocumentReference(iterator.CurrentKey.Clone());
 					}
 					while (iterator.MoveNext());
 				}
@@ -270,7 +270,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 								{ "ref", reference }
 				            };
 
-				tableStorage.DocumentReferences.Add(writeBatch, CreateKey(newKeyAsString), value);
+				tableStorage.DocumentReferences.Add(writeBatch, newKeyAsString, value);
 				documentReferencesByKey.MultiAdd(writeBatch, CreateKey(key), newKeyAsString);
 				documentReferencesByRef.MultiAdd(writeBatch, CreateKey(reference), newKeyAsString);
 				documentReferencesByView.MultiAdd(writeBatch, CreateKey(view), newKeyAsString);
@@ -381,14 +381,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			};
 		}
 
-		private void RemoveDocumentReference(Slice key)
+		private void RemoveDocumentReferenceByKey(Slice key)
 		{
 			var k = CreateKey(key);
 
 			var documentReferencesByKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByKey);
-			var documentReferencesByRef = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
-			var documentReferencesByView = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByView);
-			var documentReferencesByViewAndKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByViewAndKey);
 
 			using (var iterator = documentReferencesByKey.MultiRead(Snapshot, k))
 			{
@@ -397,23 +394,30 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 				do
 				{
-					var currentKey = iterator.CurrentKey.Clone();
-
-					ushort version;
-					var value = LoadJson(tableStorage.DocumentReferences, currentKey, writeBatch, out version);
-
-					Debug.Assert(value.Value<string>("key") == key.ToString());
-					var reference = value.Value<string>("ref");
-					var view = value.Value<string>("view");
-
-					tableStorage.DocumentReferences.Delete(writeBatch, currentKey);
-					documentReferencesByKey.MultiDelete(writeBatch, k, currentKey);
-					documentReferencesByRef.MultiDelete(writeBatch, CreateKey(reference), currentKey);
-					documentReferencesByView.MultiDelete(writeBatch, CreateKey(view), currentKey);
-					documentReferencesByViewAndKey.MultiDelete(writeBatch, CreateKey(view, key), currentKey);
+					RemoveDocumentReference(iterator.CurrentKey.Clone());
 				}
 				while (iterator.MoveNext());
 			}
+		}
+
+		private void RemoveDocumentReference(Slice id)
+		{
+			var documentReferencesByKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByKey);
+			var documentReferencesByRef = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
+			var documentReferencesByView = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByView);
+			var documentReferencesByViewAndKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByViewAndKey);
+
+			ushort version;
+			var value = LoadJson(tableStorage.DocumentReferences, id, writeBatch, out version);
+			var reference = value.Value<string>("ref");
+			var view = value.Value<string>("view");
+			var key = value.Value<string>("key");
+
+			tableStorage.DocumentReferences.Delete(writeBatch, id);
+			documentReferencesByKey.MultiDelete(writeBatch, CreateKey(key), id);
+			documentReferencesByRef.MultiDelete(writeBatch, CreateKey(reference), id);
+			documentReferencesByView.MultiDelete(writeBatch, CreateKey(view), id);
+			documentReferencesByViewAndKey.MultiDelete(writeBatch, CreateKey(view, key), id);
 		}
 	}
 }

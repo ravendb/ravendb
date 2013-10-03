@@ -213,8 +213,8 @@
 			var metadataDocument = ReadDocumentMetadata(key);
 			if (metadataDocument == null)
 			{
-				//metadata non-existing when document record exists should never occur - hence the exception
-				throw new InvalidDataException(string.Format("Metadata of document with key='{0} was not found, but the document itself exists.", key));
+				logger.Warn(string.Format("Metadata of document with key='{0} was not found, but the document itself exists.", key));
+				return null;
 			}
 
 			var documentData = ReadDocumentData(key, metadataDocument.Etag, metadataDocument.Metadata);
@@ -271,19 +271,17 @@
 				throw new ApplicationException(errorString);
 			}
 
-			var existingEtag = EnsureDocumentEtagMatch(key, etag);
+			var existingEtag = EnsureDocumentEtagMatch(key, etag, "DELETE");
 			var documentMetadata = ReadDocumentMetadata(key);
 			metadata = documentMetadata.Metadata;
 
 			deletedETag = etag != null ? existingEtag : documentMetadata.Etag;
 
 			tableStorage.Documents.Delete(writeBatch, lowerKey);
+			metadataIndex.Delete(writeBatch, lowerKey);
 
 			tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
-								  .Delete(writeBatch, deletedETag);
-
-			tableStorage.Documents.GetIndex(Tables.Documents.Indices.Metadata)
-								  .Delete(writeBatch, lowerKey);
+						  .Delete(writeBatch, deletedETag);
 
 			documentCacher.RemoveCachedDocument(lowerKey, etag);
 
@@ -429,7 +427,7 @@
 			return etag; //if not found, return the original etag
 		}
 
-		private Etag EnsureDocumentEtagMatch(string key, Etag etag)
+		private Etag EnsureDocumentEtagMatch(string key, Etag etag, string method)
 		{
 			var metadata = ReadDocumentMetadata(key);
 
@@ -451,7 +449,8 @@
 						}
 					}
 
-					throw new ConcurrencyException(string.Format("Attempted to change document (key = {0}) with non-current etag (etag = {1})", key, etag))
+					throw new ConcurrencyException(method + " attempted on document '" + key +
+												   "' using a non current etag")
 					{
 						ActualETag = existingEtag,
 						ExpectedETag = etag
@@ -526,25 +525,26 @@
 
 			if (isUpdate)
 			{
-				existingEtag = EnsureDocumentEtagMatch(loweredKey, etag);
+				existingEtag = EnsureDocumentEtagMatch(loweredKey, etag, "PUT");
 				keyByEtagDocumentIndex.Delete(writeBatch, existingEtag);
 			}
 			else if (etag != null && etag != Etag.Empty)
 			{
-				throw new ConcurrencyException(string.Format("Attempted to write document with non-current etag (key = {0})", key));
+				throw new ConcurrencyException("PUT attempted on document '" + key +
+													   "' using a non current etag (document deleted)")
+				{
+					ExpectedETag = etag
+				};
 			}
 
 			Stream dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream            
-			
+			data.WriteTo(dataStream);
 
 			var finalDataStream = documentCodecs.Aggregate(dataStream,
 				(current, codec) => codec.Encode(loweredKey, data, metadata, current));
-			data.WriteTo(finalDataStream);
-				finalDataStream.Flush();
-			
 
-			dataStream.Position = 0;
-			tableStorage.Documents.Add(writeBatch, loweredKey, dataStream);
+			finalDataStream.Position = 0;
+			tableStorage.Documents.Add(writeBatch, loweredKey, finalDataStream);
 
 			newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			savedAt = SystemTime.UtcNow;
