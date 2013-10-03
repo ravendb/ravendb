@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Backup\CanBackupData.cs" />
+    <Compile Include="Bugs\Deletes.cs" />
     <Compile Include="Bugs\EmptyTree.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
     <Compile Include="Impl\ConsecutiveSequencesTests.cs" />
