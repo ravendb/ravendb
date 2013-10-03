@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Security;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.OAuth;
@@ -722,13 +723,22 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(database) == false)
 				dbUrl = dbUrl + "/databases/" + database;
 
-			return new RemoteDatabaseChanges(dbUrl,
-				Credentials,
-				jsonRequestFactory,
-				Conventions,
-				GetReplicationInformerForDatabase(database),
-				() => databaseChanges.Remove(database),
-				((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
+			var old = SynchronizationContext.Current;
+			try
+			{
+				SynchronizationContext.SetSynchronizationContext(null);
+				return new RemoteDatabaseChanges(dbUrl,
+					Credentials,
+					jsonRequestFactory,
+					Conventions,
+					GetReplicationInformerForDatabase(database),
+					() => databaseChanges.Remove(database),
+					((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
+			}
+			finally
+			{
+				SynchronizationContext.SetSynchronizationContext(old);
+			}
 		}
 
 		/// <summary>
