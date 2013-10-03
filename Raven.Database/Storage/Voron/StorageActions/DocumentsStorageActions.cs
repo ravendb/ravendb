@@ -278,7 +278,7 @@
 			deletedETag = etag != null ? existingEtag : documentMetadata.Etag;
 
 			tableStorage.Documents.Delete(writeBatch, lowerKey);
-			tableStorage.Documents.Delete(writeBatch, lowerKey);
+			metadataIndex.Delete(writeBatch, lowerKey);
 
 			tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
 						  .Delete(writeBatch, deletedETag);
