@@ -15,6 +15,15 @@ namespace Raven.Tests.Storage.Voron
 
 	using Xunit;
 	using Xunit.Extensions;
+using Raven.Abstractions.MEF;
+using Raven.Database.Plugins;
+	using Raven.Bundles.Compression.Plugin;
+	using Raven.Bundles.Encryption.Plugin;
+	using Raven.Server;
+	using System.Reflection;
+	using Raven.Tests.Bundles.Versioning;
+	using System.IO;
+	using Raven.Database;
 
 	[Trait("VoronTest", "StorageActionsTests")]
 	[Trait("VoronTest", "DocumentStorage")]
@@ -203,16 +212,26 @@ namespace Raven.Tests.Storage.Voron
 			DocumentStorage_DocumentAdd_And_DocumentRead_Internal(requestedStorage, "Foo/Bar");
 		}
 
-		private void DocumentStorage_DocumentAdd_And_DocumentRead_Internal(string requestedStorage, string documentKey)
+		[Theory]
+		[PropertyData("Storages")]
+		public void DocumentStorage_DocumentAdd_And_DocumentRead_WithCompression(string requestedStorage)
 		{
-			using (var storage = NewTransactionalStorage(requestedStorage))
+			var documentCodecs = new OrderedPartCollection<AbstractDocumentCodec>();
+			documentCodecs.Add(new DocumentCompression());
+
+			DocumentStorage_DocumentAdd_And_DocumentRead_Internal(requestedStorage, "Foo/Bar", documentCodecs);
+		}
+
+		private void DocumentStorage_DocumentAdd_And_DocumentRead_Internal(string requestedStorage, string documentKey,OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
+		{
+			using (var storage = NewTransactionalStorage(requestedStorage,null,true,documentCodecs))
 			{
 				AddDocumentResult addResult = null;
 				storage.Batch(
 					mutator =>
 					addResult =
 					mutator.Documents.AddDocument(
-						documentKey, Etag.Empty, RavenJObject.FromObject(new { Name = "Bar" }), new RavenJObject()));
+						documentKey, Etag.Empty, RavenJObject.FromObject(new { Name = "Bar", Foo = "AlsoBar" }), new RavenJObject()));
 
 				RavenJObject document = null;
 				JsonDocument jsonDocument = null;
@@ -226,6 +245,7 @@ namespace Raven.Tests.Storage.Voron
 				Assert.NotNull(document);
 				Assert.NotNull(jsonDocument);
 				Assert.Equal("Bar", document.Value<string>("Name"));
+				Assert.Equal("AlsoBar", document.Value<string>("Foo"));
 
 				//verify correctness of LastModified return value
 				Assert.True(jsonDocument.LastModified.HasValue);
@@ -302,6 +322,7 @@ namespace Raven.Tests.Storage.Voron
 				RavenJObject document = null;
 				storage.Batch(viewer => document = viewer.Documents.DocumentByKey(documentKey, null).DataAsJson);
 
+				System.Diagnostics.Trace.WriteLine("DocumentStorage_InsertDocument_And_DocumentRead --> " + document);
 				Assert.NotNull(document);
 				Assert.Equal("Bar", document.Value<string>("Name"));
 			}
