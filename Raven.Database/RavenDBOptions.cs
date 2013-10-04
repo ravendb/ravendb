@@ -5,17 +5,33 @@ using Raven.Database.Server.WebApi;
 
 namespace Raven.Database
 {
-    public class RavenDBOwinOptions
+    public class RavenDBOptions
     {
         private readonly DatabasesLandlord databasesLandlord;
+        private readonly DocumentDatabase documentDatabase;
         private readonly MixedModeRequestAuthorizer mixedModeRequestAuthorizer;
 
-        public RavenDBOwinOptions(InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
+        public RavenDBOptions(InMemoryRavenConfiguration configuration)
         {
-            databasesLandlord = new DatabasesLandlord(documentDatabase);
-            mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
-            mixedModeRequestAuthorizer.Initialize(documentDatabase,
-                new RavenServer(databasesLandlord.SystemDatabase, configuration));
+            documentDatabase = new DocumentDatabase(configuration);
+            try
+            {
+                documentDatabase.SpinBackgroundWorkers();
+                databasesLandlord = new DatabasesLandlord(documentDatabase);
+                mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
+                mixedModeRequestAuthorizer.Initialize(documentDatabase,
+                    new RavenServer(databasesLandlord.SystemDatabase, configuration));
+            }
+            catch
+            {
+                documentDatabase.Dispose();
+                throw;
+            }
+        }
+
+        public DocumentDatabase DocumentDatabase
+        {
+            get { return documentDatabase; }
         }
 
         public MixedModeRequestAuthorizer MixedModeRequestAuthorizer

@@ -20,38 +20,26 @@ namespace Raven.Server
     public class RavenDbServer : IDisposable
     {
         private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
-        private readonly DocumentDatabase database;
         private readonly IDisposable server;
         private readonly IServerThingsForTests serverThingsForTests;
         private ClusterDiscoveryHost discoveryHost;
+        private readonly RavenDBOptions options;
 
-        public RavenDbServer(InMemoryRavenConfiguration settings)
+        public RavenDbServer(InMemoryRavenConfiguration configuration)
         {
-            database = new DocumentDatabase(settings);
-            try
-            {
-                database.SpinBackgroundWorkers();
-                var options = new RavenDBOwinOptions(settings, database);
-                //TODO use settings.ServerUrl
-                server = WebApp.Start("http://+:" + settings.Port, app => app.UseRavenDB(options));
-                serverThingsForTests = new ServerThingsForTests(options);
-            }
-            catch (Exception)
-            {
-                database.Dispose();
-                database = null;
-
-                throw;
-            }
-
-            ClusterDiscovery(settings);
+            options = new RavenDBOptions(configuration);
+            server = WebApp.Start("http://+:" + configuration.Port, app => app.UseRavenDB(options));
+            serverThingsForTests = new ServerThingsForTests(options);
+            ClusterDiscovery(configuration);
         }
 
+        //TODO DH: does this need to be exposed?
         public DocumentDatabase Database
         {
-            get { return database; }
+            get { return options.DocumentDatabase; }
         }
 
+        //TODO DH: does this need to be exposed?
         public IServerThingsForTests Server
         {
             get { return serverThingsForTests; }
@@ -60,12 +48,11 @@ namespace Raven.Server
         public void Dispose()
         {
             server.Dispose();
-            database.Dispose();
         }
 
-        private void ClusterDiscovery(InMemoryRavenConfiguration settings)
+        private void ClusterDiscovery(InMemoryRavenConfiguration configuration)
         {
-            if (settings.DisableClusterDiscovery == false)
+            if (configuration.DisableClusterDiscovery == false)
             {
                 discoveryHost = new ClusterDiscoveryHost();
                 try
@@ -76,8 +63,8 @@ namespace Raven.Server
                         var httpClient = new HttpClient(new HttpClientHandler());
                         var values = new Dictionary<string, string>
                         {
-                            {"Url", settings.ServerUrl},
-                            {"ClusterName", settings.ClusterName},
+                            {"Url", configuration.ServerUrl},
+                            {"ClusterName", configuration.ClusterName},
                         };
                         try
                         {
@@ -88,7 +75,7 @@ namespace Raven.Server
                         catch (Exception e)
                         {
                             Logger.ErrorException(
-                                "Cannot post notification for cluster discovert to: " + settings.ServerUrl, e);
+                                "Cannot post notification for cluster discovert to: " + configuration.ServerUrl, e);
                         }
                     };
                 }
@@ -105,9 +92,9 @@ namespace Raven.Server
         //TODO need a better name
         private class ServerThingsForTests : IServerThingsForTests
         {
-            private readonly RavenDBOwinOptions options;
+            private readonly RavenDBOptions options;
 
-            public ServerThingsForTests(RavenDBOwinOptions options)
+            public ServerThingsForTests(RavenDBOptions options)
             {
                 this.options = options;
             }

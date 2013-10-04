@@ -242,7 +242,7 @@
     <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
     <Compile Include="Prefetching\Prefetcher.cs" />
     <Compile Include="Prefetching\PrefetchingUser.cs" />
-    <Compile Include="RavenDBOwinOptions.cs" />
+    <Compile Include="RavenDBOptions.cs" />
     <Compile Include="Server\Connections\IEventsTransport.cs" />
     <Compile Include="Server\Connections\WebApiEventsTransport.cs" />
     <Compile Include="Server\Controllers\Admin\AdminController.cs" />
