@@ -33,7 +33,7 @@ namespace Raven.Server
                 database.SpinBackgroundWorkers();
                 var options = new RavenDbOwinOptions(settings, database);
                 //TODO use settings.ServerUrl
-                server = WebApp.Start("http://+:8079", app => app.UseRavenDB(options));
+                server = WebApp.Start("http://+:" + settings.Port, app => app.UseRavenDB(options));
                 serverThingsForTests = new ServerThingsForTests(options);
             }
             catch (Exception)
