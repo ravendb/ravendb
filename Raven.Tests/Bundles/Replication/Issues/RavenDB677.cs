@@ -78,6 +78,14 @@ namespace Raven.Tests.Bundles.Replication.Issues
 		}
 	}
 
+	public class RavenDb677_Voron : RavenDB677
+	{
+		protected override void ConfigureServer(Database.Config.RavenConfiguration serverConfiguration)
+		{
+			serverConfiguration.DefaultStorageTypeName = "voron";
+		}
+	}
+
 	public class RavenDb677_Esent : RavenDB677
 	{
 		protected override void ConfigureServer(Database.Config.RavenConfiguration serverConfiguration)

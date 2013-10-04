@@ -139,7 +139,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					var currentEtag = Etag.Parse(iterator.CurrentKey.ToString());
 
-					if (currentEtag.CompareTo(etag) < 0)
+					if (currentEtag.CompareTo(etag) <= 0)
 					{
 						ushort version;
 						var value = LoadJson(tableStorage.Lists, iterator.CurrentKey, writeBatch, out version);
