@@ -538,10 +538,11 @@
 			}
 
 			Stream dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream                  
- 
-		    var finalDataStream = documentCodecs.Aggregate(dataStream,
+
+			data.WriteTo(dataStream);
+			var finalDataStream = documentCodecs.Aggregate(dataStream,
 					(current, codec) => codec.Encode(loweredKey, data, metadata, current));
-						data.WriteTo(finalDataStream);
+			
 			finalDataStream.Flush();
       
  
