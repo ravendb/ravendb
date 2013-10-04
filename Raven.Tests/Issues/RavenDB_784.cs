@@ -12,6 +12,7 @@
 		[Theory]
 		[InlineData("munin")]
 		[InlineData("esent")]
+		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysCountsOnIndexDelete(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -59,6 +60,7 @@
 		[Theory]
 		[InlineData("munin")]
 		[InlineData("esent")]
+		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysCountsWhenReduceKeyIsGone(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -107,6 +109,7 @@
 		[Theory]
 		[InlineData("munin")]
 		[InlineData("esent")]
+		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysCountsOnDeletingAllMappedResultsForView(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -145,6 +148,7 @@
 		[Theory]
 		[InlineData("munin")]
 		[InlineData("esent")]
+		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysStatusOnIndexDelete(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -186,6 +190,7 @@
 		[Theory]
 		[InlineData("munin")]
 		[InlineData("esent")]
+		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysStatusWhenReduceKeyIsGone(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
