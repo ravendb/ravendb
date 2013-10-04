@@ -438,11 +438,11 @@
 
 		private IEnumerable<MappedResultInfo> GetReducedResultsForBucket(string view, string reduceKey, int level, int bucket, bool loadData)
 		{
-			var viewAndReduceKeyAndLevelAndSourceBucket = CreateKey(view, reduceKey, level, bucket);
+			var viewAndReduceKeyAndLevelAndBucket = CreateKey(view, reduceKey, level, bucket);
 
-			var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
+			var reduceResultsByViewAndReduceKeyAndLevelAndBucket = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket);
 			var reduceResultsData = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.Data);
-			using (var iterator = reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiRead(Snapshot, viewAndReduceKeyAndLevelAndSourceBucket))
+			using (var iterator = reduceResultsByViewAndReduceKeyAndLevelAndBucket.MultiRead(Snapshot, viewAndReduceKeyAndLevelAndBucket))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 				{
@@ -573,6 +573,8 @@
 		{
 			var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket =
 				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
+			var reduceResultsByViewAndReduceKeyAndLevelAndBucket =
+				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket);
 			var reduceResultsByViewAndReduceKeyAndLevel =
 				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel);
 			var reduceResultsData = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.Data);
@@ -603,9 +605,11 @@
 
 			var viewAndReduceKeyAndLevelAndSourceBucket = CreateKey(view, reduceKey, level, sourceBucket);
 			var viewAndReduceKeyAndLevel = CreateKey(view, reduceKey, level);
+			var viewAndReduceKeyAndLevelAndBucket = CreateKey(view, reduceKey, level, bucket);
 
 			reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiAdd(writeBatch, viewAndReduceKeyAndLevelAndSourceBucket, idAsString);
 			reduceResultsByViewAndReduceKeyAndLevel.MultiAdd(writeBatch, viewAndReduceKeyAndLevel, idAsString);
+			reduceResultsByViewAndReduceKeyAndLevelAndBucket.MultiAdd(writeBatch, viewAndReduceKeyAndLevelAndBucket, idAsString);
 		}
 
 		public void RemoveReduceResults(string view, int level, string reduceKey, int sourceBucket)
@@ -621,7 +625,7 @@
 
 				do
 				{
-					RemoveReduceResult(iterator.CurrentKey, view, level, reduceKey, sourceBucket);
+					RemoveReduceResult(iterator.CurrentKey.Clone());
 				}
 				while (iterator.MoveNext());
 			}
@@ -863,19 +867,33 @@
 			mappedResultsData.Delete(writeBatch, id);
 		}
 
-		private void RemoveReduceResult(Slice id, string view, int level, string reduceKey, int sourceBucket)
+		private void RemoveReduceResult(Slice id)
 		{
+			ushort version;
+			var value = LoadJson(tableStorage.ReduceResults, id, writeBatch, out version);
+
+			var view = value.Value<string>("view");
+			var reduceKey = value.Value<string>("reduceKey");
+			var level = value.Value<int>("level");
+			var bucket = value.Value<int>("bucket");
+			var sourceBucket = value.Value<int>("sourceBucket");
+
 			var viewAndReduceKeyAndLevelAndSourceBucket = CreateKey(view, reduceKey, level, sourceBucket);
 			var viewAndReduceKeyAndLevel = CreateKey(view, reduceKey, level);
+			var viewAndReduceKeyAndLevelAndBucket = CreateKey(view, reduceKey, level, bucket);
+
 			var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket =
 				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
 			var reduceResultsByViewAndReduceKeyAndLevel =
 				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel);
+			var reduceResultsByViewAndReduceKeyAndLevelAndBucket =
+				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket);
 			var reduceResultsData = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.Data);
 
 			tableStorage.ReduceResults.Delete(writeBatch, id);
 			reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiDelete(writeBatch, viewAndReduceKeyAndLevelAndSourceBucket, id);
 			reduceResultsByViewAndReduceKeyAndLevel.MultiDelete(writeBatch, viewAndReduceKeyAndLevel, id);
+			reduceResultsByViewAndReduceKeyAndLevelAndBucket.MultiDelete(writeBatch, viewAndReduceKeyAndLevelAndBucket, id);
 			reduceResultsData.Delete(writeBatch, id);
 		}
 	}
