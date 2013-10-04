@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Web.Http;
 using Raven.Database;
+using Raven.Database.Server.WebApi;
 
 // ReSharper disable once CheckNamespace
 namespace Owin
@@ -13,9 +15,10 @@ namespace Owin
             {
                 throw new ArgumentNullException("options");
             }
-            options.Branch = app.New();
-            var result = app.Use<RavenDbMiddleware>(options);
-            return result;
+            var httpConfiguration = new HttpConfiguration();
+            WebApiServer.SetupConfig(httpConfiguration, options.Landlord, options.MixedModeRequestAuthorizer);
+            app.UseWebApi(httpConfiguration);
+            return app;
         }
     }
 }

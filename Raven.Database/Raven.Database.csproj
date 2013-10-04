@@ -242,7 +242,6 @@
     <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
     <Compile Include="Prefetching\Prefetcher.cs" />
     <Compile Include="Prefetching\PrefetchingUser.cs" />
-    <Compile Include="RavenDbMiddleware.cs" />
     <Compile Include="RavenDbOwinOptions.cs" />
     <Compile Include="Server\Connections\IEventsTransport.cs" />
     <Compile Include="Server\Connections\WebApiEventsTransport.cs" />
@@ -271,6 +270,7 @@
     <Compile Include="Server\Controllers\RavenApiController.cs" />
     <Compile Include="Server\Controllers\RavenUiController.cs" />
     <Compile Include="Server\Controllers\SilverlightController.cs" />
+    <Compile Include="Server\Controllers\SimpleTestController.cs" />
     <Compile Include="Server\Controllers\StaticController.cs" />
     <Compile Include="Server\Controllers\StatisticsController.cs" />
     <Compile Include="Server\Controllers\StreamsController.cs" />
