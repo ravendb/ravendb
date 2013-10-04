@@ -28,6 +28,7 @@ namespace Raven.Server
         public RavenDbServer(InMemoryRavenConfiguration configuration)
         {
             options = new RavenDBOptions(configuration);
+            //TODO DH: configuration.ServerUrl doesn't bind properly
             server = WebApp.Start("http://+:" + configuration.Port, app => app.UseRavenDB(options));
             serverThingsForTests = new ServerThingsForTests(options);
             ClusterDiscovery(configuration);
