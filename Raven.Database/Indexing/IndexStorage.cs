@@ -650,6 +650,7 @@ namespace Raven.Database.Indexing
 		        return;
 		    DeleteIndex(value.indexId);
 		}
+
 		public void DeleteIndex(int id)
 		{
 		    var value = GetIndexInstance(id);
@@ -658,21 +659,24 @@ namespace Raven.Database.Indexing
 				log.Debug("Ignoring delete for non existing index {0}", value.PublicName);
 				return;
 			}
+      documentDatabase.TransactionalStorage.Batch(accessor =>
+        accessor.Lists.Remove("Raven/Indexes/QueryTime", value.PublicName));
 			log.Debug("Deleting index {0}", value.PublicName);
 			value.Dispose();
 			Index ignored;
-			var dirOnDisk = Path.Combine(path, value.indexId.ToString());
 
-			documentDatabase.TransactionalStorage.Batch(accessor =>
-				accessor.Lists.Remove("Raven/Indexes/QueryTime", value.PublicName));
-
-			if (!indexes.TryRemove(value.indexId, out ignored) || !Directory.Exists(dirOnDisk))
-				return;
-
-			IOExtensions.DeleteDirectory(dirOnDisk);
+       var dirOnDisk = Path.Combine(path, id.ToString());
+      if (!indexes.TryRemove(id, out ignored) || !Directory.Exists(dirOnDisk))
+        return;
 
 			UpdateIndexMappingFile();
 		}
+
+    public void DeleteIndexData(int id)
+    {
+      var dirOnDisk = Path.Combine(path, id.ToString());
+      IOExtensions.DeleteDirectory(dirOnDisk);
+    }
 
 		public void CreateIndexImplementation(IndexDefinition indexDefinition)
 		{
