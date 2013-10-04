@@ -1,7 +1,9 @@
-﻿using Raven.Database.Config;
+﻿using Raven.Abstractions.Logging;
+using Raven.Database.Config;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
+using Raven.Database.Util;
 
 namespace Raven.Database
 {
@@ -13,6 +15,7 @@ namespace Raven.Database
 
         public RavenDBOptions(InMemoryRavenConfiguration configuration)
         {
+            //TODO should we do HttpEndpointRegistration.RegisterHttpEndpointTarget(); here?
             documentDatabase = new DocumentDatabase(configuration);
             try
             {
