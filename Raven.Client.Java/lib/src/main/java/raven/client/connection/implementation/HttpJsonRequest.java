@@ -38,6 +38,7 @@ import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
 
+import raven.abstractions.closure.Action0;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Action3;
 import raven.abstractions.closure.Delegates;
@@ -51,8 +52,10 @@ import raven.abstractions.json.linq.JTokenType;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.util.NetDateFormat;
+import raven.client.changes.IObservable;
 import raven.client.connection.CachedRequest;
 import raven.client.connection.CreateHttpJsonRequestParams;
+import raven.client.connection.ObservableLineStream;
 import raven.client.connection.ReplicationInformer;
 import raven.client.connection.ServerClient.HandleReplicationStatusChangesCallback;
 import raven.client.connection.profiling.IHoldProfilingInformation;
@@ -670,6 +673,34 @@ public class HttpJsonRequest {
     HttpParams httpParams = webRequest.getParams();
     HttpConnectionParams.setSoTimeout(httpParams, timeoutInMilis);
     HttpConnectionParams.setConnectionTimeout(httpParams, timeoutInMilis);
+  }
+
+  public IObservable<String> serverPull() {
+    int retries = 0;
+
+    while (true) {
+      //TODO: ErrorResponseException webException;
+      try {
+        HttpUriRequest webRequest = createWebRequest(url, method);
+        //TODO CheckForErrorsAndReturnCachedResultIfAnyAsync();
+        httpResponse = httpClient.execute(webRequest);
+        ObservableLineStream observableLineStream = new ObservableLineStream(httpResponse.getEntity().getContent(), new Action0() {
+
+          @Override
+          public void apply() {
+            EntityUtils.consumeQuietly(httpResponse.getEntity());
+          }
+        });
+        //TODO setResponseHeaders();
+        observableLineStream.start();
+
+        return observableLineStream;
+      } catch (Exception e) { //TODO:
+        e.printStackTrace();
+        //TODO:
+      }
+    }
+
   }
 
 }

@@ -5,4 +5,7 @@ package raven.abstractions.basic;
  */
 public class EventArgs {
   //empty by design
+
+
+  public final static VoidArgs EMPTY = new VoidArgs();
 }

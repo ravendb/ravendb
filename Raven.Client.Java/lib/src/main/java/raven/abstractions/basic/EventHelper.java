@@ -18,9 +18,9 @@ public class EventHelper {
     }
   }
 
-  public static <T> void invoke(List<Action1<T>> sessionCreatedInternal, T session) {
-    for (Action1<T> action: sessionCreatedInternal) {
-      action.apply(session);
+  public static <T> void invoke(List<Action1<T>> actions, T argument) {
+    for (Action1<T> action: actions) {
+      action.apply(argument);
     }
   }
 }

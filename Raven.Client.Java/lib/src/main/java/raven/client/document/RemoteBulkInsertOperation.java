@@ -21,8 +21,10 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.concurrent.Cancellable;
 
 import raven.abstractions.closure.Action1;
+import raven.abstractions.data.BulkInsertChangeNotification;
 import raven.abstractions.data.BulkInsertOptions;
 import raven.abstractions.data.Constants;
+import raven.abstractions.data.DocumentChangeTypes;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
@@ -375,15 +377,10 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation {
       onReport.apply(String.format(format, args));
     }
   }
-  /* TODO
 
-        public void OnNext(BulkInsertChangeNotification value)
-        {
-            if (value.Type == DocumentChangeTypes.BulkInsertError)
-            {
-                cancellationTokenSource.Cancel();
-            }
-        }
-   */
-
+  public void onNExt(BulkInsertChangeNotification value) {
+    if (value.getType().equals(DocumentChangeTypes.BULK_INSERT_ERROR)) {
+      //TODO:  cancellationTokenSource.Cancel();
+    }
+  }
 }

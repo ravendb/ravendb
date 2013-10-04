@@ -1,13 +1,14 @@
 package raven.client.document;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.Future;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.Header;
@@ -208,27 +209,19 @@ public class DocumentStore extends DocumentStoreBase {
       observeChangesAndEvictItemsFromCacheForDatabase.close();
     }
 
-    List<Future<?>> tasks = new ArrayList<>();
-
-    /*
-     * TODO:
-    for (Map.Entry<String, IDatabaseChanges> databaseChange: databaseChanges) {
+    for (Map.Entry<String, IDatabaseChanges> databaseChange : databaseChanges) {
       IDatabaseChanges dbChange = databaseChange.getValue();
       if (dbChange instanceof RemoteDatabaseChanges) {
-        tasks.add(((RemoteDatabaseChanges) dbChange).disposeAsync());
+        ((RemoteDatabaseChanges) dbChange).close();
       } else {
         if (databaseChange.getValue() instanceof Closeable) {
-          ((Closeable)databaseChange.getValue()).close();
+          ((Closeable) databaseChange.getValue()).close();
         }
       }
-    }*/
+    }
 
     for (ReplicationInformer ri : replicationInformers.values()) {
       ri.close();
-    }
-
-    for (Future<?> future: tasks) {
-      future.wait(3000);
     }
 
     // if this is still going, we continue with disposal, it is for grace only, anyway

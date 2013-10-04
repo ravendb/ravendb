@@ -4,8 +4,10 @@ import java.util.Random;
 import java.util.UUID;
 
 public class Base62Util {
+  private static Random random = new Random();
+
   public static String base62Random() {
-    return base62ToString(new Random().nextLong());
+    return base62ToString(Math.abs(random.nextLong()));
   }
 
   private static String base62ToString(long value) {

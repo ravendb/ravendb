@@ -17,6 +17,7 @@ import org.codehaus.jackson.map.DeserializationContext;
 import org.codehaus.jackson.map.MapperConfig;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.PropertyNamingStrategy;
+import org.codehaus.jackson.map.SerializationConfig;
 import org.codehaus.jackson.map.SerializationConfig.Feature;
 import org.codehaus.jackson.map.SerializerProvider;
 import org.codehaus.jackson.map.deser.std.FromStringDeserializer;
@@ -47,6 +48,7 @@ public class JsonExtensions {
     objectMapper.disable(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES);
     objectMapper.enable(Feature.WRITE_ENUMS_USING_INDEX);
     objectMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+    objectMapper.disable(SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS);
     objectMapper.configure(Feature.WRITE_DATES_AS_TIMESTAMPS, false);
     objectMapper.setSerializationConfig(objectMapper.getSerializationConfig().withDateFormat(new NetDateFormat()));
     objectMapper.setDeserializationConfig(objectMapper.getDeserializationConfig().withDateFormat(new NetDateFormat()));
