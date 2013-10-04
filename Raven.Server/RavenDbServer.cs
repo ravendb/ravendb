@@ -31,7 +31,7 @@ namespace Raven.Server
             try
             {
                 database.SpinBackgroundWorkers();
-                var options = new RavenDbOwinOptions(settings, database);
+                var options = new RavenDBOwinOptions(settings, database);
                 //TODO use settings.ServerUrl
                 server = WebApp.Start("http://+:" + settings.Port, app => app.UseRavenDB(options));
                 serverThingsForTests = new ServerThingsForTests(options);
@@ -105,9 +105,9 @@ namespace Raven.Server
         //TODO need a better name
         private class ServerThingsForTests : IServerThingsForTests
         {
-            private readonly RavenDbOwinOptions options;
+            private readonly RavenDBOwinOptions options;
 
-            public ServerThingsForTests(RavenDbOwinOptions options)
+            public ServerThingsForTests(RavenDBOwinOptions options)
             {
                 this.options = options;
             }

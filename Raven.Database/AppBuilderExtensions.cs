@@ -9,7 +9,7 @@ namespace Owin
     public static class AppBuilderExtensions
     {
         // TODO Ext method where InMemoryRavenConfiguration and DocumentDatabase are defaults
-        public static IAppBuilder UseRavenDB(this IAppBuilder app, RavenDbOwinOptions options)
+        public static IAppBuilder UseRavenDB(this IAppBuilder app, RavenDBOwinOptions options)
         {
             if (options == null)
             {

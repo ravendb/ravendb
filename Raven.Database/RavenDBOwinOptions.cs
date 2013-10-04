@@ -5,12 +5,12 @@ using Raven.Database.Server.WebApi;
 
 namespace Raven.Database
 {
-    public class RavenDbOwinOptions
+    public class RavenDBOwinOptions
     {
         private readonly DatabasesLandlord databasesLandlord;
         private readonly MixedModeRequestAuthorizer mixedModeRequestAuthorizer;
 
-        public RavenDbOwinOptions(InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
+        public RavenDBOwinOptions(InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
         {
             databasesLandlord = new DatabasesLandlord(documentDatabase);
             mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
