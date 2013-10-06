@@ -1555,9 +1555,10 @@ namespace Raven.Database
                 if (instance == null) return;
 
                 // Set up a flag to signal that this is something we're doing
-                TransactionalStorage.Batch(actions => actions.Lists.Set("Raven/Indexes/PendingDeletion", instance.IndexId.ToString(), (RavenJObject.FromObject(new
+                TransactionalStorage.Batch(actions => actions.Lists.Set("Raven/Indexes/PendingDeletion", instance.IndexId.ToString(CultureInfo.InvariantCulture), (RavenJObject.FromObject(new
                 {
-                   TimeOfOriginalDeletion = DateTime.UtcNow 
+                   TimeOfOriginalDeletion = SystemTime.UtcNow ,
+                   instance.IndexId
                 })) , UuidType.Tasks));
 
                 // Delete the main record synchronously
@@ -1565,15 +1566,8 @@ namespace Raven.Database
                 IndexStorage.DeleteIndex(instance.IndexId);
 
                 // And delete the data in the background
-                var task = Task.Factory.StartNew(() => EnsureIndexDataIsDeleted(instance.IndexId));
+                StartDeletingIndexData(instance.IndexId);
               
-                long id;
-                AddTask(task, null, out id);
-                PendingTaskAndState value;
-                task.ContinueWith(_ => pendingTasks.TryRemove(id, out value));
-
-
-
                 // We raise the notification now because as far as we're concerned it is done *now*
                 TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
                 {
@@ -1583,16 +1577,28 @@ namespace Raven.Database
             }
         }
 
-        internal void EnsureIndexDataIsDeleted(int id)
+        internal void StartDeletingIndexData(int id)
         {
-            // Data can take a while
-            IndexStorage.DeleteIndexData(id);
-            TransactionalStorage.Batch(actions =>
+            var task = Task.Run(() =>
             {
-                // And Esent data can take a while too
-                actions.Indexing.DeleteIndex(id);
-                actions.Lists.Remove("Raven/Indexes/PendingDeletion", id.ToString());
+                // Data can take a while
+                IndexStorage.DeleteIndexData(id);
+                TransactionalStorage.Batch(actions =>
+                {
+                    // And Esent data can take a while too
+                    actions.Indexing.DeleteIndex(id, WorkContext.CancellationToken);
+                    if (WorkContext.CancellationToken.IsCancellationRequested)
+                        return;
+                    actions.Lists.Remove("Raven/Indexes/PendingDeletion", id.ToString(CultureInfo.InvariantCulture));
+                });
             });
+
+            long taskId;
+            AddTask(task, null, out taskId);
+            PendingTaskAndState value;
+            task.ContinueWith(_ => pendingTasks.TryRemove(taskId, out value));
+
+           
         }
 
         public Attachment GetStatic(string name)

@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Issues
+﻿using System.Threading;
+
+namespace Raven.Tests.Issues
 {
 	using System.Collections.Generic;
 	using System.Linq;
@@ -44,7 +46,7 @@
 					Assert.Equal(2, results[0].Count);
 				});
 
-				storage.Batch(accessor => accessor.Indexing.DeleteIndex(a));
+                storage.Batch(accessor => accessor.Indexing.DeleteIndex(a, new CancellationToken()));
 
 				storage.Batch(accessor =>
 				{
@@ -172,7 +174,7 @@
 					accessor.MapReduce.UpdatePerformedReduceType(b, "b", ReduceType.SingleStep);
 				});
 
-				storage.Batch(accessor => accessor.Indexing.DeleteIndex(a));
+                storage.Batch(accessor => accessor.Indexing.DeleteIndex(a, new CancellationToken()));
 
 				storage.Batch(accessor =>
 				{
