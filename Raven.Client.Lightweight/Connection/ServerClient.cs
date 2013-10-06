@@ -1582,23 +1582,6 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
-		/// Seeds the next identity value on the server
-		/// </summary>
-		public long SeedIdentityFor(string name, long value)
-		{
-			return ExecuteWithReplication("POST", url =>
-			{
-				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, url + "/identity/seed?name=" + Uri.EscapeDataString(name) + "&value=" + Uri.EscapeDataString(value.ToString(CultureInfo.InvariantCulture)), "POST", credentials, convention)
-						.AddOperationHeaders(OperationsHeaders));
-
-				var readResponseJson = request.ReadResponseJson();
-
-				return readResponseJson.Value<long>("Value");
-			});
-		}
-
-		/// <summary>
 		/// Get the full URL for the given document key
 		/// </summary>
 		public string UrlFor(string documentKey)
