@@ -27,8 +27,8 @@ namespace Raven.Database.Data
 		public AggregationOperation AggregationOperation { get; set; }
 		public string[] HighlightedFields { get; set; }
 
-	    private List<Action<IndexDefinition>> extraActionsToPerform = new List<Action<IndexDefinition>>();
- 
+		private List<Action<IndexDefinition>> extraActionsToPerform = new List<Action<IndexDefinition>>();
+
 		protected DynamicQueryMappingItem[] GroupByItems { get; set; }
 
 		public DynamicQueryMapping()
@@ -39,7 +39,7 @@ namespace Raven.Database.Data
 
 		public IndexDefinition CreateIndexDefinition()
 		{
-		    var fromClause = string.Empty;
+			var fromClause = string.Empty;
 			var realMappings = new HashSet<string>();
 
 			if (!string.IsNullOrEmpty(ForEntityName))
@@ -48,14 +48,14 @@ namespace Raven.Database.Data
 			}
 			else
 			{
-        fromClause = "from doc in docs";
+				fromClause = "from doc in docs";
 			}
 
 			foreach (var map in Items)
 			{
 				var currentDoc = "doc";
 				var currentExpression = new StringBuilder();
-        var mapFromClauses = new List<String>();
+				var mapFromClauses = new List<String>();
 				int currentIndex = 0;
 				while (currentIndex < map.From.Length)
 				{
@@ -72,7 +72,7 @@ namespace Raven.Database.Data
 
 							// from docNewDocItemsItem in doc.NewDoc.Items
 							String docInclude = string.Format("from {0} in ((IEnumerable<dynamic>){1}).DefaultIfEmpty()", newDoc, newDocumentSource);
-              mapFromClauses.Add(docInclude);
+							mapFromClauses.Add(docInclude);
 
 							// Start building the property again
 							currentExpression.Clear();
@@ -93,32 +93,32 @@ namespace Raven.Database.Data
 				}
 
 				var indexedMember = currentExpression.ToString().Replace("_Range", "");
-                var rightHandSide =
-                    indexedMember.Length == 0 ? currentDoc
-                    : mapFromClauses.Count > 0 ? String.Format("({0} select {1}{2}).ToArray()", String.Join("\n", mapFromClauses), currentDoc, indexedMember)
-                    : String.Format("{0}{1}", currentDoc, indexedMember);
+				var rightHandSide =
+					indexedMember.Length == 0 ? currentDoc
+					: mapFromClauses.Count > 0 ? String.Format("({0} select {1}{2}).ToArray()", String.Join("\n", mapFromClauses), currentDoc, indexedMember)
+					: String.Format("{0}{1}", currentDoc, indexedMember);
 
-					realMappings.Add(string.Format("{0} = {1}",
-						map.To.Replace("_Range", ""),
-						rightHandSide
-						));
-				}
+				realMappings.Add(string.Format("{0} = {1}",
+					map.To.Replace("_Range", ""),
+					rightHandSide
+					));
+			}
 
 			var index = new IndexDefinition
 			{
 				Map = string.Format("{0}\r\nselect new {{ {1} }}",
-                  fromClause,
+				  fromClause,
 									string.Join(", ",
 												realMappings.Concat(new[] { AggregationMapPart() }).Where(x => x != null))),
 				Reduce = DynamicAggregation ? null : AggregationReducePart(),
 				TransformResults = DynamicAggregation ? AggregationReducePart() : null,
-                InternalFieldsMapping = new Dictionary<string,string>()
+				InternalFieldsMapping = new Dictionary<string, string>()
 			};
 
-		    foreach (var item in Items)
-		    {
-		        index.InternalFieldsMapping[item.To] = item.From;
-		    }
+			foreach (var item in Items)
+			{
+				index.InternalFieldsMapping[item.To] = item.From;
+			}
 
 			if (DynamicAggregation)
 			{
@@ -256,7 +256,7 @@ namespace Raven.Database.Data
 
 					if (field.EndsWith("_Range"))
 						field = field.Substring(0, field.Length - "_Range".Length);
-				
+
 					fields.Add(Tuple.Create(SimpleQueryParser.TranslateField(field), field));
 				}
 			}
@@ -266,7 +266,7 @@ namespace Raven.Database.Data
 				AggregationOperation = query.AggregationOperation.RemoveOptionals(),
 				DynamicAggregation = query.AggregationOperation.HasFlag(AggregationOperation.Dynamic),
 				ForEntityName = entityName,
-				HighlightedFields = query.HighlightedFields.EmptyIfNull().Select(x=>x.Field).ToArray(),
+				HighlightedFields = query.HighlightedFields.EmptyIfNull().Select(x => x.Field).ToArray(),
 				SortDescriptors = GetSortInfo(fieldName =>
 				{
 					if (fields.Any(x => x.Item2 == fieldName || x.Item2 == (fieldName + "_Range")) == false)
@@ -287,51 +287,51 @@ namespace Raven.Database.Data
 			}
 		}
 
-        public void AddExistingIndexDefinition(IndexDefinition indexDefinition, DocumentDatabase database, IndexQuery query)
-        {
-            var existing = database.IndexDefinitionStorage.GetIndexDefinition(indexDefinition.Name);
-            if (existing == null || existing.InternalFieldsMapping == null) return; // No biggy, it just means we'll have two small indexes and we'll do this again later
+		public void AddExistingIndexDefinition(IndexDefinition indexDefinition, DocumentDatabase database, IndexQuery query)
+		{
+			var existing = database.IndexDefinitionStorage.GetIndexDefinition(indexDefinition.Name);
+			if (existing == null || existing.InternalFieldsMapping == null) return; // No biggy, it just means we'll have two small indexes and we'll do this again later
 
-            this.Items = this.Items.Union(
-                existing.InternalFieldsMapping
-                   .Where(field => this.Items.All(item => item.To != field.Key) && !field.Key.StartsWith("__"))
-                   .Select(field => new DynamicQueryMappingItem()
-                   {
-                       From = field.Value,
-                       To = ReplaceInvalidCharactersForFields(field.Key),
-                       QueryFrom = EscapeParentheses(field.Key)
-                   })
-           ).ToArray();
+			this.Items = this.Items.Union(
+				existing.InternalFieldsMapping
+				   .Where(field => this.Items.All(item => item.To != field.Key) && !field.Key.StartsWith("__"))
+				   .Select(field => new DynamicQueryMappingItem()
+				   {
+					   From = field.Value,
+					   To = ReplaceInvalidCharactersForFields(field.Key),
+					   QueryFrom = EscapeParentheses(field.Key)
+				   })
+		   ).ToArray();
 
-            this.SortDescriptors = this.SortDescriptors.Union(
-                indexDefinition.SortOptions
-                    .Where(option => this.SortDescriptors.All(desc => desc.Field != option.Key))
-                    .Select(option => new DynamicSortInfo()
-                    {
-                        Field = option.Key,
-                        FieldType = option.Value
-                    })
-                ).ToArray();
+			this.SortDescriptors = this.SortDescriptors.Union(
+				indexDefinition.SortOptions
+					.Where(option => this.SortDescriptors.All(desc => desc.Field != option.Key))
+					.Select(option => new DynamicSortInfo()
+					{
+						Field = option.Key,
+						FieldType = option.Value
+					})
+				).ToArray();
 
-            foreach (var fieldStorage in existing.Stores)
-            {
-                KeyValuePair<string, FieldStorage> storage = fieldStorage;
-                extraActionsToPerform.Add(def=> def.Stores[storage.Key] = storage.Value);
-            }
+			foreach (var fieldStorage in existing.Stores)
+			{
+				KeyValuePair<string, FieldStorage> storage = fieldStorage;
+				extraActionsToPerform.Add(def => def.Stores[storage.Key] = storage.Value);
+			}
 
-            foreach (var fieldIndex in existing.Indexes)
-            {
-                KeyValuePair<string, FieldIndexing> index = fieldIndex;
-                extraActionsToPerform.Add(def=> def.Indexes[index.Key] = index.Value);
-            }
+			foreach (var fieldIndex in existing.Indexes)
+			{
+				KeyValuePair<string, FieldIndexing> index = fieldIndex;
+				extraActionsToPerform.Add(def => def.Indexes[index.Key] = index.Value);
+			}
 
-            foreach (var fieldTermVector in existing.TermVectors)
-            {
-                KeyValuePair<string, FieldTermVector> vector = fieldTermVector;
-                extraActionsToPerform.Add(def=> def.TermVectors[vector.Key] = vector.Value);
-            }
-            this.FindIndexName(database, this, query);
-	    }
+			foreach (var fieldTermVector in existing.TermVectors)
+			{
+				KeyValuePair<string, FieldTermVector> vector = fieldTermVector;
+				extraActionsToPerform.Add(def => def.TermVectors[vector.Key] = vector.Value);
+			}
+			this.FindIndexName(database, this, query);
+		}
 
 		static readonly Regex replaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
 		private void SetupFieldsToIndex(IndexQuery query, IEnumerable<Tuple<string, string>> fields)
@@ -469,7 +469,7 @@ namespace Raven.Database.Data
 					: string.Format("Temp/{0}/By{1}{2}", targetName, indexName, groupBy);
 
 
-		    map.IndexName = permanentIndexName;
+			map.IndexName = permanentIndexName;
 		}
 
 		public class DynamicSortInfo
