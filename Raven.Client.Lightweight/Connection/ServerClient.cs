@@ -723,17 +723,6 @@ namespace Raven.Client.Connection
 		    asyncDatabaseCommands.DeleteIndexAsync(name).Wait();
 		}
 
-		private void DirectDeleteIndex(string name, string operationUrl)
-		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + name, "DELETE", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-			request.ExecuteRequest();
-		}
-
 	    /// <summary>
 	    /// Gets the results for the specified ids.
 	    /// </summary>
@@ -744,8 +733,8 @@ namespace Raven.Client.Connection
 	    /// <param name="metadataOnly">Load just the document metadata</param>
 	    /// <returns></returns>
 	    public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
-		{
-			return ExecuteWithReplication("GET", u => DirectGet(ids, u, includes, transformer, queryInputs ?? new Dictionary<string, RavenJToken>(), metadataOnly));
+	    {
+	        return asyncDatabaseCommands.GetAsync(ids, includes, transformer, queryInputs, metadataOnly).Result;
 		}
 
 	    /// <summary>
@@ -757,7 +746,7 @@ namespace Raven.Client.Connection
 	    /// <param name="transformer"></param>
 	    /// <param name="metadataOnly"></param>
 	    /// <returns></returns>
-	    public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs, bool metadataOnly)
+	    private MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs, bool metadataOnly)
 		{
 			var path = operationUrl + "/queries/?";
 			if (metadataOnly)
