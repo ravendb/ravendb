@@ -35,6 +35,7 @@ using Raven.Database.Plugins;
 using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
 using Document = Lucene.Net.Documents.Document;
@@ -1546,12 +1547,14 @@ namespace Raven.Database.Indexing
                 Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             };
 
+            var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(name, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
             HashSet<string> docs;
             while (missingReferencedDocs.TryDequeue(out docs))
             {
+                
                 foreach (var doc in docs)
                 {
-                    if(context.DoNotTouchAgainIfMissingReferences.TryRemove(doc))
+                    if (set.TryRemove(doc))
                         continue;
                     task.Keys.Add(doc);
                 }

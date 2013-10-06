@@ -1547,6 +1547,10 @@ namespace Raven.Database
                 IndexDefinitionStorage.RemoveIndex(name);
                 IndexStorage.DeleteIndex(instance.IndexId);
 
+				ConcurrentSet<string> _;
+                workContext.DoNotTouchAgainIfMissingReferences.TryRemove(name, out _);
+                workContext.ClearErrorsFor(name);
+
                 // And delete the data in the background
                 StartDeletingIndexData(instance.IndexId);
               
@@ -1571,6 +1575,7 @@ namespace Raven.Database
                     actions.Indexing.DeleteIndex(id, WorkContext.CancellationToken);
                     if (WorkContext.CancellationToken.IsCancellationRequested)
                         return;
+                   
                     actions.Lists.Remove("Raven/Indexes/PendingDeletion", id.ToString(CultureInfo.InvariantCulture));
                 });
             });

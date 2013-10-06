@@ -56,6 +56,30 @@ namespace Raven.Tests.Indexes
 			}
 		}
 
+        [Fact]
+        public void CanHandleMultipleMissingDocumentsInMultipleIndexes()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var indexDefinition = new EmailIndex().CreateIndexDefinition();
+
+                for (int i = 0; i < 4; i++)
+                {
+                    store.DatabaseCommands.PutIndex("email" + i, indexDefinition);
+                    
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(entity: new EmailDocument { });
+                    session.Store(entity: new EmailDocument { });
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+            }
+        }
+
 		public class EmailIndex : AbstractIndexCreationTask<EmailDocument, EmailIndexDoc>
 		{
 			public EmailIndex()
