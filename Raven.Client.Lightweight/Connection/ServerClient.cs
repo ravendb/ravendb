@@ -1018,7 +1018,7 @@ namespace Raven.Client.Connection
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
-			return ExecuteWithReplication<Operation>("DELETE", operationUrl =>
+            return ExecuteWithReplication("DELETE", operationUrl =>
 			{
 				string path = queryToDelete.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
