@@ -1508,7 +1508,7 @@ namespace Raven.Database
                     {
                         TransactionalStorage.Batch(action =>
                         {
-							action.Indexing.DeleteIndex(fixedName);
+							action.Indexing.DeleteIndex(fixedName, workContext.CancellationToken);
 
                             workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
                         });

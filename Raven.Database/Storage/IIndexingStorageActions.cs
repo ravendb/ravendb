@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Data;
 using Raven.Database.Indexing;
@@ -17,7 +18,7 @@ namespace Raven.Database.Storage
 
 		IndexStats GetIndexStats(string index);
 		void AddIndex(string name, bool createMapReduce);
-		void DeleteIndex(string name);
+		void DeleteIndex(string name, CancellationToken token);
 
 	    void SetIndexPriority(string name, IndexingPriority priority);
 
