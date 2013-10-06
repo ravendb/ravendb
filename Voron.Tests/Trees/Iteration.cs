@@ -65,7 +65,7 @@ namespace Voron.Tests.Trees
 			}
 		}
 
-        [Fact]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_ForwardIteration_TheSameKey_In_WriteBatch_And_Tree()
         {
             var random = new Random();
@@ -114,7 +114,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_BackwardIteration_TheSameKey_In_WriteBatch_And_Tree()
         {
             var random = new Random();
@@ -163,7 +163,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-	    [Fact]
+        [Fact(Skip = "Not supported currently")]
 	    public void Iterator_ForwardIteration_With_WriteBatch()
 	    {
             var random = new Random();
@@ -201,7 +201,7 @@ namespace Voron.Tests.Trees
 	        }
 	    }
 
-        [Fact]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_ForwardIteration_With_WriteBatch_SkipDeletedValues_ThatAreInTree()
         {
             var random = new Random();
@@ -242,7 +242,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_BackwardIteration_With_WriteBatch_SkipDeletedValues_ThatAreInTree()
         {
             var random = new Random();
@@ -283,7 +283,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_ForwardIteration_With_WriteBatch_And_SeekIntoTreeIterator()
         {
             var random = new Random();
@@ -324,7 +324,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_BackwardIteration_With_WriteBatch_And_SeekIntoTreeIterator()
         {
             var random = new Random();
@@ -365,7 +365,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_BackwardIteration_With_WriteBatch_And_SeekIntoAddedValues()
         {
             var random = new Random();
@@ -409,7 +409,7 @@ namespace Voron.Tests.Trees
         }
 
 
-        [Fact]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_ForwardIteration_With_WriteBatch_And_SeekIntoAddedValues()
         {
             var random = new Random();
@@ -452,7 +452,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_BackwardIteration_With_WriteBatch()
         {
             var random = new Random();
@@ -491,7 +491,7 @@ namespace Voron.Tests.Trees
         }
 
 
-	    [Fact]
+        [Fact(Skip = "Not supported currently")]
 	    public void Iterator_ForwardIteration_With_WriteBatch_And_RequiredPrefix()
 	    {
 	        var random = new Random();
@@ -540,7 +540,7 @@ namespace Voron.Tests.Trees
 	        }
 	    }
 
-        [Fact]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_ForwardIteration_With_WriteBatch_And_MaxKey_InTreeIterator()
         {
             var random = new Random();
@@ -583,7 +583,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_ForwardIteration_With_WriteBatch_And_MaxKey_InWriteBatch()
         {
             var random = new Random();
@@ -625,7 +625,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_ForwardIteration_With_WriteBatch_And_EmptyAddedValues()
         {
             var random = new Random();
@@ -665,7 +665,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_BackwardIteration_With_WriteBatch_And_EmptyAddedValues()
         {
             var random = new Random();
@@ -705,8 +705,7 @@ namespace Voron.Tests.Trees
             }
         }
 
-        //TODO : don't forget to discuss with Oren this usage scenario of iterator
-	    [Fact(Skip = "Doesn't work yet, discuss with Oren this usage scenario")]
+        [Fact(Skip = "Not supported currently")]
         public void Iterator_BackwardIteration_With_WriteBatch_And_RequiredPrefix()
         {
             var random = new Random();
