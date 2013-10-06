@@ -713,7 +713,7 @@ namespace Raven.Database.Indexing
 				log.Debug("Query on non existing index {0}", index);
 				throw new InvalidOperationException("Index '" + index + "' does not exists");
 			}
-			var fieldsToFetch = new FieldsToFetch(new string[0], AggregationOperation.None, null);
+			var fieldsToFetch = new FieldsToFetch(new string[0], false, null);
 			return new Index.IndexQueryOperation(value, query, _ => false, fieldsToFetch, indexQueryTriggers).GetLuceneQuery();
 		}
 
@@ -785,7 +785,7 @@ namespace Raven.Database.Indexing
                 throw new InvalidOperationException("Index '" + indexName + "' does not exists");
 			}
 
-			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null, AggregationOperation.None, null), indexQueryTriggers);
+			var indexQueryOperation = new Index.IndexQueryOperation(value, query, null, new FieldsToFetch(null, false, null), indexQueryTriggers);
 			return indexQueryOperation.IndexEntries(totalResults);
 		}
 

@@ -1,6 +1,5 @@
 using Raven.Abstractions.Data;
 using Xunit;
-using System.Linq;
 
 namespace Raven.Tests.Bugs.Indexing
 {

@@ -1355,7 +1355,7 @@ namespace Raven.Database
                             throw new IndexDisabledException(indexFailureInformation);
                         }
                         var docRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState, query.QueryInputs, idsToLoad);
-                        var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
+                        var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.IsDistinct,
                                                               viewGenerator.ReduceDefinition == null
                                                                 ? Constants.DocumentIdFieldName
                                                                 : Constants.ReduceKeyFieldName);
@@ -1512,7 +1512,7 @@ namespace Raven.Database
                         {
                             throw new IndexDisabledException(indexFailureInformation);
                         }
-                        loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Constants.DocumentIdFieldName), IndexQueryTriggers)
+                        loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, false, Constants.DocumentIdFieldName), IndexQueryTriggers)
                                                         select queryResult.Key);
                     });
                 stale = isStale;

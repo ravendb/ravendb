@@ -409,15 +409,15 @@ namespace Raven.Database.Extensions
 			return pageSize;
 		}
 
-		public static AggregationOperation GetAggregationOperation(this IHttpContext context)
+		public static bool IsDistinct(this IHttpContext context)
 		{
-			var aggAsString = context.Request.QueryString["aggregation"];
-			if (aggAsString == null)
-			{
-				return AggregationOperation.None;
-			}
+			var distinct = context.Request.QueryString["isDistinct"];
+			if (string.Equals("true", distinct, StringComparison.OrdinalIgnoreCase))
+				return true;
+			var aggAsString = context.Request.QueryString["aggregation"]; // 2.x legacy support
 
-			return (AggregationOperation)Enum.Parse(typeof(AggregationOperation), aggAsString, true);
+			return string.Equals("Distinct", aggAsString, StringComparison.OrdinalIgnoreCase);
+       
 		}
 
 		public static DateTime? GetCutOff(this IHttpContext context)

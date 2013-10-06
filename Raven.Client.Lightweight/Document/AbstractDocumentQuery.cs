@@ -170,20 +170,7 @@ namespace Raven.Client.Document
 		/// The paths to include when loading the query
 		/// </summary>
 		protected HashSet<string> includes = new HashSet<string>();
-		/// <summary>
-		/// What aggregated operation to execute
-		/// </summary>
-		protected AggregationOperation aggregationOp;
-
-		public AggregationOperation AggregationOperation
-		{
-			get { return aggregationOp; }
-		}
-		/// <summary>
-		/// Fields to group on
-		/// </summary>
-		protected string[] groupByFields;
-
+	
 		/// <summary>
 		/// Holds the query stats
 		/// </summary>
@@ -1068,18 +1055,6 @@ If you really want to do in memory filtering on the data returned from the query
 			queryText.Append("(");
 		}
 
-		///<summary>
-		///  Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		///<remarks>
-		///  This is only valid on dynamic indexes queries
-		///</remarks>
-		public void GroupBy(AggregationOperation aggregationOperation, params string[] fieldsToGroupBy)
-		{
-			groupByFields = fieldsToGroupBy;
-			aggregationOp = aggregationOperation;
-		}
-
 		/// <summary>
 		///   Simplified method for closing a clause within the query
 		/// </summary>
@@ -1732,8 +1707,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 				return new SpatialIndexQuery
 				{
-					GroupBy = groupByFields,
-					AggregationOperation = aggregationOp,
+					IsDistinct = isDistinct,
 					Query = query,
 					PageSize = pageSize ?? 128,
 					Start = start,
@@ -1760,8 +1734,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			var indexQuery = new IndexQuery
 			{
-				GroupBy = groupByFields,
-				AggregationOperation = aggregationOp,
+				IsDistinct = isDistinct,
 				Query = query,
 				Start = start,
 				Cutoff = cutoff,
@@ -1794,6 +1767,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			);
 		private QueryOperator defaultOperator;
+		protected bool isDistinct;
 
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
@@ -2106,5 +2080,10 @@ If you really want to do in memory filtering on the data returned from the query
 	    {
             this.resultsTransformer = resultsTransformer;
 	    }
+
+		public void Distinct()
+		{
+			isDistinct = true;
+		}
 	}
 }

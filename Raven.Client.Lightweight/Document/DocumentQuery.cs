@@ -64,7 +64,13 @@ namespace Raven.Client.Document
 			return SelectFields<TProjection>(fields, projections);
 		}
 
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Distinct()
+		{
+			Distinct();
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
 	    {
 	        base.SetResultTransformer(resultsTransformer);
 	        return this;
@@ -92,6 +98,8 @@ namespace Raven.Client.Document
 	    {
 	        this.queryInputs = queryInputs;
 	    }
+
+		public bool IsDistinct { get { return isDistinct; } }
 
 		/// <summary>
 		/// Selects the specified fields directly from the index
@@ -129,8 +137,7 @@ namespace Raven.Client.Document
 				theWaitForNonStaleResults = theWaitForNonStaleResults,
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
-				groupByFields = groupByFields,
-				aggregationOp = aggregationOp,
+				isDistinct = isDistinct,
 				negate = negate,
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
@@ -258,30 +265,6 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms)
 		{
 			Search(GetMemberQueryPath(propertySelector.Body), searchTerms);
-			return this;
-		}
-
-		///<summary>
-		/// Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		/// <remarks>
-		/// This is only valid on dynamic indexes queries
-		/// </remarks>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.GroupBy(AggregationOperation aggregationOperation, params string[] fieldsToGroupBy)
-		{
-			GroupBy(aggregationOperation, fieldsToGroupBy);
-			return this;
-		}
-
-		///<summary>
-		///  Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		///<remarks>
-		///  This is only valid on dynamic indexes queries
-		///</remarks>
-		public IDocumentQuery<T> GroupBy<TValue>(AggregationOperation aggregationOperation, params Expression<Func<T, TValue>>[] groupPropertySelectors)
-		{
-			GroupBy(aggregationOperation, groupPropertySelectors.Select(GetMemberQueryPath).ToArray());
 			return this;
 		}
 

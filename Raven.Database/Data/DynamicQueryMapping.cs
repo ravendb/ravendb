@@ -19,17 +19,13 @@ namespace Raven.Database.Data
 {
 	public class DynamicQueryMapping
 	{
-		public bool DynamicAggregation { get; set; }
 		public string IndexName { get; set; }
 		public string ForEntityName { get; set; }
 		public DynamicSortInfo[] SortDescriptors { get; set; }
 		public DynamicQueryMappingItem[] Items { get; set; }
-		public AggregationOperation AggregationOperation { get; set; }
 		public string[] HighlightedFields { get; set; }
 
 		private List<Action<IndexDefinition>> extraActionsToPerform = new List<Action<IndexDefinition>>();
-
-		protected DynamicQueryMappingItem[] GroupByItems { get; set; }
 
 		public DynamicQueryMapping()
 		{
@@ -112,26 +108,13 @@ namespace Raven.Database.Data
 
 			var index = new IndexDefinition
 			{
-				Map = string.Format("{0}\r\nselect new {{ {1} }}",
-				  fromClause,
-									string.Join(", ",
-												realMappings.Concat(new[] { AggregationMapPart() }).Where(x => x != null))),
-				Reduce = DynamicAggregation ? null : AggregationReducePart(),
-				TransformResults = DynamicAggregation ? AggregationReducePart() : null,
+				Map = string.Format("{0}\r\nselect new {{ {1} }}", fromClause,string.Join(", ", realMappings)),
 				InternalFieldsMapping = new Dictionary<string, string>()
 			};
 
 			foreach (var item in Items)
 			{
 				index.InternalFieldsMapping[item.To] = item.From;
-			}
-
-			if (DynamicAggregation)
-			{
-				foreach (var item in GroupByItems)
-				{
-					index.Stores[ToFieldName(item.To)] = FieldStorage.Yes;
-				}
 			}
 
 			foreach (var descriptor in SortDescriptors)
@@ -154,88 +137,6 @@ namespace Raven.Database.Data
 			if (item == null)
 				return field;
 			return item.To;
-		}
-
-		private string AggregationReducePart()
-		{
-			switch (AggregationOperation)
-			{
-				case AggregationOperation.None:
-					return null;
-				case AggregationOperation.Count:
-					{
-						var sb = new StringBuilder()
-							.AppendLine("from result in results")
-							.Append("group result by ");
-
-						AppendGroupByClauseForReduce(sb);
-
-						sb.AppendLine("into g");
-
-						sb.AppendLine("select new")
-							.AppendLine("{");
-
-						AppendSelectClauseForReduce(sb);
-
-
-						if (DynamicAggregation == false)
-							sb.AppendLine("\tCount = g.Sum(x=>x.Count)");
-						else
-							sb.AppendLine("\tCount = g.Count()");
-
-						sb.AppendLine("}");
-
-						return sb.ToString();
-					}
-				default:
-					throw new InvalidOperationException("Unknown AggregationOperation option: " + AggregationOperation);
-			}
-		}
-
-		private void AppendSelectClauseForReduce(StringBuilder sb)
-		{
-			var groupByItemsSource = DynamicAggregation ? GroupByItems : Items;
-			if (groupByItemsSource.Length == 1)
-			{
-				sb.Append("\t").Append(groupByItemsSource[0].To).AppendLine(" = g.Key,");
-			}
-			else
-			{
-				foreach (var item in groupByItemsSource)
-				{
-					sb.Append("\t").Append(item.To).Append(" = ").Append(" g.Key.").Append(item.To).
-						AppendLine(",");
-				}
-			}
-		}
-
-		private void AppendGroupByClauseForReduce(StringBuilder sb)
-		{
-			var groupBySourceItems = DynamicAggregation ? GroupByItems : Items;
-			if (groupBySourceItems.Length == 1)
-			{
-				sb.Append("result.").Append(groupBySourceItems[0].To);
-			}
-			else
-			{
-				sb.AppendFormat("new {{ {0} }}", string.Join(", ", groupBySourceItems.Select(x => "result." + x.To)));
-			}
-			sb.AppendLine();
-		}
-
-		private string AggregationMapPart()
-		{
-			if (DynamicAggregation)
-				return null;
-			switch (AggregationOperation)
-			{
-				case AggregationOperation.None:
-					return null;
-				case AggregationOperation.Count:
-					return "Count = 1";
-				default:
-					throw new InvalidOperationException("Unknown AggregationOperation option: " + AggregationOperation);
-			}
 		}
 
 		public static DynamicQueryMapping Create(DocumentDatabase database, string query, string entityName)
@@ -269,8 +170,6 @@ namespace Raven.Database.Data
 
 			var dynamicQueryMapping = new DynamicQueryMapping
 			{
-				AggregationOperation = query.AggregationOperation.RemoveOptionals(),
-				DynamicAggregation = query.AggregationOperation.HasFlag(AggregationOperation.Dynamic),
 				ForEntityName = entityName,
 				HighlightedFields = query.HighlightedFields.EmptyIfNull().Select(x => x.Field).ToArray(),
 				SortDescriptors = GetSortInfo(fieldName =>
@@ -342,38 +241,13 @@ namespace Raven.Database.Data
 		static readonly Regex replaceInvalidCharacterForFields = new Regex(@"[^\w_]", RegexOptions.Compiled);
 		private void SetupFieldsToIndex(IndexQuery query, IEnumerable<Tuple<string, string>> fields)
 		{
-			if (query.GroupBy != null && query.GroupBy.Length > 0)
+			Items = fields.Select(x => new DynamicQueryMappingItem
 			{
-				GroupByItems = query.GroupBy.Select(x => new DynamicQueryMappingItem
-				{
-					From = EscapeParentheses(x),
-					To = x.Replace(".", "").Replace(",", ""),
-					QueryFrom = x
-				}).ToArray();
-			}
-			if (DynamicAggregation == false &&
-				AggregationOperation != AggregationOperation.None &&
-				query.GroupBy != null && query.GroupBy.Length > 0)
-			{
-				Items = GroupByItems;
-			}
-			else
-			{
-				Items = fields.Select(x => new DynamicQueryMappingItem
-				{
-					From = x.Item1,
-					To = ReplaceInvalidCharactersForFields(x.Item2),
-					QueryFrom = EscapeParentheses(x.Item2)
-				}).OrderByDescending(x => x.QueryFrom.Length).ToArray();
-				if (GroupByItems != null && DynamicAggregation)
-				{
-					Items = Items.Concat(GroupByItems).OrderByDescending(x => x.QueryFrom.Length).ToArray();
-					var groupBys = GroupByItems.Select(x => x.To).ToArray();
-					query.FieldsToFetch = query.FieldsToFetch == null ?
-						groupBys :
-						query.FieldsToFetch.Concat(groupBys).ToArray();
-				}
-			}
+				From = x.Item1,
+				To = ReplaceInvalidCharactersForFields(x.Item2),
+				QueryFrom = EscapeParentheses(x.Item2)
+			}).OrderByDescending(x => x.QueryFrom.Length).ToArray();
+			
 		}
 
 		private string EscapeParentheses(string str)
@@ -438,19 +312,6 @@ namespace Raven.Database.Data
 					string.Join("", map.HighlightedFields.OrderBy(x => x)));
 			}
 			string groupBy = null;
-			if (AggregationOperation != AggregationOperation.None)
-			{
-				if (query.GroupBy != null && query.GroupBy.Length > 0)
-				{
-					groupBy += "/" + AggregationOperation + "By" + string.Join("And", query.GroupBy);
-				}
-				else
-				{
-					groupBy += "/" + AggregationOperation;
-				}
-				if (DynamicAggregation)
-					groupBy += "Dynamically";
-			}
 
 			if (database.Configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction == false &&
 				database.Configuration.RunInMemory == false)

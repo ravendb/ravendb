@@ -99,7 +99,6 @@ namespace Raven.Database.Extensions
 				PageSize = context.GetPageSize(maxPageSize),
 				SkipTransformResults = context.GetSkipTransformResults(),
 				FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
-				GroupBy = context.Request.QueryString.GetValues("groupBy"),
 				DefaultField = context.Request.QueryString["defaultField"],
 
 				DefaultOperator =
@@ -107,7 +106,7 @@ namespace Raven.Database.Extensions
 						QueryOperator.And :
 						QueryOperator.Or,
 
-				AggregationOperation = context.GetAggregationOperation(),
+				IsDistinct = context.IsDistinct(),
 				SortedFields = context.Request.QueryString.GetValues("sort")
 					.EmptyIfNull()
 					.Select(x => new SortedField(x))
