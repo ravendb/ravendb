@@ -1,26 +1,24 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
 using System.Web.Http;
+using System.Web.Http.Dispatcher;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Server.WebApi;
+using Raven.Database.Server.Controllers;
+using Raven.Database.Server.Security;
+using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.WebApi.Handlers;
 
 // ReSharper disable once CheckNamespace
 namespace Owin
 {
-    using System.Collections.Generic;
-    using System.Reflection;
-    using System.Web.Http.Dispatcher;
-    using Raven.Database.Server.Controllers;
-    using Raven.Database.Server.Security;
-    using Raven.Database.Server.Tenancy;
-    using Raven.Database.Server.WebApi.Handlers;
-
     public static class AppBuilderExtensions
     {
         public static IAppBuilder UseRavenDB(this IAppBuilder app)
         {
-            return UseRavenDB(app, new InMemoryRavenConfiguration());
+            return UseRavenDB(app, new RavenConfiguration());
         }
 
         public static IAppBuilder UseRavenDB(this IAppBuilder app, InMemoryRavenConfiguration configuration)
@@ -36,7 +34,7 @@ namespace Owin
             }
 
             DocumentDatabase documentDatabase = options.SystemDatabase;
-            
+
             // This is a katana specific key (i.e. non a standard OWIN key) to be notified
             // when the host in being shut down. Works both in HttpListener and SystemWeb hosting
             var appDisposing = app.Properties["host.OnAppDisposing"] as CancellationToken?;
@@ -51,22 +49,23 @@ namespace Owin
             return app;
         }
 
-        private static void SetupConfig(HttpConfiguration cfg, DatabasesLandlord databasesLandlord, MixedModeRequestAuthorizer mixedModeRequestAuthorizer)
+        private static void SetupConfig(HttpConfiguration cfg, DatabasesLandlord databasesLandlord,
+            MixedModeRequestAuthorizer mixedModeRequestAuthorizer)
         {
-            cfg.Properties[typeof(DatabasesLandlord)] = databasesLandlord;
-            cfg.Properties[typeof(MixedModeRequestAuthorizer)] = mixedModeRequestAuthorizer;
+            cfg.Properties[typeof (DatabasesLandlord)] = databasesLandlord;
+            cfg.Properties[typeof (MixedModeRequestAuthorizer)] = mixedModeRequestAuthorizer;
             cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 
-            cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
+            cfg.Services.Replace(typeof (IAssembliesResolver), new MyAssemblyResolver());
 
             cfg.MapHttpAttributeRoutes();
             cfg.Routes.MapHttpRoute(
                 "API Default", "{controller}/{action}",
-                new { id = RouteParameter.Optional });
+                new {id = RouteParameter.Optional});
 
             cfg.Routes.MapHttpRoute(
                 "Database Route", "databases/{databaseName}/{controller}/{action}",
-                new { id = RouteParameter.Optional });
+                new {id = RouteParameter.Optional});
             cfg.MessageHandlers.Add(new GZipToJsonHandler());
         }
 
@@ -74,7 +73,7 @@ namespace Owin
         {
             public ICollection<Assembly> GetAssemblies()
             {
-                return new[] { typeof(RavenApiController).Assembly };
+                return new[] {typeof (RavenApiController).Assembly};
             }
         }
     }
