@@ -122,5 +122,10 @@ namespace Raven.Abstractions.Util
 		{
 			return globalLocker.EnterWriteLock();
 		}
+
+        public IDisposable TryWithAllLocks()
+        {
+            return globalLocker.TryEnterWriteLock(TimeSpan.FromSeconds(3));
+        }
 	}
 }
