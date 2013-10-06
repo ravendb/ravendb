@@ -226,7 +226,7 @@ namespace Raven.Client.Connection
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+					.AddReplicationStatusHeaders(url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			try
 			{
@@ -406,7 +406,7 @@ namespace Raven.Client.Connection
 			}
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, "POST", metadata, credentials, convention))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                    .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 
 			try
@@ -442,7 +442,7 @@ namespace Raven.Client.Connection
 																						 operationUrl + "/static/?startsWith=" +
 																						 idPrefix + "&start=" + start + "&pageSize=" +
 																						 pageSize, method, credentials, convention))
-																						 .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                                                                                         .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			var result = webRequest.ReadResponseJson();
 
@@ -483,7 +483,7 @@ namespace Raven.Client.Connection
 		private Attachment DirectGetAttachment(string method, string key, string operationUrl)
 		{
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, method, credentials, convention))
-							.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                            .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 			Func<Stream> data;
 			try
 			{
@@ -505,7 +505,7 @@ namespace Raven.Client.Connection
 					};
 				}
 
-				HandleReplicationStatusChanges(webRequest.ResponseHeaders[Constants.RavenForcePrimaryServerCheck], Url, operationUrl);
+                HandleReplicationStatusChanges(webRequest.ResponseHeaders[Constants.RavenForcePrimaryServerCheck], url, operationUrl);
 
 				return new Attachment
 				{
@@ -775,7 +775,7 @@ namespace Raven.Client.Connection
 				request = jsonRequestFactory.CreateHttpJsonRequest(
 						new CreateHttpJsonRequestParams(this, path, "GET", metadata, credentials, convention)
 							.AddOperationHeaders(OperationsHeaders))
-							.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                            .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			}
 			else
@@ -783,7 +783,7 @@ namespace Raven.Client.Connection
 				request = jsonRequestFactory.CreateHttpJsonRequest(
 						new CreateHttpJsonRequestParams(this, path, "POST", metadata, credentials, convention)
 							.AddOperationHeaders(OperationsHeaders))
-							.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                            .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				request.Write(new RavenJArray(uniqueIds).ToString(Formatting.None));
 			}
@@ -877,7 +877,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/commit?tx=" + txId, "POST", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                    .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 
 			httpJsonRequest.ReadResponseJson();
@@ -902,7 +902,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                    .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 
 			httpJsonRequest.ReadResponseJson();
@@ -931,7 +931,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/prepare?tx=" + txId, "POST", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                    .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 
 			httpJsonRequest.ReadResponseJson();
@@ -976,7 +976,7 @@ namespace Raven.Client.Connection
 
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			databaseUrl = databaseUrl + "/databases/" + database;
-			if (databaseUrl == Url)
+            if (databaseUrl == url)
 				return this;
 			return new ServerClient(
                 new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, currentSessionId, replicationInformerGetter, databaseName, conflictListeners),
@@ -989,7 +989,7 @@ namespace Raven.Client.Connection
 		public IDatabaseCommands ForSystemDatabase()
 		{
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
-			if (databaseUrl == Url)
+            if (databaseUrl == url)
 				return this;
 			return new ServerClient(
                 new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, currentSessionId, replicationInformerGetter, databaseName, conflictListeners),
@@ -1053,7 +1053,7 @@ namespace Raven.Client.Connection
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, path, method, credentials, convention)
 						.AddOperationHeaders(OperationsHeaders))
-						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                        .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				request.Write(requestData);
 				RavenJToken jsonResponse;
@@ -1101,7 +1101,7 @@ namespace Raven.Client.Connection
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders))
-						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                        .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 
 
@@ -1198,7 +1198,7 @@ namespace Raven.Client.Connection
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders))
-						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                        .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ReadResponseJson().Values<string>();
 			});
@@ -1226,7 +1226,7 @@ namespace Raven.Client.Connection
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
 						.AddOperationHeaders(OperationsHeaders))
-						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                        .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 
 				var json = (RavenJObject)request.ReadResponseJson();
@@ -1260,7 +1260,7 @@ namespace Raven.Client.Connection
                 var request = jsonRequestFactory.CreateHttpJsonRequest(
                     new CreateHttpJsonRequestParams(this, requestUri, method, credentials, convention)
                         .AddOperationHeaders(OperationsHeaders))
-                        .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                        .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				if (method != "GET")
 					request.Write(facetsJson);
