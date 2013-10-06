@@ -49,9 +49,7 @@
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				RenderAndShow(tx, 1, "tree1");
 				t1.Delete(tx, "Foo180"); // rebalancer fails to move 1st node from one branch to another
-				RenderAndShow(tx, 1, "tree1");
 			}
 		}
 	}
