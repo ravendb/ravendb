@@ -865,7 +865,7 @@ namespace Raven.Client.Connection
 	    /// <param name="txId">The tx id.</param>
 	    public void Commit(string txId)
 		{
-			ExecuteWithReplication<object>("POST", u =>
+            ExecuteWithReplication<object>("POST", u =>
 			{
 				DirectCommit(txId, u);
 				return null;
@@ -923,13 +923,7 @@ namespace Raven.Client.Connection
 
 		public BuildNumber GetBuildNumber()
 		{
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, url + "/build/version", "GET", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-			var result = httpJsonRequest.ReadResponseJson();
-
-			return ((RavenJObject)result).Deserialize<BuildNumber>(convention);
+		    return asyncDatabaseCommands.GetBuildNumberAsync().Result;
 		}
 
 		private void DirectPrepareTransaction(string txId, string operationUrl)
