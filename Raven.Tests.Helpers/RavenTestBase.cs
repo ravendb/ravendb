@@ -217,7 +217,7 @@ namespace Raven.Tests.Helpers
 
 			if (enableAuthentication)
 			{
-				EnableAuthentication(ravenDbServer.Database);
+				EnableAuthentication(ravenDbServer.SystemDatabase);
 				ModifyConfiguration(ravenConfiguration);
 			}
 

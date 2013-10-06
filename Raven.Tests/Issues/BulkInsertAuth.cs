@@ -47,7 +47,7 @@ namespace Raven.Tests.Issues
 		protected override void ModifyServer(Server.RavenDbServer ravenDbServer)
 		{
 			var id = "Raven/ApiKeys/test";
-			ravenDbServer.Database.Put(id, null,
+			ravenDbServer.SystemDatabase.Put(id, null,
 									   RavenJObject.FromObject(new ApiKeyDefinition
 									   {
 										   Id = id,

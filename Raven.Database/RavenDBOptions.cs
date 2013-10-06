@@ -8,31 +8,31 @@ namespace Raven.Database
     public class RavenDBOptions
     {
         private readonly DatabasesLandlord databasesLandlord;
-        private readonly DocumentDatabase documentDatabase;
+        private readonly DocumentDatabase systemDatabase;
         private readonly MixedModeRequestAuthorizer mixedModeRequestAuthorizer;
 
         public RavenDBOptions(InMemoryRavenConfiguration configuration)
         {
             //TODO should we do HttpEndpointRegistration.RegisterHttpEndpointTarget(); here?
-            documentDatabase = new DocumentDatabase(configuration);
+            systemDatabase = new DocumentDatabase(configuration);
             try
             {
-                documentDatabase.SpinBackgroundWorkers();
-                databasesLandlord = new DatabasesLandlord(documentDatabase);
+                systemDatabase.SpinBackgroundWorkers();
+                databasesLandlord = new DatabasesLandlord(systemDatabase);
                 mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
-                mixedModeRequestAuthorizer.Initialize(documentDatabase,
+                mixedModeRequestAuthorizer.Initialize(systemDatabase,
                     new RavenServer(databasesLandlord.SystemDatabase, configuration));
             }
             catch
             {
-                documentDatabase.Dispose();
+                systemDatabase.Dispose();
                 throw;
             }
         }
 
-        public DocumentDatabase DocumentDatabase
+        public DocumentDatabase SystemDatabase
         {
-            get { return documentDatabase; }
+            get { return systemDatabase; }
         }
 
         public MixedModeRequestAuthorizer MixedModeRequestAuthorizer

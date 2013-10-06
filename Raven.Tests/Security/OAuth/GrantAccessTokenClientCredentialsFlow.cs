@@ -86,7 +86,7 @@ namespace Raven.Tests.Security.OAuth
 				AccessTokenBody body;
 
 				Assert.NotEmpty(token);
-				Assert.True(AccessToken.TryParseBody(server.Database.Configuration.OAuthTokenKey, token, out body));
+				Assert.True(AccessToken.TryParseBody(server.SystemDatabase.Configuration.OAuthTokenKey, token, out body));
 				Assert.False(body.IsExpired());
 			}
 

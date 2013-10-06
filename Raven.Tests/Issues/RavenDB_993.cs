@@ -257,7 +257,7 @@ namespace Raven.Tests.Issues
 
 		private RavenDbServer StartServer(RavenDbServer server)
 		{
-			return this.CreateServer(server.Database.Configuration.Port, server.Database.Configuration.DataDirectory, false);
+			return this.CreateServer(server.SystemDatabase.Configuration.Port, server.SystemDatabase.Configuration.DataDirectory, false);
 		}
 
 		public override void Dispose()
@@ -265,13 +265,13 @@ namespace Raven.Tests.Issues
 			if (server1 != null)
 			{
 				server1.Dispose();
-				IOExtensions.DeleteDirectory(server1.Database.Configuration.DataDirectory);
+				IOExtensions.DeleteDirectory(server1.SystemDatabase.Configuration.DataDirectory);
 			}
 
 			if (server2 != null)
 			{
 				server2.Dispose();
-				IOExtensions.DeleteDirectory(server2.Database.Configuration.DataDirectory);
+				IOExtensions.DeleteDirectory(server2.SystemDatabase.Configuration.DataDirectory);
 			}
 
 			if (store1 != null)

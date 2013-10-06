@@ -238,7 +238,7 @@ namespace Raven.Tests.Bundles.Replication
 				session.Delete(session.Load<Company>("companies/1"));
 				session.SaveChanges();
 			}
-			servers[1].Database.TransactionalStorage.Batch(
+			servers[1].SystemDatabase.TransactionalStorage.Batch(
 			accessor => Assert.NotNull(accessor.Lists.Read("Raven/Replication/Docs/Tombstones", "companies/1")));
 	
 			TellFirstInstanceToReplicateToSecondInstance();
@@ -260,7 +260,7 @@ namespace Raven.Tests.Bundles.Replication
 				session.Store(new Company(), "companies/1");
 				session.SaveChanges();
 			}
-			servers[1].Database.TransactionalStorage.Batch(
+			servers[1].SystemDatabase.TransactionalStorage.Batch(
 				accessor => Assert.Null(accessor.Lists.Read("Raven/Replication/Docs/Tombstones", "companies/1")));
 		}
 	}
