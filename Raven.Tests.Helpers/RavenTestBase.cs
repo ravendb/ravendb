@@ -256,8 +256,7 @@ namespace Raven.Tests.Helpers
 
 		protected virtual void CreateDefaultIndexes(IDocumentStore documentStore)
 		{
-			//new RavenDocumentsByEntityName().Execute(documentStore); // This fails in new hosting env.
-			new RavenDocumentsByEntityName().ExecuteAsync(documentStore.AsyncDatabaseCommands, documentStore.Conventions).Wait();
+			new RavenDocumentsByEntityName().ExecuteAsync(documentStore.AsyncDatabaseCommands, documentStore.Conventions);
 		}
 
 		public static void WaitForIndexing(IDocumentStore store, string db = null)

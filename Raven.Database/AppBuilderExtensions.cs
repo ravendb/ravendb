@@ -7,9 +7,20 @@ using Raven.Database.Server.WebApi;
 // ReSharper disable once CheckNamespace
 namespace Owin
 {
+    using Raven.Database.Config;
+
     public static class AppBuilderExtensions
     {
-        // TODO Ext method where InMemoryRavenConfiguration and DocumentDatabase are defaults
+        public static IAppBuilder UseRavenDB(this IAppBuilder app)
+        {
+            return UseRavenDB(app, new InMemoryRavenConfiguration());
+        }
+
+        public static IAppBuilder UseRavenDB(this IAppBuilder app, InMemoryRavenConfiguration configuration)
+        {
+            return UseRavenDB(app, new RavenDBOptions(configuration));
+        }
+
         public static IAppBuilder UseRavenDB(this IAppBuilder app, RavenDBOptions options)
         {
             if (options == null)
@@ -19,6 +30,8 @@ namespace Owin
 
             DocumentDatabase documentDatabase = options.DocumentDatabase;
             
+            // This is a katana specific key (i.e. non a standard OWIN key) to be notified
+            // when the host in being shut down. Works both in HttpListener and SystemWeb hosting
             var appDisposing = app.Properties["host.OnAppDisposing"] as CancellationToken?;
             if (appDisposing.HasValue)
             {

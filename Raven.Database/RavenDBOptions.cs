@@ -1,9 +1,7 @@
-﻿using Raven.Abstractions.Logging;
-using Raven.Database.Config;
+﻿using Raven.Database.Config;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
-using Raven.Database.Util;
 
 namespace Raven.Database
 {
