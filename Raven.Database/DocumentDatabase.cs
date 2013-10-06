@@ -1565,7 +1565,14 @@ namespace Raven.Database
                 IndexStorage.DeleteIndex(instance.IndexId);
 
                 // And delete the data in the background
-                Task.Factory.StartNew(() => EnsureIndexDataIsDeleted(instance.IndexId));
+                var task = Task.Factory.StartNew(() => EnsureIndexDataIsDeleted(instance.IndexId));
+              
+                long id;
+                AddTask(task, null, out id);
+                PendingTaskAndState value;
+                task.ContinueWith(_ => pendingTasks.TryRemove(id, out value));
+
+
 
                 // We raise the notification now because as far as we're concerned it is done *now*
                 TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
