@@ -720,8 +720,7 @@ namespace Raven.Client.Connection
 		/// <param name="name">The name.</param>
 		public void DeleteIndex(string name)
 		{
-			EnsureIsNotNullOrEmpty(name, "name");
-			ExecuteWithReplication("DELETE", operationUrl => DirectDeleteIndex(name, operationUrl));
+		    asyncDatabaseCommands.DeleteIndexAsync(name).Wait();
 		}
 
 		private void DirectDeleteIndex(string name, string operationUrl)
