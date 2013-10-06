@@ -1526,6 +1526,8 @@ namespace Raven.Database
                         Thread.Sleep(100);
                     }
                 }
+                ConcurrentSet<string> _;
+                workContext.DoNotTouchAgainIfMissingReferences.TryRemove(name, out _);
                 workContext.ClearErrorsFor(name);
             }
         }

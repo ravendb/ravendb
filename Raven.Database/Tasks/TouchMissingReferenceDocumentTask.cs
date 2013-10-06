@@ -5,6 +5,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Indexing;
+using Raven.Database.Util;
 
 namespace Raven.Database.Tasks
 {
@@ -31,11 +32,12 @@ namespace Raven.Database.Tasks
                 logger.Debug("Going to touch the following documents (missing references, need to check for concurrent transactions): {0}",
                     string.Join(", ", Keys));
             }
+            var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(Index, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
             context.TransactionalStorage.Batch(accessor =>
             {
                 foreach (var key in Keys)
                 {
-                    context.DoNotTouchAgainIfMissingReferences.Add(key);
+                    set.Add(key);
                     try
                     {
                         Etag preTouchEtag;
