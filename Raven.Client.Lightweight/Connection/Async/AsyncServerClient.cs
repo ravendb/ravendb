@@ -869,7 +869,7 @@ namespace Raven.Client.Connection.Async
             });
         }
 
-        public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+        public Task UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
         {
             var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
             return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "EVAL");

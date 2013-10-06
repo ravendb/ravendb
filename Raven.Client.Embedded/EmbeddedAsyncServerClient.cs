@@ -257,7 +257,7 @@ namespace Raven.Client.Embedded
 			return new CompletedTask();
 		}
 
-		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+		public Task UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
 			databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
 			return new CompletedTask();
