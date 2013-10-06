@@ -856,36 +856,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
 		{
-			return ExecuteWithReplication("POST", u => DirectBatch(commandDatas, u));
-		}
-
-		private BatchResult[] DirectBatch(IEnumerable<ICommandData> commandDatas, string operationUrl)
-		{
-			var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
-			var req = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/bulk_docs", "POST", metadata, credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-			var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
-			req.Write(jArray.ToString(Formatting.None, Default.Converters));
-
-			RavenJArray response;
-			try
-			{
-				response = (RavenJArray)req.ReadResponseJson();
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null ||
-					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-					throw;
-				throw FetchConcurrencyException(e);
-			}
-			return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
+		    return asyncDatabaseCommands.BatchAsync(commandDatas.ToArray()).Result;
 		}
 
 	    /// <summary>
