@@ -1147,24 +1147,7 @@ namespace Raven.Client.Connection
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
 		{
-			return ExecuteWithReplication("GET", operationUrl =>
-			{
-				var requestUri = operationUrl + string.Format("/facets/{0}?facetDoc={1}&{2}&facetStart={3}&facetPageSize={4}",
-																Uri.EscapeUriString(index),
-																Uri.EscapeDataString(facetSetupDoc),
-																query.GetMinimalQueryString(),
-																start,
-																pageSize);
-
-				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
-						.AddOperationHeaders(OperationsHeaders))
-                        .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-				var json = (RavenJObject)request.ReadResponseJson();
-				return json.JsonDeserialization<FacetResults>();
-			});
+		    return asyncDatabaseCommands.GetFacetsAsync(index, query, facetSetupDoc, start, pageSize).Result;
 		}
 
         /// <summary>
@@ -1177,30 +1160,7 @@ namespace Raven.Client.Connection
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize)
         {
-			string facetsJson = JsonConvert.SerializeObject(facets);
-	        var method = facetsJson.Length > 1024 ? "POST" : "GET";
-			return ExecuteWithReplication(method, operationUrl =>
-            {
-                var requestUri = operationUrl + string.Format("/facets/{0}?{1}&facetStart={2}&facetPageSize={3}",
-                                                                Uri.EscapeUriString(index),
-                                                                query.GetMinimalQueryString(),
-                                                                start,
-                                                                pageSize);
-
-				if(method == "GET")
-					requestUri += "&facets=" + Uri.EscapeDataString(facetsJson);
-
-                var request = jsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(this, requestUri, method, credentials, convention)
-                        .AddOperationHeaders(OperationsHeaders))
-                        .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-				if (method != "GET")
-					request.Write(facetsJson);
-
-                var json = (RavenJObject)request.ReadResponseJson();
-                return json.JsonDeserialization<FacetResults>();
-            });
+            return asyncDatabaseCommands.GetFacetsAsync(index, query, facets, start, pageSize).Result;
         }
 
 		/// <summary>
