@@ -26,6 +26,16 @@ namespace Raven.Abstractions.Util
 			inner.EnterWriteLock();
 			return new DisposableAction(inner.ExitWriteLock);
 		}
+
+        public IDisposable TryEnterWriteLock(TimeSpan ts)
+        {
+            if (inner.IsWriteLockHeld)
+                return new DisposableAction(() => { });
+
+            if (inner.TryEnterWriteLock(ts) == false)
+                return null;
+            return new DisposableAction(inner.ExitWriteLock);
+        }
 #else
 		readonly object inner = new object();
 		public IDisposable EnterReadLock()
