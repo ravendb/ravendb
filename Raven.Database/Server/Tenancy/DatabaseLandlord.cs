@@ -190,7 +190,7 @@ namespace Raven.Database.Server.Tenancy
 			Task<DocumentDatabase> db;
 			if (TryGetOrCreateResourceStore(name, out db))
 				return db;
-			return null;
+			return Task.FromResult<DocumentDatabase>(null);
 		}
 
 		public void CleanupDatabase(string db, bool skipIfActive)

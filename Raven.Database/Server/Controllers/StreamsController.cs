@@ -110,9 +110,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet("streams/query/{*id}")]
-		[HttpHead("streams/query/{*id}")]
 		[HttpGet("databases/{databaseName}/streams/query/{*id}")]
-		[HttpHead("databases/{databaseName}/streams/query/{*id}")]
 		public HttpResponseMessage SteamQueryGet(string id)
 		{
 			var msg = GetMessageWithString("");

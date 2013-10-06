@@ -94,7 +94,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var index = id;
 			if (Database.IndexDefinitionStorage.IndexNames.Contains(index, StringComparer.OrdinalIgnoreCase) == false)
-				return GetMessageWithString("Index " + id + " not found", HttpStatusCode.NotFound);
+				return new HttpResponseMessage(HttpStatusCode.NotFound);
 			return new HttpResponseMessage(HttpStatusCode.OK);
 		}
 

@@ -29,7 +29,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] { "GET", "HEAD" }; }
+			get { return new[] { "GET" }; }
 		}
 
 		public override void Respond(IHttpContext context)
