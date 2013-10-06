@@ -1105,7 +1105,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public string UrlFor(string documentKey)
 		{
-			return url + "/docs/" + documentKey;
+		    return asyncDatabaseCommands.UrlFor(documentKey);
 		}
 
 		/// <summary>

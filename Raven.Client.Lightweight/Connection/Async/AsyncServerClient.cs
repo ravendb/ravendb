@@ -1707,6 +1707,11 @@ namespace Raven.Client.Connection.Async
 		        }
             */
         }
+
+        public string UrlFor(string documentKey)
+        {
+            return url + "/docs/" + documentKey;
+        }
 #endif
 #if SILVERLIGHT
 		/// <summary>

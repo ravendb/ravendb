@@ -354,6 +354,11 @@ namespace Raven.Client.Embedded
 	        throw new NotImplementedException();
 	    }
 
+	    public string UrlFor(string documentKey)
+	    {
+	        return databaseCommands.UrlFor(documentKey);
+	    }
+
 	    #region IAsyncGlobalAdminDatabaseCommands
 
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin

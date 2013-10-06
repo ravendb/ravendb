@@ -385,6 +385,11 @@ namespace Raven.Client.Connection.Async
 #endif
 
         Task DeleteAsync(string key, Etag etag);
+
+        /// <summary>
+        /// Get the full URL for the given document key
+        /// </summary>
+        string UrlFor(string documentKey);
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands
