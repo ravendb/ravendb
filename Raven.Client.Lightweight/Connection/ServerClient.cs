@@ -1061,37 +1061,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery)
 		{
-			if (suggestionQuery == null) throw new ArgumentNullException("suggestionQuery");
-
-			return ExecuteWithReplication("GET", operationUrl =>
-			{
-				var requestUri = operationUrl + string.Format("/suggest/{0}?term={1}&field={2}&max={3}&popularity={4}",
-													 Uri.EscapeUriString(index),
-													 Uri.EscapeDataString(suggestionQuery.Term),
-													 Uri.EscapeDataString(suggestionQuery.Field),
-													 Uri.EscapeDataString(suggestionQuery.MaxSuggestions.ToInvariantString()),
-													 suggestionQuery.Popularity);
-
-				if (suggestionQuery.Accuracy.HasValue)
-					requestUri += "&accuracy=" + suggestionQuery.Accuracy.Value.ToInvariantString();
-
-				if (suggestionQuery.Distance.HasValue)
-					requestUri += "&distance=" + suggestionQuery.Distance;
-
-				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
-						.AddOperationHeaders(OperationsHeaders))
-                        .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-
-				var json = (RavenJObject)request.ReadResponseJson();
-
-				return new SuggestionQueryResult
-				{
-					Suggestions = ((RavenJArray)json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
-				};
-			});
+		    return asyncDatabaseCommands.SuggestAsync(index, suggestionQuery).Result;
 		}
 
 		/// <summary>
