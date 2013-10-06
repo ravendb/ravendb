@@ -34,14 +34,17 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-	/// <summary>
+    using Raven.Client.Connection.Async;
+
+    /// <summary>
 	/// Access the RavenDB operations using HTTP
 	/// </summary>
 	public class ServerClient : IDatabaseCommands//, IAdminDatabaseCommands
 	{
 		private readonly string url;
 		internal readonly DocumentConvention convention;
-		private readonly ICredentials credentials;
+        private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+        private readonly ICredentials credentials;
 		private readonly Func<string, ReplicationInformer> replicationInformerGetter;
 		private readonly string databaseName;
 		private readonly ReplicationInformer replicationInformer;
@@ -66,10 +69,20 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ServerClient"/> class.
 		/// </summary>
-		public ServerClient(string url, DocumentConvention convention, ICredentials credentials, Func<string, ReplicationInformer> replicationInformerGetter, string databaseName, HttpJsonRequestFactory jsonRequestFactory, Guid? currentSessionId, IDocumentConflictListener[] conflictListeners)
+		public ServerClient(
+            IAsyncDatabaseCommands asyncDatabaseCommands,
+            string url,
+            DocumentConvention convention,
+            ICredentials credentials,
+            Func<string, ReplicationInformer> replicationInformerGetter,
+            string databaseName,
+            HttpJsonRequestFactory jsonRequestFactory,
+            Guid? currentSessionId,
+            IDocumentConflictListener[] conflictListeners)
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(currentSessionId);
-			this.credentials = credentials;
+		    this.asyncDatabaseCommands = asyncDatabaseCommands;
+		    this.credentials = credentials;
 			this.replicationInformerGetter = replicationInformerGetter;
 			this.databaseName = databaseName;
 			replicationInformer = replicationInformerGetter(databaseName);
@@ -82,7 +95,6 @@ namespace Raven.Client.Connection
 				this.url = url.Substring(0, url.Length - 1);
 
 			this.convention = convention;
-			OperationsHeaders = new NameValueCollection();
 			replicationInformer.UpdateReplicationInformationIfNeeded(this);
 			readStripingBase = replicationInformer.GetReadStripingBase();
 		}
@@ -101,9 +113,10 @@ namespace Raven.Client.Connection
 		/// Gets or sets the operations headers.
 		/// </summary>
 		/// <value>The operations headers.</value>
-		public NameValueCollection OperationsHeaders
+        public NameValueCollection OperationsHeaders
 		{
-			get; set;
+			get { return asyncDatabaseCommands.OperationsHeaders; }
+            set { asyncDatabaseCommands.OperationsHeaders = value; }
 		}
 
 		/// <summary>
@@ -113,8 +126,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public JsonDocument Get(string key)
 		{
-			EnsureIsNotNullOrEmpty(key, "key");
-			return ExecuteWithReplication("GET", u => DirectGet(u, key));
+		    return asyncDatabaseCommands.GetAsync(key).Result;
 		}
 
 	    public IGlobalAdminDatabaseCommands GlobalAdmin
@@ -126,9 +138,8 @@ namespace Raven.Client.Connection
 		/// Gets documents for the specified key prefix
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
-		{
-			EnsureIsNotNullOrEmpty(keyPrefix, "keyPrefix");
-			return ExecuteWithReplication("GET", u => DirectStartsWith(u, keyPrefix, matches, exclude, start, pageSize, metadataOnly));
+	    {
+            return asyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, metadataOnly, exclude).Result;
 		}
 
 		/// <summary>
@@ -359,38 +370,6 @@ namespace Raven.Client.Connection
 		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 			return ExecuteWithReplication("PUT", u => DirectPut(metadata, key, etag, document, u));
-		}
-
-		private JsonDocument[] DirectStartsWith(string operationUrl, string keyPrefix, string matches, string exclude, int start, int pageSize, bool metadataOnly)
-		{
-			var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
-			var actualUrl = string.Format("{0}/docs?startsWith={1}&matches={4}&exclude={5}&start={2}&pageSize={3}", operationUrl,
-										  Uri.EscapeDataString(keyPrefix), start.ToInvariantString(), pageSize.ToInvariantString(),
-                                          Uri.EscapeDataString(matches ?? ""), Uri.EscapeDataString(exclude ?? ""));
-			if (metadataOnly)
-				actualUrl += "&metadata-only=true";
-
-			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-			RavenJToken responseJson;
-			try
-			{
-				responseJson = request.ReadResponseJson();
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null ||
-					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-					throw;
-				throw FetchConcurrencyException(e);
-			}
-			return SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)responseJson).OfType<RavenJObject>()).ToArray();
 		}
 
 		private PutResult DirectPut(RavenJObject metadata, string key, Etag etag, RavenJObject document, string operationUrl)
@@ -1508,7 +1487,9 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public IDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new ServerClient(url, convention, credentialsForSession, replicationInformerGetter, databaseName, jsonRequestFactory, currentSessionId, conflictListeners);
+			return new ServerClient(
+                new AsyncServerClient(url, convention, credentialsForSession,  jsonRequestFactory, currentSessionId, replicationInformerGetter, databaseName, conflictListeners),
+                url, convention, credentialsForSession, replicationInformerGetter, databaseName, jsonRequestFactory, currentSessionId, conflictListeners);
 		}
 
 		/// <summary>
@@ -1542,7 +1523,9 @@ namespace Raven.Client.Connection
 			databaseUrl = databaseUrl + "/databases/" + database;
 			if (databaseUrl == Url)
 				return this;
-			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, database, jsonRequestFactory, currentSessionId, conflictListeners)
+			return new ServerClient(
+                new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, currentSessionId, replicationInformerGetter, databaseName, conflictListeners),
+                databaseUrl, convention, credentials, replicationInformerGetter, database, jsonRequestFactory, currentSessionId, conflictListeners)
 				   {
 					   OperationsHeaders = OperationsHeaders
 				   };
@@ -1553,7 +1536,9 @@ namespace Raven.Client.Connection
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == Url)
 				return this;
-			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, null, jsonRequestFactory, currentSessionId, conflictListeners)
+			return new ServerClient(
+                new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, currentSessionId, replicationInformerGetter, databaseName, conflictListeners),
+                databaseUrl, convention, credentials, replicationInformerGetter, null, jsonRequestFactory, currentSessionId, conflictListeners)
 			{
 				OperationsHeaders = OperationsHeaders
 			};

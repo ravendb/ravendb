@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -15,7 +14,6 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
-using Raven.Database.Server;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
@@ -27,98 +25,7 @@ namespace Raven.Client.Embedded
 		public EmbeddedAsyncServerClient(IDatabaseCommands databaseCommands)
 		{
 			this.databaseCommands = databaseCommands;
-			OperationsHeaders = new DictionaryWrapper(databaseCommands.OperationsHeaders);
-		}
-
-		internal class DictionaryWrapper : IDictionary<string, string>
-		{
-			private readonly NameValueCollection inner;
-
-			public DictionaryWrapper(NameValueCollection inner)
-			{
-				this.inner = inner;
-			}
-
-			public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
-			{
-				return (from string key in inner select new KeyValuePair<string, string>(key, inner[key])).GetEnumerator();
-			}
-
-			IEnumerator IEnumerable.GetEnumerator()
-			{
-				return GetEnumerator();
-			}
-
-			public void Add(KeyValuePair<string, string> item)
-			{
-				inner.Add(item.Key, item.Value);
-			}
-
-			public void Clear()
-			{
-				inner.Clear();
-			}
-
-			public bool Contains(KeyValuePair<string, string> item)
-			{
-				return inner[item.Key] == item.Value;
-			}
-
-			public void CopyTo(KeyValuePair<string, string>[] array, int arrayIndex)
-			{
-				throw new NotImplementedException();
-			}
-
-			public bool Remove(KeyValuePair<string, string> item)
-			{
-				inner.Remove(item.Key);
-				return true;
-			}
-
-			public int Count { get { return inner.Count; } }
-			public bool IsReadOnly { get { return false; } }
-			public bool ContainsKey(string key)
-			{
-				return inner[key] != null;
-			}
-
-			public void Add(string key, string value)
-			{
-				inner.Add(key, value);
-			}
-
-			public bool Remove(string key)
-			{
-				inner.Remove(key);
-				return true;
-			}
-
-			public bool TryGetValue(string key, out string value)
-			{
-				value = inner[key];
-				return value != null;
-			}
-
-			public string this[string key]
-			{
-				get { return inner[key]; }
-				set { inner[key] = value; }
-			}
-
-			public ICollection<string> Keys
-			{
-				get
-				{
-					return inner.Cast<string>().ToList();
-				}
-			}
-			public ICollection<string> Values
-			{
-				get
-				{
-					return inner.Cast<string>().Select(x => inner[x]).ToList();
-				}
-			}
+			OperationsHeaders = databaseCommands.OperationsHeaders;
 		}
 
 		public void Dispose()
@@ -130,8 +37,7 @@ namespace Raven.Client.Embedded
 			get { return databaseCommands.ProfilingInformation; }
 		}
 
-		public IDictionary<string, string> OperationsHeaders { get; set; }
-
+		public NameValueCollection OperationsHeaders { get; set; }
 
 		public Task<JsonDocument> GetAsync(string key)
 		{
@@ -411,10 +317,10 @@ namespace Raven.Client.Embedded
 			throw new NotSupportedException();
 		}
 
-		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false, string exclude = null)
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
 		{
 			// Should add a 'matches' parameter? Setting to null for now.
-			return new CompletedTask<JsonDocument[]>(databaseCommands.StartsWith(keyPrefix, null, start, pageSize, metadataOnly, exclude));
+            return new CompletedTask<JsonDocument[]>(databaseCommands.StartsWith(keyPrefix, matches, start, pageSize, metadataOnly, exclude));
 		}
 
 		public void ForceReadFromMaster()

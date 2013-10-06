@@ -706,12 +706,9 @@ namespace Raven.Client.Connection
 		/// Adds the operation headers.
 		/// </summary>
 		/// <param name="operationsHeaders">The operations headers.</param>
-		public HttpJsonRequest AddOperationHeaders(IDictionary<string, string> operationsHeaders)
+		public HttpJsonRequest AddOperationHeaders(NameValueCollection operationsHeaders)
 		{
-			foreach (var header in operationsHeaders)
-			{
-				headers[header.Key] = header.Value;
-			}
+            headers.Add(operationsHeaders);
 			return this;
 		}
 

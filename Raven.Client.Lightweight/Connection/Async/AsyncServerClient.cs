@@ -59,7 +59,7 @@ namespace Raven.Client.Connection.Async
         private readonly string rootUrl;
         private readonly ICredentials credentials;
         internal readonly DocumentConvention convention;
-        private IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
+        private NameValueCollection operationsHeaders = new NameValueCollection();
         internal readonly HttpJsonRequestFactory jsonRequestFactory;
         private readonly Guid? sessionId;
         private readonly Func<string, ReplicationInformer> replicationInformerGetter;
@@ -610,16 +610,14 @@ namespace Raven.Client.Connection.Async
             };
         }
 
-
-
-
         /// <summary>
         /// Gets or sets the operations headers.
         /// </summary>
         /// <value>The operations headers.</value>
-        public IDictionary<string, string> OperationsHeaders
+        public NameValueCollection OperationsHeaders
         {
             get { return operationsHeaders; }
+            set { operationsHeaders = value; }
         }
 
         /// <summary>
@@ -630,12 +628,8 @@ namespace Raven.Client.Connection.Async
         public Task<JsonDocument> GetAsync(string key)
         {
             EnsureIsNotNullOrEmpty(key, "key");
-
             return ExecuteWithReplication("GET", url => DirectGetAsync(url, key));
         }
-
-
-
 
         /// <summary>
         /// Gets the transformer definition for the specified name asynchronously
@@ -1060,14 +1054,16 @@ namespace Raven.Client.Connection.Async
             });
         }
 
-        public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false, string exclude = null)
+        public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
         {
             return ExecuteWithReplication("GET", operationUrl =>
         {
             var metadata = new RavenJObject();
             AddTransactionInformation(metadata);
-            var actualUrl = string.Format("{0}/docs?startsWith={1}&exclude={4}&start={2}&pageSize={3}", operationUrl,
-                                          Uri.EscapeDataString(keyPrefix), start.ToInvariantString(), pageSize.ToInvariantString(), exclude);
+            var actualUrl = string.Format("{0}/docs?startsWith={1}&matches={4}&exclude={5}&start={2}&pageSize={3}", operationUrl,
+                                          Uri.EscapeDataString(keyPrefix), start.ToInvariantString(), pageSize.ToInvariantString(),
+                                          Uri.EscapeDataString(matches ?? ""),
+                                          Uri.EscapeDataString(exclude ?? ""));
             if (metadataOnly)
                 actualUrl += "&metadata-only=true";
             var request = jsonRequestFactory.CreateHttpJsonRequest(

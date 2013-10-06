@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -26,7 +27,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
 {
-	/// <summary>
+
+    /// <summary>
 	/// An async database command operations
 	/// </summary>
 	public interface IAsyncDatabaseCommands : IDisposable, IHoldProfilingInformation
@@ -35,7 +37,7 @@ namespace Raven.Client.Connection.Async
 		/// Gets the operations headers.
 		/// </summary>
 		/// <value>The operations headers.</value>
-		IDictionary<string, string> OperationsHeaders { get; }
+		NameValueCollection OperationsHeaders { get; set; }
 
 		/// <summary>
 		/// Admin operations performed against system database, like create/delete database
@@ -366,7 +368,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Get documents with id of a specific prefix
 		/// </summary>
-		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false, string exclude = null);
+		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null);
 
 		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.

@@ -382,7 +382,7 @@ namespace Raven.Studio.Models
 			switch (PatchOn)
 			{
 				case PatchOnOptions.Document:
-					return ApplicationModel.Database.Value.AsyncDatabaseCommands.StartsWithAsync(SelectedItem, 0, 25, metadataOnly: true)
+					return ApplicationModel.Database.Value.AsyncDatabaseCommands.StartsWithAsync(SelectedItem, null, 0, 25, metadataOnly: true)
 						.ContinueWith(t => (IList<object>) t.Result.Select(d => d.Key).Cast<object>().ToList());
 
 				case PatchOnOptions.Collection:
