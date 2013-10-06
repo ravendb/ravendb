@@ -1542,10 +1542,9 @@ namespace Raven.Database
             }
         }
 
-
         public void DeleteTransfom(string name)
-		{
-			IndexDefinitionStorage.RemoveTransformer(name);
+        {
+          IndexDefinitionStorage.RemoveTransformer(name);
         }
 
         public void DeleteIndex(string name)
@@ -1554,36 +1553,39 @@ namespace Raven.Database
             {
                 var instance = IndexDefinitionStorage.GetIndexDefinition(name);
                 if (instance == null) return;
-                IndexDefinitionStorage.RemoveIndex(name);
-                IndexStorage.DeleteIndex(name);
-                //we may run into a conflict when trying to delete if the index is currently
-                //busy indexing documents, worst case scenario, we will have an orphaned index
-                //row which will get cleaned up on next db restart.
-                for (var i = 0; i < 10; i++)
+
+                // Set up a flag to signal that this is something we're doing
+                TransactionalStorage.Batch(actions => actions.Lists.Set("Raven/Indexes/PendingDeletion", instance.IndexId.ToString(), (RavenJObject.FromObject(new
                 {
-                    try
-                    {
-                        TransactionalStorage.Batch(action =>
-                        {
-                            action.Indexing.DeleteIndex(instance.IndexId);
-                            workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
-                        });
+                   TimeOfOriginalDeletion = DateTime.UtcNow 
+                })) , UuidType.Tasks));
 
-                        TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
-                        {
-                            Name = name,
-                            Type = IndexChangeTypes.IndexRemoved,
-                        }));
+                // Delete the main record synchronously
+                IndexDefinitionStorage.RemoveIndex(name);
+                IndexStorage.DeleteIndex(instance.IndexId);
 
-                        return;
-                    }
-                    catch (ConcurrencyException)
-                    {
-                        Thread.Sleep(100);
-                    }
-                }
-                workContext.ClearErrorsFor(name);
+                // And delete the data in the background
+                Task.Factory.StartNew(() => EnsureIndexDataIsDeleted(instance.IndexId));
+
+                // We raise the notification now because as far as we're concerned it is done *now*
+                TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
+                {
+                    Name = name,
+                    Type = IndexChangeTypes.IndexRemoved,
+                }));
             }
+        }
+
+        internal void EnsureIndexDataIsDeleted(int id)
+        {
+            // Data can take a while
+            IndexStorage.DeleteIndexData(id);
+            TransactionalStorage.Batch(actions =>
+            {
+                // And Esent data can take a while too
+                actions.Indexing.DeleteIndex(id);
+                actions.Lists.Remove("Raven/Indexes/PendingDeletion", id.ToString());
+            });
         }
 
         public Attachment GetStatic(string name)
