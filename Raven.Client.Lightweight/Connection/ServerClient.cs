@@ -337,17 +337,7 @@ namespace Raven.Client.Connection
 
 		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
 		{
-			return ExecuteWithReplication("GET", url =>
-			{
-				var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
-				if (metadataOnly)
-					requestUri += "&metadata-only=true";
-				RavenJToken result = jsonRequestFactory
-					.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.ReadResponseJson();
-				return ((RavenJArray)result).Cast<RavenJObject>().ToJsonDocuments().ToArray();
-			});
+		    return asyncDatabaseCommands.GetDocumentsAsync(start, pageSize, metadataOnly).Result;
 		}
 
 		/// <summary>
