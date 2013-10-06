@@ -7,21 +7,17 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using Raven.Abstractions.Json;
 using Raven.Client.Changes;
 using Raven.Client.Listeners;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
-using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection.Profiling;
@@ -29,7 +25,6 @@ using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -54,7 +49,6 @@ namespace Raven.Client.Connection
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly Guid? currentSessionId;
 		private readonly IDocumentConflictListener[] conflictListeners;
-		private readonly ProfilingInformation profilingInformation;
 		private int readStripingBase;
 
 		private bool resolvingConflict;
@@ -83,7 +77,6 @@ namespace Raven.Client.Connection
             Guid? currentSessionId,
             IDocumentConflictListener[] conflictListeners)
 		{
-			profilingInformation = ProfilingInformation.CreateProfilingInformation(currentSessionId);
 		    this.asyncDatabaseCommands = asyncDatabaseCommands;
 		    this.credentials = credentials;
 			this.replicationInformerGetter = replicationInformerGetter;
