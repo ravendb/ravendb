@@ -1613,44 +1613,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public JsonDocumentMetadata Head(string key)
 		{
-			EnsureIsNotNullOrEmpty(key, "key");
-			return ExecuteWithReplication("HEAD", u => DirectHead(u, key));
-		}
-
-		/// <summary>
-		/// Do a direct HEAD request against the server for the specified document
-		/// </summary>
-		public JsonDocumentMetadata DirectHead(string serverUrl, string key)
-		{
-			var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
-			HttpJsonRequest request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, serverUrl + "/docs/" + key, "HEAD", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-			try
-			{
-				request.ExecuteRequest();
-				return SerializationHelper.DeserializeJsonDocumentMetadata(key, request.ResponseHeaders, request.ResponseStatusCode);
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null)
-					throw;
-				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-					return null;
-				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-				{
-					throw new ConflictException("Conflict detected on " + key +
-												", conflict must be resolved before the document will be accessible. Cannot get the conflicts ids because a HEAD request was performed. A GET request will provide more information, and if you have a document conflict listener, will automatically resolve the conflict", true)
-					{
-						Etag = httpWebResponse.GetEtagHeader()
-					};
-				}
-				throw;
-			}
+		    return asyncDatabaseCommands.HeadAsync(key).Result;
 		}
 
 		/// <summary>
