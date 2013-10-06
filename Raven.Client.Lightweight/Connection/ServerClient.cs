@@ -360,44 +360,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
-			return ExecuteWithReplication("PUT", u => DirectPut(metadata, key, etag, document, u));
-		}
-
-		private PutResult DirectPut(RavenJObject metadata, string key, Etag etag, RavenJObject document, string operationUrl)
-		{
-			if (metadata == null)
-				metadata = new RavenJObject();
-			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
-			AddTransactionInformation(metadata);
-			if (etag != null)
-				metadata["ETag"] = new RavenJValue(etag);
-
-			if (key != null)
-				key = Uri.EscapeDataString(key);
-
-			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/docs/" + key, method, metadata, credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-			request.Write(document.ToString());
-
-			RavenJToken responseJson;
-			try
-			{
-				responseJson = request.ReadResponseJson();
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null ||
-					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-					throw;
-				throw FetchConcurrencyException(e);
-			}
-			var jsonSerializer = convention.CreateSerializer();
-			return jsonSerializer.Deserialize<PutResult>(new RavenJTokenReader(responseJson));
+		    return asyncDatabaseCommands.PutAsync(key, etag, document, metadata).Result;
 		}
 
 		private void AddTransactionInformation(RavenJObject metadata)
