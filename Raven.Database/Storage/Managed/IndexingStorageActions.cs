@@ -206,7 +206,7 @@ namespace Raven.Storage.Managed
 				.Distinct(StringComparer.OrdinalIgnoreCase);
 		}
 
-		public void DeleteIndex(int id)
+		public void DeleteIndex(int id, CancellationToken cancellationToken)
 		{
 			storage.IndexingStats.Remove(id.ToString());
 			storage.LastIndexedEtags.Remove(id.ToString());
@@ -216,6 +216,8 @@ namespace Raven.Storage.Managed
 				foreach (var key in table["ByView"].SkipTo(new RavenJObject { { "view", id } })
 					.TakeWhile(x => x.Value<int>("view") == id))
 				{
+				    if (cancellationToken.IsCancellationRequested)
+				        return;
 					table.Remove(key);
 				}
 			}

@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -156,7 +157,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public void DeleteIndex(int id)
+		public void DeleteIndex(int id, CancellationToken cancellationToken)
 		{
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
 			Api.MakeKey(session, IndexesStats, id, MakeKeyGrbit.NewKey);
@@ -201,7 +202,7 @@ namespace Raven.Storage.Esent.StorageActions
 						break;
 					MaybePulseTransaction();
 					Api.JetDelete(session, op.Table);
-				} while (Api.TryMoveNext(session, op.Table));
+                } while (Api.TryMoveNext(session, op.Table) && cancellationToken.IsCancellationRequested == false);
 			}
 
 		}
