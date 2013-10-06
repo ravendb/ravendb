@@ -179,7 +179,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Creates a transformer with the specified name, based on an transformer definition
 		/// </summary>
-		string PutTransformer(string name, TransformerDefinition indexDef);
+		string PutTransformer(string name, TransformerDefinition transformerDef);
 
 		/// <summary>
 		/// Creates an index with the specified name, based on an index definition
