@@ -51,7 +51,7 @@ namespace Voron.Tests.Trees
 
 			Assert.Equal(after.RootPages, before.RootPages);
 
-			Assert.True(Env.NextPageNumber - old < 2);
+			Assert.True(Env.NextPageNumber - old < 2, "This test will not pass until we finish merging the free space branch");
 		}
 	}
 }
