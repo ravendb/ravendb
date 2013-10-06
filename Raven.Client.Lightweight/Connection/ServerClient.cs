@@ -1170,7 +1170,7 @@ namespace Raven.Client.Connection
 		/// <param name="patches">Array of patch requests</param>
 		public RavenJObject Patch(string key, PatchRequest[] patches)
 		{
-			return Patch(key, patches, null);
+		    return asyncDatabaseCommands.PatchAsync(key, patches, null).Result;
 		}
 
 		/// <summary>
@@ -1181,17 +1181,7 @@ namespace Raven.Client.Connection
 		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
 		public RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing)
 		{
-			var batchResults = Batch(new[]
-			{
-				new PatchCommandData
-				{
-					Key = key,
-					Patches = patches
-				}
-			});
-			if (!ignoreMissing && batchResults[0].PatchResult != null && batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
-				throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
-			return batchResults[0].AdditionalData;
+		    return asyncDatabaseCommands.PatchAsync(key, patches, ignoreMissing).Result;
 		}
 
 		/// <summary>
@@ -1201,7 +1191,7 @@ namespace Raven.Client.Connection
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch)
 		{
-			return Patch(key, patch, null);
+            return asyncDatabaseCommands.PatchAsync(key, patch, null).Result;
 		}
 
 		/// <summary>
@@ -1212,17 +1202,7 @@ namespace Raven.Client.Connection
 		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing)
 		{
-			var batchResults = Batch(new[]
-				  {
-					  new ScriptedPatchCommandData
-					  {
-						  Key = key,
-						  Patch = patch
-					  }
-				  });
-			if (!ignoreMissing && batchResults[0].PatchResult != null && batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
-				throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
-			return batchResults[0].AdditionalData;
+            return asyncDatabaseCommands.PatchAsync(key, patch, ignoreMissing).Result;
 		}
 
 		/// <summary>
@@ -1233,16 +1213,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		public RavenJObject Patch(string key, PatchRequest[] patches, Etag etag)
 		{
-			var batchResults = Batch(new[]
-			      	{
-			      		new PatchCommandData
-			      			{
-			      				Key = key,
-			      				Patches = patches,
-			      				Etag = etag
-			      			}
-			      	});
-			return batchResults[0].AdditionalData;
+            return asyncDatabaseCommands.PatchAsync(key, patches, etag).Result;
 		}
 
 		/// <summary>
@@ -1254,17 +1225,7 @@ namespace Raven.Client.Connection
 		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
 		public RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata)
 		{
-			var batchResults = Batch(new[]
-					{
-						new PatchCommandData
-							{
-								Key = key,
-								Patches = patchesToExisting,
-								PatchesIfMissing = patchesToDefault,
-								Metadata = defaultMetadata
-							}
-					});
-			return batchResults[0].AdditionalData;
+            return asyncDatabaseCommands.PatchAsync(key, patchesToExisting, patchesToDefault, defaultMetadata).Result;
 		}
 
 		/// <summary>
@@ -1275,16 +1236,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag)
 		{
-			var batchResults = Batch(new[]
-			{
-				new ScriptedPatchCommandData
-				{
-					Key = key,
-					Patch = patch,
-					Etag = etag
-				}
-			});
-			return batchResults[0].AdditionalData;
+            return asyncDatabaseCommands.PatchAsync(key, patch, etag).Result;
 		}
 
 		/// <summary>
@@ -1296,17 +1248,7 @@ namespace Raven.Client.Connection
 		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata)
 		{
-			var batchResults = Batch(new[]
-			{
-				new ScriptedPatchCommandData
-				{
-					Key = key,
-					Patch = patchExisting,
-					PatchIfMissing = patchDefault,
-					Metadata = defaultMetadata
-				}
-			});
-			return batchResults[0].AdditionalData;
+            return asyncDatabaseCommands.PatchAsync(key, patchExisting, patchDefault, defaultMetadata).Result;
 		}
 
 		/// <summary>
@@ -1314,7 +1256,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IDisposable DisableAllCaching()
 		{
-			return jsonRequestFactory.DisableAllCaching();
+		    return asyncDatabaseCommands.DisableAllCaching();
 		}
 
 		#endregion
@@ -1324,7 +1266,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public ProfilingInformation ProfilingInformation
 		{
-			get { return profilingInformation; }
+			get { return asyncDatabaseCommands.ProfilingInformation; }
 		}
 
 		/// <summary>
@@ -1334,10 +1276,7 @@ namespace Raven.Client.Connection
 		public void Dispose()
 		{
 			GC.SuppressFinalize(this);
-			if (ProfilingInformation != null)
-			{
-				ProfilingInformation.DurationMilliseconds = (SystemTime.UtcNow - ProfilingInformation.At).TotalMilliseconds;
-			}
+            asyncDatabaseCommands.Dispose();
 		}
 
 		/// <summary>

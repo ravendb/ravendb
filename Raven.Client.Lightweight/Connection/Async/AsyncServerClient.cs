@@ -109,6 +109,11 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         public void Dispose()
         {
+            GC.SuppressFinalize(this);
+            if (profilingInformation != null)
+            {
+                profilingInformation.DurationMilliseconds = (SystemTime.UtcNow - profilingInformation.At).TotalMilliseconds;
+            }
         }
 
         /// <summary>
