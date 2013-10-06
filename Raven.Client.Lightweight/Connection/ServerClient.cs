@@ -381,7 +381,7 @@ namespace Raven.Client.Connection
 		/// <param name="metadata">The metadata.</param>
 		public void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata)
 		{
-			ExecuteWithReplication("PUT", operationUrl => DirectPutAttachment(key, metadata, etag, data, operationUrl));
+		    asyncDatabaseCommands.PutAttachmentAsync(key, etag, data, metadata).Wait();
 		}
 
 		/// <summary>
