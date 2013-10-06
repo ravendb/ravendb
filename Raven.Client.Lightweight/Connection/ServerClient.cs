@@ -39,7 +39,7 @@ namespace Raven.Client.Connection
     /// <summary>
 	/// Access the RavenDB operations using HTTP
 	/// </summary>
-	public class ServerClient : IDatabaseCommands//, IAdminDatabaseCommands
+	public class ServerClient : IDatabaseCommands
 	{
 		private readonly string url;
 		internal readonly DocumentConvention convention;
@@ -165,13 +165,9 @@ namespace Raven.Client.Connection
 			});
 		}
 
-		public HttpJsonRequest CreateRequest(string requestUrl, string method,  bool disableRequestCompression = false)
+		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
 		{
-			var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
-			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention).AddOperationHeaders(OperationsHeaders);
-			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
-			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
+		    return asyncDatabaseCommands.CreateRequest(requestUrl, method, disableRequestCompression);
 		}
 
 		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false)
