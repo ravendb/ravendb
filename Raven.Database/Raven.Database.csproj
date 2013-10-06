@@ -804,7 +804,6 @@
     <Compile Include="Server\WebApi\Attributes\HttpResetAttribute.cs" />
     <Compile Include="Server\WebApi\IRavenServer.cs" />
     <Compile Include="Server\WebApi\Handlers\GZipToJsonHandler.cs" />
-    <Compile Include="Server\WebApi\WebApiServer.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />
