@@ -1018,44 +1018,8 @@ namespace Raven.Client.Connection
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
-            return ExecuteWithReplication("DELETE", operationUrl =>
-			{
-				string path = queryToDelete.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
-				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, path, "DELETE", credentials, convention)
-						.AddOperationHeaders(OperationsHeaders))
-						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-				RavenJToken jsonResponse;
-				try
-				{
-					jsonResponse = request.ReadResponseJson();
-				}
-				catch (WebException e)
-				{
-					var httpWebResponse = e.Response as HttpWebResponse;
-					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-						throw new InvalidOperationException("There is no index named: " + indexName);
-					throw;
-				}
-
-				// Be compitable with the resopnse from v2.0 server
-				var serverBuild = request.ResponseHeaders.GetAsInt("Raven-Server-Build");
-				if (serverBuild < 2500)
-				{
-					if (serverBuild != 13 || (serverBuild == 13 && jsonResponse.Value<long>("OperationId") == default(long)))
-					{
-					return null;
-					}
-				}
-
-				var opId = ((RavenJObject)jsonResponse)["OperationId"];
-
-				if (opId == null || opId.Type != JTokenType.Integer)
-					return null;
-
-				return new Operation(this, opId.Value<long>());
-			});
-		}
+		    return asyncDatabaseCommands.DeleteByIndexAsync(indexName, queryToDelete, allowStale).Result;
+        }
 
 		/// <summary>
 		/// Perform a set based update using the specified index, not allowing the operation

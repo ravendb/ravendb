@@ -152,20 +152,12 @@ namespace Raven.Client.Connection.Async
 		Task DeleteIndexAsync(string name);
 
 		/// <summary>
-		/// Perform a set based deletes using the specified index, not allowing the operation
-		/// if the index is stale
-		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToDelete">The query to delete.</param>
-		Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete);
-
-		/// <summary>
 		/// Perform a set based deletes using the specified index
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale);
+        Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale = false);
 
 		/// <summary>
 		/// Deletes the transformer definition for the specified name asynchronously

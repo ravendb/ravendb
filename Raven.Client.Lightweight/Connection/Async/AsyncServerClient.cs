@@ -47,6 +47,8 @@ using System.Collections.Specialized;
 
 namespace Raven.Client.Connection.Async
 {
+    using Raven.Imports.Newtonsoft.Json.Linq;
+
     /// <summary>
     /// Access the database commands in async fashion
     /// </summary>
@@ -335,12 +337,7 @@ namespace Raven.Client.Connection.Async
                                                                         .ExecuteRequestAsync());
         }
 
-        public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete)
-        {
-            return DeleteByIndexAsync(indexName, queryToDelete, false);
-        }
-
-        public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
+        public Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
         {
             return ExecuteWithReplication("DELETE", async operationUrl =>
             {
@@ -351,16 +348,34 @@ namespace Raven.Client.Connection.Async
 
                 request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior,
                                                     HandleReplicationStatusChanges);
-
-                try
-                {
-                    await request.ExecuteRequestAsync();
-                }
+                RavenJToken jsonResponse;
+				try
+				{
+					jsonResponse = await request.ReadResponseJsonAsync();
+				}
                 catch (ErrorResponseException e)
                 {
                     if (e.StatusCode == HttpStatusCode.NotFound)
                         throw new InvalidOperationException("There is no index named: " + indexName, e);
+                    throw;
                 }
+
+                // Be compitable with the resopnse from v2.0 server
+                var serverBuild = request.ResponseHeaders.GetAsInt("Raven-Server-Build");
+                if (serverBuild < 2500)
+                {
+                    if (serverBuild != 13 || (serverBuild == 13 && jsonResponse.Value<long>("OperationId") == default(long)))
+                    {
+                        return null;
+                    }
+                }
+
+                var opId = ((RavenJObject)jsonResponse)["OperationId"];
+
+                if (opId == null || opId.Type != JTokenType.Integer)
+                    return null;
+
+                return new Operation(this, opId.Value<long>());
             });
         }
 

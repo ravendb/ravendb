@@ -121,10 +121,10 @@ namespace Raven.Client.Embedded
 			return DeleteByIndexAsync(indexName, queryToDelete, false);
 		}
 
-		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
+		public Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
 			databaseCommands.DeleteByIndex(indexName, queryToDelete, allowStale);
-			return new CompletedTask();
+			return new CompletedTask<Operation>();
 		}
 
 		public Task DeleteTransformerAsync(string name)
