@@ -1621,45 +1621,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
-			foreach (var getRequest in requests)
-			{
-				getRequest.Headers["Raven-Client-Version"] = HttpJsonRequest.ClientVersion;
-			}
-			return ExecuteWithReplication("GET", // this is a logical GET, physical POST
-										  operationUrl =>
-										  {
-											  var multiGetOperation = new MultiGetOperation(this, convention, operationUrl, requests);
-
-											  var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.
-																																					RequestUri, "POST", credentials, convention));
-
-											  var requestsForServer =
-												  multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
-
-											  var postedData = JsonConvert.SerializeObject(requestsForServer);
-
-											  if (multiGetOperation.CanFullyCache(jsonRequestFactory, httpJsonRequest, postedData))
-											  {
-												  return multiGetOperation.HandleCachingResponse(new GetResponse[requests.Length],
-																								 jsonRequestFactory);
-											  }
-
-											  httpJsonRequest.Write(postedData);
-											  var results = (RavenJArray)httpJsonRequest.ReadResponseJson();
-											  var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(
-																				  new RavenJTokenReader(results));
-
-											  // 1.0 servers return result as string, not as an object, need to convert here
-											  foreach (var response in responses.Where(r => r != null && r.Result != null && r.Result.Type == JTokenType.String))
-											  {
-												  var value = response.Result.Value<string>();
-												  response.Result = string.IsNullOrEmpty(value) ?
-													RavenJToken.FromObject(null) :
-													RavenJObject.Parse(value);
-											  }
-
-											  return multiGetOperation.HandleCachingResponse(responses, jsonRequestFactory);
-										  });
+		    return asyncDatabaseCommands.MultiGetAsync(requests).Result;
 		}
 
 		///<summary>
