@@ -629,7 +629,6 @@ namespace Raven.Client.Connection
 		public string PutIndex(string name, IndexDefinition definition)
 		{
 		    return asyncDatabaseCommands.PutIndexAsync(name, definition, false).Result;
-			return PutIndex(name, definition, false);
 		}
 
 		public string PutTransformer(string name, TransformerDefinition indexDef)
@@ -649,9 +648,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex(string name, IndexDefinition definition, bool overwrite)
 		{
-			EnsureIsNotNullOrEmpty(name, "name");
-
-			return ExecuteWithReplication("PUT", operationUrl => DirectPutIndex(name, operationUrl, overwrite, definition));
+            return asyncDatabaseCommands.PutIndexAsync(name, definition, overwrite).Result;
 		}
 
 		public string DirectPutTransformer(string name, string operationUrl, TransformerDefinition definition)
