@@ -84,8 +84,9 @@ namespace Raven.Client.Silverlight.Connection
 
 		public void RemoveAuthorizationHeader()
 		{
+#if !SILVERLIGHT
 			var headersWithoutAuthorization = new WebHeaderCollection();
-
+            
 			foreach (var header in webRequest.Headers.AllKeys)
 			{
 				if(header == "Authorization")
@@ -95,6 +96,7 @@ namespace Raven.Client.Silverlight.Connection
 			}
 
 			webRequest.Headers = headersWithoutAuthorization;
+#endif
 		}
 
 		private HttpJsonRequestFactory factory;

@@ -1640,7 +1640,6 @@ namespace Raven.Client.Connection.Async
             public RavenJObject Current { get; private set; }
         }
 
-
         public async Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null,
                                                                           string matches = null, int start = 0,
                                     int pageSize = Int32.MaxValue)
@@ -1698,15 +1697,6 @@ namespace Raven.Client.Connection.Async
 			var webResponse = await request.RawExecuteRequestAsync();
 			return new YieldStreamResults(webResponse);
 		}
-            var request = jsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(this, sb.ToString().NoCache(), "GET", credentials, convention)
-                    .AddOperationHeaders(OperationsHeaders))
-                                            .AddReplicationStatusHeaders(Url, url, replicationInformer,
-                                                                         convention.FailoverBehavior,
-                                                                         HandleReplicationStatusChanges);
-            var webResponse = await request.RawExecuteRequestAsync();
-            return new YieldStreamResults(webResponse);
-        }
 #endif
 #if SILVERLIGHT
 		/// <summary>
@@ -1717,6 +1707,7 @@ namespace Raven.Client.Connection.Async
 			return new RemoteBulkInsertOperation(options, this, changes);
 		}
 #endif
+
 
         /// <summary>
         /// Do a direct HEAD request against the server for the specified document
@@ -1986,26 +1977,30 @@ namespace Raven.Client.Connection.Async
             get { return this; }
         }
 
-		
+		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
+		{
+			var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+          
+            request.DisableAuthentication();
+#if !SILVERLIGHT
+			request.webRequest.ContentLength = 0;
+#endif
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+			var result = await request.ReadResponseJsonAsync();
+			return result.Value<string>("Token");
+		}
+
         public Task CreateDatabaseAsync(DatabaseDocument databaseDocument)
         {
             if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
                 throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
 
-		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
-		{
-			var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
-            var dbname = databaseDocument.Id.Replace("Raven/Databases/", "");
+		  var dbname = databaseDocument.Id.Replace("Raven/Databases/", "");
             MultiDatabase.AssertValidDatabaseName(dbname);
             var doc = RavenJObject.FromObject(databaseDocument);
             doc.Remove("Id");
 
-			request.DisableAuthentication();
-			request.webRequest.ContentLength = 0;
-			request.AddOperationHeader("Single-Use-Auth-Token", token);
-			var result = await request.ReadResponseJsonAsync();
-			return result.Value<string>("Token");
-		}
+			
             var req = CreateRequest("/admin/databases/" + Uri.EscapeDataString(dbname), "PUT");
             return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
         }

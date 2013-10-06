@@ -1548,7 +1548,7 @@ namespace Raven.Database
                 IndexStorage.DeleteIndex(instance.IndexId);
 
 				ConcurrentSet<string> _;
-                workContext.DoNotTouchAgainIfMissingReferences.TryRemove(name, out _);
+                workContext.DoNotTouchAgainIfMissingReferences.TryRemove(instance.IndexId, out _);
                 workContext.ClearErrorsFor(name);
 
                 // And delete the data in the background

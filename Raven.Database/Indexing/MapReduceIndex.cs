@@ -74,32 +74,6 @@ namespace Raven.Database.Indexing
             get { return true; }
         }
 
-        public override void IndexDocuments(
-            AbstractViewGenerator viewGenerator,
-            IndexingBatch batch,
-            IStorageActionsAccessor actions,
-            DateTime minimumTimestamp)
-        {
-            var count = 0;
-            var sourceCount = 0;
-            var sw = Stopwatch.StartNew();
-            var start = SystemTime.UtcNow;
-            var deleted = new Dictionary<ReduceKeyAndBucket, int>();
-            RecordCurrentBatch("Current Map", batch.Docs.Count);
-            var documentsWrapped = batch.Docs.Select(doc =>
-            {
-                sourceCount++;
-                var documentId = doc.__document_id;
-                actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, indexId, deleted);
-                return doc;
-            })
-                .Where(x => x is FilteredDocument == false)
-                .ToList();
-            var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
-
-            if (documentsWrapped.Count > 0)
-                actions.MapReduce.UpdateRemovedMapReduceStats(indexId, deleted);
-
 		public override void IndexDocuments(
 			AbstractViewGenerator viewGenerator,
 			IndexingBatch batch,
@@ -116,7 +90,7 @@ namespace Raven.Database.Indexing
 			{
 				sourceCount++;
 				var documentId = doc.__document_id;
-				actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, name, deleted);
+				actions.MapReduce.DeleteMappedResultsForDocumentId((string)documentId, indexId, deleted);
 				return doc;
 			})
 				.Where(x => x is FilteredDocument == false)
@@ -131,7 +105,12 @@ namespace Raven.Database.Indexing
                 var statsPerKey = new Dictionary<string, int>();
                 allState.Enqueue(Tuple.Create(localChanges, localStats, statsPerKey));
 
-                using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
+                using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, (references,
+                                                                                                     missing) =>
+                {
+                    allReferencedDocs.Enqueue(references);
+                    missingReferencedDocs.Enqueue(missing);
+                }))
                 {
                     // we are writing to the transactional store from multiple threads here, and in a streaming fashion
                     // should result in less memory and better perf

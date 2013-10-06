@@ -9,7 +9,7 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Tasks
 {
-    public class TouchMissingReferenceDocumentTask : Task
+    public class TouchMissingReferenceDocumentTask : DatabaseTask
     {
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
         public HashSet<string> Keys { get; set; }
@@ -19,7 +19,7 @@ namespace Raven.Database.Tasks
             return string.Format("Index: {0}, Keys: {1}", Index, string.Join(", ", Keys));
         }
 
-        public override void Merge(Task task)
+        public override void Merge(DatabaseTask task)
         {
             var t = (TouchMissingReferenceDocumentTask)task;
             Keys.UnionWith(t.Keys);
@@ -51,7 +51,7 @@ namespace Raven.Database.Tasks
             });
         }
 
-        public override Task Clone()
+        public override DatabaseTask Clone()
         {
             return new TouchMissingReferenceDocumentTask
             {

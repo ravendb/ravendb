@@ -41,7 +41,7 @@ namespace Raven.Database.Indexing
 
 	    public WorkContext()
 	    {
-	        DoNotTouchAgainIfMissingReferences = new ConcurrentDictionary<string, ConcurrentSet<string>>(StringComparer.OrdinalIgnoreCase);
+	        DoNotTouchAgainIfMissingReferences = new ConcurrentDictionary<int, ConcurrentSet<string>>();
             CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>(StringComparer.OrdinalIgnoreCase);
 	    }
 
@@ -434,7 +434,7 @@ namespace Raven.Database.Indexing
 		}
 
 		public DocumentDatabase Database { get; set; }
-        public ConcurrentDictionary<string, ConcurrentSet<string>> DoNotTouchAgainIfMissingReferences { get; private set; }
+        public ConcurrentDictionary<int, ConcurrentSet<string>> DoNotTouchAgainIfMissingReferences { get; private set; }
 
 	    public void AddFutureBatch(FutureBatchStats futureBatchStat)
 		{
