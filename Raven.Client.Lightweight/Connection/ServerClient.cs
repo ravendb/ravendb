@@ -661,7 +661,6 @@ namespace Raven.Client.Connection
 			return PutIndex(name, indexDef.ToIndexDefinition(convention));
 		}
 
-
 		/// <summary>
 		/// Puts the index for the specified name
 		/// </summary>
@@ -685,8 +684,8 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-			EnsureIsNotNullOrEmpty(index, "index");
-			return ExecuteWithReplication("GET", u => DirectQuery(index, query, u, includes, metadataOnly, indexEntriesOnly));
+            // TODO delegate indexEntriesOnly
+		    return asyncDatabaseCommands.QueryAsync(index, query, includes, metadataOnly).Result;
 		}
 
 		/// <summary>
