@@ -22,7 +22,7 @@ namespace Voron.Tests.Backup
 
             var stream = new MemoryStream();
             Env.Backup(stream);
-
+            
 
             using (var pureMemoryPager = new PureMemoryPager(stream.ToArray()))
             using (var env = new StorageEnvironment(pureMemoryPager, false))
