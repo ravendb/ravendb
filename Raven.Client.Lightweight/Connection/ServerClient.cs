@@ -631,12 +631,9 @@ namespace Raven.Client.Connection
 		    return asyncDatabaseCommands.PutIndexAsync(name, definition, false).Result;
 		}
 
-		public string PutTransformer(string name, TransformerDefinition indexDef)
+		public string PutTransformer(string name, TransformerDefinition transformerDef)
 		{
-			EnsureIsNotNullOrEmpty(name, "name");
-
-			return ExecuteWithReplication("PUT", operationUrl => DirectPutTransformer(name, operationUrl, indexDef));
-	
+            return asyncDatabaseCommands.PutTransformerAsync(name, transformerDef).Result;
 		}
 
 		/// <summary>
