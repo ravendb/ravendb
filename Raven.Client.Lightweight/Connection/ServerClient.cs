@@ -597,88 +597,27 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string[] GetIndexNames(int start, int pageSize)
 		{
-			return ExecuteWithReplication("GET", u => DirectGetIndexNames(start, pageSize, u));
+		    return asyncDatabaseCommands.GetIndexNamesAsync(start, pageSize).Result;
 		}
 
 		public IndexDefinition[] GetIndexes(int start, int pageSize)
 		{
-			return ExecuteWithReplication("GET", operationUrl =>
-			{
-				var url2 = (operationUrl + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
-				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-				var result = request.ReadResponseJson();
-				var json = ((RavenJArray)result);
-				//NOTE: To review, I'm not confidence this is the correct way to deserialize the index definition
-				return json
-					.Select(x => JsonConvert.DeserializeObject<IndexDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
-					.ToArray();
-			});
+		    return asyncDatabaseCommands.GetIndexesAsync(start, pageSize).Result;
 		}
 
 		public TransformerDefinition[] GetTransformers(int start, int pageSize)
 		{
-			return ExecuteWithReplication("GET", operationUrl =>
-			{
-				var url2 = (operationUrl + "/transformers?start=" + start + "&pageSize=" + pageSize).NoCache();
-				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
-				request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-				var result = request.ReadResponseJson();
-				var json = ((RavenJArray)result);
-				//NOTE: To review, I'm not confidence this is the correct way to deserialize the transformer definition
-				return json
-					.Select(x => JsonConvert.DeserializeObject<TransformerDefinition>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
-					.ToArray();
-			});
+		    return asyncDatabaseCommands.GetTransformersAsync(start, pageSize).Result;
 		}
 
 		public TransformerDefinition GetTransformer(string name)
 		{
-			EnsureIsNotNullOrEmpty(name, "name");
-			return ExecuteWithReplication("GET", u => DirectGetTransformer(name, u));
+		    return asyncDatabaseCommands.GetTransformerAsync(name).Result;
 		}
 
 		public void DeleteTransformer(string name)
 		{
-			EnsureIsNotNullOrEmpty(name, "name");
-			ExecuteWithReplication("DELETE", operationUrl => DirectDeleteTransformer(name, operationUrl));
-		}
-
-		private void DirectDeleteTransformer(string name, string operationUrl)
-		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/transformers/" + name, "DELETE", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-			request.ExecuteRequest();
-		}
-
-		private TransformerDefinition DirectGetTransformer(string transformerName, string operationUrl)
-		{
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/transformers/" + transformerName, "GET", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-			RavenJToken transformerDef;
-			try
-			{
-				transformerDef = httpJsonRequest.ReadResponseJson();
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse != null &&
-					httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-					return null;
-				throw;
-			}
-
-			var value = transformerDef.Value<RavenJObject>("Transformer");
-			return convention.CreateSerializer().Deserialize<TransformerDefinition>(new RavenJTokenReader(value));
+		    asyncDatabaseCommands.DeleteTransformerAsync(name);
 		}
 
 		/// <summary>
