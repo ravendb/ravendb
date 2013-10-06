@@ -603,26 +603,6 @@ namespace Raven.Client.Connection
 		    return asyncDatabaseCommands.GetIndexAsync(name).Result;
 		}
 
-		private static Exception FetchConcurrencyException(WebException e)
-		{
-			using (var sr = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression()))
-			{
-				var text = sr.ReadToEnd();
-				var errorResults = JsonConvert.DeserializeAnonymousType(text, new
-				{
-					url = (string)null,
-					actualETag = Etag.Empty,
-					expectedETag = Etag.Empty,
-					error = (string)null
-				});
-				return new ConcurrencyException(errorResults.error)
-				{
-					ActualETag = errorResults.actualETag,
-					ExpectedETag = errorResults.expectedETag
-				};
-			}
-		}
-
 		/// <summary>
 		/// Puts the index.
 		/// </summary>
