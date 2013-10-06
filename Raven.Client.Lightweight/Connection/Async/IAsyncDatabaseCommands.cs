@@ -401,6 +401,7 @@ namespace Raven.Client.Connection.Async
 		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
 #endif
 
+        Task DeleteAsync(string key, Etag etag);
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands

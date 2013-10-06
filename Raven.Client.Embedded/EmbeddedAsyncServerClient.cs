@@ -349,8 +349,12 @@ namespace Raven.Client.Embedded
 	
 		}
 
+	    public Task DeleteAsync(string key, Etag etag)
+	    {
+	        throw new NotImplementedException();
+	    }
 
-		#region IAsyncGlobalAdminDatabaseCommands
+	    #region IAsyncGlobalAdminDatabaseCommands
 
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
 		{

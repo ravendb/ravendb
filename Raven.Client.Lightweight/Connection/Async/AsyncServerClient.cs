@@ -383,12 +383,9 @@ namespace Raven.Client.Connection.Async
         /// <param name="id">The id.</param>
         public Task DeleteDocumentAsync(string id)
         {
-            return ExecuteWithReplication("DELETE", url =>
-            {
-                return url.Doc(id)
-                    .ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
-                    .ExecuteRequestAsync();
-            });
+            return ExecuteWithReplication("DELETE", url => url.Doc(id)
+                .ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
+                .ExecuteRequestAsync());
         }
 
         /// <summary>
@@ -1660,6 +1657,38 @@ namespace Raven.Client.Connection.Async
                                                                          HandleReplicationStatusChanges);
             var webResponse = await request.RawExecuteRequestAsync();
             return new YieldStreamResults(webResponse);
+        }
+
+        public Task DeleteAsync(string key, Etag etag)
+        {
+            EnsureIsNotNullOrEmpty(key, "key");
+            throw new NotImplementedException("TODO");
+            /* From the sync version
+             private void DirectDelete(string key, Etag etag, string operationUrl)
+		        {
+			        var metadata = new RavenJObject();
+			        if (etag != null)
+				        metadata.Add("ETag", etag.ToString());
+			        AddTransactionInformation(metadata);
+			        var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
+				        new CreateHttpJsonRequestParams(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials, convention)
+					        .AddOperationHeaders(OperationsHeaders))
+					        .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+			        try
+			        {
+				        httpJsonRequest.ExecuteRequest();
+			        }
+			        catch (WebException e)
+			        {
+				        var httpWebResponse = e.Response as HttpWebResponse;
+				        if (httpWebResponse == null ||
+					        httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+					        throw;
+				        throw FetchConcurrencyException(e);
+			        }
+		        }
+            */
         }
 #endif
 #if SILVERLIGHT

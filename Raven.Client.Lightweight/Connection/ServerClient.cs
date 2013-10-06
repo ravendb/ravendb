@@ -150,7 +150,7 @@ namespace Raven.Client.Connection
 		/// <remarks>
 		/// This method respects the replication semantics against the database.
 		/// </remarks>
-		public RavenJToken ExecuteGetRequest(string requestUrl)
+		private RavenJToken ExecuteGetRequest(string requestUrl)
 		{
 			EnsureIsNotNullOrEmpty(requestUrl, "url");
 			return ExecuteWithReplication("GET", serverUrl =>
@@ -373,12 +373,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">The etag.</param>
 		public void Delete(string key, Etag etag)
 		{
-			EnsureIsNotNullOrEmpty(key, "key");
-			ExecuteWithReplication<object>("DELETE", u =>
-			{
-				DirectDelete(key, etag, u);
-				return null;
-			});
+            asyncDatabaseCommands.DeleteAsync(key, etag).Wait();
 		}
 
 		/// <summary>
@@ -637,31 +632,6 @@ namespace Raven.Client.Connection
 		public IndexDefinition GetIndex(string name)
 		{
 		    return asyncDatabaseCommands.GetIndexAsync(name).Result;
-		}
-
-		private void DirectDelete(string key, Etag etag, string operationUrl)
-		{
-			var metadata = new RavenJObject();
-			if (etag != null)
-				metadata.Add("ETag", etag.ToString());
-			AddTransactionInformation(metadata);
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-			try
-			{
-				httpJsonRequest.ExecuteRequest();
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null ||
-					httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-					throw;
-				throw FetchConcurrencyException(e);
-			}
 		}
 
 		private static Exception FetchConcurrencyException(WebException e)
