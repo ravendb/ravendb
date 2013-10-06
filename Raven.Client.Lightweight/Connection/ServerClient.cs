@@ -503,7 +503,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public Attachment GetAttachment(string key)
 		{
-			return ExecuteWithReplication("GET", operationUrl => DirectGetAttachment("GET", key, operationUrl));
+		    return asyncDatabaseCommands.GetAttachmentAsync(key).Result;
 		}
 
 		/// <summary>
