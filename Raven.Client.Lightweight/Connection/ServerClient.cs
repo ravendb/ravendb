@@ -1080,10 +1080,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public DatabaseStatistics GetStatistics()
 		{
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/stats", "GET", credentials, convention));
-
-			var jo = (RavenJObject)httpJsonRequest.ReadResponseJson();
-			return jo.Deserialize<DatabaseStatistics>(convention);
+		    return asyncDatabaseCommands.GetStatisticsAsync().Result;
 		}
 
 		/// <summary>
