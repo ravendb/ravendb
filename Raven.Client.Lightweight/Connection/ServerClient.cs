@@ -636,34 +636,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public IndexDefinition GetIndex(string name)
 		{
-			EnsureIsNotNullOrEmpty(name, "name");
-			return ExecuteWithReplication("GET", u => DirectGetIndex(name, u));
-		}
-
-		private IndexDefinition DirectGetIndex(string indexName, string operationUrl)
-		{
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + indexName + "?definition=yes", "GET", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-			RavenJToken indexDef;
-			try
-			{
-				indexDef = httpJsonRequest.ReadResponseJson();
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse != null &&
-					httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-					return null;
-				throw;
-			}
-			var value = indexDef.Value<RavenJObject>("Index");
-			return convention.CreateSerializer().Deserialize<IndexDefinition>(
-				new RavenJTokenReader(value)
-				);
+		    return asyncDatabaseCommands.GetIndexAsync(name).Result;
 		}
 
 		private void DirectDelete(string key, Etag etag, string operationUrl)
