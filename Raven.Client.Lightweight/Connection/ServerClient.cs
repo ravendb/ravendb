@@ -203,15 +203,6 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
-		/// Allow to query whatever we are in failover mode or not
-		/// </summary>
-		/// <returns></returns>
-		public bool InFailoverMode()
-		{
-			return replicationInformer.GetFailureCount(url) > 0;
-		}
-
-		/// <summary>
 		/// Perform a direct get for a document with the specified key on the specified server URL.
 		/// </summary>
 		/// <param name="serverUrl">The server URL.</param>
