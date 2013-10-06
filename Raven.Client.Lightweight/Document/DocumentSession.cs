@@ -176,8 +176,8 @@ namespace Raven.Client.Document
 		{
 			var transformer = new TTransformer().TransformerName;
 			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(id, transformer,
-			                                                                  new LoadTransformerOperation(this, transformer, 1),
-																			  singleResult: true);
+																		  new LoadTransformerOperation(this, transformer, 1),
+																		  singleResult: true);
 			return AddLazyOperation<TResult>(lazyLoadOperation, null);
 		}
 
@@ -321,6 +321,7 @@ namespace Raven.Client.Document
 			return Load<T>(documentKeys);
 		}
 
+
 		private T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			if (ids.Length == 0)
@@ -330,7 +331,17 @@ namespace Raven.Client.Document
 
 			var multiLoadResult = DatabaseCommands.Get(ids, new string[] {}, transformer, queryInputs);
 			return new LoadTransformerOperation(this, transformer, ids.Length).Complete<T>(multiLoadResult);
+		}
 
+		internal object ProjectionToInstance(RavenJObject y, Type type)
+		{
+			HandleInternalMetadata(y);
+			foreach (var conversionListener in listeners.ExtendedConversionListeners)
+			{
+				conversionListener.BeforeConversionToEntity(null, y, null);
+			}
+			var instance = y.Deserialize(type, Conventions);
+			foreach (var conversionListener in listeners.ConversionListeners)
 		}
 
 	
@@ -351,9 +362,9 @@ namespace Raven.Client.Document
 				conversionListener.AfterConversionToEntity(null, y, null, instance);
 			}
 			return instance;
-		}
+                                              }
 
-	
+
 		public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
 			if (ids.Length == 0)

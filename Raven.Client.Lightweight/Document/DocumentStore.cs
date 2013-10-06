@@ -712,7 +712,7 @@ namespace Raven.Client.Document
 			{
 				if (FailoverServers.IsSetForDefaultDatabase && result.FailoverUrls == null)
 					result.FailoverUrls = FailoverServers.ForDefaultDatabase;
-			}
+		}
 			else
 			{
 				if (FailoverServers.IsSetForDatabase(dbName) && result.FailoverUrls == null)
@@ -766,12 +766,12 @@ namespace Raven.Client.Document
 
 			using(NoSyncronizationContext.Scope())
 			{
-				return new RemoteDatabaseChanges(dbUrl,
-					Credentials,
-					jsonRequestFactory,
-					Conventions,
-					GetReplicationInformerForDatabase(database),
-					() => databaseChanges.Remove(database),
+			return new RemoteDatabaseChanges(dbUrl,
+				Credentials,
+				jsonRequestFactory,
+				Conventions,
+				GetReplicationInformerForDatabase(database),
+				() => databaseChanges.Remove(database),
 					((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
 			}
 		}
@@ -844,7 +844,7 @@ namespace Raven.Client.Document
 
 				var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, listeners, sessionId)
 				{
-					DatabaseName = dbName ?? DefaultDatabase
+				    DatabaseName = dbName ?? DefaultDatabase
 				};
 				AfterSessionCreated(session);
 				return session;
@@ -878,7 +878,7 @@ namespace Raven.Client.Document
 
 		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
 		{
-			return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
+            return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
 		}
 
 		/// <summary>

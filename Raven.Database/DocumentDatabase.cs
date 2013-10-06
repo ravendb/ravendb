@@ -890,7 +890,7 @@ namespace Raven.Database
                 Etag afterTouchEtag;
                 try
                 {
-                    actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+                actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
                 }
                 catch (ConcurrencyException)
                 {
@@ -1525,8 +1525,8 @@ namespace Raven.Database
         }
 
         public void DeleteTransfom(string name)
-        {
-          IndexDefinitionStorage.RemoveTransformer(name);
+		{
+			IndexDefinitionStorage.RemoveTransformer(name);
         }
 
         public void DeleteIndex(string name)
@@ -1553,13 +1553,13 @@ namespace Raven.Database
 
                 // And delete the data in the background
                 StartDeletingIndexData(instance.IndexId);
-              
+
                 // We raise the notification now because as far as we're concerned it is done *now*
-                TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
-                {
-                    Name = name,
-                    Type = IndexChangeTypes.IndexRemoved,
-                }));
+                        TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
+                        {
+                            Name = name,
+                            Type = IndexChangeTypes.IndexRemoved,
+                        }));
             }
         }
 

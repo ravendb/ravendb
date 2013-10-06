@@ -58,7 +58,7 @@ namespace Raven.Storage.Esent.Backup
 					while (true)
 				    {
                         incrementalTag = SystemTime.UtcNow.ToString("Inc yyyy-MM-dd HH-mm-ss");
-                        to = Path.Combine(to, incrementalTag);
+					to = Path.Combine(to, incrementalTag);
 
 				        if (Directory.Exists(to) == false)
 				            break;

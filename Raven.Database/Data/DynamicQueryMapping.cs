@@ -102,7 +102,7 @@ namespace Raven.Database.Data
 						map.To.Replace("_Range", ""),
 						rightHandSide
 						));
-			}
+				}
 
 			var index = new IndexDefinition
 			{
@@ -287,8 +287,8 @@ namespace Raven.Database.Data
 			}
 		}
 
-      	public void AddExistingIndexDefinition(IndexDefinition indexDefinition, DocumentDatabase database, IndexQuery query)
-		{
+        public void AddExistingIndexDefinition(IndexDefinition indexDefinition, DocumentDatabase database, IndexQuery query)
+        {
             var existing = database.IndexDefinitionStorage.GetIndexDefinition(indexDefinition.Name);
             if (existing == null || existing.InternalFieldsMapping == null) return; // No biggy, it just means we'll have two small indexes and we'll do this again later
 
@@ -303,7 +303,7 @@ namespace Raven.Database.Data
                    })
            ).ToArray();
 
-          this.SortDescriptors = this.SortDescriptors.Union(
+            this.SortDescriptors = this.SortDescriptors.Union(
                 indexDefinition.SortOptions
                     .Where(option => this.SortDescriptors.All(desc => desc.Field != option.Key))
                     .Select(option => new DynamicSortInfo()

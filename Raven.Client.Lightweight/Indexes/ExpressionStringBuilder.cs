@@ -228,14 +228,7 @@ namespace Raven.Client.Indexes
 		private void OutMember(Expression instance, MemberInfo member, Type exprType)
 		{
 			var name = GetPropertyName(member.Name, exprType);
-			if (translateIdentityProperty &&
-				convention.GetIdentityProperty(member.DeclaringType) == member &&
-				// only translate from the root type or derivatives
-				(queryRoot == null || (exprType.IsAssignableFrom(queryRoot))) &&
-				// only translate from the root alias
-				(queryRootName == null || (
-											  instance.NodeType == ExpressionType.Parameter &&
-											  ((ParameterExpression)instance).Name == queryRootName)))
+            if (TranslateToDocumentId(instance, member, exprType))
 			{
 				name = Constants.DocumentIdFieldName;
 			}
@@ -258,6 +251,49 @@ namespace Raven.Client.Indexes
 				Out(member.DeclaringType.Name + "." + name);
 			}
 		}
+
+        private bool TranslateToDocumentId(Expression instance, MemberInfo member, Type exprType)
+        {
+            if (translateIdentityProperty == false)
+                return false;
+
+            if (convention.GetIdentityProperty(member.DeclaringType) != member)
+                return false;
+
+            // only translate from the root type or derivatives
+            if (queryRoot != null && (exprType.IsAssignableFrom(queryRoot) == false))
+                return false;
+
+            if (queryRootName == null)
+                return true; // just in case, shouldn't really happen
+
+            // only translate from the root alias
+            string memberName = null;
+            while (true)
+            {
+                switch (instance.NodeType)
+                {
+                    case ExpressionType.MemberAccess:
+                        var memberExpression = ((MemberExpression) instance);
+                        if (memberName == null)
+                        {
+                            memberName = memberExpression.Member.Name;
+                        }
+                        instance = memberExpression.Expression;
+                        break;
+                    case ExpressionType.Parameter:
+                        var parameterExpression = ((ParameterExpression) instance);
+                        if (memberName == null)
+                        {
+                            memberName = parameterExpression.Name;
+                        }
+                        return memberName == queryRootName;
+                    default:
+                        return false;
+                }
+            }
+
+        }
 
 		private string GetPropertyName(string name, Type exprType)
 		{
@@ -643,11 +679,11 @@ namespace Raven.Client.Indexes
 					else
 					{
 						right = convention.SaveEnumsAsIntegers
-									? Expression.Constant((int)constantExpression.Value)
+                                    ? Expression.Constant((int)constantExpression.Value)
 									: Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
 
 					}
-					break;
+				break;
 			}
 
 			while (true)
@@ -670,7 +706,7 @@ namespace Raven.Client.Indexes
 			{
 				case ExpressionType.ConvertChecked:
 				case ExpressionType.Convert:
-					return SkipConvertExpressions(((UnaryExpression)expression).Operand);
+                    return SkipConvertExpressions(((UnaryExpression)expression).Operand);
 				default:
 					return expression;
 			}
@@ -1296,21 +1332,21 @@ namespace Raven.Client.Indexes
 		protected override Expression VisitMember(MemberExpression node)
 		{
 
-			if (Nullable.GetUnderlyingType(node.Member.DeclaringType) != null)
-			{
+            if (Nullable.GetUnderlyingType(node.Member.DeclaringType) != null)
+            {
                 switch (node.Member.Name)
-			    {
+			{
                     case "HasValue":
                         // we don't have nullable type on the server side, we just compare to null
                         Out("(");
-                        Visit(node.Expression);
+				Visit(node.Expression);
                         Out(" != null)");
-			            return node;
+                        return node;
                     case "Value":
                         Visit(node.Expression);
-                        return node; // we don't have nullable type on the server side, we can safely ignore this.
-			    }
+				return node; // we don't have nullable type on the server side, we can safely ignore this.
 			}
+            }
 
 			OutMember(node.Expression, node.Member, node.Expression == null ? node.Type : node.Expression.Type);
 			return node;
@@ -1461,7 +1497,7 @@ namespace Raven.Client.Indexes
                 Visit(node.Object);
                 return node; // we don't do anything here on the server
             }
-			
+
 			var num = 0;
 			var expression = node.Object;
 			if (IsExtensionMethod(node))
@@ -1502,7 +1538,7 @@ namespace Raven.Client.Indexes
 					Out(".");
 				}
 			}
-            if (node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node))
+			if (node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node))
 			{
 				Out("DynamicEnumerable.");
 			}
@@ -1615,34 +1651,34 @@ namespace Raven.Client.Indexes
 			return node;
 		}
 
-	    private void OutputGenericMethodArgumentsIfNeeded(MethodInfo method)
-	    {
-	        var genericArguments = method.GetGenericArguments();
-	        if (genericArguments.All(TypeExistsOnServer) == false)
-	            return; // no point if the types aren't on the server
-	        switch (method.DeclaringType.Name)
-	        {
+        private void OutputGenericMethodArgumentsIfNeeded(MethodInfo method)
+        {
+            var genericArguments = method.GetGenericArguments();
+            if (genericArguments.All(TypeExistsOnServer) == false)
+                return; // no point if the types aren't on the server
+            switch (method.DeclaringType.Name)
+            {
                 case "Enumerable":
                 case "Queryable":
-	                return; // we don't need thos, we have LinqOnDynamic for it
-	        }
+                    return; // we don't need thos, we have LinqOnDynamic for it
+            }
 
             Out("<");
-	        bool first = true;
-	        foreach (var genericArgument in genericArguments)
-	        {
+            bool first = true;
+            foreach (var genericArgument in genericArguments)
+            {
                 if (first == false)
                 {
                     Out(", ");
                 }
                 first = false;
 
-	            VisitType(genericArgument);
-	        }
+                VisitType(genericArgument);
+            }
             Out(">");
-	    }
+        }
 
-	    private static bool IsIndexerCall(MethodCallExpression node)
+		private static bool IsIndexerCall(MethodCallExpression node)
 		{
 			return node.Method.IsSpecialName && (node.Method.Name.StartsWith("get_") || node.Method.Name.StartsWith("set_"));
 		}

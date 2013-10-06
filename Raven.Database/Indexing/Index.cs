@@ -74,7 +74,7 @@ namespace Raven.Database.Indexing
 	        get { return indexId; }
 	    }
 
-	    private readonly AbstractViewGenerator viewGenerator;
+		private readonly AbstractViewGenerator viewGenerator;
 		protected readonly WorkContext context;
 		private readonly object writeLock = new object();
 		private volatile bool disposed;
@@ -147,7 +147,7 @@ namespace Raven.Database.Indexing
 
 	    public string PublicName { get { return this.indexDefinition.Name; } }
 
-	    public volatile bool IsMapIndexingInProgress;
+		public volatile bool IsMapIndexingInProgress;
 
 		protected void RecordCurrentBatch(string indexingStep, int size)
 		{
@@ -1537,17 +1537,17 @@ namespace Raven.Database.Indexing
             {
                 foreach (var referencedDocument in result)
                 {
-                    actions.Indexing.UpdateDocumentReferences(indexId, referencedDocument.Key, referencedDocument.Value);
+                    actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
                     actions.General.MaybePulseTransaction();
                 }
             }
             var task = new TouchMissingReferenceDocumentTask
             {
-                Index = indexId, // so we will get IsStale properly
+                Index = name, // so we will get IsStale properly
                 Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             };
 
-            var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(indexId, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
+            var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(name, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
             HashSet<string> docs;
             while (missingReferencedDocs.TryDequeue(out docs))
             {
@@ -1564,6 +1564,7 @@ namespace Raven.Database.Indexing
             actions.Tasks.AddTask(task, SystemTime.UtcNow);
         }
 
+                  
 		public void ForceWriteToDisk()
 		{
 			forceWriteToDisk = true;

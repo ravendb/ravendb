@@ -276,12 +276,12 @@ namespace Raven.Client.Connection
 			if (primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase)) 
 				return;
 
-			bool shouldForceCheck;
-			if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
-			{
+				bool shouldForceCheck;
+				if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
+				{
 				replicationInformer.ForceCheck(primaryUrl, shouldForceCheck);
+				}
 			}
-		}
 
 		private ConflictException TryResolveConflictOrCreateConcurrencyException(string key, RavenJObject conflictsDoc, Etag etag)
 		{
@@ -981,9 +981,9 @@ namespace Raven.Client.Connection
 	            {
 	                if (newException != null)
 	                    throw newException;
-	                    throw;
-	                }
-
+	                throw;
+	            }
+                
 	        }
 
 	        var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -1015,28 +1015,28 @@ namespace Raven.Client.Connection
 	    private static bool ShouldRethrowIndexException(WebException e, out Exception newEx)
 	    {
 	        newEx = null;
-	            var httpWebResponse = e.Response as HttpWebResponse;
+	        var httpWebResponse = e.Response as HttpWebResponse;
 	        if (httpWebResponse == null)
 	            return true;
 
 	        if (httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
-	            {
-	                var error = e.TryReadErrorResponseObject(
-	                    new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
+	        {
+	            var error = e.TryReadErrorResponseObject(
+	                new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
 
-	                if (error == null)
-	                {
+	            if (error == null)
+	            {
 	                return true;
-	                }
+	            }
 
                 newEx = new IndexCompilationException(error.Message, e)
-	                {
-	                    IndexDefinitionProperty = error.IndexDefinitionProperty,
-	                    ProblematicText = error.ProblematicText
-	                };
+	            {
+	                IndexDefinitionProperty = error.IndexDefinitionProperty,
+	                ProblematicText = error.ProblematicText
+	            };
 
 	            return true;
-	            }
+	        }
 
 	        return (httpWebResponse.StatusCode != HttpStatusCode.NotFound);
 	    }
@@ -1645,7 +1645,7 @@ namespace Raven.Client.Connection
 
 				if (opId == null || opId.Type != JTokenType.Integer)
 					return null;
-
+				
 				return new Operation(this, opId.Value<long>());
 			});
 		}

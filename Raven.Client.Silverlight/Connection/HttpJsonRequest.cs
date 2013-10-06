@@ -61,7 +61,7 @@ namespace Raven.Client.Silverlight.Connection
 			retries++;
 			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
 			var newHttpClient = new HttpClient(new HttpClientHandler
-			{
+		{
 				Credentials = handler.Credentials,
 			});
 			// HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
@@ -86,7 +86,7 @@ namespace Raven.Client.Silverlight.Connection
 		{
 #if !SILVERLIGHT
 			var headersWithoutAuthorization = new WebHeaderCollection();
-            
+
 			foreach (var header in webRequest.Headers.AllKeys)
 			{
 				if(header == "Authorization")
@@ -97,6 +97,21 @@ namespace Raven.Client.Silverlight.Connection
 
 			webRequest.Headers = headersWithoutAuthorization;
 #endif
+		}
+
+		public void RemoveAuthorizationHeader()
+		{
+			var headersWithoutAuthorization = new WebHeaderCollection();
+
+			foreach (var header in webRequest.Headers.AllKeys)
+			{
+				if(header == "Authorization")
+					continue;
+
+				headersWithoutAuthorization[header] = webRequest.Headers[header];
+			}
+
+			webRequest.Headers = headersWithoutAuthorization;
 		}
 
 		private HttpJsonRequestFactory factory;
@@ -138,7 +153,7 @@ namespace Raven.Client.Silverlight.Connection
 			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
 			{
 				if (requestParams.Method == "POST" || requestParams.Method == "PUT" ||
-				    requestParams.Method == "PATCH" || requestParams.Method == "EVAL")
+					requestParams.Method == "PATCH" || requestParams.Method == "EVAL")
 					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
 			}
 		}
@@ -174,7 +189,7 @@ namespace Raven.Client.Silverlight.Connection
 				try
 				{
 					sendTask = httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url))
-						.ConvertSecurityExceptionToServerNotFound()
+													.ConvertSecurityExceptionToServerNotFound()
 						// .MaterializeBadRequestAsException()
 						.AddUrlIfFaulting(new Uri(Url));
 				}
@@ -209,9 +224,9 @@ namespace Raven.Client.Silverlight.Connection
 
 			var webResponse = exception.Response as HttpWebResponse;
 			if (webResponse == null ||
-			    (webResponse.StatusCode != HttpStatusCode.Unauthorized &&
-			     webResponse.StatusCode != HttpStatusCode.Forbidden &&
-			     webResponse.StatusCode != HttpStatusCode.PreconditionFailed))
+				(webResponse.StatusCode != HttpStatusCode.Unauthorized &&
+				 webResponse.StatusCode != HttpStatusCode.Forbidden &&
+				 webResponse.StatusCode != HttpStatusCode.PreconditionFailed))
 				task.AssertNotFailed();
 
 			if (webResponse.StatusCode == HttpStatusCode.Forbidden)
@@ -265,7 +280,7 @@ namespace Raven.Client.Silverlight.Connection
 			await WaitForTask;
 			
 			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url))
-			                           .ConvertSecurityExceptionToServerNotFound()
+													.ConvertSecurityExceptionToServerNotFound()
 			                           .AddUrlIfFaulting(new Uri(Url));
 
 			if (Response.IsSuccessStatusCode == false)
@@ -292,23 +307,23 @@ namespace Raven.Client.Silverlight.Connection
 		private async Task<string> ReadStringInternal()
 		{
 			var responseStream = await Response.GetResponseStreamWithHttpDecompression();
-			var reader = new StreamReader(responseStream);
-			var text = reader.ReadToEnd();
-			return text;
-		}
+					var reader = new StreamReader(responseStream);
+					var text = reader.ReadToEnd();
+					return text;
+				}
 
 		/*private T ReadResponse<T>(Func<Stream, T> handleResponse)
 		{
-			var httpWebResponse = e.Response as HttpWebResponse;
-			if (httpWebResponse == null ||
-				httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
-				httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-				throw;
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null ||
+					httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
+						httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+					throw;
 
-			using (var sr = new StreamReader(e.Response.GetResponseStream()))
-			{
-				throw new InvalidOperationException(sr.ReadToEnd(), e);
-			}
+				using (var sr = new StreamReader(e.Response.GetResponseStream()))
+				{
+					throw new InvalidOperationException(sr.ReadToEnd(), e);
+				}
 
 			ResponseHeaders = new NameValueCollection();
 			foreach (var key in response.Headers.AllKeys)
@@ -335,7 +350,7 @@ namespace Raven.Client.Silverlight.Connection
 		/// The task to wait all other actions on
 		/// </summary>
 		public Task WaitForTask { get; set; }
-
+		
 		public HttpResponseMessage Response { get; set; }
 
 		private void WriteMetadata(RavenJObject metadata)
@@ -365,32 +380,32 @@ namespace Raven.Client.Silverlight.Connection
 				if (headerName == "ETag")
 					headerName = "If-None-Match";
 				if (headerName.StartsWith("@") ||
-				    headerName == Constants.LastModified ||
-				    headerName == Constants.RavenLastModified)
+					headerName == Constants.LastModified ||
+					headerName == Constants.RavenLastModified)
 					continue;
 
 				try
 				{
-					switch (headerName)
-					{
+				switch (headerName)
+				{
 						case "If-None-Match":
 							httpClient.DefaultRequestHeaders.IfNoneMatch.Add(new EntityTagHeaderValue("\"" + value + "\""));
 							break;
-						case "Content-Length":
-							break;
-						case "Content-Type":
+					case "Content-Length":
+						break;
+					case "Content-Type":
 							httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(value));
-							break;
-						default:
+						break;
+					default:
 							httpClient.DefaultRequestHeaders.TryAddWithoutValidation(headerName, value);
-							break;
-					}
+						break;
 				}
+			}
 				catch (Exception e)
 				{
 					throw new InvalidOperationException("Make sure to set the header correctly.", e);
 				}
-			}
+		}
 		}
 
 		/// <summary>
@@ -402,7 +417,7 @@ namespace Raven.Client.Silverlight.Connection
 
 			writeCalled = true;
 			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
-			{
+												{
 				Content = new CompressedStringContent(data, factory.DisableRequestCompression),
 			});
 

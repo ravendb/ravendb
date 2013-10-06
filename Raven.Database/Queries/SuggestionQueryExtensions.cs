@@ -10,13 +10,13 @@ using Raven.Abstractions.Indexing;
 
 namespace Raven.Database.Queries
 {
-    public static class SuggestionQueryExtensions
-    {
-        public static SuggestionQueryResult ExecuteSuggestionQuery(this DocumentDatabase self, string index, SuggestionQuery suggestionQuery)
-        {
-            if (index == "dynamic" || index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
-            {
-                var entitName = index == "dynamic" ? null : index.Remove(0, "dynamic/".Length);
+	public static class SuggestionQueryExtensions
+	{
+		public static SuggestionQueryResult ExecuteSuggestionQuery(this DocumentDatabase self, string index, SuggestionQuery suggestionQuery)
+		{
+			if (index == "dynamic" || index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
+			{
+				var entitName = index == "dynamic" ? null : index.Remove(0, "dynamic/".Length);
                 if (self.Configuration.PreventAutomaticSuggestionCreation)
                     throw new InvalidOperationException("Could not get suggestions for dynamic index because `Raven/PreventAutomaticSuggestionCreation` is set to true.");
                 index = self.FindDynamicIndexName(
@@ -26,13 +26,15 @@ namespace Raven.Database.Queries
                         "Could find no index for the specified query, suggestions will not create a dynamic index, and cannot suggest without an index. Did you forget to query before calling Suggest?");
             }
             else
-            {
-                var indexDefinition = self.GetIndexDefinition(index);
-                if (indexDefinition == null)
-                    throw new InvalidOperationException(string.Format("Could not find specified index '{0}'.", index));
+				{
+			}
 
-                if (indexDefinition.Suggestions.ContainsKey(suggestionQuery.Field) == false && self.Configuration.PreventAutomaticSuggestionCreation)
-                {
+			var indexDefinition = self.GetIndexDefinition(index);
+			if (indexDefinition == null)
+				throw new InvalidOperationException(string.Format("Could not find specified index '{0}'.", index));
+
+			if (indexDefinition.Suggestions.ContainsKey(suggestionQuery.Field) == false && self.Configuration.PreventAutomaticSuggestionCreation)
+			{
                     throw new InvalidOperationException(string.Format("Index '{0}' does not have suggestions configured for field '{1}'.", index, suggestionQuery.Field));
                 }
 
@@ -43,17 +45,17 @@ namespace Raven.Database.Queries
 
                 if (suggestionQuery.Distance.HasValue == false)
                     suggestionQuery.Distance = suggestion.Distance;
-            }
+			}
 
 
-            return new SuggestionQueryRunner(self).ExecuteSuggestionQuery(index, suggestionQuery);
-        }
+			return new SuggestionQueryRunner(self).ExecuteSuggestionQuery(index, suggestionQuery);
+		}
 
-        private static string QuoteIfNeeded(string term)
-        {
-            if (term.Any(char.IsWhiteSpace))
-                return '"' + term + '"';
-            return term;
-        }
-    }
+		private static string QuoteIfNeeded(string term)
+		{
+			if (term.Any(char.IsWhiteSpace))
+				return '"' + term + '"';
+			return term;
+		}
+	}
 }

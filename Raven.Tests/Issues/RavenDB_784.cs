@@ -174,6 +174,8 @@ namespace Raven.Tests.Issues
 					accessor.MapReduce.UpdatePerformedReduceType(b, "b", ReduceType.SingleStep);
 				});
 
+				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a"));
+				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a", new CancellationToken()));
                 storage.Batch(accessor => accessor.Indexing.DeleteIndex(a, new CancellationToken()));
 
 				storage.Batch(accessor =>

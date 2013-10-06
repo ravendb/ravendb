@@ -27,17 +27,17 @@ namespace Raven.Database.Plugins.Builtins
 			           
                 List<int> indexIds = actions.Indexing.GetIndexesStats().Select(x => x.Id).ToList();
                 foreach (int id in indexIds)
-                {
+				{
                     var index = database.IndexDefinitionStorage.GetIndexDefinition(id);
                     if (index != null)
-                        continue;
+						continue;
 
-                    // index is not found on disk, better kill for good
-                    // Even though technically we are running into a situation that is considered to be corrupt data
-                    // we can safely recover from it by removing the other parts of the index.
+					// index is not found on disk, better kill for good
+					// Even though technically we are running into a situation that is considered to be corrupt data
+					// we can safely recover from it by removing the other parts of the index.
                     database.IndexStorage.DeleteIndex(id);
                     actions.Indexing.DeleteIndex(id, database.WorkContext.CancellationToken);
-                }
+				}
 			});
 		}
 
