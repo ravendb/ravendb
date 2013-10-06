@@ -332,18 +332,6 @@ namespace Raven.Client.Document
 			var multiLoadResult = DatabaseCommands.Get(ids, new string[] {}, transformer, queryInputs);
 			return new LoadTransformerOperation(this, transformer, ids.Length).Complete<T>(multiLoadResult);
 		}
-
-		internal object ProjectionToInstance(RavenJObject y, Type type)
-		{
-			HandleInternalMetadata(y);
-			foreach (var conversionListener in listeners.ExtendedConversionListeners)
-			{
-				conversionListener.BeforeConversionToEntity(null, y, null);
-			}
-			var instance = y.Deserialize(type, Conventions);
-			foreach (var conversionListener in listeners.ConversionListeners)
-		}
-
 	
 		internal object ProjectionToInstance(RavenJObject y, Type type)
 		{

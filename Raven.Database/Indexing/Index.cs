@@ -1537,17 +1537,17 @@ namespace Raven.Database.Indexing
             {
                 foreach (var referencedDocument in result)
                 {
-                    actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
+                    actions.Indexing.UpdateDocumentReferences(IndexId, referencedDocument.Key, referencedDocument.Value);
                     actions.General.MaybePulseTransaction();
                 }
             }
             var task = new TouchMissingReferenceDocumentTask
             {
-                Index = name, // so we will get IsStale properly
+				Index = IndexId, // so we will get IsStale properly
                 Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             };
 
-            var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(name, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
+			var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(IndexId, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
             HashSet<string> docs;
             while (missingReferencedDocs.TryDequeue(out docs))
             {

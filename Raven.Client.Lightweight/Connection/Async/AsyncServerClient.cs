@@ -1566,22 +1566,6 @@ namespace Raven.Client.Connection.Async
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
 
-			var token = await GetSingleAuthToken();
-
-			try
-			{
-				token = await ValidateThatWeCanUseAuthenticateTokens(token);
-			}
-			catch (Exception e)
-			{
-				throw new InvalidOperationException(
-					"Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
-					e);
-			}
-
-			request.AddOperationHeader("Single-Use-Auth-Token", token);
-
-
 			return new YieldStreamResults(webResponse);
 		}
 
@@ -1988,7 +1972,9 @@ namespace Raven.Client.Connection.Async
 			var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
 
 			request.DisableAuthentication();
+#if !SILVERLIGHT
 			request.webRequest.ContentLength = 0;
+#endif
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 			var result = await request.ReadResponseJsonAsync();
 			return result.Value<string>("Token");
@@ -2002,19 +1988,6 @@ namespace Raven.Client.Connection.Async
 		public IAsyncAdminDatabaseCommands Admin
 		{
 			get { return this; }
-		}
-
-		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
-		{
-			var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
-          
-            request.DisableAuthentication();
-#if !SILVERLIGHT
-			request.webRequest.ContentLength = 0;
-#endif
-			request.AddOperationHeader("Single-Use-Auth-Token", token);
-			var result = await request.ReadResponseJsonAsync();
-			return result.Value<string>("Token");
 		}
 
         public Task CreateDatabaseAsync(DatabaseDocument databaseDocument)

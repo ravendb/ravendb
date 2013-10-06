@@ -99,21 +99,6 @@ namespace Raven.Client.Silverlight.Connection
 #endif
 		}
 
-		public void RemoveAuthorizationHeader()
-		{
-			var headersWithoutAuthorization = new WebHeaderCollection();
-
-			foreach (var header in webRequest.Headers.AllKeys)
-			{
-				if(header == "Authorization")
-					continue;
-
-				headersWithoutAuthorization[header] = webRequest.Headers[header];
-			}
-
-			webRequest.Headers = headersWithoutAuthorization;
-		}
-
 		private HttpJsonRequestFactory factory;
 
 		private static Task noopWaitForTask = new CompletedTask();

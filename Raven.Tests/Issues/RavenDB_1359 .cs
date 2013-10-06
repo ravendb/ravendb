@@ -25,8 +25,8 @@ namespace Raven.Tests.Issues
 				indexWithAttachments.Execute(store);
 
 				store.DatabaseCommands.PutAttachment("attachment", null,
-													 new MemoryStream(Encoding.UTF8.GetBytes("this is a test")),
-													 new RavenJObject());
+				                                     new MemoryStream(Encoding.UTF8.GetBytes("this is a test")),
+				                                     new RavenJObject());
 				var tasks = new List<Task>();
 
 				// here we have to do a big document upload because the problem occurred only when 
@@ -65,4 +65,9 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(store);
 
-				IndexStats indexStats = store.DatabaseCommands.GetStatistics().Indexes.First(x => x.PublicName == indexWithAttachments.IndexName);
+				IndexStats indexStats =
+					store.DatabaseCommands.GetStatistics().Indexes.First(x => x.PublicName == indexWithAttachments.IndexName);
+			}
+		}
+	}
+}
