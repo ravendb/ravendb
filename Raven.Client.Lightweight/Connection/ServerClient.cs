@@ -1134,21 +1134,7 @@ namespace Raven.Client.Connection
 		///<returns></returns>
 		public IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize)
 		{
-			return ExecuteWithReplication("GET", operationUrl =>
-			{
-				var requestUri = operationUrl + string.Format("/terms/{0}?field={1}&pageSize={2}&fromValue={3}",
-													 Uri.EscapeUriString(index),
-													 Uri.EscapeDataString(field),
-													 pageSize.ToInvariantString(),
-													 Uri.EscapeDataString(fromValue ?? ""));
-
-				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
-						.AddOperationHeaders(OperationsHeaders))
-                        .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-				return request.ReadResponseJson().Values<string>();
-			});
+		    return asyncDatabaseCommands.GetTermsAsync(index, field, fromValue, pageSize).Result;
 		}
 
 		/// <summary>
