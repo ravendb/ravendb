@@ -34,6 +34,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
+    using System.Collections;
+    using System.Threading.Tasks;
+    using Raven.Abstractions.Util;
     using Raven.Client.Connection.Async;
 
     /// <summary>
@@ -694,30 +697,11 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
 		{
-			EnsureIsNotNullOrEmpty(index, "index");
-			string path = query.GetIndexQueryUrl(url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false);
-			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, path, "GET", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-											.AddReplicationStatusHeaders(Url, url, replicationInformer,
-																		 convention.FailoverBehavior,
-																		 HandleReplicationStatusChanges);
-
-			var webResponse = request.RawExecuteRequest();
-			queryHeaderInfo = new QueryHeaderInformation
-			{
-				Index = webResponse.Headers["Raven-Index"],
-				IndexTimestamp = DateTime.ParseExact(webResponse.Headers["Raven-Index-Timestamp"], Default.DateTimeFormatsToRead,
-										CultureInfo.InvariantCulture, DateTimeStyles.None),
-				IndexEtag = Etag.Parse(webResponse.Headers["Raven-Index-Etag"]),
-				ResultEtag = Etag.Parse(webResponse.Headers["Raven-Result-Etag"]),
-				IsStable = bool.Parse(webResponse.Headers["Raven-Is-Stale"]),
-				TotalResults = int.Parse(webResponse.Headers["Raven-Total-Results"])
-			};
-
-			return YieldStreamResults(webResponse);
+		    var reference = new Reference<QueryHeaderInformation>();
+		    Task<IAsyncEnumerator<RavenJObject>> streamQueryAsync = asyncDatabaseCommands.StreamQueryAsync(index, query, reference);
+		    queryHeaderInfo = reference.Value;
+		    return new SyncEnumeratorWrapper<RavenJObject>(streamQueryAsync.Result);
 		}
-
 
 		/// <summary>
 		/// Streams the documents by etag OR starts with the prefix and match the matches
@@ -1716,6 +1700,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
+        //TODO Owin host handles 100s, is this needed?
 		public IDisposable Expect100Continue()
 		{
 			var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
@@ -1749,6 +1734,41 @@ namespace Raven.Client.Connection
 		}
 
 		#endregion
+
+        private class SyncEnumeratorWrapper<T> : IEnumerator<T>
+        {
+            private readonly IAsyncEnumerator<T> asyncEnumerator;
+
+            public SyncEnumeratorWrapper(IAsyncEnumerator<T> asyncEnumerator)
+            {
+                this.asyncEnumerator = asyncEnumerator;
+            }
+
+            public void Dispose()
+            {
+                asyncEnumerator.Dispose();
+            }
+
+            public bool MoveNext()
+            {
+                return asyncEnumerator.MoveNextAsync().Result;
+            }
+
+            public void Reset()
+            {
+                throw new NotSupportedException();
+            }
+
+            public T Current
+            {
+                get { return asyncEnumerator.Current; }
+            }
+
+            object IEnumerator.Current
+            {
+                get { return Current; }
+            }
+        }
 	}
 }
 #endif
