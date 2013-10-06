@@ -359,6 +359,12 @@ namespace Raven.Client.Embedded
 	        return databaseCommands.UrlFor(documentKey);
 	    }
 
+	    public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method,
+	        bool disableRequestCompression = false)
+	    {
+	        throw new NotImplementedException();
+	    }
+
 	    #region IAsyncGlobalAdminDatabaseCommands
 
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin

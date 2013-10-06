@@ -168,15 +168,7 @@ namespace Raven.Client.Connection
 
 		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false)
 		{
-			var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
-
-			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (currentServerUrl + requestUrl).NoCache(), method, credentials,
-				convention).AddOperationHeaders(OperationsHeaders);
-			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
-
-			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams)
-			                         .AddReplicationStatusHeaders(url, currentServerUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+            return asyncDatabaseCommands.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method, disableRequestCompression);
 		}
 
 		internal void ExecuteWithReplication(string method, Action<string> operation)

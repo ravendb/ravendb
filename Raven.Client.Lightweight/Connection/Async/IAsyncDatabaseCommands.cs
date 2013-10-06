@@ -390,6 +390,8 @@ namespace Raven.Client.Connection.Async
         /// Get the full URL for the given document key
         /// </summary>
         string UrlFor(string documentKey);
+
+        HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false);
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands
