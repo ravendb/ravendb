@@ -19,7 +19,8 @@ namespace Voron.Impl
 			PagerState.Release();
 			PagerState = new PagerState
 			{
-				Ptr = _ptr
+				Ptr = _ptr,
+                Base = _base
 			};
 			PagerState.AddRef();
 			fixed (byte* origin = data)
@@ -36,7 +37,8 @@ namespace Voron.Impl
 			PagerState.Release();
 			PagerState = new PagerState
 			{
-				Ptr = _ptr
+				Ptr = _ptr,
+                Base = _base
 			};
 			PagerState.AddRef();
 		}
