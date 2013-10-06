@@ -57,6 +57,7 @@ namespace Raven.Database.Data
 				var currentExpression = new StringBuilder();
 				var mapFromClauses = new List<String>();
 				int currentIndex = 0;
+				bool nestedCollection = false;
 				while (currentIndex < map.From.Length)
 				{
 					char currentChar = map.From[currentIndex++];
@@ -73,7 +74,7 @@ namespace Raven.Database.Data
 							// from docNewDocItemsItem in doc.NewDoc.Items
 							String docInclude = string.Format("from {0} in ((IEnumerable<dynamic>){1}).DefaultIfEmpty()", newDoc, newDocumentSource);
 							mapFromClauses.Add(docInclude);
-
+							nestedCollection = true;
 							// Start building the property again
 							currentExpression.Clear();
 
@@ -82,6 +83,7 @@ namespace Raven.Database.Data
 
 							break;
 						default:
+							nestedCollection = false;
 							currentExpression.Append(currentChar);
 							break;
 					}
@@ -93,10 +95,14 @@ namespace Raven.Database.Data
 				}
 
 				var indexedMember = currentExpression.ToString().Replace("_Range", "");
-				var rightHandSide =
-					indexedMember.Length == 0 ? currentDoc
-					: mapFromClauses.Count > 0 ? String.Format("({0} select {1}{2}).ToArray()", String.Join("\n", mapFromClauses), currentDoc, indexedMember)
-					: String.Format("{0}{1}", currentDoc, indexedMember);
+				string rightHandSide;
+
+				if (indexedMember.Length == 0 && nestedCollection == false) 
+					rightHandSide = currentDoc;
+				else if (mapFromClauses.Count > 0)
+					rightHandSide = String.Format("({0} select {1}{2}).ToArray()", String.Join("\n", mapFromClauses), currentDoc,
+					                              indexedMember);
+				else rightHandSide = String.Format("{0}{1}", currentDoc, indexedMember);
 
 				realMappings.Add(string.Format("{0} = {1}",
 					map.To.Replace("_Range", ""),
