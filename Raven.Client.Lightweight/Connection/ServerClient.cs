@@ -581,32 +581,12 @@ namespace Raven.Client.Connection
 		/// <param name="etag">The etag.</param>
 		public void DeleteAttachment(string key, Etag etag)
 		{
-			ExecuteWithReplication("DELETE", operationUrl => DirectDeleteAttachment(key, etag, operationUrl));
+		    asyncDatabaseCommands.DeleteAttachmentAsync(key, etag).Wait();
 		}
 
 		public string[] GetDatabaseNames(int pageSize, int start = 0)
 		{
-			var result = ExecuteGetRequest("".Databases(pageSize, start).NoCache());
-
-			var json = (RavenJArray)result;
-
-			return json
-				.Select(x => x.Value<string>())
-				.ToArray();
-		}
-
-		private void DirectDeleteAttachment(string key, Etag etag, string operationUrl)
-		{
-			var metadata = new RavenJObject();
-			if (etag != null)
-			{
-				metadata["ETag"] = etag.ToString();
-			}
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, "DELETE", metadata, credentials, convention))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-			webRequest.ExecuteRequest();
+		    return asyncDatabaseCommands.GetDatabaseNamesAsync(pageSize, start).Result;
 		}
 
 		/// <summary>
