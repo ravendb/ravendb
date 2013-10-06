@@ -34,10 +34,11 @@ namespace Raven.Server
             ClusterDiscovery(configuration);
         }
 
-        //TODO DH: does this need to be exposed?
-        public DocumentDatabase Database
+        //TODO does this need to be exposed? Seems to be required for low level tests that the client
+        //API does not expose
+        public DocumentDatabase SystemDatabase
         {
-            get { return options.DocumentDatabase; }
+            get { return options.SystemDatabase; }
         }
 
         //TODO DH: does this need to be exposed?
