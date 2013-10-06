@@ -52,7 +52,7 @@ namespace Raven.Abstractions.Extensions
                 if (t.Exception != null)
                 {
                     var we = t.Exception.ExtractSingleInnerException() as WebException;
-                    if (we == null || ((HttpWebResponse)we.Response).StatusCode != HttpStatusCode.BadRequest)
+                    if (we == null || we.Response == null || ((HttpWebResponse)we.Response).StatusCode != HttpStatusCode.BadRequest)
                         throw t.Exception;
 
                     var error = we.TryReadErrorResponseObject(new {Message = ""});
