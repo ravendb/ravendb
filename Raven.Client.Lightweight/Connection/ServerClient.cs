@@ -380,36 +380,7 @@ namespace Raven.Client.Connection
 		/// <param name="metadata">The metadata.</param>
 		public void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata)
 		{
-			ExecuteWithReplication("POST", operationUrl => DirectUpdateAttachmentMetadata(key, metadata, etag, operationUrl));
-		}
-
-		private void DirectUpdateAttachmentMetadata(string key, RavenJObject metadata, Etag etag, string operationUrl)
-		{
-			if (etag != null)
-			{
-				metadata["ETag"] = etag.ToString();
-			}
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, "POST", metadata, credentials, convention))
-                    .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-			try
-			{
-				webRequest.ExecuteRequest();
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.InternalServerError)
-					throw;
-
-				using (var stream = httpWebResponse.GetResponseStreamWithHttpDecompression())
-				using (var reader = new StreamReader(stream))
-				{
-					throw new InvalidOperationException("Internal Server Error: " + Environment.NewLine + reader.ReadToEnd());
-				}
-			}
+		    asyncDatabaseCommands.UpdateAttachmentMetadataAsync(key, etag, metadata).Wait();
 		}
 
 		/// <summary>

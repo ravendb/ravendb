@@ -1785,6 +1785,35 @@ namespace Raven.Client.Connection.Async
                                                                   convention.FailoverBehavior, HandleReplicationStatusChanges);
         }
 
+        public Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata)
+        {
+            return ExecuteWithReplication("POST", operationUrl => DirectUpdateAttachmentMetadata(key, metadata, etag, operationUrl));
+        }
+
+        private async Task DirectUpdateAttachmentMetadata(string key, RavenJObject metadata, Etag etag, string operationUrl)
+        {
+            if (etag != null)
+            {
+                metadata["ETag"] = etag.ToString();
+            }
+            var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, "POST", metadata, credentials, convention))
+                    .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+            ErrorResponseException responseException;
+            try
+            {
+                await webRequest.ExecuteRequestAsync();
+                return;
+            }
+            catch (ErrorResponseException e)
+            {
+                responseException = e;
+            }
+            if (!await HandleException(responseException))
+                throw responseException;
+        }
+
         private void HandleReplicationStatusChanges(string forceCheck, string primaryUrl, string currentUrl)
         {
 	        if (primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))

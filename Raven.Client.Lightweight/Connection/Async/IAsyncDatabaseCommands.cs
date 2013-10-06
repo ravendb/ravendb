@@ -392,6 +392,8 @@ namespace Raven.Client.Connection.Async
         string UrlFor(string documentKey);
 
         HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false);
+
+        Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata);
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands

@@ -365,6 +365,11 @@ namespace Raven.Client.Embedded
 	        throw new NotImplementedException();
 	    }
 
+	    public Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata)
+	    {
+	        throw new NotImplementedException();
+	    }
+
 	    #region IAsyncGlobalAdminDatabaseCommands
 
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
