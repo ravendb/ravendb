@@ -212,6 +212,7 @@
     <Compile Include="Bundles\Expiration\ExpirationReadTrigger.cs" />
     <Compile Include="Bundles\Expiration\ExpiredDocumentsCleaner.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
+    <Compile Include="Bundles\Replication\Controllers\ReplicationController.cs" />
     <Compile Include="Bundles\Replication\Impl\Historian.cs" />
     <Compile Include="Bundles\Replication\Impl\ReplicationData.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultAttachmentReplicationConflictResolver.cs" />
