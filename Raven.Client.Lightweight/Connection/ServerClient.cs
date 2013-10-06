@@ -424,36 +424,6 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private void DirectPutAttachment(string key, RavenJObject metadata, Etag etag, Stream data, string operationUrl)
-		{
-			if (etag != null)
-			{
-				metadata["ETag"] = etag.ToString();
-			}
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, "PUT", metadata, credentials, convention))
-				.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer,
-											 convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-			webRequest.Write(data);
-			try
-			{
-				webRequest.ExecuteRequest();
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.InternalServerError)
-					throw;
-
-				using (var stream = httpWebResponse.GetResponseStreamWithHttpDecompression())
-				using (var reader = new StreamReader(stream))
-				{
-					throw new InvalidOperationException("Internal Server Error: " + Environment.NewLine + reader.ReadToEnd());
-				}
-			}
-		}
-
 		/// <summary>
 		/// Gets the attachments starting with the specified prefix
 		/// </summary>
