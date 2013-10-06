@@ -2240,14 +2240,14 @@ namespace Raven.Client.Connection
 
 		public string GetSingleAuthToken()
 		{
-			var tokenRequest = CreateRequest("GET", "/singleAuthToken", disableRequestCompression: true);
+			var tokenRequest = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
 
 			return tokenRequest.ReadResponseJson().Value<string>("Token");
 		}
 
 		private string ValidateThatWeCanUseAuthenticateTokens(string token)
 		{
-			var request = CreateRequest("GET", "/singleAuthToken", disableRequestCompression: true);
+			var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
 
 			request.DisableAuthentication();
 			request.webRequest.ContentLength = 0;
