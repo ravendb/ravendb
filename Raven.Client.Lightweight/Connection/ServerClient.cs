@@ -648,35 +648,6 @@ namespace Raven.Client.Connection
             return asyncDatabaseCommands.PutIndexAsync(name, definition, overwrite).Result;
 		}
 
-		public string DirectPutTransformer(string name, string operationUrl, TransformerDefinition definition)
-		{
-			string requestUri = operationUrl + "/transformers/" + name;
-
-			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
-
-
-            try
-            {
-			    var responseJson = (RavenJObject)request.ReadResponseJson();
-			    return responseJson.Value<string>("Transformer");
-            }
-            catch (WebException e)
-            {
-                Exception newException;
-                if (ShouldRethrowIndexException(e, out newException))
-                {
-                    if (newException != null)
-                        throw new TransformCompilationException(newException.Message, e);
-                }
-                throw;
-            }
-		}
-
 	    public string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)
 	    {
 	        string requestUri = operationUrl + "/indexes/" + name;
