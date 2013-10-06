@@ -962,9 +962,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IDisposable ForceReadFromMaster()
 		{
-			var old = readStripingBase;
-			readStripingBase = -1;// this means that will have to use the master url first
-			return new DisposableAction(() => readStripingBase = old);
+            return asyncDatabaseCommands.ForceReadFromMaster();
 		}
 
 		/// <summary>

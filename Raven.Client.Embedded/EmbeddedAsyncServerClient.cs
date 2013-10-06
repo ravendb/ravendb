@@ -323,9 +323,9 @@ namespace Raven.Client.Embedded
             return new CompletedTask<JsonDocument[]>(databaseCommands.StartsWith(keyPrefix, matches, start, pageSize, metadataOnly, exclude));
 		}
 
-		public void ForceReadFromMaster()
+		public IDisposable ForceReadFromMaster()
 		{
-			databaseCommands.ForceReadFromMaster();
+			return databaseCommands.ForceReadFromMaster();
 		}
 
 		public Task<JsonDocumentMetadata> HeadAsync(string key)
