@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading;
 using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;
@@ -30,7 +31,7 @@ namespace Raven.Tests.Storage
 				tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
 				tx.Batch(viewer => Assert.True(viewer.Indexing.GetIndexesStats().Any(x => x.Name == "def")));
 
-				tx.Batch(mutator => mutator.Indexing.DeleteIndex("def"));
+				tx.Batch(mutator => mutator.Indexing.DeleteIndex("def", new CancellationToken()));
 				tx.Batch(viewer => Assert.False(viewer.Indexing.GetIndexesStats().Any(x => x.Name == "def")));
 			}
 		}
