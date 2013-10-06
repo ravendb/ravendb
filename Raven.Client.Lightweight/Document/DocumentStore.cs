@@ -764,10 +764,8 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(database) == false)
 				dbUrl = dbUrl + "/databases/" + database;
 
-			var old = SynchronizationContext.Current;
-			try
+			using(NoSyncronizationContext.Scope())
 			{
-				SynchronizationContext.SetSynchronizationContext(null);
 				return new RemoteDatabaseChanges(dbUrl,
 					Credentials,
 					jsonRequestFactory,
@@ -775,10 +773,6 @@ namespace Raven.Client.Document
 					GetReplicationInformerForDatabase(database),
 					() => databaseChanges.Remove(database),
 					((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
-			}
-			finally
-			{
-				SynchronizationContext.SetSynchronizationContext(old);
 			}
 		}
 
