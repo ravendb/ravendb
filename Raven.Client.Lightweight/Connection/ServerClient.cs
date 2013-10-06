@@ -628,6 +628,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex(string name, IndexDefinition definition)
 		{
+		    return asyncDatabaseCommands.PutIndexAsync(name, definition, false).Result;
 			return PutIndex(name, definition, false);
 		}
 
