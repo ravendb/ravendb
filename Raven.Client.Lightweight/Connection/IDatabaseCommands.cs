@@ -260,41 +260,14 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		IDatabaseCommands With(ICredentials credentialsForSession);
-
 	
-		/// <summary>
-		/// Perform a set based deletes using the specified index, not allowing the operation
-		/// if the index is stale
-		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToDelete">The query to delete.</param>
-		Operation DeleteByIndex(string indexName, IndexQuery queryToDelete);
-
 		/// <summary>
 		/// Perform a set based deletes using the specified index
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale);
-
-		/// <summary>
-		/// Perform a set based update using the specified index, not allowing the operation
-		/// if the index is stale
-		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patchRequests">The patch requests.</param>
-		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests);
-
-		/// <summary>
-		/// Perform a set based update using the specified index, not allowing the operation
-		/// if the index is stale
-		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch);
+		Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale = false);
 
 		/// <summary>
 		/// Perform a set based update using the specified index
@@ -303,7 +276,7 @@ namespace Raven.Client.Connection
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale);
+		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale = false);
 
 		/// <summary>
 		/// Perform a set based update using the specified index
@@ -312,7 +285,7 @@ namespace Raven.Client.Connection
 		/// <param name="queryToUpdate">The query to update.</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
+		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale = false);
 
 		/// <summary>
 		/// Create a new instance of <see cref="IDatabaseCommands"/> that will interacts

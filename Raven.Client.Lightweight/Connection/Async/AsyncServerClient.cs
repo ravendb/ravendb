@@ -1127,11 +1127,6 @@ namespace Raven.Client.Connection.Async
             });
         }
 
-        public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
-        {
-            return UpdateByIndex(indexName, queryToUpdate, patch, false);
-        }
-
         /// <summary>
         /// Begins the async query.
         /// </summary>

@@ -1016,43 +1016,19 @@ namespace Raven.Client.Connection
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
+		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale = false)
 		{
 		    return asyncDatabaseCommands.DeleteByIndexAsync(indexName, queryToDelete, allowStale).Result;
         }
 
-		/// <summary>
-		/// Perform a set based update using the specified index, not allowing the operation
-		/// if the index is stale
-		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patchRequests">The patch requests.</param>
-		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests)
-		{
-			return UpdateByIndex(indexName, queryToUpdate, patchRequests, false);
-		}
-
-		/// <summary>
-		/// Perform a set based update using the specified index, not allowing the operation
-		/// if the index is stale
-		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
-		{
-			return UpdateByIndex(indexName, queryToUpdate, patch, false);
-		}
-
-		/// <summary>
+	    /// <summary>
 		/// Perform a set based update using the specified index.
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
+		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale = false)
 		{
 			var requestData = new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented);
 			return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "PATCH");
@@ -1065,7 +1041,7 @@ namespace Raven.Client.Connection
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale = false)
 		{
 			var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
 			return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "EVAL");
@@ -1097,17 +1073,6 @@ namespace Raven.Client.Connection
 
 				return new Operation(this, jsonResponse.Value<long>("OperationId"));
 			});
-		}
-
-		/// <summary>
-		/// Perform a set based deletes using the specified index, not allowing the operation
-		/// if the index is stale
-		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToDelete">The query to delete.</param>
-		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete)
-		{
-			return DeleteByIndex(indexName, queryToDelete, false);
 		}
 
 		/// <summary>
