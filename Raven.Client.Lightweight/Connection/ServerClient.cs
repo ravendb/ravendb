@@ -626,31 +626,7 @@ namespace Raven.Client.Connection
 		/// <param name="name">The name.</param>
 		public void ResetIndex(string name)
 		{
-			ExecuteWithReplication("RESET", u => DirectResetIndex(name, u));
-		}
-
-		private object DirectResetIndex(string name, string operationUrl)
-		{
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/" + name, "RESET", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-			httpJsonRequest.ReadResponseJson();
-			return null;
-		}
-
-		private string[] DirectGetIndexNames(int start, int pageSize, string operationUrl)
-		{
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-			var responseJson = httpJsonRequest.ReadResponseJson();
-			return ((RavenJArray)responseJson).Select(x => x.Value<string>()).ToArray();
+		    asyncDatabaseCommands.ResetIndexAsync(name).Wait();
 		}
 
 		/// <summary>
