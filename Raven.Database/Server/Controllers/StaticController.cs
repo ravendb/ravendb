@@ -26,7 +26,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var filename = id;
 			var result = new HttpResponseMessage(HttpStatusCode.OK){Content = new JsonContent()};
-			Database.TransactionalStorage.Batch(async _ => // have to keep the session open for reading of the attachment stream
+			Database.TransactionalStorage.Batch(_ => // have to keep the session open for reading of the attachment stream
 			{
 				var attachmentAndHeaders = Database.GetStatic(filename);
 				if (attachmentAndHeaders == null)
@@ -40,16 +40,18 @@ namespace Raven.Database.Server.Controllers
 					return;
 				}
 
-				WriteHeaders(attachmentAndHeaders.Metadata, attachmentAndHeaders.Etag, result);
-				var stream = attachmentAndHeaders.Data();
-				{
-					result.Content = new PushStreamContent((stream1, content, arg3) =>
+				result.Content = new PushStreamContent((outputStream, __, ___) =>
+					Database.TransactionalStorage.Batch(accessor =>
 					{
-						stream.CopyTo(stream1);
-						stream.Dispose();
-					});
-					//	stream.CopyTo(await Request.Content.ReadAsStreamAsync());
-				}
+						using(outputStream)
+						using (var stream = attachmentAndHeaders.Data())
+						{
+							stream.CopyTo(outputStream);
+							outputStream.Flush();
+						}
+					}));
+				WriteHeaders(attachmentAndHeaders.Metadata, attachmentAndHeaders.Etag, result);
+
 			});
 
 			return result;

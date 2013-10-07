@@ -151,7 +151,7 @@ namespace Raven.Database.Server.Controllers
 			public ExcelOutputWriter(HttpResponseMessage msg, Stream stream)
 			{
 				this.stream = stream;
-				msg.Headers.Add("Content-Type", "text/csv, application/vnd.msexcel, text/anytext");
+				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("text/csv, application/vnd.msexcel, text/anytext");
 			}
 
 			public void Dispose()
