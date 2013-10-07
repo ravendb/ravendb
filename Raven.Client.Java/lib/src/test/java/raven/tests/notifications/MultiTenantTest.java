@@ -18,7 +18,6 @@ import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
 import raven.client.utils.Observers;
 
-
 public class MultiTenantTest extends RemoteClientTest {
 
 

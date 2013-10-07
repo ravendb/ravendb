@@ -2,6 +2,8 @@ package raven.client.changes;
 
 import java.util.UUID;
 
+import raven.abstractions.basic.EventHandler;
+import raven.abstractions.basic.VoidArgs;
 import raven.abstractions.data.BulkInsertChangeNotification;
 import raven.abstractions.data.DocumentChangeNotification;
 import raven.abstractions.data.IndexChangeNotification;
@@ -11,7 +13,9 @@ public interface IDatabaseChanges {
 
   public boolean isConnected();
 
-  //TODO: event EventHandler ConnectionStatusChanged;
+  public void addConnectionStatusChanged(EventHandler<VoidArgs> handler);
+
+  public void removeConnectionStatusChanges(EventHandler<VoidArgs> handler);
 
   public IObservable<IndexChangeNotification> forIndex(String indexName);
 

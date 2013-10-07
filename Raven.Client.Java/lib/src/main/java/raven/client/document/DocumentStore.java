@@ -526,7 +526,7 @@ public class DocumentStore extends DocumentStoreBase {
               databaseChanges.remove(databaseClousure);
             }
           });
-//TODO          ((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
+//FIXME          ((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
   }
 
   /**
@@ -622,7 +622,7 @@ public class DocumentStore extends DocumentStoreBase {
 
 
 
-  /*TODO
+  /*FIXME
     public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
     {
       var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? Constants.SystemDatabase);

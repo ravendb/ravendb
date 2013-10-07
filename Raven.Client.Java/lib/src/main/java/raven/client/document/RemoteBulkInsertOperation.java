@@ -18,7 +18,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.concurrent.Cancellable;
 
 import raven.abstractions.closure.Action1;
 import raven.abstractions.data.BulkInsertChangeNotification;
@@ -29,19 +28,22 @@ import raven.abstractions.data.HttpMethods;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.changes.IDatabaseChanges;
+import raven.client.changes.IObserver;
 import raven.client.connection.ServerClient;
 import raven.client.connection.implementation.HttpJsonRequest;
+import raven.client.utils.CancellationTokenSource;
+import raven.client.utils.CancellationTokenSource.CancellationToken;
 import de.undercouch.bson4jackson.BsonFactory;
 import de.undercouch.bson4jackson.BsonGenerator;
 
 
-public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation {
+public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, IObserver<BulkInsertChangeNotification> {
 
   private final BsonFactory bsonFactory = new BsonFactory();
 
   private final static RavenJObject END_OF_QUEUE_OBJECT = RavenJObject.parse("{ \"QueueFinished\" : true }");
 
-  //TODO: private CancellationTokenSource cancellationTokenSource;
+  private CancellationTokenSource cancellationTokenSource;
   private final ServerClient operationClient;
 
   private final IDatabaseChanges operationChanges;
@@ -86,20 +88,26 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation {
   }
 
   private void subscribeToBulkInsertNotifications(IDatabaseChanges changes) {
-    // TODO Auto-generated method stub
+    changes.forBulkInsert(operationId).subscribe(this);
   }
 
   private class BulkInsertEntity implements HttpEntity {
 
     private BulkInsertOptions options;
+    private CancellationToken cancellationToken;
 
-    public BulkInsertEntity(BulkInsertOptions options) {
+    public BulkInsertEntity(BulkInsertOptions options, CancellationToken cancellationToken) {
       this.options = options;
+      this.cancellationToken = cancellationToken;
     }
 
     @Override
     public boolean isRepeatable() {
       return false;
+    }
+
+    public CancellationToken getCancellationToken() {
+      return cancellationToken;
     }
 
     @Override
@@ -129,7 +137,7 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation {
 
     @Override
     public void writeTo(OutputStream outstream) throws IOException {
-      writeQueueToServer(outstream, options, null); //TODO: cancelation token
+      writeQueueToServer(outstream, options, cancellationToken);
     }
 
     @Override
@@ -145,6 +153,11 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation {
 
   }
 
+  private CancellationToken createCancellationToken() {
+    cancellationTokenSource = new CancellationTokenSource();
+    return cancellationTokenSource.getToken();
+  }
+
   private Thread startBulkInsertAsync(BulkInsertOptions options) {
     operationClient.setExpect100Continue(true);
 
@@ -158,7 +171,7 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation {
 
     operationRequest = createOperationRequest(operationUrl, token);
     HttpPost webRequest = (HttpPost) operationRequest.getWebRequest();
-    webRequest.setEntity(new BulkInsertEntity(options)); //TODO: cancelation task
+    webRequest.setEntity(new BulkInsertEntity(options, createCancellationToken()));
 
 
     Thread thread = new Thread(new Runnable() {
@@ -180,19 +193,7 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation {
     thread.start();
     return thread;
 
-    /* TODO:
-    var cancellationToken = CreateCancellationToken();
-    await Task.Factory.StartNew(() => WriteQueueToServer(stream, options, cancellationToken), TaskCreationOptions.LongRunning);
-     */
   }
-
-  /* TODO
-   * private CancellationToken CreateCancellationToken()
-        {
-            cancellationTokenSource = new CancellationTokenSource();
-            return cancellationTokenSource.Token;
-        }
-   */
 
   private String getToken(String operationUrl) {
     RavenJToken jsonToken = getAuthToken(operationUrl);
@@ -200,7 +201,6 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation {
   }
 
   private RavenJToken getAuthToken(String operationUrl) {
-    //TODO: check if resource are disposed
     HttpJsonRequest request = operationClient.createRequest(HttpMethods.POST, operationUrl + "&op=generate-single-use-auth-token", true);
     return request.readResponseJson();
   }
@@ -234,16 +234,15 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation {
 
     return requestUrl;
   }
-  //TODO: can we use cancellable from org.apache.http.concurrent; ?
-  private void writeQueueToServer(OutputStream stream, BulkInsertOptions options, Cancellable cancellationToken) throws IOException {
+  private void writeQueueToServer(OutputStream stream, BulkInsertOptions options, CancellationToken cancellationToken) throws IOException {
 
     while (true) {
-      //TODO: cancellationToken.ThrowIfCancellationRequested();
+      cancellationToken.throwIfCancellationRequested();
       List<RavenJObject> batch = new ArrayList<>();
       try {
         RavenJObject document;
         while ((document = queue.poll(200, TimeUnit.MICROSECONDS)) != null) {
-          //TODO: cancellationToken.ThrowIfCancellationRequested();
+          cancellationToken.throwIfCancellationRequested();
 
           if (document == END_OF_QUEUE_OBJECT) { //marker
             flushBatch(stream, batch);
@@ -274,8 +273,9 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation {
       throw new IllegalArgumentException("data");
     }
 
+
     /*
-    if (operationTask.isCancelled()) { //TODOO or isFaulted
+    if (operationTask.isCancelled()) { //TODO or isFaulted
       operationTask.get();// error early if we have  any error
     }*/
     metadata.add("@id", id);
@@ -378,9 +378,20 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation {
     }
   }
 
-  public void onNExt(BulkInsertChangeNotification value) {
+  @Override
+  public void onNext(BulkInsertChangeNotification value) {
     if (value.getType().equals(DocumentChangeTypes.BULK_INSERT_ERROR)) {
-      //TODO:  cancellationTokenSource.Cancel();
+      cancellationTokenSource.cancel();
     }
+  }
+
+  @Override
+  public void onError(Exception error) {
+    //empty by design
+  }
+
+  @Override
+  public void onCompleted() {
+    //empty by design
   }
 }

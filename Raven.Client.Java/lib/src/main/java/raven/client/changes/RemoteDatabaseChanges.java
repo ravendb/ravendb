@@ -25,7 +25,8 @@ import raven.abstractions.basic.VoidArgs;
 import raven.abstractions.closure.Action0;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function1;
-import raven.abstractions.closure.Functions;
+import raven.abstractions.closure.Predicate;
+import raven.abstractions.closure.Predicates;
 import raven.abstractions.data.BulkInsertChangeNotification;
 import raven.abstractions.data.DocumentChangeNotification;
 import raven.abstractions.data.HttpMethods;
@@ -235,7 +236,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
       }
     });
     counter.inc();
-    final TaskedObservable<IndexChangeNotification> taskedObservable = new TaskedObservable<>(counter, new Function1<IndexChangeNotification, Boolean>() {
+    final TaskedObservable<IndexChangeNotification> taskedObservable = new TaskedObservable<>(counter, new Predicate<IndexChangeNotification>() {
       @Override
       public Boolean apply(IndexChangeNotification notification) {
         return notification.getName().equalsIgnoreCase(indexName);
@@ -298,7 +299,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
       }
     });
 
-    final TaskedObservable<DocumentChangeNotification> taskedObservable = new TaskedObservable<>(counter, new Function1<DocumentChangeNotification, Boolean>() {
+    final TaskedObservable<DocumentChangeNotification> taskedObservable = new TaskedObservable<>(counter, new Predicate<DocumentChangeNotification>() {
       @Override
       public Boolean apply(DocumentChangeNotification notification) {
         return notification.getId().equalsIgnoreCase(docId);
@@ -339,7 +340,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
       }
     });
 
-    final TaskedObservable<DocumentChangeNotification> taskedObservable = new TaskedObservable<>(counter, Functions.<DocumentChangeNotification> alwaysTrue());
+    final TaskedObservable<DocumentChangeNotification> taskedObservable = new TaskedObservable<>(counter, Predicates.<DocumentChangeNotification> alwaysTrue());
 
     counter.getOnDocumentChangeNotification().add(new Action1<DocumentChangeNotification>() {
       @Override
@@ -378,7 +379,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
       }
     });
 
-    final TaskedObservable<BulkInsertChangeNotification> taskedObservable = new TaskedObservable<>(counter, new Function1<BulkInsertChangeNotification, Boolean>() {
+    final TaskedObservable<BulkInsertChangeNotification> taskedObservable = new TaskedObservable<>(counter, new Predicate<BulkInsertChangeNotification>() {
       @Override
       public Boolean apply(BulkInsertChangeNotification notification) {
         return notification.getOperationId().equals(operationId);
@@ -420,7 +421,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
       }
     });
     counter.inc();
-    final TaskedObservable<IndexChangeNotification> taskedObservable = new TaskedObservable<>(counter, Functions.<IndexChangeNotification> alwaysTrue());
+    final TaskedObservable<IndexChangeNotification> taskedObservable = new TaskedObservable<>(counter, Predicates.<IndexChangeNotification> alwaysTrue());
 
     counter.getOnIndexChangeNotification().add(new Action1<IndexChangeNotification>() {
       @Override
@@ -456,7 +457,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
       }
     });
 
-    final TaskedObservable<DocumentChangeNotification> taskedObservable = new TaskedObservable<>(counter, new Function1<DocumentChangeNotification, Boolean>() {
+    final TaskedObservable<DocumentChangeNotification> taskedObservable = new TaskedObservable<>(counter, new Predicate<DocumentChangeNotification>() {
       @Override
       public Boolean apply(DocumentChangeNotification notification) {
         return notification.getId() != null && notification.getId().toLowerCase().startsWith(docIdPrefix.toLowerCase());
@@ -497,7 +498,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
       }
     });
 
-    final TaskedObservable<ReplicationConflictNotification> taskedObservable = new TaskedObservable<>(counter, Functions.<ReplicationConflictNotification> alwaysTrue());
+    final TaskedObservable<ReplicationConflictNotification> taskedObservable = new TaskedObservable<>(counter, Predicates.<ReplicationConflictNotification> alwaysTrue());
 
     counter.getOnReplicationConflictNotification().add(new Action1<ReplicationConflictNotification>() {
       @Override

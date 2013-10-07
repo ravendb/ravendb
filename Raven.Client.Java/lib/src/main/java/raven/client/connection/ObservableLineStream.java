@@ -9,6 +9,7 @@ import java.nio.charset.Charset;
 import org.apache.commons.io.IOUtils;
 
 import raven.abstractions.closure.Action0;
+import raven.abstractions.closure.Predicate;
 import raven.client.changes.IObservable;
 import raven.client.changes.IObserver;
 import raven.client.connection.profiling.ConcurrentSet;
@@ -37,7 +38,7 @@ public class ObservableLineStream implements IObservable<String>, Closeable {
         while (true) {
           try {
             int read = read();
-            if (read == 0) { // will force reopening of the connection
+            if (read == -1) { // will force reopening of the connection
               throw new EOFException();
             }
 
@@ -89,16 +90,20 @@ public class ObservableLineStream implements IObservable<String>, Closeable {
             posInBuffer -= startPos;
           } catch (Exception e) {
             IOUtils.closeQuietly(stream);
+            if (e instanceof EOFException) {
+              return ;//TODO: not an error?
+            }
 
             //TODO handle object disposed exception and webexception  - request canceled
             for (IObserver<String> subscriber : subscribers) {
               subscriber.onError(e);
             }
+            return;
           }
         }
       }
 
-    });
+    }, "ObservableLineStream");
     task.setDaemon(true);
     task.start();
   }
@@ -126,5 +131,10 @@ public class ObservableLineStream implements IObservable<String>, Closeable {
         subscribers.remove(observer);
       }
     };
+  }
+
+  @Override
+  public IObservable<String> where(Predicate<String> predicate) {
+    throw new UnsupportedOperationException("You can't use ObservableLineStream with where predicate");
   }
 }

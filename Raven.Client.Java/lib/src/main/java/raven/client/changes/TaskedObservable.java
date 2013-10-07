@@ -3,16 +3,17 @@ package raven.client.changes;
 import java.io.Closeable;
 import java.io.IOException;
 
-import raven.abstractions.closure.Function1;
+import raven.abstractions.closure.Predicate;
+import raven.abstractions.closure.Predicates;
 import raven.client.connection.profiling.ConcurrentSet;
 
 
 public class TaskedObservable<T> implements IObservable<T> {
   private final LocalConnectionState localConnectionState;
-  private final Function1<T, Boolean> filter;
-  private final ConcurrentSet<IObserver<T>> subscribers = new ConcurrentSet<>();
+  private Predicate<T> filter;
+  private ConcurrentSet<IObserver<T>> subscribers = new ConcurrentSet<>();
 
-  public TaskedObservable(LocalConnectionState localConnectionState, Function1<T, Boolean> filter) {
+  public TaskedObservable(LocalConnectionState localConnectionState, Predicate<T> filter) {
     this.localConnectionState = localConnectionState;
     this.filter = filter;
   }
@@ -50,6 +51,12 @@ public class TaskedObservable<T> implements IObservable<T> {
     for (IObserver<T> subscriber : subscribers) {
       subscriber.onError(obj);
     }
+  }
+
+  @Override
+  public IObservable<T> where(Predicate<T> predicate) {
+    filter = Predicates.and(filter, predicate);
+    return this;
   }
 
 }

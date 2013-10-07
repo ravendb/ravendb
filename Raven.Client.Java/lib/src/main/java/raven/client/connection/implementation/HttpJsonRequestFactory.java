@@ -112,6 +112,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     }
     disposed = true;
     cache.close();
+    
   }
 
   public CachedRequestOp configureCaching(String url, Action2<String, String> setHeader) {
