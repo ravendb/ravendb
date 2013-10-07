@@ -15,37 +15,28 @@ namespace Raven.Database.Queries
 		{
 			if (index == "dynamic" || index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
 			{
-				var entitName = index == "dynamic" ? null : index.Remove(0, "dynamic/".Length);
-				if (self.Configuration.PreventAutomaticSuggestionCreation)
-					throw new InvalidOperationException("Could not get suggestions for dynamic index because `Raven/PreventAutomaticSuggestionCreation` is set to true.");
-				index = self.FindDynamicIndexName(
-					entitName, new IndexQuery { Query = suggestionQuery.Field + ":" + QuoteIfNeeded(suggestionQuery.Term) });
-				if (string.IsNullOrEmpty(index))
-					throw new InvalidOperationException(
-						"Could find no index for the specified query, suggestions will not create a dynamic index, and cannot suggest without an index. Did you forget to query before calling Suggest?");
+				throw new InvalidOperationException("Could not get suggestions for dynamic index because `Raven/PreventAutomaticSuggestionCreation` is set to true.");
 			}
-			else
-			{
-				var indexDefinition = self.GetIndexDefinition(index);
-				if (indexDefinition == null)
-					throw new InvalidOperationException(string.Format("Could not find specified index '{0}'.", index));
+		    
+            var indexDefinition = self.GetIndexDefinition(index);
+		    if (indexDefinition == null)
+		        throw new InvalidOperationException(string.Format("Could not find specified index '{0}'.", index));
 
-				if (indexDefinition.Suggestions.ContainsKey(suggestionQuery.Field) == false && self.Configuration.PreventAutomaticSuggestionCreation)
-				{
-					throw new InvalidOperationException(string.Format("Index '{0}' does not have suggestions configured for field '{1}'.", index, suggestionQuery.Field));
-				}
+		    if (indexDefinition.Suggestions.ContainsKey(suggestionQuery.Field) == false)
+		    {
+		        throw new InvalidOperationException(string.Format("Index '{0}' does not have suggestions configured for field '{1}'.", index, suggestionQuery.Field));
+		    }
 
-				var suggestion = indexDefinition.Suggestions[suggestionQuery.Field];
+		    var suggestion = indexDefinition.Suggestions[suggestionQuery.Field];
 
-				if (suggestionQuery.Accuracy.HasValue == false)
-					suggestionQuery.Accuracy = suggestion.Accuracy;
+		    if (suggestionQuery.Accuracy.HasValue == false)
+		        suggestionQuery.Accuracy = suggestion.Accuracy;
 
-				if (suggestionQuery.Distance.HasValue == false)
-					suggestionQuery.Distance = suggestion.Distance;
-			}
+		    if (suggestionQuery.Distance.HasValue == false)
+		        suggestionQuery.Distance = suggestion.Distance;
 
 
-			return new SuggestionQueryRunner(self).ExecuteSuggestionQuery(index, suggestionQuery);
+		    return new SuggestionQueryRunner(self).ExecuteSuggestionQuery(index, suggestionQuery);
 		}
 
 		private static string QuoteIfNeeded(string term)
