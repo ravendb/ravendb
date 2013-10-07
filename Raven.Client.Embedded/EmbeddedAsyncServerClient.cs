@@ -370,6 +370,16 @@ namespace Raven.Client.Embedded
 	        throw new NotImplementedException();
 	    }
 
+	    public Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Task<Attachment> HeadAttachmentAsync(string key)
+	    {
+	        throw new NotImplementedException();
+	    }
+
 	    #region IAsyncGlobalAdminDatabaseCommands
 
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin

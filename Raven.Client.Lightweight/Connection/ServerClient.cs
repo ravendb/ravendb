@@ -388,32 +388,9 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize)
 		{
-			return ExecuteWithReplication("GET", operationUrl => DirectGetAttachmentHeadersStartingWith("GET", idPrefix, start, pageSize, operationUrl));
-		}
-
-		private IEnumerable<Attachment> DirectGetAttachmentHeadersStartingWith(string method, string idPrefix, int start, int pageSize, string operationUrl)
-		{
-			var webRequest =
-				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-																						 operationUrl + "/static/?startsWith=" +
-																						 idPrefix + "&start=" + start + "&pageSize=" +
-																						 pageSize, method, credentials, convention))
-                                                                                         .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-			var result = webRequest.ReadResponseJson();
-
-			return convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result))
-				.Select(x => new Attachment
-				{
-					Etag = x.Etag,
-					Metadata = x.Metadata,
-					Size = x.Size,
-					Key = x.Key,
-					Data = () =>
-					{
-						throw new InvalidOperationException("Cannot get attachment data from an attachment header");
-					}
-				});
+		    return new AsycnEnumerableWrapper<Attachment>(asyncDatabaseCommands.GetAttachmentHeadersStartingWithAsync(idPrefix,
+		            start, pageSize).Result);
+            
 		}
 
 		/// <summary>
@@ -433,65 +410,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public Attachment HeadAttachment(string key)
 		{
-			return ExecuteWithReplication("HEAD", operationUrl => DirectGetAttachment("HEAD", key, operationUrl));
-		}
-
-		private Attachment DirectGetAttachment(string method, string key, string operationUrl)
-		{
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, method, credentials, convention))
-                            .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-			Func<Stream> data;
-			try
-			{
-				int len;
-				if (method == "GET")
-				{
-					var memoryStream = new MemoryStream(webRequest.ReadResponseBytes());
-					data = () => memoryStream;
-					len = (int)memoryStream.Length;
-				}
-				else
-				{
-					webRequest.ExecuteRequest();
-
-					len = int.Parse(webRequest.ResponseHeaders["Content-Length"]);
-					data = () =>
-					{
-						throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " + method);
-					};
-				}
-
-                HandleReplicationStatusChanges(webRequest.ResponseHeaders[Constants.RavenForcePrimaryServerCheck], url, operationUrl);
-
-				return new Attachment
-				{
-					Data = data,
-					Size = len,
-					Etag = webRequest.GetEtagHeader(),
-					Metadata = webRequest.ResponseHeaders.FilterHeadersAttachment()
-				};
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null)
-					throw;
-				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-				{
-					var conflictsDoc = RavenJObject.Load(new BsonReader(httpWebResponse.GetResponseStreamWithHttpDecompression()));
-					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
-
-					throw new ConflictException("Conflict detected on " + key +
-												", conflict must be resolved before the attachment will be accessible", true)
-					{
-						ConflictedVersionIds = conflictIds,
-						Etag = httpWebResponse.GetEtagHeader()
-					};
-				}
-				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-					return null;
-				throw;
-			}
+            return asyncDatabaseCommands.HeadAttachmentAsync(key).Result;
 		}
 
 		/// <summary>
@@ -636,7 +555,7 @@ namespace Raven.Client.Connection
 		    var reference = new Reference<QueryHeaderInformation>();
 		    Task<IAsyncEnumerator<RavenJObject>> streamQueryAsync = asyncDatabaseCommands.StreamQueryAsync(index, query, reference);
 		    queryHeaderInfo = reference.Value;
-		    return new SyncEnumeratorWrapper<RavenJObject>(streamQueryAsync.Result);
+		    return new AsycnEnumerableWrapper<RavenJObject>(streamQueryAsync.Result);
 		}
 
 		/// <summary>
@@ -646,7 +565,7 @@ namespace Raven.Client.Connection
 		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude)
 		{
             //TODO pass exclude param
-		    return new SyncEnumeratorWrapper<RavenJObject>(
+		    return new AsycnEnumerableWrapper<RavenJObject>(
 		            asyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize).Result);
 		}
 
@@ -1296,11 +1215,11 @@ namespace Raven.Client.Connection
 
 		#endregion
 
-        private class SyncEnumeratorWrapper<T> : IEnumerator<T>
+        private class AsycnEnumerableWrapper<T> : IEnumerator<T>, IEnumerable<T>
         {
             private readonly IAsyncEnumerator<T> asyncEnumerator;
 
-            public SyncEnumeratorWrapper(IAsyncEnumerator<T> asyncEnumerator)
+            public AsycnEnumerableWrapper(IAsyncEnumerator<T> asyncEnumerator)
             {
                 this.asyncEnumerator = asyncEnumerator;
             }
@@ -1328,6 +1247,16 @@ namespace Raven.Client.Connection
             object IEnumerator.Current
             {
                 get { return Current; }
+            }
+
+            public IEnumerator<T> GetEnumerator()
+            {
+                return this;
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
             }
         }
 	}

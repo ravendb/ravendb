@@ -1814,6 +1814,99 @@ namespace Raven.Client.Connection.Async
                 throw responseException;
         }
 
+        public Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize)
+        {
+            return ExecuteWithReplication("GET", operationUrl => DirectGetAttachmentHeadersStartingWith("GET", idPrefix, start, pageSize, operationUrl));
+        }
+
+        private async Task<IAsyncEnumerator<Attachment>> DirectGetAttachmentHeadersStartingWith(string method, string idPrefix, int start, int pageSize, string operationUrl)
+        {
+            var webRequest =
+                jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+                                                                                         operationUrl + "/static/?startsWith=" +
+                                                                                         idPrefix + "&start=" + start + "&pageSize=" +
+                                                                                         pageSize, method, credentials, convention))
+                                                                                         .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+            var result = await webRequest.ReadResponseJsonAsync();
+            throw new NotImplementedException("TODO");
+
+           /* return convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result))
+                .Select(x => new Attachment
+                {
+                    Etag = x.Etag,
+                    Metadata = x.Metadata,
+                    Size = x.Size,
+                    Key = x.Key,
+                    Data = () =>
+                    {
+                        throw new InvalidOperationException("Cannot get attachment data from an attachment header");
+                    }
+                });*/
+        }
+
+        public Task<Attachment> HeadAttachmentAsync(string key)
+        {
+            return ExecuteWithReplication("HEAD", operationUrl => DirectGetAttachment("HEAD", key, operationUrl));
+        }
+
+        private async Task<Attachment> DirectGetAttachment(string method, string key, string operationUrl)
+        {
+            var webRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, method, credentials, convention))
+                            .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+            try
+            {
+                int len;
+                Func<Stream> data;
+                if (method == "GET")
+                {
+                    var memoryStream = new MemoryStream(await webRequest.ReadResponseBytesAsync());
+                    data = () => memoryStream;
+                    len = (int) memoryStream.Length;
+                }
+                else
+                {
+                    await webRequest.ExecuteRequestAsync();
+
+                    len = int.Parse(webRequest.ResponseHeaders["Content-Length"]);
+                    data = () =>
+                    {
+                        throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " +
+                                                            method);
+                    };
+                }
+
+                HandleReplicationStatusChanges(webRequest.ResponseHeaders[Constants.RavenForcePrimaryServerCheck], url,
+                    operationUrl);
+
+                return new Attachment
+                {
+                    Data = data,
+                    Size = len,
+                    Etag = webRequest.GetEtagHeader(),
+                    Metadata = webRequest.ResponseHeaders.FilterHeadersAttachment()
+                };
+            }
+            catch (ErrorResponseException e)
+            {
+                if (e.StatusCode == HttpStatusCode.Conflict)
+                {
+                    var conflictsDoc = RavenJObject.Load(new BsonReader(e.Response.GetResponseStreamWithHttpDecompression().Result)); //TODO can't await in a catch block
+                    var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+
+                    throw new ConflictException("Conflict detected on " + key +
+                                                ", conflict must be resolved before the attachment will be accessible", true)
+                    {
+                        ConflictedVersionIds = conflictIds,
+                        Etag = e.Response.GetEtagHeader()
+                    };
+                }
+                if (e.StatusCode == HttpStatusCode.NotFound)
+                    return null;
+                throw;
+            }
+        }
+
         private void HandleReplicationStatusChanges(string forceCheck, string primaryUrl, string currentUrl)
         {
 	        if (primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
