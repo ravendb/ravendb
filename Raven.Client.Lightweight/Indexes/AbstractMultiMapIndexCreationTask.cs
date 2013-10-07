@@ -70,6 +70,7 @@ namespace Raven.Client.Indexes
 			{
 				Indexes = Indexes,
 				SortOptions = IndexSortOptions,
+                SortOptionsStrings = IndexSortOptionsStrings,
 				Analyzers = Analyzers,
 				Reduce = Reduce,
 #pragma warning disable 612,618

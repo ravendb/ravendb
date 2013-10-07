@@ -276,12 +276,12 @@ namespace Raven.Client.Connection
 			if (primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase)) 
 				return;
 
-			bool shouldForceCheck;
-			if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
-			{
+				bool shouldForceCheck;
+				if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
+				{
 				replicationInformer.ForceCheck(primaryUrl, shouldForceCheck);
+				}
 			}
-		}
 
 		private ConflictException TryResolveConflictOrCreateConcurrencyException(string key, RavenJObject conflictsDoc, Etag etag)
 		{
@@ -981,9 +981,9 @@ namespace Raven.Client.Connection
 	            {
 	                if (newException != null)
 	                    throw newException;
-	                    throw;
-	                }
-
+	                throw;
+	            }
+                
 	        }
 
 	        var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -1015,28 +1015,28 @@ namespace Raven.Client.Connection
 	    private static bool ShouldRethrowIndexException(WebException e, out Exception newEx)
 	    {
 	        newEx = null;
-	            var httpWebResponse = e.Response as HttpWebResponse;
+	        var httpWebResponse = e.Response as HttpWebResponse;
 	        if (httpWebResponse == null)
 	            return true;
 
 	        if (httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
-	            {
-	                var error = e.TryReadErrorResponseObject(
-	                    new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
+	        {
+	            var error = e.TryReadErrorResponseObject(
+	                new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
 
-	                if (error == null)
-	                {
+	            if (error == null)
+	            {
 	                return true;
-	                }
+	            }
 
                 newEx = new IndexCompilationException(error.Message, e)
-	                {
-	                    IndexDefinitionProperty = error.IndexDefinitionProperty,
-	                    ProblematicText = error.ProblematicText
-	                };
+	            {
+	                IndexDefinitionProperty = error.IndexDefinitionProperty,
+	                ProblematicText = error.ProblematicText
+	            };
 
 	            return true;
-	            }
+	        }
 
 	        return (httpWebResponse.StatusCode != HttpStatusCode.NotFound);
 	    }
@@ -1097,6 +1097,23 @@ namespace Raven.Client.Connection
 																		 convention.FailoverBehavior,
 																		 HandleReplicationStatusChanges);
 
+			request.RemoveAuthorizationHeader();
+
+			var token = GetSingleAuthToken();
+
+			try
+			{
+				token = ValidateThatWeCanUseAuthenticateTokens(token);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+					e);
+			}
+
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+
 			var webResponse = request.RawExecuteRequest();
 			queryHeaderInfo = new QueryHeaderInformation
 			{
@@ -1156,6 +1173,24 @@ namespace Raven.Client.Connection
 				new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 				.AddReplicationStatusHeaders(Url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+			request.RemoveAuthorizationHeader();
+
+			var token = GetSingleAuthToken();
+
+			try
+			{
+				token = ValidateThatWeCanUseAuthenticateTokens(token);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate token for docs streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+					e);
+			}
+
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+
 			var webResponse = request.RawExecuteRequest();
 			return YieldStreamResults(webResponse);
 		}
@@ -1610,7 +1645,7 @@ namespace Raven.Client.Connection
 
 				if (opId == null || opId.Type != JTokenType.Integer)
 					return null;
-
+				
 				return new Operation(this, opId.Value<long>());
 			});
 		}
@@ -2203,6 +2238,23 @@ namespace Raven.Client.Connection
 			return new DisposableAction(() => servicePoint.Expect100Continue = false);
 		}
 
+		public string GetSingleAuthToken()
+		{
+			var tokenRequest = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+
+			return tokenRequest.ReadResponseJson().Value<string>("Token");
+		}
+
+		private string ValidateThatWeCanUseAuthenticateTokens(string token)
+		{
+			var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+
+			request.DisableAuthentication();
+			request.webRequest.ContentLength = 0;
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+			var result = request.ReadResponseJson();
+			return result.Value<string>("Token");
+		}
 		#region IAsyncAdminDatabaseCommands
 
 	    /// <summary>

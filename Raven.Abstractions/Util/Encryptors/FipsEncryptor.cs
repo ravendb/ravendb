@@ -31,8 +31,7 @@ namespace Raven.Abstractions.Util.Encryptors
 				}
 			}
 
-			//HMACSHA1
-
+			//SHA1
 			public byte[] ComputeForStorage(byte[] bytes)
 			{
 				if(StorageHashSize == 20)
@@ -53,7 +52,7 @@ namespace Raven.Abstractions.Util.Encryptors
 			public byte[] Compute20(byte[] bytes)
 			{
 #if !SILVERLIGHT
-				return ComputeHash(HMACSHA1.Create(), bytes, 20);
+				return ComputeHash(SHA1.Create(), bytes, 20);
 #else
 				return ComputeHash(new SHA1Managed(), bytes, 20);
 #endif		

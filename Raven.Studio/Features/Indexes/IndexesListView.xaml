@@ -62,7 +62,7 @@
 										 FontStyle="{Binding IndexStats.Priority, Converter={StaticResource PriorityToFontStyle}}"
 										 Foreground="{Binding IndexStats.Priority, Converter={StaticResource PriorityToFontColor}}"
 										 Style="{StaticResource Style_Link_Index_Name}"
-										 ToolTipService.ToolTip="{Binding Name}"
+										 ToolTipService.ToolTip="{Binding ModifiedName}"
 										 Grid.Column="1" />
 						<HyperlinkButton Grid.Column="2"
 										 Command="{Binding MakeIndexPersisted}"

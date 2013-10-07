@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security;
+using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -711,7 +712,7 @@ namespace Raven.Client.Document
 			{
 				if (FailoverServers.IsSetForDefaultDatabase && result.FailoverUrls == null)
 					result.FailoverUrls = FailoverServers.ForDefaultDatabase;
-			}
+		}
 			else
 			{
 				if (FailoverServers.IsSetForDatabase(dbName) && result.FailoverUrls == null)
@@ -763,13 +764,16 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(database) == false)
 				dbUrl = dbUrl + "/databases/" + database;
 
+			using(NoSyncronizationContext.Scope())
+			{
 			return new RemoteDatabaseChanges(dbUrl,
 				Credentials,
 				jsonRequestFactory,
 				Conventions,
 				GetReplicationInformerForDatabase(database),
 				() => databaseChanges.Remove(database),
-				((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
+					((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
+			}
 		}
 
 		/// <summary>
@@ -799,6 +803,29 @@ namespace Raven.Client.Document
 			});
 #else
 			// TODO: with silverlight, we don't currently support aggressive caching
+			return new DisposableAction(() => { });
+#endif
+		}
+
+		/// <summary>
+		/// Setup the WebRequest timeout for the session
+		/// </summary>
+		/// <param name="timeout">Specify the timeout duration</param>
+		/// <remarks>
+		/// Sets the timeout for the JsonRequest.  Scoped to the Current Thread.
+		/// </remarks>
+		public override IDisposable SetRequestsTimeoutFor(TimeSpan timeout) {
+			AssertInitialized();
+#if !SILVERLIGHT && !NETFX_CORE
+
+			var old = jsonRequestFactory.RequestTimeout;
+			jsonRequestFactory.RequestTimeout = timeout;
+
+			return new DisposableAction(() => {
+				jsonRequestFactory.RequestTimeout = old;
+			});
+#else
+			// TODO: with silverlight, we don't currently support session timeout
 			return new DisposableAction(() => { });
 #endif
 		}

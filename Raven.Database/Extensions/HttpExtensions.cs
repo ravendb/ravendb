@@ -243,10 +243,10 @@ namespace Raven.Database.Extensions
 			var obj = value.Value;
 
 			if (obj is DateTime)
-				return ((DateTime) obj).ToString(format);
+				return ((DateTime)obj).ToString(format, CultureInfo.InvariantCulture);
 
 			if (obj is DateTimeOffset)
-				return ((DateTimeOffset) obj).ToString(format);
+				return ((DateTimeOffset)obj).ToString(format, CultureInfo.InvariantCulture);
 
 			return obj.ToString();
 		}
@@ -409,15 +409,15 @@ namespace Raven.Database.Extensions
 			return pageSize;
 		}
 
-		public static AggregationOperation GetAggregationOperation(this IHttpContext context)
+		public static bool IsDistinct(this IHttpContext context)
 		{
-			var aggAsString = context.Request.QueryString["aggregation"];
-			if (aggAsString == null)
-			{
-				return AggregationOperation.None;
-			}
+			var distinct = context.Request.QueryString["distinct"];
+			if (string.Equals("true", distinct, StringComparison.OrdinalIgnoreCase))
+				return true;
+			var aggAsString = context.Request.QueryString["aggregation"]; // 2.x legacy support
 
-			return (AggregationOperation)Enum.Parse(typeof(AggregationOperation), aggAsString, true);
+			return string.Equals("Distinct", aggAsString, StringComparison.OrdinalIgnoreCase);
+       
 		}
 
 		public static DateTime? GetCutOff(this IHttpContext context)
@@ -578,7 +578,7 @@ namespace Raven.Database.Extensions
 		public static void WriteFile(this IHttpContext context, string filePath)
 		{
 			var etagValue = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-None-Match"];
-			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
+			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G", CultureInfo.InvariantCulture);
 			if (etagValue == fileEtag)
 			{
 				context.SetStatusToNotModified();

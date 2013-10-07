@@ -39,6 +39,8 @@ namespace Raven.Database.Storage
 		string FriendlyName { get; }
 		bool HandleException(Exception exception);
 
+		bool IsAlreadyInBatch { get; }
+
 		void Compact(InMemoryRavenConfiguration configuration);
 		Guid ChangeId();
 		void ClearCaches();

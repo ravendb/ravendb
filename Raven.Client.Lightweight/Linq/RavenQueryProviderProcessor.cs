@@ -1194,7 +1194,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				case "Distinct":
                     if (expression.Arguments.Count == 1)
                     {
-						luceneQuery.GroupBy(AggregationOperation.Distinct);
+						luceneQuery.Distinct();
 						VisitExpression(expression.Arguments[0]);
 						break;
                     }
@@ -1592,7 +1592,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				case SpecialQueryType.Count:
 				case SpecialQueryType.LongCount:
 				{
-					if (finalQuery.AggregationOperation == AggregationOperation.Distinct)
+					if (finalQuery.IsDistinct)
 						throw new NotSupportedException("RavenDB does not support mixing Distinct & Count together.\r\n" +
 						                                "See: https://groups.google.com/forum/#!searchin/ravendb/CountDistinct/ravendb/yKQikUYKY5A/nCNI5oQB700J");
 					var qr = finalQuery.QueryResult;

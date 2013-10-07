@@ -51,9 +51,8 @@ namespace Raven.Client
 		/// </summary>
 		/// <value>The query result.</value>
 		QueryResult QueryResult { get; }
+		bool IsDistinct { get; }
 #endif
-
-		AggregationOperation AggregationOperation { get; }
 
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy

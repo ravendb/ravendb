@@ -35,6 +35,11 @@ namespace Raven.Abstractions.Data
 		public bool PageSizeSet { get; private set; }
 
 		/// <summary>
+		/// Whatever we should apply distinct operation to the query on the server side
+		/// </summary>
+		public bool IsDistinct { get; set; }
+
+		/// <summary>
 		/// Gets or sets the query.
 		/// </summary>
 		/// <value>The query.</value>
@@ -70,16 +75,6 @@ namespace Raven.Abstractions.Data
 				PageSizeSet = true;
 			}
 		}
-
-		/// <summary>
-		/// The aggregation operation for this query
-		/// </summary>
-		public AggregationOperation AggregationOperation { get; set; }
-
-		/// <summary>
-		/// The fields to group the query by
-		/// </summary>
-		public string[] GroupBy { get; set; }
 
 		/// <summary>
 		/// Gets or sets the fields to fetch.
@@ -234,11 +229,10 @@ namespace Raven.Abstractions.Data
 				path.Append("&pageSize=").Append(PageSize);
 			
 
-			if(AggregationOperation != AggregationOperation.None)
-				path.Append("&aggregation=").Append(AggregationOperation);
+			if(IsDistinct)
+				path.Append("&distinct=true");
 
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
-			GroupBy.ApplyIfNotNull(field => path.Append("&groupBy=").Append(Uri.EscapeDataString(field)));
 			SortedFields.ApplyIfNotNull(
 				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
 
@@ -272,11 +266,9 @@ namespace Raven.Abstractions.Data
 				path.Append("&cutOffEtag=").Append(CutoffEtag);
 			}
 
-		    this.HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
-            this.HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
-            this.HighlighterPostTags.ApplyIfNotNull(tag=>path.Append("&postTags=").Append(tag));
-
-			
+		    HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
+            HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
+            HighlighterPostTags.ApplyIfNotNull(tag=>path.Append("&postTags=").Append(tag));
 
 			if(DebugOptionGetIndexEntries)
 				path.Append("&debug=entries");
@@ -334,8 +326,7 @@ namespace Raven.Abstractions.Data
                    Equals(TotalSize, other.TotalSize) && 
                    Equals(QueryInputs, other.QueryInputs) && 
                    Start == other.Start && 
-                   AggregationOperation == other.AggregationOperation && 
-                   Equals(GroupBy, other.GroupBy) && 
+                   Equals(IsDistinct, other.IsDistinct) && 
                    Equals(FieldsToFetch, other.FieldsToFetch) && 
                    Equals(SortedFields, other.SortedFields) && 
                    Cutoff.Equals(other.Cutoff) && 
@@ -368,8 +359,7 @@ namespace Raven.Abstractions.Data
                 hashCode = (hashCode * 397) ^ (TotalSize != null ? TotalSize.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (QueryInputs != null ? QueryInputs.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ Start;
-                hashCode = (hashCode * 397) ^ (int)AggregationOperation;
-                hashCode = (hashCode * 397) ^ (GroupBy != null ? GroupBy.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (FieldsToFetch != null ? FieldsToFetch.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (SortedFields != null ? SortedFields.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ Cutoff.GetHashCode();

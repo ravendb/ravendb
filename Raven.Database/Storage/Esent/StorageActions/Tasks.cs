@@ -95,18 +95,27 @@ namespace Raven.Storage.Esent.StorageActions
 			var expectedTaskType = task.GetType().FullName;
 
 			Api.JetSetCurrentIndex(session, Tasks, "by_index_and_task_type");
-			Api.MakeKey(session, Tasks, task.Index, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
-			// there are no tasks matching the current one, just return
-			if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
-			{
-				return;
-			}
 
-			int totalTaskCount = 0;
-			Api.MakeKey(session, Tasks, task.Index, MakeKeyGrbit.NewKey);
-			Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
-			Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+		    if (task.SeparateTasksByIndex)
+		    {
+		        Api.MakeKey(session, Tasks, task.Index, MakeKeyGrbit.NewKey);
+		        Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
+		        // there are no tasks matching the current one, just return
+		        if (Api.TrySeek(session, Tasks, SeekGrbit.SeekEQ) == false)
+		        {
+		            return;
+		        }
+                Api.MakeKey(session, Tasks, task.Index, MakeKeyGrbit.NewKey);
+                Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
+                Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
+            }
+		    else
+		    {
+		        if (Api.TryMoveFirst(session, Tasks) == false)
+		            return;
+		    }
+
+		    int totalTaskCount = 0;
 			do
 			{
 				// esent index ranges are approximate, and we need to check them ourselves as well

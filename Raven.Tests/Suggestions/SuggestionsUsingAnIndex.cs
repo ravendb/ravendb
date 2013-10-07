@@ -220,36 +220,5 @@ namespace Raven.Tests.Suggestions
 				}
 			}
 		}
-
-		[Fact]
-		public void ExactMatchDynamic()
-		{
-			using (var documentStore = NewDocumentStore())
-			{
-				documentStore.ExecuteIndex(new DefaultSuggestionIndex());
-
-				using (var s = documentStore.OpenSession())
-				{
-					s.Store(new User {Name = "Ayende"});
-					s.Store(new User {Name = "Oren"});
-					s.SaveChanges();
-
-					s.Query<User, DefaultSuggestionIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
-				}
-
-				using (var session = documentStore.OpenSession())
-				{
-					var query = session.Query<User>()
-					               .Where(user => user.Name == "Oren")
-					               .Customize(x => x.WaitForNonStaleResults());
-
-					GC.KeepAlive(query.FirstOrDefault());
-					var suggestionQueryResult = query.Suggest();
-
-					Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-					Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
-				}
-			}
-		}
 	}
 }
