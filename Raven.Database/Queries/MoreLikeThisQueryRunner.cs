@@ -167,7 +167,7 @@ namespace Raven.Database.Queries
 				.Select(hit => new JsonDocument
 				{
 					DataAsJson = Index.CreateDocumentFromFields(searcher.Doc(hit.Doc),
-					                                            new FieldsToFetch(fields, AggregationOperation.None, index.IsMapReduce ? Constants.ReduceKeyFieldName : Constants.DocumentIdFieldName)),
+					                                            new FieldsToFetch(fields, false, index.IsMapReduce ? Constants.ReduceKeyFieldName : Constants.DocumentIdFieldName)),
 					Etag = etag
 				})
 				.ToArray();

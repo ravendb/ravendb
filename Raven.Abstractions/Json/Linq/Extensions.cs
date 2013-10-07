@@ -22,11 +22,6 @@ namespace Raven.Json.Linq
 			return value.Value<RavenJToken, U>();
 		}
 
-		public static U Value<U>(this RavenJToken value)
-		{
-			return value.Convert<U>();
-		}
-
 		/// <summary>
 		/// Converts the value.
 		/// </summary>

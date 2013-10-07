@@ -55,21 +55,27 @@ namespace Raven.Database.Server.Responders
 					// the cache for that, to avoid filling it up very quickly
 					using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 					{
-						Database.Query(index, query, information =>
+						Database.TransactionalStorage.Batch(accessor =>
 						{
-							context.Response.AddHeader("Raven-Result-Etag", information.ResultEtag.ToString());
-							context.Response.AddHeader("Raven-Index-Etag", information.IndexEtag.ToString());
-							context.Response.AddHeader("Raven-Is-Stale", information.IsStable ? "true" : "false");
-							context.Response.AddHeader("Raven-Index", information.Index);
-							context.Response.AddHeader("Raven-Total-Results", information.TotalResults.ToString(CultureInfo.InvariantCulture));
-							context.Response.AddHeader("Raven-Index-Timestamp",
-							                           information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
-							                                                               CultureInfo.InvariantCulture));
-
-							if (isHeadRequest)
-								return;
-							writer.WriteHeader();
-						}, writer.Write);
+							using (var op = new DocumentDatabase.DatabaseQueryOperation(Database, index, query, accessor))
+							{
+								op.Init();
+								var information = op.Header;
+								context.Response.AddHeader("Raven-Result-Etag", information.ResultEtag.ToString());
+								context.Response.AddHeader("Raven-Index-Etag", information.IndexEtag.ToString());
+								context.Response.AddHeader("Raven-Is-Stale", information.IsStable ? "true" : "false");
+								context.Response.AddHeader("Raven-Index", information.Index);
+								context.Response.AddHeader("Raven-Total-Results", information.TotalResults.ToString(CultureInfo.InvariantCulture));
+								context.Response.AddHeader("Raven-Index-Timestamp",
+														   information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
+																							   CultureInfo.InvariantCulture));
+								if (isHeadRequest)
+									return;
+								writer.WriteHeader();
+								op.Execute(writer.Write);
+							}
+						});
+						
 					}
 				}
 			}

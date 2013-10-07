@@ -212,6 +212,8 @@
     <Compile Include="Bundles\Expiration\ExpirationReadTrigger.cs" />
     <Compile Include="Bundles\Expiration\ExpiredDocumentsCleaner.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
+    <Compile Include="Bundles\Replication\Controllers\AdminReplicationController.cs" />
+    <Compile Include="Bundles\Replication\Controllers\ReplicationController.cs" />
     <Compile Include="Bundles\Replication\Impl\Historian.cs" />
     <Compile Include="Bundles\Replication\Impl\ReplicationData.cs" />
     <Compile Include="Bundles\Replication\Plugins\DefaultAttachmentReplicationConflictResolver.cs" />
@@ -231,6 +233,7 @@
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriter.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcher.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
+    <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
     <Compile Include="Impl\DTC\MuninInFlightTransactionalState.cs" />
@@ -239,12 +242,13 @@
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />
     <Compile Include="Linq\Ast\TransformFromClauses.cs" />
+    <Compile Include="Plugins\Builtins\ActiveBundlesProtection.cs" />
     <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
     <Compile Include="Prefetching\Prefetcher.cs" />
     <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="RavenDBOptions.cs" />
     <Compile Include="Server\Connections\IEventsTransport.cs" />
-    <Compile Include="Server\Connections\WebApiEventsTransport.cs" />
+    <Compile Include="Server\Connections\ChangesPushContent.cs" />
     <Compile Include="Server\Controllers\Admin\AdminController.cs" />
     <Compile Include="Server\Controllers\Admin\AdminDatabasesController.cs" />
     <Compile Include="Server\Controllers\Admin\BaseAdminController.cs" />
@@ -284,6 +288,7 @@
     <Compile Include="Server\Responders\Debugging\DebugLists.cs" />
     <Compile Include="Server\Responders\Debugging\DebugQueries.cs" />
     <Compile Include="Server\Responders\Debugging\ExecutingQueryInfo.cs" />
+    <Compile Include="Server\Responders\SingleAuthToken.cs" />
     <Compile Include="Server\Responders\TransactionPrepare.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
@@ -899,6 +904,7 @@
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
+    <Compile Include="Tasks\TouchMissingReferenceDocumentTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
     <Compile Include="Util\OutputTicker.cs" />

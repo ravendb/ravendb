@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -53,8 +55,15 @@ namespace Raven.Storage.Esent.Backup
 					if (!incrementalBackup)
 						throw new InvalidOperationException("Denying request to perform a full backup to an existing backup folder. Try doing an incremental backup instead.");
 
-					incrementalTag = SystemTime.UtcNow.ToString("Inc yyyy-MM-dd hh-mm-ss");
+					while (true)
+				    {
+                        incrementalTag = SystemTime.UtcNow.ToString("Inc yyyy-MM-dd HH-mm-ss");
 					to = Path.Combine(to, incrementalTag);
+
+				        if (Directory.Exists(to) == false)
+				            break;
+                        Thread.Sleep(100); // wait until the second changes, should only even happen in tests
+				    }
 				}
 				else
 				{

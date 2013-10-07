@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Globalization;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -101,7 +102,7 @@ namespace Raven.Abstractions.Data
 			if (LastModified != null)
 			{
 				metadata[Constants.LastModified] = LastModified.Value;
-				metadata[Constants.RavenLastModified] = LastModified.Value.ToString(Default.DateTimeFormatsToWrite);
+				metadata[Constants.RavenLastModified] = LastModified.Value.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
 			}
 			if (Etag != null)
 				metadata["@etag"] = Etag.ToString();

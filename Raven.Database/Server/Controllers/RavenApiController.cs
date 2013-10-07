@@ -6,12 +6,10 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using Raven.Abstractions.Data;
@@ -19,7 +17,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
-using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Tenancy;
@@ -59,11 +56,6 @@ namespace Raven.Database.Server.Controllers
 			var result = await base.ExecuteAsync(controllerContext, cancellationToken);
 			sp.Stop();
 			AddRavenHeader(result, sp, landlord);
-
-			if (result.StatusCode == HttpStatusCode.BadRequest)
-			{
-				
-			}
 
 			return result;
 		}
@@ -224,7 +216,12 @@ namespace Raven.Database.Server.Controllers
 
 		public string GetQueryStringValue(string key)
 		{
-			return Request.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
+			return GetQueryStringValue(Request, key);
+		}
+
+		protected static string GetQueryStringValue(HttpRequestMessage req, string key)
+		{
+			return req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
 		}
 
 		public string[] GetQueryStringValues(string key)
@@ -271,7 +268,6 @@ namespace Raven.Database.Server.Controllers
 				PageSize = GetPageSize(maxPageSize),
 				SkipTransformResults = GetSkipTransformResults(),
 				FieldsToFetch = GetQueryStringValues("fetch"),
-				GroupBy = GetQueryStringValues("groupBy"),
 				DefaultField = GetQueryStringValue("defaultField"),
 
 				DefaultOperator =
@@ -279,7 +275,6 @@ namespace Raven.Database.Server.Controllers
 						QueryOperator.And :
 						QueryOperator.Or,
 
-				AggregationOperation = GetAggregationOperation(),
 				SortedFields = EnumerableExtension.EmptyIfNull(GetQueryStringValues("sort"))
 					.Select(x => new SortedField(x))
 					.ToArray(),
@@ -287,7 +282,8 @@ namespace Raven.Database.Server.Controllers
 				HighlighterPreTags = GetQueryStringValues("preTags"),
 				HighlighterPostTags = GetQueryStringValues("postTags"),
 				ResultsTransformer = GetQueryStringValue("resultsTransformer"),
-				QueryInputs = ExtractQueryInputs()
+				QueryInputs = ExtractQueryInputs(),
+				ExplainScores = GetExplainScores()				
 			};
 
 
@@ -326,6 +322,13 @@ namespace Raven.Database.Server.Controllers
 			return null;
 		}
 
+		private bool GetExplainScores()
+		{
+			bool result;
+			bool.TryParse(GetQueryStringValue("explainScores"), out result);
+			return result;
+		}
+
 		public DateTime? GetCutOff()
 		{
 			var etagAsString = GetQueryStringValue("cutOff");
@@ -346,17 +349,6 @@ namespace Raven.Database.Server.Controllers
 			bool result;
 			bool.TryParse(GetQueryStringValue("skipTransformResults"), out result);
 			return result;
-		}
-
-		public AggregationOperation GetAggregationOperation()
-		{
-			var aggAsString = GetQueryStringValue("aggregation");
-			if (aggAsString == null)
-			{
-				return AggregationOperation.None;
-			}
-
-			return (AggregationOperation)Enum.Parse(typeof(AggregationOperation), aggAsString, true);
 		}
 
 		public IEnumerable<HighlightedField> GetHighlightedFields()
@@ -510,6 +502,17 @@ namespace Raven.Database.Server.Controllers
 			var resMsg = new HttpResponseMessage(code)
 			{
 				Content = new JsonContent(msg)
+			};
+			WriteETag(etag, resMsg);
+
+			return resMsg;
+		}
+
+		public HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+		{
+			var resMsg = new HttpResponseMessage(code)
+			{
+				Content = new JsonContent()
 			};
 			WriteETag(etag, resMsg);
 

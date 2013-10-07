@@ -444,26 +444,37 @@ namespace Raven.Client.Document.Async
 				return arrayOfArrays;
 			}
 
-			var items = (await this.AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs))
-				.Results
-				.SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
-				.Select(JsonExtensions.ToJObject)
-				.Select(x =>
-				{
-					this.HandleInternalMetadata(x);
-					return this.ConvertToEntity<T>(null, x, new RavenJObject());
-				})
-				.Cast<T>()
-				.ToArray();
+		    var getResponse = (await this.AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs));
+		    var items = new List<T>();
+		    foreach (var result in getResponse.Results)
+		    {
+                if (result == null)
+                {
+                    items.Add(default(T));
+                    continue;
+                }
+		        var transformedResults = result.Value<RavenJArray>("$values").ToArray()
+		              .Select(JsonExtensions.ToJObject)
+		              .Select(x =>
+		              {
+		                  this.HandleInternalMetadata(x);
+		                  return this.ConvertToEntity<T>(null, x, new RavenJObject());
+		              })
+		              .Cast<T>();
 
-			if (items.Length > ids.Length)
+
+                items.AddRange(transformedResults);
+
+		    }
+				
+			if (items.Count > ids.Length)
 			{
 				throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
 					transformer,
 					typeof(T).Name));
 			}
 
-			return items;
+			return items.ToArray();
 		}
 
 		/// <summary>

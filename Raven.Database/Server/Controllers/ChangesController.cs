@@ -98,15 +98,11 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet("changes/events")]
-		public async Task<HttpResponseMessage> ChangesEvents()
+		public HttpResponseMessage ChangesEvents()
 		{
-
-			var msg = new HttpResponseMessage {Content = new JsonContent()};
-			var eventsTransport = new WebApiEventsTransport(this);
-		//	eventsTransport.Disconnected += onDisconnect;
-			await eventsTransport.ProcessAsync(msg);
+			var eventsTransport = new ChangesPushContent(this);
 			Database.TransportState.Register(eventsTransport);
-			return msg;
+			return new HttpResponseMessage {Content = eventsTransport};
 		}
 
 		private bool Match(string x, string y)

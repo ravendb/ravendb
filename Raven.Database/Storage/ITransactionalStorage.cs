@@ -25,6 +25,8 @@ namespace Raven.Database.Storage
 	    IDisposable WriteLock();
 		IDisposable DisableBatchNesting();
 
+		IStorageActionsAccessor CreateAccessor();
+
 		void Batch(Action<IStorageActionsAccessor> action);
 		void ExecuteImmediatelyOrRegisterForSynchronization(Action action);
 		bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);
@@ -36,6 +38,8 @@ namespace Raven.Database.Storage
 
 		string FriendlyName { get; }
 		bool HandleException(Exception exception);
+
+		bool IsAlreadyInBatch { get; }
 
 		void Compact(InMemoryRavenConfiguration configuration);
 		Guid ChangeId();

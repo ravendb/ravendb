@@ -62,6 +62,11 @@ namespace Raven.Database.Server.Controllers
 
 				foreach (var result in results)
 				{
+					if (result == null)
+					{
+						writer.WriteNull();
+						continue;
+					}
 					writer.WriteStartObject();
 
 					writer.WritePropertyName("Status");
@@ -86,7 +91,8 @@ namespace Raven.Database.Server.Controllers
 
 					var jsonContent = (JsonContent)result.Content;
 
-					jsonContent.Token.WriteTo(writer, Default.Converters);
+					if(jsonContent.Token != null)
+						jsonContent.Token.WriteTo(writer, Default.Converters);
 
 					writer.WriteEndObject();
 				}
@@ -166,6 +172,7 @@ namespace Raven.Database.Server.Controllers
 			controller.RequestContext = controllerContext.RequestContext;
 			controller.Configuration = Configuration;
 
+			DatabasesLandlord.DecrementRequestCount();//we are calling again to the controller which will increase the number of request, but this is for the same request
 			return await controller.ExecuteAsync(controllerContext, CancellationToken.None);
 		}
 	}

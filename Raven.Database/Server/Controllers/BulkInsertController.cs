@@ -21,7 +21,8 @@ namespace Raven.Database.Server.Controllers
 	public class BulkInsertController : RavenApiController
 	{
 		[HttpPost("bulkInsert")]
-		public HttpResponseMessage BulkInsertPost()
+		[HttpPost("databases/{databaseName}/bulkInsert")]
+		public async Task<HttpResponseMessage> BulkInsertPost()
 		{
 			if (string.IsNullOrEmpty(GetQueryStringValue("no-op")) == false)
 			{
@@ -66,10 +67,11 @@ namespace Raven.Database.Server.Controllers
 			int documents = 0;
 			var mre = new ManualResetEventSlim(false);
 
-			var currentDatbase = Database;
+			var inputStream = await Request.Content.ReadAsStreamAsync();
+			var currentDatabase = Database;
 			var task = Task.Factory.StartNew(() =>
 			{
-				currentDatbase.BulkInsert(options, YieldBatches(mre, batchSize => documents += batchSize), operationId);
+				currentDatabase.BulkInsert(options, YieldBatches(inputStream , mre, batchSize => documents += batchSize), operationId);
 				status.Documents = documents;
 				status.Completed = true;
 			});
@@ -95,13 +97,12 @@ namespace Raven.Database.Server.Controllers
 			return result;
 		}
 
-		private IEnumerable<IEnumerable<JsonDocument>> YieldBatches(ManualResetEventSlim mre, Action<int> increaseDocumentsCount)
+		private IEnumerable<IEnumerable<JsonDocument>> YieldBatches(Stream inputStream,ManualResetEventSlim mre, Action<int> increaseDocumentsCount)
 		{
 			try
 			{
-				//TODO: change to GetBufferLessInputStream
-				using (var inputStream = new MemoryStream())
-				//using (var inputStream = Request.GetBufferLessInputStream())
+
+				using (inputStream)
 				{
 					var binaryReader = new BinaryReader(inputStream);
 					while (true)

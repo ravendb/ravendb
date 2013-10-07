@@ -1,15 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
 using System.Threading;
+using System.Web;
 using System.Web.Http;
-using System.Web.Http.Dispatcher;
 using Raven.Database;
 using Raven.Database.Config;
-using Raven.Database.Server.Controllers;
-using Raven.Database.Server.Security;
-using Raven.Database.Server.Tenancy;
-using Raven.Database.Server.WebApi.Handlers;
+using Raven.Database.Server.WebApi;
+
+// ReSharper disable once CheckNamespace
+namespace Owin
+{
+    using System.Collections.Generic;
+    using System.Reflection;
+    using System.Web.Http.Dispatcher;
+    using Raven.Database.Server.Controllers;
+    using Raven.Database.Server.Security;
+    using Raven.Database.Server.Tenancy;
+    using Raven.Database.Server.WebApi.Handlers;
 
 // ReSharper disable once CheckNamespace
 namespace Owin
@@ -67,8 +73,34 @@ namespace Owin
                 "Database Route", "databases/{databaseName}/{controller}/{action}",
                 new {id = RouteParameter.Optional});
             cfg.MessageHandlers.Add(new GZipToJsonHandler());
+			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
+
         }
 
+	    public class SelectiveBufferPolicySelector : IHostBufferPolicySelector
+		{
+			public bool UseBufferedInputStream(object hostContext)
+			{
+				var context = hostContext as IOwinContext;
+
+				if (context != null)
+				{
+					if (context.Request.Uri.LocalPath.EndsWith("bulkInsert", StringComparison.OrdinalIgnoreCase))
+						return false;
+				}
+
+				return true;
+			}
+
+			public bool UseBufferedOutputStream(HttpResponseMessage response)
+			{
+				return (response.Content is ChangesPushContent ||
+						response.Content is StreamsController.StreamQueryContent ||
+				        response.Content is StreamContent ||
+				        response.Content is PushStreamContent ||
+						response.Content is JsonContent) == false;
+			}
+		}
         private class MyAssemblyResolver : IAssembliesResolver
         {
             public ICollection<Assembly> GetAssemblies()
@@ -77,4 +109,6 @@ namespace Owin
             }
         }
     }
+
+	
 }

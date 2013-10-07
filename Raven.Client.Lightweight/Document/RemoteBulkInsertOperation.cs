@@ -28,350 +28,344 @@ using Ionic.Zlib;
 
 namespace Raven.Client.Document
 {
-	public interface ILowLevelBulkInsertOperation : IDisposable
-	{
-		Guid OperationId { get; }
+    public interface ILowLevelBulkInsertOperation : IDisposable
+    {
+        Guid OperationId { get; }
 
-		void Write(string id, RavenJObject metadata, RavenJObject data);
+        void Write(string id, RavenJObject metadata, RavenJObject data);
 
-		Task DisposeAsync();
+        Task DisposeAsync();
 
-		/// <summary>
-		///     Report on the progress of the operation
-		/// </summary>
-		event Action<string> Report;
-	}
+        /// <summary>
+        ///     Report on the progress of the operation
+        /// </summary>
+        event Action<string> Report;
+    }
 
-	public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation, IObserver<BulkInsertChangeNotification>
-	{
-		private CancellationTokenSource cancellationTokenSource;
+    public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation, IObserver<BulkInsertChangeNotification>
+    {
+        private CancellationTokenSource cancellationTokenSource;
 
 #if !SILVERLIGHT
-		private readonly ServerClient operationClient;
+        private readonly ServerClient operationClient;
 #else
 		private readonly AsyncServerClient operationClient;
 #endif
-		private readonly IDatabaseChanges operationChanges;
-		private readonly MemoryStream bufferedStream = new MemoryStream();
-		private readonly BlockingCollection<RavenJObject> queue;
+        private readonly IDatabaseChanges operationChanges;
+        private readonly MemoryStream bufferedStream = new MemoryStream();
+        private readonly BlockingCollection<RavenJObject> queue;
 
-		private HttpJsonRequest operationRequest;
-		private readonly Task operationTask;
-		private int total;
+        private HttpJsonRequest operationRequest;
+        private readonly Task operationTask;
+        private int total;
 
 #if !SILVERLIGHT
-		public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, IDatabaseChanges changes)
+        public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, IDatabaseChanges changes)
 #else
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 #endif
-		{
-			var synchronizationContext = SynchronizationContext.Current;
-			try
-			{
-				SynchronizationContext.SetSynchronizationContext(null);
+        {
+            var synchronizationContext = SynchronizationContext.Current;
+            try
+            {
+                SynchronizationContext.SetSynchronizationContext(null);
 
-			OperationId = Guid.NewGuid();
-			operationClient = client;
-			operationChanges = changes;
+                OperationId = Guid.NewGuid();
+                operationClient = client;
+                operationChanges = changes;
                 queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize * 3) / 2));
 
-			operationTask = StartBulkInsertAsync(options);
+                operationTask = StartBulkInsertAsync(options);
 #if !MONO
-			SubscribeToBulkInsertNotifications(changes);
+                SubscribeToBulkInsertNotifications(changes);
 #endif
-		}
-			finally
-			{
-				SynchronizationContext.SetSynchronizationContext(synchronizationContext);
-			}
-		}
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(synchronizationContext);
+            }
+        }
 
 #if !MONO
-		private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
-		{
-			changes
-				.ForBulkInsert(OperationId)
-				.Subscribe(this);
-		}
+        private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
+        {
+            changes
+                .ForBulkInsert(OperationId)
+                .Subscribe(this);
+        }
 #endif
 
-		private async Task StartBulkInsertAsync(BulkInsertOptions options)
-		{
+        private async Task StartBulkInsertAsync(BulkInsertOptions options)
+        {
 #if !SILVERLIGHT
-			var expect100Continue = operationClient.Expect100Continue();
+            var expect100Continue = operationClient.Expect100Continue();
 #endif
-			var operationUrl = CreateOperationUrl(options);
-			var token = await GetToken(operationUrl);
-			try
-			{
-				token = await ValidateThatWeCanUseAuthenticateTokens(operationUrl, token);
-			}
-			catch (Exception e)
-			{
-				throw new InvalidOperationException(
-					"Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
-					e);
-			}
+            var operationUrl = CreateOperationUrl(options);
+            var token = await GetToken();
+            try
+            {
+                token = await ValidateThatWeCanUseAuthenticateTokens(token);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(
+                    "Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+                    e);
+            }
 
-			operationRequest = CreateOperationRequest(operationUrl, token);
+            operationRequest = CreateOperationRequest(operationUrl, token);
 
-			var stream = await operationRequest.GetRawRequestStream();
+            var stream = await operationRequest.GetRawRequestStream();
 
 #if !SILVERLIGHT
-			try
-			{
-				if (expect100Continue != null)
-				expect100Continue.Dispose();
-			}
-			catch
-			{
+            try
+            {
+                if (expect100Continue != null)
+                    expect100Continue.Dispose();
+            }
+            catch
+            {
 
-			}
+            }
 #endif
-			var cancellationToken = CreateCancellationToken();
-			await Task.Factory.StartNew(() => WriteQueueToServer(stream, options, cancellationToken), TaskCreationOptions.LongRunning);
-		}
+            var cancellationToken = CreateCancellationToken();
+            await Task.Factory.StartNew(() => WriteQueueToServer(stream, options, cancellationToken), TaskCreationOptions.LongRunning);
+        }
 
-		private CancellationToken CreateCancellationToken()
-		{
-			cancellationTokenSource = new CancellationTokenSource();
-			return cancellationTokenSource.Token;
-		}
+        private CancellationToken CreateCancellationToken()
+        {
+            cancellationTokenSource = new CancellationTokenSource();
+            return cancellationTokenSource.Token;
+        }
 
-		private async Task<string> GetToken(string operationUrl)
-		{
-			// this will force the HTTP layer to authenticate, meaning that our next request won't have to
-			var jsonToken = await GetAuthToken(operationUrl);
+        private async Task<string> GetToken()
+        {
+            // this will force the HTTP layer to authenticate, meaning that our next request won't have to
+            var jsonToken = await GetAuthToken();
 
-			return jsonToken.Value<string>("Token");
-		}
+            return jsonToken.Value<string>("Token");
+        }
 
-		private Task<RavenJToken> GetAuthToken(string operationUrl)
-		{
-#if !SILVERLIGHT
-			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST", 
-														disableRequestCompression: true);
+        private Task<RavenJToken> GetAuthToken()
+        {
 
-			return new CompletedTask<RavenJToken>(request.ReadResponseJson());
-#else
-			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST",
+			var request = operationClient.CreateRequest("/singleAuthToken", "GET",
 														disableRequestCompression: true);
 
 			return request.ReadResponseJsonAsync();
-#endif
-		}
+        }
 
-		private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string operationUrl, string token)
-		{
-			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST", disableRequestCompression: true);
+        private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
+        {
+			var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
 
             request.DisableAuthentication();
-			request.AddOperationHeader("Single-Use-Auth-Token", token);
-			var result = await request.ReadResponseJsonAsync();
-			return result.Value<string>("Token");
-		}
+            request.AddOperationHeader("Single-Use-Auth-Token", token);
+            var result = await request.ReadResponseJsonAsync();
+            return result.Value<string>("Token");
+        }
 
-		private HttpJsonRequest CreateOperationRequest(string operationUrl, string token)
-		{
+        private HttpJsonRequest CreateOperationRequest(string operationUrl, string token)
+        {
 			var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true);
 
-			request.DisableAuthentication();
-			// the request may take a long time to process, so we need to set a large timeout value
-			request.PrepareForLongRequest();
-			request.AddOperationHeader("Single-Use-Auth-Token", token);
+            request.DisableAuthentication();
+            // the request may take a long time to process, so we need to set a large timeout value
+            request.PrepareForLongRequest();
+            request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-			return request;
-		}
+            return request;
+        }
 
-		private string CreateOperationUrl(BulkInsertOptions options)
-		{
-			string requestUrl = "/bulkInsert?";
-			if (options.CheckForUpdates)
-				requestUrl += "checkForUpdates=true";
-			if (options.CheckReferencesInIndexes)
-				requestUrl += "&checkReferencesInIndexes=true";
+        private string CreateOperationUrl(BulkInsertOptions options)
+        {
+            string requestUrl = "/bulkInsert?";
+            if (options.CheckForUpdates)
+                requestUrl += "checkForUpdates=true";
+            if (options.CheckReferencesInIndexes)
+                requestUrl += "&checkReferencesInIndexes=true";
 
-			requestUrl += "&operationId=" + OperationId;
+            requestUrl += "&operationId=" + OperationId;
 
-			return requestUrl;
-		}
+            return requestUrl;
+        }
 
-		private void WriteQueueToServer(Stream stream, BulkInsertOptions options, CancellationToken cancellationToken)
-		{
-			while (true)
-			{
-				cancellationToken.ThrowIfCancellationRequested();
+        private void WriteQueueToServer(Stream stream, BulkInsertOptions options, CancellationToken cancellationToken)
+        {
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
 
-				var batch = new List<RavenJObject>();
-				RavenJObject document;
-				while (queue.TryTake(out document, 200))
-				{
-					cancellationToken.ThrowIfCancellationRequested();
+                var batch = new List<RavenJObject>();
+                RavenJObject document;
+                while (queue.TryTake(out document, 200))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
 
-					if (document == null) // marker
-					{
-						FlushBatch(stream, batch);
-						return;
-					}
+                    if (document == null) // marker
+                    {
+                        FlushBatch(stream, batch);
+                        return;
+                    }
 
-					batch.Add(document);
+                    batch.Add(document);
 
-					if (batch.Count >= options.BatchSize)
-						break;
-				}
+                    if (batch.Count >= options.BatchSize)
+                        break;
+                }
 
-				FlushBatch(stream, batch);
-			}
-		}
+                FlushBatch(stream, batch);
+            }
+        }
 
-		public event Action<string> Report;
+        public event Action<string> Report;
 
-		public Guid OperationId { get; private set; }
+        public Guid OperationId { get; private set; }
 
-		public void Write(string id, RavenJObject metadata, RavenJObject data)
-		{
-			if (id == null) throw new ArgumentNullException("id");
-			if (metadata == null) throw new ArgumentNullException("metadata");
-			if (data == null) throw new ArgumentNullException("data");
+        public void Write(string id, RavenJObject metadata, RavenJObject data)
+        {
+            if (id == null) throw new ArgumentNullException("id");
+            if (metadata == null) throw new ArgumentNullException("metadata");
+            if (data == null) throw new ArgumentNullException("data");
 
-			if (operationTask.IsCanceled || operationTask.IsFaulted)
-				operationTask.Wait(); // error early if we have  any error
+            if (operationTask.IsCanceled || operationTask.IsFaulted)
+                operationTask.Wait(); // error early if we have  any error
 
-			metadata["@id"] = id;
-			data[Constants.Metadata] = metadata;
+            metadata["@id"] = id;
+            data[Constants.Metadata] = metadata;
 
-			queue.Add(data);
-		}
+            queue.Add(data);
+        }
 
-		private async Task<bool> IsOperationCompleted(long operationId)
-		{
-			var status = await GetOperationStatus(operationId);
+        private async Task<bool> IsOperationCompleted(long operationId)
+        {
+            var status = await GetOperationStatus(operationId);
 
-			if (status == null)
-				return true;
+            if (status == null)
+                return true;
 
-			if (status.Value<bool>("Completed"))
-				return true;
+            if (status.Value<bool>("Completed"))
+                return true;
 
-			return false;
-		}
+            return false;
+        }
 
-		private Task<RavenJToken> GetOperationStatus(long operationId)
-		{
+        private Task<RavenJToken> GetOperationStatus(long operationId)
+        {
 #if !SILVERLIGHT
-			return new CompletedTask<RavenJToken>(operationClient.GetOperationStatus(operationId));
+            return new CompletedTask<RavenJToken>(operationClient.GetOperationStatus(operationId));
 #else
 			return operationClient.GetOperationStatusAsync(operationId);
 #endif
-		}
+        }
 
-		private volatile bool disposed;
+        private volatile bool disposed;
 
-		public async Task DisposeAsync()
-		{
-			if (disposed)
-				return;
-			disposed = true;
-			queue.Add(null);
-			await operationTask;
+        public async Task DisposeAsync()
+        {
+            if (disposed)
+                return;
+            disposed = true;
+            queue.Add(null);
+            await operationTask;
 
-			operationTask.AssertNotFailed();
+            operationTask.AssertNotFailed();
 
-			ReportInternal("Finished writing all results to server");
+            ReportInternal("Finished writing all results to server");
 
-			long operationId;
+            long operationId;
 
-			using (var response = await operationRequest.RawExecuteRequestAsync())
-			using (var stream = response.GetResponseStream())
-			using (var streamReader = new StreamReader(stream))
-			{
-				var result = RavenJObject.Load(new JsonTextReader(streamReader));
-				operationId = result.Value<long>("OperationId");
-			}
+            using (var response = await operationRequest.RawExecuteRequestAsync())
+            using (var stream = response.GetResponseStream())
+            using (var streamReader = new StreamReader(stream))
+            {
+                var result = RavenJObject.Load(new JsonTextReader(streamReader));
+                operationId = result.Value<long>("OperationId");
+            }
 
-			while (true)
-			{
-				if (await IsOperationCompleted(operationId))
-					break;
+            while (true)
+            {
+                if (await IsOperationCompleted(operationId))
+                    break;
 
-				Thread.Sleep(500);
-			}
+                Thread.Sleep(500);
+            }
 
-			ReportInternal("Done writing to server");
-		}
+            ReportInternal("Done writing to server");
+        }
 
-		public void Dispose()
-		{
-			if (disposed)
-				return;
+        public void Dispose()
+        {
+            if (disposed)
+                return;
 
-			var disposeAsync = DisposeAsync().ConfigureAwait(false);
-			disposeAsync.GetAwaiter().GetResult();
-		}
+            var disposeAsync = DisposeAsync().ConfigureAwait(false);
+            disposeAsync.GetAwaiter().GetResult();
+        }
 
-		private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)
-		{
-			if (localBatch.Count == 0)
-				return;
-			bufferedStream.SetLength(0);
-			WriteToBuffer(localBatch);
+        private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)
+        {
+            if (localBatch.Count == 0)
+                return;
+            bufferedStream.SetLength(0);
+            WriteToBuffer(localBatch);
 
-			var requestBinaryWriter = new BinaryWriter(requestStream);
-			requestBinaryWriter.Write((int)bufferedStream.Position);
-			bufferedStream.WriteTo(requestStream);
-			requestStream.Flush();
+            var requestBinaryWriter = new BinaryWriter(requestStream);
+            requestBinaryWriter.Write((int)bufferedStream.Position);
+            bufferedStream.WriteTo(requestStream);
+            requestStream.Flush();
 
-			total += localBatch.Count;
-			Action<string> report = Report;
-			if (report != null)
-			{
-				report(string.Format("Wrote {0:#,#} (total {2:#,#} documents to server gzipped to {1:#,#.##} kb",
-									 localBatch.Count,
-									 bufferedStream.Position / 1024,
-									 total));
-			}
-		}
+            total += localBatch.Count;
+            Action<string> report = Report;
+            if (report != null)
+            {
+                report(string.Format("Wrote {0:#,#} (total {2:#,#} documents to server gzipped to {1:#,#.##} kb",
+                                     localBatch.Count,
+                                     bufferedStream.Position / 1024,
+                                     total));
+            }
+        }
 
-		private void WriteToBuffer(ICollection<RavenJObject> localBatch)
-		{
-			using (var gzip = new GZipStream(bufferedStream, CompressionMode.Compress, leaveOpen: true))
-			{
-				var binaryWriter = new BinaryWriter(gzip);
-				binaryWriter.Write(localBatch.Count);
-				var bsonWriter = new BsonWriter(binaryWriter);
-				foreach (var doc in localBatch)
-				{
-					doc.WriteTo(bsonWriter);
-				}
+        private void WriteToBuffer(ICollection<RavenJObject> localBatch)
+        {
+            using (var gzip = new GZipStream(bufferedStream, CompressionMode.Compress, leaveOpen: true))
+            {
+                var binaryWriter = new BinaryWriter(gzip);
+                binaryWriter.Write(localBatch.Count);
+                var bsonWriter = new BsonWriter(binaryWriter);
+                foreach (var doc in localBatch)
+                {
+                    doc.WriteTo(bsonWriter);
+                }
 
-				bsonWriter.Flush();
-				binaryWriter.Flush();
-				gzip.Flush();
-			}
-		}
+                bsonWriter.Flush();
+                binaryWriter.Flush();
+                gzip.Flush();
+            }
+        }
 
-		private void ReportInternal(string format, params object[] args)
-		{
-			var onReport = Report;
-			if (onReport != null)
-				onReport(string.Format(format, args));
-		}
+        private void ReportInternal(string format, params object[] args)
+        {
+            var onReport = Report;
+            if (onReport != null)
+                onReport(string.Format(format, args));
+        }
 
-		public void OnNext(BulkInsertChangeNotification value)
-		{
-			if (value.Type == DocumentChangeTypes.BulkInsertError)
-			{
-				cancellationTokenSource.Cancel();
-			}
-		}
+        public void OnNext(BulkInsertChangeNotification value)
+        {
+            if (value.Type == DocumentChangeTypes.BulkInsertError)
+            {
+                cancellationTokenSource.Cancel();
+            }
+        }
 
-		public void OnError(Exception error)
-		{
-		}
+        public void OnError(Exception error)
+        {
+        }
 
-		public void OnCompleted()
-		{
-		}
-	}
+        public void OnCompleted()
+        {
+        }
+    }
 }
 #endif

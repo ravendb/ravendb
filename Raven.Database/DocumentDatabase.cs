@@ -17,6 +17,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
@@ -789,96 +790,95 @@ namespace Raven.Database
             });
         }
 
-        public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
-        {
-            workContext.DocsPerSecIncreaseBy(1);
-            key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
-            RemoveReservedProperties(document);
-            RemoveMetadataReservedProperties(metadata);
-            Etag newEtag = Etag.Empty;
+		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
+		{
+			workContext.DocsPerSecIncreaseBy(1);
+			key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
+			RemoveReservedProperties(document);
+			RemoveMetadataReservedProperties(metadata);
+			Etag newEtag = Etag.Empty;
 
-            using (TransactionalStorage.WriteLock())
-            {
-                TransactionalStorage.Batch(actions =>
-                {
-                    if (key.EndsWith("/"))
-                    {
-                        key += GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions,
-                                                                                         transactionInformation);
-                    }
-                    AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
-                    if (transactionInformation == null)
-                    {
-                        if (inFlightTransactionalState.IsModified(key))
-                            throw new ConcurrencyException("PUT attempted on : " + key +
-                                                           " while it is being locked by another transaction");
+			using (TransactionalStorage.WriteLock())
+			{
+				TransactionalStorage.Batch(actions =>
+				{
+					if (key.EndsWith("/"))
+					{
+						key += GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, actions,
+																						 transactionInformation);
+					}
+					AssertPutOperationNotVetoed(key, metadata, document, transactionInformation);
+					if (transactionInformation == null)
+					{
+						if (inFlightTransactionalState.IsModified(key))
+							throw new ConcurrencyException("PUT attempted on : " + key +
+														   " while it is being locked by another transaction");
 
-                        PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
+						PutTriggers.Apply(trigger => trigger.OnPut(key, document, metadata, null));
 
-                        var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
-                        newEtag = addDocumentResult.Etag;
+						var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
+						newEtag = addDocumentResult.Etag;
 
-                        CheckReferenceBecauseOfDocumentUpdate(key, actions);
-                        metadata[Constants.LastModified] = addDocumentResult.SavedAt;
-                        metadata.EnsureSnapshot(
-                            "Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
-                        document.EnsureSnapshot(
-                            "Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+						CheckReferenceBecauseOfDocumentUpdate(key, actions);
+						metadata[Constants.LastModified] = addDocumentResult.SavedAt;
+						metadata.EnsureSnapshot(
+							"Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+						document.EnsureSnapshot(
+							"Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 
-                        actions.AfterStorageCommitBeforeWorkNotifications(new JsonDocument
-                        {
-                            Metadata = metadata,
-                            Key = key,
-                            DataAsJson = document,
-                            Etag = newEtag,
-                            LastModified = addDocumentResult.SavedAt,
-                            SkipDeleteFromIndex = addDocumentResult.Updated == false
-                        }, documents =>
-                        {
-                            etagSynchronizer.UpdateSynchronizationState(documents);
+						actions.AfterStorageCommitBeforeWorkNotifications(new JsonDocument
+						{
+							Metadata = metadata,
+							Key = key,
+							DataAsJson = document,
+							Etag = newEtag,
+							LastModified = addDocumentResult.SavedAt,
+							SkipDeleteFromIndex = addDocumentResult.Updated == false
+						}, documents =>
+						{
+							etagSynchronizer.UpdateSynchronizationState(documents);
 							prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).AfterStorageCommitBeforeWorkNotifications(documents);
-                        });
+						});
 
 						if (addDocumentResult.Updated)
 							prefetcher.AfterUpdate(key, addDocumentResult.PrevEtag);
 
-                        PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
+						PutTriggers.Apply(trigger => trigger.AfterPut(key, document, metadata, newEtag, null));
 
-                        TransactionalStorage
-                            .ExecuteImmediatelyOrRegisterForSynchronization(() =>
-                            {
-                                PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
-                                RaiseNotifications(new DocumentChangeNotification
-                                {
-                                    Id = key,
-                                    Type = DocumentChangeTypes.Put,
-                                    Etag = newEtag,
-                                }, metadata);
-                            });
+						TransactionalStorage
+							.ExecuteImmediatelyOrRegisterForSynchronization(() =>
+							{
+								PutTriggers.Apply(trigger => trigger.AfterCommit(key, document, metadata, newEtag));
+								RaiseNotifications(new DocumentChangeNotification
+								{
+									Id = key,
+									Type = DocumentChangeTypes.Put,
+									Etag = newEtag,
+								}, metadata);
+							});
 
-                        ScheduleDocumentsForReindexIfNeeded(key);
-                        workContext.ShouldNotifyAboutWork(() => "PUT " + key);
-                    }
-                    else
-                    {
-                        var doc = actions.Documents.DocumentMetadataByKey(key, null);
-                        newEtag = inFlightTransactionalState.AddDocumentInTransaction(key, etag, document, metadata,
-                                                                                      transactionInformation,
-                                                                                      doc == null
-                                                                                          ? Etag.Empty
-                                                                                          : doc.Etag,
-                                                                                      sequentialUuidGenerator);
-                    }
-                });
+						workContext.ShouldNotifyAboutWork(() => "PUT " + key);
+					}
+					else
+					{
+						var doc = actions.Documents.DocumentMetadataByKey(key, null);
+						newEtag = inFlightTransactionalState.AddDocumentInTransaction(key, etag, document, metadata,
+																					  transactionInformation,
+																					  doc == null
+																						  ? Etag.Empty
+																						  : doc.Etag,
+																					  sequentialUuidGenerator);
+					}
+				});
 
-                log.Debug("Put document {0} with etag {1}", key, newEtag);
-                return new PutResult
-                {
-                    Key = key,
-                    ETag = newEtag
-                };
-            }
-        }
+				log.Debug("Put document {0} with etag {1}", key, newEtag);
+				return new PutResult
+				{
+					Key = key,
+					ETag = newEtag
+				};
+			}
+		}
 
         internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
         {
@@ -1023,118 +1023,92 @@ namespace Raven.Database
             return Delete(key, etag, transactionInformation, out metadata);
         }
 
-        public bool Delete(string key, Etag etag, TransactionInformation transactionInformation, out RavenJObject metadata)
-        {
-            if (key == null)
-                throw new ArgumentNullException("key");
-            key = key.Trim();
+		public bool Delete(string key, Etag etag, TransactionInformation transactionInformation, out RavenJObject metadata)
+		{
+			if (key == null)
+				throw new ArgumentNullException("key");
+			key = key.Trim();
 
-            var deleted = false;
-            log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
-            RavenJObject metadataVar = null;
-            using (TransactionalStorage.WriteLock())
-            {
-                TransactionalStorage.Batch(actions =>
-                {
-                    AssertDeleteOperationNotVetoed(key, transactionInformation);
-                    if (transactionInformation == null)
-                    {
-                        DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
+			var deleted = false;
+			log.Debug("Delete a document with key: {0} and etag {1}", key, etag);
+			RavenJObject metadataVar = null;
+			using (TransactionalStorage.WriteLock())
+			{
+				TransactionalStorage.Batch(actions =>
+				{
+					AssertDeleteOperationNotVetoed(key, transactionInformation);
+					if (transactionInformation == null)
+					{
+						DeleteTriggers.Apply(trigger => trigger.OnDelete(key, null));
 
-                        Etag deletedETag;
-                        if (actions.Documents.DeleteDocument(key, etag, out metadataVar, out deletedETag))
-                        {
-                            deleted = true;
-                            actions.Indexing.RemoveAllDocumentReferencesFrom(key);
-                            WorkContext.MarkDeleted(key);
+						Etag deletedETag;
+						if (actions.Documents.DeleteDocument(key, etag, out metadataVar, out deletedETag))
+						{
+							deleted = true;
+							actions.Indexing.RemoveAllDocumentReferencesFrom(key);
+							WorkContext.MarkDeleted(key);
 
-                            CheckReferenceBecauseOfDocumentUpdate(key, actions);
+							CheckReferenceBecauseOfDocumentUpdate(key, actions);
 
-                            foreach (var indexName in IndexDefinitionStorage.IndexNames)
-                            {
-                                AbstractViewGenerator abstractViewGenerator =
-                                    IndexDefinitionStorage.GetViewGenerator(indexName);
-                                if (abstractViewGenerator == null)
-                                    continue;
+							foreach (var indexName in IndexDefinitionStorage.IndexNames)
+							{
+								AbstractViewGenerator abstractViewGenerator =
+									IndexDefinitionStorage.GetViewGenerator(indexName);
+								if (abstractViewGenerator == null)
+									continue;
 
-                                var token = metadataVar.Value<string>(Constants.RavenEntityName);
+								var token = metadataVar.Value<string>(Constants.RavenEntityName);
 
-                                if (token != null && // the document has a entity name
-                                    abstractViewGenerator.ForEntityNames.Count > 0)
-                                    // the index operations on specific entities
-                                {
-                                    if (abstractViewGenerator.ForEntityNames.Contains(token) == false)
-                                        continue;
-                                }
+								if (token != null && // the document has a entity name
+									abstractViewGenerator.ForEntityNames.Count > 0)
+								// the index operations on specific entities
+								{
+									if (abstractViewGenerator.ForEntityNames.Contains(token) == false)
+										continue;
+								}
 
-                                var instance = IndexDefinitionStorage.GetIndexDefinition(indexName);
-                                var task = actions.GetTask(x => x.Index == instance.IndexId, new RemoveFromIndexTask
-                                {
-                                    Index = instance.IndexId
-                                });
-                                task.Keys.Add(key);
-                            }
-                            if (deletedETag != null)
-                                prefetcher .AfterDelete(key, deletedETag);
-                            DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
-                        }
+								var instance = IndexDefinitionStorage.GetIndexDefinition(indexName);
+								var task = actions.GetTask(x => x.Index == instance.IndexId, new RemoveFromIndexTask
+								{
+									Index = instance.IndexId
+								});
+								task.Keys.Add(key);
+							}
+							if (deletedETag != null)
+								prefetcher.AfterDelete(key, deletedETag);
+							DeleteTriggers.Apply(trigger => trigger.AfterDelete(key, null));
+						}
 
-                        TransactionalStorage
-                            .ExecuteImmediatelyOrRegisterForSynchronization(() =>
-                            {
-                                DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
-                                RaiseNotifications(new DocumentChangeNotification
-                                {
-                                    Id = key,
-                                    Type = DocumentChangeTypes.Delete,
-                                }, metadataVar);
-                            });
+						TransactionalStorage
+							.ExecuteImmediatelyOrRegisterForSynchronization(() =>
+							{
+								DeleteTriggers.Apply(trigger => trigger.AfterCommit(key));
+								RaiseNotifications(new DocumentChangeNotification
+								{
+									Id = key,
+									Type = DocumentChangeTypes.Delete,
+								}, metadataVar);
+							});
 
-                    }
-                    else
-                    {
-                        var doc = actions.Documents.DocumentMetadataByKey(key, null);
+					}
+					else
+					{
+						var doc = actions.Documents.DocumentMetadataByKey(key, null);
 
-                        inFlightTransactionalState.DeleteDocumentInTransaction(transactionInformation, key,
-                                                                               etag,
-                                                                               doc == null ? Etag.Empty : doc.Etag,
-                                                                               sequentialUuidGenerator);
-                        deleted = doc != null;
-                    }
+						inFlightTransactionalState.DeleteDocumentInTransaction(transactionInformation, key,
+																			   etag,
+																			   doc == null ? Etag.Empty : doc.Etag,
+																			   sequentialUuidGenerator);
+						deleted = doc != null;
+					}
 
-                    ScheduleDocumentsForReindexIfNeeded(key);
-                    workContext.ShouldNotifyAboutWork(() => "DEL " + key);
-                });
+					workContext.ShouldNotifyAboutWork(() => "DEL " + key);
+				});
 
-                metadata = metadataVar;
-                return deleted;
-            }
-        }
-
-        private void ScheduleDocumentsForReindexIfNeeded(string key)
-        {
-            log.Debug("[Document Reindexing] DocumentDatabase::ScheduleDocumentsForReindexIfNeeded() started (key = {0})",key);
-
-            bool wasKeyEnqueued = false;
-            var queue = workContext.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex;
-            if (queue != null)
-            {
-                log.Debug("[Document Reindexing] workContext.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex is not null, key enqueued (key = {0})", key);
-                wasKeyEnqueued = true;
-                queue.Enqueue(key);
-            }
-
-            queue = workContext.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex;
-            if (queue != null)
-            {
-                log.Debug("[Document Reindexing] workContext.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex is not null, key enqueued (key = {0})", key);
-                wasKeyEnqueued = true;
-                queue.Enqueue(key);
-            }
-
-            if (!wasKeyEnqueued) log.Debug("[Document Reindexing] DocumentDatabase::ScheduleDocumentsForReindexIfNeeded() finished without key enqueue (key = {0})", key);
-        }
-
+				metadata = metadataVar;
+				return deleted;
+			}
+		}
         public bool HasTransaction(string txId)
         {
             return inFlightTransactionalState.HasTransaction(txId);
@@ -1308,142 +1282,174 @@ namespace Raven.Database
             return findIndexCreationOptions;
         }
 
-	    private bool shouldSkipDuplicateChecking = false;
+
         public QueryResultWithIncludes Query(string index, IndexQuery query)
         {
-	        shouldSkipDuplicateChecking = query.SkipDuplicateChecking;
-            var list = new List<RavenJObject>();
-            var result = Query(index, query, null, list.Add);
-            result.Results = list;
-            return result;
+	        QueryResultWithIncludes result = null;
+			TransactionalStorage.Batch(accessor =>
+			{
+				using (var op = new DatabaseQueryOperation(this, index, query, accessor)
+				{
+					ShouldSkipDuplicateChecking = query.SkipDuplicateChecking
+				})
+				{
+					var list = new List<RavenJObject>();
+					op.Init();
+					op.Execute(list.Add);
+					op.Result.Results = list;
+					result = op.Result;
+				}
+			});
+	        return result;
         }
 
-        public QueryResultWithIncludes Query(string indexName, IndexQuery query, Action<QueryHeaderInformation> headerInfo, Action<RavenJObject> onResult)
-        {
-            var queryStat = AddToCurrentlyRunningQueryList(indexName, query);
+	    public class DatabaseQueryOperation : IDisposable
+	    {
+			public bool ShouldSkipDuplicateChecking = false;
+			private readonly DocumentDatabase database;
+		    private readonly string indexName;
+		    private readonly IndexQuery query;
+		    private readonly IStorageActionsAccessor actions;
+		    private readonly ExecutingQueryInfo queryStat;
+		    public QueryResultWithIncludes Result = new QueryResultWithIncludes();
+		    public QueryHeaderInformation Header;
+		    private bool stale;
+		    private IEnumerable<RavenJObject> results;
+		    private DocumentRetriever docRetriever;
+		    private Stopwatch duration;
+		    private List<string> transformerErrors;
+		    private bool nonAuthoritativeInformation;
+		    private Etag resultEtag;
+		    private Tuple<DateTime, Etag> indexTimestamp;
+		    private Dictionary<string, Dictionary<string, string[]>> highlightings;
+		    private Dictionary<string, string> scoreExplanations;
+		    private HashSet<string> idsToLoad;
 
-            try
-            {
+		    public DatabaseQueryOperation(DocumentDatabase database, string indexName, IndexQuery query, IStorageActionsAccessor actions)
+		    {
+			    this.database = database;
+			    this.indexName = indexName != null ? indexName.Trim() : null;
+				this.query = query;
+				this.actions = actions;
+			    queryStat = database.AddToCurrentlyRunningQueryList(indexName, query);
+		    }
 
-                indexName = indexName != null ? indexName.Trim() : null;
-                var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
-                var scoreExplanations = new Dictionary<string, string>();
-                Func<IndexQueryResult, object> tryRecordHighlightingAndScoreExplanation = queryResult =>
-                {
-                        if (queryResult.Key == null)
-                            return null;
-                        if (queryResult.Highligtings != null)
-                        highlightings.Add(queryResult.Key, queryResult.Highligtings);
-                        if (queryResult.ScoreExplanation != null)
-                            scoreExplanations.Add(queryResult.Key, queryResult.ScoreExplanation);
-                    return null;
-                };
-                var stale = false;
-                Tuple<DateTime, Etag> indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
-                Etag resultEtag = Etag.Empty;
-                var nonAuthoritativeInformation = false;
+		    public void Init()
+		    {
+				highlightings = new Dictionary<string, Dictionary<string, string[]>>();
+				scoreExplanations = new Dictionary<string, string>();
+				Func<IndexQueryResult, object> tryRecordHighlightingAndScoreExplanation = queryResult =>
+				{
+					if (queryResult.Key == null)
+						return null;
+					if (queryResult.Highligtings != null)
+						highlightings.Add(queryResult.Key, queryResult.Highligtings);
+					if (queryResult.ScoreExplanation != null)
+						scoreExplanations.Add(queryResult.Key, queryResult.ScoreExplanation);
+					return null;
+				};
+				stale = false;
+				indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
+				resultEtag = Etag.Empty;
+				nonAuthoritativeInformation = false;
 
-                if (string.IsNullOrEmpty(query.ResultsTransformer) == false)
-                {
-                    query.FieldsToFetch = new[] { Constants.AllFields };
-                }
+				if (string.IsNullOrEmpty(query.ResultsTransformer) == false)
+				{
+					query.FieldsToFetch = new[] { Constants.AllFields };
+				}
 
-                var duration = Stopwatch.StartNew();
-                var idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                TransactionalStorage.Batch(
-                    actions =>
-                    {
-                        var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
-                        var index = IndexDefinitionStorage.GetIndexDefinition(indexName);
-                        if (viewGenerator == null)
-                            throw new IndexDoesNotExistsException("Could not find index named: " + indexName);
+				duration = Stopwatch.StartNew();
+				idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                        resultEtag = GetIndexEtag(index.Name, null, query.ResultsTransformer);
+				var viewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
+				var index = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
+				if (viewGenerator == null)
+					throw new IndexDoesNotExistsException("Could not find index named: " + indexName);
 
-                        stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, query.CutoffEtag);
+				resultEtag = database.GetIndexEtag(index.Name, null, query.ResultsTransformer);
 
-                        if (stale == false && query.Cutoff == null && query.CutoffEtag == null)
-                        {
-                            var indexInstance = IndexStorage.GetIndexInstance(indexName);
-                            stale = stale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
-                        }
+				stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, query.CutoffEtag);
 
-                        indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index.IndexId);
-                        var indexFailureInformation = actions.Indexing.GetFailureRate(index.IndexId);
-                        if (indexFailureInformation.IsInvalidIndex)
-                        {
-                            throw new IndexDisabledException(indexFailureInformation);
-                        }
-                        var docRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState, query.QueryInputs, idsToLoad);
-                        var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
-                                                              viewGenerator.ReduceDefinition == null
-                                                                ? Constants.DocumentIdFieldName
-                                                                : Constants.ReduceKeyFieldName);
-                        Func<IndexQueryResult, bool> shouldIncludeInResults =
-                            result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, shouldSkipDuplicateChecking);
-                        var indexQueryResults = IndexStorage.Query(indexName, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers);
-                        indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
+				if (stale == false && query.Cutoff == null && query.CutoffEtag == null)
+				{
+					var indexInstance = database.IndexStorage.GetIndexInstance(indexName);
+					stale = stale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
+				}
 
-                        var transformerErrors = new List<string>();
-                        var results = GetQueryResults(query, viewGenerator, docRetriever,
-                                                      from queryResult in indexQueryResults
-                                                      let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch, shouldSkipDuplicateChecking)
-                                                      where doc != null
-                                                      let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
-                                                      let __ = tryRecordHighlightingAndScoreExplanation(queryResult)
-                                                      select doc, transformerErrors);
+				indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index.IndexId);
+				var indexFailureInformation = actions.Indexing.GetFailureRate(index.IndexId);
+				if (indexFailureInformation.IsInvalidIndex)
+				{
+					throw new IndexDisabledException(indexFailureInformation);
+				}
+				docRetriever = new DocumentRetriever(actions, database.ReadTriggers, database.inFlightTransactionalState, query.QueryInputs, idsToLoad);
+				var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.IsDistinct,
+					viewGenerator.ReduceDefinition == null
+						? Constants.DocumentIdFieldName
+						: Constants.ReduceKeyFieldName);
+				Func<IndexQueryResult, bool> shouldIncludeInResults =
+					result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, ShouldSkipDuplicateChecking);
+				var indexQueryResults = database.IndexStorage.Query(indexName, query, shouldIncludeInResults, fieldsToFetch, database.IndexQueryTriggers);
+				indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
 
-                        if (headerInfo != null)
-                        {
-                            headerInfo(new QueryHeaderInformation
-                            {
-                                Index = indexName,
-                                IsStable = stale,
-                                ResultEtag = resultEtag,
-                                IndexTimestamp = indexTimestamp.Item1,
-                                IndexEtag = indexTimestamp.Item2,
-                                TotalResults = query.TotalSize.Value
-                            });
-                        }
-                        using (new CurrentTransformationScope(docRetriever))
-                        {
-                            foreach (var result in results)
-                            {
-                                onResult(result);
-                            }
-                            if (transformerErrors.Count > 0)
-                            {
-                                throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
-                            }
+				transformerErrors = new List<string>();
+				results = database.GetQueryResults(query, viewGenerator, docRetriever,
+					from queryResult in indexQueryResults
+					let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch, ShouldSkipDuplicateChecking)
+					where doc != null
+					let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
+					let __ = tryRecordHighlightingAndScoreExplanation(queryResult)
+					select doc, transformerErrors);
 
-                        }
+			    Header = new QueryHeaderInformation
+			    {
+				    Index = indexName,
+				    IsStable = stale,
+				    ResultEtag = resultEtag,
+				    IndexTimestamp = indexTimestamp.Item1,
+				    IndexEtag = indexTimestamp.Item2,
+				    TotalResults = query.TotalSize.Value
+			    };
+		    }
 
+		    public void Execute(Action<RavenJObject> onResult)
+		    {
+				using (new CurrentTransformationScope(docRetriever))
+				{
+					foreach (var result in results)
+					{
+						onResult(result);
+					}
+					if (transformerErrors.Count > 0)
+					{
+						throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
+					}
+				}
 
-                    });
+				Result = new QueryResultWithIncludes
+				{
+					IndexName = indexName,
+					IsStale = stale,
+					NonAuthoritativeInformation = nonAuthoritativeInformation,
+					SkippedResults = query.SkippedResults.Value,
+					TotalResults = query.TotalSize.Value,
+					IndexTimestamp = indexTimestamp.Item1,
+					IndexEtag = indexTimestamp.Item2,
+					ResultEtag = resultEtag,
+					IdsToInclude = idsToLoad,
+					LastQueryTime = SystemTime.UtcNow,
+					Highlightings = highlightings,
+					DurationMilliseconds = duration.ElapsedMilliseconds,
+					ScoreExplanations = scoreExplanations
+				};
+		    }
 
-                return new QueryResultWithIncludes
-                {
-                    IndexName = indexName,
-                    IsStale = stale,
-                    NonAuthoritativeInformation = nonAuthoritativeInformation,
-                    SkippedResults = query.SkippedResults.Value,
-                    TotalResults = query.TotalSize.Value,
-                    IndexTimestamp = indexTimestamp.Item1,
-                    IndexEtag = indexTimestamp.Item2,
-                    ResultEtag = resultEtag,
-                    IdsToInclude = idsToLoad,
-                    LastQueryTime = SystemTime.UtcNow,
-                    Highlightings = highlightings,
-                    DurationMilliseconds = duration.ElapsedMilliseconds,
-                    ScoreExplanations = scoreExplanations
-                };
-            }
-            finally
-            {
-                RemoveFromCurrentlyRunningQueryList(indexName, queryStat);
-            }
-        }
-
+		    public void Dispose()
+		    {
+				database.RemoveFromCurrentlyRunningQueryList(indexName, queryStat);
+		    }
+	    }
+       
 
         private void RemoveFromCurrentlyRunningQueryList(string index, ExecutingQueryInfo queryStat)
         {
@@ -1507,86 +1513,107 @@ namespace Raven.Database
                 .Select(JsonExtensions.ToJObject);
         }
 
-        public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)
-        {
-            var queryStat = AddToCurrentlyRunningQueryList(index,query);
-            try
-            {
-                bool isStale = false;
-                HashSet<string> loadedIds = null;
-                TransactionalStorage.Batch(
-                    actions =>
-                    {
-                        var definition = IndexDefinitionStorage.GetIndexDefinition(index); 
-                        isStale = actions.Staleness.IsIndexStale(definition.IndexId, query.Cutoff, null);
 
-                        if (isStale == false && query.Cutoff == null)
-                        {
-                            var indexInstance = IndexStorage.GetIndexInstance(index);
-                            isStale = isStale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
-                        }
+		public IEnumerable<string> QueryDocumentIds(string index, IndexQuery query, out bool stale)
+		{
+			var queryStat = AddToCurrentlyRunningQueryList(index, query);
+			try
+			{
+				bool isStale = false;
+				HashSet<string> loadedIds = null;
+				TransactionalStorage.Batch(
+					actions =>
+					{
+						var definition = IndexDefinitionStorage.GetIndexDefinition(index);
+						isStale = actions.Staleness.IsIndexStale(definition.IndexId, query.Cutoff, null);
 
-                         var indexFailureInformation = actions.Indexing.GetFailureRate(definition.IndexId);
+						if (isStale == false && query.Cutoff == null)
+						{
+							var indexInstance = IndexStorage.GetIndexInstance(index);
+							isStale = isStale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
+						}
 
-                        if (indexFailureInformation.IsInvalidIndex)
-                        {
-                            throw new IndexDisabledException(indexFailureInformation);
-                        }
-                        loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Constants.DocumentIdFieldName), IndexQueryTriggers)
-                                                        select queryResult.Key);
-                    });
-                stale = isStale;
-                return loadedIds;
-            }
-            finally
-            {
-                RemoveFromCurrentlyRunningQueryList(index, queryStat);
-            }
-        }
+						var indexFailureInformation = actions.Indexing.GetFailureRate(definition.IndexId);
 
+						if (indexFailureInformation.IsInvalidIndex)
+						{
+							throw new IndexDisabledException(indexFailureInformation);
+						}
+						loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, false, Constants.DocumentIdFieldName), IndexQueryTriggers)
+														select queryResult.Key);
+					});
+				stale = isStale;
+				return loadedIds;
+			}
+			finally
+			{
+				RemoveFromCurrentlyRunningQueryList(index, queryStat);
+			}
+		}
 
         public void DeleteTransfom(string name)
 		{
 			IndexDefinitionStorage.RemoveTransformer(name);
         }
 
-        public void DeleteIndex(string name)
-        {
-            using (IndexDefinitionStorage.TryRemoveIndexContext())
-            {
-                var instance = IndexDefinitionStorage.GetIndexDefinition(name);
-                if (instance == null) return;
-                IndexDefinitionStorage.RemoveIndex(name);
-                IndexStorage.DeleteIndex(name);
-                //we may run into a conflict when trying to delete if the index is currently
-                //busy indexing documents, worst case scenario, we will have an orphaned index
-                //row which will get cleaned up on next db restart.
-                for (var i = 0; i < 10; i++)
-                {
-                    try
-                    {
-                        TransactionalStorage.Batch(action =>
-                        {
-                            action.Indexing.DeleteIndex(instance.IndexId);
-                            workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
-                        });
+		public void DeleteIndex(string name)
+		{
+			using (IndexDefinitionStorage.TryRemoveIndexContext())
+			{
+				var instance = IndexDefinitionStorage.GetIndexDefinition(name);
+				if (instance == null) return;
 
-                        TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
-                        {
-                            Name = name,
-                            Type = IndexChangeTypes.IndexRemoved,
-                        }));
+				// Set up a flag to signal that this is something we're doing
+				TransactionalStorage.Batch(actions => actions.Lists.Set("Raven/Indexes/PendingDeletion", instance.IndexId.ToString(CultureInfo.InvariantCulture), (RavenJObject.FromObject(new
+				{
+					TimeOfOriginalDeletion = SystemTime.UtcNow,
+					instance.IndexId
+				})), UuidType.Tasks));
 
-                        return;
-                    }
-                    catch (ConcurrencyException)
-                    {
-                        Thread.Sleep(100);
-                    }
-                }
-                workContext.ClearErrorsFor(name);
-            }
-        }
+				// Delete the main record synchronously
+				IndexDefinitionStorage.RemoveIndex(name);
+				IndexStorage.DeleteIndex(instance.IndexId);
+
+				ConcurrentSet<string> _;
+				workContext.DoNotTouchAgainIfMissingReferences.TryRemove(instance.IndexId, out _);
+				workContext.ClearErrorsFor(name);
+
+				// And delete the data in the background
+				StartDeletingIndexData(instance.IndexId);
+
+				// We raise the notification now because as far as we're concerned it is done *now*
+				TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
+				{
+					Name = name,
+					Type = IndexChangeTypes.IndexRemoved,
+				}));
+			}
+		}
+
+		internal void StartDeletingIndexData(int id)
+		{
+			//remove the header information in a sync process
+			TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(id));
+			var task = Task.Run(() =>
+			{
+				// Data can take a while
+				IndexStorage.DeleteIndexData(id);
+				TransactionalStorage.Batch(actions =>
+				{
+					// And Esent data can take a while too
+					actions.Indexing.DeleteIndex(id, WorkContext.CancellationToken);
+					if (WorkContext.CancellationToken.IsCancellationRequested)
+						return;
+
+					actions.Lists.Remove("Raven/Indexes/PendingDeletion", id.ToString(CultureInfo.InvariantCulture));
+				});
+			});
+
+			long taskId;
+			AddTask(task, null, out taskId);
+			PendingTaskAndState value;
+			task.ContinueWith(_ => pendingTasks.TryRemove(taskId, out value));
+		}
 
         public Attachment GetStatic(string name)
         {
@@ -2441,34 +2468,32 @@ namespace Raven.Database
             }
         }
 
-        public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId)
-        {
-            var documents = 0;
-            TransactionalStorage.Batch(accessor =>
-            {
-	            RaiseNotifications(new BulkInsertChangeNotification
-	            {
-		            OperationId = operationId,
-		            Type = DocumentChangeTypes.BulkInsertStarted
-	            });
-                foreach (var docs in docBatches)
-                {
-                    WorkContext.CancellationToken.ThrowIfCancellationRequested();
+		public int BulkInsert(BulkInsertOptions options, IEnumerable<IEnumerable<JsonDocument>> docBatches, Guid operationId)
+		{
+			var documents = 0;
+			TransactionalStorage.Batch(accessor =>
+			{
+				RaiseNotifications(new BulkInsertChangeNotification
+				{
+					OperationId = operationId,
+					Type = DocumentChangeTypes.BulkInsertStarted
+				});
+				foreach (var docs in docBatches)
+				{
+					WorkContext.CancellationToken.ThrowIfCancellationRequested();
 
-                    var inserts = 0;
-                    var batch = 0;
-                    var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-	                
+					var inserts = 0;
+					var batch = 0;
+					var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
 					var docsToInsert = docs.ToArray();
 
 					foreach (var doc in docsToInsert)
-                    {
-	                    try
-	                    {
+					{
+						try
+						{
 							RemoveReservedProperties(doc.DataAsJson);
-							RemoveMetadataReservedProperties(doc.Metadata);                                                       
-
-                            ScheduleDocumentsForReindexIfNeeded(doc.Key);
+							RemoveMetadataReservedProperties(doc.Metadata);
 
 							if (options.CheckReferencesInIndexes)
 								keys.Add(doc.Key);
@@ -2484,18 +2509,18 @@ namespace Raven.Database
 								inserts++;
 
 							doc.Etag = result.Etag;
-							
+
 							doc.Metadata.EnsureSnapshot(
-								"Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+							"Metadata was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 							doc.DataAsJson.EnsureSnapshot(
-								"Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
+							"Document was written to the database, cannot modify the document after it was written (changes won't show up in the db). Did you forget to call CreateSnapshot() to get a clean copy?");
 
 
 							foreach (var trigger in PutTriggers)
 							{
 								trigger.Value.AfterPut(doc.Key, doc.DataAsJson, doc.Metadata, result.Etag, null);
 							}
-	                    }
+						}
 						catch (Exception e)
 						{
 							RaiseNotifications(new BulkInsertChangeNotification
@@ -2509,33 +2534,33 @@ namespace Raven.Database
 
 							throw;
 						}
-                    }
-                    if (options.CheckReferencesInIndexes)
-                    {
-                        foreach (var key in keys)
-                        {
-                            CheckReferenceBecauseOfDocumentUpdate(key, accessor);
-                        }
-                    }
-                    accessor.Documents.IncrementDocumentCount(inserts);
-                    accessor.General.PulseTransaction();
+					}
+					if (options.CheckReferencesInIndexes)
+					{
+						foreach (var key in keys)
+						{
+							CheckReferenceBecauseOfDocumentUpdate(key, accessor);
+						}
+					}
+					accessor.Documents.IncrementDocumentCount(inserts);
+					accessor.General.PulseTransaction();
 					etagSynchronizer.UpdateSynchronizationState(docsToInsert);
-					
-                    workContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
-                    workContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
-                }
+
+					workContext.ShouldNotifyAboutWork(() => "BulkInsert batch of " + batch + " docs");
+					workContext.NotifyAboutWork(); // forcing notification so we would start indexing right away
+				}
 
 				RaiseNotifications(new BulkInsertChangeNotification
-                {
+				{
 					OperationId = operationId,
-                    Type = DocumentChangeTypes.BulkInsertEnded
-                });
-                if (documents == 0)
-                    return;
-                workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");
-            });
-            return documents;
-        }
+					Type = DocumentChangeTypes.BulkInsertEnded
+				});
+				if (documents == 0)
+					return;
+				workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");
+			});
+			return documents;
+		}
 
         public TouchedDocumentInfo GetRecentTouchesFor(string key)
         {

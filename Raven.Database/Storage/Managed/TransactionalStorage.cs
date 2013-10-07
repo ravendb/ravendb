@@ -112,6 +112,18 @@ namespace Raven.Storage.Managed
 			});
 		}
 
+		public IStorageActionsAccessor CreateAccessor()
+		{
+			var tx = tableStorage.BeginTransaction();
+			var accessor = new StorageActionsAccessor(tableStorage, uuidGenerator, DocumentCodecs, documentCacher);
+			accessor.OnDispose += () =>
+			{
+				tableStorage.Commit();
+				tx.Dispose();
+			};
+			return accessor;
+		}
+
 		[DebuggerNonUserCode]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
@@ -251,6 +263,11 @@ namespace Raven.Storage.Managed
 		public bool HandleException(Exception exception)
 		{
 			return false;
+		}
+
+		public bool IsAlreadyInBatch
+		{
+			get { return current.Value != null; }
 		}
 
 		public void Compact(InMemoryRavenConfiguration compactConfiguration)

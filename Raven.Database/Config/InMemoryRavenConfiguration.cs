@@ -250,12 +250,9 @@ namespace Raven.Database.Config
 		{
 			get
 			{
-				var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
+				var activeBundles = Settings[Constants.ActiveBundles] ?? "";
 
-				return activeBundles.Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries)
-				                    .Select(x => x.Trim())
-				                    .ToList();
-
+				return activeBundles.GetSemicolonSeparatedValues();
 			}
 		} 
 
@@ -794,9 +791,9 @@ namespace Raven.Database.Config
 		public int MaxIndexWritesBeforeRecreate { get; set; }
 
 		/// <summary>
-		/// Limits the number of map outputs that an map-reduce index is allowed to create for a one source document. If a map operation applied to the one document
-		/// produces more outputs than this number then an index definition will be considered as a suspicious and the index will be disabled.
-		/// Default value: 5. In order to disable this check set value to -1.
+		/// Limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to the one document
+		/// produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
+		/// Default value: 15. In order to disable this check set value to -1.
 		/// </summary>
 		public int MaxIndexOutputsPerDocument { get; set; }
 

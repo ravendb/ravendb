@@ -81,7 +81,8 @@ namespace Raven.Database.Indexing
 
 		protected override DatabaseTask GetApplicableTask(IStorageActionsAccessor actions)
 		{
-			return actions.Tasks.GetMergedTask<RemoveFromIndexTask>();
+            return (DatabaseTask)actions.Tasks.GetMergedTask<RemoveFromIndexTask>() ??
+		           actions.Tasks.GetMergedTask<TouchMissingReferenceDocumentTask>();
 		}
 
 		protected override void FlushAllIndexes()
@@ -524,33 +525,5 @@ namespace Raven.Database.Indexing
 			indexingCompletedEvent = new ManualResetEventSlim(false);
 			base.Init();
 		}
-
-        protected override ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress
-        {
-            get
-            {
-                Log.Debug("[Document Reindexing] IndexingExecuter::DocumentKeysAddedWhileIndexingInProgress (get), Count = {0}, Last Caller : {1}", context.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex.Count, new StackTrace().GetFrames().Last());
-                return context.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex;
-            }
-            set
-            {
-                context.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex = value;
-                if(value != null)
-                    Log.Debug("[Document Reindexing] IndexingExecuter::DocumentKeysAddedWhileIndexingInProgress (set), Count = {0}, Last Caller : {1}", value.Count, new StackTrace().GetFrames().Last());
-                else
-                    Log.Debug("[Document Reindexing] IndexingExecuter::DocumentKeysAddedWhileIndexingInProgress (set) --> null value");
-
-            }
-        }
-
-        protected override ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing
-        {
-            get
-            {
-                Log.Debug("[Document Reindexing] IndexingExecuter::ReferencingDocumentsByChildKeysWhichMightNeedReindexing (get), Count = {0}, Last Caller : {1}", context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex.Count, new StackTrace().GetFrames().Last());
-                return context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex;
-            }
-
-        }
     }
 }

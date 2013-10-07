@@ -10,7 +10,7 @@ namespace Raven.Tests.Indexes
 {
 	public class RavenDB_1280 : RavenTest
 	{
-		[Fact(Skip = "current fails")]
+		[Fact]
 		public void Referenced_Docs_Are_Indexed_During_Heavy_Writing()
 		{
 			const int iterations = 8000;
@@ -41,21 +41,44 @@ namespace Raven.Tests.Indexes
 					var results = session.Query<EmailIndexDoc, EmailIndex>().Count(e => e.Body.StartsWith("MessageBody"));
 				    try
 				    {
-                        Assert.Equal(results, iterations);
+                        Assert.Equal(iterations, results);
 				    }
-				    catch (AssertException)
+				    catch (Exception ex)
 				    {
                         var missingDocs = session.Query<EmailIndexDoc, EmailIndex>().AsProjection<EmailIndexDoc>()
                                                                                     .Where(e => !e.Body.StartsWith("MessageBody"))
                                                                                     .ToList();
                         Console.WriteLine(string.Join(", ", missingDocs.Select(doc => doc.Id).ToArray()));
-				        Console.Beep();
-				        Console.ReadLine();
-                        Environment.Exit(0);
+				        Console.WriteLine(ex.Message);
+				        throw;
 				    }
 				}
 			}
 		}
+
+        [Fact]
+        public void CanHandleMultipleMissingDocumentsInMultipleIndexes()
+        {
+            using (var store = NewDocumentStore())
+            {
+                var indexDefinition = new EmailIndex().CreateIndexDefinition();
+
+                for (int i = 0; i < 4; i++)
+                {
+                    store.DatabaseCommands.PutIndex("email" + i, indexDefinition);
+                    
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(entity: new EmailDocument { });
+                    session.Store(entity: new EmailDocument { });
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+            }
+        }
 
 		public class EmailIndex : AbstractIndexCreationTask<EmailDocument, EmailIndexDoc>
 		{

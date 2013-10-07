@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Orders;
-using Raven.Client.Document;
 using Raven.Tests.Indexes;
 using Raven.Tests.Notifications;
 using Raven.Tests.Track;
@@ -12,12 +10,14 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			using (var store = new DocumentStore {DefaultDatabase = "Daniel", Url = "http://localhost:8080"}.Initialize())
-			using (var session = store.OpenSession())
+			for (int i = 0; i < 100; i++)
 			{
-				//store.DatabaseCommands.Put()
-				session.Store(new Company());
-				session.SaveChanges();
+				Console.WriteLine(i);
+                Environment.SetEnvironmentVariable("run", i.ToString("000"));
+                using (var x = new RavenDB_1280())
+				{
+					x.CanHandleMultipleMissingDocumentsInMultipleIndexes();
+				}
 			}
 			
 		}

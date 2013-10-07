@@ -61,7 +61,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpHead("databases/{databaseName}/docs/{*id}")]
 		public HttpResponseMessage DocHead(string id)
 		{
-			var msg = GetMessageWithString("");
+			var msg = GetEmptyMessage();
 			msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
 			var docId = id;
 			var transactionInformation = GetRequestTransaction();

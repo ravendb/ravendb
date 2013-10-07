@@ -8,7 +8,7 @@ namespace Raven.Client.Document.SessionOperations
 	public class LoadOperation
 	{
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
-		private readonly InMemoryDocumentSessionOperations sessionOperations;
+		protected readonly InMemoryDocumentSessionOperations sessionOperations;
 		private readonly Func<IDisposable> disableAllCaching;
 		private readonly string id;
 		private bool firstRequest = true;
@@ -51,7 +51,7 @@ namespace Raven.Client.Document.SessionOperations
 				;
 		}
 
-		public T Complete<T>()
+		public virtual T Complete<T>()
 		{
 			if (documentFound == null)
 			{

@@ -175,7 +175,9 @@ namespace Raven.Client.Document
 		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id)
 		{
 			var transformer = new TTransformer().TransformerName;
-			var lazyLoadOperation = new LazyLoadOperation<TResult>(id, new LoadOperation(this, DatabaseCommands.DisableAllCaching, id), HandleInternalMetadata, transformer);
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(id, transformer,
+																		  new LoadTransformerOperation(this, transformer, 1),
+																		  singleResult: true);
 			return AddLazyOperation<TResult>(lazyLoadOperation, null);
 		}
 
@@ -319,6 +321,7 @@ namespace Raven.Client.Document
 			return Load<T>(documentKeys);
 		}
 
+
 		private T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, RavenJToken> queryInputs = null)
 		{
 			if (ids.Length == 0)
@@ -326,31 +329,30 @@ namespace Raven.Client.Document
 
 			IncrementRequestCount();
 
-            var items = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs).Results
-		                                  .Select(x =>
-		                                  {
-		                                      var result = JsonObjectToClrInstancesWithoutTracking(typeof (T), x);
-		                                
-                                              var array = result as Array;
-                                              if (array != null &&  typeof(T).IsArray == false && array.Length > ids.Length)
-                                              {
-                                                  throw new InvalidOperationException(
-                                                      String.Format(
-                                                          "A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
-                                                          transformer,
-                                                          typeof(T).Name));
+			var multiLoadResult = DatabaseCommands.Get(ids, new string[] {}, transformer, queryInputs);
+			return new LoadTransformerOperation(this, transformer, ids.Length).Complete<T>(multiLoadResult);
+		}
+	
+		internal object ProjectionToInstance(RavenJObject y, Type type)
+		{
+			HandleInternalMetadata(y);
+			foreach (var conversionListener in listeners.ExtendedConversionListeners)
+			{
+				conversionListener.BeforeConversionToEntity(null, y, null);
+			}
+			var instance = y.Deserialize(type, Conventions);
+			foreach (var conversionListener in listeners.ConversionListeners)
+			{
+				conversionListener.DocumentToEntity(null, instance, y, null);
+			}
+			foreach (var conversionListener in listeners.ExtendedConversionListeners)
+			{
+				conversionListener.AfterConversionToEntity(null, y, null, instance);
+			}
+			return instance;
                                               }
 
-		                                      return result;
-		                                  })
-                                          .Cast<T>()
-		                                  .ToArray();
-          
-            
-            return items;
-		}
 
-	
 		public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
 			if (ids.Length == 0)
@@ -572,7 +574,7 @@ namespace Raven.Client.Document
 		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
 		{
 			QueryHeaderInformation _;
-			return Stream<T>(query, out _);
+			return Stream(query, out _);
 		}
 
 		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)

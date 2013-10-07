@@ -1,5 +1,4 @@
 using System;
-using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Document;
 using Xunit;
@@ -113,7 +112,6 @@ namespace Raven.Tests.Querying
 		[Fact]
 		public void CanUseStronglyTypedGroupBy()
 		{
-			CreateUserQuery().GroupBy(AggregationOperation.None, x => x.Birthday);
 		}
 	}
 }
