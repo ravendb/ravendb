@@ -2,22 +2,21 @@
 {
 	using System;
 	using System.IO;
-	using System.Text;
 
 	using Voron.Impl;
 	using Voron.Trees;
 
 	using Xunit;
 
-	public class Deletes : StorageTest
+	public class Versioning : StorageTest
 	{
 		[Fact]
-		public void RebalancerIssue()
+		public void SplittersAndRebalancersShouldNotChangeNodeVersion()
 		{
-			const int DocumentCount = 750;
+			const int DocumentCount = 100000;
 
 			var rand = new Random();
-			var testBuffer = new byte[757];
+			var testBuffer = new byte[123];
 			rand.NextBytes(testBuffer);
 
 			Tree t1 = null;
@@ -37,20 +36,16 @@
 			Env.Writer.Write(batch);
 
 			batch = new WriteBatch();
-			for (var i = 0; i < DocumentCount; i++)
+			using (var snapshot = Env.CreateSnapshot())
 			{
-				if (i >= 180)
-					continue;
-
-				batch.Delete("Foo" + i, "tree1");
+				for (var i = 0; i < DocumentCount; i++)
+				{
+					var result = snapshot.Read("tree1", "Foo" + 1, null);
+					batch.Delete("Foo" + i, "tree1", result.Version);
+				}
 			}
 
 			Env.Writer.Write(batch);
-
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				t1.Delete(tx, "Foo180"); // rebalancer fails to move 1st node from one branch to another
-			}
 		}
 	}
 }
