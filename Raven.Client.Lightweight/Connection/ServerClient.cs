@@ -866,8 +866,7 @@ namespace Raven.Client.Connection
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale = false)
 		{
-			var requestData = new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented);
-			return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "PATCH");
+            return asyncDatabaseCommands.UpdateByIndexAsync(indexName, queryToUpdate, patchRequests, allowStale).Result;
 		}
 
 		/// <summary>
@@ -879,36 +878,7 @@ namespace Raven.Client.Connection
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale = false)
 		{
-			var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
-			return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "EVAL");
-		}
-
-		private Operation UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
-		{
-			return ExecuteWithReplication<Operation>(method, operationUrl =>
-			{
-				string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
-				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, path, method, credentials, convention)
-						.AddOperationHeaders(OperationsHeaders))
-                        .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-				request.Write(requestData);
-				RavenJToken jsonResponse;
-				try
-				{
-					jsonResponse = request.ReadResponseJson();
-				}
-				catch (WebException e)
-				{
-					var httpWebResponse = e.Response as HttpWebResponse;
-					if (httpWebResponse != null && httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-						throw new InvalidOperationException("There is no index named: " + indexName);
-					throw;
-				}
-
-				return new Operation(this, jsonResponse.Value<long>("OperationId"));
-			});
+		    return asyncDatabaseCommands.UpdateByIndexAsync(indexName, queryToUpdate, patch, allowStale).Result;
 		}
 
 		/// <summary>

@@ -874,23 +874,43 @@ namespace Raven.Client.Connection.Async
             });
         }
 
-        public Task UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+        public Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
         {
             var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
             return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "EVAL");
         }
 
-        private Task UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData,
-                                       String method)
+        public Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests,
+            bool allowStale = false)
         {
-            return ExecuteWithReplication(method, operationUrl =>
+            var requestData = new RavenJArray(patchRequests.Select(x => x.ToJson())).ToString(Formatting.Indented);
+			return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "PATCH");
+        }
+
+        private Task<Operation> UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
+        {
+            return ExecuteWithReplication(method, async operationUrl =>
             {
                 string path = queryToUpdate.GetIndexQueryUrl(operationUrl, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 
                 var request = jsonRequestFactory.CreateHttpJsonRequest(
                     new CreateHttpJsonRequestParams(this, path, method, credentials, convention));
                 request.AddOperationHeaders(OperationsHeaders);
-                return request.ExecuteWriteAsync(requestData);
+                await request.ExecuteWriteAsync(requestData);
+
+                RavenJToken jsonResponse;
+                try
+                {
+                    jsonResponse = await request.ReadResponseJsonAsync();
+                }
+                catch (ErrorResponseException e)
+                {
+                    if (e.StatusCode == HttpStatusCode.NotFound)
+                        throw new InvalidOperationException("There is no index named: " + indexName);
+                    throw;
+                }
+
+                return new Operation(this, jsonResponse.Value<long>("OperationId"));
             });
         }
 

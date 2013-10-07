@@ -251,16 +251,14 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<GetResponse[]>(databaseCommands.MultiGet(requests));
 		}
 
-		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
+		public Task<Operation> UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
 		{
-			databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch);
-			return new CompletedTask();
+		    return new CompletedTask<Operation>(databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch));
 		}
 
-		public Task UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+		public Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
-			databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
-			return new CompletedTask();
+            return new CompletedTask<Operation>(databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch, allowStale));
 		}
 
 		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null ) {
