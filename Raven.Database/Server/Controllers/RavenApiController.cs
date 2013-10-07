@@ -6,12 +6,10 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using Raven.Abstractions.Data;
@@ -19,7 +17,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
-using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Tenancy;
@@ -59,11 +56,6 @@ namespace Raven.Database.Server.Controllers
 			var result = await base.ExecuteAsync(controllerContext, cancellationToken);
 			sp.Stop();
 			AddRavenHeader(result, sp, landlord);
-
-			if (result.StatusCode == HttpStatusCode.BadRequest)
-			{
-				
-			}
 
 			return result;
 		}

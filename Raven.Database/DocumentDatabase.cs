@@ -17,6 +17,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
@@ -1518,6 +1519,8 @@ namespace Raven.Database
                     actions =>
                     {
                         var definition = IndexDefinitionStorage.GetIndexDefinition(index); 
+						if(definition == null)
+							throw new IndexDoesNotExistsException(index);
                         isStale = actions.Staleness.IsIndexStale(definition.IndexId, query.Cutoff, null);
 
                         if (isStale == false && query.Cutoff == null)
