@@ -53,6 +53,8 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
                                         .Select(index => JsonConvert.DeserializeObject<TransformerDefinition>(File.ReadAllText(index), Default.Converters))
                                         .ToArray();
 
+		  int maxIndexId = 0;
+
 		    for (var i = 0; i < indexDefinitions.Length; i++)
 		    {
 		        var definition = indexDefinitions[i];
@@ -69,12 +71,13 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 
                 // TODO: This can fail, rollback
                 Directory.Move(oldStorageDirectory, newStorageDirectory);
+            maxIndexId = i;
 		    }
 
 		    for (var i = 0; i < transformDefinitions.Length; i++)
 		    {
 		        var definition = transformDefinitions[i];
-		        definition.IndexId = indexDefinitions.Length + i;
+		        definition.IndexId = maxIndexId = indexDefinitions.Length + i;
 		        nameToIds[definition.Name] = definition.IndexId;
 		        var path = Path.Combine(indexDefPath, definition.IndexId + ".transform");
 
@@ -244,13 +247,32 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
                         Api.JetBeginTransaction2(session, BeginTransactionGrbit.None);
                     }
                 }
+              UpdateLastIdentityForIndexes(session, dbid, maxIndexId+1);
             }
 
+
             filesToDelete.ForEach(File.Delete);
-			SchemaCreator.UpdateVersion(session, dbid, "4.8");
+            SchemaCreator.UpdateVersion(session, dbid, "4.8");
 		}
 
-        public static string FixupIndexName(string index, string path)
+	  private void UpdateLastIdentityForIndexes(Session session, JET_DBID dbid, int lastIdentity)
+	  {
+	    using (var sr = new Table(session, dbid, "identity_table", OpenTableGrbit.None))
+	    {
+	      Api.JetSetCurrentIndex(session, sr, "by_key");
+	      Api.MakeKey(session, sr, "IndexId", Encoding.Unicode, MakeKeyGrbit.NewKey);
+	      using (var update = new Update(session, sr, Api.TrySeek(session, sr, SeekGrbit.SeekEQ) ? JET_prep.Replace : JET_prep.Insert))
+	      {
+          var keyId = Api.GetTableColumnid(session, sr, "key");
+          var valId = Api.GetTableColumnid(session, sr, "valId");
+	        Api.SetColumn(session, sr, keyId, "IndexId", Encoding.Unicode);
+	        Api.SetColumn(session, sr, valId, lastIdentity);
+	        update.Save();
+	      }
+	    }
+	  }
+
+	  public static string FixupIndexName(string index, string path)
         {
             if (index.EndsWith("=")) //allready encoded
                 return index;
