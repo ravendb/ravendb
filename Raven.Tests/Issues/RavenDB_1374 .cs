@@ -91,7 +91,7 @@ namespace Raven.Tests.Issues
 					MaxIndexOutputsPerDocument = 20
 				});
 
-				var indexDefinition = store.DatabaseCommands.GetIndex("Product/Sales");
+                var indexDefinition = store.DatabaseCommands.GetIndex("SampleIndex");
 
 				Assert.Equal(20, indexDefinition.MaxIndexOutputsPerDocument);
 			}
