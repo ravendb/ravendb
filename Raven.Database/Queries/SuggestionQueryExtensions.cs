@@ -6,6 +6,7 @@
 using System;
 using Raven.Abstractions.Data;
 using System.Linq;
+using Raven.Abstractions.Indexing;
 
 namespace Raven.Database.Queries
 {
@@ -22,12 +23,12 @@ namespace Raven.Database.Queries
 		    if (indexDefinition == null)
 		        throw new InvalidOperationException(string.Format("Could not find specified index '{0}'.", index));
 
-		    if (indexDefinition.Suggestions.ContainsKey(suggestionQuery.Field) == false)
+		    SuggestionOptions suggestion;
+		    if (indexDefinition.Suggestions.TryGetValue(suggestionQuery.Field, out suggestion) == false)
 		    {
 		        throw new InvalidOperationException(string.Format("Index '{0}' does not have suggestions configured for field '{1}'.", index, suggestionQuery.Field));
 		    }
 
-		    var suggestion = indexDefinition.Suggestions[suggestionQuery.Field];
 
 		    if (suggestionQuery.Accuracy.HasValue == false)
 		        suggestionQuery.Accuracy = suggestion.Accuracy;
