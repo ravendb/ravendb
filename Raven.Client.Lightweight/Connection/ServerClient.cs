@@ -1181,23 +1181,6 @@ namespace Raven.Client.Connection
 	        get { return new AdminServerClient(this); }
 	    }
 
-	    public void CreateDatabase(DatabaseDocument databaseDocument)
-		{
-			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
-				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
-
-			var dbname = databaseDocument.Id.Replace("Raven/Databases/", "");
-			MultiDatabase.AssertValidDatabaseName(dbname);
-			var doc = RavenJObject.FromObject(databaseDocument);
-			doc.Remove("Id");
-
-			var req = CreateRequest("/admin/databases/" + Uri.EscapeDataString(dbname), "PUT");
-			req.Write(doc.ToString(Formatting.Indented));
-			req.ExecuteRequest();
-		}
-
-		#endregion
-
         private class AsycnEnumerableWrapper<T> : IEnumerator<T>, IEnumerable<T>
         {
             private readonly IAsyncEnumerator<T> asyncEnumerator;
