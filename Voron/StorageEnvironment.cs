@@ -55,6 +55,7 @@ namespace Voron
             catch (Exception)
             {
                 Dispose();
+                throw;
             }
         }
 
