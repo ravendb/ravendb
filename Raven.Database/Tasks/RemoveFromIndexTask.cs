@@ -16,6 +16,11 @@ namespace Raven.Database.Tasks
 	{
 		public HashSet<string> Keys { get; set; }
 
+        public override bool SeparateTasksByIndex
+        {
+            get { return true; }
+        }
+
 		public override string ToString()
 		{
 			return string.Format("Index: {0}, Keys: {1}", Index, string.Join(", ", Keys));
