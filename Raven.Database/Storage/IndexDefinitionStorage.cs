@@ -151,7 +151,8 @@ namespace Raven.Database.Storage
             }
         }
 
-        public string CreateAndPersistIndex(IndexDefinition indexDefinition)
+
+      public string CreateAndPersistIndex(IndexDefinition indexDefinition)
         {
             var transformer = AddAndCompileIndex(indexDefinition);
             if (configuration.RunInMemory == false)
@@ -330,10 +331,8 @@ namespace Raven.Database.Storage
             var indexDefinition = GetIndexDefinition(indexDef.Name);
             if (indexDefinition != null)
             {
-                var old = indexDef.IndexId;
                 indexDef.IndexId = indexDefinition.IndexId;
                 bool result = indexDefinition.Equals(indexDef);
-                indexDef.IndexId = old;
                 return result
                            ? IndexCreationOptions.Noop
                            : IndexCreationOptions.Update;
@@ -420,11 +419,6 @@ namespace Raven.Database.Storage
             if (transformNameToId.TryGetValue(name, out id))
                 return transformCache[id];
             return null;
-        }
-
-        public int NextIndexId()
-        {
-            return indexDefinitions.Any() ? indexDefinitions.Values.Max(x => x.IndexId) + 1 : 0;
         }
 
         private void UpdateIndexMappingFile()

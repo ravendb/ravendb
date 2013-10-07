@@ -1225,15 +1225,18 @@ namespace Raven.Database
                     break;
             }
 
-            IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
-            // this has to happen in this fashion so we will expose the in memory status after the commit, but 
-            // before the rest of the world is notified about this.
-            IndexDefinitionStorage.CreateAndPersistIndex(definition);
-            IndexStorage.CreateIndexImplementation(definition);
 
             TransactionalStorage.Batch(actions =>
             {
+                definition.IndexId = (int)GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions, null);
+                IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
+
+                // this has to happen in this fashion so we will expose the in memory status after the commit, but 
+                // before the rest of the world is notified about this.
+
+                IndexDefinitionStorage.CreateAndPersistIndex(definition);
+                IndexStorage.CreateIndexImplementation(definition);
                 actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
                 workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
             });
@@ -1282,8 +1285,7 @@ namespace Raven.Database
 
         private IndexCreationOptions FindIndexCreationOptions(IndexDefinition definition, ref string name)
         {
-	        definition.Name = name;
-            definition.IndexId = IndexDefinitionStorage.NextIndexId();
+  	        definition.Name = name;
             definition.RemoveDefaultValues();
             IndexDefinitionStorage.ResolveAnalyzers(definition);
             var findIndexCreationOptions = IndexDefinitionStorage.FindIndexCreationOptions(definition);
