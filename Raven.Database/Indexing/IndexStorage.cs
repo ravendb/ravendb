@@ -178,11 +178,8 @@ namespace Raven.Database.Indexing
 		{
 			try
 			{
-				documentDatabase.TransactionalStorage.Batch(accessor =>
-				{
-                    accessor.Indexing.DeleteIndex(indexDefinition.IndexId, documentDatabase.WorkContext.CancellationToken);
-                    accessor.Indexing.AddIndex(indexDefinition.IndexId, indexDefinition.IsMapReduce);
-				});
+			    documentDatabase.StartDeletingIndexData(indexDefinition.IndexId);
+				documentDatabase.TransactionalStorage.Batch(accessor => accessor.Indexing.AddIndex(indexDefinition.IndexId, indexDefinition.IsMapReduce));
 
                 var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString());
 				IOExtensions.DeleteDirectory(indexFullPath);
