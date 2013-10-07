@@ -268,7 +268,6 @@ namespace Raven.Database.Server.Controllers
 				PageSize = GetPageSize(maxPageSize),
 				SkipTransformResults = GetSkipTransformResults(),
 				FieldsToFetch = GetQueryStringValues("fetch"),
-				GroupBy = GetQueryStringValues("groupBy"),
 				DefaultField = GetQueryStringValue("defaultField"),
 
 				DefaultOperator =
@@ -276,7 +275,6 @@ namespace Raven.Database.Server.Controllers
 						QueryOperator.And :
 						QueryOperator.Or,
 
-				AggregationOperation = GetAggregationOperation(),
 				SortedFields = EnumerableExtension.EmptyIfNull(GetQueryStringValues("sort"))
 					.Select(x => new SortedField(x))
 					.ToArray(),
@@ -351,17 +349,6 @@ namespace Raven.Database.Server.Controllers
 			bool result;
 			bool.TryParse(GetQueryStringValue("skipTransformResults"), out result);
 			return result;
-		}
-
-		public AggregationOperation GetAggregationOperation()
-		{
-			var aggAsString = GetQueryStringValue("aggregation");
-			if (aggAsString == null)
-			{
-				return AggregationOperation.None;
-			}
-
-			return (AggregationOperation)Enum.Parse(typeof(AggregationOperation), aggAsString, true);
 		}
 
 		public IEnumerable<HighlightedField> GetHighlightedFields()
