@@ -396,6 +396,11 @@ namespace Raven.Client.Embedded
 	        throw new NotImplementedException();
 	    }
 
+	    public Task<MultiLoadResult> MoreLikeThisAsync(MoreLikeThisQuery query)
+	    {
+	        throw new NotImplementedException();
+	    }
+
 	    #region IAsyncGlobalAdminDatabaseCommands
 
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin

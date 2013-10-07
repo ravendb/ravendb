@@ -138,29 +138,6 @@ namespace Raven.Client.Connection
             return asyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, metadataOnly, exclude).Result;
 		}
 
-		/// <summary>
-		/// Execute a GET request against the provided url
-		/// and return the result as a json object
-		/// </summary>
-		/// <param name="requestUrl">The relative url to the server</param>
-		/// <remarks>
-		/// This method respects the replication semantics against the database.
-		/// </remarks>
-		private RavenJToken ExecuteGetRequest(string requestUrl)
-		{
-			EnsureIsNotNullOrEmpty(requestUrl, "url");
-			return ExecuteWithReplication("GET", serverUrl =>
-			{
-				var metadata = new RavenJObject();
-				AddTransactionInformation(metadata);
-				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, serverUrl + requestUrl, "GET", metadata, credentials, convention)
-						.AddOperationHeaders(OperationsHeaders));
-
-				return request.ReadResponseJson();
-			});
-		}
-
 		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
 		{
 		    return asyncDatabaseCommands.CreateRequest(requestUrl, method, disableRequestCompression);
@@ -868,8 +845,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
 		{
-			var result = ExecuteGetRequest(query.GetRequestUri());
-			return ((RavenJObject)result).Deserialize<MultiLoadResult>(convention);
+		    return asyncDatabaseCommands.MoreLikeThisAsync(query).Result;
 		}
 
 		/// <summary>

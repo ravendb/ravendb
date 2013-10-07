@@ -887,6 +887,23 @@ namespace Raven.Client.Connection.Async
 			return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "PATCH");
         }
 
+        public async Task<MultiLoadResult> MoreLikeThisAsync(MoreLikeThisQuery query)
+        {
+            var requestUrl = query.GetRequestUri();
+            EnsureIsNotNullOrEmpty(requestUrl, "url");
+			var result = await ExecuteWithReplication("GET", async serverUrl =>
+			{
+				var metadata = new RavenJObject();
+				AddTransactionInformation(metadata);
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, serverUrl + requestUrl, "GET", metadata, credentials, convention)
+						.AddOperationHeaders(OperationsHeaders));
+
+				return await request.ReadResponseJsonAsync();
+			});
+            return ((RavenJObject)result).Deserialize<MultiLoadResult>(convention);
+        }
+
         private Task<Operation> UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
         {
             return ExecuteWithReplication(method, async operationUrl =>

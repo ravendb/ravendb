@@ -440,6 +440,13 @@ namespace Raven.Client.Connection.Async
         /// <param name="patchRequests">The patch requests.</param>
         /// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
         Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale = false);
+
+        /// <summary>
+        /// Return a list of documents that based on the MoreLikeThisQuery.
+        /// </summary>
+        /// <param name="query">The more like this query parameters</param>
+        /// <returns></returns>
+        Task<MultiLoadResult> MoreLikeThisAsync(MoreLikeThisQuery query);
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands
