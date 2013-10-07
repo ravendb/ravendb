@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Security;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.OAuth;
@@ -722,13 +723,16 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(database) == false)
 				dbUrl = dbUrl + "/databases/" + database;
 
-			return new RemoteDatabaseChanges(dbUrl,
-				Credentials,
-				jsonRequestFactory,
-				Conventions,
-				GetReplicationInformerForDatabase(database),
-				() => databaseChanges.Remove(database),
-				((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
+			using(NoSyncronizationContext.Scope())
+			{
+				return new RemoteDatabaseChanges(dbUrl,
+					Credentials,
+					jsonRequestFactory,
+					Conventions,
+					GetReplicationInformerForDatabase(database),
+					() => databaseChanges.Remove(database),
+					((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
+			}
 		}
 
 		/// <summary>
@@ -762,6 +766,29 @@ namespace Raven.Client.Document
 #endif
 		}
 
+		/// <summary>
+		/// Setup the WebRequest timeout for the session
+		/// </summary>
+		/// <param name="timeout">Specify the timeout duration</param>
+		/// <remarks>
+		/// Sets the timeout for the JsonRequest.  Scoped to the Current Thread.
+		/// </remarks>
+		public override IDisposable SetRequestsTimeoutFor(TimeSpan timeout) {
+			AssertInitialized();
+#if !SILVERLIGHT && !NETFX_CORE
+
+			var old = jsonRequestFactory.RequestTimeout;
+			jsonRequestFactory.RequestTimeout = timeout;
+
+			return new DisposableAction(() => {
+				jsonRequestFactory.RequestTimeout = old;
+			});
+#else
+			// TODO: with silverlight, we don't currently support session timeout
+			return new DisposableAction(() => { });
+#endif
+		}
+
 		private IAsyncDocumentSession OpenAsyncSessionInternal(string dbName, IAsyncDatabaseCommands asyncDatabaseCommands)
 		{
 			AssertInitialized();
@@ -776,7 +803,7 @@ namespace Raven.Client.Document
 
 				var session = new AsyncDocumentSession(dbName, this, asyncDatabaseCommands, listeners, sessionId)
 				{
-				    DatabaseName = dbName ?? DefaultDatabase
+					DatabaseName = dbName ?? DefaultDatabase
 				};
 				AfterSessionCreated(session);
 				return session;
@@ -810,7 +837,7 @@ namespace Raven.Client.Document
 
 		public IAsyncDocumentSession OpenAsyncSession(OpenSessionOptions options)
 		{
-            return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
+			return OpenAsyncSessionInternal(options.Database, SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options));
 		}
 
 		/// <summary>

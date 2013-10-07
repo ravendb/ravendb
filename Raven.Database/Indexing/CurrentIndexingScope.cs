@@ -7,7 +7,7 @@ namespace Raven.Database.Indexing
 	public class CurrentIndexingScope : IDisposable
 	{
 		private readonly Func<string, dynamic> loadDocument;
-		private readonly Action<IDictionary<string, HashSet<string>>> onDispose;
+        private readonly Action<IDictionary<string, HashSet<string>>, HashSet<string>> onDispose;
 		[ThreadStatic]
 		private static CurrentIndexingScope current;
 
@@ -19,7 +19,7 @@ namespace Raven.Database.Indexing
 
 		public CurrentIndexingScope(
 			Func<string, dynamic> loadDocument,
-			Action<IDictionary<string,HashSet<string>>> onDispose)
+            Action<IDictionary<string, HashSet<string>>, HashSet<string>> onDispose)
 		{
 			this.loadDocument = loadDocument;
 			this.onDispose = onDispose;
@@ -27,7 +27,8 @@ namespace Raven.Database.Indexing
 
 		public dynamic Source { get; set; }
 
-		private readonly IDictionary<string, HashSet<string>> referencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase); 
+		private readonly IDictionary<string, HashSet<string>> referencedDocuments = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> missingReferencedDocuments = new HashSet<string>(StringComparer.OrdinalIgnoreCase); 
 		private readonly IDictionary<string,dynamic> docsCache = new Dictionary<string, dynamic>(StringComparer.OrdinalIgnoreCase);
 
 		public dynamic LoadDocument(string key)
@@ -59,13 +60,19 @@ namespace Raven.Database.Indexing
 				return value;
 
 			value = loadDocument(key);
+
+            if (value == null)
+            {
+                missingReferencedDocuments.Add(id);
+            }
+
 			docsCache[key] = value;
 			return value;
 		}
 
 		public void Dispose()
 		{
-			onDispose(referencedDocuments);
+			onDispose(referencedDocuments, missingReferencedDocuments);
 			current = null;
 		}
 	}

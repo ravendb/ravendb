@@ -16,7 +16,7 @@ namespace Raven.Database.Linq.PrivateExtensions
 	/// </summary>
 	public static class LinqOnDynamic
 	{
-		public static IEnumerable<IGrouping<dynamic, dynamic>> GroupBy(this IEnumerable<dynamic> source, Func<dynamic, dynamic> keySelector)
+        public static IEnumerable<IGrouping<dynamic, dynamic>> GroupBy(this IEnumerable<dynamic> source, Func<dynamic, dynamic> keySelector)
 		{
 			return Enumerable.GroupBy(source, keySelector).Select(inner => new WrapperGrouping(inner));
 		}

@@ -21,6 +21,7 @@
  */
 
 using System;
+using System.Globalization;
 
 namespace Raven.Abstractions.Linq
 {
@@ -96,31 +97,31 @@ namespace Raven.Abstractions.Linq
 			
 			if (resolution == Resolution.YEAR)
 			{
-				return date.ToString(YEAR_FORMAT);
+				return date.ToString(YEAR_FORMAT, CultureInfo.InvariantCulture);
 			}
 			else if (resolution == Resolution.MONTH)
 			{
-				return date.ToString(MONTH_FORMAT);
+				return date.ToString(MONTH_FORMAT, CultureInfo.InvariantCulture);
 			}
 			else if (resolution == Resolution.DAY)
 			{
-				return date.ToString(DAY_FORMAT);
+				return date.ToString(DAY_FORMAT, CultureInfo.InvariantCulture);
 			}
 			else if (resolution == Resolution.HOUR)
 			{
-				return date.ToString(HOUR_FORMAT);
+				return date.ToString(HOUR_FORMAT, CultureInfo.InvariantCulture);
 			}
 			else if (resolution == Resolution.MINUTE)
 			{
-				return date.ToString(MINUTE_FORMAT);
+				return date.ToString(MINUTE_FORMAT, CultureInfo.InvariantCulture);
 			}
 			else if (resolution == Resolution.SECOND)
 			{
-				return date.ToString(SECOND_FORMAT);
+				return date.ToString(SECOND_FORMAT, CultureInfo.InvariantCulture);
 			}
 			else if (resolution == Resolution.MILLISECOND)
 			{
-				return date.ToString(MILLISECOND_FORMAT);
+				return date.ToString(MILLISECOND_FORMAT, CultureInfo.InvariantCulture);
 			}
 			
 			throw new System.ArgumentException("unknown resolution " + resolution);

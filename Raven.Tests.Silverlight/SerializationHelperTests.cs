@@ -42,7 +42,7 @@ namespace Raven.Tests.Silverlight
 		{
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
-
+			
 			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
 			Assert.AreEqual(string.Empty, output.First().Key);
@@ -56,7 +56,8 @@ namespace Raven.Tests.Silverlight
 
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
-			((RavenJObject)doc["@metadata"])["Last-Modified"] = april_fools.ToString("r");
+            ((RavenJObject)doc["@metadata"])["@id"] = "foo";
+            ((RavenJObject)doc["@metadata"])["Last-Modified"] = april_fools.ToString("r");
 			((RavenJObject)doc["@metadata"])["Raven-Last-Modified"] = april_fools.ToString("o");
 
 			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
@@ -87,7 +88,8 @@ namespace Raven.Tests.Silverlight
 
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
-			((RavenJObject)doc["@metadata"])["@etag"] = etag.ToString();
+            ((RavenJObject)doc["@metadata"])["@id"] = "foo";
+            ((RavenJObject)doc["@metadata"])["@etag"] = etag.ToString();
 
 			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
@@ -100,7 +102,8 @@ namespace Raven.Tests.Silverlight
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
 
-			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
+            ((RavenJObject)doc["@metadata"])["@id"] = "foo";
+            var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
 			Assert.AreEqual(Etag.Empty, output.First().Etag);
 		}
@@ -110,6 +113,7 @@ namespace Raven.Tests.Silverlight
 		{
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
+		    ((RavenJObject) doc["@metadata"])["@id"] = "foo";
 			((RavenJObject)doc["@metadata"])["Non-Authoritative-Information"] = true;
 
 			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
@@ -122,7 +126,8 @@ namespace Raven.Tests.Silverlight
 		{
 			var doc = new RavenJObject();
 			doc["@metadata"] = new RavenJObject();
-
+            ((RavenJObject)doc["@metadata"])["@id"] = "foo";
+			
 			var output = SerializationHelper.RavenJObjectsToJsonDocuments(new List<RavenJObject> { doc });
 
 			Assert.AreEqual(false, output.First().NonAuthoritativeInformation);

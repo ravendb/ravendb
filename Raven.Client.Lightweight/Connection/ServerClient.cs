@@ -1093,6 +1093,23 @@ namespace Raven.Client.Connection
 																		 convention.FailoverBehavior,
 																		 HandleReplicationStatusChanges);
 
+			request.RemoveAuthorizationHeader();
+
+			var token = GetSingleAuthToken();
+
+			try
+			{
+				token = ValidateThatWeCanUseAuthenticateTokens(token);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+					e);
+			}
+
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+
 			var webResponse = request.RawExecuteRequest();
 			queryHeaderInfo = new QueryHeaderInformation
 			{
@@ -1151,6 +1168,24 @@ namespace Raven.Client.Connection
 				new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))
 				.AddReplicationStatusHeaders(Url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+			request.RemoveAuthorizationHeader();
+
+			var token = GetSingleAuthToken();
+
+			try
+			{
+				token = ValidateThatWeCanUseAuthenticateTokens(token);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate token for docs streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+					e);
+			}
+
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+
 			var webResponse = request.RawExecuteRequest();
 			return YieldStreamResults(webResponse);
 		}
@@ -2187,6 +2222,24 @@ namespace Raven.Client.Connection
 			var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
 			servicePoint.Expect100Continue = true;
 			return new DisposableAction(() => servicePoint.Expect100Continue = false);
+		}
+
+		public string GetSingleAuthToken()
+		{
+			var tokenRequest = CreateRequest("GET", "/singleAuthToken", disableRequestCompression: true);
+
+			return tokenRequest.ReadResponseJson().Value<string>("Token");
+		}
+
+		private string ValidateThatWeCanUseAuthenticateTokens(string token)
+		{
+			var request = CreateRequest("GET", "/singleAuthToken", disableRequestCompression: true);
+
+			request.DisableAuthentication();
+			request.webRequest.ContentLength = 0;
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+			var result = request.ReadResponseJson();
+			return result.Value<string>("Token");
 		}
 	}
 }

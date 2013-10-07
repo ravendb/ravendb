@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace Raven.Database.Plugins.Builtins
 {
@@ -27,7 +28,7 @@ namespace Raven.Database.Plugins.Builtins
 					// Even though technically we are running into a situation that is considered to be corrupt data
 					// we can safely recover from it by removing the other parts of the index.
 					database.IndexStorage.DeleteIndex(indexName);
-					actions.Indexing.DeleteIndex(indexName);
+					actions.Indexing.DeleteIndex(indexName, new CancellationToken());
 				}
 			});
 		}
