@@ -1237,6 +1237,9 @@ namespace Raven.Database
 
                 IndexDefinitionStorage.CreateAndPersistIndex(definition);
                 IndexStorage.CreateIndexImplementation(definition);
+
+				InvokeSuggestionIndexing(name, definition);
+
                 actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
                 workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
             });
@@ -1245,8 +1248,6 @@ namespace Raven.Database
             // we have to do it in this way so first we prepare all the elements of the 
             // index, then we add it to the storage in a way that make it public
             IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
-
-			InvokeSuggestionIndexing(name, definition);
 
 			workContext.ClearErrorsFor(name);
 
