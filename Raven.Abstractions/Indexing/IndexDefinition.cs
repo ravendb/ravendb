@@ -324,6 +324,7 @@ namespace Raven.Abstractions.Indexing
 				Name = Name,
 				Reduce = Reduce,
 				TransformResults = TransformResults,
+                MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
 				cachedHashCodeAsBytes = cachedHashCodeAsBytes
 			};
 
