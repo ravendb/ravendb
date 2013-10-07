@@ -76,7 +76,11 @@ namespace Raven.Tests.Issues
 					Map = "from doc in docs select new { doc.Name}",
 					Suggestions = new Dictionary<string, SuggestionOptions>
 													              {
-														              {"Name", new SuggestionOptions()}
+														              {"Name", new SuggestionOptions
+														              {
+															              Accuracy = 0.5f,
+																		  Distance = StringDistanceTypes.Default
+														              }}
 													              }
 				});
 
