@@ -19,6 +19,11 @@ namespace Raven.Database.Tasks
             return string.Format("Index: {0}, Keys: {1}", Index, string.Join(", ", Keys));
         }
 
+        public override bool SeparateTasksByIndex
+        {
+            get { return false; }
+        }
+
         public override void Merge(DatabaseTask task)
         {
             var t = (TouchMissingReferenceDocumentTask)task;
@@ -32,12 +37,16 @@ namespace Raven.Database.Tasks
                 logger.Debug("Going to touch the following documents (missing references, need to check for concurrent transactions): {0}",
                     string.Join(", ", Keys));
             }
-            var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(Index, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
+          
             context.TransactionalStorage.Batch(accessor =>
             {
                 foreach (var key in Keys)
                 {
-                    set.Add(key);
+                    foreach (var index in context.IndexStorage.Indexes)
+                    {
+                        var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(index, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
+                        set.Add(key);
+                    }
                     try
                     {
                         Etag preTouchEtag;
