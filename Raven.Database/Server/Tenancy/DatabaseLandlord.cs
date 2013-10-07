@@ -460,5 +460,10 @@ namespace Raven.Database.Server.Tenancy
 		{
 			Interlocked.Increment(ref physicalRequestsCount);
 		}
+
+		public void DecrementRequestCount()
+		{
+			Interlocked.Decrement(ref physicalRequestsCount);
+		}
 	}
 }

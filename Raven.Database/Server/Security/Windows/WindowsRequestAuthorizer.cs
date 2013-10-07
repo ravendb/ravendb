@@ -228,7 +228,7 @@ namespace Raven.Database.Server.Security.Windows
 		{
 			string debugAuth = controller.GetQueryStringValue("debug-auth");
 			if (debugAuth == null)
-				return controller.GetMessageWithString("");
+				return controller.GetEmptyMessage();
 
 			bool shouldProvideDebugAuthInformation;
 			if (bool.TryParse(debugAuth, out shouldProvideDebugAuthInformation) && shouldProvideDebugAuthInformation)
@@ -236,7 +236,7 @@ namespace Raven.Database.Server.Security.Windows
 				return controller.GetMessageWithObject(msg);
 			}
 
-			return controller.GetMessageWithString("");
+			return controller.GetEmptyMessage();
 		}
 
 		private PrincipalWithDatabaseAccess UpdateUserPrincipal(IHttpContext ctx, List<DatabaseAccess> databaseAccessLists)
