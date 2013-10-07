@@ -685,6 +685,11 @@ namespace Raven.Database.Indexing
 			IndexDefinitionStorage.ResolveAnalyzers(indexDefinition);
 			AssertAnalyzersValid(indexDefinition);
 
+            if (TryIndexByName(indexDefinition.Name) != null)
+            {
+                throw new InvalidOperationException("Index " + indexDefinition.Name + " already exists");
+            }
+
             indexes.AddOrUpdate(indexDefinition.IndexId, n =>
 			{
                 var directory = OpenOrCreateLuceneDirectory(indexDefinition);
