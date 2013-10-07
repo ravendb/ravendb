@@ -284,7 +284,8 @@ namespace Raven.Database.Server.Controllers
 				HighlighterPreTags = GetQueryStringValues("preTags"),
 				HighlighterPostTags = GetQueryStringValues("postTags"),
 				ResultsTransformer = GetQueryStringValue("resultsTransformer"),
-				QueryInputs = ExtractQueryInputs()
+				QueryInputs = ExtractQueryInputs(),
+				ExplainScores = GetExplainScores()				
 			};
 
 
@@ -321,6 +322,13 @@ namespace Raven.Database.Server.Controllers
 				return Etag.Parse(etagAsString);
 			}
 			return null;
+		}
+
+		private bool GetExplainScores()
+		{
+			bool result;
+			bool.TryParse(GetQueryStringValue("explainScores"), out result);
+			return result;
 		}
 
 		public DateTime? GetCutOff()
