@@ -16,7 +16,7 @@ namespace Raven.Database.Queries
 		{
 			if (index == "dynamic" || index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase))
 			{
-				throw new InvalidOperationException("Could not get suggestions for dynamic index because `Raven/PreventAutomaticSuggestionCreation` is set to true.");
+				throw new InvalidOperationException("Cannot get suggestions for dynamic indexes, only static indexes with explicitly defined Suggestions are supported");
 			}
 		    
             var indexDefinition = self.GetIndexDefinition(index);
