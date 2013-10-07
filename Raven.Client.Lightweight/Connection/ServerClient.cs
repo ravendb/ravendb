@@ -737,12 +737,12 @@ namespace Raven.Client.Connection
 		public void PrepareTransaction(string txId)
 		{
             asyncDatabaseCommands.PrepareTransactionAsync(txId).Wait();
-		}
+	    }
 
-		public BuildNumber GetBuildNumber()
-		{
-		    return asyncDatabaseCommands.GetBuildNumberAsync().Result;
-		}
+        public BuildNumber GetBuildNumber()
+        {
+            return asyncDatabaseCommands.GetBuildNumberAsync().Result;
+        }
 
 		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
