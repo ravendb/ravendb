@@ -542,7 +542,6 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-            // TODO delegate indexEntriesOnly
             return asyncDatabaseCommands.QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly).Result;
 		}
 
@@ -564,9 +563,8 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude)
 		{
-            //TODO pass exclude param
 		    return new AsycnEnumerableWrapper<RavenJObject>(
-		            asyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize).Result);
+		            asyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude).Result);
 		}
 
 		/// <summary>

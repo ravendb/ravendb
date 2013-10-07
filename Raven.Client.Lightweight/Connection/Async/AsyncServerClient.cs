@@ -1637,9 +1637,11 @@ namespace Raven.Client.Connection.Async
         }
 
 
-        public async Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null,
-                                                                          string matches = null, int start = 0,
-                                    int pageSize = Int32.MaxValue)
+        public async Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(
+            Etag fromEtag = null, string startsWith = null,
+            string matches = null, int start = 0,
+            int pageSize = Int32.MaxValue,
+            string exclude = null)
         {
             if (fromEtag != null && startsWith != null)
                 throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
@@ -1661,6 +1663,10 @@ namespace Raven.Client.Connection.Async
                 if (matches != null)
                 {
                     sb.Append("matches=").Append(Uri.EscapeDataString(matches)).Append("&");
+                }
+                if (exclude != null)
+                {
+                    sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
                 }
             }
             if (start != 0)
