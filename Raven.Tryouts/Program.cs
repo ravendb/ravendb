@@ -16,7 +16,7 @@ namespace Raven.Tryouts
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
                 using (var x = new RavenDB_1280())
 				{
-					x.Referenced_Docs_Are_Indexed_During_Heavy_Writing();
+					x.CanHandleMultipleMissingDocumentsInMultipleIndexes();
 				}
 			}
 			
