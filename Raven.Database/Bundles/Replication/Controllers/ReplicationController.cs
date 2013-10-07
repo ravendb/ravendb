@@ -35,7 +35,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[ImportMany]
 		public IEnumerable<AbstractAttachmentReplicationConflictResolver> AttachmentReplicationConflictResolvers { get; set; }
 
-		[HttpPost("replication/replicateDoc")]
+		[HttpPost("replication/replicateDocs")]
 		public async Task<HttpResponseMessage> DocReplicatePost()
 		{
 			var src = GetQueryStringValue("from");
@@ -183,6 +183,151 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				Stats = replicationTask == null ? new List<DestinationStats>() : replicationTask.DestinationStats.Values.ToList()
 			};
 			return GetMessageWithObject(replicationStatistics);
+		}
+
+		[HttpGet("replication/lastEtag")]
+		public HttpResponseMessage ReplicationLastEtagGet()
+		{
+			string src;
+			string dbid;
+			var result =  GetValuesForLastEtag(out src, out dbid);
+			if (result != null)
+				return result;
+
+			using (Database.DisableAllTriggersForCurrentThread())
+			{
+				var document = Database.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
+
+				SourceReplicationInformation sourceReplicationInformation;
+
+				var serverInstanceId = Database.TransactionalStorage.Id; // this is my id, sent to the remote serve
+
+				if (document == null)
+				{
+					sourceReplicationInformation = new SourceReplicationInformation()
+					{
+						Source = src
+					};
+				}
+				else
+				{
+					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
+					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
+				}
+
+				//var currentEtag = GetQueryStringValue("currentEtag");
+				//TODO: log
+				//log.Debug("Got replication last etag request from {0}: [Local: {1} Remote: {2}]", src,
+				//		  sourceReplicationInformation.LastDocumentEtag, currentEtag);
+				return GetMessageWithObject(sourceReplicationInformation);
+			}
+		}
+
+		[HttpPut("replication/lastEtag")]
+		public HttpResponseMessage ReplicationLastEtagPut()
+		{
+			string src;
+			string dbid;
+			var result = GetValuesForLastEtag(out src, out dbid);
+			if (result != null)
+				return result;
+
+			using (Database.DisableAllTriggersForCurrentThread())
+			{
+				var document = Database.Get(Constants.RavenReplicationSourcesBasePath + "/" + src, null);
+
+				SourceReplicationInformation sourceReplicationInformation;
+
+				Etag docEtag = null, attachmentEtag = null;
+				try
+				{
+					docEtag = Etag.Parse(GetQueryStringValue("docEtag"));
+				}
+				catch
+				{
+
+				}
+				try
+				{
+					attachmentEtag = Etag.Parse(GetQueryStringValue("attachmentEtag"));
+				}
+				catch
+				{
+
+				}
+				Guid serverInstanceId;
+				if (Guid.TryParse(dbid, out serverInstanceId) == false)
+					serverInstanceId = Database.TransactionalStorage.Id;
+
+				if (document == null)
+				{
+					sourceReplicationInformation = new SourceReplicationInformation()
+					{
+						ServerInstanceId = serverInstanceId,
+						LastAttachmentEtag = attachmentEtag ?? Etag.Empty,
+						LastDocumentEtag = docEtag ?? Etag.Empty,
+						Source = src
+					};
+				}
+				else
+				{
+					sourceReplicationInformation = document.DataAsJson.JsonDeserialization<SourceReplicationInformation>();
+					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
+					sourceReplicationInformation.LastDocumentEtag = docEtag ?? sourceReplicationInformation.LastDocumentEtag;
+					sourceReplicationInformation.LastAttachmentEtag = attachmentEtag ?? sourceReplicationInformation.LastAttachmentEtag;
+				}
+
+				var etag = document == null ? Etag.Empty : document.Etag;
+				var metadata = document == null ? new RavenJObject() : document.Metadata;
+
+				var newDoc = RavenJObject.FromObject(sourceReplicationInformation);
+				//TODO: log
+				//log.Debug("Updating replication last etags from {0}: [doc: {1} attachment: {2}]", src,
+				//				  sourceReplicationInformation.LastDocumentEtag,
+				//				  sourceReplicationInformation.LastAttachmentEtag);
+
+				Database.Put(Constants.RavenReplicationSourcesBasePath + "/" + src, etag, newDoc, metadata, null);
+			}
+
+			return new HttpResponseMessage(HttpStatusCode.OK);
+		}
+
+		[HttpPost("replication/heartbeat")]
+		public HttpResponseMessage HeartbeatPost()
+		{
+			var src = GetQueryStringValue("from");
+
+			var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
+			if (replicationTask == null)
+			{
+				return GetMessageWithObject(new
+				{
+					Error = "Cannot find replication task setup in the database"
+				}, HttpStatusCode.NotFound);
+
+			}
+
+			replicationTask.HandleHeartbeat(src);
+
+			return new HttpResponseMessage(HttpStatusCode.OK);
+		}
+
+		private HttpResponseMessage GetValuesForLastEtag(out string src, out string dbid)
+		{
+			src = GetQueryStringValue("from");
+			dbid = GetQueryStringValue("dbid");
+			if (dbid == Database.TransactionalStorage.Id.ToString())
+				throw new InvalidOperationException("Both source and target databases have database id = " + dbid +
+				                                    "\r\nDatabase cannot replicate to itself.");
+
+			if (string.IsNullOrEmpty(src))
+				return new HttpResponseMessage(HttpStatusCode.BadRequest);
+
+			while (src.EndsWith("/"))
+				src = src.Substring(0, src.Length - 1); // remove last /, because that has special meaning for Raven
+			if (string.IsNullOrEmpty(src))
+				return new HttpResponseMessage(HttpStatusCode.BadRequest);
+			return null;
 		}
 
 		private void ReplicateDocument(IStorageActionsAccessor actions, string id, RavenJObject metadata, RavenJObject document, string src)
