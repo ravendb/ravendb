@@ -264,7 +264,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 	      using (var update = new Update(session, sr, Api.TrySeek(session, sr, SeekGrbit.SeekEQ) ? JET_prep.Replace : JET_prep.Insert))
 	      {
           var keyId = Api.GetTableColumnid(session, sr, "key");
-          var valId = Api.GetTableColumnid(session, sr, "valId");
+          var valId = Api.GetTableColumnid(session, sr, "val");
 	        Api.SetColumn(session, sr, keyId, "IndexId", Encoding.Unicode);
 	        Api.SetColumn(session, sr, valId, lastIdentity);
 	        update.Save();
