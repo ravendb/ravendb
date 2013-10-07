@@ -3,15 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Generic;
-using System.IO;
-using System.Web.Management;
-using Raven.Database.Server.Responders;
-
 namespace Raven.Database.Storage.Voron.Impl
 {
 	using System;
+	using System.Collections.Generic;
 	using System.Diagnostics;
+	using System.IO;
 
 	using global::Voron;
 	using global::Voron.Debugging;
@@ -68,6 +65,8 @@ namespace Raven.Database.Storage.Voron.Impl
 		public Table Documents { get; private set; }
 
 		public Table IndexingStats { get; private set; }
+
+		public Table ReduceStats { get; private set; }
 
 		public Table LastIndexedEtags { get; private set; }
 
@@ -156,9 +155,15 @@ namespace Raven.Database.Storage.Voron.Impl
 				CreateReduceKeyTypesSchema(tx);
 				CreateReduceResultsSchema(tx);
 				CreateGeneralSchema(tx);
+				CreateReduceStatsSchema(tx);
 
 				tx.Commit();
 			}
+		}
+
+		private void CreateReduceStatsSchema(Transaction tx)
+		{
+			env.CreateTree(tx, Tables.ReduceStats.TableName);
 		}
 
 		private void CreateReduceResultsSchema(Transaction tx)
@@ -285,6 +290,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			Attachments = new Table(Tables.Attachments.TableName, Tables.Attachments.Indices.ByEtag);
 			ReduceResults = new Table(Tables.ReduceResults.TableName, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
 			General = new Table(Tables.General.TableName);
+			ReduceStats = new Table(Tables.ReduceStats.TableName);
 		}
 	}
 }

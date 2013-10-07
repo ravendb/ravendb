@@ -29,8 +29,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (indexingStats == null)
 				return false; // index does not exists
 
-			var hasReduce = indexingStats.Value<byte[]>("lastReducedEtag") != null;
-			
+			var reduceStats = LoadJson(tableStorage.ReduceStats, key, writeBatch, out version);
+			if (reduceStats == null)
+				throw new ArgumentException("reduceStats");
+
+			var hasReduce = reduceStats.Value<byte[]>("lastReducedEtag") != null;
+
 			if (IsMapStale(key) || hasReduce && IsReduceStale(key))
 			{
 				var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch, out version);
@@ -117,11 +121,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (indexingStats == null)
 				throw new IndexDoesNotExistsException("Could not find index named: " + name);
 
-			if (indexingStats.Value<object>("lastReducedTimestamp") != null)
+			var reduceStats = LoadJson(tableStorage.ReduceStats, key, writeBatch, out version);
+			if (reduceStats == null)
+				throw new ArgumentException("reduceStats");
+
+			if (reduceStats.Value<object>("lastReducedTimestamp") != null)
 			{
 				return Tuple.Create(
-					indexingStats.Value<DateTime>("lastReducedTimestamp"),
-					Etag.Parse(indexingStats.Value<byte[]>("lastReducedEtag")));
+					reduceStats.Value<DateTime>("lastReducedTimestamp"),
+					Etag.Parse(reduceStats.Value<byte[]>("lastReducedEtag")));
 			}
 
 			var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch, out version);
