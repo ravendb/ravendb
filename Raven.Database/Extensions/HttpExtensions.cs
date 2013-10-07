@@ -411,7 +411,7 @@ namespace Raven.Database.Extensions
 
 		public static bool IsDistinct(this IHttpContext context)
 		{
-			var distinct = context.Request.QueryString["isDistinct"];
+			var distinct = context.Request.QueryString["distinct"];
 			if (string.Equals("true", distinct, StringComparison.OrdinalIgnoreCase))
 				return true;
 			var aggAsString = context.Request.QueryString["aggregation"]; // 2.x legacy support

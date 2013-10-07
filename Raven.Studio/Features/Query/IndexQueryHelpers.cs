@@ -86,7 +86,7 @@ namespace Raven.Studio.Features.Query
 
         public static bool IsDistinct(this ILookup<string, string> fields)
         {
-	        var distinct = fields["isDistinct"].FirstOrDefault();
+	        var distinct = fields["distinct"].FirstOrDefault();
 	        if (string.Equals("true", distinct, StringComparison.OrdinalIgnoreCase))
 		        return true;
 	        var aggAsString = fields["aggregation"].FirstOrDefault(); // 2.x legacy support
