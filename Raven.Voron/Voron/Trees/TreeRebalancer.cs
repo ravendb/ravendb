@@ -183,9 +183,9 @@ namespace Voron.Trees
             {
                 // cannot just remove the left node, need to adjust those
                 var rightPageNumber = from.GetNode(1)->PageNumber;
-                from.RemoveNode(0); // remove the original node
-                from.RemoveNode(0); // remove the next node
                 from.AddNode(0, Slice.BeforeAllKeys, -1, rightPageNumber, 0);
+                from.RemoveNode(1); // remove the original implicit node
+                from.RemoveNode(1); // remove the next node that we now turned into implicit
                 Debug.Assert(from.NumberOfEntries >= 2);
             }
             else
@@ -212,7 +212,7 @@ namespace Voron.Trees
             var key = new Slice(node);
             while (key.Size == 0)
             {
-                Debug.Assert(page.LastSearchPosition == 0 && page.IsBranch);
+                Debug.Assert(page.IsBranch);
                 page = _tx.GetReadOnlyPage(node->PageNumber);
                 node = page.GetNode(0);
                 key.Set(node);
