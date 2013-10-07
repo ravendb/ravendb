@@ -1123,10 +1123,12 @@ namespace Raven.Database.Indexing
 
         public Index GetIndexInstance(int indexId)
         {
-            return indexes[indexId];
-		}
+            Index value;
+            indexes.TryGetValue(indexId, out value);
+            return value;
+        }
 
-		public void MarkCachedQuery(string indexName)
+	    public void MarkCachedQuery(string indexName)
 		{
 			GetIndexByName(indexName).MarkQueried();
 		}
