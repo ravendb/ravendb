@@ -1565,6 +1565,8 @@ namespace Raven.Database
 
         internal void StartDeletingIndexData(int id)
         {
+            //remove the header information in a sync process
+            TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(id));
             var task = Task.Run(() =>
             {
                 // Data can take a while

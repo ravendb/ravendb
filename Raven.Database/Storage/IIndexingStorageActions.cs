@@ -18,6 +18,7 @@ namespace Raven.Database.Storage
 
 		IndexStats GetIndexStats(int index);
 		void AddIndex(int id, bool createMapReduce);
+	    void PrepareIndexForDeletion(int id);
 		void DeleteIndex(int id, CancellationToken cancellationToken);
 
 	    void SetIndexPriority(int id, IndexingPriority priority);

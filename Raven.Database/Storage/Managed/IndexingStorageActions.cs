@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions;
@@ -206,11 +207,14 @@ namespace Raven.Storage.Managed
 				.Distinct(StringComparer.OrdinalIgnoreCase);
 		}
 
-		public void DeleteIndex(int id, CancellationToken cancellationToken)
-		{
-			storage.IndexingStats.Remove(id.ToString());
-			storage.LastIndexedEtags.Remove(id.ToString());
+	    public void PrepareIndexForDeletion(int id)
+	    {
+            storage.IndexingStats.Remove(id.ToString(CultureInfo.InvariantCulture));
+            storage.LastIndexedEtags.Remove(id.ToString(CultureInfo.InvariantCulture));
+	    }
 
+	    public void DeleteIndex(int id, CancellationToken cancellationToken)
+		{
 			foreach (var table in new[] { storage.MappedResults, storage.ReduceResults, storage.ScheduleReductions, storage.ReduceKeys, storage.DocumentReferences })
 			{
 				foreach (var key in table["ByView"].SkipTo(new RavenJObject { { "view", id } })
