@@ -717,24 +717,9 @@ namespace Raven.Client.Connection
 	    /// </summary>
 	    /// <param name="txId">The tx id.</param>
 	    public void Commit(string txId)
-		{
-            ExecuteWithReplication<object>("POST", u =>
-			{
-				DirectCommit(txId, u);
-				return null;
-			});
-		}
-
-		private void DirectCommit(string txId, string operationUrl)
-		{
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/commit?tx=" + txId, "POST", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-                    .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-			httpJsonRequest.ReadResponseJson();
-		}
+	    {
+	        asyncDatabaseCommands.CommitAsync(txId).Wait();
+	    }
 
 	    /// <summary>
 	    /// Rollbacks the specified tx id.

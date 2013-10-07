@@ -382,6 +382,11 @@ namespace Raven.Client.Embedded
 	        throw new NotImplementedException();
 	    }
 
+	    public Task CommitAsync(string txId)
+	    {
+	        throw new NotImplementedException();
+	    }
+
 	    #region IAsyncGlobalAdminDatabaseCommands
 
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin

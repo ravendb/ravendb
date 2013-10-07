@@ -52,7 +52,7 @@ namespace Raven.Client.Connection.Async
     /// <summary>
     /// Access the database commands in async fashion
     /// </summary>
-    public class AsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands, IAsyncInfoDatabaseCommands,
+    public  class AsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands, IAsyncInfoDatabaseCommands,
                                      IAsyncGlobalAdminDatabaseCommands
     {
         private readonly ProfilingInformation profilingInformation;
@@ -1857,6 +1857,23 @@ namespace Raven.Client.Connection.Async
         public Task<Attachment> HeadAttachmentAsync(string key)
         {
             return ExecuteWithReplication("HEAD", operationUrl => DirectGetAttachment("HEAD", key, operationUrl));
+        }
+
+        public Task CommitAsync(string txId)
+        {
+            return ExecuteWithReplication("POST", operationUrl => DirectCommit(txId, operationUrl));
+		}
+
+        private Task DirectCommit(string txId, string operationUrl)
+        {
+            var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/commit?tx=" + txId, "POST",
+                    credentials, convention)
+                    .AddOperationHeaders(OperationsHeaders))
+                .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior,
+                    HandleReplicationStatusChanges);
+
+            return httpJsonRequest.ReadResponseJsonAsync();
         }
 
         private async Task<Attachment> DirectGetAttachment(string method, string key, string operationUrl)

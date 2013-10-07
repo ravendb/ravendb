@@ -413,6 +413,12 @@ namespace Raven.Client.Connection.Async
         /// <param name="key">The key.</param>
         /// <returns></returns>
         Task<Attachment> HeadAttachmentAsync(string key);
+
+        /// <summary>
+        /// Commits the specified tx id.
+        /// </summary>
+        /// <param name="txId">The tx id.</param>
+        Task CommitAsync(string txId);
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands
