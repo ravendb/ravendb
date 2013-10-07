@@ -130,7 +130,12 @@ namespace Voron.Trees
 
             var fromNode = from.GetNode(from.LastSearchPosition);
             byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize + originalFromKeyStart.Size;
-            var dataPos = to.AddNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, -1, fromNode->Version);
+
+			var nodeVersion = fromNode->Version; // every time new node is allocated the version is increased, but in this case we do not want to increase it
+			if (nodeVersion > 0)
+				nodeVersion -= 1;
+
+			var dataPos = to.AddNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, -1, nodeVersion);
             NativeMethods.memcpy(dataPos, val, fromNode->DataSize);
             --@from.ItemCount;
             ++to.ItemCount;
