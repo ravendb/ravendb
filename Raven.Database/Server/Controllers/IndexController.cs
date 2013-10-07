@@ -262,7 +262,7 @@ namespace Raven.Database.Server.Controllers
 			command.AlsoInclude(queryResult.IdsToInclude);
 
 			if (queryResult.NonAuthoritativeInformation)
-				return GetMessageWithString("", HttpStatusCode.NonAuthoritativeInformation, indexEtag);
+				return GetEmptyMessage(HttpStatusCode.NonAuthoritativeInformation, indexEtag);
 
 			return GetMessageWithObject(queryResult, HttpStatusCode.OK, indexEtag);
 		}

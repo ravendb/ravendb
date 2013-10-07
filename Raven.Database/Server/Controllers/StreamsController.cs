@@ -6,11 +6,13 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Database.Impl;
+using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -38,10 +40,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					Headers =
 					{
-						ContentType = new MediaTypeHeaderValue("application/json")
-						{
-							CharSet = "utf-8"
-						}
+						ContentType = new MediaTypeHeaderValue("application/json"){CharSet = "utf-8"}
 					}
 				}
 			};
@@ -81,39 +80,11 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		private void StreamToClientQuery(Stream stream, string index, IndexQuery query, bool isHeadRequest, HttpResponseMessage msg)
-		{
-			using (var writer = GetOutputWriter(msg, stream))
-			{
-				// we may be sending a LOT of documents to the user, and most 
-				// of them aren't going to be relevant for other ops, so we are going to skip
-				// the cache for that, to avoid filling it up very quickly
-				using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
-				{
-					Database.Query(index, query, information =>
-					{
-						msg.Headers.Add("Raven-Result-Etag", information.ResultEtag.ToString());
-						msg.Headers.Add("Raven-Index-Etag", information.IndexEtag.ToString());
-						msg.Headers.Add("Raven-Is-Stale", information.IsStable ? "true" : "false");
-						msg.Headers.Add("Raven-Index", information.Index);
-						msg.Headers.Add("Raven-Total-Results", information.TotalResults.ToString(CultureInfo.InvariantCulture));
-						msg.Headers.Add("Raven-Index-Timestamp",
-							information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
-								CultureInfo.InvariantCulture));
-
-						if (isHeadRequest)
-							return;
-						writer.WriteHeader();
-					}, writer.Write);
-				}
-			}
-		}
-
 		[HttpGet("streams/query/{*id}")]
 		[HttpGet("databases/{databaseName}/streams/query/{*id}")]
 		public HttpResponseMessage SteamQueryGet(string id)
 		{
-			var msg = GetMessageWithString("");
+			var msg = GetEmptyMessage();
 
 			var index = id;
 			var query = GetIndexQuery(int.MaxValue);
@@ -123,17 +94,75 @@ namespace Raven.Database.Server.Controllers
 			if (isHeadRequest)
 				query.PageSize = 0;
 
-			msg.Content = new PushStreamContent((stream, content, arg3) => StreamToClientQuery(stream, index, query, isHeadRequest, msg));
-			msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+			var accessor = Database.TransactionalStorage.CreateAccessor();
+			try
+			{
+				var queryOp = new DocumentDatabase.DatabaseQueryOperation(Database, index, query, accessor);
+				queryOp.Init();
+
+				msg.Content = new StreamQueryContent(Request, queryOp, accessor);
+				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+				msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
+				msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
+				msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStable ? "true" : "false");
+				msg.Headers.Add("Raven-Index", queryOp.Header.Index);
+				msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
+				msg.Headers.Add("Raven-Index-Timestamp",
+					queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
+						CultureInfo.InvariantCulture));
+
+			}
+			catch (Exception)
+			{
+				accessor.Dispose();
+				throw;
+			}
 
 			return msg;
 		}
 
-		private IOutputWriter GetOutputWriter(HttpResponseMessage msg, Stream stream)
+		public class StreamQueryContent : HttpContent
 		{
-			var useExcelFormat = "excel".Equals(GetQueryStringValue("format"), StringComparison.InvariantCultureIgnoreCase);
+			private readonly HttpRequestMessage req;
+			private readonly DocumentDatabase.DatabaseQueryOperation queryOp;
+			private readonly IStorageActionsAccessor accessor;
+
+			public StreamQueryContent(HttpRequestMessage req,DocumentDatabase.DatabaseQueryOperation queryOp, IStorageActionsAccessor accessor)
+			{
+				this.req = req;
+				this.queryOp = queryOp;
+				this.accessor = accessor;
+			}
+
+			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+			{
+				using (var writer = GetOutputWriter(req, stream))
+				{
+					writer.WriteHeader();
+					queryOp.Execute(writer.Write);
+				}
+				return Task.FromResult(true);
+			}
+
+			protected override bool TryComputeLength(out long length)
+			{
+				length = -1;
+				return false;
+			}
+
+			protected override void Dispose(bool disposing)
+			{
+				base.Dispose(disposing);
+				accessor.Dispose();
+				queryOp.Dispose();
+			}
+		}
+
+		private static IOutputWriter GetOutputWriter(HttpRequestMessage req, Stream stream)
+		{
+			var useExcelFormat = "excel".Equals(GetQueryStringValue(req, "format"), StringComparison.InvariantCultureIgnoreCase);
 			if (useExcelFormat)
-				return new ExcelOutputWriter(msg, stream);
+				return new ExcelOutputWriter(stream);
 			return new JsonOutputWriter(stream);
 		}
 
@@ -148,10 +177,11 @@ namespace Raven.Database.Server.Controllers
 			private readonly Stream stream;
 			private StreamWriter writer;
 
-			public ExcelOutputWriter(HttpResponseMessage msg, Stream stream)
+			public ExcelOutputWriter( Stream stream)
 			{
 				this.stream = stream;
-				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("text/csv, application/vnd.msexcel, text/anytext");
+				// TODO, make this work
+				//msg.Content.Headers.ContentType = new MediaTypeHeaderValue("text/csv, application/vnd.msexcel, text/anytext");
 			}
 
 			public void Dispose()

@@ -671,7 +671,14 @@ namespace Raven.Storage.Esent
             }
         }
 
-        public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
+	    public IStorageActionsAccessor CreateAccessor()
+	    {
+		    var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator,
+			    documentCacher, null, this);
+			return new StorageActionsAccessor(pht);
+	    }
+
+	    public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
         {
             if (current.Value == null)
             {

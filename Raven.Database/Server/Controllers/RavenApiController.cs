@@ -216,7 +216,12 @@ namespace Raven.Database.Server.Controllers
 
 		public string GetQueryStringValue(string key)
 		{
-			return Request.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
+			return GetQueryStringValue(Request, key);
+		}
+
+		protected static string GetQueryStringValue(HttpRequestMessage req, string key)
+		{
+			return req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
 		}
 
 		public string[] GetQueryStringValues(string key)
@@ -502,6 +507,17 @@ namespace Raven.Database.Server.Controllers
 			var resMsg = new HttpResponseMessage(code)
 			{
 				Content = new JsonContent(msg)
+			};
+			WriteETag(etag, resMsg);
+
+			return resMsg;
+		}
+
+		public HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
+		{
+			var resMsg = new HttpResponseMessage(code)
+			{
+				Content = new JsonContent()
 			};
 			WriteETag(etag, resMsg);
 

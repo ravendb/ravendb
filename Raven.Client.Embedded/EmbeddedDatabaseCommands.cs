@@ -550,12 +550,18 @@ namespace Raven.Client.Embedded
 						// the cache for that, to avoid filling it up very quickly
 						using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 						{
-							database.Query(index, query, information =>
+							database.TransactionalStorage.Batch(accessor =>
 							{
-								localQueryHeaderInfo = information;
-								waitForHeaders.Set();
-								setWaitHandle = false;
-							}, items.Add);
+								using (var op = new DocumentDatabase.DatabaseQueryOperation(database, index, query, accessor))
+								{
+									op.Init();
+									localQueryHeaderInfo = op.Header;
+									waitForHeaders.Set();
+									setWaitHandle = false;
+									op.Execute(items.Add);
+								}	
+							});
+							
 						}
 					}
 					catch (Exception)

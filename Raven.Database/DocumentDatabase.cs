@@ -1309,142 +1309,174 @@ namespace Raven.Database
             return findIndexCreationOptions;
         }
 
-	    private bool shouldSkipDuplicateChecking = false;
+
         public QueryResultWithIncludes Query(string index, IndexQuery query)
         {
-	        shouldSkipDuplicateChecking = query.SkipDuplicateChecking;
-            var list = new List<RavenJObject>();
-            var result = Query(index, query, null, list.Add);
-            result.Results = list;
-            return result;
+	        QueryResultWithIncludes result = null;
+			TransactionalStorage.Batch(accessor =>
+			{
+				using (var op = new DatabaseQueryOperation(this, index, query, accessor)
+				{
+					ShouldSkipDuplicateChecking = query.SkipDuplicateChecking
+				})
+				{
+					var list = new List<RavenJObject>();
+					op.Init();
+					op.Execute(list.Add);
+					op.Result.Results = list;
+					result = op.Result;
+				}
+			});
+	        return result;
         }
 
-        public QueryResultWithIncludes Query(string indexName, IndexQuery query, Action<QueryHeaderInformation> headerInfo, Action<RavenJObject> onResult)
-        {
-            var queryStat = AddToCurrentlyRunningQueryList(indexName, query);
+	    public class DatabaseQueryOperation : IDisposable
+	    {
+			public bool ShouldSkipDuplicateChecking = false;
+			private readonly DocumentDatabase database;
+		    private readonly string indexName;
+		    private readonly IndexQuery query;
+		    private readonly IStorageActionsAccessor actions;
+		    private readonly ExecutingQueryInfo queryStat;
+		    public QueryResultWithIncludes Result = new QueryResultWithIncludes();
+		    public QueryHeaderInformation Header;
+		    private bool stale;
+		    private IEnumerable<RavenJObject> results;
+		    private DocumentRetriever docRetriever;
+		    private Stopwatch duration;
+		    private List<string> transformerErrors;
+		    private bool nonAuthoritativeInformation;
+		    private Etag resultEtag;
+		    private Tuple<DateTime, Etag> indexTimestamp;
+		    private Dictionary<string, Dictionary<string, string[]>> highlightings;
+		    private Dictionary<string, string> scoreExplanations;
+		    private HashSet<string> idsToLoad;
 
-            try
-            {
+		    public DatabaseQueryOperation(DocumentDatabase database, string indexName, IndexQuery query, IStorageActionsAccessor actions)
+		    {
+			    this.database = database;
+			    this.indexName = indexName != null ? indexName.Trim() : null;
+				this.query = query;
+				this.actions = actions;
+			    queryStat = database.AddToCurrentlyRunningQueryList(indexName, query);
+		    }
 
-                indexName = indexName != null ? indexName.Trim() : null;
-                var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
-                var scoreExplanations = new Dictionary<string, string>();
-                Func<IndexQueryResult, object> tryRecordHighlightingAndScoreExplanation = queryResult =>
-                {
-                        if (queryResult.Key == null)
-                            return null;
-                        if (queryResult.Highligtings != null)
-                        highlightings.Add(queryResult.Key, queryResult.Highligtings);
-                        if (queryResult.ScoreExplanation != null)
-                            scoreExplanations.Add(queryResult.Key, queryResult.ScoreExplanation);
-                    return null;
-                };
-                var stale = false;
-                Tuple<DateTime, Etag> indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
-                Etag resultEtag = Etag.Empty;
-                var nonAuthoritativeInformation = false;
+		    public void Init()
+		    {
+				highlightings = new Dictionary<string, Dictionary<string, string[]>>();
+				scoreExplanations = new Dictionary<string, string>();
+				Func<IndexQueryResult, object> tryRecordHighlightingAndScoreExplanation = queryResult =>
+				{
+					if (queryResult.Key == null)
+						return null;
+					if (queryResult.Highligtings != null)
+						highlightings.Add(queryResult.Key, queryResult.Highligtings);
+					if (queryResult.ScoreExplanation != null)
+						scoreExplanations.Add(queryResult.Key, queryResult.ScoreExplanation);
+					return null;
+				};
+				stale = false;
+				indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
+				resultEtag = Etag.Empty;
+				nonAuthoritativeInformation = false;
 
-                if (string.IsNullOrEmpty(query.ResultsTransformer) == false)
-                {
-                    query.FieldsToFetch = new[] { Constants.AllFields };
-                }
+				if (string.IsNullOrEmpty(query.ResultsTransformer) == false)
+				{
+					query.FieldsToFetch = new[] { Constants.AllFields };
+				}
 
-                var duration = Stopwatch.StartNew();
-                var idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                TransactionalStorage.Batch(
-                    actions =>
-                    {
-                        var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
-                        var index = IndexDefinitionStorage.GetIndexDefinition(indexName);
-                        if (viewGenerator == null)
-                            throw new IndexDoesNotExistsException("Could not find index named: " + indexName);
+				duration = Stopwatch.StartNew();
+				idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                        resultEtag = GetIndexEtag(index.Name, null, query.ResultsTransformer);
+				var viewGenerator = database.IndexDefinitionStorage.GetViewGenerator(indexName);
+				var index = database.IndexDefinitionStorage.GetIndexDefinition(indexName);
+				if (viewGenerator == null)
+					throw new IndexDoesNotExistsException("Could not find index named: " + indexName);
 
-                        stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, query.CutoffEtag);
+				resultEtag = database.GetIndexEtag(index.Name, null, query.ResultsTransformer);
 
-                        if (stale == false && query.Cutoff == null && query.CutoffEtag == null)
-                        {
-                            var indexInstance = IndexStorage.GetIndexInstance(indexName);
-                            stale = stale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
-                        }
+				stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, query.CutoffEtag);
 
-                        indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index.IndexId);
-                        var indexFailureInformation = actions.Indexing.GetFailureRate(index.IndexId);
-                        if (indexFailureInformation.IsInvalidIndex)
-                        {
-                            throw new IndexDisabledException(indexFailureInformation);
-                        }
-                        var docRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState, query.QueryInputs, idsToLoad);
-                        var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
-                                                              viewGenerator.ReduceDefinition == null
-                                                                ? Constants.DocumentIdFieldName
-                                                                : Constants.ReduceKeyFieldName);
-                        Func<IndexQueryResult, bool> shouldIncludeInResults =
-                            result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, shouldSkipDuplicateChecking);
-                        var indexQueryResults = IndexStorage.Query(indexName, query, shouldIncludeInResults, fieldsToFetch, IndexQueryTriggers);
-                        indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
+				if (stale == false && query.Cutoff == null && query.CutoffEtag == null)
+				{
+					var indexInstance = database.IndexStorage.GetIndexInstance(indexName);
+					stale = stale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
+				}
 
-                        var transformerErrors = new List<string>();
-                        var results = GetQueryResults(query, viewGenerator, docRetriever,
-                                                      from queryResult in indexQueryResults
-                                                      let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch, shouldSkipDuplicateChecking)
-                                                      where doc != null
-                                                      let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
-                                                      let __ = tryRecordHighlightingAndScoreExplanation(queryResult)
-                                                      select doc, transformerErrors);
+				indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index.IndexId);
+				var indexFailureInformation = actions.Indexing.GetFailureRate(index.IndexId);
+				if (indexFailureInformation.IsInvalidIndex)
+				{
+					throw new IndexDisabledException(indexFailureInformation);
+				}
+				docRetriever = new DocumentRetriever(actions, database.ReadTriggers, database.inFlightTransactionalState, query.QueryInputs, idsToLoad);
+				var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
+					viewGenerator.ReduceDefinition == null
+						? Constants.DocumentIdFieldName
+						: Constants.ReduceKeyFieldName);
+				Func<IndexQueryResult, bool> shouldIncludeInResults =
+					result => docRetriever.ShouldIncludeResultInQuery(result, index, fieldsToFetch, ShouldSkipDuplicateChecking);
+				var indexQueryResults = database.IndexStorage.Query(indexName, query, shouldIncludeInResults, fieldsToFetch, database.IndexQueryTriggers);
+				indexQueryResults = new ActiveEnumerable<IndexQueryResult>(indexQueryResults);
 
-                        if (headerInfo != null)
-                        {
-                            headerInfo(new QueryHeaderInformation
-                            {
-                                Index = indexName,
-                                IsStable = stale,
-                                ResultEtag = resultEtag,
-                                IndexTimestamp = indexTimestamp.Item1,
-                                IndexEtag = indexTimestamp.Item2,
-                                TotalResults = query.TotalSize.Value
-                            });
-                        }
-                        using (new CurrentTransformationScope(docRetriever))
-                        {
-                            foreach (var result in results)
-                            {
-                                onResult(result);
-                            }
-                            if (transformerErrors.Count > 0)
-                            {
-                                throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
-                            }
+				transformerErrors = new List<string>();
+				results = database.GetQueryResults(query, viewGenerator, docRetriever,
+					from queryResult in indexQueryResults
+					let doc = docRetriever.RetrieveDocumentForQuery(queryResult, index, fieldsToFetch, ShouldSkipDuplicateChecking)
+					where doc != null
+					let _ = nonAuthoritativeInformation |= (doc.NonAuthoritativeInformation ?? false)
+					let __ = tryRecordHighlightingAndScoreExplanation(queryResult)
+					select doc, transformerErrors);
 
-                        }
+			    Header = new QueryHeaderInformation
+			    {
+				    Index = indexName,
+				    IsStable = stale,
+				    ResultEtag = resultEtag,
+				    IndexTimestamp = indexTimestamp.Item1,
+				    IndexEtag = indexTimestamp.Item2,
+				    TotalResults = query.TotalSize.Value
+			    };
+		    }
 
+		    public void Execute(Action<RavenJObject> onResult)
+		    {
+				using (new CurrentTransformationScope(docRetriever))
+				{
+					foreach (var result in results)
+					{
+						onResult(result);
+					}
+					if (transformerErrors.Count > 0)
+					{
+						throw new InvalidOperationException("The transform results function failed.\r\n" + string.Join("\r\n", transformerErrors));
+					}
+				}
 
-                    });
+				Result = new QueryResultWithIncludes
+				{
+					IndexName = indexName,
+					IsStale = stale,
+					NonAuthoritativeInformation = nonAuthoritativeInformation,
+					SkippedResults = query.SkippedResults.Value,
+					TotalResults = query.TotalSize.Value,
+					IndexTimestamp = indexTimestamp.Item1,
+					IndexEtag = indexTimestamp.Item2,
+					ResultEtag = resultEtag,
+					IdsToInclude = idsToLoad,
+					LastQueryTime = SystemTime.UtcNow,
+					Highlightings = highlightings,
+					DurationMilliseconds = duration.ElapsedMilliseconds,
+					ScoreExplanations = scoreExplanations
+				};
+		    }
 
-                return new QueryResultWithIncludes
-                {
-                    IndexName = indexName,
-                    IsStale = stale,
-                    NonAuthoritativeInformation = nonAuthoritativeInformation,
-                    SkippedResults = query.SkippedResults.Value,
-                    TotalResults = query.TotalSize.Value,
-                    IndexTimestamp = indexTimestamp.Item1,
-                    IndexEtag = indexTimestamp.Item2,
-                    ResultEtag = resultEtag,
-                    IdsToInclude = idsToLoad,
-                    LastQueryTime = SystemTime.UtcNow,
-                    Highlightings = highlightings,
-                    DurationMilliseconds = duration.ElapsedMilliseconds,
-                    ScoreExplanations = scoreExplanations
-                };
-            }
-            finally
-            {
-                RemoveFromCurrentlyRunningQueryList(indexName, queryStat);
-            }
-        }
-
+		    public void Dispose()
+		    {
+				database.RemoveFromCurrentlyRunningQueryList(indexName, queryStat);
+		    }
+	    }
+       
 
         private void RemoveFromCurrentlyRunningQueryList(string index, ExecutingQueryInfo queryStat)
         {
