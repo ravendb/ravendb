@@ -54,7 +54,7 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<JsonDocument[]>(databaseCommands.GetDocuments(start, pageSize, metadataOnly));
 		}
 
-		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
+		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
 			return new CompletedTask<QueryResult>(databaseCommands.Query(index, query, includes, metadataOnly));
 		}

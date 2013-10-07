@@ -73,14 +73,15 @@ namespace Raven.Client.Connection.Async
 		/// </remarks>
 		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false);
 
-		/// <summary>
-		/// Begins the async query.
-		/// </summary>
-		/// <param name="index">The index.</param>
-		/// <param name="query">The query.</param>
-		/// <param name="includes">The include paths</param>
-		/// <param name="metadataOnly">Load just the document metadata</param>
-		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false);
+        /// <summary>
+        /// Begins the async query.
+        /// </summary>
+        /// <param name="index">The index.</param>
+        /// <param name="query">The query.</param>
+        /// <param name="includes">The include paths</param>
+        /// <param name="metadataOnly">Load just the document metadata</param>
+        /// <param name="indexEntriesOnly"></param>
+        Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false);
 
 		/// <summary>
 		/// Begins the async batch operation

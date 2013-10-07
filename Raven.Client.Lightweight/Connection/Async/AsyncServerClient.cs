@@ -1139,43 +1139,46 @@ namespace Raven.Client.Connection.Async
         /// <param name="query">The query.</param>
         /// <param name="includes">The include paths</param>
         /// <param name="metadataOnly">Load just the document metadata</param>
+        /// <param name="indexEntriesOnly"></param>
         /// <returns></returns>
-        public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
+        public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
             return ExecuteWithReplication("GET", async url =>
-        {
-            EnsureIsNotNullOrEmpty(index, "index");
-            var path = query.GetIndexQueryUrl(url, index, "indexes");
-            if (metadataOnly)
-                path += "&metadata-only=true";
-            if (includes != null && includes.Length > 0)
             {
-                path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
-            }
-
-            var request = jsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials, convention)
+                EnsureIsNotNullOrEmpty(index, "index");
+                var path = query.GetIndexQueryUrl(url, index, "indexes");
+                if (metadataOnly)
+                    path += "&metadata-only=true";
+                if (indexEntriesOnly)
+                    path += "&debug=entries";
+                if (includes != null && includes.Length > 0)
                 {
-                    AvoidCachingRequest = query.DisableCaching
-                }.AddOperationHeaders(OperationsHeaders));
+                    path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
+                }
 
-            request.AddReplicationStatusHeaders(url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                var request = jsonRequestFactory.CreateHttpJsonRequest(
+                    new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials, convention)
+                    {
+                        AvoidCachingRequest = query.DisableCaching
+                    }.AddOperationHeaders(OperationsHeaders));
 
-            ErrorResponseException responseException;
-            try
-            {
-                var result = (RavenJObject)await request.ReadResponseJsonAsync();
-                return SerializationHelper.ToQueryResult(result, request.ResponseHeaders.GetEtagHeader(),
-                                                         request.ResponseHeaders.Get("Temp-Request-Time"));
-            }
-            catch (ErrorResponseException e)
-            {
-                responseException = e;
-            }
-            if (await HandleException(responseException))
-                return null;
-            throw responseException;
-        });
+                request.AddReplicationStatusHeaders(url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+                ErrorResponseException responseException;
+                try
+                {
+                    var result = (RavenJObject)await request.ReadResponseJsonAsync();
+                    return SerializationHelper.ToQueryResult(result, request.ResponseHeaders.GetEtagHeader(),
+                                                             request.ResponseHeaders.Get("Temp-Request-Time"));
+                }
+                catch (ErrorResponseException e)
+                {
+                    responseException = e;
+                }
+                if (await HandleException(responseException))
+                    return null;
+                throw responseException;
+            });
         }
 
         /// <summary>

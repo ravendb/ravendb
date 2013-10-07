@@ -543,7 +543,7 @@ namespace Raven.Client.Connection
 		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
             // TODO delegate indexEntriesOnly
-		    return asyncDatabaseCommands.QueryAsync(index, query, includes, metadataOnly).Result;
+            return asyncDatabaseCommands.QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly).Result;
 		}
 
 		/// <summary>
