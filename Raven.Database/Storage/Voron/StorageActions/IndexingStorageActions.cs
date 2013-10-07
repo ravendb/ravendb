@@ -9,6 +9,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 	using System.Collections.Generic;
 	using System.Diagnostics;
 	using System.Linq;
+	using System.Threading;
 
 	using Raven.Abstractions;
 	using Raven.Abstractions.Data;
@@ -121,8 +122,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				}, 0);
 		}
 
-		public void DeleteIndex(string name)
+		public void DeleteIndex(string name, CancellationToken token)
 		{
+			token.ThrowIfCancellationRequested();
+
 			var key = CreateKey(name);
 
 			tableStorage.IndexingStats.Delete(writeBatch, key);
