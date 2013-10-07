@@ -32,6 +32,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
@@ -47,13 +48,14 @@ using System.Collections.Specialized;
 
 namespace Raven.Client.Connection.Async
 {
-    using Raven.Imports.Newtonsoft.Json.Linq;
-
     /// <summary>
     /// Access the database commands in async fashion
     /// </summary>
-    public  class AsyncServerClient : IAsyncDatabaseCommands, IAsyncAdminDatabaseCommands, IAsyncInfoDatabaseCommands,
-                                     IAsyncGlobalAdminDatabaseCommands
+    public class AsyncServerClient :
+        IAsyncDatabaseCommands,
+        IAsyncAdminDatabaseCommands,
+        IAsyncInfoDatabaseCommands,
+        IAsyncGlobalAdminDatabaseCommands
     {
         private readonly ProfilingInformation profilingInformation;
         private readonly IDocumentConflictListener[] conflictListeners;
@@ -902,6 +904,18 @@ namespace Raven.Client.Connection.Async
 				return await request.ReadResponseJsonAsync();
 			});
             return ((RavenJObject)result).Deserialize<MultiLoadResult>(convention);
+        }
+
+        public Task<long> NextIdentityForAsync(string name)
+        {
+            return ExecuteWithReplication("POST", async url =>
+            {
+                var request = jsonRequestFactory.CreateHttpJsonRequest(
+                    new CreateHttpJsonRequestParams(this, url + "/identity/next?name=" + Uri.EscapeDataString(name), "POST", credentials, convention)
+                        .AddOperationHeaders(OperationsHeaders));
+                var readResponseJson = await request.ReadResponseJsonAsync();
+                return readResponseJson.Value<long>("Value");
+            });
         }
 
         private Task<Operation> UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)

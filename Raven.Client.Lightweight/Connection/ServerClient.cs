@@ -861,16 +861,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public long NextIdentityFor(string name)
 		{
-			return ExecuteWithReplication("POST", url =>
-			{
-				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, url + "/identity/next?name=" + Uri.EscapeDataString(name), "POST", credentials, convention)
-						.AddOperationHeaders(OperationsHeaders));
-
-				var readResponseJson = request.ReadResponseJson();
-
-				return readResponseJson.Value<long>("Value");
-			});
+		    return asyncDatabaseCommands.NextIdentityForAsync(name).Result;
 		}
 
 		/// <summary>

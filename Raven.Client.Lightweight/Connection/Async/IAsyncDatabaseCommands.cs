@@ -447,6 +447,11 @@ namespace Raven.Client.Connection.Async
         /// <param name="query">The more like this query parameters</param>
         /// <returns></returns>
         Task<MultiLoadResult> MoreLikeThisAsync(MoreLikeThisQuery query);
+
+        /// <summary>
+		/// Generate the next identity value from the server
+		/// </summary>
+        Task<long> NextIdentityForAsync(string name);
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands
