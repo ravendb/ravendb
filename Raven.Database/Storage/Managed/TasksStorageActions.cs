@@ -108,6 +108,13 @@ namespace Raven.Storage.Managed
             }
         }
 
+
+				storage.Tasks.Remove(keyForTaskToTryMerging);
+				if (totalTaskCount++ > 1024)
+					break;
+			}
+		}
+
         private IEnumerable<RavenJToken> KeyForTaskToTryMergings(DatabaseTask task, string taskType, Guid taskId)
         {
             if (task.SeparateTasksByIndex == false)
@@ -130,6 +137,10 @@ namespace Raven.Storage.Managed
 	            {"index", task.Index},
 	            {"type", taskType},
 	        })
+				.Where(x => new Guid(x.Value<byte[]>("id")) != taskId)
+               	.TakeWhile(x =>
+                	StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("index"), task.Index) && 
+					StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("type"), taskType)
                                                   .Where(x => new Guid(x.Value<byte[]>("id")) != taskId)
                                                   .TakeWhile(x =>
                                                              task.Index.Equals(x.Value<int>("index")) &&

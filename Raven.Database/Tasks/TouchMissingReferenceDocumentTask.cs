@@ -19,6 +19,7 @@ namespace Raven.Database.Tasks
             return string.Format("Index: {0}, Keys: {1}", Index, string.Join(", ", Keys));
         }
 
+        
         public override bool SeparateTasksByIndex
         {
             get { return false; }
