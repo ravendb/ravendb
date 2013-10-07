@@ -45,7 +45,7 @@ namespace Voron.Impl
 
 		public override void EnsureEnoughSpace(Transaction tx, int len)
 		{
-			var pages = 1;
+			var pages = 10; // TODO [ppekrol] When using PureMemoryPager, all memory allocations are causing issues with writes (contex is working on 'old' memory) - this will be fixed after LogFile is introduced by Arek.
 			if (ShouldGoToOverflowPage(len))
 				pages = GetNumberOfOverflowPages(tx, len);
 
