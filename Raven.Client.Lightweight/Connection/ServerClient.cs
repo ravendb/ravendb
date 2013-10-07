@@ -727,23 +727,7 @@ namespace Raven.Client.Connection
 	    /// <param name="txId">The tx id.</param>
 	    public void Rollback(string txId)
 		{
-			ExecuteWithReplication<object>("POST", u =>
-			{
-				DirectRollback(txId, u);
-				return null;
-			});
-		}
-
-
-		private void DirectRollback(string txId, string operationUrl)
-		{
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-                    .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-			httpJsonRequest.ReadResponseJson();
+            asyncDatabaseCommands.RollbackAsync(txId).Wait();
 		}
 
 		/// <summary>
@@ -752,27 +736,12 @@ namespace Raven.Client.Connection
 		/// <param name="txId">The tx id.</param>
 		public void PrepareTransaction(string txId)
 		{
-			ExecuteWithReplication<object>("POST", u =>
-			{
-				DirectPrepareTransaction(txId, u);
-				return null;
-			});
+            asyncDatabaseCommands.PrepareTransactionAsync(txId).Wait();
 		}
 
 		public BuildNumber GetBuildNumber()
 		{
 		    return asyncDatabaseCommands.GetBuildNumberAsync().Result;
-		}
-
-		private void DirectPrepareTransaction(string txId, string operationUrl)
-		{
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/prepare?tx=" + txId, "POST", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-                    .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-
-			httpJsonRequest.ReadResponseJson();
 		}
 
 		/// <summary>
@@ -1140,8 +1109,6 @@ namespace Raven.Client.Connection
 			servicePoint.Expect100Continue = true;
 			return new DisposableAction(() => servicePoint.Expect100Continue = false);
 		}
-
-		#region IAsyncAdminDatabaseCommands
 
 	    /// <summary>
 	    /// Admin operations, like create/delete database.

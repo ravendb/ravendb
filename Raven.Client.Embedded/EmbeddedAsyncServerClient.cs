@@ -385,6 +385,22 @@ namespace Raven.Client.Embedded
 	        throw new NotImplementedException();
 	    }
 
+	    public Task RollbackAsync(string txId)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Task PrepareTransactionAsync(string txId)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests,
+	        bool allowStale = false)
+	    {
+	        throw new NotImplementedException();
+	    }
+
 	    #region IAsyncGlobalAdminDatabaseCommands
 
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin

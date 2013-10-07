@@ -419,6 +419,27 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         /// <param name="txId">The tx id.</param>
         Task CommitAsync(string txId);
+
+        /// <summary>
+        /// Rollbacks the specified tx id.
+        /// </summary>
+        /// <param name="txId">The tx id.</param>
+        Task RollbackAsync(string txId);
+
+        /// <summary>
+        /// Prepares the transaction on the server.
+        /// </summary>
+        /// <param name="txId">The tx id.</param>
+        Task PrepareTransactionAsync(string txId);
+
+        /// <summary>
+        /// Perform a set based update using the specified index.
+        /// </summary>
+        /// <param name="indexName">Name of the index.</param>
+        /// <param name="queryToUpdate">The query to update.</param>
+        /// <param name="patchRequests">The patch requests.</param>
+        /// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
+        Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale = false);
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands

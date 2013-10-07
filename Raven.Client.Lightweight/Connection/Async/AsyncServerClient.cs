@@ -1896,6 +1896,36 @@ namespace Raven.Client.Connection.Async
             return httpJsonRequest.ReadResponseJsonAsync();
         }
 
+        public Task RollbackAsync(string txId)
+        {
+            return ExecuteWithReplication("POST", operationUrl => DirectRollback(txId, operationUrl));
+        }
+
+        private Task DirectRollback(string txId, string operationUrl)
+        {
+            var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/rollback?tx=" + txId, "POST", credentials, convention)
+                    .AddOperationHeaders(OperationsHeaders))
+                    .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+            return httpJsonRequest.ReadResponseJsonAsync();
+        }
+
+        public Task PrepareTransactionAsync(string txId)
+        {
+            return ExecuteWithReplication("POST", operationUrl => DirectPrepareTransaction(txId, operationUrl));
+        }
+
+        private Task DirectPrepareTransaction(string txId, string operationUrl)
+        {
+            var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/prepare?tx=" + txId, "POST", credentials, convention)
+                    .AddOperationHeaders(OperationsHeaders))
+                    .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+            return httpJsonRequest.ReadResponseJsonAsync();
+        }
+ 
         private async Task<Attachment> DirectGetAttachment(string method, string key, string operationUrl)
         {
             var webRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, method, credentials, convention))
