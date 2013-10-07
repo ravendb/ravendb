@@ -108,7 +108,7 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-        private IEnumerable<RavenJToken> KeyForTaskToTryMergings(DatabaseTask task, string taskType, Guid taskId)
+        private IEnumerable<RavenJToken> KeyForTaskToTryMergings(Task task, string taskType, Guid taskId)
         {
             if (task.SeparateTasksByIndex == false)
             {
