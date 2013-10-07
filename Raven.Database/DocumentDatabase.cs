@@ -1267,6 +1267,7 @@ namespace Raven.Database
             }
 
 
+			InvokeSuggestionIndexing(fixedName, definition);
 
             TransactionalStorage.Batch(actions =>
             {
