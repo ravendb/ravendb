@@ -51,8 +51,6 @@ namespace Raven.Client.Connection
 		private readonly IDocumentConflictListener[] conflictListeners;
 		private int readStripingBase;
 
-		private bool resolvingConflict;
-
 		/// <summary>
 		/// Notify when the failover status changed
 		/// </summary>
@@ -174,62 +172,6 @@ namespace Raven.Client.Connection
             return asyncDatabaseCommands.DirectGetAsync(serverUrl, key, transformer).Result;
 		}
 
-		private void HandleReplicationStatusChanges(string forceCheck, string primaryUrl, string currentUrl)
-		{
-			if (primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase)) 
-				return;
-
-			bool shouldForceCheck;
-			if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
-			{
-				replicationInformer.ForceCheck(primaryUrl, shouldForceCheck);
-			}
-		}
-
-		private ConflictException TryResolveConflictOrCreateConcurrencyException(string key, RavenJObject conflictsDoc, Etag etag)
-		{
-			var ravenJArray = conflictsDoc.Value<RavenJArray>("Conflicts");
-			if (ravenJArray == null)
-				throw new InvalidOperationException("Could not get conflict ids from conflicted document, are you trying to resolve a conflict when using metadata-only?");
-
-			var conflictIds = ravenJArray.Select(x => x.Value<string>()).ToArray();
-
-
-
-			if (conflictListeners.Length > 0 && resolvingConflict == false)
-			{
-				resolvingConflict = true;
-				try
-				{
-					var multiLoadResult = Get(conflictIds, null);
-
-					var results = multiLoadResult.Results.Select(SerializationHelper.ToJsonDocument).ToArray();
-
-					foreach (var conflictListener in conflictListeners)
-					{
-						JsonDocument resolvedDocument;
-						if (conflictListener.TryResolveConflict(key, results, out resolvedDocument))
-						{
-							Put(key, etag, resolvedDocument.DataAsJson, resolvedDocument.Metadata);
-
-							return null;
-						}
-					}
-				}
-				finally
-				{
-					resolvingConflict = false;
-				}
-			}
-
-			return new ConflictException("Conflict detected on " + key +
-										", conflict must be resolved before the document will be accessible", true)
-			{
-				ConflictedVersionIds = conflictIds,
-				Etag = etag
-			};
-		}
-
 		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
 		{
 		    return asyncDatabaseCommands.GetDocumentsAsync(start, pageSize, metadataOnly).Result;
@@ -246,19 +188,6 @@ namespace Raven.Client.Connection
 		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
 		    return asyncDatabaseCommands.PutAsync(key, etag, document, metadata).Result;
-		}
-
-		private void AddTransactionInformation(RavenJObject metadata)
-		{
-			if (convention.EnlistInDistributedTransactions == false)
-				return;
-
-			var transactionInformation = RavenTransactionAccessor.GetTransactionInformation();
-			if (transactionInformation == null)
-				return;
-
-			string txInfo = string.Format("{0}, {1}", transactionInformation.Id, transactionInformation.Timeout);
-			metadata["Raven-Transaction-Information"] = new RavenJValue(txInfo);
 		}
 
 		/// <summary>
