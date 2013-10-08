@@ -326,7 +326,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex(string name, IndexDefinition definition)
 		{
-		    return asyncDatabaseCommands.PutIndexAsync(name, definition, false).Result;
+		    return asyncDatabaseCommands.PutIndexAsync(name, definition).Result;
 		}
 
 		public string PutTransformer(string name, TransformerDefinition transformerDef)
@@ -370,7 +370,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite)
 		{
-			return PutIndex(name, indexDef.ToIndexDefinition(convention), overwrite);
+            return asyncDatabaseCommands.PutIndexAsync(name, indexDef, overwrite).Result;
 		}
 
 		/// <summary>

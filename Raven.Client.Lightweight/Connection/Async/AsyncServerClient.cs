@@ -48,6 +48,8 @@ using System.Collections.Specialized;
 
 namespace Raven.Client.Connection.Async
 {
+    using Raven.Client.Indexes;
+
     /// <summary>
     /// Access the database commands in async fashion
     /// </summary>
@@ -215,13 +217,18 @@ namespace Raven.Client.Connection.Async
             });
         }
 
+        public Task<string> PutIndexAsync<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite = false)
+        {
+            return PutIndexAsync(name, indexDef.ToIndexDefinition(convention), overwrite);
+        }
+
         /// <summary>
         /// Puts the index definition for the specified name asynchronously
         /// </summary>
         /// <param name="name">The name.</param>
         /// <param name="indexDef">The index def.</param>
         /// <param name="overwrite">Should overwrite index</param>
-        public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
+        public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite = false)
         {
             return ExecuteWithReplication("PUT", opUrl => DirectPutIndexAsync(name, indexDef, overwrite, opUrl));
         }
