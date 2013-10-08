@@ -41,7 +41,7 @@ namespace Raven.Client.Connection
 	{
 		private readonly string url;
 		internal readonly DocumentConvention convention;
-        private readonly IAsyncDatabaseCommands asyncDatabaseCommands;
+        private readonly AsyncServerClient asyncDatabaseCommands;
         private readonly ICredentials credentials;
 		private readonly Func<string, ReplicationInformer> replicationInformerGetter;
 		private readonly string databaseName;
@@ -67,7 +67,7 @@ namespace Raven.Client.Connection
 		/// Initializes a new instance of the <see cref="ServerClient"/> class.
 		/// </summary>
 		public ServerClient(
-            IAsyncDatabaseCommands asyncDatabaseCommands,
+            AsyncServerClient asyncDatabaseCommands,
             string url,
             DocumentConvention convention,
             ICredentials credentials,
