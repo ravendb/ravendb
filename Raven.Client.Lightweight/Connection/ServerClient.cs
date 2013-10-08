@@ -290,12 +290,6 @@ namespace Raven.Client.Connection
 			};
 		}
 
-		private static void EnsureIsNotNullOrEmpty(string key, string argName)
-		{
-			if (string.IsNullOrEmpty(key))
-				throw new ArgumentException("Key cannot be null or empty", argName);
-		}
-
 		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
 		{
 		    return asyncDatabaseCommands.GetDocumentsAsync(start, pageSize, metadataOnly).Result;
