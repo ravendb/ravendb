@@ -31,6 +31,8 @@ public class MetadataPatchingTest extends RemoteClientTest {
 
       patchRequest.setNested(new PatchRequest[] { subRequest } );
 
+      waitForNonStaleIndexes(store.getDatabaseCommands());
+
       store.getDatabaseCommands().updateByIndex("Raven/DocumentsByEntityName", new IndexQuery(), new PatchRequest[] {
         patchRequest
       }, false).waitForCompletion();

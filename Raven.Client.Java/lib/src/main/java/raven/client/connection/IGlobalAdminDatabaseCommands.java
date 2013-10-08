@@ -47,6 +47,13 @@ public interface IGlobalAdminDatabaseCommands {
    * @param name
    * @param ignoreFailures
    */
+  public void ensureDatabaseExists(String name);
+
+  /**
+   * Ensures that the database exists, creating it if needed
+   * @param name
+   * @param ignoreFailures
+   */
   public void ensureDatabaseExists(String name, boolean ignoreFailures);
 
 }

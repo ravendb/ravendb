@@ -179,5 +179,10 @@ public class AdminServerClient implements IAdminDatabaseCommands, IGlobalAdminDa
 
   }
 
+  @Override
+  public void ensureDatabaseExists(String name) {
+    ensureDatabaseExists(name, false);
+  }
+
 
 }
