@@ -150,9 +150,9 @@ namespace Raven.Client.Connection
 		internal void ExecuteWithReplication(string method, Action<string> operation)
 		{
 		    asyncDatabaseCommands.ExecuteWithReplication<object>(method, operationUrl =>
-			{
-				operation(operationUrl);
-				return null;
+		    {
+		        operation(operationUrl);
+		        return null;
 		    }).Wait();
 		}
 
@@ -171,67 +171,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public JsonDocument DirectGet(string serverUrl, string key, string transformer = null)
 		{
-			if (key.Length > 127 || string.IsNullOrEmpty(transformer) == false)
-			{
-				// avoid hitting UrlSegmentMaxLength limits in Http.sys
-				var multiLoadResult = DirectGet(new[] {key}, serverUrl, new string[0], transformer, new Dictionary<string, RavenJToken>(), false);
-				var result = multiLoadResult.Results.FirstOrDefault();
-				if (result == null)
-					return null;
-				return SerializationHelper.RavenJObjectToJsonDocument(result);
-			}
-
-			var metadata = new RavenJObject();
-		    var actualUrl = serverUrl + "/docs/" + Uri.EscapeDataString(key);
-
-			AddTransactionInformation(metadata);
-			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(url, serverUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-			try
-			{
-				var responseJson = request.ReadResponseJson();
-				var docKey = request.ResponseHeaders[Constants.DocumentIdFieldName] ?? key;
-
-				docKey = Uri.UnescapeDataString(docKey);
-				request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
-				return SerializationHelper.DeserializeJsonDocument(docKey, responseJson, request.ResponseHeaders, request.ResponseStatusCode);
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null)
-					throw;
-				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-					return null;
-				if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-				{
-					var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-					var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
-					var etag = httpWebResponse.GetEtagHeader();
-
-					var concurrencyException = TryResolveConflictOrCreateConcurrencyException(key, conflictsDoc, etag);
-					if (concurrencyException == null)
-					{
-						if (resolvingConflictRetries)
-							throw new InvalidOperationException("Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
-
-						resolvingConflictRetries = true;
-						try
-						{
-							return DirectGet(serverUrl, key);
-						}
-						finally
-						{
-							resolvingConflictRetries = false;
-						}
-					}
-					throw concurrencyException;
-				}
-				throw;
-			}
+            return asyncDatabaseCommands.DirectGetAsync(serverUrl, key, transformer).Result;
 		}
 
 		private void HandleReplicationStatusChanges(string forceCheck, string primaryUrl, string currentUrl)
@@ -561,118 +501,6 @@ namespace Raven.Client.Connection
 	        return asyncDatabaseCommands.GetAsync(ids, includes, transformer, queryInputs, metadataOnly).Result;
 		}
 
-	    /// <summary>
-	    /// Perform a direct get for loading multiple ids in one request
-	    /// </summary>
-	    /// <param name="ids">The ids.</param>
-	    /// <param name="operationUrl">The operation URL.</param>
-	    /// <param name="includes">The includes.</param>
-	    /// <param name="transformer"></param>
-	    /// <param name="metadataOnly"></param>
-	    /// <returns></returns>
-	    private MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs, bool metadataOnly)
-		{
-			var path = operationUrl + "/queries/?";
-			if (metadataOnly)
-				path += "&metadata-only=true";
-			if (includes != null && includes.Length > 0)
-			{
-				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
-			}
-	        if (!string.IsNullOrEmpty(transformer))
-	            path += "&transformer=" + transformer;
-
-
-			if (queryInputs != null)
-			{
-				path = queryInputs.Aggregate(path, (current, queryInput) => current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
-			}
-		    var metadata = new RavenJObject();
-			AddTransactionInformation(metadata);
-		    var uniqueIds = new HashSet<string>(ids);
-			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
-			// we are fine with that, requests to load that many items are probably going to be rare
-			HttpJsonRequest request;
-			if (uniqueIds.Sum(x => x.Length) < 1024)
-			{
-				path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
-				request = jsonRequestFactory.CreateHttpJsonRequest(
-						new CreateHttpJsonRequestParams(this, path, "GET", metadata, credentials, convention)
-							.AddOperationHeaders(OperationsHeaders))
-                            .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-			}
-			else
-			{
-				request = jsonRequestFactory.CreateHttpJsonRequest(
-						new CreateHttpJsonRequestParams(this, path, "POST", metadata, credentials, convention)
-							.AddOperationHeaders(OperationsHeaders))
-                            .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-				request.Write(new RavenJArray(uniqueIds).ToString(Formatting.None));
-			}
-
-
-			var result = (RavenJObject)request.ReadResponseJson();
-
-			var results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList();
-	        var multiLoadResult = new MultiLoadResult
-	        {
-	            Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList()
-	        };
-
-            if(string.IsNullOrEmpty(transformer)) {
-                multiLoadResult.Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id, StringComparison.OrdinalIgnoreCase))).ToList();
-			} 
-            else
-            {
-                multiLoadResult.Results = results;
-            }
-
-
-			var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
-
-			return RetryOperationBecauseOfConflict(docResults, multiLoadResult, () => DirectGet(ids, operationUrl, includes, transformer, queryInputs, metadataOnly));
-		}
-
-		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
-		{
-			bool requiresRetry = docResults.Aggregate(false, (current, docResult) => current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult));
-			if (!requiresRetry)
-				return currentResult;
-
-			if (resolvingConflictRetries)
-				throw new InvalidOperationException(
-					"Encountered another conflict after already resolving a conflict. Conflict resultion cannot recurse.");
-			resolvingConflictRetries = true;
-			try
-			{
-				return nextTry();
-			}
-			finally
-			{
-				resolvingConflictRetries = false;
-			}
-		}
-
-		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult)
-		{
-			if (docResult == null)
-				return false;
-			var metadata = docResult[Constants.Metadata];
-			if (metadata == null)
-				return false;
-
-			if (metadata.Value<int>("@Http-Status-Code") == 409)
-			{
-				var concurrencyException = TryResolveConflictOrCreateConcurrencyException(metadata.Value<string>("@id"), docResult, HttpExtensions.EtagHeaderToEtag(metadata.Value<string>("@etag")));
-				if (concurrencyException == null)
-					return true;
-				throw concurrencyException;
-			}
-			return false;
-		}
-
 		/// <summary>
 		/// Executed the specified commands as a single batch
 		/// </summary>
@@ -783,7 +611,7 @@ namespace Raven.Client.Connection
 		/// <value>The URL.</value>
 		public string Url
 		{
-			get { return url; }
+			get { return asyncDatabaseCommands.Url; }
 		}
 
 		/// <summary>
