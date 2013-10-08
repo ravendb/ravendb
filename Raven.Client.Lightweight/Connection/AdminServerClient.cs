@@ -10,6 +10,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
+    using Raven.Client.Document;
+
     public class AdminServerClient : IAdminDatabaseCommands, IGlobalAdminDatabaseCommands
     {
         internal readonly ServerClient innerServerClient;
@@ -88,7 +90,7 @@ namespace Raven.Client.Connection
         {
             var json = (RavenJObject)adminRequest.AdminStats().ReadResponseJson();
 
-            return json.Deserialize<AdminStatistics>(innerServerClient.convention);
+            return json.Deserialize<AdminStatistics>(innerServerClient.Convention);
         }
     }
 }

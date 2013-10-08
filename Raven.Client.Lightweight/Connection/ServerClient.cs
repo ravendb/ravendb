@@ -39,17 +39,7 @@ namespace Raven.Client.Connection
 	/// </summary>
 	public class ServerClient : IDatabaseCommands
 	{
-		private readonly string url;
-		internal readonly DocumentConvention convention;
         private readonly AsyncServerClient asyncDatabaseCommands;
-        private readonly ICredentials credentials;
-		private readonly Func<string, ReplicationInformer> replicationInformerGetter;
-		private readonly string databaseName;
-		private readonly ReplicationInformer replicationInformer;
-		private readonly HttpJsonRequestFactory jsonRequestFactory;
-		private readonly Guid? currentSessionId;
-		private readonly IDocumentConflictListener[] conflictListeners;
-		private int readStripingBase;
 
 		/// <summary>
 		/// Notify when the failover status changed
@@ -63,34 +53,12 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ServerClient"/> class.
 		/// </summary>
-		public ServerClient(
-            AsyncServerClient asyncDatabaseCommands,
-            string url,
-            DocumentConvention convention,
-            ICredentials credentials,
-            Func<string, ReplicationInformer> replicationInformerGetter,
-            string databaseName,
-            HttpJsonRequestFactory jsonRequestFactory,
-            Guid? currentSessionId,
-            IDocumentConflictListener[] conflictListeners)
+		public ServerClient(AsyncServerClient asyncDatabaseCommands)
 		{
 		    this.asyncDatabaseCommands = asyncDatabaseCommands;
-		    this.credentials = credentials;
-			this.replicationInformerGetter = replicationInformerGetter;
-			this.databaseName = databaseName;
-			replicationInformer = replicationInformerGetter(databaseName);
-			this.jsonRequestFactory = jsonRequestFactory;
-			this.currentSessionId = currentSessionId;
-			this.conflictListeners = conflictListeners;
-			this.url = url;
-
-			if (url.EndsWith("/"))
-				this.url = url.Substring(0, url.Length - 1);
-
-			this.convention = convention;
-			replicationInformer.UpdateReplicationInformationIfNeeded(this);
-			readStripingBase = replicationInformer.GetReadStripingBase();
 		}
+
+        public DocumentConvention Convention { get { return asyncDatabaseCommands.convention; } }
 
 		/// <summary>
 		/// Allow access to the replication informer used to determine how we replicate requests
@@ -354,7 +322,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
 		{
-			return PutIndex(name, indexDef.ToIndexDefinition(convention));
+            return asyncDatabaseCommands.PutIndexAsync(name, indexDef).Result;
 		}
 
 		/// <summary>
@@ -502,32 +470,12 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IDatabaseCommands ForDatabase(string database)
 		{
-			if (database == Constants.SystemDatabase)
-				return ForSystemDatabase();
-
-			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
-			databaseUrl = databaseUrl + "/databases/" + database;
-            if (databaseUrl == url)
-				return this;
-			return new ServerClient(
-                new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, currentSessionId, replicationInformerGetter, databaseName, conflictListeners),
-                databaseUrl, convention, credentials, replicationInformerGetter, database, jsonRequestFactory, currentSessionId, conflictListeners)
-				   {
-					   OperationsHeaders = OperationsHeaders
-				   };
+            return new ServerClient((AsyncServerClient)asyncDatabaseCommands.ForDatabase(database)); //TODO This cast is bad
 		}
 
 		public IDatabaseCommands ForSystemDatabase()
 		{
-			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
-            if (databaseUrl == url)
-				return this;
-			return new ServerClient(
-                new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, currentSessionId, replicationInformerGetter, databaseName, conflictListeners),
-                databaseUrl, convention, credentials, replicationInformerGetter, null, jsonRequestFactory, currentSessionId, conflictListeners)
-			{
-				OperationsHeaders = OperationsHeaders
-			};
+            return new ServerClient((AsyncServerClient)asyncDatabaseCommands.ForSystemDatabase()); //TODO This cast is bad
 		}
 
 		/// <summary>
