@@ -99,7 +99,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public ReplicationInformer ReplicationInformer
 		{
-			get { return replicationInformer; }
+			get { return asyncDatabaseCommands.ReplicationInformer; }
 		}
 
 		#region IDatabaseCommands Members
