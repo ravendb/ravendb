@@ -818,6 +818,12 @@ namespace Raven.Database
                         var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
                         newEtag = addDocumentResult.Etag;
 
+                       var collectionName = metadata[Constants.RavenEntityName];
+                       if(collectionName != null)
+                       {
+                         SetLastEtagForCollection(actions, collectionName.ToString(), newEtag);
+                       }
+
                         CheckReferenceBecauseOfDocumentUpdate(key, actions);
                         metadata[Constants.LastModified] = addDocumentResult.SavedAt;
                         metadata.EnsureSnapshot(
@@ -877,6 +883,26 @@ namespace Raven.Database
                     ETag = newEtag
                 };
             }
+        }
+
+        private void SetLastEtagForCollection(IStorageActionsAccessor actions, string collectionName, Etag etag)
+        {
+          actions.Lists.Set("Raven/Collection/Etag", collectionName, RavenJObject.FromObject(new {
+              Etag = etag.ToByteArray()}), UuidType.Documents);      
+        }
+
+        public Etag GetLastEtagForCollection(string collectionName)
+        {
+          Etag value = Etag.Empty;
+          TransactionalStorage.Batch(accessor =>
+          {
+            var dbvalue = accessor.Lists.Read("Raven/Collection/Etag", collectionName);
+            if (dbvalue != null)
+            {
+             value = Etag.Parse(dbvalue.Data.Value<Byte[]>("Etag"));
+            }
+          });
+          return value;
         }
 
         internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
