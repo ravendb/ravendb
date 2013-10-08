@@ -718,8 +718,18 @@ namespace Raven.Client.Connection.Async
             });
         }
 
-        public async Task<JsonDocument> DirectGetAsync(string opUrl, string key)
+        public async Task<JsonDocument> DirectGetAsync(string opUrl, string key, string transformer = null)
         {
+            if (key.Length > 127 || string.IsNullOrEmpty(transformer) == false)
+            {
+                // avoid hitting UrlSegmentMaxLength limits in Http.sys
+                var multiLoadResult = await DirectGetAsync(opUrl, new[] { key }, new string[0], transformer, new Dictionary<string, RavenJToken>(), false);
+                var result = multiLoadResult.Results.FirstOrDefault();
+                if (result == null)
+                    return null;
+                return SerializationHelper.RavenJObjectToJsonDocument(result);
+            }
+
             var metadata = new RavenJObject();
             AddTransactionInformation(metadata);
             var request =
