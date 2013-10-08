@@ -156,9 +156,7 @@ namespace Raven.Client.Connection
 
 		internal T ExecuteWithReplication<T>(string method, Func<string, T> operation)
 		{
-			int currentRequest = convention.IncrementRequestCount();
-            return asyncDatabaseCommands.ReplicationInformer.ExecuteWithReplicationAsync(method, url, currentRequest,
-		        readStripingBase, s => Task.FromResult(operation(s))).Result;
+		    return asyncDatabaseCommands.ExecuteWithReplication(method, s => Task.FromResult(operation(s))).Result;
 		}
 
 		/// <summary>
@@ -479,9 +477,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public IDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new ServerClient(
-                new AsyncServerClient(url, convention, credentialsForSession,  jsonRequestFactory, currentSessionId, replicationInformerGetter, databaseName, conflictListeners),
-                url, convention, credentialsForSession, replicationInformerGetter, databaseName, jsonRequestFactory, currentSessionId, conflictListeners);
+            return new ServerClient((AsyncServerClient)asyncDatabaseCommands.With(credentialsForSession)); //TODO This cast is bad
 		}
 
 		/// <summary>
@@ -804,26 +800,13 @@ namespace Raven.Client.Connection
 
 		public RavenJToken GetOperationStatus(long id)
 		{
-			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, "GET", credentials, convention)
-					.AddOperationHeaders(OperationsHeaders));
-			try
-			{
-				return request.ReadResponseJson();
-			}
-			catch (WebException e)
-			{
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.NotFound)
-					throw;
-				return null;
-			}
+		    return asyncDatabaseCommands.GetOperationStatusAsync(id).Result;
 		}
 
         //TODO Owin host handles 100s, is this needed?
 		public IDisposable Expect100Continue()
 		{
-			var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
+			var servicePoint = ServicePointManager.FindServicePoint(new Uri(asyncDatabaseCommands.Url));
 			servicePoint.Expect100Continue = true;
 			return new DisposableAction(() => servicePoint.Expect100Continue = false);
 		}
