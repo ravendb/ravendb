@@ -72,11 +72,6 @@ namespace Raven.Client.Connection.Async
         private int requestCount;
         private int readStripingBase;
 
-        public string Url
-        {
-            get { return url; }
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
         /// </summary>
@@ -104,6 +99,16 @@ namespace Raven.Client.Connection.Async
             this.replicationInformerGetter = replicationInformerGetter;
             this.replicationInformer = replicationInformerGetter(databaseName);
             this.readStripingBase = replicationInformer.GetReadStripingBase();
+        }
+
+        public string Url
+        {
+            get { return url; }
+        }
+
+        public ReplicationInformer ReplicationInformer
+        {
+            get { return replicationInformer; }
         }
 
         /// <summary>
