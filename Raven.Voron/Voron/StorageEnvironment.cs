@@ -127,7 +127,12 @@ namespace Voron
             get { return _pager.PageSize; }
         }
 
-        public Tree GetTree(Transaction tx, string name)
+	    public IEnumerable<Tree> Trees
+	    {
+		    get { return _trees.Values; }
+	    }
+
+	    public Tree GetTree(Transaction tx, string name)
         {
             Tree tree;
             if (_trees.TryGetValue(name, out tree))
