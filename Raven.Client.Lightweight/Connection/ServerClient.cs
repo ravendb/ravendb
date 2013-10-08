@@ -52,15 +52,14 @@ namespace Raven.Client.Connection
 		private int readStripingBase;
 
 		private bool resolvingConflict;
-		private bool resolvingConflictRetries;
 
 		/// <summary>
 		/// Notify when the failover status changed
 		/// </summary>
 		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
 		{
-			add { replicationInformer.FailoverStatusChanged += value; }
-			remove { replicationInformer.FailoverStatusChanged -= value; }
+			add { asyncDatabaseCommands.ReplicationInformer.FailoverStatusChanged += value; }
+            remove { asyncDatabaseCommands.ReplicationInformer.FailoverStatusChanged -= value; }
 		}
 
 		/// <summary>
