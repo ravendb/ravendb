@@ -84,7 +84,7 @@ namespace Raven.Client.Connection
 
 	    public IGlobalAdminDatabaseCommands GlobalAdmin
 	    {
-	        get { return new AdminServerClient(this); }
+	        get { return new AdminServerClient(asyncServerClient, new AsyncAdminServerClient(asyncServerClient)); }
 	    }
 
 	    /// <summary>
@@ -107,7 +107,7 @@ namespace Raven.Client.Connection
 
 		internal void ExecuteWithReplication(string method, Action<string> operation)
 		{
-		    asyncServerClient.ExecuteWithReplication<object>(method, operationUrl =>
+		    asyncServerClient.ExecuteWithReplication(method, operationUrl =>
 		    {
 		        operation(operationUrl);
 		        return null;
@@ -756,7 +756,7 @@ namespace Raven.Client.Connection
 	    /// </summary>
 	    public IAdminDatabaseCommands Admin
 	    {
-	        get { return new AdminServerClient(this); }
+	        get { return new AdminServerClient(asyncServerClient, new AsyncAdminServerClient(asyncServerClient)); }
 	    }
 
         private class AsycnEnumerableWrapper<T> : IEnumerator<T>, IEnumerable<T>
