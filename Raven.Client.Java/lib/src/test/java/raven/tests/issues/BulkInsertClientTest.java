@@ -24,11 +24,10 @@ public class BulkInsertClientTest extends RemoteClientTest {
             System.out.println(msg);
           }
         });
-        for (int i = 0; i < 5000; i++) {
-          User user = new User();
-          user.setName("Fitzchak");
-          bulkInsert.store(user);
-        }
+        //TODO: try with multi tests + 5000 iterations
+        User user = new User();
+        user.setName("Fitzchak");
+        bulkInsert.store(user);
       }
 
       try (IDocumentSession session = store.openSession()) {

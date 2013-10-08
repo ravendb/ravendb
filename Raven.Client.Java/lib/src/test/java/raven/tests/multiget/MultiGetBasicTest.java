@@ -9,7 +9,8 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
@@ -42,22 +43,23 @@ public class MultiGetBasicTest extends RemoteClientTest {
         session.saveChanges();
       }
 
-      HttpClient httpClient = new DefaultHttpClient();
+      try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
 
-      HttpPost post = new HttpPost(getDefaultUrl() + "/multi_get");
+        HttpPost post = new HttpPost(getDefaultUrl() + "/multi_get");
 
-      String requestString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(new GetRequest[] {
+        String requestString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(new GetRequest[] {
           new GetRequest("/docs/users/1"),
           new GetRequest("/docs/users/2")
-      });
-      post.setEntity(new StringEntity(requestString, ContentType.APPLICATION_JSON));
+        });
+        post.setEntity(new StringEntity(requestString, ContentType.APPLICATION_JSON));
 
-      HttpResponse httpResponse = httpClient.execute(post);
-      String response = IOUtils.toString(httpResponse.getEntity().getContent());
-      EntityUtils.consumeQuietly(httpResponse.getEntity());
+        HttpResponse httpResponse = httpClient.execute(post);
+        String response = IOUtils.toString(httpResponse.getEntity().getContent());
+        EntityUtils.consumeQuietly(httpResponse.getEntity());
 
-      assertTrue(response, response.contains("Ayende"));
-      assertTrue(response, response.contains("Oren"));
+        assertTrue(response, response.contains("Ayende"));
+        assertTrue(response, response.contains("Oren"));
+      }
 
     }
   }
@@ -79,25 +81,26 @@ public class MultiGetBasicTest extends RemoteClientTest {
       try (IDocumentSession session = store.openSession())  {
         QUser u = QUser.user;
         session.query(User.class).customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults())
-          .where(u.name.eq("Ayende")).toList();
+        .where(u.name.eq("Ayende")).toList();
       }
 
-      HttpClient httpClient = new DefaultHttpClient();
+      try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
 
-      HttpPost post = new HttpPost(getDefaultUrl() + "/multi_get");
+        HttpPost post = new HttpPost(getDefaultUrl() + "/multi_get");
 
-      String requestString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(new GetRequest[] {
+        String requestString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(new GetRequest[] {
           new GetRequest("/indexes/dynamic/Users", "query=Name:Ayende"),
           new GetRequest("/indexes/dynamic/Users", "query=Name:Oren")
-      });
-      post.setEntity(new StringEntity(requestString, ContentType.APPLICATION_JSON));
+        });
+        post.setEntity(new StringEntity(requestString, ContentType.APPLICATION_JSON));
 
-      HttpResponse httpResponse = httpClient.execute(post);
-      String response = IOUtils.toString(httpResponse.getEntity().getContent());
-      EntityUtils.consumeQuietly(httpResponse.getEntity());
+        HttpResponse httpResponse = httpClient.execute(post);
+        String response = IOUtils.toString(httpResponse.getEntity().getContent());
+        EntityUtils.consumeQuietly(httpResponse.getEntity());
 
-      assertTrue(response, response.contains("Ayende"));
-      assertTrue(response, response.contains("Oren"));
+        assertTrue(response, response.contains("Ayende"));
+        assertTrue(response, response.contains("Oren"));
+      }
 
     }
   }
@@ -117,46 +120,46 @@ public class MultiGetBasicTest extends RemoteClientTest {
         session.saveChanges();
       }
 
-      HttpClient httpClient = new DefaultHttpClient();
+      try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
 
-      HttpPost post = new HttpPost(getDefaultUrl() + "/multi_get");
+        HttpPost post = new HttpPost(getDefaultUrl() + "/multi_get");
 
-      String requestString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(new GetRequest[] {
+        String requestString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(new GetRequest[] {
           new GetRequest("/docs/users/1"),
           new GetRequest("/docs/users/2")
-      });
-      post.setEntity(new StringEntity(requestString, ContentType.APPLICATION_JSON));
+        });
+        post.setEntity(new StringEntity(requestString, ContentType.APPLICATION_JSON));
 
-      HttpResponse httpResponse = httpClient.execute(post);
-      String response = IOUtils.toString(httpResponse.getEntity().getContent());
-      EntityUtils.consumeQuietly(httpResponse.getEntity());
+        HttpResponse httpResponse = httpClient.execute(post);
+        String response = IOUtils.toString(httpResponse.getEntity().getContent());
+        EntityUtils.consumeQuietly(httpResponse.getEntity());
 
-      GetResponse[] results = JsonExtensions.createDefaultJsonSerializer().readValue(response, GetResponse[].class);
-      assertTrue(results[0].getHeaders().containsKey("ETag"));
-      assertTrue(results[1].getHeaders().containsKey("ETag"));
+        GetResponse[] results = JsonExtensions.createDefaultJsonSerializer().readValue(response, GetResponse[].class);
+        assertTrue(results[0].getHeaders().containsKey("ETag"));
+        assertTrue(results[1].getHeaders().containsKey("ETag"));
 
-      post = new HttpPost(getDefaultUrl() + "/multi_get");
+        post = new HttpPost(getDefaultUrl() + "/multi_get");
 
-      GetRequest get1 = new GetRequest("/docs/users/1");
-      get1.getHeaders().put("If-None-Match", results[0].getHeaders().get("ETag"));
-      GetRequest get2 = new GetRequest("/docs/users/2");
-      get2.getHeaders().put("If-None-Match", results[1].getHeaders().get("ETag"));
+        GetRequest get1 = new GetRequest("/docs/users/1");
+        get1.getHeaders().put("If-None-Match", results[0].getHeaders().get("ETag"));
+        GetRequest get2 = new GetRequest("/docs/users/2");
+        get2.getHeaders().put("If-None-Match", results[1].getHeaders().get("ETag"));
 
 
-      requestString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(new GetRequest[] {
+        requestString = JsonExtensions.createDefaultJsonSerializer().writeValueAsString(new GetRequest[] {
           get1, get2
-      });
-      post.setEntity(new StringEntity(requestString, ContentType.APPLICATION_JSON));
+        });
+        post.setEntity(new StringEntity(requestString, ContentType.APPLICATION_JSON));
 
 
-      httpResponse = httpClient.execute(post);
-      response = IOUtils.toString(httpResponse.getEntity().getContent());
-      EntityUtils.consumeQuietly(httpResponse.getEntity());
+        httpResponse = httpClient.execute(post);
+        response = IOUtils.toString(httpResponse.getEntity().getContent());
+        EntityUtils.consumeQuietly(httpResponse.getEntity());
 
-      results = JsonExtensions.createDefaultJsonSerializer().readValue(response, GetResponse[].class);
-      assertEquals(304, results[0].getStatus());
-      assertEquals(304, results[1].getStatus());
-
+        results = JsonExtensions.createDefaultJsonSerializer().readValue(response, GetResponse[].class);
+        assertEquals(304, results[0].getStatus());
+        assertEquals(304, results[1].getStatus());
+      }
     }
   }
 }

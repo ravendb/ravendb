@@ -4,9 +4,9 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
@@ -73,45 +73,45 @@ public class NotModifiedTest extends RemoteClientTest {
         session.saveChanges();
       }
       // Here, we should get the same etag we got when we asked the session
-      HttpClient httpClient = new DefaultHttpClient();
-      HttpGet get = new HttpGet(url);
-      HttpResponse response = httpClient.execute(get);
+      try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
 
-      assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-      firstEtag = HttpExtensions.getEtagHeader(response);
-      EntityUtils.consumeQuietly(response.getEntity());
+        HttpGet get = new HttpGet(url);
+        HttpResponse response = httpClient.execute(get);
 
-      // If we ask with If-None-Match (and it's a match), we'll get 304 Not Modified
-      get = new HttpGet(url);
-      get.addHeader("If-None-Match", firstEtag.toString());
-      response = httpClient.execute(get);
-      assertEquals(HttpStatus.SC_NOT_MODIFIED, response.getStatusLine().getStatusCode());
-      EntityUtils.consumeQuietly(response.getEntity());
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        firstEtag = HttpExtensions.getEtagHeader(response);
+        EntityUtils.consumeQuietly(response.getEntity());
 
-      // Change the item or add a second item
-      Etag secondEtag;
-      try (IDocumentSession session = store.openSession()) {
-        session.store(secondItemToStore);
-        session.saveChanges();
+        // If we ask with If-None-Match (and it's a match), we'll get 304 Not Modified
+        get = new HttpGet(url);
+        get.addHeader("If-None-Match", firstEtag.toString());
+        response = httpClient.execute(get);
+        assertEquals(HttpStatus.SC_NOT_MODIFIED, response.getStatusLine().getStatusCode());
+        EntityUtils.consumeQuietly(response.getEntity());
+
+        // Change the item or add a second item
+        Etag secondEtag;
+        try (IDocumentSession session = store.openSession()) {
+          session.store(secondItemToStore);
+          session.saveChanges();
+        }
+
+        // If we ask with the old etag, we'll get a new result
+        get = new HttpGet(url);
+        response = httpClient.execute(get);
+
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        secondEtag = HttpExtensions.getEtagHeader(response);
+        EntityUtils.consumeQuietly(response.getEntity());
+
+
+        // If we ask with the new etag, we'll get 304 Not Modified
+        get = new HttpGet(url);
+        get.addHeader("If-None-Match", secondEtag.toString());
+        response = httpClient.execute(get);
+        assertEquals(HttpStatus.SC_NOT_MODIFIED, response.getStatusLine().getStatusCode());
+        EntityUtils.consumeQuietly(response.getEntity());
       }
-
-      // If we ask with the old etag, we'll get a new result
-      get = new HttpGet(url);
-      response = httpClient.execute(get);
-
-      assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-      secondEtag = HttpExtensions.getEtagHeader(response);
-      EntityUtils.consumeQuietly(response.getEntity());
-
-
-      // If we ask with the new etag, we'll get 304 Not Modified
-      get = new HttpGet(url);
-      get.addHeader("If-None-Match", secondEtag.toString());
-      response = httpClient.execute(get);
-      assertEquals(HttpStatus.SC_NOT_MODIFIED, response.getStatusLine().getStatusCode());
-      EntityUtils.consumeQuietly(response.getEntity());
     }
-
-
   }
 }

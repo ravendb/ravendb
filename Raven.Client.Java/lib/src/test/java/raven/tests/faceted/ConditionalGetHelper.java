@@ -4,23 +4,23 @@ import java.io.IOException;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
 import raven.abstractions.basic.Reference;
 import raven.abstractions.data.Etag;
 import raven.client.connection.HttpExtensions;
 
-public class ConditionalGetHelper {
-  private HttpClient httpClient;
+public class ConditionalGetHelper implements AutoCloseable {
+  private CloseableHttpClient httpClient;
 
   public ConditionalGetHelper() {
-    httpClient = new DefaultHttpClient();
+    httpClient = HttpClients.createDefault();
   }
 
   private HttpResponse getHttpResponseHandle304(HttpRequestBase request) throws ClientProtocolException, IOException {
@@ -65,5 +65,10 @@ public class ConditionalGetHelper {
     EntityUtils.consumeQuietly(response.getEntity());
 
     return response.getStatusLine().getStatusCode();
+  }
+
+  @Override
+  public void close() throws Exception {
+    httpClient.close();
   }
 }

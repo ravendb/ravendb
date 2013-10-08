@@ -52,6 +52,7 @@ public class ReplicationBase extends RavenDBAwareTests {
 
   @After
   public void afterTest() {
+    //TODO: dispose http client!
     try {
       for (int i = 0; i < stores.size(); i++) {
         stopServer(DEFAULT_SERVER_PORT_1 + i);

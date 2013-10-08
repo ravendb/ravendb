@@ -10,19 +10,23 @@ import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpPut;
-import org.apache.http.conn.params.ConnRoutePNames;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
+import raven.abstractions.basic.EventHandler;
 import raven.abstractions.closure.Functions;
+import raven.abstractions.connection.WebRequestEventArgs;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.client.connection.IDatabaseCommands;
@@ -55,7 +59,7 @@ public abstract class RavenDBAwareTests {
 
   public final static String DEFAULT_SERVER_RUNNER_URL = "http://" + DEFAULT_HOST + ":" + DEFAULT_RUNNER_PORT + "/servers";
 
-  protected static HttpClient client = new DefaultHttpClient();
+  protected static HttpClient client = HttpClients.createDefault();
 
 
   public String getServerUrl() {
@@ -88,15 +92,36 @@ public abstract class RavenDBAwareTests {
     replicationInformer = new ReplicationInformer(convention);
 
     serverClient = new ServerClient(DEFAULT_SERVER_URL_1, convention,
-        new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
-        UUID.randomUUID(), new IDocumentConflictListener[0]);
+      new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
+      UUID.randomUUID(), new IDocumentConflictListener[0]);
+
   }
+
+  @After
+  public void cleanUp() throws Exception {
+    factory.close();
+  }
+
 
   protected void useFiddler(IDocumentStore store){
-    HttpHost proxy = new HttpHost("127.0.0.1", 8888, "http");
-    store.getJsonRequestFactory().getHttpClient().getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, proxy);
+    store.getJsonRequestFactory().addConfigureRequestEventHandler(new FiddlerConfigureRequestHandler());
   }
 
+  public static class FiddlerConfigureRequestHandler implements EventHandler<WebRequestEventArgs> {
+
+    @Override
+    public void handle(Object sender, WebRequestEventArgs event) {
+      HttpRequestBase requestBase = (HttpRequestBase) event.getRequest();
+      HttpHost proxy = new HttpHost("127.0.0.1", 8888, "http");
+      RequestConfig requestConfig = requestBase.getConfig();
+      if (requestConfig == null) {
+        requestConfig = RequestConfig.DEFAULT;
+      }
+      requestConfig = RequestConfig.copy(requestConfig).setProxy(proxy).build();
+      requestBase.setConfig(requestConfig);
+
+    }
+  }
 
 
 

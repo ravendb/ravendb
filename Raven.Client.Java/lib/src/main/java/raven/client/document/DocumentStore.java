@@ -14,8 +14,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
 
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.EventHelper;
@@ -350,7 +348,7 @@ public class DocumentStore extends DocumentStoreBase {
       return ; // already setup by the user
     }
 
-    final BasicAuthenticator basicAuthenticator = new BasicAuthenticator(apiKey, jsonRequestFactory.isEnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers());
+    final BasicAuthenticator basicAuthenticator = new BasicAuthenticator(jsonRequestFactory.getHttpClient(), apiKey, jsonRequestFactory.isEnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers());
     final SecuredAuthenticator securedAuthenticator = new SecuredAuthenticator(apiKey, jsonRequestFactory);
 
     jsonRequestFactory.addConfigureRequestEventHandler(new EventHandler<WebRequestEventArgs>() {
@@ -405,9 +403,6 @@ public class DocumentStore extends DocumentStoreBase {
   protected void initializeInternal() {
 
     final String rootDatabaseUrl = MultiDatabase.getRootDatabaseUrl(url);
-    HttpParams httpParams = jsonRequestFactory.getHttpClient().getParams();
-    httpParams.setBooleanParameter(HttpConnectionParams.TCP_NODELAY, true); // disable Nagle's algorithm
-
     databaseCommandsGenerator = new Function0<IDatabaseCommands>() {
 
       @Override
@@ -620,13 +615,4 @@ public class DocumentStore extends DocumentStoreBase {
     return this;
   }
 
-
-
-  /*FIXME
-    public Task GetObserveChangesAndEvictItemsFromCacheTask(string database = null)
-    {
-      var changes = observeChangesAndEvictItemsFromCacheForDatabases.GetOrDefault(database ?? Constants.SystemDatabase);
-      return changes == null ? new CompletedTask() : changes.ConnectionTask;
-    }
-   */
 }

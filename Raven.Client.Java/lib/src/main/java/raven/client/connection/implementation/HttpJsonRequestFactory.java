@@ -10,12 +10,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpClient;
-import org.apache.http.conn.ClientConnectionManager;
-import org.apache.http.impl.client.DecompressingHttpClient;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.config.SocketConfig;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.StandardHttpRequestRetryHandler;
-import org.apache.http.impl.conn.PoolingClientConnectionManager;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
 import raven.abstractions.basic.EventHandler;
 import raven.abstractions.basic.EventHelper;
@@ -38,9 +37,7 @@ import raven.client.util.SimpleCache;
  */
 public class HttpJsonRequestFactory implements AutoCloseable {
 
-  private DefaultHttpClient httpClient;
-
-  private DecompressingHttpClient gzipHttpClient;
+  private CloseableHttpClient httpClient;
 
   private List<EventHandler<WebRequestEventArgs>> configureRequest = new ArrayList<>();
 
@@ -58,16 +55,15 @@ public class HttpJsonRequestFactory implements AutoCloseable {
 
   public HttpJsonRequestFactory(int maxNumberOfCachedRequests) {
     super();
-    ClientConnectionManager cm = new PoolingClientConnectionManager();
-    this.httpClient = new DefaultHttpClient(cm);
-    this.gzipHttpClient = new DecompressingHttpClient(this.httpClient);
-    this.httpClient.setHttpRequestRetryHandler(new StandardHttpRequestRetryHandler(0, false));
+
+    PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+    cm.setDefaultMaxPerRoute(10);
+    this.httpClient = HttpClients.custom().setConnectionManager(cm).setRetryHandler(new StandardHttpRequestRetryHandler(0, false))
+      .setDefaultSocketConfig(SocketConfig.custom().setTcpNoDelay(true).build()).
+      build();
     this.maxNumberOfCachedRequests = maxNumberOfCachedRequests;
     resetCache();
   }
-
-
-
 
   public void addConfigureRequestEventHandler(EventHandler<WebRequestEventArgs> event) {
     configureRequest.add(event);
@@ -79,17 +75,9 @@ public class HttpJsonRequestFactory implements AutoCloseable {
   }
 
   /**
-   * @return the gzipHttpClient
-   */
-  public HttpClient getGzipHttpClient() {
-    return gzipHttpClient;
-  }
-
-
-  /**
    * @return the httpClient
    */
-  public HttpClient getHttpClient() {
+  public CloseableHttpClient getHttpClient() {
     return httpClient;
   }
 
@@ -112,7 +100,8 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     }
     disposed = true;
     cache.close();
-    
+    httpClient.close();
+
   }
 
   public CachedRequestOp configureCaching(String url, Action2<String, String> setHeader) {

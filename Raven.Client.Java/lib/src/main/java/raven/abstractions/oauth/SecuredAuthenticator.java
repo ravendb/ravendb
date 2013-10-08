@@ -110,7 +110,7 @@ public class SecuredAuthenticator extends AbstractAuthenticator {
       }
 
       try {
-        HttpClient httpClient = jsonRequestFactory.getGzipHttpClient();
+        HttpClient httpClient = jsonRequestFactory.getHttpClient();
         HttpResponse httpResponse = httpClient.execute(authRequest);
         if (httpResponse.getStatusLine().getStatusCode() >= 300) {
           EntityUtils.consumeQuietly(httpResponse.getEntity());

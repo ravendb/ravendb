@@ -12,8 +12,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
-import org.apache.http.impl.cookie.DateParseException;
-import org.apache.http.impl.cookie.DateUtils;
+import org.apache.http.client.utils.DateUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.type.ArrayType;
 import org.codehaus.jackson.map.type.MapType;
@@ -102,11 +101,7 @@ public class SerializationHelper {
     }
     String lastModified = headers.get(Constants.LAST_MODIFIED);
     if (StringUtils.isNotEmpty(lastModified)) {
-      try {
-        return DateUtils.parseDate(lastModified);
-      } catch (DateParseException e) {
-        throw new IllegalArgumentException(e.getMessage(), e);
-      }
+      return DateUtils.parseDate(lastModified);
     }
 
     return null;

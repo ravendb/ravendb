@@ -3,32 +3,29 @@ package raven.abstractions.oauth;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.util.EntityUtils;
+import org.apache.http.impl.client.CloseableHttpClient;
 
 import raven.abstractions.closure.Action1;
 
 public class BasicAuthenticator extends AbstractAuthenticator {
   private final String apiKey;
   private final boolean enableBasicAuthenticationOverUnsecuredHttp;
+  private final CloseableHttpClient httpClient;
 
-  public BasicAuthenticator(String apiKey, boolean enableBasicAuthenticationOverUnsecuredHttp) {
+  public BasicAuthenticator(CloseableHttpClient httpClient, String apiKey, boolean enableBasicAuthenticationOverUnsecuredHttp) {
     this.apiKey = apiKey;
     this.enableBasicAuthenticationOverUnsecuredHttp = enableBasicAuthenticationOverUnsecuredHttp;
+    this.httpClient = httpClient;
   }
 
   @Override
   public Action1<HttpRequest> doOAuthRequest(String oauthSource) {
-    HttpClient httpClient = new DefaultHttpClient();
     try {
-
       HttpGet authRequest = prepareOAuthRequest(oauthSource);
-      HttpResponse httpResponse = httpClient.execute(authRequest);
-      try {
-        final String response = IOUtils.toString(httpResponse.getEntity().getContent());
+      try (CloseableHttpResponse httpReponse = httpClient.execute(authRequest)) {
+        final String response = IOUtils.toString(httpReponse.getEntity().getContent());
         return new Action1<HttpRequest>() {
 
           @Override
@@ -36,13 +33,9 @@ public class BasicAuthenticator extends AbstractAuthenticator {
             request.setHeader("Authorization", "Bearer " + response);
           }
         };
-      } finally {
-        EntityUtils.consume(httpResponse.getEntity());
       }
     } catch (Exception e) {
       throw new RuntimeException(e);
-    } finally {
-      httpClient.getConnectionManager().shutdown();
     }
   }
 

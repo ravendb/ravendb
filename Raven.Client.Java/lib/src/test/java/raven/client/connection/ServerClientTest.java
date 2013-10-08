@@ -390,7 +390,7 @@ public class ServerClientTest extends RavenDBAwareTests {
 
       dbCommands.deleteAttachment(key, a.getEtag());
       String url = dbCommands.urlFor(key);
-      assertEquals("http://localhost:8123/databases/" + getDbName() + "/docs/test/at1", url);
+      assertEquals("http://" + DEFAULT_HOST + ":8123/databases/" + getDbName() + "/docs/test/at1", url);
 
       a = dbCommands.getAttachment(key);
       assertNull(a);

@@ -106,10 +106,6 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, 
       return false;
     }
 
-    public CancellationToken getCancellationToken() {
-      return cancellationToken;
-    }
-
     @Override
     public boolean isChunked() {
       return true;
@@ -181,8 +177,6 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, 
         try {
           responseBytes = operationRequest.readResponseBytes();
         } catch (IOException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
           throw new RuntimeException(e);
         }
       }
@@ -272,7 +266,6 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, 
     if (data == null) {
       throw new IllegalArgumentException("data");
     }
-
 
     /*
     if (operationTask.isCancelled()) { //TODO or isFaulted

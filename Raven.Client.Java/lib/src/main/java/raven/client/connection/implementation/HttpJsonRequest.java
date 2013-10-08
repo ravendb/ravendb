@@ -21,7 +21,8 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
@@ -29,13 +30,12 @@ import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.params.CoreProtocolPNames;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 
 import raven.abstractions.closure.Action0;
@@ -75,7 +75,7 @@ public class HttpJsonRequest {
   private final HttpMethods method;
 
   private volatile HttpUriRequest webRequest;
-  private volatile HttpResponse httpResponse;
+  private volatile CloseableHttpResponse httpResponse;
   private CachedRequest cachedRequestDetails;
   private final HttpJsonRequestFactory factory;
   private final IHoldProfilingInformation owner;
@@ -91,7 +91,7 @@ public class HttpJsonRequest {
   private boolean skipServerCheck;
   private int contentLength = -1;
 
-  private HttpClient httpClient;
+  private CloseableHttpClient httpClient;
   private int responseStatusCode;
 
   public HttpMethods getMethod() {
@@ -127,7 +127,8 @@ public class HttpJsonRequest {
         webRequest.addHeader("Content-Encoding", "gzip");
       }
       // Accept-Encoding Parameters are handled by HttpClient
-      this.httpClient = factory.getGzipHttpClient();
+      webRequest.addHeader("Accept-Encoding", "gzip,deflate"); //TODO: test me
+      this.httpClient = factory.getHttpClient();
     } else {
       this.httpClient = factory.getHttpClient();
     }
@@ -181,15 +182,17 @@ public class HttpJsonRequest {
       case POST:
         baseMethod = new HttpPost(url);
         if (owner != null) {
-          baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE,
-            owner.isExpect100Continue());
+          HttpRequestBase requestBase = (HttpRequestBase) baseMethod;
+          RequestConfig requestConfig =  RequestConfig.custom().setExpectContinueEnabled(owner.isExpect100Continue()).build();
+          requestBase.setConfig(requestConfig);
         }
         break;
       case PUT:
         baseMethod = new HttpPut(url);
         if (owner != null) {
-          baseMethod.getParams().setBooleanParameter(CoreProtocolPNames.USE_EXPECT_CONTINUE,
-            owner.isExpect100Continue());
+          HttpRequestBase requestBase = (HttpRequestBase) baseMethod;
+          RequestConfig requestConfig = RequestConfig.custom().setExpectContinueEnabled(owner.isExpect100Continue()).build();
+          requestBase.setConfig(requestConfig);
         }
         break;
       case DELETE:
@@ -670,9 +673,14 @@ public class HttpJsonRequest {
   }
 
   public void setTimeout(int timeoutInMilis) {
-    HttpParams httpParams = webRequest.getParams();
-    HttpConnectionParams.setSoTimeout(httpParams, timeoutInMilis);
-    HttpConnectionParams.setConnectionTimeout(httpParams, timeoutInMilis);
+    HttpRequestBase baseRequest = (HttpRequestBase) webRequest;
+    RequestConfig requestConfig = baseRequest.getConfig();
+    if (requestConfig == null) {
+      requestConfig = RequestConfig.DEFAULT;
+    }
+
+    requestConfig = RequestConfig.copy(requestConfig).setSocketTimeout(timeoutInMilis).setConnectTimeout(timeoutInMilis).build();
+    baseRequest.setConfig(requestConfig);
   }
 
   public IObservable<String> serverPull() {
@@ -685,7 +693,6 @@ public class HttpJsonRequest {
         //TODO CheckForErrorsAndReturnCachedResultIfAnyAsync();
         httpResponse = httpClient.execute(webRequest);
         ObservableLineStream observableLineStream = new ObservableLineStream(httpResponse.getEntity().getContent(), new Action0() {
-
           @Override
           public void apply() {
             EntityUtils.consumeQuietly(httpResponse.getEntity());

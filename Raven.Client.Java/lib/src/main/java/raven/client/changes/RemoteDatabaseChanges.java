@@ -79,10 +79,12 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
   private volatile boolean disposed;
 
 
+  @Override
   public void addConnectionStatusChanged(EventHandler<VoidArgs> handler) {
     connectionStatusChanged.add(handler);
   }
 
+  @Override
   public void removeConnectionStatusChanges(EventHandler<VoidArgs> handler) {
     connectionStatusChanged.remove(handler);
   }
