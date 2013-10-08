@@ -10,11 +10,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-    using Raven.Client.Document;
-
     public class AdminServerClient : IAdminDatabaseCommands, IGlobalAdminDatabaseCommands
     {
-        internal readonly ServerClient innerServerClient;
+        private readonly ServerClient innerServerClient;
         private readonly AdminRequestCreator adminRequest;
 
         public AdminServerClient(ServerClient serverClient)
