@@ -149,17 +149,18 @@ namespace Raven.Client.Connection
 
 		internal void ExecuteWithReplication(string method, Action<string> operation)
 		{
-			ExecuteWithReplication<object>(method, operationUrl =>
+		    asyncDatabaseCommands.ExecuteWithReplication<object>(method, operationUrl =>
 			{
 				operation(operationUrl);
 				return null;
-			});
+		    }).Wait();
 		}
 
 		internal T ExecuteWithReplication<T>(string method, Func<string, T> operation)
 		{
 			int currentRequest = convention.IncrementRequestCount();
-			return replicationInformer.ExecuteWithReplication(method, url, currentRequest, readStripingBase, operation);
+            return asyncDatabaseCommands.ReplicationInformer.ExecuteWithReplicationAsync(method, url, currentRequest,
+		        readStripingBase, s => Task.FromResult(operation(s))).Result;
 		}
 
 		/// <summary>
