@@ -179,7 +179,7 @@ namespace Raven.Tests.Silverlight
 				var task = documentStore.AsyncDatabaseCommands.ForDatabase(dbname).GetIndexAsync("Test");
 				yield return task;
 
-				Assert.AreEqual("Test", task.Result.IndexId);
+				Assert.AreEqual("Test", task.Result.Name);
 			}
 		}
 	}
