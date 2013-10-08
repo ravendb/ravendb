@@ -664,15 +664,23 @@ namespace Raven.Client.Document
 			}
 			InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
 		}
-#endif
 
-		protected void ClearSortHints(IAsyncDatabaseCommands dbCommands)
-		{
-			foreach (var key in dbCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
-			{
-				dbCommands.OperationsHeaders.Remove(key);
-			}
-		}
+        protected void ClearSortHints(IAsyncDatabaseCommands dbCommands)
+        {
+            foreach (var key in dbCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
+            {
+                dbCommands.OperationsHeaders.Remove(key);
+            }
+        }
+#else
+        protected void ClearSortHints(IAsyncDatabaseCommands dbCommands)
+        {
+            foreach (var key in dbCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
+            {
+                dbCommands.OperationsHeaders.Remove(key);
+            }
+        }
+#endif
 
 #if !SILVERLIGHT && !NETFX_CORE
 

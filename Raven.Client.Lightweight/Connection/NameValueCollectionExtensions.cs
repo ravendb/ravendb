@@ -4,7 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Specialized;
-#if !SILVERLIGHT
+
 namespace Raven.Client.Connection
 {
 	public static class NameValueCollectionExtensions
@@ -25,4 +25,3 @@ namespace Raven.Client.Connection
 		}
 	}
 }
-#endif

@@ -382,7 +382,7 @@ namespace Raven.Studio.Models
 			switch (PatchOn)
 			{
 				case PatchOnOptions.Document:
-					return ApplicationModel.Database.Value.AsyncDatabaseCommands.StartsWithAsync(SelectedItem, 0, 25, metadataOnly: true)
+					return ApplicationModel.Database.Value.AsyncDatabaseCommands.StartsWithAsync(SelectedItem, null, 0, 25, metadataOnly: true)
 						.ContinueWith(t => (IList<object>) t.Result.Select(d => d.Key).Cast<object>().ToList());
 
 				case PatchOnOptions.Collection:
@@ -769,7 +769,7 @@ namespace Raven.Studio.Models
                             break;
 
                         case PatchOnOptions.Collection:
-                            ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(PatchModel.CollectionsIndex,
+                            ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndexAsync(PatchModel.CollectionsIndex,
                                                                                                 new IndexQuery { Query = "Tag:" + patchModel.SelectedItem }, request)
 																								.ContinueOnSuccessInTheUIThread(() => patchModel.UpdateCollectionSource())
                                                                                                  .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
@@ -777,7 +777,7 @@ namespace Raven.Studio.Models
                             break;
 
                         case PatchOnOptions.Index:
-                            ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(patchModel.SelectedItem, new IndexQuery { Query = patchModel.QueryDoc.CurrentSnapshot.Text },
+                            ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndexAsync(patchModel.SelectedItem, new IndexQuery { Query = patchModel.QueryDoc.CurrentSnapshot.Text },
                                                                                                 request)
 																								.ContinueOnSuccessInTheUIThread(() => patchModel.UpdateCollectionSource())
                                                                                                  .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
