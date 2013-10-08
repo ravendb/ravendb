@@ -34,6 +34,8 @@ namespace Raven.Database.Json
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
+		private static readonly Dictionary<string, JTokenType> PropertiesTypeByName = new Dictionary<string, JTokenType>();
+
 		public ScriptedJsonPatcher(DocumentDatabase database = null)
 		{
 			if (database == null)
@@ -180,12 +182,12 @@ namespace Raven.Database.Json
 					case JsInstance.CLASS_FUNCTION:
 						continue;
 				}
-				rjo[key] = ToRavenJToken(jsInstance);
+				rjo[key] = ToRavenJToken(jsInstance, key);
 			}
 			return rjo;
 		}
 
-		private static RavenJToken ToRavenJToken(JsInstance v)
+		private static RavenJToken ToRavenJToken(JsInstance v, string propertyName)
 		{
 			switch (v.Class)
 			{
@@ -198,6 +200,17 @@ namespace Raven.Database.Json
 				case JsInstance.TYPE_NUMBER:
 				case JsInstance.CLASS_NUMBER:
 					var num = (double)v.Value;
+
+					JTokenType type;
+					if (PropertiesTypeByName.TryGetValue(propertyName, out type))
+					{
+						if (type == JTokenType.Float)
+							return new RavenJValue(num);
+						if (type == JTokenType.Integer)
+							return new RavenJValue((long) num);
+					}
+
+					// If we don't have the type, assume that if the number ending with ".0" it actually an integer.
 					var integer = Math.Truncate(num);
 					if (Math.Abs(num - integer) < double.Epsilon)
 						return new RavenJValue((long)integer);
@@ -220,7 +233,7 @@ namespace Raven.Database.Json
 					for (int i = 0; i < jsArray.Length; i++)
 					{
 						var jsInstance = jsArray.get(i);
-						var ravenJToken = ToRavenJToken(jsInstance);
+						var ravenJToken = ToRavenJToken(jsInstance, propertyName);
 						if (ravenJToken == null)
 							continue;
 						rja.Add(ravenJToken);
@@ -242,6 +255,8 @@ namespace Raven.Database.Json
 			var jsObject = global.ObjectClass.New();
 			foreach (var prop in doc)
 			{
+				if (prop.Value is RavenJValue)
+					PropertiesTypeByName[prop.Key] = prop.Value.Type;
 				var val = ToJsInstance(global, prop.Value);
 				jsObject.DefineOwnProperty(prop.Key, val);
 			}
