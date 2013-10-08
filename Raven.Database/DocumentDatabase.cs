@@ -818,12 +818,6 @@ namespace Raven.Database
                         var addDocumentResult = actions.Documents.AddDocument(key, etag, document, metadata);
                         newEtag = addDocumentResult.Etag;
 
-                       var collectionName = metadata[Constants.RavenEntityName];
-                       if(collectionName != null)
-                       {
-                         SetLastEtagForCollection(actions, collectionName.ToString(), newEtag);
-                       }
-
                         CheckReferenceBecauseOfDocumentUpdate(key, actions);
                         metadata[Constants.LastModified] = addDocumentResult.SavedAt;
                         metadata.EnsureSnapshot(
@@ -841,6 +835,7 @@ namespace Raven.Database
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
                         }, documents =>
                         {
+                            SetPerCollectionEtags(documents);
                             etagSynchronizer.UpdateSynchronizationState(documents);
 							prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).AfterStorageCommitBeforeWorkNotifications(documents);
                         });
@@ -885,7 +880,21 @@ namespace Raven.Database
             }
         }
 
-        private void SetLastEtagForCollection(IStorageActionsAccessor actions, string collectionName, Etag etag)
+      private void SetPerCollectionEtags(JsonDocument[] documents)
+      {
+        var collections = documents.GroupBy(x => x.Metadata[Constants.RavenEntityName])
+                 .Where(x => x.Key != null)
+                 .Select(x => new {Etag = x.Max(y => y.Etag), CollectionName = x.Key.ToString()})
+                 .ToArray();
+
+        TransactionalStorage.Batch(accessor =>
+        {
+          foreach(var collection in collections)
+            SetLastEtagForCollection(accessor, collection.CollectionName, collection.Etag);
+        });
+      }
+
+      private void SetLastEtagForCollection(IStorageActionsAccessor actions, string collectionName, Etag etag)
         {
           actions.Lists.Set("Raven/Collection/Etag", collectionName, RavenJObject.FromObject(new {
               Etag = etag.ToByteArray()}), UuidType.Documents);      

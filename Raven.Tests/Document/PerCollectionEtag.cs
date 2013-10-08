@@ -17,6 +17,7 @@ namespace Raven.Tests.Document {
         {
           session.Store(new Post { Id = "posts/1", Title = "test", Body = "etags"});
           session.Store(new Comment { Id = "comments/1" ,Title = "test"});
+          session.Store(new { Id = "no-collection-name" ,Title = "test"});
           session.SaveChanges();
         }
 
