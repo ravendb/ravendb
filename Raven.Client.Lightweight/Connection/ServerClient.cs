@@ -5,67 +5,59 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
-using Raven.Abstractions.Json;
+using System.Threading.Tasks;
 using Raven.Client.Changes;
-using Raven.Client.Listeners;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Abstractions.Commands;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
+using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
-using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-    using System.Collections;
-    using System.Threading.Tasks;
-    using Raven.Abstractions.Util;
-    using Raven.Client.Connection.Async;
-
     /// <summary>
 	/// Access the RavenDB operations using HTTP
 	/// </summary>
 	public class ServerClient : IDatabaseCommands
 	{
-        private readonly AsyncServerClient asyncDatabaseCommands;
+        private readonly AsyncServerClient asyncServerClient;
 
 		/// <summary>
 		/// Notify when the failover status changed
 		/// </summary>
 		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged
 		{
-			add { asyncDatabaseCommands.ReplicationInformer.FailoverStatusChanged += value; }
-            remove { asyncDatabaseCommands.ReplicationInformer.FailoverStatusChanged -= value; }
+			add { asyncServerClient.ReplicationInformer.FailoverStatusChanged += value; }
+            remove { asyncServerClient.ReplicationInformer.FailoverStatusChanged -= value; }
 		}
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ServerClient"/> class.
 		/// </summary>
-		public ServerClient(AsyncServerClient asyncDatabaseCommands)
+		public ServerClient(AsyncServerClient asyncServerClient)
 		{
-		    this.asyncDatabaseCommands = asyncDatabaseCommands;
+		    this.asyncServerClient = asyncServerClient;
 		}
 
-        public DocumentConvention Convention { get { return asyncDatabaseCommands.convention; } }
+        public DocumentConvention Convention { get { return asyncServerClient.convention; } }
 
 		/// <summary>
 		/// Allow access to the replication informer used to determine how we replicate requests
 		/// </summary>
 		public ReplicationInformer ReplicationInformer
 		{
-			get { return asyncDatabaseCommands.ReplicationInformer; }
+			get { return asyncServerClient.ReplicationInformer; }
 		}
 
 		#region IDatabaseCommands Members
@@ -76,8 +68,8 @@ namespace Raven.Client.Connection
 		/// <value>The operations headers.</value>
         public NameValueCollection OperationsHeaders
 		{
-			get { return asyncDatabaseCommands.OperationsHeaders; }
-            set { asyncDatabaseCommands.OperationsHeaders = value; }
+			get { return asyncServerClient.OperationsHeaders; }
+            set { asyncServerClient.OperationsHeaders = value; }
 		}
 
 		/// <summary>
@@ -87,7 +79,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public JsonDocument Get(string key)
 		{
-		    return asyncDatabaseCommands.GetAsync(key).Result;
+		    return asyncServerClient.GetAsync(key).Result;
 		}
 
 	    public IGlobalAdminDatabaseCommands GlobalAdmin
@@ -100,22 +92,22 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
 	    {
-            return asyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, metadataOnly, exclude).Result;
+            return asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, metadataOnly, exclude).Result;
 		}
 
 		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
 		{
-		    return asyncDatabaseCommands.CreateRequest(requestUrl, method, disableRequestCompression);
+		    return asyncServerClient.CreateRequest(requestUrl, method, disableRequestCompression);
 		}
 
 		public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false)
 		{
-            return asyncDatabaseCommands.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method, disableRequestCompression);
+            return asyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method, disableRequestCompression);
 		}
 
 		internal void ExecuteWithReplication(string method, Action<string> operation)
 		{
-		    asyncDatabaseCommands.ExecuteWithReplication<object>(method, operationUrl =>
+		    asyncServerClient.ExecuteWithReplication<object>(method, operationUrl =>
 		    {
 		        operation(operationUrl);
 		        return null;
@@ -124,7 +116,7 @@ namespace Raven.Client.Connection
 
 		internal T ExecuteWithReplication<T>(string method, Func<string, T> operation)
 		{
-		    return asyncDatabaseCommands.ExecuteWithReplication(method, s => Task.FromResult(operation(s))).Result;
+		    return asyncServerClient.ExecuteWithReplication(method, s => Task.FromResult(operation(s))).Result;
 		}
 
 		/// <summary>
@@ -135,12 +127,12 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public JsonDocument DirectGet(string serverUrl, string key, string transformer = null)
 		{
-            return asyncDatabaseCommands.DirectGetAsync(serverUrl, key, transformer).Result;
+            return asyncServerClient.DirectGetAsync(serverUrl, key, transformer).Result;
 		}
 
 		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
 		{
-		    return asyncDatabaseCommands.GetDocumentsAsync(start, pageSize, metadataOnly).Result;
+		    return asyncServerClient.GetDocumentsAsync(start, pageSize, metadataOnly).Result;
 		}
 
 		/// <summary>
@@ -153,7 +145,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
-		    return asyncDatabaseCommands.PutAsync(key, etag, document, metadata).Result;
+		    return asyncServerClient.PutAsync(key, etag, document, metadata).Result;
 		}
 
 		/// <summary>
@@ -163,7 +155,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">The etag.</param>
 		public void Delete(string key, Etag etag)
 		{
-            asyncDatabaseCommands.DeleteAsync(key, etag).Wait();
+            asyncServerClient.DeleteAsync(key, etag).Wait();
 		}
 
 		/// <summary>
@@ -175,7 +167,7 @@ namespace Raven.Client.Connection
 		/// <param name="metadata">The metadata.</param>
 		public void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata)
 		{
-		    asyncDatabaseCommands.PutAttachmentAsync(key, etag, data, metadata).Wait();
+		    asyncServerClient.PutAttachmentAsync(key, etag, data, metadata).Wait();
 		}
 
 		/// <summary>
@@ -186,7 +178,7 @@ namespace Raven.Client.Connection
 		/// <param name="metadata">The metadata.</param>
 		public void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata)
 		{
-		    asyncDatabaseCommands.UpdateAttachmentMetadataAsync(key, etag, metadata).Wait();
+		    asyncServerClient.UpdateAttachmentMetadataAsync(key, etag, metadata).Wait();
 		}
 
 		/// <summary>
@@ -194,7 +186,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IEnumerable<Attachment> GetAttachmentHeadersStartingWith(string idPrefix, int start, int pageSize)
 		{
-		    return new AsycnEnumerableWrapper<Attachment>(asyncDatabaseCommands.GetAttachmentHeadersStartingWithAsync(idPrefix,
+		    return new AsycnEnumerableWrapper<Attachment>(asyncServerClient.GetAttachmentHeadersStartingWithAsync(idPrefix,
 		            start, pageSize).Result);
             
 		}
@@ -206,7 +198,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public Attachment GetAttachment(string key)
 		{
-		    return asyncDatabaseCommands.GetAttachmentAsync(key).Result;
+		    return asyncServerClient.GetAttachmentAsync(key).Result;
 		}
 
 		/// <summary>
@@ -216,7 +208,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public Attachment HeadAttachment(string key)
 		{
-            return asyncDatabaseCommands.HeadAttachmentAsync(key).Result;
+            return asyncServerClient.HeadAttachmentAsync(key).Result;
 		}
 
 		/// <summary>
@@ -226,12 +218,12 @@ namespace Raven.Client.Connection
 		/// <param name="etag">The etag.</param>
 		public void DeleteAttachment(string key, Etag etag)
 		{
-		    asyncDatabaseCommands.DeleteAttachmentAsync(key, etag).Wait();
+		    asyncServerClient.DeleteAttachmentAsync(key, etag).Wait();
 		}
 
 		public string[] GetDatabaseNames(int pageSize, int start = 0)
 		{
-		    return asyncDatabaseCommands.GetDatabaseNamesAsync(pageSize, start).Result;
+		    return asyncServerClient.GetDatabaseNamesAsync(pageSize, start).Result;
 		}
 
 		/// <summary>
@@ -242,27 +234,27 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string[] GetIndexNames(int start, int pageSize)
 		{
-		    return asyncDatabaseCommands.GetIndexNamesAsync(start, pageSize).Result;
+		    return asyncServerClient.GetIndexNamesAsync(start, pageSize).Result;
 		}
 
 		public IndexDefinition[] GetIndexes(int start, int pageSize)
 		{
-		    return asyncDatabaseCommands.GetIndexesAsync(start, pageSize).Result;
+		    return asyncServerClient.GetIndexesAsync(start, pageSize).Result;
 		}
 
 		public TransformerDefinition[] GetTransformers(int start, int pageSize)
 		{
-		    return asyncDatabaseCommands.GetTransformersAsync(start, pageSize).Result;
+		    return asyncServerClient.GetTransformersAsync(start, pageSize).Result;
 		}
 
 		public TransformerDefinition GetTransformer(string name)
 		{
-		    return asyncDatabaseCommands.GetTransformerAsync(name).Result;
+		    return asyncServerClient.GetTransformerAsync(name).Result;
 		}
 
 		public void DeleteTransformer(string name)
 		{
-		    asyncDatabaseCommands.DeleteTransformerAsync(name);
+		    asyncServerClient.DeleteTransformerAsync(name);
 		}
 
 		/// <summary>
@@ -271,7 +263,7 @@ namespace Raven.Client.Connection
 		/// <param name="name">The name.</param>
 		public void ResetIndex(string name)
 		{
-		    asyncDatabaseCommands.ResetIndexAsync(name).Wait();
+		    asyncServerClient.ResetIndexAsync(name).Wait();
 		}
 
 		/// <summary>
@@ -281,7 +273,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public IndexDefinition GetIndex(string name)
 		{
-		    return asyncDatabaseCommands.GetIndexAsync(name).Result;
+		    return asyncServerClient.GetIndexAsync(name).Result;
 		}
 
 		/// <summary>
@@ -292,12 +284,12 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex(string name, IndexDefinition definition)
 		{
-		    return asyncDatabaseCommands.PutIndexAsync(name, definition).Result;
+		    return asyncServerClient.PutIndexAsync(name, definition).Result;
 		}
 
 		public string PutTransformer(string name, TransformerDefinition transformerDef)
 		{
-            return asyncDatabaseCommands.PutTransformerAsync(name, transformerDef).Result;
+            return asyncServerClient.PutTransformerAsync(name, transformerDef).Result;
 		}
 
 		/// <summary>
@@ -309,7 +301,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex(string name, IndexDefinition definition, bool overwrite)
 		{
-            return asyncDatabaseCommands.PutIndexAsync(name, definition, overwrite).Result;
+            return asyncServerClient.PutIndexAsync(name, definition, overwrite).Result;
 		}
 
 	    /// <summary>
@@ -322,7 +314,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
 		{
-            return asyncDatabaseCommands.PutIndexAsync(name, indexDef).Result;
+            return asyncServerClient.PutIndexAsync(name, indexDef).Result;
 		}
 
 		/// <summary>
@@ -336,7 +328,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite)
 		{
-            return asyncDatabaseCommands.PutIndexAsync(name, indexDef, overwrite).Result;
+            return asyncServerClient.PutIndexAsync(name, indexDef, overwrite).Result;
 		}
 
 		/// <summary>
@@ -348,7 +340,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-            return asyncDatabaseCommands.QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly).Result;
+            return asyncServerClient.QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly).Result;
 		}
 
 		/// <summary>
@@ -358,7 +350,7 @@ namespace Raven.Client.Connection
 		public IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
 		{
 		    var reference = new Reference<QueryHeaderInformation>();
-		    Task<IAsyncEnumerator<RavenJObject>> streamQueryAsync = asyncDatabaseCommands.StreamQueryAsync(index, query, reference);
+		    Task<IAsyncEnumerator<RavenJObject>> streamQueryAsync = asyncServerClient.StreamQueryAsync(index, query, reference);
 		    queryHeaderInfo = reference.Value;
 		    return new AsycnEnumerableWrapper<RavenJObject>(streamQueryAsync.Result);
 		}
@@ -370,7 +362,7 @@ namespace Raven.Client.Connection
 		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude)
 		{
 		    return new AsycnEnumerableWrapper<RavenJObject>(
-		            asyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude).Result);
+		            asyncServerClient.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude).Result);
 		}
 
 		/// <summary>
@@ -379,7 +371,7 @@ namespace Raven.Client.Connection
 		/// <param name="name">The name.</param>
 		public void DeleteIndex(string name)
 		{
-		    asyncDatabaseCommands.DeleteIndexAsync(name).Wait();
+		    asyncServerClient.DeleteIndexAsync(name).Wait();
 		}
 
 	    /// <summary>
@@ -393,7 +385,7 @@ namespace Raven.Client.Connection
 	    /// <returns></returns>
 	    public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
 	    {
-	        return asyncDatabaseCommands.GetAsync(ids, includes, transformer, queryInputs, metadataOnly).Result;
+	        return asyncServerClient.GetAsync(ids, includes, transformer, queryInputs, metadataOnly).Result;
 		}
 
 		/// <summary>
@@ -403,7 +395,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
 		{
-		    return asyncDatabaseCommands.BatchAsync(commandDatas.ToArray()).Result;
+		    return asyncServerClient.BatchAsync(commandDatas.ToArray()).Result;
 		}
 
 	    /// <summary>
@@ -412,7 +404,7 @@ namespace Raven.Client.Connection
 	    /// <param name="txId">The tx id.</param>
 	    public void Commit(string txId)
 	    {
-	        asyncDatabaseCommands.CommitAsync(txId).Wait();
+	        asyncServerClient.CommitAsync(txId).Wait();
 	    }
 
 	    /// <summary>
@@ -421,7 +413,7 @@ namespace Raven.Client.Connection
 	    /// <param name="txId">The tx id.</param>
 	    public void Rollback(string txId)
 		{
-            asyncDatabaseCommands.RollbackAsync(txId).Wait();
+            asyncServerClient.RollbackAsync(txId).Wait();
 		}
 
 		/// <summary>
@@ -430,12 +422,12 @@ namespace Raven.Client.Connection
 		/// <param name="txId">The tx id.</param>
 		public void PrepareTransaction(string txId)
 		{
-            asyncDatabaseCommands.PrepareTransactionAsync(txId).Wait();
+            asyncServerClient.PrepareTransactionAsync(txId).Wait();
 	    }
 
         public BuildNumber GetBuildNumber()
         {
-            return asyncDatabaseCommands.GetBuildNumberAsync().Result;
+            return asyncServerClient.GetBuildNumberAsync().Result;
         }
 
 		/// <summary>
@@ -445,7 +437,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public IDatabaseCommands With(ICredentials credentialsForSession)
 		{
-            return new ServerClient((AsyncServerClient)asyncDatabaseCommands.With(credentialsForSession)); //TODO This cast is bad
+            return new ServerClient((AsyncServerClient)asyncServerClient.With(credentialsForSession)); //TODO This cast is bad
 		}
 
 		/// <summary>
@@ -461,7 +453,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IDisposable ForceReadFromMaster()
 		{
-            return asyncDatabaseCommands.ForceReadFromMaster();
+            return asyncServerClient.ForceReadFromMaster();
 		}
 
 		/// <summary>
@@ -470,12 +462,12 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IDatabaseCommands ForDatabase(string database)
 		{
-            return new ServerClient((AsyncServerClient)asyncDatabaseCommands.ForDatabase(database)); //TODO This cast is bad
+            return new ServerClient((AsyncServerClient)asyncServerClient.ForDatabase(database)); //TODO This cast is bad
 		}
 
 		public IDatabaseCommands ForSystemDatabase()
 		{
-            return new ServerClient((AsyncServerClient)asyncDatabaseCommands.ForSystemDatabase()); //TODO This cast is bad
+            return new ServerClient((AsyncServerClient)asyncServerClient.ForSystemDatabase()); //TODO This cast is bad
 		}
 
 		/// <summary>
@@ -484,7 +476,7 @@ namespace Raven.Client.Connection
 		/// <value>The URL.</value>
 		public string Url
 		{
-			get { return asyncDatabaseCommands.Url; }
+			get { return asyncServerClient.Url; }
 		}
 
 		/// <summary>
@@ -495,7 +487,7 @@ namespace Raven.Client.Connection
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale = false)
 		{
-		    return asyncDatabaseCommands.DeleteByIndexAsync(indexName, queryToDelete, allowStale).Result;
+		    return asyncServerClient.DeleteByIndexAsync(indexName, queryToDelete, allowStale).Result;
         }
 
 	    /// <summary>
@@ -507,7 +499,7 @@ namespace Raven.Client.Connection
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale = false)
 		{
-            return asyncDatabaseCommands.UpdateByIndexAsync(indexName, queryToUpdate, patchRequests, allowStale).Result;
+            return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patchRequests, allowStale).Result;
 		}
 
 		/// <summary>
@@ -519,7 +511,7 @@ namespace Raven.Client.Connection
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale = false)
 		{
-		    return asyncDatabaseCommands.UpdateByIndexAsync(indexName, queryToUpdate, patch, allowStale).Result;
+		    return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patch, allowStale).Result;
 		}
 
 		/// <summary>
@@ -530,7 +522,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery)
 		{
-		    return asyncDatabaseCommands.SuggestAsync(index, suggestionQuery).Result;
+		    return asyncServerClient.SuggestAsync(index, suggestionQuery).Result;
 		}
 
 		/// <summary>
@@ -540,7 +532,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
 		{
-		    return asyncDatabaseCommands.MoreLikeThisAsync(query).Result;
+		    return asyncServerClient.MoreLikeThisAsync(query).Result;
 		}
 
 		/// <summary>
@@ -548,7 +540,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public DatabaseStatistics GetStatistics()
 		{
-		    return asyncDatabaseCommands.GetStatisticsAsync().Result;
+		    return asyncServerClient.GetStatisticsAsync().Result;
 		}
 
 		/// <summary>
@@ -556,7 +548,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public long NextIdentityFor(string name)
 		{
-		    return asyncDatabaseCommands.NextIdentityForAsync(name).Result;
+		    return asyncServerClient.NextIdentityForAsync(name).Result;
 		}
 
 		/// <summary>
@@ -564,7 +556,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public string UrlFor(string documentKey)
 		{
-		    return asyncDatabaseCommands.UrlFor(documentKey);
+		    return asyncServerClient.UrlFor(documentKey);
 		}
 
 		/// <summary>
@@ -574,7 +566,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public JsonDocumentMetadata Head(string key)
 		{
-		    return asyncDatabaseCommands.HeadAsync(key).Result;
+		    return asyncServerClient.HeadAsync(key).Result;
 		}
 
 		/// <summary>
@@ -582,7 +574,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
-		    return asyncDatabaseCommands.MultiGetAsync(requests).Result;
+		    return asyncServerClient.MultiGetAsync(requests).Result;
 		}
 
 		///<summary>
@@ -593,7 +585,7 @@ namespace Raven.Client.Connection
 		///<returns></returns>
 		public IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize)
 		{
-		    return asyncDatabaseCommands.GetTermsAsync(index, field, fromValue, pageSize).Result;
+		    return asyncServerClient.GetTermsAsync(index, field, fromValue, pageSize).Result;
 		}
 
 		/// <summary>
@@ -606,7 +598,7 @@ namespace Raven.Client.Connection
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
 		{
-		    return asyncDatabaseCommands.GetFacetsAsync(index, query, facetSetupDoc, start, pageSize).Result;
+		    return asyncServerClient.GetFacetsAsync(index, query, facetSetupDoc, start, pageSize).Result;
 		}
 
         /// <summary>
@@ -619,7 +611,7 @@ namespace Raven.Client.Connection
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize)
         {
-            return asyncDatabaseCommands.GetFacetsAsync(index, query, facets, start, pageSize).Result;
+            return asyncServerClient.GetFacetsAsync(index, query, facets, start, pageSize).Result;
         }
 
 		/// <summary>
@@ -629,7 +621,7 @@ namespace Raven.Client.Connection
 		/// <param name="patches">Array of patch requests</param>
 		public RavenJObject Patch(string key, PatchRequest[] patches)
 		{
-		    return asyncDatabaseCommands.PatchAsync(key, patches, null).Result;
+		    return asyncServerClient.PatchAsync(key, patches, null).Result;
 		}
 
 		/// <summary>
@@ -640,7 +632,7 @@ namespace Raven.Client.Connection
 		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
 		public RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing)
 		{
-		    return asyncDatabaseCommands.PatchAsync(key, patches, ignoreMissing).Result;
+		    return asyncServerClient.PatchAsync(key, patches, ignoreMissing).Result;
 		}
 
 		/// <summary>
@@ -650,7 +642,7 @@ namespace Raven.Client.Connection
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch)
 		{
-            return asyncDatabaseCommands.PatchAsync(key, patch, null).Result;
+            return asyncServerClient.PatchAsync(key, patch, null).Result;
 		}
 
 		/// <summary>
@@ -661,7 +653,7 @@ namespace Raven.Client.Connection
 		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing)
 		{
-            return asyncDatabaseCommands.PatchAsync(key, patch, ignoreMissing).Result;
+            return asyncServerClient.PatchAsync(key, patch, ignoreMissing).Result;
 		}
 
 		/// <summary>
@@ -672,7 +664,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		public RavenJObject Patch(string key, PatchRequest[] patches, Etag etag)
 		{
-            return asyncDatabaseCommands.PatchAsync(key, patches, etag).Result;
+            return asyncServerClient.PatchAsync(key, patches, etag).Result;
 		}
 
 		/// <summary>
@@ -684,7 +676,7 @@ namespace Raven.Client.Connection
 		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
 		public RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata)
 		{
-            return asyncDatabaseCommands.PatchAsync(key, patchesToExisting, patchesToDefault, defaultMetadata).Result;
+            return asyncServerClient.PatchAsync(key, patchesToExisting, patchesToDefault, defaultMetadata).Result;
 		}
 
 		/// <summary>
@@ -695,7 +687,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag)
 		{
-            return asyncDatabaseCommands.PatchAsync(key, patch, etag).Result;
+            return asyncServerClient.PatchAsync(key, patch, etag).Result;
 		}
 
 		/// <summary>
@@ -707,7 +699,7 @@ namespace Raven.Client.Connection
 		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata)
 		{
-            return asyncDatabaseCommands.PatchAsync(key, patchExisting, patchDefault, defaultMetadata).Result;
+            return asyncServerClient.PatchAsync(key, patchExisting, patchDefault, defaultMetadata).Result;
 		}
 
 		/// <summary>
@@ -715,7 +707,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public IDisposable DisableAllCaching()
 		{
-		    return asyncDatabaseCommands.DisableAllCaching();
+		    return asyncServerClient.DisableAllCaching();
 		}
 
 		#endregion
@@ -725,7 +717,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public ProfilingInformation ProfilingInformation
 		{
-			get { return asyncDatabaseCommands.ProfilingInformation; }
+			get { return asyncServerClient.ProfilingInformation; }
 		}
 
 		/// <summary>
@@ -735,7 +727,7 @@ namespace Raven.Client.Connection
 		public void Dispose()
 		{
 			GC.SuppressFinalize(this);
-            asyncDatabaseCommands.Dispose();
+            asyncServerClient.Dispose();
 		}
 
 		/// <summary>
@@ -748,13 +740,13 @@ namespace Raven.Client.Connection
 
 		public RavenJToken GetOperationStatus(long id)
 		{
-		    return asyncDatabaseCommands.GetOperationStatusAsync(id).Result;
+		    return asyncServerClient.GetOperationStatusAsync(id).Result;
 		}
 
         //TODO Owin host handles 100s, is this needed?
 		public IDisposable Expect100Continue()
 		{
-			var servicePoint = ServicePointManager.FindServicePoint(new Uri(asyncDatabaseCommands.Url));
+			var servicePoint = ServicePointManager.FindServicePoint(new Uri(asyncServerClient.Url));
 			servicePoint.Expect100Continue = true;
 			return new DisposableAction(() => servicePoint.Expect100Continue = false);
 		}
