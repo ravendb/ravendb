@@ -18,28 +18,28 @@ namespace Raven.Abstractions.Indexing
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinition"/> class.
 		/// </summary>
-		public IndexDefinition() 
-        {
+		public IndexDefinition()
+		{
 			Maps = new HashSet<string>();
 			Indexes = new Dictionary<string, FieldIndexing>();
 			Stores = new Dictionary<string, FieldStorage>();
 			Analyzers = new Dictionary<string, string>();
 			SortOptions = new Dictionary<string, SortOptions>();
 			Fields = new List<string>();
-		    Suggestions = new Dictionary<string, SuggestionOptions>();
+			Suggestions = new Dictionary<string, SuggestionOptions>();
 			TermVectors = new Dictionary<string, FieldTermVector>();
 			SpatialIndexes = new Dictionary<string, SpatialOptions>();
 		}
 
-	    /// <summary>
+		/// <summary>
 		/// Get or set the id of this index
 		/// </summary>
 		public int IndexId { get; set; }
 
         /// <summary>
         /// This is the means by which the outside world refers to this index defiintion
-        /// </summary>
-        public string Name { get; set; }
+		/// </summary>
+		public string Name { get; set; }
 
 		/// <summary>
 		/// Get or set the index lock mode
@@ -141,6 +141,19 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		/// <value>The spatial options.</value>
 		public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
+
+		/// <summary>
+        /// Internal map of field names to expressions generating them
+        /// Only relevant for auto indexes and only used internally
+        /// </summary>
+        public IDictionary<string, string> InternalFieldsMapping { get; set; }
+
+		/// <summary>
+		/// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
+		/// the one document produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
+		/// Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.
+		/// </summary>
+		public int? MaxIndexOutputsPerDocument { get; set; }
 
 		/// <summary>
 		/// Equals the specified other.
@@ -308,9 +321,10 @@ namespace Raven.Abstractions.Indexing
 			var indexDefinition = new IndexDefinition
 			{
 				IndexId = IndexId,
-        Name = Name,
+				Name = Name,
 				Reduce = Reduce,
 				TransformResults = TransformResults,
+                MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
 				cachedHashCodeAsBytes = cachedHashCodeAsBytes
 			};
 
@@ -350,9 +364,9 @@ namespace Raven.Abstractions.Indexing
 		/// </summary>
 		public string TransformResults { get; set; }
 		public int IndexId { get; set; }
-	    public string Name { get; set; }
+		public string Name { get; set; }
 
-	    public bool Equals(TransformerDefinition other)
+		public bool Equals(TransformerDefinition other)
 		{
 			return string.Equals(TransformResults, other.TransformResults);
 		}

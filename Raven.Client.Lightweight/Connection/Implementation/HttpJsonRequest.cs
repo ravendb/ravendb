@@ -19,6 +19,7 @@ using System.IO.Compression;
 #if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -125,6 +126,11 @@ namespace Raven.Client.Connection
 			webRequest.Credentials = null;
 			webRequest.UseDefaultCredentials = false;
 			disabledAuthRetries = true;
+		}
+
+		public void RemoveAuthorizationHeader()
+		{
+			webRequest.Headers.Remove("Authorization");
 		}
 
 		public Task ExecuteRequestAsync()
@@ -838,7 +844,7 @@ namespace Raven.Client.Connection
 							break;
 						case "If-Modified-Since":
 							DateTime tmp;
-							DateTime.TryParse(value, out tmp);
+							DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out tmp);
 							webRequest.IfModifiedSince = tmp;
 							break;
 						case "Accept":

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions;
@@ -66,7 +67,7 @@ namespace Raven.Bundles.Expiration
 			try
 			{
 				DateTime currentTime = SystemTime.UtcNow;
-				string nowAsStr = currentTime.ToString(Default.DateTimeFormatsToWrite);
+				string nowAsStr = currentTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
 				logger.Debug("Trying to find expired documents to delete");
 				var query = "Expiry:[* TO " + nowAsStr + "]";
 

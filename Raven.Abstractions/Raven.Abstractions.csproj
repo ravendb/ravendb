@@ -125,8 +125,6 @@
     <Compile Include="Data\RestoreStatus.cs" />
     <Compile Include="Data\ScriptedIndexResults.cs" />
     <Compile Include="Data\ScriptedPatchRequest.cs" />
-    <Compile Include="Data\AggregationOperation.cs" />
-    <Compile Include="Data\AggregationOperationExtensions.cs" />
     <Compile Include="Data\Attachment.cs" />
     <Compile Include="Data\BackupStatus.cs" />
     <Compile Include="Data\BatchResult.cs" />

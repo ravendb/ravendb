@@ -88,15 +88,21 @@ namespace Raven.Database.Indexing
                         .ToList();
 
                     var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
+                    var missingReferencedDocs = new ConcurrentQueue<HashSet<string>>();
 
                     BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
                     {
-                        var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(context.Database, indexDefinition, viewGenerator);
+						var anonymousObjectToLuceneDocumentConverter = new AnonymousObjectToLuceneDocumentConverter(context.Database, indexDefinition, viewGenerator);
                         var luceneDoc = new Document();
                         var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
                                                         Field.Index.NOT_ANALYZED_NO_NORMS);
 
-                        using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
+                        using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, (references,
+                                                                                                      missing) =>
+                        {
+                            allReferencedDocs.Enqueue(references);
+                            missingReferencedDocs.Enqueue(missing);
+                        } ))
                         {
                             string currentDocId = null;
                             int outputPerDocId = 0;
@@ -115,51 +121,38 @@ namespace Raven.Database.Indexing
                                 }
                                 outputPerDocId++;
                                 EnsureValidNumberOfOutputsForDocument(currentDocId, outputPerDocId);
-                                Interlocked.Increment(ref count);
-                                luceneDoc.GetFields().Clear();
-                                luceneDoc.Boost = boost;
-                                documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
-                                luceneDoc.Add(documentIdField);
-                                foreach (var field in indexingResult.Fields)
-                                {
-                                    luceneDoc.Add(field);
-                                }
-                                batchers.ApplyAndIgnoreAllErrors(
-                                    exception =>
+                                    Interlocked.Increment(ref count);
+                                    luceneDoc.GetFields().Clear();
+                                    luceneDoc.Boost = boost;
+                                    documentIdField.SetValue(indexingResult.NewDocId.ToLowerInvariant());
+                                    luceneDoc.Add(documentIdField);
+                                    foreach (var field in indexingResult.Fields)
                                     {
-                                        logIndexing.WarnException(
+                                        luceneDoc.Add(field);
+                                    }
+                                    batchers.ApplyAndIgnoreAllErrors(
+                                        exception =>
+                                        {
+                                            logIndexing.WarnException(
                                             string.Format(
                                                 "Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
                                                 indexId, indexingResult.NewDocId),
-                                            exception);
+                                                exception);
                                         context.AddError(indexId,
-                                                         indexingResult.NewDocId,
-                                                         exception.Message,
-                                                         "OnIndexEntryCreated Trigger"
-                                            );
-                                    },
-                                    trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
-                                LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
-                                AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
+                                                             indexingResult.NewDocId,
+                                                             exception.Message,
+                                                             "OnIndexEntryCreated Trigger"
+                                                );
+                                        },
+                                        trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
+                                    LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
+                                    AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
 
                                 Interlocked.Increment(ref stats.IndexingSuccesses);
                             }
                         }
                     });
-
-                    var dic = context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex;
-                    IDictionary<string, HashSet<string>> result;
-                    while (allReferencedDocs.TryDequeue(out result))
-                    {
-                        foreach (var referencedDocument in result)
-                        {
-                            actions.Indexing.UpdateDocumentReferences(indexId, referencedDocument.Key, referencedDocument.Value);
-                            foreach (var childDocumentKey in referencedDocument.Value)
-                            {
-                                dic.GetOrAdd(childDocumentKey, k => new ConcurrentBag<string>()).Add(referencedDocument.Key);
-                            }
-                        }
-                    }
+                    UpdateDocumentReferences(actions, allReferencedDocs, missingReferencedDocs);
 
                 }
                 catch (Exception e)
@@ -336,8 +329,8 @@ namespace Raven.Database.Indexing
                 stats.Operation = IndexingWorkStats.Status.Ignore;
                 logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), indexId));
                 var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
-                  .Where(x => x != null)
-                  .ToList();
+                    .Where(x => x != null)
+                    .ToList();
 
                 keys.Apply(
                     key => batchers.ApplyAndIgnoreAllErrors(

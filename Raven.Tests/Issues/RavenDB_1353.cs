@@ -105,7 +105,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void ShouldDisableMapReduceIndexWithTooManyOutputsPerDocument()
+		public void ShouldMarkMapReduceIndexAsErroredWhenItProducesTooManyOutputsPerDocument()
 		{
 			using (var store = NewDocumentStore())
 			{

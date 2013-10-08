@@ -486,8 +486,11 @@ namespace Raven.Database.Server
 
 		protected void CleanupDatabase(string db, bool skipIfActive)
 		{
-			using (ResourcesStoresCache.WithAllLocks())
+			using (var locker = ResourcesStoresCache.TryWithAllLocks())
 			{
+			    if (locker == null)
+			        return;
+
 				DateTime time;
 				Task<DocumentDatabase> databaseTask;
 				if (ResourcesStoresCache.TryGetValue(db, out databaseTask) == false)

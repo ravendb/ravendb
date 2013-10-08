@@ -139,29 +139,5 @@ namespace Raven.Tests.Suggestions
 				Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
 			}
 		}
-
-		[Fact]
-		public void ExactMatchDynamic()
-		{
-			using (var s = documentStore.OpenSession())
-			{
-				s.Store(new User { Name = "Ayende" });
-				s.Store(new User { Name = "Oren" });
-				s.SaveChanges();
-			}
-
-			using (var s = documentStore.OpenSession())
-			{
-				var query = s.Query<User>()
-					.Where(user => user.Name == "Oren")
-					.Customize(x => x.WaitForNonStaleResults());
-
-				GC.KeepAlive(query.FirstOrDefault());
-				var suggestionQueryResult = query.Suggest();
-
-				Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-				Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
-			}
-		}
 	}
 }

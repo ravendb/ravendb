@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading;
 using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;
@@ -32,7 +33,11 @@ namespace Raven.Tests.Storage
 				tx.Batch(viewer =>
 					Assert.True(viewer.Indexing.GetIndexesStats().Any(x => x.Id == 555)));
 
-				tx.Batch(mutator => mutator.Indexing.DeleteIndex(555));
+				tx.Batch(mutator =>
+				{
+					mutator.Indexing.PrepareIndexForDeletion(555);
+					mutator.Indexing.DeleteIndex(555, new CancellationToken());
+				});
 				tx.Batch(viewer =>
 					Assert.False(viewer.Indexing.GetIndexesStats().Any(x => x.Id == 555)));
 			}
@@ -58,7 +63,7 @@ namespace Raven.Tests.Storage
 				tx.Batch(mutator => mutator.Indexing.AddIndex(555, false));
 				tx.Batch(mutator=> mutator.Indexing.UpdateIndexingStats(555, new IndexingWorkStats
 				{
-				    IndexingAttempts = 1
+					IndexingAttempts = 1
 				}));
 				tx.Batch(viewer =>
 					Assert.Equal(1, viewer.Indexing.GetFailureRate(555).Attempts));
@@ -73,14 +78,14 @@ namespace Raven.Tests.Storage
 				tx.Batch(mutator => mutator.Indexing.AddIndex(555, false));
 				tx.Batch(mutator => mutator.Indexing.UpdateIndexingStats(555, new IndexingWorkStats
 				{
-				    IndexingAttempts = 1
+					IndexingAttempts = 1
 				}));
 				tx.Batch(viewer =>
 					Assert.Equal(1, viewer.Indexing.GetFailureRate(555).Attempts));
 
 				tx.Batch(mutator => mutator.Indexing.UpdateIndexingStats(555, new IndexingWorkStats
 				{
-				    IndexingAttempts = -1
+					IndexingAttempts = -1
 				}));
 
 				tx.Batch(viewer =>
@@ -97,7 +102,7 @@ namespace Raven.Tests.Storage
 				tx.Batch(mutator => mutator.Indexing.AddIndex(555, false));
 				tx.Batch(mutator => mutator.Indexing.UpdateIndexingStats(555, new IndexingWorkStats
 				{
-				    IndexingErrors = 1
+					IndexingErrors = 1
 				}));
 				tx.Batch(viewer =>
 					Assert.Equal(1, viewer.Indexing.GetFailureRate(555).Errors));
@@ -112,7 +117,7 @@ namespace Raven.Tests.Storage
 				tx.Batch(mutator => mutator.Indexing.AddIndex(555, false));
 				tx.Batch(mutator => mutator.Indexing.UpdateIndexingStats(555, new IndexingWorkStats
 				{
-				    IndexingSuccesses = 1
+					IndexingSuccesses = 1
 				}));
 				tx.Batch(viewer =>
 					Assert.Equal(1, viewer.Indexing.GetFailureRate(555).Successes));

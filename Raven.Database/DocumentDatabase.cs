@@ -856,7 +856,6 @@ namespace Raven.Database
                                 }, metadata);
                             });
 
-                        ScheduleDocumentsForReindexIfNeeded(key);
                         workContext.ShouldNotifyAboutWork(() => "PUT " + key);
                     }
                     else
@@ -889,7 +888,15 @@ namespace Raven.Database
             {
                 Etag preTouchEtag;
                 Etag afterTouchEtag;
+                try
+                {
                 actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+                }
+                catch (ConcurrencyException)
+                {
+                    continue;
+                }
+
                 if (preTouchEtag == null || afterTouchEtag == null)
                     continue;
 
@@ -1102,37 +1109,12 @@ namespace Raven.Database
                         deleted = doc != null;
                     }
 
-                    ScheduleDocumentsForReindexIfNeeded(key);
                     workContext.ShouldNotifyAboutWork(() => "DEL " + key);
                 });
 
                 metadata = metadataVar;
                 return deleted;
             }
-        }
-
-        private void ScheduleDocumentsForReindexIfNeeded(string key)
-        {
-            log.Debug("[Document Reindexing] DocumentDatabase::ScheduleDocumentsForReindexIfNeeded() started (key = {0})",key);
-
-            bool wasKeyEnqueued = false;
-            var queue = workContext.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex;
-            if (queue != null)
-            {
-                log.Debug("[Document Reindexing] workContext.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex is not null, key enqueued (key = {0})", key);
-                wasKeyEnqueued = true;
-                queue.Enqueue(key);
-            }
-
-            queue = workContext.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex;
-            if (queue != null)
-            {
-                log.Debug("[Document Reindexing] workContext.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex is not null, key enqueued (key = {0})", key);
-                wasKeyEnqueued = true;
-                queue.Enqueue(key);
-            }
-
-            if (!wasKeyEnqueued) log.Debug("[Document Reindexing] DocumentDatabase::ScheduleDocumentsForReindexIfNeeded() finished without key enqueue (key = {0})", key);
         }
 
         public bool HasTransaction(string txId)
@@ -1243,15 +1225,21 @@ namespace Raven.Database
                     break;
             }
 
-            IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
-            // this has to happen in this fashion so we will expose the in memory status after the commit, but 
-            // before the rest of the world is notified about this.
-            IndexDefinitionStorage.CreateAndPersistIndex(definition);
-            IndexStorage.CreateIndexImplementation(definition);
 
             TransactionalStorage.Batch(actions =>
             {
+                definition.IndexId = (int)GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions, null);
+                IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
+
+                // this has to happen in this fashion so we will expose the in memory status after the commit, but 
+                // before the rest of the world is notified about this.
+
+                IndexDefinitionStorage.CreateAndPersistIndex(definition);
+                IndexStorage.CreateIndexImplementation(definition);
+
+				InvokeSuggestionIndexing(name, definition);
+
                 actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
                 workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
             });
@@ -1260,8 +1248,6 @@ namespace Raven.Database
             // we have to do it in this way so first we prepare all the elements of the 
             // index, then we add it to the storage in a way that make it public
             IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
-
-			InvokeSuggestionIndexing(name, definition);
 
 			workContext.ClearErrorsFor(name);
 
@@ -1300,8 +1286,7 @@ namespace Raven.Database
 
         private IndexCreationOptions FindIndexCreationOptions(IndexDefinition definition, ref string name)
         {
-	        definition.Name = name;
-            definition.IndexId = IndexDefinitionStorage.NextIndexId();
+  	        definition.Name = name;
             definition.RemoveDefaultValues();
             IndexDefinitionStorage.ResolveAnalyzers(definition);
             var findIndexCreationOptions = IndexDefinitionStorage.FindIndexCreationOptions(definition);
@@ -1373,7 +1358,7 @@ namespace Raven.Database
                             throw new IndexDisabledException(indexFailureInformation);
                         }
                         var docRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState, query.QueryInputs, idsToLoad);
-                        var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.AggregationOperation,
+                        var fieldsToFetch = new FieldsToFetch(query.FieldsToFetch, query.IsDistinct,
                                                               viewGenerator.ReduceDefinition == null
                                                                 ? Constants.DocumentIdFieldName
                                                                 : Constants.ReduceKeyFieldName);
@@ -1530,7 +1515,7 @@ namespace Raven.Database
                         {
                             throw new IndexDisabledException(indexFailureInformation);
                         }
-                        loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, AggregationOperation.None, Constants.DocumentIdFieldName), IndexQueryTriggers)
+                        loadedIds = new HashSet<string>(from queryResult in IndexStorage.Query(index, query, result => true, new FieldsToFetch(null, false, Constants.DocumentIdFieldName), IndexQueryTriggers)
                                                         select queryResult.Key);
                     });
                 stale = isStale;
@@ -1541,7 +1526,6 @@ namespace Raven.Database
                 RemoveFromCurrentlyRunningQueryList(index, queryStat);
             }
         }
-
 
         public void DeleteTransfom(string name)
 		{
@@ -1554,36 +1538,59 @@ namespace Raven.Database
             {
                 var instance = IndexDefinitionStorage.GetIndexDefinition(name);
                 if (instance == null) return;
-                IndexDefinitionStorage.RemoveIndex(name);
-                IndexStorage.DeleteIndex(name);
-                //we may run into a conflict when trying to delete if the index is currently
-                //busy indexing documents, worst case scenario, we will have an orphaned index
-                //row which will get cleaned up on next db restart.
-                for (var i = 0; i < 10; i++)
-                {
-                    try
-                    {
-                        TransactionalStorage.Batch(action =>
-                        {
-                            action.Indexing.DeleteIndex(instance.IndexId);
-                            workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
-                        });
 
+                // Set up a flag to signal that this is something we're doing
+                TransactionalStorage.Batch(actions => actions.Lists.Set("Raven/Indexes/PendingDeletion", instance.IndexId.ToString(CultureInfo.InvariantCulture), (RavenJObject.FromObject(new
+                {
+                   TimeOfOriginalDeletion = SystemTime.UtcNow ,
+                   instance.IndexId
+                })) , UuidType.Tasks));
+
+                // Delete the main record synchronously
+                IndexDefinitionStorage.RemoveIndex(name);
+                IndexStorage.DeleteIndex(instance.IndexId);
+
+				ConcurrentSet<string> _;
+                workContext.DoNotTouchAgainIfMissingReferences.TryRemove(instance.IndexId, out _);
+                workContext.ClearErrorsFor(name);
+
+                // And delete the data in the background
+                StartDeletingIndexData(instance.IndexId);
+
+                // We raise the notification now because as far as we're concerned it is done *now*
                         TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
                         {
                             Name = name,
                             Type = IndexChangeTypes.IndexRemoved,
                         }));
-
-                        return;
-                    }
-                    catch (ConcurrencyException)
-                    {
-                        Thread.Sleep(100);
-                    }
-                }
-                workContext.ClearErrorsFor(name);
             }
+        }
+
+        internal void StartDeletingIndexData(int id)
+        {
+            //remove the header information in a sync process
+            TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(id));
+            var task = Task.Run(() =>
+            {
+                // Data can take a while
+                IndexStorage.DeleteIndexData(id);
+                TransactionalStorage.Batch(actions =>
+                {
+                    // And Esent data can take a while too
+                    actions.Indexing.DeleteIndex(id, WorkContext.CancellationToken);
+                    if (WorkContext.CancellationToken.IsCancellationRequested)
+                        return;
+                   
+                    actions.Lists.Remove("Raven/Indexes/PendingDeletion", id.ToString(CultureInfo.InvariantCulture));
+                });
+            });
+
+            long taskId;
+            AddTask(task, null, out taskId);
+            PendingTaskAndState value;
+            task.ContinueWith(_ => pendingTasks.TryRemove(taskId, out value));
+
+           
         }
 
         public Attachment GetStatic(string name)
@@ -2465,8 +2472,6 @@ namespace Raven.Database
 	                    {
 							RemoveReservedProperties(doc.DataAsJson);
 							RemoveMetadataReservedProperties(doc.Metadata);                                                       
-
-                            ScheduleDocumentsForReindexIfNeeded(doc.Key);
 
 							if (options.CheckReferencesInIndexes)
 								keys.Add(doc.Key);

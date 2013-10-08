@@ -38,8 +38,7 @@ namespace Raven.Studio.Features.Query
                 PageSize = fields.GetPageSize(250),
                 SkipTransformResults = fields.GetSkipTransformResults(),
                 FieldsToFetch = fields["fetch"].ToArray(),
-                GroupBy = fields["groupBy"].ToArray(),
-                AggregationOperation = fields.GetAggregationOperation(),
+                IsDistinct = fields.IsDistinct(),
                 SortedFields = fields["sort"]
                     .EmptyIfNull()
                     .Select(x => new SortedField(x))
@@ -85,13 +84,14 @@ namespace Raven.Studio.Features.Query
             return pageSize;
         }
 
-        public static AggregationOperation GetAggregationOperation(this ILookup<string, string> fields)
+        public static bool IsDistinct(this ILookup<string, string> fields)
         {
-            var aggAsString = fields["aggregation"].FirstOrDefault();
-            if (aggAsString == null)
-                return AggregationOperation.None;
+	        var distinct = fields["distinct"].FirstOrDefault();
+	        if (string.Equals("true", distinct, StringComparison.OrdinalIgnoreCase))
+		        return true;
+	        var aggAsString = fields["aggregation"].FirstOrDefault(); // 2.x legacy support
 
-            return (AggregationOperation)Enum.Parse(typeof(AggregationOperation), aggAsString, true);
+	        return string.Equals("Distinct", aggAsString, StringComparison.OrdinalIgnoreCase);
         }
 
         public static DateTime? GetCutOff(this ILookup<string, string> fields)

@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -156,29 +157,32 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public void DeleteIndex(int id)
+	    public void PrepareIndexForDeletion(int id)
+	    {
+            Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+            Api.MakeKey(session, IndexesStats, id, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ))
+            {
+                Api.JetDelete(session, IndexesStats);
+            }
+
+            Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
+            Api.MakeKey(session, IndexesEtags, id, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ))
+            {
+                Api.JetDelete(session, IndexesEtags);
+            }
+
+            Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+            Api.MakeKey(session, IndexesStatsReduce, id, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ))
+            {
+                Api.JetDelete(session, IndexesStatsReduce);
+            }
+	    }
+
+	    public void DeleteIndex(int id, CancellationToken cancellationToken)
 		{
-			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-			Api.MakeKey(session, IndexesStats, id, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ))
-			{
-				Api.JetDelete(session, IndexesStats);
-			}
-
-			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
-			Api.MakeKey(session, IndexesEtags, id, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ))
-			{
-				Api.JetDelete(session, IndexesEtags);
-			}
-
-			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-			Api.MakeKey(session, IndexesStatsReduce, id, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ))
-			{
-				Api.JetDelete(session, IndexesStatsReduce);
-			}
-
 			foreach (var op in new[]
 			{
 				new { Table = MappedResults, Index = "by_view_and_doc_key" },
@@ -201,7 +205,7 @@ namespace Raven.Storage.Esent.StorageActions
 						break;
 					MaybePulseTransaction();
 					Api.JetDelete(session, op.Table);
-				} while (Api.TryMoveNext(session, op.Table));
+                } while (Api.TryMoveNext(session, op.Table) && cancellationToken.IsCancellationRequested == false);
 			}
 
 		}
