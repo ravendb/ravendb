@@ -16,7 +16,7 @@ namespace Raven.Smuggler.Imports
 	public class SmugglerJintHelper
 	{
 		private static JintEngine jint;
-		private static readonly Dictionary<string, JTokenType> PropertiesTypeByName = new Dictionary<string, JTokenType>();
+		private static Dictionary<string, JTokenType> propertiesTypeByName;
 		
 		public static void Initialize(SmugglerOptions options)
 		{
@@ -33,6 +33,8 @@ namespace Raven.Smuggler.Imports
 						return ({0}).apply(this, [docInner]);
 					}};", options.TransformScript));
 			}
+
+			propertiesTypeByName = new Dictionary<string, JTokenType>();
 		}
 
 		public static RavenJObject Transform(string transformScript, RavenJObject input)
@@ -88,7 +90,7 @@ namespace Raven.Smuggler.Imports
 					var num = (double)v.Value;
 
 					JTokenType type;
-					if (PropertiesTypeByName.TryGetValue(propertyName, out type))
+					if (propertiesTypeByName.TryGetValue(propertyName, out type))
 					{
 						if (type == JTokenType.Float)
 							return new RavenJValue(num);
@@ -142,7 +144,7 @@ namespace Raven.Smuggler.Imports
 			foreach (var prop in doc)
 			{
 				if (prop.Value is RavenJValue)
-					PropertiesTypeByName[prop.Key] = prop.Value.Type;
+					propertiesTypeByName[prop.Key] = prop.Value.Type;
 				var val = ToJsInstance(global, prop.Value);
 				jsObject.DefineOwnProperty(prop.Key, val);
 			}

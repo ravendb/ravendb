@@ -34,7 +34,7 @@ namespace Raven.Database.Json
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
-		private static readonly Dictionary<string, JTokenType> PropertiesTypeByName = new Dictionary<string, JTokenType>();
+		private static Dictionary<string, JTokenType> propertiesTypeByName;
 
 		public ScriptedJsonPatcher(DocumentDatabase database = null)
 		{
@@ -58,6 +58,7 @@ namespace Raven.Database.Json
 					return jsonDocument == null ? null : jsonDocument.ToJson();
 				};
 			}
+			propertiesTypeByName = new Dictionary<string, JTokenType>();
 		}
 
 		public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch, int size = 0, string docId = null)
@@ -202,7 +203,7 @@ namespace Raven.Database.Json
 					var num = (double)v.Value;
 
 					JTokenType type;
-					if (PropertiesTypeByName.TryGetValue(propertyName, out type))
+					if (propertiesTypeByName.TryGetValue(propertyName, out type))
 					{
 						if (type == JTokenType.Float)
 							return new RavenJValue(num);
@@ -256,7 +257,7 @@ namespace Raven.Database.Json
 			foreach (var prop in doc)
 			{
 				if (prop.Value is RavenJValue)
-					PropertiesTypeByName[prop.Key] = prop.Value.Type;
+					propertiesTypeByName[prop.Key] = prop.Value.Type;
 				var val = ToJsInstance(global, prop.Value);
 				jsObject.DefineOwnProperty(prop.Key, val);
 			}
