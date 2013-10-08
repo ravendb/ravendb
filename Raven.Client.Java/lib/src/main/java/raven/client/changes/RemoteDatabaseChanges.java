@@ -25,13 +25,16 @@ import raven.abstractions.basic.VoidArgs;
 import raven.abstractions.closure.Action0;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function1;
+import raven.abstractions.closure.Function4;
 import raven.abstractions.closure.Predicate;
 import raven.abstractions.closure.Predicates;
 import raven.abstractions.data.BulkInsertChangeNotification;
 import raven.abstractions.data.DocumentChangeNotification;
+import raven.abstractions.data.Etag;
 import raven.abstractions.data.HttpMethods;
 import raven.abstractions.data.IndexChangeNotification;
 import raven.abstractions.data.ReplicationConflictNotification;
+import raven.abstractions.data.ReplicationConflictTypes;
 import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.logging.ILog;
@@ -64,7 +67,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
   private final DocumentConvention conventions;
   private final ReplicationInformer replicationInformer;
   private final Action0 onDispose;
-  //TODO: private readonly Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
+  private final Function4<String, Etag, String[] , String, Boolean> tryResolveConflictByUsingRegisteredConflictListeners;
   private final AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<>(String.CASE_INSENSITIVE_ORDER);
   private Closeable connection;
   private Date lastHeartbeat;
@@ -97,7 +100,8 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
 
 
   public RemoteDatabaseChanges(String url, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions,
-    ReplicationInformer replicationInformer, Action0 onDispose) {
+    ReplicationInformer replicationInformer, Action0 onDispose,
+    Function4<String, Etag, String[], String, Boolean> tryResolveConflictByUsingRegisteredConflictListeners) {
     connectionStatusChanged = Arrays.<EventHandler<VoidArgs>> asList(new EventHandler<VoidArgs>() {
       @Override
       public void handle(Object sender, VoidArgs event) {
@@ -115,11 +119,10 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
     this.conventions = conventions;
     this.replicationInformer = replicationInformer;
     this.onDispose = onDispose;
-    //TODO: this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
+    this.tryResolveConflictByUsingRegisteredConflictListeners = tryResolveConflictByUsingRegisteredConflictListeners;
 
     establishConnection();
   }
-  //TODO: one more param !:  Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync
 
   @SuppressWarnings("null")
   public void establishConnection() {
@@ -579,7 +582,20 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
             counter.send(indexChangeNotification);
           }
           break;
-          //TODO:   "ReplicationConflictNotification":
+        case "ReplicationConflictNotification":
+          ReplicationConflictNotification replicationConflictNotification = mapper.readValue(value.toString(), ReplicationConflictNotification.class);
+          for (LocalConnectionState counter: counters.values()) {
+            counter.send(replicationConflictNotification);
+          }
+          if (replicationConflictNotification.getItemType().equals(ReplicationConflictTypes.DOCUMENT_REPLICATION_CONFLICT)) {
+            boolean result = tryResolveConflictByUsingRegisteredConflictListeners.apply(replicationConflictNotification.getId(),
+                replicationConflictNotification.getEtag(), replicationConflictNotification.getConflicts(), null);
+            if (result) {
+              logger.debug("Document replication conflict for %s was resolved by one of the registered conflict listeners",
+                replicationConflictNotification.getId());
+            }
+          }
+          break;
         case "Disconnect":
           if (connection != null) {
             connection.close();

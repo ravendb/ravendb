@@ -1,11 +1,16 @@
 package raven.tests.bundles.replication;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.lang.StringUtils;
 import org.junit.After;
 import org.junit.Assert;
 
+import raven.abstractions.basic.Reference;
+import raven.abstractions.data.JsonDocument;
+import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.replication.ReplicationDestination;
 import raven.abstractions.replication.ReplicationDestination.TransitiveReplicationOptions;
 import raven.abstractions.replication.ReplicationDocument;
@@ -13,6 +18,7 @@ import raven.client.IDocumentSession;
 import raven.client.IDocumentStore;
 import raven.client.RavenDBAwareTests;
 import raven.client.document.DocumentStore;
+import raven.client.listeners.IDocumentConflictListener;
 
 public class ReplicationBase extends RavenDBAwareTests {
 
@@ -52,7 +58,6 @@ public class ReplicationBase extends RavenDBAwareTests {
 
   @After
   public void afterTest() {
-    //TODO: dispose http client!
     try {
       for (int i = 0; i < stores.size(); i++) {
         stopServer(DEFAULT_SERVER_PORT_1 + i);
@@ -73,6 +78,28 @@ public class ReplicationBase extends RavenDBAwareTests {
     ReplicationDocument repDoc = new ReplicationDocument();
     repDoc.getDestinations().add(rep);
     return repDoc;
+  }
+
+  public static class ClientSideConflictResolution implements IDocumentConflictListener {
+
+    @Override
+    public boolean tryResolveConflict(String key, List<JsonDocument> conflictedDocs, Reference<JsonDocument> resolvedDocument) {
+      RavenJObject dataAsJson = new RavenJObject();
+
+      List<String> items = new ArrayList<>();
+
+      for (JsonDocument conflictedDoc : conflictedDocs) {
+        items.add(conflictedDoc.getDataAsJson().value(String.class,"Name"));
+      }
+
+      Collections.sort(items);
+      String nameJoined = StringUtils.join(items, " ");
+      dataAsJson.add("Name", nameJoined);
+
+      resolvedDocument.value = new JsonDocument(dataAsJson, new RavenJObject(), null, null, null, null);
+      return true;
+    }
+
   }
 
 }

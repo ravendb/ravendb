@@ -2317,6 +2317,36 @@ public class ServerClient implements IDatabaseCommands {
     return new AdminServerClient(this);
   }
 
+  @Override
+  public Boolean tryResolveConflictByUsingRegisteredListeners(String key, Etag etag, String[] conflictedIds,
+    String opUrl) {
+    if (StringUtils.isEmpty(opUrl)) {
+      opUrl = url;
+    }
+    if (conflictListeners.length > 0 && resolvingConflict == false) {
+      resolvingConflict = true;
+      try {
+        MultiLoadResult multiLoadResult = get(conflictedIds, null);
+        List<JsonDocument> results = new ArrayList<>();
+        for (RavenJObject document : multiLoadResult.getResults()) {
+          results.add(SerializationHelper.toJsonDocument(document));
+        }
+
+        for (IDocumentConflictListener conflictListener : conflictListeners) {
+          Reference<JsonDocument> resolvedDocumentRef = new Reference<>();
+          if (conflictListener.tryResolveConflict(key, results, resolvedDocumentRef)) {
+            put(key, etag, resolvedDocumentRef.value.getDataAsJson(), resolvedDocumentRef.value.getMetadata());
+            return true;
+          }
+        }
+
+      } finally {
+        resolvingConflict = false;
+      }
+    }
+    return false;
+  }
+
 
 
 }

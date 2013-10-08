@@ -77,7 +77,6 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, 
 
 
   public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, IDatabaseChanges changes) {
-    //TODO: synchronizationContext (???)
     operationId = UUID.randomUUID();
     operationClient = client;
     operationChanges = changes;

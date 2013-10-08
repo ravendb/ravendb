@@ -697,5 +697,16 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    */
   public void deleteTransformer(String name);
 
+  /**
+   * Tries to resolve conflict using registered listeners
+   * @param key
+   * @param etag
+   * @param conflictedIds
+   * @param opUrl
+   * @return
+   */
+  public Boolean tryResolveConflictByUsingRegisteredListeners(String key, Etag etag, String[] conflictedIds,
+    String opUrl);
+
 
 }

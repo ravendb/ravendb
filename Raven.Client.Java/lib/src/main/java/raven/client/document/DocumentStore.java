@@ -22,10 +22,12 @@ import raven.abstractions.closure.Action0;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function0;
 import raven.abstractions.closure.Function1;
+import raven.abstractions.closure.Function4;
 import raven.abstractions.connection.WebRequestEventArgs;
 import raven.abstractions.data.BulkInsertOptions;
 import raven.abstractions.data.ConnectionStringParser;
 import raven.abstractions.data.Constants;
+import raven.abstractions.data.Etag;
 import raven.abstractions.data.RavenConnectionStringOptions;
 import raven.abstractions.oauth.BasicAuthenticator;
 import raven.abstractions.oauth.SecuredAuthenticator;
@@ -260,7 +262,7 @@ public class DocumentStore extends DocumentStoreBase {
     currentSessionId.set(sessionId);
     try {
       DocumentSession session = new DocumentSession(options.getDatabase(), this, listeners, sessionId,
-          setupCommands(getDatabaseCommands(), options.getDatabase(), options));
+        setupCommands(getDatabaseCommands(), options.getDatabase(), options));
       session.setDatabaseName(options.getDatabase() != null ? options.getDatabase() : defaultDatabase);
 
       afterSessionCreated(session);
@@ -414,7 +416,7 @@ public class DocumentStore extends DocumentStoreBase {
         }
 
         return new ServerClient(databaseUrl, conventions,
-            new ReplicationInformerGetter()
+          new ReplicationInformerGetter()
         , null, jsonRequestFactory, currentSessionId.get(), listeners.getConflictListeners().toArray(new IDocumentConflictListener[0]));
       }
     };
@@ -496,32 +498,37 @@ public class DocumentStore extends DocumentStoreBase {
   }
 
   protected IDatabaseChanges createDatabaseChanges(String database) {
-      if (StringUtils.isEmpty(url)) {
-        throw new IllegalStateException("Changes API requires usage of server/client");
+    if (StringUtils.isEmpty(url)) {
+      throw new IllegalStateException("Changes API requires usage of server/client");
+    }
+
+    if (database == null) {
+      database = defaultDatabase;
+    }
+
+
+    String dbUrl = MultiDatabase.getRootDatabaseUrl(url);
+    if (StringUtils.isNotEmpty(database)) {
+      dbUrl = dbUrl + "/databases/" + database;
+    }
+    final String databaseClousure = database;
+
+    return new RemoteDatabaseChanges(dbUrl,
+      jsonRequestFactory,
+      getConventions(),
+      getReplicationInformerForDatabase(database),
+      new Action0() {
+      @Override
+      public void apply() {
+        databaseChanges.remove(databaseClousure);
       }
-
-      if (database == null) {
-        database = defaultDatabase;
+    }, new Function4<String, Etag, String[], String, Boolean>() {
+      @Override
+      public Boolean apply(String key, Etag etag, String[] conflictedIds, String opUrl) {
+        return getDatabaseCommands().tryResolveConflictByUsingRegisteredListeners(key, etag, conflictedIds, opUrl);
       }
-
-
-      String dbUrl = MultiDatabase.getRootDatabaseUrl(url);
-      if (StringUtils.isNotEmpty(database)) {
-        dbUrl = dbUrl + "/databases/" + database;
-      }
-      final String databaseClousure = database;
-
-      return new RemoteDatabaseChanges(dbUrl,
-          jsonRequestFactory,
-          getConventions(),
-          getReplicationInformerForDatabase(database),
-          new Action0() {
-            @Override
-            public void apply() {
-              databaseChanges.remove(databaseClousure);
-            }
-          });
-//FIXME          ((AsyncServerClient)AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync);
+    }
+      );
   }
 
   /**
@@ -591,7 +598,7 @@ public class DocumentStore extends DocumentStoreBase {
         databaseName = Constants.SYSTEM_DATABASE;
       }
       observeChangesAndEvictItemsFromCacheForDatabases.putIfAbsent(databaseName,
-          new EvictItemsFromCacheBasedOnChanges(databaseName, createDatabaseChanges(databaseName), new ExpireItemsFromCacheAction()));
+        new EvictItemsFromCacheBasedOnChanges(databaseName, createDatabaseChanges(databaseName), new ExpireItemsFromCacheAction()));
     }
 
     super.afterSessionCreated(session);
