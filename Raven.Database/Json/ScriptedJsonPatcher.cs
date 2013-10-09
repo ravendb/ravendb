@@ -34,7 +34,7 @@ namespace Raven.Database.Json
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
-		private static Dictionary<string, JTokenType> propertiesTypeByName;
+		private readonly Dictionary<string, JTokenType> propertiesTypeByName;
 
 		public ScriptedJsonPatcher(DocumentDatabase database = null)
 		{
@@ -166,7 +166,7 @@ namespace Raven.Database.Json
 			return ToRavenJObject(jsObject);
 		}
 
-		public static RavenJObject ToRavenJObject(JsObject jsObject)
+		public RavenJObject ToRavenJObject(JsObject jsObject)
 		{
 			var rjo = new RavenJObject();
 			foreach (var key in jsObject.GetKeys())
@@ -188,7 +188,7 @@ namespace Raven.Database.Json
 			return rjo;
 		}
 
-		private static RavenJToken ToRavenJToken(JsInstance v, string propertyName)
+		private RavenJToken ToRavenJToken(JsInstance v, string propertyName)
 		{
 			switch (v.Class)
 			{
@@ -251,7 +251,7 @@ namespace Raven.Database.Json
 			}
 		}
 
-		protected static JsObject ToJsObject(IGlobal global, RavenJObject doc)
+		protected JsObject ToJsObject(IGlobal global, RavenJObject doc)
 		{
 			var jsObject = global.ObjectClass.New();
 			foreach (var prop in doc)
@@ -264,7 +264,7 @@ namespace Raven.Database.Json
 			return jsObject;
 		}
 
-		private static JsInstance ToJsInstance(IGlobal global, RavenJToken value)
+		private JsInstance ToJsInstance(IGlobal global, RavenJToken value)
 		{
 			switch (value.Type)
 			{
@@ -302,7 +302,7 @@ namespace Raven.Database.Json
 			}
 		}
 
-		private static JsArray ToJsArray(IGlobal global, RavenJArray array)
+		private JsArray ToJsArray(IGlobal global, RavenJArray array)
 		{
 			var jsArr = global.ArrayClass.New();
 			for (int i = 0; i < array.Length; i++)
