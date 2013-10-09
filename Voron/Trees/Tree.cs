@@ -158,6 +158,7 @@ namespace Voron.Trees
 				else // need to turn to tree
 				{
 					var tree = Create(tx, _cmp, TreeFlags.MultiValue);
+					tree.Name = string.Format("multi_" + Name);
 					var current = NodeHeader.GetData(tx, item);
 					tree.DirectAdd(tx, current, 0);
 					tree.DirectAdd(tx, value, 0);
@@ -578,6 +579,8 @@ namespace Voron.Trees
 			tree = childTreeHeader != null ?
 				Open(tx, _cmp, childTreeHeader) :
 				Create(tx, _cmp);
+
+			tree.Name = string.Format("multi_" + Name);
 
 			tx.AddMultiValueTree(this, key, tree);
 			return tree;
