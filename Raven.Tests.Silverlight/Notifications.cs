@@ -3,16 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Documents;
 using Microsoft.Silverlight.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Raven.Abstractions.Data;
-using Raven.Client.Document;
-using System.Reactive.Linq;
-using System;
 using Raven.Client.Extensions;
 using Raven.Tests.Document;
 
