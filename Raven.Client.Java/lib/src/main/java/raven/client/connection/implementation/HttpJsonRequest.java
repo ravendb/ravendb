@@ -32,10 +32,14 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.protocol.BasicHttpContext;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 
 import raven.abstractions.closure.Action0;
@@ -137,6 +141,10 @@ public class HttpJsonRequest {
     writeMetadata(requestParams.getMetadata());
     requestParams.updateHeaders(webRequest);
 
+  }
+
+  public void removeAuthorizationHeader() {
+      webRequest.removeHeaders("Authorization");
   }
 
   private void writeMetadata(RavenJObject metadata) {
@@ -672,14 +680,14 @@ public class HttpJsonRequest {
     }
   }
 
-  public void setTimeout(int timeoutInMilis) {
+  public void setTimeout(long timeoutInMilis) {
     HttpRequestBase baseRequest = (HttpRequestBase) webRequest;
     RequestConfig requestConfig = baseRequest.getConfig();
     if (requestConfig == null) {
       requestConfig = RequestConfig.DEFAULT;
     }
 
-    requestConfig = RequestConfig.copy(requestConfig).setSocketTimeout(timeoutInMilis).setConnectTimeout(timeoutInMilis).build();
+    requestConfig = RequestConfig.copy(requestConfig).setSocketTimeout((int) timeoutInMilis).setConnectTimeout((int) timeoutInMilis).build();
     baseRequest.setConfig(requestConfig);
   }
 
@@ -691,7 +699,7 @@ public class HttpJsonRequest {
       try {
         HttpUriRequest webRequest = createWebRequest(url, method);
         //TODO CheckForErrorsAndReturnCachedResultIfAnyAsync();
-        httpResponse = httpClient.execute(webRequest);
+        httpResponse = httpClient.execute(webRequest );
         ObservableLineStream observableLineStream = new ObservableLineStream(httpResponse.getEntity().getContent(), new Action0() {
           @Override
           public void apply() {

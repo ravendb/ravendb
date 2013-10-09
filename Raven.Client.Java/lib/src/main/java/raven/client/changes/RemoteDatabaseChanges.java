@@ -70,7 +70,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
   private final Function4<String, Etag, String[] , String, Boolean> tryResolveConflictByUsingRegisteredConflictListeners;
   private final AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<>(String.CASE_INSENSITIVE_ORDER);
   private Closeable connection;
-  private Date lastHeartbeat;
+  private Date lastHeartbeat = new Date();
 
   private static int connectionCounter;
   private final String id;

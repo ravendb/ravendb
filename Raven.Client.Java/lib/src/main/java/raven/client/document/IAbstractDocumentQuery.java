@@ -2,14 +2,12 @@ package raven.client.document;
 
 import java.util.Collection;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.Iterator;
 
 import com.mysema.query.types.Path;
 
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
-import raven.abstractions.data.AggregationOperation;
 import raven.client.EscapeQueryOptions;
 import raven.client.FieldHighlightings;
 import raven.client.IDocumentQuery;
@@ -140,16 +138,6 @@ public interface IAbstractDocumentQuery<T> {
    * @return
    */
   public IDocumentQuery<T> openSubclause();
-
-  /**
-   * Instruct the index to group by the specified fields using the specified aggregation operation
-   *
-   * This is only valid on dynamic indexes queries
-   * @param aggregationOperation
-   * @param fieldsToGroupBy
-   * @return
-   */
-  public IDocumentQuery<T> groupBy(EnumSet<AggregationOperation> aggregationOperation, String... fieldsToGroupBy);
 
   /**
    * Simplified method for closing a clause within the query
@@ -400,5 +388,7 @@ public interface IAbstractDocumentQuery<T> {
   public void addRootType(Class<T> type);
 
   public Iterator<T> iterator();
+
+  public IDocumentQuery<T> distinct();
 
 }

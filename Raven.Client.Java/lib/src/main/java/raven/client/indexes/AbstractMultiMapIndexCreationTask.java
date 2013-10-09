@@ -36,6 +36,7 @@ public class AbstractMultiMapIndexCreationTask extends AbstractIndexCreationTask
     builder.setIndexes(indexes);
     builder.setIndexesStrings(indexesStrings);
     builder.setSortOptions(indexSortOptions);
+    builder.setSortOptionsStrings(indexSortOptionsStrings);
     builder.setAnalyzers(analyzers);
     builder.setAnalyzersStrings(analyzersStrings);
     builder.setMap(map);

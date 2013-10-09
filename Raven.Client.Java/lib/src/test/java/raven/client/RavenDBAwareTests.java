@@ -2,6 +2,7 @@ package raven.client;
 
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,6 +35,7 @@ import raven.client.connection.ReplicationInformer;
 import raven.client.connection.ServerClient;
 import raven.client.connection.implementation.HttpJsonRequestFactory;
 import raven.client.document.DocumentConvention;
+import raven.client.document.FailoverBehavior;
 import raven.client.listeners.IDocumentConflictListener;
 import raven.client.utils.UrlUtils;
 
@@ -87,6 +89,7 @@ public abstract class RavenDBAwareTests {
   public void init() {
     System.setProperty("java.net.preferIPv4Stack" , "true");
     convention = new DocumentConvention();
+    convention.setFailoverBehavior(EnumSet.of(FailoverBehavior.FAIL_IMMEDIATELY));
     factory = new HttpJsonRequestFactory(10);
 
     replicationInformer = new ReplicationInformer(convention);

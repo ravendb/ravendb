@@ -1178,6 +1178,26 @@ public class ServerClient implements IDatabaseCommands {
         convention.getFailoverBehavior(),
         new HandleReplicationStatusChangesCallback());
 
+    /*
+     * TODO
+     * request.RemoveAuthorizationHeader();
+
+            var token = GetSingleAuthToken();
+
+            try
+            {
+                token = ValidateThatWeCanUseAuthenticateTokens(token);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(
+                    "Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+                    e);
+            }
+
+            request.AddOperationHeader("Single-Use-Auth-Token", token);
+     */
+
     HttpResponse webResponse = request.rawExecuteRequest();
 
     QueryHeaderInformation queryHeaderInformation = new QueryHeaderInformation();
@@ -1256,6 +1276,26 @@ public class ServerClient implements IDatabaseCommands {
       new CreateHttpJsonRequestParams(this, sb.toString(), HttpMethods.GET, new RavenJObject(), convention)
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, url, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
+
+    /*TODO:
+     * request.RemoveAuthorizationHeader();
+
+            var token = GetSingleAuthToken();
+
+            try
+            {
+                token = ValidateThatWeCanUseAuthenticateTokens(token);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(
+                    "Could not authenticate token for docs streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+                    e);
+            }
+
+            request.AddOperationHeader("Single-Use-Auth-Token", token);
+     */
+
     HttpResponse webResponse = request.rawExecuteRequest();
     return yieldStreamResults(webResponse);
   }
@@ -2348,5 +2388,24 @@ public class ServerClient implements IDatabaseCommands {
   }
 
 
+/*TODO
+ * public string GetSingleAuthToken()
+        {
+            var tokenRequest = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+
+            return tokenRequest.ReadResponseJson().Value<string>("Token");
+        }
+
+        private string ValidateThatWeCanUseAuthenticateTokens(string token)
+        {
+            var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+
+            request.DisableAuthentication();
+            request.webRequest.ContentLength = 0;
+            request.AddOperationHeader("Single-Use-Auth-Token", token);
+            var result = request.ReadResponseJson();
+            return result.Value<string>("Token");
+        }
+ */
 
 }

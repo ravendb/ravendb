@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -28,7 +27,6 @@ import raven.abstractions.closure.Action2;
 import raven.abstractions.closure.Delegates;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.closure.Function2;
-import raven.abstractions.data.AggregationOperation;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.Facet;
@@ -91,6 +89,8 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * Whatever to negate the next operation
    */
   protected boolean negate;
+
+  protected boolean distinct;
 
   /**
    * The database commands to use
@@ -193,10 +193,6 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * The paths to include when loading the query
    */
   protected Set<String> includes = new HashSet<>();
-  /**
-   * What aggregated operation to execute
-   */
-  protected EnumSet<AggregationOperation> aggregationOp = EnumSet.of(AggregationOperation.NONE);
 
   /**
    * Fields to group on
@@ -817,21 +813,6 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   }
 
   /**
-   * Instruct the index to group by the specified fields using the specified aggregation operation
-   *
-   * This is only valid on dynamic indexes queries
-   * @param aggregationOperation
-   * @param string
-   */
-  @Override
-  @SuppressWarnings("unchecked")
-  public IDocumentQuery<T> groupBy(EnumSet<AggregationOperation> aggregationOperation, String... fieldsToGroupBy) {
-    groupByFields = fieldsToGroupBy;
-    aggregationOp = aggregationOperation;
-    return (IDocumentQuery<T>) this;
-  }
-
-  /**
    * Simplified method for closing a clause within the query
    */
   @Override
@@ -1397,8 +1378,6 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       }
 
       SpatialIndexQuery spatialIndexQuery = new SpatialIndexQuery();
-      spatialIndexQuery.setGroupBy(groupByFields);
-      spatialIndexQuery.setAggregationOperation(aggregationOp);
       spatialIndexQuery.setQuery(query);
       spatialIndexQuery.setPageSize(pageSize != null ? pageSize : 128);
       spatialIndexQuery.setStart(start);
@@ -1434,8 +1413,6 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     }
 
     IndexQuery indexQuery = new IndexQuery();
-    indexQuery.setGroupBy(groupByFields);
-    indexQuery.setAggregationOperation(aggregationOp);
     indexQuery.setQuery(query);
     indexQuery.setStart(start);
     indexQuery.setCutoff(cutoff);
@@ -1695,6 +1672,13 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
         return propertyName;
   }
 
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public IDocumentQuery<T> distinct() {
+    distinct = true;
+    return (IDocumentQuery<T>) this;
+  }
 
 
 }

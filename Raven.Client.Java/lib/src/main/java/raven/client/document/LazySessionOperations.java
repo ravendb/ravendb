@@ -16,7 +16,9 @@ import raven.client.document.batches.LazyLoadOperation;
 import raven.client.document.batches.LazyMultiLoadOperation;
 import raven.client.document.batches.LazyMultiLoaderWithInclude;
 import raven.client.document.batches.LazyStartsWithOperation;
+import raven.client.document.batches.LazyTransformerLoadOperation;
 import raven.client.document.sessionoperations.LoadOperation;
+import raven.client.document.sessionoperations.LoadTransformerOperation;
 import raven.client.document.sessionoperations.MultiLoadOperation;
 import raven.client.indexes.AbstractTransformerCreationTask;
 
@@ -147,18 +149,36 @@ public class LazySessionOperations implements ILazySessionOperations {
     Class<TTransformer> tranformerClass, Class<TResult> clazz, String id) {
     try {
       String transformer = tranformerClass.newInstance().getTransformerName();
-      LoadOperation loadOperation = new LoadOperation(delegate, new Function0<AutoCloseable>() {
-        @Override
-        public AutoCloseable apply() {
-          return delegate.getDatabaseCommands().disableAllCaching();
-        }
-      }, id);
-      LazyLoadOperation<TResult> lazyLoadOperation = new LazyLoadOperation<>(clazz, id, loadOperation, transformer);
+      LoadTransformerOperation loadOperation = new LoadTransformerOperation(delegate, transformer, 1);
+      LazyTransformerLoadOperation<TResult> lazyLoadOperation = new LazyTransformerLoadOperation<>(clazz, id, transformer, loadOperation, true);
       return delegate.addLazyOperation(lazyLoadOperation, null);
     } catch (IllegalAccessException | InstantiationException e) {
       throw new RuntimeException(e);
     }
   }
+
+  /*TODO:
+   * (non-Javadoc)
+   * @see raven.client.document.batches.ILazySessionOperations#load(java.lang.Class, java.lang.Class, java.lang.String[])
+   * internal object ProjectionToInstance(RavenJObject y, Type type)
+        {
+            HandleInternalMetadata(y);
+            foreach (var conversionListener in listeners.ExtendedConversionListeners)
+            {
+                conversionListener.BeforeConversionToEntity(null, y, null);
+            }
+            var instance = y.Deserialize(type, Conventions);
+            foreach (var conversionListener in listeners.ConversionListeners)
+            {
+                conversionListener.DocumentToEntity(null, instance, y, null);
+            }
+            foreach (var conversionListener in listeners.ExtendedConversionListeners)
+            {
+                conversionListener.AfterConversionToEntity(null, y, null, instance);
+            }
+            return instance;
+                                              }
+   */
 
   @Override
   public <TResult, TTransformer extends AbstractTransformerCreationTask> Lazy<TResult[]> load(

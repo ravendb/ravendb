@@ -62,6 +62,13 @@ public interface IDocumentStore extends IDisposalNotification {
   public AutoCloseable disableAggressiveCaching();
 
   /**
+   * Setup the WebRequest timeout for the session
+   * @param timeout Specify the timeout duration
+   * @return Sets the timeout for the JsonRequest.  Scoped to the Current Thread.
+   */
+  public AutoCloseable setRequestsTimeoutFor(long timeout);
+
+  /**
    * Gets the shared operations headers.
    * @return
    */

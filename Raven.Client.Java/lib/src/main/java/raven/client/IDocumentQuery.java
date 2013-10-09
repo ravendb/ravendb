@@ -85,6 +85,8 @@ public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<
 
   public IDocumentQuery<T> spatial(String name, Function1<SpatialCriteriaFactory, SpatialCriteria> clause);
 
+  public boolean isDistinct();
+
   /**
    * Get the facets as per the specified doc with the given start and pageSize
    * @param facetSetupDoc

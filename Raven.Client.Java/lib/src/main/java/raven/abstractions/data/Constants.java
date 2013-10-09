@@ -13,6 +13,8 @@ public class Constants {
 
   public final static String RAVEN_REPLICATION_DESTINATIONS = "Raven/Replication/Destinations";
 
+  public final static String ALLOW_BUNDLES_CHANGE = "Raven-Temp-Allow-Bundles-Change";
+
   public final static String LAST_MODIFIED = "Last-Modified";
   public final static String RAVEN_LAST_MODIFIED = "Raven-Last-Modified";
   public final static String SYSTEM_DATABASE = "<system>";

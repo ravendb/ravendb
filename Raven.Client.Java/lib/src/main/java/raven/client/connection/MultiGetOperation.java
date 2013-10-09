@@ -126,7 +126,7 @@ public class MultiGetOperation {
       }
     }
 
-    if (hasCachedRequests == false || convention.isDisableProfiling())
+    if (hasCachedRequests == false || convention.isDisableProfiling() || holdProfilingInformation.getProfilingInformation().getRequests().size() == 0)
       return responses;
 
     List<RequestResultArgs> profilingRequests = holdProfilingInformation.getProfilingInformation().getRequests();

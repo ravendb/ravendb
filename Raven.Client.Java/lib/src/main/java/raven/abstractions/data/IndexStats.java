@@ -233,6 +233,7 @@ public class IndexStats {
     DISABLED(2),
     IDLE(4),
     ABANDONED(8),
+    ERROR(16),
     FORCED(512);
 
     private int code;

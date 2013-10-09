@@ -157,9 +157,9 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, 
     operationClient.setExpect100Continue(true);
 
     String operationUrl = createOperationUrl(options);
-    String token = getToken(operationUrl);
+    String token = getToken();
     try {
-      token = validateThatWeCanUseAuthenticateTokens(operationUrl, token);
+      token = validateThatWeCanUseAuthenticateTokens(token);
     } catch (Exception e) {
       throw new IllegalStateException("Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
     }
@@ -188,18 +188,19 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, 
 
   }
 
-  private String getToken(String operationUrl) {
-    RavenJToken jsonToken = getAuthToken(operationUrl);
+  private String getToken() {
+    RavenJToken jsonToken = getAuthToken();
     return jsonToken.value(String.class, "Token");
   }
 
-  private RavenJToken getAuthToken(String operationUrl) {
-    HttpJsonRequest request = operationClient.createRequest(HttpMethods.POST, operationUrl + "&op=generate-single-use-auth-token", true);
+  private RavenJToken getAuthToken() {
+    HttpJsonRequest request = operationClient.createRequest(HttpMethods.GET, "/singleAuthToken", true);
     return request.readResponseJson();
   }
 
-  private String validateThatWeCanUseAuthenticateTokens(String operationUrl, String token) {
-    HttpJsonRequest request = operationClient.createRequest(HttpMethods.POST, operationUrl + "&op=generate-single-use-auth-token", true);
+  private String validateThatWeCanUseAuthenticateTokens(String token) {
+    HttpJsonRequest request = operationClient.createRequest(HttpMethods.GET, "/singleAuthToken", true);
+    request.removeAuthorizationHeader();
     request.addOperationHeader("Single-Use-Auth-Token", token);
     RavenJToken result = request.readResponseJson();
     return result.value(String.class, "Token");

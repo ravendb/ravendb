@@ -622,4 +622,24 @@ public class DocumentStore extends DocumentStoreBase {
     return this;
   }
 
+  /**
+   * Setup the WebRequest timeout for the session
+   */
+  @Override
+  public AutoCloseable setRequestsTimeoutFor(long timeout) {
+    assertInitialized();
+
+    final Long old = jsonRequestFactory.getRequestTimeout();
+    jsonRequestFactory.setRequestTimeout(timeout);
+
+    return new AutoCloseable() {
+
+      @Override
+      public void close() throws Exception {
+        jsonRequestFactory.setRequestTimeout(old);
+      }
+    };
+  }
+
+
 }

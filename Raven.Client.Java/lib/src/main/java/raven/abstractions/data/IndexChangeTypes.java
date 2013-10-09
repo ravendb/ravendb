@@ -16,7 +16,9 @@ public enum IndexChangeTypes {
 
   INDEX_DEMOTED_TO_ABANDONED(128),
 
-  INDEX_DEMOTED_TO_DISABLED(256);
+  INDEX_DEMOTED_TO_DISABLED(256),
+
+  INDEX_MARKED_AS_ERRORED(512);
 
   private int value;
 

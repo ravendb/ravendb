@@ -2,14 +2,12 @@ package raven.client;
 
 import java.util.Collection;
 import java.util.Date;
-import java.util.EnumSet;
 
 import com.mysema.query.types.Path;
 import com.mysema.query.types.path.ListPath;
 
 import raven.abstractions.basic.Reference;
 import raven.abstractions.closure.Action1;
-import raven.abstractions.data.AggregationOperation;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.QueryOperator;
@@ -637,26 +635,6 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
   public <TValue> TSelf search(Path<?> propertySelector, String searchTerms);
 
   /**
-   * Instruct the index to group by the specified fields using the specified aggregation operation
-   *
-   * This is only valid on dynamic indexes queries
-   * @param aggregationOperation
-   * @param fieldsToGroupBy
-   * @return
-   */
-  public TSelf groupBy(EnumSet<AggregationOperation> aggregationOperation, String... fieldsToGroupBy);
-
-  /**
-   * Instruct the index to group by the specified fields using the specified aggregation operation
-   *
-   * This is only valid on dynamic indexes queries
-   * @param aggregationOperation
-   * @param groupPropertySelectors
-   * @return
-   */
-  public <TValue> TSelf groupBy(EnumSet<AggregationOperation> aggregationOperation, Path<?>... groupPropertySelectors);
-
-  /**
    * Partition the query so we can intersect different parts of the query
    * across different index entries.
    * @return
@@ -708,6 +686,12 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
    * @return
    */
   public TSelf noCaching();
+
+  /**
+   * Apply distinct operation to this query
+   * @return
+   */
+  public TSelf distinct();
 
   /**
    * Sets a transformer to use after executing a query

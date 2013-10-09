@@ -52,6 +52,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
   private ThreadLocal<Long> aggressiveCacheDuration = new ThreadLocal<>(); // in milis
   private ThreadLocal<Boolean> disableHttpCaching = new ThreadLocal<>();
   private volatile boolean disposed;
+  private ThreadLocal<Long> requestTimeout=  new ThreadLocal<>();// in milis
 
   public HttpJsonRequestFactory(int maxNumberOfCachedRequests) {
     super();
@@ -154,6 +155,11 @@ public class HttpJsonRequestFactory implements AutoCloseable {
       request.setCachedRequestDetails(cachedRequestDetails.getCachedRequest());
       request.setSkipServerCheck(cachedRequestDetails.isSkipServerCheck());
     }
+
+    if (getRequestTimeout() != null) {
+      request.setTimeout(getRequestTimeout());
+    }
+
     EventHelper.invoke(configureRequest, createHttpJsonRequestParams.getOwner(), new WebRequestEventArgs(request.getWebRequest()));
     return request;
   }
@@ -314,4 +320,14 @@ public class HttpJsonRequestFactory implements AutoCloseable {
     }
     httpJsonRequest.getCachedRequestDetails().setTime(new Date());
   }
+
+  public Long getRequestTimeout() {
+    return requestTimeout.get();
+  }
+
+
+  public void setRequestTimeout(Long requestTimeout) {
+    this.requestTimeout.set(requestTimeout);
+  }
+
 }

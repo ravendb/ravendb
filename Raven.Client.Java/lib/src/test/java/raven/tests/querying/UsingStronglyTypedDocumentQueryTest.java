@@ -5,13 +5,11 @@ import static org.junit.Assert.assertEquals;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.TimeZone;
 
 import org.apache.commons.lang.time.DateUtils;
 import org.junit.Test;
 
-import raven.abstractions.data.AggregationOperation;
 import raven.client.IDocumentQuery;
 import raven.client.document.DocumentQuery;
 
@@ -123,9 +121,4 @@ public class UsingStronglyTypedDocumentQueryTest {
     createUserQuery().search(x.birthday, "1975");
   }
 
-  @Test
-  public void canUseStronglyTypedGroupBy() {
-    QIndexedUser x = QIndexedUser.indexedUser;
-    createUserQuery().groupBy(EnumSet.of(AggregationOperation.NONE), x.birthday);
-  }
 }

@@ -31,9 +31,12 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
   protected String reduce;
   protected String transformResults;
 
+  protected Long maxIndexOutputsPerDocument;
+
   protected Map<Path<?>, FieldStorage> stores;
   protected Map<String, FieldStorage> storesStrings;
   protected Map<Path<?>, SortOptions> indexSortOptions;
+  protected Map<String, SortOptions> indexSortOptionsStrings;
   protected Map<Path<?>, String> analyzers;
   protected Map<String, String> analyzersStrings;
   protected Map<Path<?>, SuggestionOptions> indexSuggestions;
@@ -51,6 +54,7 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
     this.indexes = new HashMap<>();
     this.indexesStrings = new HashMap<>();
     this.indexSortOptions = new HashMap<>();
+    this.indexSortOptionsStrings = new HashMap<>();
     this.indexSuggestions = new HashMap<>();
     this.analyzers = new HashMap<>();
     this.analyzersStrings = new HashMap<>();
@@ -111,6 +115,7 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
     builder.setIndexes(indexes);
     builder.setIndexesStrings(indexesStrings);
     builder.setSortOptions(indexSortOptions);
+    builder.setSortOptionsStrings(indexSortOptionsStrings);
     builder.setAnalyzers(analyzers);
     builder.setAnalyzersStrings(analyzersStrings);
     builder.setMap(map);
@@ -123,6 +128,7 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
     builder.setTermVectorsStrings(termVectorsStrings);
     builder.setSpatialIndexes(spatialIndexes);
     builder.setSpatialIndexesStrings(spatialIndexesStrings);
+    builder.setMaxIndexOutputsPerDocument(maxIndexOutputsPerDocument);
     return builder.toIndexDefinition(conventions);
 
   }
@@ -205,6 +211,22 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
   }
 
   /**
+   * Max number of allowed indexing outputs per one source document
+   * @return
+   */
+  public Long getMaxIndexOutputsPerDocument() {
+    return maxIndexOutputsPerDocument;
+  }
+
+  /**
+   * Max number of allowed indexing outputs per one source document
+   * @param maxIndexOutputsPerDocument
+   */
+  public void setMaxIndexOutputsPerDocument(Long maxIndexOutputsPerDocument) {
+    this.maxIndexOutputsPerDocument = maxIndexOutputsPerDocument;
+  }
+
+  /**
    * Register a field to be analyzed
    * @param field
    * @param analyzer
@@ -243,11 +265,22 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
   /**
    * Register a field to be sorted
    * @param field
+   * @param sort
+   */
+  protected void sort(String field, SortOptions sort) {
+    indexSortOptionsStrings.put(field, sort);
+  }
+
+  /**
+   * Register a field to be sorted
+   * @param field
    * @param suggestion
    */
   protected void suggestion(Path<?> field, SuggestionOptions suggestion) {
     indexSuggestions.put(field, suggestion);
   }
+
+
 
   /**
    * Register a field to be sorted

@@ -15,7 +15,6 @@ import raven.client.RemoteClientTest;
 import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.DocumentStore;
 import raven.client.indexes.AbstractIndexCreationTask;
-import raven.client.linq.IRavenQueryable;
 import raven.tests.bugs.QUser;
 import raven.tests.bugs.User;
 
@@ -229,33 +228,5 @@ public class SuggestionsUsingAnIndexTest extends RemoteClientTest {
     }
   }
 
-  @Test
-  public void exactMatchDynamic() throws Exception {
-    try (IDocumentStore store = new DocumentStore(getDefaultUrl(), getDefaultDb()).initialize()) {
-      store.executeIndex(new DefaultSuggestionIndex());
-      try (IDocumentSession session = store.openSession()) {
-        User user1 = new User();
-        user1.setName("Ayende");
-        session.store(user1);
-
-        User user2 = new User();
-        user2.setName("Oren");
-        session.store(user2);
-
-        session.saveChanges();
-
-        session.query(User.class, DefaultSuggestionIndex.class).customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults()).toList();
-      }
-      try (IDocumentSession session = store.openSession()) {
-        QUser x = QUser.user;
-        IRavenQueryable<User> query = session.query(User.class).where(x.name.eq("Oren")).customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults());
-
-        query.firstOrDefault();
-        SuggestionQueryResult suggestionQueryResult = query.suggest();
-        assertEquals(1, suggestionQueryResult.getSuggestions().length);
-        assertEquals("oren", suggestionQueryResult.getSuggestions()[0]);
-      }
-    }
-  }
 
 }

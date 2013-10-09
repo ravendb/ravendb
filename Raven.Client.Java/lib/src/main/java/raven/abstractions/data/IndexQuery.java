@@ -1,14 +1,12 @@
 package raven.abstractions.data;
 
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 
 import raven.abstractions.basic.Reference;
-import raven.abstractions.basic.SharpEnum;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.util.NetDateFormat;
 import raven.client.utils.UrlUtils;
@@ -36,12 +34,11 @@ public class IndexQuery {
 
 
   private boolean pageSizeSet;
+  private boolean distinct;
   private String query;
   private Reference<Integer> totalSize;
   private Map<String, RavenJToken> queryInputs;
   private int start;
-  private EnumSet<AggregationOperation> aggregationOperation;
-  private String[] groupBy;
   private String[] fieldsToFetch;
   private SortedField[] sortedFields;
   private Date cutoff;
@@ -64,6 +61,19 @@ public class IndexQuery {
 
   public void setResultsTransformer(String resultsTransformer) {
     this.resultsTransformer = resultsTransformer;
+  }
+
+  /**
+   * Whatever we should apply distinct operation to the query on the server side
+   * @return
+   */
+  public boolean isDistinct() {
+    return distinct;
+  }
+
+
+  public void setDistinct(boolean distinct) {
+    this.distinct = distinct;
   }
 
   public HighlightedField[] getHighlightedFields() {
@@ -217,14 +227,6 @@ public class IndexQuery {
     this.sortedFields = sortedFields;
   }
 
-  public EnumSet<AggregationOperation> getAggregationOperation() {
-    return aggregationOperation;
-  }
-
-  public void setAggregationOperation(EnumSet<AggregationOperation> aggregationOperation) {
-    this.aggregationOperation = aggregationOperation;
-  }
-
   public int getStart() {
     return start;
   }
@@ -268,17 +270,6 @@ public class IndexQuery {
   public void setPageSize(int pageSize) {
     this.pageSize = pageSize;
     this.pageSizeSet = true;
-  }
-
-
-
-
-  public String[] getGroupBy() {
-    return groupBy;
-  }
-
-  public void setGroupBy(String[] groupBy) {
-    this.groupBy = groupBy;
   }
 
   public String[] getFieldsToFetch() {
@@ -346,22 +337,10 @@ public class IndexQuery {
       path.append("&pageSize=").append(pageSize);
     }
 
-    if (aggregationOperation != null && !aggregationOperation.isEmpty() && !aggregationOperation.contains(AggregationOperation.NONE)) {
-      path.append("&aggregation=").append(SharpEnum.value(aggregationOperation));
-    }
-
     if (fieldsToFetch != null) {
       for (String field: fieldsToFetch) {
         if (StringUtils.isNotEmpty(field)) {
           path.append("&fetch=").append(UrlUtils.escapeDataString(field));
-        }
-      }
-    }
-
-    if (groupBy != null) {
-      for (String group: groupBy) {
-        if (StringUtils.isNotEmpty(group)) {
-          path.append("&groupBy=").append(UrlUtils.escapeDataString(group));
         }
       }
     }
@@ -454,8 +433,6 @@ public class IndexQuery {
         clone.queryInputs.put(key, queryInputs.get(key).cloneToken());
       }
       clone.start = start;
-      clone.aggregationOperation = aggregationOperation.clone();
-      clone.groupBy = groupBy.clone();
       clone.fieldsToFetch = fieldsToFetch.clone();
       clone.sortedFields = new SortedField[sortedFields.length];
       for (int i = 0 ; i <  sortedFields.length; i++) {

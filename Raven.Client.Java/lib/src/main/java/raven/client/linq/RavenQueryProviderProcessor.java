@@ -6,7 +6,6 @@ import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,7 +16,6 @@ import raven.abstractions.LinqOps;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action1;
-import raven.abstractions.data.AggregationOperation;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.QueryResult;
 import raven.abstractions.json.linq.RavenJObject;
@@ -688,7 +686,7 @@ public class RavenQueryProviderProcessor<T> {
       visitExpression(expression.getArg(0));
       visitTake((Constant<Integer>) expression.getArg(1));
     } else if (operatorId.equals(LinqOps.Query.DISTINCT.getId())) {
-      luceneQuery.groupBy(EnumSet.of(AggregationOperation.DISTINCT));
+      luceneQuery.distinct();
     } else if (operatorId.equals(LinqOps.Query.FIRST_OR_DEFAULT.getId())) {
       visitExpression(expression.getArg(0));
       visitFirstOrDefault();

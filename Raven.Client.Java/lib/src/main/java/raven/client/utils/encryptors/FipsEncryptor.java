@@ -3,18 +3,13 @@ package raven.client.utils.encryptors;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 
-import javax.crypto.Mac;
-
-
 public class FipsEncryptor implements IEncryptor {
 
   public static class FipsHashEncryptor extends HashEncryptorBase implements IHashEncryptor {
     @Override
     public byte[] compute20(byte[] bytes) {
       try {
-        Mac mac = Mac.getInstance("HmacSHA1"); //TODO: initialize with key
-        byte[] digest = mac.doFinal(bytes);
-        return digest;
+        return computeHash("SHA-1", bytes, null);
       } catch (NoSuchAlgorithmException e) {
         throw new RuntimeException(e);
       }

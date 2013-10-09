@@ -3,7 +3,6 @@ package raven.client.document;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
-import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -33,7 +32,6 @@ import raven.abstractions.data.MultiLoadResult;
 import raven.abstractions.data.QueryHeaderInformation;
 import raven.abstractions.data.StreamResult;
 import raven.abstractions.exceptions.ConcurrencyException;
-import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.IDocumentQuery;
@@ -50,6 +48,7 @@ import raven.client.document.batches.ILazyOperation;
 import raven.client.document.batches.ILazySessionOperations;
 import raven.client.document.batches.LazyMultiLoadOperation;
 import raven.client.document.sessionoperations.LoadOperation;
+import raven.client.document.sessionoperations.LoadTransformerOperation;
 import raven.client.document.sessionoperations.MultiLoadOperation;
 import raven.client.document.sessionoperations.QueryOperation;
 import raven.client.exceptions.ConflictException;
@@ -225,64 +224,15 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return loadInternal(clazz, ids, transformer, null);
   }
 
-  @SuppressWarnings("unchecked")
   private <T> T[] loadInternal(Class<T> clazz, String[] ids, String transformer, Map<String, RavenJToken> queryInputs) {
     if (ids.length == 0) {
       return (T[]) Array.newInstance(clazz, 0);
     }
 
     incrementRequestCount();
-    if (clazz.isArray()) {
 
-      // Returns array of arrays, public APIs don't surface that yet though as we only support Transform
-      // With a single Id
-      List<RavenJObject> results = getDatabaseCommands().get(ids, new String[] {}, transformer, queryInputs).getResults();
-      List<T> items = new ArrayList<>();
-
-      Class<?> innerType = clazz.getComponentType();
-
-      try {
-
-        for (RavenJObject result : results) {
-          List<RavenJObject> values = result.value(RavenJArray.class, "$values").values(RavenJObject.class);
-          List<Object> innerTypes = new ArrayList<>();
-          for (RavenJObject value: values) {
-            innerTypes.add(getConventions().createSerializer().readValue(value.toString(), innerType));
-          }
-          Object[] innerArray = (Object[]) Array.newInstance(innerType, innerTypes.size());
-          for (int i = 0; i < innerTypes.size(); i++) {
-            innerArray[i] = innerTypes.get(i);
-          }
-          items.add((T) innerArray);
-        }
-
-        return (T[]) items.toArray();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-
-    } else {
-      List<RavenJObject> results = databaseCommands.get(ids, new String[] { } , transformer, queryInputs).getResults();
-
-      List<T> items = new ArrayList<>();
-
-      try {
-        for (RavenJObject object : results) {
-          for (RavenJToken token : object.value(RavenJArray.class, "$values")) {
-            items.add(getConventions().createSerializer().readValue(token.toString(), clazz));
-          }
-        }
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-
-      if (items.size() > ids.length) {
-        throw new IllegalStateException(String.format("A load was attempted with transformer %s, and more " +
-            "than one item was returned per entity - please use %s[] as the projection type instead of %s",
-            transformer, clazz.getSimpleName(), clazz.getSimpleName()));
-      }
-      return (T[]) items.toArray();
-    }
+    MultiLoadResult multiLoadResult = getDatabaseCommands().get(ids, new String[] { }, transformer, queryInputs);
+    return new LoadTransformerOperation(this, transformer, ids.length).complete(clazz, multiLoadResult);
   }
 
 

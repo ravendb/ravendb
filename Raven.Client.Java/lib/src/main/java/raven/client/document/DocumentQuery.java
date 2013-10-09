@@ -7,7 +7,6 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +18,6 @@ import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.closure.Function2;
-import raven.abstractions.data.AggregationOperation;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.Facet;
 import raven.abstractions.data.FacetResults;
@@ -98,6 +96,17 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   }
 
   @Override
+  public IDocumentQuery<T> distinct() {
+    distinct = true;
+    return this;
+  }
+
+  @Override
+  public boolean isDistinct() {
+    return distinct;
+  }
+
+  @Override
   public IDocumentQuery<T> setResultTransformer(String resultsTransformer) {
     this.resultsTransformer = resultsTransformer;
     return this;
@@ -171,8 +180,7 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
     documentQuery.theWaitForNonStaleResults = theWaitForNonStaleResults;
     documentQuery.sortByHints = sortByHints;
     documentQuery.orderByFields = orderByFields;
-    documentQuery.groupByFields = groupByFields;
-    documentQuery.aggregationOp = aggregationOp;
+    documentQuery.distinct = distinct;
     documentQuery.negate = negate;
     documentQuery.transformResultsFunc = transformResultsFunc;
     documentQuery.includes = new HashSet<>(includes);
@@ -353,12 +361,6 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   @Override
   public <TValue> IDocumentQuery<T> search(Path< ? > propertySelector, String searchTerms) {
     search(getMemberQueryPath(propertySelector), searchTerms);
-    return this;
-  }
-
-  @Override
-  public <TValue> IDocumentQuery<T> groupBy(EnumSet<AggregationOperation> aggregationOperation, Path< ? >... groupPropertySelectors) {
-    groupBy(aggregationOperation, getMemberQueryPaths(groupPropertySelectors));
     return this;
   }
 

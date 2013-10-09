@@ -29,11 +29,13 @@ public class IndexDefinition {
     spatialIndexes = new HashMap<>();
   }
 
+
   public IndexDefinition(String map) {
     this();
     this.maps.add(map);
   }
 
+  private Long maxIndexOutputsPerDocument;
   private int indexId;
   private String name;
   private IndexLockMode lockMode = IndexLockMode.UNLOCK;
@@ -51,6 +53,19 @@ public class IndexDefinition {
   private Map<String, SpatialOptions> spatialIndexes;
   private Integer cachedHashCode;
 
+  /**
+   * Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
+   * the one document produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
+   * Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.
+   * @return
+   */
+  public Long getMaxIndexOutputsPerDocument() {
+    return maxIndexOutputsPerDocument;
+  }
+
+  public void setMaxIndexOutputsPerDocument(Long maxIndexOutputsPerDocument) {
+    this.maxIndexOutputsPerDocument = maxIndexOutputsPerDocument;
+  }
 
 
 
@@ -486,6 +501,7 @@ public class IndexDefinition {
     indexDefinition.setTransformResults(transformResults);
     indexDefinition.cachedHashCode = cachedHashCode;
 
+    indexDefinition.setMaxIndexOutputsPerDocument(maxIndexOutputsPerDocument);
     if (maps != null) {
       indexDefinition.setMaps(new HashSet<>(maps));
     }

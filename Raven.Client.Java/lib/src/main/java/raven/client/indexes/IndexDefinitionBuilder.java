@@ -26,10 +26,13 @@ public class IndexDefinitionBuilder {
   private Map<Path<?>, FieldStorage> stores;
   private Map<String, FieldStorage> storesStrings;
 
+  private Long maxIndexOutputsPerDocument;
+
   private Map<Path<?>, FieldIndexing> indexes;
   private Map<String, FieldIndexing> indexesStrings;
 
   private Map<Path<?>, SortOptions> sortOptions;
+  private Map<String, SortOptions> sortOptionsStrings;
   private Map<Path<?>, String> analyzers;
   private Map<String, String> analyzersStrings;
   private Map<Path<?>, SuggestionOptions> suggestions;
@@ -45,6 +48,7 @@ public class IndexDefinitionBuilder {
     this.indexes = new HashMap<>();
     this.indexesStrings = new HashMap<>();
     this.sortOptions = new HashMap<>();
+    this.sortOptionsStrings = new HashMap<>();
     this.suggestions = new HashMap<>();
     this.analyzers = new HashMap<>();
     this.analyzersStrings = new HashMap<>();
@@ -103,6 +107,18 @@ public class IndexDefinitionBuilder {
   }
   public Map<String, FieldTermVector> getTermVectorsStrings() {
     return termVectorsStrings;
+  }
+  public Map<String, SortOptions> getSortOptionsStrings() {
+    return sortOptionsStrings;
+  }
+  public void setSortOptionsStrings(Map<String, SortOptions> sortOptionsStrings) {
+    this.sortOptionsStrings = sortOptionsStrings;
+  }
+  public Long getMaxIndexOutputsPerDocument() {
+    return maxIndexOutputsPerDocument;
+  }
+  public void setMaxIndexOutputsPerDocument(Long maxIndexOutputsPerDocument) {
+    this.maxIndexOutputsPerDocument = maxIndexOutputsPerDocument;
   }
 
   public String getTransformResults() {
@@ -213,6 +229,14 @@ public class IndexDefinitionBuilder {
         throw new IllegalArgumentException("There is a duplicate key in spatial indexes: " + spatialString.getKey());
       indexDefinition.getSpatialIndexes().put(spatialString.getKey(), spatialString.getValue());
     }
+
+    for (Map.Entry<String, SortOptions> sortOptions: sortOptionsStrings.entrySet()) {
+      if (indexDefinition.getSortOptions().containsKey(sortOptions.getKey()))
+        throw new IllegalArgumentException("There is a duplicate key in sort options: " + sortOptions.getKey());
+      indexDefinition.getSortOptions().put(sortOptions.getKey(), sortOptions.getValue());
+    }
+
+    indexDefinition.setMaxIndexOutputsPerDocument(maxIndexOutputsPerDocument);
 
     if (map != null) {
       indexDefinition.setMap(map);
