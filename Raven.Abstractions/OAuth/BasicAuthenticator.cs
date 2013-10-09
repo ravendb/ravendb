@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
@@ -17,38 +19,66 @@ namespace Raven.Abstractions.OAuth
 {
 	public class BasicAuthenticator : AbstractAuthenticator
 	{
-		private readonly string apiKey;
 		private readonly bool enableBasicAuthenticationOverUnsecuredHttp;
-	
-		public BasicAuthenticator(string apiKey, bool enableBasicAuthenticationOverUnsecuredHttp)
+
+		public BasicAuthenticator(string apiKey, bool enableBasicAuthenticationOverUnsecuredHttp) : base(apiKey)
 		{
-			this.apiKey = apiKey;
 			this.enableBasicAuthenticationOverUnsecuredHttp = enableBasicAuthenticationOverUnsecuredHttp;
 		}
 
-
-		public Task<Action<HttpWebRequest>> HandleOAuthResponseAsync(string oauthSource)
+		public async Task<Action<HttpClient>> HandleOAuthResponseAsync(string oauthSource)
 		{
-			var authRequest = PrepareOAuthRequest(oauthSource);
-			return Task<WebResponse>.Factory.FromAsync(authRequest.BeginGetResponse, authRequest.EndGetResponse, null)
-				.AddUrlIfFaulting(authRequest.RequestUri)
-				.ConvertSecurityExceptionToServerNotFound()
-				.ContinueWith(task =>
-				{
-#if SILVERLIGHT
-					using(var stream = task.Result.GetResponseStream())
-#else
-					using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
+			var httpClient = new HttpClient(new HttpClientHandler());
+			httpClient.DefaultRequestHeaders.TryAddWithoutValidation("grant_type", "client_credentials");
+			httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "UTF-8" });
+
+#if !SILVERLIGHT
+			httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
+			httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
 #endif
-					using (var reader = new StreamReader(stream))
-					{
-						CurrentOauthToken = "Bearer " + reader.ReadToEnd();
-						return (Action<HttpWebRequest>) (request => SetHeader(request.Headers, "Authorization", CurrentOauthToken));
-					}
-				});
+
+			if (string.IsNullOrEmpty(ApiKey) == false)
+				httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Api-Key", ApiKey);
+
+			if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false && enableBasicAuthenticationOverUnsecuredHttp == false)
+				throw new InvalidOperationException(BasicOAuthOverHttpError);
+
+			var requestUri = oauthSource
+#if SILVERLIGHT
+				.NoCache()
+#endif
+				;
+			var response = await httpClient.GetAsync(requestUri)
+			                               .ConvertSecurityExceptionToServerNotFound()
+										   .AddUrlIfFaulting(new Uri(requestUri));
+
+			var stream = await response.GetResponseStreamWithHttpDecompression();
+			using (var reader = new StreamReader(stream))
+			{
+				CurrentOauthToken = reader.ReadToEnd();
+				return (Action<HttpClient>)(SetAuthorization);
+			}
 		}
 
+		
+
 #if !SILVERLIGHT && !NETFX_CORE
+		private HttpWebRequest PrepareOAuthRequest(string oauthSource)
+		{
+			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
+			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
+			authRequest.Headers["grant_type"] = "client_credentials";
+			authRequest.Accept = "application/json;charset=UTF-8";
+
+			if (String.IsNullOrEmpty(ApiKey) == false)
+				SetHeader(authRequest.Headers, "Api-Key", ApiKey);
+
+			if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false && enableBasicAuthenticationOverUnsecuredHttp == false)
+				throw new InvalidOperationException(BasicOAuthOverHttpError);
+
+			return authRequest;
+		}
+
 		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource)
 		{
 			var authRequest = PrepareOAuthRequest(oauthSource);
@@ -63,27 +93,6 @@ namespace Raven.Abstractions.OAuth
 			}
 		}
 #endif
-
-		private HttpWebRequest PrepareOAuthRequest(string oauthSource)
-		{
-#if !SILVERLIGHT
-			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
-			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
-#else
-			var authRequest = (HttpWebRequest) WebRequestCreator.ClientHttp.Create(new Uri(oauthSource.NoCache()));
-#endif
-
-			authRequest.Headers["grant_type"] = "client_credentials";
-			authRequest.Accept = "application/json;charset=UTF-8";
-
-			if (String.IsNullOrEmpty(apiKey) == false)
-				SetHeader(authRequest.Headers, "Api-Key", apiKey);
-
-			if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false && enableBasicAuthenticationOverUnsecuredHttp == false)
-				throw new InvalidOperationException(BasicOAuthOverHttpError);
-
-			return authRequest;
-		}
 
 		private const string BasicOAuthOverHttpError = @"Attempting to authenticate using basic security over HTTP would expose user credentials (including the password) in clear text to anyone sniffing the network.
 Your OAuth endpoint should be using HTTPS, not HTTP, as the transport mechanism.

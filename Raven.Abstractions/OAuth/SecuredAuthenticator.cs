@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using System.Linq;
@@ -13,16 +15,14 @@ using System.Net.Browser;
 using Raven.Client.Changes;
 
 #endif
+using Raven.Client.Connection;
 
 namespace Raven.Abstractions.OAuth
 {
 	public class SecuredAuthenticator : AbstractAuthenticator
 	{
-		private readonly string apiKey;
-
-		public SecuredAuthenticator(string apiKey)
+		public SecuredAuthenticator(string apiKey) : base(apiKey)
 		{
-			this.apiKey = apiKey;
 		}
 
 		public override void ConfigureRequest(object sender, WebRequestEventArgs e)
@@ -32,7 +32,7 @@ namespace Raven.Abstractions.OAuth
 				base.ConfigureRequest(sender, e);
 				return;
 			}
-			if (apiKey != null)
+			if (ApiKey != null)
 			{
 #if NETFX_CORE || SILVERLIGHT
 				e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
@@ -58,7 +58,7 @@ namespace Raven.Abstractions.OAuth
 				var exponent = OAuthHelper.ParseBytes(serverRSAExponent);
 				var modulus = OAuthHelper.ParseBytes(serverRSAModulus);
 
-				var apiKeyParts = apiKey.Split(new[] { '/' }, StringSplitOptions.None);
+				var apiKeyParts = ApiKey.Split(new[] { '/' }, StringSplitOptions.None);
 
 				if (apiKeyParts.Length > 2)
 				{
@@ -163,95 +163,109 @@ namespace Raven.Abstractions.OAuth
 		}
 #endif
 
-		public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string baseUrl, string oauthSource)
+		public Task<Action<HttpClient>> DoOAuthRequestAsync(string baseUrl, string oauthSource)
 		{
 			return DoOAuthRequestAsync(baseUrl, oauthSource, null, null, null, 0);
 		}
 
-		private Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, int tries)
+		private async Task<Action<HttpClient>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, int tries)
 		{
-			if (oauthSource == null) throw new ArgumentNullException("oauthSource");
+			if (oauthSource == null)
+				throw new ArgumentNullException("oauthSource");
 
-			var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRsaExponent, serverRsaModulus, challenge);
-			var authRequest = authRequestTuple.Item1;
+			var httpClient = new HttpClient(new HttpClientHandler());
+			httpClient.DefaultRequestHeaders.TryAddWithoutValidation("grant_type", "client_credentials");
+			httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") {CharSet = "UTF-8"});
 
-			Task sendDataTask = new CompletedTask();
-			if (authRequestTuple.Item2 != null)
+			string data = null;
+			if (!string.IsNullOrEmpty(serverRsaExponent) && !string.IsNullOrEmpty(serverRsaModulus) && !string.IsNullOrEmpty(challenge))
 			{
-				sendDataTask = Task<Stream>.Factory.FromAsync(authRequest.BeginGetRequestStream, authRequest.EndGetRequestStream, null).ContinueWith(task =>
+				var exponent = OAuthHelper.ParseBytes(serverRsaExponent);
+				var modulus = OAuthHelper.ParseBytes(serverRsaModulus);
+
+				var apiKeyParts = ApiKey.Split(new[] {'/'}, StringSplitOptions.None);
+				if (apiKeyParts.Length > 2)
 				{
-					using (var stream = task.Result)
-					using (var writer = new StreamWriter(stream))
+					apiKeyParts[1] = string.Join("/", apiKeyParts.Skip(1));
+				}
+				if (apiKeyParts.Length < 2)
+					throw new InvalidOperationException("Invalid API key");
+
+				var apiKeyName = apiKeyParts[0].Trim();
+				var apiSecret = apiKeyParts[1].Trim();
+
+				data = OAuthHelper.DictionaryToString(new Dictionary<string, string>
+				{
+					{OAuthHelper.Keys.RSAExponent, serverRsaExponent},
+					{OAuthHelper.Keys.RSAModulus, serverRsaModulus},
 					{
-						writer.Write(authRequestTuple.Item2);
+						OAuthHelper.Keys.EncryptedData,
+						OAuthHelper.EncryptAsymmetric(exponent, modulus, OAuthHelper.DictionaryToString(new Dictionary<string, string>
+						{
+							{OAuthHelper.Keys.APIKeyName, apiKeyName},
+							{OAuthHelper.Keys.Challenge, challenge},
+							{OAuthHelper.Keys.Response, OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge, apiSecret))}
+						}))
 					}
 				});
 			}
 
-
-			return sendDataTask.ContinueWith(t =>
-			{
-				t.Wait();
-
-				return Task<WebResponse>.Factory.FromAsync(authRequest.BeginGetResponse, authRequest.EndGetResponse, null)
-					.AddUrlIfFaulting(authRequest.RequestUri)
-					.ConvertSecurityExceptionToServerNotFound()
-					.ContinueWith(task =>
-					{
-						try
-						{
-							using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
-							using (var reader = new StreamReader(stream))
-							{
-								var currentOauthToken = "Bearer " + reader.ReadToEnd();
-								CurrentOauthToken = currentOauthToken;
+			var requestUri = oauthSource
 #if SILVERLIGHT
-								BrowserCookieToAllowUserToUseStandardRequests(baseUrl, currentOauthToken);
+				.NoCache()
 #endif
-								return
-									CompletedTask.With(
-										(Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", CurrentOauthToken)));
-							}
-						}
-						catch (AggregateException ae)
-						{
-							var ex = ae.ExtractSingleInnerException() as WebException;
+				;
+			var response = await httpClient.PostAsync(requestUri, data != null ? (HttpContent) new CompressedStringContent(data, true) : new StringContent(""))
+			                               .AddUrlIfFaulting(new Uri(requestUri))
+			                               .ConvertSecurityExceptionToServerNotFound();
 
-							if (tries > 2 || ex == null)
-								// We've already tried three times and failed
-								throw;
+			using (var stream = await response.GetResponseStreamWithHttpDecompression())
+			using (var reader = new StreamReader(stream))
+			{
+				Dictionary<string, string> challengeDictionary;
+				try
+				{
+					CurrentOauthToken = reader.ReadToEnd();
+#if SILVERLIGHT
+					BrowserCookieToAllowUserToUseStandardRequests(baseUrl, reader.ReadToEnd());
+#endif
+					return (Action<HttpClient>) (SetAuthorization);
+				}
+				catch (AggregateException ae)
+				{
+					var ex = ae.ExtractSingleInnerException() as WebException;
+					if (tries > 2 || ex == null)
+						// We've already tried three times and failed
+						throw;
 
+					var authResponse = ex.Response as HttpWebResponse;
+					if (authResponse == null || authResponse.StatusCode != HttpStatusCode.PreconditionFailed)
+						throw;
 
-
-							var authResponse = ex.Response as HttpWebResponse;
-							if (authResponse == null || authResponse.StatusCode != HttpStatusCode.PreconditionFailed)
-								throw;
-
-							var header = authResponse.Headers["Www-Authenticate"];
-							if (string.IsNullOrEmpty(header) || !header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey))
-								throw;
+					var header = authResponse.Headers["Www-Authenticate"];
+					if (string.IsNullOrEmpty(header) || !header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey))
+						throw;
 
 #if !NETFX_CORE
-							authResponse.Close();
+					authResponse.Close();
 #endif
 
-							var challengeDictionary =
-								OAuthHelper.ParseDictionary(header.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());
+					challengeDictionary = OAuthHelper.ParseDictionary(header.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());
+				}
 
-							return DoOAuthRequestAsync(baseUrl, oauthSource,
-													   challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent),
-													   challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus),
-													   challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge),
-													   tries + 1);
-						}
-					}).Unwrap();
-			}).Unwrap();
+				return await DoOAuthRequestAsync(baseUrl, oauthSource,
+						challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent),
+						challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus),
+						challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge),
+						tries + 1);
+			}
 		}
+
 #if SILVERLIGHT
 		private void BrowserCookieToAllowUserToUseStandardRequests(string baseUrl, string currentOauthToken)
 		{
 			var webRequest = WebRequestCreator.BrowserHttp.Create(new Uri(baseUrl + "/OAuth/Cookie"));
-			webRequest.Headers["Authorization"] = currentOauthToken;
+			webRequest.Headers["Authorization"] = "Bearer " + currentOauthToken;
 			webRequest.Headers["Has-Api-Key"] = "True";
 			webRequest.Method = "POST";
 			webRequest.BeginGetResponse(ar =>

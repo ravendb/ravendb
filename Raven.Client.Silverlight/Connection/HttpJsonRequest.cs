@@ -227,8 +227,8 @@ namespace Raven.Client.Silverlight.Connection
 			await WaitForTask;
 
 			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url))
-													.ConvertSecurityExceptionToServerNotFound()
-									   .AddUrlIfFaulting(new Uri(Url));
+			                           .ConvertSecurityExceptionToServerNotFound()
+			                           .AddUrlIfFaulting(new Uri(Url));
 			SetResponseHeaders(Response);
 			if (Response.IsSuccessStatusCode == false)
 				throw new ErrorResponseException(Response);
