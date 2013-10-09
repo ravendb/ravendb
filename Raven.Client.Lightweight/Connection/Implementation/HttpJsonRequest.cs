@@ -47,6 +47,7 @@ namespace Raven.Client.Connection
 		internal readonly string Url;
 		internal readonly string Method;
 
+		private WebRequestHandler handler;
 		internal volatile HttpClient httpClient;
 		internal volatile HttpWebRequest webRequest;
 
@@ -59,6 +60,8 @@ namespace Raven.Client.Connection
 		private readonly IHoldProfilingInformation owner;
 		private readonly DocumentConvention conventions;
 		private string postedData;
+		private bool isRequestSentToServer;
+
 		private Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
 		private Stream postedStream;
@@ -88,7 +91,7 @@ namespace Raven.Client.Connection
 			owner = requestParams.Owner;
 			conventions = requestParams.Convention;
 
-			var handler = new WebRequestHandler
+			handler = new WebRequestHandler
 			{
 				UseDefaultCredentials = true,
 				Credentials = requestParams.Credentials,
@@ -143,6 +146,11 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public async Task<RavenJToken> ReadResponseJsonAsync()
 		{
+			if (isRequestSentToServer)
+				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
+
+			isRequestSentToServer = true;
+
 			if (SkipServerCheck)
 			{
 				var result = factory.GetCachedResponse(this);
@@ -346,6 +354,10 @@ namespace Raven.Client.Connection
 
 		public async Task<byte[]> ReadResponseBytesAsync()
 		{
+			if (isRequestSentToServer)
+				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
+			isRequestSentToServer = true;
+
 			if (writeCalled == false)
 				webRequest.ContentLength = 0;
 			var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
@@ -475,7 +487,7 @@ namespace Raven.Client.Connection
 			if (unauthorizedResponseAsync == null)
 				return false;
 
-			RecreateWebRequest(await unauthorizedResponseAsync);
+			await RecreateHttpClient(await unauthorizedResponseAsync);
 			return true;
 		}
 
@@ -489,6 +501,23 @@ namespace Raven.Client.Connection
 				return;
 
 			await forbiddenResponseAsync;
+		}
+
+		private async Task RecreateHttpClient(Action<HttpClient> result)
+		{
+			var newHttpClient = new HttpClient(new HttpClientHandler
+			{
+				Credentials = handler.Credentials,
+			});
+			// HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
+			result(newHttpClient);
+			httpClient = newHttpClient;
+			isRequestSentToServer = false;
+
+			if (postedData == null)
+				return;
+
+			await WriteAsync(postedData);
 		}
 
 		private void RecreateWebRequest(Action<HttpWebRequest> action)
