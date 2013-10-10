@@ -1,14 +1,41 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>net.ravendb</groupId>
-    <artifactId>jvm-client-parent</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-  </parent>
+  <groupId>net.ravendb</groupId>
   <artifactId>lib</artifactId>
+  <version>3.0.0-SNAPSHOT</version>
+
+  <scm>
+    <url>https://github.com/ml054/ravendb/</url>
+  </scm>
+
+
+
+  <developers>
+    <developer>
+      <email>marcin@ais.pl</email>
+      <id>marcin@ais.pl</id>
+      <name>Marcin Lewandowski</name>
+      <organizationUrl>http://ais.pl</organizationUrl>
+      <roles>
+        <role>developer</role>
+      </roles>
+    </developer>
+  </developers>
+
+  <contributors>
+    <contributor>
+      <email>blazej@ais.pl</email>
+      <name>Blazej Majewski</name>
+      <organizationUrl>http://ais.pl</organizationUrl>
+      <organization>ais.pl</organization>
+    </contributor>
+  </contributors>
 
   <properties>
     <queryDsl.version>3.1.1</queryDsl.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
 
   <dependencies>
@@ -30,6 +57,7 @@
     <dependency>
       <groupId>commons-lang</groupId>
       <artifactId>commons-lang</artifactId>
+      <version>2.6</version>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -56,6 +84,8 @@
       <artifactId>bson4jackson</artifactId>
       <version>1.3.0</version>
     </dependency>
+
+    <!-- test deps -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -68,11 +98,26 @@
       <version>0.9.9-RC1</version>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+      <version>1.8.4</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.5</version>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
+          <encoding>UTF-8</encoding>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>com.mysema.maven</groupId>
         <artifactId>apt-maven-plugin</artifactId>
@@ -95,5 +140,39 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>coverage</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>2.15</version>
+          </plugin>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.6.2.201302030002</version>
+            <executions>
+              <execution>
+                <id>jacoco-initialize</id>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>jacoco-site</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>report</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>
