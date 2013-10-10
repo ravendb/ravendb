@@ -3,18 +3,21 @@
 	using System;
 	using System.Collections.Generic;
 	using System.IO;
+	using System.Linq;
 
 	using Voron.Impl;
 	using Voron.Trees;
 
 	using Xunit;
 
-	public class Some
+	public class PageSplitter : StorageTest
 	{
 		[Fact]
-		public void T1()
+		public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
 		{
-			var ids = ReadIds();
+			var ids = ReadIds()
+				.Take(10000)
+				.ToList();
 
 			using (var env = new StorageEnvironment(new PureMemoryPager()))
 			{
@@ -24,17 +27,17 @@
 
 				var trees = CreateTrees(env, 1, "tree");
 
-				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				foreach (var id in ids) // 244165328/0/373/1614190405 -> 8887 iteration
 				{
-					foreach (var id in ids)
+					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 					{
 						foreach (var tree in trees)
 						{
 							tree.Add(tx, id, new MemoryStream(testBuffer));
 						}
-					}
 
-					tx.Commit();
+						tx.Commit();
+					}
 				}
 
 				ValidateRecords(env, trees, ids);
