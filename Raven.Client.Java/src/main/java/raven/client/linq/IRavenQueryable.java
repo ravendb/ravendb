@@ -1,14 +1,12 @@
 package raven.client.linq;
 
 import raven.abstractions.basic.Reference;
-import raven.abstractions.closure.Function1;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.LinqExtensionsQueryable;
 import raven.client.RavenQueryStatistics;
 import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.spatial.SpatialCriteria;
-import raven.client.spatial.SpatialCriteriaFactory;
 
 import com.mysema.query.types.Path;
 
@@ -56,7 +54,7 @@ public interface IRavenQueryable<T> extends IOrderedQueryable<T>, LinqExtensions
    */
   IRavenQueryable<T> addQueryInput(String name, Object value);
 
-  IRavenQueryable<T> spatial(Path<?> path, Function1<SpatialCriteriaFactory, SpatialCriteria> clause);
+  IRavenQueryable<T> spatial(Path<?> path, SpatialCriteria criteria);
 
   /**
    * Returns distinct results

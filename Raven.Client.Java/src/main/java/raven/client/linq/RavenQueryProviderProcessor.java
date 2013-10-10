@@ -545,8 +545,8 @@ public class RavenQueryProviderProcessor<T> {
     result.setPath(result.getPath().substring(result.getPath().indexOf('.') + 1));
 
     String propertyName = indexName == null  || indexName.toLowerCase().startsWith("dynamic/")
-      ? queryGenerator.getConventions().getFindPropertyNameForDynamicIndex().apply(clazz, indexName, currentPath, result.getPath())
-        : queryGenerator.getConventions().getFindPropertyNameForIndex().apply(clazz, indexName, currentPath, result.getPath());
+      ? queryGenerator.getConventions().getFindPropertyNameForDynamicIndex().find(clazz, indexName, currentPath, result.getPath())
+        : queryGenerator.getConventions().getFindPropertyNameForIndex().find(clazz, indexName, currentPath, result.getPath());
 
       ExpressionInfo expressionInfo = new ExpressionInfo(propertyName, result.getMemberType(), result.isNestedPath());
       expressionInfo.setMaybeProperty(result.getMaybeProperty());

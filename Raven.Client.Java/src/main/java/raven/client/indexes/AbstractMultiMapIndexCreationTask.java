@@ -3,6 +3,8 @@ package raven.client.indexes;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.lang.NotImplementedException;
+
 import raven.abstractions.indexing.IndexDefinition;
 import raven.client.document.DocumentConvention;
 
@@ -18,7 +20,7 @@ public class AbstractMultiMapIndexCreationTask extends AbstractIndexCreationTask
   }
 
   protected void addMapForAll(Class<?> baseClass, String expression) {
-    //TODO: implement me!
+    throw new NotImplementedException();    //TODO: implement me!
   }
 
   @Override

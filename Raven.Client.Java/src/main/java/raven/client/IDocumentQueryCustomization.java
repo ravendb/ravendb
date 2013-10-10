@@ -7,14 +7,12 @@ import com.mysema.query.types.Path;
 
 import raven.abstractions.basic.Reference;
 import raven.abstractions.closure.Action1;
-import raven.abstractions.closure.Function1;
 import raven.abstractions.closure.Function2;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.indexing.SpatialOptions.SpatialRelation;
 import raven.abstractions.indexing.SpatialOptions.SpatialUnits;
 import raven.client.spatial.SpatialCriteria;
-import raven.client.spatial.SpatialCriteriaFactory;
 
 /**
  * Customize the document query
@@ -168,7 +166,7 @@ public interface IDocumentQueryCustomization {
    */
   public IDocumentQueryCustomization relatesToShape(String fieldName, String shapeWKT, SpatialRelation rel);
 
-  public IDocumentQueryCustomization spatial(String fieldName, Function1<SpatialCriteriaFactory, SpatialCriteria> clause);
+  public IDocumentQueryCustomization spatial(String fieldName, SpatialCriteria criteria);
 
   /**
    * When using spatial queries, instruct the query to sort by the distance from the origin point

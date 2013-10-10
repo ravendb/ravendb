@@ -27,7 +27,6 @@ import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function1;
 import raven.abstractions.closure.Function2;
 import raven.abstractions.closure.Function3;
-import raven.abstractions.closure.Function4;
 import raven.abstractions.closure.Functions;
 import raven.abstractions.data.Constants;
 import raven.abstractions.extensions.JsonExtensions;
@@ -39,6 +38,8 @@ import raven.client.converters.ITypeConverter;
 import raven.client.converters.Int32Converter;
 import raven.client.converters.Int64Converter;
 import raven.client.converters.UUIDConverter;
+import raven.client.delegates.ClrTypeFinder;
+import raven.client.delegates.PropertyNameFinder;
 import raven.client.indexes.AbstractIndexCreationTask;
 import raven.client.linq.LinqPathProvider;
 import raven.client.util.Inflector;
@@ -73,7 +74,7 @@ public class DocumentConvention implements Serializable {
   private static Map<Class<?>, String> CACHED_DEFAULT_TYPE_TAG_NAMES = new HashMap<>();
   private AtomicInteger requestCount = new AtomicInteger(0);
 
-  private Function3<String, RavenJObject, RavenJObject, String> findClrType;
+  private ClrTypeFinder findClrType;
 
   private Function1<Class<?>, String> findClrTypeName;
 
@@ -83,9 +84,9 @@ public class DocumentConvention implements Serializable {
 
   private TypeTagNameFinder findTypeTagName;
 
-  private Function4<Class<?>, String, String, String, String> findPropertyNameForIndex;
+  private PropertyNameFinder findPropertyNameForIndex;
 
-  private Function4<Class<?>, String, String, String, String> findPropertyNameForDynamicIndex;
+  private PropertyNameFinder findPropertyNameForDynamicIndex;
 
   private Function1<String, Boolean> shouldCacheRequest;
 
@@ -142,10 +143,10 @@ public class DocumentConvention implements Serializable {
         return input.getName().equals("id");
       }
     });
-    setFindClrType(new Function3<String, RavenJObject, RavenJObject, String>() {
+    setFindClrType(new ClrTypeFinder() {
 
       @Override
-      public String apply(String id, RavenJObject doc, RavenJObject metadata) {
+      public String find(String id, RavenJObject doc, RavenJObject metadata) {
         return metadata.value(String.class, Constants.RAVEN_CLR_TYPE);
       }
     });
@@ -184,16 +185,16 @@ public class DocumentConvention implements Serializable {
       }
     });
 
-    setFindPropertyNameForIndex(new Function4<Class<?>, String, String, String, String>() {
+    setFindPropertyNameForIndex(new PropertyNameFinder() {
       @Override
-      public String apply(Class< ? > indexedType, String indexedName, String path, String prop) {
+      public String find(Class<?> indexedType, String indexedName, String path, String prop) {
         return (path + prop).replace(',', '_').replace('.', '_');
       }
     });
 
-    setFindPropertyNameForDynamicIndex(new Function4<Class<?>, String, String, String, String>() {
+    setFindPropertyNameForDynamicIndex(new PropertyNameFinder() {
       @Override
-      public String apply(Class< ? > indexedType, String indexedName, String path, String prop) {
+      public String find(Class< ? > indexedType, String indexedName, String path, String prop) {
         return path + prop;
       }
     });
@@ -511,7 +512,7 @@ public class DocumentConvention implements Serializable {
    *  Gets the function to find the clr type of a document.
    * @return
    */
-  public Function3<String, RavenJObject, RavenJObject, String> getFindClrType() {
+  public ClrTypeFinder getFindClrType() {
     return findClrType;
   }
 
@@ -519,7 +520,7 @@ public class DocumentConvention implements Serializable {
    *  Sets the function to find the clr type of a document.
    * @param findClrType
    */
-  public void setFindClrType(Function3<String, RavenJObject, RavenJObject, String> findClrType) {
+  public void setFindClrType(ClrTypeFinder findClrType) {
     this.findClrType = findClrType;
   }
 
@@ -578,7 +579,7 @@ public class DocumentConvention implements Serializable {
    * given the indexed document type, the index name, the current path and the property path.
    * @return
    */
-  public Function4<Class< ? >, String, String, String, String> getFindPropertyNameForIndex() {
+  public PropertyNameFinder getFindPropertyNameForIndex() {
     return findPropertyNameForIndex;
   }
 
@@ -587,7 +588,7 @@ public class DocumentConvention implements Serializable {
    * given the indexed document type, the index name, the current path and the property path.
    * @param findPropertyNameForIndex
    */
-  public void setFindPropertyNameForIndex(Function4<Class< ? >, String, String, String, String> findPropertyNameForIndex) {
+  public void setFindPropertyNameForIndex(PropertyNameFinder findPropertyNameForIndex) {
     this.findPropertyNameForIndex = findPropertyNameForIndex;
   }
 
@@ -596,7 +597,7 @@ public class DocumentConvention implements Serializable {
    *  given the indexed document type, the index name, the current path and the property path.
    * @return
    */
-  public Function4<Class< ? >, String, String, String, String> getFindPropertyNameForDynamicIndex() {
+  public PropertyNameFinder getFindPropertyNameForDynamicIndex() {
     return findPropertyNameForDynamicIndex;
   }
 
@@ -605,7 +606,7 @@ public class DocumentConvention implements Serializable {
    *  given the indexed document type, the index name, the current path and the property path.
    * @param findPropertyNameForDynamicIndex
    */
-  public void setFindPropertyNameForDynamicIndex(Function4<Class< ? >, String, String, String, String> findPropertyNameForDynamicIndex) {
+  public void setFindPropertyNameForDynamicIndex(PropertyNameFinder findPropertyNameForDynamicIndex) {
     this.findPropertyNameForDynamicIndex = findPropertyNameForDynamicIndex;
   }
 
@@ -769,7 +770,7 @@ public class DocumentConvention implements Serializable {
    * @return
    */
   public String getClrType(String id, RavenJObject document, RavenJObject metadata) {
-    return findClrType.apply(id, document, metadata);
+    return findClrType.find(id, document, metadata);
   }
 
   /**

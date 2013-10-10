@@ -206,7 +206,7 @@ public class MetadataExtensions {
     try {
       Date date = netDateFormat.parse(val);
       return new RavenJValue(date);
-    } catch (ParseException e) {
+    } catch (ParseException | IllegalArgumentException e) {
       //ignore
     }
     return new RavenJValue(UrlUtils.unescapeDataString(val));

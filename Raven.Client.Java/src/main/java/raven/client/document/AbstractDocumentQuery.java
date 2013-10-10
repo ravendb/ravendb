@@ -1676,8 +1676,8 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     result.setPath(result.getPath().substring(result.getPath().indexOf('.') + 1));
 
     String propertyName = indexName == null || indexName.toLowerCase().startsWith("dynamic/")
-      ? conventions.getFindPropertyNameForDynamicIndex().apply(clazz, indexName, "", result.getPath())
-        : conventions.getFindPropertyNameForIndex().apply(clazz, indexName, "", result.getPath());
+      ? conventions.getFindPropertyNameForDynamicIndex().find(clazz, indexName, "", result.getPath())
+        : conventions.getFindPropertyNameForIndex().find(clazz, indexName, "", result.getPath());
       return propertyName;
   }
 

@@ -7,7 +7,6 @@ import com.mysema.query.types.Path;
 
 import raven.abstractions.basic.Reference;
 import raven.abstractions.closure.Action1;
-import raven.abstractions.closure.Function1;
 import raven.abstractions.closure.Function2;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.IndexQuery;
@@ -16,7 +15,6 @@ import raven.abstractions.indexing.SpatialOptions.SpatialUnits;
 import raven.client.FieldHighlightings;
 import raven.client.IDocumentQueryCustomization;
 import raven.client.spatial.SpatialCriteria;
-import raven.client.spatial.SpatialCriteriaFactory;
 
 public class DocumentQueryCustomization implements IDocumentQueryCustomization {
   private DocumentQuery<?> delegate;
@@ -135,8 +133,8 @@ public class DocumentQueryCustomization implements IDocumentQueryCustomization {
   }
 
   @Override
-  public IDocumentQueryCustomization spatial(String fieldName, Function1<SpatialCriteriaFactory, SpatialCriteria> clause) {
-    delegate.spatial(fieldName, clause);
+  public IDocumentQueryCustomization spatial(String fieldName, SpatialCriteria criteria) {
+    delegate.spatial(fieldName, criteria);
     return this;
   }
 

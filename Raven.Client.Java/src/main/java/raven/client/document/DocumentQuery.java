@@ -16,7 +16,6 @@ import org.apache.commons.lang.StringUtils;
 import raven.abstractions.basic.Lazy;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
-import raven.abstractions.closure.Function1;
 import raven.abstractions.closure.Function2;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.Facet;
@@ -31,7 +30,6 @@ import raven.client.connection.IDatabaseCommands;
 import raven.client.linq.EnumerableUtils;
 import raven.client.listeners.IDocumentQueryListener;
 import raven.client.spatial.SpatialCriteria;
-import raven.client.spatial.SpatialCriteriaFactory;
 
 import com.mysema.query.types.Path;
 import com.mysema.query.types.path.ListPath;
@@ -238,8 +236,7 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   }
 
   @Override
-  public IDocumentQuery<T> spatial(String fieldName, Function1<SpatialCriteriaFactory, SpatialCriteria> clause) {
-    SpatialCriteria criteria = clause.apply(new SpatialCriteriaFactory());
+  public IDocumentQuery<T> spatial(String fieldName, SpatialCriteria criteria) {
     return generateSpatialQueryData(fieldName, criteria);
   }
 
@@ -365,8 +362,8 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   }
 
   @Override
-  public IDocumentQuery<T> spatial(Path< ? > path, Function1<SpatialCriteriaFactory, SpatialCriteria> clause) {
-    return spatial(getMemberQueryPath(path), clause);
+  public IDocumentQuery<T> spatial(Path< ? > path, SpatialCriteria criteria) {
+    return spatial(getMemberQueryPath(path), criteria);
   }
 
   @Override

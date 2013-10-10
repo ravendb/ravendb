@@ -9,7 +9,6 @@ import javax.annotation.concurrent.Immutable;
 
 import raven.abstractions.basic.Reference;
 import raven.abstractions.closure.Action1;
-import raven.abstractions.closure.Function1;
 import raven.abstractions.closure.Function2;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.IndexQuery;
@@ -18,7 +17,6 @@ import raven.abstractions.indexing.SpatialOptions.SpatialUnits;
 import raven.client.FieldHighlightings;
 import raven.client.IDocumentQueryCustomization;
 import raven.client.spatial.SpatialCriteria;
-import raven.client.spatial.SpatialCriteriaFactory;
 
 import com.mysema.query.types.Path;
 
@@ -314,11 +312,11 @@ public class DocumentQueryCustomizationFactory {
     });
   }
 
-  public DocumentQueryCustomizationFactory spatial(final String fieldName, final Function1<SpatialCriteriaFactory, SpatialCriteria> clause) {
+  public DocumentQueryCustomizationFactory spatial(final String fieldName, final SpatialCriteria criteria) {
     return new DocumentQueryCustomizationFactory(actions, new Action1<IDocumentQueryCustomization>() {
       @Override
       public void apply(IDocumentQueryCustomization documentQuery) {
-        documentQuery.spatial(fieldName, clause);
+        documentQuery.spatial(fieldName, criteria);
       }
     });
   }

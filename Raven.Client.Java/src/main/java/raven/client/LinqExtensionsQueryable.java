@@ -10,7 +10,6 @@ import raven.abstractions.data.SuggestionQuery;
 import raven.abstractions.data.SuggestionQueryResult;
 import raven.client.linq.DynamicAggregationQuery;
 import raven.client.linq.IRavenQueryable;
-import raven.client.SearchOptions;
 
 import com.mysema.query.types.Path;
 

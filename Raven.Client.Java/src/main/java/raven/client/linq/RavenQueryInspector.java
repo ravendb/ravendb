@@ -19,7 +19,6 @@ import raven.abstractions.basic.Lazy;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action1;
-import raven.abstractions.closure.Function1;
 import raven.abstractions.data.Facet;
 import raven.abstractions.data.FacetResults;
 import raven.abstractions.data.IndexQuery;
@@ -44,7 +43,6 @@ import raven.client.document.LazyFacetsOperation;
 import raven.client.document.batches.LazySuggestOperation;
 import raven.client.indexes.AbstractTransformerCreationTask;
 import raven.client.spatial.SpatialCriteria;
-import raven.client.spatial.SpatialCriteriaFactory;
 
 public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryInspector {
 
@@ -148,8 +146,8 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   }
 
   @Override
-  public IRavenQueryable<T> spatial(final Path< ? > path, final Function1<SpatialCriteriaFactory, SpatialCriteria> clause) {
-    return customize(new DocumentQueryCustomizationFactory().spatial(ExpressionExtensions.toPropertyPath(path), clause));
+  public IRavenQueryable<T> spatial(final Path< ? > path, final SpatialCriteria criteria) {
+    return customize(new DocumentQueryCustomizationFactory().spatial(ExpressionExtensions.toPropertyPath(path), criteria));
   }
 
   @Override

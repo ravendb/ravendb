@@ -7,14 +7,12 @@ import com.mysema.query.types.Path;
 
 import raven.abstractions.basic.Lazy;
 import raven.abstractions.closure.Action1;
-import raven.abstractions.closure.Function1;
 import raven.abstractions.data.Facet;
 import raven.abstractions.data.FacetResults;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.QueryResult;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.client.spatial.SpatialCriteria;
-import raven.client.spatial.SpatialCriteriaFactory;
 
 /**
  * A query against a Raven index
@@ -81,9 +79,9 @@ public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<
    */
   public IndexQuery getIndexQuery();
 
-  public IDocumentQuery<T> spatial(Path<?> path, Function1<SpatialCriteriaFactory, SpatialCriteria> clause);
+  public IDocumentQuery<T> spatial(Path<?> path, SpatialCriteria criteria);
 
-  public IDocumentQuery<T> spatial(String name, Function1<SpatialCriteriaFactory, SpatialCriteria> clause);
+  public IDocumentQuery<T> spatial(String name, SpatialCriteria criteria);
 
   public boolean isDistinct();
 
