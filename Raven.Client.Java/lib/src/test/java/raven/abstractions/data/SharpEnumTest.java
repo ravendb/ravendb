@@ -86,6 +86,5 @@ public class SharpEnumTest {
     testDeserialization(serializer);
 
   }
-  //TODO: test for serialization / deserialziation in map (ex. index)
 
 }

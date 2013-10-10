@@ -15,7 +15,7 @@ import raven.client.document.DocumentStore;
 import raven.client.linq.IRavenQueryable;
 import raven.tests.bugs.PatchingTest.Comment;
 import raven.tests.bugs.PatchingTest.Post;
-import raven.tests.bugs.QPatching_Post;
+import raven.tests.bugs.QPatchingTest_Post;
 import raven.tests.bugs.QUser;
 import raven.tests.bugs.User;
 
@@ -70,7 +70,7 @@ public class ArrayLengthQueryTest extends RemoteClientTest {
         session.saveChanges();
       }
       try (IDocumentSession session = store.openSession()) {
-        QPatching_Post x = QPatching_Post.post;
+        QPatchingTest_Post x = QPatchingTest_Post.post;
         IRavenQueryable<Post> query = session.query(Post.class)
           .where(x.comments.size().eq(5))
           .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults());
@@ -119,7 +119,7 @@ public class ArrayLengthQueryTest extends RemoteClientTest {
         session.saveChanges();
       }
       try (IDocumentSession session = store.openSession()) {
-        QPatching_Post x = QPatching_Post.post;
+        QPatchingTest_Post x = QPatchingTest_Post.post;
         IRavenQueryable<Post> query = session.query(Post.class)
           .orderBy(x.comments.size().asc())
           .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults());

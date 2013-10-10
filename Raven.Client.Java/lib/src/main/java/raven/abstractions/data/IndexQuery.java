@@ -371,7 +371,6 @@ public class IndexQuery {
       NetDateFormat sdf = new NetDateFormat();
       String cutOffAsString = UrlUtils.escapeDataString(sdf.format(cutoff));
       path.append("&cufOff=").append(cutOffAsString);
-      //TODO: test date format
     }
     if (cutoffEtag != null) {
       path.append("&cutOffEtag=").append(cutoffEtag);

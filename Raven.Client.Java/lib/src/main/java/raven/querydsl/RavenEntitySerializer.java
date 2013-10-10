@@ -27,8 +27,19 @@ public class RavenEntitySerializer extends EntitySerializer {
   }
 
   private void writeCreateListMethod(EntityType model, CodeWriter writer) throws IOException {
-    //TODO: find if we have any list property!
+/*
+    boolean hasListProperty = false;
 
+    for (Property property : model.getProperties()) {
+      if (property.getType().getJavaClass().equals(ListPath.class)) {
+        hasListProperty = true;
+      }
+    }
+
+    if (!hasListProperty) {
+      return;
+    }
+*/
     writer.suppressWarnings("all");
     writer.append("    protected <A, E extends SimpleExpression<? super A>> RavenList<A, E> createList(String property, Class<? super A> type, Class<? super E> queryType, PathInits inits) {");
     writer.nl();
