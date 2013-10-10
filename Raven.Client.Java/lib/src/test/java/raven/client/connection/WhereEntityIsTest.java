@@ -12,6 +12,7 @@ import raven.client.indexes.IndexDefinitionBuilder;
 import static org.junit.Assert.assertEquals;
 public class WhereEntityIsTest extends RavenDBAwareTests {
 
+  // this test fails sometimes when run in memory == true
   @Test
   public void testCtanQueryUsingMultipleEntities() throws Exception {
     try {

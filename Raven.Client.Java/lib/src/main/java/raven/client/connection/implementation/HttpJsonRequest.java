@@ -125,7 +125,7 @@ public class HttpJsonRequest {
         webRequest.addHeader("Content-Encoding", "gzip");
       }
       // Accept-Encoding Parameters are handled by HttpClient
-      webRequest.addHeader("Accept-Encoding", "gzip,deflate"); //TODO: test me
+      webRequest.addHeader("Accept-Encoding", "gzip,deflate");
       this.httpClient = factory.getHttpClient();
     } else {
       this.httpClient = factory.getHttpClient();
@@ -689,20 +689,40 @@ public class HttpJsonRequest {
     int retries = 0;
 
     while (true) {
-      //TODO: ErrorResponseException webException;
+      HttpOperationException webException = null;
       try {
         HttpUriRequest webRequest = createWebRequest(url, method);
         //TODO CheckForErrorsAndReturnCachedResultIfAnyAsync();
         httpResponse = httpClient.execute(webRequest);
+        if (httpResponse.getStatusLine().getStatusCode() >= 300) {
+          throw new HttpOperationException("Unable to connect to changes API", null, webRequest, httpResponse);
+        }
         final ObservableLineStream observableLineStream = new ObservableLineStream(httpResponse.getEntity().getContent(),  Delegates.delegate0());
         setResponseHeaders(extractHeaders(httpResponse.getAllHeaders()));
         observableLineStream.start();
 
         return observableLineStream;
       } catch (Exception e) {
-        e.printStackTrace();
-        //TODO:
+        if (++retries >= 3 || disabledAuthRetries || !(e instanceof HttpOperationException)) {
+          throw new RuntimeException(e);
+        }
+        webException = (HttpOperationException) e;
+        if (webException.getStatusCode() != HttpStatus.SC_UNAUTHORIZED &&
+          webException.getStatusCode() != HttpStatus.SC_FORBIDDEN &&
+          webException.getStatusCode() != HttpStatus.SC_PRECONDITION_FAILED) {
+          throw webException;
+        }
       }
+
+      if (webException.getStatusCode() == HttpStatus.SC_FORBIDDEN) {
+        handleForbiddenResponse(webException.getHttpResponse());
+        throw webException;
+      }
+
+      if (!handleUnauthorizedResponse(webException.getHttpResponse())) {
+        throw webException;
+      }
+
     }
 
   }

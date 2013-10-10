@@ -46,9 +46,7 @@ import raven.client.util.Inflector;
 // TODO: finish me (copy java docs) and introduce interfaces instead of FuncN types
 /**
  * Note: we removed logic related to applyReduceFunction because we don't support map/reduce on shards
- * we also don't support contractResolver - Jackson customiazation can be performed via {@link JsonExtensions#getDefaultObjectMapper()} instance
- *
- * for CreateSerializer use {@link JsonExtensions#getDefaultObjectMapper()}
+ * we also don't support contractResolver - Jackson customization can be performed via {@link JsonExtensions#getDefaultObjectMapper()} instance
  *
  */
 public class DocumentConvention implements Serializable {
@@ -934,6 +932,7 @@ public class DocumentConvention implements Serializable {
 
   public interface TryConvertValueForQueryDelegate<T> {
     public boolean tryConvertValue(String fieldName, T value, QueryValueConvertionType convertionType, Reference<String> strValue);
+    public Class<T> getSupportedClass();
   }
 
   public <T> void registerQueryValueConverter(TryConvertValueForQueryDelegate<T> converter) {
@@ -944,34 +943,25 @@ public class DocumentConvention implements Serializable {
     registerQueryValueConverter(converter, defaultSortOption, false);
   }
 
-  public <T> void registerQueryValueConverter(TryConvertValueForQueryDelegate<T> converter, SortOptions defaultSortOption, boolean usesRangeField) {
-    /*TODO
-    TryConvertValueForQueryDelegate<object> actual = (string name, object value, QueryValueConvertionType convertionType, out string strValue) =>
-    {
-      if (value is T)
-        return converter(name, (T)value, convertionType, out strValue);
-      strValue = null;
-      return false;
-    };
+  public <T> void registerQueryValueConverter(final TryConvertValueForQueryDelegate<T> converter, SortOptions defaultSortOption, boolean usesRangeField) {
 
     int index;
-    for (index = 0; index < listOfQueryValueConverters.Count; index++)
-    {
-      var entry = listOfQueryValueConverters[index];
-      if (entry.Item1.IsAssignableFrom(typeof(T)))
-      {
+    for (index = 0; index < listOfQueryValueConverters.size(); index++) {
+      Tuple<Class<?>, TryConvertValueForQueryDelegate<?>> entry = listOfQueryValueConverters.get(index);
+      if (entry.getItem1().isAssignableFrom(converter.getSupportedClass())) {
         break;
       }
     }
 
-    listOfQueryValueConverters.Insert(index, Tuple.Create(typeof(T), actual));
+    listOfQueryValueConverters.add(index, Tuple.<Class<?>,TryConvertValueForQueryDelegate<?>> create(converter.getSupportedClass(), converter));
 
-    if (defaultSortOption != SortOptions.String)
-      customDefaultSortOptions.Add(typeof(T).Name, defaultSortOption);
+    if (defaultSortOption != SortOptions.STRING) {
+      customDefaultSortOptions.put(converter.getSupportedClass().getName(), defaultSortOption);
+    }
+    if (usesRangeField) {
+      customRangeTypes.add(converter.getSupportedClass());
+    }
 
-    if (usesRangeField)
-      customRangeTypes.Add(typeof(T));
-      */
   }
 
   public boolean tryConvertValueForQuery(String fieldName, Object value, QueryValueConvertionType convertionType, Reference<String> strValue) {

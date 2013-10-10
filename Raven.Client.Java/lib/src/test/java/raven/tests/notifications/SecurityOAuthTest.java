@@ -52,6 +52,6 @@ public class SecurityOAuthTest extends RemoteClientTest {
       assertEquals(documentChangeNotification.getType(), DocumentChangeTypes.PUT);
 
     }
-
+//TODO: other tests
   }
 }

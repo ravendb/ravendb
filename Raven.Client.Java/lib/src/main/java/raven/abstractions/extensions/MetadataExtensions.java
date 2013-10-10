@@ -1,6 +1,8 @@
 package raven.abstractions.extensions;
 
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +15,7 @@ import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
+import raven.abstractions.util.NetDateFormat;
 import raven.client.utils.UrlUtils;
 
 /**
@@ -198,7 +201,14 @@ public class MetadataExtensions {
     if (val.startsWith("[")) {
       return RavenJArray.parse(val);
     }
-    //TODO: parse dates
+
+    NetDateFormat netDateFormat = new NetDateFormat();
+    try {
+      Date date = netDateFormat.parse(val);
+      return new RavenJValue(date);
+    } catch (ParseException e) {
+      //ignore
+    }
     return new RavenJValue(UrlUtils.unescapeDataString(val));
   }
 

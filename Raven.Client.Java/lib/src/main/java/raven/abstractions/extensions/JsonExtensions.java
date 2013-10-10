@@ -59,8 +59,6 @@ public class JsonExtensions {
     ObjectMapper objectMapper = new ObjectMapper();
     objectMapper.setPropertyNamingStrategy(new DotNetNamingStrategy());
     objectMapper.disable(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES);
-    // objectMapper.enable(Feature.WRITE_ENUMS_USING_INDEX); //TODO: make sure
-    // if we should remove it
     objectMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
     objectMapper.disable(SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS);
     objectMapper.configure(Feature.WRITE_DATES_AS_TIMESTAMPS, false);

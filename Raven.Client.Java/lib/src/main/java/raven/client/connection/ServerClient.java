@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -77,6 +78,7 @@ import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
 import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
+import raven.abstractions.util.NetDateFormat;
 import raven.client.changes.IDatabaseChanges;
 import raven.client.connection.ReplicationInformer.FailoverStatusChangedEventArgs;
 import raven.client.connection.implementation.HttpJsonRequest;
@@ -1193,8 +1195,12 @@ public class ServerClient implements IDatabaseCommands {
     QueryHeaderInformation queryHeaderInformation = new QueryHeaderInformation();
     Map<String, String> headers = HttpJsonRequest.extractHeaders(webResponse.getAllHeaders());
     queryHeaderInformation.setIndex(headers.get("Raven-Index"));
-    //TODO: queryHeaderInformation.setIndexTimestamp() IndexTimestamp = DateTime.ParseExact(webResponse.Headers["Raven-Index-Timestamp"], Default.DateTimeFormatsToRead,
-    //CultureInfo.InvariantCulture, DateTimeStyles.None),
+    NetDateFormat sdf = new NetDateFormat();
+    try {
+      queryHeaderInformation.setIndexTimestamp(sdf.parse(headers.get("Raven-Index-Timestamp")));
+    } catch (ParseException e) {
+      throw new RuntimeException(e);
+    }
 
     queryHeaderInformation.setIndexEtag(Etag.parse(headers.get("Raven-Index-Etag")));
     queryHeaderInformation.setResultEtag(Etag.parse(headers.get("Raven-Result-Etag")));
