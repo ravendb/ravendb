@@ -34,6 +34,7 @@ import raven.client.IDocumentQuery;
 import raven.client.RavenQueryHighlightings;
 import raven.client.RavenQueryStatistics;
 import raven.client.SearchOptions;
+import raven.client.SearchOptionsSet;
 import raven.client.connection.IDatabaseCommands;
 import raven.client.connection.IRavenQueryInspector;
 import raven.client.document.DocumentQueryCustomizationFactory;
@@ -387,21 +388,21 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
 
   @Override
   public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms) {
-    return search(fieldSelector, searchTerms, 1.0, SearchOptions.GUESS, EscapeQueryOptions.ESCAPE_ALL);
+    return search(fieldSelector, searchTerms, 1.0, new SearchOptionsSet(SearchOptions.GUESS), EscapeQueryOptions.ESCAPE_ALL);
   }
 
   @Override
   public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms, double boost) {
-    return search(fieldSelector, searchTerms, boost, SearchOptions.GUESS, EscapeQueryOptions.ESCAPE_ALL);
+    return search(fieldSelector, searchTerms, boost, new SearchOptionsSet(SearchOptions.GUESS), EscapeQueryOptions.ESCAPE_ALL);
   }
 
   @Override
-  public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms, double boost, SearchOptions searchOptions) {
+  public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms, double boost, SearchOptionsSet searchOptions) {
     return search(fieldSelector, searchTerms, boost, searchOptions, EscapeQueryOptions.ESCAPE_ALL);
   }
 
   @Override
-  public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms, double boost, SearchOptions options, EscapeQueryOptions escapeQueryOptions) {
+  public IRavenQueryable<T> search(Path< ? > fieldSelector, String searchTerms, double boost, SearchOptionsSet options, EscapeQueryOptions escapeQueryOptions) {
     // we use constant null to preserve arguments indexes
     return provider.createQuery(Expressions.operation(Object.class, LinqOps.Query.SEARCH, getExpression(), fieldSelector,
         Expressions.constant(searchTerms), Expressions.constant(boost), Expressions.constant(options), Expressions.constant(escapeQueryOptions)));

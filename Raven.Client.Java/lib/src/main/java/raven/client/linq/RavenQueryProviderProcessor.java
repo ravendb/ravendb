@@ -23,6 +23,7 @@ import raven.abstractions.json.linq.RavenJToken;
 import raven.client.EscapeQueryOptions;
 import raven.client.IDocumentQuery;
 import raven.client.SearchOptions;
+import raven.client.SearchOptionsSet;
 import raven.client.WhereParams;
 import raven.client.document.DocumentQuery;
 import raven.client.document.DocumentQueryCustomization;
@@ -859,8 +860,8 @@ public class RavenQueryProviderProcessor<T> {
       if (!LinqPathProvider.getValueFromExpressionWithoutConversion(search.getArg(4), valueRef)) {
         throw new IllegalStateException("Could not extract value from " + searchExpression);
       }
-      SearchOptions queryOptions = (SearchOptions) valueRef.value;
-      if (queryOptions != SearchOptions.GUESS) { //TODO: in C# search option is flags
+      SearchOptionsSet queryOptions = (SearchOptionsSet) valueRef.value;
+      if (!queryOptions.contains(SearchOptions.GUESS)) {
         break;
       }
       Expression< ? > maybeInnerOperation = search.getArg(0);
@@ -893,11 +894,11 @@ public class RavenQueryProviderProcessor<T> {
       if (LinqPathProvider.getValueFromExpressionWithoutConversion(expression.getArg(4), valueRef) == false) {
         throw new IllegalArgumentException("Could not extract value from " + expression);
       }
-      SearchOptions options = (SearchOptions) valueRef.value;
-      if (chanedWhere && options == SearchOptions.AND) { //TODO: has flag
+      SearchOptionsSet options = (SearchOptionsSet) valueRef.value;
+      if (chanedWhere && options.contains(SearchOptions.AND)) {
         luceneQuery.andAlso();
       }
-      if (options == SearchOptions.NOT) {
+      if (options.contains(SearchOptions.NOT)) {
         luceneQuery.negateNext();
       }
       if (LinqPathProvider.getValueFromExpressionWithoutConversion(expression.getArg(5), valueRef) == false) {
@@ -907,7 +908,7 @@ public class RavenQueryProviderProcessor<T> {
       luceneQuery.search(expressionInfo.getPath(), searchTerms, queryOptions);
       luceneQuery.boost(boost);
 
-      if (options == SearchOptions.AND) {
+      if (options.contains(SearchOptions.AND)) {
         chanedWhere = true;
       }
     }
@@ -920,8 +921,8 @@ public class RavenQueryProviderProcessor<T> {
     if (LinqPathProvider.getValueFromExpressionWithoutConversion(searchExpression.getArg(4), valueRef) == false) {
       throw new IllegalArgumentException("Could not extract value from " + searchExpression);
     }
-    SearchOptions options = (SearchOptions) valueRef.value;
-    if (options == SearchOptions.GUESS) {
+    SearchOptionsSet options = (SearchOptionsSet) valueRef.value;
+    if (options.contains(SearchOptions.GUESS)) {
       chanedWhere = true;
     }
 

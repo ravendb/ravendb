@@ -2,6 +2,7 @@ package raven.querydsl;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 
 import com.mysema.codegen.CodeWriter;
 import com.mysema.codegen.model.ClassType;
@@ -26,20 +27,21 @@ public class RavenEntitySerializer extends EntitySerializer {
     super.outro(model, writer);
   }
 
-  private void writeCreateListMethod(EntityType model, CodeWriter writer) throws IOException {
-/*
-    boolean hasListProperty = false;
-
+  private boolean hasListProperty(EntityType model) {
     for (Property property : model.getProperties()) {
-      if (property.getType().getJavaClass().equals(ListPath.class)) {
-        hasListProperty = true;
+      if (property.getType().getFullName().equals(List.class.getName())) {
+        return true;
       }
     }
 
-    if (!hasListProperty) {
+    return false;
+  }
+
+  private void writeCreateListMethod(EntityType model, CodeWriter writer) throws IOException {
+
+    if (!hasListProperty(model)) {
       return;
     }
-*/
     writer.suppressWarnings("all");
     writer.append("    protected <A, E extends SimpleExpression<? super A>> RavenList<A, E> createList(String property, Class<? super A> type, Class<? super E> queryType, PathInits inits) {");
     writer.nl();
@@ -54,7 +56,9 @@ public class RavenEntitySerializer extends EntitySerializer {
   @Override
   protected void introImports(CodeWriter writer, SerializerConfig config, EntityType model) throws IOException {
     super.introImports(writer, config, model);
-    writer.imports(SimpleExpression.class, RavenList.class);
+    if (hasListProperty(model)) {
+      writer.imports(SimpleExpression.class, RavenList.class);
+    }
   }
 
   @Override

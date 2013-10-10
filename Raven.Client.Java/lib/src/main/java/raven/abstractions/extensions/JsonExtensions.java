@@ -50,6 +50,7 @@ import raven.abstractions.json.linq.RavenJValue;
 import raven.abstractions.util.NetDateFormat;
 import raven.abstractions.util.ValueTypeUtils;
 import raven.client.SearchOptions;
+import raven.client.SearchOptionsSet;
 import raven.client.document.FailoverBehavior;
 import raven.client.document.FailoverBehaviorSet;
 
@@ -80,6 +81,7 @@ public class JsonExtensions {
 
     module.addSerializer(FacetAggregationSet.class, new RavenEnumSetSerializer(FacetAggregation.class));
     module.addSerializer(FailoverBehaviorSet.class, new RavenEnumSetSerializer(FailoverBehavior.class));
+    module.addSerializer(SearchOptionsSet.class, new RavenEnumSetSerializer(SearchOptions.class));
 
     module.addSerializer(RavenJObject.class, new RavenJTokenSerializer<>(RavenJObject.class));
     module.addSerializer(RavenJToken.class, new RavenJTokenSerializer<>(RavenJToken.class));

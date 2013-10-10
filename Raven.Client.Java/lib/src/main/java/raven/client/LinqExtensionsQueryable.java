@@ -178,9 +178,9 @@ public interface LinqExtensionsQueryable<T> {
 
   public IRavenQueryable<T> search(Path<?> fieldSelector, String searchTerms, double boost);
 
-  public IRavenQueryable<T> search(Path<?> fieldSelector, String searchTerms, double boost, SearchOptions searchOptions);
+  public IRavenQueryable<T> search(Path<?> fieldSelector, String searchTerms, double boost, SearchOptionsSet searchOptions);
 
-  public IRavenQueryable<T> search(Path<?> fieldSelector, String searchTerms, double boost, SearchOptions searchOptions, EscapeQueryOptions escapeQueryOptions);
+  public IRavenQueryable<T> search(Path<?> fieldSelector, String searchTerms, double boost, SearchOptionsSet searchOptions, EscapeQueryOptions escapeQueryOptions);
 
   public IRavenQueryable<T> orderByScore();
 

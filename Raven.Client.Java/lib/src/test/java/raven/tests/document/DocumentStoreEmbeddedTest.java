@@ -34,5 +34,4 @@ public class DocumentStoreEmbeddedTest extends RemoteClientTest {
     }
   }
 
-  //TODO: other tests
 }
