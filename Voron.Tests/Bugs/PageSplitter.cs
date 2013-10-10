@@ -15,9 +15,7 @@
 		[Fact]
 		public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
 		{
-			var ids = ReadIds()
-				.Take(10000)
-				.ToList();
+			var ids = ReadIds("data.txt");
 
 			using (var env = new StorageEnvironment(new PureMemoryPager()))
 			{
@@ -27,7 +25,48 @@
 
 				var trees = CreateTrees(env, 1, "tree");
 
-				foreach (var id in ids) // 244165328/0/373/1614190405 -> 8887 iteration
+				var addedIds = new List<string>();
+				foreach (var id in ids) // 244276974/13/250/2092845878 -> 8887 iteration
+				{
+					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+					{
+						foreach (var tree in trees)
+						{
+							if (id == "244276974/13/250/2092845878")
+							{
+							}
+
+							tree.Add(tx, id, new MemoryStream(testBuffer));
+						}
+
+						tx.Commit();
+
+						addedIds.Add(id);
+						if (addedIds.Count >= 8887)
+						{
+							//ValidateRecords(env, trees, addedIds);
+						}
+					}
+				}
+
+				ValidateRecords(env, trees, ids);
+			}
+		}
+
+		[Fact]
+		public void PageSplitterShouldCalculateSeparatorKeyCorrectly2()
+		{
+			var ids = ReadIds("data2.txt");
+
+			using (var env = new StorageEnvironment(new PureMemoryPager()))
+			{
+				var rand = new Random();
+				var testBuffer = new byte[69];
+				rand.NextBytes(testBuffer);
+
+				var trees = CreateTrees(env, 1, "tree");
+
+				foreach (var id in ids)
 				{
 					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 					{
@@ -93,9 +132,9 @@
 			return results;
 		}
 
-		private static IList<string> ReadIds()
+		private static IList<string> ReadIds(string fileName)
 		{
-			using (var reader = new StreamReader("Bugs/Data/data.txt"))
+			using (var reader = new StreamReader("Bugs/Data/" + fileName))
 			{
 				string line;
 

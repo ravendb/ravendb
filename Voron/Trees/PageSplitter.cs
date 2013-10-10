@@ -95,7 +95,7 @@ namespace Voron.Trees
             var currentIndex = _page.LastSearchPosition;
             var newPosition = true;
             var splitIndex = _page.NumberOfEntries / 2;
-            if (currentIndex <= splitIndex)
+            if (currentIndex < splitIndex)
                 newPosition = false;
 
             if (_page.IsLeaf)
