@@ -179,8 +179,7 @@ namespace Raven.Client.Connection
 						{
 						    var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
 						    CopyHeadersToHttpRequestMessage(httpRequestMessage);
-						    HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage);
-						    Response = httpResponseMessage;
+						    Response = await httpClient.SendAsync(httpRequestMessage);
 							SetResponseHeaders(Response);
 
 							ResponseStatusCode = Response.StatusCode;
@@ -189,7 +188,7 @@ namespace Raven.Client.Connection
 						{
 							sp.Stop();
 						}
-						var result = await this.CheckForErrorsAndReturnCachedResultIfAnyAsync();
+						var result = await CheckForErrorsAndReturnCachedResultIfAnyAsync();
 					    if (result != null)
 					        return result;
 					}
@@ -358,11 +357,13 @@ namespace Raven.Client.Connection
 				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
 			isRequestSentToServer = true;
 
-			if (writeCalled == false)
-				webRequest.ContentLength = 0;
 			var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
 			CopyHeadersToHttpRequestMessage(httpRequestMessage);
 			Response = await httpClient.SendAsync(httpRequestMessage);
+
+			// throw the conflict exception
+			await CheckForErrorsAndReturnCachedResultIfAnyAsync();
+			
 			using (var stream = await Response.GetResponseStreamWithHttpDecompression())
 			{
 				SetResponseHeaders(Response);

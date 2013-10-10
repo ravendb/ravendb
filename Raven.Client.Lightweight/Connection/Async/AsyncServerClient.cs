@@ -1387,10 +1387,6 @@ namespace Raven.Client.Connection.Async
 				{
 					var result = await request.ReadResponseBytesAsync();
 					var memoryStream = new MemoryStream(result);
-					if (request.Response.StatusCode == HttpStatusCode.Conflict)
-					{
-						await request.ReadResponseJsonAsync();//throw the conflict exception
-					}
 					return new Attachment
 					{
 						Data = () => memoryStream,
