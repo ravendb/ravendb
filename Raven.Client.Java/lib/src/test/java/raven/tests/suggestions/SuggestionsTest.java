@@ -15,7 +15,6 @@ import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentQueryCustomizationFactory;
 import raven.client.document.DocumentStore;
-import raven.client.linq.IRavenQueryable;
 import raven.tests.bugs.QUser;
 import raven.tests.bugs.User;
 

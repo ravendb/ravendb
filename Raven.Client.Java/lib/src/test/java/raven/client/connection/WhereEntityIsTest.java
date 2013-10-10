@@ -13,7 +13,7 @@ import static org.junit.Assert.assertEquals;
 public class WhereEntityIsTest extends RavenDBAwareTests {
 
   @Test
-  public void testCanQueryUsingMultipleEntities() throws Exception {
+  public void testCtanQueryUsingMultipleEntities() throws Exception {
     try {
       createDb();
       IDatabaseCommands dbCommands = serverClient.forDatabase(getDbName());

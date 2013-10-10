@@ -8,7 +8,6 @@ import static org.junit.Assert.fail;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +39,7 @@ import raven.client.connection.profiling.RequestResultArgs;
 import raven.client.connection.profiling.RequestStatus;
 import raven.client.document.DocumentConvention;
 import raven.client.document.FailoverBehavior;
+import raven.client.document.FailoverBehaviorSet;
 import raven.client.listeners.IDocumentConflictListener;
 
 public class HttpJsonRequestTest extends RavenDBAwareTests {
@@ -52,7 +52,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
   public void init() {
     System.setProperty("java.net.preferIPv4Stack" , "true");
     convention = new DocumentConvention();
-    convention.setFailoverBehavior(EnumSet.of(FailoverBehavior.FAIL_IMMEDIATELY));
+    convention.setFailoverBehavior(new FailoverBehaviorSet(FailoverBehavior.FAIL_IMMEDIATELY));
     factory = new HttpJsonRequestFactory(10);
 
     replicationInformer = new ReplicationInformer(convention);

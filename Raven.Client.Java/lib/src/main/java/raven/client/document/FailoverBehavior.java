@@ -1,5 +1,10 @@
 package raven.client.document;
 
+import raven.abstractions.basic.SerializeUsingValue;
+import raven.abstractions.basic.UseSharpEnum;
+
+@UseSharpEnum
+@SerializeUsingValue
 public enum FailoverBehavior {
 
   /** Allow to read from the secondary server(s), but immediately fail writes

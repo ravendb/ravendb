@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +58,7 @@ public class DocumentConvention implements Serializable {
   private final List<Tuple<Class<?>, Function3<String, IDatabaseCommands, Object, String>>> listOfRegisteredIdConventions =
       new ArrayList<>();
 
-  private EnumSet<FailoverBehavior> failoverBehavior = EnumSet.of(FailoverBehavior.FAIL_IMMEDIATELY);
+  private FailoverBehaviorSet failoverBehavior = new FailoverBehaviorSet();
 
   public boolean disableProfiling;
 
@@ -136,7 +135,7 @@ public class DocumentConvention implements Serializable {
     setDisableProfiling(true);
     setUseParallelMultiGet(true);
     setDefaultQueryingConsistency(ConsistencyOptions.NONE);
-    setFailoverBehavior(EnumSet.of(FailoverBehavior.ALLOW_READS_FROM_SECONDARIES));
+    setFailoverBehavior(FailoverBehaviorSet.of(FailoverBehavior.ALLOW_READS_FROM_SECONDARIES));
     shouldCacheRequest = Functions.alwaysTrue();
     setFindIdentityProperty(new Function1<Field, Boolean>() {
 
@@ -275,7 +274,7 @@ public class DocumentConvention implements Serializable {
    *  reach the primary node and need to failover to secondary node(s).
    * @return the failoverBehavior
    */
-  public EnumSet<FailoverBehavior> getFailoverBehavior() {
+  public FailoverBehaviorSet getFailoverBehavior() {
     return failoverBehavior;
   }
 
@@ -284,7 +283,7 @@ public class DocumentConvention implements Serializable {
    *  reach the primary node and need to failover to secondary node(s).
    * @param failoverBehavior the failoverBehavior to set
    */
-  public void setFailoverBehavior(EnumSet<FailoverBehavior> failoverBehavior) {
+  public void setFailoverBehavior(FailoverBehaviorSet failoverBehavior) {
     this.failoverBehavior = failoverBehavior;
   }
 
@@ -877,8 +876,8 @@ public class DocumentConvention implements Serializable {
   }
 
 
-  public EnumSet<FailoverBehavior> getFailoverBehaviorWithoutFlags() {
-    EnumSet<FailoverBehavior> result = this.failoverBehavior.clone();
+  public FailoverBehaviorSet getFailoverBehaviorWithoutFlags() {
+    FailoverBehaviorSet result = this.failoverBehavior.clone();
     result.remove(FailoverBehavior.READ_FROM_ALL_SERVERS);
     return result;
   }

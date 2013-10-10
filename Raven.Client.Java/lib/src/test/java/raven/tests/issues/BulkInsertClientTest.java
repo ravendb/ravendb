@@ -24,7 +24,6 @@ public class BulkInsertClientTest extends RemoteClientTest {
             System.out.println(msg);
           }
         });
-        //TODO: try with multi tests + 5000 iterations
         User user = new User();
         user.setName("Fitzchak");
         bulkInsert.store(user);

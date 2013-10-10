@@ -157,29 +157,6 @@ public class LazySessionOperations implements ILazySessionOperations {
     }
   }
 
-  /*TODO:
-   * (non-Javadoc)
-   * @see raven.client.document.batches.ILazySessionOperations#load(java.lang.Class, java.lang.Class, java.lang.String[])
-   * internal object ProjectionToInstance(RavenJObject y, Type type)
-        {
-            HandleInternalMetadata(y);
-            foreach (var conversionListener in listeners.ExtendedConversionListeners)
-            {
-                conversionListener.BeforeConversionToEntity(null, y, null);
-            }
-            var instance = y.Deserialize(type, Conventions);
-            foreach (var conversionListener in listeners.ConversionListeners)
-            {
-                conversionListener.DocumentToEntity(null, instance, y, null);
-            }
-            foreach (var conversionListener in listeners.ExtendedConversionListeners)
-            {
-                conversionListener.AfterConversionToEntity(null, y, null, instance);
-            }
-            return instance;
-                                              }
-   */
-
   @Override
   public <TResult, TTransformer extends AbstractTransformerCreationTask> Lazy<TResult[]> load(
     Class<TTransformer> tranformerClass, Class<TResult> clazz, String... ids) {

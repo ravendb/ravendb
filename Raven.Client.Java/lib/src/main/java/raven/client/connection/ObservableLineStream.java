@@ -21,6 +21,7 @@ public class ObservableLineStream implements IObservable<String>, Closeable {
   private final byte[] buffer = new byte[8192];
   private int posInBuffer;
   private final Action0 onDispose;
+  private Thread task;
 
   private final ConcurrentSet<IObserver<String>> subscribers = new ConcurrentSet<>();
 
@@ -30,7 +31,7 @@ public class ObservableLineStream implements IObservable<String>, Closeable {
   }
 
   public void start() {
-    Thread task = new Thread(new Runnable() {
+    task = new Thread(new Runnable() {
 
       @Override
       public void run() {
@@ -91,10 +92,8 @@ public class ObservableLineStream implements IObservable<String>, Closeable {
           } catch (Exception e) {
             IOUtils.closeQuietly(stream);
             if (e instanceof EOFException) {
-              return ;//TODO: not an error?
+              return ;
             }
-
-            //TODO handle object disposed exception and webexception  - request canceled
             for (IObserver<String> subscriber : subscribers) {
               subscriber.onError(e);
             }
@@ -106,6 +105,10 @@ public class ObservableLineStream implements IObservable<String>, Closeable {
     }, "ObservableLineStream");
     task.setDaemon(true);
     task.start();
+  }
+
+  public Thread getTask() {
+    return task;
   }
 
   public int read() throws IOException {

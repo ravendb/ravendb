@@ -3,14 +3,17 @@ package raven.abstractions.extensions;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.EnumSet;
-import java.util.Iterator;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonProcessingException;
+import org.codehaus.jackson.JsonToken;
 import org.codehaus.jackson.Version;
 import org.codehaus.jackson.map.DeserializationConfig;
 import org.codehaus.jackson.map.DeserializationContext;
@@ -29,9 +32,16 @@ import org.codehaus.jackson.map.module.SimpleModule;
 import org.codehaus.jackson.map.ser.std.SerializerBase;
 import org.codehaus.jackson.type.JavaType;
 
-import raven.abstractions.basic.SerializeUsingValue;
 import raven.abstractions.basic.SharpAwareJacksonAnnotationIntrospector;
+import raven.abstractions.basic.SharpEnum;
+import raven.abstractions.data.DocumentChangeTypes;
+import raven.abstractions.data.EnumSet;
 import raven.abstractions.data.Etag;
+import raven.abstractions.data.FacetAggregation;
+import raven.abstractions.data.FacetAggregationSet;
+import raven.abstractions.data.IndexChangeTypes;
+import raven.abstractions.data.ReplicationConflictTypes;
+import raven.abstractions.data.ReplicationOperationTypes;
 import raven.abstractions.indexing.SortOptions;
 import raven.abstractions.json.linq.RavenJArray;
 import raven.abstractions.json.linq.RavenJObject;
@@ -39,6 +49,9 @@ import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
 import raven.abstractions.util.NetDateFormat;
 import raven.abstractions.util.ValueTypeUtils;
+import raven.client.SearchOptions;
+import raven.client.document.FailoverBehavior;
+import raven.client.document.FailoverBehaviorSet;
 
 public class JsonExtensions {
 
@@ -46,7 +59,8 @@ public class JsonExtensions {
     ObjectMapper objectMapper = new ObjectMapper();
     objectMapper.setPropertyNamingStrategy(new DotNetNamingStrategy());
     objectMapper.disable(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES);
-    objectMapper.enable(Feature.WRITE_ENUMS_USING_INDEX);
+    // objectMapper.enable(Feature.WRITE_ENUMS_USING_INDEX); //TODO: make sure
+    // if we should remove it
     objectMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
     objectMapper.disable(SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS);
     objectMapper.configure(Feature.WRITE_DATES_AS_TIMESTAMPS, false);
@@ -65,13 +79,34 @@ public class JsonExtensions {
     module.addDeserializer(RavenJToken.class, new RavenJTokenDeserializer<>(RavenJToken.class));
     module.addDeserializer(RavenJArray.class, new RavenJTokenDeserializer<>(RavenJArray.class));
     module.addDeserializer(RavenJValue.class, new RavenJTokenDeserializer<>(RavenJValue.class));
-    module.addSerializer(EnumSet.class, new RavenEnumSetSerializer());
+
+    module.addSerializer(FacetAggregationSet.class, new RavenEnumSetSerializer(FacetAggregation.class));
+    module.addSerializer(FailoverBehaviorSet.class, new RavenEnumSetSerializer(FailoverBehavior.class));
+
     module.addSerializer(RavenJObject.class, new RavenJTokenSerializer<>(RavenJObject.class));
     module.addSerializer(RavenJToken.class, new RavenJTokenSerializer<>(RavenJToken.class));
     module.addSerializer(RavenJArray.class, new RavenJTokenSerializer<>(RavenJArray.class));
     module.addSerializer(RavenJValue.class, new RavenJTokenSerializer<>(RavenJValue.class));
-    //TODO: add deserializer for enumset and enum!
+
     module.addSerializer(SortOptions.class, new RavenEnumSerializer(SortOptions.class));
+    module.addSerializer(DocumentChangeTypes.class, new RavenEnumSerializer(DocumentChangeTypes.class));
+    module.addSerializer(FacetAggregation.class, new RavenEnumSerializer(FacetAggregation.class));
+    module.addSerializer(IndexChangeTypes.class, new RavenEnumSerializer(IndexChangeTypes.class));
+    module.addSerializer(ReplicationConflictTypes.class, new RavenEnumSerializer(ReplicationConflictTypes.class));
+    module.addSerializer(ReplicationOperationTypes.class, new RavenEnumSerializer(ReplicationOperationTypes.class));
+    module.addSerializer(SearchOptions.class, new RavenEnumSerializer(SearchOptions.class));
+    module.addSerializer(FailoverBehavior.class, new RavenEnumSerializer(FailoverBehavior.class));
+
+    module.addDeserializer(SortOptions.class, new RavenEnumDeserializer<>(SortOptions.class));
+    module.addDeserializer(DocumentChangeTypes.class, new RavenEnumDeserializer<>(DocumentChangeTypes.class));
+    module.addDeserializer(FacetAggregation.class, new RavenEnumDeserializer<>(FacetAggregation.class));
+    module.addDeserializer(IndexChangeTypes.class, new RavenEnumDeserializer<>(IndexChangeTypes.class));
+    module.addDeserializer(ReplicationConflictTypes.class, new RavenEnumDeserializer<>(ReplicationConflictTypes.class));
+    module.addDeserializer(ReplicationOperationTypes.class,
+      new RavenEnumDeserializer<>(ReplicationOperationTypes.class));
+    module.addDeserializer(SearchOptions.class, new RavenEnumDeserializer<>(SearchOptions.class));
+    module.addDeserializer(FailoverBehavior.class, new RavenEnumDeserializer<>(FailoverBehavior.class));
+
     return module;
   }
 
@@ -79,21 +114,26 @@ public class JsonExtensions {
 
     @SuppressWarnings("unchecked")
     protected RavenEnumSerializer(Class<? extends Enum<?>> t) {
-      super((Class<Enum< ? >>) t);
+      super((Class<Enum<?>>) t);
     }
 
     @Override
-    public void serialize(Enum< ? > value, JsonGenerator jgen, SerializerProvider provider) throws IOException, JsonGenerationException {
-      if (value == null) {
-        jgen.writeNull();
-        return;
-      }
-      try {
-        Method method = value.getClass().getMethod("getValue");
-        Integer intValue = (Integer) method.invoke(value, new Object[] { } );
-        jgen.writeNumber(intValue);
-      } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-        throw new RuntimeException(e);
+    public void serialize(Enum<?> value, JsonGenerator jgen, SerializerProvider provider) throws IOException,
+      JsonGenerationException {
+      if (provider.isEnabled(Feature.WRITE_ENUMS_USING_INDEX)) {
+        if (value == null) {
+          jgen.writeNull();
+          return;
+        }
+        try {
+          Method method = value.getClass().getMethod("getValue");
+          Integer intValue = (Integer) method.invoke(value, new Object[] {});
+          jgen.writeNumber(intValue);
+        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+          throw new RuntimeException(e);
+        }
+      } else {
+        jgen.writeString(SharpEnum.value(value));
       }
     }
 
@@ -102,35 +142,60 @@ public class JsonExtensions {
   @SuppressWarnings("rawtypes")
   public static class RavenEnumSetSerializer extends SerializerBase<EnumSet> {
 
-    protected RavenEnumSetSerializer() {
+    private Class<? extends Enum<?>> innerClass;
+
+    public RavenEnumSetSerializer(Class<? extends Enum<?>> innerClass) {
       super(EnumSet.class);
+      this.innerClass = innerClass;
     }
 
-    @Override
-    public void serialize(EnumSet value, JsonGenerator jgen, SerializerProvider provider) throws IOException, JsonGenerationException {
+    private Map<Enum, Long> enumValues = new HashMap<>();
+    private boolean cacheInitialized = false;
+
+    private void initCache() {
+      if (cacheInitialized) {
+        return;
+      }
       try {
-        if (value.isEmpty()) {
-          jgen.writeNumber(0);
-        } else {
-          Enum firstEnum= (Enum) value.iterator().next();
-          SerializeUsingValue serializeAsFlags = firstEnum.getClass().getAnnotation(SerializeUsingValue.class);
-          if (serializeAsFlags != null) {
-            Method method = firstEnum.getClass().getMethod("getValue");
-            int result = 0;
-            Iterator<Enum> iterator = value.iterator();
-            while (iterator.hasNext()) {
-              Object next = iterator.next();
-              result |= (int)method.invoke(next);
-            }
-            jgen.writeNumber(result);
-          } else {
-            throw new IllegalStateException("not implemented yet");//TODO
-          }
+        cacheInitialized = true;
+        Method getValueMethod = innerClass.getMethod("getValue");
+
+        for (Object o : innerClass.getEnumConstants()) {
+          int enumValue = (int) getValueMethod.invoke(o);
+          enumValues.put((Enum) o, Long.valueOf(enumValue));
         }
-      } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+      } catch (NoSuchMethodException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
         throw new RuntimeException(e);
       }
 
+    }
+
+    @Override
+    public void serialize(EnumSet value, JsonGenerator jgen, SerializerProvider provider) throws IOException,
+      JsonGenerationException {
+      if (provider.isEnabled(Feature.WRITE_ENUMS_USING_INDEX)) {
+        jgen.writeNumber(value.getValue());
+      } else {
+        initCache();
+        Object[] enumConstants = value.getInnerClass().getEnumConstants();
+        Set<String> result = new LinkedHashSet<>();
+        outer: for (Object item : enumConstants) {
+          if (value.contains((Enum) item)) {
+            // check if other value does not contain this one
+            for (Object subItem : enumConstants) {
+              long itemValue = enumValues.get(item);
+              long subItemValue = enumValues.get(subItem);
+              if (!subItem.equals(item) && value.contains((Enum) subItem)
+                && ((itemValue | subItemValue) == subItemValue)) {
+                continue outer;
+              }
+            }
+
+            result.add(SharpEnum.value((Enum<?>) item));
+          }
+        }
+        jgen.writeString(StringUtils.join(result, ", "));
+      }
     }
   }
 
@@ -158,7 +223,7 @@ public class JsonExtensions {
 
   public static class RavenJTokenDeserializer<T extends RavenJToken> extends StdDeserializer<T> {
 
-    protected RavenJTokenDeserializer(Class< T > vc) {
+    protected RavenJTokenDeserializer(Class<T> vc) {
       super(vc);
     }
 
@@ -168,10 +233,64 @@ public class JsonExtensions {
     }
   }
 
+  public static class RavenEnumDeserializer<T extends Enum<?>> extends StdDeserializer<T> {
+
+    private Map<Long, T> cache = new HashMap<>();
+    private Map<String, T> stringCache = new HashMap<>();
+
+    public RavenEnumDeserializer(Class<T> vc) {
+      super(vc);
+    }
+
+    @Override
+    public T deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+      try {
+        initCache();
+
+        if (jp.getCurrentToken() == JsonToken.VALUE_STRING) {
+          String text = jp.getText();
+          if (!stringCache.containsKey(text)) {
+            throw new IOException("Unexpected text token: " + text);
+          }
+          return stringCache.get(text);
+        } else {
+          long longValue = jp.getValueAsInt();
+          if (!cache.containsKey(longValue)) {
+            throw new IOException("Unable to find matching enum value in cache for:" + longValue);
+          }
+          return cache.get(longValue);
+        }
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void initCache() throws NoSuchMethodException, SecurityException, IllegalAccessException,
+      IllegalArgumentException, InvocationTargetException {
+      if (!cache.isEmpty()) {
+        return;
+      }
+      if (_valueClass.getEnumConstants().length == 0) {
+        return;
+      }
+
+      Method getValueMethod = _valueClass.getMethod("getValue");
+
+      for (Object o : _valueClass.getEnumConstants()) {
+        int enumValue = (int) getValueMethod.invoke(o);
+        cache.put(Long.valueOf(enumValue), (T) o);
+        String enumStringValue = SharpEnum.value((Enum<?>) o);
+        stringCache.put(enumStringValue, (T) o);
+      }
+
+    }
+
+  }
 
   public static class EtagDeserializer extends FromStringDeserializer<Etag> {
 
-    private EtagDeserializer(Class< ? > vc) {
+    private EtagDeserializer(Class<?> vc) {
       super(vc);
     }
 
@@ -185,26 +304,25 @@ public class JsonExtensions {
   public static class DotNetNamingStrategy extends PropertyNamingStrategy {
 
     @Override
-    public String nameForField(MapperConfig< ? > config, AnnotatedField field, String defaultName) {
+    public String nameForField(MapperConfig<?> config, AnnotatedField field, String defaultName) {
       return StringUtils.capitalize(defaultName);
     }
 
     @Override
-    public String nameForGetterMethod(MapperConfig< ? > config, AnnotatedMethod method, String defaultName) {
+    public String nameForGetterMethod(MapperConfig<?> config, AnnotatedMethod method, String defaultName) {
       return StringUtils.capitalize(defaultName);
     }
 
     @Override
-    public String nameForSetterMethod(MapperConfig< ? > config, AnnotatedMethod method, String defaultName) {
+    public String nameForSetterMethod(MapperConfig<?> config, AnnotatedMethod method, String defaultName) {
       return StringUtils.capitalize(defaultName);
     }
 
     @Override
-    public String nameForConstructorParameter(MapperConfig< ? > config, AnnotatedParameter ctorParam, String defaultName) {
+    public String nameForConstructorParameter(MapperConfig<?> config, AnnotatedParameter ctorParam, String defaultName) {
       return StringUtils.capitalize(defaultName);
     }
   }
-
 
   public static RavenJObject toJObject(Object result) {
     if (result instanceof String || ValueTypeUtils.isValueType(result.getClass())) {

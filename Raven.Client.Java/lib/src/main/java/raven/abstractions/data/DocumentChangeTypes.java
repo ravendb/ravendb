@@ -1,6 +1,10 @@
 package raven.abstractions.data;
 
+import raven.abstractions.basic.SerializeUsingValue;
+import raven.abstractions.basic.UseSharpEnum;
 
+@UseSharpEnum
+@SerializeUsingValue
 public enum DocumentChangeTypes {
   NONE(0),
 

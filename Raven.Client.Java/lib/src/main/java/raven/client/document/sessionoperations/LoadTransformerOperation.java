@@ -23,6 +23,7 @@ public class LoadTransformerOperation {
     this.count = count;
   }
 
+  @SuppressWarnings("unchecked")
   public <T> T[] complete(Class<T> clazz, MultiLoadResult multiLoadResult) {
     if (clazz.isArray()) {
 
@@ -76,5 +77,4 @@ public class LoadTransformerOperation {
       return (T[]) items.toArray();
     }
   }
-  //TODO:
 }

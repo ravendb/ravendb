@@ -1177,26 +1177,16 @@ public class ServerClient implements IDatabaseCommands {
       .addReplicationStatusHeaders(url, url, replicationInformer,
         convention.getFailoverBehavior(),
         new HandleReplicationStatusChangesCallback());
+    request.removeAuthorizationHeader();
 
-    /*
-     * TODO
-     * request.RemoveAuthorizationHeader();
+    String token = getSingleAuthToken();
 
-            var token = GetSingleAuthToken();
-
-            try
-            {
-                token = ValidateThatWeCanUseAuthenticateTokens(token);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException(
-                    "Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
-                    e);
-            }
-
-            request.AddOperationHeader("Single-Use-Auth-Token", token);
-     */
+    try {
+      token = validateThatWeCanUseAuthenticateTokens(token);
+    } catch (Exception e) {
+      throw new IllegalStateException("Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
+    }
+    request.addOperationHeader("Single-Use-Auth-Token", token);
 
     HttpResponse webResponse = request.rawExecuteRequest();
 
@@ -1277,24 +1267,16 @@ public class ServerClient implements IDatabaseCommands {
       .addOperationHeaders(operationsHeaders))
       .addReplicationStatusHeaders(url, url, replicationInformer, convention.getFailoverBehavior(), new HandleReplicationStatusChangesCallback());
 
-    /*TODO:
-     * request.RemoveAuthorizationHeader();
+    request.removeAuthorizationHeader();
+    String token = getSingleAuthToken();
 
-            var token = GetSingleAuthToken();
+    try {
+      token = validateThatWeCanUseAuthenticateTokens(token);
+    } catch (Exception e) {
+      throw new IllegalStateException("Could not authenticate token for docs streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
+    }
 
-            try
-            {
-                token = ValidateThatWeCanUseAuthenticateTokens(token);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException(
-                    "Could not authenticate token for docs streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
-                    e);
-            }
-
-            request.AddOperationHeader("Single-Use-Auth-Token", token);
-     */
+    request.addOperationHeader("Single-Use-Auth-Token", token);
 
     HttpResponse webResponse = request.rawExecuteRequest();
     return yieldStreamResults(webResponse);
@@ -1886,6 +1868,7 @@ public class ServerClient implements IDatabaseCommands {
 
     try {
       RavenJObject jo = (RavenJObject)httpJsonRequest.readResponseJson();
+
       return convention.createSerializer().readValue(jo.toString(), DatabaseStatistics.class);
     } catch (IOException e) {
       throw new ServerClientException(e);
@@ -2388,24 +2371,17 @@ public class ServerClient implements IDatabaseCommands {
   }
 
 
-/*TODO
- * public string GetSingleAuthToken()
-        {
-            var tokenRequest = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
+  public String getSingleAuthToken() {
+    HttpJsonRequest tokenRequest = createRequest(HttpMethods.GET, "/singleAuthToken", true);
+    return tokenRequest.readResponseJson().value(String.class, "Token");
+  }
 
-            return tokenRequest.ReadResponseJson().Value<string>("Token");
-        }
-
-        private string ValidateThatWeCanUseAuthenticateTokens(string token)
-        {
-            var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
-
-            request.DisableAuthentication();
-            request.webRequest.ContentLength = 0;
-            request.AddOperationHeader("Single-Use-Auth-Token", token);
-            var result = request.ReadResponseJson();
-            return result.Value<string>("Token");
-        }
- */
+  private String validateThatWeCanUseAuthenticateTokens(String token) {
+    HttpJsonRequest request = createRequest(HttpMethods.GET, "/singleAuthToken", true);
+    request.removeAuthorizationHeader();
+    request.addOperationHeader("Single-Use-Auth-Token", token);
+    RavenJToken result = request.readResponseJson();
+    return result.value(String.class, "Token");
+  }
 
 }

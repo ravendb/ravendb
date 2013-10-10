@@ -3,7 +3,6 @@ package raven.tests.notifications;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import java.util.EnumSet;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -18,6 +17,7 @@ import raven.client.IDocumentStore;
 import raven.client.RemoteClientTest;
 import raven.client.document.DocumentStore;
 import raven.client.document.FailoverBehavior;
+import raven.client.document.FailoverBehaviorSet;
 import raven.client.utils.Observers;
 
 
@@ -28,7 +28,7 @@ public class SecurityOAuthTest extends RemoteClientTest {
     stopServerAfter();
     startServerWithOAuth(DEFAULT_SERVER_PORT_1);
     try (IDocumentStore store = new DocumentStore(getDefaultUrl()).withApiKey("java/6B4G51NrO0P")) {
-      store.getConventions().setFailoverBehavior(EnumSet.of(FailoverBehavior.FAIL_IMMEDIATELY));
+      store.getConventions().setFailoverBehavior(new FailoverBehaviorSet(FailoverBehavior.FAIL_IMMEDIATELY));
       store.initialize();
 
       final BlockingQueue<DocumentChangeNotification> list = new ArrayBlockingQueue<>(20);

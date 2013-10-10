@@ -17,7 +17,6 @@ import raven.client.document.DocumentConvention;
 import raven.client.extensions.MultiDatabase;
 import raven.client.indexes.RavenDocumentsByEntityName;
 
-//TODO: check if response is consumed
 public class AdminServerClient implements IAdminDatabaseCommands, IGlobalAdminDatabaseCommands {
 
   private final ServerClient innerServerClient;

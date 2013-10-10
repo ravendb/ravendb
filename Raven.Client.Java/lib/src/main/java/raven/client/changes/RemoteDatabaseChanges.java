@@ -556,7 +556,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
     RavenJObject value = ravenJObject.value(RavenJObject.class, "Value");
     String type = ravenJObject.value(String.class, "Type");
 
-    logger.info("Got notification from %s id %s of type %s", url, id, dataFromConnection); //TODO: debug
+    logger.debug("Got notification from %s id %s of type %s", url, id, dataFromConnection);
 
     ObjectMapper mapper = JsonExtensions.createDefaultJsonSerializer();
 

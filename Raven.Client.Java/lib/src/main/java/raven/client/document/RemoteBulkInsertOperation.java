@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -46,13 +47,13 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, 
   private CancellationTokenSource cancellationTokenSource;
   private final ServerClient operationClient;
 
-  private final IDatabaseChanges operationChanges;
   private final ByteArrayOutputStream bufferedStream = new ByteArrayOutputStream();
   private final BlockingQueue<RavenJObject> queue;
 
   private HttpJsonRequest operationRequest;
   private byte[] responseBytes;
   private final Thread operationTask;
+  private Exception operationTaskException;
   private int total;
 
   private Action1<String> report;
@@ -79,7 +80,6 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, 
   public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, IDatabaseChanges changes) {
     operationId = UUID.randomUUID();
     operationClient = client;
-    operationChanges = changes;
     queue = new ArrayBlockingQueue<>(Math.max(128, (options.getBatchSize() * 3) / 2));
 
     operationTask = startBulkInsertAsync(options);
@@ -182,6 +182,12 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, 
     });
 
     operationClient.setExpect100Continue(false);
+    thread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+      @Override
+      public void uncaughtException(Thread t, Throwable e) {
+        operationTaskException = (Exception) e;
+      }
+    });
 
     thread.start();
     return thread;
@@ -267,10 +273,10 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, 
       throw new IllegalArgumentException("data");
     }
 
-    /*
-    if (operationTask.isCancelled()) { //TODO or isFaulted
-      operationTask.get();// error early if we have  any error
-    }*/
+    if (operationTaskException != null) {
+      throw new RuntimeException(operationTaskException); // error early if we have  any error
+    }
+
     metadata.add("@id", id);
     data.add(Constants.METADATA, metadata);
     try {
@@ -307,7 +313,9 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, 
     queue.add(END_OF_QUEUE_OBJECT);
     operationTask.join();
 
-    //TODO:  operationTask.AssertNotFailed();
+    if (operationTaskException != null) {
+      throw new RuntimeException(operationTaskException);
+    }
 
     reportInternal("Finished writing all results to server");
 

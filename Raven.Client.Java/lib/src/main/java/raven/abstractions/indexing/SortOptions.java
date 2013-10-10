@@ -1,5 +1,6 @@
 package raven.abstractions.indexing;
 
+import raven.abstractions.basic.SerializeUsingValue;
 import raven.abstractions.basic.UseSharpEnum;
 
 /**
@@ -7,6 +8,7 @@ import raven.abstractions.basic.UseSharpEnum;
  *
  */
 @UseSharpEnum
+@SerializeUsingValue
 public enum SortOptions {
 
   /**

@@ -5,7 +5,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
-import java.util.EnumSet;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +23,7 @@ import raven.client.changes.IDatabaseChanges;
 import raven.client.changes.IObservable;
 import raven.client.document.DocumentStore;
 import raven.client.document.FailoverBehavior;
+import raven.client.document.FailoverBehaviorSet;
 import raven.client.exceptions.ConflictException;
 import raven.client.utils.Observers;
 import raven.tests.bundles.replication.ReplicationBase;
@@ -253,7 +253,7 @@ public class ReplicationConflictsTest extends ReplicationBase {
     try (IDocumentStore store1 = createStore();
       IDocumentStore store2 = createStore()) {
 
-      store2.getConventions().setFailoverBehavior(EnumSet.of(FailoverBehavior.FAIL_IMMEDIATELY));
+      store2.getConventions().setFailoverBehavior(new FailoverBehaviorSet(FailoverBehavior.FAIL_IMMEDIATELY));
 
       store1.getDatabaseCommands().put("users/1", null,
         RavenJObject.parse("{\"Name\": \"Ayende\" }"),

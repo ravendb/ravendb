@@ -3,11 +3,10 @@ package raven.client.linq;
 import com.mysema.query.types.expr.BooleanExpression;
 
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 
 import raven.abstractions.data.Facet;
-import raven.abstractions.data.FacetAggregation;
+import raven.abstractions.data.FacetAggregationSet;
 import raven.abstractions.data.FacetMode;
 
 public class AggregationQueryDsl extends AggregationQuery {
@@ -24,7 +23,7 @@ public class AggregationQueryDsl extends AggregationQuery {
   public static List<Facet> getDslFacets(List<AggregationQueryDsl> aggregationQueries) {
     List<Facet> facetsList = new ArrayList<>();
     for (AggregationQueryDsl aggregationQuery : aggregationQueries) {
-      if (aggregationQuery.getAggregation().equals(EnumSet.of(FacetAggregation.NONE))) {
+      if (aggregationQuery.getAggregation().equals(new FacetAggregationSet())) {
         throw new IllegalStateException("All aggregations must have a type");
       }
 

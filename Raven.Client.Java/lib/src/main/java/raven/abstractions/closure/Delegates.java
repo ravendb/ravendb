@@ -1,6 +1,14 @@
 package raven.abstractions.closure;
 
 public class Delegates {
+
+  public static class Delegate0 implements Action0 {
+    @Override
+    public void apply() {
+      // do nothing
+    }
+  }
+
   public static class Delegate1<X> implements Action1<X> {
     @Override
     public void apply(X first) {
@@ -21,6 +29,11 @@ public class Delegates {
       // do nothing
     }
   }
+
+  public static Action0 delegate0() {
+    return new Delegate0();
+  }
+
 
   public static <X> Action1<X> delegate1() {
     return new Delegate1<>();
@@ -50,5 +63,6 @@ public class Delegates {
       }
     };
   }
+
 
 }

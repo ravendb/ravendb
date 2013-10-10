@@ -1,7 +1,9 @@
 package raven.client;
 
 import raven.abstractions.basic.SerializeUsingValue;
+import raven.abstractions.basic.UseSharpEnum;
 
+@UseSharpEnum
 @SerializeUsingValue
 public enum SearchOptions  {
 

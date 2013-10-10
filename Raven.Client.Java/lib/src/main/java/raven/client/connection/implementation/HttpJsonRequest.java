@@ -8,7 +8,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -32,17 +31,12 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.protocol.BasicHttpContext;
-import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 
-import raven.abstractions.closure.Action0;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Action3;
 import raven.abstractions.closure.Delegates;
@@ -66,7 +60,7 @@ import raven.client.connection.profiling.IHoldProfilingInformation;
 import raven.client.connection.profiling.RequestResultArgs;
 import raven.client.connection.profiling.RequestStatus;
 import raven.client.document.DocumentConvention;
-import raven.client.document.FailoverBehavior;
+import raven.client.document.FailoverBehaviorSet;
 import raven.java.http.client.GzipHttpEntity;
 import raven.java.http.client.HttpEval;
 import raven.java.http.client.HttpReset;
@@ -643,7 +637,7 @@ public class HttpJsonRequest {
   }
 
   public HttpJsonRequest addReplicationStatusHeaders(String thePrimaryUrl, String currentUrl,
-    ReplicationInformer replicationInformer, EnumSet<FailoverBehavior> failoverBehavior,
+    ReplicationInformer replicationInformer, FailoverBehaviorSet failoverBehavior,
     HandleReplicationStatusChangesCallback handleReplicationStatusChangesCallback) {
 
     if (thePrimaryUrl.equalsIgnoreCase(currentUrl)) {
@@ -699,18 +693,13 @@ public class HttpJsonRequest {
       try {
         HttpUriRequest webRequest = createWebRequest(url, method);
         //TODO CheckForErrorsAndReturnCachedResultIfAnyAsync();
-        httpResponse = httpClient.execute(webRequest );
-        ObservableLineStream observableLineStream = new ObservableLineStream(httpResponse.getEntity().getContent(), new Action0() {
-          @Override
-          public void apply() {
-            EntityUtils.consumeQuietly(httpResponse.getEntity());
-          }
-        });
-        //TODO setResponseHeaders();
+        httpResponse = httpClient.execute(webRequest);
+        final ObservableLineStream observableLineStream = new ObservableLineStream(httpResponse.getEntity().getContent(),  Delegates.delegate0());
+        setResponseHeaders(extractHeaders(httpResponse.getAllHeaders()));
         observableLineStream.start();
 
         return observableLineStream;
-      } catch (Exception e) { //TODO:
+      } catch (Exception e) {
         e.printStackTrace();
         //TODO:
       }

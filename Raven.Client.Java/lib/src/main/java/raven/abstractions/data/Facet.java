@@ -1,7 +1,6 @@
 package raven.abstractions.data;
 
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
@@ -23,7 +22,7 @@ import com.mysema.query.types.expr.BooleanOperation;
 public class Facet {
   private String displayName;
   private FacetMode mode = FacetMode.DEFAULT;
-  private EnumSet<FacetAggregation> aggregation = EnumSet.of(FacetAggregation.NONE);
+  private FacetAggregationSet aggregation = new FacetAggregationSet();
   private String aggregationField;
   private String aggregationType;
   private String name;
@@ -37,11 +36,11 @@ public class Facet {
     this.termSortMode = FacetTermSortMode.VALUE_ASC;
   }
 
-  public EnumSet<FacetAggregation> getAggregation() {
+  public FacetAggregationSet getAggregation() {
     return aggregation;
   }
 
-  public void setAggregation(EnumSet<FacetAggregation> aggregation) {
+  public void setAggregation(FacetAggregationSet aggregation) {
     this.aggregation = aggregation;
   }
 

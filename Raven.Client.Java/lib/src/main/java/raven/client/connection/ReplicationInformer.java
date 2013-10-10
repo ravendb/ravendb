@@ -81,14 +81,13 @@ public class ReplicationInformer implements AutoCloseable {
     return result;
   }
 
-  //TODO: consider return the Future<Void>
   public void updateReplicationInformationIfNeeded(final ServerClient serverClient) {
     if (conventions.getFailoverBehavior().contains(FailoverBehavior.FAIL_IMMEDIATELY)) {
-      return; //new CompletedFuture<>();
+      return;//new CompletedFuture<>();
     }
 
     if (DateUtils.addMinutes(lastReplicationUpdate, 5).after(new Date())) {
-      return; // new CompletedFuture<>();
+      return;//new CompletedFuture<>();
     }
 
     synchronized (replicationLock) {
