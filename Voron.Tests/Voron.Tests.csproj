@@ -54,6 +54,7 @@
     <Compile Include="Bugs\Snapshots.cs" />
     <Compile Include="Bugs\Deletes.cs" />
     <Compile Include="Bugs\EmptyTree.cs" />
+    <Compile Include="Bugs\Some.cs" />
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
     <Compile Include="Impl\ConsecutiveSequencesTests.cs" />
@@ -86,6 +87,11 @@
       <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Bugs\Data\data.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />

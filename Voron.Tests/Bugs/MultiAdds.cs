@@ -28,32 +28,82 @@
 
 				for (var i = 0; i < 50; i++)
 				{
-					AddMultiRecords(env, multiTrees, DocumentCount, true);
+					AddMultiRecords(env, multiTrees, DocumentCount, true, i);
 
 					ValidateMultiRecords(env, multiTrees, DocumentCount, i + 1);
 				}
 			}
 		}
 
-		private void ValidateRecords(StorageEnvironment env, IEnumerable<Tree> trees, int documentCount, int i)
+		[Fact]
+		public void T2()
 		{
-			using (var tx = env.NewTransaction(TransactionFlags.Read))
+			const int DocumentCount = 500;
+
+			using (var env = new StorageEnvironment(new PureMemoryPager()))
+			{
+				var rand = new Random();
+				var testBuffer = new byte[22];
+				rand.NextBytes(testBuffer);
+
+				var trees = CreateTrees(env, 20, "tree");
+				var multiTrees = CreateTrees(env, 20, "multitree");
+
+				for (var i = 0; i < 10; i++)
+				{
+					AddRecords(env, trees, DocumentCount, testBuffer, true, i);
+					AddMultiRecords(env, multiTrees, DocumentCount, true, i);
+
+					AddRecords(env, trees, DocumentCount, testBuffer, true, i);
+					AddMultiRecords(env, multiTrees, DocumentCount, true, i);
+
+					ValidateRecords(env, trees, DocumentCount, i + 1);
+				}
+			}
+		}
+
+		private void DeleteMultiRecords(StorageEnvironment env, IList<Tree> trees, int documentCount, bool sequential, int key)
+		{
+			var batch = new WriteBatch();
+
+			for (int i = 0; i < documentCount; i++)
 			{
 				foreach (var tree in trees)
 				{
-					using (var iterator = tree.Iterate(tx))
+					var value = sequential ? string.Format("{0}_tree_{0}_record_{1}_key_{2}", tree.Name, i, key) : Guid.NewGuid().ToString();
+
+					batch.MultiDelete((i % 10).ToString(), value, tree.Name);
+				}
+			}
+
+			env.Writer.Write(batch);
+		}
+
+		private void ValidateRecords(StorageEnvironment env, IEnumerable<Tree> trees, int documentCount, int i)
+		{
+			using (var snapshot = env.CreateSnapshot())
+			{
+				foreach (var tree in trees)
+				{
+					using (var iterator = snapshot.Iterate(tree.Name))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+
+						var keys = new HashSet<string>();
 
 						var count = 0;
 						do
 						{
+							keys.Add(iterator.CurrentKey.ToString());
+							Assert.NotNull(snapshot.Read(tree.Name, iterator.CurrentKey));
+
 							count++;
 						}
 						while (iterator.MoveNext());
 
 						Assert.Equal(i * documentCount, tree.State.EntriesCount);
 						Assert.Equal(i * documentCount, count);
+						Assert.Equal(i * documentCount, keys.Count);
 					}
 				}
 			}
@@ -69,33 +119,44 @@
 					{
 						using (var iterator = tree.MultiRead(tx, (j % 10).ToString()))
 						{
-							Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+							var valid = iterator.Seek(Slice.BeforeAllKeys);
+							if (documentCount > 0)
+								Assert.True(valid);
+							else
+							{
+								Assert.False(valid);
+								continue;
+							}
+
+							var keys = new HashSet<string>();
 
 							var count = 0;
 							do
 							{
+								keys.Add(iterator.CurrentKey.ToString());
+
 								count++;
 							}
 							while (iterator.MoveNext());
 
 							Assert.Equal((i * documentCount) / 10, count);
+							Assert.Equal((i * documentCount) / 10, keys.Count);
 						}
 					}
 				}
 			}
 		}
 
-		private void AddRecords(StorageEnvironment env, IList<Tree> trees, int documentCount, byte[] testBuffer, bool sequential)
+		private void AddRecords(StorageEnvironment env, IList<Tree> trees, int documentCount, byte[] testBuffer, bool sequential, int key)
 		{
-			var key = Guid.NewGuid().ToString();
 			var batch = new WriteBatch();
 
 			for (int i = 0; i < documentCount; i++)
 			{
+				var id = sequential ? string.Format("{0}_record_{0}_key_{1}", i, key) : Guid.NewGuid().ToString();
+
 				foreach (var tree in trees)
 				{
-					var id = sequential ? string.Format("tree_{0}_record_{1}_key_{2}", tree.Name, i, key) : Guid.NewGuid().ToString();
-
 					batch.Add(id, new MemoryStream(testBuffer), tree.Name);
 				}
 			}
@@ -103,16 +164,15 @@
 			env.Writer.Write(batch);
 		}
 
-		private void AddMultiRecords(StorageEnvironment env, IList<Tree> trees, int documentCount, bool sequential)
+		private void AddMultiRecords(StorageEnvironment env, IList<Tree> trees, int documentCount, bool sequential, int key)
 		{
-			var key = Guid.NewGuid().ToString();
 			var batch = new WriteBatch();
 
 			for (int i = 0; i < documentCount; i++)
 			{
 				foreach (var tree in trees)
 				{
-					var value = sequential ? string.Format("tree_{0}_record_{1}_key_{2}", tree.Name, i, key) : Guid.NewGuid().ToString();
+					var value = sequential ? string.Format("{0}_tree_{0}_record_{1}_key_{2}", tree.Name, i, key) : Guid.NewGuid().ToString();
 
 					batch.MultiAdd((i % 10).ToString(), value, tree.Name);
 				}
