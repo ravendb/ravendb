@@ -124,6 +124,7 @@
 
 			source.CopyTo(destination);
 			destination.Position = sourcePosition;
+			source.Position = sourcePosition;
 
 			return destination;
 		}
