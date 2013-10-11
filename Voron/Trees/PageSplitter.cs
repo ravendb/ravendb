@@ -103,17 +103,19 @@ namespace Voron.Trees
                 splitIndex = AdjustSplitPosition(_newKey, _len, _page, currentIndex, splitIndex, ref newPosition);
             }
 
+			var currentNode = _page.GetNode(splitIndex);
+			var currentKey = new Slice(currentNode);
+
             // here we the current key is the separator key and can go either way, so 
             // use newPosition to decide if it stays on the left node or moves to the right
             Slice seperatorKey;
             if (currentIndex == splitIndex && newPosition)
             {
-                seperatorKey = _newKey;
+				seperatorKey = currentKey.Compare(_newKey, NativeMethods.memcmp) < 0 ? currentKey : _newKey;  
             }
             else
             {
-                var node = _page.GetNode(splitIndex);
-                seperatorKey = new Slice(node);
+	            seperatorKey = currentKey;
             }
 
             AddSeparatorToParentPage(rightPage, seperatorKey);
