@@ -11,7 +11,7 @@ namespace Voron.Impl
 		/// size will only include the key and not the data. Sizes are always
 		/// rounded up to an even number of bytes, to guarantee 2-byte alignment
 		/// </summary>
-        public static int LeafEntry(int pageMaxSpace, Slice key, int len)
+		public static int LeafEntry(int pageMaxSpace, Slice key, int len)
 		{
 			var nodeSize = Constants.NodeHeaderSize;
 
@@ -25,7 +25,7 @@ namespace Voron.Impl
 					nodeSize -= len - Constants.PageNumberSize;
 			}
 			// else - page ref node, take no additional space
-			
+
 			nodeSize += nodeSize & 1;
 
 			return nodeSize;
@@ -39,17 +39,17 @@ namespace Voron.Impl
 			return sz;
 		}
 
-		public static int NodeEntry(int pageMaxSpace,Slice key, int len)
+		public static int NodeEntry(int pageMaxSpace, Slice key, int len)
 		{
 			if (len < 0)
 				return BranchEntry(key);
-            return LeafEntry(pageMaxSpace, key, len);
+			return LeafEntry(pageMaxSpace, key, len);
 		}
 
 		public static int NodeEntry(NodeHeader* other)
 		{
 			var sz = other->KeySize + Constants.NodeHeaderSize;
-			if (other->Flags==(NodeFlags.Data))
+			if (other->Flags == NodeFlags.Data || other->Flags == NodeFlags.MultiValuePageRef)
 				sz += other->DataSize;
 
 			sz += sz & 1;
