@@ -201,7 +201,10 @@
 		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
 		{
 			if (string.IsNullOrEmpty(key))
-				throw new ArgumentNullException("key");
+			{
+				logger.Debug("Document with empty key was not found");
+				return null;
+			}
 
 			var lowerKey = CreateKey(key);
 			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch))
