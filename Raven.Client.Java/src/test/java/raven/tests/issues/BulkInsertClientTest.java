@@ -58,6 +58,6 @@ public class BulkInsertClientTest extends RemoteClientTest {
       this.name = name;
     }
   }
-  //TODO: other tests
+  //FIXME: other tests
 
 }

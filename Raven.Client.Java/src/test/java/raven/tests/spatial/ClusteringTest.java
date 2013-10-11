@@ -103,6 +103,4 @@ public class ClusteringTest extends RemoteClientTest {
     }
   }
 
-
-  //TODO:
 }

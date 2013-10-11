@@ -1,7 +1,6 @@
 package raven.tests.spatial;
 
 public class SpatialIndexTest {
-  //TODO: finish me
 
   public static double getGeographicalDistance(double lat1, double lon1, double lat2, double lon2) {
     double theta = lon1 - lon2;

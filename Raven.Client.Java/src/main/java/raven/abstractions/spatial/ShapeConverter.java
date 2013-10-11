@@ -2,11 +2,17 @@ package raven.abstractions.spatial;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import raven.abstractions.basic.Reference;
+import raven.abstractions.data.Constants;
 import raven.abstractions.json.linq.JTokenType;
+import raven.abstractions.json.linq.RavenJObject;
+import raven.abstractions.json.linq.RavenJToken;
 import raven.abstractions.json.linq.RavenJValue;
 
 /**
@@ -16,9 +22,9 @@ public class ShapeConverter {
 
 
   private final static GeoJsonWktConverter geoJsonConverter = new GeoJsonWktConverter();
-  //TODO: regexp for x and y
+  private final static String REG_EXP_X = "^(?:x|longitude|lng|lon|long)$";
+  private final static String REG_EXP_Y = "^(?:y|latitude|lat)$";
 
-  @SuppressWarnings("unchecked")
   public boolean tryConvert(Object value, Reference<String> resultRef) {
     if (value instanceof String) {
       resultRef.value = (String) value;
@@ -36,25 +42,64 @@ public class ShapeConverter {
     if (value.getClass().isArray()) {
       value = Arrays.asList((Object[])value);
     }
-    if (value instanceof Collection) {
-      List<Object> list = new ArrayList<>((Collection<Object>)value);
-      boolean allNumbers = true;
-      for (int i =0 ;i < list.size(); i++) {
-        if (!isNumber(list.get(i))) {
-          allNumbers = false;
-          break;
-        }
+    if (value instanceof Iterable) {
+      List<Object> objects = new ArrayList<>();
+
+      Iterator<?> iterator = ((Iterable<?>) value).iterator();
+      while (iterator.hasNext()) {
+        objects.add(iterator.next());
       }
-      if (list.size() > 1 && allNumbers) {
-        resultRef.value = makePoint(getDouble(list.get(0)), getDouble(list.get(1)));
+
+      boolean allNumbers = true;
+      for (Object o : objects) {
+        allNumbers &= isNumber(o);
+      }
+
+      if (objects.size() > 1 && allNumbers) {
+        resultRef.value = makePoint(getDouble(objects.get(0)), getDouble(objects.get(1)));
         return true;
       }
 
-      //TODO: other types
+      Map<String, Object> keyValues = new HashMap<>();
+      // try to fill using ravenJObject
+      for (Object o : objects) {
+        if (o instanceof Entry) {
+          Entry<?, ?> e = (Entry<?, ?>) o;
+          if (e.getKey() instanceof String && e.getValue() instanceof RavenJToken && isNumber(e.getValue())) {
+            keyValues.put((String)e.getKey(), e.getValue());
+          }
+        }
+      }
+
+      if (keyValues.size() > 0) {
+        String x1 = findKeyThatMatches(keyValues, REG_EXP_X);
+        String y1 = findKeyThatMatches(keyValues, REG_EXP_Y);
+        if (x1 != null && y1 != null) {
+          resultRef.value = makePoint(getDouble(keyValues.get(x1)), getDouble(keyValues.get(y1)));
+          return true;
+        }
+      }
+
+    }
+
+    if (value instanceof RavenJObject) {
+      RavenJObject ravenValue = (RavenJObject) value;
+      if (geoJsonConverter.tryConvert(ravenValue, resultRef)) {
+        return true;
+      }
     }
 
     resultRef.value = null;
     return false;
+  }
+
+  private String findKeyThatMatches(Map<String, Object> keyValues, String regExp) {
+    for (String key: keyValues.keySet()) {
+      if (key.toLowerCase().matches(regExp)) {
+        return key;
+      }
+    }
+    return null;
   }
 
   private boolean isNumber(Object obj) {
@@ -83,7 +128,7 @@ public class ShapeConverter {
   }
 
   protected String makePoint(double x, double y) {
-    return String.format("POINT (%f %f)", x, y);
+    return String.format(Constants.getDefaultLocale(), "POINT (%f %f)", x, y);
   }
 
 

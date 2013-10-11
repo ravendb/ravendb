@@ -198,5 +198,4 @@ public class AfifTest extends RemoteClientTest {
     }
   }
 
-  //TODO:
 }

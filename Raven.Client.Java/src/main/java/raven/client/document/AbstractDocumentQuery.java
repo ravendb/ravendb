@@ -440,7 +440,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
         jsonSerializer.writeValue(jsonWriter, criteria.getShape());
 
         if (!converter.tryConvert(jsonWriter.getToken(), wktRef)) {
-          throw new IllegalArgumentException("Shape");
+          throw new IllegalArgumentException("Shape is invalid:" + criteria);
         }
       }
     } catch (IOException e) {
