@@ -14,6 +14,7 @@ using ActiproSoftware.Text.Parsing;
 using ActiproSoftware.Text.Parsing.LLParser;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining;
 using Microsoft.Expression.Interactivity.Core;
+using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Client.Exceptions;
@@ -387,7 +388,8 @@ namespace Raven.Studio.Models
 				            var expiration = result.Document.Metadata["Raven-Expiration-Date"];
 				            if (expiration != null)
 				            {
-				                ExpireAt.Value = DateTime.Parse(expiration.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+				                // The expiration date is always interpreted as UTC.
+				                ExpireAt.Value = DateTime.SpecifyKind(expiration.Value<DateTime>(), DateTimeKind.Utc);
 				                EnableExpiration.Value = true;
 				                HasExpiration = true;
 				            }
@@ -1192,7 +1194,7 @@ namespace Raven.Studio.Models
 
 					if (parentModel.EnableExpiration.Value)
 					{
-						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.Value.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
 					}
 					else if (metadata.ContainsKey("Raven-Expiration-Date"))
 					{
