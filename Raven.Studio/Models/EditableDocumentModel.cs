@@ -385,17 +385,22 @@ namespace Raven.Studio.Models
 				            result.Document.Key = Uri.UnescapeDataString(result.Document.Key);
 				            LocalId = result.Document.Key;
 				            SetCurrentDocumentKey(result.Document.Key);
+
+				            HasExpiration = Database.Value.HasExpirationBundle;
 				            var expiration = result.Document.Metadata["Raven-Expiration-Date"];
 				            if (expiration != null)
 				            {
 				                // The expiration date is always interpreted as UTC.
 				                ExpireAt.Value = DateTime.SpecifyKind(expiration.Value<DateTime>(), DateTimeKind.Utc);
 				                EnableExpiration.Value = true;
+
+				                // If there's an expiration date, show it even if the bundle is not enabled.
 				                HasExpiration = true;
 				            }
 				            else
 				            {
-				                HasExpiration = false;
+				                ExpireAt.Value = null;
+				                EnableExpiration.Value = false;
 				            }
 				        }
 
