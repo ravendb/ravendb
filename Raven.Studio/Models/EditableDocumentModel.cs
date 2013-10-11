@@ -101,7 +101,7 @@ namespace Raven.Studio.Models
 			metaDataSection = new DocumentSection{ Name = "Metadata", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
 			DocumentSections = new List<DocumentSection> { dataSection, metaDataSection };
 			EnableExpiration = new Observable<bool>();
-			ExpireAt = new Observable<DateTime>();
+			ExpireAt = new Observable<DateTime?>();
 			ExpireAt.PropertyChanged += (sender, args) => TimeChanged = true;
 			CurrentSection = dataSection;
 
@@ -253,7 +253,7 @@ namespace Raven.Studio.Models
 		}
 
 		public bool TimeChanged { get; set; }
-		public Observable<DateTime> ExpireAt { get; set; }
+		public Observable<DateTime?> ExpireAt { get; set; }
 		private void StoreOutliningMode()
 		{
 			Settings.Instance.DocumentOutliningMode = SelectedOutliningMode.Name;
@@ -1197,9 +1197,9 @@ namespace Raven.Studio.Models
 						}
 					}
 
-					if (parentModel.EnableExpiration.Value)
+					if (parentModel.EnableExpiration.Value && parentModel.ExpireAt.Value.HasValue)
 					{
-						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.Value.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
+						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.Value.Value.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
 					}
 					else if (metadata.ContainsKey("Raven-Expiration-Date"))
 					{
