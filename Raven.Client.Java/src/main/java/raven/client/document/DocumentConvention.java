@@ -24,7 +24,6 @@ import com.mysema.query.types.Expression;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action1;
-import raven.abstractions.closure.Function1;
 import raven.abstractions.data.Constants;
 import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.indexing.SortOptions;
@@ -41,6 +40,8 @@ import raven.client.delegates.DocumentKeyFinder;
 import raven.client.delegates.HttpResponseHandler;
 import raven.client.delegates.IdConvention;
 import raven.client.delegates.IdValuePartFinder;
+import raven.client.delegates.IdentityPropertyFinder;
+import raven.client.delegates.IdentityPropertyNameFinder;
 import raven.client.delegates.PropertyNameFinder;
 import raven.client.delegates.ReplicationInformerFactory;
 import raven.client.delegates.RequestCachePolicy;
@@ -95,9 +96,9 @@ public class DocumentConvention implements Serializable {
 
   private RequestCachePolicy shouldCacheRequest;
 
-  private Function1<Field, Boolean> findIdentityProperty;
+  private IdentityPropertyFinder findIdentityProperty;
 
-  private Function1<String, String> findIdentityPropertyNameFromEntityName;
+  private IdentityPropertyNameFinder findIdentityPropertyNameFromEntityName;
 
   private DocumentKeyGenerator documentKeyGenerator;
 
@@ -146,10 +147,9 @@ public class DocumentConvention implements Serializable {
         return true;
       }
     };
-    setFindIdentityProperty(new Function1<Field, Boolean>() {
-
+    setFindIdentityProperty(new IdentityPropertyFinder() {
       @Override
-      public Boolean apply(Field input) {
+      public Boolean find(Field input) {
         return input.getName().equals("id");
       }
     });
@@ -180,9 +180,9 @@ public class DocumentConvention implements Serializable {
       }
     });
 
-    setFindIdentityPropertyNameFromEntityName(new Function1<String, String>() {
+    setFindIdentityPropertyNameFromEntityName(new IdentityPropertyNameFinder() {
       @Override
-      public String apply(String entityName) {
+      public String find(String entityName) {
         return "id";
       }
     });
@@ -484,7 +484,7 @@ public class DocumentConvention implements Serializable {
 
     Field identityProperty = null;
     for (Field f : getPropertiesForType(type)) {
-      if (findIdentityProperty.apply(f)) {
+      if (findIdentityProperty.find(f)) {
         identityProperty = f;
         break;
       }
@@ -632,7 +632,7 @@ public class DocumentConvention implements Serializable {
    * Gets the function to find the identity property.
    * @return
    */
-  public Function1<Field, Boolean> getFindIdentityProperty() {
+  public IdentityPropertyFinder getFindIdentityProperty() {
     return findIdentityProperty;
   }
 
@@ -640,7 +640,7 @@ public class DocumentConvention implements Serializable {
    * Sets the function to find the identity property.
    * @param findIdentityProperty
    */
-  public void setFindIdentityProperty(Function1<Field, Boolean> findIdentityProperty) {
+  public void setFindIdentityProperty(IdentityPropertyFinder findIdentityProperty) {
     this.findIdentityProperty = findIdentityProperty;
   }
 
@@ -648,7 +648,7 @@ public class DocumentConvention implements Serializable {
    * Get the function to get the identity property name from the entity name
    * @return
    */
-  public Function1<String, String> getFindIdentityPropertyNameFromEntityName() {
+  public IdentityPropertyNameFinder getFindIdentityPropertyNameFromEntityName() {
     return findIdentityPropertyNameFromEntityName;
   }
 
@@ -656,7 +656,7 @@ public class DocumentConvention implements Serializable {
    * Sets the function to get the identity property name from the entity name
    * @param findIdentityPropertyNameFromEntityName
    */
-  public void setFindIdentityPropertyNameFromEntityName(Function1<String, String> findIdentityPropertyNameFromEntityName) {
+  public void setFindIdentityPropertyNameFromEntityName(IdentityPropertyNameFinder findIdentityPropertyNameFromEntityName) {
     this.findIdentityPropertyNameFromEntityName = findIdentityPropertyNameFromEntityName;
   }
 

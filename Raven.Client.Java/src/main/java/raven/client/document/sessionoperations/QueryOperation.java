@@ -238,7 +238,7 @@ public class QueryOperation {
 
     String entityName = metadata.value(String.class, Constants.RAVEN_ENTITY_NAME);
 
-    String idPropName = sessionOperations.getConventions().getFindIdentityPropertyNameFromEntityName().apply(entityName);
+    String idPropName = sessionOperations.getConventions().getFindIdentityPropertyNameFromEntityName().find(entityName);
 
     if (result.containsKey(idPropName)) {
       return;

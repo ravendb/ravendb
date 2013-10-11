@@ -827,7 +827,7 @@ public class RavenQueryProviderProcessor<T> {
     }
     if (!docField.equals(renamedField)) {
       if (identityProperty == null) {
-        String idPropName = luceneQuery.getDocumentConvention().getFindIdentityPropertyNameFromEntityName().apply(luceneQuery.getDocumentConvention().getTypeTagName(clazz));
+        String idPropName = luceneQuery.getDocumentConvention().getFindIdentityPropertyNameFromEntityName().find(luceneQuery.getDocumentConvention().getTypeTagName(clazz));
         if (docField.equals(idPropName)) {
           RenamedField renamedField2 = new RenamedField();
           renamedField2.setNewField(renamedField);
@@ -935,7 +935,7 @@ public class RavenQueryProviderProcessor<T> {
       Class<?> fieldType = result.getClazz();
       String fieldName = result.getPath();
 
-      if (result.getMaybeProperty() != null && queryGenerator.getConventions().getFindIdentityProperty().apply(result.getMaybeProperty())) {
+      if (result.getMaybeProperty() != null && queryGenerator.getConventions().getFindIdentityProperty().find(result.getMaybeProperty())) {
         fieldName = Constants.DOCUMENT_ID_FIELD_NAME;
         fieldType = String.class;
       }
