@@ -1188,10 +1188,6 @@ namespace Raven.Studio.Models
 						{
 							metadata[Constants.RavenEntityName] = char.ToUpper(entityName[0]) + entityName.Substring(1);
 						}
-						else
-						{
-							metadata[Constants.RavenEntityName] = parentModel.ExpireAt.Value;
-						}
 					}
 
 					if (parentModel.EnableExpiration.Value)
