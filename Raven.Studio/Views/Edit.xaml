@@ -592,7 +592,7 @@
 								</Grid.RowDefinitions>
 
 								<controls:DateTimePicker SelectedDateTime="{Binding ExpireAt.Value, Mode=TwoWay}"/>
-								<controls:DateTimePicker SelectedDateTime="{Binding ExpireAt, Mode=TwoWay}"/>
+								<TextBlock Grid.Row="0" Grid.Column="1" Text=" (UTC)" VerticalAlignment="Center"/>
 							</Grid>
 						</StackPanel>
 					</Border>
