@@ -7,6 +7,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import raven.abstractions.closure.Action1;
@@ -24,6 +25,7 @@ import raven.client.utils.Observers;
 public class SecurityOAuthTest extends RemoteClientTest {
 
   @Test
+  @Ignore("Cant run this test in .NET on host different than localhost")
   public void withOAuthOnSystemDatabase() throws Exception {
     stopServerAfter();
     startServerWithOAuth(DEFAULT_SERVER_PORT_1);

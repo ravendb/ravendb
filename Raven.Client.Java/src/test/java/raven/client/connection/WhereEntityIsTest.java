@@ -45,8 +45,16 @@ public class WhereEntityIsTest extends RavenDBAwareTests {
       IndexQuery query = new IndexQuery();
       query.setQuery("Color:Black");
 
-      QueryResult queryResult = dbCommands.query("test", query, null);
-      assertEquals(2, queryResult.getResults().size());
+      for (int i = 0; i< 10;i++) {
+        QueryResult queryResult = dbCommands.query("test", query, null);
+        if (queryResult.getResults().size()  != 2) {
+          Thread.sleep(1000);
+        } else {
+          assertEquals(2, queryResult.getResults().size());
+          break;
+        }
+      }
+
 
     } finally {
       deleteDb();
