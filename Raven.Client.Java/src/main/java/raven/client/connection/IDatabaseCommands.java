@@ -541,6 +541,26 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @param query
    * @param facetSetupDoc
    * @param start
+   * @return
+   */
+  public FacetResults getFacets(String index, IndexQuery query, String facetSetupDoc);
+
+  /**
+   *  Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+   * @param index
+   * @param query
+   * @param facetSetupDoc
+   * @param start
+   * @return
+   */
+  public FacetResults getFacets(String index, IndexQuery query, String facetSetupDoc, int start);
+
+  /**
+   *  Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+   * @param index
+   * @param query
+   * @param facetSetupDoc
+   * @param start
    * @param pageSize
    * @return
    */

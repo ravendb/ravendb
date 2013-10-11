@@ -2067,6 +2067,32 @@ public class ServerClient implements IDatabaseCommands {
   }
 
   /**
+   * Using the given Index, calculate the facets as per the specified doc
+   * @param index
+   * @param query
+   * @param facetSetupDoc
+   * @return
+   */
+  @Override
+  public FacetResults getFacets(final String index, final IndexQuery query, final String facetSetupDoc) {
+    return getFacets(index, query, facetSetupDoc, 0, null);
+  }
+
+  /**
+   * Using the given Index, calculate the facets as per the specified doc with the given start
+   * @param index
+   * @param query
+   * @param facetSetupDoc
+   * @param start
+   * @return
+   */
+  @Override
+  public FacetResults getFacets(final String index, final IndexQuery query, final String facetSetupDoc, final int start) {
+    return getFacets(index, query, facetSetupDoc, start, null);
+  }
+
+
+  /**
    * Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
    * @param index
    * @param query
