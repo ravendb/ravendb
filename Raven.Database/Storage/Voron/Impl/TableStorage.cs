@@ -172,6 +172,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel));
 			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket));
 			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket));
+			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByView));
 			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.Data));
 		}
 
@@ -288,7 +289,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, Tables.ReduceKeyCounts.Indices.ByView);
 			ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, Tables.ReduceKeyTypes.Indices.ByView);
 			Attachments = new Table(Tables.Attachments.TableName, Tables.Attachments.Indices.ByEtag);
-			ReduceResults = new Table(Tables.ReduceResults.TableName, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
+			ReduceResults = new Table(Tables.ReduceResults.TableName, Tables.ReduceResults.Indices.ByView, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
 			General = new Table(Tables.General.TableName);
 			ReduceStats = new Table(Tables.ReduceStats.TableName);
 		}

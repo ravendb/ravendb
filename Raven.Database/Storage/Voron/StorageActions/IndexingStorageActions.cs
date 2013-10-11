@@ -31,12 +31,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		private readonly IUuidGenerator generator;
 
-		public IndexingStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, WriteBatch writeBatch)
+		private readonly IStorageActionsAccessor currentStorageActionsAccessor;
+
+		public IndexingStorageActions(TableStorage tableStorage, IUuidGenerator generator, SnapshotReader snapshot, WriteBatch writeBatch, IStorageActionsAccessor storageActionsAccessor)
 			: base(snapshot)
 		{
 			this.tableStorage = tableStorage;
 			this.generator = generator;
 			this.writeBatch = writeBatch;
+			this.currentStorageActionsAccessor = storageActionsAccessor;
 		}
 
 		public void Dispose()
@@ -135,6 +138,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			tableStorage.IndexingStats.Delete(writeBatch, key);
 			tableStorage.ReduceStats.Delete(writeBatch, key);
 			tableStorage.LastIndexedEtags.Delete(writeBatch, key);
+
+			RemoveAllDocumentReferencesByView(key);
+
+			var mappedResultsStorageActions = (MappedResultsStorageActions)currentStorageActionsAccessor.MapReduce;
+
+			mappedResultsStorageActions.DeleteMappedResultsForView(key);
+			mappedResultsStorageActions.DeleteScheduledReductionForView(key);
+			mappedResultsStorageActions.RemoveReduceResultsForView(key);
 		}
 
 		public void SetIndexPriority(string name, IndexingPriority priority)
@@ -247,6 +258,23 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public void RemoveAllDocumentReferencesFrom(string key)
 		{
 			RemoveDocumentReferenceByKey(key);
+		}
+
+		public void RemoveAllDocumentReferencesByView(string view)
+		{
+			var documentReferencesByView = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByView);
+
+			using (var iterator = documentReferencesByView.MultiRead(Snapshot, CreateKey(view)))
+			{
+				if (iterator.Seek(Slice.BeforeAllKeys))
+				{
+					do
+					{
+						RemoveDocumentReference(iterator.CurrentKey.Clone());
+					}
+					while (iterator.MoveNext());
+				}
+			}
 		}
 
 		public void UpdateDocumentReferences(string view, string key, HashSet<string> references)

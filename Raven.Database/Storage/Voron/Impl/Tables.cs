@@ -165,6 +165,8 @@ namespace Raven.Database.Storage.Voron.Impl
 
 				public const string ByViewAndReduceKeyAndLevelAndBucket = "by_view_and_reduce_key_and_level_and_bucket";
 
+				public const string ByView = "by_view";
+
 				public const string ByViewAndReduceKeyAndLevel = "by_view_and_reduce_key_and_level";
 
 				public const string Data = "data";
