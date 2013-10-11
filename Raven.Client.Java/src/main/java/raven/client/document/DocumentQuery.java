@@ -16,7 +16,6 @@ import org.apache.commons.lang.StringUtils;
 import raven.abstractions.basic.Lazy;
 import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
-import raven.abstractions.closure.Function2;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.Facet;
 import raven.abstractions.data.FacetResults;
@@ -180,7 +179,6 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
     documentQuery.orderByFields = orderByFields;
     documentQuery.distinct = distinct;
     documentQuery.negate = negate;
-    documentQuery.transformResultsFunc = transformResultsFunc;
     documentQuery.includes = new HashSet<>(includes);
     documentQuery.isSpatialQuery = isSpatialQuery;
     documentQuery.spatialFieldName = spatialFieldName;
@@ -238,11 +236,6 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   @Override
   public IDocumentQuery<T> spatial(String fieldName, SpatialCriteria criteria) {
     return generateSpatialQueryData(fieldName, criteria);
-  }
-
-  public IDocumentQuery<T> transformResults(Function2<IndexQuery, Collection<Object>, Collection<Object>> resultsTransformer) {
-    this.transformResultsFunc = resultsTransformer;
-    return this;
   }
 
   @Override

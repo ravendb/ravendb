@@ -191,13 +191,13 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
 
   @Override
   public <T> T load(Class<T> clazz, Number id) {
-    String documentKey = getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
+    String documentKey = getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false);
     return load(clazz, documentKey);
   }
 
   @Override
   public <T> T load(Class<T> clazz, UUID id) {
-    String documentKey = getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
+    String documentKey = getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false);
     return load(clazz, documentKey);
   }
 
@@ -205,7 +205,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   public <T> T[] load(Class<T> clazz, Number... ids) {
     List<String> documentKeys = new ArrayList<>();
     for (Number id: ids) {
-      documentKeys.add(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+      documentKeys.add(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false));
     }
     return load(clazz, documentKeys.toArray(new String[0]));
   }
@@ -214,7 +214,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
   public <T> T[] load(Class<T> clazz, UUID... ids) {
     List<String> documentKeys = new ArrayList<>();
     for (UUID id: ids) {
-      documentKeys.add(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+      documentKeys.add(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false));
     }
     return load(clazz, documentKeys.toArray(new String[0]));
   }

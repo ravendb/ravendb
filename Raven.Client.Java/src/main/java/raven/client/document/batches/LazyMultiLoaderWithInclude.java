@@ -74,13 +74,13 @@ public class LazyMultiLoaderWithInclude implements ILazyLoaderWithInclude {
 
   @Override
   public <TResult> Lazy<TResult> load(Class<TResult> clazz, Number id) {
-    String documentKey = session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
+    String documentKey = session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false);
     return load(clazz, documentKey);
   }
 
   @Override
   public <TResult> Lazy<TResult> load(Class<TResult> clazz, UUID id) {
-    String documentKey = session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
+    String documentKey = session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false);
     return load(clazz, documentKey);
   }
 
@@ -88,7 +88,7 @@ public class LazyMultiLoaderWithInclude implements ILazyLoaderWithInclude {
   public <TResult> Lazy<TResult[]> load(Class<TResult> clazz, Number... ids) {
     List<String> documentKeys = new ArrayList<>();
     for (Number id: ids) {
-      documentKeys.add(session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+      documentKeys.add(session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false));
     }
     return load(clazz, documentKeys);
   }
@@ -97,7 +97,7 @@ public class LazyMultiLoaderWithInclude implements ILazyLoaderWithInclude {
   public <TResult> Lazy<TResult[]> load(Class<TResult> clazz, UUID... ids) {
     List<String> documentKeys = new ArrayList<>();
     for (UUID id: ids) {
-      documentKeys.add(session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+      documentKeys.add(session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false));
     }
     return load(clazz, documentKeys);
   }

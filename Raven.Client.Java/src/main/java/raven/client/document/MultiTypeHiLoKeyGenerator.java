@@ -35,7 +35,7 @@ public class MultiTypeHiLoKeyGenerator {
     if (StringUtils.isEmpty(typeTagName)) { //ignore empty tags
       return null;
     }
-    String tag = conventions.getTransformTypeTagNameToDocumentKeyPrefix().apply(typeTagName);
+    String tag = conventions.getTransformTypeTagNameToDocumentKeyPrefix().transform(typeTagName);
     if (keyGeneratorsByTag.containsKey(tag)) {
       return keyGeneratorsByTag.get(tag).generateDocumentKey(databaseCommands, conventions, entity);
     }

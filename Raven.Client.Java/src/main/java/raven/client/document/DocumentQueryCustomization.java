@@ -1,13 +1,11 @@
 package raven.client.document;
 
-import java.util.Collection;
 import java.util.Date;
 
 import com.mysema.query.types.Path;
 
 import raven.abstractions.basic.Reference;
 import raven.abstractions.closure.Action1;
-import raven.abstractions.closure.Function2;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.indexing.SpatialOptions.SpatialRelation;
@@ -159,13 +157,6 @@ public class DocumentQueryCustomization implements IDocumentQueryCustomization {
   @Override
   public IDocumentQueryCustomization beforeQueryExecution(Action1<IndexQuery> action) {
     delegate.beforeQueryExecution(action);
-    return this;
-  }
-
-  @Deprecated
-  @Override
-  public IDocumentQueryCustomization transformResults(Function2<IndexQuery, Collection<Object>, Collection<Object>> resultsTransformer) {
-    delegate.transformResults(resultsTransformer);
     return this;
   }
 

@@ -94,13 +94,13 @@ public class LazySessionOperations implements ILazySessionOperations {
 
   @Override
   public <T> Lazy<T> load(Class<T> clazz, Number id, Action1<T> onEval) {
-    String documentKey = delegate.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
+    String documentKey = delegate.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false);
     return load(clazz, documentKey, onEval);
   }
 
   @Override
   public <T> Lazy<T> load(Class<T> clazz, UUID id, Action1<T> onEval) {
-    String documentKey = delegate.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
+    String documentKey = delegate.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false);
     return load(clazz, documentKey, onEval);
   }
 
@@ -108,7 +108,7 @@ public class LazySessionOperations implements ILazySessionOperations {
   public <T> Lazy<T[]> load(Class<T> clazz, Number... ids) {
     List<String> documentKeys = new ArrayList<>();
     for (Number id : ids) {
-      documentKeys.add(delegate.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+      documentKeys.add(delegate.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false));
     }
     return load(clazz, documentKeys, null);
   }
@@ -117,7 +117,7 @@ public class LazySessionOperations implements ILazySessionOperations {
   public <T> Lazy<T[]> load(Class<T> clazz, UUID... ids) {
     List<String> documentKeys = new ArrayList<>();
     for (UUID id : ids) {
-      documentKeys.add(delegate.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+      documentKeys.add(delegate.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false));
     }
     return load(clazz, documentKeys, null);
   }
@@ -127,7 +127,7 @@ public class LazySessionOperations implements ILazySessionOperations {
   public <TResult> Lazy<TResult[]> load(Class<TResult> clazz, Action1<TResult[]> onEval, Number... ids) {
     List<String> documentKeys = new ArrayList<>();
     for (Number id : ids) {
-      documentKeys.add(delegate.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+      documentKeys.add(delegate.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false));
     }
     return delegate.lazyLoadInternal(clazz, documentKeys.toArray(new String[0]), new Tuple[0], onEval);
   }
@@ -137,7 +137,7 @@ public class LazySessionOperations implements ILazySessionOperations {
   public <TResult> Lazy<TResult[]> load(Class<TResult> clazz, Action1<TResult[]> onEval, UUID... ids) {
     List<String> documentKeys = new ArrayList<>();
     for (UUID id : ids) {
-      documentKeys.add(delegate.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+      documentKeys.add(delegate.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false));
     }
     return delegate.lazyLoadInternal(clazz, documentKeys.toArray(new String[0]), new Tuple[0], onEval);
   }

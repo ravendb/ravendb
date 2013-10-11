@@ -3,7 +3,6 @@ package raven.client.document.sessionoperations;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map.Entry;
@@ -16,7 +15,6 @@ import org.apache.commons.lang.StringUtils;
 import raven.abstractions.basic.SharpEnum;
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action2;
-import raven.abstractions.closure.Function2;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.data.QueryResult;
@@ -43,7 +41,6 @@ public class QueryOperation {
   private final boolean waitForNonStaleResults;
   private boolean disableEntitiesTracking;
   private final long timeout;
-  private final Function2<IndexQuery, Collection<Object>, Collection<Object>> transformResults;
   private final Set<String> includes;
   private QueryResult currentQueryResults;
   private final String[] projectionFields;
@@ -69,14 +66,12 @@ public class QueryOperation {
   public QueryOperation(InMemoryDocumentSessionOperations sessionOperations, String indexName, IndexQuery indexQuery,
       String[] projectionFields, Set<Tuple<String, Class<?>>> sortByHints,
       boolean waitForNonStaleResults, Action2<String, String> setOperationHeaders, long timeout,
-      Function2<IndexQuery, Collection<Object>, Collection<Object>> transformResults,
       Set<String> includes, boolean disableEntitiesTracking) {
     this.indexQuery = indexQuery;
     this.sortByHints = sortByHints;
     this.waitForNonStaleResults = waitForNonStaleResults;
     this.setOperationHeaders = setOperationHeaders;
     this.timeout = timeout;
-    this.transformResults = transformResults;
     this.includes = includes;
     this.projectionFields = projectionFields;
     this.sessionOperations = sessionOperations;
@@ -136,7 +131,6 @@ public class QueryOperation {
     return (new Date().getTime()  - spStart) <= sessionOperations.getNonAuthoritativeInformationTimeout();
   }
 
-  @SuppressWarnings("unchecked")
   public <T> List<T> complete(Class<T> clazz)
   {
     QueryResult queryResult = currentQueryResults.createSnapshot();
@@ -153,10 +147,7 @@ public class QueryOperation {
 
     sessionOperations.registerMissingIncludes(queryResult.getResults(), includes);
 
-    if (transformResults == null)
-      return list;
-
-    return (List<T>) transformResults.apply(indexQuery, (Collection<Object>) list);
+    return list;
   }
 
   public boolean isDisableEntitiesTracking() {

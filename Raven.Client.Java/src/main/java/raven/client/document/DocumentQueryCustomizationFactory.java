@@ -1,6 +1,5 @@
 package raven.client.document;
 
-import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -9,7 +8,6 @@ import javax.annotation.concurrent.Immutable;
 
 import raven.abstractions.basic.Reference;
 import raven.abstractions.closure.Action1;
-import raven.abstractions.closure.Function2;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.indexing.SpatialOptions.SpatialRelation;
@@ -372,21 +370,6 @@ public class DocumentQueryCustomizationFactory {
       @Override
       public void apply(IDocumentQueryCustomization documentQuery) {
         documentQuery.beforeQueryExecution(action);
-      }
-    });
-  }
-
-  /**
-   * Execute the transformation function on the results of this query.
-   * @param resultsTransformer
-   * @return
-   */
-  @Deprecated
-  public DocumentQueryCustomizationFactory transformResults(final Function2<IndexQuery, Collection<Object>, Collection<Object>> resultsTransformer) {
-    return new DocumentQueryCustomizationFactory(actions, new Action1<IDocumentQueryCustomization>() {
-      @Override
-      public void apply(IDocumentQueryCustomization documentQuery) {
-        documentQuery.transformResults(resultsTransformer);
       }
     });
   }

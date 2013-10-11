@@ -25,9 +25,6 @@ import raven.abstractions.basic.Reference;
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Function1;
-import raven.abstractions.closure.Function2;
-import raven.abstractions.closure.Function3;
-import raven.abstractions.closure.Functions;
 import raven.abstractions.data.Constants;
 import raven.abstractions.extensions.JsonExtensions;
 import raven.abstractions.indexing.SortOptions;
@@ -39,7 +36,15 @@ import raven.client.converters.Int32Converter;
 import raven.client.converters.Int64Converter;
 import raven.client.converters.UUIDConverter;
 import raven.client.delegates.ClrTypeFinder;
+import raven.client.delegates.ClrTypeNameFinder;
+import raven.client.delegates.DocumentKeyFinder;
+import raven.client.delegates.HttpResponseHandler;
+import raven.client.delegates.IdConvention;
+import raven.client.delegates.IdValuePartFinder;
 import raven.client.delegates.PropertyNameFinder;
+import raven.client.delegates.ReplicationInformerFactory;
+import raven.client.delegates.RequestCachePolicy;
+import raven.client.delegates.TypeTagNameToDocumentKeyPrefixTransformer;
 import raven.client.indexes.AbstractIndexCreationTask;
 import raven.client.linq.LinqPathProvider;
 import raven.client.util.Inflector;
@@ -54,7 +59,7 @@ public class DocumentConvention implements Serializable {
 
   private Map<Class<?>, Field> idPropertyCache = new HashMap<>();
 
-  private final List<Tuple<Class<?>, Function3<String, IDatabaseCommands, Object, String>>> listOfRegisteredIdConventions =
+  private final List<Tuple<Class<?>, IdConvention>> listOfRegisteredIdConventions =
       new ArrayList<>();
 
   private FailoverBehaviorSet failoverBehavior = new FailoverBehaviorSet();
@@ -76,9 +81,9 @@ public class DocumentConvention implements Serializable {
 
   private ClrTypeFinder findClrType;
 
-  private Function1<Class<?>, String> findClrTypeName;
+  private ClrTypeNameFinder findClrTypeName;
 
-  private Function3<Object, Class<?>, Boolean, String> findFullDocumentKeyFromNonStringIdentifier;
+  private DocumentKeyFinder findFullDocumentKeyFromNonStringIdentifier;
 
   private DeserializationProblemHandler jsonContractResolver; //TODO: // find all usages in introduce them
 
@@ -88,7 +93,7 @@ public class DocumentConvention implements Serializable {
 
   private PropertyNameFinder findPropertyNameForDynamicIndex;
 
-  private Function1<String, Boolean> shouldCacheRequest;
+  private RequestCachePolicy shouldCacheRequest;
 
   private Function1<Field, Boolean> findIdentityProperty;
 
@@ -102,17 +107,17 @@ public class DocumentConvention implements Serializable {
 
   private boolean shouldSaveChangesForceAggressiveCacheCheck;
 
-  private Function1<HttpResponse, Action1<HttpRequest>> handleForbiddenResponse;
+  private HttpResponseHandler handleForbiddenResponse;
 
-  private Function1<HttpResponse, Action1<HttpRequest>> handleUnauthorizedResponse;
+  private HttpResponseHandler handleUnauthorizedResponse;
 
-  private Function2<Object, String, String> findIdValuePartForValueTypeConversion;
+  private IdValuePartFinder findIdValuePartForValueTypeConversion;
 
   private boolean saveEnumsAsIntegers;
 
-  private Function1<String, String> transformTypeTagNameToDocumentKeyPrefix;
+  private TypeTagNameToDocumentKeyPrefixTransformer transformTypeTagNameToDocumentKeyPrefix;
 
-  private Function1<String, ReplicationInformer> replicationInformerFactory;
+  private ReplicationInformerFactory replicationInformerFactory;
 
   /* The maximum amount of time that we will wait before checking
    * that a failed node is still up or not.
@@ -135,7 +140,12 @@ public class DocumentConvention implements Serializable {
     setUseParallelMultiGet(true);
     setDefaultQueryingConsistency(ConsistencyOptions.NONE);
     setFailoverBehavior(FailoverBehaviorSet.of(FailoverBehavior.ALLOW_READS_FROM_SECONDARIES));
-    shouldCacheRequest = Functions.alwaysTrue();
+    shouldCacheRequest = new RequestCachePolicy() {
+      @Override
+      public Boolean shouldCacheRequest(String url) {
+        return true;
+      }
+    };
     setFindIdentityProperty(new Function1<Field, Boolean>() {
 
       @Override
@@ -150,22 +160,22 @@ public class DocumentConvention implements Serializable {
         return metadata.value(String.class, Constants.RAVEN_CLR_TYPE);
       }
     });
-    setFindClrTypeName(new Function1<Class<?>, String>() {
+    setFindClrTypeName(new ClrTypeNameFinder() {
       @Override
-      public String apply(Class< ? > entityType) {
+      public String find(Class< ? > entityType) {
         return ReflectionUtil.getFullNameWithoutVersionInformation(entityType);
       }
     });
 
-    setTransformTypeTagNameToDocumentKeyPrefix(new Function1<String, String>() {
+    setTransformTypeTagNameToDocumentKeyPrefix(new TypeTagNameToDocumentKeyPrefixTransformer() {
       @Override
-      public String apply(String typeTagName) {
+      public String transform(String typeTagName) {
         return defaultTransformTypeTagNameToDocumentKeyPrefix(typeTagName);
       }
     });
-    setFindFullDocumentKeyFromNonStringIdentifier(new Function3<Object, Class<?>, Boolean, String>() {
+    setFindFullDocumentKeyFromNonStringIdentifier(new DocumentKeyFinder() {
       @Override
-      public String apply(Object id, Class< ? > type, Boolean allowNull) {
+      public String find(Object id, Class< ? > type, Boolean allowNull) {
         return defaultFindFullDocumentKeyFromNonStringIdentifier(id, type, allowNull);
       }
     });
@@ -203,15 +213,15 @@ public class DocumentConvention implements Serializable {
     setJsonContractResolver(new DefaultRavenContractResolver());
 
     setMaxNumberOfRequestsPerSession(30);
-    setReplicationInformerFactory(new Function1<String, ReplicationInformer>() {
+    setReplicationInformerFactory(new ReplicationInformerFactory() {
       @Override
-      public ReplicationInformer apply(String url) {
+      public ReplicationInformer create(String url) {
         return new ReplicationInformer(DocumentConvention.this);
       }
     });
-    setFindIdValuePartForValueTypeConversion(new Function2<Object, String, String>() {
+    setFindIdValuePartForValueTypeConversion(new IdValuePartFinder() {
       @Override
-      public String apply(Object entity, String id) {
+      public String find(Object entity, String id) {
         String[] splits = id.split(identityPartsSeparator);
         for (int i = splits.length - 1; i >= 0; i--) {
           if (StringUtils.isNotEmpty(splits[i])) {
@@ -259,7 +269,7 @@ public class DocumentConvention implements Serializable {
     }
     String tag = getTypeTagName(type);
     if (tag != null) {
-      tag = transformTypeTagNameToDocumentKeyPrefix.apply(tag);
+      tag = transformTypeTagNameToDocumentKeyPrefix.transform(tag);
       tag += identityPartsSeparator;
     }
     if (converter != null) {
@@ -448,9 +458,9 @@ public class DocumentConvention implements Serializable {
    */
   public String generateDocumentKey(String dbName, IDatabaseCommands databaseCommands, Object entity) {
     Class<?> type = entity.getClass();
-    for (Tuple<Class<?>, Function3<String, IDatabaseCommands, Object, String>> typeToRegisteredIdConvention : listOfRegisteredIdConventions) {
+    for (Tuple<Class<?>, IdConvention> typeToRegisteredIdConvention : listOfRegisteredIdConventions) {
       if (typeToRegisteredIdConvention.getItem1().isAssignableFrom(type)) {
-        return typeToRegisteredIdConvention.getItem2().apply(dbName, databaseCommands, entity);
+        return typeToRegisteredIdConvention.getItem2().findIdentifier(dbName, databaseCommands, entity);
       }
     }
 
@@ -528,7 +538,7 @@ public class DocumentConvention implements Serializable {
    *  Gets the function to find the clr type name from a clr type
    * @return
    */
-  public Function1<Class< ? >, String> getFindClrTypeName() {
+  public ClrTypeNameFinder getFindClrTypeName() {
     return findClrTypeName;
   }
 
@@ -536,7 +546,7 @@ public class DocumentConvention implements Serializable {
    *  Sets the function to find the clr type name from a clr type
    * @param findClrTypeName
    */
-  public void setFindClrTypeName(Function1<Class< ? >, String> findClrTypeName) {
+  public void setFindClrTypeName(ClrTypeNameFinder findClrTypeName) {
     this.findClrTypeName = findClrTypeName;
   }
 
@@ -545,7 +555,7 @@ public class DocumentConvention implements Serializable {
    * and the value type identifier (just the numeric part of the id).
    * @return
    */
-  public Function3<Object, Class< ? >, Boolean, String> getFindFullDocumentKeyFromNonStringIdentifier() {
+  public DocumentKeyFinder getFindFullDocumentKeyFromNonStringIdentifier() {
     return findFullDocumentKeyFromNonStringIdentifier;
   }
 
@@ -554,7 +564,7 @@ public class DocumentConvention implements Serializable {
    * and the value type identifier (just the numeric part of the id).
    * @param findFullDocumentKeyFromNonStringIdentifier
    */
-  public void setFindFullDocumentKeyFromNonStringIdentifier(Function3<Object, Class< ? >, Boolean, String> findFullDocumentKeyFromNonStringIdentifier) {
+  public void setFindFullDocumentKeyFromNonStringIdentifier(DocumentKeyFinder findFullDocumentKeyFromNonStringIdentifier) {
     this.findFullDocumentKeyFromNonStringIdentifier = findFullDocumentKeyFromNonStringIdentifier;
   }
 
@@ -614,7 +624,7 @@ public class DocumentConvention implements Serializable {
    * Whatever or not RavenDB should cache the request to the specified url.
    * @return the shouldCacheRequest
    */
-  public Function1<String, Boolean> getShouldCacheRequest() {
+  public RequestCachePolicy getShouldCacheRequest() {
     return shouldCacheRequest;
   }
 
@@ -725,13 +735,13 @@ public class DocumentConvention implements Serializable {
    * @return
    */
   public Boolean shouldCacheRequest(String url) {
-    return shouldCacheRequest.apply(url);
+    return shouldCacheRequest.shouldCacheRequest(url);
   }
 
   /**
    * @param shouldCacheRequest the shouldCacheRequest to set
    */
-  public void setShouldCacheRequest(Function1<String, Boolean> shouldCacheRequest) {
+  public void setShouldCacheRequest(RequestCachePolicy shouldCacheRequest) {
     this.shouldCacheRequest = shouldCacheRequest;
   }
 
@@ -741,8 +751,8 @@ public class DocumentConvention implements Serializable {
    * Note that you can still fall back to the DocumentKeyGenerator if you want.
    */
   @SuppressWarnings("unchecked")
-  public <TEntity> DocumentConvention registerIdConvention(Class<TEntity> type, Function3<String, IDatabaseCommands, TEntity, String> func) {
-    for (Tuple<Class<?>, Function3<String, IDatabaseCommands, Object, String>> entry: listOfRegisteredIdConventions) {
+  public <TEntity> DocumentConvention registerIdConvention(Class<TEntity> type, IdConvention func) {
+    for (Tuple<Class<?>, IdConvention> entry: listOfRegisteredIdConventions) {
       if (entry.getItem1().equals(type)) {
         listOfRegisteredIdConventions.remove(type);
         break;
@@ -750,13 +760,13 @@ public class DocumentConvention implements Serializable {
     }
     int index;
     for (index = 0; index < listOfRegisteredIdConventions.size(); index++) {
-      Tuple<Class< ? >, Function3<String, IDatabaseCommands, Object, String>> entry = listOfRegisteredIdConventions.get(index);
+      Tuple<Class< ? >, IdConvention> entry = listOfRegisteredIdConventions.get(index);
       if (entry.getItem1().isAssignableFrom(type)) {
         break;
       }
     }
-    Tuple<Class<?>, Function3<String, IDatabaseCommands, Object, String>> item =
-        (Tuple<Class<?>, Function3<String, IDatabaseCommands, Object, String>>) (Object) Tuple.create(type, func);
+    Tuple<Class<?>, IdConvention> item =
+        (Tuple<Class<?>, IdConvention>) (Object) Tuple.create(type, func);
     listOfRegisteredIdConventions.add(index, item);
 
     return this;
@@ -778,7 +788,7 @@ public class DocumentConvention implements Serializable {
    * this to perform the actual work
    * @return
    */
-  public Function2<Object, String, String> getFindIdValuePartForValueTypeConversion() {
+  public IdValuePartFinder getFindIdValuePartForValueTypeConversion() {
     return findIdValuePartForValueTypeConversion;
   }
 
@@ -787,7 +797,7 @@ public class DocumentConvention implements Serializable {
    * this to perform the actual work
    * @param findIdValuePartForValueTypeConversion
    */
-  public void setFindIdValuePartForValueTypeConversion(Function2<Object, String, String> findIdValuePartForValueTypeConversion) {
+  public void setFindIdValuePartForValueTypeConversion(IdValuePartFinder findIdValuePartForValueTypeConversion) {
     this.findIdValuePartForValueTypeConversion = findIdValuePartForValueTypeConversion;
   }
 
@@ -811,7 +821,7 @@ public class DocumentConvention implements Serializable {
    * Translate the type tag name to the document key prefix
    * @return
    */
-  public Function1<String, String> getTransformTypeTagNameToDocumentKeyPrefix() {
+  public TypeTagNameToDocumentKeyPrefixTransformer getTransformTypeTagNameToDocumentKeyPrefix() {
     return transformTypeTagNameToDocumentKeyPrefix;
   }
 
@@ -819,11 +829,11 @@ public class DocumentConvention implements Serializable {
    * Translate the type tag name to the document key prefix
    * @param transformTypeTagNameToDocumentKeyPrefix
    */
-  public void setTransformTypeTagNameToDocumentKeyPrefix(Function1<String, String> transformTypeTagNameToDocumentKeyPrefix) {
+  public void setTransformTypeTagNameToDocumentKeyPrefix(TypeTagNameToDocumentKeyPrefixTransformer transformTypeTagNameToDocumentKeyPrefix) {
     this.transformTypeTagNameToDocumentKeyPrefix = transformTypeTagNameToDocumentKeyPrefix;
   }
 
-  public void setReplicationInformerFactory(Function1<String, ReplicationInformer> replicationInformerFactory) {
+  public void setReplicationInformerFactory(ReplicationInformerFactory replicationInformerFactory) {
     this.replicationInformerFactory = replicationInformerFactory;
   }
 
@@ -831,7 +841,7 @@ public class DocumentConvention implements Serializable {
    * Get the CLR type name to be stored in the entity metadata
    */
   public String getClrTypeName(Class<?> entityType) {
-    return findClrTypeName.apply(entityType);
+    return findClrTypeName.find(entityType);
   }
 
   /**
@@ -846,7 +856,7 @@ public class DocumentConvention implements Serializable {
    *  Handles unauthenticated responses, usually by authenticating against the oauth server
    * @return the handleUnauthorizedResponse
    */
-  public Function1<HttpResponse, Action1<HttpRequest>> getHandleUnauthorizedResponse() {
+  public HttpResponseHandler getHandleUnauthorizedResponse() {
     return handleUnauthorizedResponse;
   }
 
@@ -854,7 +864,7 @@ public class DocumentConvention implements Serializable {
    *  Handles unauthenticated responses, usually by authenticating against the oauth server
    * @param handleUnauthorizedResponse the handleUnauthorizedResponse to set
    */
-  public void setHandleUnauthorizedResponse(Function1<HttpResponse, Action1<HttpRequest>> handleUnauthorizedResponse) {
+  public void setHandleUnauthorizedResponse(HttpResponseHandler handleUnauthorizedResponse) {
     this.handleUnauthorizedResponse = handleUnauthorizedResponse;
   }
 
@@ -862,7 +872,7 @@ public class DocumentConvention implements Serializable {
    * Handles forbidden responses
    * @return the handleForbiddenResponse
    */
-  public Function1<HttpResponse, Action1<HttpRequest>> getHandleForbiddenResponse() {
+  public HttpResponseHandler getHandleForbiddenResponse() {
     return handleForbiddenResponse;
   }
 
@@ -870,7 +880,7 @@ public class DocumentConvention implements Serializable {
    * Handles forbidden responses
    * @param handleForbiddenResponse the handleForbiddenResponse to set
    */
-  public void setHandleForbiddenResponse(Function1<HttpResponse, Action1<HttpRequest>> handleForbiddenResponse) {
+  public void setHandleForbiddenResponse(HttpResponseHandler handleForbiddenResponse) {
     this.handleForbiddenResponse = handleForbiddenResponse;
   }
 
@@ -915,11 +925,11 @@ public class DocumentConvention implements Serializable {
   }
 
   public void handleForbiddenResponse(HttpResponse forbiddenResponse) {
-    handleForbiddenResponse.apply(forbiddenResponse);
+    handleForbiddenResponse.handle(forbiddenResponse);
   }
 
   public Action1<HttpRequest> handleUnauthorizedResponse(HttpResponse unauthorizedResponse) {
-    return handleUnauthorizedResponse.apply(unauthorizedResponse);
+    return handleUnauthorizedResponse.handle(unauthorizedResponse);
   }
 
   /**
@@ -927,7 +937,7 @@ public class DocumentConvention implements Serializable {
    * this to inject your own replication / failover logic.
    * @return
    */
-  public Function1<String, ReplicationInformer> getReplicationInformerFactory() {
+  public ReplicationInformerFactory getReplicationInformerFactory() {
     return replicationInformerFactory;
   }
 

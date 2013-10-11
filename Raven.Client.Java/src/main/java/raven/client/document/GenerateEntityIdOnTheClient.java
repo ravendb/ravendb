@@ -43,7 +43,7 @@ public class GenerateEntityIdOnTheClient {
           value = Constants.EMPTY_UUID;
         }
         if (idHolder.value == null && value != null) { //need convertion
-          idHolder.value = documentStore.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(value, entity.getClass(), true);
+          idHolder.value = documentStore.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(value, entity.getClass(), true);
           return true;
         }
         return idHolder.value != null;
@@ -102,7 +102,7 @@ public class GenerateEntityIdOnTheClient {
       } else { // need converting
         for (ITypeConverter converter : documentStore.getConventions().getIdentityTypeConvertors()) {
           if (converter.canConvertFrom(propertyOrFieldType)) {
-            FieldUtils.writeField(field, entity, converter.convertTo(documentStore.getConventions().getFindIdValuePartForValueTypeConversion().apply(entity, id)), true);
+            FieldUtils.writeField(field, entity, converter.convertTo(documentStore.getConventions().getFindIdValuePartForValueTypeConversion().find(entity, id)), true);
             return;
           }
         }

@@ -27,7 +27,6 @@ import raven.abstractions.closure.Action1;
 import raven.abstractions.closure.Action2;
 import raven.abstractions.closure.Delegates;
 import raven.abstractions.closure.Function1;
-import raven.abstractions.closure.Function2;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.Facet;
@@ -103,8 +102,6 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * The index to query
    */
   protected final String indexName;
-
-  protected Function2<IndexQuery, Collection<Object>, Collection<Object>> transformResultsFunc;
 
   protected String defaultField;
 
@@ -478,7 +475,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   @SuppressWarnings("unchecked")
   @Override
   public IDocumentQuery<T> include(Class<?> targetClass, Path<?> path) {
-    String fullId = getDocumentConvention().getFindFullDocumentKeyFromNonStringIdentifier().apply(-1, targetClass, false);
+    String fullId = getDocumentConvention().getFindFullDocumentKeyFromNonStringIdentifier().find(-1, targetClass, false);
     String idPrefix = fullId.replace("-1", "");
     String id = ExpressionExtensions.toPropertyPath(path) +  "(" + idPrefix + ")";
     include(id);
@@ -507,7 +504,6 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       theWaitForNonStaleResults,
       setOperationHeaders,
       timeout,
-      transformResultsFunc,
       includes,
       disableEntitiesTracking);
   }
@@ -1518,7 +1514,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     }
 
     if (whereParams.getFieldName().equals(Constants.DOCUMENT_ID_FIELD_NAME) && !(whereParams.getValue() instanceof String)) {
-      return theSession.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(whereParams.getValue(),
+      return theSession.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(whereParams.getValue(),
         whereParams.getFieldTypeForIdentifier() != null ? whereParams.getFieldTypeForIdentifier() : clazz, false);
     }
 
@@ -1577,7 +1573,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       return dateStr;
     }
     if (Constants.DOCUMENT_ID_FIELD_NAME.equals(whereParams.getFieldName()) && !(whereParams.getValue() instanceof String))  {
-      return theSession.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(whereParams.getValue(), clazz, false);
+      return theSession.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(whereParams.getValue(), clazz, false);
     }
     if (whereParams.getValue() instanceof Integer) {
       return NumberUtil.numberToString((Integer)whereParams.getValue());

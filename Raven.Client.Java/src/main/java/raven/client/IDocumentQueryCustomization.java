@@ -1,13 +1,11 @@
 package raven.client;
 
-import java.util.Collection;
 import java.util.Date;
 
 import com.mysema.query.types.Path;
 
 import raven.abstractions.basic.Reference;
 import raven.abstractions.closure.Action1;
-import raven.abstractions.closure.Function2;
 import raven.abstractions.data.Etag;
 import raven.abstractions.data.IndexQuery;
 import raven.abstractions.indexing.SpatialOptions.SpatialRelation;
@@ -194,16 +192,6 @@ public interface IDocumentQueryCustomization {
    * @return
    */
   public IDocumentQueryCustomization beforeQueryExecution(Action1<IndexQuery> action);
-
-  /**
-   * Execute the transformation function on the results of this query.
-   *
-   * Use Result Transformers instead.
-   * @param resultsTransformer
-   * @return
-   */
-  @Deprecated
-  public IDocumentQueryCustomization transformResults(Function2<IndexQuery, Collection<Object>, Collection<Object>> resultsTransformer);
 
   /**
    * Adds matches highlighting for the specified field.

@@ -29,7 +29,7 @@ public class MultiLoaderWithInclude implements ILoaderWithInclude {
   @Override
   public MultiLoaderWithInclude include(Class<?> targetClass, Path<?> path) {
     Class< ? > type = path.getType();
-    String fullId = session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(-1, targetClass, false);
+    String fullId = session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(-1, targetClass, false);
     String id = ExpressionExtensions.toPropertyPath(path);
     if (!String.class.equals(type)) {
       String idPrefix = fullId.replace("-1", "");
@@ -80,13 +80,13 @@ public class MultiLoaderWithInclude implements ILoaderWithInclude {
 
   @Override
   public <TResult> TResult load(Class<TResult> clazz, Number id) {
-    String documentKey = session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
+    String documentKey = session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false);
     return load(clazz, documentKey);
   }
 
   @Override
   public <TResult> TResult load(Class<TResult> clazz, UUID id) {
-    String documentKey = session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false);
+    String documentKey = session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false);
     return load(clazz, documentKey);
   }
 
@@ -94,7 +94,7 @@ public class MultiLoaderWithInclude implements ILoaderWithInclude {
   public <TResult> TResult[] load(Class<TResult> clazz, UUID... ids) {
     List<String> documentIds = new ArrayList<>();
     for (UUID id: ids) {
-      documentIds.add(session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+      documentIds.add(session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false));
     }
     return load(clazz, documentIds);
   }
@@ -103,7 +103,7 @@ public class MultiLoaderWithInclude implements ILoaderWithInclude {
   public <TResult> TResult[] load(Class<TResult> clazz, Number... ids) {
     List<String> documentIds = new ArrayList<>();
     for (Number id: ids) {
-      documentIds.add(session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().apply(id, clazz, false));
+      documentIds.add(session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false));
     }
     return load(clazz, documentIds);
   }

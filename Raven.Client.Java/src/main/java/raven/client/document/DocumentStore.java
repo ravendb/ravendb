@@ -42,6 +42,7 @@ import raven.client.connection.ReplicationInformer;
 import raven.client.connection.ServerClient;
 import raven.client.connection.implementation.HttpJsonRequestFactory;
 import raven.client.connection.profiling.RequestResultArgs;
+import raven.client.delegates.HttpResponseHandler;
 import raven.client.extensions.MultiDatabase;
 import raven.client.listeners.IDocumentConflictListener;
 import raven.client.util.EvictItemsFromCacheBasedOnChanges;
@@ -366,10 +367,10 @@ public class DocumentStore extends DocumentStoreBase {
       }
     });
 
-    conventions.setHandleUnauthorizedResponse(new Function1<HttpResponse, Action1<HttpRequest>>() {
+    conventions.setHandleUnauthorizedResponse(new HttpResponseHandler() {
       @SuppressWarnings("null")
       @Override
-      public Action1<HttpRequest> apply(HttpResponse response) {
+      public Action1<HttpRequest> handle(HttpResponse response) {
         Header oauthSourceHeader = response.getFirstHeader("OAuth-Source");
         String oauthSource = null;
         if (oauthSourceHeader != null) {
@@ -444,7 +445,7 @@ public class DocumentStore extends DocumentStoreBase {
     if (StringUtils.isNotEmpty(dbName)) {
       key = MultiDatabase.getRootDatabaseUrl(url) + "/databases/" + dbName;
     }
-    replicationInformers.putIfAbsent(key, conventions.getReplicationInformerFactory().apply(key));
+    replicationInformers.putIfAbsent(key, conventions.getReplicationInformerFactory().create(key));
     return replicationInformers.get(key);
   }
 
