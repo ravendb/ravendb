@@ -28,6 +28,8 @@ public class LinqOps {
 
     public static final Operator<Object> ANY = new OperatorImpl<>("QUERY_ANY");
 
+    public static final Operator<Object> ANY_RESULT = new OperatorImpl<>("QUERY_ANY_RESULT");
+
     public static final String QUERY_OPERATORS_PREFIX = "QUERY_";
   }
 

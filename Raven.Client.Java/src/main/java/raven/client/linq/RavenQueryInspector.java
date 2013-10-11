@@ -544,7 +544,7 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
 
   @Override
   public boolean any() {
-    return (boolean) provider.execute(Expressions.operation(Object.class, LinqOps.Query.ANY, getExpression()));
+    return (boolean) provider.execute(Expressions.operation(Boolean.class, LinqOps.Query.ANY_RESULT, getExpression()));
   }
 
 }

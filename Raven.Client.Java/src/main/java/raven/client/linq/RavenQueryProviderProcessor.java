@@ -236,6 +236,8 @@ public class RavenQueryProviderProcessor<T> {
       visitEndsWith(expression);
     } else if (expression.getOperator().equals(LinqOps.Query.ANY)) {
       visitAny(expression);
+    } else if (expression.getOperator().equals(LinqOps.Query.ANY_RESULT)) {
+      visitAny();
     } else {
       throw new IllegalArgumentException("Expression is not supported: " + expression.getOperator());
     }
@@ -967,6 +969,10 @@ public class RavenQueryProviderProcessor<T> {
     currentPath = oldPath;
   }
 
+  private void visitAny() {
+    luceneQuery.take(1);
+    queryType = SpecialQueryType.ANY;
+  }
 
   private void visitCount() {
     luceneQuery.take(0);
