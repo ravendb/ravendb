@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !SILVERLIGHT
+using System;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -6,7 +7,6 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Document.SessionOperations
 {
-#if !SILVERLIGHT
 	public class LoadTransformerOperation 
 	{
 		private readonly DocumentSession documentSession;
@@ -66,6 +66,5 @@ namespace Raven.Client.Document.SessionOperations
 			return items;
 		}
 	}
-#endif
-
 }
+#endif
