@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class TransfomerLoadCaching : RavenTest
+	public class TransformerLoadCaching : RavenTest
 	{
 		public class Contact
 		{
