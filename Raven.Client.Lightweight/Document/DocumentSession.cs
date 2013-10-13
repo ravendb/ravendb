@@ -175,7 +175,7 @@ namespace Raven.Client.Document
 		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id)
 		{
 			var transformer = new TTransformer().TransformerName;
-			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(id, transformer,
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(new[] { id }, transformer,
 																		  new LoadTransformerOperation(this, transformer, 1),
 																		  singleResult: true);
 			return AddLazyOperation<TResult>(lazyLoadOperation, null);
@@ -184,9 +184,10 @@ namespace Raven.Client.Document
 		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(string[] ids)
 		{
 			var transformer = new TTransformer().TransformerName;
-			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, null);
-			var lazyOp = new LazyMultiLoadOperation<TResult>(multiLoadOperation, ids, null, transformer);
-			return AddLazyOperation<TResult[]>(lazyOp, null);
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(ids, transformer,
+																		  new LoadTransformerOperation(this, transformer, ids.Length),
+																		  singleResult: false);
+			return AddLazyOperation<TResult[]>(lazyLoadOperation, null);
 		}
 
 		/// <summary>
