@@ -328,7 +328,7 @@ function ExecutePatchScript(docInner){{
 				.AllowClr(false)
 				.SetDebugMode(false)
 				.SetMaxRecursions(50)
-				.SetMaxSteps(10 * 1000);
+				.SetMaxSteps(maxSteps);
 
 
 			AddScript(jintEngine, "Raven.Database.Json.Map.js");
