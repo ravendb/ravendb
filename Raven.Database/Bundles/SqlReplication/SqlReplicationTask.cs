@@ -281,9 +281,13 @@ namespace Raven.Database.Bundles.SqlReplication
 				finally
 				{
 					AfterReplicationCompleted(successes.Count);
-					var lastMinReplicatedEtag = localReplicationStatus.LastReplicatedEtags.Min(x => new ComparableByteArray(x.LastDocEtag.ToByteArray())).ToEtag();
-					prefetchingBehavior.CleanupDocuments(lastMinReplicatedEtag);
-					prefetchingBehavior.UpdateAutoThrottler(documents, replicationDuration.Elapsed);
+					var min = localReplicationStatus.LastReplicatedEtags.Min(x => new ComparableByteArray(x.LastDocEtag.ToByteArray()));
+					if (min != null)
+					{
+						var lastMinReplicatedEtag = min.ToEtag();
+						prefetchingBehavior.CleanupDocuments(lastMinReplicatedEtag);
+						prefetchingBehavior.UpdateAutoThrottler(documents, replicationDuration.Elapsed);
+					}
 				}
 			}
 		}
