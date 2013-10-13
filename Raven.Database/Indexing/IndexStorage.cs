@@ -958,7 +958,7 @@ namespace Raven.Database.Indexing
 			{
 				var autoIndexesSortedByLastQueryTime =
 					(from index in indexes
-					 let stats = accessor.Indexing.GetIndexStats(index.Key)
+					 let stats = GetIndexStats(accessor, index.Key)
 					 where stats != null
 					 let lastQueryTime = stats.LastQueryTimestamp ?? DateTime.MinValue
                      where index.Value.PublicName.StartsWith("Auto/", StringComparison.InvariantCultureIgnoreCase)
@@ -1023,6 +1023,15 @@ namespace Raven.Database.Indexing
 					}
 				}
 			});
+		}
+
+		private IndexStats GetIndexStats(IStorageActionsAccessor accessor, string indexName)
+		{
+			var indexStats = accessor.Indexing.GetIndexStats(indexName);
+			if (indexStats == null)
+				return null;
+			indexStats.LastQueryTimestamp = GetLastQueryTime(indexName);
+			return indexStats;
 		}
 
 
