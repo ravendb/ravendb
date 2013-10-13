@@ -184,7 +184,7 @@ namespace Raven.Database.Server.Tenancy
 
 		public Task<DocumentDatabase> GetDatabaseInternal(string name)
 		{
-			if (string.Equals("System", name, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(name))
+			if (string.Equals("<system>", name, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(name))
 				return new CompletedTask<DocumentDatabase>(systemDatabase);
 
 			Task<DocumentDatabase> db;
