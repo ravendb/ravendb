@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions;
@@ -195,7 +196,7 @@ namespace Raven.Database.Server.Controllers
 
 			public void WriteHeader()
 			{
-				writer = new StreamWriter(stream);
+				writer = new StreamWriter(stream, Encoding.UTF8);
 			}
 
 			public void Write(RavenJObject result)
