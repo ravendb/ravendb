@@ -757,7 +757,7 @@ namespace Raven.Client.Connection.Async
                 request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
                 var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson,
                                                                                   request.ResponseHeaders,
-                                                                                  request.Response.StatusCode);
+                                                                                  request.ResponseStatusCode);
                 return deserializeJsonDocument;
             }
             catch (ErrorResponseException e)
