@@ -254,7 +254,7 @@ namespace Raven.Client.Connection
 
 		public void DeleteTransformer(string name)
 		{
-		    asyncServerClient.DeleteTransformerAsync(name);
+		    asyncServerClient.DeleteTransformerAsync(name).Wait();
 		}
 
 		/// <summary>
