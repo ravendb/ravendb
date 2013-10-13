@@ -20,7 +20,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
@@ -50,7 +50,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Backup\CanBackupData.cs" />
+    <Compile Include="Bugs\MultiAdds.cs" />
+    <Compile Include="Bugs\Snapshots.cs" />
+    <Compile Include="Bugs\Deletes.cs" />
     <Compile Include="Bugs\EmptyTree.cs" />
+    <Compile Include="Bugs\PageSplitter.cs" />
+    <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
     <Compile Include="Impl\ConsecutiveSequencesTests.cs" />
     <Compile Include="MultiValueTree.cs" />
@@ -72,6 +77,7 @@
     <Compile Include="StorageTest.cs" />
     <Compile Include="Trees\Rebalance.cs" />
     <Compile Include="Trees\Updates.cs" />
+    <Compile Include="Util\StreamExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -81,6 +87,14 @@
       <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Bugs\Data\data.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Bugs\Data\data2.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />

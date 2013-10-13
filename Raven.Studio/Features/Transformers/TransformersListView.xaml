@@ -103,7 +103,13 @@
 							   Style="{StaticResource Style_Text_Header}"/>
 				</StackPanel>
 				<Border toolkit:DockPanel.Dock="Top" Background="{StaticResource Brush_ToolbarBackground}" UseLayoutRounding="True">
-					<StackPanel Orientation="Horizontal"
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="*"/>
+							<ColumnDefinition Width="Auto"/>
+						</Grid.ColumnDefinitions>
+						<StackPanel Orientation="Horizontal"
 								VerticalAlignment="Center"
 								Margin="0,4,4,4">
 						<HyperlinkButton Command="{StaticResource NavigateToCommand}"
@@ -168,6 +174,15 @@
 							</HyperlinkButton.Content>
 						</HyperlinkButton>
 					</StackPanel>
+						<StackPanel Orientation="Horizontal" Grid.Column="2">
+							<TextBlock Text="Filter by name: " VerticalAlignment="Center"/>
+							<TextBox Text="{Binding SearchText.Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Margin="5" 
+									 VerticalAlignment="Center"
+									 MinWidth="100"/>
+						</StackPanel>
+
+					</Grid>
 				</Border>
 			</toolkit:DockPanel>
 		</toolkit:HeaderedContentControl.Header>

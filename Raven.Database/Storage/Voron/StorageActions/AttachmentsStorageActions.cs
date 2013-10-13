@@ -46,7 +46,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		public Etag AddAttachment(string key, Etag etag, Stream data, RavenJObject headers)
 		{
 			if (String.IsNullOrEmpty(key))
-				throw new ArgumentNullException("key");			
+				throw new ArgumentNullException("key");
 
 			var lowercaseKey = key.ToLowerInvariant();
 			var dataKey = Util.DataKey(lowercaseKey);
@@ -58,15 +58,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			{
 				if (!attachmentsTable.Contains(snapshot, metadataKey, writeBatch)) //precaution
 				{
-					throw new ApplicationException(String.Format(@"Headers for attachment with key = '{0}' were not found, 
-																		but the attachment itself was found. Data corruption?", key));
+					throw new ApplicationException(String.Format(@"Headers for attachment with key = '{0}' were not found,
+but the attachment itself was found. Data corruption?", key));
 				}
 
 				Etag existingEtag = null;
 				if (etag != null && !IsAttachmentEtagMatch(metadataKey, etag, out existingEtag))
 				{
 					throw new ConcurrencyException("PUT attempted on attachment '" + key +
-					                               "' using a non current etag")
+					"' using a non current etag")
 					{
 						ActualETag = existingEtag,
 						ExpectedETag = etag
@@ -85,25 +85,33 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			{
 				if (data == null)
 					throw new InvalidOperationException("When adding new attachment, the attachment data must be specified");
-			
+
 				if (!data.CanRead) //precaution
-					throw new ArgumentException("Attachment data stream must be readable");
+					throw new InvalidOperationException("When adding/updating attachment, the attachment data stream must be readable");
 			}
 
 			var newETag = uuidGenerator.CreateSequentialUuid(UuidType.Attachments);
 
 			if (data != null)
 			{
-				if (data.CanSeek) 
+				if (data.CanSeek)
 				{
 					data.Seek(0, SeekOrigin.Begin);
 					attachmentsTable.Add(writeBatch, dataKey, data);
 				}
 				else //handle streams like GzipStream
 				{
-					var tempStream = new MemoryStream();
-					data.CopyTo(tempStream);
-					attachmentsTable.Add(writeBatch, dataKey, tempStream);
+					try
+					{
+						var tempStream = new MemoryStream();
+						data.CopyTo(tempStream);
+						tempStream.Seek(0, SeekOrigin.Begin);
+						attachmentsTable.Add(writeBatch, dataKey, tempStream);
+					}
+					finally
+					{
+						data.Dispose();
+					}
 				}
 			}
 

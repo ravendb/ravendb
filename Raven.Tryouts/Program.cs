@@ -13,6 +13,7 @@ namespace Raven.Tryouts
 			for (int i = 0; i < 100; i++)
 			{
 				Console.WriteLine(i);
+                Environment.SetEnvironmentVariable("run", i.ToString("000"));
                 using (var x = new RavenDB_1280())
 				{
 					x.Referenced_Docs_Are_Indexed_During_Heavy_Writing();

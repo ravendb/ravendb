@@ -183,7 +183,7 @@ namespace Raven.Database.Indexing
 			{
 				documentDatabase.TransactionalStorage.Batch(accessor =>
 				{
-					accessor.Indexing.DeleteIndex(indexName);
+                    accessor.Indexing.DeleteIndex(indexName, documentDatabase.WorkContext.CancellationToken);
 					accessor.Indexing.AddIndex(indexName, indexDefinition.IsMapReduce);
 				});
 
@@ -1015,7 +1015,7 @@ namespace Raven.Database.Indexing
 			// can be safely removed, probably
 			if (age < 90 && lastQuery < 30)
 			{
-				accessor.Indexing.DeleteIndex(thisItem.Name);
+                accessor.Indexing.DeleteIndex(thisItem.Name, documentDatabase.WorkContext.CancellationToken);
 				return;
 			}
 

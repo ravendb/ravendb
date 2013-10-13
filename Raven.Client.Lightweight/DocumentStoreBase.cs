@@ -59,6 +59,8 @@ namespace Raven.Client
 
 		public abstract IDisposable DisableAggressiveCaching();
 
+		public abstract IDisposable SetRequestsTimeoutFor(TimeSpan timeout);
+
 #if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Gets the shared operations headers.

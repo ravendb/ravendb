@@ -13,13 +13,10 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Smuggler;
-using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Database.Smuggler;
-using Raven.Database.Tasks;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using Task = System.Threading.Tasks.Task;
 
@@ -140,13 +137,13 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							var databaseStatistics = documentDatabase.Statistics;
 							// No-op if nothing has changed
 							if (databaseStatistics.LastDocEtag == localBackupStatus.LastDocsEtag &&
-								databaseStatistics.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
+							    databaseStatistics.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
 							{
 								return;
 							}
 
 							var backupPath = localBackupConfigs.LocalFolderName ??
-											 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicBackup-Temp");
+							                 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicBackup-Temp");
 							var options = new SmugglerOptions
 							{
 								BackupPath = backupPath,
@@ -164,8 +161,14 @@ namespace Raven.Database.Bundles.PeriodicBackups
 								return;
 							}
 
-							UploadToServer(filePath, localBackupConfigs);
-							IOExtensions.DeleteDirectory(filePath);
+							try
+							{
+								UploadToServer(filePath, localBackupConfigs);
+							}
+							finally
+							{
+								IOExtensions.DeleteDirectory(filePath);
+							}
 
 							localBackupStatus.LastAttachmentsEtag = options.LastAttachmentEtag;
 							localBackupStatus.LastDocsEtag = options.LastDocsEtag;
@@ -174,7 +177,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);
 							ravenJObject.Remove("Id");
 							var putResult = documentDatabase.Put(PeriodicBackupStatus.RavenDocumentKey, null, ravenJObject,
-							                             new RavenJObject(), null);
+								new RavenJObject(), null);
 
 							// this result in backupStatus being refreshed
 							localBackupStatus = backupStatus;

@@ -137,6 +137,12 @@ namespace Raven.Abstractions.Indexing
 		/// <value>The spatial options.</value>
 		public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
 
+        /// <summary>
+        /// Internal map of field names to expressions generating them
+        /// Only relevant for auto indexes and only used internally
+        /// </summary>
+        public IDictionary<string, string> InternalFieldsMapping { get; set; }
+
 		/// <summary>
 		/// Equals the specified other.
 		/// </summary>

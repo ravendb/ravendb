@@ -3,16 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Generic;
-using System.IO;
-using System.Web.Management;
-using Raven.Database.Server.Responders;
-
 namespace Raven.Database.Storage.Voron.Impl
 {
 	using System;
+	using System.Collections.Generic;
+	using System.Diagnostics;
+	using System.IO;
 
 	using global::Voron;
+	using global::Voron.Debugging;
 	using global::Voron.Impl;
 
 	public class TableStorage : IDisposable
@@ -25,22 +24,22 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			this.persistanceSource = persistanceSource;
 			env = new StorageEnvironment(persistanceSource.Pager, ownsPager: false);
-            
+
 			Initialize();
 			CreateSchema();
 		}
 
-	    public void ExecuteBackup(Stream outputStream)
-	    {
-	        if (outputStream == null) throw new ArgumentNullException("outputStream");
-            if (!outputStream.CanWrite) throw new ArgumentException("must be writable stream","outputStream");
+		public void ExecuteBackup(Stream outputStream)
+		{
+			if (outputStream == null) throw new ArgumentNullException("outputStream");
+			if (!outputStream.CanWrite) throw new ArgumentException("must be writable stream", "outputStream");
 
-	        env.Backup(outputStream);
-	    }	  
+			env.Backup(outputStream);
+		}
 
-	    internal Dictionary<string, object> GenerateReportOnStorage()
-	    {
-	        var reportData = new Dictionary<string, object>
+		internal Dictionary<string, object> GenerateReportOnStorage()
+		{
+			var reportData = new Dictionary<string, object>
 	        {
 	            {"MaxNodeSize", persistanceSource.Pager.MaxNodeSize},
 	            {"NumberOfAllocatedPages", persistanceSource.Pager.NumberOfAllocatedPages},
@@ -53,8 +52,8 @@ namespace Raven.Database.Storage.Voron.Impl
 
 	        };
 
-	        return reportData;
-	    }
+			return reportData;
+		}
 
 		public SnapshotReader CreateSnapshot()
 		{
@@ -66,6 +65,8 @@ namespace Raven.Database.Storage.Voron.Impl
 		public Table Documents { get; private set; }
 
 		public Table IndexingStats { get; private set; }
+
+		public Table ReduceStats { get; private set; }
 
 		public Table LastIndexedEtags { get; private set; }
 
@@ -89,7 +90,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public Table ReduceKeyTypes { get; private set; }
 
-        public Table General { get; private set; }
+		public Table General { get; private set; }
 
 		public void Write(WriteBatch writeBatch)
 		{
@@ -101,6 +102,26 @@ namespace Raven.Database.Storage.Voron.Impl
 			using (var tx = env.NewTransaction(TransactionFlags.Read))
 			{
 				return env.GetTree(tx, table.TableName).State.EntriesCount;
+			}
+		}
+
+		public void RenderAndShow(TableBase table, int showEntries = 25)
+		{
+			if (Debugger.IsAttached == false)
+				return;
+
+			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = env.GetTree(tx, table.TableName);
+
+				var path = Path.Combine(Environment.CurrentDirectory, "test-tree.dot");
+				var rootPageNumber = tx.GetTreeInformation(tree).RootPageNumber;
+				TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
+
+				var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
+				var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
+				p.WaitForExit();
+				Process.Start(output);
 			}
 		}
 
@@ -133,10 +154,16 @@ namespace Raven.Database.Storage.Voron.Impl
 				CreateReduceKeyCountsSchema(tx);
 				CreateReduceKeyTypesSchema(tx);
 				CreateReduceResultsSchema(tx);
-                CreateGeneralSchema(tx);
+				CreateGeneralSchema(tx);
+				CreateReduceStatsSchema(tx);
 
 				tx.Commit();
 			}
+		}
+
+		private void CreateReduceStatsSchema(Transaction tx)
+		{
+			env.CreateTree(tx, Tables.ReduceStats.TableName);
 		}
 
 		private void CreateReduceResultsSchema(Transaction tx)
@@ -144,6 +171,8 @@ namespace Raven.Database.Storage.Voron.Impl
 			env.CreateTree(tx, Tables.ReduceResults.TableName);
 			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel));
 			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket));
+			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket));
+			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.ByView));
 			env.CreateTree(tx, ReduceResults.GetIndexKey(Tables.ReduceResults.Indices.Data));
 		}
 
@@ -240,10 +269,10 @@ namespace Raven.Database.Storage.Voron.Impl
 			env.CreateTree(tx, Documents.GetIndexKey(Tables.Documents.Indices.Metadata));
 		}
 
-	    private void CreateGeneralSchema(Transaction tx)
-	    {
-	        env.CreateTree(tx, Tables.General.TableName);
-	    }
+		private void CreateGeneralSchema(Transaction tx)
+		{
+			env.CreateTree(tx, Tables.General.TableName);
+		}
 
 		private void Initialize()
 		{
@@ -259,9 +288,10 @@ namespace Raven.Database.Storage.Voron.Impl
 			MappedResults = new Table(Tables.MappedResults.TableName, Tables.MappedResults.Indices.ByView, Tables.MappedResults.Indices.ByViewAndDocumentId, Tables.MappedResults.Indices.ByViewAndReduceKey, Tables.MappedResults.Indices.ByViewAndReduceKeyAndSourceBucket, Tables.MappedResults.Indices.Data);
 			ReduceKeyCounts = new Table(Tables.ReduceKeyCounts.TableName, Tables.ReduceKeyCounts.Indices.ByView);
 			ReduceKeyTypes = new Table(Tables.ReduceKeyTypes.TableName, Tables.ReduceKeyTypes.Indices.ByView);
-			Attachments = new Table(Tables.Attachments.TableName,Tables.Attachments.Indices.ByEtag); 
-			ReduceResults = new Table(Tables.ReduceResults.TableName, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.Data);
-            General = new Table(Tables.General.TableName);
+			Attachments = new Table(Tables.Attachments.TableName, Tables.Attachments.Indices.ByEtag);
+			ReduceResults = new Table(Tables.ReduceResults.TableName, Tables.ReduceResults.Indices.ByView, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevel, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket, Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndBucket, Tables.ReduceResults.Indices.Data);
+			General = new Table(Tables.General.TableName);
+			ReduceStats = new Table(Tables.ReduceStats.TableName);
 		}
 	}
 }

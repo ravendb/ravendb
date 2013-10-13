@@ -8,6 +8,7 @@ namespace Raven.Tests.Storage.Voron
 	using System;
 	using System.Collections.Generic;
 	using System.Linq;
+	using System.Threading;
 
 	using Microsoft.Isam.Esent.Interop;
 
@@ -92,8 +93,8 @@ namespace Raven.Tests.Storage.Voron
 
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.DeleteIndex("index1");
-					accessor.Indexing.DeleteIndex("index2");
+					accessor.Indexing.DeleteIndex("index1", new CancellationToken());
+					accessor.Indexing.DeleteIndex("index2", new CancellationToken());
 				});
 
 				storage.Batch(accessor =>

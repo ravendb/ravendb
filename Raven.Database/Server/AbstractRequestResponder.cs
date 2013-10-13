@@ -103,7 +103,7 @@ namespace Raven.Database.Server
 			}
 
 			DateTime primaryServerLastCheck;
-			if(DateTime.TryParse(clientPrimaryServerLastCheck, out primaryServerLastCheck) == false)
+			if(DateTime.TryParse(clientPrimaryServerLastCheck, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out primaryServerLastCheck) == false)
 			{
 				return;
 			}

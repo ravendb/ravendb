@@ -554,7 +554,7 @@ namespace Raven.Database.Server.Responders
                     continue;
 
                 builder.Remove(matches[i].Groups[2].Index, matches[i].Groups[2].Length);
-                var newDateTimeFormat = time.ToString(Default.DateTimeFormatsToWrite);
+				var newDateTimeFormat = time.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
                 builder.Insert(matches[i].Groups[2].Index, newDateTimeFormat);
             }
             indexQuery.Query = builder.ToString();

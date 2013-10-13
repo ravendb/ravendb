@@ -618,6 +618,8 @@
     <Compile Include="Issues\RavenDB_1379.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Issues\RavenDB_1359 .cs" />
+    <Compile Include="Issues\RavenDB_1377.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB953.cs" />
     <Compile Include="Issues\RavenDB955.cs" />
@@ -724,10 +726,12 @@
     <Compile Include="MailingList\ChangeTrackingDoesntWorkForDecimalsWithSmallChanges.cs" />
     <Compile Include="MailingList\Chirea.cs" />
     <Compile Include="MailingList\CoalescingOperatorWithStringARray.cs" />
+    <Compile Include="MailingList\ComplexIndexMerge.cs" />
     <Compile Include="MailingList\CompoundOrQueryWithOrderByDescending .cs" />
     <Compile Include="MailingList\ConcurrencyTests.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
+    <Compile Include="MailingList\DifferentKeysWithTheSameFirst127CharactersAreDifferent.cs" />
     <Compile Include="MailingList\DistinctWithPaging.cs" />
     <Compile Include="MailingList\DynamicFieldNoAnalysisStillAnalyzesTest.cs" />
     <Compile Include="MailingList\DynamicObjectTests.cs" />
@@ -770,6 +774,7 @@
     <Compile Include="MailingList\JsonComarision.cs" />
     <Compile Include="MailingList\Kushnir.cs" />
     <Compile Include="MailingList\LazyLoadFromSessionCache.cs" />
+    <Compile Include="MailingList\LazyTests.cs" />
     <Compile Include="MailingList\Lindblom.cs" />
     <Compile Include="MailingList\linmouhong2.cs" />
     <Compile Include="MailingList\linmouhong3.cs" />
@@ -787,6 +792,7 @@
     <Compile Include="MailingList\nberardi.cs" />
     <Compile Include="MailingList\Nemitoff.cs" />
     <Compile Include="MailingList\NullableGuidIndexTest.cs" />
+    <Compile Include="MailingList\NullableInIndex.cs" />
     <Compile Include="MailingList\Nullables.cs" />
     <Compile Include="MailingList\Maxime.cs" />
     <Compile Include="MailingList\Maxime2.cs" />
@@ -814,6 +820,7 @@
     <Compile Include="MailingList\LateBoundValue.cs" />
     <Compile Include="MailingList\RavenDB_Stream_SelectFields_Test.cs" />
     <Compile Include="MailingList\RavenDeserializationBug.cs" />
+    <Compile Include="MailingList\RavenDynamicTests.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
     <Compile Include="MailingList\RenamedProperty.cs" />
     <Compile Include="MailingList\ResultTransformerMetaData .cs" />
@@ -824,6 +831,7 @@
     <Compile Include="MailingList\SnapshotBug.cs" />
     <Compile Include="MailingList\SortingOnMapReduce.cs" />
     <Compile Include="MailingList\SortTest.cs" />
+    <Compile Include="MailingList\SpatialQueryWithTransformTests.cs" />
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\StrangeNames.cs" />
     <Compile Include="MailingList\Strange_select_behaviour_in_query_tests.cs" />
@@ -836,6 +844,8 @@
     <Compile Include="MailingList\TertiaryOperator.cs" />
     <Compile Include="MailingList\ThorTimeRange\Repro.cs" />
     <Compile Include="MailingList\TransfomerLoadCaching.cs" />
+    <Compile Include="MailingList\TransformerDictionaryOrderTests.cs" />
+    <Compile Include="MailingList\TransformerQueryInputTests.cs" />
     <Compile Include="MailingList\TransformersAndEtags.cs" />
     <Compile Include="MailingList\TransformWithConversionListener.cs" />
     <Compile Include="MailingList\TransformWithLoad.cs" />
@@ -848,6 +858,7 @@
     <Compile Include="MailingList\UrlInIdsRepro.cs" />
     <Compile Include="MailingList\Vitaliy.cs" />
     <Compile Include="MailingList\Wayne.cs" />
+    <Compile Include="MailingList\When_trying_to_load_a_non_existing_document.cs" />
     <Compile Include="MailingList\WhereInTests.cs" />
     <Compile Include="MailingList\WhereStringEqualsInCollection.cs" />
     <Compile Include="MailingList\WildCardQuery.cs" />

@@ -225,6 +225,14 @@ namespace Raven.Storage.Voron
 			return false; //false returned --> all exceptions (if any) are properly rethrown in DocumentDatabase
 		}
 
+		public bool IsAlreadyInBatch
+		{
+			get
+			{
+				return current.Value != null;
+			}
+		}
+
 		public void Compact(InMemoryRavenConfiguration configuration)
 		{
 			//Voron storage does not support compaction

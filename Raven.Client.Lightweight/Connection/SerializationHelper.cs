@@ -56,6 +56,7 @@ namespace Raven.Client.Connection
                 // projection, it seems.
                 return new JsonDocument
                 {
+                    Key = string.Empty,
                     DataAsJson = doc,
                     LastModified = SystemTime.UtcNow,
                 };

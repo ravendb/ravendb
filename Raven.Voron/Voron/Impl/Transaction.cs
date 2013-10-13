@@ -70,6 +70,11 @@ namespace Voron.Impl
 			_freeSpaceRepository = freeSpaceRepository;
 			Flags = flags;
 			NextPageNumber = env.NextPageNumber;
+
+			foreach (var tree in env.Trees)
+			{
+				GetTreeInformation(tree);
+			}
 		}
 
 		public Page ModifyCursor(Tree tree, Cursor c)

@@ -13,7 +13,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -34,9 +33,12 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
+using Raven.Database.Tasks;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
 using Document = Lucene.Net.Documents.Document;
+using Task = System.Threading.Tasks.Task;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -1500,6 +1502,42 @@ namespace Raven.Database.Indexing
 				return new DynamicNullObject();
 			return new DynamicJsonObject(jsonDocument.ToJson());
 		}
+
+        protected void UpdateDocumentReferences(IStorageActionsAccessor actions, 
+            ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs, 
+            ConcurrentQueue<HashSet<string>> missingReferencedDocs)
+        {
+            IDictionary<string, HashSet<string>> result;
+            while (allReferencedDocs.TryDequeue(out result))
+            {
+                foreach (var referencedDocument in result)
+                {
+                    actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
+                    actions.General.MaybePulseTransaction();
+                }
+            }
+            var task = new TouchMissingReferenceDocumentTask
+            {
+                Index = name, // so we will get IsStale properly
+                Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            };
+
+            var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(name, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
+            HashSet<string> docs;
+            while (missingReferencedDocs.TryDequeue(out docs))
+            {
+                
+                foreach (var doc in docs)
+                {
+                    if (set.TryRemove(doc))
+                        continue;
+                    task.Keys.Add(doc);
+                }
+            }
+            if (task.Keys.Count == 0)
+                return;
+            actions.Tasks.AddTask(task, SystemTime.UtcNow);
+        }
 
 		public void ForceWriteToDisk()
 		{

@@ -228,8 +228,11 @@ namespace Voron.Trees
 
             Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
 
+	        var nodeVersion = other->Version; // every time new node is allocated the version is increased, but in this case we do not want to increase it
+			if (nodeVersion > 0)
+				nodeVersion -= 1;
 
-            var newNode = AllocateNewNode(index, key, nodeSize, other->Version);
+            var newNode = AllocateNewNode(index, key, nodeSize, nodeVersion);
             newNode->Flags = other->Flags;
             key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
 

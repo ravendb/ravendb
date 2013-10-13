@@ -214,7 +214,7 @@ namespace Raven.Tests.Helpers
 			return ravenDbServer;
 		}
 
-		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, bool runInMemory = false)
+		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, bool runInMemory = false, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
 		{
 			ITransactionalStorage newTransactionalStorage;
 			string storageType = GetDefaultStorageType(requestedStorage);
@@ -226,7 +226,7 @@ namespace Raven.Tests.Helpers
 			else
 				newTransactionalStorage = new Storage.Esent.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
 
-			newTransactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
+			newTransactionalStorage.Initialize(new DummyUuidGenerator(), (documentCodecs == null) ? new OrderedPartCollection<AbstractDocumentCodec>() : documentCodecs );
 			return newTransactionalStorage;
 		}
 
@@ -256,7 +256,7 @@ namespace Raven.Tests.Helpers
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-			Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, TimeSpan.FromMinutes(10)));
+			Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, TimeSpan.FromSeconds(10)));
 		}
 
 		public static void WaitForIndexing(DocumentDatabase db)

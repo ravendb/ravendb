@@ -201,7 +201,10 @@
 		public JsonDocument DocumentByKey(string key, TransactionInformation transactionInformation)
 		{
 			if (string.IsNullOrEmpty(key))
-				throw new ArgumentNullException("key");
+			{
+				logger.Debug("Document with empty key was not found");
+				return null;
+			}
 
 			var lowerKey = CreateKey(key);
 			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch))
@@ -537,14 +540,17 @@
 				};
 			}
 
-			Stream dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream            
+			Stream dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream                  
+
 			data.WriteTo(dataStream);
-
 			var finalDataStream = documentCodecs.Aggregate(dataStream,
-				(current, codec) => codec.Encode(loweredKey, data, metadata, current));
-
-			finalDataStream.Position = 0;
-			tableStorage.Documents.Add(writeBatch, loweredKey, finalDataStream);
+					(current, codec) => codec.Encode(loweredKey, data, metadata, current));
+			
+			finalDataStream.Flush();
+      
+ 
+			dataStream.Position = 0;
+			tableStorage.Documents.Add(writeBatch, loweredKey, dataStream); 
 
 			newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			savedAt = SystemTime.UtcNow;

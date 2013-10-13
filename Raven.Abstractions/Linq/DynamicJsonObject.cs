@@ -294,6 +294,36 @@ namespace Raven.Abstractions.Linq
             }
         }
 
+        public IEnumerable<object> OrderBy(Func<object, object> func)
+        {
+            return new DynamicList(parent, Enumerable.OrderBy(this, func).ToArray());
+        }
+
+        public IEnumerable<object> OrderByDescending(Func<object, object> func)
+        {
+            return new DynamicList(parent, Enumerable.OrderByDescending(this, func).ToArray());
+        }
+
+        public dynamic FirstOrDefault(Func<object, bool> func)
+        {
+            return Enumerable.FirstOrDefault(this, func) ?? new DynamicNullObject();
+        }
+
+        public dynamic First(Func<object, bool> func)
+        {
+            return FirstOrDefault(func);
+        }
+
+        public dynamic LastOrDefault(Func<object, bool> func)
+        {
+            return Enumerable.LastOrDefault(this, func) ?? new DynamicNullObject();
+        }
+
+        public dynamic Last(Func<object, bool> func)
+        {
+            return LastOrDefault(func);
+        }
+
         public IEnumerable<object> Select(Func<object, object> func)
         {
             return new DynamicList(parent, Enumerable.Select(this, func).ToArray());

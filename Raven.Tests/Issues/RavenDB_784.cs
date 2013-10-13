@@ -1,4 +1,6 @@
-﻿namespace Raven.Tests.Issues
+﻿using System.Threading;
+
+namespace Raven.Tests.Issues
 {
 	using System.Collections.Generic;
 	using System.Linq;
@@ -12,6 +14,7 @@
 		[Theory]
 		[InlineData("munin")]
 		[InlineData("esent")]
+		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysCountsOnIndexDelete(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -41,7 +44,7 @@
 					Assert.Equal(2, results[0].Count);
 				});
 
-				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a"));
+				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a", new CancellationToken()));
 
 				storage.Batch(accessor =>
 				{
@@ -59,6 +62,7 @@
 		[Theory]
 		[InlineData("munin")]
 		[InlineData("esent")]
+		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysCountsWhenReduceKeyIsGone(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -107,6 +111,7 @@
 		[Theory]
 		[InlineData("munin")]
 		[InlineData("esent")]
+		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysCountsOnDeletingAllMappedResultsForView(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -145,6 +150,7 @@
 		[Theory]
 		[InlineData("munin")]
 		[InlineData("esent")]
+		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysStatusOnIndexDelete(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))
@@ -169,7 +175,7 @@
 					accessor.MapReduce.UpdatePerformedReduceType("b", "b", ReduceType.SingleStep);
 				});
 
-				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a"));
+				storage.Batch(accessor => accessor.Indexing.DeleteIndex("a", new CancellationToken()));
 
 				storage.Batch(accessor =>
 				{
@@ -186,6 +192,7 @@
 		[Theory]
 		[InlineData("munin")]
 		[InlineData("esent")]
+		[InlineData("voron")]
 		public void ShouldRemoveDataFromReduceKeysStatusWhenReduceKeyIsGone(string storageType)
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage: storageType))

@@ -26,7 +26,7 @@ namespace Raven.Database.Storage.Voron
 		public StorageActionsAccessor(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, IDocumentCacher documentCacher, WriteBatch writeBatch, SnapshotReader snapshot, TableStorage storage, TransactionalStorage transactionalStorage)
 		{
 			Documents = new DocumentsStorageActions(generator, documentCodecs, documentCacher, writeBatch, snapshot, storage);
-			Indexing = new IndexingStorageActions(storage, generator, snapshot, writeBatch);
+			Indexing = new IndexingStorageActions(storage, generator, snapshot, writeBatch, this);
 			Queue = new QueueStorageActions(storage, generator, snapshot, writeBatch);
 			Lists = new ListsStorageActions(storage, generator, snapshot, writeBatch);
 			Tasks = new TasksStorageActions(storage, generator, snapshot, writeBatch);
