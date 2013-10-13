@@ -798,6 +798,7 @@
     <Compile Include="MailingList\jbartruf.cs" />
     <Compile Include="MailingList\JsonComarision.cs" />
     <Compile Include="MailingList\Kushnir.cs" />
+    <Compile Include="MailingList\LazilyLoadByIdsWithTransformer.cs" />
     <Compile Include="MailingList\LazyLoadFromSessionCache.cs" />
     <Compile Include="MailingList\LazyTests.cs" />
     <Compile Include="MailingList\Lindblom.cs" />

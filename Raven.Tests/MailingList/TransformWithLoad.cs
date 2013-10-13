@@ -107,7 +107,7 @@ namespace Raven.Tests.MailingList
             }
         }
 
-		[Fact(Skip = "Currently not working")]
+	    [Fact]
 		public void LazyLoadByIds()
 		{
 			using (var session = store.OpenSession())
