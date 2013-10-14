@@ -17,6 +17,9 @@ using Raven.Server.Discovery;
 
 namespace Raven.Server
 {
+    using System.Net;
+    using Raven.Database.Server;
+
     public class RavenDbServer : IDisposable
     {
         private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
@@ -24,14 +27,18 @@ namespace Raven.Server
         private readonly IServerThingsForTests serverThingsForTests;
         private ClusterDiscoveryHost discoveryHost;
         private readonly RavenDBOptions options;
+        private HttpServer httpServer;
 
         public RavenDbServer(InMemoryRavenConfiguration configuration)
         {
             options = new RavenDBOptions(configuration);
             //TODO DH: configuration.ServerUrl doesn't bind properly
-            server = WebApp.Start("http://+:" + configuration.Port, app => app.UseRavenDB(options));
-            serverThingsForTests = new ServerThingsForTests(options);
+            /*server = WebApp.Start("http://+:" + configuration.Port, app => app.UseRavenDB(options)); */
             ClusterDiscovery(configuration);
+            httpServer = new HttpServer(configuration, options.SystemDatabase);
+            httpServer.StartListening();
+            server = httpServer;
+            serverThingsForTests = new ServerThingsForTests(options, httpServer);
         }
 
         //TODO DH: does this need to be exposed? Seems to be required for low level tests that the client
@@ -95,10 +102,12 @@ namespace Raven.Server
         private class ServerThingsForTests : IServerThingsForTests
         {
             private readonly RavenDBOptions options;
+            private readonly HttpServer httpServer;
 
-            public ServerThingsForTests(RavenDBOptions options)
+            public ServerThingsForTests(RavenDBOptions options, HttpServer httpServer)
             {
                 this.options = options;
+                this.httpServer = httpServer;
             }
 
             public bool HasPendingRequests
@@ -108,7 +117,11 @@ namespace Raven.Server
 
             public int NumberOfRequests
             {
-                get { return options.Landlord.NumberOfRequests; }
+                get
+                {
+                    return httpServer.NumberOfRequests;
+                    //return options.Landlord.NumberOfRequests;
+                }
             }
 
             public DatabasesLandlord Landlord
@@ -118,7 +131,8 @@ namespace Raven.Server
 
             public void ResetNumberOfRequests()
             {
-                options.Landlord.ResetNumberOfRequests();
+                httpServer.ResetNumberOfRequests();
+                //options.Landlord.ResetNumberOfRequests();
             }
 
             public Task<DocumentDatabase> GetDatabaseInternal(string databaseName)
