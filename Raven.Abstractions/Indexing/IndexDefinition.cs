@@ -32,7 +32,12 @@ namespace Raven.Abstractions.Indexing
 		}
 
 		/// <summary>
-		/// Get or set the name of the index
+		/// Get or set the id of this index
+		/// </summary>
+		public int IndexId { get; set; }
+
+        /// <summary>
+        /// This is the means by which the outside world refers to this index defiintion
 		/// </summary>
 		public string Name { get; set; }
 
@@ -74,6 +79,7 @@ namespace Raven.Abstractions.Indexing
 		/// <summary>
 		/// Gets or sets the translator function
 		/// </summary>
+		[Obsolete("Use Result Transformers instead.")]
 		public string TransformResults { get; set; }
 
 		/// <summary>
@@ -137,6 +143,19 @@ namespace Raven.Abstractions.Indexing
 		public IDictionary<string, SpatialOptions> SpatialIndexes { get; set; }
 
 		/// <summary>
+        /// Internal map of field names to expressions generating them
+        /// Only relevant for auto indexes and only used internally
+        /// </summary>
+        public IDictionary<string, string> InternalFieldsMapping { get; set; }
+
+		/// <summary>
+		/// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
+		/// the one document produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
+		/// Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.
+		/// </summary>
+		public int? MaxIndexOutputsPerDocument { get; set; }
+
+		/// <summary>
 		/// Equals the specified other.
 		/// </summary>
 		/// <param name="other">The other.</param>
@@ -148,7 +167,7 @@ namespace Raven.Abstractions.Indexing
 			if (ReferenceEquals(this, other))
 				return true;
 			return Maps.SequenceEqual(other.Maps) &&
-					Equals(other.Name, Name) &&
+					Equals(other.IndexId, IndexId) &&
 					Equals(other.Reduce, Reduce) &&
 					Equals(other.TransformResults, TransformResults) &&
 					DictionaryEquals(other.Stores, Stores) &&
@@ -292,13 +311,20 @@ namespace Raven.Abstractions.Indexing
 			}
 		}
 
+		public override string ToString()
+		{
+			return Name ?? Map;
+		}
+
 		public IndexDefinition Clone()
 		{
 			var indexDefinition = new IndexDefinition
 			{
+				IndexId = IndexId,
 				Name = Name,
 				Reduce = Reduce,
 				TransformResults = TransformResults,
+                MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
 				cachedHashCodeAsBytes = cachedHashCodeAsBytes
 			};
 
@@ -337,6 +363,7 @@ namespace Raven.Abstractions.Indexing
 		/// Gets or sets the translator function
 		/// </summary>
 		public string TransformResults { get; set; }
+		public int IndexId { get; set; }
 		public string Name { get; set; }
 
 		public bool Equals(TransformerDefinition other)
@@ -360,6 +387,11 @@ namespace Raven.Abstractions.Indexing
 		public TransformerDefinition Clone()
 		{
 			return (TransformerDefinition) MemberwiseClone();
+		}
+
+		public override string ToString()
+		{
+			return TransformResults;
 		}
 	}
 }

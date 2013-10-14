@@ -4,15 +4,20 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
 {
+	public class BulkInsertChangeNotification : DocumentChangeNotification
+	{
+		public Guid OperationId { get; set; }
+	}
+
 	public class DocumentChangeNotification : EventArgs
 	{
 		public DocumentChangeTypes Type { get; set; }
 		public string Id { get; set; }
 		public Etag Etag { get; set; }
+		public string Message { get; set; }
 
 		public override string ToString()
 		{
@@ -29,6 +34,7 @@ namespace Raven.Abstractions.Data
 		Delete = 2,
 		BulkInsertStarted = 4,
 		BulkInsertEnded = 8,
+		BulkInsertError = 16,
 
 		Common = Put | Delete
 	}
@@ -49,6 +55,10 @@ namespace Raven.Abstractions.Data
         IndexPromotedFromIdle = 64,
 
 		IndexDemotedToAbandoned = 128,
+
+		IndexDemotedToDisabled = 256,
+
+        IndexMarkedAsErrored = 512
 	}
 
 	public class IndexChangeNotification : EventArgs

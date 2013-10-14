@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -114,7 +115,6 @@ namespace Raven.Database.Extensions
 			else
 			{
 				context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
-
 			}
 
 			if (minimal)
@@ -243,10 +243,10 @@ namespace Raven.Database.Extensions
 			var obj = value.Value;
 
 			if (obj is DateTime)
-				return ((DateTime) obj).ToString(format);
+				return ((DateTime)obj).ToString(format, CultureInfo.InvariantCulture);
 
 			if (obj is DateTimeOffset)
-				return ((DateTimeOffset) obj).ToString(format);
+				return ((DateTimeOffset)obj).ToString(format, CultureInfo.InvariantCulture);
 
 			return obj.ToString();
 		}
@@ -254,7 +254,12 @@ namespace Raven.Database.Extensions
 		private static string UnescapeStringIfNeeded(string str)
 		{
 			if (str.StartsWith("\"") && str.EndsWith("\""))
-				return Regex.Unescape(str.Substring(1, str.Length - 2));
+				str =  Regex.Unescape(str.Substring(1, str.Length - 2));
+			if (str.Any(ch => ch > 127))
+			{
+				// contains non ASCII chars, needs encoding
+				return Uri.EscapeDataString(str);
+			}
 			return str;
 		}
 
@@ -404,15 +409,22 @@ namespace Raven.Database.Extensions
 			return pageSize;
 		}
 
-		public static AggregationOperation GetAggregationOperation(this IHttpContext context)
+		public static bool IsDistinct(this IHttpContext context)
 		{
-			var aggAsString = context.Request.QueryString["aggregation"];
+			var distinct = context.Request.QueryString["distinct"];
+			if (string.Equals("true", distinct, StringComparison.OrdinalIgnoreCase))
+				return true;
+			var aggAsString = context.Request.QueryString["aggregation"]; // 2.x legacy support
 			if (aggAsString == null)
-			{
-				return AggregationOperation.None;
-			}
+				return false;
 
-			return (AggregationOperation)Enum.Parse(typeof(AggregationOperation), aggAsString, true);
+			if (string.Equals("Distinct", aggAsString, StringComparison.OrdinalIgnoreCase))
+				return true;
+
+			if (string.Equals("None", aggAsString, StringComparison.OrdinalIgnoreCase))
+				return false;
+
+			throw new NotSupportedException("AggregationOperation (except Distinct) is no longer supported");
 		}
 
 		public static DateTime? GetCutOff(this IHttpContext context)
@@ -501,6 +513,13 @@ namespace Raven.Database.Extensions
 			}
 		}
 
+		public static bool GetExplainScores(this IHttpContext context)
+		{
+			bool result;
+			bool.TryParse(context.Request.QueryString["explainScores"], out result);
+			return result;
+		}
+
 		public static Etag GetEtagFromQueryString(this IHttpContext context)
 		{
 			var etagAsString = context.Request.QueryString["etag"];
@@ -566,7 +585,7 @@ namespace Raven.Database.Extensions
 		public static void WriteFile(this IHttpContext context, string filePath)
 		{
 			var etagValue = context.Request.Headers["If-None-Match"] ?? context.Request.Headers["If-None-Match"];
-			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
+			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G", CultureInfo.InvariantCulture);
 			if (etagValue == fileEtag)
 			{
 				context.SetStatusToNotModified();
@@ -583,7 +602,7 @@ namespace Raven.Database.Extensions
 		}
 		public static void WriteETag(this IHttpContext context, string etag)
 		{
-			var clientVersion = context.Request.Headers["Raven-Client-Version"];
+			var clientVersion = context.Request.Headers[Constants.RavenClientVersion];
 			if (string.IsNullOrEmpty(clientVersion))
 			{
 				context.Response.AddHeader("ETag", etag);

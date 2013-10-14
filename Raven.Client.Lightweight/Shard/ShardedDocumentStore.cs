@@ -149,6 +149,7 @@ namespace Raven.Client.Shard
 
 		private readonly AtomicDictionary<IDatabaseChanges> changes =
 			new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
+
 		public override IDatabaseChanges Changes(string database = null)
 		{
 			return changes.GetOrAdd(database, 
@@ -194,6 +195,24 @@ namespace Raven.Client.Shard
 			{
 				foreach (var disposable in disposables)
 				{
+					disposable.Dispose();
+				}
+			});
+		}
+
+		/// <summary>
+		/// Setup the WebRequest timeout for the session
+		/// </summary>
+		/// <param name="timeout">Specify the timeout duration</param>
+		/// <remarks>
+		/// Sets the timeout for the JsonRequest.  Scoped to the Current Thread.
+		/// </remarks>
+		public override IDisposable SetRequestsTimeoutFor(TimeSpan timeout) {
+			var disposables =
+				ShardStrategy.Shards.Select(shard => shard.Value.SetRequestsTimeoutFor(timeout)).ToList();
+
+			return new DisposableAction(() => {
+				foreach (var disposable in disposables) {
 					disposable.Dispose();
 				}
 			});
@@ -273,7 +292,7 @@ namespace Raven.Client.Shard
 #if !SILVERLIGHT && !NETFX_CORE
 		public override BulkInsertOperation BulkInsert(string database = null, BulkInsertOptions options = null)
 		{
-			return new BulkInsertOperation(database, this, listeners, options ?? new BulkInsertOptions());
+			return new BulkInsertOperation(database, this, listeners, options ?? new BulkInsertOptions(), Changes(database));
 		}
 #endif
 

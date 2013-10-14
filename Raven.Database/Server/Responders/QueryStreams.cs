@@ -12,6 +12,7 @@ using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
+using Raven.Database.Impl;
 using Raven.Database.Server.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -33,37 +34,44 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			context.Response.BufferOutput = false;
-			context.Response.ContentType = "application/json; charset=utf-8";
-
-			var match = urlMatcher.Match(context.GetRequestUrl());
-			var index = match.Groups[1].Value;
-
-			var query = context.GetIndexQueryFromHttpContext(int.MaxValue);
-			if (string.IsNullOrEmpty(context.Request.QueryString["pageSize"]))
-				query.PageSize = int.MaxValue;
-			var isHeadRequest = context.Request.HttpMethod == "HEAD";
-			if (isHeadRequest)
-				query.PageSize = 0;
-
-			using (var writer = GetOutputWriter(context))
+			using (context.Response.Streaming())
 			{
-				Database.Query(index, query, information =>
+				context.Response.ContentType = "application/json; charset=utf-8";
+
+				var match = urlMatcher.Match(context.GetRequestUrl());
+				var index = match.Groups[1].Value;
+
+				var query = context.GetIndexQueryFromHttpContext(int.MaxValue);
+				if (string.IsNullOrEmpty(context.Request.QueryString["pageSize"]))
+					query.PageSize = int.MaxValue;
+				var isHeadRequest = context.Request.HttpMethod == "HEAD";
+				if (isHeadRequest)
+					query.PageSize = 0;
+
+				using (var writer = GetOutputWriter(context))
 				{
-					context.Response.AddHeader("Raven-Result-Etag", information.ResultEtag.ToString());
-					context.Response.AddHeader("Raven-Index-Etag", information.IndexEtag.ToString());
-					context.Response.AddHeader("Raven-Is-Stale", information.IsStable ? "true" : "false");
-					context.Response.AddHeader("Raven-Index", information.Index);
-					context.Response.AddHeader("Raven-Total-Results", information.TotalResults.ToString(CultureInfo.InvariantCulture));
-					context.Response.AddHeader("Raven-Index-Timestamp",
-											   information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
-																				   CultureInfo.InvariantCulture));
+					// we may be sending a LOT of documents to the user, and most 
+					// of them aren't going to be relevant for other ops, so we are going to skip
+					// the cache for that, to avoid filling it up very quickly
+					using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+					{
+						Database.Query(index, query, information =>
+						{
+							context.Response.AddHeader("Raven-Result-Etag", information.ResultEtag.ToString());
+							context.Response.AddHeader("Raven-Index-Etag", information.IndexEtag.ToString());
+							context.Response.AddHeader("Raven-Is-Stale", information.IsStable ? "true" : "false");
+							context.Response.AddHeader("Raven-Index", information.Index);
+							context.Response.AddHeader("Raven-Total-Results", information.TotalResults.ToString(CultureInfo.InvariantCulture));
+							context.Response.AddHeader("Raven-Index-Timestamp",
+							                           information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
+							                                                               CultureInfo.InvariantCulture));
 
-					if (isHeadRequest)
-						return;
-					writer.WriteHeader();
-
-				}, writer.Write);
+							if (isHeadRequest)
+								return;
+							writer.WriteHeader();
+						}, writer.Write);
+					}
+				}
 			}
 		}
 

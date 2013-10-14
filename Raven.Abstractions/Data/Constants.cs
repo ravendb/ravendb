@@ -13,6 +13,8 @@ namespace Raven.Abstractions.Data
 			};
 			InDatabaseKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
 		}
+
+		public const string RavenEtagSynchronization = "Raven/Etag/Synchronization";
 		
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
@@ -43,6 +45,7 @@ namespace Raven.Abstractions.Data
 		public const string NotForReplication = "Raven-Not-For-Replication";
 		public const string RavenDeleteMarker = "Raven-Delete-Marker";
 		public const string ActiveBundles = "Raven/ActiveBundles";
+		public const string AllowBundlesChange = "Raven-Temp-Allow-Bundles-Change";
 		public const string RavenAlerts = "Raven/Alerts";
 
 		//Paths
@@ -105,5 +108,7 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public const double EarthMeanRadiusKm = 6371.0087714;
 		public const double MilesToKm = 1.60934;
+
+		public const string RavenClientVersion = "Raven-Client-Version";
 	}
 }

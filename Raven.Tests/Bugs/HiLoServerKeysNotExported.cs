@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.IO;
+using Lucene.Net.Support;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -46,7 +47,7 @@ namespace Raven.Tests.Bugs
 											Port = 8079,
 											DataDirectory = "HiLoData",
 											RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-											AnonymousUserAccessMode = AnonymousUserAccessMode.All
+											AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
 										});
 
 		}
@@ -107,7 +108,7 @@ namespace Raven.Tests.Bugs
 			                       				{
 			                       					Path = "Something",
 													ShouldMatch = true,
-													Value = "Something1"
+													Values = new EquatableList<string>{"Something1"}
 			                       				}
 			                       			}
 									}, false).Wait(TimeSpan.FromSeconds(15));

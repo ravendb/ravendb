@@ -317,7 +317,7 @@ namespace Raven.Database.Indexing
 					prev = ch;
 					continue;
 				}
-				prev = ch;
+				prev = '\0';// reset
 				switch (ch)
 				{
 					case '*':
@@ -346,7 +346,6 @@ namespace Raven.Database.Indexing
 							}
 							// append any leading substring
 							buffer.Append(term, start, i - start - 1);
-
 							buffer.Append(ch);
 							start = i + 1;
 							break;

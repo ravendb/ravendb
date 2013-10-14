@@ -8,6 +8,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Raven.Database.Server.Security.OAuth;
 using Raven.Json.Linq;
 using Xunit;
@@ -18,9 +19,8 @@ namespace Raven.Tests.Security.OAuth
 	/// Client credentials flow used to grant access tokens to confidential clients (such as a web server)
 	/// http://tools.ietf.org/html/draft-ietf-oauth-v2-20#section-4.4
 	/// </summary>
-	public class GrantAccessTokenClientCredentialsFlow : RemoteClientTest, IDisposable
+	public class GrantAccessTokenClientCredentialsFlow : RemoteClientTest
 	{
-		readonly string path;
 		const string baseUrl = "http://localhost";
 		const string tokenUrl = "/OAuth/AccessToken";
 		const int port = 8079;
@@ -29,15 +29,14 @@ namespace Raven.Tests.Security.OAuth
 
 		public GrantAccessTokenClientCredentialsFlow()
 		{
-			path = GetPath("TestDb");
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
-
 		}
 
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration ravenConfiguration)
 		{
 			ravenConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-			ravenConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(FakeAuthenticateClient)));
+            Authentication.EnableOnce(); 
+            ravenConfiguration.Catalog.Catalogs.Add(new TypeCatalog(typeof(FakeAuthenticateClient)));
 		}
 
 		protected override void CreateDefaultIndexes(IDocumentStore documentStore)
@@ -59,12 +58,6 @@ namespace Raven.Tests.Security.OAuth
 				};
 				return string.IsNullOrEmpty(password) == false;
 			}
-		}
-
-		public override void Dispose()
-		{
-			IOExtensions.DeleteDirectory(path);
-			base.Dispose();
 		}
 
 		public HttpWebRequest GetNewValidTokenRequest()

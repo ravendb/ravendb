@@ -2,104 +2,194 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Windows.Input;
+using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Extensions;
+using Raven.Studio.Features.Tasks;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Models
 {
-	public enum TaskStatus
-	{
-		DidNotStart,
-		Started,
-		Ended
-	}
+    public enum TaskStatus
+    {
+        DidNotStart,
+        Started,
+        Ended
+    }
 
-	public abstract class TaskSectionModel : ViewModel
-	{
-		public string SectionName { get { return Name; } }
+    public abstract class TaskSectionModel<T> : ViewModel where T : DatabaseTask
+    {
+        public string SectionName
+        {
+            get { return Name; }
+        }
 
-		public Observable<bool> CanExecute { get; set; }
-		public bool StatusBarActive
-		{
-			get { return TaskStatus == TaskStatus.Started; }
-		}
+        public bool CanExecute
+        {
+            get
+            {
+                return Task == null || Task.Status == DatabaseTaskStatus.Idle ||
+                       Task.Status == DatabaseTaskStatus.Completed;
+            }
+        }
 
-		public TaskSectionModel()
-		{
-			Output = new BindableCollection<string>(x => x);
-			CanExecute = new Observable<bool>
-			{
-				Value = true
-			};
-		}
+        public bool IsStatusViewVisible
+        {
+            get
+            {
+                return IsTaskRunning || IsTaskCompleted; 
+            }
+        }
 
-		public void ReportError(Exception exception)
-		{
-			var aggregate = exception as AggregateException;
-			if (aggregate != null)
-				exception = aggregate.ExtractSingleInnerException();
+        public bool IsTaskRunning
+        {
+            get { return Task != null && Task.Status == DatabaseTaskStatus.Running; }
+        }
 
-			var objects = new List<object>();
-			var webException = exception as WebException;
-			if (webException != null)
-			{
-				var httpWebResponse = webException.Response as HttpWebResponse;
-				if (httpWebResponse != null)
-				{
-					var stream = httpWebResponse.GetResponseStream();
-					if (stream != null)
-					{
-						objects = ApplicationModel.ExtractError(stream, httpWebResponse);
-					}
-				}
-			}
+        public bool IsTaskCompleted
+        {
+            get
+            {
+                return Task != null && Task.Status == DatabaseTaskStatus.Completed; 
+            }
+        }
 
-			if (objects.Count == 0)
-				Output.Add("Error: " + exception.Message);
-			else
-			{
-				foreach (var msg in objects)
-				{
-					if (!string.IsNullOrWhiteSpace(msg.ToString()))
-						Output.Add("Error: " + msg);
-				}
-			}
-		}
+        public TaskSectionModel()
+        {
+        }
 
-		public void ReportError(string errorMsg)
-		{
-			Output.Add("Error: " + errorMsg);
-		}
+        private string name;
+        public string Name
+        {
+            get { return name; }
+            set
+            {
+                name = value;
+                OnPropertyChanged(() => Name);
+            }
+        }
 
-		private string name;
-		public string Name
-		{
-			get { return name; }
-			set { name = value; OnPropertyChanged(() => Name); }
-		}
+        public string IconResource
+        {
+            get { return iconResource; }
+            set
+            {
+                iconResource = value;
+                OnPropertyChanged(() => IconResource);
+            }
+        }
 
-		public string IconResource
-		{
-			get { return iconResource; }
-			set { iconResource = value; OnPropertyChanged(() => IconResource); }
-		}
+        public string Description { get; set; }
 
-		public string Description { get; set; }
+        private string iconResource;
+        private ActionCommand actionCommand;
+        private ICommand acknowledgeCompletion;
 
-		private TaskStatus taskStatus;
-		private string iconResource;
-		public TaskStatus TaskStatus
-		{
-			get { return taskStatus; }
-			set
-			{
-				taskStatus = value;
-				OnPropertyChanged(() => TaskStatus);
-				OnPropertyChanged(() => StatusBarActive);
-			}
-		}
+        protected bool AutoAcknowledge { get; set; }
 
-		public BindableCollection<string> Output { get; set; }
-		public abstract ICommand Action { get; }
-	}
+        protected T Task
+        {
+            get
+            {
+                DatabaseTask task;
+                return (T) (PerDatabaseState.ActiveTasks.TryGetValue(typeof (T), out task) ? task : null);
+            }
+            set
+            {
+                PerDatabaseState.ActiveTasks[typeof (T)] = value;
+
+                OnPropertyChanged(() => CanExecute);
+                OnPropertyChanged(() => IsTaskCompleted);
+                OnPropertyChanged(() => IsTaskRunning);
+                OnPropertyChanged(() => IsStatusViewVisible);
+                OnPropertyChanged(() => Output);
+            }
+        }
+
+        public IEnumerable<DatabaseTaskOutput> Output
+        {
+            get { return Task == null ? new DatabaseTaskOutput[0] : Task.Output; }
+        }
+
+        public ICommand AcknowledgeCompletion
+        {
+            get { return acknowledgeCompletion ?? (acknowledgeCompletion = new ActionCommand(HandleAcknowledgeCompletion)); }
+        }
+
+        private void HandleAcknowledgeCompletion()
+        {
+            Task = null;
+        }
+
+        public ICommand Action
+        {
+            get { return actionCommand ?? (actionCommand = new ActionCommand(HandleExecute)); }
+        }
+
+        private void HandleExecute()
+        {
+            if (!CanExecute)
+            {
+                return;
+            }
+
+            var task = CreateTask();
+
+            Task = task;
+
+            task.StatusChanged += HandleTaskStatusChanged;
+
+            task.Run();
+        }
+
+        protected override void OnViewLoaded()
+        {
+            var task = Task;
+            if (task != null)
+            {
+                if (Task.Status == DatabaseTaskStatus.Completed && (Task.Outcome.Value == DatabaseTaskOutcome.Abandoned || Task.Outcome.Value == DatabaseTaskOutcome.Succesful && AutoAcknowledge))
+                {
+                    Task = null;
+                }
+                else
+                {
+                    Task.StatusChanged += HandleTaskStatusChanged;
+
+                    OnPropertyChanged(() => CanExecute);
+                    OnPropertyChanged(() => IsTaskCompleted);
+                    OnPropertyChanged(() => IsStatusViewVisible);
+                    OnPropertyChanged(() => Output);
+                }
+            }
+        }
+
+        protected override void OnViewUnloaded()
+        {
+            var task = Task;
+            if (task != null)
+            {
+                Task.StatusChanged -= HandleTaskStatusChanged;
+            }
+        }
+
+        private void HandleTaskStatusChanged(object sender, EventArgs e)
+        {
+            OnPropertyChanged(() => CanExecute);
+            OnPropertyChanged(() => IsTaskCompleted);
+            OnPropertyChanged(() => IsTaskRunning);
+            OnPropertyChanged(() => IsStatusViewVisible);
+            OnTaskCompleted();
+        }
+
+        protected abstract T CreateTask();
+
+        protected virtual void OnTaskCompleted()
+        {
+            if (Task.Status == DatabaseTaskStatus.Completed && (Task.Outcome.Value == DatabaseTaskOutcome.Abandoned ||
+                                                                (Task.Outcome.Value == DatabaseTaskOutcome.Succesful &&
+                                                                 AutoAcknowledge)))
+            {
+                Task = null;
+            }
+        }
+    }
 }

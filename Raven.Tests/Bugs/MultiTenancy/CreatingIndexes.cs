@@ -27,7 +27,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 					Port = port,
 					RunInMemory = true,
 					DataDirectory = "Data",
-					AnonymousUserAccessMode = AnonymousUserAccessMode.All
+					AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
 				});
 		}
 
@@ -42,7 +42,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				DefaultDatabase = "Test"
 			}.Initialize())
 			{
-				store.DatabaseCommands.EnsureDatabaseExists("Test");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Test");
 				store.DatabaseCommands.PutIndex("TestIndex",
 												new IndexDefinitionBuilder<Test, Test>
 												{

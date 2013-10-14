@@ -30,6 +30,8 @@ namespace Raven.Database.Indexing
 
 		private int currentNumberOfWrites;
 
+	    private readonly IndexWriter.IndexReaderWarmer _indexReaderWarmer;
+
 		public Directory Directory
 		{
 			get
@@ -52,13 +54,13 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public RavenIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy, IndexWriter.MaxFieldLength mfl, int maximumNumberOfWritesBeforeRecreate)
+		public RavenIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy, IndexWriter.MaxFieldLength mfl, int maximumNumberOfWritesBeforeRecreate, IndexWriter.IndexReaderWarmer indexReaderWarmer)
 		{
 			directory = d;
 			analyzer = a;
 			indexDeletionPolicy = deletionPolicy;
 			maxFieldLength = mfl;
-
+		    _indexReaderWarmer = indexReaderWarmer;
 			this.maximumNumberOfWritesBeforeRecreate = maximumNumberOfWritesBeforeRecreate;
 
 			RecreateIfNecessary();
@@ -118,6 +120,10 @@ namespace Raven.Database.Indexing
 		private void CreateIndexWriter()
 		{
 			indexWriter = new IndexWriter(directory, analyzer, indexDeletionPolicy, maxFieldLength);
+            if(_indexReaderWarmer!=null)
+            {
+                indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
+            }
 			using (indexWriter.MergeScheduler) { }
 			indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
 
@@ -128,7 +134,7 @@ namespace Raven.Database.Indexing
 			currentNumberOfWrites = 0;
 		}
 
-		private void DisposeIndexWriter()
+		private void DisposeIndexWriter(bool waitForMerges = true)
 		{
 			if (indexWriter == null)
 				return;
@@ -147,7 +153,7 @@ namespace Raven.Database.Indexing
 
 			try
 			{
-				writer.Dispose();
+				writer.Dispose(waitForMerges);
 			}
 			catch (Exception e)
 			{
@@ -157,24 +163,22 @@ namespace Raven.Database.Indexing
 
 		public void Dispose()
 		{
-			if (indexWriter != null)
-				indexWriter.Dispose();
-
-			indexWriter = null;
+			DisposeIndexWriter();
 		}
 
 		public void Dispose(bool waitForMerges)
 		{
-			if (indexWriter != null)
-				indexWriter.Dispose(waitForMerges);
-
-			indexWriter = null;
+			DisposeIndexWriter(waitForMerges);
 		}
 
 		public RavenIndexWriter CreateRamWriter()
 		{
 			var ramDirectory = new RAMDirectory();
-			return new RavenIndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength, int.MaxValue);
+            if (_indexReaderWarmer != null)
+            {
+                indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
+            }
+			return new RavenIndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength, int.MaxValue, _indexReaderWarmer);
 		}
 
 		public void AddIndexesNoOptimize(Directory[] directories, int count)

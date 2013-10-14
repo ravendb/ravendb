@@ -19,13 +19,13 @@ namespace Raven.Tests.Silverlight
 			using (var documentStore = new DocumentStore { Url = Url + Port }.Initialize())
 			{
 				var cmd = documentStore.AsyncDatabaseCommands;
-				yield return cmd.EnsureDatabaseExistsAsync(dbname);
+				yield return cmd.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(new Company {Name = "Hai"});
-					session.Store(new Company {Name = "I can haz cheezburgr?"});
-					session.Store(new Company {Name = "lol"});
+					yield return session.StoreAsync(new Company { Name = "Hai" });
+					yield return session.StoreAsync(new Company { Name = "I can haz cheezburgr?" });
+					yield return session.StoreAsync(new Company { Name = "lol" });
 					yield return session.SaveChangesAsync();
 				}
 
@@ -43,12 +43,12 @@ namespace Raven.Tests.Silverlight
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
 				var cmd = documentStore.AsyncDatabaseCommands;
-				yield return cmd.EnsureDatabaseExistsAsync(dbname);
+				yield return cmd.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(new Company {Name = "Something with the desired prefix"});
-					session.Store(new Contact {Surname = "Something without the desired prefix"});
+					yield return session.StoreAsync(new Company { Name = "Something with the desired prefix" });
+					yield return session.StoreAsync(new Contact { Surname = "Something without the desired prefix" });
 					yield return session.SaveChangesAsync();
 				}
 
@@ -67,7 +67,7 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var task = documentStore.AsyncDatabaseCommands.GetDatabaseNamesAsync(25);
 				yield return task;
@@ -83,7 +83,7 @@ namespace Raven.Tests.Silverlight
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
 				yield return documentStore.AsyncDatabaseCommands
-					.EnsureDatabaseExistsAsync(first);
+					.GlobalAdmin.EnsureDatabaseExistsAsync(first);
 
 				var task = documentStore.AsyncDatabaseCommands
 					.GetDatabaseNamesAsync(25);
@@ -93,7 +93,7 @@ namespace Raven.Tests.Silverlight
 
 				var second = GenerateNewDatabaseName();
 				yield return documentStore.AsyncDatabaseCommands
-					.EnsureDatabaseExistsAsync(second);
+					.GlobalAdmin.EnsureDatabaseExistsAsync(second);
 
 				var verify = documentStore.AsyncDatabaseCommands
 					.GetDatabaseNamesAsync(25);
@@ -109,12 +109,12 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1"};
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(entity);
+					yield return session.StoreAsync(entity);
 					yield return session.SaveChangesAsync();
 
 					yield return ((AsyncDocumentSession)session).AsyncDatabaseCommands
@@ -138,13 +138,13 @@ namespace Raven.Tests.Silverlight
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
 				var cmd = documentStore.AsyncDatabaseCommands;
-				yield return cmd.EnsureDatabaseExistsAsync(dbname);
+				yield return cmd.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(new Company {Name = "Hai"});
-					session.Store(new Company {Name = "I can haz cheezburgr?"});
-					session.Store(new Company {Name = "lol"});
+					yield return session.StoreAsync(new Company { Name = "Hai" });
+					yield return session.StoreAsync(new Company { Name = "I can haz cheezburgr?" });
+					yield return session.StoreAsync(new Company { Name = "lol" });
 					yield return session.SaveChangesAsync();
 				}
 

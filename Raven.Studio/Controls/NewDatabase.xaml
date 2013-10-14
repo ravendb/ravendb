@@ -5,7 +5,7 @@
 					  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 					  mc:Ignorable="d" 
 					  x:Class="Raven.Studio.Controls.NewDatabase"
-					  Width="500" Height="330" 
+					  Width="500" Height="350" 
 					  Title="Create a New Database" 
 					  x:Name="NewDatabaseControl"
 					  Style="{StaticResource ChildWindowNoAnimationStyle}">
@@ -103,6 +103,7 @@
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
 					<RowDefinition Height="Auto" />
+					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 	
 				<CheckBox x:Name="Compression"
@@ -175,11 +176,20 @@
 						  IsChecked="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=PeriodicBackup}"
 						  IsEnabled="False"/>
 
+				<CheckBox x:Name="ScriptedIndexResults"
+                          Checked="Checked"
+                          Unchecked="UnChecked"
+                          Grid.Row="8"
+                          Margin="5"
+						  Content=" Scripted Index Bundle"
+						  ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=ScriptedIndexResults}"
+						  IsEnabled="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToActive}, ConverterParameter=ScriptedIndexResults}"/>
+
 				<CheckBox x:Name="Authorization"
 						  Visibility="{Binding ElementName=NewDatabaseControl, Path=HasAuth.Value, Converter={StaticResource BooleanToVisibility}}"
                           ToolTipService.ToolTip="{Binding ElementName=NewDatabaseControl, Path=LicensingStatus.Value, Converter={StaticResource BundleNameToToolTip}, ConverterParameter=Authorization}"
 						  Content=" Authorization Bundle"
-						  Grid.Row="8"
+						  Grid.Row="9"
 						  Checked="Checked"
                           Unchecked="UnChecked"
                           Margin="5"/>

@@ -13,6 +13,7 @@ namespace Raven.Database.Linq
 		public IndexingFunc TransformResultsDefinition { get; set; }
 		public string SourceCode { get; set; }
 
+    public string Name { get { return transformerDefinition.Name; } }
 		public string ViewText { get; set; }
 
 		protected dynamic LoadDocument(object key)
@@ -28,7 +29,10 @@ namespace Raven.Database.Linq
             if (CurrentTransformationScope.Current == null)
                 throw new InvalidOperationException("Query was accessed without CurrentTransformationScope.Current being set");
 
-	        return CurrentTransformationScope.Current.QueryInputs[key];
+	        RavenJToken value;
+	        if(CurrentTransformationScope.Current.QueryInputs.TryGetValue(key, out value) == false)
+                throw new InvalidOperationException("Query parameter "+key+ " was accessed, but it wasn't provided for this query.");
+	        return value;
 
 	    }
 

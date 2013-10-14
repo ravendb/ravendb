@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-#if !SILVERLIGHT
 using System;
 using System.Dynamic;
 using System.Linq.Expressions;
@@ -27,6 +26,18 @@ namespace Raven.Abstractions.Json
 		/// <param name="serializer">The calling serializer.</param>
 		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 		{
+			if (value == null)
+			{
+					writer.WriteNull();
+				return;
+			}
+			if (value.GetType() == typeof (object))
+			{
+				writer.WriteStartObject();
+				writer.WriteEndObject();
+				return;
+			}
+
 			var dynamicValue = ((IDynamicMetaObjectProvider) value).GetMetaObject(Expression.Constant(value));
 
 			writer.WriteStartObject();
@@ -90,4 +101,3 @@ namespace Raven.Abstractions.Json
 		}
 	}
 }
-#endif

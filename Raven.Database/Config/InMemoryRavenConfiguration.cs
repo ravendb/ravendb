@@ -26,6 +26,10 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Config
 {
+	using System.Runtime;
+
+	using Raven.Abstractions.Util.Encryptors;
+
 	public class InMemoryRavenConfiguration
 	{
 		private CompositionContainer container;
@@ -59,11 +63,13 @@ namespace Raven.Database.Config
 			FilterActiveBundles();
 
 			SetupOAuth();
+
+			SetupGC();
 		}
 
 		public void Initialize()
 		{
-			int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 64 * 1024;
+			int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
 			int defaultInitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
 			var ravenSettings = new StronglyTypedRavenSettings(Settings);
@@ -94,6 +100,7 @@ namespace Raven.Database.Config
 			// Index settings
 			MaxIndexingRunLatency = ravenSettings.MaxIndexingRunLatency.Value;
 			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
+			MaxIndexOutputsPerDocument = ravenSettings.MaxIndexOutputsPerDocument.Value;
 
 			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
 
@@ -189,10 +196,14 @@ namespace Raven.Database.Config
 
 			DisableDocumentPreFetchingForIndexing = ravenSettings.DisableDocumentPreFetchingForIndexing.Value;
 
+			MaxNumberOfItemsToPreFetchForIndexing = ravenSettings.MaxNumberOfItemsToPreFetchForIndexing.Value;
+
 			// Misc settings
 			WebDir = ravenSettings.WebDir.Value;
 
 			PluginsDirectory = ravenSettings.PluginsDirectory.Value.ToFullPath();
+
+			CompiledIndexCacheDirectory = ravenSettings.CompiledIndexCacheDirectory.Value.ToFullPath();
 
 			var taskSchedulerType = ravenSettings.TaskScheduler.Value;
 			if (taskSchedulerType != null)
@@ -234,6 +245,16 @@ namespace Raven.Database.Config
 
 			var exportedValues = Container.GetExportedValues<IStartupTask>().ToArray();
 		}
+
+		public List<string> ActiveBundles
+		{
+			get
+			{
+				var activeBundles = Settings[Constants.ActiveBundles] ?? "";
+
+				return activeBundles.GetSemicolonSeparatedValues();
+			}
+		} 
 
 		private ComposablePartCatalog GetUnfilteredCatalogs(ICollection<ComposablePartCatalog> catalogs)
 		{
@@ -294,9 +315,14 @@ namespace Raven.Database.Config
 			OAuthTokenKey = GetOAuthKey();
 		}
 
+		private void SetupGC()
+		{
+			//GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
+		}
+
 		private static readonly Lazy<byte[]> defaultOauthKey = new Lazy<byte[]>(() =>
 		{
-			using (var rsa = new RSACryptoServiceProvider())
+			using (var rsa = Encryptor.Current.CreateAsymmetrical())
 			{
 				return rsa.ExportCspBlob(true);
 			}
@@ -457,6 +483,11 @@ namespace Raven.Database.Config
 		public bool UseSsl { get; set; }
 
 		/// <summary>
+		/// Whatever we should use FIPS compliant encryption algorithms
+		/// </summary>
+		public bool UseFips { get; set; }
+
+		/// <summary>
 		/// The port to use when creating the http listener. 
 		/// Default: 8080. You can set it to *, in which case it will find the first available port from 8080 and upward.
 		/// </summary>
@@ -525,7 +556,11 @@ namespace Raven.Database.Config
 		/// Allowed values: All, Get, None
 		/// Default: Get
 		/// </summary>
-		public AnonymousUserAccessMode AnonymousUserAccessMode { get; set; }
+		public AnonymousUserAccessMode AnonymousUserAccessMode
+		{
+			get { return anonymousUserAccessMode; }
+			set { anonymousUserAccessMode = value; }
+		}
 
 		/// <summary>
 		/// If set local request don't require authentication
@@ -616,7 +651,7 @@ namespace Raven.Database.Config
 				ResetContainer();
 				// remove old directory catalog
 				var matchingCatalogs = Catalog.Catalogs.OfType<DirectoryCatalog>()
-					.Concat(Catalog.Catalogs.OfType<FilteredCatalog>()
+					.Concat(Catalog.Catalogs.OfType<Raven.Database.Plugins.Catalogs.FilteredCatalog>()
 								.Select(x => x.CatalogToFilter as DirectoryCatalog)
 								.Where(x => x != null)
 					)
@@ -644,6 +679,12 @@ namespace Raven.Database.Config
 		public bool CreatePluginsDirectoryIfNotExisting { get; set; }
 		public bool CreateAnalyzersDirectoryIfNotExisting { get; set; }
 
+		/// <summary>
+		/// Where to cache the compiled indexes
+		/// Default: ~\Raven\CompiledIndexCache
+		/// </summary>
+		public string CompiledIndexCacheDirectory { get; set; }
+
 		public string OAuthTokenServer { get; set; }
 
 		#endregion
@@ -661,6 +702,8 @@ namespace Raven.Database.Config
 
 		public bool DisableDocumentPreFetchingForIndexing { get; set; }
 
+		public int MaxNumberOfItemsToPreFetchForIndexing { get; set; }
+
 		[JsonIgnore]
 		public AggregateCatalog Catalog { get; set; }
 
@@ -669,6 +712,7 @@ namespace Raven.Database.Config
 		private string indexStoragePath;
 		private int? maxNumberOfParallelIndexTasks;
 		private int initialNumberOfItemsToIndexInSingleBatch;
+		private AnonymousUserAccessMode anonymousUserAccessMode;
 		/// <summary>
 		/// The expiration value for documents in the internal managed cache
 		/// </summary>
@@ -746,6 +790,13 @@ namespace Raven.Database.Config
 
 		public int MaxIndexWritesBeforeRecreate { get; set; }
 
+		/// <summary>
+		/// Limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to the one document
+		/// produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
+		/// Default value: 15. In order to disable this check set value to -1.
+		/// </summary>
+		public int MaxIndexOutputsPerDocument { get; set; }
+
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public void SetSystemDatabase()
@@ -776,7 +827,7 @@ namespace Raven.Database.Config
 				var val = Enum.Parse(typeof(AnonymousUserAccessMode), Settings["Raven/AnonymousAccess"]);
 				return (AnonymousUserAccessMode)val;
 			}
-			return AnonymousUserAccessMode.Get;
+			return AnonymousUserAccessMode.Admin;
 		}
 
 		public string GetFullUrl(string baseUrl)

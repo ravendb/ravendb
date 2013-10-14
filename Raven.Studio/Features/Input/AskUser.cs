@@ -162,6 +162,39 @@ namespace Raven.Studio.Features.Input
 
 		}
 
+        public static Task<T> ConfirmationWithContinuation<T>(string title, string question, Func<Task<T>> onOkay, Func<Task<T>> onCancelled)
+        {
+            var dataContext = new ConfirmModel
+            {
+                Title = title,
+                Question = question
+            };
+
+            var inputWindow = new ConfirmWindow
+            {
+                DataContext = dataContext
+            };
+
+            var tcs = new TaskCompletionSource<T>();
+
+            inputWindow.Closed += async (sender, args) =>
+            {
+                try
+                {
+                    var result = inputWindow.DialogResult == true ? await onOkay() : await onCancelled();
+                    tcs.SetResult(result);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            };
+
+            inputWindow.Show();
+
+            return tcs.Task;
+        }
+
         public static bool Confirmation(string title, string question)
         {
             return MessageBox.Show(question, title, MessageBoxButton.OKCancel) == MessageBoxResult.OK;

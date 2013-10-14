@@ -10,8 +10,7 @@
         <File Id='Raven.Server.exe.config' Name='Raven.Server.exe.config' DiskId='1' Source='$(var.SolutionDir)\DefaultConfigs\RavenDb.exe.config' />
         <File Id="Raven.Server" Name='$(var.Raven.Server.ProjectName).exe' DiskId='1' Source='$(var.Raven.Server.TargetPath)' KeyPath='yes'>
         </File>
-        <File Id='System.Net.Http.dll' Name='System.Net.Http.dll' DiskId='1' Source='$(var.Raven.Server.TargetDir)\System.Net.Http.dll' />
-        <File Id='System.Net.Http.Primitives.dll' Name='System.Net.Http.Primitives.dll' DiskId='1' Source='$(var.Raven.Server.TargetDir)\System.Net.Http.Primitives.dll' />
+       
         <util:XmlFile Id="ModifyPort"
                  Action="setValue"
                  Permanent="yes"

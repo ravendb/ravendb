@@ -33,6 +33,7 @@ namespace Raven.Client.Indexes
 		/// Gets or sets the reduce function
 		/// </summary>
 		/// <value>The reduce.</value>
+		[Obsolete("Use Result Transformers instead.")]
 		public Expression<Func<IClientSideDatabase, IEnumerable<TReduceResult>, IEnumerable>> TransformResults { get; set; }
 
 		/// <summary>
@@ -64,6 +65,12 @@ namespace Raven.Client.Indexes
 		/// </summary>
 		/// <value>The sort options.</value>
 		public IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> SortOptions { get; set; }
+
+		/// <summary>
+        /// Gets or sets the sort options.
+        /// </summary>
+        /// <value>The sort options.</value>
+        public Dictionary<string, SortOptions> SortOptionsStrings { get; set; }
 
 		/// <summary>
 		/// Get os set the analyzers
@@ -105,6 +112,10 @@ namespace Raven.Client.Indexes
 		/// <value>The spatial options.</value>
 		public IDictionary<string, SpatialOptions> SpatialIndexesStrings { get; set; }
 
+		/// <summary>
+		/// Max number of allowed indexing outputs per one source document
+		/// </summary>
+		public int? MaxIndexOutputsPerDocument { get; set; }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
@@ -116,6 +127,7 @@ namespace Raven.Client.Indexes
 			Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
 			IndexesStrings = new Dictionary<string, FieldIndexing>();
 			SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
+            SortOptionsStrings = new Dictionary<string, SortOptions>();
 			Suggestions = new Dictionary<Expression<Func<TReduceResult, object>>, SuggestionOptions>();
 			Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
 			AnalyzersStrings = new Dictionary<string, string>();
@@ -141,14 +153,17 @@ namespace Raven.Client.Indexes
 			var indexDefinition = new IndexDefinition
 			{
 				Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
+#pragma warning disable 612,618
 				TransformResults = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(TransformResults, convention, "results", translateIdentityProperty: Reduce == null),
+#pragma warning restore 612,618
 				Indexes = ConvertToStringDictionary(Indexes),
 				Stores = ConvertToStringDictionary(Stores),
 				SortOptions = ConvertToStringDictionary(SortOptions),
 				Analyzers = ConvertToStringDictionary(Analyzers),
 				Suggestions = ConvertToStringDictionary(Suggestions),
 				TermVectors =  ConvertToStringDictionary(TermVectors),
-				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes)
+				SpatialIndexes = ConvertToStringDictionary(SpatialIndexes),
+				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
 			};
 
 			foreach (var indexesString in IndexesStrings)
@@ -185,6 +200,13 @@ namespace Raven.Client.Indexes
 					throw new InvalidOperationException("There is a duplicate key in spatial indexes: " + spatialString.Key);
 				indexDefinition.SpatialIndexes.Add(spatialString);
 			}
+
+            foreach (var sortOption in SortOptionsStrings)
+            {
+                if (indexDefinition.SortOptions.ContainsKey(sortOption.Key))
+                    throw new InvalidOperationException("There is a duplicate key in sort options: " + sortOption.Key);
+                indexDefinition.SortOptions.Add(sortOption);
+            }
 
 			if (Map != null)
 				indexDefinition.Map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Map, convention,

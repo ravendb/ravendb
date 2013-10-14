@@ -21,7 +21,7 @@ namespace Raven.Bundles.Versioning.Triggers
 	[ExportMetadata("Bundle", "Versioning")]
 	public class VersioningDeleteTrigger : AbstractDeleteTrigger
 	{
-		ThreadLocal<Dictionary<string, RavenJObject>> versionInformer 
+	    readonly ThreadLocal<Dictionary<string, RavenJObject>> versionInformer 
 			= new ThreadLocal<Dictionary<string, RavenJObject>>(() => new Dictionary<string, RavenJObject>());
 
 		public override VetoResult AllowDelete(string key, TransactionInformation transactionInformation)
@@ -34,7 +34,8 @@ namespace Raven.Bundles.Versioning.Triggers
 			if (document.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) != "Historical")
 				return VetoResult.Allowed;
 
-			if (Database.IsVersioningActive(document.Metadata))
+			if (Database.ChangesToRevisionsAllowed() == false &&
+                Database.IsVersioningActive(document.Metadata))
 			{
 				var revisionPos = key.LastIndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
 				if (revisionPos != -1)

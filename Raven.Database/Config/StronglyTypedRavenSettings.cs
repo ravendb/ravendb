@@ -39,6 +39,8 @@ namespace Raven.Database.Config
 				                    TimeSpanArgumentType.FromParse);
 			MaxIndexWritesBeforeRecreate =
 				new IntegerSetting(settings["Raven/MaxIndexWritesBeforeRecreate"], 256 * 1024);
+			MaxIndexOutputsPerDocument = 
+				new IntegerSetting(settings["Raven/MaxIndexOutputsPerDocument"], 15);
 
 			MaxNumberOfItemsToIndexInSingleBatch =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"],
@@ -86,10 +88,15 @@ namespace Raven.Database.Config
 				new StringSetting(settings["Raven/RedirectStudioUrl"], (string) null);
 			DisableDocumentPreFetchingForIndexing =
 				new BooleanSetting(settings["Raven/DisableDocumentPreFetchingForIndexing"], false);
+			MaxNumberOfItemsToPreFetchForIndexing =
+				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToPreFetchForIndexing"],
+										  defaultMaxNumberOfItemsToIndexInSingleBatch, 128);
 			WebDir =
 				new StringSetting(settings["Raven/WebDir"], GetDefaultWebDir);
 			PluginsDirectory =
 				new StringSetting(settings["Raven/PluginsDirectory"], @"~\Plugins");
+			CompiledIndexCacheDirectory =
+				new StringSetting(settings["Raven/CompiledIndexCacheDirectory"], @"~\Raven\CompiledIndexCache");
 			TaskScheduler =
 				new StringSetting(settings["Raven/TaskScheduler"], (string) null);
 			AllowLocalAccessWithoutAuthorization =
@@ -199,6 +206,8 @@ namespace Raven.Database.Config
 
 		public BooleanSetting DisableDocumentPreFetchingForIndexing { get; private set; }
 
+		public IntegerSettingWithMin MaxNumberOfItemsToPreFetchForIndexing { get; private set; }
+
 		public StringSetting WebDir { get; private set; }
 
 		public BooleanSetting DisableClusterDiscovery { get; private set; }
@@ -208,6 +217,8 @@ namespace Raven.Database.Config
 		public StringSetting ServerName { get; private set; }
 
 		public StringSetting PluginsDirectory { get; private set; }
+
+		public StringSetting CompiledIndexCacheDirectory { get; private set; }
 
 		public StringSetting TaskScheduler { get; private set; }
 
@@ -231,5 +242,7 @@ namespace Raven.Database.Config
 		public IntegerSetting AdditionalStepsForScriptBasedOnDocumentSize { get; private set; }
 
 		public IntegerSetting MaxIndexWritesBeforeRecreate { get; private set; }
+
+		public IntegerSetting MaxIndexOutputsPerDocument { get; private set; }
 	}
 }

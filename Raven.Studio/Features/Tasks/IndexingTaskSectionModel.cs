@@ -5,7 +5,7 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public class IndexingTaskSectionModel : BasicTaskSectionModel
+	public class IndexingTaskSectionModel : BasicTaskSectionModel<ToggleIndexingStatusDatabaseTask>
 	{
 		public IndexingTaskSectionModel()
 		{
@@ -14,6 +14,8 @@ namespace Raven.Studio.Features.Tasks
 
 			IndexingStatus = "Started";
 			TaskDatas.Add(new TaskData("Current Status:", IndexingStatus));
+
+		    AutoAcknowledge = true;
 		}
 
 		private string indexingStatus;
@@ -30,7 +32,7 @@ namespace Raven.Studio.Features.Tasks
 
 		public override System.Threading.Tasks.Task TimerTickedAsync()
 		{
-			return ApplicationModel.DatabaseCommands.GetIndexingStatusAsync()
+			return ApplicationModel.DatabaseCommands.Admin.GetIndexingStatusAsync()
 			                       .ContinueOnSuccessInTheUIThread(item =>
 			                       {
 				                       IndexingStatus = item;
@@ -40,16 +42,18 @@ namespace Raven.Studio.Features.Tasks
 			                       });
 		}
 
-		public override ICommand Action
-		{
-			get
-			{
-				if (IndexingStatus == "Indexing")
-					return new StopIndexingCommand(line => Execute.OnTheUI(() => Output.Add(line)), ()=>ForceTimerTicked());
-				if (IndexingStatus == "Paused")
-					return new StartIndexingCommand(line => Execute.OnTheUI(() => Output.Add(line)), () => ForceTimerTicked());
-				return null;
-			}
-		}
+        protected override ToggleIndexingStatusDatabaseTask CreateTask()
+        {
+            var action = IndexingStatus == "Indexing" ? ToggleIndexAction.TurnOff : ToggleIndexAction.TurnOn;
+
+            return new ToggleIndexingStatusDatabaseTask(action, DatabaseCommands, Database.Value.Name);
+        }
+
+        protected override void OnTaskCompleted()
+        {
+            base.OnTaskCompleted();
+
+            ForceTimerTicked();
+        }
 	}
 }

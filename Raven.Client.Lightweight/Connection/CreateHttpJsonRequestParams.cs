@@ -1,13 +1,8 @@
 using System;
 using System.Collections.Generic;
-#if SILVERLIGHT || NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
 using System.Collections.Specialized;
-#endif
 using System.Linq;
 using System.Net;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;

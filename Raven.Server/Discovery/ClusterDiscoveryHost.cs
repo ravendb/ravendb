@@ -23,6 +23,7 @@ namespace Raven.Server.Discovery
 			IsStop = false;
 			socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, 1);
+			socket.Bind(new IPEndPoint(IPAddress.Any, 12392));
 			NetworkInterface[] adapters = NetworkInterface.GetAllNetworkInterfaces();
 			foreach (NetworkInterface adapter in adapters.Where(card => card.OperationalStatus == OperationalStatus.Up))
 			{
@@ -33,7 +34,6 @@ namespace Raven.Server.Discovery
 				}
 			}
 
-			socket.Bind(new IPEndPoint(IPAddress.Any, 12392));
 			StartListening();
 		}
 

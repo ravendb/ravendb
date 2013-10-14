@@ -11,7 +11,7 @@ namespace Raven.Abstractions.Data
 	{
 		 public string Key { get; set; }
 		 public Etag Etag { get; set; }
-		 public RavenJObject Metdata { get; set; }
+		 public RavenJObject Metadata { get; set; }
 		 public T Document { get; set; }
 	}
 }

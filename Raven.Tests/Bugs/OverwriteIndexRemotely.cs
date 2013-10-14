@@ -16,17 +16,15 @@ namespace Raven.Tests.Bugs
 {
 	public class OverwriteIndexRemotely : RemoteClientTest, IDisposable
 	{
-		private readonly string path;
 		private readonly RavenDbServer ravenDbServer;
 		private readonly IDocumentStore documentStore;
 
 		public OverwriteIndexRemotely()
 		{
 			const int port = 8079;
-			path = GetPath("TestDb");
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 
-			ravenDbServer = GetNewServer(port, path);
+			ravenDbServer = GetNewServer(port);
 			documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize();
 		}
 
@@ -34,7 +32,6 @@ namespace Raven.Tests.Bugs
 		{
 			documentStore.Dispose();
 			ravenDbServer.Dispose();
-			IOExtensions.DeleteDirectory(path);
 			base.Dispose();
 		}
 

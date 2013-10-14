@@ -165,6 +165,7 @@ namespace Raven.Client
 		/// <summary>
 		/// Execute the transformation function on the results of this query.
 		/// </summary>
+		[Obsolete("Use Result Transformers instead.")]
 		IDocumentQueryCustomization TransformResults(Func<IndexQuery,IEnumerable<object>, IEnumerable<object>> resultsTransformer);
 
 		/// <summary>

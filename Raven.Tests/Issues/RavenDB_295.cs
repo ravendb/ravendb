@@ -9,30 +9,37 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
+	using System.Collections.Generic;
+
 	public class RavenDB_295 : RavenTest
 	{
 		[Fact]
 		public void CanUpdateSuggestions()
 		{
-			using(var store = NewDocumentStore())
+			using (var store = NewDocumentStore())
 			{
-				using(var session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					session.Store(new{Name  = "john"});
+					session.Store(new { Name = "john" });
 					session.Store(new { Name = "darsy" });
 					session.SaveChanges();
 				}
 				store.DatabaseCommands.PutIndex("test",
-				                                new IndexDefinition
-				                                {
-				                                	Map = "from doc in docs select new { doc.Name}"
-				                                });
+												new IndexDefinition
+												{
+													Map = "from doc in docs select new { doc.Name}",
+													Suggestions = new Dictionary<string, SuggestionOptions>
+													              {
+														              {"Name", new SuggestionOptions()}
+													              }
+												});
 
 				WaitForIndexing(store);
 
 				var suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
 				{
-					Field = "Name", Term = "orne"
+					Field = "Name",
+					Term = "orne"
 				});
 				Assert.Empty(suggestionQueryResult.Suggestions);
 
@@ -55,17 +62,26 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanUpdateSuggestions_AfterRestart()
 		{
-			using (var store = NewDocumentStore(runInMemory: false, deleteDirectoryOnDispose: false))
+			var dataDir = NewDataPath();
+			using (var store = NewDocumentStore(runInMemory: false, dataDir: dataDir))
 			{
 				using (var session = store.OpenSession())
 				{
-					session.Store(new {Name = "john"});
-					session.Store(new {Name = "darsy"});
+					session.Store(new { Name = "john" });
+					session.Store(new { Name = "darsy" });
 					session.SaveChanges();
 				}
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
-					Map = "from doc in docs select new { doc.Name}"
+					Map = "from doc in docs select new { doc.Name}",
+					Suggestions = new Dictionary<string, SuggestionOptions>
+													              {
+														              {"Name", new SuggestionOptions
+														              {
+															              Accuracy = 0.5f,
+																		  Distance = StringDistanceTypes.Default
+														              }}
+													              }
 				});
 
 				WaitForIndexing(store);
@@ -78,7 +94,7 @@ namespace Raven.Tests.Issues
 				Assert.NotEmpty(suggestionQueryResult.Suggestions);
 			}
 
-			using (var store = NewDocumentStore(runInMemory: false, deleteDirectoryOnDispose: true, deleteDirectory: false))
+			using (var store = NewDocumentStore(runInMemory: false, dataDir: dataDir))
 			{
 				using (var session = store.OpenSession())
 				{
@@ -87,14 +103,13 @@ namespace Raven.Tests.Issues
 				}
 				WaitForIndexing(store);
 
-
 				var suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
 				{
 					Field = "Name",
 					Term = "jhon"
 				});
-				Assert.NotEmpty(suggestionQueryResult.Suggestions); 
-				
+				Assert.NotEmpty(suggestionQueryResult.Suggestions);
+
 				suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
 				{
 					Field = "Name",

@@ -22,7 +22,7 @@
             <Border Background="{StaticResource Brush_ToolbarBackground}"
                     BorderThickness="1"
                     BorderBrush="Gray"
-                    Margin="0,20,0,0">
+                    Margin="0,0,0,0">
                 <Border.Effect>
                     <DropShadowEffect Opacity="0.4" />
                 </Border.Effect>
@@ -59,20 +59,7 @@
                               ToolTipService.ToolTip="Show the raw index entries instead of matching documents"
                               Margin="4" Content="Index Entries">
                     </CheckBox>
-					
-					<ContextMenu:Separator Style="{StaticResource Style_Separator_Horizontal}"/>
-
-					<CheckBox IsChecked="{Binding UseTransformer, Mode=TwoWay}" 
-							  HorizontalAlignment="Left"
-							  ToolTipService.ToolTip="Select a transformer to use"
-							  Margin="4"
-							  Content="Use Transformer"/>
-					
-					<ComboBox SelectedValue="{Binding SelectedTransformer.Value, Mode=TwoWay}"
-							  ItemsSource="{Binding Transformers}"
-							  Margin="4"
-							  Visibility="{Binding UseTransformer, Converter={StaticResource BooleanToVisibility}}"/>
-					
+										
 					<CheckBox IsChecked="{Binding SkipTransformResults, Mode=TwoWay}"
                               HorizontalAlignment="Left"
                               ToolTipService.ToolTip="Prevents the Transform Results stage of the index being applied"

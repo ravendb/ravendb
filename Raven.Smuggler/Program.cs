@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using NDesk.Options;
@@ -51,7 +52,7 @@ namespace Raven.Smuggler
 			            			                       {
 				            			                       Path = "@metadata." + key,
 															   ShouldMatch = true,
-															   Value = val
+															   Values = new List<string>{val}
 			            			                       })
 			            			},
 								{
@@ -60,7 +61,7 @@ namespace Raven.Smuggler
 			            			                       {
 				            			                       Path = "@metadata." + key,
 															   ShouldMatch = false,
-															   Value = val
+															   Values = new List<string>{val}
 			            			                       })
 			            			},
 			            		{
@@ -69,7 +70,7 @@ namespace Raven.Smuggler
 			            			              {
 													  Path = key,
 													  ShouldMatch = true,
-				            			              Value = val
+													  Values = new List<string>{val}
 			            			              })
 			            			},
 								{
@@ -77,8 +78,8 @@ namespace Raven.Smuggler
 			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters.Add(new FilterSetting
 			            			              {
 													  Path = key,
-													  ShouldMatch = true,
-				            			              Value = val
+													  ShouldMatch = false,
+													  Values = new List<string>{val}
 			            			              })
 			            			},
 			            		{
@@ -207,7 +208,7 @@ namespace Raven.Smuggler
 				}
 				else
 				{
-					Console.WriteLine(e);
+					Console.WriteLine(ex);
 					Environment.Exit(-1);
 				}
 			}

@@ -20,7 +20,7 @@ namespace Raven.Performance
 		private readonly string dataLocation;
 		private readonly DocumentStore store;
 		public List<long> MemoryUsage { get; set; }
-		public List<KeyValuePair<string, double>> LatencyTimes { get; set; }
+        public List<KeyValuePair<string, double>> LatencyTimes { get; set; }
 		public List<KeyValuePair<string, long>> LatencyInDocuments { get; set; }
 
 		private const int BatchSize = 512;
@@ -35,8 +35,8 @@ namespace Raven.Performance
 			this.dataLocation = dataLocation;
 
 			MemoryUsage = new List<long>();
-			LatencyTimes = new List<KeyValuePair<string, double>>();
-			LatencyInDocuments = new List<KeyValuePair<string, long>>();
+            LatencyTimes = new List<KeyValuePair<string, double>>();
+            LatencyInDocuments = new List<KeyValuePair<string, long>>();
 
 			store = new DocumentStore
 			{
@@ -196,14 +196,14 @@ select new
 
 				foreach (var staleIndex in statistics.StaleIndexes)
 				{
-					var indexStats = statistics.Indexes.Single(x => x.Name == staleIndex);
+					var indexStats = statistics.Indexes.Single(x => x.PublicName == staleIndex);
 					var latencyInTime = (DateTime.UtcNow - indexStats.LastIndexedTimestamp).TotalMilliseconds;
 					LatencyTimes.Add(new KeyValuePair<string, double>(staleIndex, latencyInTime));
 
 					var latencyInDocuments = statistics.CountOfDocuments - indexStats.IndexingAttempts;
-					LatencyInDocuments.Add(new KeyValuePair<string, long>(staleIndex, latencyInDocuments));
+                    LatencyInDocuments.Add(new KeyValuePair<string, long>(staleIndex, latencyInDocuments));
 
-					logger.Debug("Stale index {0} - {1:#,#}/{2:#,#} - latency: {3:#,#}, {4:#,#}ms", indexStats.Name, indexStats.IndexingAttempts, statistics.CountOfDocuments,
+					logger.Debug("Stale index {0} - {1:#,#}/{2:#,#} - latency: {3:#,#}, {4:#,#}ms", indexStats.Id, indexStats.IndexingAttempts, statistics.CountOfDocuments,
 						latencyInDocuments,
 						latencyInTime);
 				}
@@ -223,8 +223,9 @@ select new
 			foreach (var item in LatencyTimes.GroupBy(x => x.Key))
 			{
 				yield return
-					Tuple.Create(item.Key, item.Select(x => x.Value),
-					             LatencyInDocuments.Where(pair => pair.Key == item.Key).Select(x => x.Value));
+					Tuple.Create(item.Key, 
+                        item.Select(x => x.Value),
+                         LatencyInDocuments.Where(pair => pair.Key == item.Key).Select(x => x.Value));
 			}
 		}
 	}

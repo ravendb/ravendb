@@ -38,5 +38,15 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The metadata.</value>
 		public RavenJObject AdditionalData { get; set; }
+		/// <summary>
+		/// Gets or sets the result of a PATCH operation.
+		/// </summary>
+		/// <value>The PatchResult.</value>
+		public PatchResult? PatchResult { get; set; }
+		/// <summary>
+		/// Gets or sets the result of a DELETE operation.
+		/// </summary>
+		/// <value>true if the document was deleted, false if it did not exist.</value>
+		public bool? Deleted { get; set; }
 	}
 }

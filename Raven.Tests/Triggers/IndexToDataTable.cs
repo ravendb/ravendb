@@ -22,7 +22,7 @@ namespace Raven.Tests.Triggers
 		}
 
 
-		public override AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName)
+		public override AbstractIndexUpdateTriggerBatcher CreateBatcher(int indexName)
 		{
 			return new DataTableBatcher(this);
 		}

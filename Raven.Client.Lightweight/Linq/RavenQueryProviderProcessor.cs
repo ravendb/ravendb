@@ -33,7 +33,6 @@ namespace Raven.Client.Linq
 		private bool chainedWhere;
 		private int insideWhere;
 		private IAbstractDocumentQuery<T> luceneQuery;
-		private Expression<Func<T, bool>> predicate;
 		private SpecialQueryType queryType = SpecialQueryType.None;
 		private Type newExpressionType;
 		private string currentPath = string.Empty;
@@ -107,7 +106,7 @@ namespace Raven.Client.Linq
 			{
 				switch (expression.NodeType)
 				{
-					case ExpressionType.MemberAccess:
+                  	case ExpressionType.MemberAccess:
 						VisitMemberAccess((MemberExpression) expression, true);
 						break;
 					case ExpressionType.Not:
@@ -139,11 +138,20 @@ namespace Raven.Client.Linq
 						{
 							VisitMethodCall((MethodCallExpression) expression);
 						}
-						else if (expression is LambdaExpression)
+						else
 						{
-							VisitExpression(((LambdaExpression) expression).Body);
+						    var lambdaExpression = expression as LambdaExpression;
+						    if (lambdaExpression != null)
+						    {
+						        var body = lambdaExpression.Body;
+						        if (body.NodeType == ExpressionType.Constant && ((ConstantExpression)body).Value is bool)
+						        {
+						            throw new ArgumentException("Constants expressions such as Where(x => true) are not allowed in the RavenDB queries");
+						        }
+						        VisitExpression(body);
+						    }
 						}
-						break;
+				        break;
 				}
 			}
 
@@ -205,11 +213,16 @@ namespace Raven.Client.Linq
 			// 100 < x.Foo && 200 > x.Foo
 			// 200 > x.Foo && 100 < x.Foo 
 
+			// x.Foo >= 100 && x.Foo <= 200
+			// x.Foo <= 200 && x.Foo >= 100 
+			// 100 <= x.Foo && 200 >= x.Foo
+			// 200 >= x.Foo && 100 <= x.Foo
+
 			var isPossibleBetween =
 				(andAlso.Left.NodeType == ExpressionType.GreaterThan && andAlso.Right.NodeType == ExpressionType.LessThan) ||
 				(andAlso.Left.NodeType == ExpressionType.GreaterThanOrEqual && andAlso.Right.NodeType == ExpressionType.LessThanOrEqual) ||
 				(andAlso.Left.NodeType == ExpressionType.LessThan && andAlso.Right.NodeType == ExpressionType.GreaterThan) ||
-				(andAlso.Left.NodeType == ExpressionType.LessThanOrEqual && andAlso.Right.NodeType == ExpressionType.GreaterThan);
+				(andAlso.Left.NodeType == ExpressionType.LessThanOrEqual && andAlso.Right.NodeType == ExpressionType.GreaterThanOrEqual);
 
 			if (isPossibleBetween == false)
 				return false;
@@ -475,38 +488,91 @@ namespace Raven.Client.Linq
 
 		private void VisitEquals(MethodCallExpression expression)
 		{
-			var memberInfo = GetMember(expression.Object);
-			bool isAnalyzed = true;
+			ExpressionInfo fieldInfo = null;
+			Expression constant = null;
+			object comparisonType = null;
 
-			if (expression.Arguments.Count == 2 &&
-			    expression.Arguments[1].NodeType == ExpressionType.Constant &&
-			    expression.Arguments[1].Type == typeof (StringComparison))
+			if (expression.Object == null)
 			{
-				switch ((StringComparison) ((ConstantExpression) expression.Arguments[1]).Value)
+				var a = expression.Arguments[0];
+				var b = expression.Arguments[1];
+
+				if (a is MemberExpression && b is ConstantExpression)
+				{
+					fieldInfo = GetMember(a);
+					constant = b;
+				}
+				else if (a is ConstantExpression && b is MemberExpression)
+				{
+					fieldInfo = GetMember(b);
+					constant = a;
+				}
+
+				if (expression.Arguments.Count == 3 &&
+					expression.Arguments[2].NodeType == ExpressionType.Constant &&
+					expression.Arguments[2].Type == typeof(StringComparison))
+				{
+					comparisonType = ((ConstantExpression)expression.Arguments[2]).Value;
+					
+				}
+			}
+			else
+			{
+			    switch (expression.Object.NodeType)
+			    {
+			        case ExpressionType.MemberAccess:
+			            fieldInfo = GetMember(expression.Object);
+			            constant = expression.Arguments[0];
+			            break;
+			        case ExpressionType.Constant:
+			            fieldInfo = GetMember(expression.Arguments[0]);
+			            constant = expression.Object;
+			            break;
+			        case ExpressionType.Parameter:
+			            fieldInfo = new ExpressionInfo(currentPath.Substring(0, currentPath.Length - 1), expression.Object.Type,
+			                                           false);
+			            constant = expression.Arguments[0];
+			            break;
+                    default:
+                        throw new NotSupportedException("Nodes of type + " + expression.Object.NodeType + " are not understood in this context");
+			    }
+			    if (expression.Arguments.Count == 2 &&
+				    expression.Arguments[1].NodeType == ExpressionType.Constant &&
+				    expression.Arguments[1].Type == typeof (StringComparison))
+				{
+					comparisonType = ((ConstantExpression)expression.Arguments[1]).Value;
+				}
+			}
+
+		    if (comparisonType != null)
+			{
+				switch ((StringComparison) comparisonType)
 				{
 					case StringComparison.CurrentCulture:
 #if !NETFX_CORE
 					case StringComparison.InvariantCulture:
 #endif
 					case StringComparison.Ordinal:
-						isAnalyzed = false;
-						break;
+				        throw new NotSupportedException(
+				            "RavenDB queries case sensitivity is dependent on the index, not the query. If you need case sensitive queries, use a static index and an NotAnalyzed field for that.");
 					case StringComparison.CurrentCultureIgnoreCase:
 #if !NETFX_CORE
 					case StringComparison.InvariantCultureIgnoreCase:
 #endif
 					case StringComparison.OrdinalIgnoreCase:
-						isAnalyzed = true;
-						break;
+				        break;
 					default:
 						throw new ArgumentOutOfRangeException();
 				}
 			}
+
+            
+
 			luceneQuery.WhereEquals(new WhereParams
 			{
-				FieldName = memberInfo.Path,
-				Value = GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)),
-				IsAnalyzed = isAnalyzed,
+				FieldName = fieldInfo.Path,
+				Value = GetValueFromExpression(constant, GetMemberType(fieldInfo)),
+				IsAnalyzed = true,
 				AllowWildcards = false
 			});
 		}
@@ -994,7 +1060,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				case "Where":
 				{
 					insideWhere++;
-					VisitExpression(expression.Arguments[0]);
+				    VisitExpression(expression.Arguments[0]);
 					if (chainedWhere)
 					{
 						luceneQuery.AndAlso();
@@ -1128,7 +1194,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				case "Distinct":
                     if (expression.Arguments.Count == 1)
                     {
-						luceneQuery.GroupBy(AggregationOperation.Distinct);
+						luceneQuery.Distinct();
 						VisitExpression(expression.Arguments[0]);
 						break;
                     }
@@ -1147,15 +1213,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				}
 			}
 		}
-        static readonly HashSet<Type> requireOrderByToUseRange = new HashSet<Type>
-        {
-            typeof(int),
-            typeof(long),
-            typeof(float),
-            typeof(decimal),
-            typeof(double),
-            typeof(TimeSpan)
-        };
+
 		private void VisitOrderBy(LambdaExpression expression, bool descending)
 		{
 			var result = GetMemberDirect(expression.Body);
@@ -1169,9 +1227,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 fieldType = typeof (string);
             }
 
-
-		    if (requireOrderByToUseRange.Contains(fieldType))
-                fieldName = fieldName + "_Range";
+			if (this.queryGenerator.Conventions.UsesRangeType(fieldType))
+				fieldName = fieldName + "_Range";
 			luceneQuery.AddOrder(fieldName, descending, fieldType);
 		}
 
@@ -1312,8 +1369,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 		private void VisitAll(Expression<Func<T, bool>> predicateExpression)
 		{
-			predicate = predicateExpression;
-			queryType = SpecialQueryType.All;
+			throw new NotSupportedException("All() is not supported for linq queries");
 		}
 
 		private void VisitAny()
@@ -1378,7 +1434,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			var q = queryGenerator.Query<T>(indexName, isMapReduce);
 
 			luceneQuery = (IAbstractDocumentQuery<T>) q;
-
+		    luceneQuery.SetResultTransformer(resultsTransformer);
 			VisitExpression(expression);
 
 			if (customizeQuery != null)
@@ -1528,25 +1584,21 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				{
 					return finalQuery.SingleOrDefault();
 				}
-				case SpecialQueryType.All:
-				{
-					var pred = predicate.Compile();
-					return finalQuery.AsQueryable().All(projection => pred((T) (object) projection));
-				}
 				case SpecialQueryType.Any:
 				{
 					return finalQuery.Any();
 				}
 #if !SILVERLIGHT
 				case SpecialQueryType.Count:
-				{
-					var queryResultAsync = finalQuery.QueryResult;
-					return queryResultAsync.TotalResults;
-				}
 				case SpecialQueryType.LongCount:
 				{
-					var queryResultAsync = finalQuery.QueryResult;
-					return (long) queryResultAsync.TotalResults;
+					if (finalQuery.IsDistinct)
+						throw new NotSupportedException("RavenDB does not support mixing Distinct & Count together.\r\n" +
+						                                "See: https://groups.google.com/forum/#!searchin/ravendb/CountDistinct/ravendb/yKQikUYKY5A/nCNI5oQB700J");
+					var qr = finalQuery.QueryResult;
+					if (queryType != SpecialQueryType.Count) 
+						return (long) qr.TotalResults;
+					return qr.TotalResults;
 				}
 #else
 				case SpecialQueryType.Count:
@@ -1576,10 +1628,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			/// 
 			/// </summary>
 			None,
-			/// <summary>
-			/// 
-			/// </summary>
-			All,
 			/// <summary>
 			/// 
 			/// </summary>

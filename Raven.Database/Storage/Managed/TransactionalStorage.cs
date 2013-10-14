@@ -4,18 +4,22 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Impl;
+using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Json.Linq;
 using Raven.Munin;
 using Raven.Storage.Managed.Backup;
 using Raven.Storage.Managed.Impl;
@@ -25,13 +29,13 @@ namespace Raven.Storage.Managed
 	public class TransactionalStorage : ITransactionalStorage
 	{
 		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
+		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
 
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly Action onCommit;
 		private TableStorage tableStorage;
 
 		private OrderedPartCollection<AbstractDocumentCodec> DocumentCodecs { get; set; }
-
 		public TableStorage TableStorage
 		{
 			get { return tableStorage; }
@@ -39,13 +43,15 @@ namespace Raven.Storage.Managed
 
 		private IPersistentSource persistenceSource;
 		private volatile bool disposed;
-		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
+		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 		private Timer idleTimer;
 		private long lastUsageTime;
 		private IUuidGenerator uuidGenerator;
 		private readonly IDocumentCacher documentCacher;
+	    private DisposableAction exitLockDisposable;
+		private MuninInFlightTransactionalState inFlightTransactionalState;
 
-		public IPersistentSource PersistenceSource
+	    public IPersistentSource PersistenceSource
 		{
 			get { return persistenceSource; }
 		}
@@ -55,6 +61,7 @@ namespace Raven.Storage.Managed
 			this.configuration = configuration;
 			this.onCommit = onCommit;
 			documentCacher = new DocumentCacher(configuration);
+		    exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
 		}
 
 		public void Dispose()
@@ -87,14 +94,41 @@ namespace Raven.Storage.Managed
 			private set;
 		}
 
+	    public IDisposable WriteLock()
+	    {
+	        Monitor.Enter(this);
+            return exitLockDisposable;
+	    }
+
+		public IDisposable DisableBatchNesting()
+		{
+			disableBatchNesting.Value = new object();
+		    var old = tableStorage.CurrentTransactionId.Value;
+            tableStorage.CurrentTransactionId.Value = Guid.Empty;
+			return new DisposableAction(() =>
+			{
+			    tableStorage.CurrentTransactionId.Value = old;
+			    disableBatchNesting.Value = null;
+			});
+		}
+
 		[DebuggerNonUserCode]
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
-			if (disposerLock.IsReadLockHeld) // we are currently in a nested Batch call
+			if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches
 			{
 				if (current.Value != null) // check again, just to be sure
 				{
-					action(current.Value);
+				    var old = current.Value.IsNested;
+                    current.Value.IsNested = true;
+				    try
+				    {
+                        action(current.Value);
+				    }
+				    finally
+				    {
+                        current.Value.IsNested = old;
+				    }
 					return;
 				}
 			}
@@ -113,7 +147,7 @@ namespace Raven.Storage.Managed
 			finally
 			{
 				disposerLock.ExitReadLock();
-				if (disposed == false)
+				if (disposed == false && disableBatchNesting.Value == null)
 					current.Value = null;
 			}
 			result.InvokeOnCommit();
@@ -127,8 +161,9 @@ namespace Raven.Storage.Managed
 			using (tableStorage.BeginTransaction())
 			{
 				var storageActionsAccessor = new StorageActionsAccessor(tableStorage, uuidGenerator, DocumentCodecs, documentCacher);
-				current.Value = storageActionsAccessor;
-				action(current.Value);
+				if (disableBatchNesting.Value == null)
+					current.Value = storageActionsAccessor;
+				action(storageActionsAccessor);
 				storageActionsAccessor.SaveAllTasks();
 				tableStorage.Commit();
 				return storageActionsAccessor;
@@ -218,6 +253,11 @@ namespace Raven.Storage.Managed
 			return false;
 		}
 
+		public bool IsAlreadyInBatch
+		{
+			get { return current.Value != null; }
+		}
+
 		public void Compact(InMemoryRavenConfiguration compactConfiguration)
 		{
 			using (var ps = new FileBasedPersistentSource(compactConfiguration.DataDirectory, "Raven", configuration.TransactionMode == TransactionMode.Safe))
@@ -243,6 +283,19 @@ namespace Raven.Storage.Managed
 		public void DumpAllStorageTables()
 		{
 			throw new NotSupportedException("Not valid for munin");
+		}
+
+        public IList<string> ComputeDetailedStorageInformation()
+        {
+            return new List<string>
+            {
+                "Detailed storage sizes is not available for Munin"
+            };
+        }
+
+	    public InFlightTransactionalState GetInFlightTransactionalState(Func<string, Etag, RavenJObject, RavenJObject, TransactionInformation, PutResult> put, Func<string, Etag, TransactionInformation, bool> delete)
+		{
+			return inFlightTransactionalState ?? (inFlightTransactionalState = new MuninInFlightTransactionalState(this, put, delete));
 		}
 
 		public void ClearCaches()

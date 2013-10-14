@@ -80,12 +80,14 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanAddAndReadFileAfterReopen()
 		{
-			using (var tx = NewTransactionalStorage())
+			var dataDir = NewDataPath();
+
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 			}
 
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				RavenJObject document = null;
 				tx.Batch(viewer =>
@@ -100,7 +102,9 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanDeleteFile()
 		{
-			using (var tx = NewTransactionalStorage())
+			var dataDir = NewDataPath();
+
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 				RavenJObject metadata;
@@ -108,7 +112,7 @@ namespace Raven.Tests.Storage
 				tx.Batch(mutator => mutator.Documents.DeleteDocument("Ayende", null, out metadata, out deletedETag));
 			}
 
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(viewer => Assert.Null(viewer.Documents.DocumentByKey("Ayende", null)));
 
@@ -118,7 +122,9 @@ namespace Raven.Tests.Storage
 		[Fact]
 		public void CanCountDocuments()
 		{
-			using (var tx = NewTransactionalStorage())
+			var dataDir = NewDataPath();
+
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(mutator => mutator.Documents.AddDocument("Ayende", null, RavenJObject.FromObject(new { Name = "Rahien" }), new RavenJObject()));
 				tx.Batch(accessor => Assert.Equal(1, accessor.Documents.GetDocumentsCount()));
@@ -130,7 +136,7 @@ namespace Raven.Tests.Storage
 
 			}
 
-			using (var tx = NewTransactionalStorage())
+			using (var tx = NewTransactionalStorage(dataDir: dataDir))
 			{
 				tx.Batch(viewer => Assert.Null(viewer.Documents.DocumentByKey("Ayende", null)));
 				tx.Batch(accessor => Assert.Equal(0, accessor.Documents.GetDocumentsCount()));

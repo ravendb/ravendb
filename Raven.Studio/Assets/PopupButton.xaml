@@ -1,6 +1,7 @@
 ﻿<ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:splitButton="clr-namespace:Delay" xmlns:b="clr-namespace:Boogaart.Silverlight.Behaviors">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:splitButton="clr-namespace:Delay" xmlns:b="clr-namespace:Boogaart.Silverlight.Behaviors"
+    xmlns:markupExtensions="clr-namespace:Raven.Studio.Infrastructure.MarkupExtensions">
 
     <Style TargetType="splitButton:PopupButton">
         <Setter Property="Background">
@@ -56,6 +57,22 @@
                                 </VisualState>
                                 <VisualState x:Name="Unfocused" />
                             </VisualStateGroup>
+                            <VisualStateGroup x:Name="PopupAlignment">
+                                <VisualState x:Name="Top">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Duration="0" Storyboard.TargetName="PopupElement" Storyboard.TargetProperty="VerticalAlignment">
+                                            <DiscreteObjectKeyFrame Value="{markupExtensions:StaticExtension Member=VerticalAlignment.Top}" KeyTime="0:0:0"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                                <VisualState x:Name="Bottom">
+                                    <Storyboard>
+                                        <ObjectAnimationUsingKeyFrames Duration="0" Storyboard.TargetName="PopupElement" Storyboard.TargetProperty="VerticalAlignment">
+                                            <DiscreteObjectKeyFrame Value="{markupExtensions:StaticExtension Member=VerticalAlignment.Bottom}" KeyTime="0:0:0"/>
+                                        </ObjectAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </VisualState>
+                            </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
                         <Border x:Name="border" CornerRadius="2" Background="{TemplateBinding Background}" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}" Opacity="0">
 
@@ -67,7 +84,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <ContentPresenter x:Name="contentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}"/>
-                            <Popup x:Name="PopupElement" b:Popup.StaysOpen="False">
+                            <Popup x:Name="PopupElement" b:Popup.StaysOpen="False" Margin="0,1,0,0">
                                 <ContentPresenter Content="{TemplateBinding PopupContent}"/>
                             </Popup>
                             <Path x:Name="DropdownArrow" Grid.Column="1" Data="M 0,0 L 8,0 L 4,4 Z" Fill="{TemplateBinding Foreground}" Margin="2 0 4 0" VerticalAlignment="Center"/>

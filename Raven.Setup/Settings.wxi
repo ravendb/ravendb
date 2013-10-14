@@ -5,7 +5,8 @@
   <Icon Id="Raven.ico" SourceFile="$(var.Raven.Server.ProjectDir)\favicon.ico" />
   <Property Id="ARPPRODUCTICON" Value="Raven.ico" />
 
-  <Property Id="RAVEN_INSTALLATION_TYPE" Value="IIS" /> <!-- default value -->
+  <Property Id="RAVEN_INSTALLATION_TYPE" Value="IIS" /> <!-- default value is IIS [available options: IIS, SERVICE] -->
+  <Property Id="RAVEN_TARGET_ENVIRONMENT" Value="PRODUCTION" /> <!-- default value is PRODUCTION [available options: PRODUCTION, DEVELOPMENT] -->
   <Property Id="RAVEN_LICENSE_FILE_PATH" />
   <Property Id="RAVEN_LICENSE_ERROR" />
 

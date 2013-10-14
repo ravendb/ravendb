@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using Raven.Abstractions.Data;
-using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Document;
@@ -14,8 +14,6 @@ namespace Raven.Tests.Security.OAuth
 	{
 		private const string apiKey = "test/ThisIsMySecret";
 
-		
-
 		protected override void ConfigureStore(DocumentStore store)
 		{
 			store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
@@ -23,7 +21,7 @@ namespace Raven.Tests.Security.OAuth
 			store.ApiKey = apiKey;
 		}
 
-		protected override void ConfigureDatbase(Database.DocumentDatabase database)
+		protected override void ConfigureDatabase(Database.DocumentDatabase database)
 		{
 			database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 			{
@@ -41,8 +39,9 @@ namespace Raven.Tests.Security.OAuth
 		[Fact]
 		public void Can_Replicate_With_OAuth()
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore(anonymousUserAccessMode: AnonymousUserAccessMode.None);
+			var store1 = CreateStore(enableAuthorization: true);
+            Authentication.EnableOnce();
+            var store2 = CreateStore(anonymousUserAccessMode: AnonymousUserAccessMode.None, enableAuthorization: true);
 			
 			TellFirstInstanceToReplicateToSecondInstance(apiKey);
 

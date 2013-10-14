@@ -60,7 +60,7 @@ namespace Raven.Studio.Features.Documents
 	            return new[]
 	            {
 		            new PathSegment {Name = "Documents", Url = "/documents"},
-		            new PathSegment {Name = entityType, Url = "/collections?name=" + entityType}
+		            new PathSegment {Name = entityType, Url = "/documents?collection=" + entityType}
 	            };
             }
 

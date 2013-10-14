@@ -11,6 +11,7 @@
         <Setter Property="Foreground" Value="#FF666666"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Padding" Value="14,6"/>
+        <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="delay:SplitHyperlinkButtonPopup">

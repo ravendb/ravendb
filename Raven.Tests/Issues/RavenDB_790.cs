@@ -98,7 +98,6 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanDisableQueryResultsTrackingForAsyncShardedDocumentQuery()
 		{
-
 			using (GetNewServer(8079))
 			using (GetNewServer(8078))
 			using (var store = new ShardedDocumentStore(new ShardStrategy(new Dictionary<string, IDocumentStore>

@@ -15,6 +15,11 @@ namespace Raven.Abstractions.Data
 		public string Message { get; set; }
 		public string Status { get; set; }
 		public bool Error { get; set; }
+		public bool IsCommercial
+		{
+			get { return Status.StartsWith("Commercial"); }
+		}
+		public bool ValidCommercialLicenseSeen { get; set; }
 
 		public Dictionary<string, string> Attributes
 		{

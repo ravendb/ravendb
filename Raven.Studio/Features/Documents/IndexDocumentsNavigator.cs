@@ -146,7 +146,7 @@ namespace Raven.Studio.Features.Documents
 	                return new[]
 	                {
 		                new PathSegment {Name = "Documents", Url = "/documents"},
-		                new PathSegment {Name = collectionName, Url = "/collections?name=" + collectionName}
+		                new PathSegment {Name = collectionName, Url = "/documents?collection=" + collectionName}
 	                };
                 }
             }
@@ -156,6 +156,7 @@ namespace Raven.Studio.Features.Documents
 		        new PathSegment {Name = "Indexes", Url = "/Indexes"},
 		        new PathSegment {Name = indexName, Url = "/indexes/" + indexName},
 		        new PathSegment {Name = "Query", Url = "/query/" + indexName},
+		        new PathSegment {Name = "Reporting", Url = "/reporting/" + indexName},
 	        };
         }
 

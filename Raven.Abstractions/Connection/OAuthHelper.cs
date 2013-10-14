@@ -14,6 +14,8 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Abstractions.Connection
 {
+	using Raven.Abstractions.Util.Encryptors;
+
 	public static class OAuthHelper
 	{
 		public static class Keys
@@ -39,10 +41,8 @@ namespace Raven.Abstractions.Connection
 		private static KeyDerivationAlgorithmProvider sha1;
 #else
 		[ThreadStatic]
-		private static SHA1 sha1;
+		private static IHashEncryptor sha1;
 #endif
-		
-
 
 		/**** Cryptography *****/
 
@@ -55,8 +55,8 @@ namespace Raven.Abstractions.Connection
 			throw new NotImplementedException("WinRT...");
 #else
 			if (sha1 == null)
-				sha1 = new SHA1Managed();
-			var hash = sha1.ComputeHash(bytes);
+				sha1 = Encryptor.Current.CreateHash();
+			var hash = sha1.Compute20(bytes);
 			return BytesToString(hash);
 #endif
 		}
@@ -69,15 +69,12 @@ namespace Raven.Abstractions.Connection
 #if NETFX_CORE
 			throw new NotImplementedException("WinRT...");
 #else
-			using (var aesKeyGen = new AesManaged
-			{
-				KeySize = 256,
-			})
+			using (var aesKeyGen = Encryptor.Current.CreateSymmetrical(keySize: 256))
 			{
 				aesKeyGen.GenerateKey();
 				aesKeyGen.GenerateIV();
 
-				results.AddRange(AddEncryptedKeyAndIv(exponent, modulus, aesKeyGen));
+				results.AddRange(AddEncryptedKeyAndIv(exponent, modulus, aesKeyGen.Key, aesKeyGen.IV));
 
 				using (var encryptor = aesKeyGen.CreateEncryptor())
 				{
@@ -90,29 +87,20 @@ namespace Raven.Abstractions.Connection
 		}
 
 #if SILVERLIGHT
-		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, AesManaged aesKeyGen)
+		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, byte[] key, byte[] iv)
 		{
-			var rsa = new RSA.RSACrypto();
-			rsa.ImportParameters(new RSA.RSAParameters
-			{
-				E = exponent,
-				N = modulus
-			});
-			return rsa.Encrypt(aesKeyGen.Key.Concat(aesKeyGen.IV).ToArray());
+			// http://msdn.microsoft.com/en-us/library/cc265159(v=vs.95).aspx
+			// http://msdn.microsoft.com/en-us/library/system.security.cryptography.rsacryptoserviceprovider(v=vs.95).aspx
+			return null;
 		}
 #elif NETFX_CORE
 		
 #else
-		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, AesManaged aesKeyGen)
+		private static byte[] AddEncryptedKeyAndIv(byte[] exponent, byte[] modulus, byte[] key, byte[] iv)
 		{
-			using (var rsa = new RSACryptoServiceProvider())
+			using (var rsa = Encryptor.Current.CreateAsymmetrical(exponent, modulus))
 			{
-				rsa.ImportParameters(new RSAParameters
-				{
-					Exponent = exponent,
-					Modulus = modulus
-				});
-				return rsa.Encrypt(aesKeyGen.Key.Concat(aesKeyGen.IV).ToArray(), true);
+				return rsa.Encrypt(key.Concat(iv).ToArray(), true);
 			}
 		}
 #endif

@@ -73,6 +73,9 @@ namespace Raven.Abstractions.Linq
 		{
 			switch (binder.Name)
 			{
+				case "GetValueOrDefault":
+					result = new DynamicNullObject {IsExplicitNull = true};
+					return true;
 				case "Count":
 					result = 0;
 					return true;
@@ -104,6 +107,26 @@ namespace Raven.Abstractions.Linq
 			return GetEnumerator();
 		}
 
+		public static bool operator >=(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator <=(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator >(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
+		public static bool operator <(DynamicNullObject left, object right)
+		{
+			return false;
+		}
+
 		public static bool operator ==(DynamicNullObject left, object right)
 		{
 			return right == null || right is DynamicNullObject;
@@ -116,6 +139,18 @@ namespace Raven.Abstractions.Linq
 
 		public static implicit operator double(DynamicNullObject o) { return double.NaN; }
 		public static implicit operator double?(DynamicNullObject o) { return null; }
+
+		public static implicit operator int(DynamicNullObject o) { return 0; }
+		public static implicit operator int?(DynamicNullObject o) { return null; }
+
+		public static implicit operator long(DynamicNullObject o) { return 0; }
+		public static implicit operator long?(DynamicNullObject o) { return null; }
+
+		public static implicit operator decimal(DynamicNullObject o) { return 0; }
+		public static implicit operator decimal?(DynamicNullObject o) { return null; }
+
+		public static implicit operator float(DynamicNullObject o) { return float.NaN; }
+		public static implicit operator float?(DynamicNullObject o) { return null; }
 	
 		public override bool Equals(object obj)
 		{

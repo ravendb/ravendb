@@ -8,12 +8,14 @@ namespace Raven.Database.Impl
 	{
 		private readonly ILog log;
 		private readonly string errorMsg;
+		private readonly LogLevel level;
 		readonly ConcurrentSet<Exception> list = new ConcurrentSet<Exception>();
 
-		public ExceptionAggregator(ILog log, string errorMsg)
+		public ExceptionAggregator(ILog log, string errorMsg, LogLevel level = LogLevel.Error)
 		{
 			this.log = log;
 			this.errorMsg = errorMsg;
+			this.level = level;
 		}
 
 		public void Execute(Action action)
@@ -34,7 +36,7 @@ namespace Raven.Database.Impl
 				return;
 
 			var aggregateException = new AggregateException(list);
-			log.ErrorException(errorMsg, aggregateException);
+			log.Log(level, () => errorMsg, aggregateException);
 			throw aggregateException;
 		}
 	}

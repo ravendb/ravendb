@@ -14,33 +14,9 @@
                          xmlns:controls="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls"
                          d:DesignWidth="640" d:DesignHeight="480"
 						 Title="SmugglerTaskSectionView Page"
-						 d:DataContext="{d:DesignInstance tasks:SmugglerTaskSectionModel}">
+						 d:DataContext="{d:DesignInstance tasks:ExportTaskSectionModel}">
 
-	<Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}">
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="*" />
-		</Grid.RowDefinitions>
-		
-		<Border Background="{StaticResource Brush_HeaderBackground}"
-                BorderBrush="{StaticResource Brush_HeaderBorder}"
-                BorderThickness="1,1,1,0"
-                CornerRadius="4,4,0,0">
-		</Border>
-		<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
-			<Image Style="{StaticResource Style_Image_PageHeader}" Source="{StaticResource Image_Tasks_Small}"/>
-			<TextBlock Text="{Binding Name}"
-					   Style="{StaticResource Style_Text_Header}" />
-		</StackPanel>
-
-		<TextBlock FontSize="13"
-				   TextWrapping="Wrap"
-				   Grid.Row="1"
-				   Text="{Binding Description}"
-				   Margin="0,10" />
-
-		<controls:TabControl Grid.Row="2">
+		<controls:TabControl >
 			<controls:TabItem Header="General">
 				<Grid>
 					<Grid.RowDefinitions>
@@ -66,51 +42,12 @@
 								  IsChecked="{Binding IncludeTransforms.Value, Mode=TwoWay}" 
 								  VerticalAlignment="Center" Margin="5" Content=" Include Transformers"/>
 
-					</StackPanel>
-					<StackPanel Orientation="Horizontal" Grid.Row="1">
-						<Button Content="{Binding Name}"
-								Width="Auto"
-								HorizontalAlignment="Left"
-								Command="{Binding Action}"
-								IsEnabled="{Binding CanExecute.Value}"
-								Padding="8,4"
-								MinWidth="100"
-								Margin="0,10" />
-						<TextBlock Text="{Binding TaskStatus, Converter={StaticResource TaskStatusConverter},Mode=TwoWay}" 
-								   VerticalAlignment="Center" 
-								   FontSize="21.333" 
-								   Margin="100,0,0,0"/>
 
-						<ProgressBar Margin="5" 
-									 Width="200" 
-									 Height="25"
-									 FlowDirection="LeftToRight" 
-									 IsIndeterminate="{Binding StatusBarActive}" 
-									 Visibility="{Binding TaskStatus, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Started'}"/>
-					</StackPanel>
-					<ItemsControl ItemsSource="{Binding Output}"
-								  Grid.Row="2"
-								  BorderBrush="#FFEAE7E4"
-								  Background="{StaticResource Brush_SubtleBackground2}"
-								  BorderThickness="1"
-								  Margin="0,10,0,0">
-						<ItemsControl.Template>
-							<ControlTemplate TargetType="ItemsControl">
-								<ScrollViewer x:Name="ScrollViewer"
-											  VerticalScrollBarVisibility="Auto"
-											  BorderThickness="{TemplateBinding BorderThickness}"
-											  BorderBrush="{TemplateBinding BorderBrush}"
-											  Background="{TemplateBinding Background}">
-									<ItemsPresenter />
-								</ScrollViewer>
-							</ControlTemplate>
-						</ItemsControl.Template>
-						<ItemsControl.ItemTemplate>
-							<DataTemplate>
-								<TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource RedIfError}}" />
-							</DataTemplate>
-						</ItemsControl.ItemTemplate>
-					</ItemsControl>
+                    <CheckBox Grid.Column="0" 
+								  IsChecked="{Binding RemoveAnalyzers.Value, Mode=TwoWay}" 
+								  VerticalAlignment="Center" Margin="5" Content=" Remove Analyzers"/>
+
+                </StackPanel>
 				</Grid>
 			</controls:TabItem>
 
@@ -185,7 +122,7 @@
 
 							<CheckBox Grid.Column="0" 
 									  IsChecked="{Binding Options.Value.ShouldExcludeExpired, Mode=TwoWay}" 
-									  VerticalAlignment="Center" Margin="5" Content=" Should Exlude Expired"/>
+									  VerticalAlignment="Center" Margin="5" Content="Exclude Expired Documents"/>
 
 						<Grid>
 							<Grid.ColumnDefinitions>
@@ -197,32 +134,71 @@
 						</Grid>
 					</StackPanel>
 
-					<Grid Grid.Column="2" Margin="5">
+					<Grid Grid.Column="2" Margin="5" x:Name="CollectionGrid">
 						<Grid.RowDefinitions>
 							<RowDefinition Height="Auto"/>
 							<RowDefinition Height="Auto"/>
 						</Grid.RowDefinitions>
 						
 						<CheckBox IsChecked="{Binding UseCollections.Value, Mode=TwoWay}"
-								  Content=" Use Collections"/>
+								  Margin="5"
+								  Content="Include only documents from specific collections (from the list below)"
+								  VerticalAlignment="Center"/>
 						
-						<ListBox Visibility="{Binding UseCollections.Value, Mode=OneWay, Converter={StaticResource BooleanToVisibility}}"
-								 ItemsSource="{Binding Collections}"
+						<ListBox ItemsSource="{Binding Collections}"
 								 MaxHeight="156"
 								 Grid.Row="1">
 							<ListBox.ItemTemplate>
 								<DataTemplate>
-									<CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" Content="{Binding Name}"/>
+									<CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" Content="{Binding Name}"
+											  IsEnabled="{Binding DataContext.UseCollections.Value, ElementName=CollectionGrid}"/>
 								</DataTemplate>
 							</ListBox.ItemTemplate>
 						</ListBox>
 					</Grid>
-					
-					<TextBlock Grid.Row="1" Grid.ColumnSpan="4" Text="Transform Script:"></TextBlock>
-					<Editors:JsonEditor  Grid.Row="2" Grid.ColumnSpan="4"  BoundDocument="{Binding Script}" Margin="5"/>
+
+				<StackPanel Orientation="Horizontal" Grid.Row="1" Grid.ColumnSpan="4" >
+					<Image Source="{StaticResource Image_Info_Tiny}" Stretch="Uniform" Width="14" VerticalAlignment="Top">
+						<i:Interaction.Behaviors>
+							<behaviors:ShowPopupWhilstMouseOver>
+								<behaviors:ShowPopupWhilstMouseOver.Popup>
+									<Popup>
+										<ContentControl Style="{StaticResource Style_InfoToolTip}">
+											<RichTextBlock MaxWidth="370" Margin="5">
+												<Paragraph>Scripts are written in JScript.</Paragraph>
+												<Paragraph>Example:
+													<LineBreak/>
+													<Span FontFamily="Consolas">
+														<LineBreak/>
+														<Span Foreground="Blue">var</Span> company = LoadDocument(
+														<Span Foreground="Blue">this</Span> .Company);
+														<LineBreak/>
+														<Span Foreground="Blue">if</Span> (company == null)
+														<Span Foreground="Blue">return;</Span>
+														<LineBreak/>
+														company.Orders = { Count:
+														<Span Foreground="Blue">this</Span> .Count, Total:
+														<Span Foreground="Blue">this</Span> .Total };
+														<LineBreak/>
+														PutDocument(
+														<Span Foreground="Blue">this</Span> .Company, company);
+													</Span>
+													<LineBreak/>
+												</Paragraph>
+											</RichTextBlock>
+										</ContentControl>
+									</Popup>
+								</behaviors:ShowPopupWhilstMouseOver.Popup>
+							</behaviors:ShowPopupWhilstMouseOver>
+						</i:Interaction.Behaviors>
+					</Image>
+
+					<TextBlock Text="Transform Script:" Style="{StaticResource Style_TextBlock_PagePartHeader}"></TextBlock>
+
+				</StackPanel>
+				<Editors:JsonEditor  Grid.Row="2" Grid.ColumnSpan="4"  BoundDocument="{Binding Script}" Margin="5"/>
 				</Grid>
 			
 			</controls:TabItem>
 		</controls:TabControl>
-	</Grid>
 </infrastructure:PageView>

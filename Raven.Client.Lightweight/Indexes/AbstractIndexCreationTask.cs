@@ -86,6 +86,24 @@ namespace Raven.Client.Indexes
 		}
 
 		/// <summary>
+		/// Generate field with values that can be used for spatial clustering on the lat/lng coordinates
+		/// </summary>
+		public object SpatialClustering(string fieldName, double? lat, double? lng)
+		{
+			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+		}
+
+		/// <summary>
+		/// Generate field with values that can be used for spatial clustering on the lat/lng coordinates
+		/// </summary>
+		public object SpatialClustering(string fieldName, double? lat, double? lng,
+		                                                 int minPrecision,
+		                                                 int maxPrecision)
+		{
+			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
+		}
+
+		/// <summary>
 		/// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
 		/// </summary>
 		/// <param name="fieldName">The field name, will be used for querying</param>
@@ -97,6 +115,7 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This method is provided solely to allow query translation on the server");
 		}
 
+		[Obsolete]
 		protected class SpatialIndex
 		{
 			/// <summary>
@@ -105,6 +124,7 @@ namespace Raven.Client.Indexes
 			/// <param name="fieldName">The field name, will be used for querying</param>
 			/// <param name="lat">Latitude</param>
 			/// <param name="lng">Longitude</param>
+			[Obsolete("Use SpatialGenerate instead.")]
 			public static object Generate(string fieldName, double? lat, double? lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
@@ -115,6 +135,7 @@ namespace Raven.Client.Indexes
 			/// </summary>
 			/// <param name="lat">Latitude</param>
 			/// <param name="lng">Longitude</param>
+			[Obsolete("Use SpatialGenerate instead.")]
 			public static object Generate(double? lat, double? lng)
 			{
 				throw new NotSupportedException("This method is provided solely to allow query translation on the server");
@@ -242,21 +263,30 @@ namespace Raven.Client.Indexes
 			{
 				Indexes = Indexes,
 				IndexesStrings = IndexesStrings,
+                SortOptionsStrings = IndexSortOptionsStrings,
 				SortOptions = IndexSortOptions,
 				Analyzers = Analyzers,
 				AnalyzersStrings = AnalyzersStrings,
 				Map = Map,
 				Reduce = Reduce,
+#pragma warning disable 612,618
 				TransformResults = TransformResults,
+#pragma warning restore 612,618
 				Stores = Stores,
 				StoresStrings = StoresStrings,
 				Suggestions = IndexSuggestions,
 				TermVectors = TermVectors,
 				TermVectorsStrings = TermVectorsStrings,
 				SpatialIndexes = SpatialIndexes,
-				SpatialIndexesStrings = SpatialIndexesStrings
+				SpatialIndexesStrings = SpatialIndexesStrings,
+				MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
 			}.ToIndexDefinition(Conventions);
 		}
+
+		/// <summary>
+		/// Max number of allowed indexing outputs per one source document
+		/// </summary>
+		public int? MaxIndexOutputsPerDocument { get; set; }
 
 		public override bool IsMapReduce
 		{
@@ -323,6 +353,14 @@ namespace Raven.Client.Indexes
 			throw new NotSupportedException("This can only be run on the server side");
 		}
 #endif
+
+		/// <summary>
+		/// Loads the specifed document during the indexing process
+		/// </summary>
+		public object LoadAttachmentForIndexing(string key)
+		{
+			throw new NotSupportedException("This can only be run on the server side");
+		}
 
 		/// <summary>
 		/// Loads the specifed document during the indexing process

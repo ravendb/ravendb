@@ -78,9 +78,10 @@ namespace Raven.Tests.Bugs
 					session.Query<UsersByName.Result, UsersByName>().Customize(x => x.WaitForNonStaleResults()).ToList();
 				}
 
+                var indexId = store.DocumentDatabase.GetIndexDefinition(index.IndexName).IndexId;
 				storage.Batch(accessor =>
 				{
-					var stats = accessor.MapReduce.GetKeysStats(index.IndexName, 0, 10).ToList();
+					var stats = accessor.MapReduce.GetKeysStats(indexId, 0, 10).ToList();
 					Assert.Equal(2, stats.Count);
 					Assert.Equal(2, stats.First(x => x.Key == "Adam").Count);
 					Assert.Equal(1, stats.First(x => x.Key == "John").Count);
@@ -95,7 +96,7 @@ namespace Raven.Tests.Bugs
 
 				storage.Batch(accessor =>
 				{
-					var stats = accessor.MapReduce.GetKeysStats(index.IndexName, 0, 10).ToList();
+					var stats = accessor.MapReduce.GetKeysStats(indexId, 0, 10).ToList();
 					Assert.Equal(2, stats.Count);
 					Assert.Equal(1, stats.First(x => x.Key == "Adam").Count);
 					Assert.Equal(1, stats.First(x => x.Key == "John").Count);

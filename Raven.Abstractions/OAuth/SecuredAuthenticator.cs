@@ -34,7 +34,7 @@ namespace Raven.Abstractions.OAuth
 			}
 			if (apiKey != null)
 			{
-#if NETFX_CORE
+#if NETFX_CORE || SILVERLIGHT
 				e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
 #else
 				e.Request.Headers["Has-Api-Key"] = "true";
@@ -82,10 +82,7 @@ namespace Raven.Abstractions.OAuth
 						{
 							{OAuthHelper.Keys.APIKeyName, apiKeyName},
 							{OAuthHelper.Keys.Challenge, challenge},
-							{
-								OAuthHelper.Keys.Response,
-								OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge, apiSecret))
-							}
+							{OAuthHelper.Keys.Response, OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge, apiSecret))}
 						}))
 					}
 				});

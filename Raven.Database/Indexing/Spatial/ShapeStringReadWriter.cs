@@ -32,8 +32,8 @@ namespace Raven.Database.Indexing.Spatial
 		private NtsShapeReadWriter CreateNtsShapeReadWriter(SpatialOptions opt, NtsSpatialContext ntsContext)
 		{
 			if (opt.Type == SpatialFieldType.Cartesian)
-				return new NtsShapeReadWriter(ntsContext);
-			return geoShapeReadWriter ?? (geoShapeReadWriter = new NtsShapeReadWriter(ntsContext));
+				return new NtsShapeReadWriter(ntsContext, false);
+			return geoShapeReadWriter ?? (geoShapeReadWriter = new NtsShapeReadWriter(ntsContext, false));
 		}
 
 		public Shape ReadShape(string shape, SpatialUnits? unitOverride = null)

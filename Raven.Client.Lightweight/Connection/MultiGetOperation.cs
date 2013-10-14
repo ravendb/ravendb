@@ -1,16 +1,11 @@
 using System;
-#if SILVERLIGHT || NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
 using System.Collections.Specialized;
-#endif
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
 #elif NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
 using System.Linq;
-using System.Net;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection.Profiling;
@@ -125,7 +120,8 @@ namespace Raven.Client.Connection
 				}
 			}
 
-			if (hasCachedRequests == false || convention.DisableProfiling)
+			if (hasCachedRequests == false || convention.DisableProfiling ||
+                holdProfilingInformation.ProfilingInformation.Requests.Count == 0)
 				return responses;
 
 			var lastRequest = holdProfilingInformation.ProfilingInformation.Requests.Last();

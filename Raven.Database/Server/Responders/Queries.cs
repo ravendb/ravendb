@@ -35,7 +35,7 @@ namespace Raven.Database.Server.Responders
 			var result = new MultiLoadResult();
 			var loadedIds = new HashSet<string>();
 			var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
-		    var transformer = context.Request.QueryString["transformer"];
+			var transformer = context.Request.QueryString["transformer"] ?? context.Request.QueryString["resultTransformer"];
 
 		    var queryInputs = context.ExtractQueryInputs();
             
@@ -75,7 +75,7 @@ namespace Raven.Database.Server.Responders
 			});
 
 			Etag computedEtag;
-
+            
 			using (var md5 = MD5.Create())
 			{
 				var computeHash = md5.ComputeHash(includedEtags.ToArray());

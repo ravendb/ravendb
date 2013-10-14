@@ -18,7 +18,7 @@ namespace Raven.Abstractions.Connection
 	/// </summary>
 	public class WebRequestEventArgs : EventArgs
 	{
-#if NETFX_CORE
+#if NETFX_CORE || SILVERLIGHT
 
 		/// <summary>
 		/// Gets or sets the web request.

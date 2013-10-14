@@ -33,6 +33,7 @@ ClientBin/
 *.g.3.5.csproj
 *.g.csproj
 *.g.4.csproj
+*.g.45.csproj
 *.docstates
 StyleCop.Cache
 *.dotCover
@@ -45,5 +46,5 @@ Raven.Web/NLog.config
 *.*crunch*
 Testresults
 /Raven.Client.MvcIntegration/Content/ravendb-profiler.min.js
-
+/*.shfbproj_Fitzchak
 Raven.Studio/Settings.dat

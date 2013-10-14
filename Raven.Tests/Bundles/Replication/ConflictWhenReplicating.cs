@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Threading;
+using Raven.Abstractions.Data;
 using Raven.Client.Exceptions;
 using Raven.Tests.Bundles.Versioning;
 using Xunit;
@@ -194,6 +195,73 @@ namespace Raven.Tests.Bundles.Replication
 			});
 
 			Assert.Equal("Conflict detected on companies/1, conflict must be resolved before the document will be accessible", conflictException.Message);
+		}
+
+		[Fact]
+		public void Tombstone_deleted_after_conflict_resolved()
+		{
+			var store1 = CreateStore();
+			var store2 = CreateStore();
+			using (var session = store1.OpenSession())
+			{
+				session.Store(new Company());
+				session.SaveChanges();
+			}
+
+			TellFirstInstanceToReplicateToSecondInstance();
+			Company company = null;
+			for (int i = 0; i < RetriesCount; i++)
+			{
+				using (var session = store2.OpenSession())
+				{
+					company = session.Load<Company>("companies/1");
+					if (company != null)
+						break;
+					Thread.Sleep(100);
+				}
+			}
+			Assert.NotNull(company);
+
+			//Stop replication
+			store1.DatabaseCommands.Delete(Constants.RavenReplicationDestinations, null);
+			Assert.Null(store1.DatabaseCommands.Get(Constants.RavenReplicationDestinations));
+
+			using (var session = store1.OpenSession())
+			{
+				company = session.Load<Company>("companies/1");
+				company.Name = "Raven";
+				session.SaveChanges();
+			}
+
+			using (var session = store2.OpenSession())
+			{
+				session.Delete(session.Load<Company>("companies/1"));
+				session.SaveChanges();
+			}
+			servers[1].Database.TransactionalStorage.Batch(
+			accessor => Assert.NotNull(accessor.Lists.Read("Raven/Replication/Docs/Tombstones", "companies/1")));
+	
+			TellFirstInstanceToReplicateToSecondInstance();
+
+			Assert.Throws<ConflictException>(() =>
+			{
+				for (int i = 0; i < RetriesCount; i++)
+				{
+					using (var session = store2.OpenSession())
+					{
+						session.Load<Company>("companies/1");
+						Thread.Sleep(100);
+					}
+				}
+			});
+
+			using (var session = store2.OpenSession())
+			{
+				session.Store(new Company(), "companies/1");
+				session.SaveChanges();
+			}
+			servers[1].Database.TransactionalStorage.Batch(
+				accessor => Assert.Null(accessor.Lists.Read("Raven/Replication/Docs/Tombstones", "companies/1")));
 		}
 	}
 }

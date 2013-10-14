@@ -294,7 +294,9 @@ namespace Raven.Client.Linq
 		public IDocumentQuery<TResult> ToLuceneQuery<TResult>(Expression expression)
 		{
 			var processor = GetQueryProviderProcessor<T>();
-			return (IDocumentQuery<TResult>)processor.GetLuceneQueryFor(expression);
+			var result = (IDocumentQuery<TResult>)processor.GetLuceneQueryFor(expression);
+			result.SetResultTransformer(ResultTransformer);
+			return result;
 		}
 	}
 }

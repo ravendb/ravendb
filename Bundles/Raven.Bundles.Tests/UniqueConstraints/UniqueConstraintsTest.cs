@@ -45,4 +45,14 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 
 		public string Name { get; set; }
 	}
+
+    public class GenericNamedValue<T>
+    {
+        public string Id { get; set; }
+
+        [UniqueConstraint]
+        public string Name { get; set; }
+
+        public T Value { get; set; }
+    }
 }

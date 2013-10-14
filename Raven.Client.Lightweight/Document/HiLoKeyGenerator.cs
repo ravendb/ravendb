@@ -72,6 +72,7 @@ namespace Raven.Client.Document
 		{
 #if !NETFX_CORE
 			using (new TransactionScope(TransactionScopeOption.Suppress))
+			using (RavenTransactionAccessor.SupressExplicitRavenTransaction())
 			using (databaseCommands.ForceReadFromMaster())
 			{
 #endif

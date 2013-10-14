@@ -180,7 +180,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public IAsyncDocumentQuery<T> WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
 		{
-			//WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+			WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
 			return this;
 		}
 
@@ -479,7 +479,7 @@ namespace Raven.Client.Document
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
 		public IAsyncDocumentQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
-			OrderBy(propertySelectors.Select(x => GetMemberQueryPath(x)).ToArray());
+			OrderBy(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
 			return this;
 		}
 
@@ -503,7 +503,7 @@ namespace Raven.Client.Document
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
 		public IAsyncDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
-			OrderByDescending(propertySelectors.Select(GetMemberQueryPath).ToArray());
+			OrderByDescending(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
 			return this;
 		}		
 
@@ -709,23 +709,34 @@ namespace Raven.Client.Document
 											start = start,
 											timeout = timeout,
 											cutoff = cutoff,
+											cutoffEtag = cutoffEtag,
+											queryStats = queryStats,
 											theWaitForNonStaleResults = theWaitForNonStaleResults,
 											sortByHints = sortByHints,
 											orderByFields = orderByFields,
-											groupByFields = groupByFields,
-											aggregationOp = aggregationOp,
+											isDistinct = isDistinct,
+											negate = negate,
 											transformResultsFunc = transformResultsFunc,
 											includes = new HashSet<string>(includes),
-											negate = negate,
-											queryOperation = queryOperation,
-											queryStats = queryStats,
-											rootTypes = {typeof(T)},
+											isSpatialQuery = isSpatialQuery,
+											spatialFieldName = spatialFieldName,
+											queryShape = queryShape,
+											spatialRelation = spatialRelation,
+											spatialUnits = spatialUnits,
+											distanceErrorPct = distanceErrorPct,
+											rootTypes = { typeof(T) },
+											defaultField = defaultField,
+											beforeQueryExecutionAction = beforeQueryExecutionAction,
+											afterQueryExecutedCallback = afterQueryExecutedCallback,
 											highlightedFields = new List<HighlightedField>(highlightedFields),
 											highlighterPreTags = highlighterPreTags,
 											highlighterPostTags = highlighterPostTags,
+											resultsTransformer = resultsTransformer,
+											queryInputs = queryInputs,
 											disableEntitiesTracking = disableEntitiesTracking,
 											disableCaching = disableCaching,
-											resultsTransformer = resultsTransformer,
+											lastEquality = lastEquality,
+											shouldExplainScores = shouldExplainScores
 										};
 			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return asyncDocumentQuery;
@@ -750,6 +761,24 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AddOrder(string fieldName, bool descending)
 		{
 			AddOrder(fieldName, descending);
+			return this;
+		}
+
+		/// <summary>
+		/// Adds an ordering by score for a specific field to the query
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScore()
+		{
+			AddOrder(Constants.TemporaryScoreValue, false);
+			return this;
+		}
+
+		/// <summary>
+		/// Adds an ordering by score descending for a specific field to the query
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScoreDescending()
+		{
+			AddOrder(Constants.TemporaryScoreValue, true);
 			return this;
 		}
 
@@ -835,18 +864,6 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		///<summary>
-		///  Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		///<remarks>
-		///  This is only valid on dynamic indexes queries
-		///</remarks>
-		public IAsyncDocumentQuery<T> GroupBy<TValue>(AggregationOperation aggregationOperation, params Expression<Func<T, TValue>>[] groupPropertySelectors)
-		{
-			GroupBy(aggregationOperation, groupPropertySelectors.Select(GetMemberQueryPath).ToArray());
-			return this;
-		}
-
 		/// <summary>
 		/// Partition the query so we can intersect different parts of the query
 		/// across different index entries.
@@ -854,18 +871,6 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Intersect()
 		{
 			Intersect();
-			return this;
-		}
-
-		///<summary>
-		/// Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		/// <remarks>
-		/// This is only valid on dynamic indexes queries
-		/// </remarks>
-		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.GroupBy(AggregationOperation aggregationOperation, params string[] fieldsToGroupBy)
-		{
-			GroupBy(aggregationOperation, fieldsToGroupBy);
 			return this;
 		}
 
@@ -902,14 +907,26 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IAsyncDocumentQuery<T>  IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Distinct()
+		{
+			Distinct();
+			return this;
+		}
+
 		/// <summary>
 		/// Sets a transformer to use after executing a query
 		/// </summary>
 		/// <param name="resultsTransformer"></param>
-		public IAsyncDocumentQuery<T> SetResultTransformer(string resultsTransformer)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
 		{
-	        this.resultsTransformer = resultsTransformer;
+		    base.SetResultTransformer(resultsTransformer);
 	        return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ExplainScores()
+		{
+			shouldExplainScores = true;
+			return this;
 		}
 	}
 }

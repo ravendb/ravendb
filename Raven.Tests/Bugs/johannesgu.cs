@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs
 			 {
 				 var tx = new TransactionInformation
 				 {
-					 Id = Guid.NewGuid(),
+                     Id = Guid.NewGuid().ToString(),
 					 Timeout = TimeSpan.FromMinutes(1)
 				 };
 

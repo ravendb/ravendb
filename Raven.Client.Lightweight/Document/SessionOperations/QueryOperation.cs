@@ -23,7 +23,7 @@ namespace Raven.Client.Document.SessionOperations
 		private readonly HashSet<KeyValuePair<string, Type>> sortByHints;
 		private readonly Action<string, string> setOperationHeaders;
 		private readonly bool waitForNonStaleResults;
-		private readonly bool disableEntitiesTracking;
+		private bool disableEntitiesTracking;
 		private readonly TimeSpan timeout;
 		private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults;
 		private readonly HashSet<string> includes;
@@ -152,7 +152,13 @@ namespace Raven.Client.Document.SessionOperations
 			return transformResults(indexQuery, list.Cast<object>()).Cast<T>().ToList();
 		}
 
-	    public T Deserialize<T>(RavenJObject result)
+		public bool DisableEntitiesTracking
+		{
+			get { return disableEntitiesTracking; }
+			set { disableEntitiesTracking = value; }
+		}
+
+		public T Deserialize<T>(RavenJObject result)
 		{
 			var metadata = result.Value<RavenJObject>("@metadata");
 			if ((projectionFields == null || projectionFields.Length <= 0)  &&
@@ -182,7 +188,7 @@ namespace Raven.Client.Document.SessionOperations
 				return (T)(object)documentId;
 			}
 
-			HandleInternalMetadata(result);
+			sessionOperations.HandleInternalMetadata(result);
 
 			var deserializedResult = DeserializedResult<T>(result);
 
@@ -230,38 +236,6 @@ namespace Raven.Client.Document.SessionOperations
 			}
 
 			return (T) jsonSerializer.Deserialize(ravenJTokenReader, resultType);
-		}
-
-		private void HandleInternalMetadata(RavenJObject result)
-		{
-			// Implant a property with "id" value ... if not exists
-			var metadata = result.Value<RavenJObject>("@metadata");
-			if (metadata == null || string.IsNullOrEmpty(metadata.Value<string>("@id")))
-			{
-				// if the item has metadata, then nested items will not have it, so we can skip recursing down
-				foreach (var nested in result.Select(property => property.Value))
-				{
-					var jObject = nested as RavenJObject;
-					if (jObject != null)
-						HandleInternalMetadata(jObject);
-					var jArray = nested as RavenJArray;
-					if (jArray == null)
-						continue;
-					foreach (var item in jArray.OfType<RavenJObject>())
-					{
-						HandleInternalMetadata(item);
-					}
-				}
-				return;
-			}
-
-			var entityName = metadata.Value<string>(Constants.RavenEntityName);
-
-			var idPropName = sessionOperations.Conventions.FindIdentityPropertyNameFromEntityName(entityName);
-			if (result.ContainsKey(idPropName))
-				return;
-
-			result[idPropName] = new RavenJValue(metadata.Value<string>("@id"));
 		}
 
 		public void ForceResult(QueryResult result)

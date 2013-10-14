@@ -13,7 +13,7 @@ using Raven.Abstractions.Smuggler;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public abstract class SmugglerTaskSectionModel : TaskSectionModel
+	public abstract class SmugglerTaskSectionModel<T> : TaskSectionModel<T> where T : DatabaseTask
 	{
 		protected static ISyntaxLanguage JScriptLanguage { get; set; }
 
@@ -28,6 +28,7 @@ namespace Raven.Studio.Features.Tasks
 			Filters = new ObservableCollection<FilterSetting>();
 			IncludeDocuments = new Observable<bool> {Value = true};
 			IncludeIndexes = new Observable<bool> {Value = true};
+            RemoveAnalyzers = new Observable<bool>{Value = false};
 			IncludeAttachments = new Observable<bool>();
 			IncludeTransforms = new Observable<bool> {Value = true};
 			UseCollections = new Observable<bool>();
@@ -52,6 +53,7 @@ namespace Raven.Studio.Features.Tasks
 		public Observable<bool> IncludeIndexes { get; set; }
 		public Observable<bool> IncludeAttachments { get; set; }
 		public Observable<bool> IncludeTransforms { get; set; }
+        public Observable<bool> RemoveAnalyzers { get; set; }
 		public Observable<bool> UseCollections { get; set; }
 		public List<CollectionSelectionInfo> Collections { get; set; } 
 
@@ -67,7 +69,7 @@ namespace Raven.Studio.Features.Tasks
 			}
 		}
 
-		public ICommand DeleteFilter
+        public ICommand DeleteFilter
 		{
 			get
 			{
@@ -96,6 +98,31 @@ namespace Raven.Studio.Features.Tasks
 			get { return Script.CurrentSnapshot.Text; }
 			set { Script.SetText(value); }
 		}
+
+	    protected List<FilterSetting> GetFilterSettings()
+	    {
+	        return Filters.Concat(GetCollectionFilterSettings()).ToList();
+	    }
+
+	    private IEnumerable<FilterSetting> GetCollectionFilterSettings()
+	    {
+	        if (!UseCollections.Value)
+	        {
+	            return new List<FilterSetting>();
+	        }
+	        else
+	        {
+				return new List<FilterSetting>
+				{
+					new FilterSetting
+					{
+						Path = "@metadata.Raven-Entity-Name",
+						Values = new List<string>(Collections.Where(c => c.Selected).Select(info => info.Name).ToList()),
+						ShouldMatch = true
+					}
+				};
+	        }
+	    }
 	}
 
 	public class CollectionSelectionInfo

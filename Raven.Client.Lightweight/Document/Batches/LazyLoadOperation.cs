@@ -1,16 +1,12 @@
 ﻿using System;
+using System.Collections.Specialized;
+using System.Linq;
 using System.Net;
 using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document.SessionOperations;
 using Raven.Client.Shard;
-#if SILVERLIGHT || NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
-using System.Collections.Specialized;
-#endif
 using Raven.Json.Linq;
-using System.Linq;
 
 namespace Raven.Client.Document.Batches
 {
@@ -18,24 +14,26 @@ namespace Raven.Client.Document.Batches
 	{
 		private readonly string key;
 		private readonly LoadOperation loadOperation;
+		private readonly Action<RavenJObject> handleInternalMetadata;
 
-		public LazyLoadOperation(string key, LoadOperation loadOperation)
+		public LazyLoadOperation(string key, LoadOperation loadOperation, Action<RavenJObject> handleInternalMetadata)
 		{
 			this.key = key;
 			this.loadOperation = loadOperation;
+			this.handleInternalMetadata = handleInternalMetadata;
 		}
 
 		public GetRequest CreateRequest()
 		{
-			return new GetRequest
-			{
-				Url = "/docs/" + Uri.EscapeDataString(key)
-			};
+			string path = "/docs/" + Uri.EscapeDataString(key);
+
+			return new GetRequest {Url = path};
 		}
 
 		public object Result { get; set; }
 
 		public bool RequiresRetry { get; set; }
+
 #if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
 		{
@@ -64,7 +62,6 @@ namespace Raven.Client.Document.Batches
 
 		private void HandleResponse(JsonDocument jsonDocument)
 		{
-
 			RequiresRetry = loadOperation.SetResult(jsonDocument);
 			if (RequiresRetry == false)
 				Result = loadOperation.Complete<T>();
@@ -84,6 +81,24 @@ namespace Raven.Client.Document.Batches
 
 		public void HandleEmbeddedResponse(object result)
 		{
+			var multiLoadResult = result as MultiLoadResult;
+			if (multiLoadResult != null)
+			{
+				var resultItem = multiLoadResult.Results.FirstOrDefault();
+				var ravenJObject = resultItem.Value<RavenJArray>("$values")
+				                             .Cast<RavenJObject>()
+											 .Select(value =>
+											 {
+												 if (handleInternalMetadata != null)
+													 handleInternalMetadata(value);
+												 return value;
+											 })
+				                             .FirstOrDefault();
+				var jsonDocument = SerializationHelper.RavenJObjectToJsonDocument(ravenJObject);
+				HandleResponse(jsonDocument);
+				return;
+			}
+
 			HandleResponse((JsonDocument) result);
 		}
 	}

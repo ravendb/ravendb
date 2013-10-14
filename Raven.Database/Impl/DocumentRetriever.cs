@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Raven.Abstractions.Logging;
+using Raven.Database.Impl.DTC;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -35,6 +36,9 @@ namespace Raven.Database.Impl
 		private readonly InFlightTransactionalState inFlightTransactionalState;
 		private readonly Dictionary<string, RavenJToken> queryInputs;
 	    private readonly HashSet<string> itemsToInclude;
+		private bool disableCache;
+
+	    public Etag Etag = Etag.Empty;
 
 		public DocumentRetriever(IStorageActionsAccessor actions, OrderedPartCollection<AbstractReadTrigger> triggers, 
 			InFlightTransactionalState inFlightTransactionalState,
@@ -201,14 +205,22 @@ namespace Raven.Database.Impl
 			if (key == null)
 				return null;
 			JsonDocument doc;
-			if (cache.TryGetValue(key, out doc))
+			if (disableCache == false && cache.TryGetValue(key, out doc))
 				return doc;
 			doc = actions.Documents.DocumentByKey(key, null);
 			EnsureIdInMetadata(doc);
 			var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, key);
 			if (nonAuthoritativeInformationBehavior != null)
 				doc = nonAuthoritativeInformationBehavior(doc);
-			cache[key] = doc;
+			if(disableCache == false)
+				cache[key] = doc;
+			if (cache.Count > 2048)
+			{
+				// we are probably doing a stream here, no point in trying to cache things, we might be
+				// going through the entire db here!
+				disableCache = true;
+				cache.Clear();
+			}
 			return doc;
 		}
 
@@ -312,14 +324,21 @@ namespace Raven.Database.Impl
 		{
 			var document = GetDocumentWithCaching(id);
 			if (document == null)
-				return new DynamicNullObject();
+			{
+			    Etag = Etag.HashWith(Etag.Empty);
+			    return new DynamicNullObject();
+			}
+		    Etag = Etag.HashWith(document.Etag);
 			return new DynamicJsonObject(document.ToJson());
 		}
 
 		public dynamic Load(object maybeId)
 		{
 			if (maybeId == null || maybeId is DynamicNullObject)
-				return new DynamicNullObject();
+			{
+			    Etag = Etag.HashWith(Etag.Empty);
+			    return new DynamicNullObject();
+			}
 			var id = maybeId as string;
 			if (id != null)
 				return Load(id);

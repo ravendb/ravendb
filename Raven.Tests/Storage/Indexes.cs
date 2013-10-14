@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading;
 using Raven.Database.Indexing;
 using Xunit;
 using System.Linq;
@@ -17,9 +18,9 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
+				tx.Batch(mutator => mutator.Indexing.AddIndex(555, false));
 				tx.Batch( viewer =>
-					Assert.True(viewer.Indexing.GetIndexesStats().Any(x => x.Name == "def")));
+					Assert.True(viewer.Indexing.GetIndexesStats().Any(x => x.Id == 555)));
 			}
 		}
 
@@ -28,13 +29,17 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
+				tx.Batch(mutator => mutator.Indexing.AddIndex(555, false));
 				tx.Batch(viewer =>
-					Assert.True(viewer.Indexing.GetIndexesStats().Any(x => x.Name == "def")));
+					Assert.True(viewer.Indexing.GetIndexesStats().Any(x => x.Id == 555)));
 
-				tx.Batch(mutator => mutator.Indexing.DeleteIndex("def"));
+				tx.Batch(mutator =>
+				{
+					mutator.Indexing.PrepareIndexForDeletion(555);
+					mutator.Indexing.DeleteIndex(555, new CancellationToken());
+				});
 				tx.Batch(viewer =>
-					Assert.False(viewer.Indexing.GetIndexesStats().Any(x => x.Name == "def")));
+					Assert.False(viewer.Indexing.GetIndexesStats().Any(x => x.Id == 555)));
 			}
 		}
 
@@ -44,9 +49,9 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
+				tx.Batch(mutator => mutator.Indexing.AddIndex(555, false));
 				tx.Batch(viewer =>
-					Assert.Equal("def", viewer.Indexing.GetFailureRate("def").Name));
+					Assert.Equal(555, viewer.Indexing.GetFailureRate(555).Id));
 			}
 		}
 
@@ -55,17 +60,13 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
-				tx.Batch(mutator=>
+				tx.Batch(mutator => mutator.Indexing.AddIndex(555, false));
+				tx.Batch(mutator=> mutator.Indexing.UpdateIndexingStats(555, new IndexingWorkStats
 				{
-					mutator.Indexing.UpdateIndexingStats("def", new IndexingWorkStats
-					{
-						IndexingAttempts = 1
-					});
-
-				});
+					IndexingAttempts = 1
+				}));
 				tx.Batch(viewer =>
-					Assert.Equal(1, viewer.Indexing.GetFailureRate("def").Attempts));
+					Assert.Equal(1, viewer.Indexing.GetFailureRate(555).Attempts));
 			}
 		}
 
@@ -74,27 +75,21 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
-				tx.Batch(mutator =>
+				tx.Batch(mutator => mutator.Indexing.AddIndex(555, false));
+				tx.Batch(mutator => mutator.Indexing.UpdateIndexingStats(555, new IndexingWorkStats
 				{
-					mutator.Indexing.UpdateIndexingStats("def", new IndexingWorkStats
-					{
-						IndexingAttempts = 1
-					});
-				});
+					IndexingAttempts = 1
+				}));
 				tx.Batch(viewer =>
-					Assert.Equal(1, viewer.Indexing.GetFailureRate("def").Attempts));
+					Assert.Equal(1, viewer.Indexing.GetFailureRate(555).Attempts));
 
-				tx.Batch(mutator =>
+				tx.Batch(mutator => mutator.Indexing.UpdateIndexingStats(555, new IndexingWorkStats
 				{
-					mutator.Indexing.UpdateIndexingStats("def", new IndexingWorkStats
-					{
-						IndexingAttempts = -1
-					});
-				});
+					IndexingAttempts = -1
+				}));
 
 				tx.Batch(viewer =>
-					Assert.Equal(0, viewer.Indexing.GetFailureRate("def").Attempts));
+					Assert.Equal(0, viewer.Indexing.GetFailureRate(555).Attempts));
 			}
 		}
 
@@ -104,17 +99,13 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
-				tx.Batch(mutator =>
+				tx.Batch(mutator => mutator.Indexing.AddIndex(555, false));
+				tx.Batch(mutator => mutator.Indexing.UpdateIndexingStats(555, new IndexingWorkStats
 				{
-					mutator.Indexing.UpdateIndexingStats("def", new IndexingWorkStats
-					{
-						IndexingErrors = 1
-					});
-
-				});
+					IndexingErrors = 1
+				}));
 				tx.Batch(viewer =>
-					Assert.Equal(1, viewer.Indexing.GetFailureRate("def").Errors));
+					Assert.Equal(1, viewer.Indexing.GetFailureRate(555).Errors));
 			}
 		}
 
@@ -123,16 +114,13 @@ namespace Raven.Tests.Storage
 		{
 			using (var tx = NewTransactionalStorage())
 			{
-				tx.Batch(mutator => mutator.Indexing.AddIndex("def", false));
-				tx.Batch(mutator =>
+				tx.Batch(mutator => mutator.Indexing.AddIndex(555, false));
+				tx.Batch(mutator => mutator.Indexing.UpdateIndexingStats(555, new IndexingWorkStats
 				{
-					mutator.Indexing.UpdateIndexingStats("def", new IndexingWorkStats
-					{
-						IndexingSuccesses = 1
-					});
-				});
+					IndexingSuccesses = 1
+				}));
 				tx.Batch(viewer =>
-					Assert.Equal(1, viewer.Indexing.GetFailureRate("def").Successes));
+					Assert.Equal(1, viewer.Indexing.GetFailureRate(555).Successes));
 			}
 		}
 	}

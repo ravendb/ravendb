@@ -2,6 +2,7 @@
 using System.Net;
 using System.Security;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -44,6 +45,35 @@ namespace Raven.Abstractions.Extensions
 			             .Unwrap();
 		}
 
+#if !SILVERLIGHT && !NETFX_CORE
+        public static Task<T> MaterializeBadRequestAsException<T>(this Task<T> parent)
+        {
+            return parent.ContinueWith(t =>
+            {
+                if (t.Exception != null)
+                {
+                    var we = t.Exception.ExtractSingleInnerException() as WebException;
+                    if (we == null || we.Response == null || ((HttpWebResponse)we.Response).StatusCode != HttpStatusCode.BadRequest)
+                        throw t.Exception;
+
+                    var error = we.TryReadErrorResponseObject(new {Message = ""});
+                    if (error != null && error.Message != null)
+                    {
+                        throw new BadRequestException(error.Message);
+                    }
+                    else
+                    {
+                        throw t.Exception;
+                    }
+                }
+                else
+                {
+                    return t.Result;
+                }
+            });
+        }
+#endif
+
 		public static async Task<bool> WaitWithTimeout(this Task task, TimeSpan? timeout)
 		{
 			if (timeout == null)
@@ -51,7 +81,11 @@ namespace Raven.Abstractions.Extensions
 				await task;
 				return true;
 			}
+#if SILVERLIGHT
 			if (task == await TaskEx.WhenAny(task, TaskEx.Delay(timeout.Value)))
+#else
+			if (task == await Task.WhenAny(task, Task.Delay(timeout.Value)))
+#endif
 				return true;
 			return false;
 		}

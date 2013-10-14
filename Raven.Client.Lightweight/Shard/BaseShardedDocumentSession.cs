@@ -192,12 +192,17 @@ namespace Raven.Client.Shard
 
 		#region Transaction methods (not supported)
 
-		public override void Commit(Guid txId)
+		public override void Commit(string txId)
 		{
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
 
-		public override void Rollback(Guid txId)
+		public override void Rollback(string txId)
+		{
+			throw new NotSupportedException("DTC support is handled via the internal document stores");
+		}
+
+		public void PrepareTransaction(string txId)
 		{
 			throw new NotSupportedException("DTC support is handled via the internal document stores");
 		}
@@ -237,12 +242,17 @@ namespace Raven.Client.Shard
 			var highlightings = new RavenQueryHighlightings();
 #if !SILVERLIGHT
 			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, null, isMapReduce);
-			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, null, isMapReduce);
 #else
 			var provider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, null, isMapReduce);
-			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, isMapReduce);
 #endif
+			return CreateRavenQueryInspector(indexName, isMapReduce, provider, ravenQueryStatistics, highlightings);
 		}
+
+		protected abstract RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce,
+		                                                                              RavenQueryProvider<T> provider,
+		                                                                              RavenQueryStatistics
+			                                                                              ravenQueryStatistics,
+		                                                                              RavenQueryHighlightings highlightings);
 
 		/// <summary>
 		/// Query RavenDB dynamically using LINQ
@@ -256,7 +266,9 @@ namespace Raven.Client.Shard
 				indexName += "/" + Conventions.GetTypeTagName(typeof(T));
 			}
 			return Query<T>(indexName)
+#pragma warning disable 612,618
 				.Customize(x => x.TransformResults((query, results) => results.Take(query.PageSize)));
+#pragma warning restore 612,618
 		}
 
 		/// <summary>
@@ -272,7 +284,9 @@ namespace Raven.Client.Shard
 				Conventions = Conventions
 			};
 			return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce)
+#pragma warning disable 612,618
 				.Customize(x => x.TransformResults(indexCreator.ApplyReduceFunctionIfExists));
+#pragma warning restore 612,618
 		}
 
 		/// <summary>

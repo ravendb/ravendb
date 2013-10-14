@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Database.Server;
+using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Xunit;
 using Raven.Client.Extensions;
@@ -20,7 +21,10 @@ namespace Raven.Tests.Security.OAuth
 		protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
 		{
 			configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
-		}
+
+
+            Authentication.EnableOnce();
+        }
 
 		protected override void ModifyServer(Server.RavenDbServer ravenDbServer)
 		{
@@ -50,7 +54,7 @@ namespace Raven.Tests.Security.OAuth
 			const string id = "test/1";
 			const string name = "My name";
 
-			using (var store = NewRemoteDocumentStore())
+			using (var store = NewRemoteDocumentStore(enableAuthentication: true))
 			{
 				using (var session = store.OpenSession())
 				{
@@ -68,7 +72,7 @@ namespace Raven.Tests.Security.OAuth
 		[Fact]
 		public void CanAuthAsAdminAgainstTenantDb()
 		{
-			using (var server = GetNewServer())
+			using (var server = GetNewServer(enableAuthentication: true))
 			{
 
 				server.Database.Put("Raven/ApiKeys/sysadmin", null, RavenJObject.FromObject(new ApiKeyDefinition
@@ -101,7 +105,7 @@ namespace Raven.Tests.Security.OAuth
 					Conventions = {FailoverBehavior = FailoverBehavior.FailImmediately}
 				}.Initialize())
 				{
-					store.DatabaseCommands.EnsureDatabaseExists("test");
+					store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("test");
 				}
 
 				using (var store = new DocumentStore

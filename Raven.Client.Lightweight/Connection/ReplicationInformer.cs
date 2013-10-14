@@ -16,6 +16,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -27,6 +28,7 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
@@ -55,6 +57,11 @@ namespace Raven.Client.Connection
 		{
 			get { return replicationDestinations; }
 		}
+
+		/// <summary>
+		/// Urls of failover servers set manually in config file or when document store was initialized
+		/// </summary>
+		public string[] FailoverUrls { get; internal set; }
 
 		/// <summary>
 		/// Gets the replication destinations.
@@ -137,7 +144,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private class FailureCounter
+		public class FailureCounter
 		{
 			public long Value;
 			public DateTime LastCheck;
@@ -235,7 +242,7 @@ namespace Raven.Client.Connection
 												conventions.FailoverBehavior);
 		}
 
-		private FailureCounter GetHolder(string operationUrl)
+		protected FailureCounter GetHolder(string operationUrl)
 		{
 #if !SILVERLIGHT
 			return failureCounts.GetOrAdd(operationUrl, new FailureCounter());
@@ -308,6 +315,9 @@ namespace Raven.Client.Connection
 				return commands.DirectGetAsync(commands.Url, RavenReplicationDestinations).ContinueWith((Task<JsonDocument> getTask) =>
 				{
 					JsonDocument document;
+
+					var fromFailoverUrls = false;
+
 					if (getTask.Status == TaskStatus.RanToCompletion)
 					{
 						document = getTask.Result;
@@ -317,8 +327,28 @@ namespace Raven.Client.Connection
 					{
 						log.ErrorException("Could not contact master for new replication information", getTask.Exception);
 						document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+
+						if (document == null)
+						{
+							if (FailoverUrls != null && FailoverUrls.Length > 0) // try to use configured failover servers
+							{
+								var failoverServers = new ReplicationDocument { Destinations = new List<ReplicationDestination>() };
+
+								foreach (var failoverUrl in FailoverUrls)
+								{
+									failoverServers.Destinations.Add(new ReplicationDestination()
+									{
+										Url = failoverUrl
+									});
 					}
 
+								document = new JsonDocument();
+								document.DataAsJson = RavenJObject.FromObject(failoverServers);
+
+								fromFailoverUrls = true;
+							}
+						}
+					}
 
 					if (IsInvalidDestinationsDocument(document))
 					{
@@ -326,6 +356,7 @@ namespace Raven.Client.Connection
 						return;
 					}
 
+					if(!fromFailoverUrls)
 					ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
 
 					UpdateReplicationInformationFromDocument(document);
@@ -342,6 +373,8 @@ namespace Raven.Client.Connection
 				var serverHash = ServerHash.GetServerHash(commands.Url);
 
 				JsonDocument document;
+				var fromFailoverUrls = false;
+
 				try
 				{
 					document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
@@ -351,13 +384,35 @@ namespace Raven.Client.Connection
 				{
 					log.ErrorException("Could not contact master for new replication information", e);
 					document = ReplicationInformerLocalCache.TryLoadReplicationInformationFromLocalCache(serverHash);
+
+					if (document == null)
+					{
+						if (FailoverUrls != null && FailoverUrls.Length > 0) // try to use configured failover servers
+						{
+							var failoverServers = new ReplicationDocument {Destinations = new List<ReplicationDestination>()};
+
+							foreach (var failoverUrl in FailoverUrls)
+							{
+								failoverServers.Destinations.Add(new ReplicationDestination()
+								{
+									Url = failoverUrl
+								});
+							}
+
+							document = new JsonDocument();
+							document.DataAsJson = RavenJObject.FromObject(failoverServers);
+						}
+					}
 				}
+					
+				
 				if (document == null)
 				{
 					lastReplicationUpdate = SystemTime.UtcNow; // checked and not found
 					return;
 				}
 
+				if(!fromFailoverUrls)
 				ReplicationInformerLocalCache.TrySavingReplicationInformationToLocalCache(serverHash, document);
 
 				UpdateReplicationInformationFromDocument(document);
@@ -452,7 +507,7 @@ namespace Raven.Client.Connection
 
 			if (ShouldExecuteUsing(primaryUrl, currentRequest, method, true))
 			{
-				if (TryOperation(operation, primaryUrl, !timeoutThrown, out result, out timeoutThrown))
+				if (TryOperation(operation, primaryUrl, !timeoutThrown && localReplicationDestinations.Count > 0, out result, out timeoutThrown))
 					return result;
 				if (!timeoutThrown && IsFirstFailure(primaryUrl) &&
 				    TryOperation(operation, primaryUrl, localReplicationDestinations.Count > 0, out result, out timeoutThrown))
@@ -691,6 +746,11 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 				e = aggregateException.ExtractSingleInnerException();
 			}
 
+			var ere = e as ErrorResponseException ?? e.InnerException as ErrorResponseException;
+		    if (ere != null)
+		    {
+			    return httpStatusCode.Contains(ere.StatusCode);
+		    }
 			var webException = (e as WebException) ?? (e.InnerException as WebException);
 			if (webException != null)
 			{
@@ -711,6 +771,13 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			{
 				e = aggregateException.ExtractSingleInnerException();
 			}
+
+		    var ere = e as ErrorResponseException ?? e.InnerException as ErrorResponseException;
+		    if (ere != null)
+		    {
+		        if (IsServerDown(ere.Response.StatusCode, out timeout))
+		            return true;
+		    }
 
 			var webException = (e as WebException) ?? (e.InnerException as WebException);
 			if (webException != null)
@@ -735,16 +802,8 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 				var httpWebResponse = webException.Response as HttpWebResponse;
 				if (httpWebResponse != null)
 				{
-					switch (httpWebResponse.StatusCode)
-					{
-						case HttpStatusCode.RequestTimeout:
-						case HttpStatusCode.GatewayTimeout:
-							timeout = true;
-							return true;
-						case HttpStatusCode.BadGateway:
-						case HttpStatusCode.ServiceUnavailable:
-							return true;
-					}
+					if (IsServerDown(httpWebResponse.StatusCode, out timeout))
+                        return true;
 				}
 			}
 			return
@@ -754,7 +813,23 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 				e.InnerException is IOException;
 		}
 
-		public virtual void Dispose()
+        private static bool IsServerDown(HttpStatusCode httpStatusCode, out bool timeout)
+	    {
+            timeout = false;
+            switch (httpStatusCode)
+	        {
+	            case HttpStatusCode.RequestTimeout:
+	            case HttpStatusCode.GatewayTimeout:
+	                timeout = true;
+	                return true;
+	            case HttpStatusCode.BadGateway:
+	            case HttpStatusCode.ServiceUnavailable:
+	                return true;
+	        }
+	        return false;
+	    }
+
+	    public virtual void Dispose()
 		{
 			var replicationInformationTaskCopy = refreshReplicationInformationTask;
 			if (replicationInformationTaskCopy != null)

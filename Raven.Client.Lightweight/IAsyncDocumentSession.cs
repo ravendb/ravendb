@@ -10,11 +10,10 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Client.Linq;
 
 namespace Raven.Client
 {
-	using Linq;
-
 	/// <summary>
 	/// Interface for document session using async approaches
 	/// </summary>
@@ -79,6 +78,22 @@ namespace Raven.Client
 		void Delete<T>(T entity);
 
 		/// <summary>
+		/// Begins the a load that will use the specified results transformer against the specified id
+		/// </summary>
+		Task<T> LoadAsync<TTransformer, T>(string id) where TTransformer : AbstractTransformerCreationTask, new();
+
+
+		/// <summary>
+		/// Begins the a load that will use the specified results transformer against the specified id
+		/// </summary>
+		Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
+
+		/// <summary>
+		/// Begins the a load that will use the specified results transformer against the specified id
+		/// </summary>
+		Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new();
+
+		/// <summary>
 		/// Begins the async load operation
 		/// </summary>
 		/// <param name="id">The id.</param>
@@ -91,6 +106,11 @@ namespace Raven.Client
 		/// <param name="ids">The ids.</param>
 		/// <returns></returns>
 		Task<T[]> LoadAsync<T>(params string[] ids);
+
+		/// <summary>
+		/// Begins the async load operation
+		/// </summary>
+		Task<T[]> LoadAsync<TTransformer, T>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new();
 
 		/// <summary>
 		/// Begins the async multi-load operation

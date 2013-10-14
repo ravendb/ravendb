@@ -30,6 +30,8 @@ namespace Raven.Storage.Managed
 		private readonly OrderedPartCollection<AbstractDocumentCodec> documentCodecs;
 		private readonly IDocumentCacher documentCacher;
 
+		private readonly Dictionary<Etag, Etag> etagTouches = new Dictionary<Etag, Etag>();
+
 		public DocumentsStorageActions(TableStorage storage,
 			IUuidGenerator generator,
 			OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
@@ -86,7 +88,7 @@ namespace Raven.Storage.Managed
 		{
 			return storage.Documents["ByKey"].SkipTo(new RavenJObject { { "key", idPrefix } })
 				.Skip(start)
-				.TakeWhile(x => x.Value<string>("key").StartsWith(idPrefix))
+				.TakeWhile(x => x.Value<string>("key").StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase))
 				.Select(result => DocumentByKey(result.Value<string>("key"), null))
 				.Take(take);
 		}
@@ -124,7 +126,7 @@ namespace Raven.Storage.Managed
 			var resultInTx = storage.DocumentsModifiedByTransactions.Read(new RavenJObject { { "key", key } });
 			if (transactionInformation != null && resultInTx != null)
 			{
-				if (new Guid(resultInTx.Key.Value<byte[]>("txId")) == transactionInformation.Id)
+				if (resultInTx.Key.Value<string>("txId") == transactionInformation.Id)
 				{
 					if (resultInTx.Key.Value<bool>("deleted"))
 						return null;
@@ -165,23 +167,8 @@ namespace Raven.Storage.Managed
 				Key = readResult.Key.Value<string>("key"),
 				Etag = etag,
 				Metadata = metadata,
-				LastModified = readResult.Key.Value<DateTime>("modified"),
-				NonAuthoritativeInformation = IsModifiedByTransaction(resultInTx)
+				LastModified = readResult.Key.Value<DateTime>("modified")
 			});
-		}
-
-		private bool IsModifiedByTransaction(Table.ReadResult resultInTx)
-		{
-			if (resultInTx == null)
-				return false;
-			var txId = resultInTx.Key.Value<byte[]>("txId");
-			var tx = storage.Transactions.Read(new RavenJObject
-			{
-				{"txId", txId}
-			});
-			if (tx == null)
-				return false;
-			return SystemTime.UtcNow < tx.Key.Value<DateTime>("timeout");
 		}
 
 		private Tuple<MemoryStream, RavenJObject, int> ReadMetadata(string key, Etag etag, Func<byte[]> getData, out RavenJObject metadata)
@@ -263,6 +250,8 @@ namespace Raven.Storage.Managed
 			var addDocumentResult = AddDocument(key, documentByKey.Etag, documentByKey.DataAsJson, documentByKey.Metadata);
 			preTouchEtag = documentByKey.Etag;
 			afterTouchEtag = addDocumentResult.Etag;
+
+			etagTouches.Add(preTouchEtag, afterTouchEtag);
 		}
 
 		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
@@ -278,10 +267,15 @@ namespace Raven.Storage.Managed
 				stream.Flush();
 			}
 
-			var isUpdate = storage.Documents.Read(new RavenJObject { { "key", key } }) != null;
+			var readResult = storage.Documents.Read(new RavenJObject {{"key", key}});
+			var isUpdate = readResult != null;
 
 			if (isUpdate && checkForUpdates == false)
 				throw new InvalidOperationException("Cannot insert document " + key + " because it already exists");
+
+			Etag existingEtag = null;
+			if(isUpdate)
+				existingEtag = Etag.Parse(readResult.Key.Value<byte[]>("etag"));
 
 			var newEtag = generator.CreateSequentialUuid(UuidType.Documents);
 			var savedAt = SystemTime.UtcNow;
@@ -298,6 +292,7 @@ namespace Raven.Storage.Managed
 			return new AddDocumentResult
 			{
 				Etag = newEtag,
+				PrevEtag = existingEtag,
 				SavedAt = savedAt,
 				Updated = isUpdate
 			};
@@ -341,6 +336,7 @@ namespace Raven.Storage.Managed
 			return new AddDocumentResult
 			{
 				Etag = newEtag,
+				PrevEtag = existingEtag,
 				SavedAt = savedAt,
 				Updated = isUpdate
 			};
@@ -370,6 +366,12 @@ namespace Raven.Storage.Managed
 
 				if (etag != null)
 				{
+					Etag next;
+					while (etagTouches.TryGetValue(etag, out next))
+					{
+						etag = next;
+					}
+
 					if (existingEtag != etag)
 					{
 						if (etag == Etag.Empty)

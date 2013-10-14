@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -98,7 +99,6 @@ namespace Raven.Database.Extensions
 				PageSize = context.GetPageSize(maxPageSize),
 				SkipTransformResults = context.GetSkipTransformResults(),
 				FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
-				GroupBy = context.Request.QueryString.GetValues("groupBy"),
 				DefaultField = context.Request.QueryString["defaultField"],
 
 				DefaultOperator =
@@ -106,7 +106,7 @@ namespace Raven.Database.Extensions
 						QueryOperator.And :
 						QueryOperator.Or,
 
-				AggregationOperation = context.GetAggregationOperation(),
+				IsDistinct = context.IsDistinct(),
 				SortedFields = context.Request.QueryString.GetValues("sort")
 					.EmptyIfNull()
 					.Select(x => new SortedField(x))
@@ -115,8 +115,9 @@ namespace Raven.Database.Extensions
 				HighlighterPreTags = context.Request.QueryString.GetValues("preTags"),
 				HighlighterPostTags = context.Request.QueryString.GetValues("postTags"),
                 ResultsTransformer = context.Request.QueryString["resultsTransformer"],
-                QueryInputs = context.ExtractQueryInputs()
-                };
+                QueryInputs = context.ExtractQueryInputs(),
+				ExplainScores = context.GetExplainScores()
+            };
 
 	
 			var spatialFieldName = context.Request.QueryString["spatialField"] ?? Constants.DefaultSpatialFieldName;
@@ -124,7 +125,7 @@ namespace Raven.Database.Extensions
 			SpatialUnits units;
 			bool unitsSpecified = Enum.TryParse(context.Request.QueryString["spatialUnits"], out units);
 			double distanceErrorPct;
-			if (!double.TryParse(context.Request.QueryString["distErrPrc"], out distanceErrorPct))
+			if (!double.TryParse(context.Request.QueryString["distErrPrc"], NumberStyles.Any, CultureInfo.InvariantCulture, out distanceErrorPct))
 				distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
 			SpatialRelation spatialRelation;
 			if (Enum.TryParse(context.Request.QueryString["spatialRelation"], false, out spatialRelation)

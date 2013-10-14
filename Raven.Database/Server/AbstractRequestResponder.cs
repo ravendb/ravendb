@@ -88,7 +88,7 @@ namespace Raven.Database.Server
 				throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss'");
 			return new TransactionInformation
 			{
-				Id = new Guid(parts[0]),
+				Id = parts[0],
 				Timeout = TimeSpan.ParseExact(parts[1], "c", CultureInfo.InvariantCulture)
 			};
 		}
@@ -103,7 +103,7 @@ namespace Raven.Database.Server
 			}
 
 			DateTime primaryServerLastCheck;
-			if(DateTime.TryParse(clientPrimaryServerLastCheck, out primaryServerLastCheck) == false)
+			if(DateTime.TryParse(clientPrimaryServerLastCheck, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out primaryServerLastCheck) == false)
 			{
 				return;
 			}

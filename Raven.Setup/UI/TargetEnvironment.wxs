@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <UI>
+      <Dialog Id="TargetEnvironment" Width="370" Height="270" Title="[ProductName] Setup">
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next" />
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel" />
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>{\WixUI_Font_Title}Target environment</Text>
+        </Control>
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>Select the environment that you are targetting</Text>
+        </Control>
+        <Control Type="RadioButtonGroup" Property="RAVEN_TARGET_ENVIRONMENT" Id="SelectType" Width="190" Height="46" X="98" Y="90">
+          <RadioButtonGroup Property="RAVEN_TARGET_ENVIRONMENT">
+            <RadioButton Text="Production / Test" Value="PRODUCTION" Height="17" Width="190" X="0" Y="0" />
+            <RadioButton Text="Development" Value="DEVELOPMENT" Height="17" Width="190" X="0" Y="25" />
+          </RadioButtonGroup>
+        </Control>
+        <Control Type="Text" Id="notes" Width="111" Height="12" X="18" Y="176">
+          <Text>Selected environment info:</Text>
+        </Control>
+        
+        <Control Type="Text" Id="prod_note1" Width="328" Height="10" X="20" Y="191">
+          <Text>- Requires a valid license file as the next installation step</Text>
+          <Condition Action="show"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "PRODUCTION"]]></Condition>
+          <Condition Action="hide"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "DEVELOPMENT"]]></Condition>
+        </Control>
+        <Control Type="Text" Id="prod_note2" Width="328" Height="10" X="20" Y="202">
+          <Text>- Database can be secured and require authentication</Text>
+          <Condition Action="show"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "PRODUCTION"]]></Condition>
+          <Condition Action="hide"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "DEVELOPMENT"]]></Condition>
+        </Control>
+        <Control Type="Text" Id="prod_note3" Width="328" Height="10" X="20" Y="214">
+          <Text>- Features will be available accordingly to your license options</Text>
+          <Condition Action="show"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "PRODUCTION"]]></Condition>
+          <Condition Action="hide"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "DEVELOPMENT"]]></Condition>
+        </Control>
+
+        <Control Type="Text" Id="dev_note1" Width="328" Height="10" X="20" Y="191">
+          <Text>- No license file required (development mode only, not for production usage)</Text>
+          <Condition Action="show"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "DEVELOPMENT"]]></Condition>
+          <Condition Action="hide"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "PRODUCTION"]]></Condition>
+        </Control>
+        <Control Type="Text" Id="dev_note2" Width="328" Height="10" X="20" Y="202">
+          <Text>- No authentication support - the database will be open to all</Text>
+          <Condition Action="show"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "DEVELOPMENT"]]></Condition>
+          <Condition Action="hide"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "PRODUCTION"]]></Condition>
+        </Control>
+        <Control Type="Text" Id="dev_note3" Width="328" Height="10" X="20" Y="214">
+          <Text>- All other features will be available, and there are no limits</Text>
+          <Condition Action="show"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "DEVELOPMENT"]]></Condition>
+          <Condition Action="hide"><![CDATA[RAVEN_TARGET_ENVIRONMENT = "PRODUCTION"]]></Condition>
+        </Control>
+      </Dialog>
+    </UI>
+  </Fragment>
+</Wix>

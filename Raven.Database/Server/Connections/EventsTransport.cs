@@ -4,21 +4,18 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.Server.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.Connections
 {
-	public class EventsTransport
+	public class EventsTransport : IDisposable
 	{
-		private readonly Timer heartbeat;
-
 		private readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		private readonly IHttpContext context;
@@ -28,7 +25,8 @@ namespace Raven.Database.Server.Connections
 
 		public event Action Disconnected = delegate { };
 
-		private Task initTask;
+		private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
+		private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();
 
 		public EventsTransport(IHttpContext context)
 		{
@@ -38,117 +36,51 @@ namespace Raven.Database.Server.Connections
 			if (string.IsNullOrEmpty(Id))
 				throw new ArgumentException("Id is mandatory");
 
-			heartbeat = new Timer(Heartbeat);
-
 		}
 
-		public Task ProcessAsync()
+		public async Task ProcessAsync()
 		{
 			context.Response.ContentType = "text/event-stream";
-			initTask = SendAsync(new { Type = "Initialized" });
-			Thread.MemoryBarrier();
-
-			heartbeat.Change(TimeSpan.Zero, TimeSpan.FromSeconds(10));
-
-			return initTask;
-
-		}
-
-		private void Heartbeat(object _)
-		{
-			try
+			while (Connected)
 			{
-				SendAsync(new { Type = "Heartbeat" });
-			}
-			catch (Exception)
-			{
-				// we expect and should recover from errors
-			}
-		}
-
-		public Task SendAsync(object data)
-		{
-			try
-			{
-				if (initTask != null && // may be the very first time? 
-					initTask.IsCompleted == false) // still pending on this...
-					return initTask.ContinueWith(_ => SendAsync(data)).Unwrap();
-
-
-				return context.Response.WriteAsync("data: " +
-				                                   JsonConvert.SerializeObject(data, Formatting.None, new EtagJsonConverter()) +
-				                                   "\r\n\r\n")
-				              .ContinueWith(DisconnectOnError);
-			}
-			catch (Exception e)
-			{
-				DisconnectBecauseOfAnError(e);
-				throw;
-			}
-		}
-
-		public Task SendManyAsync(IEnumerable<object> data)
-		{
-			try
-			{
-				if (initTask.IsCompleted == false)
-					return initTask.ContinueWith(_ => SendManyAsync(data)).Unwrap();
-
-				var sb = new StringBuilder();
-
-				foreach (var o in data)
+				try
 				{
-					sb.Append("data: ")
-						.Append(JsonConvert.SerializeObject(o))
-						.Append("\r\n\r\n");
+					var result = await manualResetEvent.WaitAsync(5000);
+					if (Connected == false)
+						return;
+
+					if (result == false)
+					{
+						await context.Response.WriteAsync("data: { 'Type': 'Heartbeat' }\r\n\r\n");
+						continue;
+					}
+					manualResetEvent.Reset();
+					object msg;
+					while (msgs.TryDequeue(out msg))
+					{
+						var obj = JsonConvert.SerializeObject(msg, Formatting.None, new EtagJsonConverter());
+						await context.Response.WriteAsync("data: " + obj + "\r\n\r\n");
+					}
 				}
-
-				return context.Response.WriteAsync(sb.ToString())
-					.ContinueWith(DisconnectOnError);
-			}
-			catch (Exception e)
-			{
-				DisconnectBecauseOfAnError(e);
-				throw;
+				catch (Exception e)
+				{
+					Connected = false;
+					log.DebugException("Error when using events transport", e);
+					Disconnected();
+				}
 			}
 		}
 
-		private void DisconnectOnError(Task prev)
+		public void Dispose()
 		{
-			prev.ContinueWith(task =>
-			{
-				if (task.IsFaulted == false)
-					return;
-				DisconnectBecauseOfAnError(task.Exception);
-			});
-		}
-
-		private void DisconnectBecauseOfAnError(Exception exception)
-		{
-			log.DebugException("Error when using events transport", exception);
-
-			try
-			{
-				Disconnect();
-			}
-			catch (ObjectDisposedException)
-			{
-				// already closed?
-			}
-			catch (Exception e)
-			{
-				log.DebugException("Could not close transport", e);
-			}
-		}
-
-		public void Disconnect()
-		{
-			if (heartbeat != null)
-				heartbeat.Dispose();
-
 			Connected = false;
-			Disconnected();
-			context.FinalizeResponse();
+			manualResetEvent.Set();
+		}
+
+		public void SendAsync(object msg)
+		{
+			msgs.Enqueue(msg);
+			manualResetEvent.Set();
 		}
 	}
 }

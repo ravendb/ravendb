@@ -42,6 +42,11 @@ namespace Raven.Database.Util
 		{
 			return dic.TryGetValue(key, out value);
 		}
+
+        public bool TryRemove(TKey key, out TValue value)
+        {
+            return dic.TryRemove(key, out value);
+        }
 		
 	}
 }

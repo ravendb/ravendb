@@ -86,6 +86,43 @@ namespace Raven.Abstractions.Data
 			if (handler != null) handler(this, new PropertyChangedEventArgs(propertyName));
 		}
 
+		protected bool Equals(ApiKeyDefinition other)
+		{
+			var baseEqual =  string.Equals(Id, other.Id) && Enabled.Equals(other.Enabled) && Equals(Databases.Count, other.Databases.Count) &&
+			       string.Equals(Secret, other.Secret) && string.Equals(Name, other.Name);
+
+			if(baseEqual == false)
+				return false;
+
+			for (int i = 0; i < Databases.Count; i++)
+			{
+				if (Databases[i].Equals(other.Databases[i]) == false)
+					return false;
+			}
+
+			return true;
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((ApiKeyDefinition) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				var hashCode = (Id != null ? Id.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ Enabled.GetHashCode();
+				hashCode = (hashCode*397) ^ (Databases != null ? Databases.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (secret != null ? secret.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ (name != null ? name.GetHashCode() : 0);
+				return hashCode;
+			}
+		}
 	}
 
 	public class DatabaseAccess
@@ -93,5 +130,29 @@ namespace Raven.Abstractions.Data
 		public bool Admin { get; set; }
 		public string TenantId { get; set; }
 		public bool ReadOnly { get; set; }
+
+		protected bool Equals(DatabaseAccess other)
+		{
+			return Admin.Equals(other.Admin) && string.Equals(TenantId, other.TenantId) && ReadOnly.Equals(other.ReadOnly);
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((DatabaseAccess) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				var hashCode = Admin.GetHashCode();
+				hashCode = (hashCode*397) ^ (TenantId != null ? TenantId.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ ReadOnly.GetHashCode();
+				return hashCode;
+			}
+		}
 	}
 }

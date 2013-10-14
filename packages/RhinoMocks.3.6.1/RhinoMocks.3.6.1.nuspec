@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>RhinoMocks</id>
+    <version>3.6.1</version>
+    <title>RhinoMocks</title>
+    <authors>ayende</authors>
+    <owners>ayende</owners>
+    <licenseUrl>http://hibernatingrhinos.com/open-source/rhino-mocks</licenseUrl>
+    <projectUrl>http://hibernatingrhinos.com/open-source/rhino-mocks</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Rhino Mocks is using Castle Dynamic Proxy (http://www.castleproject.org/dynamicproxy/index.html) to handle proxying the types it needs to mock.
+The Dynamic Proxy project has been invaluable resource and made creating Rhino Mocks possible.</description>
+    <summary>Rhino Mocks is using Castle Dynamic Proxy (http://www.castleproject.org/dynamicproxy/index.html) to handle proxying the types it needs to mock.
+The Dynamic Proxy project has been invaluable resource a</summary>
+    <tags>tdd mocking mocks unittest unittesting</tags>
+  </metadata>
+</package>

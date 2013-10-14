@@ -5,6 +5,7 @@
 
 	<Converters:IntParamEqualityConverter x:Key="IntParamEquality"/>
 	<Converters:VisibilityByParamInEqualityConverter x:Key="VisibilityByParamInEquality"/>
+    <Converters:VisibilityByAnyParamEqualityConverter x:Key="VisibilityByAnyParamEquality"/>
 	<Converters:BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
 	<Converters:HorizontalIfStringConverter x:Key="HorizontalIfString"/>
 	<Converters:BreakToLinesConverter x:Key="BreakToLines"/>
@@ -37,6 +38,7 @@
 	<Converters:BooleanToGridLengthConverter x:Key="HiddenWhenFalseStarSizedWhenTrue"
 																					 ValueWhenFalse="0"
 																					 ValueWhenTrue="*"/>
+	<Converters:BooleanToIndexConverter x:Key="BooleanToIndex"/>
 	<Converters:PriorityToFontStyleConverter x:Key="PriorityToFontStyle"/>
 	<Converters:PriorityToFontColorConverter x:Key="PriorityToFontColor"/>
 	<Converters:IdStringToIdWithoutHeader x:Key="IdStringToIdWithoutHeader"/>
@@ -59,4 +61,5 @@
 	<Models:DocumentSize x:Key="DocumentSize" />
 	<Converters:MillisecondsToMinutesConverter x:Key="MillisecondsToMinutes" />
 	<Converters:StringEmptyToValueConverter x:Key="StringEmptyToUnnamed" ValueWhenEmpty="Unnamed"/>
+    <Converters:DoubleToGridLengthConverter x:Key="DoubleToGridLengthConverter"></Converters:DoubleToGridLengthConverter>
 </ResourceDictionary>

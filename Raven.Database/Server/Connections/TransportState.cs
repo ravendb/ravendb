@@ -7,11 +7,14 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Server.Connections
 {
-	public class TransportState
+	public class TransportState : IDisposable
 	{
+	    private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+
 		readonly TimeSensitiveStore<string> timeSensitiveStore = new TimeSensitiveStore<string>(TimeSpan.FromSeconds(45));
 
 		readonly ConcurrentDictionary<string, ConnectionState> connections = new ConcurrentDictionary<string, ConnectionState>();
@@ -32,7 +35,7 @@ namespace Raven.Database.Server.Connections
 			timeSensitiveStore.Seen(id);
 			ConnectionState value;
 			if(connections.TryRemove(id, out value))
-				value.Disconnect();
+				value.Dispose();
 		}
 
 		public ConnectionState Register(EventsTransport transport)
@@ -68,6 +71,17 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
+		public event Action<object, BulkInsertChangeNotification> OnBulkInsertChangeNotification = delegate { };
+
+		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
+		{
+			OnBulkInsertChangeNotification(this, bulkInsertChangeNotification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.Send(bulkInsertChangeNotification);
+			}
+		}
+
 		public event Action<object, ReplicationConflictNotification> OnReplicationConflictNotification = delegate { };
 
 		public void Send(ReplicationConflictNotification replicationConflictNotification)
@@ -92,6 +106,21 @@ namespace Raven.Database.Server.Connections
 	    public object[] DebugStatuses
 	    {
 	        get { return connections.Values.Select(x=>x.DebugStatus).ToArray(); }
+	    }
+
+	    public void Dispose()
+	    {
+	        foreach (var connectionState in connections)
+	        {
+	            try
+	            {
+	                connectionState.Value.Dispose();
+	            }
+	            catch (Exception e)
+	            {
+	                logger.InfoException("Could not disconnect transport connection", e);
+	            }
+	        }    
 	    }
 	}
 }

@@ -1,12 +1,20 @@
-using System;
-using System.Linq;
-using System.Text;
-using Xunit;
-
 namespace Raven.Munin.Tests
 {
-	public class MyToDoList
+	using System;
+	using System.Linq;
+
+	using Raven.Abstractions.Util.Encryptors;
+	using Raven.Tests.Helpers;
+
+	using Xunit;
+
+	public class MyToDoList : IDisposable
 	{
+		public MyToDoList()
+		{
+			Encryptor.Initialize(SettingsHelper.UseFipsEncryptionAlgorithms);
+		}
+
 		[Fact]
 		public void CanStoreToDoItems()
 		{
@@ -69,6 +77,11 @@ namespace Raven.Munin.Tests
 			Assert.Equal("Buy Milk #9", results[0].Action);
 			Assert.Equal("Buy Milk #8", results[1].Action);
 			Assert.Equal("Buy Milk #7", results[2].Action);
+		}
+
+		public void Dispose()
+		{
+			Encryptor.Dispose();
 		}
 	}
 }

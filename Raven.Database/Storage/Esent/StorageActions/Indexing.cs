@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -23,16 +24,16 @@ namespace Raven.Storage.Esent.StorageActions
 {
 	public partial class DocumentStorageActions : IIndexingStorageActions
 	{
-		private bool SetCurrentIndexStatsToImpl(string index)
+		private bool SetCurrentIndexStatsToImpl(int index)
 		{
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-			Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexesStats,index, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
 				throw new IndexDoesNotExistsException("There is no index named: " + index);
 
 			// this is optional
 			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-			Api.MakeKey(session, IndexesStatsReduce, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexesStatsReduce, index, MakeKeyGrbit.NewKey);
 			return Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
 		}
 
@@ -49,26 +50,27 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public IndexStats GetIndexStats(string index)
+		public IndexStats GetIndexStats(int index)
 		{
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
 			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
 			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
 
-			Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexesStats, index, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
 				return null;
 
 			return GetIndexStats();
 		}
 
+
 		private IndexStats GetIndexStats()
 		{
-			var indexName = Api.RetrieveColumnAsString(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"]);
-			Api.MakeKey(session, IndexesStatsReduce, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+		    var id = (int)Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"]);
+			Api.MakeKey(session, IndexesStatsReduce, id, MakeKeyGrbit.NewKey);
 			var hasReduce = Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ);
 
-			Api.MakeKey(session, IndexesEtags, indexName, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexesEtags, id, MakeKeyGrbit.NewKey);
 			Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ);
 
 			var lastIndexedTimestamp = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"]).Value;
@@ -76,7 +78,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var lastIndexingTime = Api.RetrieveColumnAsInt64(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexing_time"]).Value;
 			return new IndexStats
 			{
-				Name = indexName,
+				Id = id,
 				TouchCount = Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value,
 				IndexingAttempts =
 					Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
@@ -123,11 +125,11 @@ namespace Raven.Storage.Esent.StorageActions
 			return Etag.Parse(bytes);
 		}
 
-		public void AddIndex(string name, bool createMapReduce)
+		public void AddIndex(int id, bool createMapReduce)
 		{
 			using (var update = new Update(session, IndexesStats, JET_prep.Insert))
 			{
-				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], name, Encoding.Unicode);
+				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["key"], id);
                 Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["priority"], 1);
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_etag"], Guid.Empty.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["last_indexed_timestamp"], DateTime.MinValue.ToBinary());
@@ -139,7 +141,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			using (var update = new Update(session, IndexesEtags, JET_prep.Insert))
 			{
-				Api.SetColumn(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["key"], name, Encoding.Unicode);
+			    Api.SetColumn(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["key"], id);
 				update.Save();
 			}
 
@@ -148,36 +150,39 @@ namespace Raven.Storage.Esent.StorageActions
 
 			using (var update = new Update(session, IndexesStatsReduce, JET_prep.Insert))
 			{
-				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["key"], name, Encoding.Unicode);
+			    Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["key"], id);
 				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_etag"], Guid.Empty.TransformToValueForEsentSorting());
 				Api.SetColumn(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["last_reduced_timestamp"], DateTime.MinValue.ToBinary());
 				update.Save();
 			}
 		}
 
-		public void DeleteIndex(string name)
+	    public void PrepareIndexForDeletion(int id)
+	    {
+            Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
+            Api.MakeKey(session, IndexesStats, id, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ))
+            {
+                Api.JetDelete(session, IndexesStats);
+            }
+
+            Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
+            Api.MakeKey(session, IndexesEtags, id, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ))
+            {
+                Api.JetDelete(session, IndexesEtags);
+            }
+
+            Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
+            Api.MakeKey(session, IndexesStatsReduce, id, MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ))
+            {
+                Api.JetDelete(session, IndexesStatsReduce);
+            }
+	    }
+
+	    public void DeleteIndex(int id, CancellationToken cancellationToken)
 		{
-			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ))
-			{
-				Api.JetDelete(session, IndexesStats);
-			}
-
-			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
-			Api.MakeKey(session, IndexesEtags, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ))
-			{
-				Api.JetDelete(session, IndexesEtags);
-			}
-
-			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-			Api.MakeKey(session, IndexesStatsReduce, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ))
-			{
-				Api.JetDelete(session, IndexesStatsReduce);
-			}
-
 			foreach (var op in new[]
 			{
 				new { Table = MappedResults, Index = "by_view_and_doc_key" },
@@ -189,28 +194,28 @@ namespace Raven.Storage.Esent.StorageActions
 			})
 			{
 				Api.JetSetCurrentIndex(session, op.Table, op.Index);
-				Api.MakeKey(session, op.Table, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				Api.MakeKey(session, op.Table, id, MakeKeyGrbit.NewKey);
 				if (!Api.TrySeek(session, op.Table, SeekGrbit.SeekGE))
 					continue;
 				var columnids = Api.GetColumnDictionary(session, op.Table);
 				do
 				{
-					var indexNameFromDb = Api.RetrieveColumnAsString(session, op.Table, columnids["view"]);
-					if (string.Equals(name, indexNameFromDb, StringComparison.OrdinalIgnoreCase) == false)
+					var indexNameFromDb = Api.RetrieveColumnAsInt32(session, op.Table, columnids["view"]);
+					if (id != indexNameFromDb)
 						break;
 					MaybePulseTransaction();
 					Api.JetDelete(session, op.Table);
-				} while (Api.TryMoveNext(session, op.Table));
+                } while (Api.TryMoveNext(session, op.Table) && cancellationToken.IsCancellationRequested == false);
 			}
 
 		}
 
-		public IndexFailureInformation GetFailureRate(string index)
+		public IndexFailureInformation GetFailureRate(int index)
 		{
 			var hasReduce = SetCurrentIndexStatsToImpl(index);
 			return new IndexFailureInformation
 			{
-				Name = index,
+				Id = index,
 				Attempts = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]).Value,
 				Errors = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["errors"]).Value,
 				Successes = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["successes"]).Value,
@@ -220,12 +225,12 @@ namespace Raven.Storage.Esent.StorageActions
 			};
 		}
 
-		public void UpdateLastIndexed(string index, Etag etag, DateTime timestamp)
+		public void UpdateLastIndexed(int id, Etag etag, DateTime timestamp)
 		{
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-			Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexesStats, id, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
-				throw new IndexDoesNotExistsException("There is no index named: " + index);
+				throw new IndexDoesNotExistsException("There is no index with id: " + id.ToString());
 
 			using (var update = new Update(session, IndexesStats, JET_prep.Replace))
 			{
@@ -237,13 +242,13 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-        public void SetIndexPriority(string index, IndexingPriority priority)
+        public void SetIndexPriority(int id, IndexingPriority priority)
         {
             Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
-            Api.MakeKey(session, IndexesStats, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+            Api.MakeKey(session, IndexesStats, id, MakeKeyGrbit.NewKey);
             if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
             {
-	            throw new IndexDoesNotExistsException("There is no index named: " + index);
+	            throw new IndexDoesNotExistsException(message: "There is no index with id: " + id.ToString());
             }
 
             using (var update = new Update(session, IndexesStats, JET_prep.Replace))
@@ -255,9 +260,9 @@ namespace Raven.Storage.Esent.StorageActions
             }
         }
 
-		public void UpdateIndexingStats(string index, IndexingWorkStats stats)
+		public void UpdateIndexingStats(int id, IndexingWorkStats stats)
 		{
-			SetCurrentIndexStatsToImpl(index);
+			SetCurrentIndexStatsToImpl(id);
 			using (var update = new Update(session, IndexesStats, JET_prep.Replace))
 			{
 				var oldAttempts = Api.RetrieveColumnAsInt32(session, IndexesStats, tableColumnsCache.IndexesStatsColumns["attempts"]) ?? 0;
@@ -279,9 +284,9 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public void UpdateReduceStats(string index, IndexingWorkStats stats)
+		public void UpdateReduceStats(int id, IndexingWorkStats stats)
 		{
-			SetCurrentIndexStatsToImpl(index);
+			SetCurrentIndexStatsToImpl(id);
 			using (var update = new Update(session, IndexesStatsReduce, JET_prep.Replace))
 			{
 				var oldAttempts = Api.RetrieveColumnAsInt32(session, IndexesStatsReduce, tableColumnsCache.IndexesStatsReduceColumns["reduce_attempts"]) ?? 0;
@@ -300,22 +305,22 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public void TouchIndexEtag(string index)
+		public void TouchIndexEtag(int id)
 		{
 			Api.JetSetCurrentIndex(session, IndexesEtags, "by_key");
-			Api.MakeKey(session, IndexesEtags, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexesEtags, id, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesEtags, SeekGrbit.SeekEQ) == false)
-				throw new IndexDoesNotExistsException("There is no reduce index named: " + index);
+				throw new IndexDoesNotExistsException("There is no reduce index named: " + id);
 
 			Api.EscrowUpdate(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"], 1);
 		}
 
-		public void UpdateLastReduced(string index, Etag etag, DateTime timestamp)
+		public void UpdateLastReduced(int id, Etag etag, DateTime timestamp)
 		{
 			Api.JetSetCurrentIndex(session, IndexesStatsReduce, "by_key");
-			Api.MakeKey(session, IndexesStatsReduce, index, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexesStatsReduce, id, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStatsReduce, SeekGrbit.SeekEQ) == false)
-				throw new IndexDoesNotExistsException("There is no reduce index named: " + index);
+				throw new IndexDoesNotExistsException("There is no reduce index named: " + id.ToString());
 
 			using (var update = new Update(session, IndexesStatsReduce, JET_prep.Replace))
 			{
@@ -343,14 +348,14 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(session, IndexedDocumentsReferences));
 		}
 
-		public void UpdateDocumentReferences(string view, string key, HashSet<string> references)
+		public void UpdateDocumentReferences(int id, string key, HashSet<string> references)
 		{
 			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, "by_view_and_key");
-			Api.MakeKey(session, IndexedDocumentsReferences, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+			Api.MakeKey(session, IndexedDocumentsReferences, id, MakeKeyGrbit.NewKey);
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.None);
 			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ))
 			{
-				Api.MakeKey(session, IndexedDocumentsReferences, view, Encoding.Unicode, MakeKeyGrbit.NewKey);
+				Api.MakeKey(session, IndexedDocumentsReferences, id, MakeKeyGrbit.NewKey);
 				Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.None);
 				Api.JetSetIndexRange(session, IndexedDocumentsReferences,
 				                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
@@ -375,7 +380,7 @@ namespace Raven.Storage.Esent.StorageActions
 				using (var update = new Update(session, IndexedDocumentsReferences, JET_prep.Insert))
 				{
 					Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["key"], key, Encoding.Unicode);
-					Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["view"], view, Encoding.Unicode);
+				    Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["view"], id);
 					Api.SetColumn(session, IndexedDocumentsReferences, tableColumnsCache.IndexedDocumentsReferencesColumns["ref"], reference, Encoding.Unicode);
 					update.Save();
 				}
@@ -408,9 +413,9 @@ namespace Raven.Storage.Esent.StorageActions
 			return QueryReferences(key, "by_key", "ref");
 		}
 
-		private IEnumerable<string> QueryReferences(string key, string index, string col)
+		private IEnumerable<string> QueryReferences(string key, string id, string col)
 		{
-			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, index);
+			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, id);
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
 				return Enumerable.Empty<string>();

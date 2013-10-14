@@ -11,10 +11,42 @@
              xmlns:controls="clr-namespace:Raven.Studio.Controls"
              xmlns:ContextMenu="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Input.Toolkit"
              xmlns:Editors="clr-namespace:Raven.Studio.Controls.Editors"
+             xmlns:ei="clr-namespace:Microsoft.Expression.Interactivity.Core;assembly=Microsoft.Expression.Interactions"
+             xmlns:media="clr-namespace:Microsoft.Expression.Interactivity.Media;assembly=Microsoft.Expression.Interactions"
+             xmlns:sdk="clr-namespace:System.Windows.Controls;assembly=System.Windows.Controls.Data"
              mc:Ignorable="d"
 			 d:DataContext="{d:DesignInstance Models:TransformerDefinitionModel, IsDesignTimeCreatable=False}"
 			 d:DesignHeight="300" d:DesignWidth="400">
-
+<UserControl.Resources>
+        <LinearGradientBrush x:Key="ErrorAreaBorderBrush" EndPoint="0.5,1" StartPoint="0.5,0">
+            <GradientStop Color="#D6D6D6"/>
+            <GradientStop Color="#C2C2C2" Offset="1"/>
+        </LinearGradientBrush>
+        <Storyboard x:Key="HighlightErrorArea">
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.Foreground).(SolidColorBrush.Color)" To="White" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ErrorsGrid" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[0].Color" To="#D67171" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ErrorsGrid" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[1].Color" To="#C25858" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[0].Color" To="#D67171" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[1].Color" To="#C25858" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.Background).(LinearGradientBrush.GradientStops)[0].Color" To="#D67171" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.Background).(LinearGradientBrush.GradientStops)[1].Color" To="#C25858" Duration="0:0:0.1"/>
+        </Storyboard>
+        <Storyboard x:Key="UnhighlightErrorArea">
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.Foreground).(SolidColorBrush.Color)" To="Black" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ErrorsGrid" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[0].Color" To="#D6D6D6" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ErrorsGrid" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[1].Color" To="#C2C2C2" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[0].Color" To="#D6D6D6" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.BorderBrush).(LinearGradientBrush.GradientStops)[1].Color" To="#C2C2C2" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.Background).(LinearGradientBrush.GradientStops)[0].Color" To="#D6D6D6" Duration="0:0:0.1"/>
+            <ColorAnimation Storyboard.TargetName="ShowErrorsButton" Storyboard.TargetProperty="(Control.Background).(LinearGradientBrush.GradientStops)[1].Color" To="#C2C2C2" Duration="0:0:0.1"/>
+        </Storyboard>
+        <Storyboard x:Key="ShowErrorsPanel">
+            <DoubleAnimation Storyboard.TargetName="ErrorArea" Storyboard.TargetProperty="Height" To="200" Duration="0:0:0.1"/>
+        </Storyboard>
+        <Storyboard x:Key="HideErrorsPanel">
+            <DoubleAnimation Storyboard.TargetName="ErrorArea" Storyboard.TargetProperty="Height" To="24" Duration="0:0:0.1"/>
+        </Storyboard>
+    </UserControl.Resources>
 	<Grid x:Name="LayoutRoot">
 		<toolkit:HeaderedContentControl Style="{StaticResource Style_HeaderedContentControl_Stretch}" Margin="{StaticResource Margin_ContentPage}">
 			<i:Interaction.Triggers>
@@ -87,6 +119,7 @@
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="*" />
+						<RowDefinition Height="Auto" />
 					</Grid.RowDefinitions>
 
 					<TextBlock Text="Name"
@@ -118,16 +151,16 @@
 														<LineBreak/> Example:
 														<Span FontFamily="Consolas">
 															<LineBreak/>
-															<Span Foreground="Blue">from</Span> order
-															<Span Foreground="Blue">in</Span> orders
+															<Span Foreground="Blue">from</Span> result
+															<Span Foreground="Blue">in</Span> results
 															<LineBreak/>
-															<Span Foreground="Blue">let</Span> region = Database.Load(result.RegionId)
+															<Span Foreground="Blue">let</Span> region = LoadDocument(result.RegionId)
 															<LineBreak/>
 															<Span Foreground="Blue">select new</Span> {
-															<LineBreak/> result.Date,
-															<LineBreak/> result.Amount,
-															<LineBreak/> Region = region.Name,
-															<LineBreak/> Manager = region.Manager
+															<LineBreak/>   result.Date,
+															<LineBreak/>   result.Amount,
+															<LineBreak/>   Region = region.Name,
+															<LineBreak/>   Manager = region.Manager
 															<LineBreak/> }
 														</Span>
 														<LineBreak/>
@@ -150,7 +183,70 @@
 						<Editors:LinqEditor Text="{Binding Transformer.TransformResults, Mode=TwoWay}"/>
 					</Grid>
 
-				</Grid>
+                    <Grid Grid.Row="2" Grid.ColumnSpan="2">
+                        <Border x:Name="ErrorArea" Height="24" Grid.Row="3" Margin="10,0,10,10">
+                            <i:Interaction.Triggers>
+                                <ei:DataTrigger Binding="{Binding Errors.Count}" Value="0" Comparison="GreaterThan">
+                                    <media:ControlStoryboardAction ControlStoryboardOption="Play" Storyboard="{StaticResource HighlightErrorArea}"/>
+                                </ei:DataTrigger>
+                                <ei:DataTrigger Binding="{Binding Errors.Count}" Value="0" Comparison="Equal">
+                                    <media:ControlStoryboardAction ControlStoryboardOption="Play" Storyboard="{StaticResource UnhighlightErrorArea}"/>
+                                </ei:DataTrigger>
+                                <ei:DataTrigger Binding="{Binding IsShowingErrors}" Value="True" Comparison="Equal">
+                                    <media:ControlStoryboardAction ControlStoryboardOption="Play" Storyboard="{StaticResource ShowErrorsPanel}"/>
+                                </ei:DataTrigger>
+                                <ei:DataTrigger Binding="{Binding IsShowingErrors}" Value="False" Comparison="Equal">
+                                    <media:ControlStoryboardAction ControlStoryboardOption="Play" Storyboard="{StaticResource HideErrorsPanel}"/>
+                                </ei:DataTrigger>
+                            </i:Interaction.Triggers>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <ToggleButton x:Name="ShowErrorsButton"
+                                      IsChecked="{Binding IsShowingErrors, Mode=TwoWay}" HorizontalAlignment="Left"
+                                      Style="{StaticResource Style_ToggleButton_ErrorExpander}"
+                                      MinWidth="80"
+                                      HorizontalContentAlignment="Left"
+                                      Foreground="Black"
+                                      Background="{StaticResource ErrorAreaBorderBrush}"
+                                      BorderBrush="{StaticResource ErrorAreaBorderBrush}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Errors.Count, StringFormat='{}{0} Errors'}"/>
+                                    </StackPanel>
+                                </ToggleButton>
+                                <sdk:DataGrid ItemsSource="{Binding Errors}" AutoGenerateColumns="False"
+                                      Grid.Row="1"
+                                      BorderBrush="{StaticResource ErrorAreaBorderBrush}"
+                                      x:Name="ErrorsGrid">
+                                    <i:Interaction.Triggers>
+                                        <Behaviors:DataGridRowDoubleClickTrigger>
+
+                                        </Behaviors:DataGridRowDoubleClickTrigger>
+                                    </i:Interaction.Triggers>
+                                    <sdk:DataGrid.Columns>
+                                        <sdk:DataGridTemplateColumn>
+                                            <sdk:DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Image Source="{StaticResource Image_Error_Tiny}" Stretch="Fill" Width="12" Height="12" Margin="2" VerticalAlignment="Top"/>
+                                                </DataTemplate>
+                                            </sdk:DataGridTemplateColumn.CellTemplate>
+                                        </sdk:DataGridTemplateColumn>
+                                        <sdk:DataGridTemplateColumn Header="Message" Width="*">
+                                            <sdk:DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate DataType="Models:TransformerDefinitionError">
+                                                    <TextBlock Text="{Binding Message}" Margin="2" VerticalAlignment="Top" Behaviors:FadeTrimming.IsEnabled="True" />
+                                                </DataTemplate>
+                                            </sdk:DataGridTemplateColumn.CellTemplate>
+                                        </sdk:DataGridTemplateColumn>
+                                    </sdk:DataGrid.Columns>
+                                </sdk:DataGrid>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                    
+                </Grid>
 			</Grid>
 		</toolkit:HeaderedContentControl>
 	</Grid>

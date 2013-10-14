@@ -4,9 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Threading;
 using Kent.Boogaart.KBCsv;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -31,7 +29,6 @@ namespace Raven.Studio.Commands
         public override void Execute(object parameter)
         {
             var stream = GetOutputStream();
-
             if (stream == null)
                 return;
 
@@ -39,11 +36,11 @@ namespace Raven.Studio.Commands
             var collectionSource = model.Documents.Source;
 
             if (model.DocumentsHaveId)
-                columns.Insert(0, new ColumnDefinition() { Binding = "$JsonDocument:Key", Header = "Id" });
+                columns.Insert(0, new ColumnDefinition { Binding = "$JsonDocument:Key", Header = "Id" });
 
             var cts = new CancellationTokenSource();
 
-            var progressWindow = new ProgressWindow() { Title = "Exporting Report"};
+            var progressWindow = new ProgressWindow { Title = "Exporting Report"};
             progressWindow.Closed += delegate { cts.Cancel(); };
 
             var exporter = new Exporter(stream, (DocumentsVirtualCollectionSourceBase)collectionSource, columns);
@@ -58,8 +55,7 @@ namespace Raven.Studio.Commands
 
 		                if (t.IsFaulted)
 		                {
-			                ApplicationModel.Current.AddErrorNotification(t.Exception,
-			                                                              "Exporting Report Failed");
+			                ApplicationModel.Current.AddErrorNotification(t.Exception, "Exporting Report Failed");
 		                }
 		                else if (!t.IsCanceled)
 		                {
@@ -150,26 +146,22 @@ namespace Raven.Studio.Commands
                             } while (documentBatch.Count > 0);
                         }
 
-                    });
+                    }, cancellationToken);
                 }
             }
 
             private async Task<IList<JsonDocument>> GetNextBatch(IAsyncEnumerator<JsonDocument> documentsStream, CancellationToken token)
             {
                 var documents = new List<JsonDocument>();
-                var count = 0;
 
-                while (await documentsStream.MoveNextAsync().ConfigureAwait(false) && count < BatchSize)
+				while (documents.Count < BatchSize && await documentsStream.MoveNextAsync().ConfigureAwait(false))
                 {
                     documents.Add(documentsStream.Current);
-                    count++;
-
                     token.ThrowIfCancellationRequested();
                 }
 
                 return documents;
             }
-
 
             private void WriteColumnsForDocuments(CsvWriter writer, IEnumerable<JsonDocument> documents, DocumentColumnsExtractor extractor)
             {

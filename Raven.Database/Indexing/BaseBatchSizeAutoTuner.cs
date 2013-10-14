@@ -6,6 +6,8 @@ using System.Collections.Generic;
 
 namespace Raven.Database.Indexing
 {
+	using Raven.Abstractions.Util;
+
 	public abstract class BaseBatchSizeAutoTuner
 	{
 		protected readonly WorkContext context;
@@ -29,7 +31,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void AutoThrottleBatchSize(int amountOfItemsToIndex, int size, TimeSpan indexingDuration)
+		public void AutoThrottleBatchSize(int amountOfItemsToIndex, long size, TimeSpan indexingDuration)
 		{
 			try
 			{
@@ -46,7 +48,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private bool ConsiderIncreasingBatchSize(int amountOfItemsToIndex, int size, TimeSpan indexingDuration)
+		private bool ConsiderIncreasingBatchSize(int amountOfItemsToIndex, long size, TimeSpan indexingDuration)
 		{
 			if (amountOfItemsToIndex < NumberOfItemsToIndexInSingleBatch)
 			{
@@ -122,7 +124,7 @@ namespace Raven.Database.Indexing
 			// * The system is over the configured limit, and there is a strong likelihood that this is us causing this
 			// * By forcing a GC, we ensure that we use less memory, and it is not frequent enough to cause perf problems
 
-			GC.Collect(1, GCCollectionMode.Optimized);
+			RavenGC.CollectGarbage(1, GCCollectionMode.Optimized);
 
 			// let us check again after the GC call, do we still need to reduce the batch size?
 
@@ -181,7 +183,7 @@ namespace Raven.Database.Indexing
 			// but we only want to do it if the change was significant 
 			if (NumberOfItemsToIndexInSingleBatch - old > 4096)
 			{
-				GC.Collect(1, GCCollectionMode.Optimized);
+				RavenGC.CollectGarbage(1, GCCollectionMode.Optimized);
 			}
 
 			return true;

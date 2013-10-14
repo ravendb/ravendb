@@ -1,10 +1,11 @@
-﻿using System.Windows.Input;
+﻿using System.Linq;
+using System.Windows.Input;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public class ImportTaskSectionModel : SmugglerTaskSectionModel
+	public class ImportTaskSectionModel : SmugglerTaskSectionModel<ImportDatabaseTask>
 	{
 		public ImportTaskSectionModel()
 		{
@@ -13,9 +14,21 @@ namespace Raven.Studio.Features.Tasks
 			Description = "Import data to the current database.\nImporting will overwrite any existing indexes.";
 		}
 
-		public override ICommand Action
-		{
-			get { return new ImportDatabaseCommand(this, line => Execute.OnTheUI(() => Output.Add(line))); }
-		}
+        protected override ImportDatabaseTask CreateTask()
+        {
+            return new ImportDatabaseTask(
+                DatabaseCommands,
+                Database.Value.Name,
+                includeAttachements: IncludeAttachments.Value,
+                includeDocuments: IncludeDocuments.Value,
+                includeIndexes: IncludeIndexes.Value,
+                removeAnalyzers: this.RemoveAnalyzers.Value,
+                includeTransformers: IncludeTransforms.Value,
+                shouldExcludeExpired: Options.Value.ShouldExcludeExpired,
+                batchSize: Options.Value.BatchSize,
+                transformScript: Options.Value.TransformScript,
+                filterSettings: GetFilterSettings()
+                );
+        }
 	}
 }

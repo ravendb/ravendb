@@ -62,9 +62,9 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		protected override Task<RavenJArray> GetTransformers(int totalCount)
+		protected override Task<RavenJArray> GetTransformers(int start)
 		{
-			return new CompletedTask<RavenJArray>(_database.GetTransformers(totalCount, SmugglerOptions.BatchSize));
+			return new CompletedTask<RavenJArray>(_database.GetTransformers(start, SmugglerOptions.BatchSize));
 		}
 
 		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
@@ -93,7 +93,7 @@ namespace Raven.Database.Smuggler
 				// worse, if we are using http compression, this value is known to be wrong
 				// instead, we rely on the actual size of the data provided for us
 				attachmentExportInfo.Metadata.Remove("Content-Length");
-				_database.PutStatic(attachmentExportInfo.Key, null, new MemoryStream(attachmentExportInfo.Data),
+				_database.PutStatic(attachmentExportInfo.Key, null, attachmentExportInfo.Data,
 									attachmentExportInfo.Metadata);
 			}
 

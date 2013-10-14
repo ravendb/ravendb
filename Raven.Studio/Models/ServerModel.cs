@@ -28,6 +28,7 @@ namespace Raven.Studio.Models
 		private string buildNumber;
 		private Observable<bool> isConnected;
 		public UserInfo UserInfo { get; set; }
+		private bool UserInfoSet = false;
 
 		private string rawUrl;
 		public string RawUrl
@@ -72,6 +73,7 @@ namespace Raven.Studio.Models
 			SelectedDatabase = new Observable<DatabaseModel>();
 			License = new Observable<LicensingStatus>();
 			IsConnected = new Observable<bool> { Value = true };
+			UserInfo = new UserInfo();
 			Initialize();
 		}
 
@@ -105,7 +107,7 @@ namespace Raven.Studio.Models
 			documentStore.JsonRequestFactory.ConfigureRequest += (o, eventArgs) =>
 			{
 				if (onWebRequest != null)
-					onWebRequest(eventArgs.Request);
+					onWebRequest(eventArgs.Client);
 			};
 
 			defaultDatabase = new[] { Constants.SystemDatabase };
@@ -128,6 +130,7 @@ namespace Raven.Studio.Models
 			                .ReadResponseJsonAsync()
 			                .ContinueOnSuccessInTheUIThread(doc =>
 			                {
+				                UserInfoSet = true;
 				                UserInfo = DocumentStore.Conventions.CreateSerializer()
 				                                           .Deserialize<UserInfo>(new RavenJTokenReader(doc));
 			                });
@@ -146,7 +149,7 @@ namespace Raven.Studio.Models
 											return;
 
 										firstTick = false;
-										if (UserInfo == null)
+										if (UserInfoSet == false)
 											UpdateUserInfo();
 
 										if (UserInfo != null && UserInfo.IsAdminGlobal)

@@ -6,21 +6,17 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Client.Changes;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
-
-#if SILVERLIGHT || NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
-using System.Collections.Specialized;
-#endif
 
 namespace Raven.Client.Connection
 {
@@ -36,9 +32,19 @@ namespace Raven.Client.Connection
 		NameValueCollection OperationsHeaders { get; set; }
 
 		/// <summary>
+		/// Admin operations for current database
+		/// </summary>
+		IAdminDatabaseCommands Admin { get; }
+
+		/// <summary>
+		/// Admin operations performed against system database, like create/delete database
+		/// </summary>
+		IGlobalAdminDatabaseCommands GlobalAdmin { get; }
+
+		/// <summary>
 		/// Retrieves documents for the specified key prefix
 		/// </summary>
-		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,  bool metadataOnly = false);
+		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,  bool metadataOnly = false, string exclude = null);
 
 		/// <summary>
 		/// Retrieves the document for the specified key
@@ -223,7 +229,7 @@ namespace Raven.Client.Connection
 		/// Streams the documents by etag OR starts with the prefix and match the matches
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
-		IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue);
+		IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null);
 
 		/// <summary>
 		/// Deletes the specified index
@@ -237,17 +243,17 @@ namespace Raven.Client.Connection
 		/// <param name="commandDatas">The command data.</param> 
 		BatchResult[] Batch(IEnumerable<ICommandData> commandDatas);
 
-		/// <summary>
-		/// Commits the specified tx id
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		void Commit(Guid txId);
+	    /// <summary>
+	    /// Commits the specified tx id
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    void Commit(string txId);
 
-		/// <summary>
-		/// Rollbacks the specified tx id
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		void Rollback(Guid txId);
+	    /// <summary>
+	    /// Rollbacks the specified tx id
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    void Rollback(string txId);
 
 		/// <summary>
 		/// Returns a new <see cref="IDatabaseCommands"/> using the specified credentials
@@ -269,7 +275,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale);
 
 		/// <summary>
@@ -296,7 +302,7 @@ namespace Raven.Client.Connection
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale);
 
 		/// <summary>
@@ -305,7 +311,7 @@ namespace Raven.Client.Connection
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
         /// <param name="patch">The patch request to use (using JavaScript)</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
 
 		/// <summary>
@@ -363,7 +369,7 @@ namespace Raven.Client.Connection
         FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null);
 
 		/// <summary>
-		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// Sends a patch request for a specific document, ignoring the document's Etag and if the document is missing
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patches">Array of patch requests</param>
@@ -373,8 +379,24 @@ namespace Raven.Client.Connection
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
+		RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing);
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag and  if the document is missing
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		RavenJObject Patch(string key, ScriptedPatchRequest patch);
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
+		RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing);
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -385,12 +407,30 @@ namespace Raven.Client.Connection
 		RavenJObject Patch(string key, PatchRequest[] patches, Etag etag);
 
 		/// <summary>
+		/// Sends a patch request for a specific document which may or may not currently exist
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchesToExisting">Array of patch requests to apply to an existing document</param>
+		/// <param name="patchesToDefault">Array of patch requests to apply to a default document when the document is missing</param>
+		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
+		RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata);
+
+		/// <summary>
 		/// Sends a patch request for a specific document
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
-        /// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag);
+
+		/// <summary>
+		/// Sends a patch request for a specific document which may or may not currently exist
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchExisting">The patch request to use (using JavaScript) to an existing document</param>
+		/// <param name="patchDefault">The patch request to use (using JavaScript)  to a default document when the document is missing</param>
+		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
+		RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata);
 
 		/// <summary>
 		/// Disable all caching within the given scope
@@ -434,7 +474,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Get the low level  bulk insert operation
 		/// </summary>
-		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
+		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
 #endif
 		/// <summary>
 		/// Gets the transformers from the server
@@ -454,6 +494,70 @@ namespace Raven.Client.Connection
 		/// </summary>
 		/// <param name="name">The name.</param>
 		void DeleteTransformer(string name);
+
+		/// <summary>
+		/// Prepares the transaction on the server.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		void PrepareTransaction(string txId);
+
+		/// <summary>
+		/// Gets the build number
+		/// </summary>
+		BuildNumber GetBuildNumber();
+	}
+
+	public interface IGlobalAdminDatabaseCommands
+	{
+		/// <summary>
+		/// Get admin statistics
+		/// </summary>
+		AdminStatistics GetStatistics();
+
+		/// <summary>
+		/// Creates a database
+		/// </summary>
+		void CreateDatabase(DatabaseDocument databaseDocument);
+
+		/// <summary>
+		/// Deteles a database with the specified name
+		/// </summary>
+		void DeleteDatabase(string dbName, bool hardDelete = false);
+
+		/// <summary>
+		/// Sends an async command to compact a database. During the compaction the specified database will be offline.
+		/// </summary>
+		void CompactDatabase(string databaseName);
+
+        IDatabaseCommands Commands { get; }
+	}
+
+	public interface IAdminDatabaseCommands
+	{
+		/// <summary>
+		/// Disables all indexing
+		/// </summary>
+		void StopIndexing();
+
+		/// <summary>
+		/// Enables indexing
+		/// </summary>
+		void StartIndexing();
+
+		/// <summary>
+		/// Begins a backup operation
+		/// </summary>
+		void StartBackup(string backupLocation, DatabaseDocument databaseDocument);
+
+		/// <summary>
+		/// Begins a restore operation
+		/// </summary>
+		void StartRestore(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
+
+		/// <summary>
+		/// Get the indexing status
+		/// </summary>
+		string GetIndexingStatus();
 	}
 }
 #endif

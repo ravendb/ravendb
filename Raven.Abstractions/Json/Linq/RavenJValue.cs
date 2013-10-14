@@ -6,7 +6,9 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Json.Utilities;
+using Raven.Imports.Newtonsoft.Json.Utilities;
+using MiscellaneousUtils = Raven.Json.Utilities.MiscellaneousUtils;
+using StringUtils = Raven.Json.Utilities.StringUtils;
 
 namespace Raven.Json.Linq
 {
@@ -213,7 +215,7 @@ namespace Raven.Json.Linq
 			else if (value is Etag)
 				return JTokenType.String;
 
-			throw new ArgumentException("Could not determine JSON object type for type {0}.".FormatWith(CultureInfo.InvariantCulture, value.GetType()));
+			throw new ArgumentException(StringUtils.FormatWith("Could not determine JSON object type for type {0}.", CultureInfo.InvariantCulture, value.GetType()));
 		}
 
 		private static JTokenType GetStringValueType(JTokenType? current)
@@ -252,8 +254,7 @@ namespace Raven.Json.Linq
 					v = new RavenJValue(null, JTokenType.Undefined);
 					break;
 				default:
-					throw new InvalidOperationException("The JsonReader should not be on a token of type {0}."
-															.FormatWith(CultureInfo.InvariantCulture,
+					throw new InvalidOperationException(StringUtils.FormatWith("The JsonReader should not be on a token of type {0}.", CultureInfo.InvariantCulture,
 																		reader.TokenType));
 			}
 			return v;
@@ -542,7 +543,7 @@ namespace Raven.Json.Linq
 					return guid1.CompareTo(guid2);
 				case JTokenType.Uri:
 					if (objB is string)
-						objB = new Uri((string)objB);
+						objB = new Uri((string)objB, UriKind.RelativeOrAbsolute);
 
 					if (!(objB is Uri))
 						throw new ArgumentException("Object must be of type Uri.");
@@ -560,7 +561,7 @@ namespace Raven.Json.Linq
 
 					return ts1.CompareTo(ts2);
 				default:
-					throw MiscellaneousUtils.CreateArgumentOutOfRangeException("valueType", valueType, "Unexpected value type: {0}".FormatWith(CultureInfo.InvariantCulture, valueType));
+					throw MiscellaneousUtils.CreateArgumentOutOfRangeException("valueType", valueType, StringUtils.FormatWith("Unexpected value type: {0}", CultureInfo.InvariantCulture, valueType));
 			}
 		}
 
@@ -693,8 +694,7 @@ namespace Raven.Json.Linq
 					v = new RavenJValue(null, JTokenType.Undefined);
 					break;
 				default:
-					throw new InvalidOperationException("The JsonReader should not be on a token of type {0}."
-															.FormatWith(CultureInfo.InvariantCulture,
+					throw new InvalidOperationException(StringUtils.FormatWith("The JsonReader should not be on a token of type {0}.", CultureInfo.InvariantCulture,
 																		reader.TokenType));
 			}
 			return v;

@@ -5,7 +5,7 @@ using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-    public class CsvImportTaskSectionModel : BasicTaskSectionModel
+    public class CsvImportTaskSectionModel : BasicTaskSectionModel<CsvImportTask>
     {
         public CsvImportTaskSectionModel()
         {
@@ -14,9 +14,9 @@ namespace Raven.Studio.Features.Tasks
             IconResource = "Image_ImportCsv_Tiny";
         }
 
-        public override ICommand Action
+        protected override CsvImportTask CreateTask()
         {
-            get { return new CsvImportCommand(this, line => Execute.OnTheUI(() => Output.Add(line))); }
+            return new CsvImportTask(DatabaseCommands, Database.Value.Name);
         }
     }
 }

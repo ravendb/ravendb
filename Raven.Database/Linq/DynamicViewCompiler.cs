@@ -32,6 +32,7 @@ namespace Raven.Database.Linq
 		private readonly CaptureSelectNewFieldNamesVisitor captureSelectNewFieldNamesVisitor = new CaptureSelectNewFieldNamesVisitor();
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForMap = new CaptureQueryParameterNamesVisitor();
 		private readonly CaptureQueryParameterNamesVisitor captureQueryParameterNamesVisitorForReduce = new CaptureQueryParameterNamesVisitor();
+		private readonly TransformFromClauses transformFromClauses = new TransformFromClauses();
 
 		public DynamicViewCompiler(string name, IndexDefinition indexDefinition, string basePath)
 			: this(name, indexDefinition, new OrderedPartCollection<AbstractDynamicCompilationExtension>(), basePath, new RavenConfiguration())
@@ -44,12 +45,10 @@ namespace Raven.Database.Linq
 			RequiresSelectNewAnonymousType = true;
 		}
 
-		private static readonly ConcurrentSet<string> paths = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
-
 		private void TransformQueryToClass()
 		{
 
-			CSharpSafeName = "Index_" + Regex.Replace(Name, @"[^\w\d]", "_");
+            CSharpSafeName = "Index_" + Regex.Replace(Name, @"[^\w\d]", "_");  
 			var type = new TypeDeclaration
 			{
 				Modifiers = Modifiers.Public,
@@ -265,8 +264,26 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		            reduceDefinition = QueryParsingUtils.GetVariableDeclarationForLinqQuery(indexDefinition.Reduce,
 		                                                                                    RequiresSelectNewAnonymousType);
 		            var queryExpression = ((QueryExpression) reduceDefinition.Initializer);
-		            var queryContinuationClause = queryExpression.Clauses.OfType<QueryContinuationClause>().First();
-		            var queryGroupClause = queryContinuationClause.PrecedingQuery.Clauses.OfType<QueryGroupClause>().First();
+		            var queryContinuationClause = queryExpression.Clauses.OfType<QueryContinuationClause>().FirstOrDefault();
+                    if (queryContinuationClause == null)
+                    {
+                        throw new IndexCompilationException("Reduce query must contain a 'group ... into ...' clause")
+                        {
+                            ProblematicText = indexDefinition.Reduce,
+                            IndexDefinitionProperty = "Reduce",
+                        };
+                    }
+
+		            var queryGroupClause = queryContinuationClause.PrecedingQuery.Clauses.OfType<QueryGroupClause>().FirstOrDefault();
+                    if (queryGroupClause == null)
+                    {
+                        throw new IndexCompilationException("Reduce query must contain a 'group ... into ...' clause")
+                        {
+                            ProblematicText = indexDefinition.Reduce,
+                            IndexDefinitionProperty = "Reduce",
+                        };
+                    }
+
 		            groupByIdentifier = queryContinuationClause.Identifier;
 		            groupBySource = queryGroupClause.Key;
 		            groupByParameter =
@@ -281,6 +298,16 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		            var target = (MemberReferenceExpression) invocation.Target;
 		            while (target.MemberName != "GroupBy")
 		            {
+                        if (!(target.Target is InvocationExpression))
+                        {
+                            // we've reached the initial results variable without encountering a GroupBy call
+                            throw new IndexCompilationException("Reduce expression must contain a call to GroupBy")
+                            {
+                                ProblematicText = indexDefinition.Reduce,
+                                IndexDefinitionProperty = "Reduce",
+                            };
+                        }
+
 		                invocation = (InvocationExpression) target.Target;
 		                target = (MemberReferenceExpression) invocation.Target;
 		            }
@@ -294,7 +321,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		        captureSelectNewFieldNamesVisitor.Clear(); // reduce override the map fields
 		        reduceDefinition.Initializer.AcceptVisitor(captureSelectNewFieldNamesVisitor, null);
 		        reduceDefinition.Initializer.AcceptVisitor(captureQueryParameterNamesVisitorForReduce, null);
-		        reduceDefinition.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCalls(groupByIdentifier), null);
+				reduceDefinition.Initializer.AcceptVisitor(new ThrowOnInvalidMethodCallsInReduce(groupByIdentifier), null);
 
 		        ValidateMapReduceFields(mapFields);
 
@@ -560,6 +587,9 @@ Reduce only fields: {2}
 					Name = Constants.DocumentIdFieldName,
 					Expression = new MemberReferenceExpression(identifierExpression, Constants.DocumentIdFieldName)
 				});
+
+			variableDeclaration.AcceptVisitor(this.transformFromClauses, null);
+
 			return variableDeclaration;
 		}
 

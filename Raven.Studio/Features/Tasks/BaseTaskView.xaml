@@ -9,31 +9,7 @@
                          xmlns:controls="clr-namespace:Raven.Studio.Controls"
                          Title="BaseTaskView Page">
 
-	<Grid x:Name="LayoutRoot" Margin="{StaticResource Margin_ContentPage}" DataContext="{Binding}">
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="*" />
-		</Grid.RowDefinitions>
-		<Border Background="{StaticResource Brush_HeaderBackground}"
-                BorderBrush="{StaticResource Brush_HeaderBorder}"
-                BorderThickness="1,1,1,0"
-                CornerRadius="4,4,0,0">
-		</Border>
-		<StackPanel Orientation="Horizontal" UseLayoutRounding="True">
-			<Image Style="{StaticResource Style_Image_PageHeader}" Source="{StaticResource Image_Tasks_Small}"/>
-			<TextBlock Text="{Binding Name}"
-					   Style="{StaticResource Style_Text_Header}" />
-		</StackPanel>
-
-		<TextBlock FontSize="13"
-				   TextWrapping="Wrap"
-				   Grid.Row="1"
-				   Text="{Binding Description}"
-				   Margin="0,10" />
-
-		<StackPanel Grid.Row="2">
+		<StackPanel>
 			<ItemsControl ItemsSource="{Binding TaskInputs}">
 				<ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -83,51 +59,6 @@
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
-			<StackPanel Orientation="Horizontal">
-				<Button Content="{Binding Name}"
-					Width="Auto"
-					HorizontalAlignment="Left"
-					Command="{Binding Action}"
-					IsEnabled="{Binding CanExecute.Value}"
-					Padding="8,4"
-					MinWidth="100"
-					Margin="0,10" />
-				<TextBlock Text="{Binding TaskStatus, Converter={StaticResource TaskStatusConverter},Mode=TwoWay}" 
-						   VerticalAlignment="Center" 
-						   FontSize="21.333" 
-						   Margin="100,0,0,0"/>
-				
-				<ProgressBar Margin="5" 
-							 Width="200" 
-							 Height="25"
-							 FlowDirection="LeftToRight" 
-							 IsIndeterminate="{Binding StatusBarActive}" 
-							 Visibility="{Binding TaskStatus, Converter={StaticResource VisibleWhenEqual}, ConverterParameter='Started'}"/>
-			</StackPanel>
 		</StackPanel>
 
-		<ItemsControl Grid.Row="3"
-					  ItemsSource="{Binding Output}"
-					  BorderBrush="#FFEAE7E4"
-					  Background="{StaticResource Brush_SubtleBackground2}"
-					  BorderThickness="1"
-					  Margin="0,10,0,0">
-			<ItemsControl.Template>
-				<ControlTemplate TargetType="ItemsControl">
-					<ScrollViewer x:Name="ScrollViewer"
-								  VerticalScrollBarVisibility="Auto"
-								  BorderThickness="{TemplateBinding BorderThickness}"
-								  BorderBrush="{TemplateBinding BorderBrush}"
-								  Background="{TemplateBinding Background}">
-						<ItemsPresenter />
-					</ScrollViewer>
-				</ControlTemplate>
-			</ItemsControl.Template>
-			<ItemsControl.ItemTemplate>
-				<DataTemplate>
-					<TextBlock Text="{Binding}" Foreground="{Binding Converter={StaticResource RedIfError}}" />
-				</DataTemplate>
-			</ItemsControl.ItemTemplate>
-		</ItemsControl>
-	</Grid>
 </Infrastructure:PageView>

@@ -103,7 +103,13 @@
 							   Style="{StaticResource Style_Text_Header}"/>
 				</StackPanel>
 				<Border toolkit:DockPanel.Dock="Top" Background="{StaticResource Brush_ToolbarBackground}" UseLayoutRounding="True">
-					<StackPanel Orientation="Horizontal"
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="*"/>
+							<ColumnDefinition Width="Auto"/>
+						</Grid.ColumnDefinitions>
+						<StackPanel Orientation="Horizontal"
 								VerticalAlignment="Center"
 								Margin="0,4,4,4">
 						<HyperlinkButton Command="{StaticResource NavigateToCommand}"
@@ -122,24 +128,122 @@
 								</StackPanel>
 							</HyperlinkButton.Content>
 						</HyperlinkButton>
+
+						<HyperlinkButton Command="{Binding CollapseAll}"
+										 Style="{StaticResource Style_Button_MouseOverChrome}"
+										 VerticalAlignment="Center">
+							<HyperlinkButton.Content>
+								<StackPanel Orientation="Horizontal">
+									<Image Source="{StaticResource Image_Expand_Tiny}"
+										   Stretch="None"
+										   VerticalAlignment="Center"
+										   Margin="4,0,4,0" />
+									<TextBlock Text="Collapse All Groups"
+											   VerticalAlignment="Center" />
+								</StackPanel>
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
+
+						<HyperlinkButton Command="{Binding ExpandAll}"
+										 Style="{StaticResource Style_Button_MouseOverChrome}"
+										 VerticalAlignment="Center">
+							<HyperlinkButton.Content>
+								<StackPanel Orientation="Horizontal">
+									<Image Source="{StaticResource Image_ToggleExpansion_Tiny}"
+										   Stretch="None"
+										   VerticalAlignment="Center"
+										   Margin="4,0,4,0" />
+									<TextBlock Text="Expand All Groups"
+											   VerticalAlignment="Center" />
+								</StackPanel>
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
+
+						<HyperlinkButton Command="{Binding DeleteAllTransformers}"
+										 Style="{StaticResource Style_Button_MouseOverChrome}"
+										 VerticalAlignment="Center">
+							<HyperlinkButton.Content>
+								<StackPanel Orientation="Horizontal">
+									<Image Source="{StaticResource Image_Transformer_Delete_Tiny}"
+										   Stretch="None"
+										   VerticalAlignment="Center"
+										   Margin="4,0,4,0" />
+									<TextBlock Text="Delete All Transformers"
+											   VerticalAlignment="Center" />
+								</StackPanel>
+							</HyperlinkButton.Content>
+						</HyperlinkButton>
 					</StackPanel>
+						<StackPanel Orientation="Horizontal" Grid.Column="2">
+							<TextBlock Text="Filter by name: " VerticalAlignment="Center"/>
+							<TextBox Text="{Binding SearchText.Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+									 Margin="5" 
+									 VerticalAlignment="Center"
+									 MinWidth="100"/>
+						</StackPanel>
+
+					</Grid>
 				</Border>
 			</toolkit:DockPanel>
 		</toolkit:HeaderedContentControl.Header>
-
+		
 		<ListBox x:Name="TransformersList" 
                  Style="{StaticResource Style_ListBox_Indexes}"
-                 ItemTemplate="{StaticResource TransformerItemTemplate}"
-				 ItemsSource="{Binding Transformers}"
-				 SelectedValue="{Binding ItemSelection, Mode=TwoWay}"
+                 ItemsSource="{Binding GroupedTransformers}"
+				 SelectedItem="{Binding SelectedGroup, Mode=TwoWay}"
                  Margin="10,5">
+			<ListBox.ItemTemplate>
+				<DataTemplate>
+					<Grid Width="428" Visibility="{Binding Items, Converter={StaticResource HiddenWhenEmpty}}">
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="*"/>
+						</Grid.RowDefinitions>
+						<Rectangle Fill="Transparent"/>
+						<!--this is for the Item selection-->
+						<StackPanel Grid.Row="0" Orientation="Horizontal">
+							<Button Command="{Binding ChangeCollapse}" Style="{StaticResource Style_Button_MouseOverChrome}" 
+									Visibility="{Binding Collapse.Value, Converter={StaticResource BooleanToOppositeVisibility}}">
+								<Image Source="{StaticResource Image_ToggleExpansion_Tiny}"/>
+							</Button>
+							<Button Command="{Binding ChangeCollapse}" Style="{StaticResource Style_Button_MouseOverChrome}" 
+									Visibility="{Binding Collapse.Value, Converter={StaticResource BooleanToVisibility}}">
+								<Image Source="{StaticResource Image_Expand_Tiny}"/>
+							</Button>
+							<TextBlock Text="{Binding GroupName}"
+								   Style="{StaticResource Style_TextBlock_GroupHeader}"
+								   VerticalAlignment="Center" />
+							<TextBlock Text="{Binding ItemCount}" VerticalAlignment="Center"/>
+						</StackPanel>
+
+						<ListBox Grid.Row="1" Style="{StaticResource Style_ListBox_IndexGroup}"
+								 Visibility="{Binding Collapse.Value, Converter={StaticResource BooleanToOppositeVisibility}}"
+								 ItemsSource="{Binding Items}"
+								 SelectedItem="{Binding DataContext.ItemSelection, ElementName=TransformersList, Mode=TwoWay}"
+								 ItemTemplate="{StaticResource TransformerItemTemplate}">
+							<i:Interaction.Behaviors>
+								<Behaviors:SelectItemOnRightClick/>
+								<!--<Behaviors:BindSelectedItemsBehavior Target="{Binding DataContext.ItemSelection, RelativeSource={RelativeSource AncestorType=ListBox, AncestorLevel=2, Mode=FindAncestor}}"/>-->
+							</i:Interaction.Behaviors>
+
+							<ContextMenu:ContextMenuService.ContextMenu>
+								<ContextMenu:ContextMenu x:Name="IndexesContextMenu">
+									<ContextMenu:MenuItem Header="Delete Transformer"
+                                          Command="{Binding DataContext.DeleteTransformer, ElementName=TransformersList}"/>
+								</ContextMenu:ContextMenu>
+							</ContextMenu:ContextMenuService.ContextMenu>
+						</ListBox>
+					</Grid>
+				</DataTemplate>
+			</ListBox.ItemTemplate>
 			<i:Interaction.Behaviors>
 				<Behaviors:SelectItemOnRightClick/>
 			</i:Interaction.Behaviors>
 			<ContextMenu:ContextMenuService.ContextMenu>
-				<ContextMenu:ContextMenu x:Name="TransformersContextMenu">
-					<ContextMenu:MenuItem Header="Delete transformer"
-                                          Command="{Binding DeleteTransformer}"/>
+				<ContextMenu:ContextMenu x:Name="GroupContextMenu">
+					<ContextMenu:MenuItem Header="Delete all transformers in group"
+                                          Command="{Binding DeleteGroupTransformers}"
+										  CommandParameter="{Binding SelectedGroup}"/>
 				</ContextMenu:ContextMenu>
 			</ContextMenu:ContextMenuService.ContextMenu>
 		</ListBox>

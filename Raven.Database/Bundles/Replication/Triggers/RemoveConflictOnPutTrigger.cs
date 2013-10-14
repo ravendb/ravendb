@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using Raven.Abstractions.Data;
 using Raven.Database.Bundles.Replication.Impl;
@@ -29,7 +30,7 @@ namespace Raven.Bundles.Replication.Triggers
 				if (oldVersion.Metadata[Constants.RavenReplicationConflict] == null)
 					return;
 
-				RavenJArray history = new RavenJArray(ReplicationData.GetHistory(metadata));
+				var history = new RavenJArray();
 				metadata[Constants.RavenReplicationHistory] = history;
 
 				var ravenJTokenEqualityComparer = new RavenJTokenEqualityComparer();
@@ -38,26 +39,50 @@ namespace Raven.Bundles.Replication.Triggers
 				var conflicts = oldVersion.DataAsJson.Value<RavenJArray>("Conflicts");
 				if(conflicts == null)
 					return;
+
+			    var list = new List<RavenJArray>
+			    {
+			        new RavenJArray(ReplicationData.GetHistory(metadata)) // first item to interleave
+			    };
 				foreach (var prop in conflicts)
 				{
 					RavenJObject deletedMetadata;
 					Database.Delete(prop.Value<string>(), null, transactionInformation, out deletedMetadata);
 
-					// add the conflict history to the mix, so we make sure that we mark that we resolved the conflict
-					var conflictHistory = new RavenJArray(ReplicationData.GetHistory(deletedMetadata));
-					conflictHistory.Add(new RavenJObject
-					{
-						{Constants.RavenReplicationVersion, deletedMetadata[Constants.RavenReplicationVersion]},
-						{Constants.RavenReplicationSource, deletedMetadata[Constants.RavenReplicationSource]}
-					});
-
-					foreach (var item in conflictHistory)
-					{
-						if(history.Any(x=>ravenJTokenEqualityComparer.Equals(x, item)))
-							continue;
-						history.Add(item);
-					}
+				    if (deletedMetadata != null)
+				    {
+                        var conflictHistory = new RavenJArray(ReplicationData.GetHistory(deletedMetadata));
+                        conflictHistory.Add(new RavenJObject
+				        {
+				            {Constants.RavenReplicationVersion, deletedMetadata[Constants.RavenReplicationVersion]},
+				            {Constants.RavenReplicationSource, deletedMetadata[Constants.RavenReplicationSource]}
+				        });
+				        list.Add(conflictHistory);
+				    }
 				}
+
+
+			    int index = 0;
+                bool added = true;
+                while (added) // interleave the history from all conflicts
+                {
+                    added = false;
+                    foreach (var deletedMetadata in list)
+			        {
+                        // add the conflict history to the mix, so we make sure that we mark that we resolved the conflict
+			            if (index < deletedMetadata.Length)
+			            {
+			                history.Add(deletedMetadata[index]);
+			                added = true;
+			            }
+			        }
+			        index++;
+			    }
+
+                while (history.Length > Constants.ChangeHistoryLength)
+                {
+                    history.RemoveAt(0);
+                }
 			}
 		}
 	}

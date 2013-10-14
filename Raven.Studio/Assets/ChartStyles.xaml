@@ -1,0 +1,172 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:toolkit="clr-namespace:System.Windows.Controls.DataVisualization.Charting;assembly=System.Windows.Controls.DataVisualization.Toolkit"
+    xmlns:dataVisualization="clr-namespace:System.Windows.Controls.DataVisualization;assembly=System.Windows.Controls.DataVisualization.Toolkit"
+    xmlns:primitives="clr-namespace:System.Windows.Controls.DataVisualization.Charting.Primitives;assembly=System.Windows.Controls.DataVisualization.Toolkit">
+
+
+    <Style x:Key="SeriesDataPointStyle" TargetType="toolkit:LineDataPoint">
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Width" Value="6" />
+        <Setter Property="Height" Value="6" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="toolkit:LineDataPoint">
+                    <Ellipse Stroke="{TemplateBinding BorderBrush}" Fill="{TemplateBinding Background}" StrokeThickness="0">
+                        <ToolTipService.ToolTip>
+                            <ContentControl Content="{Binding Value}"/>
+                        </ToolTipService.ToolTip>
+                    </Ellipse>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Style x:Key="Reduce1SeriesDataPointStyle" TargetType="toolkit:LineDataPoint" BasedOn="{StaticResource SeriesDataPointStyle}">
+        <Setter Property="Background" Value="#55172C"/>
+    </Style>
+
+    <Style x:Key="Reduce2SeriesDataPointStyle" TargetType="toolkit:LineDataPoint" BasedOn="{StaticResource SeriesDataPointStyle}">
+        <Setter Property="Background" Value="#BF426C"/>
+    </Style>
+
+    <Style x:Key="Reduce3SeriesDataPointStyle" TargetType="toolkit:LineDataPoint" BasedOn="{StaticResource SeriesDataPointStyle}">
+        <Setter Property="Background" Value="#F090B0"/>
+    </Style>
+
+    <Style x:Key="MapSeriesDataPointStyle" TargetType="toolkit:LineDataPoint" BasedOn="{StaticResource SeriesDataPointStyle}">
+        <Setter Property="Background" Value="#BF8112"/>
+    </Style>
+
+    <Style x:Key="IndexSeriesDataPointStyle" TargetType="toolkit:LineDataPoint" BasedOn="{StaticResource SeriesDataPointStyle}">
+        <Setter Property="Background" Value="#1C697E"/>
+    </Style>
+
+    <Style x:Key="LegendItemStyle" TargetType="toolkit:LegendItem">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="toolkit:LegendItem">
+                    <StackPanel Orientation="Horizontal">
+                        <Grid>
+                            <Rectangle Height="2" Width="25" Fill="{Binding Background}" VerticalAlignment="Center"/>
+                            <Ellipse Stroke="{Binding BorderBrush}" StrokeThickness="0" Fill="{Binding Background}" VerticalAlignment="Center"  Width="6" Height="6" HorizontalAlignment="Center"/>
+                        </Grid>
+                        <dataVisualization:Title Content="{TemplateBinding Content}" Margin="3,0,10,0" FontSize="10"/>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Style x:Key="LegendStyle" TargetType="dataVisualization:Legend">
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="dataVisualization:Legend">
+                    <ItemsPresenter/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <Style x:Key="AxisStyle" TargetType="toolkit:LinearAxis">
+        <Setter Property="Foreground" Value="Gray"/>
+        <Setter Property="ShowGridLines" Value="True"/>
+        <Setter Property="MajorTickMarkStyle">
+            <Setter.Value>
+                <Style TargetType="Line">
+                    <Setter Property="Stroke" Value="LightGray"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="GridLineStyle">
+            <Setter.Value>
+                <Style TargetType="Line">
+                    <Setter Property="Stroke" Value="LightGray"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="AxisLabelStyle">
+            <Setter.Value>
+                <Style TargetType="toolkit:AxisLabel">
+                    <Setter Property="Foreground" Value="Gray"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="toolkit:AxisLabel">
+                                <TextBlock Text="{Binding StringFormat='\{0:#,#;;0\}'}" Margin="5,0" FontSize="10"/>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="TimeAxisStyle" TargetType="toolkit:DateTimeAxis">
+        <Setter Property="Foreground" Value="Gray"/>
+        <Setter Property="ShowGridLines" Value="False"/>
+        <Setter Property="MajorTickMarkStyle">
+            <Setter.Value>
+                <Style TargetType="Line">
+                    <Setter Property="Stroke" Value="LightGray"/>
+                    <Setter Property="StrokeThickness" Value="1"></Setter>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="AxisLabelStyle">
+            <Setter.Value>
+                <Style TargetType="toolkit:AxisLabel">
+                    <Setter Property="Foreground" Value="Gray"/>
+                    <Setter Property="FontSize" Value="10"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="TitleStyle" TargetType="dataVisualization:Title">
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="5"/>
+    </Style>
+    
+    <Style x:Key="PerformanceChart" TargetType="toolkit:Chart">
+        <Setter Property="TitleStyle" Value="{StaticResource TitleStyle}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="toolkit:Chart">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <dataVisualization:Title Style="{TemplateBinding TitleStyle}" Content="{TemplateBinding Title}"/>
+                        <primitives:EdgePanel x:Name="ChartArea" Style="{TemplateBinding ChartAreaStyle}"
+                              Grid.Row="1">
+                            
+                            <Border BorderThickness="1,0,0,1" BorderBrush="Gray">
+                                <Grid x:Name="PlotArea" Style="{TemplateBinding PlotAreaStyle}"
+                                      Background="Transparent">
+                                    <Grid x:Name="GridLinesContainer" />
+                                    <Grid x:Name="SeriesContainer" />
+                                </Grid>
+                            </Border>
+                        </primitives:EdgePanel>
+                        <dataVisualization:Legend x:Name="Legend" Style="{StaticResource LegendStyle}" Grid.Row="2" HorizontalAlignment="Center" Margin="0,5" 
+                                                  Foreground="Gray"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+</ResourceDictionary>

@@ -70,7 +70,7 @@ namespace Raven.Client.Document
 			string id;
 			if (entity is IDynamicMetaObjectProvider)
 			{
-				if (TryGetIdFromDynamic(entity, out id) == false)
+				if (TryGetIdFromDynamic(entity, out id) == false || id == null)
 				{
 					id = generateKey(entity);
 					// If we generated a new id, store it back into the Id field so the client has access to to it                    

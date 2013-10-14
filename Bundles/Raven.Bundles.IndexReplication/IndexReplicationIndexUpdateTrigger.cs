@@ -18,6 +18,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Bundles.IndexReplication.Data;
+using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Document = Lucene.Net.Documents.Document;
 
@@ -25,9 +26,12 @@ namespace Raven.Bundles.IndexReplication
 {
 	public class IndexReplicationIndexUpdateTrigger : AbstractIndexUpdateTrigger
 	{
-		public override AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName)
+		public override AbstractIndexUpdateTriggerBatcher CreateBatcher(int indexId)
 		{
-			var document = Database.Get("Raven/IndexReplication/" + indexName, null);
+		    Index indexInstance = this.Database.IndexStorage.GetIndexInstance(indexId);
+		    if (indexInstance == null)
+		        return null;
+		    var document = Database.Get("Raven/IndexReplication/" + indexInstance.PublicName, null);
 			if (document == null)
 				return null; // we don't have any reason to replicate anything 
 

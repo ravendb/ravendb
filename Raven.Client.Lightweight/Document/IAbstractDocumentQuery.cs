@@ -114,14 +114,6 @@ namespace Raven.Client.Document
 		/// <returns></returns>
 		void OpenSubclause();
 
-		///<summary>
-		///  Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		///<remarks>
-		///  This is only valid on dynamic indexes queries
-		///</remarks>
-		void GroupBy(AggregationOperation aggregationOperation, params string[] fieldsToGroupBy);
-
 		/// <summary>
 		///   Simplified method for closing a clause within the query
 		/// </summary>
@@ -346,5 +338,7 @@ namespace Raven.Client.Document
 
 		void Intersect();
 		void AddRootType(Type type);
+	    void SetResultTransformer(string resultsTransformer);
+		void Distinct();
 	}
 }

@@ -21,6 +21,12 @@ namespace Raven.Abstractions.Commands
 		public PatchRequest[] Patches{ get; set;}
 
 		/// <summary>
+		/// Gets or sets the patches to apply to a default document if the document is missing
+		/// </summary>
+		/// <value>The patches.</value>
+		public PatchRequest[] PatchesIfMissing { get; set; }
+
+		/// <summary>
 		/// Gets the key.
 		/// </summary>
 		/// <value>The key.</value>
@@ -77,10 +83,13 @@ namespace Raven.Abstractions.Commands
 						{"Key", Key},
 						{"Method", Method},
 						{"Patches", new RavenJArray(Patches.Select(x => x.ToJson()))},
+						{"Metadata", Metadata},
 						{"AdditionalData", AdditionalData}
-			       	};
+					};
 			if (Etag != null)
 				ret.Add("Etag", Etag.ToString());
+			if (PatchesIfMissing != null && PatchesIfMissing.Length > 0)
+				ret.Add("PatchesIfMissing", new RavenJArray(PatchesIfMissing.Select(x => x.ToJson())));
 			return ret;
 		}
 	}

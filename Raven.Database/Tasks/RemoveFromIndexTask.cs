@@ -12,9 +12,14 @@ using Raven.Database.Storage;
 
 namespace Raven.Database.Tasks
 {
-	public class RemoveFromIndexTask : Task
+	public class RemoveFromIndexTask : DatabaseTask
 	{
 		public HashSet<string> Keys { get; set; }
+
+        public override bool SeparateTasksByIndex
+        {
+            get { return true; }
+        }
 
 		public override string ToString()
 		{
@@ -26,7 +31,7 @@ namespace Raven.Database.Tasks
 			Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		}
 
-		public override void Merge(Task task)
+		public override void Merge(DatabaseTask task)
 		{
 			var removeFromIndexTask = ((RemoveFromIndexTask)task);
 			Keys.UnionWith(removeFromIndexTask.Keys);
@@ -75,7 +80,7 @@ namespace Raven.Database.Tasks
 			return generator.ForEntityNames.Contains(entityName) == false;
 		}
 
-		public override Task Clone()
+		public override DatabaseTask Clone()
 		{
 			return new RemoveFromIndexTask
 			{

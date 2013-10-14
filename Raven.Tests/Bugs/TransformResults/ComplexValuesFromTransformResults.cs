@@ -6,7 +6,6 @@ using Raven.Abstractions.MEF;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
-using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Raven.Database.Impl;
 using Raven.Database.Linq;
@@ -96,7 +95,11 @@ namespace Raven.Tests.Bugs.TransformResults
 
 				documentStore.DocumentDatabase.TransactionalStorage.Batch(accessor =>
 				{
-					var documentRetriever = new DocumentRetriever(accessor, new OrderedPartCollection<AbstractReadTrigger>(), new InFlightTransactionalState());
+					var documentRetriever = new DocumentRetriever(accessor, new OrderedPartCollection<AbstractReadTrigger>(),
+					                                              documentStore.DocumentDatabase.TransactionalStorage
+					                                                           .GetInFlightTransactionalState(
+						                                                           documentStore.DocumentDatabase.Put,
+						                                                           documentStore.DocumentDatabase.Delete));
 					var dynamicJsonObjects = new[] { new DynamicJsonObject(accessor.Documents.DocumentByKey("answer2s/" + answerId.ToString(), null).ToJson()), };
 					var transformResultsDefinition = abstractViewGenerator.TransformResultsDefinition(documentRetriever,
 																									  dynamicJsonObjects
@@ -136,6 +139,51 @@ namespace Raven.Tests.Bugs.TransformResults
 						.SingleOrDefault();
 					Assert.NotNull(questionInfo);
 					Assert.Equal(63, questionInfo.DecimalTotal);
+				}
+			}
+		}
+
+		[Fact]
+		public void will_work_normally_when_specifying_transformresults_through_customize()
+		{
+			using (var documentStore = NewDocumentStore(requestedStorage: "esent"))
+			{
+				new Answers_ByQuestion_NoTransformResults().Execute(documentStore);
+
+				using (IDocumentSession session = documentStore.OpenSession())
+				{
+					var vote1 = new AnswerVote {QuestionId = @"question/257", Delta = 20};
+					session.Store(vote1);
+					var vote2 = new AnswerVote {QuestionId = @"question/258", Delta = 30};
+					session.Store(vote2);
+					var vote3 = new AnswerVote {QuestionId = @"question/259", Delta = 20};
+					session.Store(vote3);
+
+					session.SaveChanges();
+				}
+
+				using (var session = documentStore.OpenSession())
+				{
+					var answers = session.Query<AnswerViewItem, Answers_ByQuestion_NoTransformResults>()
+						.Customize(x =>
+						{
+							x.WaitForNonStaleResultsAsOfNow();
+							x.TransformResults((database, results) =>
+								results.OfType<dynamic>().GroupBy(r => r.VoteTotal)
+									.Select(g => new AnswerViewItem {UserDisplayName = "From TransformResults", VoteTotal = g.Key, DecimalTotal = g.Count()})
+								);
+						})
+						.ToList()
+						.OrderBy(x=>x.VoteTotal)
+						.ToList();
+
+					Assert.NotNull(answers);
+					// Expecting two results, one with VoteTotal = 20 (DecimalTotal = 2) and one with VoteTotal = 30 (DecimalTotal = 1)
+					Assert.Equal(2, answers.Count());
+
+					var first = answers.First();
+					Assert.Equal(20, first.VoteTotal);
+					Assert.Equal(2, first.DecimalTotal);
 				}
 			}
 		}
@@ -458,7 +506,8 @@ namespace Raven.Tests.Bugs.TransformResults
 
 		}
 
-		public static string CreateEntities(IDocumentStore documentStore)
+        
+        public static string CreateEntities(IDocumentStore documentStore)
 		{
 			const string questionId = @"question/259";
 			const string answerId = @"answer/540";

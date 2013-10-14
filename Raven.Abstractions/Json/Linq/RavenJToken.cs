@@ -138,7 +138,7 @@ namespace Raven.Json.Linq
 			}
 		}
 
-		/// <summary>
+        /// <summary>
 		/// Writes this token to a <see cref="JsonWriter"/>.
 		/// </summary>
 		/// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
@@ -209,6 +209,16 @@ namespace Raven.Json.Linq
 				return null;
 			}
 			return Load(jsonTextReader);
+		}
+
+		public static async Task<RavenJToken> TryLoadAsync(Stream stream)
+		{
+			var jsonTextReader = new JsonTextReaderAsync(new StreamReader(stream));
+			if (await jsonTextReader.ReadAsync() == false || jsonTextReader.TokenType == JsonToken.None)
+			{
+				return null;
+			}
+			return await ReadFromAsync(jsonTextReader);
 		}
 
 		/// <summary>
@@ -303,6 +313,12 @@ namespace Raven.Json.Linq
 								RavenJToken token;
 								if (otherObj.TryGetValue(kvp.Key, out token) == false)
 									return false;
+								if (kvp.Value == null)
+								{
+									if (token != null && token.Type != JTokenType.Null)
+										return false;
+									continue;
+								}
 								switch (kvp.Value.Type)
 								{
 									case JTokenType.Array:
@@ -470,6 +486,11 @@ namespace Raven.Json.Linq
 		{
 			throw new NotSupportedException();
 		}
+
+        public virtual T Value<T>()
+        {
+            return this.Convert<T>();
+        }
 
 		/// <summary>
 		/// Returns a collection of the child values of this token, in document order.

@@ -14,6 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Impl;
+using Raven.Database.Impl.DTC;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Extensions;
@@ -35,7 +36,9 @@ namespace Raven.Storage.Esent.StorageActions
 		protected static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		protected readonly Session session;
 		private Transaction transaction;
-		private bool useLazyCommit;
+		private readonly Dictionary<Etag, Etag> etagTouches = new Dictionary<Etag, Etag>();
+		private readonly EsentTransactionContext transactionContext;
+		private readonly Action sessionAndTransactionDisposer;
 
 		public JET_DBID Dbid
 		{
@@ -56,6 +59,7 @@ namespace Raven.Storage.Esent.StorageActions
 			OrderedPartCollection<AbstractDocumentCodec> documentCodecs,
 			IUuidGenerator uuidGenerator,
 			IDocumentCacher cacher,
+			EsentTransactionContext transactionContext,
 			TransactionalStorage transactionalStorage)
 		{
 			this.tableColumnsCache = tableColumnsCache;
@@ -63,15 +67,42 @@ namespace Raven.Storage.Esent.StorageActions
 			this.uuidGenerator = uuidGenerator;
 			this.cacher = cacher;
 			this.transactionalStorage = transactionalStorage;
+			this.transactionContext = transactionContext;
+
 			try
 			{
-				session = new Session(instance);
-				transaction = new Transaction(session);
+				if (transactionContext == null)
+				{
+					session = new Session(instance);
+					transaction = new Transaction(session);
+					sessionAndTransactionDisposer = () =>
+					{
+						if(transaction != null)
+							transaction.Dispose();
+						if(session != null)
+							session.Dispose();
+					};
+				}
+				else
+				{
+					session = transactionContext.Session;
+					transaction = transactionContext.Transaction;
+					var disposable = transactionContext.EnterSessionContext();
+					sessionAndTransactionDisposer = disposable.Dispose;
+				}
 				Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
-				Dispose();
+			    logger.WarnException("Error when trying to open a new DocumentStorageActions", ex);
+			    try
+			    {
+			        Dispose();
+			    }
+			    catch (Exception e)
+			    {
+			        logger.WarnException("Error on dispose when the ctor threw an exception, resources may have leaked", e);
+			    }
 				throw;
 			}
 		}
@@ -127,11 +158,8 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Equals(dbid, JET_DBID.Nil) == false && session != null)
 				Api.JetCloseDatabase(session.JetSesid, dbid, CloseDatabaseGrbit.None);
 
-			if (transaction != null)
-				transaction.Dispose();
-
-			if (session != null)
-				session.Dispose();
+		    if (sessionAndTransactionDisposer != null)
+		        sessionAndTransactionDisposer();
 		}
 
 		public void UseLazyCommit()
@@ -169,7 +197,10 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public Action Commit(CommitTransactionGrbit txMode)
 		{
-			transaction.Commit(txMode);
+			if (transactionContext == null)
+			{
+				transaction.Commit(txMode);
+			}
 
 			return OnStorageCommit;
 		}

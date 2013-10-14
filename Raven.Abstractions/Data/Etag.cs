@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Text;
 using System.Linq;
 #if SILVERLIGHT || NETFX_CORE
-using Raven.Client.Silverlight.MissingFromSilverlight;
+using Raven.Abstractions.Util;
 #else
 using System.Security.Cryptography;
 #endif
@@ -41,7 +41,9 @@ namespace Raven.Abstractions.Data
 
 		public Etag(string str)
 		{
-			Parse(str);
+			var etag = Parse(str);
+			restarts = etag.restarts;
+			changes = etag.changes;
 		}
 
 		public Etag(UuidType type, long restarts, long changes)
@@ -250,6 +252,15 @@ namespace Raven.Abstractions.Data
 				return Parse(md5.ComputeHash(etagBytes));
 			}
 #endif
+		}
+
+		public static Etag Max(Etag first, Etag second)
+		{
+			if (first == null)
+				return second;
+			return first.CompareTo(second) > 0
+				? first
+				: second;
 		}
 	}
 

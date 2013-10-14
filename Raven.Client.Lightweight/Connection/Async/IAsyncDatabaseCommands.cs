@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
@@ -19,6 +20,7 @@ using Raven.Client.Silverlight.Connection;
 #elif NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
+using Raven.Client.Changes;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 
@@ -34,8 +36,17 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <value>The operations headers.</value>
 		IDictionary<string, string> OperationsHeaders { get; }
+
+		/// <summary>
+		/// Admin operations performed against system database, like create/delete database
+		/// </summary>
 		IAsyncGlobalAdminDatabaseCommands GlobalAdmin { get; }
+
+		/// <summary>
+		/// Admin operations for current database
+		/// </summary>
 		IAsyncAdminDatabaseCommands Admin { get; }
+		
 		IAsyncInfoDatabaseCommands Info { get; }
 
 		/// <summary>
@@ -47,7 +58,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Begins an async multi get operation
 		/// </summary>
-		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, bool metadataOnly = false);
+		Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false);
 
 		/// <summary>
 		/// Begins an async get operation for documents
@@ -139,7 +150,15 @@ namespace Raven.Client.Connection.Async
 		Task DeleteIndexAsync(string name);
 
 		/// <summary>
-		/// Perform a set based deletes using the specified index.
+		/// Perform a set based deletes using the specified index, not allowing the operation
+		/// if the index is stale
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToDelete">The query to delete.</param>
+		Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete);
+
+		/// <summary>
+		/// Perform a set based deletes using the specified index
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
@@ -166,6 +185,56 @@ namespace Raven.Client.Connection.Async
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
         Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata);
+
+		/// <summary>
+		/// Sends a patch request for a specific document
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, Etag etag);
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
+		Task<RavenJObject> PatchAsync(string key, PatchRequest[] patches, bool ignoreMissing);
+
+		/// <summary>
+		/// Sends a patch request for a specific document which may or may not currently exist
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchesToExisting">Array of patch requests to apply to an existing document</param>
+		/// <param name="patchesToDefault">Array of patch requests to apply to a default document when the document is missing</param>
+		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
+		Task<RavenJObject> PatchAsync(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata);
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
+		Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, bool ignoreMissing);
+
+		/// <summary>
+		/// Sends a patch request for a specific document
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="etag">Require specific Etag [null to ignore]</param>
+		Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patch, Etag etag);
+
+		/// <summary>
+		/// Sends a patch request for a specific document which may or may not currently exist
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchExisting">The patch request to use (using JavaScript) to an existing document</param>
+		/// <param name="patchDefault">The patch request to use (using JavaScript)  to a default document when the document is missing</param>
+		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
+		Task<RavenJObject> PatchAsync(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata);
 
 		/// <summary>
 		/// Create a http request to the specified relative url on the current database
@@ -205,9 +274,9 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-		/// <param name="data">The data.</param>
+        /// <param name="stream">The data stream.</param>
 		/// <param name="metadata">The metadata.</param>
-        Task PutAttachmentAsync(string key, Etag etag, byte[] data, RavenJObject metadata);
+        Task PutAttachmentAsync(string key, Etag etag, Stream stream, RavenJObject metadata);
 
 		/// <summary>
 		/// Gets the attachment by the specified key asynchronously
@@ -256,7 +325,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
 
 		/// <summary>
@@ -268,6 +337,16 @@ namespace Raven.Client.Connection.Async
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null );
+
+		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+		/// </summary>
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facets">List of facets</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize);
 
 		/// <summary>
 		/// Gets the Logs
@@ -285,34 +364,9 @@ namespace Raven.Client.Connection.Async
 		Task<BuildNumber> GetBuildNumberAsync();
 
 		/// <summary>
-		/// Begins an async backup operation
-		/// </summary>
-		Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument);
-
-		/// <summary>
-		/// Begins an async restore operation
-		/// </summary>
-		Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
-
-		/// <summary>
-		/// Sends an async command that enables indexing
-		/// </summary>
-		Task StartIndexingAsync();
-
-		/// <summary>
-		/// Sends an async command that disables all indexing
-		/// </summary>
-		Task StopIndexingAsync();
-
-		/// <summary>
-		/// Get the indexing status
-		/// </summary>
-		Task<string> GetIndexingStatusAsync();
-
-		/// <summary>
 		/// Get documents with id of a specific prefix
 		/// </summary>
-		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false);
+		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false, string exclude = null);
 
 		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
@@ -342,9 +396,9 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Get the low level  bulk insert operation
 		/// </summary>
-		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options);
+		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
 #endif
-	
+
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands
@@ -354,11 +408,49 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <returns></returns>
 		Task<AdminStatistics> GetStatisticsAsync();
+
+		/// <summary>
+		/// Sends an async command to create a database
+		/// </summary>
+		Task CreateDatabaseAsync(DatabaseDocument databaseDocument);
+
+		/// <summary>
+		/// Sends an async command to delete a database
+		/// </summary>
+		Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false);
+
+		/// <summary>
+		/// Sends an async command to compact a database. During the compaction the specified database will be offline.
+		/// </summary>
+		Task CompactDatabaseAsync(string databaseName);
 	}
 	
 	public interface IAsyncAdminDatabaseCommands
 	{
-		
+		/// <summary>
+		/// Sends an async command that disables all indexing
+		/// </summary>
+		Task StopIndexingAsync();
+
+		/// <summary>
+		/// Sends an async command that enables indexing
+		/// </summary>
+		Task StartIndexingAsync();
+
+		/// <summary>
+		/// Begins an async backup operation
+		/// </summary>
+		Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument);
+
+		/// <summary>
+		/// Begins an async restore operation
+		/// </summary>
+		Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
+
+		/// <summary>
+		/// Get the indexing status
+		/// </summary>
+		Task<string> GetIndexingStatusAsync();
 	}
 
 	public interface IAsyncInfoDatabaseCommands

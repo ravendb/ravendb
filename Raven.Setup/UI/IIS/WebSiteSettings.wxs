@@ -25,9 +25,11 @@
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
           <Condition Action="disable">
-            <![CDATA[WEBSITE_VD = "" OR (WEBSITE_TYPE = "NEW" AND (WEBSITE_DESCRIPTION = "" OR WEBSITE_PATH = "" OR WEBSITE_PORT = ""))]]>
+            <![CDATA[WEBSITE_TYPE = "NEW" AND (WEBSITE_DESCRIPTION = "" OR WEBSITE_PATH = "" OR WEBSITE_PORT = "")]]>
           </Condition>
-          <Condition Action="enable"><![CDATA[(WEBSITE_VD <> "" AND WEBSITE_TYPE = "EXISTING") OR (WEBSITE_VD <> "" AND WEBSITE_TYPE = "NEW" AND (WEBSITE_DESCRIPTION <> ""  AND WEBSITE_PATH <> "" AND WEBSITE_PORT <> ""))]]></Condition>
+          <Condition Action="enable">
+            <![CDATA[(WEBSITE_TYPE = "EXISTING") OR (WEBSITE_TYPE = "NEW" AND (WEBSITE_DESCRIPTION <> ""  AND WEBSITE_PATH <> "" AND WEBSITE_PORT <> ""))]]>
+          </Condition>
         </Control>
         <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel" />
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />

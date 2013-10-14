@@ -12,7 +12,9 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
+using Raven.Client.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.Listeners;
 using Raven.Database.Data;
@@ -108,16 +110,32 @@ namespace Raven.Client.Embedded
 		public NameValueCollection OperationsHeaders { get; set; }
 
 		/// <summary>
+		/// Admin operations, like create/delete database.
+		/// </summary>
+		public IAdminDatabaseCommands Admin
+		{
+			get { throw new NotSupportedException("Multiple databases are not supported in the embedded API currently"); }
+		}
+
+		/// <summary>
+		/// Admin operations, like create/delete database.
+		/// </summary>
+		public IGlobalAdminDatabaseCommands GlobalAdmin
+		{
+			get { throw new NotSupportedException("Multiple databases are not supported in the embedded API currently"); }
+		}
+
+		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
-		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false)
+		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
 		{
 			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
 
 			// metadata only is NOT supported for embedded, nothing to save on the data transfers, so not supporting 
 			// this
 
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, start, pageSize);
+			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, start, pageSize);
 			return SerializationHelper.RavenJObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<RavenJObject>()).ToArray();
 		}
 
@@ -150,7 +168,7 @@ namespace Raven.Client.Embedded
 			return jsonDocument;
 		}
 
-	    /// <summary>
+		/// <summary>
 	    /// Retrieves the document with the specified key and performs the transform operation specified on that document
 	    /// </summary>
 	    /// <param name="key">The key</param>
@@ -372,6 +390,7 @@ namespace Raven.Client.Embedded
 			database.DeleteTransfom(name);
 		}
 
+
 		/// <summary>
 		/// Resets the specified index
 		/// </summary>
@@ -421,9 +440,9 @@ namespace Raven.Client.Embedded
 		public string PutIndex(string name, IndexDefinition definition, bool overwrite)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			if (overwrite == false && database.IndexStorage.Indexes.Contains(name))
+			if (overwrite == false && database.IndexStorage.HasIndex(name))
 				throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
-			return database.PutIndex(name, definition);
+			return database.PutIndex(name, definition.Clone());
 		}
 
 		/// <summary>
@@ -462,7 +481,8 @@ namespace Raven.Client.Embedded
 		/// <param name="indexEntriesOnly">Include index entries</param>
 		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-			query.PageSize = Math.Min(query.PageSize, database.Configuration.MaxPageSize);
+            if(query.PageSizeSet)
+			    query.PageSize = Math.Min(query.PageSize, database.Configuration.MaxPageSize);
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 
 			// metadataOnly is not supported for embedded
@@ -516,18 +536,35 @@ namespace Raven.Client.Embedded
 			if (query.PageSizeSet == false)
 				query.PageSize = int.MaxValue;
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var items = new BlockingCollection<RavenJObject>();
+			var items = new BlockingCollection<RavenJObject>(1024);
 			using (var waitForHeaders = new ManualResetEventSlim(false))
 			{
 				QueryHeaderInformation localQueryHeaderInfo = null;
 				var task = Task.Factory.StartNew(() =>
 				{
-					database.Query(index, query, information =>
+					bool setWaitHandle = true;
+					try
 					{
-						localQueryHeaderInfo = information;
-						waitForHeaders.Set();
-					}, items.Add);
-				});
+						// we may be sending a LOT of documents to the user, and most 
+						// of them aren't going to be relevant for other ops, so we are going to skip
+						// the cache for that, to avoid filling it up very quickly
+						using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+						{
+							database.Query(index, query, information =>
+							{
+								localQueryHeaderInfo = information;
+								waitForHeaders.Set();
+								setWaitHandle = false;
+							}, items.Add);
+						}
+					}
+					catch (Exception)
+					{
+						if (setWaitHandle)
+							waitForHeaders.Set();
+						throw;
+					}
+				}, TaskCreationOptions.LongRunning);
 				waitForHeaders.Wait();
 				queryHeaderInfo = localQueryHeaderInfo;
 				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
@@ -538,27 +575,40 @@ namespace Raven.Client.Embedded
 		/// Streams the documents by etag OR starts with the prefix and match the matches
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
-		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
+        public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude)
 		{
 			if(fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
 
-			var items = new BlockingCollection<RavenJObject>();
+			var items = new BlockingCollection<RavenJObject>(1024);
 			var task = Task.Factory.StartNew(() =>
 			{
-				if (string.IsNullOrEmpty(startsWith))
+				// we may be sending a LOT of documents to the user, and most 
+				// of them aren't going to be relevant for other ops, so we are going to skip
+				// the cache for that, to avoid filling it up very quickly
+				using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 				{
-					database.GetDocuments(start, pageSize, fromEtag,
-					                      items.Add);
-				}
-				else
-				{
-					database.GetDocumentsWithIdStartingWith(
-						startsWith,
-						matches,
-						start,
-						pageSize,
-						items.Add);
+					try
+					{
+						if (string.IsNullOrEmpty(startsWith))
+						{
+							database.GetDocuments(start, pageSize, fromEtag,
+							                      items.Add);
+						}
+						else
+						{
+							database.GetDocumentsWithIdStartingWith(
+								startsWith,
+								matches,
+                                exclude,
+								start,
+								pageSize,
+								items.Add);
+						}
+					}
+					catch (ObjectDisposedException)
+					{
+					}
 				}
 			});
 			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
@@ -566,15 +616,28 @@ namespace Raven.Client.Embedded
 
 		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task task)
 		{
-			task.ContinueWith(_ => items.Add(null));
-			while (true)
+			try
 			{
-				var ravenJObject = items.Take();
-				if (ravenJObject == null)
-					break;
-				yield return ravenJObject;
+				task.ContinueWith(_ => items.Add(null));
+				while (true)
+				{
+					var ravenJObject = items.Take();
+					if (ravenJObject == null)
+						break;
+					yield return ravenJObject;
+				}
 			}
-			task.Wait();
+			finally
+			{
+				try
+				{
+					task.Wait();
+				}
+				catch (ObjectDisposedException)
+				{
+				}
+			}
+			
 		}
 
 		/// <summary>
@@ -674,24 +737,46 @@ namespace Raven.Client.Embedded
 			return batchResults;
 		}
 
-		/// <summary>
-		/// Commits the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public void Commit(Guid txId)
+	    /// <summary>
+	    /// Commits the specified tx id.
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    public void Commit(string txId)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			database.Commit(txId);
 		}
 
-		/// <summary>
-		/// Rollbacks the specified tx id.
-		/// </summary>
-		/// <param name="txId">The tx id.</param>
-		public void Rollback(Guid txId)
+	    /// <summary>
+	    /// Rollbacks the specified tx id.
+	    /// </summary>
+	    /// <param name="txId">The tx id.</param>
+	    public void Rollback(string txId)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			database.Rollback(txId);
+		}
+
+		/// <summary>
+		/// Prepares the transaction on the server.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		public void PrepareTransaction(string txId)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+			database.PrepareTransaction(txId);
+		}
+
+		/// <summary>
+		/// Gets the build number
+		/// </summary>
+		public BuildNumber GetBuildNumber()
+		{
+			return new BuildNumber
+			       {
+				       BuildVersion = DocumentDatabase.BuildVersion,
+					   ProductVersion = DocumentDatabase.ProductVersion
+			       };
 		}
 
 		/// <summary>
@@ -716,9 +801,9 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Get the low level  bulk insert operation
 		/// </summary>
-		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options)
+		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
 		{
-			return new EmbeddedBulkInsertOperation(database, options);
+			return new EmbeddedBulkInsertOperation(database, options, changes);
 		}
 
 		/// <summary>
@@ -751,7 +836,7 @@ namespace Raven.Client.Embedded
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patchRequests">The patch requests.</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
@@ -766,11 +851,11 @@ namespace Raven.Client.Embedded
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation());
+			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
 			var state = databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
 			return new Operation(0, state);
 		}
@@ -791,7 +876,7 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
-		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation even if the index is stale. Otherwise, not allowing the operation.</param>
 		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
@@ -894,10 +979,52 @@ namespace Raven.Client.Embedded
 		/// Sends a patch request for a specific document, ignoring the document's Etag
 		/// </summary>
 		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patches">Array of patch requests</param>
+		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
+		public RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing)
+		{
+			var batchResults = Batch(new[]
+			{
+				new PatchCommandData
+				{
+					Key = key,
+					Patches = patches
+				}
+			});
+			if (!ignoreMissing && batchResults[0].PatchResult != null && batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
+				throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
+			return batchResults[0].AdditionalData;
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch)
 		{
 			return Patch(key, patch, null);
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document, ignoring the document's Etag
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patch">The patch request to use (using JavaScript)</param>
+		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
+		public RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing)
+		{
+			var batchResults = Batch(new[]
+				  {
+					  new ScriptedPatchCommandData
+					  {
+						  Key = key,
+						  Patch = patch
+					  }
+				  });
+			if (!ignoreMissing && batchResults[0].PatchResult != null && batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
+				throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
+			return batchResults[0].AdditionalData;
 		}
 
 		/// <summary>
@@ -913,6 +1040,29 @@ namespace Raven.Client.Embedded
 				new PatchCommandData
 				{
 					Key = key, Patches = patches, Etag = etag
+				}
+			});
+
+			return batchResults[0].AdditionalData;
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document which may or may not currently exist
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchesToExisting">Array of patch requests to apply to an existing document</param>
+		/// <param name="patchesToDefault">Array of patch requests to apply to a default document when the document is missing</param>
+		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
+		public RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata)
+		{
+			var batchResults = Batch(new[]
+			{
+				new PatchCommandData
+				{
+					Key = key,
+					Patches = patchesToExisting,
+					PatchesIfMissing = patchesToDefault,
+					Metadata = defaultMetadata
 				}
 			});
 
@@ -936,6 +1086,28 @@ namespace Raven.Client.Embedded
 					      Etag = etag
 				      }
 			      });
+			return batchResults[0].AdditionalData;
+		}
+
+		/// <summary>
+		/// Sends a patch request for a specific document which may or may not currently exist
+		/// </summary>
+		/// <param name="key">Id of the document to patch</param>
+		/// <param name="patchExisting">The patch request to use (using JavaScript) to an existing document</param>
+		/// <param name="patchDefault">The patch request to use (using JavaScript)  to a default document when the document is missing</param>
+		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
+		public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata)
+		{
+			var batchResults = Batch(new[]
+				  {
+					  new ScriptedPatchCommandData
+					  {
+						  Key = key,
+						  Patch = patchExisting,
+						  PatchIfMissing = patchDefault,
+						  Metadata = defaultMetadata
+					  }
+				  });
 			return batchResults[0].AdditionalData;
 		}
 
@@ -969,6 +1141,15 @@ namespace Raven.Client.Embedded
 				nextIdentityValue = accessor.General.GetNextIdentityValue(name);
 			});
 			return nextIdentityValue;
+		}
+
+		/// <summary>
+		/// Seeds the next identity value on the server
+		/// </summary>
+		public long SeedIdentityFor(string name, long value)
+		{
+			database.TransactionalStorage.Batch(accessor => accessor.General.SetIdentityValue(name, value));
+			return value;
 		}
 
 		/// <summary>

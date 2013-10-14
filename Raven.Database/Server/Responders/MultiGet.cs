@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions.Data;
 using System.Linq;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
@@ -177,18 +178,11 @@ namespace Raven.Database.Server.Responders
 		{
 			public MultiGetHttpRequest(GetRequest req, IHttpRequest realRequest)
 			{
-				var tempQueryString = HttpUtility.ParseQueryString(req.Query ?? "");
-				QueryString = new NameValueCollection();
-				foreach (string key in tempQueryString)
-				{
-					var values = tempQueryString.GetValues(key);
-					if (values == null)
-						continue;
-					foreach (var value in values)
-					{
-						QueryString.Add(key, HttpUtility.UrlDecode(value));
-					}
-				}
+			    string ravenClientVersion;
+			    req.Headers.TryGetValue(Constants.RavenClientVersion, out ravenClientVersion);
+			    QueryString = HttpRequestHelper.ParseQueryStringWithLegacySupport(
+                                                    ravenClientVersion, 
+                                                    req.Query ?? string.Empty);
 				Url = new UriBuilder(realRequest.Url)
 				{
 					Query = req.Query,
@@ -258,13 +252,14 @@ namespace Raven.Database.Server.Responders
 		public class MultiGetHttpResponse : IHttpResponse
 		{
 			private readonly GetResponse getResponse;
+			private bool bufferOutput;
 
 			public MultiGetHttpResponse(GetResponse getResponse, IHttpResponse response)
 			{
 				this.getResponse = getResponse;
 				RedirectionPrefix = response.RedirectionPrefix;
 				OutputStream = new MemoryStream();
-				BufferOutput = true;
+				bufferOutput = true;
 			}
 
 			public string RedirectionPrefix
@@ -303,7 +298,11 @@ namespace Raven.Database.Server.Responders
 				get;
 				set;
 			}
-			public bool BufferOutput { get; set; }
+
+			public bool BufferOutput
+			{
+				get { return bufferOutput; }
+			}
 
 			public void Redirect(string url)
 			{
@@ -331,6 +330,12 @@ namespace Raven.Database.Server.Responders
 			public NameValueCollection GetHeaders()
 			{
 				throw new NotSupportedException();
+			}
+
+			public IDisposable Streaming()
+			{
+				bufferOutput = false;
+				return null;
 			}
 
 			public Task WriteAsync(string data)

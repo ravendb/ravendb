@@ -31,9 +31,12 @@ namespace Raven.Studio.Features.Documents
             }
 
             return ApplicationModel.DatabaseCommands.GetDocumentsAsync(start, pageSize, MetadataOnly)
-                .ContinueWith(t =>
+                .ContinueOnSuccess(t =>
                 {
-                    var docs = (IList<ViewableDocument>)t.Result.Select(x => new ViewableDocument(x)).ToArray();
+	                if (t == null)
+		                return new List<ViewableDocument>();
+
+                    var docs = (IList<ViewableDocument>)t.Select(x => new ViewableDocument(x)).ToArray();
                     return docs;
                 })
                 .Catch();

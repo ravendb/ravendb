@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
@@ -28,11 +26,7 @@ namespace Raven.Tests.MailingList
 				Number = DateTime.Now.Ticks,
 				Name = "Test1"
 			};
-			using (GetNewServer())
-			using (var store = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			}.Initialize())
+			using (var store = NewRemoteDocumentStore())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -70,14 +64,9 @@ namespace Raven.Tests.MailingList
 		{
 			string dbName = "MyNewDatabase";
 
-			using (GetNewServer())
-			using (var store = new DocumentStore
+			using (var store = NewRemoteDocumentStore())
 			{
-				Url = "http://localhost:8079"
-			}.Initialize())
-			{
-
-				store.DatabaseCommands.EnsureDatabaseExists(dbName);
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(dbName);
 				using (var session = store.OpenSession(dbName))
 				{
 					session.Store(new SampleDoc { Number = 1, Name = "Test 1" }, "SampleDocs/1");
@@ -96,16 +85,18 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 				}
 
+				WaitForIndexing(store, dbName);
+
 				using (var session = store.OpenSession(dbName))
 				{
 					var selectGood = session.Query<SampleDoc>().ToList();
 					Assert.Equal(2, selectGood.Count);
 
-					var selectBad = session.Query<SampleDoc>().Customize(x => x.WaitForNonStaleResults())
+					var selectBad = session.Query<SampleDoc>()
 						.Select(x => new { x.Name, x.Number }).ToList();
-					var count = session.Query<SampleDoc>().Customize(x => x.WaitForNonStaleResults()).Count();
-
 					Assert.Equal(2, selectBad.Count);
+
+					var count = session.Query<SampleDoc>().Count();
 					Assert.Equal(2, count);
 				}
 			}

@@ -42,7 +42,7 @@ namespace Raven.Database.Queries
 				throw new InvalidOperationException("The document id or map group fields are mandatory");
 
 			IndexSearcher searcher;
-			using (database.IndexStorage.GetCurrentIndexSearcher(query.IndexName, out searcher))
+			using (database.IndexStorage.GetCurrentIndexSearcher(index.indexId, out searcher))
 			{
 				var documentQuery = new BooleanQuery();
 
@@ -167,7 +167,7 @@ namespace Raven.Database.Queries
 				.Select(hit => new JsonDocument
 				{
 					DataAsJson = Index.CreateDocumentFromFields(searcher.Doc(hit.Doc),
-					                                            new FieldsToFetch(fields, AggregationOperation.None, index.IsMapReduce ? Constants.ReduceKeyFieldName : Constants.DocumentIdFieldName)),
+					                                            new FieldsToFetch(fields, false, index.IsMapReduce ? Constants.ReduceKeyFieldName : Constants.DocumentIdFieldName)),
 					Etag = etag
 				})
 				.ToArray();

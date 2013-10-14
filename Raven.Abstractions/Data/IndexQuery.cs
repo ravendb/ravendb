@@ -15,9 +15,9 @@ namespace Raven.Abstractions.Data
 	/// <summary>
 	/// All the information required to query a Raven index
 	/// </summary>
-	public class IndexQuery
+	public class IndexQuery : IEquatable<IndexQuery>
 	{
-		private int pageSize;
+	    private int pageSize;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="IndexQuery"/> class.
@@ -33,6 +33,11 @@ namespace Raven.Abstractions.Data
 		/// Whatever the page size was explicitly set or still at its default value
 		/// </summary>
 		public bool PageSizeSet { get; private set; }
+
+		/// <summary>
+		/// Whatever we should apply distinct operation to the query on the server side
+		/// </summary>
+		public bool IsDistinct { get; set; }
 
 		/// <summary>
 		/// Gets or sets the query.
@@ -70,16 +75,6 @@ namespace Raven.Abstractions.Data
 				PageSizeSet = true;
 			}
 		}
-
-		/// <summary>
-		/// The aggregation operation for this query
-		/// </summary>
-		public AggregationOperation AggregationOperation { get; set; }
-
-		/// <summary>
-		/// The fields to group the query by
-		/// </summary>
-		public string[] GroupBy { get; set; }
 
 		/// <summary>
 		/// Gets or sets the fields to fetch.
@@ -173,7 +168,12 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		public bool DisableCaching { get; set; }
 
-	    /// <summary>
+		/// <summary>
+		/// Whatever a query result should contains an explanation about how docs scored against query
+		/// </summary>
+		public bool ExplainScores { get; set; }
+
+		/// <summary>
 		/// Gets the index query URL.
 		/// </summary>
 		/// <param name="operationUrl">The operation URL.</param>
@@ -224,11 +224,10 @@ namespace Raven.Abstractions.Data
 				path.Append("&pageSize=").Append(PageSize);
 			
 
-			if(AggregationOperation != AggregationOperation.None)
-				path.Append("&aggregation=").Append(AggregationOperation);
+			if(IsDistinct)
+				path.Append("&distinct=true");
 
 			FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
-			GroupBy.ApplyIfNotNull(field => path.Append("&groupBy=").Append(Uri.EscapeDataString(field)));
 			SortedFields.ApplyIfNotNull(
 				field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
 
@@ -254,8 +253,7 @@ namespace Raven.Abstractions.Data
 
 			if (Cutoff != null)
 			{
-				var cutOffAsString =
-					Uri.EscapeUriString(Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture)));
+				var cutOffAsString = Uri.EscapeDataString(Cutoff.Value.ToString("o", CultureInfo.InvariantCulture));
 				path.Append("&cutOff=").Append(cutOffAsString);
 			}
 			if (CutoffEtag != null)
@@ -263,14 +261,15 @@ namespace Raven.Abstractions.Data
 				path.Append("&cutOffEtag=").Append(CutoffEtag);
 			}
 
-		    this.HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
-            this.HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
-            this.HighlighterPostTags.ApplyIfNotNull(tag=>path.Append("&postTags=").Append(tag));
-
-			
+		    HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
+            HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
+            HighlighterPostTags.ApplyIfNotNull(tag=>path.Append("&postTags=").Append(tag));
 
 			if(DebugOptionGetIndexEntries)
 				path.Append("&debug=entries");
+
+			if (ExplainScores)
+				path.Append("&explainScores=true");
 		}
 
 		private void AppendMinimalQueryString(StringBuilder path)
@@ -278,7 +277,7 @@ namespace Raven.Abstractions.Data
 			if (string.IsNullOrEmpty(Query) == false)
 			{
 				path.Append("&query=")
-				    .Append(Uri.EscapeUriString(Uri.EscapeDataString(Query)));
+				    .Append(Uri.EscapeDataString(Query));
 			}
 			
 			if (string.IsNullOrEmpty(DefaultField) == false)
@@ -312,6 +311,78 @@ namespace Raven.Abstractions.Data
 		{
 			return Query;
 		}
+
+        public bool Equals(IndexQuery other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return PageSizeSet.Equals(other.PageSizeSet) && 
+                   String.Equals(Query, other.Query) && 
+                   Equals(TotalSize, other.TotalSize) && 
+                   Equals(QueryInputs, other.QueryInputs) && 
+                   Start == other.Start && 
+                   Equals(IsDistinct, other.IsDistinct) && 
+                   Equals(FieldsToFetch, other.FieldsToFetch) && 
+                   Equals(SortedFields, other.SortedFields) && 
+                   Cutoff.Equals(other.Cutoff) && 
+                   Equals(CutoffEtag, other.CutoffEtag) && 
+                   String.Equals(DefaultField, other.DefaultField) && 
+                   DefaultOperator == other.DefaultOperator && 
+                   SkipTransformResults.Equals(other.SkipTransformResults) && 
+                   Equals(SkippedResults, other.SkippedResults) && 
+                   DebugOptionGetIndexEntries.Equals(other.DebugOptionGetIndexEntries) && 
+                   Equals(HighlightedFields, other.HighlightedFields) && 
+                   Equals(HighlighterPreTags, other.HighlighterPreTags) && 
+                   Equals(HighlighterPostTags, other.HighlighterPostTags) && 
+                   String.Equals(ResultsTransformer, other.ResultsTransformer) && 
+                   DisableCaching.Equals(other.DisableCaching);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj.GetType() == GetType() && Equals((IndexQuery)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = PageSizeSet.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Query != null ? Query.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (TotalSize != null ? TotalSize.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (QueryInputs != null ? QueryInputs.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ Start;
+                hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
+                hashCode = (hashCode * 397) ^ (FieldsToFetch != null ? FieldsToFetch.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (SortedFields != null ? SortedFields.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ Cutoff.GetHashCode();
+                hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (DefaultField != null ? DefaultField.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (int)DefaultOperator;
+                hashCode = (hashCode * 397) ^ SkipTransformResults.GetHashCode();
+                hashCode = (hashCode * 397) ^ (SkippedResults != null ? SkippedResults.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ DebugOptionGetIndexEntries.GetHashCode();
+                hashCode = (hashCode * 397) ^ (HighlightedFields != null ? HighlightedFields.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (HighlighterPreTags != null ? HighlighterPreTags.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (HighlighterPostTags != null ? HighlighterPostTags.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (ResultsTransformer != null ? ResultsTransformer.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
+                return hashCode;
+            }
+        }
+
+        public static bool operator ==(IndexQuery left, IndexQuery right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(IndexQuery left, IndexQuery right)
+        {
+            return !Equals(left, right);
+        }
+
 	}
 
     public enum QueryOperator

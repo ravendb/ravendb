@@ -4,40 +4,21 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Util;
-using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Shard;
-using Raven.Database.Extensions;
-using Raven.Database.Server;
 using Raven.Tests.Document;
 using Xunit;
-using System.Collections.Generic;
 
 namespace Raven.Tests.Shard.Async
 {
-	public class WhenUsingParallelAccessStrategy  : RemoteClientTest, IDisposable
+	public class WhenUsingParallelAccessStrategy  : RemoteClientTest
 	{
-		private readonly string path;
-		private readonly int port;
-
-		public WhenUsingParallelAccessStrategy()
-		{
-			port = 8079;
-			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
-		}
-
-		public override void Dispose()
-		{
-			IOExtensions.DeleteDirectory(path);
-			base.Dispose();
-		}
-
 		[Fact]
 		public void NullResultIsNotAnException()
 		{
-			using(GetNewServer(port, path))
+			using(GetNewServer())
 			using (var shard1 = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			using (var session = shard1.OpenAsyncSession())
 			{
@@ -52,7 +33,7 @@ namespace Raven.Tests.Shard.Async
 		[Fact]
 		public void ExecutionExceptionsAreRethrown()
 		{
-			using (GetNewServer(port, path))
+			using (GetNewServer())
 			using (var shard1 = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			using (var session = shard1.OpenAsyncSession())
 			{

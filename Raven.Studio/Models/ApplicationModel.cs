@@ -11,7 +11,9 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Changes;
 using Raven.Client.Connection.Async;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
+using Raven.Studio.Features.Documents;
 using Raven.Studio.Infrastructure;
 using Raven.Studio.Messages;
 using System.Linq;
@@ -20,7 +22,8 @@ namespace Raven.Studio.Models
 {
 	public class ApplicationModel : NotifyPropertyChangedBase
 	{
-		public static ApplicationModel Current { get; private set; }
+	    private DocumentPadModel documentPadModel;
+	    public static ApplicationModel Current { get; private set; }
 
 		static ApplicationModel()
 		{
@@ -43,13 +46,12 @@ namespace Raven.Studio.Models
 
 			Server.Value.SelectedDatabase.PropertyChanged += (sender, args) =>
 			{
-				Server.Value.SelectedDatabase.Value.UpdateDatabaseDocument();
+				Server.Value.SelectedDatabase.Value.Update();
 				RegisterToAlerts();
 			};
 
 			RegisterToAlerts();
 			State = new ApplicationState();
-			
 		}
 
 		private void RegisterToAlerts()
@@ -58,6 +60,11 @@ namespace Raven.Studio.Models
 			      .ForDocument(Constants.RavenAlerts)
 			      .Subscribe(notification => UpdateAlerts());
 			UpdateAlerts();
+		}
+
+		public Settings Settings
+		{
+			get { return Settings.Instance; }
 		}
 
 		private void UpdateAlerts()
@@ -100,12 +107,26 @@ namespace Raven.Studio.Models
 			get { return Database.Value.AsyncDatabaseCommands; }
 		}
 
+		public static JsonSerializer CreateSerializer()
+		{
+			return Current.Server.Value.DocumentStore.Conventions.CreateSerializer();
+		}
+
 		public Observable<ServerModel> Server { get; set; }
 
 		public void Setup(FrameworkElement rootVisual)
 		{
 			rootVisual.DataContext = this;
 		}
+
+        public DocumentPadModel DocumentPad { get { return documentPadModel ?? (documentPadModel = new DocumentPadModel()); } }
+
+        public void ShowDocumentInDocumentPad(string documentId)
+        {
+            DocumentPad.IsOpen = true;
+            DocumentPad.DocumentId = documentId;
+            DocumentPad.LoadDocument.Execute(null);
+        }
 
 		public void AddNotification(Notification notification)
 		{
@@ -158,7 +179,7 @@ namespace Raven.Studio.Models
 							}
 						}
 						if(message == null)
-							message = httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription;
+							message = (int)httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription;
 						var stream = httpWebResponse.GetResponseStream();
 						if (stream != null)
 						{
@@ -240,6 +261,11 @@ namespace Raven.Studio.Models
 				return firstOrDefault.Version;
 
 			return "0.0.unknown.0";
+		}
+
+		public void Refresh()
+		{
+			OnPropertyChanged(() => Settings);
 		}
 	}
 }

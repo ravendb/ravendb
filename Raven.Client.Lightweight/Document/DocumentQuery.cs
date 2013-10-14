@@ -26,7 +26,7 @@ namespace Raven.Client.Document
 	{
 
 
-	    /// <summary>
+		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
 		public DocumentQuery(InMemoryDocumentSessionOperations session
@@ -59,22 +59,49 @@ namespace Raven.Client.Document
 		{
 			var propertyInfos = typeof (TProjection).GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 			var projections = propertyInfos.Select(x => x.Name).ToArray();
-			var fields = propertyInfos.Select(x => DocumentConvention.FindIdentityProperty(x) ? Constants.DocumentIdFieldName : x.Name).ToArray();
+			var identityProperty = DocumentConvention.GetIdentityProperty(typeof (TProjection));
+			var fields = propertyInfos.Select(p =>(p == identityProperty) ? Constants.DocumentIdFieldName : p.Name).ToArray();
 			return SelectFields<TProjection>(fields, projections);
 		}
 
-	    public IDocumentQuery<T> SetResultTransformer(string resultsTransformer)
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Distinct()
+		{
+			Distinct();
+			return this;
+		}
+
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetResultTransformer(string resultsTransformer)
 	    {
-	        this.resultsTransformer = resultsTransformer;
+	        base.SetResultTransformer(resultsTransformer);
 	        return this;
 	    }
 
-        public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
+		public IDocumentQuery<T> OrderByScore()
+		{
+			AddOrder(Constants.TemporaryScoreValue, false);
+			return this;
+		}
+
+		public IDocumentQuery<T> OrderByScoreDescending()
+		{
+			AddOrder(Constants.TemporaryScoreValue, true);
+			return this;
+		}
+
+		public IDocumentQuery<T> ExplainScores()
+		{
+			shouldExplainScores = true;
+			return this;
+		}
+
+		public void SetQueryInputs(Dictionary<string, RavenJToken> queryInputs)
 	    {
 	        this.queryInputs = queryInputs;
 	    }
 
-	    /// <summary>
+		public bool IsDistinct { get { return isDistinct; } }
+
+		/// <summary>
 		/// Selects the specified fields directly from the index
 		/// </summary>
 		/// <typeparam name="TProjection">The type of the projection.</typeparam>
@@ -110,8 +137,7 @@ namespace Raven.Client.Document
 				theWaitForNonStaleResults = theWaitForNonStaleResults,
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
-				groupByFields = groupByFields,
-				aggregationOp = aggregationOp,
+				isDistinct = isDistinct,
 				negate = negate,
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
@@ -132,7 +158,8 @@ namespace Raven.Client.Document
                 queryInputs = queryInputs,
 				disableEntitiesTracking = disableEntitiesTracking,
 				disableCaching = disableCaching,
-                lastEquality = lastEquality
+                lastEquality = lastEquality,
+				shouldExplainScores = shouldExplainScores
 			};
 			return documentQuery;
 		}
@@ -238,30 +265,6 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms)
 		{
 			Search(GetMemberQueryPath(propertySelector.Body), searchTerms);
-			return this;
-		}
-
-		///<summary>
-		/// Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		/// <remarks>
-		/// This is only valid on dynamic indexes queries
-		/// </remarks>
-		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.GroupBy(AggregationOperation aggregationOperation, params string[] fieldsToGroupBy)
-		{
-			GroupBy(aggregationOperation, fieldsToGroupBy);
-			return this;
-		}
-
-		///<summary>
-		///  Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		///<remarks>
-		///  This is only valid on dynamic indexes queries
-		///</remarks>
-		public IDocumentQuery<T> GroupBy<TValue>(AggregationOperation aggregationOperation, params Expression<Func<T, TValue>>[] groupPropertySelectors)
-		{
-			GroupBy(aggregationOperation, groupPropertySelectors.Select(GetMemberQueryPath).ToArray());
 			return this;
 		}
 
@@ -711,7 +714,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-        /// Sorts the query results by distance.
+		/// Sorts the query results by distance.
 		/// </summary>
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance()
 		{
@@ -739,7 +742,13 @@ namespace Raven.Client.Document
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
 		public IDocumentQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
-			OrderBy(propertySelectors.Select(GetMemberQueryPath).ToArray());
+			var orderByfields = propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray();
+			OrderBy(orderByfields);
+			for (int index = 0; index < orderByfields.Length; index++)
+			{
+				var fld = orderByfields[index];
+				sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].ReturnType));
+			}
 			return this;
 		}
 
@@ -763,8 +772,14 @@ namespace Raven.Client.Document
 		/// <param name = "propertySelectors">Property selectors for the fields.</param>
 		public IDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
-			OrderByDescending(propertySelectors.Select(GetMemberQueryPath).ToArray());
-			return this;
+            var orderByfields = propertySelectors.Select(expression => MakeFieldSortDescending(GetMemberQueryPathForOrderBy(expression))).ToArray();
+            OrderBy(orderByfields);
+            for (int index = 0; index < orderByfields.Length; index++)
+            {
+                var fld = orderByfields[index];
+                sortByHints.Add(new KeyValuePair<string, Type>(fld, propertySelectors[index].ReturnType));
+            }
+            return this;
 		}
 
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Highlight(

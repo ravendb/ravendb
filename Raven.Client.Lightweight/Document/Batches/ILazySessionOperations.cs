@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Client.Indexes;
 
 namespace Raven.Client.Document.Batches
 {
@@ -117,10 +118,14 @@ namespace Raven.Client.Document.Batches
 		/// </remarks>
 		Lazy<TResult[]> Load<TResult>(IEnumerable<ValueType> ids, Action<TResult[]> onEval);
 
+		Lazy<TResult> Load<TTransformer, TResult>(string id) where TTransformer : AbstractTransformerCreationTask, new();
+
+		Lazy<TResult[]> Load<TTransformer, TResult>(params string[] ids) where TTransformer : AbstractTransformerCreationTask, new();
+
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		Lazy<TResult[]> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25);
+		Lazy<TResult[]> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null);
 	}
 
 	/// <summary>

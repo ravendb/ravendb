@@ -70,19 +70,15 @@ namespace Raven.Database.Server.Responders
 			var allowStale = context.GetAllowStale();
 			var indexQuery = context.GetIndexQueryFromHttpContext(maxPageSize: int.MaxValue);
 
-			var status = new RavenJObject
-			{
-				{"State", null},
-				{"Completed", false}
-			};
+		    var status = new BulkOperationStatus();
 			var sp = Stopwatch.StartNew();
 			long id = 0;
 
 			var task = Task.Factory.StartNew(() =>
 			{
 				var array = batchOperation(index, indexQuery, allowStale);
-				status["State"] = array;
-				status["Completed"] = true;
+			    status.State = array;
+				status.Completed = true;
 
 				context.Log(log => log.Debug("\tBatch Operation worked on {0:#,#;;0} documents in {1}, task #: {2}", array.Length, sp.Elapsed, id));
 			});
@@ -94,8 +90,14 @@ namespace Raven.Database.Server.Responders
 				OperationId = id
 			});
 		}
-		
-		private void Batch(IHttpContext context)
+
+	    public class BulkOperationStatus
+	    {
+            public RavenJArray State { get; set; }
+            public bool Completed { get; set; }
+	    }
+
+	    private void Batch(IHttpContext context)
 		{
 			var jsonCommandArray = context.ReadJsonArray();
 

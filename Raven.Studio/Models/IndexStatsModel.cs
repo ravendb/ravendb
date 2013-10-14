@@ -22,7 +22,7 @@ namespace Raven.Studio.Models
 				DatabaseCommands.GetStatisticsAsync()
 					.ContinueOnSuccessInTheUIThread(x =>
 					{
-						foreach (var index in x.Indexes.Where(index => index.Name == indexName))
+						foreach (var index in x.Indexes.Where(index => index.Id.ToString() == indexName)) // SNAFU: This isn't going to work
 						{
 							indexStats = index;
 							OnPropertyChanged(() => IndexStats);

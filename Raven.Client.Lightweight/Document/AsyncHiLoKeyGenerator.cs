@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 #if !SILVERLIGHT
+using System;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
@@ -39,21 +40,22 @@ namespace Raven.Client.Document
 		/// <param name="convention">The convention.</param>
 		/// <param name="entity">The entity.</param>
 		/// <returns></returns>
-		public Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, DocumentConvention convention, object entity)
+		public async Task<string> GenerateDocumentKeyAsync(IAsyncDatabaseCommands databaseCommands, DocumentConvention convention, object entity)
 		{
-			return NextIdAsync(databaseCommands).ContinueWith(task => GetDocumentKeyFromId(convention, task.Result));
+			var nextId = await NextIdAsync(databaseCommands);
+			return GetDocumentKeyFromId(convention, nextId);
 		}
 
 		///<summary>
 		/// Create the next id (numeric)
 		///</summary>
-		public Task<long> NextIdAsync(IAsyncDatabaseCommands databaseCommands)
+		public async Task<long> NextIdAsync(IAsyncDatabaseCommands databaseCommands)
 		{
 			var myRange = Range; // thread safe copy
 			long incrementedCurrent = Interlocked.Increment(ref myRange.Current);
 			if (incrementedCurrent <= myRange.Max)
 			{
-				return CompletedTask.With(incrementedCurrent);
+				return incrementedCurrent;
 			}
 
 			bool lockTaken = false;
@@ -64,23 +66,20 @@ namespace Raven.Client.Document
 				{
 					// Lock was contended, and the max has already been changed. Just get a new id as usual.
 					generatorLock.Exit();
-					return NextIdAsync(databaseCommands);
+					return await NextIdAsync(databaseCommands);
 				}
 				// Get a new max, and use the current value.
-				return GetNextRangeAsync(databaseCommands)
-					.ContinueWith(task =>
-					{
-						try
-						{
-							Range = task.Result;
-						}
-						finally
-						{
-							generatorLock.Exit();
-						}
 
-						return NextIdAsync(databaseCommands);
-					}).Unwrap();
+				try
+				{
+					Range = await GetNextRangeAsync(databaseCommands);
+				}
+				finally
+				{
+					generatorLock.Exit();
+				}
+
+				return await NextIdAsync(databaseCommands);
 			}
 			catch
 			{
@@ -99,102 +98,101 @@ namespace Raven.Client.Document
 			return GetNextMaxAsyncInner(databaseCommands);
 		}
 
-		private Task<RangeValue> GetNextMaxAsyncInner(IAsyncDatabaseCommands databaseCommands)
+		private async Task<RangeValue> GetNextMaxAsyncInner(IAsyncDatabaseCommands databaseCommands)
 		{
 			var minNextMax = Range.Max;
-			return GetDocumentAsync(databaseCommands)
-				.ContinueWith(task =>
+			try
+			{
+				JsonDocument document = null;
+				ConflictException conflictException = null;
+				try
 				{
-					try
+					document = await GetDocumentAsync(databaseCommands);
+				}
+				catch (ConflictException e)
+				{
+					conflictException = e;
+				}
+				if (conflictException != null)
+				{
+					// resolving the conflict by selecting the highest number
+					var highestMax = conflictException.ConflictedVersionIds
+					                                  .Select(async conflictedVersionId =>
+					                                  {
+						                                  var doc = await databaseCommands.GetAsync(conflictedVersionId);
+						                                  return GetMaxFromDocument(doc, minNextMax);
+					                                  })
+					                                  .AggregateAsync(Enumerable.Max);
+
+					await PutDocumentAsync(databaseCommands, new JsonDocument
 					{
-						JsonDocument document;
-						try
-						{
-							document = task.Result;
-						}
-						catch (ConflictException e)
-						{
-							// resolving the conflict by selecting the highest number
-							var highestMax = e.ConflictedVersionIds
-								.Select(conflictedVersionId => databaseCommands.GetAsync(conflictedVersionId)
-								                               	.ContinueWith(t => GetMaxFromDocument(t.Result, minNextMax)))
-								.AggregateAsync(Enumerable.Max);
+						Etag = conflictException.Etag,
+						Metadata = new RavenJObject(),
+						DataAsJson = RavenJObject.FromObject(new {Max = highestMax}),
+						Key = HiLoDocumentKey
+					});
 
-							return highestMax
-								.ContinueWith(t => PutDocumentAsync(databaseCommands, new JsonDocument
-								{
-									Etag = e.Etag,
-									Metadata = new RavenJObject(),
-									DataAsJson = RavenJObject.FromObject(new {Max = t.Result}),
-									Key = HiLoDocumentKey
-								}))
-								.Unwrap()
-								.ContinueWithTask(() => GetNextRangeAsync(databaseCommands));
-						}
+					return await GetNextRangeAsync(databaseCommands);
+				}
 
-						long min, max;
-						if (document == null)
-						{
-							min = minNextMax + 1;
-							max = minNextMax + capacity;
-							document = new JsonDocument
-							{
-								Etag = Etag.Empty,
-								// sending empty etag means - ensure the that the document does NOT exists
-								Metadata = new RavenJObject(),
-								DataAsJson = RavenJObject.FromObject(new {Max = max}),
-								Key = HiLoDocumentKey
-							};
-						}
-						else
-						{
-							var oldMax = GetMaxFromDocument(document, minNextMax);
-							min = oldMax + 1;
-							max = oldMax + capacity;
-
-							document.DataAsJson["Max"] = max;
-						}
-
-						return PutDocumentAsync(databaseCommands, document).WithResult(new RangeValue(min, max));
-					}
-					catch (ConcurrencyException)
+				long min, max;
+				if (document == null)
+				{
+					min = minNextMax + 1;
+					max = minNextMax + capacity;
+					document = new JsonDocument
 					{
-						return GetNextMaxAsyncInner(databaseCommands);
-					}
-				}).Unwrap();
+						Etag = Etag.Empty,
+						// sending empty etag means - ensure the that the document does NOT exists
+						Metadata = new RavenJObject(),
+						DataAsJson = RavenJObject.FromObject(new { Max = max }),
+						Key = HiLoDocumentKey
+					};
+				}
+				else
+				{
+					var oldMax = GetMaxFromDocument(document, minNextMax);
+					min = oldMax + 1;
+					max = oldMax + capacity;
+
+					document.DataAsJson["Max"] = max;
+				}
+
+				return await PutDocumentAsync(databaseCommands, document).WithResult(new RangeValue(min, max));
+			}
+			catch (ConcurrencyException)
+			{
+				// We will retry the operation. Since we have here just one catch clause, 
+				// we can just continue to the next line without using a flag like retry = true
+			}
+			return await GetNextMaxAsyncInner(databaseCommands);
 		}
 
 		private Task PutDocumentAsync(IAsyncDatabaseCommands databaseCommands, JsonDocument document)
 		{
-			return databaseCommands.PutAsync(HiLoDocumentKey, document.Etag,
-								 document.DataAsJson,
-								 document.Metadata);
+			return databaseCommands.PutAsync(HiLoDocumentKey, document.Etag, document.DataAsJson, document.Metadata);
 		}
 
-		private Task<JsonDocument> GetDocumentAsync(IAsyncDatabaseCommands databaseCommands)
+		private async Task<JsonDocument> GetDocumentAsync(IAsyncDatabaseCommands databaseCommands)
 		{
-			return databaseCommands.GetAsync(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0])
-				.ContinueWith(task =>
-				{
-					var documents = task.Result;
-					if (documents.Results.Count == 2 && documents.Results[1] != null)
-					{
-						lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");
-					}
-					else
-					{
-						lastServerPrefix = string.Empty;
-					}
-					if (documents.Results.Count == 0 || documents.Results[0] == null)
-						return (JsonDocument)null;
+			var documents = await databaseCommands.GetAsync(new[] {HiLoDocumentKey, RavenKeyServerPrefix}, new string[0]);
+			if (documents.Results.Count == 2 && documents.Results[1] != null)
+			{
+				lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");
+			}
+			else
+			{
+				lastServerPrefix = string.Empty;
+			}
+			if (documents.Results.Count == 0 || documents.Results[0] == null)
+				return null;
 
-					var jsonDocument = documents.Results[0].ToJsonDocument();
-					foreach (var key in jsonDocument.Metadata.Keys.Where(x => x.StartsWith("@")).ToArray())
-					{
-						jsonDocument.Metadata.Remove(key);
-					}
-					return jsonDocument;
-				});
+			var jsonDocument = documents.Results[0].ToJsonDocument();
+			foreach (var key in jsonDocument.Metadata.Keys.Where(x => x.StartsWith("@")).ToArray())
+			{
+				jsonDocument.Metadata.Remove(key);
+			}
+			return jsonDocument;
 		}
 	}
 }

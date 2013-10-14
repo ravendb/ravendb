@@ -1,10 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Client;
 using Xunit;
-using Raven.Client.Linq;
 
 namespace Raven.Tests.Shard.BlogModel
 {

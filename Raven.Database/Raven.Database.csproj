@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Raven.Database</RootNamespace>
     <AssemblyName>Raven.Database</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -39,7 +39,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\build\</OutputPath>
     <DefineConstants>TRACE;DEBUG;NET_4_0</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -47,11 +47,12 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <DocumentationFile>
     </DocumentationFile>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\build\</OutputPath>
     <DefineConstants>TRACE;NET_4_0</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -60,6 +61,7 @@
     <DocumentationFile>
     </DocumentationFile>
     <NoWarn>1607, 1591</NoWarn>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -107,12 +109,22 @@
     <Reference Include="Lucene.Net.Contrib.Spatial.NTS">
       <HintPath>..\SharedLibs\Lucene.Net.Contrib.Spatial.NTS.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Net4">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\net40\Microsoft.CompilerServices.AsyncTargetingPack.Net4.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.Data.Edm, Version=5.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Data.Edm.5.2.0\lib\net40\Microsoft.Data.Edm.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Data.OData, Version=5.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Data.OData.5.2.0\lib\net40\Microsoft.Data.OData.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="Microsoft.WindowsAzure.Configuration, Version=1.8.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.WindowsAzure.ConfigurationManager.1.8.0.0\lib\net35-full\Microsoft.WindowsAzure.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.WindowsAzure.Storage, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\WindowsAzure.Storage.2.0.5.1\lib\net40\Microsoft.WindowsAzure.Storage.dll</HintPath>
+    </Reference>
     <Reference Include="Mono.Cecil">
       <HintPath>..\packages\Mono.Cecil.0.9.5.3\lib\net40\Mono.Cecil.dll</HintPath>
     </Reference>
@@ -128,17 +140,25 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Data.Services.Client" />
     <Reference Include="System.DirectoryServices" />
     <Reference Include="System.DirectoryServices.AccountManagement" />
     <Reference Include="System.Management" />
     <Reference Include="System.Net" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Net.Http.WebRequest" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Security" />
     <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Spatial, Version=5.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\System.Spatial.5.2.0\lib\net40\System.Spatial.dll</HintPath>
+    </Reference>
     <Reference Include="System.Transactions" />
     <Reference Include="System.Web" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
@@ -164,7 +184,6 @@
     <Compile Include="Bundles\Encryption\Streams\StructConverter.cs" />
     <Compile Include="Bundles\Expiration\ExpirationReadTrigger.cs" />
     <Compile Include="Bundles\Expiration\ExpiredDocumentsCleaner.cs" />
-    <Compile Include="Bundles\IndexedProperties\IndexedPropertiesTrigger.cs" />
     <Compile Include="Bundles\MoreLikeThis\MoreLikeThis.cs" />
     <Compile Include="Bundles\Replication\Impl\Historian.cs" />
     <Compile Include="Bundles\Replication\Impl\ReplicationData.cs" />
@@ -179,16 +198,42 @@
     <Compile Include="Bundles\Replication\Tasks\ReplicationStrategy.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnAttachmentDeleteTrigger.cs" />
     <Compile Include="Bundles\Replication\Triggers\RemoveConflictOnDeleteTrigger.cs" />
+    <Compile Include="Bundles\ScriptedIndexResults\ScriptedIndexResultsIndexTrigger.cs" />
     <Compile Include="Bundles\SqlReplication\ConversionScriptResult.cs" />
     <Compile Include="Bundles\SqlReplication\ItemToReplicate.cs" />
     <Compile Include="Bundles\SqlReplication\RelationalDatabaseWriter.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcher.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
+    <Compile Include="Extensions\StringExtensions.cs" />
+    <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
+    <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
+    <Compile Include="Impl\DTC\MuninInFlightTransactionalState.cs" />
+    <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
+    <Compile Include="Linq\AttachmentForIndexing.cs" />
+    <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
+    <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />
+    <Compile Include="Linq\Ast\TransformFromClauses.cs" />
+    <Compile Include="Plugins\Builtins\ActiveBundlesProtection.cs" />
+    <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
+    <Compile Include="Prefetching\Prefetcher.cs" />
+    <Compile Include="Prefetching\PrefetchingUser.cs" />
+    <Compile Include="Server\Responders\Admin\AdminDetailedSizeBreakdown.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugIndexFields.cs" />
+    <Compile Include="Server\Responders\Admin\AdminLohCompaction.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugLists.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugQueries.cs" />
+    <Compile Include="Server\Responders\Debugging\ExecutingQueryInfo.cs" />
+    <Compile Include="Server\Responders\SingleAuthToken.cs" />
+    <Compile Include="Server\Responders\TransactionPrepare.cs" />
+    <Compile Include="Server\Security\Authentication.cs" />
+    <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
     <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Extensions\DocDbExtensions.cs" />
     <Compile Include="Extensions\TaskExtensions.cs" />
-    <Compile Include="Impl\InFlightTransactionalState.cs" />
-    <Compile Include="Impl\PutSerialLock.cs" />
+    <Compile Include="Impl\Synchronization\DatabaseEtagSynchronizer.cs" />
+    <Compile Include="Impl\DTC\InFlightTransactionalState.cs" />
+    <Compile Include="Impl\Synchronization\EtagSynchronizer.cs" />
+    <Compile Include="Impl\Synchronization\EtagSynchronizerType.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\BaseFragmentsBuilder.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FastVectorHighlighter.cs" />
     <Compile Include="Imports\Lucene.Net\FastVectorHightlighter\FieldFragList.cs" />
@@ -233,7 +278,7 @@
     <Compile Include="Config\Settings\TimeSpanSetting.cs" />
     <Compile Include="Data\TouchedDocumentInfo.cs" />
     <Compile Include="Data\RestoreRequest.cs" />
-    <Compile Include="Extensions\AdminFinder.cs" />
+    <Compile Include="Extensions\RoleFinder.cs" />
     <Compile Include="Extensions\WhoIsLocking.cs" />
     <Compile Include="Indexing\CurrentIndexingScope.cs" />
     <Compile Include="Indexing\CurrentTransformationScope.cs" />
@@ -250,7 +295,7 @@
     <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceAnalyzer.cs" />
     <Compile Include="Indexing\Analyzers\LowerCaseWhitespaceTokenizer.cs" />
     <Compile Include="Indexing\LuceneIntegration\TermsMatchQuery.cs" />
-    <Compile Include="Indexing\PrefetchingBehavior.cs" />
+    <Compile Include="Prefetching\PrefetchingBehavior.cs" />
     <Compile Include="Indexing\RavenIndexWriter.cs" />
     <Compile Include="Indexing\RavenPerFieldAnalyzerWrapper.cs" />
     <Compile Include="Indexing\Spatial\BBoxStrategyThatSupportsAllShapes.cs" />
@@ -422,10 +467,12 @@
     <Compile Include="Server\Responders\Plugins.cs" />
     <Compile Include="Server\Responders\RavenRoot.cs" />
     <Compile Include="Server\Responders\RavenUI.cs" />
+    <Compile Include="Server\Responders\IdentitySeed.cs" />
     <Compile Include="Server\Responders\SilverlightUI.cs" />
     <Compile Include="Server\Responders\QueryStreams.cs" />
     <Compile Include="Server\Responders\Transformers.cs" />
     <Compile Include="Server\Security\AbstractRequestAuthorizer.cs" />
+    <Compile Include="Server\Security\IgnoreDb.cs" />
     <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
@@ -435,6 +482,7 @@
     <Compile Include="Server\Security\OAuth\OAuthCookie.cs" />
     <Compile Include="Server\Security\OAuth\OAuthRequestAuthorizer.cs" />
     <Compile Include="Server\Security\OAuth\OAuthServerHelper.cs" />
+    <Compile Include="Server\Security\Triggers\OAuthPutTrigger.cs" />
     <Compile Include="Server\Security\Triggers\WindowsAuthDeleteTrigger.cs" />
     <Compile Include="Server\Security\Triggers\WindowsAuthPutTrigger.cs" />
     <Compile Include="Server\Security\Windows\WindowsAuthDocument.cs" />
@@ -696,10 +744,12 @@
     <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />
     <Compile Include="Storage\Esent\Backup\EsentBackup.cs" />
     <Compile Include="Storage\Esent\Backup\RestoreOperation.cs" />
+    <Compile Include="Storage\Esent\Debug\StorageSizes.cs" />
     <Compile Include="Storage\Esent\EsentExtension.cs" />
     <Compile Include="Storage\Esent\SchemaCreator.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\ISchemaUpdate.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\SchemaUpdaterHelper.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From47To48.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From42To43.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From41To42.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From39To40.cs" />
@@ -782,8 +832,9 @@
     <Compile Include="Storage\Managed\TasksStorageActions.cs" />
     <Compile Include="Storage\Managed\TransactionalStorage.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
-    <Compile Include="Tasks\Task.cs" />
+    <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
+    <Compile Include="Tasks\TouchMissingReferenceDocumentTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
     <Compile Include="Util\OutputTicker.cs" />

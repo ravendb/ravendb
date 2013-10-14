@@ -1,11 +1,6 @@
 ﻿using System;
 using System.Text;
-#if NETFX_CORE || SILVERLIGHT
-using Raven.Client.Silverlight.MissingFromSilverlight;
-#else
 using System.Collections.Specialized;
-
-#endif
 
 namespace Raven.Abstractions.Data
 {
@@ -122,6 +117,9 @@ namespace Raven.Abstractions.Data
 			}
 			else
 			{
+				if(DocumentId == null)
+					throw new ArgumentNullException("DocumentId", "DocumentId cannot be null");
+
 				pathSuffix = DocumentId;
 			}
 

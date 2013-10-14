@@ -23,7 +23,6 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 #endregion
 
-#if !PocketPC
 using System;
 using System.Runtime.Serialization;
 using Raven.Imports.Newtonsoft.Json.Serialization;
@@ -82,4 +81,3 @@ namespace Raven.Imports.Newtonsoft.Json.Tests.TestObjects
     }
   }
 }
-#endif

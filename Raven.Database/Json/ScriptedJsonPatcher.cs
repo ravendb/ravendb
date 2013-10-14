@@ -30,13 +30,12 @@ namespace Raven.Database.Json
 		private static Func<string, RavenJObject> loadDocumentStatic;
 
 		public List<string> Debug = new List<string>();
-		public IList<JsonDocument> CreatedDocs;
+		public IList<JsonDocument> CreatedDocs = new List<JsonDocument>();
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
 		public ScriptedJsonPatcher(DocumentDatabase database = null)
 		{
-			
 			if (database == null)
 			{
 				maxSteps = 10 * 1000;
@@ -59,7 +58,7 @@ namespace Raven.Database.Json
 			}
 		}
 
-		public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch, int size = 0)
+		public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch, int size = 0, string docId = null)
 		{
 			if (document == null)
 				return null;
@@ -67,13 +66,13 @@ namespace Raven.Database.Json
 			if (String.IsNullOrEmpty(patch.Script))
 				throw new InvalidOperationException("Patch script must be non-null and not empty");
 
-			var resultDocument = ApplySingleScript(document, patch, size);
+			var resultDocument = ApplySingleScript(document, patch, size, docId);
 			if (resultDocument != null)
 				document = resultDocument;
 			return document;
 		}
 
-		private RavenJObject ApplySingleScript(RavenJObject doc, ScriptedPatchRequest patch, int size)
+		private RavenJObject ApplySingleScript(RavenJObject doc, ScriptedPatchRequest patch, int size, string docId)
 		{
 			JintEngine jintEngine;
 			try
@@ -96,39 +95,45 @@ namespace Raven.Database.Json
 			loadDocumentStatic = loadDocument;
 			try
 			{
-				CustomizeEngine(jintEngine);
-				
-				foreach (var kvp in patch.Values)
-				{
-				    var token = kvp.Value as RavenJToken;
-				    if (token != null)
-					{
-						jintEngine.SetParameter(kvp.Key, ToJsInstance(jintEngine.Global, token));
-					}
-					else
-					{
-						var rjt = RavenJToken.FromObject(kvp.Value);
-						var jsInstance = ToJsInstance(jintEngine.Global, rjt);
-						jintEngine.SetParameter(kvp.Key, jsInstance);
-					}
-				}
+			    CustomizeEngine(jintEngine);
+			    jintEngine.SetFunction("PutDocument", ((Action<string, JsObject, JsObject>) (PutDocument)));
+			    jintEngine.SetParameter("__document_id", docId);
+			    foreach (var kvp in patch.Values)
+			    {
+			        var token = kvp.Value as RavenJToken;
+			        if (token != null)
+			        {
+			            jintEngine.SetParameter(kvp.Key, ToJsInstance(jintEngine.Global, token));
+			        }
+			        else
+			        {
+			            var rjt = RavenJToken.FromObject(kvp.Value);
+			            var jsInstance = ToJsInstance(jintEngine.Global, rjt);
+			            jintEngine.SetParameter(kvp.Key, jsInstance);
+			        }
+			    }
 			    var jsObject = ToJsObject(jintEngine.Global, doc);
-				jintEngine.ResetSteps();
-				if (size != 0)
-				{
-					jintEngine.SetMaxSteps(maxSteps + (size* additionalStepsPerSize));
-				}
-				jintEngine.CallFunction("ExecutePatchScript", jsObject);
-				foreach (var kvp in patch.Values)
-				{
-					jintEngine.RemoveParameter(kvp.Key);
-				}
-				RemoveEngineCustomizations(jintEngine);
-				OutputLog(jintEngine);
+			    jintEngine.ResetSteps();
+			    if (size != 0)
+			    {
+			        jintEngine.SetMaxSteps(maxSteps + (size*additionalStepsPerSize));
+			    }
+			    jintEngine.CallFunction("ExecutePatchScript", jsObject);
+			    foreach (var kvp in patch.Values)
+			    {
+			        jintEngine.RemoveParameter(kvp.Key);
+			    }
+			    jintEngine.RemoveParameter("__document_id");
+			    RemoveEngineCustomizations(jintEngine);
+			    OutputLog(jintEngine);
 
-				scriptsCache.CheckinScript(patch, jintEngine);
+			    scriptsCache.CheckinScript(patch, jintEngine);
 
-				return ConvertReturnValue(jsObject);
+			    return ConvertReturnValue(jsObject);
+			}
+			catch (ConcurrencyException)
+			{
+			    throw;
 			}
 			catch (Exception errorEx)
 			{
@@ -163,6 +168,8 @@ namespace Raven.Database.Json
 			var rjo = new RavenJObject();
 			foreach (var key in jsObject.GetKeys())
 			{
+			    if (key == Constants.ReduceKeyFieldName || key == Constants.DocumentIdFieldName)
+			        continue;
 				var jsInstance = jsObject[key];
 				switch (jsInstance.Type)
 				{
@@ -322,11 +329,7 @@ function ExecutePatchScript(docInner){{
 				return ToJsObject(jintEngine.Global, loadedDoc);
 			})));
 
-			CreatedDocs = new List<JsonDocument>();
-
-			jintEngine.SetFunction("PutDocument", ((Action<string, JsObject, JsObject>)(PutDocument)));
-
-			jintEngine.Run(wrapperScript);
+            jintEngine.Run(wrapperScript);
 
 			return jintEngine;
 		}
@@ -352,29 +355,43 @@ function ExecutePatchScript(docInner){{
                 Key = key,
                 DataAsJson = ToRavenJObject(doc)
             };
-            CreatedDocs.Add(newDocument);
-
-	        if (meta == null) 
-                return;
-
-	        foreach (var etagKeyName in EtagKeyNames)
+            
+	        if (meta == null)
 	        {
-	            JsInstance result;
-	            if (!meta.TryGetProperty(etagKeyName, out result)) 
-	                continue;
-	            string etag = result.ToString();
-                meta.Delete(etagKeyName);
-	            if (string.IsNullOrEmpty(etag))
-	                continue;
-	            Etag newDocumentEtag;
-	            if (Etag.TryParse(etag, out newDocumentEtag) == false)
+	            RavenJToken value;
+	            if (newDocument.DataAsJson.TryGetValue("@metadata", out value))
 	            {
-	                throw new InvalidOperationException(string.Format("Invalid ETag value '{0}' for document '{1}'",
-	                                                                  etag, key));
+	                newDocument.DataAsJson.Remove("@metadata");
+	                newDocument.Metadata = (RavenJObject) value;
 	            }
-	            newDocument.Etag = newDocumentEtag;
 	        }
-	        newDocument.Metadata = ToRavenJObject(meta);
+	        else
+	        {
+	            foreach (var etagKeyName in EtagKeyNames)
+	            {
+	                JsInstance result;
+	                if (!meta.TryGetProperty(etagKeyName, out result))
+	                    continue;
+	                string etag = result.ToString();
+	                meta.Delete(etagKeyName);
+	                if (string.IsNullOrEmpty(etag))
+	                    continue;
+	                Etag newDocumentEtag;
+	                if (Etag.TryParse(etag, out newDocumentEtag) == false)
+	                {
+	                    throw new InvalidOperationException(string.Format("Invalid ETag value '{0}' for document '{1}'",
+	                                                                      etag, key));
+	                }
+	                newDocument.Etag = newDocumentEtag;
+	            }
+	            newDocument.Metadata = ToRavenJObject(meta);
+	        }
+	        ValidateDocument(newDocument);
+            CreatedDocs.Add(newDocument);
+	    }
+
+	    protected virtual void ValidateDocument(JsonDocument newDocument)
+	    {
 	    }
 
 	    private static string NormalizeLineEnding(string script)
@@ -413,6 +430,7 @@ function ExecutePatchScript(docInner){{
 					continue;
 				Debug.Add(o.ToString());
 			}
+			engine.SetParameter("debug_outputs", engine.Global.ArrayClass.New());
 		}
 
 		private static string GetFromResources(string resourceName)

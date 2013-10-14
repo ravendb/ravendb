@@ -13,22 +13,16 @@ namespace Raven.Studio.Commands
 {
 	public class ImportDatabaseCommand : Command
 	{
-		const int BatchSize = 512;
-
 		private readonly Action<string> output;
 		private readonly ImportTaskSectionModel taskModel;
 		private bool includeAttachments, includeDocuments, includeIndexes, includeTransformers;
 
-		private readonly ISmugglerApi smuggler;
+		private ISmugglerApi smuggler;
 
 		public ImportDatabaseCommand(ImportTaskSectionModel taskModel, Action<string> output)
 		{
 			this.output = output;
 			this.taskModel = taskModel;
-			smuggler = new SmugglerApi(new SmugglerOptions
-			{
-				BatchSize = BatchSize
-			}, DatabaseCommands, output);
 		}
 
 		public override void Execute(object parameter)
@@ -110,6 +104,8 @@ namespace Raven.Studio.Commands
 				ShouldExcludeExpired = taskModel.Options.Value.ShouldExcludeExpired,
 				OperateOnTypes = operateOnTypes
 			};
+
+			smuggler = new SmugglerApi(smugglerOptions, DatabaseCommands, output);
 
 			smuggler.ImportData(stream, smugglerOptions)
 			        .Catch(exception => Infrastructure.Execute.OnTheUI(() => taskModel.ReportError(exception)))

@@ -11,6 +11,8 @@ using System.Threading;
 
 namespace Raven.Database.Extensions
 {
+	using Raven.Abstractions.Util;
+
 	public static class IOExtensions
 	{
 		const int retries = 10;
@@ -110,8 +112,7 @@ namespace Raven.Database.Extensions
 				throw new IOException("Could not delete " + Path.GetFullPath(directory), e);
 			}
 
-			GC.Collect();
-			GC.WaitForPendingFinalizers();
+			RavenGC.CollectGarbage(true);
 			Thread.Sleep(100);
 		}
 

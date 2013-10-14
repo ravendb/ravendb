@@ -48,7 +48,7 @@ namespace Raven.Database.Server
 	{
 		private readonly DateTime startUpTime = SystemTime.UtcNow;
 		private DateTime lastWriteRequest;
-		private const int MaxConcurrentRequests = 192;
+		private const int MaxConcurrentRequests = 10 * 1024;
 		public DocumentDatabase SystemDatabase { get; private set; }
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
 		readonly MixedModeRequestAuthorizer requestAuthorizer;
@@ -69,6 +69,8 @@ namespace Raven.Database.Server
 
 		private readonly ConcurrentDictionary<string, DateTime> databaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
+
+        private readonly ConcurrentDictionary<string, TransportState> databaseTransportStates = new ConcurrentDictionary<string, TransportState>(StringComparer.OrdinalIgnoreCase);
 
 #if DEBUG
 		private readonly ConcurrentQueue<string> recentRequests = new ConcurrentQueue<string>();
@@ -153,7 +155,7 @@ namespace Raven.Database.Server
 
 			requestAuthorizer = new MixedModeRequestAuthorizer();
 
-			requestAuthorizer.Initialize(() => currentDatabase.Value, () => currentConfiguration.Value, () => currentTenantId.Value, this);
+			requestAuthorizer.Initialize(SystemDatabase, SystemConfiguration, () => currentTenantId.Value, this);
 
 			foreach (var task in configuration.Container.GetExportedValues<IServerStartupTask>())
 			{
@@ -207,7 +209,7 @@ namespace Raven.Database.Server
 					Name = x.Key,
 					Database = x.Value.Result
 				});
-				var allDbs = activeDatabases.Concat(new[] {new {Name = Constants.SystemDatabase, Database = SystemDatabase}}).ToArray();
+				var allDbs = activeDatabases.Concat(new[] { new { Name = Constants.SystemDatabase, Database = SystemDatabase } }).ToArray();
 				return new AdminStatistics
 				{
 					ServerName = currentConfiguration.Value.ServerName,
@@ -280,6 +282,13 @@ namespace Raven.Database.Server
 			{
 				TenantDatabaseModified.Occured -= TenantDatabaseRemoved;
 				var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
+                exceptionAggregator.Execute(() =>
+                {
+                    foreach (var databaseTransportState in databaseTransportStates)
+                    {
+                        databaseTransportState.Value.Dispose();
+                    }
+                });
 				exceptionAggregator.Execute(() =>
 				{
 					if (serverTimer != null)
@@ -288,7 +297,7 @@ namespace Raven.Database.Server
 				exceptionAggregator.Execute(() =>
 				{
 					if (listener != null && listener.IsListening)
-						listener.Stop();
+						listener.Close();
 				});
 				disposed = true;
 
@@ -347,7 +356,8 @@ namespace Raven.Database.Server
 			string virtualDirectory = SystemConfiguration.VirtualDirectory;
 			if (virtualDirectory.EndsWith("/") == false)
 				virtualDirectory = virtualDirectory + "/";
-			var uri = "http://" + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
+		    var prefix = Configuration.UseSsl ? "https://" : "http://";
+            var uri = prefix + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
 			listener.Prefixes.Add(uri);
 
 			foreach (var configureHttpListener in ConfigureHttpListeners)
@@ -358,8 +368,72 @@ namespace Raven.Database.Server
 			Init();
 			listener.Start();
 
+			Task.Factory.StartNew(async () =>
+			{
+				while (listener.IsListening)
+				{
+					HttpListenerContext context = null;
+					try
+					{
+					    context = await listener.GetContextAsync();
+					}
+					catch (ObjectDisposedException)
+					{
+					    break;
+					}
+					catch (Exception)
+					{
+                        continue;
+					}
 
-			listener.BeginGetContext(GetContext, null);
+					ProcessRequest(context);
+				}
+			}, TaskCreationOptions.LongRunning);
+		}
+
+		private void ProcessRequest(HttpListenerContext context)
+		{
+			if (context == null)
+				return;
+
+			Task.Factory.StartNew(() =>
+			{
+				var ctx = new HttpListenerContextAdpater(context, SystemConfiguration, bufferPool);
+
+				if (concurrentRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
+				{
+					try
+					{
+						HandleTooBusyError(ctx);
+					}
+					catch (Exception e)
+					{
+						logger.WarnException("Could not send a too busy error to the client", e);
+					}
+					return;
+				}
+				try
+				{
+					Interlocked.Increment(ref physicalRequestsCount);
+#if DEBUG
+					recentRequests.Enqueue(ctx.Request.RawUrl);
+					while (recentRequests.Count > 50)
+					{
+						string _;
+						recentRequests.TryDequeue(out _);
+					}
+#endif
+
+					if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
+						HandleChangesRequest(ctx, () => { });
+					else
+						HandleActualRequest(ctx);
+				}
+				finally
+				{
+					concurrentRequestSemaphore.Release();
+				}
+			});
 		}
 
 		public void Init()
@@ -412,8 +486,11 @@ namespace Raven.Database.Server
 
 		protected void CleanupDatabase(string db, bool skipIfActive)
 		{
-			using (ResourcesStoresCache.WithAllLocks())
+			using (var locker = ResourcesStoresCache.TryWithAllLocks())
 			{
+			    if (locker == null)
+			        return;
+
 				DateTime time;
 				Task<DocumentDatabase> databaseTask;
 				if (ResourcesStoresCache.TryGetValue(db, out databaseTask) == false)
@@ -458,59 +535,6 @@ namespace Raven.Database.Server
 					onDatabaseCleanupOccured(db);
 			}
 		}
-
-		private void GetContext(IAsyncResult ar)
-		{
-			HttpListenerContextAdpater ctx;
-			try
-			{
-				HttpListenerContext httpListenerContext = listener.EndGetContext(ar);
-				ctx = new HttpListenerContextAdpater(httpListenerContext, SystemConfiguration, bufferPool);
-				//setup waiting for the next request
-				listener.BeginGetContext(GetContext, null);
-			}
-			catch (Exception)
-			{
-				// can't get current request / end new one, probably
-				// listener shutdown
-				return;
-			}
-
-			if (concurrentRequestSemaphore.Wait(TimeSpan.FromSeconds(5)) == false)
-			{
-				try
-				{
-					HandleTooBusyError(ctx);
-				}
-				catch (Exception e)
-				{
-					logger.WarnException("Could not send a too busy error to the client", e);
-				}
-				return;
-			}
-			try
-			{
-				Interlocked.Increment(ref physicalRequestsCount);
-#if DEBUG
-				recentRequests.Enqueue(ctx.Request.RawUrl);
-				while (recentRequests.Count > 50)
-				{
-					string _;
-					recentRequests.TryDequeue(out _);
-				}
-#endif
-
-				if (ChangesQuery.IsMatch(ctx.GetRequestUrl()))
-					HandleChangesRequest(ctx, () => { });
-				else
-					HandleActualRequest(ctx);
-			}
-			finally
-			{
-				concurrentRequestSemaphore.Release();
-			}
-		}
-
 
 		public Task HandleChangesRequest(IHttpContext context, Action onDisconnect)
 		{
@@ -693,7 +717,7 @@ namespace Raven.Database.Server
 		{
 			if (logger.IsDebugEnabled == false)
 				return;
-			
+
 			// we filter out requests for the UI because they fill the log with information
 			// we probably don't care about them anyway. That said, we do output them if they take too
 			// long.
@@ -762,7 +786,7 @@ namespace Raven.Database.Server
 						sp.Stop();
 						if (ctx.Response.BufferOutput)
 						{
-							ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0 ms", CultureInfo.InvariantCulture));
+							ctx.Response.AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture));
 						}
 						return requestResponder.IsUserInterfaceRequest;
 					}
@@ -944,7 +968,7 @@ namespace Raven.Database.Server
 			}
 			else
 			{
-				ctx.SetStatusToNotFound();
+				ctx.SetStatusToNotAvailable();
 				ctx.WriteJson(new
 				{
 					Error = "Could not find a database named: " + tenantId
@@ -956,7 +980,7 @@ namespace Raven.Database.Server
 
 		private static void OutputDatabaseOpenFailure(IHttpContext ctx, string tenantId, Exception e)
 		{
-			var msg = "Could open database named: " + tenantId;
+			var msg = "Could not open database named: " + tenantId;
 			logger.WarnException(msg, e);
 			ctx.SetStatusToNotAvailable();
 			ctx.WriteJson(new
@@ -1019,8 +1043,10 @@ namespace Raven.Database.Server
 
 			database = ResourcesStoresCache.GetOrAdd(tenantId, __ => Task.Factory.StartNew(() =>
 			{
-				var documentDatabase = new DocumentDatabase(config);
-				AssertLicenseParameters(config);
+			    var transportState = databaseTransportStates.GetOrAdd(tenantId, s => new TransportState());
+			    var documentDatabase = new DocumentDatabase(config, transportState);
+
+			    AssertLicenseParameters(config);
 				documentDatabase.SpinBackgroundWorkers();
 				InitializeRequestResponders(documentDatabase);
 
@@ -1047,7 +1073,7 @@ namespace Raven.Database.Server
 				{
 					var numberOfAllowedDbs = int.Parse(maxDatabases);
 
-					var databases = SystemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, 0, numberOfAllowedDbs).ToList();
+					var databases = SystemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, numberOfAllowedDbs).ToList();
 					if (databases.Count >= numberOfAllowedDbs)
 						throw new InvalidOperationException(
 							"You have reached the maximum number of databases that you can have according to your license: " + numberOfAllowedDbs + Environment.NewLine +
@@ -1060,7 +1086,7 @@ namespace Raven.Database.Server
 			{
 				var bundlesList = bundles.Split(';').ToList();
 
-				foreach (var bundle in bundlesList)
+				foreach (var bundle in bundlesList.Where(s => string.IsNullOrWhiteSpace(s) == false && s != "PeriodicBackup"))
 				{
 					string value;
 					if (ValidateLicense.CurrentLicense.Attributes.TryGetValue(bundle, out value))
@@ -1144,7 +1170,17 @@ namespace Raven.Database.Server
 		{
 			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlAllowOrigin))
 				return;
-			ctx.Response.AddHeader("Access-Control-Allow-Origin", SystemConfiguration.AccessControlAllowOrigin);
+
+			ctx.Response.AddHeader("Access-Control-Allow-Credentials", "true");
+
+			bool originAllowed = SystemConfiguration.AccessControlAllowOrigin == "*" ||
+					SystemConfiguration.AccessControlAllowOrigin.Split(' ')
+						.Any(o => o == ctx.Request.Headers["Origin"]);
+			if(originAllowed)
+			{
+				ctx.Response.AddHeader("Access-Control-Allow-Origin", ctx.Request.Headers["Origin"]);
+			}
+			
 			ctx.Response.AddHeader("Access-Control-Max-Age", SystemConfiguration.AccessControlMaxAge);
 			ctx.Response.AddHeader("Access-Control-Allow-Methods", SystemConfiguration.AccessControlAllowMethods);
 			if (string.IsNullOrEmpty(SystemConfiguration.AccessControlRequestHeaders))
@@ -1220,7 +1256,7 @@ namespace Raven.Database.Server
 
 			foreach (var prop in databaseDocument.SecuredSettings.ToList())
 			{
-				if(prop.Value == null)
+				if (prop.Value == null)
 					continue;
 				var bytes = Encoding.UTF8.GetBytes(prop.Value);
 				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
@@ -1239,7 +1275,7 @@ namespace Raven.Database.Server
 
 			foreach (var prop in databaseDocument.SecuredSettings.ToList())
 			{
-				if(prop.Value == null)
+				if (prop.Value == null)
 					continue;
 				var bytes = Convert.FromBase64String(prop.Value);
 				var entrophy = Encoding.UTF8.GetBytes(prop.Key);
@@ -1250,7 +1286,7 @@ namespace Raven.Database.Server
 				}
 				catch (Exception e)
 				{
-					logger.WarnException("Could not unprotect secured db data " + prop.Key +" setting the value to '<data could not be decrypted>'", e);
+					logger.WarnException("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
 					databaseDocument.SecuredSettings[prop.Key] = "<data could not be decrypted>";
 				}
 			}
@@ -1258,7 +1294,7 @@ namespace Raven.Database.Server
 
 
 		static class ExceptionHandler
-		{			
+		{
 			private static readonly Dictionary<Type, Action<IHttpContext, Exception>> handlers =
 				new Dictionary<Type, Action<IHttpContext, Exception>>
 			{
@@ -1297,7 +1333,7 @@ namespace Raven.Database.Server
 			}
 
 			public static void SerializeError(IHttpContext ctx, object error)
-			{				
+			{
 				var sw = new StreamWriter(ctx.Response.OutputStream);
 				JsonExtensions.CreateDefaultJsonSerializer().Serialize(new JsonTextWriter(sw)
 				{
@@ -1336,8 +1372,8 @@ namespace Raven.Database.Server
 				SerializeError(ctx, new
 				{
 					Url = ctx.Request.RawUrl,
-					e.ActualETag,
-					e.ExpectedETag,
+                    ActualETag = e.ActualETag ?? Etag.Empty,
+                    ExpectedETag = e.ExpectedETag ?? Etag.Empty,
 					Error = e.Message
 				});
 			}
@@ -1371,11 +1407,10 @@ namespace Raven.Database.Server
 			{
 				ctx.Response.StatusCode = 503;
 				ctx.Response.StatusDescription = "Service Unavailable";
-				SerializeError(ctx, new
+			    SerializeError(ctx, new
 				{
 					Url = ctx.Request.RawUrl,
-					Error = e.Information.GetErrorMessage(),
-					Index = e.Information.Name,
+					Error = e.Information == null ? e.Message : e.Information.GetErrorMessage(),
 				});
 			}
 

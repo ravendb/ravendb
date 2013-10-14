@@ -4,9 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Linq;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 
@@ -25,10 +23,16 @@ namespace Raven.Database.Queries
 		{
 			if(field == null) throw new ArgumentNullException("field");
 			if(index == null) throw new ArgumentNullException("index");
-			
+
+			if (field.EndsWith("_Range"))
+			{
+				field = field.Substring(0, field.Length - "_Range".Length);
+			}
+
 			var result = new HashSet<string>();
 			IndexSearcher currentIndexSearcher;
-			using(database.IndexStorage.GetCurrentIndexSearcher(index, out currentIndexSearcher))
+      var indexDefinition = database.IndexDefinitionStorage.GetIndexDefinition(index);
+			using(database.IndexStorage.GetCurrentIndexSearcher(indexDefinition.IndexId, out currentIndexSearcher))
 			{
 				if(currentIndexSearcher == null)
 				{

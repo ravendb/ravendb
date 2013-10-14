@@ -1,10 +1,11 @@
-﻿using System.Windows.Input;
+﻿using System.Linq;
+using System.Windows.Input;
 using Raven.Studio.Commands;
 using Raven.Studio.Models;
 
 namespace Raven.Studio.Features.Tasks
 {
-	public class StartRestoreTaskSectionModel : BasicTaskSectionModel
+	public class StartRestoreTaskSectionModel : BasicTaskSectionModel<RestoreDatabaseTask>
 	{
 		public StartRestoreTaskSectionModel()
 		{
@@ -17,9 +18,15 @@ namespace Raven.Studio.Features.Tasks
 			TaskInputs.Add(new TaskCheckBox("Defrag", false));
 		}
 
-		public override ICommand Action
-		{
-			get { return new RestoreCommand(this); }
-		}
+
+	    protected override RestoreDatabaseTask CreateTask()
+	    {
+            var backupLocation = TaskInputs.First(x => x.Name == "Backup Location").Value as string;
+            var databaseLocation = TaskInputs.First(x => x.Name == "Database Location").Value as string;
+            var name = TaskInputs.First(x => x.Name == "Database Name").Value as string;
+            var defrag = (bool)TaskInputs.First(x => x.Name == "Defrag").Value;
+
+            return new RestoreDatabaseTask(DatabaseCommands, name, backupLocation, databaseLocation, defrag);
+	    }
 	}
 }

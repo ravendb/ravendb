@@ -14,6 +14,7 @@ using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Client.Document.Batches;
 using Raven.Client.Linq;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Client
 {
@@ -49,6 +50,30 @@ namespace Raven.Client
 			return source;
 		}
 
+		/// <summary>
+		/// Query the facets results for this query using aggregation
+		/// </summary>
+		public static DynamicAggregationQuery<T> AggregateBy<T>(this IQueryable<T> queryable, string path, string displayName= null)
+		{
+			return new DynamicAggregationQuery<T>(queryable, path, displayName);
+		}
+
+		/// <summary>
+		/// Query the facets results for this query using aggregation
+		/// </summary>
+		public static DynamicAggregationQuery<T> AggregateBy<T>(this IQueryable<T> queryable, Expression<Func<T, object>> path)
+		{
+			return new DynamicAggregationQuery<T>(queryable, path);
+		}
+
+		/// <summary>
+		/// Query the facets results for this query using aggregation with a specific display name
+		/// </summary>
+		public static DynamicAggregationQuery<T> AggregateBy<T>(this IQueryable<T> queryable, Expression<Func<T, object>> path, string displayName)
+		{
+			return new DynamicAggregationQuery<T>(queryable, path, displayName);
+		}
+
 #if !SILVERLIGHT && !NETFX_CORE
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document with the given start and pageSize
@@ -59,9 +84,7 @@ namespace Raven.Client
 		public static FacetResults ToFacets<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-			var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
-
-			return ravenQueryInspector.DatabaseCommands.GetFacets( ravenQueryInspector.IndexQueried, query, facetSetupDoc, start, pageSize );
+			return ravenQueryInspector.GetFacets(facetSetupDoc, start, pageSize );
 		}
 
         /// <summary>
@@ -78,9 +101,8 @@ namespace Raven.Client
                 throw new ArgumentException("Facets must contain at least one entry", "facets");
 
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
 
-            return ravenQueryInspector.DatabaseCommands.GetFacets(ravenQueryInspector.IndexQueried, query, facetsList, start, pageSize);
+            return ravenQueryInspector.GetFacets(facetsList, start, pageSize);
         }
 
 		/// <summary>
@@ -91,9 +113,8 @@ namespace Raven.Client
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public static FacetResults ToFacets<T>(this IDocumentQuery<T> query, string facetSetupDoc, int start = 0, int? pageSize = null)
 		{
-			var indexQuery = query.GetIndexQuery(isAsync: false);
 			var documentQuery = ((DocumentQuery<T>) query);
-			return documentQuery.DatabaseCommands.GetFacets(documentQuery.IndexQueried, indexQuery, facetSetupDoc, start, pageSize);
+			return documentQuery.GetFacets(facetSetupDoc, start, pageSize);
 		}
 
         /// <summary>
@@ -109,10 +130,9 @@ namespace Raven.Client
             if (!facetsList.Any())
                 throw new ArgumentException("Facets must contain at least one entry", "facets");
 
-            var indexQuery = query.GetIndexQuery(isAsync: false);
             var documentQuery = ((DocumentQuery<T>)query);
 
-            return documentQuery.DatabaseCommands.GetFacets(documentQuery.IndexQueried, indexQuery, facetsList, start, pageSize);
+            return documentQuery.GetFacets(facetsList, start, pageSize);
         }
 #endif
 
@@ -201,10 +221,26 @@ namespace Raven.Client
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public static Task<FacetResults> ToFacetsAsync<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
-			var ravenQueryInspector = ((RavenQueryInspector<T>)queryable);
-			var query = ravenQueryInspector.GetIndexQuery(isAsync: true);
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+			return ravenQueryInspector.GetFacetsAsync(facetSetupDoc, start, pageSize );
+		}
 
-			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync( ravenQueryInspector.AsyncIndexQueried, query, facetSetupDoc, start, pageSize );
+		/// <summary>
+		/// Async Query the facets results for this query using the specified list of facets with the given start and pageSize
+		/// </summary>
+		/// <param name="facets">List of facets</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+		{
+			var facetsList = facets.ToList();
+
+			if (!facetsList.Any())
+				throw new ArgumentException("Facets must contain at least one entry", "facets");
+
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+
+			return ravenQueryInspector.GetFacetsAsync(facetsList, start, pageSize);
 		}
 
 		/// <summary>
@@ -215,10 +251,7 @@ namespace Raven.Client
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public static Task<FacetResults> ToFacetsAsync<T>(this IAsyncDocumentQuery<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
 		{
-			var ravenQueryInspector = ((AsyncDocumentQuery<T>)queryable);
-			var query = ravenQueryInspector.GetIndexQuery(isAsync: true);
-
-			return ravenQueryInspector.AsyncDatabaseCommands.GetFacetsAsync(ravenQueryInspector.IndexQueried, query, facetSetupDoc, start, pageSize);
+			return queryable.GetFacetsAsync(facetSetupDoc, start, pageSize);
 		}
 
 		/// <summary>
@@ -332,7 +365,7 @@ namespace Raven.Client
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query, true);
 
-			return ravenQueryInspector.AsyncDatabaseCommands.SuggestAsync(ravenQueryInspector.IndexQueried, query);
+			return ravenQueryInspector.AsyncDatabaseCommands.SuggestAsync(ravenQueryInspector.AsyncIndexQueried, query);
 		}
 
 		/// <summary>
@@ -378,51 +411,579 @@ namespace Raven.Client
 
 			var documentQuery = provider.ToAsyncLuceneQuery<T>(source.Expression);
 			provider.MoveAfterQueryExecuted(documentQuery);
-			return documentQuery.ToListAsync()
-				.ContinueWith(task => task.Result.Item2);
+			return documentQuery.ToListAsync();
 		}
 
-		/// <summary>
-		/// Returns a first or default asynchronously. 
-		/// </summary>
-		public static Task<T> FirstOrDefaultAsync<T>(this IQueryable<T> source)
-		{
-			var provider = source.Provider as IRavenQueryProvider;
-			if (provider == null)
-				throw new ArgumentException("You can only use Raven Queryable with FirstOrDefaultAsync");
+        /// <summary>
+        /// Determines whether a sequence contains any elements.
+        /// </summary>
+        /// 
+        /// <typeparam name="TSource">
+        /// The type of the elements of source.
+        /// </typeparam>
+        /// 
+        /// <param name="source">
+        /// The <see cref="IRavenQueryable{T}"/> that contains the elements to be counted.
+        /// </param>
+        /// 
+        /// <returns>
+        /// true if the source sequence contains any elements; otherwise, false.
+        /// </returns>
+        /// 
+        /// <exception cref="ArgumentNullException">
+        /// source is null.
+        /// </exception>
+        public static async Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
 
-			var documentQuery = provider
-				.ToAsyncLuceneQuery<T>(source.Expression)
-				.Take(1);
-			provider.MoveAfterQueryExecuted(documentQuery);
-			return documentQuery.ToListAsync()
-				.ContinueWith(task => task.Result.Item2.FirstOrDefault());
-		}
+            var provider = source.Provider as IRavenQueryProvider;
 
-		/// <summary>
-		/// Returns whatever the query has any results asynchronously
-		/// </summary>
-		public static Task<bool> AnyAsync<T>(this IQueryable<T> source)
-		{
-			return source.CountAsync().ContinueWith(x => x.Result > 0);
-		}
+            if (provider == null)
+                throw new InvalidOperationException("AnyAsync only be used with IRavenQueryable");
 
-		/// <summary>
-		/// Returns the total count of results for a query asynchronously. 
-		/// </summary>
-		public static Task<int> CountAsync<T>(this IQueryable<T> source)
-		{
-			var provider = source.Provider as IRavenQueryProvider;
-			if (provider == null)
-				throw new ArgumentException("You can only use Raven Queryable with CountAsync");
+            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+                                .Take(0);
 
-			var documentQuery = provider
-				.ToAsyncLuceneQuery<T>(source.Expression)
-				.Take(0);
-			provider.MoveAfterQueryExecuted(documentQuery);
-			return documentQuery.ToListAsync()
-				.ContinueWith(task => task.Result.Item1.TotalResults);
-		}
+            provider.MoveAfterQueryExecuted(query);
+	        RavenQueryStatistics stats;
+	        query.Statistics(out stats);
+
+            await query.ToListAsync();
+
+            return stats.TotalResults > 0;
+        }
+
+        /// <summary>
+        /// Determines whether any element of a sequence satisfies a condition.
+        /// </summary>
+        /// 
+        /// <typeparam name="TSource">
+        /// The type of the elements of source.
+        /// </typeparam>
+        /// 
+        /// <param name="source">
+        /// The <see cref="IRavenQueryable{T}"/> that contains the elements to be counted.
+        /// </param>
+        /// 
+        /// <param name="predicate">
+        /// A function to test each element for a condition.
+        /// </param>
+        /// 
+        /// <returns>
+        /// true if any elements in the source sequence pass the test in the specified
+        /// predicate; otherwise, false.
+        /// </returns>
+        /// 
+        /// <exception cref="ArgumentNullException">
+        /// source or predicate is null.
+        /// </exception>
+        public static async Task<bool> AnyAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
+            var filtered = source.Where(predicate);
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("AnyAsync only be used with IRavenQueryable");
+
+            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+                                .Take(0);
+
+            provider.MoveAfterQueryExecuted(query);
+
+			RavenQueryStatistics stats;
+			query.Statistics(out stats);
+
+			await query.ToListAsync();
+
+			return stats.TotalResults > 0;
+        }
+
+        /// <summary>
+        /// Returns the number of elements in a sequence.
+        /// </summary>
+        /// 
+        /// <typeparam name="TSource">
+        /// The type of the elements of source.
+        /// </typeparam>
+        /// 
+        /// <param name="source">
+        /// The <see cref="IRavenQueryable{T}"/> that contains the elements to be counted.
+        /// </param>
+        /// 
+        /// <returns>
+        /// The number of elements in the input sequence.
+        /// </returns>
+        /// 
+        /// <exception cref="ArgumentNullException">
+        /// source is null.
+        /// </exception>
+        /// 
+        /// <exception cref="OverflowException">
+        /// The number of elements in source is larger than <see cref="Int32.MaxValue"/>.
+        /// </exception>
+        public static async Task<int> CountAsync<TSource>(this IQueryable<TSource> source)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("CountAsync only be used with IRavenQueryable");
+
+            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+                                .Take(0);
+
+            provider.MoveAfterQueryExecuted(query);
+
+			RavenQueryStatistics stats;
+			query.Statistics(out stats);
+
+			await query.ToListAsync();
+
+			return stats.TotalResults;
+        }
+
+        /// <summary>
+        /// Returns the number of elements in the specified sequence that satisfies a condition.
+        /// </summary>
+        /// 
+        /// <typeparam name="TSource">
+        /// The type of the elements of source.
+        /// </typeparam>
+        /// 
+        /// <param name="source">
+        /// The <see cref="IRavenQueryable{T}"/> that contains the elements to be counted.
+        /// </param>
+        /// 
+        /// <param name="predicate">
+        /// A function to test each element for a condition.
+        /// </param>
+        /// 
+        /// <returns>
+        /// The number of elements in the sequence that satisfies the condition in
+        /// the predicate function.
+        /// </returns>
+        /// 
+        /// <exception cref="ArgumentNullException">
+        /// source or predicate is null.
+        /// </exception>
+        /// 
+        /// <exception cref="OverflowException">
+        /// The number of elements in source is larger than <see cref="Int32.MaxValue"/>.
+        /// </exception>
+        public static async Task<int> CountAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
+            var filtered = source.Where(predicate);
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("CountAsync only be used with IRavenQueryable");
+
+            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+                                .Take(0);
+
+            provider.MoveAfterQueryExecuted(query);
+			RavenQueryStatistics stats;
+			query.Statistics(out stats);
+
+			await query.ToListAsync();
+
+			return stats.TotalResults;
+        }
+
+        /// <summary>
+        /// Asynchronously returns the first element of a sequence.
+        /// </summary>
+        /// 
+        /// <typeparam name="TSource">
+        /// The type of the elements of source.
+        /// </typeparam>
+        /// 
+        /// <param name="source">
+        /// The <see cref="IRavenQueryable{T}"/> to return the first element of.
+        /// </param>
+        /// 
+        /// <returns>
+        /// The first element in source.
+        /// </returns>
+        /// 
+        /// <exception cref="ArgumentNullException">
+        /// source is null.
+        /// </exception>
+        /// 
+        /// <exception cref="InvalidOperationException">
+        /// The source sequence is empty or source
+        /// is not of type <see cref="IRavenQueryable{T}"/>.
+        /// </exception>
+        public static async Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("FirstAsync only be used with IRavenQueryable");
+
+            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+                                .Take(1);
+
+            provider.MoveAfterQueryExecuted(query);
+
+            var result = await query.ToListAsync();
+
+            return result.First();
+        }
+
+        /// <summary>
+        /// Asynchronously returns the first element of a sequence that satisfies a specified condition.
+        /// </summary>
+        /// 
+        /// <typeparam name="TSource">
+        /// The type of the elements of source.
+        /// </typeparam>
+        /// 
+        /// <param name="source">
+        /// The <see cref="IRavenQueryable{T}"/> to return the first element of.
+        /// </param>
+        /// 
+        /// <param name="predicate">
+        /// A function to test each element for a condition.
+        /// </param>
+        /// 
+        /// <returns>
+        /// The first element in source.
+        /// </returns>
+        /// 
+        /// <exception cref="ArgumentNullException">
+        /// source or predicate is null.
+        /// </exception>
+        /// 
+        /// <exception cref="InvalidOperationException">
+        /// No element satisfies the condition in predicate,
+        /// the source sequence is empty or source
+        /// is not of type <see cref="IRavenQueryable{T}"/>.
+        /// </exception>
+        public static async Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
+            var filtered = source.Where(predicate);
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("FirstAsync only be used with IRavenQueryable");
+
+            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+                                .Take(1);
+
+            provider.MoveAfterQueryExecuted(query);
+
+            var result = await query.ToListAsync();
+
+            return result.First();
+        }
+
+        /// <summary>
+        /// Asynchronously returns the first element of a sequence, or a default value if the sequence contains no elements.
+        /// </summary>
+        /// 
+        /// <typeparam name="TSource">
+        /// The type of the elements of source.
+        /// </typeparam>
+        /// 
+        /// <param name="source">
+        /// The <see cref="IRavenQueryable{T}"/> to return the first element of.
+        /// </param>
+        /// 
+        /// <returns>
+        /// default(TSource) if source is empty; otherwise,
+        /// the first element in source.
+        /// </returns>
+        /// 
+        /// <exception cref="ArgumentNullException">
+        /// source is null.
+        /// </exception>
+        /// 
+        /// <exception cref="InvalidOperationException">
+        /// source is not of type <see cref="IRavenQueryable{T}"/>.
+        /// </exception>
+        public static async Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("FirstOrDefaultAsync only be used with IRavenQueryable");
+
+            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+                                .Take(1);
+
+            provider.MoveAfterQueryExecuted(query);
+
+            var result = await query.ToListAsync();
+
+            return result.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Asynchronously returns the first element of a sequence that satisfies a specified
+        /// condition or a default value if no such element is found.
+        /// </summary>
+        /// 
+        /// <typeparam name="TSource">
+        /// The type of the elements of source.
+        /// </typeparam>
+        /// 
+        /// <param name="source">
+        /// The <see cref="IRavenQueryable{T}"/> to return the first element of.
+        /// </param>
+        /// 
+        /// <param name="predicate">
+        /// A function to test each element for a condition.
+        /// </param>
+        /// 
+        /// <returns>
+        /// default(TSource) if source is empty or
+        /// if no element passes the test specified by predicate;
+        /// otherwise, the first element in source that passes
+        /// the test specified by predicate.
+        /// </returns>
+        /// 
+        /// <exception cref="ArgumentNullException">
+        /// source or predicate is null.
+        /// </exception>
+        /// 
+        /// <exception cref="InvalidOperationException">
+        /// source is not of type <see cref="IRavenQueryable{T}"/>.
+        /// </exception>
+        public static async Task<TSource> FirstOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
+            var filtered = source.Where(predicate);
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("FirstOrDefaultAsync only be used with IRavenQueryable");
+
+            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+                                .Take(1);
+
+            provider.MoveAfterQueryExecuted(query);
+
+            var result = await query.ToListAsync();
+
+            return result.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Asynchronously returns the only element of a sequence, and throws an exception if there
+        /// is not exactly one element in the sequence.
+        /// </summary>
+        /// 
+        /// <typeparam name="TSource">
+        /// The type of the elements of source.
+        /// </typeparam>
+        /// 
+        /// <param name="source">
+        /// The <see cref="IRavenQueryable{T}"/> to return the single element of.
+        /// </param>
+        /// 
+        /// <returns>
+        /// The single element of the input sequence.
+        /// </returns>
+        /// 
+        /// <exception cref="ArgumentNullException">
+        /// source is null.
+        /// </exception>
+        /// 
+        /// <exception cref="InvalidOperationException">
+        /// The source sequence is empty, has more than one element or
+        /// is not of type <see cref="IRavenQueryable{T}"/>.
+        /// </exception>
+        public static async Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("SingleAsync only be used with IRavenQueryable");
+
+            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+                                .Take(2);
+
+            provider.MoveAfterQueryExecuted(query);
+
+            var result = await query.ToListAsync();
+
+            return result.Single();
+        }
+
+        /// <summary>
+        /// Asynchronously returns the only element of a sequence, and throws an exception if there
+        /// is not exactly one element in the sequence.
+        /// </summary>
+        /// 
+        /// <typeparam name="TSource">
+        /// The type of the elements of source.
+        /// </typeparam>
+        /// 
+        /// <param name="source">
+        /// The <see cref="IRavenQueryable{T}"/> to return the single element of.
+        /// </param>
+        /// 
+        /// <param name="predicate">
+        /// A function to test each element for a condition.
+        /// </param>
+        /// 
+        /// <returns>
+        /// The single element of the input sequence that satisfies the condition in predicate.
+        /// </returns>
+        /// 
+        /// <exception cref="ArgumentNullException">
+        /// source or predicate is null.
+        /// </exception>
+        /// 
+        /// <exception cref="InvalidOperationException">
+        /// No element satisfies the condition in predicate, more than
+        /// one element satisfies the condition, the source sequence is empty or
+        /// source is not of type <see cref="IRavenQueryable{T}"/>.
+        /// </exception>
+        public static async Task<TSource> SingleAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
+            var filtered = source.Where(predicate);
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("SingleAsync only be used with IRavenQueryable");
+
+            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+                                .Take(2);
+
+            provider.MoveAfterQueryExecuted(query);
+
+            var result = await query.ToListAsync();
+
+            return result.Single();
+        }
+
+        /// <summary>
+        /// Asynchronously returns the only element of a sequence, or a default value if the
+        /// sequence is empty; this method throws an exception if there is more than one
+        /// element in the sequence.
+        /// </summary>
+        /// 
+        /// <typeparam name="TSource">
+        /// The type of the elements of source.
+        /// </typeparam>
+        /// 
+        /// <param name="source">
+        /// The <see cref="IRavenQueryable{T}"/> to return the first element of.
+        /// </param>
+        /// 
+        /// <returns>
+        /// The single element of the input sequence, or default(TSource)
+        /// if the sequence contains no elements.
+        /// </returns>
+        /// 
+        /// <exception cref="ArgumentNullException">
+        /// source is null.
+        /// </exception>
+        /// 
+        /// <exception cref="InvalidOperationException">
+        /// source has more than one element or
+        /// is not of type <see cref="IRavenQueryable{T}"/>.
+        /// </exception>
+        public static async Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("SingleOrDefaultAsync only be used with IRavenQueryable");
+
+            var query = provider.ToAsyncLuceneQuery<TSource>(source.Expression)
+                                .Take(2);
+
+            provider.MoveAfterQueryExecuted(query);
+
+            var result = await query.ToListAsync();
+
+            return result.SingleOrDefault();
+        }
+
+        /// <summary>
+        /// Asynchronously returns the only element of a sequence that satisfies a specified
+        /// condition or a default value if no such element exists; this method throws an
+        /// exception if more than one element satisfies the condition.
+        /// </summary>
+        /// 
+        /// <typeparam name="TSource">
+        /// The type of the elements of source.
+        /// </typeparam>
+        /// 
+        /// <param name="source">
+        /// The <see cref="IRavenQueryable{T}"/> to return the first element of.
+        /// </param>
+        /// 
+        /// <param name="predicate">
+        /// A function to test each element for a condition.
+        /// </param>
+        /// 
+        /// <returns>
+        /// The single element of the input sequence that satisfies the condition in predicate,
+        /// or default(TSource) if no such element is found.
+        /// </returns>
+        /// 
+        /// <exception cref="ArgumentNullException">
+        /// source or predicate is null.
+        /// </exception>
+        /// 
+        /// <exception cref="InvalidOperationException">
+        /// More than one element satisfies the condition in predicate
+        /// or source is not of type <see cref="IRavenQueryable{T}"/>.
+        /// </exception>
+        public static async Task<TSource> SingleOrDefaultAsync<TSource>(this IQueryable<TSource> source, Expression<Func<TSource, bool>> predicate)
+        {
+            if (source == null)
+                throw new ArgumentNullException("source");
+
+            var filtered = source.Where(predicate);
+            var provider = source.Provider as IRavenQueryProvider;
+
+            if (provider == null)
+                throw new InvalidOperationException("SingleOrDefaultAsync only be used with IRavenQueryable");
+
+            var query = provider.ToAsyncLuceneQuery<TSource>(filtered.Expression)
+                                .Take(2);
+
+            provider.MoveAfterQueryExecuted(query);
+
+            var result = await query.ToListAsync();
+
+            return result.SingleOrDefault();
+        }
 
 #if !NETFX_CORE
 		/// <summary>

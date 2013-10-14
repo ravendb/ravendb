@@ -44,6 +44,17 @@ namespace Raven.Studio.Features.Documents
 
         protected override Task<IList<ViewableDocument>> GetPageAsyncOverride(int start, int pageSize, IList<SortDescription> sortDescriptions)
         {
+			if (CollectionName == "0")
+			{
+				return ApplicationModel.DatabaseCommands.StartsWithAsync("Raven/",start, 1024)
+					.ContinueWith(t =>
+					{
+						var docs = (IList<ViewableDocument>)t.Result.Select(x => new ViewableDocument(x)).ToArray();
+						SetCount(docs.Count);
+						return docs;
+					})
+					.Catch();
+			}
 	        return GetQueryResults(start, pageSize)
 		        .ContinueWith(task =>
 		        {

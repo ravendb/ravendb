@@ -21,6 +21,41 @@ namespace Raven.Database.Server.Security.Windows
 		public bool Enabled { get; set; }
 		public List<DatabaseAccess> Databases { get; set; }
 
+		protected bool Equals(WindowsAuthData other)
+		{
+			var baseEqual =  string.Equals(Name, other.Name) && Enabled.Equals(other.Enabled) && Equals(Databases.Count, other.Databases.Count);
+
+			if(baseEqual == false)
+				return false;
+
+			for (int i = 0; i < Databases.Count; i++)
+			{
+				if(Databases[i].Equals(other.Databases[i]) == false)
+					return false;
+			}
+
+			return true;
+		}
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+			return Equals((WindowsAuthData) obj);
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				var hashCode = (Name != null ? Name.GetHashCode() : 0);
+				hashCode = (hashCode*397) ^ Enabled.GetHashCode();
+				hashCode = (hashCode*397) ^ (Databases != null ? Databases.GetHashCode() : 0);
+				return hashCode;
+			}
+		}
+
 		public WindowsAuthData()
 		{
 			Databases = new List<DatabaseAccess>();

@@ -4,7 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Transactions;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -13,44 +15,22 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Database.Server;
 using Raven.Json.Linq;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Database.Extensions;
-using Raven.Server;
 using Raven.Tests.Indexes;
-using Xunit;
-using System.Linq;
 using Raven.Tests.Spatial;
+using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Document
 {
-	using System.Collections.Generic;
-
-	public class DocumentStoreServerTests : RemoteClientTest, IDisposable
+	public class DocumentStoreServerTests : RemoteClientTest
 	{
-		private readonly string path;
-		private readonly int port;
-		private readonly RavenDbServer server;
 		private readonly IDocumentStore documentStore;
 
 		public DocumentStoreServerTests()
 		{
-			port = 8079;
-			path = GetPath("TestDb");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
-
-			server = GetNewServer(port, path);
-			documentStore = new DocumentStore {Url = "http://localhost:" + port}.Initialize();
-		}
-
-		public override void Dispose()
-		{
-			documentStore.Dispose();
-			server.Dispose();
-			IOExtensions.DeleteDirectory(path);
-			base.Dispose();
+			documentStore = NewRemoteDocumentStore();
 		}
 
 		[Fact]
@@ -112,12 +92,12 @@ namespace Raven.Tests.Document
 				session.Advanced.LuceneQuery<Company>().WaitForNonStaleResults().ToArray(); // wait for the index to settle down
 			}
 
-			documentStore
-				.DatabaseCommands
-				.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
-				                                              {
-					                                              Query = "Tag:[[Companies]]"
-				                                              }, allowStale: false).WaitForCompletion();
+			var operation = documentStore.DatabaseCommands.DeleteByIndex("Raven/DocumentsByEntityName", new IndexQuery
+			{
+				Query = "Tag:[[Companies]]"
+			}, allowStale: false);
+
+			operation.WaitForCompletion();
 
 			using (var session = documentStore.OpenSession())
 			{
@@ -958,9 +938,11 @@ namespace Raven.Tests.Document
 			}
 		}
 
-		[Fact]
-		public void Can_query_from_spatial_index()
+		[Theory]
+		[CriticalCultures]
+		public void Can_query_from_spatial_index(CultureInfo cultureInfo)
 		{
+			using(new TemporaryCulture(cultureInfo))
 			using (var session = documentStore.OpenSession())
 			{
 				foreach (Event @event in SpatialIndexTestHelper.GetEvents())
@@ -1284,6 +1266,161 @@ namespace Raven.Tests.Document
 			               		{"Content-Length", 100},
 			               	};
 			Assert.DoesNotThrow(() => documentStore.DatabaseCommands.PutAttachment(key, null, new MemoryStream(new byte[] {0, 1, 2}), metadata));
+		}
+
+		[Fact]
+		public void Can_patch_existing_document_when_present()
+		{
+			var company = new Company {Name = "Hibernating Rhinos"};
+
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(company);
+				session.SaveChanges();
+			}
+
+			documentStore.DatabaseCommands.Patch(
+				company.Id,
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "Existing",
+					}
+				},
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "New",
+					}
+				},
+				new RavenJObject());
+
+			using (var session = documentStore.OpenSession())
+			{
+				var company2 = session.Load<Company>(company.Id);
+
+				Assert.NotNull(company2);
+				Assert.Equal(company2.Name, "Existing");
+			}
+		}
+
+		[Fact]
+		public void Can_patch_default_document_when_missing()
+		{
+			documentStore.DatabaseCommands.Patch(
+				"Company/1",
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "Existing",
+					}
+				},
+				new[]
+				{
+					new PatchRequest
+					{
+						Type = PatchCommandType.Set,
+						Name = "Name",
+						Value = "New",
+					}
+				},
+				new RavenJObject
+				{
+					{ "DefaultMetadataPresent", "true" }
+				});
+
+			using (var session = documentStore.OpenSession())
+			{
+				var company = session.Load<Company>("Company/1");
+
+				Assert.NotNull(company);
+				Assert.Equal(company.Name, "New");
+
+				var metadata = session.Advanced.GetMetadataFor(company);
+
+				Assert.NotNull(metadata);
+				Assert.Equal(metadata["DefaultMetadataPresent"], "true");
+			}
+		}
+
+		[Fact]
+		public void Should_not_throw_when_ignore_missing_true()
+		{
+			Assert.DoesNotThrow(
+				() => documentStore.DatabaseCommands.Patch(
+					"Company/1",
+					new[]
+					{
+						new PatchRequest
+						{
+							Type = PatchCommandType.Set,
+							Name = "Name",
+							Value = "Existing",
+						}
+					}));
+		
+			Assert.DoesNotThrow(
+				() => documentStore.DatabaseCommands.Patch(
+					"Company/1",
+					new[]
+					{
+						new PatchRequest
+						{
+							Type = PatchCommandType.Set,
+							Name = "Name",
+							Value = "Existing",
+						}
+					}, true));
+		}
+
+		[Fact]
+		public void Should_throw_when_ignore_missing_false()
+		{
+			Assert.Throws<DocumentDoesNotExistsException>(
+				() => documentStore.DatabaseCommands.Patch(
+					"Company/1",
+					new[]
+					{
+						new PatchRequest
+						{
+							Type = PatchCommandType.Set,
+							Name = "Name",
+							Value = "Existing",
+						}
+					}, false));
+		}
+
+		[Fact]
+		public void Should_return_false_on_batch_delete_when_document_missing()
+		{
+			BatchResult[] batchResult = documentStore.DatabaseCommands.Batch(new[] { new DeleteCommandData { Key = "Company/1" } });
+
+			Assert.NotNull(batchResult);
+			Assert.Equal(1, batchResult.Length);
+			Assert.NotNull(batchResult[0].Deleted);
+			Assert.False(batchResult[0].Deleted ?? true);
+		}
+
+		[Fact]
+		public void Should_return_true_on_batch_delete_when_document_present()
+		{
+			documentStore.DatabaseCommands.Put("Company/1", null, new RavenJObject(), new RavenJObject());
+			
+			BatchResult[] batchResult = documentStore.DatabaseCommands.Batch(new[] { new DeleteCommandData { Key = "Company/1" } });
+
+			Assert.NotNull(batchResult);
+			Assert.Equal(1, batchResult.Length);
+			Assert.NotNull(batchResult[0].Deleted);
+			Assert.True(batchResult[0].Deleted ?? false);
 		}
 	}
 }

@@ -115,12 +115,18 @@ namespace Raven.Studio.Models
 			{
 				return indexName;
 			}
-			private set
+			set
 			{
 				if (string.IsNullOrWhiteSpace(value))
-					UrlUtil.Navigate("/indexes");
+					return;
 
-				indexName = value;
+                if (HasIndexChanged(value))
+                {
+                    NavigateToIndexQuery(value);
+                    return;
+                }
+
+			    indexName = value;
 				DocumentsResult.Context = "Index/" + indexName;
 				ApplicationModel.Current.Server.Value.RawUrl = "databases/" +
 																	   ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name +
@@ -132,8 +138,29 @@ namespace Raven.Studio.Models
 			}
 		}
 
-		
-		private QueryOperator defaultOperator;
+	    private static void NavigateToIndexesList()
+	    {
+	        UrlUtil.Navigate("/indexes");
+	    }
+
+	    private static void NavigateToIndexQuery(string indexName)
+	    {
+	        UrlUtil.Navigate("/query/" + indexName);
+	    }
+
+	    private bool HasIndexChanged(string newIndexName)
+	    {
+            if (newIndexName.StartsWith("dynamic", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+	        var currentIndex = new UrlParser(UrlUtil.Url.Substring(ModelUrl.Length)).Path.Trim('/');
+            return !newIndexName.Equals(currentIndex, StringComparison.OrdinalIgnoreCase);
+	    }
+
+
+	    private QueryOperator defaultOperator;
 		public QueryOperator DefaultOperator
 		{
 			get { return defaultOperator; }
@@ -208,6 +235,7 @@ namespace Raven.Studio.Models
 	    #region Sorting
 
 		public const string SortByDescSuffix = " DESC";
+		public const string SortByRangeSuffix = "_Range";
 
 		public class StringRef : NotifyPropertyChangedBase
 		{
@@ -232,6 +260,22 @@ namespace Raven.Studio.Models
 			get { return new RemoveSortByCommand(this); }
 		}
 
+	    public ICommand AddTransformer
+	    {
+	        get { return (addTransformer ?? (addTransformer = new ActionCommand(() => UseTransformer = true))); }
+	    }
+
+	    public ICommand RemoveTransformer
+	    {
+	        get
+	        {
+	            return (removeTransformer ?? (removeTransformer = new ActionCommand(() =>
+	            {
+	                UseTransformer = false;
+	                SelectedTransformer.Value = "None";
+	            })));
+	        }
+	    }
 		private class RemoveSortByCommand : Command
 		{
 			private string field;
@@ -266,7 +310,9 @@ namespace Raven.Studio.Models
 			foreach (var item in items)
 			{
 				SortByOptions.Add(item);
-				SortByOptions.Add(item + SortByDescSuffix);
+				SortByOptions.Add(item + SortByDescSuffix); 
+				SortByOptions.Add(item + SortByRangeSuffix);
+				SortByOptions.Add(item + SortByRangeSuffix + SortByDescSuffix );
 			}
 		}
 		
@@ -344,12 +390,12 @@ namespace Raven.Studio.Models
 		{
 			ModelUrl = "/query";
 			ApplicationModel.Current.Server.Value.RawUrl = null;
+            SelectedTransformer = new Observable<string> { Value = "None" };
+            SelectedTransformer.PropertyChanged += (sender, args) => Requery();
 
 		    ApplicationModel.DatabaseCommands.GetTransformersAsync(0, 256).ContinueOnSuccessInTheUIThread(transformers =>
 		    {
-				SelectedTransformer = new Observable<string>{Value = "None"};
-			    SelectedTransformer.PropertyChanged += (sender, args) => Requery();
-				Transformers = new List<string>{"None"};
+                Transformers = new List<string>{"None"};
 			    Transformers.AddRange(transformers.Select(definition => definition.Name));
 			    
 			    OnPropertyChanged(() => Transformers);
@@ -393,12 +439,16 @@ namespace Raven.Studio.Models
 			SortByOptions = new BindableCollection<string>(x => x);
 			Suggestions = new BindableCollection<FieldAndTerm>(x => x.Field);
 			DynamicOptions = new BindableCollection<string>(x => x) {"AllDocs"};
-
+	        AvailableIndexes = new BindableCollection<string>(x => x);
 		    SpatialQuery = new SpatialQueryModel {IndexName = indexName};
 		}
 
-		Regex errorLocation = new Regex(@"at line (\d+), column (\d+)");
+	    public BindableCollection<string> AvailableIndexes { get; private set; }
+
+	    Regex errorLocation = new Regex(@"at line (\d+), column (\d+)");
 	    private ICommand deleteMatchingResultsCommand;
+	    private ICommand addTransformer;
+	    private ICommand removeTransformer;
 
 	    private void HandleQueryError(Exception exception)
 		{
@@ -440,6 +490,11 @@ namespace Raven.Studio.Models
 
 		public void ClearQueryError()
 		{
+			if (Database.Value.Statistics.Value.Errors.Any(error => error.IndexName == IndexName))
+			{
+				QueryErrorMessage.Value = "The index " + IndexName + " has errors";
+				return;
+			}
 			QueryErrorMessage.Value = string.Empty;
 			IsErrorVisible.Value = false;
 		}
@@ -459,6 +514,7 @@ namespace Raven.Studio.Models
         {
             var urlParser = new UrlParser(parameters);
 
+            UpdateAvailableIndexes();
             ClearCurrentQuery();
 
             if (urlParser.GetQueryParam("mode") == "dynamic")
@@ -486,16 +542,42 @@ namespace Raven.Studio.Models
             }
 
             IsDynamicQuery = false;
-            IndexName = urlParser.Path.Trim('/');
+            var newIndexName = urlParser.Path.Trim('/');
 
-            DatabaseCommands.GetIndexAsync(IndexName)
+            if (string.IsNullOrEmpty(newIndexName))
+            {
+                if (AvailableIndexes.Any())
+                {
+                    NavigateToIndexQuery(AvailableIndexes.FirstOrDefault());
+                    return;
+                }
+            }
+
+            IndexName = newIndexName;
+
+	        if (Database.Value.Statistics.Value.Errors.Any(error => error.IndexName == IndexName))
+	        {
+		        QueryErrorMessage.Value = "The index " + IndexName + " has errors";
+		        IsErrorVisible.Value = true;
+	        }
+
+	        DatabaseCommands.GetIndexAsync(IndexName)
                 .ContinueOnUIThread(task =>
                 {
                     if (task.IsFaulted || task.Result == null)
                     {
-                        IndexDefinitionModel.HandleIndexNotFound(IndexName);
+                        if (AvailableIndexes.Any())
+                        {
+
+                            NavigateToIndexQuery(AvailableIndexes.FirstOrDefault());
+                        }
+                        else
+                        {
+                            NavigateToIndexesList();
+                        }
                         return;
                     }
+
                     var fields = task.Result.Fields;
                     QueryIndexAutoComplete = new QueryIndexAutoComplete(fields, IndexName, QueryDocument);
 
@@ -545,13 +627,28 @@ namespace Raven.Studio.Models
                     SetSortByOptions(fields);
                     RestoreHistory();
                 }).Catch();
+
+
         }
+
+	    private void UpdateAvailableIndexes()
+	    {
+            if (Database.Value == null || Database.Value.Statistics.Value == null)
+            {
+                return;
+            }
+
+	        AvailableIndexes.Match(Database.Value.Statistics.Value.Indexes.Select(i => i.Id.ToString()).ToArray());
+	    }
 
 	    private void ClearCurrentQuery()
 	    {
 	        Query = string.Empty;
             SortBy.Clear();
 			SpatialQuery.Clear();
+            ClearQueryError();
+            Suggestions.Clear();
+	        CollectionSource.Clear();
 	    }
 
 	    public bool HasTransform
@@ -795,6 +892,25 @@ namespace Raven.Studio.Models
                                 () => ApplicationModel.Current.AddInfoNotification("Documents successfully deleted"))
                             .Catch();
                     });
+        }
+
+        protected override void OnViewLoaded()
+        {
+            base.OnViewLoaded();
+
+            Database.ObservePropertyChanged()
+                            .TakeUntil(Unloaded)
+                            .Subscribe(_ =>
+                            {
+                                UpdateAvailableIndexes();
+
+                                Database.Value.Statistics.ObservePropertyChanged()
+                                        .TakeUntil(
+                                            Database.ObservePropertyChanged().Select(__ => Unit.Default).Amb(Unloaded))
+                                        .Subscribe(__ => UpdateAvailableIndexes());
+                            });
+
+            UpdateAvailableIndexes();
         }
 
 		private class RepairTermInQueryCommand : Command

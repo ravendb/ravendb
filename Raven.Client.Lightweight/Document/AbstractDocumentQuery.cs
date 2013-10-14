@@ -170,15 +170,7 @@ namespace Raven.Client.Document
 		/// The paths to include when loading the query
 		/// </summary>
 		protected HashSet<string> includes = new HashSet<string>();
-		/// <summary>
-		/// What aggregated operation to execute
-		/// </summary>
-		protected AggregationOperation aggregationOp;
-		/// <summary>
-		/// Fields to group on
-		/// </summary>
-		protected string[] groupByFields;
-
+	
 		/// <summary>
 		/// Holds the query stats
 		/// </summary>
@@ -203,6 +195,11 @@ namespace Raven.Client.Document
 		/// Determine if query results should be cached.
 		/// </summary>
 		protected bool disableCaching;
+
+		/// <summary>
+		/// Determine if scores of query results should be explained
+		/// </summary>
+		protected bool shouldExplainScores;
 
 		/// <summary>
 		///   Get the name of the index being queried
@@ -243,7 +240,7 @@ namespace Raven.Client.Document
 		/// </summary>
 		public DocumentConvention DocumentConvention
 		{
-			get { return theSession.Conventions; }
+			get { return conventions; }
 		}
 
 #if !SILVERLIGHT
@@ -319,7 +316,7 @@ namespace Raven.Client.Document
 			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
 			linqPathProvider = new LinqPathProvider(conventions);
 
-			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.QueryYourWrites)
+			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite)
 			{
 				WaitForNonStaleResultsAsOfLastWrite();
 			}
@@ -365,6 +362,7 @@ namespace Raven.Client.Document
 		    queryInputs = other.queryInputs;
 			disableEntitiesTracking = other.disableEntitiesTracking;
 			disableCaching = other.disableCaching;
+			shouldExplainScores = other.shouldExplainScores;
 			
 			AfterQueryExecuted(this.UpdateStatsAndHighlightings);
 		}
@@ -587,6 +585,31 @@ namespace Raven.Client.Document
 			var indexQuery = GenerateIndexQuery(query);
 			return indexQuery;
 		}
+#if !SILVERLIGHT
+		public FacetResults GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize)
+		{
+			var q = GetIndexQuery(false);
+			return DatabaseCommands.GetFacets(indexName, q, facetSetupDoc, facetStart, facetPageSize);
+		}
+
+		public FacetResults GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
+		{
+			var q = GetIndexQuery(false);
+			return DatabaseCommands.GetFacets(indexName, q, facets, facetStart, facetPageSize);
+		}
+#endif
+
+		public Task<FacetResults> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize)
+		{
+			var q = GetIndexQuery(true);
+			return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facetSetupDoc, facetStart, facetPageSize);
+		}
+
+		public Task<FacetResults> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize)
+		{
+			var q = GetIndexQuery(true);
+			return AsyncDatabaseCommands.GetFacetsAsync(indexName, q, facets, facetStart, facetPageSize);
+		}
 
 #if !SILVERLIGHT  && !NETFX_CORE
 		/// <summary>
@@ -672,7 +695,7 @@ namespace Raven.Client.Document
 			if (queryOperation == null)
 			{
 				ExecuteBeforeQueryListeners();
-				queryOperation = InitializeQueryOperation(headers.Add);
+				queryOperation = InitializeQueryOperation((key, val) => headers[key] =val);
 			}
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
@@ -688,25 +711,22 @@ namespace Raven.Client.Document
 		///   Execute the query the first time that this is called.
 		/// </summary>
 		/// <value>The query result.</value>
-		public Task<QueryResult> QueryResultAsync
+		public async Task<QueryResult> QueryResultAsync()
 		{
-			get
-			{
-				return InitAsync()
-					.ContinueWith(x => x.Result.CurrentQueryResults.CreateSnapshot());
-			}
+			var result = await InitAsync();
+			return result.CurrentQueryResults.CreateSnapshot();
 		}
 
-		protected virtual Task<QueryOperation> InitAsync()
+		protected virtual async Task<QueryOperation> InitAsync()
 		{
 			if (queryOperation != null)
-				return CompletedTask.With(queryOperation);
+				return queryOperation;
 			ClearSortHints(AsyncDatabaseCommands);
 			ExecuteBeforeQueryListeners();
 
 			queryOperation = InitializeQueryOperation((key, val) => AsyncDatabaseCommands.OperationsHeaders[key] = val);
 			theSession.IncrementRequestCount();
-			return ExecuteActualQueryAsync();
+			return await ExecuteActualQueryAsync();
 		}
 
 		protected void ExecuteBeforeQueryListeners()
@@ -865,22 +885,21 @@ namespace Raven.Client.Document
 		}
 #endif
 
-		private Task<Tuple<QueryOperation,IList<T>>> ProcessEnumerator(Task<QueryOperation> task)
+		private async Task<Tuple<QueryResult, IList<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
 		{
-			var currentQueryOperation = task.Result;
 			try
 			{
 				var list = currentQueryOperation.Complete<T>();
-				return Task.Factory.StartNew(() => Tuple.Create(currentQueryOperation, list));
+				return Tuple.Create(currentQueryOperation.CurrentQueryResults, list);
 			}
 			catch (Exception e)
 			{
 				if (queryOperation.ShouldQueryAgain(e) == false)
 					throw;
-				return ExecuteActualQueryAsync()
-					.ContinueWith(t => ProcessEnumerator(t))
-					.Unwrap();
 			}
+
+			var result = await ExecuteActualQueryAsync();
+			return await ProcessEnumerator(result);
 		}
 
 		/// <summary>
@@ -979,18 +998,18 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <param name = "whereClause">The where clause.</param>
 		public void Where(string whereClause)
 		{
-			AppendSpaceIfRequired();
+			AppendSpaceIfNeeded(queryText.Length > 0 && queryText[queryText.Length - 1] != '(');
 			queryText.Append(whereClause);
 		}
 
-		private void AppendSpaceIfRequired()
+		private void AppendSpaceIfNeeded(bool shouldAppendSpace)
 		{
-			if (queryText.Length > 0 && queryText[queryText.Length - 1] != '(')
+			if (shouldAppendSpace)
 			{
 				queryText.Append(" ");
 			}
 		}
-
+			
 		/// <summary>
 		///   Matches exact value
 		/// </summary>
@@ -1031,21 +1050,9 @@ If you really want to do in memory filtering on the data returned from the query
 		public void OpenSubclause()
 		{
 			currentClauseDepth++;
-			AppendSpaceIfRequired();
+			AppendSpaceIfNeeded(queryText.Length > 0 && queryText[queryText.Length - 1] != '(');
 			NegateIfNeeded();
 			queryText.Append("(");
-		}
-
-		///<summary>
-		///  Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		///<remarks>
-		///  This is only valid on dynamic indexes queries
-		///</remarks>
-		public void GroupBy(AggregationOperation aggregationOperation, params string[] fieldsToGroupBy)
-		{
-			groupByFields = fieldsToGroupBy;
-			aggregationOp = aggregationOperation;
 		}
 
 		/// <summary>
@@ -1066,14 +1073,11 @@ If you really want to do in memory filtering on the data returned from the query
 			EnsureValidFieldName(whereParams);
 			var transformToEqualValue = TransformToEqualValue(whereParams);
 			lastEquality = new KeyValuePair<string, string>(whereParams.FieldName, transformToEqualValue);
-			if (queryText.Length > 0 && queryText[queryText.Length - 1] != '(')
-			{
-				queryText.Append(" ");
-			}
 
+			AppendSpaceIfNeeded(queryText.Length > 0 && queryText[queryText.Length - 1] != '(');
 			NegateIfNeeded();
 
-			queryText.Append(whereParams.FieldName);
+			queryText.Append(RavenQuery.EscapeField(whereParams.FieldName));
 			queryText.Append(":");
 			queryText.Append(transformToEqualValue);
 		}
@@ -1118,9 +1122,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		public void WhereIn(string fieldName, IEnumerable<object> values)
 		{
-			if (queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false)
-				queryText.Append(" ");
-
+			AppendSpaceIfNeeded(queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false);
 			NegateIfNeeded();
 
 			var list = values.ToList();
@@ -1217,10 +1219,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		public void WhereBetween(string fieldName, object start, object end)
 		{
-			if (queryText.Length > 0)
-			{
-				queryText.Append(" ");
-			}
+			AppendSpaceIfNeeded(queryText.Length > 0);
 
 			if ((start ?? end) != null)
 				sortByHints.Add(new KeyValuePair<string, Type>(fieldName, (start ?? end).GetType()));
@@ -1229,7 +1228,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
-			queryText.Append(fieldName).Append(":{");
+			queryText.Append(RavenQuery.EscapeField(fieldName)).Append(":{");
 			queryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams{Value = start, FieldName = fieldName}));
 			queryText.Append(" TO ");
 			queryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams{Value = end, FieldName = fieldName}));
@@ -1245,10 +1244,7 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <returns></returns>
 		public void WhereBetweenOrEqual(string fieldName, object start, object end)
 		{
-			if (queryText.Length > 0)
-			{
-				queryText.Append(" ");
-			}
+			AppendSpaceIfNeeded(queryText.Length > 0);
 			if ((start ?? end) != null)
 				sortByHints.Add(new KeyValuePair<string, Type>(fieldName, (start ?? end).GetType()));
 
@@ -1256,7 +1252,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			fieldName = GetFieldNameForRangeQueries(fieldName, start, end);
 
-			queryText.Append(fieldName).Append(":[");
+			queryText.Append(RavenQuery.EscapeField(fieldName)).Append(":[");
 			queryText.Append(start == null ? "*" : TransformToRangeValue(new WhereParams { Value = start, FieldName = fieldName }));
 			queryText.Append(" TO ");
 			queryText.Append(end == null ? "NULL" : TransformToRangeValue(new WhereParams { Value = end, FieldName = fieldName }));
@@ -1453,7 +1449,7 @@ If you really want to do in memory filtering on the data returned from the query
 			OrderBy(fields);
 		}
 
-		string MakeFieldSortDescending(string field)
+		protected string MakeFieldSortDescending(string field)
 		{
 			if (string.IsNullOrWhiteSpace(field) || field.StartsWith("+") || field.StartsWith("-"))
 			{
@@ -1676,42 +1672,25 @@ If you really want to do in memory filtering on the data returned from the query
 
 		#endregion
 
-		protected virtual Task<QueryOperation> ExecuteActualQueryAsync()
+		protected virtual async Task<QueryOperation> ExecuteActualQueryAsync()
 		{
-			using(queryOperation.EnterQueryContext())
+			using (queryOperation.EnterQueryContext())
 			{
 				queryOperation.LogQuery();
-				return theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray())
-					.ContinueWith(task =>
+				var result = await theAsyncDatabaseCommands.QueryAsync(indexName, queryOperation.IndexQuery, includes.ToArray());
+
+				if (queryOperation.IsAcceptable(result) == false)
 					{
-						if (queryOperation.IsAcceptable(task.Result) == false)
-						{
-							return TaskDelay(100)
-								.ContinueWith(_ => ExecuteActualQueryAsync())
-								.Unwrap();
+#if SILVERLIGHT
+					await TaskEx.Delay(100);
+#else
+					await Task.Delay(100);
+#endif
+					return await ExecuteActualQueryAsync();
 						}
 						InvokeAfterQueryExecuted(queryOperation.CurrentQueryResults);
-						return Task.Factory.StartNew(() => queryOperation);
-					}).Unwrap();
+				return queryOperation;
 			}
-		}
-
-		private static Task TaskDelay(int dueTimeMilliseconds)
-		{
-#if NETFX_CORE
-			return Task.Delay(dueTimeMilliseconds);
-#else
-			var taskCompletionSource = new TaskCompletionSource<object>();
-			var cancellationTokenRegistration = new CancellationTokenRegistration();
-			var timer = new Timer(o =>
-			{
-				cancellationTokenRegistration.Dispose();
-				((Timer)o).Dispose();
-				taskCompletionSource.TrySetResult(null);
-			});
-			timer.Change(dueTimeMilliseconds, -1);
-			return taskCompletionSource.Task;
-#endif
 		}
 
 		/// <summary>
@@ -1723,10 +1702,12 @@ If you really want to do in memory filtering on the data returned from the query
 		{
 			if(isSpatialQuery)
 			{
+				if (indexName == "dynamic" || indexName.StartsWith("dynamic/"))
+					throw new NotSupportedException("Dynamic indexes do not support spatial queries. A static index, with spatial field(s), must be defined.");
+
 				return new SpatialIndexQuery
 				{
-					GroupBy = groupByFields,
-					AggregationOperation = aggregationOp,
+					IsDistinct = isDistinct,
 					Query = query,
 					PageSize = pageSize ?? 128,
 					Start = start,
@@ -1746,14 +1727,14 @@ If you really want to do in memory filtering on the data returned from the query
 					HighlighterPostTags = highlighterPostTags.ToArray(),
                     ResultsTransformer = resultsTransformer,
                     QueryInputs  = queryInputs,
-					DisableCaching = disableCaching
+					DisableCaching = disableCaching,
+					ExplainScores = shouldExplainScores
 				};
 			}
 
 			var indexQuery = new IndexQuery
 			{
-				GroupBy = groupByFields,
-				AggregationOperation = aggregationOp,
+				IsDistinct = isDistinct,
 				Query = query,
 				Start = start,
 				Cutoff = cutoff,
@@ -1767,7 +1748,8 @@ If you really want to do in memory filtering on the data returned from the query
 				HighlighterPostTags = highlighterPostTags.ToArray(),
                 ResultsTransformer = this.resultsTransformer,
                 QueryInputs = queryInputs,
-				DisableCaching = disableCaching
+				DisableCaching = disableCaching,
+				ExplainScores = shouldExplainScores
 			};
 
 			if (pageSize != null)
@@ -1785,6 +1767,7 @@ If you really want to do in memory filtering on the data returned from the query
 
 			);
 		private QueryOperator defaultOperator;
+		protected bool isDistinct;
 
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
@@ -1838,7 +1821,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (type == typeof(DateTime))
 			{
 				var val = (DateTime)whereParams.Value;
-				var s = val.ToString(Default.DateTimeFormatsToWrite);
+				var s = val.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
 				if (val.Kind == DateTimeKind.Utc)
 					s += "Z";
 				return s;
@@ -1846,7 +1829,7 @@ If you really want to do in memory filtering on the data returned from the query
 			if (type == typeof(DateTimeOffset))
 			{
 				var val = (DateTimeOffset)whereParams.Value;
-				return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
+				return val.UtcDateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
 			}
 			
 			if(type == typeof(decimal))
@@ -1950,13 +1933,13 @@ If you really want to do in memory filtering on the data returned from the query
 			if (whereParams.Value is DateTime)
 			{
 				var dateTime = (DateTime) whereParams.Value;
-				var dateStr = dateTime.ToString(Default.DateTimeFormatsToWrite);
+				var dateStr = dateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
 				if(dateTime.Kind == DateTimeKind.Utc)
 					dateStr += "Z";
 				return dateStr;
 			}
 			if (whereParams.Value is DateTimeOffset)
-				return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite) + "Z";
+				return ((DateTimeOffset)whereParams.Value).UtcDateTime.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
 
 			if (whereParams.FieldName == Constants.DocumentIdFieldName && whereParams.Value is string == false)
 			{
@@ -2053,22 +2036,30 @@ If you really want to do in memory filtering on the data returned from the query
 		/// <summary>
 		/// Returns a list of results for a query asynchronously. 
 		/// </summary>
-		public Task<Tuple<QueryResult,IList<T>>> ToListAsync()
+		public async Task<IList<T>> ToListAsync()
 		{
-			return InitAsync()
-				.ContinueWith(t => ProcessEnumerator(t))
-				.Unwrap()
-				.ContinueWith(t => Tuple.Create(t.Result.Item1.CurrentQueryResults, t.Result.Item2));
+			var currentQueryOperation = await InitAsync();
+			var tuple = await ProcessEnumerator(currentQueryOperation);
+			return tuple.Item2;
 		}
 
 		/// <summary>
 		/// Gets the total count of records for this query
 		/// </summary>
-		public Task<int> CountAsync()
+		public async Task<int> CountAsync()
 		{
 			Take(0);
-			return QueryResultAsync
-				.ContinueWith(r => r.Result.TotalResults);
+			var result = await QueryResultAsync();
+			return result.TotalResults;
+		}
+
+		public string GetMemberQueryPathForOrderBy(Expression expression)
+		{
+			var memberQueryPath = GetMemberQueryPath(expression);
+			var memberExpression = linqPathProvider.GetMemberExpression(expression);
+			if (DocumentConvention.UsesRangeType(memberExpression.Type))
+				return memberQueryPath + "_Range";
+			return memberQueryPath;
 		}
 
 		public string GetMemberQueryPath(Expression expression)
@@ -2083,7 +2074,16 @@ If you really want to do in memory filtering on the data returned from the query
 				? conventions.FindPropertyNameForDynamicIndex(typeof(T), indexName, "", result.Path)
 				: conventions.FindPropertyNameForIndex(typeof(T), indexName, "", result.Path);
 			return propertyName;
+		}
 
+        public void SetResultTransformer(string resultsTransformer)
+	    {
+            this.resultsTransformer = resultsTransformer;
+	    }
+
+		public void Distinct()
+		{
+			isDistinct = true;
 		}
 	}
 }

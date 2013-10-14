@@ -16,6 +16,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Plugins;
+using Raven.Database.Server.Responders.Debugging;
 using Raven.Database.Storage;
 using System.Linq;
 using Raven.Database.Util;
@@ -37,8 +38,16 @@ namespace Raven.Database.Indexing
 		private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly ThreadLocal<List<Func<string>>> shouldNotifyOnWork = new ThreadLocal<List<Func<string>>>(() => new List<Func<string>>());
+
+	    public WorkContext()
+	    {
+	        DoNotTouchAgainIfMissingReferences = new ConcurrentDictionary<int, ConcurrentSet<string>>();
+            CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>(StringComparer.OrdinalIgnoreCase);
+	    }
+
 		public OrderedPartCollection<AbstractIndexUpdateTrigger> IndexUpdateTriggers { get; set; }
 		public OrderedPartCollection<AbstractReadTrigger> ReadTriggers { get; set; }
+        public OrderedPartCollection<AbstractIndexReaderWarmer> IndexReaderWarmers { get; set; }
 		public string DatabaseName { get; set; }
 
 		public DateTime LastWorkTime { get; private set; }
@@ -57,6 +66,9 @@ namespace Raven.Database.Indexing
 		{
 			LastWorkTime = SystemTime.UtcNow;
 		}
+
+        //collection that holds information about currently running queries, in the form of [Index name -> (When query started,IndexQuery data)]
+        public ConcurrentDictionary<string,ConcurrentSet<ExecutingQueryInfo>> CurrentlyRunningQueries { get; private set; }
 
 		public InMemoryRavenConfiguration Configuration { get; set; }
 		public IndexStorage IndexStorage { get; set; }
@@ -169,13 +181,20 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void AddError(string index, string key, string error)
+		public void AddError(int index, string indexName, string key, string error )
+		{
+            AddError(index, indexName, key, "Unknown", "Unknown");
+		}
+
+		public void AddError(int index, string indexName, string key, string error, string component)
 		{
 			serverErrors.Enqueue(new ServerError
 			{
 				Document = key,
 				Error = error,
 				Index = index,
+                IndexName = indexName,
+                Action = component,
 				Timestamp = SystemTime.UtcNow
 			});
 			if (serverErrors.Count <= 50)
@@ -415,8 +434,9 @@ namespace Raven.Database.Indexing
 		}
 
 		public DocumentDatabase Database { get; set; }
+        public ConcurrentDictionary<int, ConcurrentSet<string>> DoNotTouchAgainIfMissingReferences { get; private set; }
 
-		public void AddFutureBatch(FutureBatchStats futureBatchStat)
+	    public void AddFutureBatch(FutureBatchStats futureBatchStat)
 		{
 			futureBatchStats.Add(futureBatchStat);
 			if (futureBatchStats.Count <= 30)
