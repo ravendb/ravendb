@@ -442,6 +442,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			var result = new ConversionScriptResult();
 			foreach (var jsonDocument in docs)
 			{
+				Database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 				if (string.IsNullOrEmpty(cfg.RavenEntityName) == false)
 				{
 					var entityName = jsonDocument.Metadata.Value<string>(Constants.RavenEntityName);
