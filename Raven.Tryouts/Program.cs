@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Tests.Indexes;
+using Raven.Tests.MultiGet;
 using Raven.Tests.Notifications;
 using Raven.Tests.Track;
 
@@ -14,9 +15,9 @@ namespace Raven.Tryouts
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-                using (var x = new RavenDB_1280())
+                using (var x = new MultiGetProfiling())
 				{
-					x.Referenced_Docs_Are_Indexed_During_Heavy_Writing();
+					x.CanProfileFullyAggressivelyCached();
 				}
 			}
 			
