@@ -60,11 +60,11 @@ public class DatabaseStatistics {
   }
   public static class FutureBatchStats {
     private Date timestamp;
-    private long duration;
+    private String duration;
     private Integer size;
     private int retries;
 
-    public long getDuration() {
+    public String getDuration() {
       return duration;
     }
     public int getRetries() {
@@ -76,7 +76,7 @@ public class DatabaseStatistics {
     public Date getTimestamp() {
       return timestamp;
     }
-    public void setDuration(long duration) {
+    public void setDuration(String duration) {
       this.duration = duration;
     }
     public void setRetries(int retries) {
