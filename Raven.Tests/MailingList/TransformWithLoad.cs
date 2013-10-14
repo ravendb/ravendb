@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
@@ -113,8 +114,8 @@ namespace Raven.Tests.MailingList
 		{
 			using (var session = store.OpenSession())
 			{
-				var contactViewModel = session.Advanced.Lazily.Load<ContactTransformer, ContactDto>("contacts/1", "contacts/2");
-				var result = contactViewModel.Value;
+				var result = session.Advanced.Lazily.Load<ContactTransformer, ContactDto>("contacts/1", "contacts/2").Value;
+				Assert.Equal(2, result.Length);
 				Assert.NotNull(result[0]);
 				Assert.Null(result[1]);
 
@@ -122,6 +123,35 @@ namespace Raven.Tests.MailingList
 				{
 					Assert.NotNull(detail.Id);
 				}
+			}
+		}
+
+		[Fact]
+		public void LoadByIds()
+		{
+			using (var session = store.OpenSession())
+			{
+				var result = session.Load<ContactTransformer, ContactDto>("contacts/1", "contacts/2");
+				Assert.Equal(2, result.Length);
+				Assert.NotNull(result[0]);
+				Assert.Null(result[1]);
+
+				foreach (var detail in result[0].ContactDetails)
+				{
+					Assert.NotNull(detail.Id);
+				}
+			}
+		}
+
+		[Fact]
+		public void PlainLoadByIds()
+		{
+			using (var session = store.OpenSession())
+			{
+				var result = session.Load<Contact>("contacts/1", "contacts/2");
+				Assert.Equal(2, result.Length);
+				Assert.NotNull(result[0]);
+				Assert.Null(result[1]);
 			}
 		}
 
