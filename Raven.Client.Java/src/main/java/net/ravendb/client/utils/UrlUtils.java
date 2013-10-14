@@ -66,7 +66,6 @@ public class UrlUtils {
 
         short count = 1;
         for (; count < maxSize && pStr.charAt(i + count) > 0x7F; ++count) {
-          ;
         }
         // Is the last a high surrogate?
         if (pStr.charAt(i + count-1) >= 0xD800 && pStr.charAt(i + count-1) <= 0xDBFF) {

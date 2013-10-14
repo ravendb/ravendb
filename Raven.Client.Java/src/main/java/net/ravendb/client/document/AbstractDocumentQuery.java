@@ -786,7 +786,6 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> whereEquals(String fieldName, Object value) {
     WhereParams whereParams = new WhereParams();
-    ;
     whereParams.setFieldName(fieldName);
     whereParams.setValue(value);
     whereEquals(whereParams);
