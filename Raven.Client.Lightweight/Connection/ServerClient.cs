@@ -26,7 +26,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-    /// <summary>
+	using Raven.Client.Extensions;
+
+	/// <summary>
 	/// Access the RavenDB operations using HTTP
 	/// </summary>
 	public class ServerClient : IDatabaseCommands
@@ -79,7 +81,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public JsonDocument Get(string key)
 		{
-		    return asyncServerClient.GetAsync(key).Result;
+		    return asyncServerClient.GetAsync(key).ResultUnwrap();
 		}
 
 	    public IGlobalAdminDatabaseCommands GlobalAdmin
@@ -92,7 +94,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
 	    {
-            return asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, metadataOnly, exclude).Result;
+            return asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, metadataOnly, exclude).ResultUnwrap();
 		}
 
 		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
@@ -111,12 +113,12 @@ namespace Raven.Client.Connection
 		    {
 		        operation(operationUrl);
 		        return null;
-		    }).Wait();
+		    }).WaitUnwrap();
 		}
 
 		internal T ExecuteWithReplication<T>(string method, Func<string, T> operation)
 		{
-		    return asyncServerClient.ExecuteWithReplication(method, s => Task.FromResult(operation(s))).Result;
+		    return asyncServerClient.ExecuteWithReplication(method, s => Task.FromResult(operation(s))).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -127,12 +129,12 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public JsonDocument DirectGet(string serverUrl, string key, string transformer = null)
 		{
-            return asyncServerClient.DirectGetAsync(serverUrl, key, transformer).Result;
+            return asyncServerClient.DirectGetAsync(serverUrl, key, transformer).ResultUnwrap();
 		}
 
 		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
 		{
-		    return asyncServerClient.GetDocumentsAsync(start, pageSize, metadataOnly).Result;
+		    return asyncServerClient.GetDocumentsAsync(start, pageSize, metadataOnly).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -145,7 +147,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata)
 		{
-		    return asyncServerClient.PutAsync(key, etag, document, metadata).Result;
+		    return asyncServerClient.PutAsync(key, etag, document, metadata).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -155,7 +157,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">The etag.</param>
 		public void Delete(string key, Etag etag)
 		{
-            asyncServerClient.DeleteAsync(key, etag).Wait();
+            asyncServerClient.DeleteAsync(key, etag).WaitUnwrap();
 		}
 
 		/// <summary>
@@ -167,7 +169,7 @@ namespace Raven.Client.Connection
 		/// <param name="metadata">The metadata.</param>
 		public void PutAttachment(string key, Etag etag, Stream data, RavenJObject metadata)
 		{
-		    asyncServerClient.PutAttachmentAsync(key, etag, data, metadata).Wait();
+		    asyncServerClient.PutAttachmentAsync(key, etag, data, metadata).WaitUnwrap();
 		}
 
 		/// <summary>
@@ -178,7 +180,7 @@ namespace Raven.Client.Connection
 		/// <param name="metadata">The metadata.</param>
 		public void UpdateAttachmentMetadata(string key, Etag etag, RavenJObject metadata)
 		{
-		    asyncServerClient.UpdateAttachmentMetadataAsync(key, etag, metadata).Wait();
+		    asyncServerClient.UpdateAttachmentMetadataAsync(key, etag, metadata).WaitUnwrap();
 		}
 
 		/// <summary>
@@ -198,7 +200,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public Attachment GetAttachment(string key)
 		{
-		    return asyncServerClient.GetAttachmentAsync(key).Result;
+		    return asyncServerClient.GetAttachmentAsync(key).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -208,7 +210,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public Attachment HeadAttachment(string key)
 		{
-            return asyncServerClient.HeadAttachmentAsync(key).Result;
+            return asyncServerClient.HeadAttachmentAsync(key).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -218,12 +220,12 @@ namespace Raven.Client.Connection
 		/// <param name="etag">The etag.</param>
 		public void DeleteAttachment(string key, Etag etag)
 		{
-		    asyncServerClient.DeleteAttachmentAsync(key, etag).Wait();
+		    asyncServerClient.DeleteAttachmentAsync(key, etag).WaitUnwrap();
 		}
 
 		public string[] GetDatabaseNames(int pageSize, int start = 0)
 		{
-		    return asyncServerClient.GetDatabaseNamesAsync(pageSize, start).Result;
+		    return asyncServerClient.GetDatabaseNamesAsync(pageSize, start).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -234,27 +236,27 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string[] GetIndexNames(int start, int pageSize)
 		{
-		    return asyncServerClient.GetIndexNamesAsync(start, pageSize).Result;
+		    return asyncServerClient.GetIndexNamesAsync(start, pageSize).ResultUnwrap();
 		}
 
 		public IndexDefinition[] GetIndexes(int start, int pageSize)
 		{
-		    return asyncServerClient.GetIndexesAsync(start, pageSize).Result;
+		    return asyncServerClient.GetIndexesAsync(start, pageSize).ResultUnwrap();
 		}
 
 		public TransformerDefinition[] GetTransformers(int start, int pageSize)
 		{
-		    return asyncServerClient.GetTransformersAsync(start, pageSize).Result;
+		    return asyncServerClient.GetTransformersAsync(start, pageSize).ResultUnwrap();
 		}
 
 		public TransformerDefinition GetTransformer(string name)
 		{
-		    return asyncServerClient.GetTransformerAsync(name).Result;
+		    return asyncServerClient.GetTransformerAsync(name).ResultUnwrap();
 		}
 
 		public void DeleteTransformer(string name)
 		{
-		    asyncServerClient.DeleteTransformerAsync(name).Wait();
+		    asyncServerClient.DeleteTransformerAsync(name).WaitUnwrap();
 		}
 
 		/// <summary>
@@ -263,7 +265,7 @@ namespace Raven.Client.Connection
 		/// <param name="name">The name.</param>
 		public void ResetIndex(string name)
 		{
-		    asyncServerClient.ResetIndexAsync(name).Wait();
+		    asyncServerClient.ResetIndexAsync(name).WaitUnwrap();
 		}
 
 		/// <summary>
@@ -273,7 +275,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public IndexDefinition GetIndex(string name)
 		{
-		    return asyncServerClient.GetIndexAsync(name).Result;
+		    return asyncServerClient.GetIndexAsync(name).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -284,12 +286,12 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex(string name, IndexDefinition definition)
 		{
-		    return asyncServerClient.PutIndexAsync(name, definition).Result;
+		    return asyncServerClient.PutIndexAsync(name, definition).ResultUnwrap();
 		}
 
 		public string PutTransformer(string name, TransformerDefinition transformerDef)
 		{
-            return asyncServerClient.PutTransformerAsync(name, transformerDef).Result;
+            return asyncServerClient.PutTransformerAsync(name, transformerDef).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -301,7 +303,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex(string name, IndexDefinition definition, bool overwrite)
 		{
-            return asyncServerClient.PutIndexAsync(name, definition, overwrite).Result;
+            return asyncServerClient.PutIndexAsync(name, definition, overwrite).ResultUnwrap();
 		}
 
 	    /// <summary>
@@ -314,7 +316,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef)
 		{
-            return asyncServerClient.PutIndexAsync(name, indexDef).Result;
+            return asyncServerClient.PutIndexAsync(name, indexDef).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -328,7 +330,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex<TDocument, TReduceResult>(string name, IndexDefinitionBuilder<TDocument, TReduceResult> indexDef, bool overwrite)
 		{
-            return asyncServerClient.PutIndexAsync(name, indexDef, overwrite).Result;
+            return asyncServerClient.PutIndexAsync(name, indexDef, overwrite).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -340,7 +342,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-            return asyncServerClient.QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly).Result;
+            return asyncServerClient.QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -371,7 +373,7 @@ namespace Raven.Client.Connection
 		/// <param name="name">The name.</param>
 		public void DeleteIndex(string name)
 		{
-		    asyncServerClient.DeleteIndexAsync(name).Wait();
+		    asyncServerClient.DeleteIndexAsync(name).WaitUnwrap();
 		}
 
 	    /// <summary>
@@ -385,7 +387,7 @@ namespace Raven.Client.Connection
 	    /// <returns></returns>
 	    public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
 	    {
-	        return asyncServerClient.GetAsync(ids, includes, transformer, queryInputs, metadataOnly).Result;
+	        return asyncServerClient.GetAsync(ids, includes, transformer, queryInputs, metadataOnly).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -395,7 +397,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public BatchResult[] Batch(IEnumerable<ICommandData> commandDatas)
 		{
-		    return asyncServerClient.BatchAsync(commandDatas.ToArray()).Result;
+		    return asyncServerClient.BatchAsync(commandDatas.ToArray()).ResultUnwrap();
 		}
 
 	    /// <summary>
@@ -404,7 +406,7 @@ namespace Raven.Client.Connection
 	    /// <param name="txId">The tx id.</param>
 	    public void Commit(string txId)
 	    {
-	        asyncServerClient.CommitAsync(txId).Wait();
+	        asyncServerClient.CommitAsync(txId).WaitUnwrap();
 	    }
 
 	    /// <summary>
@@ -413,7 +415,7 @@ namespace Raven.Client.Connection
 	    /// <param name="txId">The tx id.</param>
 	    public void Rollback(string txId)
 		{
-            asyncServerClient.RollbackAsync(txId).Wait();
+            asyncServerClient.RollbackAsync(txId).WaitUnwrap();
 		}
 
 		/// <summary>
@@ -422,12 +424,12 @@ namespace Raven.Client.Connection
 		/// <param name="txId">The tx id.</param>
 		public void PrepareTransaction(string txId)
 		{
-            asyncServerClient.PrepareTransactionAsync(txId).Wait();
+            asyncServerClient.PrepareTransactionAsync(txId).WaitUnwrap();
 	    }
 
         public BuildNumber GetBuildNumber()
         {
-            return asyncServerClient.GetBuildNumberAsync().Result;
+            return asyncServerClient.GetBuildNumberAsync().ResultUnwrap();
         }
 
 		/// <summary>
@@ -487,7 +489,7 @@ namespace Raven.Client.Connection
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale = false)
 		{
-		    return asyncServerClient.DeleteByIndexAsync(indexName, queryToDelete, allowStale).Result;
+		    return asyncServerClient.DeleteByIndexAsync(indexName, queryToDelete, allowStale).ResultUnwrap();
         }
 
 	    /// <summary>
@@ -499,7 +501,7 @@ namespace Raven.Client.Connection
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale = false)
 		{
-            return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patchRequests, allowStale).Result;
+            return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patchRequests, allowStale).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -511,7 +513,7 @@ namespace Raven.Client.Connection
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale = false)
 		{
-		    return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patch, allowStale).Result;
+		    return asyncServerClient.UpdateByIndexAsync(indexName, queryToUpdate, patch, allowStale).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -522,7 +524,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public SuggestionQueryResult Suggest(string index, SuggestionQuery suggestionQuery)
 		{
-		    return asyncServerClient.SuggestAsync(index, suggestionQuery).Result;
+		    return asyncServerClient.SuggestAsync(index, suggestionQuery).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -532,7 +534,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public MultiLoadResult MoreLikeThis(MoreLikeThisQuery query)
 		{
-		    return asyncServerClient.MoreLikeThisAsync(query).Result;
+		    return asyncServerClient.MoreLikeThisAsync(query).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -540,7 +542,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public DatabaseStatistics GetStatistics()
 		{
-		    return asyncServerClient.GetStatisticsAsync().Result;
+		    return asyncServerClient.GetStatisticsAsync().ResultUnwrap();
 		}
 
 		/// <summary>
@@ -548,7 +550,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public long NextIdentityFor(string name)
 		{
-		    return asyncServerClient.NextIdentityForAsync(name).Result;
+		    return asyncServerClient.NextIdentityForAsync(name).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -566,7 +568,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public JsonDocumentMetadata Head(string key)
 		{
-		    return asyncServerClient.HeadAsync(key).Result;
+		    return asyncServerClient.HeadAsync(key).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -574,7 +576,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
-		    return asyncServerClient.MultiGetAsync(requests).Result;
+		    return asyncServerClient.MultiGetAsync(requests).ResultUnwrap();
 		}
 
 		///<summary>
@@ -585,7 +587,7 @@ namespace Raven.Client.Connection
 		///<returns></returns>
 		public IEnumerable<string> GetTerms(string index, string field, string fromValue, int pageSize)
 		{
-		    return asyncServerClient.GetTermsAsync(index, field, fromValue, pageSize).Result;
+		    return asyncServerClient.GetTermsAsync(index, field, fromValue, pageSize).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -598,7 +600,7 @@ namespace Raven.Client.Connection
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
 		{
-		    return asyncServerClient.GetFacetsAsync(index, query, facetSetupDoc, start, pageSize).Result;
+		    return asyncServerClient.GetFacetsAsync(index, query, facetSetupDoc, start, pageSize).ResultUnwrap();
 		}
 
         /// <summary>
@@ -611,7 +613,7 @@ namespace Raven.Client.Connection
         /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
         public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize)
         {
-            return asyncServerClient.GetFacetsAsync(index, query, facets, start, pageSize).Result;
+            return asyncServerClient.GetFacetsAsync(index, query, facets, start, pageSize).ResultUnwrap();
         }
 
 		/// <summary>
@@ -621,7 +623,7 @@ namespace Raven.Client.Connection
 		/// <param name="patches">Array of patch requests</param>
 		public RavenJObject Patch(string key, PatchRequest[] patches)
 		{
-		    return asyncServerClient.PatchAsync(key, patches, null).Result;
+		    return asyncServerClient.PatchAsync(key, patches, null).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -632,7 +634,7 @@ namespace Raven.Client.Connection
 		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
 		public RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing)
 		{
-		    return asyncServerClient.PatchAsync(key, patches, ignoreMissing).Result;
+		    return asyncServerClient.PatchAsync(key, patches, ignoreMissing).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -642,7 +644,7 @@ namespace Raven.Client.Connection
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch)
 		{
-            return asyncServerClient.PatchAsync(key, patch, null).Result;
+            return asyncServerClient.PatchAsync(key, patch, null).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -653,7 +655,7 @@ namespace Raven.Client.Connection
 		/// <param name="ignoreMissing">true if the patch request should ignore a missing document, false to throw DocumentDoesNotExistException</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing)
 		{
-            return asyncServerClient.PatchAsync(key, patch, ignoreMissing).Result;
+            return asyncServerClient.PatchAsync(key, patch, ignoreMissing).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -664,7 +666,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		public RavenJObject Patch(string key, PatchRequest[] patches, Etag etag)
 		{
-            return asyncServerClient.PatchAsync(key, patches, etag).Result;
+            return asyncServerClient.PatchAsync(key, patches, etag).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -676,7 +678,7 @@ namespace Raven.Client.Connection
 		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
 		public RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata)
 		{
-            return asyncServerClient.PatchAsync(key, patchesToExisting, patchesToDefault, defaultMetadata).Result;
+            return asyncServerClient.PatchAsync(key, patchesToExisting, patchesToDefault, defaultMetadata).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -687,7 +689,7 @@ namespace Raven.Client.Connection
 		/// <param name="etag">Require specific Etag [null to ignore]</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag)
 		{
-            return asyncServerClient.PatchAsync(key, patch, etag).Result;
+            return asyncServerClient.PatchAsync(key, patch, etag).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -699,7 +701,7 @@ namespace Raven.Client.Connection
 		/// <param name="defaultMetadata">The metadata for the default document when the document is missing</param>
 		public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata)
 		{
-            return asyncServerClient.PatchAsync(key, patchExisting, patchDefault, defaultMetadata).Result;
+            return asyncServerClient.PatchAsync(key, patchExisting, patchDefault, defaultMetadata).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -740,7 +742,7 @@ namespace Raven.Client.Connection
 
 		public RavenJToken GetOperationStatus(long id)
 		{
-		    return asyncServerClient.GetOperationStatusAsync(id).Result;
+		    return asyncServerClient.GetOperationStatusAsync(id).ResultUnwrap();
 		}
 
         //TODO Owin host handles 100s, is this needed?
@@ -775,7 +777,7 @@ namespace Raven.Client.Connection
 
             public bool MoveNext()
             {
-                return asyncEnumerator.MoveNextAsync().Result;
+                return asyncEnumerator.MoveNextAsync().ResultUnwrap();
             }
 
             public void Reset()
