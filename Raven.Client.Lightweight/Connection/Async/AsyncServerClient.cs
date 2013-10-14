@@ -1761,34 +1761,32 @@ namespace Raven.Client.Connection.Async
         public Task DeleteAsync(string key, Etag etag)
         {
             EnsureIsNotNullOrEmpty(key, "key");
-            throw new NotImplementedException("TODO");
-            /* From the sync version
-             private void DirectDelete(string key, Etag etag, string operationUrl)
-		        {
-			        var metadata = new RavenJObject();
-			        if (etag != null)
-				        metadata.Add("ETag", etag.ToString());
-			        AddTransactionInformation(metadata);
-			        var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				        new CreateHttpJsonRequestParams(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials, convention)
-					        .AddOperationHeaders(OperationsHeaders))
-					        .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-			        try
-			        {
-				        httpJsonRequest.ExecuteRequest();
-			        }
-			        catch (WebException e)
-			        {
-				        var httpWebResponse = e.Response as HttpWebResponse;
-				        if (httpWebResponse == null ||
-					        httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-					        throw;
-				        throw FetchConcurrencyException(e);
-			        }
-		        }
-            */
+			return ExecuteWithReplication("DELETE", operationUrl => operationUrl.Doc(key)
+			   .ToJsonRequest(this, credentials, convention, OperationsHeaders, "DELETE")
+			   .ExecuteRequestAsync());
         }
+
+        private async Task DirectDeleteAsync(string key, Etag etag, string operationUrl)
+		{
+			var metadata = new RavenJObject();
+			if (etag != null)
+				metadata.Add("ETag", etag.ToString());
+			AddTransactionInformation(metadata);
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, operationUrl + "/docs/" + key, "DELETE", metadata, credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+					.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+			try
+			{
+				await httpJsonRequest.ExecuteRequestAsync();
+			}
+			catch (ErrorResponseException e)
+			{
+				if (e.StatusCode != HttpStatusCode.NotFound)
+					throw;
+			}
+		}
 
         public string UrlFor(string documentKey)
         {
@@ -2062,7 +2060,7 @@ namespace Raven.Client.Connection.Async
         private bool resolvingConflict;
         private bool resolvingConflictRetries;
 
-        internal Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
+        internal async Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
         {
             var currentRequest = Interlocked.Increment(ref requestCount);
             if (currentlyExecuting && convention.AllowMultipuleAsyncOperations == false)
@@ -2071,7 +2069,7 @@ namespace Raven.Client.Connection.Async
             currentlyExecuting = true;
             try
             {
-                return replicationInformer.ExecuteWithReplicationAsync(method, url, currentRequest, readStripingBase, operation);
+                return await replicationInformer.ExecuteWithReplicationAsync(method, url, currentRequest, readStripingBase, operation);
             }
             finally
             {
