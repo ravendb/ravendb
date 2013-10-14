@@ -54,7 +54,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		public void Execute(DocumentDatabase database)
 		{
 			etagSynchronizer = database.EtagSynchronizer.GetSynchronizer(EtagSynchronizerType.SqlReplicator);
-			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.SqlReplicator);
+			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
 
 			Database = database;
 			Database.OnDocumentChange += (sender, notification, metadata) =>

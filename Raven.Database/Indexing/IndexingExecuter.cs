@@ -37,7 +37,7 @@ namespace Raven.Database.Indexing
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			etagSynchronizer = synchronizer.GetSynchronizer(EtagSynchronizerType.Indexer);
-			prefetchingBehavior = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer);
+			prefetchingBehavior = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
