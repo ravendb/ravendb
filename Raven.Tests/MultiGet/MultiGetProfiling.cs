@@ -196,13 +196,13 @@ namespace Raven.Tests.MultiGet
 			{
 				store.Initialize();
 				store.InitializeProfiling();
+
 				using (var session = store.OpenSession())
 				{
 					session.Store(new User { Name = "oren" });
 					session.Store(new User { Name = "ayende" });
 					session.SaveChanges();
 				}
-
 
 				using (var session = store.OpenSession())
 				{
@@ -212,8 +212,8 @@ namespace Raven.Tests.MultiGet
 						session.Load<User>("users/2");
 					}
 				}
-				Guid id;
 
+				Guid id;
 				using (var session = store.OpenSession())
 				{
 					id = ((DocumentSession)session).DatabaseCommands.ProfilingInformation.Id;
@@ -226,6 +226,7 @@ namespace Raven.Tests.MultiGet
 					}
 
 				}
+
 				var profilingInformation = store.GetProfilingInformationFor(id);
 				Assert.Equal(1, profilingInformation.Requests.Count);
 
