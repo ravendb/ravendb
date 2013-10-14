@@ -93,6 +93,9 @@ namespace Raven.Tests.Storage.Voron
 
 				storage.Batch(accessor =>
 				{
+					accessor.Indexing.PrepareIndexForDeletion(101);
+					accessor.Indexing.PrepareIndexForDeletion(202);
+
 					accessor.Indexing.DeleteIndex(101, new CancellationToken());
 					accessor.Indexing.DeleteIndex(202, new CancellationToken());
 				});
@@ -124,10 +127,10 @@ namespace Raven.Tests.Storage.Voron
 			else if (requestedStorage == "voron")
 			{
 				exception1Type = typeof(ArgumentException);
-				exception1Message = "There is already an index with the name: 'index1'";
+				exception1Message = "There is already an index with the name: '101'";
 
 				exception2Type = typeof(ArgumentException);
-				exception2Message = "There is already an index with the name: 'index2'";
+				exception2Message = "There is already an index with the name: '202'";
 			}
 
 			using (var storage = NewTransactionalStorage(requestedStorage))
