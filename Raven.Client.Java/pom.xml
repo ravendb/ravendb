@@ -135,7 +135,7 @@
             </goals>
             <configuration>
               <outputDirectory>target/generated-test-sources/java</outputDirectory>
-              <processor>raven.querydsl.RavenDBAnnotationProcessor</processor>
+              <processor>net.ravendb.querydsl.RavenDBAnnotationProcessor</processor>
               <options>
                 <querydsl.entityAccessors>true</querydsl.entityAccessors>
               </options>
