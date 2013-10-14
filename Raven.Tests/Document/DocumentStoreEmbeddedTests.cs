@@ -165,7 +165,10 @@ namespace Raven.Tests.Document
 					session2.SaveChanges();
 				}
 
+			    var old = session.Advanced.GetEtagFor(company);
 				session.Advanced.Refresh(company);
+                Assert.NotEqual(old, session.Advanced.GetEtagFor(company));
+                Assert.NotEqual(Etag.Empty, session.Advanced.GetEtagFor(company));
 				Assert.Equal("Hibernating Rhinos", company.Name);
 			}
 		}

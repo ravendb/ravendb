@@ -613,6 +613,8 @@
     <Compile Include="Issues\RavenDB_1235.cs" />
     <Compile Include="Issues\RavenDB_1251_1.cs" />
     <Compile Include="Issues\RavenDB_1288.cs" />
+    <Compile Include="Issues\RavenDB_1345.cs" />
+    <Compile Include="Issues\RavenDB_1346.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB953.cs" />
     <Compile Include="Issues\RavenDB955.cs" />
@@ -719,6 +721,7 @@
     <Compile Include="MailingList\ChangeTrackingDoesntWorkForDecimalsWithSmallChanges.cs" />
     <Compile Include="MailingList\Chirea.cs" />
     <Compile Include="MailingList\CoalescingOperatorWithStringARray.cs" />
+    <Compile Include="MailingList\CompoundOrQueryWithOrderByDescending .cs" />
     <Compile Include="MailingList\ConcurrencyTests.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
@@ -810,7 +813,9 @@
     <Compile Include="MailingList\RavenDeserializationBug.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
     <Compile Include="MailingList\RenamedProperty.cs" />
+    <Compile Include="MailingList\ResultTransformerMetaData .cs" />
     <Compile Include="MailingList\Rudolph.cs" />
+    <Compile Include="MailingList\SessionAlreadyHaveSessionContext.cs" />
     <Compile Include="MailingList\ShardedFacets.cs" />
     <Compile Include="MailingList\SmugglerTests.cs" />
     <Compile Include="MailingList\SnapshotBug.cs" />

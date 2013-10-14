@@ -1,7 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Indexes;
 using Xunit;
+using Xunit.Sdk;
+using Raven.Client;
 
 namespace Raven.Tests.Indexes
 {
@@ -12,7 +15,7 @@ namespace Raven.Tests.Indexes
 		{
 			const int iterations = 8000;
 
-			using (var documentStore = NewRemoteDocumentStore())
+			using (var documentStore = NewRemoteDocumentStore(requestedStorage:"esent"))
 			{
 				new EmailIndex().Execute(documentStore);
 
@@ -36,7 +39,20 @@ namespace Raven.Tests.Indexes
 				using (var session = documentStore.OpenSession())
 				{
 					var results = session.Query<EmailIndexDoc, EmailIndex>().Count(e => e.Body.StartsWith("MessageBody"));
-					Assert.Equal(results, iterations);
+				    try
+				    {
+                        Assert.Equal(results, iterations);
+				    }
+				    catch (AssertException)
+				    {
+                        var missingDocs = session.Query<EmailIndexDoc, EmailIndex>().AsProjection<EmailIndexDoc>()
+                                                                                    .Where(e => !e.Body.StartsWith("MessageBody"))
+                                                                                    .ToList();
+                        Console.WriteLine(string.Join(", ", missingDocs.Select(doc => doc.Id).ToArray()));
+				        Console.Beep();
+				        Console.ReadLine();
+                        Environment.Exit(0);
+				    }
 				}
 			}
 		}
