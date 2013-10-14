@@ -29,24 +29,24 @@ namespace Raven.Tests.Storage.Voron
 			{
 				storage.Batch(accessor =>
 				{
-					var count = accessor.Staleness.GetIndexTouchCount("index1");
+					var count = accessor.Staleness.GetIndexTouchCount(101);
 					Assert.Equal(-1, count);
 				});
 
-				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", true));
+				storage.Batch(accessor => accessor.Indexing.AddIndex(101, true));
 
 				storage.Batch(accessor =>
 				{
-					var count = accessor.Staleness.GetIndexTouchCount("index1");
+					var count = accessor.Staleness.GetIndexTouchCount(101);
 					Assert.Equal(0, count);
 				});
 
-				storage.Batch(accessor => accessor.Indexing.TouchIndexEtag("index1"));
-				storage.Batch(accessor => accessor.Indexing.TouchIndexEtag("index1"));
+				storage.Batch(accessor => accessor.Indexing.TouchIndexEtag(101));
+				storage.Batch(accessor => accessor.Indexing.TouchIndexEtag(101));
 
 				storage.Batch(accessor =>
 				{
-					var count = accessor.Staleness.GetIndexTouchCount("index1");
+					var count = accessor.Staleness.GetIndexTouchCount(101);
 					Assert.Equal(2, count);
 				});
 			}
@@ -118,18 +118,18 @@ namespace Raven.Tests.Storage.Voron
 				var date2 = DateTime.Now.AddSeconds(100);
 				var date3 = DateTime.Now.AddSeconds(1000);
 
-				storage.Batch(accessor => Assert.Throws<IndexDoesNotExistsException>(() => accessor.Staleness.IndexLastUpdatedAt("index1")));
+				storage.Batch(accessor => Assert.Throws<IndexDoesNotExistsException>(() => accessor.Staleness.IndexLastUpdatedAt(101)));
 
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.AddIndex("index1", false);
-					accessor.Indexing.AddIndex("index2", true);
+					accessor.Indexing.AddIndex(101, false);
+					accessor.Indexing.AddIndex(202, true);
 				});
 
 				storage.Batch(accessor =>
 				{
-					var r1 = accessor.Staleness.IndexLastUpdatedAt("index1");
-					var r2 = accessor.Staleness.IndexLastUpdatedAt("index2");
+					var r1 = accessor.Staleness.IndexLastUpdatedAt(101);
+					var r2 = accessor.Staleness.IndexLastUpdatedAt(202);
 
 					Assert.Equal(DateTime.MinValue, r1.Item1);
 					Assert.Equal(Etag.Empty, r1.Item2);
@@ -140,14 +140,14 @@ namespace Raven.Tests.Storage.Voron
 
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.UpdateLastIndexed("index1", etag1, date1);
-					accessor.Indexing.UpdateLastIndexed("index2", etag2, date2);
+					accessor.Indexing.UpdateLastIndexed(101, etag1, date1);
+					accessor.Indexing.UpdateLastIndexed(202, etag2, date2);
 				});
 
 				storage.Batch(accessor =>
 				{
-					var r1 = accessor.Staleness.IndexLastUpdatedAt("index1");
-					var r2 = accessor.Staleness.IndexLastUpdatedAt("index2");
+					var r1 = accessor.Staleness.IndexLastUpdatedAt(101);
+					var r2 = accessor.Staleness.IndexLastUpdatedAt(202);
 
 					Assert.Equal(date1, r1.Item1);
 					Assert.Equal(etag1, r1.Item2);
@@ -156,11 +156,11 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(Etag.Empty, r2.Item2);
 				});
 
-				storage.Batch(accessor => accessor.Indexing.UpdateLastReduced("index2", etag3, date3));
+				storage.Batch(accessor => accessor.Indexing.UpdateLastReduced(202, etag3, date3));
 
 				storage.Batch(accessor =>
 				{
-					var r2 = accessor.Staleness.IndexLastUpdatedAt("index2");
+					var r2 = accessor.Staleness.IndexLastUpdatedAt(202);
 
 					Assert.Equal(date3, r2.Item1);
 					Assert.Equal(etag3, r2.Item2);
@@ -174,7 +174,7 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => Assert.False(accessor.Staleness.IsMapStale("index1")));
+				storage.Batch(accessor => Assert.False(accessor.Staleness.IsMapStale(101)));
 
 				var etag1 = Etag.Parse("00000000-0000-0000-0000-000000000001");
 				var etag2 = Etag.Parse("00000000-0000-0000-0000-000000000002");
@@ -186,42 +186,42 @@ namespace Raven.Tests.Storage.Voron
 
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.AddIndex("index1", false);
-					accessor.Indexing.AddIndex("index2", true);
+					accessor.Indexing.AddIndex(101, false);
+					accessor.Indexing.AddIndex(202, true);
 				});
 
 				storage.Batch(accessor =>
 				{
-					Assert.False(accessor.Staleness.IsMapStale("index1"));
-					Assert.False(accessor.Staleness.IsMapStale("index2"));
+					Assert.False(accessor.Staleness.IsMapStale(101));
+					Assert.False(accessor.Staleness.IsMapStale(202));
 				});
 
 				storage.Batch(accessor => accessor.Documents.AddDocument("key1", Etag.Empty, new RavenJObject(), new RavenJObject()));
 
 				storage.Batch(accessor =>
 				{
-					Assert.True(accessor.Staleness.IsMapStale("index1"));
-					Assert.True(accessor.Staleness.IsMapStale("index2"));
+					Assert.True(accessor.Staleness.IsMapStale(101));
+					Assert.True(accessor.Staleness.IsMapStale(202));
 				});
 
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.UpdateLastIndexed("index1", etag1, date1);
-					accessor.Indexing.UpdateLastIndexed("index2", etag1, date1);
+					accessor.Indexing.UpdateLastIndexed(101, etag1, date1);
+					accessor.Indexing.UpdateLastIndexed(202, etag1, date1);
 				});
 
 				storage.Batch(accessor =>
 				{
-					Assert.False(accessor.Staleness.IsMapStale("index1"));
-					Assert.False(accessor.Staleness.IsMapStale("index2"));
+					Assert.False(accessor.Staleness.IsMapStale(101));
+					Assert.False(accessor.Staleness.IsMapStale(202));
 				});
 
 				storage.Batch(accessor => accessor.Documents.AddDocument("key2", Etag.Empty, new RavenJObject(), new RavenJObject()));
 
 				storage.Batch(accessor =>
 				{
-					Assert.True(accessor.Staleness.IsMapStale("index1"));
-					Assert.True(accessor.Staleness.IsMapStale("index2"));
+					Assert.True(accessor.Staleness.IsMapStale(101));
+					Assert.True(accessor.Staleness.IsMapStale(202));
 				});
 			}
 		}
@@ -232,40 +232,17 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => Assert.False(accessor.Staleness.IsReduceStale("index1")));
+				storage.Batch(accessor => Assert.False(accessor.Staleness.IsReduceStale(101)));
 
-				storage.Batch(accessor => accessor.MapReduce.ScheduleReductions("index1", 0, new ReduceKeyAndBucket(1, "reduceKey1")));
+				storage.Batch(accessor => accessor.MapReduce.ScheduleReductions(101, 0, new ReduceKeyAndBucket(1, "reduceKey1")));
 
-				storage.Batch(accessor => Assert.True(accessor.Staleness.IsReduceStale("index1")));
+				storage.Batch(accessor => Assert.True(accessor.Staleness.IsReduceStale(101)));
 
-				storage.Batch(accessor => accessor.MapReduce.DeleteScheduledReduction("index1", 0, "reduceKey1"));
+				storage.Batch(accessor => accessor.MapReduce.DeleteScheduledReduction(101, 0, "reduceKey1"));
 
-				storage.Batch(accessor => Assert.False(accessor.Staleness.IsReduceStale("index1")));
+				storage.Batch(accessor => Assert.False(accessor.Staleness.IsReduceStale(101)));
 			}
 		}
-
-		[Theory]
-		[PropertyData("Storages")]
-		public void IsReduceStale_UpperAndLowerCasingOfIndexNames(string requestedStorage)
-		{
-			using (var storage = NewTransactionalStorage(requestedStorage))
-			{
-				storage.Batch(accessor => Assert.False(accessor.Staleness.IsReduceStale("index1")));
-
-				storage.Batch(accessor => accessor.MapReduce.ScheduleReductions("index1", 0, new ReduceKeyAndBucket(1, "reduceKey1")));
-
-				storage.Batch(accessor => Assert.True(accessor.Staleness.IsReduceStale("index1")));
-				storage.Batch(accessor => Assert.True(accessor.Staleness.IsReduceStale("Index1")));
-				storage.Batch(accessor => Assert.True(accessor.Staleness.IsReduceStale("inDEx1")));
-
-				storage.Batch(accessor => accessor.MapReduce.DeleteScheduledReduction("index1", 0, "reduceKey1"));
-
-				storage.Batch(accessor => Assert.False(accessor.Staleness.IsReduceStale("index1")));
-				storage.Batch(accessor => Assert.False(accessor.Staleness.IsReduceStale("Index1")));
-				storage.Batch(accessor => Assert.False(accessor.Staleness.IsReduceStale("inDEx1")));
-			}
-		}
-
 
 		[Theory]
 		[PropertyData("Storages")]
@@ -277,11 +254,11 @@ namespace Raven.Tests.Storage.Voron
 				var etag2 = Etag.Parse("00000000-0000-0000-0000-000000000002");
 				var etag3 = Etag.Parse("00000000-0000-0000-0000-000000000003");
 
-				storage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale("index1", null, null)));
+				storage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale(101, null, null)));
 
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.AddIndex("index1", false);
+					accessor.Indexing.AddIndex(101, false);
 					accessor.Documents.AddDocument("key1", Etag.Empty, new RavenJObject(), new RavenJObject());
 					accessor.Documents.AddDocument("key2", Etag.Empty, new RavenJObject(), new RavenJObject());
 					accessor.Documents.AddDocument("key3", Etag.Empty, new RavenJObject(), new RavenJObject());
@@ -292,36 +269,36 @@ namespace Raven.Tests.Storage.Voron
 				var date2 = DateTime.Now.AddSeconds(100);
 				var date3 = DateTime.Now.AddSeconds(1000);
 
-				storage.Batch(accessor => Assert.True(accessor.Staleness.IsIndexStale("index1", null, null)));
-				storage.Batch(accessor => accessor.Indexing.UpdateLastIndexed("index1", etag2, date2));
+				storage.Batch(accessor => Assert.True(accessor.Staleness.IsIndexStale(101, null, null)));
+				storage.Batch(accessor => accessor.Indexing.UpdateLastIndexed(101, etag2, date2));
 
 				storage.Batch(accessor =>
 				{
-					Assert.False(accessor.Staleness.IsIndexStale("index1", date0, null));
-					Assert.False(accessor.Staleness.IsIndexStale("index1", date1, null));
-					Assert.True(accessor.Staleness.IsIndexStale("index1", date2, null));
+					Assert.False(accessor.Staleness.IsIndexStale(101, date0, null));
+					Assert.False(accessor.Staleness.IsIndexStale(101, date1, null));
+					Assert.True(accessor.Staleness.IsIndexStale(101, date2, null));
 
-					Assert.False(accessor.Staleness.IsIndexStale("index1", null, etag1));
-					Assert.False(accessor.Staleness.IsIndexStale("index1", null, etag2));
-					Assert.True(accessor.Staleness.IsIndexStale("index1", null, etag3));
+					Assert.False(accessor.Staleness.IsIndexStale(101, null, etag1));
+					Assert.False(accessor.Staleness.IsIndexStale(101, null, etag2));
+					Assert.True(accessor.Staleness.IsIndexStale(101, null, etag3));
 				});
 
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.UpdateLastIndexed("index1", etag3, date3);
+					accessor.Indexing.UpdateLastIndexed(101, etag3, date3);
 					accessor.Tasks.AddTask(new RemoveFromIndexTask
 										   {
-											   Index = "index1",
+											   Index = 101,
 											   Keys = new HashSet<string>()
 										   }, date1);
 				});
 
 				storage.Batch(accessor =>
 				{
-					Assert.True(accessor.Staleness.IsIndexStale("index1", null, null));
-					Assert.False(accessor.Staleness.IsIndexStale("index1", date0, null));
-					Assert.True(accessor.Staleness.IsIndexStale("index1", date1, null));
-					Assert.True(accessor.Staleness.IsIndexStale("index1", date2, null));
+					Assert.True(accessor.Staleness.IsIndexStale(101, null, null));
+					Assert.False(accessor.Staleness.IsIndexStale(101, date0, null));
+					Assert.True(accessor.Staleness.IsIndexStale(101, date1, null));
+					Assert.True(accessor.Staleness.IsIndexStale(101, date2, null));
 				});
 			}
 		}
@@ -336,12 +313,12 @@ namespace Raven.Tests.Storage.Voron
 				var etag2 = Etag.Parse("00000000-0000-0000-0000-000000000002");
 				var etag3 = Etag.Parse("00000000-0000-0000-0000-000000000003");
 
-				storage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale("index1", null, null)));
+				storage.Batch(accessor => Assert.False(accessor.Staleness.IsIndexStale(101, null, null)));
 
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.AddIndex("index1", true);
-					accessor.MapReduce.ScheduleReductions("index1", 0, new ReduceKeyAndBucket(1, "reduceKey1"));
+					accessor.Indexing.AddIndex(101, true);
+					accessor.MapReduce.ScheduleReductions(101, 0, new ReduceKeyAndBucket(1, "reduceKey1"));
 				});
 
 				var date0 = DateTime.Now.AddSeconds(-10);
@@ -349,40 +326,40 @@ namespace Raven.Tests.Storage.Voron
 				var date2 = DateTime.Now.AddSeconds(100);
 				var date3 = DateTime.Now.AddSeconds(1000);
 
-				storage.Batch(accessor => Assert.True(accessor.Staleness.IsIndexStale("index1", null, null)));
+				storage.Batch(accessor => Assert.True(accessor.Staleness.IsIndexStale(101, null, null)));
 				storage.Batch(accessor =>
 				{ 
-					accessor.Indexing.UpdateLastIndexed("index1", etag2, date2);
-					accessor.Indexing.UpdateLastReduced("index1", etag2, date2);
+					accessor.Indexing.UpdateLastIndexed(101, etag2, date2);
+					accessor.Indexing.UpdateLastReduced(101, etag2, date2);
 				});
 
 				storage.Batch(accessor =>
 				{
-					Assert.False(accessor.Staleness.IsIndexStale("index1", date0, null));
-					Assert.False(accessor.Staleness.IsIndexStale("index1", date1, null));
-					Assert.True(accessor.Staleness.IsIndexStale("index1", date2, null));
+					Assert.False(accessor.Staleness.IsIndexStale(101, date0, null));
+					Assert.False(accessor.Staleness.IsIndexStale(101, date1, null));
+					Assert.True(accessor.Staleness.IsIndexStale(101, date2, null));
 
-					Assert.False(accessor.Staleness.IsIndexStale("index1", null, etag1));
-					Assert.False(accessor.Staleness.IsIndexStale("index1", null, etag2));
-					Assert.True(accessor.Staleness.IsIndexStale("index1", null, etag3));
+					Assert.False(accessor.Staleness.IsIndexStale(101, null, etag1));
+					Assert.False(accessor.Staleness.IsIndexStale(101, null, etag2));
+					Assert.True(accessor.Staleness.IsIndexStale(101, null, etag3));
 				});
 
 				storage.Batch(accessor =>
 				{
-					accessor.MapReduce.DeleteScheduledReduction("index1", 0, "reduceKey1");
+					accessor.MapReduce.DeleteScheduledReduction(101, 0, "reduceKey1");
 					accessor.Tasks.AddTask(new RemoveFromIndexTask
 					{
-						Index = "index1",
+						Index = 101,
 						Keys = new HashSet<string>()
 					}, date1);
 				});
 
 				storage.Batch(accessor =>
 				{
-					Assert.True(accessor.Staleness.IsIndexStale("index1", null, null));
-					Assert.False(accessor.Staleness.IsIndexStale("index1", date0, null));
-					Assert.True(accessor.Staleness.IsIndexStale("index1", date1, null));
-					Assert.True(accessor.Staleness.IsIndexStale("index1", date2, null));
+					Assert.True(accessor.Staleness.IsIndexStale(101, null, null));
+					Assert.False(accessor.Staleness.IsIndexStale(101, date0, null));
+					Assert.True(accessor.Staleness.IsIndexStale(101, date1, null));
+					Assert.True(accessor.Staleness.IsIndexStale(101, date2, null));
 				});
 			}
 		}

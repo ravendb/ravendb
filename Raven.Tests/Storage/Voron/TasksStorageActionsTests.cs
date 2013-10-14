@@ -21,7 +21,7 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask { Index = "index1" }, DateTime.Now));
+				storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask { Index = 101 }, DateTime.Now));
 
 				storage.Batch(accessor =>
 				{
@@ -43,8 +43,8 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask { Index = "index1" }, DateTime.Now));
-				storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask { Index = "index1" }, DateTime.Now));
+				storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask { Index = 101 }, DateTime.Now));
+				storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask { Index = 101 }, DateTime.Now));
 
 				storage.Batch(accessor =>
 				{

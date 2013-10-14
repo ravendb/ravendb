@@ -20,9 +20,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			this.writeBatch = writeBatch;
 		}
 
-		public bool IsIndexStale(string name, DateTime? cutOff, Etag cutoffEtag)
+		public bool IsIndexStale(int id, DateTime? cutOff, Etag cutoffEtag)
 		{
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			ushort version;
 			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch, out version);
@@ -35,7 +35,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			var hasReduce = reduceStats.Value<byte[]>("lastReducedEtag") != null;
 
-			if (IsMapStale(key) || hasReduce && IsReduceStale(key))
+			if (IsMapStale(id) || hasReduce && IsReduceStale(id))
 			{
 				var lastIndexedEtags = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch, out version);
 
@@ -85,10 +85,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return false;
 		}
 
-		public bool IsReduceStale(string view)
+		public bool IsReduceStale(int id)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
-			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, CreateKey(view)))
+			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, CreateKey(id)))
 			{
 				if (!iterator.Seek(Slice.BeforeAllKeys))
 					return false;
@@ -97,9 +97,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public bool IsMapStale(string name)
+		public bool IsMapStale(int id)
 		{
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			ushort version;
 			var read = LoadJson(tableStorage.LastIndexedEtags, key, writeBatch, out version);
@@ -112,14 +112,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return lastDocumentEtag.CompareTo(lastIndexedEtag) > 0;
 		}
 
-		public Tuple<DateTime, Etag> IndexLastUpdatedAt(string name)
+		public Tuple<DateTime, Etag> IndexLastUpdatedAt(int id)
 		{
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			ushort version;
 			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch, out version);
 			if (indexingStats == null)
-				throw new IndexDoesNotExistsException("Could not find index named: " + name);
+				throw new IndexDoesNotExistsException("Could not find index named: " + id);
 
 			var reduceStats = LoadJson(tableStorage.ReduceStats, key, writeBatch, out version);
 			if (reduceStats == null)
@@ -162,9 +162,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public int GetIndexTouchCount(string name)
+		public int GetIndexTouchCount(int id)
 		{
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			ushort version;
 			var indexingStats = LoadJson(tableStorage.IndexingStats, key, writeBatch, out version);

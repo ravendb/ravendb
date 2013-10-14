@@ -30,10 +30,10 @@ namespace Raven.Tests.Storage.Voron
 	    {
 	        using (var storage = NewTransactionalStorage(requestedStorage))
 	        {
-                storage.Batch(accessor => accessor.Indexing.AddIndex("index1", false));
+                storage.Batch(accessor => accessor.Indexing.AddIndex(101, false));
                 
                 //make sure that index already exists check works correctly
-                Assert.DoesNotThrow(() => storage.Batch(accessor => accessor.Indexing.AddIndex("index2", false)));
+                Assert.DoesNotThrow(() => storage.Batch(accessor => accessor.Indexing.AddIndex(202, false)));
             }
 	    }
 
@@ -45,8 +45,8 @@ namespace Raven.Tests.Storage.Voron
 			{
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.AddIndex("index1", false);
-					accessor.Indexing.AddIndex("index2", true);
+					accessor.Indexing.AddIndex(101, false);
+					accessor.Indexing.AddIndex(202, true);
 				});
 
 				storage.Batch(accessor =>
@@ -55,7 +55,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(2, stats.Count);
 
 					var stat1 = stats[0];
-					Assert.Equal("index1", stat1.Name);
+					Assert.Equal(101, stat1.Id);
 					Assert.Equal(0, stat1.IndexingAttempts);
 					Assert.Equal(0, stat1.IndexingSuccesses);
 					Assert.Equal(0, stat1.IndexingErrors);
@@ -73,7 +73,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(DateTime.MinValue, stat1.LastIndexedTimestamp);
 
 					var stat2 = stats[1];
-					Assert.Equal("index2", stat2.Name);
+					Assert.Equal(202, stat2.Id);
 					Assert.Equal(0, stat2.IndexingAttempts);
 					Assert.Equal(0, stat2.IndexingSuccesses);
 					Assert.Equal(0, stat2.IndexingErrors);
@@ -93,8 +93,8 @@ namespace Raven.Tests.Storage.Voron
 
 				storage.Batch(accessor =>
 				{
-					accessor.Indexing.DeleteIndex("index1", new CancellationToken());
-					accessor.Indexing.DeleteIndex("index2", new CancellationToken());
+					accessor.Indexing.DeleteIndex(101, new CancellationToken());
+					accessor.Indexing.DeleteIndex(202, new CancellationToken());
 				});
 
 				storage.Batch(accessor =>
@@ -132,9 +132,9 @@ namespace Raven.Tests.Storage.Voron
 
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", false));
+				storage.Batch(accessor => accessor.Indexing.AddIndex(101, false));
 
-				var e1 = Assert.Throws(exception1Type, () => storage.Batch(accessor => accessor.Indexing.AddIndex("index1", false)));
+				var e1 = Assert.Throws(exception1Type, () => storage.Batch(accessor => accessor.Indexing.AddIndex(101, false)));
 
 				Assert.Equal(exception1Message, e1.Message);
 
@@ -142,8 +142,8 @@ namespace Raven.Tests.Storage.Voron
 					() => storage.Batch(
 						accessor =>
 						{
-							accessor.Indexing.AddIndex("index2", false);
-							accessor.Indexing.AddIndex("index2", true);
+							accessor.Indexing.AddIndex(202, false);
+							accessor.Indexing.AddIndex(202, true);
 						}));
 
 				Assert.Equal(exception2Message, e2.Message);
@@ -159,8 +159,8 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(
 					accessor =>
 					{
-						accessor.Indexing.AddIndex("index1", false);
-						accessor.Indexing.AddIndex("index2", true);
+						accessor.Indexing.AddIndex(101, false);
+						accessor.Indexing.AddIndex(202, true);
 					});
 
 				storage.Batch(accessor =>
@@ -168,8 +168,8 @@ namespace Raven.Tests.Storage.Voron
 					var stats = accessor.Indexing.GetIndexesStats().ToList();
 					Assert.Equal(2, stats.Count);
 
-					var stat1 = accessor.Indexing.GetIndexStats("index1");
-					Assert.Equal("index1", stat1.Name);
+					var stat1 = accessor.Indexing.GetIndexStats(101);
+					Assert.Equal(101, stat1.Id);
 					Assert.Equal(0, stat1.IndexingAttempts);
 					Assert.Equal(0, stat1.IndexingSuccesses);
 					Assert.Equal(0, stat1.IndexingErrors);
@@ -186,8 +186,8 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(Etag.Empty, stat1.LastIndexedEtag);
 					Assert.Equal(DateTime.MinValue, stat1.LastIndexedTimestamp);
 
-					var stat2 = accessor.Indexing.GetIndexStats("index2");
-					Assert.Equal("index2", stat2.Name);
+					var stat2 = accessor.Indexing.GetIndexStats(202);
+					Assert.Equal(202, stat2.Id);
 					Assert.Equal(0, stat2.IndexingAttempts);
 					Assert.Equal(0, stat2.IndexingSuccesses);
 					Assert.Equal(0, stat2.IndexingErrors);
@@ -213,21 +213,21 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", false));
+				storage.Batch(accessor => accessor.Indexing.AddIndex(101, false));
 
 				storage.Batch(
 					accessor =>
 					{
-						var stats = accessor.Indexing.GetIndexStats("index1");
+						var stats = accessor.Indexing.GetIndexStats(101);
 						Assert.Equal(IndexingPriority.Normal, stats.Priority);
 
-						accessor.Indexing.SetIndexPriority("index1", IndexingPriority.Forced);
+						accessor.Indexing.SetIndexPriority(101, IndexingPriority.Forced);
 					});
 
 				storage.Batch(
 					accessor =>
 					{
-						var stats = accessor.Indexing.GetIndexStats("index1");
+						var stats = accessor.Indexing.GetIndexStats(101);
 						Assert.Equal(IndexingPriority.Forced, stats.Priority);
 					});
 			}
@@ -242,13 +242,13 @@ namespace Raven.Tests.Storage.Voron
 				storage.Batch(
 					accessor =>
 					{
-						accessor.Indexing.AddIndex("index1", false);
-						accessor.Indexing.AddIndex("index2", true);
+						accessor.Indexing.AddIndex(101, false);
+						accessor.Indexing.AddIndex(202, true);
 					});
 
 				storage.Batch(accessor =>
 				{
-					var rate1 = accessor.Indexing.GetFailureRate("index1");
+					var rate1 = accessor.Indexing.GetFailureRate(101);
 					Assert.NotNull(rate1);
 					Assert.Equal(0, rate1.Attempts);
 					Assert.Equal(0, rate1.Errors);
@@ -257,7 +257,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Null(rate1.ReduceErrors);
 					Assert.Null(rate1.ReduceSuccesses);
 
-					var rate2 = accessor.Indexing.GetFailureRate("index2");
+					var rate2 = accessor.Indexing.GetFailureRate(202);
 					Assert.NotNull(rate2);
 					Assert.Equal(0, rate2.Attempts);
 					Assert.Equal(0, rate2.Errors);
@@ -275,17 +275,17 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", false));
+				storage.Batch(accessor => accessor.Indexing.AddIndex(101, false));
 
 				var etag = new Etag(Guid.NewGuid().ToString());
 				var date = DateTime.Now.AddDays(1);
 
-				storage.Batch(accessor => accessor.Indexing.UpdateLastIndexed("index1", etag, date));
+				storage.Batch(accessor => accessor.Indexing.UpdateLastIndexed(101, etag, date));
 
 				storage.Batch(accessor =>
 				{
-					var stat1 = accessor.Indexing.GetIndexStats("index1");
-					Assert.Equal("index1", stat1.Name);
+					var stat1 = accessor.Indexing.GetIndexStats(101);
+					Assert.Equal(101, stat1.Id);
 					Assert.Equal(etag, stat1.LastIndexedEtag);
 					Assert.Equal(date, stat1.LastIndexedTimestamp);
 				});
@@ -298,17 +298,17 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", true));
+				storage.Batch(accessor => accessor.Indexing.AddIndex(101, true));
 
 				var etag = new Etag(Guid.NewGuid().ToString());
 				var date = DateTime.Now.AddDays(1);
 
-				storage.Batch(accessor => accessor.Indexing.UpdateLastReduced("index1", etag, date));
+				storage.Batch(accessor => accessor.Indexing.UpdateLastReduced(101, etag, date));
 
 				storage.Batch(accessor =>
 				{
-					var stat1 = accessor.Indexing.GetIndexStats("index1");
-					Assert.Equal("index1", stat1.Name);
+					var stat1 = accessor.Indexing.GetIndexStats(101);
+					Assert.Equal(101, stat1.Id);
 					Assert.Equal(etag, stat1.LastReducedEtag);
 					Assert.Equal(date, stat1.LastReducedTimestamp);
 				});
@@ -321,30 +321,30 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", true));
+				storage.Batch(accessor => accessor.Indexing.AddIndex(101, true));
 
 				storage.Batch(accessor =>
 				{
-					var stat1 = accessor.Indexing.GetIndexStats("index1");
-					Assert.Equal("index1", stat1.Name);
+					var stat1 = accessor.Indexing.GetIndexStats(101);
+					Assert.Equal(101, stat1.Id);
 					Assert.Equal(0, stat1.TouchCount);
 				});
 
-				storage.Batch(accessor => accessor.Indexing.TouchIndexEtag("index1"));
+				storage.Batch(accessor => accessor.Indexing.TouchIndexEtag(101));
 
 				storage.Batch(accessor =>
 				{
-					var stat1 = accessor.Indexing.GetIndexStats("index1");
-					Assert.Equal("index1", stat1.Name);
+					var stat1 = accessor.Indexing.GetIndexStats(101);
+					Assert.Equal(101, stat1.Id);
 					Assert.Equal(1, stat1.TouchCount);
 				});
 
-				storage.Batch(accessor => accessor.Indexing.TouchIndexEtag("index1"));
+				storage.Batch(accessor => accessor.Indexing.TouchIndexEtag(101));
 
 				storage.Batch(accessor =>
 				{
-					var stat1 = accessor.Indexing.GetIndexStats("index1");
-					Assert.Equal("index1", stat1.Name);
+					var stat1 = accessor.Indexing.GetIndexStats(101);
+					Assert.Equal(101, stat1.Id);
 					Assert.Equal(2, stat1.TouchCount);
 				});
 			}
@@ -356,9 +356,9 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", true));
+				storage.Batch(accessor => accessor.Indexing.AddIndex(101, true));
 
-				storage.Batch(accessor => accessor.Indexing.UpdateIndexingStats("index1", new IndexingWorkStats
+				storage.Batch(accessor => accessor.Indexing.UpdateIndexingStats(101, new IndexingWorkStats
 																						  {
 																							  IndexingAttempts = 11,
 																							  IndexingErrors = 3,
@@ -371,7 +371,7 @@ namespace Raven.Tests.Storage.Voron
 
 				storage.Batch(accessor =>
 				{
-					var stat = accessor.Indexing.GetIndexStats("index1");
+					var stat = accessor.Indexing.GetIndexStats(101);
 					Assert.NotNull(stat);
 					Assert.Equal(11, stat.IndexingAttempts);
 					Assert.Equal(3, stat.IndexingErrors);
@@ -390,9 +390,9 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", true));
+				storage.Batch(accessor => accessor.Indexing.AddIndex(101, true));
 
-				storage.Batch(accessor => accessor.Indexing.UpdateReduceStats("index1", new IndexingWorkStats
+				storage.Batch(accessor => accessor.Indexing.UpdateReduceStats(101, new IndexingWorkStats
 				{
 					IndexingAttempts = 11,
 					IndexingErrors = 3,
@@ -405,7 +405,7 @@ namespace Raven.Tests.Storage.Voron
 
 				storage.Batch(accessor =>
 				{
-					var stat = accessor.Indexing.GetIndexStats("index1");
+					var stat = accessor.Indexing.GetIndexStats(101);
 					Assert.NotNull(stat);
 					Assert.Equal(0, stat.IndexingAttempts);
 					Assert.Equal(0, stat.IndexingErrors);
@@ -423,9 +423,9 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", true));
+				storage.Batch(accessor => accessor.Indexing.AddIndex(101, true));
 
-				storage.Batch(accessor => accessor.Indexing.UpdateDocumentReferences("view1", "key1", new HashSet<string>()));
+				storage.Batch(accessor => accessor.Indexing.UpdateDocumentReferences(303, "key1", new HashSet<string>()));
 
 				storage.Batch(accessor =>
 				{
@@ -433,7 +433,7 @@ namespace Raven.Tests.Storage.Voron
 					Assert.Equal(0, references.Count);
 				});
 
-				storage.Batch(accessor => accessor.Indexing.UpdateDocumentReferences("view1", "key1", new HashSet<string> { "key2", "key3" }));
+				storage.Batch(accessor => accessor.Indexing.UpdateDocumentReferences(303, "key1", new HashSet<string> { "key2", "key3" }));
 
 				storage.Batch(accessor =>
 				{
@@ -460,10 +460,10 @@ namespace Raven.Tests.Storage.Voron
 		{
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
-				storage.Batch(accessor => accessor.Indexing.AddIndex("index1", true));
+				storage.Batch(accessor => accessor.Indexing.AddIndex(101, true));
 
-				storage.Batch(accessor => accessor.Indexing.UpdateDocumentReferences("view1", "key1", new HashSet<string> { "key2", "key3" }));
-				storage.Batch(accessor => accessor.Indexing.UpdateDocumentReferences("view1", "key2", new HashSet<string> { "key1", "key3" }));
+				storage.Batch(accessor => accessor.Indexing.UpdateDocumentReferences(303, "key1", new HashSet<string> { "key2", "key3" }));
+				storage.Batch(accessor => accessor.Indexing.UpdateDocumentReferences(303, "key2", new HashSet<string> { "key1", "key3" }));
 
 				storage.Batch(accessor =>
 				{

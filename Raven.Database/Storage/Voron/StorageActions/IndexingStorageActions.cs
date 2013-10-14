@@ -71,9 +71,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public IndexStats GetIndexStats(string name)
+		public IndexStats GetIndexStats(int id)
 		{
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			ushort version;
 
@@ -84,19 +84,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return GetIndexStats(indexStats, reduceStats, lastIndexedEtags);
 		}
 
-		public void AddIndex(string name, bool createMapReduce)
+		public void AddIndex(int id, bool createMapReduce)
 		{
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			if (tableStorage.IndexingStats.Contains(Snapshot, key, writeBatch))
-				throw new ArgumentException(string.Format("There is already an index with the name: '{0}'", name));
+				throw new ArgumentException(string.Format("There is already an index with the name: '{0}'", id));
 
 			tableStorage.IndexingStats.Add(
 				writeBatch,
 				key,
 				new RavenJObject
 				{
-					{ "index", name },
+					{ "index", id },
 					{ "attempts", 0 },
 					{ "successes", 0 },
 					{ "failures", 0 },
@@ -123,34 +123,37 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				key,
 				new RavenJObject
 				{
-					{ "index", name },
+					{ "index", id },
 					{ "lastEtag", Etag.Empty.ToByteArray() },
 					{ "lastTimestamp", DateTime.MinValue },
 				}, 0);
 		}
 
-		public void DeleteIndex(string name, CancellationToken token)
+		public void PrepareIndexForDeletion(int id)
 		{
-			token.ThrowIfCancellationRequested();
-
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			tableStorage.IndexingStats.Delete(writeBatch, key);
 			tableStorage.ReduceStats.Delete(writeBatch, key);
 			tableStorage.LastIndexedEtags.Delete(writeBatch, key);
+		}
 
-			RemoveAllDocumentReferencesByView(key);
+		public void DeleteIndex(int id, CancellationToken token)
+		{
+			token.ThrowIfCancellationRequested();
+
+			RemoveAllDocumentReferencesByView(id);
 
 			var mappedResultsStorageActions = (MappedResultsStorageActions)currentStorageActionsAccessor.MapReduce;
 
-			mappedResultsStorageActions.DeleteMappedResultsForView(key);
-			mappedResultsStorageActions.DeleteScheduledReductionForView(key);
-			mappedResultsStorageActions.RemoveReduceResultsForView(key);
+			mappedResultsStorageActions.DeleteMappedResultsForView(id);
+			mappedResultsStorageActions.DeleteScheduledReductionForView(id);
+			mappedResultsStorageActions.RemoveReduceResultsForView(id);
 		}
 
-		public void SetIndexPriority(string name, IndexingPriority priority)
+		public void SetIndexPriority(int id, IndexingPriority priority)
 		{
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			ushort version;
 			var index = Load(tableStorage.IndexingStats, key, out version);
@@ -160,9 +163,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			tableStorage.IndexingStats.Add(writeBatch, key, index, version);
 		}
 
-		public IndexFailureInformation GetFailureRate(string name)
+		public IndexFailureInformation GetFailureRate(int id)
 		{
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			ushort version;
 			var indexStats = Load(tableStorage.IndexingStats, key, out version);
@@ -176,15 +179,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				ReduceAttempts = reduceStats.Value<int?>("reduce_attempts"),
 				ReduceErrors = reduceStats.Value<int?>("reduce_failures"),
 				ReduceSuccesses = reduceStats.Value<int?>("reduce_successes"),
-				Name = indexStats.Value<string>("index"),
+				Id = indexStats.Value<int>("index")
 			};
 
 			return indexFailureInformation;
 		}
 
-		public void UpdateLastIndexed(string name, Etag etag, DateTime timestamp)
+		public void UpdateLastIndexed(int id, Etag etag, DateTime timestamp)
 		{
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			ushort version;
 			var indexStats = Load(tableStorage.LastIndexedEtags, key, out version);
@@ -198,9 +201,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			tableStorage.LastIndexedEtags.Add(writeBatch, key, indexStats, version);
 		}
 
-		public void UpdateLastReduced(string name, Etag etag, DateTime timestamp)
+		public void UpdateLastReduced(int id, Etag etag, DateTime timestamp)
 		{
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			ushort version;
 			var reduceStats = Load(tableStorage.ReduceStats, key, out version);
@@ -214,9 +217,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			tableStorage.ReduceStats.Add(writeBatch, key, reduceStats, version);
 		}
 
-		public void TouchIndexEtag(string name)
+		public void TouchIndexEtag(int id)
 		{
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			ushort version;
 			var index = Load(tableStorage.IndexingStats, key, out version);
@@ -226,9 +229,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			tableStorage.IndexingStats.Add(writeBatch, key, index, version);
 		}
 
-		public void UpdateIndexingStats(string name, IndexingWorkStats stats)
+		public void UpdateIndexingStats(int id, IndexingWorkStats stats)
 		{
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			ushort version;
 			var index = Load(tableStorage.IndexingStats, key, out version);
@@ -241,9 +244,9 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			tableStorage.IndexingStats.Add(writeBatch, key, index, version);
 		}
 
-		public void UpdateReduceStats(string name, IndexingWorkStats stats)
+		public void UpdateReduceStats(int id, IndexingWorkStats stats)
 		{
-			var key = CreateKey(name);
+			var key = CreateKey(id);
 
 			ushort version;
 			var reduceStats = Load(tableStorage.ReduceStats, key, out version);
@@ -260,7 +263,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			RemoveDocumentReferenceByKey(key);
 		}
 
-		public void RemoveAllDocumentReferencesByView(string view)
+		public void RemoveAllDocumentReferencesByView(int view)
 		{
 			var documentReferencesByView = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByView);
 
@@ -277,14 +280,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public void UpdateDocumentReferences(string view, string key, HashSet<string> references)
+		public void UpdateDocumentReferences(int id, string key, HashSet<string> references)
 		{
 			var documentReferencesByKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByKey);
 			var documentReferencesByRef = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByRef);
 			var documentReferencesByView = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByView);
 			var documentReferencesByViewAndKey = tableStorage.DocumentReferences.GetIndex(Tables.DocumentReferences.Indices.ByViewAndKey);
 
-			using (var iterator = documentReferencesByViewAndKey.MultiRead(Snapshot, CreateKey(view, key)))
+			using (var iterator = documentReferencesByViewAndKey.MultiRead(Snapshot, CreateKey(id, key)))
 			{
 				if (iterator.Seek(Slice.BeforeAllKeys))
 				{
@@ -302,7 +305,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				var newKeyAsString = newKey.ToString();
 				var value = new RavenJObject
 				            {
-					            { "view", view }, 
+					            { "view", id }, 
 								{ "key", key }, 
 								{ "ref", reference }
 				            };
@@ -310,8 +313,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				tableStorage.DocumentReferences.Add(writeBatch, newKeyAsString, value);
 				documentReferencesByKey.MultiAdd(writeBatch, CreateKey(key), newKeyAsString);
 				documentReferencesByRef.MultiAdd(writeBatch, CreateKey(reference), newKeyAsString);
-				documentReferencesByView.MultiAdd(writeBatch, CreateKey(view), newKeyAsString);
-				documentReferencesByViewAndKey.MultiAdd(writeBatch, CreateKey(view, key), newKeyAsString);
+				documentReferencesByView.MultiAdd(writeBatch, CreateKey(id), newKeyAsString);
+				documentReferencesByViewAndKey.MultiAdd(writeBatch, CreateKey(id, key), newKeyAsString);
 			}
 		}
 
@@ -404,7 +407,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				ReduceIndexingAttempts = reduceStats.Value<int?>("reduce_attempts"),
 				ReduceIndexingErrors = reduceStats.Value<int?>("reduce_failures"),
 				ReduceIndexingSuccesses = reduceStats.Value<int?>("reduce_successes"),
-				Name = indexingStats.Value<string>("index"),
+				Id = indexingStats.Value<int>("index"),
 				Priority = (IndexingPriority)indexingStats.Value<int>("priority"),
 				LastIndexedEtag = Etag.Parse(lastIndexedEtags.Value<byte[]>("lastEtag")),
 				LastIndexedTimestamp = lastIndexedEtags.Value<DateTime>("lastTimestamp"),
