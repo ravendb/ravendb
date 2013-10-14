@@ -1203,6 +1203,7 @@ namespace Raven.Database
             // before the rest of the world is notified about this.
             IndexDefinitionStorage.CreateAndPersistIndex(definition);
             IndexStorage.CreateIndexImplementation(definition);
+			InvokeSuggestionIndexing(fixedName, definition);
 
             TransactionalStorage.Batch(actions =>
             {
@@ -1215,7 +1216,6 @@ namespace Raven.Database
             // index, then we add it to the storage in a way that make it public
 			IndexDefinitionStorage.AddIndex(fixedName, definition);
 
-			InvokeSuggestionIndexing(fixedName, definition);
 
 			workContext.ClearErrorsFor(fixedName);
 

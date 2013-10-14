@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
@@ -53,7 +54,7 @@ namespace Raven.Storage.Managed
 			foreach (var readResult in storage.Tasks)
 			{
 				var taskType = readResult.Key.Value<string>("type");
-				if(taskType != typeof(T).FullName)
+                if (taskType != typeof(T).FullName)
 					continue;
 
 				Task task;
@@ -78,22 +79,12 @@ namespace Raven.Storage.Managed
 		private void MergeSimilarTasks(Task task, byte [] taskId)
 		{
 			var taskType = task.GetType().FullName;
-			var keyForTaskToTryMergings = storage.Tasks["ByIndexAndType"].SkipTo(new RavenJObject
-			{
-				{"index", task.Index},
-				{"type", taskType},
-			})
-			.Where(x => new Guid(x.Value<byte[]>("id")) != new Guid(taskId))
-				.TakeWhile(x =>
-						   StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("index"), task.Index) &&
-						   StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("type"), taskType)
-				);
 
 			int totalTaskCount = 0;
-			foreach (var keyForTaskToTryMerging in keyForTaskToTryMergings)
+            foreach (var keyForTaskToTryMerging in KeyForTaskToTryMergings(task, taskType, new Guid(taskId)))
 			{
 				var readResult = storage.Tasks.Read(keyForTaskToTryMerging);
-				if(readResult == null)
+                if (readResult == null)
 					continue;
 				Task existingTask;
 				try
@@ -117,5 +108,33 @@ namespace Raven.Storage.Managed
 			}
 		}
 
+        private IEnumerable<RavenJToken> KeyForTaskToTryMergings(Task task, string taskType, Guid taskId)
+        {
+            if (task.SeparateTasksByIndex == false)
+            {
+                return storage.Tasks["ByIndexAndType"].SkipTo(new RavenJObject
+                {
+                    {"index", ""}, // the very start
+                    {"type", ""},
+                })
+                      .Where(x => new Guid(x.Value<byte[]>("id")) != taskId)
+                      .TakeWhile(x =>
+                                                                 StringComparer.OrdinalIgnoreCase.Equals(
+                                                                     x.Value<string>("type"), taskType)
+                    );
+
+            }
+
+            return storage.Tasks["ByIndexAndType"].SkipTo(new RavenJObject
+	        {
+	            {"index", task.Index},
+	            {"type", taskType},
+	        })
+				.Where(x => new Guid(x.Value<byte[]>("id")) != taskId)
+               	.TakeWhile(x =>
+                	StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("index"), task.Index) && 
+					StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("type"), taskType)
+                );
+        }
 	}
 }
