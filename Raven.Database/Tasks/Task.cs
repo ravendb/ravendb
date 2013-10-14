@@ -16,6 +16,8 @@ namespace Raven.Database.Tasks
 	{
 		public string Index { get; set; }
 
+        public abstract bool SeparateTasksByIndex { get; }
+
 		public abstract void Merge(Task task);
 		public abstract void Execute(WorkContext context);
 
