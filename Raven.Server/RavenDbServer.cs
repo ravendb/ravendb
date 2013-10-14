@@ -34,7 +34,7 @@ namespace Raven.Server
             ClusterDiscovery(configuration);
         }
 
-        //TODO does this need to be exposed? Seems to be required for low level tests that the client
+        //TODO DH: does this need to be exposed? Seems to be required for low level tests that the client
         //API does not expose
         public DocumentDatabase SystemDatabase
         {
@@ -91,7 +91,7 @@ namespace Raven.Server
             }
         }
 
-        //TODO need a better name
+        //TODO DH: need a better name
         private class ServerThingsForTests : IServerThingsForTests
         {
             private readonly RavenDBOptions options;
@@ -103,7 +103,7 @@ namespace Raven.Server
 
             public bool HasPendingRequests
             {
-                get { return false; } //TODO: fix (copied from WebApiServer
+                get { return false; } //TODO DH: fix (copied from WebApiServer)
             }
 
             public int NumberOfRequests
@@ -128,7 +128,7 @@ namespace Raven.Server
         }
     }
 
-    //TODO need a better name
+    //TODO DH: need a better name
     public interface IServerThingsForTests
     {
         bool HasPendingRequests { get; }
