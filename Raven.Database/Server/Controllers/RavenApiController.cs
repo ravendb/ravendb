@@ -38,7 +38,10 @@ namespace Raven.Database.Server.Controllers
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			var landlord = (DatabasesLandlord) controllerContext.Configuration.Properties[typeof (DatabasesLandlord)];
-			landlord.IncrementRequestCount();
+			var internalHeader = GetHeader("Raven-internal-request", controllerContext.Request);
+			if (internalHeader == null || internalHeader != "true")
+				landlord.IncrementRequestCount();
+
 			var values = controllerContext.Request.GetRouteData().Values;
 			if (values.ContainsKey("databaseName"))
 				DatabaseName = controllerContext.Request.GetRouteData().Values["databaseName"] as string;

@@ -26,7 +26,7 @@ namespace Raven.Database.Server.Controllers
 					Transformer = transformerDefinition,
 				});
 			}
-			return new HttpResponseMessage();
+			return GetEmptyMessage();
 		}
 
 		[HttpGet("transformers")]

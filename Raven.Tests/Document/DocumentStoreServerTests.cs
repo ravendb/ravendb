@@ -131,7 +131,7 @@ namespace Raven.Tests.Document
 				var q = from company in session.Query<Company>("CompaniesByName")
 				        orderby company.Name descending
 				        select company;
-
+				
 				var companies = q.ToArray();
 				Assert.Equal("B", companies[0].Name);
 				Assert.Equal("B", companies[1].Name);
@@ -787,7 +787,14 @@ namespace Raven.Tests.Document
 				}
 
 				company.Name = "Company 2";
-				Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+				try
+				{
+					session.SaveChanges();
+				}
+				catch (Exception e)
+				{
+					Assert.IsType<ConcurrencyException>(e.GetBaseException());
+				}
 			}
 		}
 

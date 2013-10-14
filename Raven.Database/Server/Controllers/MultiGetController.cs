@@ -158,6 +158,8 @@ namespace Raven.Database.Server.Controllers
 				msg.Headers.TryAddWithoutValidation(header.Key, header.Value);
 			}
 
+			msg.Headers.TryAddWithoutValidation("Raven-internal-request", "true");
+
 			var controller = (ApiController)descriptor.CreateController(msg);
 			controller.Configuration = Configuration;
 			var controllerContext = new HttpControllerContext(Configuration, route, msg)
@@ -172,7 +174,6 @@ namespace Raven.Database.Server.Controllers
 			controller.RequestContext = controllerContext.RequestContext;
 			controller.Configuration = Configuration;
 
-			DatabasesLandlord.DecrementRequestCount();//we are calling again to the controller which will increase the number of request, but this is for the same request
 			return await controller.ExecuteAsync(controllerContext, CancellationToken.None);
 		}
 	}

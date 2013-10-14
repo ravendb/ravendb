@@ -240,7 +240,7 @@ namespace Raven.Database.Server.Controllers
 		private HttpResponseMessage GetIndexQueryResult(string index)
 		{
 			Etag indexEtag;
-			var msg = new HttpResponseMessage();
+			var msg = GetEmptyMessage();
 			var queryResult = ExecuteQuery(index, out indexEtag, msg);
 
 			if (queryResult == null)

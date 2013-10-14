@@ -154,7 +154,7 @@ namespace Raven.Database.Server.Security.OAuth
 
 		void WriteAuthorizationChallenge(RavenApiController controller, int statusCode, string error, string errorDescription)
 		{
-			var msg = new HttpResponseMessage();
+			var msg = controller.GetEmptyMessage();
 
 			if (string.IsNullOrEmpty(controller.DatabasesLandlord.SystemConfiguration.OAuthTokenServer) == false)
 			{
