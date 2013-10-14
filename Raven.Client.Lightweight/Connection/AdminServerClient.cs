@@ -4,13 +4,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using Raven.Abstractions.Data;
+using Raven.Client.Extensions;
+using Raven.Client.Connection.Async;
 
 namespace Raven.Client.Connection
 {
-    using Raven.Client.Connection.Async;
 
-    public class AdminServerClient : IAdminDatabaseCommands, IGlobalAdminDatabaseCommands
+	public class AdminServerClient : IAdminDatabaseCommands, IGlobalAdminDatabaseCommands
     {
         private readonly AsyncServerClient asyncServerClient;
         private readonly AsyncAdminServerClient asyncAdminServerClient;
@@ -23,7 +25,7 @@ namespace Raven.Client.Connection
 
         public void CreateDatabase(DatabaseDocument databaseDocument)
         {
-            asyncAdminServerClient.CreateDatabaseAsync(databaseDocument).Wait();
+            asyncAdminServerClient.CreateDatabaseAsync(databaseDocument).WaitUnwrap();
         }
 
         public void DeleteDatabase(string databaseName, bool hardDelete = false)
@@ -35,22 +37,22 @@ namespace Raven.Client.Connection
 
         public void CompactDatabase(string databaseName)
         {
-            asyncAdminServerClient.CompactDatabaseAsync(databaseName).Wait();
+			asyncAdminServerClient.CompactDatabaseAsync(databaseName).WaitUnwrap();
         }
 
         public void StopIndexing()
         {
-            asyncAdminServerClient.StopIndexingAsync().Wait();
+			asyncAdminServerClient.StopIndexingAsync().WaitUnwrap();
         }
 
         public void StartIndexing()
         {
-            asyncAdminServerClient.StartIndexingAsync().Wait();
+			asyncAdminServerClient.StartIndexingAsync().WaitUnwrap();
         }
 
         public void StartBackup(string backupLocation, DatabaseDocument databaseDocument)
         {
-            asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument).Wait();
+			asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument).WaitUnwrap();
         }
 
         public void StartRestore(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
