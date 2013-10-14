@@ -2062,7 +2062,7 @@ namespace Raven.Client.Connection.Async
         private bool resolvingConflict;
         private bool resolvingConflictRetries;
 
-        internal async Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
+        internal Task<T> ExecuteWithReplication<T>(string method, Func<string, Task<T>> operation)
         {
             var currentRequest = Interlocked.Increment(ref requestCount);
             if (currentlyExecuting && convention.AllowMultipuleAsyncOperations == false)
@@ -2071,8 +2071,7 @@ namespace Raven.Client.Connection.Async
             currentlyExecuting = true;
             try
             {
-                return
-                    await replicationInformer.ExecuteWithReplicationAsync(method, url, currentRequest, readStripingBase, operation);
+                return replicationInformer.ExecuteWithReplicationAsync(method, url, currentRequest, readStripingBase, operation);
             }
             finally
             {
