@@ -47,7 +47,8 @@ namespace Raven.Client.Extensions
 			}
 			catch (AggregateException ex)
 			{
-				ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+				var exception = ex.ExtractSingleInnerException();
+				ExceptionDispatchInfo.Capture(exception).Throw();
 			}
 		}
 
@@ -60,7 +61,8 @@ namespace Raven.Client.Extensions
 			}
 			catch (AggregateException ex)
 			{
-				ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+				var exception = ex.ExtractSingleInnerException();
+				ExceptionDispatchInfo.Capture(exception).Throw();
 			}
 			return result;
 		}
