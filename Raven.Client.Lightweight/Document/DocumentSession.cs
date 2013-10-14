@@ -329,10 +329,10 @@ namespace Raven.Client.Document
 
 			IncrementRequestCount();
 
-			var multiLoadResult = DatabaseCommands.Get(ids, new string[] { }, transformer, queryInputs);
+			var multiLoadResult = DatabaseCommands.Get(ids, new string[] {}, transformer, queryInputs);
 			return new LoadTransformerOperation(this, transformer, ids.Length).Complete<T>(multiLoadResult);
 		}
-
+	
 		internal object ProjectionToInstance(RavenJObject y, Type type)
 		{
 			HandleInternalMetadata(y);
@@ -350,10 +350,9 @@ namespace Raven.Client.Document
 				conversionListener.AfterConversionToEntity(null, y, null, instance);
 			}
 			return instance;
-		}
+                                              }
 
 
-	
 		public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
 		{
 			if (ids.Length == 0)
@@ -575,7 +574,7 @@ namespace Raven.Client.Document
 		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
 		{
 			QueryHeaderInformation _;
-			return Stream<T>(query, out _);
+			return Stream(query, out _);
 		}
 
 		public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation)

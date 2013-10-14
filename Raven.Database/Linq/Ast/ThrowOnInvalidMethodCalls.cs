@@ -64,23 +64,26 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 		public override object VisitInvocationExpression(InvocationExpression invocationExpression, object data)
 		{
 			if (!string.IsNullOrEmpty(groupByIdentifier))
-			{
-				var memberReferenceExpression = invocationExpression.Target as MemberReferenceExpression;
-				if (memberReferenceExpression != null)
-				{
-					var identifier = memberReferenceExpression.Target as IdentifierExpression;
-					if (identifier != null && identifier.Identifier == groupByIdentifier)
-					{
-						if (memberReferenceExpression.MemberName == "Count")
-							throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
-
-						if (memberReferenceExpression.MemberName == "Average")
-							throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
-					}
-				}
-			}
+				AssertInvocationExpression(invocationExpression);
 
 			return base.VisitInvocationExpression(invocationExpression, data);
+		}
+
+		protected virtual void AssertInvocationExpression(InvocationExpression invocation)
+		{
+			var memberReferenceExpression = invocation.Target as MemberReferenceExpression;
+			if (memberReferenceExpression != null)
+			{
+				var identifier = memberReferenceExpression.Target as IdentifierExpression;
+				if (identifier != null && identifier.Identifier == groupByIdentifier)
+				{
+					if (memberReferenceExpression.MemberName == "Count")
+						throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
+
+					if (memberReferenceExpression.MemberName == "Average")
+						throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
+				}
+			}
 		}
 
 		private Expression SimplifyLetExpression(Expression expression)
@@ -130,10 +133,10 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 			return base.VisitSimpleType(simpleType, data);
 		}
 
-		private static void HandleGroupBy(SimpleType simpleType)
+		private void HandleGroupBy(SimpleType simpleType)
 		{
 			var initializer = simpleType.Ancestors.OfType<VariableInitializer>().Single();
-			var rootExpression = (InvocationExpression) initializer.Initializer;
+			var rootExpression = (InvocationExpression)initializer.Initializer;
 
 			var nodes = rootExpression.Children.Where(x => x.NodeType != NodeType.Token).ToList();
 			if (nodes.Count < 2)
@@ -174,22 +177,27 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 
 			foreach (var invocation in lambda.Descendants.OfType<InvocationExpression>())
 			{
-				var identifiers = invocation.Descendants.OfType<IdentifierExpression>().Where(x => x.Identifier == parameter.Name);
+				AssertInvocationExpression(invocation, parameter);
+			}
+		}
 
-				foreach (var identifier in identifiers)
-				{
-					var parent = identifier.Parent as InvocationExpression;
-					if (parent == null)
-						continue;
+		protected virtual void AssertInvocationExpression(InvocationExpression invocation, ParameterDeclaration parameter)
+		{
+			var identifiers = invocation.Descendants.OfType<IdentifierExpression>().Where(x => x.Identifier == parameter.Name);
 
-					var member = (MemberReferenceExpression) parent.Target;
+			foreach (var identifier in identifiers)
+			{
+				var parent = identifier.Parent as InvocationExpression;
+				if (parent == null)
+					continue;
 
-					if (member.MemberName == "Count")
-						throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
+				var member = (MemberReferenceExpression)parent.Target;
 
-					if (member.MemberName == "Average")
-						throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
-				}
+				if (member.MemberName == "Count")
+					throw new InvalidOperationException("Reduce cannot contain Count() methods in grouping.");
+
+				if (member.MemberName == "Average")
+					throw new InvalidOperationException("Reduce cannot contain Average() methods in grouping.");
 			}
 		}
 

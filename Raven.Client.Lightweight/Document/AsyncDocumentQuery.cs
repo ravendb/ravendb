@@ -714,8 +714,7 @@ namespace Raven.Client.Document
 											theWaitForNonStaleResults = theWaitForNonStaleResults,
 											sortByHints = sortByHints,
 											orderByFields = orderByFields,
-											groupByFields = groupByFields,
-											aggregationOp = aggregationOp,
+											isDistinct = isDistinct,
 											negate = negate,
 											transformResultsFunc = transformResultsFunc,
 											includes = new HashSet<string>(includes),
@@ -736,7 +735,8 @@ namespace Raven.Client.Document
 											queryInputs = queryInputs,
 											disableEntitiesTracking = disableEntitiesTracking,
 											disableCaching = disableCaching,
-											lastEquality = lastEquality
+											lastEquality = lastEquality,
+											shouldExplainScores = shouldExplainScores
 										};
 			asyncDocumentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return asyncDocumentQuery;
@@ -864,18 +864,6 @@ namespace Raven.Client.Document
 			return this;
 		}
 
-		///<summary>
-		///  Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		///<remarks>
-		///  This is only valid on dynamic indexes queries
-		///</remarks>
-		public IAsyncDocumentQuery<T> GroupBy<TValue>(AggregationOperation aggregationOperation, params Expression<Func<T, TValue>>[] groupPropertySelectors)
-		{
-			GroupBy(aggregationOperation, groupPropertySelectors.Select(GetMemberQueryPath).ToArray());
-			return this;
-		}
-
 		/// <summary>
 		/// Partition the query so we can intersect different parts of the query
 		/// across different index entries.
@@ -883,18 +871,6 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Intersect()
 		{
 			Intersect();
-			return this;
-		}
-
-		///<summary>
-		/// Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		/// <remarks>
-		/// This is only valid on dynamic indexes queries
-		/// </remarks>
-		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.GroupBy(AggregationOperation aggregationOperation, params string[] fieldsToGroupBy)
-		{
-			GroupBy(aggregationOperation, fieldsToGroupBy);
 			return this;
 		}
 
@@ -931,6 +907,12 @@ namespace Raven.Client.Document
 			return this;
 		}
 
+		IAsyncDocumentQuery<T>  IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Distinct()
+		{
+			Distinct();
+			return this;
+		}
+
 		/// <summary>
 		/// Sets a transformer to use after executing a query
 		/// </summary>
@@ -939,6 +921,12 @@ namespace Raven.Client.Document
 		{
 		    base.SetResultTransformer(resultsTransformer);
 	        return this;
+		}
+
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ExplainScores()
+		{
+			shouldExplainScores = true;
+			return this;
 		}
 	}
 }

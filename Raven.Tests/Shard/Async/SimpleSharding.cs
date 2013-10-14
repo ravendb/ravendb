@@ -5,10 +5,10 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Client.Shard;
 using Raven.Server;
 using Raven.Tests.Bugs;
@@ -16,10 +16,10 @@ using Xunit;
 
 namespace Raven.Tests.Shard.Async
 {
-	public class SimpleSharding : RavenTest, IDisposable
+	public class SimpleSharding : RavenTest
 	{
-		private RavenDbServer[] servers;
-		private ShardedDocumentStore documentStore;
+		private readonly RavenDbServer[] servers;
+		private readonly ShardedDocumentStore documentStore;
 
 		public SimpleSharding()
 		{
@@ -53,20 +53,20 @@ namespace Raven.Tests.Shard.Async
 		}
 
 		[Fact]
-		public void CanUseDeferred()
+		public async Task CanUseDeferred()
 		{
 			string userId;
 			using (var session = documentStore.OpenAsyncSession())
 			{
 				var entity = new User();
-				session.Store(entity);
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(entity);
+				await session.SaveChangesAsync();
 				userId = entity.Id;
 			}
 
 			using(var session = documentStore.OpenAsyncSession())
 			{
-				Assert.NotNull(session.LoadAsync<User>(userId).Result);
+				Assert.NotNull(await session.LoadAsync<User>(userId));
 			}
 
 			using (var session = documentStore.OpenAsyncSession())
@@ -76,12 +76,12 @@ namespace Raven.Tests.Shard.Async
 					Key = userId
 				});
 
-				session.SaveChangesAsync().Wait();
+				await session.SaveChangesAsync();
 			}
 
 			using (var session = documentStore.OpenAsyncSession())
 			{
-				Assert.Null(session.LoadAsync<User>(userId).Result);
+				Assert.Null(await session.LoadAsync<User>(userId));
 			}
 		}
 

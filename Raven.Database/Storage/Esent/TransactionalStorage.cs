@@ -456,7 +456,7 @@ namespace Raven.Storage.Esent
 
                                 ticker.Start();
 
-                                updater.Value.Init(generator);
+                                updater.Value.Init(generator, configuration);
                                 updater.Value.Update(session, dbid, Output);
                                 schemaVersion = Api.RetrieveColumnAsString(session, details, columnids["schema_version"]);
 

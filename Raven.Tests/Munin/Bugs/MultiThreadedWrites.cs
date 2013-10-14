@@ -9,8 +9,16 @@ using Xunit;
 
 namespace Raven.Munin.Tests.Bugs
 {
-	public class MultiThreadedWrites
+	using Raven.Abstractions.Util.Encryptors;
+	using Raven.Tests.Helpers;
+
+	public class MultiThreadedWrites : IDisposable
 	{
+		public MultiThreadedWrites()
+		{
+			Encryptor.Initialize(SettingsHelper.UseFipsEncryptionAlgorithms);
+		}
+
 		[Fact]
 		public void MultipleThreadsCanSafelyWriteandCommit()
 		{
@@ -68,6 +76,11 @@ namespace Raven.Munin.Tests.Bugs
 		private static void Log(string format, params object[] args)
 		{
 			Trace.WriteLine(String.Format(format, args));
+		}
+
+		public void Dispose()
+		{
+			Encryptor.Dispose();
 		}
 	}
 }

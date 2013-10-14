@@ -22,7 +22,7 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
@@ -43,20 +43,20 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(entity);
+					yield return session.StoreAsync(entity);
 					yield return session.SaveChangesAsync();
 				}
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
 					var query = session.Query<Company>()
-						.Where(x => x.Name == "Async Company #1")
-						.ToListAsync();
+					                   .Where(x => x.Name == "Async Company #1")
+					                   .ToListAsync();
 					yield return query;
 
 					Assert.AreEqual(1, query.Result.Count);
@@ -71,12 +71,12 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(entity);
+					yield return session.StoreAsync(entity);
 					yield return session.SaveChangesAsync();
 				}
 
@@ -101,12 +101,12 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(entity);
+					yield return session.StoreAsync(entity);
 					yield return session.SaveChangesAsync();
 				}
 
@@ -130,7 +130,7 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				yield return documentStore.AsyncDatabaseCommands.ForDatabase(dbname).PutIndexAsync("test", new IndexDefinition
 				                                                                                           	{
@@ -140,7 +140,7 @@ namespace Raven.Tests.Silverlight
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(entity);
+					yield return session.StoreAsync(entity);
 					yield return session.SaveChangesAsync();
 				}
 
@@ -168,12 +168,12 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(new Company {Name = "Async Company", Phone = 55555, Id = "companies/1"});
-					session.Store(new Company {Name = "Async Company", Phone = 12345, Id = "companies/2"});
+					yield return session.StoreAsync(new Company { Name = "Async Company", Phone = 55555, Id = "companies/1" });
+					yield return session.StoreAsync(new Company { Name = "Async Company", Phone = 12345, Id = "companies/2" });
 					yield return session.SaveChangesAsync();
 				}
 
@@ -196,12 +196,12 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var s = documentStore.OpenAsyncSession(dbname))
 				{
-					s.Store(new Company {Name = "Ayende"});
-					s.Store(new Company {Name = "Oren"});
+					yield return s.StoreAsync(new Company { Name = "Ayende" });
+					yield return s.StoreAsync(new Company { Name = "Oren" });
 					yield return s.SaveChangesAsync();
 				}
 
@@ -223,14 +223,14 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(new Company {Name = "Moon Dog", Id = "companies/1"});
-					session.Store(new Company {Name = "Alpha Dog", Id = "companies/2"});
-					session.Store(new Company {Name = "Loony Lin", Id = "companies/3"});
-					session.Store(new Company {Name = "Betty Boop", Id = "companies/4"});
+					yield return session.StoreAsync(new Company { Name = "Moon Dog", Id = "companies/1" });
+					yield return session.StoreAsync(new Company { Name = "Alpha Dog", Id = "companies/2" });
+					yield return session.StoreAsync(new Company { Name = "Loony Lin", Id = "companies/3" });
+					yield return session.StoreAsync(new Company { Name = "Betty Boop", Id = "companies/4" });
 					yield return session.SaveChangesAsync();
 				}
 
@@ -255,13 +255,13 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(new Company {Name = "Async Company #1", Id = "companies/1"});
-					session.Store(new Company {Name = "Async Company #2", Id = "companies/2"});
-					session.Store(new Company {Name = "Different Company", Id = "companies/3"});
+					yield return session.StoreAsync(new Company { Name = "Async Company #1", Id = "companies/1" });
+					yield return session.StoreAsync(new Company { Name = "Async Company #2", Id = "companies/2" });
+					yield return session.StoreAsync(new Company { Name = "Different Company", Id = "companies/3" });
 					yield return session.SaveChangesAsync();
 				}
 
@@ -284,14 +284,14 @@ namespace Raven.Tests.Silverlight
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
 				documentStore.Conventions.AllowQueriesOnId = true;
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var customer = new Customer {Name = "Customer #1", Id = "customer/1", Email = "someone@customer.com"};
 				var order = new Order {Id = "orders/1", Note = "Hello", Customer = new DenormalizedReference {Id = customer.Id, Name = customer.Name}};
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(customer);
-					session.Store(order);
+					yield return session.StoreAsync(customer);
+					yield return session.StoreAsync(order);
 					yield return session.SaveChangesAsync();
 				}
 
@@ -321,12 +321,12 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				var entity = new Company {Name = "Async Company #1", Id = "companies/1"};
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(entity);
+					yield return session.StoreAsync(entity);
 					yield return session.SaveChangesAsync();
 				}
 
@@ -354,21 +354,21 @@ namespace Raven.Tests.Silverlight
 			var dbname = GenerateNewDatabaseName();
 			using (var documentStore = new DocumentStore {Url = Url + Port}.Initialize())
 			{
-				yield return documentStore.AsyncDatabaseCommands.EnsureDatabaseExistsAsync(dbname);
+				yield return documentStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(dbname);
 
 				using (var session = documentStore.OpenAsyncSession(dbname))
 				{
-					session.Store(new Order
+					yield return session.StoreAsync(new Order
 					              	{
 					              		Id = "orders/1",
 					              		Lines = new List<OrderLine> {new OrderLine {Quantity = 1}, new OrderLine {Quantity = 2}}
 					              	});
-					session.Store(new Order
+					yield return session.StoreAsync(new Order
 					              	{
 					              		Id = "orders/2",
 					              		Lines = new List<OrderLine> {new OrderLine {Quantity = 1}, new OrderLine {Quantity = 2}}
 					              	});
-					session.Store(new Order
+					yield return session.StoreAsync(new Order
 					              	{
 					              		Id = "orders/3",
 					              		Lines = new List<OrderLine> {new OrderLine {Quantity = 1}, new OrderLine {Quantity = 1}}

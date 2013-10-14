@@ -366,7 +366,8 @@ namespace Raven.Smuggler
 			}
 
 			var request = CreateRequest(docUrl, "PUT");
-			var document = MultiDatabase.CreateDatabaseDocument(ConnectionStringOptions.DefaultDatabase);
+			var document = RavenJObject.FromObject(MultiDatabase.CreateDatabaseDocument(ConnectionStringOptions.DefaultDatabase));
+			document.Remove("Id");
 			request.Write(document);
 			request.ExecuteRequest();
 

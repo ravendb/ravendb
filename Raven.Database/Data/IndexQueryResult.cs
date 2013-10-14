@@ -16,8 +16,9 @@ namespace Raven.Database.Data
 
 		public float Score { get; set; }
 	    public Dictionary<string, string[]> Highligtings { get; set; }
+		public string ScoreExplanation { get; set; }
 
-	    public bool Equals(IndexQueryResult other)
+		public bool Equals(IndexQueryResult other)
 		{
 			if (ReferenceEquals(null, other)) return false;
 			if (ReferenceEquals(this, other)) return true;

@@ -45,7 +45,7 @@ namespace Raven.Tests.Issues
 
 				// It should be less, but at 20 seconds, there's definitely something wrong
 				Assert.InRange(stopwatch.ElapsedMilliseconds, 0, 20000);
-				
+
 				//using (var session = documentStore.OpenSession())
 				//{
 				//	// example of how to query the index as of today to get the top customers over the last 30 days.

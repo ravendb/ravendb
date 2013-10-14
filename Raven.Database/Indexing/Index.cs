@@ -22,6 +22,7 @@ using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Linq;
@@ -66,7 +67,12 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentDictionary<string, IIndexExtension> indexExtensions =
 			new ConcurrentDictionary<string, IIndexExtension>();
 
-		internal readonly string name;
+		internal readonly int indexId;
+
+	    public int IndexId
+	    {
+	        get { return indexId; }
+	    }
 
 		private readonly AbstractViewGenerator viewGenerator;
 		protected readonly WorkContext context;
@@ -85,18 +91,17 @@ namespace Raven.Database.Indexing
 		public long TimePerDoc { get; set; }
 		public Task CurrentMapIndexingTask { get; set; }
 
-		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
+		protected Index(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
 			if (directory == null) throw new ArgumentNullException("directory");
-			if (name == null) throw new ArgumentNullException("name");
 			if (indexDefinition == null) throw new ArgumentNullException("indexDefinition");
 			if (viewGenerator == null) throw new ArgumentNullException("viewGenerator");
 
-			this.name = name;
+			this.indexId = id;
 			this.indexDefinition = indexDefinition;
 			this.viewGenerator = viewGenerator;
 			this.context = context;
-			logIndexing.Debug("Creating index for {0}", name);
+			logIndexing.Debug("Creating index for {0}", indexId);
 			this.directory = directory;
 
 			RecreateSearcher();
@@ -140,6 +145,8 @@ namespace Raven.Database.Indexing
 			}
 		}
 
+	    public string PublicName { get { return this.indexDefinition.Name; } }
+
 		public volatile bool IsMapIndexingInProgress;
 
 		protected void RecordCurrentBatch(string indexingStep, int size)
@@ -176,7 +183,7 @@ namespace Raven.Database.Indexing
 					var localReason = waitReason;
 					if (localReason != null)
 						logIndexing.Warn("Waiting for {0} to complete before disposing of index {1}, that might take a while if the server is very busy",
-						 localReason, name);
+						 localReason, indexId);
 
 					Monitor.Enter(writeLock);
 				}
@@ -276,10 +283,10 @@ namespace Raven.Database.Indexing
 				waitReason = "Merge / Optimize";
 				try
 				{
-					logIndexing.Info("Starting merge of {0}", name);
+					logIndexing.Info("Starting merge of {0}", indexId);
 					var sp = Stopwatch.StartNew();
 					indexWriter.Optimize();
-					logIndexing.Info("Done merging {0} - took {1}", name, sp.Elapsed);
+					logIndexing.Info("Done merging {0} - took {1}", indexId, sp.Elapsed);
 				}
 				finally
 				{
@@ -355,7 +362,7 @@ namespace Raven.Database.Indexing
 		protected void Write(Func<RavenIndexWriter, Analyzer, IndexingWorkStats, IndexedItemsInfo> action)
 		{
 			if (disposed)
-				throw new ObjectDisposedException("Index " + name + " has been disposed");
+				throw new ObjectDisposedException("Index " + indexId + " has been disposed");
 
 			PreviousIndexTime = LastIndexTime;
 			LastIndexTime = SystemTime.UtcNow;
@@ -376,7 +383,7 @@ namespace Raven.Database.Indexing
 					}
 					catch (Exception e)
 					{
-						context.AddError(name, "Creating Analyzer", e.ToString(), "Analyzer");
+						context.AddError(indexId, indexDefinition.Name, "Creating Analyzer", e.ToString(), "Analyzer");
 						throw;
 					}
 
@@ -395,7 +402,7 @@ namespace Raven.Database.Indexing
 							if (locker.Obtain() == false)
 							{
 								throw new InvalidOperationException(string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
-																				  name));
+																				  indexId));
 							}
 
 							itemsInfo = action(indexWriter, searchAnalyzer, stats);
@@ -407,7 +414,7 @@ namespace Raven.Database.Indexing
 						}
 						catch (Exception e)
 						{
-							context.AddError(name, null, e.ToString(), "Write");
+							context.AddError(indexId, indexDefinition.Name, null, e.ToString(), "Write");
 							throw;
 						}
 
@@ -457,10 +464,10 @@ namespace Raven.Database.Indexing
 			switch (stats.Operation)
 			{
 				case IndexingWorkStats.Status.Map:
-					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateIndexingStats(name, stats));
+					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateIndexingStats(indexId, stats));
 					break;
 				case IndexingWorkStats.Status.Reduce:
-					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateReduceStats(name, stats));
+					workContext.TransactionalStorage.Batch(accessor => accessor.Indexing.UpdateReduceStats(indexId, stats));
 					break;
 				case IndexingWorkStats.Status.Ignore:
 					break;
@@ -473,7 +480,7 @@ namespace Raven.Database.Indexing
 		{
 			snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
 		    IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
-		                                                          ? new IndexReaderWarmersWrapper(name, context.IndexReaderWarmers)
+		                                                          ? new IndexReaderWarmersWrapper(indexDefinition.Name, context.IndexReaderWarmers)
 		                                                          : null;
 			indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
 		}
@@ -494,7 +501,7 @@ namespace Raven.Database.Indexing
 			if (forceWriteToDisk || toobig || !stale)
 			{
 				indexWriter.Commit();
-				var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition.Name);
+				var fsDir = context.IndexStorage.MakeRAMDirectoryPhysical(dir, indexDefinition);
 				IndexStorage.WriteIndexVersion(fsDir, indexDefinition);
 				directory = fsDir;
 
@@ -569,13 +576,14 @@ namespace Raven.Database.Indexing
 				CancelMoveNext = () => Interlocked.Decrement(ref stats.IndexingAttempts),
 				OnError = (exception, o) =>
 				{
-					context.AddError(name,
+					context.AddError(indexId,
+                                     indexDefinition.Name,
 									TryGetDocKey(o),
 									exception.Message,
 									"Map"
 						);
 					logIndexing.WarnException(
-						String.Format("Failed to execute indexing function on {0} on {1}", name,
+						String.Format("Failed to execute indexing function on {0} on {1}", indexId,
 										TryGetDocKey(o)),
 						exception);
 
@@ -595,13 +603,14 @@ namespace Raven.Database.Indexing
 				CancelMoveNext = () => Interlocked.Decrement(ref stats.ReduceAttempts),
 				OnError = (exception, o) =>
 				{
-					context.AddError(name,
+					context.AddError(indexId,
+                                     indexDefinition.Name,
 									TryGetDocKey(o),
 									exception.Message,
 									"Reduce"
 						);
 					logIndexing.WarnException(
-						String.Format("Failed to execute indexing function on {0} on {1}", name,
+						String.Format("Failed to execute indexing function on {0} on {1}", indexId,
 										TryGetDocKey(o)),
 						exception);
 
@@ -621,13 +630,14 @@ namespace Raven.Database.Indexing
 				CancelMoveNext = () => { }, // don't care
 				OnError = (exception, o) =>
 				{
-					context.AddError(name,
+					context.AddError(indexId,
+                                     indexDefinition.Name,
 									TryGetDocKey(o),
 									exception.Message,
 									"Reduce"
 						);
 					logIndexing.WarnException(
-						String.Format("Failed to execute indexing function on {0} on {1}", name,
+						String.Format("Failed to execute indexing function on {0} on {1}", indexId,
 										TryGetDocKey(o)),
 						exception);
 				}
@@ -681,7 +691,7 @@ namespace Raven.Database.Indexing
 																(currentAnalyzer, generator) =>
 																{
 																	Analyzer generateAnalyzer =
-																		generator.Value.GenerateAnalyzerForIndexing(name, luceneDoc,
+																		generator.Value.GenerateAnalyzerForIndexing(indexId.ToString(), luceneDoc,
 																											currentAnalyzer);
 																	if (generateAnalyzer != currentAnalyzer &&
 																		currentAnalyzer != analyzer)
@@ -817,7 +827,7 @@ namespace Raven.Database.Indexing
 						.AppendLine();
 				}
 
-				logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, name,
+				logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, indexId,
 								sb.ToString());
 			}
 
@@ -884,6 +894,9 @@ namespace Raven.Database.Indexing
 
 			public IEnumerable<IndexQueryResult> Query()
 			{
+			    if (parent.Priority.HasFlag(IndexingPriority.Error))
+			        throw new IndexDisabledException("The index has been disabled due to errors");
+
 				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
 				{
@@ -944,6 +957,8 @@ namespace Raven.Database.Indexing
 								}
 
 								AddHighlighterResults(indexSearcher, scoreDoc, indexQueryResult);
+
+								AddQueryExplanation(luceneQuery, indexSearcher, scoreDoc, indexQueryResult);
 
 								returnedResults++;
 								yield return indexQueryResult;
@@ -1016,11 +1031,21 @@ namespace Raven.Database.Indexing
 				}
 			}
 
+			private void AddQueryExplanation(Query luceneQuery, IndexSearcher indexSearcher, ScoreDoc scoreDoc, IndexQueryResult indexQueryResult)
+			{
+				if(indexQuery.ExplainScores == false)
+					return;
+
+				var explanation = indexSearcher.Explain(luceneQuery, scoreDoc.Doc);
+
+				indexQueryResult.ScoreExplanation = explanation.ToString();
+			}
+
 			private Query ApplyIndexTriggers(Query luceneQuery)
 			{
 				luceneQuery = indexQueryTriggers.Aggregate(luceneQuery,
 														   (current, indexQueryTrigger) =>
-														   indexQueryTrigger.Value.ProcessQuery(parent.name, current, indexQuery));
+														   indexQueryTrigger.Value.ProcessQuery(parent.indexId.ToString(), current, indexQuery));
 				return luceneQuery;
 			}
 
@@ -1199,12 +1224,12 @@ namespace Raven.Database.Indexing
 				Query luceneQuery;
 				if (String.IsNullOrEmpty(query))
 				{
-					logQuerying.Debug("Issuing query on index {0} for all documents", parent.name);
+					logQuerying.Debug("Issuing query on index {0} for all documents", parent.indexId);
 					luceneQuery = new MatchAllDocsQuery();
 				}
 				else
 				{
-					logQuerying.Debug("Issuing query on index {0} for: {1}", parent.name, query);
+					logQuerying.Debug("Issuing query on index {0} for: {1}", parent.indexId, query);
 					var toDispose = new List<Action>();
 					RavenPerFieldAnalyzerWrapper searchAnalyzer = null;
 					try
@@ -1212,7 +1237,7 @@ namespace Raven.Database.Indexing
 						searchAnalyzer = parent.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
 						searchAnalyzer = parent.AnalyzerGenerators.Aggregate(searchAnalyzer, (currentAnalyzer, generator) =>
 						{
-							Analyzer newAnalyzer = generator.GenerateAnalyzerForQuerying(parent.name, indexQuery.Query, currentAnalyzer);
+							Analyzer newAnalyzer = generator.GenerateAnalyzerForQuerying(parent.indexId.ToString(), indexQuery.Query, currentAnalyzer);
 							if (newAnalyzer != currentAnalyzer)
 							{
 								DisposeAnalyzerAndFriends(toDispose, currentAnalyzer);
@@ -1383,8 +1408,8 @@ namespace Raven.Database.Indexing
 				if (incrementalTag != null)
 					backupDirectory = Path.Combine(backupDirectory, incrementalTag);
 
-				var allFilesPath = Path.Combine(backupDirectory, MonoHttpUtility.UrlEncode(name) + ".all-existing-index-files");
-				var saveToFolder = Path.Combine(backupDirectory, "Indexes", MonoHttpUtility.UrlEncode(name));
+				var allFilesPath = Path.Combine(backupDirectory, indexId + ".all-existing-index-files");
+				var saveToFolder = Path.Combine(backupDirectory, "Indexes", indexId.ToString());
 				System.IO.Directory.CreateDirectory(saveToFolder);
 				if (File.Exists(allFilesPath))
 				{
@@ -1408,7 +1433,7 @@ namespace Raven.Database.Indexing
 							// sure that we get the _at the time_ of the write. 
 							foreach (var fileName in new[] { "segments.gen", IndexStorage.IndexVersionFileName(indexDefinition)})
 							{
-								var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
+								var fullPath = Path.Combine(path, indexId.ToString(), fileName);
 								File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
 								allFilesWriter.WriteLine(fileName);
 							}
@@ -1418,7 +1443,7 @@ namespace Raven.Database.Indexing
 					catch (CorruptIndexException e)
 					{
 						logIndexing.WarnException(
-							"Could not backup index " + name +
+							"Could not backup index " + indexId +
 							" because it is corrupted. Skipping the index, will force index reset on restore", e);
 						neededFilesWriter.Dispose();
 						TryDelete(neededFilePath);
@@ -1429,7 +1454,7 @@ namespace Raven.Database.Indexing
 					hasSnapshot = true;
 					foreach (var fileName in commit.FileNames)
 					{
-						var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
+						var fullPath = Path.Combine(path, indexId.ToString(), fileName);
 
 						if (".lock".Equals(Path.GetExtension(fullPath), StringComparison.InvariantCultureIgnoreCase))
 							continue;
@@ -1447,7 +1472,7 @@ namespace Raven.Database.Indexing
 							catch (Exception e)
 							{
 								logIndexing.WarnException(
-									"Could not backup index " + name +
+									"Could not backup index " + indexId +
 									" because failed to copy file : " + fullPath + ". Skipping the index, will force index reset on restore", e);
 								neededFilesWriter.Dispose();
 								TryDelete(neededFilePath);
@@ -1512,17 +1537,17 @@ namespace Raven.Database.Indexing
             {
                 foreach (var referencedDocument in result)
                 {
-                    actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
+                    actions.Indexing.UpdateDocumentReferences(IndexId, referencedDocument.Key, referencedDocument.Value);
                     actions.General.MaybePulseTransaction();
                 }
             }
             var task = new TouchMissingReferenceDocumentTask
             {
-                Index = name, // so we will get IsStale properly
+				Index = IndexId, // so we will get IsStale properly
                 Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             };
 
-            var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(name, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
+			var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(IndexId, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
             HashSet<string> docs;
             while (missingReferencedDocs.TryDequeue(out docs))
             {
@@ -1540,9 +1565,46 @@ namespace Raven.Database.Indexing
             actions.Tasks.AddTask(task, SystemTime.UtcNow);
         }
 
+                  
 		public void ForceWriteToDisk()
 		{
 			forceWriteToDisk = true;
 		}
+
+        protected void EnsureValidNumberOfOutputsForDocument(string sourceDocumentId, int numberOfAlreadyProducedOutputs)
+        {
+            var maxNumberOfIndexOutputs = indexDefinition.MaxIndexOutputsPerDocument ?? context.Configuration.MaxIndexOutputsPerDocument;
+
+            if (maxNumberOfIndexOutputs == -1)
+                return;
+
+            if (numberOfAlreadyProducedOutputs <= maxNumberOfIndexOutputs) 
+                return;
+
+            Priority = IndexingPriority.Error;
+
+            // this cannot happen in the current transaction, since we are going to throw in just a bit.
+            using (context.Database.TransactionalStorage.DisableBatchNesting())
+            {
+                context.Database.TransactionalStorage.Batch(accessor =>
+                {
+                    accessor.Indexing.SetIndexPriority(indexId, IndexingPriority.Error);
+                    accessor.Indexing.TouchIndexEtag(indexId);
+                });    
+            }
+
+            context.Database.RaiseNotifications(new IndexChangeNotification()
+            {
+                Name = PublicName,
+                Type = IndexChangeTypes.IndexMarkedAsErrored 
+            });
+
+            throw new InvalidOperationException(
+                string.Format(
+                    "Index '{0}' has already produced {1} map results for a source document '{2}', while the allowed max number of outputs is {3} per one document. " +
+                    "Index will be disabled.  Please verify this index definition and consider a re-design of your entities.",
+					PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs));
+        }
+
 	}
 }

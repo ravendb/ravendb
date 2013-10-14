@@ -44,7 +44,7 @@ namespace Raven.Studio.Features.Stats
 
 			var allErrors = Database.Value.Statistics.Value.Errors;
 			if (IsShowingErrorForASpecificIndex)
-				allErrors = allErrors.Where(e => e.Index == IndexName).ToArray();
+				allErrors = allErrors.Where(e => e.IndexName == indexName).ToArray();
 			Errors = allErrors;
 		}
 	}

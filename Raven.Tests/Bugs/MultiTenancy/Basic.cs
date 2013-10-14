@@ -5,17 +5,16 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Client.Extensions;
 using Raven.Database.Config;
-using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Server;
 using Xunit;
-using Raven.Client.Extensions;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Raven.Tests.Bugs.MultiTenancy
 {
@@ -41,7 +40,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.EnsureDatabaseExists("Northwind");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 				
 				string userId;
 
@@ -77,7 +76,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.EnsureDatabaseExists("Northwind");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 
 				using (var s = store.OpenSession("Northwind"))
 				{
@@ -106,7 +105,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.EnsureDatabaseExists("Northwind");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 
 				using (var s = store.OpenSession("Northwind"))
 				{
@@ -138,7 +137,7 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				DefaultDatabase = "Northwind"
 			}.Initialize())
 			{
-				store.DatabaseCommands.EnsureDatabaseExists("Northwind");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 
 				string userId;
 
@@ -169,9 +168,9 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				using(var s = store.OpenSession())
+				using(var session = store.OpenSession())
 				{
-					s.Store(new DatabaseDocument
+					session.Store(new DatabaseDocument
 					{
 						Id = "Raven/Databases/Northwind",
 						Settings =
@@ -181,30 +180,30 @@ namespace Raven.Tests.Bugs.MultiTenancy
 							}
 					});
 
-					s.SaveChanges();
+					session.SaveChanges();
 				}
 
 				string userId;
 
-				using(var s = store.OpenSession("Northwind"))
+				using(var session = store.OpenSession("Northwind"))
 				{
 					var entity = new User
 					{
 						Name = "First Multitenant Bank",
 					};
-					s.Store(entity);
+					session.Store(entity);
 					userId = entity.Id;
-					s.SaveChanges();
+					session.SaveChanges();
 				}
 
-				using (var s = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					Assert.Null(s.Load<User>(userId));
+					Assert.Null(session.Load<User>(userId));
 				}
 
-				using (var s = store.OpenSession("Northwind"))
+				using (var session = store.OpenSession("Northwind"))
 				{
-					Assert.NotNull(s.Load<User>(userId));
+					Assert.NotNull(session.Load<User>(userId));
 				}
 			}
 		}
@@ -218,14 +217,14 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				store.DatabaseCommands.EnsureDatabaseExists("Northwind");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Northwind");
 				var index = store.DatabaseCommands.ForDatabase("Northwind").GetIndex("Raven/DocumentsByEntityName");
 				Assert.NotNull(index);
 			}
 		}
 
 		[Fact]
-		public void RavenDocumentsByEntityNameIndexCreatedAsync()
+		public async Task RavenDocumentsByEntityNameIndexCreatedAsync()
 		{
 			using (GetNewServer(8079))
 			using (var store = new DocumentStore
@@ -233,14 +232,9 @@ namespace Raven.Tests.Bugs.MultiTenancy
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				 Task task = store.AsyncDatabaseCommands.EnsureDatabaseExistsAsync("Northwind").ContinueWith(x =>
- 				{
-					var index = store.DatabaseCommands.ForDatabase("Northwind").GetIndex("Raven/DocumentsByEntityName");
-					Assert.NotNull(index);
- 				});
- 
- 				task.Wait();
-
+				await store.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync("Northwind");
+				var index = await store.AsyncDatabaseCommands.ForDatabase("Northwind").GetIndexAsync("Raven/DocumentsByEntityName");
+				Assert.NotNull(index);
 			}
 		}
 

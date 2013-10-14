@@ -45,7 +45,7 @@ namespace Raven.Studio.Commands
 			{
 				var systemSession = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
 				await SaveApiKeys(systemSession);
-				var savedWinAuth = SaveWindowsAuth(systemSession);
+				var savedWinAuth = await SaveWindowsAuth(systemSession);
 				if(needToSaveChanges)
 					await systemSession.SaveChangesAsync();
 				ApplicationModel.Current.Notifications.Add(savedWinAuth
@@ -72,7 +72,7 @@ namespace Raven.Studio.Commands
 
 				if (settingsModel.DatabaseDocument.Id == null)
 					settingsModel.DatabaseDocument.Id = databaseName;
-				await DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);
+				await DatabaseCommands.GlobalAdmin.CreateDatabaseAsync(settingsModel.DatabaseDocument);
 			}
 
 		    var replicationSettings = settingsModel.GetSection<ReplicationSettingsSectionModel>();
@@ -98,7 +98,7 @@ namespace Raven.Studio.Commands
 					if(document.Destinations.Count != 0 && document.Destinations.Any(destination => destination.Disabled == false))
 						await CheckDestinations(document);
 
-					session.Store(document);
+					await session.StoreAsync(document);
 					needToSaveChanges = true;
 				}
 				catch (Exception e)
@@ -118,7 +118,7 @@ namespace Raven.Studio.Commands
 					if (scriptedIndexResults.Value != null)
 					{
 						scriptedIndexResults.Value.Id = ScriptedIndexResults.IdPrefix + scriptedIndexResults.Key;
-						session.Store(scriptedIndexResults.Value, scriptedIndexResults.Value.Id);
+						await session.StoreAsync(scriptedIndexResults.Value, scriptedIndexResults.Value.Id);
 					}
 				}
 
@@ -202,7 +202,7 @@ namespace Raven.Studio.Commands
 									lastReplicatedEtag.LastDocEtag = Etag.Empty;
 							}
 
-							session.Store(status, ravenSqlreplicationStatus);
+							await session.StoreAsync(status,  ravenSqlreplicationStatus);
 						}
 
 						foreach (var sqlReplicationConfig in sqlReplicationSettings.SqlReplicationConfigs)
@@ -210,7 +210,7 @@ namespace Raven.Studio.Commands
 							var id = "Raven/SqlReplication/Configuration/" + sqlReplicationConfig.Name;
 							var config = await session.LoadAsync<SqlReplicationConfig>(id);
 							config  = UpdateConfig(config, sqlReplicationConfig);
-							session.Store(config);
+							await session.StoreAsync(config);
 						}
 					}
 					needToSaveChanges = true;
@@ -238,7 +238,7 @@ namespace Raven.Studio.Commands
 				{
 					if (versioningConfiguration.Id.StartsWith("Raven/Versioning/",StringComparison.OrdinalIgnoreCase) == false)
 						versioningConfiguration.Id = "Raven/Versioning/" + versioningConfiguration.Id;
-					session.Store(versioningConfiguration);
+					await session.StoreAsync(versioningConfiguration);
 				}
 
 				if (versioningSettings.DatabaseDocument != null)
@@ -268,12 +268,12 @@ namespace Raven.Studio.Commands
 
 				foreach (var authorizationRole in authorizationSettings.AuthorizationRoles)
 				{
-					session.Store(authorizationRole);
+					await session.StoreAsync(authorizationRole);
 				}
 
 				foreach (var authorizationUser in authorizationSettings.AuthorizationUsers)
 				{
-					session.Store(authorizationUser);
+					await session.StoreAsync(authorizationUser);
 				}
 
 				needToSaveChanges = true;
@@ -410,13 +410,13 @@ namespace Raven.Studio.Commands
 
 			settingsModel.DatabaseDocument.Settings["Raven/ActiveBundles"] = activeBundles;
 
-			await DatabaseCommands.CreateDatabaseAsync(settingsModel.DatabaseDocument);
+			await DatabaseCommands.GlobalAdmin.CreateDatabaseAsync(settingsModel.DatabaseDocument);
 
-			session.Store(periodicBackup.PeriodicBackupSetup, PeriodicBackupSetup.RavenDocumentKey);
+			await session.StoreAsync(periodicBackup.PeriodicBackupSetup, PeriodicBackupSetup.RavenDocumentKey);
 			needToSaveChanges = true;
 		}
 
-		private bool SaveWindowsAuth(IAsyncDocumentSession session)
+		private async Task<bool> SaveWindowsAuth(IAsyncDocumentSession session)
 		{
 			var windowsAuthModel = settingsModel.Sections
 				.Where(sectionModel => sectionModel is WindowsAuthSettingsSectionModel)
@@ -439,7 +439,7 @@ namespace Raven.Studio.Commands
 			windowsAuthModel.Document.Value.RequiredGroups = windowsAuthModel.RequiredGroups.ToList();
 			windowsAuthModel.Document.Value.RequiredUsers = windowsAuthModel.RequiredUsers.ToList();
 
-			session.Store(RavenJObject.FromObject(windowsAuthModel.Document.Value), "Raven/Authorization/WindowsSettings");
+			await session.StoreAsync(RavenJObject.FromObject(windowsAuthModel.Document.Value), "Raven/Authorization/WindowsSettings");
 			needToSaveChanges = true;
 			return true;
 		}
@@ -466,7 +466,7 @@ namespace Raven.Studio.Commands
 			foreach (var apiKeyDefinition in apiKeysModel.ApiKeys)
 			{
 				apiKeyDefinition.Id = "Raven/ApiKeys/" + apiKeyDefinition.Name;
-				session.Store(apiKeyDefinition);
+				await session.StoreAsync(apiKeyDefinition);
 			}
 
 			apiKeysModel.ApiKeys = new ObservableCollection<ApiKeyDefinition>(apiKeysModel.ApiKeys);

@@ -110,8 +110,7 @@ namespace Raven.Client.Document
 				theWaitForNonStaleResults = theWaitForNonStaleResults,
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
-				groupByFields = groupByFields,
-				aggregationOp = aggregationOp,
+				isDistinct = isDistinct,
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
 				rootTypes = {typeof(T)},
@@ -131,7 +130,8 @@ namespace Raven.Client.Document
 				databaseCommands = databaseCommands,
 				indexQuery = indexQuery,
 				disableEntitiesTracking = disableEntitiesTracking,
-				disableCaching = disableCaching
+				disableCaching = disableCaching,
+				shouldExplainScores = shouldExplainScores
 			};
 			return documentQuery;
 		}

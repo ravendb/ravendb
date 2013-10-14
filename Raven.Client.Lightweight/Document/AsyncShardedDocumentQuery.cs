@@ -107,15 +107,15 @@ namespace Raven.Client.Document
 				theWaitForNonStaleResults = theWaitForNonStaleResults,
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
-				groupByFields = groupByFields,
-				aggregationOp = aggregationOp,
+				isDistinct = isDistinct,
 				transformResultsFunc = transformResultsFunc,
 				includes = new HashSet<string>(includes),
 				highlightedFields = new List<HighlightedField>(highlightedFields),
 				highlighterPreTags = highlighterPreTags,
 				highlighterPostTags = highlighterPostTags,
 				disableEntitiesTracking = disableEntitiesTracking,
-				disableCaching = disableCaching
+				disableCaching = disableCaching,
+				shouldExplainScores = shouldExplainScores
 			};
 			documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
 			return documentQuery;

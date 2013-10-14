@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Data;
+﻿using System.Globalization;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
@@ -28,21 +29,29 @@ namespace Raven.Tests.Silverlight
 
 			using (var session = store.OpenAsyncSession())
 			{
-				Enumerable.Range(0, 25).ToList()
-					.ForEach(i => session.Store(new Company {Id = "Companies/" + i, Name = i.ToString()}));
+				foreach (var i in Enumerable.Range(0, 25))
+				{
+					yield return session.StoreAsync(new Company {Id = "Companies/" + i, Name = i.ToString(CultureInfo.InvariantCulture)});
+				}
 
-				Enumerable.Range(0, 250).ToList()
-					.ForEach(i => session.Store(new Order { Id = "Orders/" + i, Note = i.ToString() }));
+				foreach (var i in Enumerable.Range(0, 250))
+				{
+					yield return session.StoreAsync(new Order {Id = "Orders/" + i, Note = i.ToString(CultureInfo.InvariantCulture)});
+				}
 
-				Enumerable.Range(0, 100).ToList()
-					.ForEach(i => session.Store(new Customer { Name = "Joe " + i}));
+				foreach (var i in Enumerable.Range(0, 100))
+				{
+					yield return session.StoreAsync(new Customer {Name = "Joe " + i});
+				}
 
-				Enumerable.Range(0, 75).ToList()
-					.ForEach(i => session.Store(new Contact { FirstName = "Bob" + i, Surname = i.ToString() + "0101001" }));
+				foreach (var i in Enumerable.Range(0, 75))
+				{
+					yield return session.StoreAsync(new Contact {FirstName = "Bob" + i, Surname = i.ToString(CultureInfo.InvariantCulture) + "0101001"});
+				}
 
-				session.Store(new Customer { Name = "Henry"});
-				session.Store(new Order { Note = "An order" });
-				session.Store(new Company {Name = "My Company"});
+				yield return session.StoreAsync(new Customer {Name = "Henry"});
+				yield return session.StoreAsync(new Order {Note = "An order"});
+				yield return session.StoreAsync(new Company {Name = "My Company"});
 
 				yield return session.SaveChangesAsync();
 			}
@@ -92,7 +101,7 @@ namespace Raven.Tests.Silverlight
 
 				if (query.Result.IsStale)
 				{
-					yield return Delay(100);
+					yield return TaskEx.Delay(100);
 					continue;
 				}
 				Assert.AreNotEqual(0, query.Result.TotalResults);

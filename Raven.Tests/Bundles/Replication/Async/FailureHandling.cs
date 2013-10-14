@@ -5,8 +5,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
 using Raven.Tests.Bundles.Versioning;
 using Xunit;
 
@@ -15,21 +15,21 @@ namespace Raven.Tests.Bundles.Replication.Async
 	public class FailureHandling : ReplicationBase
 	{
 		[Fact]
-		public void When_replicating_from_two_different_source_different_documents_at_the_same_time()
+		public async Task When_replicating_from_two_different_source_different_documents_at_the_same_time()
 		{
 			var store1 = CreateStore();
 			var store2 = CreateStore();
 			var store3 = CreateStore();
 			using (var session = store1.OpenAsyncSession())
 			{
-				session.Store(new Company());
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(new Company());
+				await session.SaveChangesAsync();
 			}
 
 			using (var session = store2.OpenAsyncSession())
 			{
-				session.Store(new Company());
-				session.SaveChangesAsync().Wait();
+				await session.StoreAsync(new Company());
+				await session.SaveChangesAsync();
 			}
 
 			TellInstanceToReplicateToAnotherInstance(0, 2);
@@ -38,7 +38,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 			{
 				using (var session = store3.OpenAsyncSession())
 				{
-					if(session.LoadAsync<Company>("companies/1").Result != null)
+					if (await session.LoadAsync<Company>("companies/1") != null)
 						break;
 					Thread.Sleep(100);
 				}
@@ -46,13 +46,13 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			TellInstanceToReplicateToAnotherInstance(1, 2);
 
-			var aggregateException = Assert.Throws<AggregateException>(() =>
+			var aggregateException = await AssertAsync.Throws<AggregateException>(async () =>
 			{
 				for (int i = 0; i < RetriesCount; i++)
 				{
 					using (var session = store3.OpenAsyncSession())
 					{
-						session.LoadAsync<Company>("companies/1").Wait();
+						await session.LoadAsync<Company>("companies/1");
 						Thread.Sleep(100);
 					}
 				}

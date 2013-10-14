@@ -39,8 +39,6 @@ namespace Raven.Database.Queries
 			// We explicitly do NOT want to update the field names of FieldsToFetch - that reads directly from the document
 			//UpdateFieldsInArray(map, query.FieldsToFetch);
 			
-			UpdateFieldsInArray(map, query.GroupBy);
-
 			return ExecuteActualQuery(query, map, touchTemporaryIndexResult, realQuery);
 		}
 
@@ -52,18 +50,6 @@ namespace Raven.Database.Queries
 				var item = map.Items.FirstOrDefault(x => x.From == sortedField.Field);
 				if (item != null)
 					sortedField.Field = item.To;
-			}
-		}
-
-		private static void UpdateFieldsInArray(DynamicQueryMapping map, string[] fields)
-		{
-			if (fields == null)
-				return;
-			for (var i = 0; i < fields.Length; i++)
-			{
-				var item = map.Items.FirstOrDefault(x => x.From == fields[i]);
-				if (item != null)
-					fields[i] = item.To;
 			}
 		}
 
@@ -98,8 +84,7 @@ namespace Raven.Database.Queries
 				Query = realQuery,
 				Start = query.Start,
 				FieldsToFetch = query.FieldsToFetch,
-				GroupBy = query.GroupBy,
-				AggregationOperation = query.AggregationOperation,
+				IsDistinct = query.IsDistinct,
 				SortedFields = query.SortedFields,
 				DefaultField = query.DefaultField,
 				CutoffEtag = query.CutoffEtag,
@@ -111,7 +96,8 @@ namespace Raven.Database.Queries
 				HighlighterPostTags = query.HighlighterPostTags,
 				HighlightedFields = query.HighlightedFields,
 				ResultsTransformer = query.ResultsTransformer,
-				QueryInputs = query.QueryInputs
+				QueryInputs = query.QueryInputs,
+				ExplainScores = query.ExplainScores
 			};
 			if (indexQuery.SortedFields == null)
 				return indexQuery;

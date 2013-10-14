@@ -26,6 +26,10 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Config
 {
+	using System.Runtime;
+
+	using Raven.Abstractions.Util.Encryptors;
+
 	public class InMemoryRavenConfiguration
 	{
 		private CompositionContainer container;
@@ -59,6 +63,8 @@ namespace Raven.Database.Config
 			FilterActiveBundles();
 
 			SetupOAuth();
+
+			SetupGC();
 		}
 
 		public void Initialize()
@@ -94,8 +100,7 @@ namespace Raven.Database.Config
 			// Index settings
 			MaxIndexingRunLatency = ravenSettings.MaxIndexingRunLatency.Value;
 			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
-
-			PreventAutomaticSuggestionCreation = ravenSettings.PreventAutomaticSuggestionCreation.Value;
+			MaxIndexOutputsPerDocument = ravenSettings.MaxIndexOutputsPerDocument.Value;
 
 			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
 
@@ -245,12 +250,9 @@ namespace Raven.Database.Config
 		{
 			get
 			{
-				var activeBundles = Settings["Raven/ActiveBundles"] ?? "";
+				var activeBundles = Settings[Constants.ActiveBundles] ?? "";
 
-				return activeBundles.Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries)
-				                    .Select(x => x.Trim())
-				                    .ToList();
-
+				return activeBundles.GetSemicolonSeparatedValues();
 			}
 		} 
 
@@ -313,9 +315,14 @@ namespace Raven.Database.Config
 			OAuthTokenKey = GetOAuthKey();
 		}
 
+		private void SetupGC()
+		{
+			//GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
+		}
+
 		private static readonly Lazy<byte[]> defaultOauthKey = new Lazy<byte[]>(() =>
 		{
-			using (var rsa = new RSACryptoServiceProvider())
+			using (var rsa = Encryptor.Current.CreateAsymmetrical())
 			{
 				return rsa.ExportCspBlob(true);
 			}
@@ -474,6 +481,11 @@ namespace Raven.Database.Config
 		/// Whatever we should use SSL for this connection
 		/// </summary>
 		public bool UseSsl { get; set; }
+
+		/// <summary>
+		/// Whatever we should use FIPS compliant encryption algorithms
+		/// </summary>
+		public bool UseFips { get; set; }
 
 		/// <summary>
 		/// The port to use when creating the http listener. 
@@ -779,9 +791,11 @@ namespace Raven.Database.Config
 		public int MaxIndexWritesBeforeRecreate { get; set; }
 
 		/// <summary>
-		/// If True the server will not create suggestions automatically based on the suggestion query. Default: false.
+		/// Limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to the one document
+		/// produces more outputs than this number then an index definition will be considered as a suspicious and the index will be marked as errored.
+		/// Default value: 15. In order to disable this check set value to -1.
 		/// </summary>
-		public bool PreventAutomaticSuggestionCreation { get; set; }
+		public int MaxIndexOutputsPerDocument { get; set; }
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]

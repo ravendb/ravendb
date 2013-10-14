@@ -1,27 +1,22 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using Raven.Json.Linq;
+﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace Raven.Client.Silverlight.MissingFromSilverlight
+namespace System.Collections.Specialized
 {
 	public class NameValueCollection : IEnumerable
 	{
-		private readonly Dictionary<string, List<string>> inner =
-			new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, List<string>> inner = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
-		public NameValueCollection()
+		public Dictionary<string, List<string>> Headers
 		{
-			inner = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+			get { return inner; }
 		}
 
-		public Dictionary<string, List<string>> Headers { get { return inner; } }
-		
 		public int Count
 		{
 			get { return inner.Count; }
 		}
+
 		public IEnumerable<string> Keys
 		{
 			get { return inner.Keys; }
@@ -32,17 +27,16 @@ namespace Raven.Client.Silverlight.MissingFromSilverlight
 			return inner.Keys.GetEnumerator();
 		}
 
+		/// <summary>
+		/// Gets the values associated with the specified key from the <see cref='NameValueCollection'/>.
+		/// </summary>
+		/// <param name="header">The header.</param>
+		/// <returns></returns>
 		public string[] GetValues(string header)
 		{
-			var result = new string[inner.Count];
-			var counter = 0;
-			foreach (var list in inner)
-			{
-				result[counter] = string.Join(";", list);
-				counter++;
-			}
-
-			return result;
+			return inner.Where(pair => pair.Key == header)
+			            .Select(pair => pair.Value.ToArray())
+			            .FirstOrDefault();
 		}
 
 		public string this[string key]
@@ -72,6 +66,11 @@ namespace Raven.Client.Silverlight.MissingFromSilverlight
 		public bool ContainsKey(string key)
 		{
 			return inner.ContainsKey(key);
+		}
+
+		public string Get(string key)
+		{
+			return this[key];
 		}
 	}
 }

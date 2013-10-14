@@ -5,7 +5,6 @@ using System.Linq.Expressions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
-using Raven.Client.Linq;
 
 namespace Raven.Client
 {
@@ -582,22 +581,6 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms);
 
-		///<summary>
-		///  Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		///<remarks>
-		///  This is only valid on dynamic indexes queries
-		///</remarks>
-		TSelf GroupBy (AggregationOperation aggregationOperation, params string[] fieldsToGroupBy);
-
-		///<summary>
-		///  Instruct the index to group by the specified fields using the specified aggregation operation
-		///</summary>
-		///<remarks>
-		///  This is only valid on dynamic indexes queries
-		///</remarks>
-		TSelf GroupBy<TValue>(AggregationOperation aggregationOperation, params Expression<Func<T, TValue>>[] groupPropertySelectors);
-
 		/// <summary>
 		/// Partition the query so we can intersect different parts of the query
 		/// across different index entries.
@@ -641,6 +624,11 @@ If you really want to do in memory filtering on the data returned from the query
 		TSelf NoCaching();
 
 		/// <summary>
+		/// Apply distinct operation to this query
+		/// </summary>
+		TSelf Distinct();
+		
+		/// <summary>
 		/// Sets a transformer to use after executing a query
 		/// </summary>
 		/// <param name="resultsTransformer"></param>
@@ -655,5 +643,10 @@ If you really want to do in memory filtering on the data returned from the query
 		/// Adds an ordering by score for a specific field to the query
 		/// </summary>
 		TSelf OrderByScoreDescending();
+
+		/// <summary>
+		/// Adds explanations of scores calculated for queried documents to the query result
+		/// </summary>
+		TSelf ExplainScores();
 	}
 }

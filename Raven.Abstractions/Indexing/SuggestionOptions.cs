@@ -4,6 +4,12 @@ namespace Raven.Abstractions.Indexing
 {
 	public class SuggestionOptions
 	{
+		public SuggestionOptions()
+		{
+			Distance = SuggestionQuery.DefaultDistance;
+			Accuracy = SuggestionQuery.DefaultAccuracy;
+		}
+
 		/// <summary>
 		/// Gets or sets the string distance algorithm.
 		/// </summary>

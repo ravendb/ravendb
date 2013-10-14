@@ -85,18 +85,8 @@ namespace Raven.Tests.MailingList
 			}
 		}
 
-        [Fact]
-        public void WithMetadata()
-        {
-            using (var session = store.OpenSession())
-            {
-                var c = session.Load<ContactTransformer, ContactDto>("contacts/1");
-                Assert.Equal("hello", c.MetaVal);
-            }
-        }
-
 		[Fact]
-        public void EagerLoadById()
+		public void EagerLoadById()
 		{
 			using (var session = store.OpenSession())
 			{
@@ -107,6 +97,15 @@ namespace Raven.Tests.MailingList
 				}
 			}
 		}
+        [Fact]
+        public void WithMetadata()
+        {
+            using (var session = store.OpenSession())
+            {
+                var c = session.Load<ContactTransformer, ContactDto>("contacts/1");
+                Assert.Equal("hello", c.MetaVal);
+            }
+        }
 
 		[Fact(Skip = "Currently not working")]
 		public void LazyLoadByIds()

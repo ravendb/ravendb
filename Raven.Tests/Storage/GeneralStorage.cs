@@ -137,7 +137,7 @@ namespace Raven.Tests.Storage
 				{
 					actions.Tasks.AddTask(new RemoveFromIndexTask
 					{
-						Index = "foo",
+						Index = 100,
 						Keys = { "tasks/" + i },
 					}, SystemTime.UtcNow);
 				}
@@ -148,7 +148,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var isIndexStale = actions.Staleness.IsIndexStale("foo", null, null);
+				var isIndexStale = actions.Staleness.IsIndexStale(100, null, null);
 				Assert.False(isIndexStale);
 			});
 		}

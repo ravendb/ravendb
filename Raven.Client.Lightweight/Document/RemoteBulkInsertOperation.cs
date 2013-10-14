@@ -80,15 +80,13 @@ namespace Raven.Client.Document
                 SubscribeToBulkInsertNotifications(changes);
 #endif
             }
-
-#if !MONO
             finally
             {
                 SynchronizationContext.SetSynchronizationContext(synchronizationContext);
             }
-
         }
 
+#if !MONO
         private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
         {
             changes
@@ -150,29 +148,18 @@ namespace Raven.Client.Document
 
         private Task<RavenJToken> GetAuthToken()
         {
-#if !SILVERLIGHT
-			var request = operationClient.CreateRequest("GET", "/singleAuthToken",
-                                                        disableRequestCompression: true);
 
-            return new CompletedTask<RavenJToken>(request.ReadResponseJson());
-#else
 			var request = operationClient.CreateRequest("/singleAuthToken", "GET",
 														disableRequestCompression: true);
-			request.webRequest.ContentLength = 0;
 
 			return request.ReadResponseJsonAsync();
-#endif
-		}
+        }
 
         private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
         {
-#if !SILVERLIGHT
-			var request = operationClient.CreateRequest("GET", "/singleAuthToken", disableRequestCompression: true);
-#else
 			var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
-#endif
-			request.DisableAuthentication();
-            request.webRequest.ContentLength = 0;
+
+            request.DisableAuthentication();
             request.AddOperationHeader("Single-Use-Auth-Token", token);
             var result = await request.ReadResponseJsonAsync();
             return result.Value<string>("Token");
@@ -180,11 +167,8 @@ namespace Raven.Client.Document
 
         private HttpJsonRequest CreateOperationRequest(string operationUrl, string token)
         {
-#if !SILVERLIGHT
-            var request = operationClient.CreateRequest("POST", operationUrl, disableRequestCompression: true);
-#else
 			var request = operationClient.CreateRequest(operationUrl, "POST", disableRequestCompression: true);
-#endif
+
             request.DisableAuthentication();
             // the request may take a long time to process, so we need to set a large timeout value
             request.PrepareForLongRequest();

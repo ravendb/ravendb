@@ -51,14 +51,6 @@ namespace Raven.Database.Queries
 			IndexQuery indexQuery,
 			List<Explanation> explanations = null)
 		{
-			// There isn't much point for query optimizer of aggregation indexes
-			// the main reason is that we must always aggregate on the same items, and using the same 
-			// aggregation. Therefore we can't reuse one aggregate index for another query.
-			// We decline to suggest an index here and choose to use the default index created for this
-			// sort of query, which is what we would have to choose anyway.
-			if (indexQuery.AggregationOperation != AggregationOperation.None)
-				return new DynamicQueryOptimizerResult("", DynamicQueryMatchType.Failure);
-
 			if (string.IsNullOrEmpty(indexQuery.Query) && // we optimize for empty queries to use Raven/DocumentsByEntityName
 			    (indexQuery.SortedFields == null || indexQuery.SortedFields.Length == 0) && // and no sorting was requested
 				database.IndexDefinitionStorage.Contains("Raven/DocumentsByEntityName")) // and Raven/DocumentsByEntityName exists
@@ -303,7 +295,8 @@ namespace Raven.Database.Queries
 		        {
 			        prioritizedResults = optimizerResults.OrderByDescending(result =>
 			        {
-				        var stats = accessor.Indexing.GetIndexStats(result.IndexName);
+			            var instance = this.database.IndexStorage.GetIndexInstance(result.IndexName);
+				        var stats = accessor.Indexing.GetIndexStats(instance.indexId);
 				        if (stats == null)
 							return Etag.Empty;
 
@@ -312,8 +305,7 @@ namespace Raven.Database.Queries
 				        .ThenByDescending(result =>
 				        {
 					        var abstractViewGenerator =
-						        database.IndexDefinitionStorage.GetViewGenerator(
-							        result.IndexName);
+						        database.IndexDefinitionStorage.GetViewGenerator(result.IndexName);
 					        if (abstractViewGenerator == null)
 						        return -1;
 					        return abstractViewGenerator.CountOfFields;
@@ -340,7 +332,7 @@ namespace Raven.Database.Queries
                 }).First();
             }
 
-            return new DynamicQueryOptimizerResult("<invalid index>", DynamicQueryMatchType.Failure);
+            return new DynamicQueryOptimizerResult("", DynamicQueryMatchType.Failure);
 
 		}
 	}

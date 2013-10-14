@@ -1,13 +1,13 @@
-﻿namespace Raven.Tests.Silverlight
-{
-	using System;
-	using System.Diagnostics;
-	using System.Windows;
-	using System.Windows.Browser;
-	using Microsoft.Silverlight.Testing;
-	using Microsoft.Silverlight.Testing.UnitTesting.Metadata;
-	using UnitTestProvider;
+﻿using System;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Browser;
+using Microsoft.Silverlight.Testing;
+using Microsoft.Silverlight.Testing.UnitTesting.Metadata;
+using Raven.Tests.Silverlight.UnitTestProvider;
 
+namespace Raven.Tests.Silverlight
+{
 	public partial class App : Application
 	{
 		public App()

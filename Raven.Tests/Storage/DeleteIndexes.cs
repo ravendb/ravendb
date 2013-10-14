@@ -57,7 +57,7 @@ namespace Raven.Tests.Storage
 ";
 			db.PutIndex("pagesByTitle", new IndexDefinition{Map = definition});
 			db.DeleteIndex("pagesByTitle");
-			var actualDefinition = db.IndexStorage.Indexes.Where(x=>x.StartsWith("Raven") == false);
+			var actualDefinition = db.IndexStorage.IndexNames.Where(x=>x.StartsWith("Raven") == false);
 			Assert.Empty(actualDefinition);
 		}
 	}

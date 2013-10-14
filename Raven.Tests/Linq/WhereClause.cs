@@ -11,6 +11,7 @@ using Raven.Client.Embedded;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Raven.Tests.Linq
 {

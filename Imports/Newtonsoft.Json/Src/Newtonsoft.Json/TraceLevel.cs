@@ -1,4 +1,4 @@
-﻿#if (NETFX_CORE || SILVERLIGHT || PORTABLE)
+﻿#if (NETFX_CORE || SILVERLIGHT || PORTABLE40 || PORTABLE)
 using Raven.Imports.Newtonsoft.Json.Serialization;
 
 namespace Raven.Imports.Newtonsoft.Json

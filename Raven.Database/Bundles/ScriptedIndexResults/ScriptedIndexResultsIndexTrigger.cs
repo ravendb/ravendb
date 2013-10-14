@@ -9,6 +9,7 @@ using System.ComponentModel.Composition;
 using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Plugins;
 using Raven.Abstractions.Extensions;
@@ -22,17 +23,20 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
     {
         private static ILog log = LogManager.GetCurrentClassLogger();
 
-        public override AbstractIndexUpdateTriggerBatcher CreateBatcher(string indexName)
+        public override AbstractIndexUpdateTriggerBatcher CreateBatcher(int indexId)
         {
             //Only apply the trigger if there is a setup doc for this particular index
-            var jsonSetupDoc = Database.Get(Abstractions.Data.ScriptedIndexResults.IdPrefix + indexName, null);
+            Index indexInstance = this.Database.IndexStorage.GetIndexInstance(indexId);
+            if (indexInstance == null)
+                return null;
+            var jsonSetupDoc = Database.Get(Abstractions.Data.ScriptedIndexResults.IdPrefix + indexInstance.PublicName, null);
             if (jsonSetupDoc == null)
                 return null;
             var scriptedIndexResults = jsonSetupDoc.DataAsJson.JsonDeserialization<Abstractions.Data.ScriptedIndexResults>();
-            scriptedIndexResults.Id = indexName;
-            var abstractViewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(indexName);
+            var abstractViewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(indexId);
             if (abstractViewGenerator == null)
-                throw new InvalidOperationException("Could not find view generator for: " + indexName);
+                throw new InvalidOperationException("Could not find view generator for: " + indexInstance.PublicName);
+            scriptedIndexResults.Id = indexInstance.PublicName;
             return new Batcher(Database, scriptedIndexResults, abstractViewGenerator.ForEntityNames);
         }
 

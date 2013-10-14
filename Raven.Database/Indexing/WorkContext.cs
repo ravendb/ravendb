@@ -41,7 +41,7 @@ namespace Raven.Database.Indexing
 
 	    public WorkContext()
 	    {
-	        DoNotTouchAgainIfMissingReferences = new ConcurrentDictionary<string, ConcurrentSet<string>>(StringComparer.OrdinalIgnoreCase);
+	        DoNotTouchAgainIfMissingReferences = new ConcurrentDictionary<int, ConcurrentSet<string>>();
             CurrentlyRunningQueries = new ConcurrentDictionary<string, ConcurrentSet<ExecutingQueryInfo>>(StringComparer.OrdinalIgnoreCase);
 	    }
 
@@ -181,13 +181,19 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		public void AddError(string index, string key, string error, string component)
+		public void AddError(int index, string indexName, string key, string error )
+		{
+            AddError(index, indexName, key, "Unknown", "Unknown");
+		}
+
+		public void AddError(int index, string indexName, string key, string error, string component)
 		{
 			serverErrors.Enqueue(new ServerError
 			{
 				Document = key,
 				Error = error,
 				Index = index,
+                IndexName = indexName,
                 Action = component,
 				Timestamp = SystemTime.UtcNow
 			});
@@ -428,7 +434,7 @@ namespace Raven.Database.Indexing
 		}
 
 		public DocumentDatabase Database { get; set; }
-        public ConcurrentDictionary<string, ConcurrentSet<string>> DoNotTouchAgainIfMissingReferences { get; private set; }
+        public ConcurrentDictionary<int, ConcurrentSet<string>> DoNotTouchAgainIfMissingReferences { get; private set; }
 
 	    public void AddFutureBatch(FutureBatchStats futureBatchStat)
 		{

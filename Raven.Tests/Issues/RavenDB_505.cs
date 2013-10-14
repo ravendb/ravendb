@@ -14,9 +14,11 @@ namespace Raven.Tests.Issues
 				{
 					Map = "from d in docs select new {}"
 				};
-				store.DatabaseCommands.PutIndex("test", indexDefinition);
-				store.DatabaseCommands.DeleteIndex("test");
-				store.DatabaseCommands.PutIndex("test", indexDefinition);
+			    for (int i = 0; i < 10; i++)
+			    {
+                    store.DatabaseCommands.PutIndex("test", indexDefinition);
+                    store.DatabaseCommands.DeleteIndex("test");
+			    }
 			}
 		}
 

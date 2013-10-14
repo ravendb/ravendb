@@ -87,7 +87,8 @@ namespace Raven.Client.Linq
 	    private void SetFacet(Expression<Func<T, object>> path, FacetAggregation facetAggregation)
 		{
 			var last = facets.Last();
-			last.AggregationField = path.ToPropertyPath('_');
+			last.AggregationField = path.ToPropertyPath();
+		    last.AggregationType = path.ExtractTypeFromPath().FullName;
 			last.Aggregation |= facetAggregation;
 		}
 

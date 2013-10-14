@@ -26,8 +26,8 @@ namespace Raven.Database.Indexing
 {
     public class SimpleIndex : Index
     {
-        public SimpleIndex(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
-            : base(directory, name, indexDefinition, viewGenerator, context)
+        public SimpleIndex(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
+            : base(directory, id, indexDefinition, viewGenerator, context)
         {
         }
 
@@ -47,7 +47,7 @@ namespace Raven.Database.Indexing
             Write((indexWriter, analyzer, stats) =>
             {
                 var processedKeys = new HashSet<string>();
-                var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
+                var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
                     .Where(x => x != null)
                     .ToList();
                 try
@@ -69,9 +69,9 @@ namespace Raven.Database.Indexing
                             {
                                 logIndexing.WarnException(
                                     string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
-                                                  name, documentId),
+                                                  indexId, documentId),
                                     exception);
-                                context.AddError(name,
+                                context.AddError(indexId,
                                                  documentId,
                                                  exception.Message,
                                                  "OnIndexEntryDeleted Trigger"
@@ -104,13 +104,23 @@ namespace Raven.Database.Indexing
                             missingReferencedDocs.Enqueue(missing);
                         } ))
                         {
+                            string currentDocId = null;
+                            int outputPerDocId = 0;
                             foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats))
                             {
                                 float boost;
                                 var indexingResult = GetIndexingResult(doc, anonymousObjectToLuceneDocumentConverter, out boost);
-
-                                if (indexingResult.NewDocId != null && indexingResult.ShouldSkip == false)
+                                if (indexingResult.NewDocId == null || indexingResult.ShouldSkip != false)
                                 {
+                                    continue;
+                                }
+                                if (currentDocId != indexingResult.NewDocId)
+                                {
+                                    currentDocId = indexingResult.NewDocId;
+                                    outputPerDocId = 0;
+                                }
+                                outputPerDocId++;
+                                EnsureValidNumberOfOutputsForDocument(currentDocId, outputPerDocId);
                                     Interlocked.Increment(ref count);
                                     luceneDoc.GetFields().Clear();
                                     luceneDoc.Boost = boost;
@@ -124,10 +134,11 @@ namespace Raven.Database.Indexing
                                         exception =>
                                         {
                                             logIndexing.WarnException(
-                                                string.Format("Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
-                                                              name, indexingResult.NewDocId),
+                                            string.Format(
+                                                "Error when executed OnIndexEntryCreated trigger for index '{0}', key: '{1}'",
+                                                indexId, indexingResult.NewDocId),
                                                 exception);
-                                            context.AddError(name,
+                                        context.AddError(indexId,
                                                              indexingResult.NewDocId,
                                                              exception.Message,
                                                              "OnIndexEntryCreated Trigger"
@@ -136,7 +147,6 @@ namespace Raven.Database.Indexing
                                         trigger => trigger.OnIndexEntryCreated(indexingResult.NewDocId, luceneDoc));
                                     LogIndexedDocument(indexingResult.NewDocId, luceneDoc);
                                     AddDocumentToIndex(indexWriter, luceneDoc, analyzer);
-                                }
 
                                 Interlocked.Increment(ref stats.IndexingSuccesses);
                             }
@@ -151,7 +161,7 @@ namespace Raven.Database.Indexing
                         ex =>
                         {
                             logIndexing.WarnException("Failed to notify index update trigger batcher about an error", ex);
-                            context.AddError(name, null, ex.Message, "AnErrorOccured Trigger");
+                            context.AddError(indexId, null, ex.Message, "AnErrorOccured Trigger");
                         },
                         x => x.AnErrorOccured(e));
                     throw;
@@ -162,7 +172,7 @@ namespace Raven.Database.Indexing
                         e =>
                         {
                             logIndexing.WarnException("Failed to dispose on index update trigger", e);
-                            context.AddError(name, null, e.Message, "Dispose Trigger");
+                            context.AddError(indexId, null, e.Message, "Dispose Trigger");
                         },
                         x => x.Dispose());
                     BatchCompleted("Current");
@@ -183,7 +193,7 @@ namespace Raven.Database.Indexing
                 Operation = "Index",
                 Started = start
             });
-            logIndexing.Debug("Indexed {0} documents for {1}", count, name);
+            logIndexing.Debug("Indexed {0} documents for {1}", count, indexId);
         }
 
         protected override bool IsUpToDateEnoughToWriteToDisk(Etag highestETag)
@@ -200,7 +210,7 @@ namespace Raven.Database.Indexing
         {
             if (ShouldStoreCommitPoint() && itemsInfo.HighestETag != null)
             {
-                context.IndexStorage.StoreCommitPoint(name, new IndexCommitPoint
+                context.IndexStorage.StoreCommitPoint(indexId.ToString(), new IndexCommitPoint
                 {
                     HighestCommitedETag = itemsInfo.HighestETag,
                     TimeStamp = LastIndexTime,
@@ -211,7 +221,7 @@ namespace Raven.Database.Indexing
             }
             else if (itemsInfo.DeletedKeys != null && directory is RAMDirectory == false)
             {
-                context.IndexStorage.AddDeletedKeysToCommitPoints(name, itemsInfo.DeletedKeys);
+                context.IndexStorage.AddDeletedKeysToCommitPoints(indexDefinition, itemsInfo.DeletedKeys);
             }
         }
 
@@ -230,7 +240,7 @@ namespace Raven.Database.Indexing
             }
             catch (CorruptIndexException ex)
             {
-                logIndexing.WarnException(string.Format("Could not read segment information for an index '{0}'", name), ex);
+                logIndexing.WarnException(string.Format("Could not read segment information for an index '{0}'", indexId), ex);
 
                 result.IsIndexCorrupted = true;
             }
@@ -312,14 +322,13 @@ namespace Raven.Database.Indexing
             };
         }
 
-
         public override void Remove(string[] keys, WorkContext context)
         {
             Write((writer, analyzer, stats) =>
             {
                 stats.Operation = IndexingWorkStats.Status.Ignore;
-                logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), name));
-                var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(name))
+                logIndexing.Debug(() => string.Format("Deleting ({0}) from {1}", string.Join(", ", keys), indexId));
+                var batchers = context.IndexUpdateTriggers.Select(x => x.CreateBatcher(indexId))
                     .Where(x => x != null)
                     .ToList();
 
@@ -329,9 +338,9 @@ namespace Raven.Database.Indexing
                         {
                             logIndexing.WarnException(
                                 string.Format("Error when executed OnIndexEntryDeleted trigger for index '{0}', key: '{1}'",
-                                              name, key),
+                                              indexId, key),
                                 exception);
-                            context.AddError(name, key, exception.Message, "OnIndexEntryDeleted Trigger");
+                            context.AddError(indexId, key, exception.Message, "OnIndexEntryDeleted Trigger");
                         },
                         trigger => trigger.OnIndexEntryDeleted(key)));
                 writer.DeleteDocuments(keys.Select(k => new Term(Constants.DocumentIdFieldName, k.ToLowerInvariant())).ToArray());
@@ -339,12 +348,12 @@ namespace Raven.Database.Indexing
                     e =>
                     {
                         logIndexing.WarnException("Failed to dispose on index update trigger", e);
-                        context.AddError(name, null, e.Message, "Dispose Trigger");
+                        context.AddError(indexId, null, e.Message, "Dispose Trigger");
                     },
                     batcher => batcher.Dispose());
 
                 IndexStats currentIndexStats = null;
-                context.TransactionalStorage.Batch(accessor => currentIndexStats = accessor.Indexing.GetIndexStats(name));
+                context.TransactionalStorage.Batch(accessor => currentIndexStats = accessor.Indexing.GetIndexStats(indexId));
 
                 return new IndexedItemsInfo
                 {

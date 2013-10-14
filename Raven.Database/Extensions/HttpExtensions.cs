@@ -115,7 +115,6 @@ namespace Raven.Database.Extensions
 			else
 			{
 				context.Response.AddHeader("Content-Type", "application/json; charset=utf-8");
-
 			}
 
 			if (minimal)
@@ -410,15 +409,22 @@ namespace Raven.Database.Extensions
 			return pageSize;
 		}
 
-		public static AggregationOperation GetAggregationOperation(this IHttpContext context)
+		public static bool IsDistinct(this IHttpContext context)
 		{
-			var aggAsString = context.Request.QueryString["aggregation"];
+			var distinct = context.Request.QueryString["distinct"];
+			if (string.Equals("true", distinct, StringComparison.OrdinalIgnoreCase))
+				return true;
+			var aggAsString = context.Request.QueryString["aggregation"]; // 2.x legacy support
 			if (aggAsString == null)
-			{
-				return AggregationOperation.None;
-			}
+				return false;
 
-			return (AggregationOperation)Enum.Parse(typeof(AggregationOperation), aggAsString, true);
+			if (string.Equals("Distinct", aggAsString, StringComparison.OrdinalIgnoreCase))
+				return true;
+
+			if (string.Equals("None", aggAsString, StringComparison.OrdinalIgnoreCase))
+				return false;
+
+			throw new NotSupportedException("AggregationOperation (except Distinct) is no longer supported");
 		}
 
 		public static DateTime? GetCutOff(this IHttpContext context)
@@ -505,6 +511,13 @@ namespace Raven.Database.Extensions
 					throw new BadRequestException(
 						"Could not parse hightlight query parameter as field highlight options");
 			}
+		}
+
+		public static bool GetExplainScores(this IHttpContext context)
+		{
+			bool result;
+			bool.TryParse(context.Request.QueryString["explainScores"], out result);
+			return result;
 		}
 
 		public static Etag GetEtagFromQueryString(this IHttpContext context)

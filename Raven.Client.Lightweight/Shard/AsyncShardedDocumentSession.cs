@@ -29,7 +29,7 @@ namespace Raven.Client.Shard
 	public class AsyncShardedDocumentSession : BaseShardedDocumentSession<IAsyncDatabaseCommands>,
 											   IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations
 	{
-		private AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
+		private readonly AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
 
 		public AsyncShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
 										   ShardStrategy shardStrategy, IDictionary<string, IAsyncDatabaseCommands> shardDbCommands)
@@ -345,12 +345,12 @@ namespace Raven.Client.Shard
 		#region Queries
 
 		protected override RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce, RavenQueryProvider<T> provider,
-																			RavenQueryStatistics ravenQueryStatistics,
-																			RavenQueryHighlightings highlightings)
+		                                                                    RavenQueryStatistics ravenQueryStatistics,
+		                                                                    RavenQueryHighlightings highlightings)
 		{
 #if !SILVERLIGHT
 			return new ShardedRavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, isMapReduce, shardStrategy,
-				 null,
+				 null, 
 				 shardDbCommands.Values.ToList());
 #else
 			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, isMapReduce);

@@ -19,7 +19,7 @@ namespace Raven.Tests.MailingList
 			using(GetNewServer())
 			using(var store = new DocumentStore{Url = "http://localhost:8079"}.Initialize())
 			{
-				store.DatabaseCommands.EnsureDatabaseExists("test");
+				store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("test");
 
 				using(var testSession = store.OpenSession("test"))
 				{

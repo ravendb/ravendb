@@ -103,5 +103,21 @@ namespace Raven.Tests
 				Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", store.ApiKey);
 			}
 		}
+
+		[Fact]
+		public void Can_get_failover_urls()
+		{
+			using (var store = new DocumentStore())
+			{
+				store.ParseConnectionString("Url=http://localhost:8079/;FailoverUrl=http://localhost:8078/;FailoverUrl=http://localhost:8077/databases/test;FailoverUrl=Northwind|http://localhost:8076/");
+
+				Assert.Equal("http://localhost:8079", store.Url);
+				Assert.Equal(2, store.FailoverServers.ForDefaultDatabase.Length);
+				Assert.Equal("http://localhost:8078", store.FailoverServers.ForDefaultDatabase[0]);
+				Assert.Equal("http://localhost:8077/databases/test", store.FailoverServers.ForDefaultDatabase[1]);
+				Assert.Equal(1, store.FailoverServers.GetForDatabase("Northwind").Length);
+				Assert.Equal("http://localhost:8076", store.FailoverServers.GetForDatabase("Northwind")[0]);
+			}
+		}
 	}
 }

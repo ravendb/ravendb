@@ -1,5 +1,4 @@
 using System;
-using System.Net;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Config;
@@ -23,13 +22,12 @@ namespace Raven.Tests.Bugs
 			using (var documentStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 			{
 				const string tenantName = "   Tenant with some    spaces     in it ";
-				// TODO: we better throw here.
-				Assert.Throws<InvalidOperationException>(() => documentStore.DatabaseCommands.EnsureDatabaseExists(tenantName));	
-				
+				var exception = Assert.Throws<InvalidOperationException>(() => documentStore.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists(tenantName));
+				Assert.Equal("Database name can only contain only A-Z, a-z, \"_\", \".\" or \"-\" but was: " + tenantName, exception.Message);
+
 				var databaseCommands = documentStore.DatabaseCommands.ForDatabase(tenantName);
-				// TODO: we better throw here with a better error message than "tenant not found".
-				var webException = Assert.Throws<WebException>(() => databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject()));
-				Assert.Equal(HttpStatusCode.NotFound,((HttpWebResponse)webException.Response).StatusCode);
+				exception = Assert.Throws<InvalidOperationException>(() => databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject()));
+				Assert.Equal("Could not find a database named: %20%20%20Tenant%20with%20some%20%20%20%20spaces%20%20%20%20%20in%20it%20", exception.Message);
 			}
 		}
 	}

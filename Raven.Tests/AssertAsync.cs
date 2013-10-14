@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Xunit.Sdk;
 
@@ -18,9 +18,9 @@ namespace Raven.Tests
 			}
 			catch (Exception e)
 			{
-				if (typeof(TException) == e.GetType())
-					return (TException)e;
-				throw new ThrowsException(typeof(TException), e);
+				if (typeof (TException) == e.GetType())
+					return (TException) e;
+				throw new ThrowsException(typeof (TException), e);
 			}
 			throw new ThrowsException(typeof(TException), null);
 		}

@@ -107,7 +107,7 @@ namespace Raven.Studio.Models
 			documentStore.JsonRequestFactory.ConfigureRequest += (o, eventArgs) =>
 			{
 				if (onWebRequest != null)
-					onWebRequest(eventArgs.Request);
+					onWebRequest(eventArgs.Client);
 			};
 
 			defaultDatabase = new[] { Constants.SystemDatabase };

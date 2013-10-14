@@ -14,14 +14,14 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document.SessionOperations;
+using Raven.Client.Extensions;
+using Raven.Client.Linq;
 using Raven.Client.Indexes;
 using Raven.Client.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Document.Async
 {
-	using Linq;
-
 	/// <summary>
 	/// Implementation for async document session 
 	/// </summary>
@@ -94,7 +94,7 @@ namespace Raven.Client.Document.Async
 		}
 
 		public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0,
-																	 int pageSize = Int32.MaxValue)
+								   int pageSize = Int32.MaxValue)
 		{
 			return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize);
 		}
@@ -340,6 +340,9 @@ namespace Raven.Client.Document.Async
 				tcs.TrySetResult((T)entity);
 				return tcs.Task;
 			}
+		    if (IsDeleted(id))
+		        return new CompletedTask<T>(null);
+
 			IncrementRequestCount();
 			var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
 			return CompleteLoadAsync<T>(id, loadOperation);

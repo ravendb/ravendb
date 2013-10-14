@@ -14,38 +14,38 @@ namespace Raven.Database.Storage
 {
 	public interface IMappedResultsStorageAction
 	{
-		IEnumerable<ReduceKeyAndCount> GetKeysStats(string view, int start, int pageSize);
+		IEnumerable<ReduceKeyAndCount> GetKeysStats(int view, int start, int pageSize);
 
-		void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data);
-		void IncrementReduceKeyCounter(string view, string reduceKey, int val);
-		void DeleteMappedResultsForDocumentId(string documentId, string view, Dictionary<ReduceKeyAndBucket, int> removed);
-		void UpdateRemovedMapReduceStats(string view, Dictionary<ReduceKeyAndBucket, int> removed);
-		void DeleteMappedResultsForView(string view);
+		void PutMappedResult(int indexId, string docId, string reduceKey, RavenJObject data);
+		void IncrementReduceKeyCounter(int indexId, string reduceKey, int val);
+		void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed);
+		void UpdateRemovedMapReduceStats(int indexId, Dictionary<ReduceKeyAndBucket, int> removed);
+		void DeleteMappedResultsForView(int indexId);
 
-		IEnumerable<string> GetKeysForIndexForDebug(string indexName, int start, int take);
+		IEnumerable<string> GetKeysForIndexForDebug(int index, int start, int take);
 
-		IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string indexName, string key, int start, int take);
-		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string indexName, string key, int level, int start, int take);
-		IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(string indexName, int start, int take);
+		IEnumerable<MappedResultInfo> GetMappedResultsForDebug(int index, string key, int start, int take);
+		IEnumerable<MappedResultInfo> GetReducedResultsForDebug(int index, string key, int level, int start, int take);
+		IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(int index, int start, int take);
 
-		void ScheduleReductions(string view, int level, ReduceKeyAndBucket reduceKeysAndBuckets);
+		void ScheduleReductions(int index, int level, ReduceKeyAndBucket reduceKeysAndBuckets);
 		IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams);
 		ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete);
-		void DeleteScheduledReduction(string indexName, int level, string reduceKey);
-		void PutReducedResult(string name, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
-		void RemoveReduceResults(string indexName, int level, string reduceKey, int sourceBucket);
-		IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string indexName, int take, int limitOfItemsToReduceInSingleStep);
-		void UpdatePerformedReduceType(string indexName, string reduceKey, ReduceType performedReduceType);
-		ReduceType GetLastPerformedReduceType(string indexName, string reduceKey);
-		IEnumerable<int> GetMappedBuckets(string indexName, string reduceKey);
-		IEnumerable<MappedResultInfo> GetMappedResults(string indexName, IEnumerable<string> keysToReduce, bool loadData);
-		IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(string view, int start, int take);
+		void DeleteScheduledReduction(int index, int level, string reduceKey);
+		void PutReducedResult(int index, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
+		void RemoveReduceResults(int index, int level, string reduceKey, int sourceBucket);
+		IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int index, int take, int limitOfItemsToReduceInSingleStep);
+		void UpdatePerformedReduceType(int index, string reduceKey, ReduceType performedReduceType);
+		ReduceType GetLastPerformedReduceType(int index, string reduceKey);
+		IEnumerable<int> GetMappedBuckets(int index, string reduceKey);
+		IEnumerable<MappedResultInfo> GetMappedResults(int index, IEnumerable<string> keysToReduce, bool loadData);
+		IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(int view, int start, int take);
 	}
 
 	public class GetItemsToReduceParams
 	{
 
-		public GetItemsToReduceParams(string index, IEnumerable<string> reduceKeys, int level, bool loadData, List<object> itemsToDelete)
+		public GetItemsToReduceParams(int index, IEnumerable<string> reduceKeys, int level, bool loadData, List<object> itemsToDelete)
 		{
 			Index = index;
 			Level = level;
@@ -55,7 +55,7 @@ namespace Raven.Database.Storage
 			ReduceKeys = new HashSet<string>(reduceKeys);
 		}
 
-		public string Index { get; private set; }
+		public int Index { get; private set; }
 		public int Level { get; private set; }
 		public bool LoadData { get; private set; }
 		public int Take { get; set; }

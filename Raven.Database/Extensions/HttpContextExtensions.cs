@@ -99,7 +99,6 @@ namespace Raven.Database.Extensions
 				PageSize = context.GetPageSize(maxPageSize),
 				SkipTransformResults = context.GetSkipTransformResults(),
 				FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
-				GroupBy = context.Request.QueryString.GetValues("groupBy"),
 				DefaultField = context.Request.QueryString["defaultField"],
 
 				DefaultOperator =
@@ -107,7 +106,7 @@ namespace Raven.Database.Extensions
 						QueryOperator.And :
 						QueryOperator.Or,
 
-				AggregationOperation = context.GetAggregationOperation(),
+				IsDistinct = context.IsDistinct(),
 				SortedFields = context.Request.QueryString.GetValues("sort")
 					.EmptyIfNull()
 					.Select(x => new SortedField(x))
@@ -116,8 +115,9 @@ namespace Raven.Database.Extensions
 				HighlighterPreTags = context.Request.QueryString.GetValues("preTags"),
 				HighlighterPostTags = context.Request.QueryString.GetValues("postTags"),
                 ResultsTransformer = context.Request.QueryString["resultsTransformer"],
-                QueryInputs = context.ExtractQueryInputs()
-                };
+                QueryInputs = context.ExtractQueryInputs(),
+				ExplainScores = context.GetExplainScores()
+            };
 
 	
 			var spatialFieldName = context.Request.QueryString["spatialField"] ?? Constants.DefaultSpatialFieldName;

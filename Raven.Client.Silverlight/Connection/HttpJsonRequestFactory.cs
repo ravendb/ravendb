@@ -1,8 +1,8 @@
 using System;
+using System.Collections.Specialized;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
-using Raven.Client.Silverlight.MissingFromSilverlight;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Silverlight.Connection
@@ -58,7 +58,7 @@ namespace Raven.Client.Silverlight.Connection
 		public HttpJsonRequest CreateHttpJsonRequest(CreateHttpJsonRequestParams createHttpJsonRequestParams)
 		{
 			var request = new HttpJsonRequest(createHttpJsonRequestParams, this);
-			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs { Request = request.webRequest, JsonRequest = request });
+			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs { Client = request.httpClient, JsonRequest = request });
 			return request;
 		}
 

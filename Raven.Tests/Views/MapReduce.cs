@@ -11,6 +11,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 using Raven.Database;
 using Xunit;
+using System.Linq;
 
 namespace Raven.Tests.Views
 {
@@ -86,7 +87,7 @@ select new {
 			Assert.False(q.IsStale);
 			Assert.Equal(@"{""blog_id"":3,""comments_length"":3}", q.Results[0].ToString(Formatting.None));
 
-			var index = db.Statistics.Indexes[0];
+            var index = db.Statistics.Indexes.First(x => x.PublicName == "CommentsCountPerBlog");
 			// we add 100 because we might have reduces running in the middle of the operation
 			Assert.True((1024 + 100) >= index.ReduceIndexingAttempts,
 				"1024 + 100 >= " + index.ReduceIndexingAttempts + " failed");

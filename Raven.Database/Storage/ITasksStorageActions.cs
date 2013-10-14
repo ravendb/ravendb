@@ -10,9 +10,9 @@ namespace Raven.Database.Storage
 {
 	public interface ITasksStorageActions
 	{
-		void AddTask(Task task, DateTime addedAt);
+		void AddTask(DatabaseTask task, DateTime addedAt);
 		bool HasTasks { get; }
 		long ApproximateTaskCount { get; }
-		T GetMergedTask<T>() where T : Task;
+		T GetMergedTask<T>() where T : DatabaseTask;
 	}
 }

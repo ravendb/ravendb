@@ -39,7 +39,7 @@ namespace Raven.Tests.Helpers
 	{
 		protected readonly List<RavenDbServer> servers = new List<RavenDbServer>();
 		protected readonly List<IDocumentStore> stores = new List<IDocumentStore>();
-		private readonly List<string> pathsToDelete = new List<string>();
+		private readonly HashSet<string> pathsToDelete = new HashSet<string>();
 
 		public RavenTestBase()
 		{
@@ -70,7 +70,8 @@ namespace Raven.Tests.Helpers
 					DataDirectory = dataDir ?? NewDataPath(),
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
-					Port = 8079
+					Port = 8079,
+					UseFips = SettingsHelper.UseFipsEncryptionAlgorithms
 				}
 			};
 
@@ -117,10 +118,10 @@ namespace Raven.Tests.Helpers
 		}
 
 		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
-			bool runInMemory = true,
+			 bool runInMemory = true,
 			string dataDirectory = null,
 			string requestedStorage = null,
-			bool enableAuthentication = false)
+			 bool enableAuthentication = false)
 		{
 			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication);
 			ModifyServer(ravenDbServer);
@@ -158,11 +159,12 @@ namespace Raven.Tests.Helpers
 			return defaultStorageType;
 		}
 
-		protected RavenDbServer GetNewServer(int port = 8079,
+		protected RavenDbServer GetNewServer(int port = 8079, 
 			string dataDirectory = null,
-			bool runInMemory = true,
+			bool runInMemory = true, 
 			string requestedStorage = null,
-			bool enableAuthentication = false)
+			bool enableAuthentication = false,
+			string activeBundles = null)
 		{
 			if (dataDirectory != null)
 				pathsToDelete.Add(dataDirectory);
@@ -173,9 +175,17 @@ namespace Raven.Tests.Helpers
 				Port = port,
 				DataDirectory = dataDirectory ?? NewDataPath(),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
+#if DEBUG
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+#endif
 				DefaultStorageTypeName = storageType,
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin
 			};
+
+			if (activeBundles != null)
+			{
+				ravenConfiguration.Settings["Raven/ActiveBundles"] = activeBundles;
+			}
 
 			ModifyConfiguration(ravenConfiguration);
 
@@ -256,7 +266,7 @@ namespace Raven.Tests.Helpers
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-			Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, TimeSpan.FromSeconds(10)));
+			Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, TimeSpan.FromMinutes(1)));
 		}
 
 		public static void WaitForIndexing(DocumentDatabase db)

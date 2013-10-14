@@ -72,9 +72,16 @@ namespace Raven.Client.Connection
 			return url + "/terms/" + index + "?field=" + field + "&fromValue=" + fromValue + "&pageSize=" + pageSize;
 		}
 
-		public static string Document(this string url, string key)
+		public static string Doc(this string url, string key)
 		{
-			return url + "/docs/" + Uri.EscapeUriString(key);
+
+			return url + "/docs/" 
+#if SILVERLIGHT 
+				+ HttpUtility.UrlEncode(key)
+#else
+				+ key
+#endif
+				;
 		}
 
 		public static string Docs(this string url, int start, int pageSize)

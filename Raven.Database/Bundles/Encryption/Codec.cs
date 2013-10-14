@@ -10,6 +10,8 @@ using Raven.Abstractions.Data;
 
 namespace Raven.Bundles.Encryption
 {
+	using Raven.Abstractions.Util.Encryptors;
+
 	public class Codec
 	{
 		private static readonly ThreadLocal<RNGCryptoServiceProvider> LocalRNG = new ThreadLocal<RNGCryptoServiceProvider>(() => new RNGCryptoServiceProvider());
@@ -158,7 +160,7 @@ namespace Raven.Bundles.Encryption
 
 		private static byte[] GetSaltFromEncryptionKey(byte[] key)
 		{
-			return SHA1.Create().ComputeHash(key);
+			return Encryptor.Current.Hash.Compute16(key);
 		}
 
 		public struct EncodedBlock

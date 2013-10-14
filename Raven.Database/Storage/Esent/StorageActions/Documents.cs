@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -397,6 +398,7 @@ namespace Raven.Storage.Esent.StorageActions
 						}
 						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"],
 									  newEtag.TransformToValueForEsentSorting());
+
 						savedAt = SystemTime.UtcNow;
 						Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
 
@@ -422,6 +424,7 @@ namespace Raven.Storage.Esent.StorageActions
 					throw;
 				}
 
+
 				logger.Debug("Inserted a new document with key '{0}', update: {1}, ",
 							   key, isUpdate);
 
@@ -438,7 +441,8 @@ namespace Raven.Storage.Esent.StorageActions
 			{
 				throw new ConcurrencyException("Illegal duplicate key " + key, e);
 			}
-		}
+	}
+
 
 		public AddDocumentResult InsertDocument(string key, RavenJObject data, RavenJObject metadata, bool checkForUpdates)
 		{

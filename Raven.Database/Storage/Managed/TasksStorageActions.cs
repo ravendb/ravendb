@@ -28,7 +28,7 @@ namespace Raven.Storage.Managed
 			this.generator = generator;
 		}
 
-		public void AddTask(Task task, DateTime addedAt)
+        public void AddTask(DatabaseTask task, DateTime addedAt)
 		{
 			storage.Tasks.Put(new RavenJObject
 			{
@@ -49,7 +49,7 @@ namespace Raven.Storage.Managed
 			get { return storage.Tasks.Count; }
 		}
 
-		public T GetMergedTask<T>() where T : Task
+        public T GetMergedTask<T>() where T : DatabaseTask
 		{
 			foreach (var readResult in storage.Tasks)
 			{
@@ -57,10 +57,10 @@ namespace Raven.Storage.Managed
                 if (taskType != typeof(T).FullName)
 					continue;
 
-				Task task;
+                DatabaseTask task;
 				try
 				{
-					task = Task.ToTask(taskType, readResult.Data());
+                    task = DatabaseTask.ToTask(taskType, readResult.Data());
 				}
 				catch (Exception e)
 				{
@@ -76,7 +76,7 @@ namespace Raven.Storage.Managed
 			return null;
 		}
 
-		private void MergeSimilarTasks(Task task, byte [] taskId)
+        private void MergeSimilarTasks(DatabaseTask task, byte[] taskId)
 		{
 			var taskType = task.GetType().FullName;
 
@@ -86,10 +86,10 @@ namespace Raven.Storage.Managed
 				var readResult = storage.Tasks.Read(keyForTaskToTryMerging);
                 if (readResult == null)
 					continue;
-				Task existingTask;
+                DatabaseTask existingTask;
 				try
 				{
-					existingTask = Task.ToTask(readResult.Key.Value<string>("type"), readResult.Data());
+                    existingTask = DatabaseTask.ToTask(readResult.Key.Value<string>("type"), readResult.Data());
 				}
 				catch (Exception e)
 				{
@@ -108,7 +108,7 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-        private IEnumerable<RavenJToken> KeyForTaskToTryMergings(Task task, string taskType, Guid taskId)
+        private IEnumerable<RavenJToken> KeyForTaskToTryMergings(DatabaseTask task, string taskType, Guid taskId)
         {
             if (task.SeparateTasksByIndex == false)
             {
@@ -130,11 +130,12 @@ namespace Raven.Storage.Managed
 	            {"index", task.Index},
 	            {"type", taskType},
 	        })
-				.Where(x => new Guid(x.Value<byte[]>("id")) != taskId)
-               	.TakeWhile(x =>
-                	StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("index"), task.Index) && 
-					StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("type"), taskType)
+                                                  .Where(x => new Guid(x.Value<byte[]>("id")) != taskId)
+                                                  .TakeWhile(x =>
+                                                             task.Index.Equals(x.Value<int>("index")) &&
+                                                             StringComparer.OrdinalIgnoreCase.Equals(
+                                                                 x.Value<string>("type"), taskType)
                 );
         }
-	}
+    }
 }

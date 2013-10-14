@@ -1,9 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Embedded;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Tests.Helpers;
 using Xunit;
@@ -21,32 +19,32 @@ namespace Raven.Tests.MailingList
 
 				using (IAsyncDocumentSession session = db.OpenAsyncSession())
 				{
-					session.Store(new Promo
+					await session.StoreAsync(new Promo
 					{
 						Title = "IPHONES",
 						Coordinate = new Coordinate {latitude = 41.145556, longitude = -73.995}
 					});
-					session.Store(new Promo
+					await session.StoreAsync(new Promo
 					{
 						Title = "ANDROIDS",
 						Coordinate = new Coordinate {latitude = 41.145533, longitude = -73.999}
 					});
-					session.Store(new Promo
+					await session.StoreAsync(new Promo
 					{
 						Title = "BLACKBERRY",
 						Coordinate = new Coordinate {latitude = 12.233, longitude = -73.995}
 					});
-					session.SaveChangesAsync().Wait();
+					await session.SaveChangesAsync();
 
 					WaitForIndexing(db);
 
 					var result = await session.Query<Promo, Promos_Index>()
-					                                   .Customize(
-						                                   x => x.WithinRadiusOf(
-							                                   radius: 3.0,
-							                                   latitude: 41.145556,
-							                                   longitude: -73.995))
-					                                   .ToListAsync();
+					                          .Customize(
+						                          x => x.WithinRadiusOf(
+							                          radius: 3.0,
+							                          latitude: 41.145556,
+							                          longitude: -73.995))
+					                          .ToListAsync();
 
 					Assert.Equal(2, result.Count);
 				}
@@ -56,7 +54,6 @@ namespace Raven.Tests.MailingList
 		public class Coordinate
 		{
 			public double latitude { get; set; }
-
 			public double longitude { get; set; }
 		}
 
