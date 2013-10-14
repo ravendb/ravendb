@@ -2,6 +2,9 @@ package raven.tests.spatial;
 
 import java.util.Date;
 
+import com.mysema.query.annotations.QueryEntity;
+
+@QueryEntity
 public class Event {
 
   private String venue;

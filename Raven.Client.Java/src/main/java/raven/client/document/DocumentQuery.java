@@ -15,6 +15,7 @@ import org.apache.commons.lang.StringUtils;
 
 import raven.abstractions.basic.Lazy;
 import raven.abstractions.basic.Reference;
+import raven.abstractions.basic.SharpEnum;
 import raven.abstractions.basic.Tuple;
 import raven.abstractions.data.Constants;
 import raven.abstractions.data.Facet;
@@ -363,7 +364,7 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   public String toString() {
     String query = super.toString();
     if (isSpatialQuery) {
-      return String.format("%s SpatialField: %s QueryShape: %s Relation: %s", query, spatialFieldName, queryShape, spatialRelation);
+      return String.format("%s SpatialField: %s QueryShape: %s Relation: %s", query, spatialFieldName, queryShape, SharpEnum.value(spatialRelation));
     }
     return query;
   }

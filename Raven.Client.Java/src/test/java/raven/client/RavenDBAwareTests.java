@@ -2,10 +2,14 @@ package raven.client;
 
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.UUID;
 
 import org.apache.commons.lang.CharUtils;
+import org.apache.commons.lang.time.DateUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -320,7 +324,12 @@ public abstract class RavenDBAwareTests {
     deleteDb(dbName, 1);
   }
 
-
+  protected Date mkDate(int year, int month, int day) {
+    Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+    calendar = DateUtils.truncate(calendar, Calendar.DAY_OF_MONTH);
+    calendar.set(year, month - 1, day);
+    return calendar.getTime();
+  }
 
   protected void deleteDb(String dbName, int i) throws Exception {
 
