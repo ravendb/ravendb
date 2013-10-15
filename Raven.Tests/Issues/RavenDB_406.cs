@@ -17,7 +17,7 @@ namespace Raven.Tests.Issues
 	public class RavenDB_406 : RavenTest
 	{
 		[Fact]
-		public void LoadResultShoudBeUpToDateEvenIfAggressiveCacheIsEnabled()
+		public void LoadResultShouldBeUpToDateEvenIfAggressiveCacheIsEnabled()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
@@ -72,7 +72,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void QueryResultShoudBeUpToDateEvenIfAggressiveCacheIsEnabled()
+		public void QueryResultShouldBeUpToDateEvenIfAggressiveCacheIsEnabled()
 		{
 			using (GetNewServer())
 			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
