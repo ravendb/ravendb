@@ -7,15 +7,13 @@ import static org.junit.Assert.fail;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 import net.ravendb.abstractions.data.Facet;
 import net.ravendb.abstractions.data.FacetMode;
 import net.ravendb.tests.faceted.QFacetAdvancedAPITest_Test;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.time.DateUtils;
-
-
 
 import com.mysema.query.annotations.QueryEntity;
 
@@ -162,9 +160,15 @@ public class FacetAdvancedAPITest {
   }
 
   private Date makeDate(int year, int month, int day) {
-    Calendar cal = Calendar.getInstance();
+    Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
     cal.set(year, month - 1, day);
-    return DateUtils.truncate(cal.getTime(), Calendar.DAY_OF_MONTH);
+    cal.set(Calendar.HOUR, 0);
+    cal.set(Calendar.MINUTE, 0);
+    cal.set(Calendar.SECOND, 0);
+    cal.set(Calendar.MILLISECOND, 0);
+    //NOTE: don't use DateUtils becuase it removes time zone info!
+
+    return cal.getTime();
   }
 
 
@@ -172,13 +176,14 @@ public class FacetAdvancedAPITest {
   public void advancedAPIAdvancedEdgeCases() {
     QFacetAdvancedAPITest_Test x = QFacetAdvancedAPITest_Test.test;
     Date testDateTime = makeDate(2001, 12, 5);
+
     Facet facet = new Facet();
     facet.setName(x.date);
     facet.setRanges(x.date.lt(new Date()), x.date.gt(makeDate(2010, 12, 5)).and(x.date.lt(testDateTime)));
 
     assertEquals(2, facet.getRanges().size());
     assertTrue(StringUtils.isNotEmpty(facet.getRanges().get(0)));
-    assertEquals("[2010\\-12\\-04T23\\:00\\:00.0000000Z TO 2001\\-12\\-04T23\\:00\\:00.0000000Z]", facet.getRanges().get(1));
+    assertEquals("[2010\\-12\\-05T00\\:00\\:00.0000000Z TO 2001\\-12\\-05T00\\:00\\:00.0000000Z]", facet.getRanges().get(1));
 
   }
 
