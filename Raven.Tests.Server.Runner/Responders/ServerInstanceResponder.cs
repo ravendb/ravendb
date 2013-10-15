@@ -12,8 +12,11 @@ namespace Raven.Tests.Server.Runner.Responders
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
+    using System.Reflection;
     using System.Threading;
 
+    using Raven.Database;
     using Raven.Database.Config;
     using Raven.Database.Extensions;
     using Raven.Database.Server;
@@ -120,6 +123,11 @@ namespace Raven.Tests.Server.Runner.Responders
             MaybeRemoveServer(configuration.Port);
             var server = CreateNewServer(configuration, context);
 
+			if (serverConfiguration.UseCommercialLicense)
+			{
+				EnableAuthentication(server.Database);
+			}
+
             if (serverConfiguration.HasApiKey)
             {
                 server.Database.Put("Raven/ApiKeys/" + serverConfiguration.ApiKeyName, null, RavenJObject.FromObject(new ApiKeyDefinition
@@ -211,6 +219,26 @@ namespace Raven.Tests.Server.Runner.Responders
                 }
             }
         }
+
+		public static void EnableAuthentication(DocumentDatabase database)
+		{
+			var license = GetLicenseByReflection(database);
+			license.Error = false;
+			license.Status = "Commercial";
+
+			// rerun this startup task
+			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
+		}
+
+		public static LicensingStatus GetLicenseByReflection(DocumentDatabase database)
+		{
+			var field = database.GetType().GetField("validateLicense", BindingFlags.Instance | BindingFlags.NonPublic);
+			var validateLicense = field.GetValue(database);
+
+			var currentLicenseProp = validateLicense.GetType().GetProperty("CurrentLicense", BindingFlags.Static | BindingFlags.Public);
+
+			return (LicensingStatus)currentLicenseProp.GetValue(validateLicense, null);
+		}
     }
 
     [Serializable]
@@ -224,6 +252,8 @@ namespace Raven.Tests.Server.Runner.Responders
         public int Port { get; set; }
 
         public bool RunInMemory { get; set; }
+
+		public bool UseCommercialLicense { get; set; }
 
         public string ApiKeyName { get; set; }
 
