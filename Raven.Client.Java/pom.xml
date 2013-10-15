@@ -26,6 +26,15 @@
         <role>developer</role>
       </roles>
     </developer>
+    <developer>
+      <email>pikus@ais.pl</email>
+      <id>pikus@ais.pl</id>
+      <name>Tomasz Pik</name>
+      <organizationUrl>http://ais.pl</organizationUrl>
+      <roles>
+        <role>release manager</role>
+      </roles>
+    </developer>
   </developers>
 
   <contributors>
