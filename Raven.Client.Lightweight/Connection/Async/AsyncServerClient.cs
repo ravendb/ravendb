@@ -1908,21 +1908,21 @@ namespace Raven.Client.Connection.Async
                                                                                          pageSize, method, credentials, convention))
                                                                                          .AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-            var result = await webRequest.ReadResponseJsonAsync();
-            throw new NotImplementedException("TODO");
+	        RavenJToken result = await webRequest.ReadResponseJsonAsync();
 
-           /* return convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result))
-                .Select(x => new Attachment
-                {
-                    Etag = x.Etag,
-                    Metadata = x.Metadata,
-                    Size = x.Size,
-                    Key = x.Key,
-                    Data = () =>
-                    {
-                        throw new InvalidOperationException("Cannot get attachment data from an attachment header");
-                    }
-                });*/
+	        List<Attachment> attachments =
+		        convention.CreateSerializer().Deserialize<Attachment[]>(new RavenJTokenReader(result))
+			        .Select(x => new Attachment
+			        {
+				        Etag = x.Etag,
+				        Metadata = x.Metadata,
+				        Size = x.Size,
+				        Key = x.Key,
+				        Data =
+					        () => { throw new InvalidOperationException("Cannot get attachment data from an attachment header"); }
+			        }).ToList();
+	        return new AsyncEnumeratorBridge<Attachment>(attachments.GetEnumerator());
+
         }
 
         public Task<Attachment> HeadAttachmentAsync(string key)
