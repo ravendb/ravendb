@@ -37,7 +37,8 @@ public class UsingWhereConditionsTest extends RemoteClientTest {
         session.query(CommitInfo.class).customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults(5 * 60 * 1000)).toList();
 
         QCommitInfo x = QCommitInfo.commitInfo;
-        IRavenQueryable<CommitInfo> results = session.query(CommitInfo.class).where(x.revision.eq(1));
+        IRavenQueryable<CommitInfo> results = session.query(CommitInfo.class)
+          .customize(new DocumentQueryCustomizationFactory().waitForNonStaleResults()).where(x.revision.eq(1));
         //There is one CommitInfo with Revision == 1
         assertEquals(1, results.toList().size());
 
