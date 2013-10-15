@@ -99,7 +99,7 @@ namespace Raven.Database.Server.Controllers
 					return GetMessageWithString("No idea how to handle this request", HttpStatusCode.BadRequest);
 
 			}
-			return new HttpResponseMessage(HttpStatusCode.OK);
+			return GetEmptyMessage();
 		}
 
 		private HttpResponseMessage TryGetFacetsFromString(string index, out Etag etag, out List<Facet> facets, string facetsJson)

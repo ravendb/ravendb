@@ -30,7 +30,7 @@ namespace Raven.Database.Server.Controllers
 			lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
 			if (MatchEtag(lastDocEtag))
 			{
-				return new HttpResponseMessage(HttpStatusCode.NotModified);
+				return GetEmptyMessage(HttpStatusCode.NotModified);
 			}
 
 			var startsWith = GetQueryStringValue("startsWith");
@@ -106,7 +106,7 @@ namespace Raven.Database.Server.Controllers
 					var documentMetadata = Database.GetDocumentMetadata(docId, transactionInformation);
 					if (documentMetadata == null)
 					{
-						msg = new HttpResponseMessage(HttpStatusCode.NotFound);
+						msg = GetEmptyMessage(HttpStatusCode.NotFound);
 						return;
 					}
 					Debug.Assert(documentMetadata.Etag != null);
@@ -132,7 +132,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var docId = id;
 			Database.Delete(docId, GetEtag(), GetRequestTransaction());
-			return new HttpResponseMessage(HttpStatusCode.NoContent);
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpPut("docs/{*id}")]
@@ -200,7 +200,7 @@ namespace Raven.Database.Server.Controllers
 			switch (patchResult)
 			{
 				case PatchResult.DocumentDoesNotExists:
-					return new HttpResponseMessage(HttpStatusCode.NotFound);
+					return GetEmptyMessage(HttpStatusCode.NotFound);
 				case PatchResult.Patched:
 					var msg = GetMessageWithObject(new { Patched = true, Debug = debug });
 					msg.Headers.Add("Location", Database.Configuration.GetFullUrl("/docs/" + docId));

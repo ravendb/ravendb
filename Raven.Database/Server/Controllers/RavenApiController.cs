@@ -56,11 +56,19 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			var sp = Stopwatch.StartNew();
-			var result = await base.ExecuteAsync(controllerContext, cancellationToken);
-			sp.Stop();
-			AddRavenHeader(result, sp, landlord);
+			try
+			{
+				var result = await base.ExecuteAsync(controllerContext, cancellationToken);
+				sp.Stop();
+				AddRavenHeader(result, sp, landlord);
 
-			return result;
+				return result;
+			}
+			catch (Exception e)
+			{
+				return GetMessageWithObject(e, HttpStatusCode.InternalServerError);
+			}
+			
 		}
 
 		private void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp, DatabasesLandlord landlord)
@@ -526,7 +534,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage WriteData(RavenJObject data, RavenJObject headers, Etag etag, HttpStatusCode status = HttpStatusCode.OK, HttpResponseMessage msg = null)
 		{
 			if (msg == null)
-				msg = new HttpResponseMessage(status);
+				msg = GetEmptyMessage(status);
 
 			var jsonContent = ((JsonContent) msg.Content);
 			var jsonp = GetQueryStringValue("jsonp");
@@ -624,22 +632,23 @@ namespace Raven.Database.Server.Controllers
 		//TODO: check
 		private static readonly string EmbeddedLastChangedDate =
 			File.GetLastWriteTime(typeof(HttpExtensions).Assembly.Location).Ticks.ToString("G");
+
 		public HttpResponseMessage WriteEmbeddedFile(string ravenPath, string docPath)
 		{
 			var filePath = Path.Combine(ravenPath, docPath);
 			var type = GetContentType(docPath);
 			if (File.Exists(filePath))
-				return WriteFile(filePath, type);
+				return WriteFile(filePath);
 			return WriteEmbeddedFileOfType(docPath, type);
 		}
 
-		public HttpResponseMessage WriteFile(string filePath, string type)
+		public HttpResponseMessage WriteFile(string filePath)
 		{
 			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-None-Match");
 			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
 			if (etagValue == fileEtag)
 			{
-				return new HttpResponseMessage(HttpStatusCode.NotModified);
+				return GetEmptyMessage(HttpStatusCode.NotModified);
 			}
 
 			var msg = new HttpResponseMessage
@@ -658,7 +667,7 @@ namespace Raven.Database.Server.Controllers
 			var currentFileEtag = EmbeddedLastChangedDate + docPath;
 			if (etagValue == currentFileEtag)
 			{
-				return new HttpResponseMessage(HttpStatusCode.NotModified);
+				return GetEmptyMessage(HttpStatusCode.NotModified);
 			}
 
 			byte[] bytes;
@@ -668,7 +677,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				if (resource == null)
 				{
-					return new HttpResponseMessage(HttpStatusCode.NotFound);
+					return GetEmptyMessage(HttpStatusCode.NotFound);
 				}
 				bytes = resource.ReadData();
 			}
@@ -677,7 +686,7 @@ namespace Raven.Database.Server.Controllers
 				Content = new ByteArrayContent(bytes),
 			};
 
-			msg.Headers.Add("Content-Type", type);
+			msg.Content.Headers.ContentType = new MediaTypeHeaderValue(type);
 			WriteETag(etagValue, msg);
 
 			return msg;

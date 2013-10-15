@@ -1,4 +1,7 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Web.Http;
 
@@ -36,6 +39,20 @@ namespace Raven.Database.Server.Controllers
 			WriteETag(typeof(HardRouteController).FullName, msg);
 			msg.Content.Headers.ContentType = new MediaTypeHeaderValue("text/xml");
 			return msg;
+		}
+
+		public const string RootPath = "raven/studio.html";
+
+		[HttpGet("")]
+		public HttpResponseMessage RavenRoot()
+		{
+			var location = DatabasesLandlord.SystemConfiguration.VirtualDirectory != "/" 
+				? Path.Combine(DatabasesLandlord.SystemConfiguration.VirtualDirectory, RootPath) : RootPath;
+
+			var result = Request.CreateResponse(HttpStatusCode.Found);
+			result.Headers.Location = new Uri(Path.Combine(DatabasesLandlord.SystemConfiguration.ServerUrl, location));
+
+			return result;
 		}
 	}
 }

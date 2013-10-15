@@ -25,18 +25,18 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage StaticGet(string id)
 		{
 			var filename = id;
-			var result = new HttpResponseMessage(HttpStatusCode.OK){Content = new JsonContent()};
+			var result = GetEmptyMessage();
 			Database.TransactionalStorage.Batch(_ => // have to keep the session open for reading of the attachment stream
 			{
 				var attachmentAndHeaders = Database.GetStatic(filename);
 				if (attachmentAndHeaders == null)
 				{
-					result = new HttpResponseMessage(HttpStatusCode.NotFound);
+					result = GetEmptyMessage(HttpStatusCode.NotFound);
 					return;
 				}
 				if (MatchEtag(attachmentAndHeaders.Etag))
 				{
-					result = new HttpResponseMessage(HttpStatusCode.NotModified);
+					result = GetEmptyMessage(HttpStatusCode.NotModified);
 					return;
 				}
 
@@ -61,18 +61,18 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage StaticHead(string id)
 		{
 			var filename = id;
-			var result = new HttpResponseMessage(HttpStatusCode.OK){Content = new JsonContent()};
+			var result = GetEmptyMessage();
 			Database.TransactionalStorage.Batch(_ => // have to keep the session open for reading of the attachment stream
 			{
 				var attachmentAndHeaders = Database.GetStatic(filename);
 				if (attachmentAndHeaders == null)
 				{
-					result = new HttpResponseMessage(HttpStatusCode.NotFound);
+					result = GetEmptyMessage(HttpStatusCode.NotFound);
 					return;
 				}
 				if (MatchEtag(attachmentAndHeaders.Etag))
 				{
-					result = new HttpResponseMessage(HttpStatusCode.NotModified);
+					result = GetEmptyMessage(HttpStatusCode.NotModified);
 					return;
 				}
 
@@ -92,7 +92,7 @@ namespace Raven.Database.Server.Controllers
 
 			var newEtag = Database.PutStatic(filename, GetEtag(), await Request.Content.ReadAsStreamAsync(), Request.Headers.FilterHeadersAttachment());
 
-			var msg = new HttpResponseMessage(HttpStatusCode.NoContent);
+			var msg = GetEmptyMessage(HttpStatusCode.NoContent);
 
 			WriteETag(newEtag, msg);
 			return msg;
@@ -114,7 +114,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var filename = id;
 			Database.DeleteStatic(filename, GetEtag());
-			return new HttpResponseMessage(HttpStatusCode.NoContent);
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 	}
 }

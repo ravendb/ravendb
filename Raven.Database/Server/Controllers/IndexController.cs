@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
+using NetTopologySuite.IO.GML2;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -94,8 +95,8 @@ namespace Raven.Database.Server.Controllers
 		{
 			var index = id;
 			if (Database.IndexDefinitionStorage.IndexNames.Contains(index, StringComparer.OrdinalIgnoreCase) == false)
-				return new HttpResponseMessage(HttpStatusCode.NotFound);
-			return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetEmptyMessage(HttpStatusCode.NotFound);
+			return GetEmptyMessage();
 		}
 
 		[HttpPost("indexes/{*id}")]
@@ -106,7 +107,7 @@ namespace Raven.Database.Server.Controllers
 			if ("forceWriteToDisk".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
 			{
 				Database.IndexStorage.ForceWriteToDisk(index);
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetEmptyMessage();
 			}
 
 			if ("lockModeChange".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
@@ -131,14 +132,35 @@ namespace Raven.Database.Server.Controllers
 		{
 			var index = id;
 			Database.DeleteIndex(index);
-			return new HttpResponseMessage(HttpStatusCode.NoContent);
+			return GetEmptyMessage(HttpStatusCode.NoContent);
+		}
+
+		[HttpPost("indexes/set-priority/{*id}")]
+		[HttpPost("databases/{databaseName}/indexes/set-priority/{*id}")]
+		public HttpResponseMessage SetPriority(string id)
+		{
+			var index = id;
+
+			IndexingPriority indexingPriority;
+			if (Enum.TryParse(GetQueryStringValue("priority"), out indexingPriority) == false)
+			{
+				return GetMessageWithObject(new
+				{
+					Error = "Could not parse priority value: " + GetQueryStringValue("priority")
+				}, HttpStatusCode.BadRequest);
+			}
+
+			var instance = Database.IndexStorage.GetIndexInstance(index);
+			Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(instance.indexId, indexingPriority));
+
+			return GetEmptyMessage();
 		}
 
 		private HttpResponseMessage GetIndexDefinition(string index)
 		{
 			var indexDefinition = Database.GetIndexDefinition(index);
 			if (indexDefinition == null)
-				return new HttpResponseMessage(HttpStatusCode.NotFound);
+				return GetEmptyMessage(HttpStatusCode.NotFound);
 
 			indexDefinition.Fields = Database.GetIndexFields(index);
 
@@ -152,7 +174,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var viewGenerator = Database.IndexDefinitionStorage.GetViewGenerator(index);
 			if (viewGenerator == null)
-				return new HttpResponseMessage(HttpStatusCode.NotFound);
+				return GetEmptyMessage(HttpStatusCode.NotFound);
 
 			return GetMessageWithObject(viewGenerator.SourceCode);
 		}
@@ -182,7 +204,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var definition = Database.IndexDefinitionStorage.GetIndexDefinition(index);
 			if (definition == null)
-				return new HttpResponseMessage(HttpStatusCode.NotFound);
+				return GetEmptyMessage(HttpStatusCode.NotFound);
 
 			var key = GetQueryStringValue("key");
 			if (string.IsNullOrEmpty(key))
@@ -418,14 +440,14 @@ namespace Raven.Database.Server.Controllers
 			definition.LockMode = indexLockMode;
 			Database.IndexDefinitionStorage.UpdateIndexDefinitionWithoutUpdatingCompiledIndex(definition);
 
-			return new HttpResponseMessage(HttpStatusCode.OK);
+			return GetEmptyMessage();
 		}
 
 		private HttpResponseMessage GetIndexReducedResult(string index)
 		{
 			var definition = Database.IndexDefinitionStorage.GetIndexDefinition(index);
 			if (definition == null)
-				return new HttpResponseMessage(HttpStatusCode.NotFound);
+				return GetEmptyMessage(HttpStatusCode.NotFound);
 			
 			var key = GetQueryStringValue("key");
 			if (string.IsNullOrEmpty(key))
@@ -472,7 +494,7 @@ namespace Raven.Database.Server.Controllers
 			var definition = Database.IndexDefinitionStorage.GetIndexDefinition(index);
 			if (definition == null)
 			{
-				return new HttpResponseMessage(HttpStatusCode.NotFound);
+				return GetEmptyMessage(HttpStatusCode.NotFound);
 			}
 
 			List<ReduceKeyAndCount> keys = null;
@@ -511,7 +533,7 @@ namespace Raven.Database.Server.Controllers
 			var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
 
 			if (dynamicIndexName == null)
-				return new HttpResponseMessage(HttpStatusCode.NotFound);
+				return GetEmptyMessage(HttpStatusCode.NotFound);
 
 			return GetIndexEntriesForExistingIndex(dynamicIndexName, indexQuery, totalResults);
 		}
@@ -570,7 +592,7 @@ namespace Raven.Database.Server.Controllers
 			});
 
 			if (stats == null)
-				return new HttpResponseMessage(HttpStatusCode.NotFound);
+				return GetEmptyMessage(HttpStatusCode.NotFound);
 
 			stats.LastQueryTimestamp = Database.IndexStorage.GetLastQueryTime(instance.indexId);
 			stats.Performance = Database.IndexStorage.GetIndexingPerformance(instance.indexId);

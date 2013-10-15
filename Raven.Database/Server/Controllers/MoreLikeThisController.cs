@@ -32,14 +32,14 @@ namespace Raven.Database.Server.Controllers
 			var indexEtag = Database.GetIndexEtag(parameters.IndexName, null);
 			if (MatchEtag(indexEtag))
 			{
-				return new HttpResponseMessage(HttpStatusCode.NotModified);
+				return GetEmptyMessage(HttpStatusCode.NotModified);
 			}
 
 			var result = Database.ExecuteMoreLikeThisQuery(parameters, GetRequestTransaction(), GetPageSize(Database.Configuration.MaxPageSize), GetQueryStringValues("include"));
 
 			if (MatchEtag(result.Etag))
 			{
-				return new HttpResponseMessage(HttpStatusCode.NotModified);
+				return GetEmptyMessage(HttpStatusCode.NotModified);
 			}
 
 			var msg = GetMessageWithObject(result.Result);

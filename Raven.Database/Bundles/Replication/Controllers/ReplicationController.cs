@@ -40,13 +40,13 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		{
 			var src = GetQueryStringValue("from");
 			if (string.IsNullOrEmpty(src))
-				return new HttpResponseMessage(HttpStatusCode.BadRequest);
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
 		
 			while (src.EndsWith("/"))
 				src = src.Substring(0, src.Length - 1);// remove last /, because that has special meaning for Raven
 
 			if (string.IsNullOrEmpty(src))
-				return new HttpResponseMessage(HttpStatusCode.BadRequest);
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
 			
 			var array = await ReadJsonArrayAsync();
 			if (ReplicationTask != null)
@@ -97,7 +97,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				});
 			}
 
-			return new HttpResponseMessage(HttpStatusCode.OK);
+			return GetEmptyMessage();
 		}
 
 		[HttpPost("replication/replicateAttachments")]
@@ -105,12 +105,12 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		{
 			var src = GetQueryStringValue("from");
 			if (string.IsNullOrEmpty(src))
-				return new HttpResponseMessage(HttpStatusCode.BadRequest);
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
 			
 			while (src.EndsWith("/"))
 				src = src.Substring(0, src.Length - 1);// remove last /, because that has special meaning for Raven
 			if (string.IsNullOrEmpty(src))
-				return new HttpResponseMessage(HttpStatusCode.BadRequest);
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
 			
 			var array = await ReadBsonArrayAsync();
 			using (Database.DisableAllTriggersForCurrentThread())
@@ -159,7 +159,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				});
 			}
 
-			return new HttpResponseMessage(HttpStatusCode.OK);
+			return GetEmptyMessage();
 		}
 
 		[HttpGet("replication/info")]
@@ -289,7 +289,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				Database.Put(Constants.RavenReplicationSourcesBasePath + "/" + src, etag, newDoc, metadata, null);
 			}
 
-			return new HttpResponseMessage(HttpStatusCode.OK);
+			return GetEmptyMessage();
 		}
 
 		[HttpPost("replication/heartbeat")]
@@ -309,7 +309,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 			replicationTask.HandleHeartbeat(src);
 
-			return new HttpResponseMessage(HttpStatusCode.OK);
+			return GetEmptyMessage();
 		}
 
 		private HttpResponseMessage GetValuesForLastEtag(out string src, out string dbid)
@@ -321,12 +321,12 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				                                    "\r\nDatabase cannot replicate to itself.");
 
 			if (string.IsNullOrEmpty(src))
-				return new HttpResponseMessage(HttpStatusCode.BadRequest);
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
 			while (src.EndsWith("/"))
 				src = src.Substring(0, src.Length - 1); // remove last /, because that has special meaning for Raven
 			if (string.IsNullOrEmpty(src))
-				return new HttpResponseMessage(HttpStatusCode.BadRequest);
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
 			return null;
 		}
 

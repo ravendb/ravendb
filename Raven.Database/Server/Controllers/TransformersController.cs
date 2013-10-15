@@ -19,7 +19,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				var transformerDefinition = Database.GetTransformerDefinition(transformer);
 				if (transformerDefinition == null)
-					return new HttpResponseMessage(HttpStatusCode.NotFound);
+					return GetEmptyMessage(HttpStatusCode.NotFound);
 
 				return GetMessageWithObject(new
 				{
@@ -75,7 +75,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage TransformersDelete(string id)
 		{
 			Database.DeleteTransfom(id);
-			return new HttpResponseMessage(HttpStatusCode.NoContent);
+			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 	}
 }

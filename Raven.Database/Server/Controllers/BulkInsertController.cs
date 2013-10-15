@@ -28,7 +28,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				// this is a no-op request which is there just to force the client HTTP layer to handle the authentication
 				// only used for legacy clients
-				return new HttpResponseMessage(HttpStatusCode.OK);
+				return GetEmptyMessage(HttpStatusCode.OK);
 			}
 			if ("generate-single-use-auth-token".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
 			{
@@ -45,8 +45,6 @@ namespace Raven.Database.Server.Controllers
 				{
 					Token = token
 				});
-
-				return new HttpResponseMessage(HttpStatusCode.OK);
 			}
 
 			if (HttpContext.Current != null)

@@ -28,7 +28,7 @@ namespace Raven.Database.Server.Controllers.Admin
 				incrementalBackup = false;
 			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
 
-			return new HttpResponseMessage(HttpStatusCode.Created);		
+			return GetEmptyMessage(HttpStatusCode.Created);		
 		}
 
 		protected WindowsBuiltInRole[] AdditionalSupportedRoles
@@ -187,7 +187,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			DatabasesLandlord.LockDatabase(db, () => DatabasesLandlord.SystemDatabase.TransactionalStorage.Compact(configuration));
 
-			return new HttpResponseMessage(HttpStatusCode.OK);
+			return GetEmptyMessage();
 		}
 
 		[HttpGet("admin/indexingStatus")]

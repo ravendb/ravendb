@@ -51,7 +51,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				}
 			});
 
-			return new HttpResponseMessage(HttpStatusCode.OK);
+			return GetEmptyMessage();
 		}
 	}
 }
