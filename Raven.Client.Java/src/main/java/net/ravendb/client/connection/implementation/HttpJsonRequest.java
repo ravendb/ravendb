@@ -693,7 +693,6 @@ public class HttpJsonRequest {
       HttpOperationException webException = null;
       try {
         HttpUriRequest webRequest = createWebRequest(url, method);
-        //TODO CheckForErrorsAndReturnCachedResultIfAnyAsync();
         httpResponse = httpClient.execute(webRequest);
         if (httpResponse.getStatusLine().getStatusCode() >= 300) {
           throw new HttpOperationException("Unable to connect to changes API", null, webRequest, httpResponse);

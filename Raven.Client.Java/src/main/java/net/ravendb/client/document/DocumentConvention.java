@@ -86,7 +86,7 @@ public class DocumentConvention implements Serializable {
 
   private DocumentKeyFinder findFullDocumentKeyFromNonStringIdentifier;
 
-  private DeserializationProblemHandler jsonContractResolver; //TODO: // find all usages in introduce them
+  private DeserializationProblemHandler jsonContractResolver;
 
   private TypeTagNameFinder findTypeTagName;
 

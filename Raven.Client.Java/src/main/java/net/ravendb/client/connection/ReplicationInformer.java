@@ -34,8 +34,6 @@ import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-
-// TODO: finish me - sync with most recent version - failover servers
 public class ReplicationInformer implements AutoCloseable {
 
   private static Log log = LogFactory.getLog(ReplicationInformer.class.getCanonicalName());
@@ -57,6 +55,16 @@ public class ReplicationInformer implements AutoCloseable {
   private final Map<String, FailureCounter> failureCounts = new ConcurrentHashMap<>();
 
   private Thread refreshReplicationInformationTask;
+
+  private String[] failoverUrls;
+
+  public void setFailoverUrls(String[] failoverUrls) {
+    this.failoverUrls = failoverUrls;
+  }
+
+  public String[] getFailoverUrls() {
+    return failoverUrls;
+  }
 
   public ReplicationInformer(DocumentConvention conventions) {
     this.conventions = conventions;
@@ -227,7 +235,6 @@ public class ReplicationInformer implements AutoCloseable {
     if (e instanceof SocketException) {
       return true;
     }
-    //TODO: finish me
     return false;
   }
 

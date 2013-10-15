@@ -6,11 +6,10 @@ import java.util.Set;
 import net.ravendb.abstractions.indexing.IndexDefinition;
 import net.ravendb.client.document.DocumentConvention;
 
-import org.apache.commons.lang.NotImplementedException;
-
-
 /**
  * Allow to create indexes with multiple maps
+ *
+ * Note we don't provide support for addMapForAll - all child classes must be manually listed using addMap.
  */
 public class AbstractMultiMapIndexCreationTask extends AbstractIndexCreationTask {
   private final Set<String> maps = new HashSet<>();
@@ -18,10 +17,6 @@ public class AbstractMultiMapIndexCreationTask extends AbstractIndexCreationTask
 
   protected void addMap(String expression) {
     maps.add(expression);
-  }
-
-  protected void addMapForAll(Class<?> baseClass, String expression) {
-    throw new NotImplementedException();    //TODO: implement me!
   }
 
   @Override

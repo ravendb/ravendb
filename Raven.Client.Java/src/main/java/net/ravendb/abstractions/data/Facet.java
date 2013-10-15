@@ -110,7 +110,7 @@ public class Facet {
       this.ranges.add(parse(expr));
     }
 
-    boolean shouldUseRanges = ranges.size() > 0; //TODO: and type != String.
+    boolean shouldUseRanges = ranges.size() > 0;
     mode = shouldUseRanges ? FacetMode.RANGES : FacetMode.DEFAULT;
     if (name == null) {
       throw new IllegalStateException("Set facet name first!");

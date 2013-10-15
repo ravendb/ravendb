@@ -447,7 +447,23 @@ public class DocumentStore extends DocumentStoreBase {
       key = MultiDatabase.getRootDatabaseUrl(url) + "/databases/" + dbName;
     }
     replicationInformers.putIfAbsent(key, conventions.getReplicationInformerFactory().create(key));
-    return replicationInformers.get(key);
+    ReplicationInformer informer = replicationInformers.get(key);
+
+    if (failoverServers == null) {
+      return informer;
+    }
+
+    if (dbName.equals(getDefaultDatabase())) {
+      if (failoverServers.isSetForDefaultDatabase() && informer.getFailoverUrls() == null) {
+        informer.setFailoverUrls(failoverServers.getForDefaultDatabase());
+      }
+    } else {
+      if (failoverServers.isSetForDatabase(dbName) && informer.getFailoverUrls() == null) {
+        informer.setFailoverUrls(failoverServers.getForDatabase(dbName));
+      }
+    }
+
+    return informer;
   }
 
   /**

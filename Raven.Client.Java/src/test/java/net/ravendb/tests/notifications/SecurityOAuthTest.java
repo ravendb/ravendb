@@ -55,6 +55,6 @@ public class SecurityOAuthTest extends RemoteClientTest {
       assertEquals(documentChangeNotification.getType(), DocumentChangeTypes.PUT);
 
     }
-//FIXME: other tests
+//FIXME: other tests - wait for fix in .net
   }
 }
