@@ -258,10 +258,11 @@ public abstract class RavenDBAwareTests {
 
   protected static String getCreateServerDocumentWithApiKey(int port) {
     RavenJObject doc = new RavenJObject();
-    doc.add("Port", new RavenJValue(port));
-    doc.add("RunInMemory", new RavenJValue(RUN_IN_MEMORY));
-    doc.add("ApiKeyName", new RavenJValue("java"));
-    doc.add("ApiKeySecret", new RavenJValue("6B4G51NrO0P"));
+    doc.add("Port", port);
+    doc.add("RunInMemory", RUN_IN_MEMORY);
+    doc.add("ApiKeyName", "java");
+    doc.add("ApiKeySecret", "6B4G51NrO0P");
+    doc.add("UseCommercialLicense", true);
     return doc.toString();
   }
 

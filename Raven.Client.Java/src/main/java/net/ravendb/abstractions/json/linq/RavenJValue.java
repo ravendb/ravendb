@@ -293,10 +293,10 @@ public class RavenJValue extends RavenJToken {
     if (getType() == JTokenType.NULL && (node == null || node.getType() == JTokenType.NULL)) {
       return true;
     }
-    RavenJValue other = (RavenJValue) node;
-    if (other == null) {
+    if (!(node instanceof RavenJValue)) {
       return false;
     }
+    RavenJValue other = (RavenJValue) node;
     if (this == other) {
       return true;
     }
