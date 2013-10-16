@@ -268,6 +268,7 @@
     <Compile Include="Server\Controllers\LogsController.cs" />
     <Compile Include="Server\Controllers\MoreLikeThisController.cs" />
     <Compile Include="Server\Controllers\MultiGetController.cs" />
+    <Compile Include="Server\Controllers\OAuthController.cs" />
     <Compile Include="Server\Controllers\OperationsController.cs" />
     <Compile Include="Server\Controllers\PluginController.cs" />
     <Compile Include="Server\Controllers\QueriesController.cs" />

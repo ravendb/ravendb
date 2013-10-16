@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
 using System.Security.Principal;
+using Amazon.S3.Model;
 using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -11,6 +14,7 @@ using Raven.Database.Server.Security.OAuth;
 using Raven.Database.Server.Security.Windows;
 using System.Linq;
 using Raven.Database.Extensions;
+using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Server.Security
 {
@@ -93,6 +97,39 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.Authorize(context, IgnoreDb.Urls.Contains(requestUrl));
 		}
 
+		public bool TryAuthorize(RavenApiController controller, out HttpResponseMessage msg, HttpRequestMessage request, DatabasesLandlord landlord)
+		{
+			var requestUrl = controller.GetRequestUrl(request, landlord.SystemConfiguration);
+			if (NeverSecret.Urls.Contains(requestUrl))
+			{
+				msg = controller.GetEmptyMessage();
+				return true;
+			}
+
+			//CORS pre-flight (ignore creds if using cors).
+			if (!String.IsNullOrEmpty(Settings.AccessControlAllowOrigin) && controller.Request.Method.Method == "OPTIONS")
+			{
+				msg = controller.GetEmptyMessage();
+				return true;
+			}
+
+			var oneTimeToken = controller.GetHeader("Single-Use-Auth-Token", request);
+			if (string.IsNullOrEmpty(oneTimeToken) == false)
+			{
+				return TryAuthorizeUsingleUseAuthToken(controller, oneTimeToken, out msg);
+			}
+
+			var authHeader = controller.GetHeader("Authorization", request);
+			var hasApiKey = "True".Equals(controller.GetHeader("Has-Api-Key", request), StringComparison.CurrentCultureIgnoreCase);
+			var hasOAuthTokenInCookie = controller.HasCookie("OAuth-Token", request);
+			if (hasApiKey || hasOAuthTokenInCookie ||
+				string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
+			{
+				return oAuthRequestAuthorizer.TryAuthorize(controller, hasApiKey, IgnoreDb.Urls.Contains(requestUrl), out msg, request, landlord);
+			}
+			return windowsRequestAuthorizer.TryAuthorize(controller, IgnoreDb.Urls.Contains(requestUrl), out msg, request, landlord);
+		}
+
 		private bool AuthorizeUsingleUseAuthToken(IHttpContext context, string token)
 		{
 			OneTimeToken value;
@@ -133,6 +170,49 @@ namespace Raven.Database.Server.Security
 			return true;
 		}
 
+		private bool TryAuthorizeUsingleUseAuthToken(RavenApiController controller, string token, out HttpResponseMessage msg)
+		{
+			OneTimeToken value;
+			if (singleUseAuthTokens.TryRemove(token, out value) == false)
+			{
+				msg = controller.GetMessageWithObject(
+					new
+					{
+						Error = "Unknown single use token, maybe it was already used?"
+					}, HttpStatusCode.Forbidden);
+				return false;
+			}
+
+			if (string.Equals(value.DatabaseName, TenantId, StringComparison.InvariantCultureIgnoreCase) == false)
+			{
+				msg = controller.GetMessageWithObject(
+					new
+					{
+						Error = "This single use token cannot be used for this database"
+					}, HttpStatusCode.Forbidden);
+				return false;
+			}
+			if ((SystemTime.UtcNow - value.GeneratedAt).TotalMinutes > 2.5)
+			{
+				msg = controller.GetMessageWithObject(
+					new
+					{
+						Error = "This single use token has expired"
+					}, HttpStatusCode.Forbidden);
+				return false;
+			}
+
+			if (value.User != null)
+			{
+				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = value.User.Identity.Name;
+			}
+
+			CurrentOperationContext.User.Value = value.User;
+			controller.User = value.User;
+			msg = controller.GetEmptyMessage();
+			return true;
+		}
+
 		public IPrincipal GetUser(IHttpContext context)
 		{
 			var hasApiKey = "True".Equals(context.Request.Headers["Has-Api-Key"], StringComparison.CurrentCultureIgnoreCase);
@@ -154,7 +234,7 @@ namespace Raven.Database.Server.Security
 			if (hasApiKey || hasOAuthTokenInCookie ||
 				string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
-				return oAuthRequestAuthorizer.GetUser(controller, hasApiKey);
+				return oAuthRequestAuthorizer.GetUser(controller, hasApiKey, controller.DatabasesLandlord);
 			}
 			return windowsRequestAuthorizer.GetUser(controller);
 		}

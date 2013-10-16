@@ -17,8 +17,10 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using System.Linq;
 using Raven.Imports.Newtonsoft.Json;
@@ -35,9 +37,19 @@ namespace Raven.Database.Server.Controllers
 			get; private set;
 		}
 
-		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
+		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext,
+			CancellationToken cancellationToken)
 		{
+			var authorizer =
+				(MixedModeRequestAuthorizer) controllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 			var landlord = (DatabasesLandlord) controllerContext.Configuration.Properties[typeof (DatabasesLandlord)];
+
+			HttpResponseMessage authMsg;
+			if (authorizer.TryAuthorize(this, out authMsg, controllerContext.Request, landlord) == false)
+			{
+				return authMsg;
+			}
+
 			var internalHeader = GetHeader("Raven-internal-request", controllerContext.Request);
 			if (internalHeader == null || internalHeader != "true")
 				landlord.IncrementRequestCount();
@@ -52,23 +64,16 @@ namespace Raven.Database.Server.Controllers
 			if (DatabaseName != null && await landlord.GetDatabaseInternal(DatabaseName) == null)
 			{
 				var msg = "Could not find a database named: " + DatabaseName;
-				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
+				return GetMessageWithObject(new {Error = msg}, HttpStatusCode.ServiceUnavailable);
 			}
 
 			var sp = Stopwatch.StartNew();
-			try
-			{
-				var result = await base.ExecuteAsync(controllerContext, cancellationToken);
-				sp.Stop();
-				AddRavenHeader(result, sp, landlord);
 
-				return result;
-			}
-			catch (Exception e)
-			{
-				return GetMessageWithObject(e, HttpStatusCode.InternalServerError);
-			}
-			
+			var result = await base.ExecuteAsync(controllerContext, cancellationToken);
+			sp.Stop();
+			AddRavenHeader(result, sp, landlord);
+
+			return result;
 		}
 
 		private void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp, DatabasesLandlord landlord)
@@ -230,7 +235,7 @@ namespace Raven.Database.Server.Controllers
 			return GetQueryStringValue(Request, key);
 		}
 
-		protected static string GetQueryStringValue(HttpRequestMessage req, string key)
+		public static string GetQueryStringValue(HttpRequestMessage req, string key)
 		{
 			return req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
 		}
@@ -590,14 +595,18 @@ namespace Raven.Database.Server.Controllers
 			return Request.Headers.GetValues(key).ToList();
 		}
 
-		public bool HasCookie(string key)
+		public bool HasCookie(string key, HttpRequestMessage request = null)
 		{
-			return Request.Headers.GetCookies(key).Count != 0;
+			if (request == null)
+				request = Request;
+			return request.Headers.GetCookies(key).Count != 0;
 		}
 
-		public string GetCookie(string key)
+		public string GetCookie(string key, HttpRequestMessage request = null)
 		{
-			var cookieHeaderValue = Request.Headers.GetCookies(key).FirstOrDefault();
+			if (request == null)
+				request = Request;
+			var cookieHeaderValue = request.Headers.GetCookies(key).FirstOrDefault();
 			if (cookieHeaderValue != null)
 			{
 				var coockie = cookieHeaderValue.Cookies.FirstOrDefault();
@@ -718,10 +727,15 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		public string GetRequestUrl()
+		public string GetRequestUrl(HttpRequestMessage request = null, InMemoryRavenConfiguration configuration = null)
 		{
-			var rawUrl = Request.RequestUri.AbsoluteUri;
-			return UrlExtension.GetRequestUrlFromRawUrl(rawUrl, DatabasesLandlord.SystemConfiguration);
+			if (request == null)
+				request = Request;
+			if (configuration == null)
+				configuration = DatabasesLandlord.SystemConfiguration;
+
+			var rawUrl = request.RequestUri.PathAndQuery;
+			return UrlExtension.GetRequestUrlFromRawUrl(rawUrl, configuration);
 		}
 	}
 }
