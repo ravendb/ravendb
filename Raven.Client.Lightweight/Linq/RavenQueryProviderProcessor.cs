@@ -1478,7 +1478,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			return executeQueryWithProjectionType.Invoke(this, new object[0]);
 		}
 
-#if !SILVERLIGHT
+#if SILVERLIGHT
+		private object ExecuteQuery<TProjection>()
+		{
+			throw new NotImplementedException("Not done yet");
+		}
+#else
 		private object ExecuteQuery<TProjection>()
 		{
 			var renamedFields = FieldsToFetch.Select(field =>
