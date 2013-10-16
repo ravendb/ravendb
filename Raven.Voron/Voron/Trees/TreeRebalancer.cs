@@ -135,8 +135,15 @@ namespace Voron.Trees
 			if (nodeVersion > 0)
 				nodeVersion -= 1;
 
-			var dataPos = to.AddNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, -1, nodeVersion);
-            NativeMethods.memcpy(dataPos, val, fromNode->DataSize);
+	        var dataPos = to.AddNode(to.LastSearchPosition, originalFromKeyStart, fromNode->DataSize, -1, nodeVersion);
+
+	        if (fromNode->Flags == NodeFlags.MultiValuePageRef)
+	        {
+		        var newNode = to.GetNode(to.LastSearchPosition);
+				newNode->Flags = NodeFlags.MultiValuePageRef;
+	        }
+
+	        NativeMethods.memcpy(dataPos, val, fromNode->DataSize);
             --@from.ItemCount;
             ++to.ItemCount;
 
