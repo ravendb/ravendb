@@ -27,7 +27,6 @@ namespace Raven.Server
         private readonly IServerThingsForTests serverThingsForTests;
         private ClusterDiscoveryHost discoveryHost;
         private readonly RavenDBOptions options;
-        private HttpServer httpServer;
 
         public RavenDbServer(InMemoryRavenConfiguration configuration)
         {
@@ -35,7 +34,7 @@ namespace Raven.Server
             //TODO DH: configuration.ServerUrl doesn't bind properly
             server = WebApp.Start("http://+:" + configuration.Port, app => app.UseRavenDB(options));
             ClusterDiscovery(configuration);
-            serverThingsForTests = new ServerThingsForTests(options, httpServer);
+			serverThingsForTests = new ServerThingsForTests(options);
         }
 
         //TODO DH: does this need to be exposed? Seems to be required for low level tests that the client
@@ -101,7 +100,7 @@ namespace Raven.Server
             private readonly RavenDBOptions options;
             private readonly HttpServer httpServer;
 
-            public ServerThingsForTests(RavenDBOptions options, HttpServer httpServer)
+            public ServerThingsForTests(RavenDBOptions options)
             {
                 this.options = options;
                 this.httpServer = httpServer;
@@ -116,8 +115,7 @@ namespace Raven.Server
             {
                 get
                 {
-                    return httpServer.NumberOfRequests;
-                    //return options.Landlord.NumberOfRequests;
+                    return options.Landlord.NumberOfRequests;
                 }
             }
 
@@ -128,8 +126,7 @@ namespace Raven.Server
 
             public void ResetNumberOfRequests()
             {
-                httpServer.ResetNumberOfRequests();
-                //options.Landlord.ResetNumberOfRequests();
+                options.Landlord.ResetNumberOfRequests();
             }
 
             public Task<DocumentDatabase> GetDatabaseInternal(string databaseName)
