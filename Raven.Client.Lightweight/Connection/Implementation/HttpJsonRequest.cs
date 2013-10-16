@@ -12,13 +12,9 @@ using System.Collections.Specialized;
 #endif
 using System.Diagnostics;
 using System.IO;
-#if !SILVERLIGHT
-using System.IO.Compression;
-#endif
 #if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
-using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -28,7 +24,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Connection;
 using Raven.Client.Connection.Profiling;
@@ -45,9 +40,7 @@ namespace Raven.Client.Connection
 		internal readonly string Url;
 		internal readonly string Method;
 
-		internal volatile HttpClient httpClient;
-		internal volatile HttpWebRequest webRequest;
-
+		private volatile HttpClient httpClient;
         private readonly NameValueCollection headers = new NameValueCollection();
 
 		// temporary create a strong reference to the cached data for this request
@@ -56,8 +49,8 @@ namespace Raven.Client.Connection
 		private readonly HttpJsonRequestFactory factory;
 		private readonly IHoldProfilingInformation owner;
 		private readonly DocumentConvention conventions;
-		private string postedData;
-		private Stopwatch sp = Stopwatch.StartNew();
+		private string postedData = null;
+		private readonly Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
 		private Stream postedStream;
 		private bool writeCalled;
@@ -68,6 +61,7 @@ namespace Raven.Client.Connection
 		private string operationUrl;
 
 		public Action<string, string, string> HandleReplicationStatusChanges = delegate { };
+		private readonly WebRequestHandler handler;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -86,43 +80,37 @@ namespace Raven.Client.Connection
 			owner = requestParams.Owner;
 			conventions = requestParams.Convention;
 
-			var handler = new WebRequestHandler
+			handler = new WebRequestHandler
 			{
 				UseDefaultCredentials = true,
 				Credentials = requestParams.Credentials,
 			};
 			httpClient = new HttpClient(handler);
 
-			webRequest = (HttpWebRequest)WebRequest.Create(requestParams.Url);
-			webRequest.UseDefaultCredentials = true;
-			webRequest.Credentials = requestParams.Credentials;
-			webRequest.Method = requestParams.Method;
-
 			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
 			{
 				if (requestParams.Method == "POST" || requestParams.Method == "PUT" ||
 				    requestParams.Method == "PATCH" || requestParams.Method == "EVAL")
 				{
-                    webRequest.Headers["Content-Encoding"] = "gzip";
                     httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
 				}
 
-                webRequest.Headers["Accept-Encoding"] = "gzip";
                 httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Encoding", "gzip");
 			}
 
-			webRequest.ContentType = "application/json; charset=utf-8";
 			httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "utf-8" });
 			headers.Add("Raven-Client-Version", ClientVersion);
+		}
 
-			WriteMetadata(requestParams.Metadata);
-			requestParams.UpdateHeaders(webRequest);
+		public HttpRequestHeaders DefaultRequestHeaders
+		{
+			get { return httpClient.DefaultRequestHeaders; }
 		}
 
 		public void DisableAuthentication()
 		{
-			webRequest.Credentials = null;
-			webRequest.UseDefaultCredentials = false;
+			handler.Credentials = null;
+			handler.UseDefaultCredentials = false;
 			disabledAuthRetries = true;
 		}
 
@@ -142,11 +130,11 @@ namespace Raven.Client.Connection
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
-					Method = webRequest.Method,
+					Method = Method,
 					HttpResult = (int)ResponseStatusCode,
 					Status = RequestStatus.AggressivelyCached,
 					Result = result.ToString(),
-					Url = webRequest.RequestUri.PathAndQuery,
+					Url = Url,
 					PostedData = postedData
 				});
 				return result;
@@ -199,7 +187,7 @@ namespace Raven.Client.Connection
 					await new CompletedTask(webException).Task; // Throws, preserving original stack
 				}
 
-				if (await HandleUnauthorizedResponseAsync(Response) == false)
+				if (!HandleUnauthorizedResponse(Response))
 					await new CompletedTask(webException).Task; // Throws, preserving original stack
 			}
 		}
@@ -238,11 +226,11 @@ namespace Raven.Client.Connection
 					factory.InvokeLogRequest(owner, () => new RequestResultArgs
 					{
 						DurationMilliseconds = CalculateDuration(),
-						Method = webRequest.Method,
+						Method = Method,
 						HttpResult = (int)Response.StatusCode,
 						Status = RequestStatus.ErrorOnServer,
 						Result = Response.StatusCode.ToString(),
-						Url = webRequest.RequestUri.PathAndQuery,
+						Url = Url,
 						PostedData = postedData
 					});
 
@@ -263,11 +251,11 @@ namespace Raven.Client.Connection
 					factory.InvokeLogRequest(owner, () => new RequestResultArgs
 					{
 						DurationMilliseconds = CalculateDuration(),
-						Method = webRequest.Method,
+						Method = Method,
 						HttpResult = (int)Response.StatusCode,
 						Status = RequestStatus.Cached,
 						Result = result.ToString(),
-						Url = webRequest.RequestUri.PathAndQuery,
+						Url = Url,
 						PostedData = postedData
 					});
 
@@ -282,11 +270,11 @@ namespace Raven.Client.Connection
 					factory.InvokeLogRequest(owner, () => new RequestResultArgs
 					{
 						DurationMilliseconds = CalculateDuration(),
-						Method = webRequest.Method,
+						Method = Method,
 						HttpResult = (int)Response.StatusCode,
 						Status = RequestStatus.Cached,
 						Result = readToEnd,
-						Url = webRequest.RequestUri.PathAndQuery,
+						Url = Url,
 						PostedData = postedData
 					});
 
@@ -339,8 +327,6 @@ namespace Raven.Client.Connection
 
 		public async Task<byte[]> ReadResponseBytesAsync()
 		{
-			if (writeCalled == false)
-				webRequest.ContentLength = 0;
 			var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
 			CopyHeadersToHttpRequestMessage(httpRequestMessage);
 			Response = await httpClient.SendAsync(httpRequestMessage);
@@ -365,21 +351,7 @@ namespace Raven.Client.Connection
 		    return ReadResponseJsonAsync().Result;
 		}
 
-	    private void CopyHeadersToWebRequest()
-	    {
-	        for (int i = 0; i < headers.Count; i++)
-	        {
-	            var key = headers.GetKey(i);
-	            var values = headers.GetValues(i);
-	            Debug.Assert(values != null);
-	            foreach (var value in values)
-	            {
-	                webRequest.Headers.Set(key, value);
-	            }
-	        }
-	    }
-
-	    private async Task<bool> HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse)
+	    private bool HandleUnauthorizedResponse(HttpResponseMessage unauthorizedResponse)
 		{
 			if (conventions.HandleUnauthorizedResponseAsync == null)
 				return false;
@@ -388,7 +360,6 @@ namespace Raven.Client.Connection
 			if (unauthorizedResponseAsync == null)
 				return false;
 
-			RecreateWebRequest(await unauthorizedResponseAsync);
 			return true;
 		}
 
@@ -404,34 +375,6 @@ namespace Raven.Client.Connection
 			await forbiddenResponseAsync;
 		}
 
-		private void RecreateWebRequest(Action<HttpWebRequest> action)
-		{
-			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
-
-			var newWebRequest = (HttpWebRequest)WebRequest.Create(Url);
-			newWebRequest.Method = webRequest.Method;
-			HttpRequestHelper.CopyHeaders(webRequest, newWebRequest);
-			newWebRequest.UseDefaultCredentials = webRequest.UseDefaultCredentials;
-			newWebRequest.Credentials = webRequest.Credentials;
-			action(newWebRequest);
-
-			if (postedData != null)
-			{
-				HttpRequestHelper.WriteDataToRequest(newWebRequest, postedData, factory.DisableRequestCompression);
-			}
-			if (postedStream != null)
-			{
-				postedStream.Position = 0;
-				using (var stream = newWebRequest.GetRequestStream())
-				using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
-				{
-				    postedStream.CopyTo(factory.DisableRequestCompression == false ? commpressedData : stream);
-				    commpressedData.Flush();
-					stream.Flush();
-				}
-			}
-			webRequest = newWebRequest;
-		}
 
 		private async Task<RavenJToken> ReadJsonInternalAsync()
 		{
@@ -449,11 +392,11 @@ namespace Raven.Client.Connection
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
-					Method = webRequest.Method,
+					Method = Method,
 					HttpResult = (int) ResponseStatusCode,
 					Status = RequestStatus.SentToServer,
 					Result = (data ?? "").ToString(),
-					Url = webRequest.RequestUri.PathAndQuery,
+					Url = Url,
 					PostedData = postedData
 				});
 
@@ -528,91 +471,10 @@ namespace Raven.Client.Connection
 
         public TimeSpan Timeout
 		{
-			set { webRequest.Timeout = (int) value.TotalMilliseconds; }
+			set { handler.ReadWriteTimeout = (int) value.TotalMilliseconds; }
 		}
 
 		public HttpResponseMessage Response { get; private set; }
-
-		private void WriteMetadata(RavenJObject metadata)
-		{
-			if (metadata == null || metadata.Count == 0)
-			{
-				return;
-			}
-
-			foreach (var prop in metadata)
-			{
-				if (prop.Value == null)
-					continue;
-
-				if (prop.Value.Type == JTokenType.Object ||
-					prop.Value.Type == JTokenType.Array)
-					continue;
-
-				var headerName = prop.Key;
-				string value = prop.Value.Value<object>().ToString();
-				if (headerName == "ETag")
-				{
-					headerName = "If-None-Match";
-					// If-None-Match headers MUST be surrounded in quotes
-					if (!value.StartsWith("\""))
-					{
-						value = "\"" + value;
-					}
-					if (!value.EndsWith("\""))
-					{
-						value = value + "\"";
-					}
-				}
-
-				bool isRestricted;
-				try
-				{
-					isRestricted = WebHeaderCollection.IsRestricted(headerName);
-				}
-				catch (Exception e)
-				{
-					throw new InvalidOperationException("Could not figure out how to treat header: " + headerName, e);
-				}
-				// Restricted headers require their own special treatment, otherwise an exception will
-				// be thrown.
-				// See http://msdn.microsoft.com/en-us/library/78h415ay.aspx
-				if (isRestricted)
-				{
-					switch (headerName)
-					{
-						/*case "Date":
-						case "Referer":
-						case "Content-Length":
-						case "Expect":
-						case "Range":
-						case "Transfer-Encoding":
-						case "User-Agent":
-						case "Proxy-Connection":
-						case "Host": // Host property is not supported by 3.5
-							break;*/
-						case "Content-Type":
-							webRequest.ContentType = value;
-							break;
-						case "If-Modified-Since":
-							DateTime tmp;
-							DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out tmp);
-							webRequest.IfModifiedSince = tmp;
-							break;
-						case "Accept":
-							webRequest.Accept = value;
-							break;
-						case "Connection":
-							webRequest.Connection = value;
-							break;
-					}
-				}
-				else
-				{
-					headers[headerName] = value;
-				}
-			}
-		}
 
 		/// <summary>
 		/// Writes the specified data.
@@ -620,10 +482,10 @@ namespace Raven.Client.Connection
 		/// <param name="data">The data.</param>
 		public void Write(string data)
 		{
-			writeCalled = true;
+			throw new NotSupportedException("TO BE REMOVED");
+			/*writeCalled = true;
 			postedData = data;
-            CopyHeadersToWebRequest();
-			HttpRequestHelper.WriteDataToRequest(webRequest, data, factory.DisableRequestCompression);
+			HttpRequestHelper.WriteDataToRequest(webRequest, data, factory.DisableRequestCompression);*/
 		}
 
 		public async Task<IObservable<string>> ServerPullAsync()
@@ -663,7 +525,7 @@ namespace Raven.Client.Connection
 					await new CompletedTask(webException).Task; // Throws, preserving original stack
 				}
 
-				if (await HandleUnauthorizedResponseAsync(webException.Response) == false)
+				if (!HandleUnauthorizedResponse(webException.Response))
 					await new CompletedTask(webException).Task; // Throws, preserving original stack
 			}
 		}
@@ -711,14 +573,16 @@ namespace Raven.Client.Connection
 
 		public Task<Stream> GetRawRequestStream()
 		{
-            CopyHeadersToWebRequest();
+			throw new NotSupportedException();
+            /*CopyHeadersToWebRequest();
 			webRequest.SendChunked = true;
-			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
+			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);*/
 		}
 
-		public async Task<WebResponse> RawExecuteRequestAsync()
+		public Task<WebResponse> RawExecuteRequestAsync()
 		{
-			try
+			throw new NotSupportedException();
+			/*try
 			{
                 CopyHeadersToWebRequest();
 				return await webRequest.GetResponseAsync();
@@ -743,13 +607,14 @@ namespace Raven.Client.Connection
 					}
 				}
 				throw new InvalidOperationException(sb.ToString(), we);
-			}
+			}*/
 		}
 
 		public void PrepareForLongRequest()
 		{
 			Timeout = TimeSpan.FromHours(6);
-			webRequest.AllowWriteStreamBuffering = false;
+			//TODO DH no comparable property on httpclient
+			//webRequest.AllowWriteStreamBuffering = false;
 		}
 
 	    public void AddHeader(string key, string val)
