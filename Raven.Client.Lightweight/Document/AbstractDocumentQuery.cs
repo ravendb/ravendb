@@ -1145,7 +1145,7 @@ If you really want to do in memory filtering on the data returned from the query
             foreach (var item in items)
             {
                 var enumerable = item as IEnumerable;
-                if (enumerable != null)
+                if (enumerable != null && item is string == false)
                 {
                     foreach (var nested in UnpackEnumerable(enumerable))
                     {
