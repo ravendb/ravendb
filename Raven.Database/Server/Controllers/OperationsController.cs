@@ -23,7 +23,7 @@ namespace Raven.Database.Server.Controllers
 			var status = Database.GetTaskState(id);
 			if (status == null)
 			{
-				return new HttpResponseMessage(HttpStatusCode.NotFound);
+				return GetEmptyMessage(HttpStatusCode.NotFound);
 			}
 
 			return GetMessageWithObject(status);
