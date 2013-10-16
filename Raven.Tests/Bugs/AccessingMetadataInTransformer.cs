@@ -32,6 +32,9 @@ namespace Raven.Tests.Bugs
 					               .Customize(c => c.WaitForNonStaleResults())
 					               .TransformWith<Transformer, Transformed>()
 					               .ToList();
+
+					var transformed = result.First();
+					Assert.True(DateTime.UtcNow - transformed.DateUpdated < TimeSpan.FromSeconds(5), transformed.DateUpdated.ToString("O"));
 				}
 			}
 		}
