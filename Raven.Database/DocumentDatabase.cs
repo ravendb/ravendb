@@ -1342,7 +1342,6 @@ namespace Raven.Database
 
             try
             {
-
                 indexName = indexName != null ? indexName.Trim() : null;
                 var highlightings = new Dictionary<string, Dictionary<string, string[]>>();
                 var scoreExplanations = new Dictionary<string, string>();
@@ -1366,6 +1365,7 @@ namespace Raven.Database
                     query.FieldsToFetch = new[] { Constants.AllFields };
                 }
 
+
                 var duration = Stopwatch.StartNew();
                 var idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 TransactionalStorage.Batch(
@@ -1375,6 +1375,12 @@ namespace Raven.Database
                         var index = IndexDefinitionStorage.GetIndexDefinition(indexName);
                         if (viewGenerator == null)
                             throw new IndexDoesNotExistsException("Could not find index named: " + indexName);
+
+                         if (query.CutoffEtag == null && viewGenerator.ForEntityNames.Count > 0)
+                         {
+                           query.CutoffEtag =
+                             viewGenerator.ForEntityNames.Select(GetLastEtagForCollection).Max();
+                         }
 
                         resultEtag = GetIndexEtag(index.Name, null, query.ResultsTransformer);
 
