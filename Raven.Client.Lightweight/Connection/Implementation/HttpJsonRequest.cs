@@ -550,9 +550,20 @@ namespace Raven.Client.Connection
 					continue;
 
 				var headerName = prop.Key;
+				string value = prop.Value.Value<object>().ToString();
 				if (headerName == "ETag")
+				{
 					headerName = "If-None-Match";
-				var value = prop.Value.Value<object>().ToString();
+					// If-None-Match headers MUST be surrounded in quotes
+					if (!value.StartsWith("\""))
+					{
+						value = "\"" + value;
+					}
+					if (!value.EndsWith("\""))
+					{
+						value = value + "\"";
+					}
+				}
 
 				bool isRestricted;
 				try
@@ -673,12 +684,9 @@ namespace Raven.Client.Connection
 		{
 			postedStream = streamToWrite;
 
-			using (postedStream)
-			using (var dataStream = new GZipStream(postedStream, CompressionMode.Compress))
-			{
 				Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
 				{
-					Content = new StreamContent(dataStream)
+				Content = new CompressedStreamContent(postedStream)
 				});
 
 				if (Response.IsSuccessStatusCode == false)
@@ -686,7 +694,6 @@ namespace Raven.Client.Connection
 
 				SetResponseHeaders(Response);
 			}
-		}
 
 		public async Task WriteAsync(string data)
 		{

@@ -42,7 +42,7 @@ namespace Raven.Abstractions.Connection
             Response = response;
         }
 
-        public ErrorResponseException(HttpResponseMessage response)
+		public ErrorResponseException(HttpResponseMessage response)
         {
             Response = response;
         }

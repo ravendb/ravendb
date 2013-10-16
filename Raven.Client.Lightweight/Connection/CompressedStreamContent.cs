@@ -34,11 +34,11 @@ namespace Raven.Client.Connection
 
 		protected override bool TryComputeLength(out long length)
 		{
-		    if (data.CanSeek)
+		    /*if (data.CanSeek)
 		    {
 		        length = data.Length;
 		        return true;
-		    }
+		    }*/
 
 		    length = -1;
 		    return false;

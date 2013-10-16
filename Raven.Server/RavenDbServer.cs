@@ -17,6 +17,9 @@ using Raven.Server.Discovery;
 
 namespace Raven.Server
 {
+    using System.Net;
+    using Raven.Database.Server;
+
     public class RavenDbServer : IDisposable
     {
         private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
@@ -30,8 +33,8 @@ namespace Raven.Server
             options = new RavenDBOptions(configuration);
             //TODO DH: configuration.ServerUrl doesn't bind properly
             server = WebApp.Start("http://+:" + configuration.Port, app => app.UseRavenDB(options));
-            serverThingsForTests = new ServerThingsForTests(options);
             ClusterDiscovery(configuration);
+			serverThingsForTests = new ServerThingsForTests(options);
         }
 
         //TODO DH: does this need to be exposed? Seems to be required for low level tests that the client
@@ -95,10 +98,12 @@ namespace Raven.Server
         private class ServerThingsForTests : IServerThingsForTests
         {
             private readonly RavenDBOptions options;
+            private readonly HttpServer httpServer;
 
             public ServerThingsForTests(RavenDBOptions options)
             {
                 this.options = options;
+                this.httpServer = httpServer;
             }
 
             public bool HasPendingRequests
@@ -108,7 +113,10 @@ namespace Raven.Server
 
             public int NumberOfRequests
             {
-                get { return options.Landlord.NumberOfRequests; }
+                get
+                {
+                    return options.Landlord.NumberOfRequests;
+                }
             }
 
             public DatabasesLandlord Landlord
