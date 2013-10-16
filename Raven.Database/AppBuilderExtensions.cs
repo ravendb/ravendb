@@ -103,7 +103,8 @@ namespace Owin
                         response.Content is StreamsController.StreamQueryContent ||
                         response.Content is StreamContent ||
                         response.Content is PushStreamContent ||
-                        response.Content is JsonContent) == false;
+                        response.Content is JsonContent ||
+						response.Content is MultiGetController.MultiGetContent) == false;
             }
         }
     }
