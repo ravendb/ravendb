@@ -220,6 +220,7 @@
     <Compile Include="Bugs\CanUseReduceResultInOutput.cs" />
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
+    <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
     <Compile Include="Bugs\WhenQueringAsync.cs" />
     <Compile Include="Bugs\PatchShouldNotConvertFloatToInteger.cs" />
     <Compile Include="Bugs\MultiGetDoesNotUrlDecodeTwice.cs" />
