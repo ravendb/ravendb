@@ -33,11 +33,8 @@ namespace Raven.Server
         {
             options = new RavenDBOptions(configuration);
             //TODO DH: configuration.ServerUrl doesn't bind properly
-            /*server = WebApp.Start("http://+:" + configuration.Port, app => app.UseRavenDB(options)); */
+            server = WebApp.Start("http://+:" + configuration.Port, app => app.UseRavenDB(options));
             ClusterDiscovery(configuration);
-            httpServer = new HttpServer(configuration, options.SystemDatabase);
-            httpServer.StartListening();
-            server = httpServer;
             serverThingsForTests = new ServerThingsForTests(options, httpServer);
         }
 
