@@ -37,6 +37,8 @@ namespace Raven.Database.Server.Security
 			this.database = database;
 			this.settings = database.Configuration;
 			this.server = theServer;
+
+			Initialize();
 		}
 
 		protected virtual void Initialize()

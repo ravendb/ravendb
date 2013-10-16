@@ -12,6 +12,7 @@ using Raven.Database.Server.Abstractions;
 using System.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Server.Controllers;
+using Raven.Database.Server.Tenancy;
 
 namespace Raven.Database.Server.Security.Windows
 {
@@ -119,6 +120,83 @@ namespace Raven.Database.Server.Security.Windows
 			}
 		}
 
+		public bool TryAuthorize(RavenApiController controller, bool ignoreDb, out HttpResponseMessage msg, HttpRequestMessage httpRequest, DatabasesLandlord landlord)
+		{
+			Func<HttpResponseMessage> onRejectingRequest;
+			var databaseName = controller.DatabaseName ?? Constants.SystemDatabase;
+			var userCreated = TryCreateUser(controller, databaseName, out onRejectingRequest, httpRequest, landlord);
+			if (server.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None && userCreated == false)
+			{
+				msg = onRejectingRequest();
+				return false;
+			}
+
+			PrincipalWithDatabaseAccess user = null;
+			if (userCreated)
+			{
+				user = (PrincipalWithDatabaseAccess)controller.User;
+				CurrentOperationContext.Headers.Value[Constants.RavenAuthenticatedUser] = controller.User.Identity.Name;
+				CurrentOperationContext.User.Value = controller.User;
+
+				// admins always go through
+				if (user.Principal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode))
+				{
+					msg = controller.GetEmptyMessage();
+					return true;
+				}
+
+				// backup operators can go through
+				if (user.Principal.IsBackupOperator(server.SystemConfiguration.AnonymousUserAccessMode))
+				{
+					msg = controller.GetEmptyMessage();
+					return true;
+				}
+			}
+
+			bool isGetRequest = IsGetRequest(httpRequest.Method.Method, httpRequest.RequestUri.AbsolutePath);
+			switch (server.SystemConfiguration.AnonymousUserAccessMode)
+			{
+				case AnonymousUserAccessMode.Admin:
+				case AnonymousUserAccessMode.All:
+					msg = controller.GetEmptyMessage();
+					return true; // if we have, doesn't matter if we have / don't have the user
+				case AnonymousUserAccessMode.Get:
+					if (isGetRequest)
+					{
+						msg = controller.GetEmptyMessage();
+						return true;
+					}
+					goto case AnonymousUserAccessMode.None;
+				case AnonymousUserAccessMode.None:
+					if (userCreated)
+					{
+						if (user.AdminDatabases.Contains(databaseName) ||
+						    user.AdminDatabases.Contains("*") || ignoreDb)
+						{
+							msg = controller.GetEmptyMessage();
+							return true;
+						}
+						if (user.ReadWriteDatabases.Contains(databaseName) ||
+						    user.ReadWriteDatabases.Contains("*"))
+						{
+							msg = controller.GetEmptyMessage();
+							return true;
+						}
+						if (isGetRequest && (user.ReadOnlyDatabases.Contains(databaseName) ||
+						                     user.ReadOnlyDatabases.Contains("*")))
+						{
+							msg = controller.GetEmptyMessage();
+							return true;
+						}
+					}
+
+					msg = onRejectingRequest();
+					return false;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+
 		private bool TryCreateUser(IHttpContext ctx, string databaseName, out Action onRejectingRequest)
 		{
 			var invalidUser = (ctx.User == null || ctx.User.Identity.IsAuthenticated == false);
@@ -163,7 +241,7 @@ namespace Raven.Database.Server.Security.Windows
 			return true;
 		}
 
-		private bool TryCreateUser(RavenApiController controller, string databaseName, out Action onRejectingRequest)
+		private bool TryCreateUser(RavenApiController controller, string databaseName, out Func<HttpResponseMessage> onRejectingRequest, HttpRequestMessage request, DatabasesLandlord landlord)
 		{
 			var invalidUser = (controller.User == null || controller.User.Identity.IsAuthenticated == false);
 			if (invalidUser)
@@ -173,15 +251,15 @@ namespace Raven.Database.Server.Security.Windows
 					var msg = ProvideDebugAuthInfo(controller, new
 					{
 						Reason = "User is null or not authenticated"
-					});
+					}, request);
 					controller.AddHeader("Raven-Required-Auth", "Windows", msg);
-					if (string.IsNullOrEmpty(controller.DatabasesLandlord.SystemConfiguration.OAuthTokenServer) == false)
+					if (string.IsNullOrEmpty(landlord.SystemConfiguration.OAuthTokenServer) == false)
 					{
-						controller.AddHeader("OAuth-Source", controller.DatabasesLandlord.SystemConfiguration.OAuthTokenServer, msg);
+						controller.AddHeader("OAuth-Source", landlord.SystemConfiguration.OAuthTokenServer, msg);
 					}
 					msg.StatusCode = HttpStatusCode.Unauthorized;
 
-					throw new HttpResponseException(msg);
+					return msg;
 				};
 				return false;
 			}
@@ -202,7 +280,7 @@ namespace Raven.Database.Server.Security.Windows
 					user.ReadOnlyDatabases,
 					user.ReadWriteDatabases,
 					DatabaseName = databaseName
-				});
+				}, request);
 
 				msg.StatusCode = HttpStatusCode.Forbidden;
 
@@ -224,9 +302,9 @@ namespace Raven.Database.Server.Security.Windows
 			}
 		}
 
-		private static HttpResponseMessage ProvideDebugAuthInfo(RavenApiController controller, object msg)
+		private static HttpResponseMessage ProvideDebugAuthInfo(RavenApiController controller, object msg, HttpRequestMessage request)
 		{
-			string debugAuth = controller.GetQueryStringValue("debug-auth");
+			string debugAuth = RavenApiController.GetQueryStringValue(request, "debug-auth");
 			if (debugAuth == null)
 				return controller.GetEmptyMessage();
 
@@ -314,9 +392,9 @@ namespace Raven.Database.Server.Security.Windows
 
 		public IPrincipal GetUser(RavenApiController controller)
 		{
-			Action onRejectingRequest;
+			Func<HttpResponseMessage> onRejectingRequest;
 			var databaseName = controller.DatabaseName ?? Constants.SystemDatabase;
-			var userCreated = TryCreateUser(controller, databaseName, out onRejectingRequest);
+			var userCreated = TryCreateUser(controller, databaseName, out onRejectingRequest, controller.Request, controller.DatabasesLandlord);
 			if (userCreated == false)
 				onRejectingRequest();
 			return userCreated ? controller.User : null;

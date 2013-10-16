@@ -60,7 +60,7 @@ namespace Raven.Database.Server.Controllers
 
 			if (MatchEtag(lastDocEtag))
 			{
-				return new HttpResponseMessage(HttpStatusCode.NotModified);
+				return GetEmptyMessage(HttpStatusCode.NotModified);
 			}
 
 			var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, GetStart(),

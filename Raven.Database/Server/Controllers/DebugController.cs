@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using Raven.Abstractions.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
+using Raven.Database.Server.Abstractions;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 
@@ -95,6 +99,95 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage Queries()
 		{
 			return GetMessageWithObject(Database.WorkContext.CurrentlyRunningQueries);
+		}
+
+		[HttpGet("user-info")]
+		[HttpPost("user-info")]
+		[HttpGet("databases/{databaseName}/user-info")]
+		[HttpPost("databases/{databaseName}/user-info")]
+		public HttpResponseMessage UserInfo()
+		{
+			var principal = User;
+			if (principal == null || principal.Identity == null || principal.Identity.IsAuthenticated == false)
+			{
+				var anonymous = new UserInfo
+				{
+					Remark = "Using anonymous user",
+					IsAdminGlobal = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.Admin
+				};
+				return GetMessageWithObject(anonymous);
+			}
+
+			var windowsPrincipal = principal as WindowsPrincipal;
+			if (windowsPrincipal != null)
+			{
+				var windowsUser = new UserInfo
+				{
+					Remark = "Using windows auth",
+					User = windowsPrincipal.Identity.Name,
+					IsAdminGlobal =
+						windowsPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode)
+				};
+
+				return GetMessageWithObject(windowsUser);
+			}
+
+			var principalWithDatabaseAccess = principal as PrincipalWithDatabaseAccess;
+			if (principalWithDatabaseAccess != null)
+			{
+				var windowsUserWithDatabase = new UserInfo
+				{
+					Remark = "Using windows auth",
+					User = principalWithDatabaseAccess.Identity.Name,
+					IsAdminGlobal =
+						principalWithDatabaseAccess.IsAdministrator(
+							DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+					IsAdminCurrentDb = principalWithDatabaseAccess.IsAdministrator(Database),
+					Databases =
+						principalWithDatabaseAccess.AdminDatabases.Concat(
+							principalWithDatabaseAccess.ReadOnlyDatabases)
+												   .Concat(principalWithDatabaseAccess.ReadWriteDatabases)
+												   .Select(db => new DatabaseInfo
+												   {
+													   Database = db,
+													   IsAdmin = principal.IsAdministrator(db)
+												   }).ToList(),
+					AdminDatabases = principalWithDatabaseAccess.AdminDatabases,
+					ReadOnlyDatabases = principalWithDatabaseAccess.ReadOnlyDatabases,
+					ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
+				};
+
+				return GetMessageWithObject(windowsUserWithDatabase);
+			}
+
+			var oAuthPrincipal = principal as OAuthPrincipal;
+			if (oAuthPrincipal != null)
+			{
+				var oAuth = new UserInfo
+				{
+					Remark = "Using OAuth",
+					User = oAuthPrincipal.Name,
+					IsAdminGlobal = oAuthPrincipal.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode),
+					IsAdminCurrentDb = oAuthPrincipal.IsAdministrator(Database),
+					Databases = oAuthPrincipal.TokenBody.AuthorizedDatabases
+											  .Select(db => new DatabaseInfo
+											  {
+												  Database = db.TenantId,
+												  IsAdmin = principal.IsAdministrator(db.TenantId)
+											  }).ToList(),
+					AccessTokenBody = oAuthPrincipal.TokenBody,
+				};
+
+				return GetMessageWithObject(oAuth);
+			}
+
+			var unknown = new UserInfo
+			{
+				Remark = "Unknown auth",
+				Principal = principal
+			};
+
+			return GetMessageWithObject(unknown);
 		}
 	}
 }

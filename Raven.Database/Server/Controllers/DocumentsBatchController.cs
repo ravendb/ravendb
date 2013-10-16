@@ -79,7 +79,7 @@ namespace Raven.Database.Server.Controllers
 		private HttpResponseMessage OnBulkOperation(Func<string, IndexQuery, bool, RavenJArray> batchOperation, string index)
 		{
 			if (string.IsNullOrEmpty(index))
-				return new HttpResponseMessage(HttpStatusCode.BadRequest);
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
 
 			var allowStale = GetAllowStale();
 			var indexQuery = GetIndexQuery(maxPageSize: int.MaxValue);

@@ -86,7 +86,7 @@ namespace Raven.Database.Server.Controllers
 
 			if (MatchEtag(computedEtag))
 			{
-				return new HttpResponseMessage(HttpStatusCode.NotModified);
+				return GetEmptyMessage(HttpStatusCode.NotModified);
 			}
 
 			var msg = GetMessageWithObject(result);
