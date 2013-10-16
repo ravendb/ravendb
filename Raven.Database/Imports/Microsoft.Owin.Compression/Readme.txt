@@ -1,1 +1,0 @@
-﻿2013-10-06 Microsoft.Owin.Compression has been imported pending official release
