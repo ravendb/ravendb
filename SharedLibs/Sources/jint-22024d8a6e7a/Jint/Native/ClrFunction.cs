@@ -69,7 +69,7 @@ namespace Jint.Native {
         }
 
         public override string ToString() {
-            return String.Format("function {0}() { [native code] }", Delegate.Method.Name);
+            return String.Format("function {0}() {{ [native code] }}", Delegate.Method.Name);
         }
     }
 }
