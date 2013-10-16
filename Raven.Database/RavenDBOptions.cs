@@ -13,10 +13,16 @@ namespace Raven.Database
 
         public RavenDBOptions(InMemoryRavenConfiguration configuration)
         {
-            //TODO should we do HttpEndpointRegistration.RegisterHttpEndpointTarget(); here?
+            //TODO DH: should we do HttpEndpointRegistration.RegisterHttpEndpointTarget(); here?
             systemDatabase = new DocumentDatabase(configuration);
             try
             {
+                //TODO DH: I'd prefer this to not be here, but instead, initialize 
+                //these types in the Owin Startup. The problem it that we currently need
+                //to expose the SystemDatabase and Landlord instances to tests (see
+                //RavenDbServer delegating properties). This feels leaky to me. 
+                //I'm of the opinion that they should be accessible via client only. 
+
                 systemDatabase.SpinBackgroundWorkers();
                 databasesLandlord = new DatabasesLandlord(systemDatabase);
                 mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
