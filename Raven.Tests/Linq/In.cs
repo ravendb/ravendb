@@ -11,7 +11,7 @@ using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;
 
-namespace Raven.Tests.Bugs
+namespace Raven.Tests.Linq
 {
 	public class In : RavenTest
 	{
@@ -45,7 +45,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		public Class1()
+		public In()
 		{
 			store = NewDocumentStore();
 			

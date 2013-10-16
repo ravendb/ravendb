@@ -1140,6 +1140,25 @@ If you really want to do in memory filtering on the data returned from the query
 			queryText.Append("-");
 		}
 
+        private IEnumerable<object> UnpackEnumerable(IEnumerable items)
+        {
+            foreach (var item in items)
+            {
+                var enumerable = item as IEnumerable;
+                if (enumerable != null)
+                {
+                    foreach (var nested in UnpackEnumerable(enumerable))
+                    {
+                        yield return nested;
+                    }
+                }
+                else
+                {
+                    yield return item;
+                }
+            }
+        }
+
 		/// <summary>
 		/// Check that the field has one of the specified value
 		/// </summary>
@@ -1148,7 +1167,7 @@ If you really want to do in memory filtering on the data returned from the query
 			AppendSpaceIfNeeded(queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false);
 			NegateIfNeeded();
 
-			var list = values.ToList();
+            var list = UnpackEnumerable(values).ToList();
 
 			if(list.Count == 0)
 			{
