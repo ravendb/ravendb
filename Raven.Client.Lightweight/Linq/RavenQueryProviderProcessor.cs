@@ -1221,13 +1221,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var fieldType = result.Type;
             var fieldName = result.Path;
             if (result.MaybeProperty != null &&
-                this.queryGenerator.Conventions.FindIdentityProperty(result.MaybeProperty))
+                queryGenerator.Conventions.FindIdentityProperty(result.MaybeProperty))
             {
                 fieldName = Constants.DocumentIdFieldName;
                 fieldType = typeof (string);
             }
 
-			if (this.queryGenerator.Conventions.UsesRangeType(fieldType))
+			if (queryGenerator.Conventions.UsesRangeType(fieldType))
 				fieldName = fieldName + "_Range";
 			luceneQuery.AddOrder(fieldName, descending, fieldType);
 		}
@@ -1457,7 +1457,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			if (customizeQuery != null)
 				customizeQuery((IDocumentQueryCustomization) asyncLuceneQuery);
 
-
 			return asyncLuceneQuery.SelectFields<T>(FieldsToFetch.ToArray());
 		}
 
@@ -1492,13 +1491,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 			var finalQuery = ((IDocumentQuery<T>) luceneQuery).SelectFields<TProjection>(FieldsToFetch.ToArray(), renamedFields);
 
-		    finalQuery.SetResultTransformer(this.resultsTransformer);
-		    finalQuery.SetQueryInputs(this.queryInputs);
+		    finalQuery.SetResultTransformer(resultsTransformer);
+		    finalQuery.SetQueryInputs(queryInputs);
 
 			if (FieldsToRename.Count > 0)
-			{
 				finalQuery.AfterQueryExecuted(RenameResults);
-			}
 			var executeQuery = GetQueryResult(finalQuery);
 
 			var queryResult = finalQuery.QueryResult;
@@ -1509,6 +1506,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 			return executeQuery;
 		}
+#endif
 
 		public void RenameResults(QueryResult queryResult)
 		{
@@ -1552,17 +1550,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				queryResult.Results[index] = safeToModify;
 			}
 		}
-#else
-		private object ExecuteQuery<TProjection>()
-		{
-			throw new NotImplementedException("Not done yet");
-		}
-
-		public void RenameResults(QueryResult queryResult) 
-		{
-			throw new NotImplementedException("Not done yet");
-		}
-#endif
 
 		private object GetQueryResult<TProjection>(IDocumentQuery<TProjection> finalQuery)
 		{
