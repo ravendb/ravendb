@@ -79,6 +79,8 @@ namespace Voron.Trees
 
 		public void MultiDelete(Transaction tx, Slice key, Slice value, ushort? version = null)
 		{
+			tx.Pager.EnsureEnoughSpace(tx, value.Size);
+
 			using (var cursor = tx.NewCursor(this))
 			{
 				var page = FindPageFor(tx, key, cursor);
@@ -127,6 +129,8 @@ namespace Voron.Trees
 				throw new ArgumentException("Cannot add a value to child tree that is over " + tx.Pager.MaxNodeSize + " bytes in size", "value");
 			if (value.Size == 0)
 				throw new ArgumentException("Cannot add empty value to child tree");
+
+			tx.Pager.EnsureEnoughSpace(tx, value.Size);
 
 			using (var cursor = tx.NewCursor(this))
 			{
