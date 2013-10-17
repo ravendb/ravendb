@@ -51,7 +51,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var json = await ReadJsonAsync();
 			var id = Database.Put(null, Etag.Empty, json,
-								  Request.Content.Headers.FilterHeaders(),
+								  InnerRequest.Content.Headers.FilterHeaders(),
 								  GetRequestTransaction());
 
 			return GetMessageWithObject(id);
@@ -141,7 +141,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var docId = id;
 			var json = await ReadJsonAsync();
-			var putResult = Database.Put(docId, GetEtag(), json, Request.Headers.FilterHeaders(), GetRequestTransaction());
+			var putResult = Database.Put(docId, GetEtag(), json, InnerRequest.Headers.FilterHeaders(), GetRequestTransaction());
 			return GetMessageWithObject(putResult, HttpStatusCode.Created);
 		}
 

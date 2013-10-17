@@ -17,7 +17,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
-using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
@@ -37,22 +36,31 @@ namespace Raven.Database.Server.Controllers
 			get; private set;
 		}
 
+		public HttpRequestMessage InnerRequest
+		{
+			get
+			{
+				return Request ?? request;
+			}
+		}
+
+		private HttpRequestMessage request;
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext,
 			CancellationToken cancellationToken)
 		{
+			Initilize(controllerContext);
 			var authorizer =
 				(MixedModeRequestAuthorizer) controllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
-			var landlord = (DatabasesLandlord) controllerContext.Configuration.Properties[typeof (DatabasesLandlord)];
 
 			HttpResponseMessage authMsg;
-			if (authorizer.TryAuthorize(this, out authMsg, controllerContext.Request, landlord) == false)
+			if (authorizer.TryAuthorize(this, out authMsg) == false)
 			{
 				return authMsg;
 			}
 
-			var internalHeader = GetHeader("Raven-internal-request", controllerContext.Request);
+			var internalHeader = GetHeader("Raven-internal-request");
 			if (internalHeader == null || internalHeader != "true")
-				landlord.IncrementRequestCount();
+				DatabasesLandlord.IncrementRequestCount();
 
 			var values = controllerContext.Request.GetRouteData().Values;
 			if (values.ContainsKey("databaseName"))
@@ -61,7 +69,7 @@ namespace Raven.Database.Server.Controllers
 				DatabaseName = null;
 
 
-			if (DatabaseName != null && await landlord.GetDatabaseInternal(DatabaseName) == null)
+			if (DatabaseName != null && await DatabasesLandlord.GetDatabaseInternal(DatabaseName) == null)
 			{
 				var msg = "Could not find a database named: " + DatabaseName;
 				return GetMessageWithObject(new {Error = msg}, HttpStatusCode.ServiceUnavailable);
@@ -71,53 +79,62 @@ namespace Raven.Database.Server.Controllers
 
 			var result = await base.ExecuteAsync(controllerContext, cancellationToken);
 			sp.Stop();
-			AddRavenHeader(result, sp, landlord);
+			AddRavenHeader(result, sp);
 
 			return result;
 		}
 
-		private void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp, DatabasesLandlord landlord)
+		private void Initilize(HttpControllerContext controllerContext)
+		{
+			landlord = (DatabasesLandlord) controllerContext.Configuration.Properties[typeof (DatabasesLandlord)];
+			request = controllerContext.Request;
+		}
+
+		private void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
 		{
 			AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion, msg);
 			AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
-			AddAccessControlHeaders(msg, landlord);
+			AddAccessControlHeaders(msg);
 
 		}
 
-		private void AddAccessControlHeaders(HttpResponseMessage msg, DatabasesLandlord landlord)
+		private void AddAccessControlHeaders(HttpResponseMessage msg)
 		{
-			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlAllowOrigin))
+			if (string.IsNullOrEmpty(DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin))
 				return;
 
 			AddHeader("Access-Control-Allow-Credentials", "true", msg);
 
-			bool originAllowed = landlord.SystemConfiguration.AccessControlAllowOrigin == "*" ||
-					landlord.SystemConfiguration.AccessControlAllowOrigin.Split(' ')
-						.Any(o => o == GetHeader("Origin", ControllerContext.Request));
+			bool originAllowed = DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin == "*" ||
+					DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin.Split(' ')
+						.Any(o => o == GetHeader("Origin"));
 			if (originAllowed)
 			{
-				AddHeader("Access-Control-Allow-Origin", GetHeader("Origin", ControllerContext.Request), msg);
+				AddHeader("Access-Control-Allow-Origin", GetHeader("Origin"), msg);
 			}
 
-			AddHeader("Access-Control-Max-Age", landlord.SystemConfiguration.AccessControlMaxAge, msg);
-			AddHeader("Access-Control-Allow-Methods", landlord.SystemConfiguration.AccessControlAllowMethods, msg);
-			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlRequestHeaders))
+			AddHeader("Access-Control-Max-Age", DatabasesLandlord.SystemConfiguration.AccessControlMaxAge, msg);
+			AddHeader("Access-Control-Allow-Methods", DatabasesLandlord.SystemConfiguration.AccessControlAllowMethods, msg);
+			if (string.IsNullOrEmpty(DatabasesLandlord.SystemConfiguration.AccessControlRequestHeaders))
 			{
 				// allow whatever headers are being requested
-				var hdr = GetHeader("Access-Control-Request-Headers", ControllerContext.Request); // typically: "x-requested-with"
+				var hdr = GetHeader("Access-Control-Request-Headers"); // typically: "x-requested-with"
 				if (hdr != null) AddHeader("Access-Control-Allow-Headers", hdr, msg);
 			}
 			else
 			{
-				AddHeader("Access-Control-Request-Headers", landlord.SystemConfiguration.AccessControlRequestHeaders, msg);
+				AddHeader("Access-Control-Request-Headers", DatabasesLandlord.SystemConfiguration.AccessControlRequestHeaders, msg);
 			}
 		}
 
+		private DatabasesLandlord landlord;
 		public DatabasesLandlord DatabasesLandlord
 		{
 			get
 			{
-				return (DatabasesLandlord)Configuration.Properties[typeof(DatabasesLandlord)];
+				if (Configuration == null)
+					return landlord;
+				return (DatabasesLandlord) Configuration.Properties[typeof (DatabasesLandlord)];
 			}
 		}
 
@@ -138,7 +155,7 @@ namespace Raven.Database.Server.Controllers
 
 		public async Task<T> ReadJsonObjectAsync<T>()
 		{
-			using (var stream = await Request.Content.ReadAsStreamAsync())
+			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
 			//using(var gzipStream = new GZipStream(stream, CompressionMode.Decompress))
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 			{
@@ -153,7 +170,7 @@ namespace Raven.Database.Server.Controllers
 
 		public async Task<RavenJObject> ReadJsonAsync()
 		{
-			using (var stream = await Request.Content.ReadAsStreamAsync())
+			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 			using (var jsonReader = new RavenJsonTextReader(streamReader))
 				return RavenJObject.Load(jsonReader);
@@ -161,7 +178,7 @@ namespace Raven.Database.Server.Controllers
 
 		public async Task<RavenJArray> ReadJsonArrayAsync()
 		{
-			using (var stream = await Request.Content.ReadAsStreamAsync())
+			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 			using (var jsonReader = new RavenJsonTextReader(streamReader))
 				return RavenJArray.Load(jsonReader);
@@ -169,14 +186,14 @@ namespace Raven.Database.Server.Controllers
 
 		public async Task<string> ReadStringAsync()
 		{
-			using (var stream = await Request.Content.ReadAsStreamAsync())
+			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
 			using (var streamReader = new StreamReader(stream, GetRequestEncoding()))
 				return streamReader.ReadToEnd();
 		}
 
 		public async Task<RavenJArray> ReadBsonArrayAsync()
 		{
-			using (var stream = await Request.Content.ReadAsStreamAsync())
+			using (var stream = await InnerRequest.Content.ReadAsStreamAsync())
 			using (var jsonReader = new BsonReader(stream))
 			{
 				var jObject = RavenJObject.Load(jsonReader);
@@ -186,9 +203,9 @@ namespace Raven.Database.Server.Controllers
 
 		private Encoding GetRequestEncoding()
 		{
-			if (Request.Content.Headers.ContentType == null || string.IsNullOrWhiteSpace(Request.Content.Headers.ContentType.CharSet))
+			if (InnerRequest.Content.Headers.ContentType == null || string.IsNullOrWhiteSpace(InnerRequest.Content.Headers.ContentType.CharSet))
 				return Encoding.GetEncoding("ISO-8859-1");
-			return Encoding.GetEncoding(Request.Content.Headers.ContentType.CharSet);
+			return Encoding.GetEncoding(InnerRequest.Content.Headers.ContentType.CharSet);
 		}
 
 		protected bool EnsureSystemDatabase()
@@ -232,7 +249,7 @@ namespace Raven.Database.Server.Controllers
 
 		public string GetQueryStringValue(string key)
 		{
-			return GetQueryStringValue(Request, key);
+			return GetQueryStringValue(InnerRequest, key);
 		}
 
 		public static string GetQueryStringValue(HttpRequestMessage req, string key)
@@ -242,7 +259,7 @@ namespace Raven.Database.Server.Controllers
 
 		public string[] GetQueryStringValues(string key)
 		{
-			var items = Request.GetQueryNameValuePairs().Where(pair => pair.Key == key);
+			var items = InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key == key);
 			return items.Select(pair => pair.Value).ToArray();
 		}
 
@@ -258,9 +275,9 @@ namespace Raven.Database.Server.Controllers
 
 		protected TransactionInformation GetRequestTransaction()
 		{
-			if (Request.Headers.Contains("Raven-Transaction-Information") == false)
+			if (InnerRequest.Headers.Contains("Raven-Transaction-Information") == false)
 				return null;
-			var txInfo = Request.Headers.GetValues("Raven-Transaction-Information").FirstOrDefault();
+			var txInfo = InnerRequest.Headers.GetValues("Raven-Transaction-Information").FirstOrDefault();
 			if (string.IsNullOrEmpty(txInfo))
 				return null;
 			var parts = txInfo.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
@@ -391,7 +408,7 @@ namespace Raven.Database.Server.Controllers
 		public Dictionary<string, RavenJToken> ExtractQueryInputs()
 		{
 			var result = new Dictionary<string, RavenJToken>();
-			foreach (var key in Request.GetQueryNameValuePairs().Select(pair => pair.Key))
+			foreach (var key in InnerRequest.GetQueryNameValuePairs().Select(pair => pair.Key))
 			{
 				if (string.IsNullOrEmpty(key)) continue;
 				if (key.StartsWith("qp-"))
@@ -579,34 +596,28 @@ namespace Raven.Database.Server.Controllers
 			return null;
 		}
 
-		public string GetHeader(string key, HttpRequestMessage request = null)
+		public string GetHeader(string key)
 		{
-			if (request == null)
-				request = Request;
-			if (request.Headers.Contains(key) == false)
+			if (InnerRequest.Headers.Contains(key) == false)
 				return null;
-			return request.Headers.GetValues(key).FirstOrDefault();
+			return InnerRequest.Headers.GetValues(key).FirstOrDefault();
 		}
 
 		public List<string> GetHeaders(string key)
 		{
-			if (Request.Headers.Contains(key) == false)
+			if (InnerRequest.Headers.Contains(key) == false)
 				return null;
-			return Request.Headers.GetValues(key).ToList();
+			return InnerRequest.Headers.GetValues(key).ToList();
 		}
 
-		public bool HasCookie(string key, HttpRequestMessage request = null)
+		public bool HasCookie(string key)
 		{
-			if (request == null)
-				request = Request;
-			return request.Headers.GetCookies(key).Count != 0;
+			return InnerRequest.Headers.GetCookies(key).Count != 0;
 		}
 
-		public string GetCookie(string key, HttpRequestMessage request = null)
+		public string GetCookie(string key)
 		{
-			if (request == null)
-				request = Request;
-			var cookieHeaderValue = request.Headers.GetCookies(key).FirstOrDefault();
+			var cookieHeaderValue = InnerRequest.Headers.GetCookies(key).FirstOrDefault();
 			if (cookieHeaderValue != null)
 			{
 				var coockie = cookieHeaderValue.Cookies.FirstOrDefault();
@@ -727,15 +738,10 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		public string GetRequestUrl(HttpRequestMessage request = null, InMemoryRavenConfiguration configuration = null)
+		public string GetRequestUrl()
 		{
-			if (request == null)
-				request = Request;
-			if (configuration == null)
-				configuration = DatabasesLandlord.SystemConfiguration;
-
-			var rawUrl = request.RequestUri.PathAndQuery;
-			return UrlExtension.GetRequestUrlFromRawUrl(rawUrl, configuration);
+			var rawUrl = InnerRequest.RequestUri.PathAndQuery;
+			return UrlExtension.GetRequestUrlFromRawUrl(rawUrl, DatabasesLandlord.SystemConfiguration);
 		}
 	}
 }

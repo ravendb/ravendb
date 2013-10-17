@@ -97,9 +97,9 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.Authorize(context, IgnoreDb.Urls.Contains(requestUrl));
 		}
 
-		public bool TryAuthorize(RavenApiController controller, out HttpResponseMessage msg, HttpRequestMessage request, DatabasesLandlord landlord)
+		public bool TryAuthorize(RavenApiController controller, out HttpResponseMessage msg)
 		{
-			var requestUrl = controller.GetRequestUrl(request, landlord.SystemConfiguration);
+			var requestUrl = controller.GetRequestUrl();
 			if (NeverSecret.Urls.Contains(requestUrl))
 			{
 				msg = controller.GetEmptyMessage();
@@ -107,27 +107,27 @@ namespace Raven.Database.Server.Security
 			}
 
 			//CORS pre-flight (ignore creds if using cors).
-			if (!String.IsNullOrEmpty(Settings.AccessControlAllowOrigin) && controller.Request.Method.Method == "OPTIONS")
+			if (!String.IsNullOrEmpty(Settings.AccessControlAllowOrigin) && controller.InnerRequest.Method.Method == "OPTIONS")
 			{
 				msg = controller.GetEmptyMessage();
 				return true;
 			}
 
-			var oneTimeToken = controller.GetHeader("Single-Use-Auth-Token", request);
+			var oneTimeToken = controller.GetHeader("Single-Use-Auth-Token");
 			if (string.IsNullOrEmpty(oneTimeToken) == false)
 			{
 				return TryAuthorizeUsingleUseAuthToken(controller, oneTimeToken, out msg);
 			}
 
-			var authHeader = controller.GetHeader("Authorization", request);
-			var hasApiKey = "True".Equals(controller.GetHeader("Has-Api-Key", request), StringComparison.CurrentCultureIgnoreCase);
-			var hasOAuthTokenInCookie = controller.HasCookie("OAuth-Token", request);
+			var authHeader = controller.GetHeader("Authorization");
+			var hasApiKey = "True".Equals(controller.GetHeader("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
+			var hasOAuthTokenInCookie = controller.HasCookie("OAuth-Token");
 			if (hasApiKey || hasOAuthTokenInCookie ||
 				string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
-				return oAuthRequestAuthorizer.TryAuthorize(controller, hasApiKey, IgnoreDb.Urls.Contains(requestUrl), out msg, request, landlord);
+				return oAuthRequestAuthorizer.TryAuthorize(controller, hasApiKey, IgnoreDb.Urls.Contains(requestUrl), out msg);
 			}
-			return windowsRequestAuthorizer.TryAuthorize(controller, IgnoreDb.Urls.Contains(requestUrl), out msg, request, landlord);
+			return windowsRequestAuthorizer.TryAuthorize(controller, IgnoreDb.Urls.Contains(requestUrl), out msg);
 		}
 
 		private bool AuthorizeUsingleUseAuthToken(IHttpContext context, string token)
@@ -234,7 +234,7 @@ namespace Raven.Database.Server.Security
 			if (hasApiKey || hasOAuthTokenInCookie ||
 				string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
 			{
-				return oAuthRequestAuthorizer.GetUser(controller, hasApiKey, controller.DatabasesLandlord);
+				return oAuthRequestAuthorizer.GetUser(controller, hasApiKey);
 			}
 			return windowsRequestAuthorizer.GetUser(controller);
 		}

@@ -1,10 +1,8 @@
 ﻿using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security;
 using System.Security.Principal;
 using System.Threading.Tasks;
-using Amazon.ElastiCache.Model;
 using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Security;
@@ -23,6 +21,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		public override Task<HttpResponseMessage> ExecuteAsync(System.Web.Http.Controllers.HttpControllerContext controllerContext, System.Threading.CancellationToken cancellationToken)
 		{
+			Initialize(controllerContext);
 			var authorizer = (MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 			var user = authorizer.GetUser(this);
 			if (user == null)

@@ -51,7 +51,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			Database.Delete(docKey, null, null);
 			bool result;
 
-			if (bool.TryParse(Request.RequestUri.ParseQueryString()["hard-delete"], out result) && result)
+			if (bool.TryParse(InnerRequest.RequestUri.ParseQueryString()["hard-delete"], out result) && result)
 			{
 				IOExtensions.DeleteDirectory(configuration.DataDirectory);
 				IOExtensions.DeleteDirectory(configuration.IndexStoragePath);

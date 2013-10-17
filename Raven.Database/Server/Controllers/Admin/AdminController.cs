@@ -22,7 +22,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		public async Task<HttpResponseMessage> Backup()
 		{
 			var backupRequest = await ReadJsonObjectAsync<BackupRequest>();
-			var incrementalString = Request.RequestUri.ParseQueryString()["incremental"];
+			var incrementalString = InnerRequest.RequestUri.ParseQueryString()["incremental"];
 			bool incrementalBackup;
 			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
 				incrementalBackup = false;
@@ -177,7 +177,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		{
 			EnsureSystemDatabase();
 				
-			var db = Request.RequestUri.ParseQueryString()["database"];
+			var db = InnerRequest.RequestUri.ParseQueryString()["database"];
 			if (string.IsNullOrWhiteSpace(db))
 				return GetMessageWithString("Compact request requires a valid database parameter", HttpStatusCode.BadRequest);
 
@@ -205,7 +205,7 @@ namespace Raven.Database.Server.Controllers.Admin
 		[HttpGet("admin/startIndexing")]
 		public void StartIndexing()
 		{
-			var concurrency = Request.RequestUri.ParseQueryString()["concurrency"];
+			var concurrency = InnerRequest.RequestUri.ParseQueryString()["concurrency"];
 
 			if (string.IsNullOrEmpty(concurrency) == false)
 			{

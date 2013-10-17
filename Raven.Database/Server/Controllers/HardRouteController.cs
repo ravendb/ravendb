@@ -49,7 +49,7 @@ namespace Raven.Database.Server.Controllers
 			var location = DatabasesLandlord.SystemConfiguration.VirtualDirectory != "/" 
 				? Path.Combine(DatabasesLandlord.SystemConfiguration.VirtualDirectory, RootPath) : RootPath;
 
-			var result = Request.CreateResponse(HttpStatusCode.Found);
+			var result = InnerRequest.CreateResponse(HttpStatusCode.Found);
 			result.Headers.Location = new Uri(Path.Combine(DatabasesLandlord.SystemConfiguration.ServerUrl, location));
 
 			return result;

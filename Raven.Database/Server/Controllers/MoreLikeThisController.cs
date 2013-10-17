@@ -15,7 +15,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage MoreLikeThisGet()
 		{
 			var nameValueCollection = new NameValueCollection();
-			foreach (var queryNameValuePair in Request.GetQueryNameValuePairs())
+			foreach (var queryNameValuePair in InnerRequest.GetQueryNameValuePairs())
 			{
 				nameValueCollection.Add(queryNameValuePair.Key, queryNameValuePair.Value);
 			}

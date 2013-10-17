@@ -91,7 +91,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpPost("OAuth/API-Key")]
 		public async Task<HttpResponseMessage> ApiKeyPost()
 		{
-			if (Request.Content.Headers.ContentLength > MaxOAuthContentLength)
+			if (InnerRequest.Content.Headers.ContentLength > MaxOAuthContentLength)
 			{
 				return
 					GetMessageWithObject(
@@ -103,7 +103,7 @@ namespace Raven.Database.Server.Controllers
 						HttpStatusCode.BadRequest);
 			}
 
-			if (Request.Content.Headers.ContentLength == 0)
+			if (InnerRequest.Content.Headers.ContentLength == 0)
 			{
 				return RespondWithChallenge();
 			}

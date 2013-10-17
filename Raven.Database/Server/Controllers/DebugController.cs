@@ -76,7 +76,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage List(string id)
 		{
 			var listName = id;
-			var key = Request.RequestUri.ParseQueryString()["key"];
+			var key = InnerRequest.RequestUri.ParseQueryString()["key"];
 			if (key == null)
 				throw new ArgumentException("Key query string variable is mandatory");
 

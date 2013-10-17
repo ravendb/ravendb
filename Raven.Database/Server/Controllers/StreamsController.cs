@@ -91,7 +91,7 @@ namespace Raven.Database.Server.Controllers
 			var query = GetIndexQuery(int.MaxValue);
 			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
 				query.PageSize = int.MaxValue;
-			var isHeadRequest = Request.Method == HttpMethod.Head;
+			var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
 			if (isHeadRequest)
 				query.PageSize = 0;
 
@@ -101,7 +101,7 @@ namespace Raven.Database.Server.Controllers
 				var queryOp = new DocumentDatabase.DatabaseQueryOperation(Database, index, query, accessor);
 				queryOp.Init();
 
-				msg.Content = new StreamQueryContent(Request, queryOp, accessor);
+				msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor);
 				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
 				msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
 				msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());

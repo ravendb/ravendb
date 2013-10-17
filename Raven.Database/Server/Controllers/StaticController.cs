@@ -90,7 +90,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var filename = id;
 
-			var newEtag = Database.PutStatic(filename, GetEtag(), await Request.Content.ReadAsStreamAsync(), Request.Headers.FilterHeadersAttachment());
+			var newEtag = Database.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync(), InnerRequest.Headers.FilterHeadersAttachment());
 
 			var msg = GetEmptyMessage(HttpStatusCode.NoContent);
 
@@ -102,7 +102,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage StaticPost(string id)
 		{
 			var filename = id;
-			var newEtagPost = Database.PutStatic(filename, GetEtag(), null, Request.Headers.FilterHeadersAttachment());
+			var newEtagPost = Database.PutStatic(filename, GetEtag(), null, InnerRequest.Headers.FilterHeadersAttachment());
 
 			var msg = GetMessageWithObject(newEtagPost);
 			WriteETag(newEtagPost, msg);

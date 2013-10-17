@@ -19,7 +19,7 @@ namespace Raven.Database.Server.Controllers
 			if (EnsureSystemDatabase() == false)
 				return
 					GetMessageWithString(
-						"The request '" + Request.RequestUri.AbsoluteUri + "' can only be issued on the system database",
+						"The request '" + InnerRequest.RequestUri.AbsoluteUri + "' can only be issued on the system database",
 						HttpStatusCode.BadRequest);
 
 			// This method is NOT secured, and anyone can access it.
