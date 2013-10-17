@@ -331,8 +331,9 @@ function ExecutePatchScript(docInner){{
 				.SetMaxSteps(maxSteps);
 
 
+			AddScript(jintEngine, "Raven.Database.Json.Map.js");
+			AddScript(jintEngine, "Raven.Database.Json.ToJson.js");
 			AddScript(jintEngine, "Raven.Database.Json.lodash.js");
-			AddScript(jintEngine, "Raven.Database.Json.ToJson.js");		
 			AddScript(jintEngine, "Raven.Database.Json.RavenDB.js");
 
 			jintEngine.SetFunction("LoadDocument", ((Func<string, object>)(value =>
