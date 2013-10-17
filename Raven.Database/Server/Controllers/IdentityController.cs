@@ -7,7 +7,7 @@ namespace Raven.Database.Server.Controllers
 {
 	public class IdentityController : RavenApiController
 	{
-		[HttpPost("identity")]
+		[HttpPost("identity/next")]
 		public HttpResponseMessage IdentityNextPost()
 		{
 			var name = GetQueryStringValue("name");

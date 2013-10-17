@@ -12,6 +12,7 @@ namespace Raven.Database.Server.Controllers
 	public class ChangesController : RavenApiController
 	{
 		[HttpGet("changes/config")]
+		[HttpGet("databases/{databaseName}/changes/config")]
 		public HttpResponseMessage ChangeConfigGet()
 		{
 			var id = GetQueryStringValue("id");
@@ -98,6 +99,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet("changes/events")]
+		[HttpGet("databases/{databaseNames}/changes/events")]
 		public HttpResponseMessage ChangesEvents()
 		{
 			var eventsTransport = new ChangesPushContent(this);
