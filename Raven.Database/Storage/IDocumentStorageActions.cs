@@ -30,7 +30,30 @@ namespace Raven.Database.Storage
 
 		void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag);
 		Etag GetBestNextDocumentEtag(Etag etag);
+	    DebugDocumentStats GetDocumentStatsVerySlowly();
 	}
+
+    public class DebugDocumentStats
+    {
+        public long Total { get; set; }
+        public long Tombstones { get; set; }
+        public long System { get; set; }
+        public long NoCollection { get; set; }
+        public Dictionary<string, long> Collections { get; set; }
+        public TimeSpan TimeToGenerate { get; set; }
+
+        public DebugDocumentStats()
+        {
+            Collections = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        public void IncrementCollection(string name)
+        {
+            long value;
+            Collections.TryGetValue(name, out value);
+            Collections[name] = value + 1;
+        }
+    }
 
 	public class AddDocumentResult
 	{
