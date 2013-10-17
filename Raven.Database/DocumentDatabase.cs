@@ -1220,69 +1220,73 @@ namespace Raven.Database
         // the method already handle attempts to create the same index, so we don't have to 
         // worry about this.
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public string PutIndex(string name, IndexDefinition definition)
-        {
-            if (name == null)
-                throw new ArgumentNullException("name");
+		public string PutIndex(string name, IndexDefinition definition)
+		{
+			if (name == null)
+				throw new ArgumentNullException("name");
 
-            var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
+			var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
 
-            if (existingIndex != null)
-            {
-                switch (existingIndex.LockMode)
-                {
-                    case IndexLockMode.LockedIgnore:
-                        log.Info("Index {0} not saved because it was lock (with ignore)", name);
-                        return name;
+			if (existingIndex != null)
+			{
+				switch (existingIndex.LockMode)
+				{
+					case IndexLockMode.LockedIgnore:
+						log.Info("Index {0} not saved because it was lock (with ignore)", name);
+						return name;
 
-                    case IndexLockMode.LockedError:
-                        throw new InvalidOperationException("Can not overwrite locked index: " + name);
-                }
-            }
+					case IndexLockMode.LockedError:
+						throw new InvalidOperationException("Can not overwrite locked index: " + name);
+				}
+			}
 
-            name = name.Trim();
+			name = name.Trim();
 
-            switch (FindIndexCreationOptions(definition, ref name))
-            {
-                case IndexCreationOptions.Noop:
-                    return name;
-                case IndexCreationOptions.Update:
-                    // ensure that the code can compile
-                    new DynamicViewCompiler(definition.Name, definition, Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Configuration).GenerateInstance();
-                    DeleteIndex(name);
-                    break;
-            }
+			switch (FindIndexCreationOptions(definition, ref name))
+			{
+				case IndexCreationOptions.Noop:
+					return name;
+				case IndexCreationOptions.Update:
+					// ensure that the code can compile
+					new DynamicViewCompiler(definition.Name, definition, Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Configuration).GenerateInstance();
+					DeleteIndex(name);
+					break;
+			}
 
-            IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
-            // this has to happen in this fashion so we will expose the in memory status after the commit, but 
-            // before the rest of the world is notified about this.
-            IndexDefinitionStorage.CreateAndPersistIndex(definition);
-            IndexStorage.CreateIndexImplementation(definition);
 
-            TransactionalStorage.Batch(actions =>
-            {
-                actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
-                workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
-            });
+			TransactionalStorage.Batch(actions =>
+			{
+				definition.IndexId = (int)GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions, null);
+				IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
-            // The act of adding it here make it visible to other threads
-            // we have to do it in this way so first we prepare all the elements of the 
-            // index, then we add it to the storage in a way that make it public
-            IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
+				// this has to happen in this fashion so we will expose the in memory status after the commit, but 
+				// before the rest of the world is notified about this.
 
-			InvokeSuggestionIndexing(name, definition);
+				IndexDefinitionStorage.CreateAndPersistIndex(definition);
+				IndexStorage.CreateIndexImplementation(definition);
+
+				InvokeSuggestionIndexing(name, definition);
+
+				actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
+				workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
+			});
+
+			// The act of adding it here make it visible to other threads
+			// we have to do it in this way so first we prepare all the elements of the 
+			// index, then we add it to the storage in a way that make it public
+			IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
 
 			workContext.ClearErrorsFor(name);
 
-            TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
-            {
-                Name = name,
-                Type = IndexChangeTypes.IndexAdded,
-            }));
+			TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
+			{
+				Name = name,
+				Type = IndexChangeTypes.IndexAdded,
+			}));
 
-            return name;
-        }
+			return name;
+		}
 
         private void InvokeSuggestionIndexing(string name, IndexDefinition definition)
         {
