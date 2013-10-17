@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -42,6 +43,11 @@ namespace Raven.Database.Server.Controllers
 			{
 				return Request ?? request;
 			}
+		}
+
+		public new IPrincipal User
+		{
+			get; set;
 		}
 
 		private HttpRequestMessage request;
@@ -88,6 +94,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			landlord = (DatabasesLandlord) controllerContext.Configuration.Properties[typeof (DatabasesLandlord)];
 			request = controllerContext.Request;
+			User = controllerContext.RequestContext.Principal;
 		}
 
 		private void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
