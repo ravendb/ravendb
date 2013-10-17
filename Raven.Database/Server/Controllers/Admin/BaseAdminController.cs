@@ -23,9 +23,19 @@ namespace Raven.Database.Server.Controllers.Admin
 		{
 			InnerInitialization(controllerContext);
 			var authorizer = (MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+
+			var accessMode = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode;
+			if(accessMode == AnonymousUserAccessMode.Admin || accessMode == AnonymousUserAccessMode.All ||
+			(accessMode == AnonymousUserAccessMode.Get && InnerRequest.Method.Method == "GET"))
+				return base.ExecuteAsync(controllerContext, cancellationToken);
+				
 			var user = authorizer.GetUser(this);
 			if (user == null)
-				return null;
+				return new CompletedTask<HttpResponseMessage>(GetMessageWithObject(
+					new
+					{
+						Error = "The operation '" + GetRequestUrl() + "' is only available to administrators, and could not find the user to authorize with"
+					}, HttpStatusCode.Unauthorized)); ;
 
 			if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false &&
 			user.IsAdministrator(Database) == false && SupportedByAnyAdditionalRoles(user) == false)
