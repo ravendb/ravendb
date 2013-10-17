@@ -145,15 +145,19 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.GetUser(context);
 		}
 
-		public List<string> GetApprovedDatabases(IPrincipal user, IHttpContext context)
+		public List<string> GetApprovedDatabases(IPrincipal user, IHttpContext context, string[] databases)
 		{
 			var authHeader = context.Request.Headers["Authorization"];
+			List<string> approved;
 			if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
-			{
-				return oAuthRequestAuthorizer.GetApprovedDatabases(user);
-			}
+				approved = oAuthRequestAuthorizer.GetApprovedDatabases(user);
+			else
+				approved = windowsRequestAuthorizer.GetApprovedDatabases(user);
 
-			return windowsRequestAuthorizer.GetApprovedDatabases(user);
+			if (approved.Contains("*"))
+				return databases.ToList();
+
+			return approved;
 		}
 
 		public override void Dispose()
