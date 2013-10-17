@@ -18,6 +18,8 @@ using Raven.Server.Discovery;
 
 namespace Raven.Server
 {
+	using System.Net;
+
 	public class RavenDbServer : IDisposable
 	{
 		private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
@@ -30,7 +32,12 @@ namespace Raven.Server
 		{
 			options = new RavenDBOptions(configuration);
 			//TODO DH: configuration.ServerUrl doesn't bind properly
-			server = WebApp.Start("http://+:" + configuration.Port, app => app.UseRavenDB(options));
+			server = WebApp.Start("http://+:" + configuration.Port, app =>
+			{
+				var listener = (HttpListener) app.Properties["System.Net.HttpListener"];
+				listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication | AuthenticationSchemes.Anonymous;
+				app.UseRavenDB(options);
+			});
 			ClusterDiscovery(configuration);
 			serverThingsForTests = new ServerThingsForTests(options);
 		}
