@@ -16,15 +16,18 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
+	[RoutePrefix("")]
 	public class DebugController : RavenApiController
 	{
-		[HttpGet]
+		[HttpGet("debug/changes")]
+		[HttpGet("databases/{databaseName}/debug/changes")]
 		public HttpResponseMessage Changes()
 		{
 			return GetMessageWithObject(Database.TransportState.DebugStatuses);
 		}
 
-		[HttpGet]
+		[HttpGet("debug/config")]
+		[HttpGet("databases/{databaseName}/debug/config")]
 		public HttpResponseMessage Config()
 		{
 			var cfg = RavenJObject.FromObject(Database.Configuration);
@@ -36,7 +39,8 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(cfg);
 		}
 
-		[HttpGet]
+		[HttpGet("debug/docrefs")]
+		[HttpGet("databases/{databaseName}/debug/docrefs")]
 		public HttpResponseMessage Docrefs(string id)
 		{
 			var totalCount = -1;
@@ -59,6 +63,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet("debug/index-fields")]
+		[HttpGet("databases/{databaseName}/debug/index-fields")]
 		public async Task<HttpResponseMessage> IndexFields()
 		{
 			var indexStr = await ReadStringAsync();
@@ -72,7 +77,8 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(new { captureSelectNewFieldNamesVisitor.FieldNames });
 		}
 
-		[HttpGet]
+		[HttpGet("debug/list")]
+		[HttpGet("databases/{databaseName}/debug/list")]
 		public HttpResponseMessage List(string id)
 		{
 			var listName = id;
@@ -95,16 +101,17 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(listItem);
 		}
 
-		[HttpGet]
+		[HttpGet("debug/queries")]
+		[HttpGet("databases/{databaseName}/debug/queries")]
 		public HttpResponseMessage Queries()
 		{
 			return GetMessageWithObject(Database.WorkContext.CurrentlyRunningQueries);
 		}
 
-		[HttpGet("user-info")]
-		[HttpPost("user-info")]
-		[HttpGet("databases/{databaseName}/user-info")]
-		[HttpPost("databases/{databaseName}/user-info")]
+		[HttpGet("debug/user-info")]
+		[HttpPost("debug/user-info")]
+		[HttpGet("databases/{databaseName}/debug/user-info")]
+		[HttpPost("databases/{databaseName}/debug/user-info")]
 		public HttpResponseMessage UserInfo()
 		{
 			var principal = User;

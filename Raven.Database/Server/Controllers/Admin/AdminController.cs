@@ -39,7 +39,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 		}
 
-		[HttpGet("admin/restore")]
+		[HttpPost("admin/restore")]
 		public async Task<HttpResponseMessage> Restore()
 		{
 			if (EnsureSystemDatabase() == false)
@@ -159,7 +159,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			return Path.Combine(baseDataPath, documentDataDir.Substring(2));
 		}
 
-		[HttpGet("admin/changedbid")]
+		[HttpPost("admin/changedbid")]
 		public HttpResponseMessage ChangeDbId()
 		{
 			Guid old = Database.TransactionalStorage.Id;
@@ -172,7 +172,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			});
 		}
 
-		[HttpGet("admin/compact")]
+		[HttpPost("admin/compact")]
 		public HttpResponseMessage Compact()
 		{
 			EnsureSystemDatabase();
@@ -196,13 +196,13 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(new {IndexingStatus = Database.WorkContext.RunIndexing ? "Indexing" : "Paused"});		
 		}
 
-		[HttpGet("admin/optimize")]
+		[HttpPost("admin/optimize")]
 		public void Optimize()
 		{
 			Database.IndexStorage.MergeAllIndexes();			
 		}
 
-		[HttpGet("admin/startIndexing")]
+		[HttpPost("admin/startIndexing")]
 		public void StartIndexing()
 		{
 			var concurrency = InnerRequest.RequestUri.ParseQueryString()["concurrency"];
@@ -215,7 +215,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			Database.SpinIndexingWorkers();
 		}
 
-		[HttpGet("admin/stopIndexing")]
+		[HttpPost("admin/stopIndexing")]
 		public void StopIndexing()
 		{
 			Database.StopIndexingWorkers();			
