@@ -23,7 +23,7 @@ namespace Raven.Database.Server.Security.OAuth
 			if (AuthorizedDatabases == null)
 				return false;
 			DatabaseAccess db;
-			if (string.Equals(tenantId, "<system>"))
+			if (string.Equals(tenantId, "<system>") || string.IsNullOrWhiteSpace(tenantId))
 			{
 				db = AuthorizedDatabases.FirstOrDefault(access => string.Equals(access.TenantId, "<system>"));
 			}

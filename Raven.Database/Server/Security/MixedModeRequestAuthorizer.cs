@@ -183,7 +183,8 @@ namespace Raven.Database.Server.Security
 				return false;
 			}
 
-			if (string.Equals(value.DatabaseName, TenantId, StringComparison.InvariantCultureIgnoreCase) == false)
+			if (string.Equals(value.DatabaseName, controller.DatabaseName, StringComparison.InvariantCultureIgnoreCase) == false &&
+				(value.DatabaseName == "<system>" && controller.DatabaseName == null) == false)
 			{
 				msg = controller.GetMessageWithObject(
 					new
