@@ -21,7 +21,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 		public override Task<HttpResponseMessage> ExecuteAsync(System.Web.Http.Controllers.HttpControllerContext controllerContext, System.Threading.CancellationToken cancellationToken)
 		{
-			Initialize(controllerContext);
+			InnerInitialization(controllerContext);
 			var authorizer = (MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 			var user = authorizer.GetUser(this);
 			if (user == null)

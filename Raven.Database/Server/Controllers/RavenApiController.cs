@@ -48,7 +48,7 @@ namespace Raven.Database.Server.Controllers
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext,
 			CancellationToken cancellationToken)
 		{
-			Initilize(controllerContext);
+			InnerInitialization(controllerContext);
 			var authorizer =
 				(MixedModeRequestAuthorizer) controllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 
@@ -84,7 +84,7 @@ namespace Raven.Database.Server.Controllers
 			return result;
 		}
 
-		private void Initilize(HttpControllerContext controllerContext)
+		protected void InnerInitialization(HttpControllerContext controllerContext)
 		{
 			landlord = (DatabasesLandlord) controllerContext.Configuration.Properties[typeof (DatabasesLandlord)];
 			request = controllerContext.Request;
