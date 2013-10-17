@@ -74,11 +74,6 @@ namespace Voron.Impl
 			// nothing to do here
 		}
 
-		protected override Page Get(long n)
-		{
-			return new Page(PagerState.Base + (n * PageSize), PageMaxSpace);
-		}
-
 		public override void AllocateMorePages(Transaction tx, long newLength)
 		{
 			if (newLength <= _allocatedSize)

@@ -43,10 +43,14 @@ namespace Voron.Impl
 				throw new InvalidOperationException("Cannot increase size of the pager when errorOnChange is set to true");
 			}
 			EnsureContinious(tx, n, 1);
-			return Get(n);
+		    var pagerState = tx == null || tx.LatestPagerState == null ? PagerState : tx.LatestPagerState;
+		    return Get(pagerState, n);
 		}
 
-		protected abstract Page Get(long n);
+        protected Page Get(PagerState txState, long n)
+        {
+            return new Page(txState.Base + (n * PageSize), PageMaxSpace);
+        }
 
 		public abstract void Flush(List<long> sortedPagesToFlush);
 		public abstract void Flush(long headerPageId);

@@ -61,8 +61,9 @@ namespace Voron.Impl
 		{
 			get { return modifiedTrees != null; }
 		}
+        public PagerState LatestPagerState { get; private set; }
 
-		public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository)
+	    public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository)
 		{
 			_pager = pager;
 			_env = env;
@@ -383,6 +384,7 @@ namespace Voron.Impl
 
 		public void AddPagerState(PagerState state)
 		{
+		    LatestPagerState = state;
 			_pagerStates.Add(state);
 		}
 
