@@ -17,7 +17,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
-using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
@@ -836,6 +835,7 @@ namespace Raven.Database
 							SkipDeleteFromIndex = addDocumentResult.Updated == false
 						}, documents =>
 						{
+							SetPerCollectionEtags(documents);
 							etagSynchronizer.UpdateSynchronizationState(documents);
 							prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).AfterStorageCommitBeforeWorkNotifications(documents);
 						});
@@ -878,6 +878,42 @@ namespace Raven.Database
 					ETag = newEtag
 				};
 			}
+		}
+
+		private void SetPerCollectionEtags(JsonDocument[] documents)
+		{
+			var collections = documents.GroupBy(x => x.Metadata[Constants.RavenEntityName])
+					 .Where(x => x.Key != null)
+					 .Select(x => new { Etag = x.Max(y => y.Etag), CollectionName = x.Key.ToString() })
+					 .ToArray();
+
+			TransactionalStorage.Batch(accessor =>
+			{
+				foreach (var collection in collections)
+					SetLastEtagForCollection(accessor, collection.CollectionName, collection.Etag);
+			});
+		}
+
+		private void SetLastEtagForCollection(IStorageActionsAccessor actions, string collectionName, Etag etag)
+		{
+			actions.Lists.Set("Raven/Collection/Etag", collectionName, RavenJObject.FromObject(new
+			{
+				Etag = etag.ToByteArray()
+			}), UuidType.Documents);
+		}
+
+		public Etag GetLastEtagForCollection(string collectionName)
+		{
+			Etag value = Etag.Empty;
+			TransactionalStorage.Batch(accessor =>
+			{
+				var dbvalue = accessor.Lists.Read("Raven/Collection/Etag", collectionName);
+				if (dbvalue != null)
+				{
+					value = Etag.Parse(dbvalue.Data.Value<Byte[]>("Etag"));
+				}
+			});
+			return value;
 		}
 
         internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
@@ -1274,12 +1310,11 @@ namespace Raven.Database
 
         private IndexCreationOptions FindIndexCreationOptions(IndexDefinition definition, ref string name)
         {
-	        definition.Name = name;
-            definition.IndexId = IndexDefinitionStorage.NextIndexId();
-            definition.RemoveDefaultValues();
-            IndexDefinitionStorage.ResolveAnalyzers(definition);
-            var findIndexCreationOptions = IndexDefinitionStorage.FindIndexCreationOptions(definition);
-            return findIndexCreationOptions;
+			definition.Name = name;
+			definition.RemoveDefaultValues();
+			IndexDefinitionStorage.ResolveAnalyzers(definition);
+			var findIndexCreationOptions = IndexDefinitionStorage.FindIndexCreationOptions(definition);
+			return findIndexCreationOptions;
         }
 
 
