@@ -33,7 +33,11 @@ namespace Raven.Tests.Storage
 				tx.Batch(viewer =>
 					Assert.True(viewer.Indexing.GetIndexesStats().Any(x => x.Id == 555)));
 
-				tx.Batch(mutator => mutator.Indexing.DeleteIndex(555, new CancellationToken()));
+				tx.Batch(mutator =>
+				{
+					mutator.Indexing.PrepareIndexForDeletion(555);
+					mutator.Indexing.DeleteIndex(555, new CancellationToken());
+				});
 				tx.Batch(viewer =>
 					Assert.False(viewer.Indexing.GetIndexesStats().Any(x => x.Id == 555)));
 			}

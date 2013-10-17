@@ -123,6 +123,13 @@ task Compile -depends Init {
 	remove-item "$build_dir\nlog.config" -force  -ErrorAction SilentlyContinue
 }
 
+task Java {
+
+$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
+exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "RavenDB.sln" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
+
+}
+
 task FullStorageTest {
 	$global:full_storage_test = $true
 }

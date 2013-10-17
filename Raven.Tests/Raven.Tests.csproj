@@ -580,6 +580,7 @@
     <Compile Include="Bundles\SqlReplication\CanReplicate.cs" />
     <Compile Include="Bundles\SqlReplication\FactIfSqlServerIsAvailable.cs" />
     <Compile Include="Bundles\Versioning\Bugs\MultiTenant.cs" />
+    <Compile Include="Document\PerCollectionEtag.cs" />
     <Compile Include="Faceted\Aggregation.cs" />
     <Compile Include="Faceted\ConditionalGetHelper.cs" />
     <Compile Include="Faceted\DynamicFacets.cs" />

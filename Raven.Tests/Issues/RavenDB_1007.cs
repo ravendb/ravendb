@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -64,15 +65,15 @@ namespace Raven.Tests.Issues
 			var incrementalDirectories = Directory.GetDirectories(BackupDir, "Inc*");
 
 			// delete 'index-files.required-for-index-restore' to make backup corrupted according to the reported error
-			File.Delete(Path.Combine(incrementalDirectories.First(),
-			                         "Indexes\\0\\index-files.required-for-index-restore"));
+			var combine = Directory.GetFiles(incrementalDirectories.First(), "index-files.required-for-index-restore",SearchOption.AllDirectories).First();
+			File.Delete(combine);
 
 			var sb = new StringBuilder();
 
 			DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => sb.Append(s), defrag: true);
 
 			Assert.Contains(
-				"Error: Index 0 could not be restored. All already copied index files was deleted." +
+				"could not be restored. All already copied index files was deleted." +
 				" Index will be recreated after launching Raven instance",
 				sb.ToString());
 
@@ -127,16 +128,16 @@ namespace Raven.Tests.Issues
 			}
 			IOExtensions.DeleteDirectory(DataDir);
 
+			var path = Directory.GetFiles(BackupDir, "index-files.required-for-index-restore", SearchOption.AllDirectories).First();
 			// lock file to simulate IOException when restore operation will try to copy this file
-			using (var file = File.Open(Path.Combine(BackupDir, "Indexes\\0\\segments.gen"),
-				                     FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+			using (var file = File.Open(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
 			{
 				var sb = new StringBuilder();
 
 				DocumentDatabase.Restore(new RavenConfiguration(), BackupDir, DataDir, s => sb.Append(s), defrag: true);
 
 				Assert.Contains(
-					"Error: Index 0 could not be restored. All already copied index files was deleted." +
+					"could not be restored. All already copied index files was deleted." +
 					" Index will be recreated after launching Raven instance",
 					sb.ToString());
 			}
