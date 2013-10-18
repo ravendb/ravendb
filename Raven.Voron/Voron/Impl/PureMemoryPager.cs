@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using Voron.Trees;
-
-namespace Voron.Impl
+﻿namespace Voron.Impl
 {
+	using System;
+	using System.Collections.Generic;
+	using System.Runtime.InteropServices;
+
 	public unsafe class PureMemoryPager : AbstractPager
 	{
 		private IntPtr _ptr;
@@ -17,12 +16,8 @@ namespace Voron.Impl
 			_base = (byte*)_ptr.ToPointer();
 			NumberOfAllocatedPages = data.Length / PageSize;
 			PagerState.Release();
-			PagerState = new PagerState
-			{
-				Ptr = _ptr,
-                Base = _base
-			};
-			PagerState.AddRef();
+			PagerState = CreateNewPagerState(_base, _ptr);
+
 			fixed (byte* origin = data)
 			{
 				NativeMethods.memcpy(_base, origin, data.Length);
@@ -35,12 +30,7 @@ namespace Voron.Impl
 			_base = (byte*)_ptr.ToPointer();
 			NumberOfAllocatedPages = _allocatedSize / PageSize;
 			PagerState.Release();
-			PagerState = new PagerState
-			{
-				Ptr = _ptr,
-                Base = _base
-			};
-			PagerState.AddRef();
+			PagerState = CreateNewPagerState(_base, _ptr);
 		}
 
 		public override void EnsureEnoughSpace(Transaction tx, int len)

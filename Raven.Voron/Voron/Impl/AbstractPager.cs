@@ -1,10 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using Voron.Trees;
-
-namespace Voron.Impl
+﻿namespace Voron.Impl
 {
+	using System;
+	using System.Collections.Generic;
+	using System.Runtime.InteropServices;
+
+	using Voron.Trees;
+
 	public unsafe abstract class AbstractPager : IVirtualPager
 	{
 		protected const int MinIncreaseSize = 1 * 1024 * 1024;
@@ -43,14 +44,14 @@ namespace Voron.Impl
 				throw new InvalidOperationException("Cannot increase size of the pager when errorOnChange is set to true");
 			}
 			EnsureContinious(tx, n, 1);
-		    var pagerState = tx == null || tx.LatestPagerState == null ? PagerState : tx.LatestPagerState;
-		    return Get(pagerState, n);
+			var pagerState = tx == null || tx.LatestPagerState == null ? PagerState : tx.LatestPagerState;
+			return Get(pagerState, n);
 		}
 
-        protected Page Get(PagerState txState, long n)
-        {
-            return new Page(txState.Base + (n * PageSize), PageMaxSpace);
-        }
+		protected Page Get(PagerState txState, long n)
+		{
+			return new Page(txState.Base + (n * PageSize), PageMaxSpace);
+		}
 
 		public abstract void Flush(List<long> sortedPagesToFlush);
 		public abstract void Flush(long headerPageId);
