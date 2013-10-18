@@ -572,25 +572,26 @@ namespace Raven.Client.Connection
 			SetResponseHeaders(Response);
 		}
 
-		public Task<Stream> GetRawRequestStream()
+		public async Task<Stream> GetRawRequestStream()
 		{
-			throw new NotSupportedException();
-            /*CopyHeadersToWebRequest();
-			webRequest.SendChunked = true;
-			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);*/
+			var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+			CopyHeadersToHttpRequestMessage(httpRequestMessage);
+			HttpResponseMessage response = await httpClient.SendAsync(httpRequestMessage);
+			return await response.Content.ReadAsStreamAsync();
+
+			//TODO DH no comparable property on httpclient
+			// webRequest.SendChunked = true;
 		}
 
 		public async Task<HttpResponseMessage> RawExecuteRequestAsync()
 		{
-            var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
-            CopyHeadersToHttpRequestMessage(httpRequestMessage);
-            return await httpClient.SendAsync(httpRequestMessage);
-		    
-		    /*try
-			{
-                CopyHeadersToWebRequest();
-				return await webRequest.GetResponseAsync();
-			}
+			/*try
+			{*/
+			var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+			CopyHeadersToHttpRequestMessage(httpRequestMessage);
+			return await httpClient.SendAsync(httpRequestMessage);
+			// TODO DH do we need this catch?
+			/*}
 			catch (WebException we)
 			{
 				var httpWebResponse = we.Response as HttpWebResponse;
