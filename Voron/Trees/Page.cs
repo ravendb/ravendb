@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text;
 using Voron.Debugging;
 using Voron.Impl;
+using Voron.Impl.FileHeaders;
 
 namespace Voron.Trees
 {
@@ -174,7 +175,37 @@ namespace Voron.Trees
 
         }
 
-        public byte* AddNode(int index, Slice key, int len, long pageNumber, ushort previousNodeVersion)
+		public byte* AddPageRefNode(int index, Slice key, long pageNumber)
+		{
+			var node = CreateNode(index, key, NodeFlags.PageRef, -1, 0);
+			node->PageNumber = pageNumber;
+
+			return null; // nothing to write into page ref node
+		}
+
+		public byte* AddDataNode(int index, Slice key, int dataSize, ushort previousNodeVersion)
+		{
+			Debug.Assert(dataSize >= 0);
+			Debug.Assert(key.Options == SliceOptions.Key);
+
+			var node = CreateNode(index, key, NodeFlags.Data, dataSize, previousNodeVersion);
+			node->DataSize = dataSize;
+
+			return (byte*)node + Constants.NodeHeaderSize + key.Size;
+		}
+
+		public byte* AddMultiValueNode(int index, Slice key, int dataSize, ushort previousNodeVersion)
+		{
+			Debug.Assert(dataSize == sizeof(TreeRootHeader));
+			Debug.Assert(key.Options == SliceOptions.Key);
+
+			var node = CreateNode(index, key, NodeFlags.MultiValuePageRef, dataSize, previousNodeVersion);
+			node->DataSize = dataSize;
+
+			return (byte*)node + Constants.NodeHeaderSize + key.Size;
+		}
+
+        private NodeHeader* CreateNode(int index, Slice key, NodeFlags flags, int len, ushort previousNodeVersion)
         {
             Debug.Assert(index <= NumberOfEntries && index >= 0);
             Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
@@ -192,19 +223,9 @@ namespace Voron.Trees
             if (key.Options == SliceOptions.Key)
                 key.CopyTo((byte*)node + Constants.NodeHeaderSize);
 
-			if (len < 0) // branch or overflow
-            {
-                Debug.Assert(pageNumber != -1);
-                node->PageNumber = pageNumber;
-	            node->Flags = NodeFlags.PageRef;
-                return null; // write nothing here
-            }
+	        node->Flags = flags;
 
-            Debug.Assert(key.Options == SliceOptions.Key);
-            var dataPos = (byte*)node + Constants.NodeHeaderSize + key.Size;
-            node->DataSize = len;
-	        node->Flags = NodeFlags.Data;
-            return dataPos;
+	        return node;
         }
 
         /// <summary>
