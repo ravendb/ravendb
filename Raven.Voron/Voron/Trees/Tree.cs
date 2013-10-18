@@ -69,7 +69,7 @@ namespace Voron.Trees
 			if (value == null) throw new ArgumentNullException("value");
 			if (value.Length > int.MaxValue)
 				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
-			var pos = DirectAdd(tx, key, (int)value.Length, version);
+			var pos = DirectAdd(tx, key, (int)value.Length, version: version);
 
 			using (var ums = new UnmanagedMemoryStream(pos, value.Length, value.Length, FileAccess.ReadWrite))
 			{
@@ -79,6 +79,8 @@ namespace Voron.Trees
 
 		public void MultiDelete(Transaction tx, Slice key, Slice value, ushort? version = null)
 		{
+			tx.Pager.EnsureEnoughSpace(tx, value.Size);
+
 			using (var cursor = tx.NewCursor(this))
 			{
 				var page = FindPageFor(tx, key, cursor);
@@ -128,13 +130,15 @@ namespace Voron.Trees
 			if (value.Size == 0)
 				throw new ArgumentException("Cannot add empty value to child tree");
 
+			tx.Pager.EnsureEnoughSpace(tx, value.Size);
+
 			using (var cursor = tx.NewCursor(this))
 			{
 				var page = FindPageFor(tx, key, cursor);
 
 				if (page == null || page.LastMatch != 0)
 				{
-					var ptr = DirectAdd(tx, key, value.Size, version);
+					var ptr = DirectAdd(tx, key, value.Size, version: version);
 					value.CopyTo(ptr);
 					return;
 				}
@@ -163,18 +167,15 @@ namespace Voron.Trees
 					tree.DirectAdd(tx, value, 0);
 					tx.AddMultiValueTree(this, key, tree);
 
-					DirectAdd(tx, key, sizeof(TreeRootHeader));
-
-					cursor.Clear();
-					page = FindPageFor(tx, key, cursor);
-					Debug.Assert(page.LastMatch == 0);
-					page.GetNode(page.LastSearchPosition)->Flags = NodeFlags.MultiValuePageRef;
+					DirectAdd(tx, key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
 				}
 			}
 		}
 
-		internal byte* DirectAdd(Transaction tx, Slice key, int len, ushort? version = null)
+		internal byte* DirectAdd(Transaction tx, Slice key, int len, NodeFlags nodeType = NodeFlags.Data, ushort? version = null)
 		{
+			Debug.Assert(nodeType == NodeFlags.Data || nodeType == NodeFlags.MultiValuePageRef);
+
 			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
 				throw new ArgumentException("Cannot add a value in a read only transaction");
 
@@ -210,12 +211,13 @@ namespace Voron.Trees
 				{
 					pageNumber = WriteToOverflowPages(tx, txInfo, len, out overFlowPos);
 					len = -1;
+					nodeType = NodeFlags.PageRef;
 				}
 
 				byte* dataPos;
 				if (page.HasSpaceFor(key, len) == false)
 				{
-					var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeVersion, cursor, txInfo);
+					var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, txInfo);
 					dataPos = pageSplitter.Execute();
 
 					if (overFlowPos != null)
@@ -225,7 +227,20 @@ namespace Voron.Trees
 				}
 				else
 				{
-					dataPos = page.AddNode(lastSearchPosition, key, len, pageNumber, nodeVersion);
+					switch (nodeType)
+					{
+						case NodeFlags.PageRef:
+							dataPos = page.AddPageRefNode(lastSearchPosition, key, pageNumber);
+							break;
+						case NodeFlags.Data:
+							dataPos = page.AddDataNode(lastSearchPosition, key, len, nodeVersion);
+							break;
+						case NodeFlags.MultiValuePageRef:
+							dataPos = page.AddMultiValueNode(lastSearchPosition, key, len, nodeVersion);
+							break;
+						default:
+							throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
+					}
 					cursor.IncrementItemCount();
 					page.DebugValidate(tx, _cmp, txInfo.RootPageNumber);
 				}

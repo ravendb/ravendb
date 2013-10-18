@@ -1,13 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.MemoryMappedFiles;
-using System.Runtime.InteropServices;
-using System.Linq;
-using Voron.Trees;
-
-namespace Voron.Impl
+﻿namespace Voron.Impl
 {
+	using System;
+	using System.Collections.Generic;
+	using System.IO;
+	using System.IO.MemoryMappedFiles;
+	using System.Linq;
+	using System.Runtime.InteropServices;
+
 	public unsafe class MemoryMapPager : AbstractPager
 	{
 		private readonly FlushMode _flushMode;
@@ -36,10 +35,7 @@ namespace Voron.Impl
 			}
 		}
 
-		protected override Page Get(long n)
-		{
-			return new Page(PagerState.Base + (n * PageSize), PageMaxSpace);
-		}
+
 
 		public override void AllocateMorePages(Transaction tx, long newLength)
 		{

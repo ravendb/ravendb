@@ -3,7 +3,6 @@
 	using System;
 	using System.Collections.Generic;
 	using System.IO;
-	using System.Linq;
 
 	using Voron.Impl;
 	using Voron.Trees;
@@ -12,7 +11,7 @@
 
 	public class PageSplitter : StorageTest
 	{
-		[Fact]
+		[Fact(Skip = "Long running")]
 		public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
 		{
 			var ids = ReadIds("data.txt");
@@ -53,7 +52,7 @@
 			}
 		}
 
-		[Fact]
+		[Fact(Skip = "Long running")]
 		public void PageSplitterShouldCalculateSeparatorKeyCorrectly2()
 		{
 			var ids = ReadIds("data2.txt");
@@ -112,24 +111,6 @@
 					}
 				}
 			}
-		}
-
-
-		private static IList<Tree> CreateTrees(StorageEnvironment env, int number, string prefix)
-		{
-			var results = new List<Tree>();
-
-			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				for (var i = 0; i < number; i++)
-				{
-					results.Add(env.CreateTree(tx, prefix + i));
-				}
-
-				tx.Commit();
-			}
-
-			return results;
 		}
 
 		private static IList<string> ReadIds(string fileName)

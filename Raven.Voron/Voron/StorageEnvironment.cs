@@ -17,7 +17,7 @@ namespace Voron
         private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
             new ConcurrentDictionary<long, Transaction>();
 
-        private readonly ConcurrentDictionary<string, Tree> _trees
+        private ConcurrentDictionary<string, Tree> _trees
             = new ConcurrentDictionary<string, Tree>(StringComparer.OrdinalIgnoreCase);
 
         private readonly bool _ownsPager;
@@ -300,14 +300,18 @@ namespace Voron
                 _transactionsCounter = txId;
                 if (tx.HasModifiedTrees == false)
                     return;
+				
+	            var clonedTrees = new ConcurrentDictionary<string, Tree>(_trees);
                 foreach (var tree in tx.ModifiedTrees)
                 {
                     Tree val = tree.Value;
                     if (val == null)
-                        _trees.TryRemove(tree.Key, out val);
+						clonedTrees.TryRemove(tree.Key, out val);
                     else
-                        _trees.AddOrUpdate(tree.Key, val, (s, tree1) => val);
+						clonedTrees.AddOrUpdate(tree.Key, val, (s, tree1) => val);
                 }
+
+	            _trees = clonedTrees;
             }
             finally
             {
