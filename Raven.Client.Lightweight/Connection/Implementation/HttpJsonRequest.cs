@@ -173,7 +173,7 @@ namespace Raven.Client.Connection
 					if (++retries >= 3 || disabledAuthRetries)
 						throw;
 
-					if (e.StatusCode != HttpStatusCode.Unauthorized &&
+                    if (e.StatusCode != HttpStatusCode.Unauthorized &&
 						e.StatusCode != HttpStatusCode.Forbidden &&
 						e.StatusCode != HttpStatusCode.PreconditionFailed)
 						throw;
@@ -580,10 +580,13 @@ namespace Raven.Client.Connection
 			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);*/
 		}
 
-		public Task<WebResponse> RawExecuteRequestAsync()
+		public async Task<HttpResponseMessage> RawExecuteRequestAsync()
 		{
-			throw new NotSupportedException();
-			/*try
+            var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+            CopyHeadersToHttpRequestMessage(httpRequestMessage);
+            return await httpClient.SendAsync(httpRequestMessage);
+		    
+		    /*try
 			{
                 CopyHeadersToWebRequest();
 				return await webRequest.GetResponseAsync();
