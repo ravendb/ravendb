@@ -16,12 +16,8 @@
 			_base = (byte*)_ptr.ToPointer();
 			NumberOfAllocatedPages = data.Length / PageSize;
 			PagerState.Release();
-			PagerState = new PagerState
-			{
-				Ptr = _ptr,
-				Base = _base
-			};
-			PagerState.AddRef();
+			PagerState = CreateNewPagerState(_base, _ptr);
+
 			fixed (byte* origin = data)
 			{
 				NativeMethods.memcpy(_base, origin, data.Length);
@@ -34,12 +30,7 @@
 			_base = (byte*)_ptr.ToPointer();
 			NumberOfAllocatedPages = _allocatedSize / PageSize;
 			PagerState.Release();
-			PagerState = new PagerState
-			{
-				Ptr = _ptr,
-				Base = _base
-			};
-			PagerState.AddRef();
+			PagerState = CreateNewPagerState(_base, _ptr);
 		}
 
 		public override void EnsureEnoughSpace(Transaction tx, int len)
