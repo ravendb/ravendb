@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using Voron.Trees;
-
-namespace Voron.Impl
+﻿namespace Voron.Impl
 {
+	using System;
+	using System.Collections.Generic;
+	using System.Runtime.InteropServices;
+
 	public unsafe class PureMemoryPager : AbstractPager
 	{
 		private IntPtr _ptr;
@@ -20,7 +19,7 @@ namespace Voron.Impl
 			PagerState = new PagerState
 			{
 				Ptr = _ptr,
-                Base = _base
+				Base = _base
 			};
 			PagerState.AddRef();
 			fixed (byte* origin = data)
@@ -38,7 +37,7 @@ namespace Voron.Impl
 			PagerState = new PagerState
 			{
 				Ptr = _ptr,
-                Base = _base
+				Base = _base
 			};
 			PagerState.AddRef();
 		}
@@ -72,11 +71,6 @@ namespace Voron.Impl
 		public override void Sync()
 		{
 			// nothing to do here
-		}
-
-		protected override Page Get(long n)
-		{
-			return new Page(PagerState.Base + (n * PageSize), PageMaxSpace);
 		}
 
 		public override void AllocateMorePages(Transaction tx, long newLength)

@@ -61,6 +61,7 @@ namespace Voron.Impl
 		{
 			get { return modifiedTrees != null; }
 		}
+		public PagerState LatestPagerState { get; private set; }
 
 		public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository)
 		{
@@ -194,14 +195,14 @@ namespace Voron.Impl
 				var tree = kvp.Key;
 
 				if (txInfo.RootPageNumber == tree.State.RootPageNumber &&
-				    (modifiedTrees == null || modifiedTrees.ContainsKey(tree.Name) == false))
+					(modifiedTrees == null || modifiedTrees.ContainsKey(tree.Name) == false))
 					continue; // not modified
 
 				tree.DebugValidateTree(this, txInfo.RootPageNumber);
 				txInfo.Flush();
 				if (string.IsNullOrEmpty(kvp.Key.Name))
 					continue;
-		
+
 				var treePtr = (TreeRootHeader*)_env.Root.DirectAdd(this, tree.Name, sizeof(TreeRootHeader));
 				tree.State.CopyTo(treePtr);
 			}
@@ -324,18 +325,18 @@ namespace Voron.Impl
 			if (tree == _env.Root)
 			{
 				return _rootTreeData ?? (_rootTreeData = new TreeDataInTransaction(_env.Root)
-					{
-						RootPageNumber = _env.Root.State.RootPageNumber
-					});
+				{
+					RootPageNumber = _env.Root.State.RootPageNumber
+				});
 			}
 
 			// ReSharper disable once PossibleUnintendedReferenceComparison
 			if (tree == _env.FreeSpaceRoot)
 			{
 				return _fresSpaceTreeData ?? (_fresSpaceTreeData = new TreeDataInTransaction(_env.FreeSpaceRoot)
-					{
-						RootPageNumber = _env.FreeSpaceRoot.State.RootPageNumber
-					});
+				{
+					RootPageNumber = _env.FreeSpaceRoot.State.RootPageNumber
+				});
 			}
 
 			TreeDataInTransaction c;
@@ -344,9 +345,9 @@ namespace Voron.Impl
 				return c;
 			}
 			c = new TreeDataInTransaction(tree)
-				{
-					RootPageNumber = tree.State.RootPageNumber
-				};
+			{
+				RootPageNumber = tree.State.RootPageNumber
+			};
 			_treesInfo.Add(tree, c);
 			return c;
 		}
@@ -383,6 +384,7 @@ namespace Voron.Impl
 
 		public void AddPagerState(PagerState state)
 		{
+			LatestPagerState = state;
 			_pagerStates.Add(state);
 		}
 
