@@ -36,6 +36,7 @@ namespace Raven.Backup
 			ServerUrl = ServerUrl.TrimEnd('/');
 
 			store = new DocumentStore {Url = ServerUrl, DefaultDatabase = Database, ApiKey = ApiKey};
+			store.Initialize();
 			
 			var json = @"{ ""BackupLocation"": """ + BackupPath.Replace("\\", "\\\\") + @""" }";
 
@@ -71,7 +72,7 @@ namespace Raven.Backup
 			uriString += url;
 			if (Incremental)
 				uriString += "?incremental=true";
-			var req = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, Credentials ?? CredentialCache.DefaultCredentials, store.Conventions));
+			var req = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, Credentials, store.Conventions));
 
 			if (Timeout.HasValue)
 			{
