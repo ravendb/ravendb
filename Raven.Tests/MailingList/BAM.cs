@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Abstractions.Connection;
 using Raven.Client.Document;
 using Xunit;
 using Raven.Client.Extensions;
@@ -48,7 +49,7 @@ namespace Raven.Tests.MailingList
 					var badIn = new {Id = badId};
 					session.Store(badIn);
 
-					var throws = Assert.Throws<InvalidOperationException>(()=>session.SaveChanges());
+					var throws = Assert.Throws<ErrorResponseException>(()=>session.SaveChanges());
 
 					Assert.Contains(@"PUT vetoed by Raven.Database.Plugins.Builtins.InvalidDocumentNames because: Document names cannot contains '\' but attempted to save with: bad\one", throws.Message);
 				}
@@ -66,7 +67,7 @@ namespace Raven.Tests.MailingList
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				var throws = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("System"));
+				var throws = Assert.Throws<ErrorResponseException>(() => store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("System"));
 
 				Assert.Contains(@"Cannot create a tenant database with the name 'System', that name is reserved for the actual system database", throws.Message);
 		

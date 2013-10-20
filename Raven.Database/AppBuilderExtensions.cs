@@ -13,6 +13,7 @@ using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.WebApi.Filters;
 using Raven.Database.Server.WebApi.Handlers;
 
 // ReSharper disable once CheckNamespace
@@ -61,7 +62,7 @@ namespace Owin
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 
 			cfg.Services.Replace(typeof (IAssembliesResolver), new MyAssemblyResolver());
-
+			cfg.Filters.Add(new RavenExceptionFilterAttribute());
 			cfg.MapHttpAttributeRoutes();
 			cfg.Routes.MapHttpRoute(
 				"API Default", "{controller}/{action}",
