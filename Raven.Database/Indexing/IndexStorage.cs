@@ -190,6 +190,9 @@ namespace Raven.Database.Indexing
 				var indexDirectory = indexName;
 				var indexFullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(indexDirectory));
 				IOExtensions.DeleteDirectory(indexFullPath);
+
+                var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
+                IOExtensions.DeleteDirectory(suggestionsForIndex);
 			}
 			catch (Exception exception)
 			{
@@ -226,29 +229,45 @@ namespace Raven.Database.Indexing
 			if (!Directory.Exists(suggestionsForIndex))
 				return;
 
-			foreach (var directory in Directory.GetDirectories(suggestionsForIndex))
-			{
-				IndexSearcher searcher;
-				using (indexImplementation.GetSearcher(out searcher))
-				{
-					var key = Path.GetFileName(directory);
-					var decodedKey = MonoHttpUtility.UrlDecode(key);
-					var lastIndexOfDash = decodedKey.LastIndexOf('-');
-					var accuracy = float.Parse(decodedKey.Substring(lastIndexOfDash + 1));
-					var lastIndexOfDistance = decodedKey.LastIndexOf('-', lastIndexOfDash - 1);
-					StringDistanceTypes distanceType;
-					Enum.TryParse(decodedKey.Substring(lastIndexOfDistance + 1, lastIndexOfDash - lastIndexOfDistance - 1),
-								  true, out distanceType);
-					var field = decodedKey.Substring(0, lastIndexOfDistance);
-					var extension = new SuggestionQueryIndexExtension(
-						documentDatabase.WorkContext,
-						Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), searcher.IndexReader.Directory() is RAMDirectory,
-						SuggestionQueryRunner.GetStringDistance(distanceType),
-						field,
-						accuracy);
-					indexImplementation.SetExtension(key, extension);
-				}
-			}
+		    try
+		    {
+		        foreach (var directory in Directory.GetDirectories(suggestionsForIndex))
+		        {
+		            IndexSearcher searcher;
+		            using (indexImplementation.GetSearcher(out searcher))
+		            {
+		                var key = Path.GetFileName(directory);
+		                var decodedKey = MonoHttpUtility.UrlDecode(key);
+		                var lastIndexOfDash = decodedKey.LastIndexOf('-');
+		                var accuracy = float.Parse(decodedKey.Substring(lastIndexOfDash + 1));
+		                var lastIndexOfDistance = decodedKey.LastIndexOf('-', lastIndexOfDash - 1);
+		                StringDistanceTypes distanceType;
+		                Enum.TryParse(decodedKey.Substring(lastIndexOfDistance + 1, lastIndexOfDash - lastIndexOfDistance - 1),
+		                              true, out distanceType);
+		                var field = decodedKey.Substring(0, lastIndexOfDistance);
+		                var extension = new SuggestionQueryIndexExtension(
+		                    documentDatabase.WorkContext,
+		                    Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), searcher.IndexReader.Directory() is RAMDirectory,
+		                    SuggestionQueryRunner.GetStringDistance(distanceType),
+		                    field,
+		                    accuracy);
+		                indexImplementation.SetExtension(key, extension);
+		            }
+		        }
+		    }
+		    catch (Exception e)
+		    {
+		        log.WarnException("Could not open suggestions for index " + indexName + ", resetting the index", e);
+		        try
+		        {
+		            IOExtensions.DeleteDirectory(suggestionsForIndex);
+		        }
+		        catch (Exception)
+		        {
+		            // ignore the failure
+		        }
+		        throw;
+		    }
 		}
 
 
