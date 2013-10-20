@@ -68,13 +68,6 @@ namespace Raven.Database.Server.Controllers
 			if (internalHeader == null || internalHeader != "true")
 				DatabasesLandlord.IncrementRequestCount();
 
-			var values = controllerContext.Request.GetRouteData().Values;
-			if (values.ContainsKey("databaseName"))
-				DatabaseName = controllerContext.Request.GetRouteData().Values["databaseName"] as string;
-			else
-				DatabaseName = null;
-
-
 			if (DatabaseName != null && await DatabasesLandlord.GetDatabaseInternal(DatabaseName) == null)
 			{
 				var msg = "Could not find a database named: " + DatabaseName;
@@ -95,6 +88,12 @@ namespace Raven.Database.Server.Controllers
 			landlord = (DatabasesLandlord) controllerContext.Configuration.Properties[typeof (DatabasesLandlord)];
 			request = controllerContext.Request;
 			User = controllerContext.RequestContext.Principal;
+
+			var values = controllerContext.Request.GetRouteData().Values;
+			if (values.ContainsKey("databaseName"))
+				DatabaseName = controllerContext.Request.GetRouteData().Values["databaseName"] as string;
+			else
+				DatabaseName = null;
 		}
 
 		private void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
