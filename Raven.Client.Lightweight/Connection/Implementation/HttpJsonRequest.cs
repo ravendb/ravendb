@@ -173,7 +173,7 @@ namespace Raven.Client.Connection
 					if (++retries >= 3 || disabledAuthRetries)
 						throw;
 
-					if (e.StatusCode != HttpStatusCode.Unauthorized &&
+                    if (e.StatusCode != HttpStatusCode.Unauthorized &&
 						e.StatusCode != HttpStatusCode.Forbidden &&
 						e.StatusCode != HttpStatusCode.PreconditionFailed)
 						throw;
@@ -330,6 +330,7 @@ namespace Raven.Client.Connection
 			var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
 			CopyHeadersToHttpRequestMessage(httpRequestMessage);
 			Response = await httpClient.SendAsync(httpRequestMessage);
+		    await CheckForErrorsAndReturnCachedResultIfAnyAsync();
 			using (var stream = await Response.GetResponseStreamWithHttpDecompression())
 			{
 				SetResponseHeaders(Response);
@@ -571,22 +572,26 @@ namespace Raven.Client.Connection
 			SetResponseHeaders(Response);
 		}
 
-		public Task<Stream> GetRawRequestStream()
+		public async Task<Stream> GetRawRequestStream()
 		{
-			throw new NotSupportedException();
-            /*CopyHeadersToWebRequest();
-			webRequest.SendChunked = true;
-			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);*/
+			var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+			CopyHeadersToHttpRequestMessage(httpRequestMessage);
+			HttpResponseMessage response = await httpClient.SendAsync(httpRequestMessage);
+			return await response.Content.ReadAsStreamAsync();
+
+			//TODO DH no comparable property on httpclient
+			// webRequest.SendChunked = true;
 		}
 
-		public Task<WebResponse> RawExecuteRequestAsync()
+		public async Task<HttpResponseMessage> RawExecuteRequestAsync()
 		{
-			throw new NotSupportedException();
 			/*try
-			{
-                CopyHeadersToWebRequest();
-				return await webRequest.GetResponseAsync();
-			}
+			{*/
+			var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+			CopyHeadersToHttpRequestMessage(httpRequestMessage);
+			return await httpClient.SendAsync(httpRequestMessage);
+			// TODO DH do we need this catch?
+			/*}
 			catch (WebException we)
 			{
 				var httpWebResponse = we.Response as HttpWebResponse;
