@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Logging;
 using Raven.Client.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.Listeners;
@@ -50,6 +51,8 @@ namespace Raven.Client.Embedded
 		private readonly ProfilingInformation profilingInformation;
 		private bool resolvingConflict;
 		private bool resolvingConflictRetries;
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+
 		private TransactionInformation TransactionInformation
 		{
 			get { return convention.EnlistInDistributedTransactions ? RavenTransactionAccessor.GetTransactionInformation() : null; }
@@ -558,10 +561,17 @@ namespace Raven.Client.Embedded
 							}, items.Add);
 						}
 					}
-					catch (Exception)
+					catch (Exception e)
 					{
 						if (setWaitHandle)
 							waitForHeaders.Set();
+
+						if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) &&
+							e is IndexDoesNotExistsException)
+						{
+							throw new InvalidOperationException(@"StreamQuery() does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.",e);
+						}
+
 						throw;
 					}
 				}, TaskCreationOptions.LongRunning);
@@ -632,6 +642,18 @@ namespace Raven.Client.Embedded
 				try
 				{
 					task.Wait();
+				}
+				catch (AggregateException ae)
+				{
+//log all exceptions, so no errror information gets lost
+					ae.Handle(e =>
+					{
+						logger.Error("{0}",e);					
+						return true;
+					});
+
+					if (ae.InnerExceptions.Count > 0)
+						throw ae.InnerExceptions.First();
 				}
 				catch (ObjectDisposedException)
 				{
