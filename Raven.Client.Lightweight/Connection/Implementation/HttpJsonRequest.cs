@@ -102,6 +102,7 @@ namespace Raven.Client.Connection
 
 			httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "utf-8" });
 			headers.Add("Raven-Client-Version", ClientVersion);
+			requestParams.UpdateHeaders(httpClient.DefaultRequestHeaders);
 		}
 
 		public HttpRequestHeaders DefaultRequestHeaders
