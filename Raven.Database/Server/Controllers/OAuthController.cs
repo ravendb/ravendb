@@ -24,68 +24,10 @@ namespace Raven.Database.Server.Controllers
 		private const int MaxOAuthContentLength = 1500;
 		private static readonly TimeSpan MaxChallengeAge = TimeSpan.FromMinutes(10);
 
-		[Import]
-		public IAuthenticateClient AuthenticateClient { get; set; }
-
 		private int numberOfTokensIssued;
 		public int NumberOfTokensIssued
 		{
 			get { return numberOfTokensIssued; }
-		}
-
-		[HttpGet("OAuth/AccessToken")]
-		public HttpResponseMessage AccessTokenGet()
-		{
-			if (GetHeader("Accept") != TokenContentType)
-			{
-				return
-					GetMessageWithObject(new {error = "invalid_request", error_description = "Accept should be: " + TokenContentType},
-						HttpStatusCode.BadRequest);
-			}
-
-			if (GetHeader("grant_type") != TokenGrantType)
-			{
-				return
-					GetMessageWithObject(new { error = "unsupported_grant_type", error_description = "Only supported grant_type is: " + TokenGrantType },
-						HttpStatusCode.BadRequest);
-			}
-
-			var identity = GetUserAndPassword();
-
-			if (identity == null)
-			{
-				var msg =
-					GetMessageWithObject(new {error = "invalid_client", error_description = "No client authentication was provided"},
-						HttpStatusCode.Unauthorized);
-				msg.Headers.Add("WWW-Authenticate", "Basic realm=\"Raven DB\"");
-				return msg;
-			}
-
-			List<DatabaseAccess> authorizedDatabases;
-			if (!AuthenticateClient.Authenticate(Database, identity.Item1, identity.Item2, out authorizedDatabases))
-			{
-				if ((Database == DatabasesLandlord.SystemDatabase ||
-					 !AuthenticateClient.Authenticate(DatabasesLandlord.SystemDatabase, identity.Item1, identity.Item2, out authorizedDatabases)))
-				{
-					var msg =
-					GetMessageWithObject(new { error = "unauthorized_client", error_description = "Invalid client credentials" },
-						HttpStatusCode.Unauthorized);
-					msg.Headers.Add("WWW-Authenticate", "Basic realm=\"Raven DB\"");
-					return msg;
-				}
-			}
-
-			Interlocked.Increment(ref numberOfTokensIssued);
-
-			var userId = identity.Item1;
-
-			var token = AccessToken.Create(DatabasesLandlord.SystemConfiguration.OAuthTokenKey, new AccessTokenBody
-			{
-				UserId = userId,
-				AuthorizedDatabases = authorizedDatabases
-			});
-
-			return GetMessageWithObject(token.Serialize());
 		}
 
 		[HttpPost("OAuth/API-Key")]
@@ -177,29 +119,6 @@ namespace Raven.Database.Server.Controllers
 			var token = apiKeyTuple.Item2;
 
 			return GetMessageWithObject(token.Serialize());
-		}
-
-		private Tuple<string, string> GetUserAndPassword()
-		{
-			if (User != null)
-			{
-				var httpListenerBasicIdentity = User.Identity as HttpListenerBasicIdentity;
-				if (httpListenerBasicIdentity != null)
-				{
-					return Tuple.Create(httpListenerBasicIdentity.Name, httpListenerBasicIdentity.Password);
-				}
-			}
-
-			var auth = GetHeader("Authorization");
-			if (string.IsNullOrEmpty(auth) || auth.StartsWith("Basic", StringComparison.OrdinalIgnoreCase) == false)
-				return null;
-
-			var userAndPass = Encoding.UTF8.GetString(Convert.FromBase64String(auth.Substring("Basic ".Length)));
-			var parts = userAndPass.Split(':');
-			if (parts.Length != 2)
-				return null;
-
-			return Tuple.Create(parts[0], parts[1]);
 		}
 
 		public HttpResponseMessage RespondWithChallenge()
