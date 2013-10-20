@@ -17,7 +17,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
-using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
@@ -836,6 +835,7 @@ namespace Raven.Database
 							SkipDeleteFromIndex = addDocumentResult.Updated == false
 						}, documents =>
 						{
+							SetPerCollectionEtags(documents);
 							etagSynchronizer.UpdateSynchronizationState(documents);
 							prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).AfterStorageCommitBeforeWorkNotifications(documents);
 						});
@@ -878,6 +878,42 @@ namespace Raven.Database
 					ETag = newEtag
 				};
 			}
+		}
+
+		private void SetPerCollectionEtags(JsonDocument[] documents)
+		{
+			var collections = documents.GroupBy(x => x.Metadata[Constants.RavenEntityName])
+					 .Where(x => x.Key != null)
+					 .Select(x => new { Etag = x.Max(y => y.Etag), CollectionName = x.Key.ToString() })
+					 .ToArray();
+
+			TransactionalStorage.Batch(accessor =>
+			{
+				foreach (var collection in collections)
+					SetLastEtagForCollection(accessor, collection.CollectionName, collection.Etag);
+			});
+		}
+
+		private void SetLastEtagForCollection(IStorageActionsAccessor actions, string collectionName, Etag etag)
+		{
+			actions.Lists.Set("Raven/Collection/Etag", collectionName, RavenJObject.FromObject(new
+			{
+				Etag = etag.ToByteArray()
+			}), UuidType.Documents);
+		}
+
+		public Etag GetLastEtagForCollection(string collectionName)
+		{
+			Etag value = Etag.Empty;
+			TransactionalStorage.Batch(accessor =>
+			{
+				var dbvalue = accessor.Lists.Read("Raven/Collection/Etag", collectionName);
+				if (dbvalue != null)
+				{
+					value = Etag.Parse(dbvalue.Data.Value<Byte[]>("Etag"));
+				}
+			});
+			return value;
 		}
 
         internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
@@ -1184,69 +1220,73 @@ namespace Raven.Database
         // the method already handle attempts to create the same index, so we don't have to 
         // worry about this.
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public string PutIndex(string name, IndexDefinition definition)
-        {
-            if (name == null)
-                throw new ArgumentNullException("name");
+		public string PutIndex(string name, IndexDefinition definition)
+		{
+			if (name == null)
+				throw new ArgumentNullException("name");
 
-            var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
+			var existingIndex = IndexDefinitionStorage.GetIndexDefinition(name);
 
-            if (existingIndex != null)
-            {
-                switch (existingIndex.LockMode)
-                {
-                    case IndexLockMode.LockedIgnore:
-                        log.Info("Index {0} not saved because it was lock (with ignore)", name);
-                        return name;
+			if (existingIndex != null)
+			{
+				switch (existingIndex.LockMode)
+				{
+					case IndexLockMode.LockedIgnore:
+						log.Info("Index {0} not saved because it was lock (with ignore)", name);
+						return name;
 
-                    case IndexLockMode.LockedError:
-                        throw new InvalidOperationException("Can not overwrite locked index: " + name);
-                }
-            }
+					case IndexLockMode.LockedError:
+						throw new InvalidOperationException("Can not overwrite locked index: " + name);
+				}
+			}
 
-            name = name.Trim();
+			name = name.Trim();
 
-            switch (FindIndexCreationOptions(definition, ref name))
-            {
-                case IndexCreationOptions.Noop:
-                    return name;
-                case IndexCreationOptions.Update:
-                    // ensure that the code can compile
-                    new DynamicViewCompiler(definition.Name, definition, Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Configuration).GenerateInstance();
-                    DeleteIndex(name);
-                    break;
-            }
+			switch (FindIndexCreationOptions(definition, ref name))
+			{
+				case IndexCreationOptions.Noop:
+					return name;
+				case IndexCreationOptions.Update:
+					// ensure that the code can compile
+					new DynamicViewCompiler(definition.Name, definition, Extensions, IndexDefinitionStorage.IndexDefinitionsPath, Configuration).GenerateInstance();
+					DeleteIndex(name);
+					break;
+			}
 
-            IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
-            // this has to happen in this fashion so we will expose the in memory status after the commit, but 
-            // before the rest of the world is notified about this.
-            IndexDefinitionStorage.CreateAndPersistIndex(definition);
-            IndexStorage.CreateIndexImplementation(definition);
 
-            TransactionalStorage.Batch(actions =>
-            {
-                actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
-                workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
-            });
+			TransactionalStorage.Batch(actions =>
+			{
+				definition.IndexId = (int)GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions, null);
+				IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
-            // The act of adding it here make it visible to other threads
-            // we have to do it in this way so first we prepare all the elements of the 
-            // index, then we add it to the storage in a way that make it public
-            IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
+				// this has to happen in this fashion so we will expose the in memory status after the commit, but 
+				// before the rest of the world is notified about this.
 
-			InvokeSuggestionIndexing(name, definition);
+				IndexDefinitionStorage.CreateAndPersistIndex(definition);
+				IndexStorage.CreateIndexImplementation(definition);
+
+				InvokeSuggestionIndexing(name, definition);
+
+				actions.Indexing.AddIndex(definition.IndexId, definition.IsMapReduce);
+				workContext.ShouldNotifyAboutWork(() => "PUT INDEX " + name);
+			});
+
+			// The act of adding it here make it visible to other threads
+			// we have to do it in this way so first we prepare all the elements of the 
+			// index, then we add it to the storage in a way that make it public
+			IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
 
 			workContext.ClearErrorsFor(name);
 
-            TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
-            {
-                Name = name,
-                Type = IndexChangeTypes.IndexAdded,
-            }));
+			TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
+			{
+				Name = name,
+				Type = IndexChangeTypes.IndexAdded,
+			}));
 
-            return name;
-        }
+			return name;
+		}
 
         private void InvokeSuggestionIndexing(string name, IndexDefinition definition)
         {
@@ -1274,12 +1314,11 @@ namespace Raven.Database
 
         private IndexCreationOptions FindIndexCreationOptions(IndexDefinition definition, ref string name)
         {
-	        definition.Name = name;
-            definition.IndexId = IndexDefinitionStorage.NextIndexId();
-            definition.RemoveDefaultValues();
-            IndexDefinitionStorage.ResolveAnalyzers(definition);
-            var findIndexCreationOptions = IndexDefinitionStorage.FindIndexCreationOptions(definition);
-            return findIndexCreationOptions;
+			definition.Name = name;
+			definition.RemoveDefaultValues();
+			IndexDefinitionStorage.ResolveAnalyzers(definition);
+			var findIndexCreationOptions = IndexDefinitionStorage.FindIndexCreationOptions(definition);
+			return findIndexCreationOptions;
         }
 
 

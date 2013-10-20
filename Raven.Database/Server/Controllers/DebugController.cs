@@ -16,15 +16,20 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
+	[RoutePrefix("")]
 	public class DebugController : RavenApiController
 	{
 		[HttpGet]
+		[Route("debug/changes")]
+		[Route("databases/{databaseName}/debug/changes")]
 		public HttpResponseMessage Changes()
 		{
 			return GetMessageWithObject(Database.TransportState.DebugStatuses);
 		}
 
 		[HttpGet]
+		[Route("debug/config")]
+		[Route("databases/{databaseName}/debug/config")]
 		public HttpResponseMessage Config()
 		{
 			var cfg = RavenJObject.FromObject(Database.Configuration);
@@ -37,6 +42,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
+		[Route("debug/docrefs")]
+		[Route("databases/{databaseName}/debug/docrefs")]
 		public HttpResponseMessage Docrefs(string id)
 		{
 			var totalCount = -1;
@@ -58,7 +65,9 @@ namespace Raven.Database.Server.Controllers
 			});
 		}
 
-		[HttpGet][Route("debug/index-fields")]
+		[HttpGet]
+		[Route("debug/index-fields")]
+		[Route("databases/{databaseName}/debug/index-fields")]
 		public async Task<HttpResponseMessage> IndexFields()
 		{
 			var indexStr = await ReadStringAsync();
@@ -73,6 +82,8 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
+		[Route("debug/list")]
+		[Route("databases/{databaseName}/debug/list")]
 		public HttpResponseMessage List(string id)
 		{
 			var listName = id;
@@ -96,17 +107,17 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
+		[Route("debug/queries")]
+		[Route("databases/{databaseName}/debug/queries")]
 		public HttpResponseMessage Queries()
 		{
 			return GetMessageWithObject(Database.WorkContext.CurrentlyRunningQueries);
 		}
 
 		[HttpGet]
-		[Route("user-info")]
-		[Route("user-info")]
 		[HttpPost]
-		[Route("databases/{databaseName}/user-info")]
-		[Route("databases/{databaseName}/user-info")]
+		[Route("debug/user-info")]
+		[Route("databases/{databaseName}/debug/user-info")]
 		public HttpResponseMessage UserInfo()
 		{
 			var principal = User;

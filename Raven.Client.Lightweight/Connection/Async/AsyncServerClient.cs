@@ -1246,6 +1246,13 @@ namespace Raven.Client.Connection.Async
                 }
                 catch (ErrorResponseException e)
                 {
+	                if (e.Response.StatusCode == HttpStatusCode.NotFound)
+	                {
+						var text = new StreamReader(e.Response.GetResponseStreamWithHttpDecompression().Result).ReadToEnd();
+						if (text.Contains("maxQueryString"))
+							throw new ErrorResponseException(e.Response, text);
+						throw new ErrorResponseException(e.Response, "There is no index named: " + index);
+	                }
                     responseException = e;
                 }
                 if (await HandleException(responseException))
@@ -1993,7 +2000,7 @@ namespace Raven.Client.Connection.Async
                 {
                     await webRequest.ExecuteRequestAsync();
 
-                    len = int.Parse(webRequest.ResponseHeaders["Content-Length"]);
+                    len = (int) webRequest.Response.Content.Headers.ContentLength;
                     data = () =>
                     {
                         throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " +

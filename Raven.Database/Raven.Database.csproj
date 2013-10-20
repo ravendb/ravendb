@@ -539,9 +539,7 @@
     <Compile Include="Server\Security\MixedModeRequestAuthorizer.cs" />
     <Compile Include="Server\Security\NeverSecret.cs" />
     <Compile Include="Server\Security\OAuth\AccessToken.cs" />
-    <Compile Include="Server\Security\OAuth\IAuthenticateClient.cs" />
     <Compile Include="Server\Security\OAuth\OAuthApiKeyResponder.cs" />
-    <Compile Include="Server\Security\OAuth\OAuthClientCredentialsTokenResponder.cs" />
     <Compile Include="Server\Security\OAuth\OAuthCookie.cs" />
     <Compile Include="Server\Security\OAuth\OAuthRequestAuthorizer.cs" />
     <Compile Include="Server\Security\OAuth\OAuthServerHelper.cs" />
@@ -805,6 +803,7 @@
     <Compile Include="Server\Tenancy\DatabaseLandlord.cs" />
     <Compile Include="Server\WebApi\Attributes\HttpEvalAttribute.cs" />
     <Compile Include="Server\WebApi\Attributes\HttpResetAttribute.cs" />
+    <Compile Include="Server\WebApi\Filters\RavenExceptionFilterAttribute.cs" />
     <Compile Include="Server\WebApi\IRavenServer.cs" />
     <Compile Include="Server\WebApi\Handlers\GZipToJsonHandler.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />

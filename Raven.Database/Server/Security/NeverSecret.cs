@@ -15,7 +15,6 @@ namespace Raven.Database.Server.Security
 				"/favicon.ico",
 				"/clientaccesspolicy.xml",
 				"/build/version",
-				"/OAuth/AccessToken",
 				"/OAuth/API-Key",
 				"/OAuth/Cookie",
 			};

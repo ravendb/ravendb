@@ -415,9 +415,16 @@ namespace Raven.Database.Extensions
 			if (string.Equals("true", distinct, StringComparison.OrdinalIgnoreCase))
 				return true;
 			var aggAsString = context.Request.QueryString["aggregation"]; // 2.x legacy support
+			if (aggAsString == null)
+				return false;
 
-			return string.Equals("Distinct", aggAsString, StringComparison.OrdinalIgnoreCase);
-       
+			if (string.Equals("Distinct", aggAsString, StringComparison.OrdinalIgnoreCase))
+				return true;
+
+			if (string.Equals("None", aggAsString, StringComparison.OrdinalIgnoreCase))
+				return false;
+
+			throw new NotSupportedException("AggregationOperation (except Distinct) is no longer supported");
 		}
 
 		public static DateTime? GetCutOff(this IHttpContext context)

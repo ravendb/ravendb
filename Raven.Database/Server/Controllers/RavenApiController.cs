@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -44,6 +45,11 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
+		public new IPrincipal User
+		{
+			get; set;
+		}
+
 		private HttpRequestMessage request;
 		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext,
 			CancellationToken cancellationToken)
@@ -61,13 +67,6 @@ namespace Raven.Database.Server.Controllers
 			var internalHeader = GetHeader("Raven-internal-request");
 			if (internalHeader == null || internalHeader != "true")
 				DatabasesLandlord.IncrementRequestCount();
-
-			var values = controllerContext.Request.GetRouteData().Values;
-			if (values.ContainsKey("databaseName"))
-				DatabaseName = controllerContext.Request.GetRouteData().Values["databaseName"] as string;
-			else
-				DatabaseName = null;
-
 
 			if (DatabaseName != null && await DatabasesLandlord.GetDatabaseInternal(DatabaseName) == null)
 			{
@@ -88,6 +87,13 @@ namespace Raven.Database.Server.Controllers
 		{
 			landlord = (DatabasesLandlord) controllerContext.Configuration.Properties[typeof (DatabasesLandlord)];
 			request = controllerContext.Request;
+			User = controllerContext.RequestContext.Principal;
+
+			var values = controllerContext.Request.GetRouteData().Values;
+			if (values.ContainsKey("databaseName"))
+				DatabaseName = controllerContext.Request.GetRouteData().Values["databaseName"] as string;
+			else
+				DatabaseName = null;
 		}
 
 		private void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)

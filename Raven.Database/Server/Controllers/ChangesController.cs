@@ -11,7 +11,9 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class ChangesController : RavenApiController
 	{
-		[HttpGet][Route("changes/config")]
+		[HttpGet]
+		[Route("changes/config")]
+		[Route("databases/{databaseName}/changes/config")]
 		public HttpResponseMessage ChangeConfigGet()
 		{
 			var id = GetQueryStringValue("id");
@@ -97,7 +99,9 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(connectionState);
 		}
 
-		[HttpGet][Route("changes/events")]
+		[HttpGet]
+		[Route("changes/events")]
+		[Route("databases/{databaseNames}/changes/events")]
 		public HttpResponseMessage ChangesEvents()
 		{
 			var eventsTransport = new ChangesPushContent(this);

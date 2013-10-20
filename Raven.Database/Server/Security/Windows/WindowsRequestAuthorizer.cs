@@ -357,7 +357,7 @@ namespace Raven.Database.Server.Security.Windows
 					user.ReadWriteDatabases.Add(databaseAccess.TenantId);
 			}
 
-			HttpContext.Current.User = user;
+			controller.User = user;
 			Thread.CurrentPrincipal = user;
 
 			return user;
