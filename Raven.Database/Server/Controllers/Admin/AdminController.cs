@@ -18,7 +18,9 @@ namespace Raven.Database.Server.Controllers.Admin
 	[RoutePrefix("")]
 	public class AdminController : BaseAdminController
 	{
-		[HttpPost][Route("admin/backup")]
+		[HttpPost]
+		[Route("admin/backup")]
+		[Route("databases/{databaseName}/admin/backup")]
 		public async Task<HttpResponseMessage> Backup()
 		{
 			var backupRequest = await ReadJsonObjectAsync<BackupRequest>();
@@ -39,7 +41,9 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 		}
 
-		[HttpPost][Route("admin/restore")]
+		[HttpPost]
+		[Route("admin/restore")]
+		[Route("databases/{databaseName}/admin/restore")]
 		public async Task<HttpResponseMessage> Restore()
 		{
 			if (EnsureSystemDatabase() == false)
@@ -159,7 +163,9 @@ namespace Raven.Database.Server.Controllers.Admin
 			return Path.Combine(baseDataPath, documentDataDir.Substring(2));
 		}
 
-		[HttpPost][Route("admin/changedbid")]
+		[HttpPost]
+		[Route("admin/changedbid")]
+		[Route("databases/{databaseName}/admin/changedbid")]
 		public HttpResponseMessage ChangeDbId()
 		{
 			Guid old = Database.TransactionalStorage.Id;
@@ -172,7 +178,9 @@ namespace Raven.Database.Server.Controllers.Admin
 			});
 		}
 
-		[HttpPost][Route("admin/compact")]
+		[HttpPost]
+		[Route("admin/compact")]
+		[Route("databases/{databaseName}/admin/compact")]
 		public HttpResponseMessage Compact()
 		{
 			EnsureSystemDatabase();
@@ -190,19 +198,25 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetEmptyMessage();
 		}
 
-		[HttpGet][Route("admin/indexingStatus")]
+		[HttpGet]
+		[Route("admin/indexingStatus")]
+		[Route("databases/{databaseName}/admin/indexingStatus")]
 		public HttpResponseMessage IndexingStatus()
 		{
 			return GetMessageWithObject(new {IndexingStatus = Database.WorkContext.RunIndexing ? "Indexing" : "Paused"});		
 		}
 
-		[HttpPost][Route("admin/optimize")]
+		[HttpPost]
+		[Route("admin/optimize")]
+		[Route("databases/{databaseName}/admin/optimize")]
 		public void Optimize()
 		{
 			Database.IndexStorage.MergeAllIndexes();			
 		}
 
-		[HttpPost][Route("admin/startIndexing")]
+		[HttpPost]
+		[Route("admin/startIndexing")]
+		[Route("databases/{databaseName}/admin/startIndexing")]
 		public void StartIndexing()
 		{
 			var concurrency = InnerRequest.RequestUri.ParseQueryString()["concurrency"];
@@ -215,13 +229,17 @@ namespace Raven.Database.Server.Controllers.Admin
 			Database.SpinIndexingWorkers();
 		}
 
-		[HttpPost][Route("admin/stopIndexing")]
+		[HttpPost]
+		[Route("admin/stopIndexing")]
+		[Route("databases/{databaseName}/admin/stopIndexing")]
 		public void StopIndexing()
 		{
 			Database.StopIndexingWorkers();			
 		}
 
-		[HttpGet][Route("admin/stats")]
+		[HttpGet]
+		[Route("admin/stats")]
+		[Route("databases/{databaseName}/admin/stats")]
 		public HttpResponseMessage Stats()
 		{
 			if (Database != DatabasesLandlord.SystemDatabase)
@@ -230,23 +248,33 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(DatabasesLandlord.SystemDatabase.Statistics);
 		}
 
-		[HttpGet][Route("admin/gc")]
-		[HttpPost][Route("admin/gc")]
+		[HttpGet]
+		[Route("admin/gc")]
+		[Route("databases/{databaseName}/admin/gc")]
+		[HttpPost]
+		[Route("admin/gc")]
+		[Route("databases/{databaseName}/admin/gc")]
 		public void Gc()
 		{
 			EnsureSystemDatabase();
 			CollectGarbage(Database);
 		}
 
-		[HttpGet][Route("admin/detailed-storage-breakdown")]
+		[HttpGet]
+		[Route("admin/detailed-storage-breakdown")]
+		[Route("databases/{databaseName}/admin/detailed-storage-breakdown")]
 		public HttpResponseMessage DetailedStorageBreakdown()
 		{
 			var x = Database.TransactionalStorage.ComputeDetailedStorageInformation();
 			return GetMessageWithObject(x);
 		}
 
-		[HttpGet][Route("admin/loh-compaction")]
-		[HttpPost][Route("admin/loh-compaction")]
+		[HttpGet]
+		[Route("admin/loh-compaction")]
+		[Route("databases/{databaseName}/admin/loh-compaction")]
+		[HttpPost]
+		[Route("admin/loh-compaction")]
+		[Route("databases/{databaseName}/admin/loh-compaction")]		
 		public void LohCompaction()
 		{
 			if (EnsureSystemDatabase() == false)
