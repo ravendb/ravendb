@@ -32,6 +32,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
+	using Raven.Client.Extensions;
+
 	/// <summary>
 	/// A representation of an HTTP json request to the RavenDB server
 	/// </summary>
@@ -340,7 +342,7 @@ namespace Raven.Client.Connection
 
 		public void ExecuteRequest()
 		{
-			ReadResponseJsonAsync().Wait();
+			ReadResponseJsonAsync().WaitUnwrap();
 		}
 
 		/// <summary>
@@ -349,7 +351,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public RavenJToken ReadResponseJson()
 		{
-		    return ReadResponseJsonAsync().Result;
+		    return ReadResponseJsonAsync().ResultUnwrap();
 		}
 
 	    private bool HandleUnauthorizedResponse(HttpResponseMessage unauthorizedResponse)
