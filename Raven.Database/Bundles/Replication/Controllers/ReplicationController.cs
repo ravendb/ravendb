@@ -35,7 +35,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		[ImportMany]
 		public IEnumerable<AbstractAttachmentReplicationConflictResolver> AttachmentReplicationConflictResolvers { get; set; }
 
-		[HttpPost("replication/replicateDocs")]
+		[HttpPost]
+		[Route("replication/replicateDocs")]
 		public async Task<HttpResponseMessage> DocReplicatePost()
 		{
 			var src = GetQueryStringValue("from");
@@ -100,7 +101,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetEmptyMessage();
 		}
 
-		[HttpPost("replication/replicateAttachments")]
+		[HttpPost][Route("replication/replicateAttachments")]
 		public async Task<HttpResponseMessage> AttachmentReplicatePost()
 		{
 			var src = GetQueryStringValue("from");
@@ -162,8 +163,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetEmptyMessage();
 		}
 
-		[HttpGet("replication/info")]
-		[HttpPost("replication/info")]
+		[HttpGet][Route("replication/info")]
+		[HttpPost][Route("replication/info")]
 		public HttpResponseMessage ReplicationInfoGet()
 		{
 			var mostRecentDocumentEtag = Etag.Empty;
@@ -185,7 +186,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetMessageWithObject(replicationStatistics);
 		}
 
-		[HttpGet("replication/lastEtag")]
+		[HttpGet][Route("replication/lastEtag")]
 		public HttpResponseMessage ReplicationLastEtagGet()
 		{
 			string src;
@@ -223,7 +224,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			}
 		}
 
-		[HttpPut("replication/lastEtag")]
+		[HttpPut][Route("replication/lastEtag")]
 		public HttpResponseMessage ReplicationLastEtagPut()
 		{
 			string src;
@@ -292,7 +293,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetEmptyMessage();
 		}
 
-		[HttpPost("replication/heartbeat")]
+		[HttpPost][Route("replication/heartbeat")]
 		public HttpResponseMessage HeartbeatPost()
 		{
 			var src = GetQueryStringValue("from");

@@ -1,27 +1,18 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.Net.Http;
-using System.Web.Http;
+using System.Web.Http.Controllers;
 
 namespace Raven.Database.Server.WebApi.Attributes
 {
 	[AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
-	public sealed class HttpEvalAttribute : HttpVerbAttribute
+	public sealed class HttpEvalAttribute :  Attribute , IActionHttpMethodProvider
 	{
-		/// <summary>
-		/// Initializes a new instance of the <see cref="HttpEvalAttribute" /> class.
-		/// </summary>
-		public HttpEvalAttribute()
-			: base(new HttpMethod("EVAL"))
+		private static readonly Collection<HttpMethod> SupportedMethods = new Collection<HttpMethod>(new[]
 		{
-		}
+			new HttpMethod("EVAL")
+		});
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="HttpEvalAttribute" /> class.
-		/// </summary>
-		/// <param name="routeTemplate">The route template describing the URI pattern to match against.</param>
-		public HttpEvalAttribute(string routeTemplate)
-			: base(new HttpMethod("EVAL"), routeTemplate)
-		{
-		}
+		public Collection<HttpMethod> HttpMethods { get { return SupportedMethods; } }
 	}
 }

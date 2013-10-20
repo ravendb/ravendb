@@ -9,8 +9,9 @@ namespace Raven.Database.Server.Controllers
 {
 	public class SuggestionController : RavenApiController
 	{
-		[HttpGet("suggest/{*id}")]
-		[HttpGet("databases/{databaseName}/suggest/{*id}")]
+		[HttpGet]
+		[Route("suggest/{*id}")]
+		[Route("databases/{databaseName}/suggest/{*id}")]
 		public HttpResponseMessage SuggestGet(string id)
 		{
 			var index = id;

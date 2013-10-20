@@ -20,8 +20,9 @@ namespace Raven.Database.Server.Controllers
 	{
 		private static ThreadLocal<bool> recursive = new ThreadLocal<bool>(() => false);
 
-		[HttpPost("multi_get")]
-		[HttpPost("databases/{databaseName}/multi_get")]
+		[HttpPost]
+		[Route("multi_get")]
+		[Route("databases/{databaseName}/multi_get")]
 		public async Task<HttpResponseMessage> MultiGet()
 		{
 			if (recursive.Value)

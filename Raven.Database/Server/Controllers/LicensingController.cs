@@ -7,7 +7,7 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class LicensingController : RavenApiController
 	{
-		[HttpGet("license/status")]
+		[HttpGet][Route("license/status")]
 		public HttpResponseMessage LicenseStatusGet()
 		{
 			return GetMessageWithObject(ValidateLicense.CurrentLicense);

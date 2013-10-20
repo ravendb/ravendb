@@ -20,8 +20,9 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class BulkInsertController : RavenApiController
 	{
-		[HttpPost("bulkInsert")]
-		[HttpPost("databases/{databaseName}/bulkInsert")]
+		[HttpPost]
+		[Route("bulkInsert")]
+		[Route("databases/{databaseName}/bulkInsert")]
 		public async Task<HttpResponseMessage> BulkInsertPost()
 		{
 			if (string.IsNullOrEmpty(GetQueryStringValue("no-op")) == false)

@@ -9,7 +9,7 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class PluginController : RavenApiController
 	{
-		[HttpGet("plugins/status")]
+		[HttpGet][Route("plugins/status")]
 		public HttpResponseMessage PlugingsStatusGet()
 		{
 			var dir = DatabasesLandlord.SystemDatabase.Configuration.PluginsDirectory;

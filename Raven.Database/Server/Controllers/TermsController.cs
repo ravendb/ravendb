@@ -1,15 +1,15 @@
 ﻿using System.Net;
 using System.Net.Http;
 using System.Web.Http;
-using Lucene.Net.Search;
 using Raven.Database.Queries;
 
 namespace Raven.Database.Server.Controllers
 {
 	public class TermsController : RavenApiController
 	{
-		[HttpGet("terms/{*id}")]
-		[HttpGet("databases/{databaseName}/terms/{*id}")]
+		[HttpGet]
+		[Route("terms/{*id}")]
+		[Route("databases/{databaseName}/terms/{*id}")]
 		public HttpResponseMessage TermsGet(string id)
 		{
 			var index = id;

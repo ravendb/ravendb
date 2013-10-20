@@ -10,8 +10,9 @@ namespace Raven.Database.Server.Controllers
 {
 	public class TransformersController : RavenApiController
 	{
-		[HttpGet("transformers/{*id}")]
-		[HttpGet("databases/{databaseName}/transformers/{*id}")]
+		[HttpGet]
+		[Route("transformers/{*id}")]
+		[Route("databases/{databaseName}/transformers/{*id}")]
 		public HttpResponseMessage TransformerGet(string id)
 		{
 			var transformer = id;
@@ -29,8 +30,9 @@ namespace Raven.Database.Server.Controllers
 			return GetEmptyMessage();
 		}
 
-		[HttpGet("transformers")]
-		[HttpGet("databases/{databaseName}/transformers")]
+		[HttpGet]
+		[Route("transformers")]
+		[Route("databases/{databaseName}/transformers")]
 		public HttpResponseMessage TransformerGet()
 		{
 			var namesOnlyString = GetQueryStringValue("namesOnly");
@@ -44,8 +46,9 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(transformers);
 		}
 
-		[HttpPut("transformers/{*id}")]
-		[HttpPut("databases/{databaseName}/transformers/{*id}")]
+		[HttpPut]
+		[Route("transformers/{*id}")]
+		[Route("databases/{databaseName}/transformers/{*id}")]
 		public async Task<HttpResponseMessage> TransformersPut(string id)
 		{
 			var transformer = id;
@@ -70,8 +73,9 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		[HttpDelete("transformers/{*id}")]
-		[HttpDelete("databases/{databaseName}/transformers/{*id}")]
+		[HttpDelete]
+		[Route("transformers/{*id}")]
+		[Route("databases/{databaseName}/transformers/{*id}")]
 		public HttpResponseMessage TransformersDelete(string id)
 		{
 			Database.DeleteTransfom(id);

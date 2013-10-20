@@ -16,7 +16,7 @@ namespace Raven.Database.Server.Controllers
 		[ImportMany]
 		public OrderedPartCollection<ISilverlightRequestedAware> SilverlightRequestedAware { get; set; }
 
-		[HttpGet("silverlight/ensureStartup")]
+		[HttpGet][Route("silverlight/ensureStartup")]
 		public HttpResponseMessage SilverlightEnsureStartup()
 		{
 			Database.ExtensionsState.GetOrAdd("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
@@ -37,7 +37,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		//TODO: fix the routing 
-		[HttpGet("silverlight/{*id}")]
+		[HttpGet][Route("silverlight/{*id}")]
 		public HttpResponseMessage SilverlightUi(string id)
 		{
 			Database.ExtensionsState.GetOrAdd("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>

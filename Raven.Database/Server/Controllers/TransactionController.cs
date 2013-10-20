@@ -7,7 +7,7 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class TransactionController : RavenApiController
 	{
-		[HttpPost("transaction/rollback")]
+		[HttpPost][Route("transaction/rollback")]
 		public HttpResponseMessage Rollback()
 		{
 			var txId = GetQueryStringValue("tx");
@@ -15,14 +15,14 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(new { Rollbacked = txId });
 		}
 
-		[HttpGet("transaction/status")]
+		[HttpGet][Route("transaction/status")]
 		public HttpResponseMessage Status()
 		{
 			var txId = GetQueryStringValue("tx");
 			return GetMessageWithObject(new { Exists = Database.HasTransaction(txId) });
 		}
 
-		[HttpPost("transaction/prepare")]
+		[HttpPost][Route("transaction/prepare")]
 		public HttpResponseMessage Prepare()
 		{
 			var txId = GetQueryStringValue("tx");
@@ -31,7 +31,7 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(new { Prepared = txId });
 		}
 
-		[HttpPost("transaction/commit")]
+		[HttpPost][Route("transaction/commit")]
 		public HttpResponseMessage Commit()
 		{
 			var txId = GetQueryStringValue("tx");

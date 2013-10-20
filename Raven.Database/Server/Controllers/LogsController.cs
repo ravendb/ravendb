@@ -10,7 +10,7 @@ namespace Raven.Database.Server.Controllers
 {
 	public class LogsController : RavenApiController
 	{
-		[HttpGet("logs")]
+		[HttpGet][Route("logs")]
 		public HttpResponseMessage LogsGet()
 		{
 			var target = LogManager.GetTarget<DatabaseMemoryTarget>();

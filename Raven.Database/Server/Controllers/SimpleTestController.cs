@@ -7,7 +7,7 @@ namespace Raven.Database.Server.Controllers
 {
     public class SimpleTestController : ApiController
     {
-        [HttpGet("simples")]
+        [HttpGet][Route("simples")]
         public HttpResponseMessage SimpleGet()
         {
             return new HttpResponseMessage(HttpStatusCode.NotFound)

@@ -58,7 +58,7 @@ namespace Raven.Database.Server.Controllers
 			});
 		}
 
-		[HttpGet("debug/index-fields")]
+		[HttpGet][Route("debug/index-fields")]
 		public async Task<HttpResponseMessage> IndexFields()
 		{
 			var indexStr = await ReadStringAsync();
@@ -101,10 +101,12 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(Database.WorkContext.CurrentlyRunningQueries);
 		}
 
-		[HttpGet("user-info")]
-		[HttpPost("user-info")]
-		[HttpGet("databases/{databaseName}/user-info")]
-		[HttpPost("databases/{databaseName}/user-info")]
+		[HttpGet]
+		[Route("user-info")]
+		[Route("user-info")]
+		[HttpPost]
+		[Route("databases/{databaseName}/user-info")]
+		[Route("databases/{databaseName}/user-info")]
 		public HttpResponseMessage UserInfo()
 		{
 			var principal = User;

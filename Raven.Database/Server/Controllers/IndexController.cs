@@ -9,7 +9,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
-using NetTopologySuite.IO.GML2;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -26,8 +25,9 @@ namespace Raven.Database.Server.Controllers
 {
 	public class IndexController : RavenApiController
 	{
-		[HttpGet("indexes")]
-		[HttpGet("databases/{databaseName}/indexes")]
+		[HttpGet]
+		[Route("indexes")]
+		[Route("databases/{databaseName}/indexes")]
 		public HttpResponseMessage IndexesGet()
 		{
 			var namesOnlyString = GetQueryStringValue("namesOnly");
@@ -41,8 +41,9 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(indexes);
 		}
 
-		[HttpGet("indexes/{*id}")]
-		[HttpGet("databases/{databaseName}/indexes/{*id}")]
+		[HttpGet]
+		[Route("indexes/{*id}")]
+		[Route("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexGet(string id)
 		{
 			var index = id;
@@ -61,8 +62,9 @@ namespace Raven.Database.Server.Controllers
 			return GetIndexQueryResult(index);
 		}
 
-		[HttpPut("indexes/{*id}")]
-		[HttpPut("databases/{databaseName}/indexes/{*id}")]
+		[HttpPut]
+		[Route("indexes/{*id}")]
+		[Route("databases/{databaseName}/indexes/{*id}")]
 		public async Task<HttpResponseMessage> IndexPut(string id)
 		{
 			var index = id;
@@ -89,8 +91,9 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		[HttpHead("indexes/{*id}")]
-		[HttpHead("databases/{databaseName}/indexes/{*id}")]
+		[HttpHead]
+		[Route("indexes/{*id}")]
+		[Route("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexHead(string id)
 		{
 			var index = id;
@@ -99,8 +102,9 @@ namespace Raven.Database.Server.Controllers
 			return GetEmptyMessage();
 		}
 
-		[HttpPost("indexes/{*id}")]
-		[HttpPost("databases/{databaseName}/indexes/{*id}")]
+		[HttpPost]
+		[Route("indexes/{*id}")]
+		[Route("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexPost(string id)
 		{
 			var index = id;
@@ -117,8 +121,9 @@ namespace Raven.Database.Server.Controllers
 										(GetQueryStringValue("op") ?? "<no val specified>"));
 		}
 
-		[HttpReset("indexes/{*id}")]
-		[HttpReset("databases/{databaseName}/indexes/{*id}")]
+		[HttpReset]
+		[Route("indexes/{*id}")]
+		[Route("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexReset(string id)
 		{
 			var index = id;
@@ -126,8 +131,9 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(new { Reset = index });
 		}
 
-		[HttpDelete("indexes/{*id}")]
-		[HttpDelete("databases/{databaseName}/indexes/{*id}")]
+		[HttpDelete]
+		[Route("indexes/{*id}")]
+		[Route("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexDelete(string id)
 		{
 			var index = id;
@@ -135,8 +141,9 @@ namespace Raven.Database.Server.Controllers
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
-		[HttpPost("indexes/set-priority/{*id}")]
-		[HttpPost("databases/{databaseName}/indexes/set-priority/{*id}")]
+		[HttpPost]
+		[Route("indexes/set-priority/{*id}")]
+		[Route("databases/{databaseName}/indexes/set-priority/{*id}")]
 		public HttpResponseMessage SetPriority(string id)
 		{
 			var index = id;

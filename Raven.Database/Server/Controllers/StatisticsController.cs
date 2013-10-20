@@ -5,8 +5,9 @@ namespace Raven.Database.Server.Controllers
 {
 	public class StatisticsController : RavenApiController
 	{
-		[HttpGet("stats")]
-		[HttpGet("databases/{databaseName}/stats")]
+		[HttpGet]
+		[Route("stats")]
+		[Route("databases/{databaseName}/stats")]
 		public HttpResponseMessage Get()
 		{
 			return GetMessageWithObject(Database.Statistics);

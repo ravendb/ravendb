@@ -13,7 +13,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 	[InheritedExport(typeof(RavenApiController))]
 	public class AdminReplicationController : BaseAdminController
 	{
-		[HttpGet("admin/replication/purge-tombstones")]
+		[HttpGet]
+		[Route("admin/replication/purge-tombstones")]
 		public HttpResponseMessage PurgeTombstones()
 		{
 			var docEtagStr = GetQueryStringValue("docEtag");

@@ -22,8 +22,9 @@ namespace Raven.Database.Server.Controllers
 {
 	public class StreamsController : RavenApiController
 	{
-		[HttpGet("streams/docs")]
-		[HttpGet("databases/{databaseName}/streams/docs")]
+		[HttpGet]
+		[Route("streams/docs")]
+		[Route("databases/{databaseName}/streams/docs")]
 		public HttpResponseMessage StreamDocsGet()
 		{
 			var start = GetStart();
@@ -81,8 +82,9 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
-		[HttpGet("streams/query/{*id}")]
-		[HttpGet("databases/{databaseName}/streams/query/{*id}")]
+		[HttpGet]
+		[Route("streams/query/{*id}")]
+		[Route("databases/{databaseName}/streams/query/{*id}")]
 		public HttpResponseMessage SteamQueryGet(string id)
 		{
 			var msg = GetEmptyMessage();

@@ -6,7 +6,7 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class RavenUiController : RavenApiController
 	{
-		[HttpGet("raven")]
+		[HttpGet][Route("raven")]
 		public HttpResponseMessage RavenUiGet()
 		{
 			if (string.IsNullOrEmpty(Database.Configuration.RedirectStudioUrl) == false)

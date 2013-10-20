@@ -18,7 +18,7 @@ namespace Raven.Database.Server.Controllers.Admin
 	[RoutePrefix("")]
 	public class AdminController : BaseAdminController
 	{
-		[HttpPost("admin/backup")]
+		[HttpPost][Route("admin/backup")]
 		public async Task<HttpResponseMessage> Backup()
 		{
 			var backupRequest = await ReadJsonObjectAsync<BackupRequest>();
@@ -39,7 +39,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 		}
 
-		[HttpGet("admin/restore")]
+		[HttpGet][Route("admin/restore")]
 		public async Task<HttpResponseMessage> Restore()
 		{
 			if (EnsureSystemDatabase() == false)
@@ -159,7 +159,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			return Path.Combine(baseDataPath, documentDataDir.Substring(2));
 		}
 
-		[HttpGet("admin/changedbid")]
+		[HttpGet][Route("admin/changedbid")]
 		public HttpResponseMessage ChangeDbId()
 		{
 			Guid old = Database.TransactionalStorage.Id;
@@ -172,7 +172,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			});
 		}
 
-		[HttpGet("admin/compact")]
+		[HttpGet][Route("admin/compact")]
 		public HttpResponseMessage Compact()
 		{
 			EnsureSystemDatabase();
@@ -190,19 +190,19 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetEmptyMessage();
 		}
 
-		[HttpGet("admin/indexingStatus")]
+		[HttpGet][Route("admin/indexingStatus")]
 		public HttpResponseMessage IndexingStatus()
 		{
 			return GetMessageWithObject(new {IndexingStatus = Database.WorkContext.RunIndexing ? "Indexing" : "Paused"});		
 		}
 
-		[HttpGet("admin/optimize")]
+		[HttpGet][Route("admin/optimize")]
 		public void Optimize()
 		{
 			Database.IndexStorage.MergeAllIndexes();			
 		}
 
-		[HttpGet("admin/startIndexing")]
+		[HttpGet][Route("admin/startIndexing")]
 		public void StartIndexing()
 		{
 			var concurrency = InnerRequest.RequestUri.ParseQueryString()["concurrency"];
@@ -215,13 +215,13 @@ namespace Raven.Database.Server.Controllers.Admin
 			Database.SpinIndexingWorkers();
 		}
 
-		[HttpGet("admin/stopIndexing")]
+		[HttpGet][Route("admin/stopIndexing")]
 		public void StopIndexing()
 		{
 			Database.StopIndexingWorkers();			
 		}
 
-		[HttpGet("admin/stats")]
+		[HttpGet][Route("admin/stats")]
 		public HttpResponseMessage Stats()
 		{
 			if (Database != DatabasesLandlord.SystemDatabase)
@@ -230,23 +230,23 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(DatabasesLandlord.SystemDatabase.Statistics);
 		}
 
-		[HttpGet("admin/gc")]
-		[HttpPost("admin/gc")]
+		[HttpGet][Route("admin/gc")]
+		[HttpPost][Route("admin/gc")]
 		public void Gc()
 		{
 			EnsureSystemDatabase();
 			CollectGarbage(Database);
 		}
 
-		[HttpGet("admin/detailed-storage-breakdown")]
+		[HttpGet][Route("admin/detailed-storage-breakdown")]
 		public HttpResponseMessage DetailedStorageBreakdown()
 		{
 			var x = Database.TransactionalStorage.ComputeDetailedStorageInformation();
 			return GetMessageWithObject(x);
 		}
 
-		[HttpGet("admin/loh-compaction")]
-		[HttpPost("admin/loh-compaction")]
+		[HttpGet][Route("admin/loh-compaction")]
+		[HttpPost][Route("admin/loh-compaction")]
 		public void LohCompaction()
 		{
 			if (EnsureSystemDatabase() == false)

@@ -13,7 +13,7 @@ namespace Raven.Database.Server.Controllers
 {
 	public class DatabasesController : RavenApiController
 	{
-		[HttpGet("databases")]
+		[HttpGet][Route("databases")]
 		public HttpResponseMessage Databases()
 		{
 			if (EnsureSystemDatabase() == false)
@@ -80,8 +80,9 @@ namespace Raven.Database.Server.Controllers
 			return msg;
 		}
 
-		[HttpGet("database/size")]
-		[HttpGet("databases/{databaseName}/database/size")]
+		[HttpGet]
+		[Route("database/size")]
+		[Route("databases/{databaseName}/database/size")]
 		public HttpResponseMessage DatabaseSize()
 		{
 			var totalSizeOnDisk = Database.GetTotalSizeOnDisk();
@@ -92,8 +93,9 @@ namespace Raven.Database.Server.Controllers
 			});
 		}
 
-		[HttpGet("database/storage/sizes")]
-		[HttpGet("databases/{databaseName}/database/storage/sizes")]
+		[HttpGet]
+		[Route("database/storage/sizes")]
+		[Route("databases/{databaseName}/database/storage/sizes")]
 		public HttpResponseMessage DatabaseStorageSizes()
 		{
 			var indexStorageSize = Database.GetIndexStorageSizeOnDisk();

@@ -17,13 +17,13 @@ namespace Raven.Database.Server.Controllers
 {
 	public class FacetsController : RavenApiController
 	{
-		[HttpGet("facets/{*id}")]
+		[HttpGet][Route("facets/{*id}")]
 		public async Task<HttpResponseMessage> FacetsGet(string id)
 		{
 			return await Facets(id, "GET");
 		}
 
-		[HttpPost("facets/{*id}")]
+		[HttpPost][Route("facets/{*id}")]
 		public async Task<HttpResponseMessage> FacetsPost(string id)
 		{
 			return await Facets(id, "POST");

@@ -10,8 +10,9 @@ namespace Raven.Database.Server.Controllers
 {
 	public class MoreLikeThisController : RavenApiController
 	{
-		[HttpGet("morelikethis/{*id}")]
-		[HttpGet("databases/{databaseName}/morelikethis/{*id}")]
+		[HttpGet]
+		[Route("morelikethis/{*id}")]
+		[Route("databases/{databaseName}/morelikethis/{*id}")]
 		public HttpResponseMessage MoreLikeThisGet()
 		{
 			var nameValueCollection = new NameValueCollection();

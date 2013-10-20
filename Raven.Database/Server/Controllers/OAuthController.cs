@@ -33,7 +33,7 @@ namespace Raven.Database.Server.Controllers
 			get { return numberOfTokensIssued; }
 		}
 
-		[HttpGet("OAuth/AccessToken")]
+		[HttpGet][Route("OAuth/AccessToken")]
 		public HttpResponseMessage AccessTokenGet()
 		{
 			if (GetHeader("Accept") != TokenContentType)
@@ -88,7 +88,7 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(token.Serialize());
 		}
 
-		[HttpPost("OAuth/API-Key")]
+		[HttpPost][Route("OAuth/API-Key")]
 		public async Task<HttpResponseMessage> ApiKeyPost()
 		{
 			if (InnerRequest.Content.Headers.ContentLength > MaxOAuthContentLength)

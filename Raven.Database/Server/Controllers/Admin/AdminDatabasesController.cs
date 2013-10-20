@@ -12,7 +12,7 @@ namespace Raven.Database.Server.Controllers.Admin
 	[RoutePrefix("")]
 	public class AdminDatabasesController : BaseAdminController
 	{
-		[HttpGet("admin/databases/{*id}")]
+		[HttpGet][Route("admin/databases/{*id}")]
 		public HttpResponseMessage DatabasesGet(string id)
 		{
 			var docKey = "Raven/Databases/" + id;
@@ -27,7 +27,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			return GetMessageWithObject(dbDoc);
 		}
 
-		[HttpPut("admin/databases/{*id}")]
+		[HttpPut][Route("admin/databases/{*id}")]
 		public async Task DatabasesPut(string id)
 		{
 			var docKey = "Raven/Databases/" + id;
@@ -39,7 +39,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			Database.Put(docKey, null, json, new RavenJObject(), null);
 		}
 
-		[HttpDelete("admin/databases/{*id}")]
+		[HttpDelete][Route("admin/databases/{*id}")]
 		public void DatabasesDelete(string id)
 		{
 			var docKey = "Raven/Databases/" + id;

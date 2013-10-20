@@ -10,13 +10,13 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class HardRouteController : RavenApiController
 	{
-		[HttpGet("favicon.ico")]
+		[HttpGet][Route("favicon.ico")]
 		public HttpResponseMessage FaviconGet()
 		{
 			return WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "favicon.ico");
 		}
 
-		[HttpGet("clientaccesspolicy.xml")]
+		[HttpGet][Route("clientaccesspolicy.xml")]
 		public HttpResponseMessage ClientaccessPolicyGet()
 		{
 			var msg = new HttpResponseMessage
@@ -43,7 +43,7 @@ namespace Raven.Database.Server.Controllers
 
 		public const string RootPath = "raven/studio.html";
 
-		[HttpGet("")]
+		[HttpGet][Route("")]
 		public HttpResponseMessage RavenRoot()
 		{
 			var location = DatabasesLandlord.SystemConfiguration.VirtualDirectory != "/" 

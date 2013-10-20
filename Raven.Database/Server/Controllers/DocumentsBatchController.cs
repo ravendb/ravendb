@@ -15,8 +15,9 @@ namespace Raven.Database.Server.Controllers
 {
 	public class DocumentsBatchController : RavenApiController
 	{
-		[HttpPost("bulk_docs")]
-		[HttpPost("databases/{databaseName}/bulk_docs")]
+		[HttpPost]
+		[Route("bulk_docs")]
+		[Route("databases/{databaseName}/bulk_docs")]
 		public async Task<HttpResponseMessage> BulkPost()
 		{
 			var jsonCommandArray = await ReadJsonArrayAsync();
@@ -46,16 +47,18 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(batchResult);
 		}
 
-		[HttpDelete("bulk_docs/{*id}")]
-		[HttpDelete("databases/{databaseName}/bulk_docs/{*id}")]
+		[HttpDelete]
+		[Route("bulk_docs/{*id}")]
+		[Route("databases/{databaseName}/bulk_docs/{*id}")]
 		public HttpResponseMessage BulkDelete(string id)
 		{
 			var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction());
 			return OnBulkOperation(databaseBulkOperations.DeleteByIndex, id);
 		}
 
-		[HttpPatch("bulk_docs/{*id}")]
-		[HttpPatch("databases/{databaseName}/bulk_docs/{*id}")]
+		[HttpPatch]
+		[Route("bulk_docs/{*id}")]
+		[Route("databases/{databaseName}/bulk_docs/{*id}")]
 		public async Task<HttpResponseMessage> BulkPatch(string id)
 		{
 			var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction());
@@ -65,8 +68,9 @@ namespace Raven.Database.Server.Controllers
 				databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale), id);
 		}
 
-		[HttpEval("bulk_docs/{*id}")]
-		[HttpEval("databases/{databaseName}/bulk_docs/{*id}")]
+		[HttpEval]
+		[Route("bulk_docs/{*id}")]
+		[Route("databases/{databaseName}/bulk_docs/{*id}")]
 		public async Task<HttpResponseMessage> BulkEval(string id)
 		{
 			var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction());
