@@ -49,6 +49,11 @@ namespace Raven.Backup
 				{"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => op.ApiKey = value},
 		        {"incremental", "When specified, the backup process will be incremental when done to a folder where a previous backup lies. If dest is an empty folder, or it does not exist, a full backup will be created. For incremental backups to work, the configuration option Raven/Esent/CircularLog must be set to false.", _ => op.Incremental = true},
 				{"timeout:", "The timeout to use for requests", s => op.Timeout = int.Parse(s)},
+			    {"h|?|help", v =>
+			    {
+				    PrintUsage();
+					Environment.Exit(0);
+			    }},
 	        };
         }
 
