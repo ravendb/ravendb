@@ -39,6 +39,9 @@ namespace Raven.Database.Indexing
 
         public override object GetValue(string name)
         {
+            if (parentDoc == null)
+                return base.GetValue(name);
+
             if (name == Constants.Metadata)
                 return parentDoc[name];
             var result = base.GetValue(name);
