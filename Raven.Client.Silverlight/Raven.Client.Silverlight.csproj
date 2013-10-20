@@ -146,9 +146,6 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\*.cs">
       <Link>Connection\Async\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\HttpResponseMessageExtensions.cs">
-      <Link>Connection\Async\HttpResponseMessageExtensions.cs</Link>
-    </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\*.cs">
       <Link>Connection\Profiling\%(FileName)</Link>
     </Compile>
