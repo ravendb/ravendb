@@ -730,6 +730,7 @@
     <Compile Include="MailingList\ComplexIndexMerge.cs" />
     <Compile Include="MailingList\CompoundOrQueryWithOrderByDescending .cs" />
     <Compile Include="MailingList\ConcurrencyTests.cs" />
+    <Compile Include="MailingList\ConcurrencyTests2.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
     <Compile Include="MailingList\DifferentKeysWithTheSameFirst127CharactersAreDifferent.cs" />
