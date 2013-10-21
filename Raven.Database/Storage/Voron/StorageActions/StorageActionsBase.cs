@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Text;
+
 namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System;
@@ -28,16 +30,19 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			if (values == null || values.Length == 0)
 				throw new InvalidOperationException("Cannot create an empty key.");
 
-			var key = string.Empty;
+		    if (values.Length == 1)
+		        return values[0].ToString().ToLowerInvariant();
+
+		    var sb = new StringBuilder();
 			for (var i = 0; i < values.Length; i++)
 			{
 				var value = values[i];
-				key += value;
-				if (i < values.Length - 1)
-					key += "/";
+			    sb.Append(value.ToString().ToLowerInvariant());
+			    if (i < values.Length - 1)
+			        sb.Append("/");
 			}
 
-			return key.ToLowerInvariant();
+		    return sb.ToString();
 		}
 
 		protected RavenJObject LoadJson(Table table, Slice key, WriteBatch writeBatch, out ushort version)
