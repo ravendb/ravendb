@@ -11,6 +11,10 @@
 	{
 		private readonly ConcurrentDictionary<string, List<BatchOperation>> _operations;
 
+		private readonly ConcurrentDictionary<string, ConcurrentDictionary<Slice, BatchOperation>> _lastOperations;
+
+		private readonly SliceEqualityComparer _sliceEqualityComparer;
+
 		public ReadOnlyCollection<BatchOperation> Operations
 		{
 			get
@@ -22,11 +26,11 @@
 			}
 		}
 
-		public long Size
+		public Func<long> Size
 		{
 			get
 			{
-				return _operations.Sum(operation => operation.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
+				return () => _operations.Sum(operation => operation.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
 			}
 		}
 
@@ -35,18 +39,17 @@
 			result = null;
 			operationType = BatchOperationType.None;
 
+			if (treeName == null)
+				treeName = Constants.RootTreeName;
+
 			if (_operations.ContainsKey(treeName) == false)
 				return false;
 
-			var operations = _operations[treeName];
+			var operations = _lastOperations[treeName];
 
-			for (var i = operations.Count - 1; i >= 0; i--)
+			BatchOperation operation;
+			if (operations.TryGetValue(key, out operation))
 			{
-				var operation = operations[i];
-
-				if (operation.Key.Equals(key) == false)
-					continue;
-
 				operationType = operation.Type;
 
 				if (operation.Type == BatchOperationType.Delete)
@@ -70,6 +73,8 @@
 		public WriteBatch()
 		{
 			_operations = new ConcurrentDictionary<string, List<BatchOperation>>();
+			_lastOperations = new ConcurrentDictionary<string, ConcurrentDictionary<Slice, BatchOperation>>();
+			_sliceEqualityComparer = new SliceEqualityComparer();
 		}
 
 		public void Add(Slice key, Stream value, string treeName, ushort? version = null)
@@ -137,6 +142,22 @@
 				{
 					list.Add(operation);
 					return list;
+				});
+
+			_lastOperations.AddOrUpdate(
+				treeName,
+				s =>
+				{
+					var dict = new ConcurrentDictionary<Slice, BatchOperation>(_sliceEqualityComparer);
+					dict.AddOrUpdate(operation.Key, operation, (_, __) => operation);
+
+					return dict;
+				},
+				(s, dict) =>
+				{
+					dict.AddOrUpdate(operation.Key, operation, (_, __) => operation);
+
+					return dict;
 				});
 		}
 
@@ -212,6 +233,9 @@
 				if (disposable != null)
 					disposable.Dispose();
 			}
+
+			_operations.Clear();
+			_lastOperations.Clear();
 		}
 	}
 }

@@ -13,7 +13,7 @@ namespace Voron.Benchmark
         private static HashSet<long> _randomNumbers;
         public const int ItemsPerTransaction = 100;
         private const int Transactions = 500;
-        private const string Path = @"e:\data\bench.data";
+        private const string Path = @"c:\temp\bench.data";
 
         public static void Main()
         {
@@ -35,7 +35,7 @@ namespace Voron.Benchmark
 
             //Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
             //Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
-            Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
+            //Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
 
             //Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
             //Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
@@ -53,6 +53,8 @@ namespace Voron.Benchmark
             //Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
             //Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
             //Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
+
+			Time("fill batch read batch", sw => FillBatchReadBatchOneTransaction(sw, 1000 * ItemsPerTransaction));
 
             //Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4));
 
@@ -261,6 +263,43 @@ namespace Voron.Benchmark
                 sw.Stop();
             }
         }
+
+		private static void FillBatchReadBatchOneTransaction(Stopwatch sw, int iterations)
+		{
+			using (var env = new StorageEnvironment(new MemoryMapPager(Path)))
+			{
+				sw.Start();
+				using (var tx = env.NewTransaction(TransactionFlags.Read))
+				{
+					var ms = new byte[100];
+
+					var batch = new WriteBatch();
+					for (int i = 0; i < iterations; i++)
+					{
+						var key = i.ToString("0000000000000000");
+						batch.Add(key, new MemoryStream(), null);
+					}
+
+					using (var snapshot = env.CreateSnapshot())
+					{
+						for (int i = 0; i < iterations; i++)
+						{
+							var key = i.ToString("0000000000000000");
+
+							using (var read = snapshot.Read(null, key, batch))
+							{
+								while (read.Stream.Read(ms, 0, ms.Length) != 0)
+								{
+								}
+							}
+						}
+					}
+
+					tx.Commit();
+				}
+				sw.Stop();
+			}
+		}
 
         private static void ReadOneTransaction(Stopwatch sw)
         {
