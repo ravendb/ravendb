@@ -7,44 +7,57 @@ namespace Raven.Backup
     class Program
     {
         private static bool doReadKeyOnExit;
-        private static BackupOperation op;
-        private static OptionSet optionSet;
+        private BackupOperation op;
+        private OptionSet optionSet;
 
-        static void Main(string[] args)
+	    static void Main(string[] args)
         {
-            Initialize();
+			var program = new Program();
+			program.Initialize();
 
-            ParseArguments(args);
+            program.ParseArguments(args);
+            program.EnsureMinimalParameters();
 
-            EnsureMinimalParameters();
+            var backupOperationSucceeded = program.PerformBackup();
 
-            var backupOperationSucceeded = PerformBackup();
-
-            if (doReadKeyOnExit) Console.ReadKey();
+            if (doReadKeyOnExit) 
+				Console.ReadKey();
 
             var exitCode = (int)(backupOperationSucceeded ? ExitCodes.Success : ExitCodes.Error);
             Environment.Exit(exitCode);
         }
 
-        private static void Initialize()
+        private void Initialize()
         {
-            op = new BackupOperation
-                 {
-                     NoWait = false,
-                     Incremental = false
-                 };
+	        op = new BackupOperation
+	        {
+		        NoWait = false,
+		        Incremental = false
+	        };
 
-            optionSet = new OptionSet
-			                	{
-			                		{"url=", "RavenDB server {0:url}", url => op.ServerUrl = url},
-			                		{"dest=", "Full {0:path} to backup folder", path => op.BackupPath = path},
-			                		{"nowait", "Return immediately without waiting for a response from the server", _ => op.NoWait = true},
-			                		{"readkey", "Specifying this flag will make the utility wait for key press before exiting.", _ => doReadKeyOnExit = true},
-									{"incremental", "When specified, the backup process will be incremental when done to a folder where a previous backup lies. If dest is an empty folder, or it does not exist, a full backup will be created. For incremental backups to work, the configuration option Raven/Esent/CircularLog must be set to false.", _ => op.Incremental = true}
-			                	};
+	        optionSet = new OptionSet
+	        {
+		        {"url=", "RavenDB server {0:url}", url => op.ServerUrl = url},
+		        {"dest=", "Full {0:path} to backup folder", path => op.BackupPath = path},
+		        {"nowait", "Return immediately without waiting for a response from the server", _ => op.NoWait = true},
+		        {"readkey", "Specifying this flag will make the utility wait for key press before exiting.", _ => doReadKeyOnExit = true},
+
+				{"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => op.Database = value},
+				{"u|user|username:", "The username to use when the database requires the client to authenticate.", value => op.Credentials.UserName = value},
+				{"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => op.Credentials.Password = value},
+				{"domain:", "The domain to use when the database requires the client to authenticate.", value => op.Credentials.Domain = value},
+				{"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => op.ApiKey = value},
+		        {"incremental", "When specified, the backup process will be incremental when done to a folder where a previous backup lies. If dest is an empty folder, or it does not exist, a full backup will be created. For incremental backups to work, the configuration option Raven/Esent/CircularLog must be set to false.", _ => op.Incremental = true},
+				{"timeout:", "The timeout to use for requests", s => op.Timeout = int.Parse(s)},
+			    {"h|?|help", v =>
+			    {
+				    PrintUsage();
+					Environment.Exit(0);
+			    }},
+	        };
         }
 
-        private static void ParseArguments(string[] args)
+        private void ParseArguments(string[] args)
         {
             try
             {
@@ -63,7 +76,7 @@ namespace Raven.Backup
             }
         }
 
-        private static void EnsureMinimalParameters()
+        private void EnsureMinimalParameters()
         {
             if (string.IsNullOrWhiteSpace(op.ServerUrl))
             {
@@ -83,25 +96,29 @@ namespace Raven.Backup
             }
         }
 
-        private static bool PerformBackup()
+        private bool PerformBackup()
         {
-            try
-            {
-                if (op.InitBackup())
-                {
-                    op.WaitForBackup();
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
+	        try
+	        {
+		        if (op.InitBackup())
+		        {
+			        op.WaitForBackup();
+			        return true;
+		        }
+	        }
+	        catch (Exception ex)
+	        {
+		        Console.WriteLine(ex);
+	        }
+	        finally
+	        {
+		        op.Dispose();
+	        }
 
             return false;
         }
 
-        private static void PrintUsage()
+        private void PrintUsage()
         {
             Console.WriteLine(
                 @"
