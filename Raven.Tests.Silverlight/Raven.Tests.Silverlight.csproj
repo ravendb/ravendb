@@ -80,9 +80,6 @@
     <Reference Include="DH.Scrypt">
       <HintPath>..\packages\DH.Scrypt.dll.1.0.3\lib\sl50\DH.Scrypt.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5">
-      <HintPath>..\packages\Microsoft.CompilerServices.AsyncTargetingPack.1.0.0\lib\sl50\Microsoft.CompilerServices.AsyncTargetingPack.Silverlight5.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.Silverlight.Testing, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Silverlight\Toolkit v5.0\Testing\Microsoft.Silverlight.Testing.dll</HintPath>
