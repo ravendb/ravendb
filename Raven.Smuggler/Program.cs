@@ -119,11 +119,13 @@ namespace Raven.Smuggler
 			if (args.Length < 3)
 				PrintUsageAndExit(-1);
 
-			SmugglerAction action = SmugglerAction.Export;
+			var action = SmugglerAction.Export;
 			if (string.Equals(args[0], "in", StringComparison.OrdinalIgnoreCase))
 				action = SmugglerAction.Import;
 			else if (string.Equals(args[0], "out", StringComparison.OrdinalIgnoreCase))
 				action = SmugglerAction.Export;
+            else if (string.Equals(args[0], "between", StringComparison.OrdinalIgnoreCase))
+                action = SmugglerAction.Between;
 			else
 				PrintUsageAndExit(-1);
 
@@ -167,6 +169,9 @@ namespace Raven.Smuggler
 					case SmugglerAction.Export:
 						smugglerApi.ExportData(null, options, incremental).Wait();
 						break;
+                    case SmugglerAction.Between:
+                        smugglerApi.ExportData(null, options, incremental).Wait();
+                        break;
 				}
 			}
 			catch (AggregateException ex)
@@ -228,10 +233,12 @@ Smuggler Import/Export utility for RavenDB
 Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
 Usage:
-	- Import the dump.raven file to a local instance:
-		Raven.Smuggler in http://localhost:8080/ dump.raven
-	- Export a local instance to dump.raven:
-		Raven.Smuggler out http://localhost:8080/ dump.raven
+	- Import the dump.raven file to the MyDatabase database of the specified RavenDB instance:
+		Raven.Smuggler in http://localhost:8080/ dump.raven --database=MyDatabase
+	- Export from MyDatabase database of the specified RavenDB instance to the dump.raven file:
+		Raven.Smuggler out http://localhost:8080/ dump.raven --database=MyDatabase
+	- Export from Database1 to Database2 on a different RavenDB instance:
+		Raven.Smuggler between http://localhost:8080/databases/Database1 http://localhost:8081/databases/Database2
 
 Command line options:", SystemTime.UtcNow.Year);
 
