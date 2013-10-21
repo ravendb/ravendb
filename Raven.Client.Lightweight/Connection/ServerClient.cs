@@ -333,6 +333,11 @@ namespace Raven.Client.Connection
             return asyncServerClient.PutIndexAsync(name, indexDef, overwrite).ResultUnwrap();
 		}
 
+		public string DirectPutIndex(string name, IndexDefinition indexDefinition, bool overwrite, string url)
+		{
+			return asyncServerClient.DirectPutIndexAsync(name, indexDefinition, overwrite, url).Result;
+		}
+
 		/// <summary>
 		/// Queries the specified index.
 		/// </summary>
