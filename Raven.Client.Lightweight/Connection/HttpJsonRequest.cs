@@ -732,12 +732,15 @@ namespace Raven.Client.Connection
 		{
 			using (var dataStream = webRequest.EndGetRequestStream(result))
 			using (var compressed = new GZipStream(dataStream, CompressionMode.Compress))
-			using (var writer = new StreamWriter(compressed, Encoding.UTF8))
+            using (var writer = factory.DisableRequestCompression == false ?
+                    new StreamWriter(compressed, Encoding.UTF8) :
+                    new StreamWriter(dataStream, Encoding.UTF8))
 			{
 				writer.Write(postedData);
 				writer.Flush();
 #if !MONO
-				compressed.Flush();
+                if (factory.DisableRequestCompression == false)
+                    compressed.Flush();
 #endif
 				dataStream.Flush();
 			}
@@ -873,9 +876,9 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public Task WriteAsync(string serializeObject)
+		public Task WriteAsync(string data)
 		{
-			return Task.Factory.FromAsync(BeginWrite, EndWrite, serializeObject, null);
+			return Task.Factory.FromAsync(BeginWrite, EndWrite, data, null);
 		}
 
 		public Task<Stream> GetRawRequestStream()
