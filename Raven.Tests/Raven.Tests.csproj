@@ -720,6 +720,7 @@
     <Compile Include="MailingList\Chirea.cs" />
     <Compile Include="MailingList\CoalescingOperatorWithStringARray.cs" />
     <Compile Include="MailingList\ConcurrencyTests.cs" />
+    <Compile Include="MailingList\ConcurrencyTests2.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
     <Compile Include="MailingList\DistinctWithPaging.cs" />
