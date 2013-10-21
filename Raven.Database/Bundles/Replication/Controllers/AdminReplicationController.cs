@@ -13,7 +13,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 	[InheritedExport(typeof(RavenApiController))]
 	public class AdminReplicationController : BaseAdminController
 	{
-		[HttpGet]
+		[HttpPost]
 		[Route("admin/replication/purge-tombstones")]
 		public HttpResponseMessage PurgeTombstones()
 		{
