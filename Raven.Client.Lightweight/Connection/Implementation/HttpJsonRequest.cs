@@ -806,9 +806,19 @@ namespace Raven.Client.Connection
 					continue;
 
 				var headerName = prop.Key;
-				if (headerName == "ETag")
-					headerName = "If-None-Match";
 				var value = prop.Value.Value<object>().ToString();
+				if (headerName == "ETag")
+				{
+					headerName = "If-None-Match";
+					if (!value.StartsWith("\""))
+					{
+						value = "\"" + value;
+					}
+					if (!value.EndsWith("\""))
+					{
+						value = value + "\"";
+					}
+				}
 
 				bool isRestricted;
 				try
