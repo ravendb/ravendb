@@ -461,7 +461,7 @@ namespace Voron.Trees
 
 		}
 
-		public ushort ReadVersion(Transaction tx, Slice key)
+		public ushort? ReadVersion(Transaction tx, Slice key)
 		{
 			using (var cursor = tx.NewCursor(this))
 			{
@@ -469,7 +469,7 @@ namespace Voron.Trees
 				var node = p.Search(key, _cmp);
 
 				if (node == null || new Slice(node).Compare(key, _cmp) != 0)
-					return 0;
+					return null;
 
 				return node->Version;
 			}
