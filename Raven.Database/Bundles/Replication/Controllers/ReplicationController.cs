@@ -29,11 +29,21 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			get { return replicationTask ?? (replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault()); }
 		}
 
-		[ImportMany]
-		public IEnumerable<AbstractDocumentReplicationConflictResolver> DocsReplicationConflictResolvers { get; set; }
+		public IEnumerable<AbstractDocumentReplicationConflictResolver> DocsReplicationConflictResolvers
+		{
+			get
+			{
+				return Database.Configuration.Container.GetExportedValues<AbstractDocumentReplicationConflictResolver>();
+			}
+		}
 
-		[ImportMany]
-		public IEnumerable<AbstractAttachmentReplicationConflictResolver> AttachmentReplicationConflictResolvers { get; set; }
+		public IEnumerable<AbstractAttachmentReplicationConflictResolver> AttachmentReplicationConflictResolvers
+		{
+			get
+			{
+				return Database.Configuration.Container.GetExportedValues<AbstractAttachmentReplicationConflictResolver>();				
+			}
+		}
 
 		[HttpPost]
 		[Route("replication/replicateDocs")]
