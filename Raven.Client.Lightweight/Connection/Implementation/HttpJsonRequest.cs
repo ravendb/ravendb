@@ -946,11 +946,10 @@ namespace Raven.Client.Connection
 			postedStream = streamToWrite;
 
 			using (postedStream)
-			using (var dataStream = new GZipStream(postedStream, CompressionMode.Compress))
 			{
 				Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
 				{
-					Content = new StreamContent(dataStream)
+					Content = new CompressedStreamContent(streamToWrite)
 				});
 
 				if (Response.IsSuccessStatusCode == false)
