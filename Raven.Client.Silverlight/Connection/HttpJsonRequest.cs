@@ -495,7 +495,7 @@ namespace Raven.Client.Silverlight.Connection
 			//	return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
 		}
 
-		public Task<HttpResponseMessage> RawExecuteRequestAsync()
+		public Task<WebResponse> RawExecuteRequestAsync()
 		{
 			throw new NotImplementedException();
 			/*

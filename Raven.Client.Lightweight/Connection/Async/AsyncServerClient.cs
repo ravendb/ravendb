@@ -1630,15 +1630,16 @@ namespace Raven.Client.Connection.Async
                                                                          convention.FailoverBehavior,
                                                                          HandleReplicationStatusChanges);
 
-            HttpResponseMessage webResponse = await request.RawExecuteRequestAsync();
+            var webResponse = await request.RawExecuteRequestAsync();
             queryHeaderInfo.Value = new QueryHeaderInformation
             {
-                Index = webResponse.GetSingleHeaderValue("Raven-Index"),
-                IndexTimestamp = webResponse.GetSingleHeaderValueAsDateTime("Raven-Index-Timestamp"),
-                IndexEtag = webResponse.GetSingleHeaderValueAsEtag("Raven-Index-Etag"),
-                ResultEtag = webResponse.GetSingleHeaderValueAsEtag("Raven-Result-Etag"),
-                IsStable = webResponse.GetSingleHeaderValueAsBool("Raven-Is-Stale"),
-                TotalResults = webResponse.GetSingleHeaderValueAsInt("Raven-Total-Results")
+				Index = webResponse.Headers["Raven-Index"],
+				IndexTimestamp = DateTime.ParseExact(webResponse.Headers["Raven-Index-Timestamp"], Default.DateTimeFormatsToRead,
+										CultureInfo.InvariantCulture, DateTimeStyles.None),
+				IndexEtag = Etag.Parse(webResponse.Headers["Raven-Index-Etag"]),
+				ResultEtag = Etag.Parse(webResponse.Headers["Raven-Result-Etag"]),
+				IsStable = bool.Parse(webResponse.Headers["Raven-Is-Stale"]),
+				TotalResults = int.Parse(webResponse.Headers["Raven-Total-Results"])
             };
 
             return new YieldStreamResults(webResponse);
@@ -1646,7 +1647,7 @@ namespace Raven.Client.Connection.Async
 
         private class YieldStreamResults : IAsyncEnumerator<RavenJObject>
         {
-            private readonly HttpResponseMessage webResponse;
+            private readonly WebResponse webResponse;
             private readonly Stream stream;
             private readonly StreamReader streamReader;
             private readonly JsonTextReaderAsync reader;
@@ -1654,10 +1655,10 @@ namespace Raven.Client.Connection.Async
 
             private bool wasInitalized;
 
-            public YieldStreamResults(HttpResponseMessage webResponse)
+			public YieldStreamResults(WebResponse webResponse)
             {
                 this.webResponse = webResponse;
-                stream = webResponse.GetResponseStreamWithHttpDecompression().Result; //TODO DH should this be in InitAsync?
+                stream = webResponse.GetResponseStreamWithHttpDecompression();
                 streamReader = new StreamReader(stream);
                 reader = new JsonTextReaderAsync(streamReader);
 

@@ -278,7 +278,7 @@ namespace Raven.Client.Document
             long operationId;
 
             using (var response = await operationRequest.RawExecuteRequestAsync())
-            using (var stream = await response.GetResponseStreamWithHttpDecompression())
+            using (var stream = response.GetResponseStream())
             using (var streamReader = new StreamReader(stream))
             {
                 var result = RavenJObject.Load(new JsonTextReader(streamReader));

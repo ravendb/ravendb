@@ -143,8 +143,17 @@
     <Compile Include="..\Raven.Client.Lightweight\Connection\*.cs">
       <Link>Connection\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\*.cs">
-      <Link>Connection\Async\%(FileName)</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncAdminServerClient.cs">
+      <Link>Connection\Async\AsyncAdminServerClient</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncDatabaseCommandsExtensions.cs">
+      <Link>Connection\Async\AsyncDatabaseCommandsExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncServerClient.cs">
+      <Link>Connection\Async\AsyncServerClient</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\Async\IAsyncDatabaseCommands.cs">
+      <Link>Connection\Async\IAsyncDatabaseCommands</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Profiling\*.cs">
       <Link>Connection\Profiling\%(FileName)</Link>
