@@ -47,6 +47,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 		[HttpPost]
 		[Route("replication/replicateDocs")]
+		[Route("databases/{databaseName}/replication/replicateDocs")]
 		public async Task<HttpResponseMessage> DocReplicatePost()
 		{
 			var src = GetQueryStringValue("from");
@@ -111,7 +112,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetEmptyMessage();
 		}
 
-		[HttpPost][Route("replication/replicateAttachments")]
+		[HttpPost]
+		[Route("replication/replicateAttachments")]
+		[Route("databases/{databaseName}/replication/replicateAttachments")]
 		public async Task<HttpResponseMessage> AttachmentReplicatePost()
 		{
 			var src = GetQueryStringValue("from");
@@ -173,8 +176,12 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetEmptyMessage();
 		}
 
-		[HttpGet][Route("replication/info")]
-		[HttpPost][Route("replication/info")]
+		[HttpGet]
+		[Route("replication/info")]
+		[Route("databases/{databaseName}/replication/info")]
+		[HttpPost]
+		[Route("replication/info")]
+		[Route("databases/{databaseName}/replication/info")]
 		public HttpResponseMessage ReplicationInfoGet()
 		{
 			var mostRecentDocumentEtag = Etag.Empty;
@@ -196,7 +203,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetMessageWithObject(replicationStatistics);
 		}
 
-		[HttpGet][Route("replication/lastEtag")]
+		[HttpGet]
+		[Route("replication/lastEtag")]
+		[Route("databases/{databaseName}/replication/lastEtag")]
 		public HttpResponseMessage ReplicationLastEtagGet()
 		{
 			string src;
@@ -234,7 +243,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			}
 		}
 
-		[HttpPut][Route("replication/lastEtag")]
+		[HttpPut]
+		[Route("replication/lastEtag")]
+		[Route("databases/{databaseName}/replication/lastEtag")]
 		public HttpResponseMessage ReplicationLastEtagPut()
 		{
 			string src;
@@ -303,7 +314,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			return GetEmptyMessage();
 		}
 
-		[HttpPost][Route("replication/heartbeat")]
+		[HttpPost]
+		[Route("replication/heartbeat")]
+		[Route("databases/{databaseName}/replication/heartbeat")]
 		public HttpResponseMessage HeartbeatPost()
 		{
 			var src = GetQueryStringValue("from");
