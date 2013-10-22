@@ -90,12 +90,25 @@ namespace Raven.Database.Server.Controllers
 			request = controllerContext.Request;
 			User = controllerContext.RequestContext.Principal;
 
-			var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
-			var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("databaseName"));
-			if (selectedData != null)
-				DatabaseName = selectedData.Values["databaseName"] as string;
+			var values = controllerContext.Request.GetRouteData().Values;
+			if (values.ContainsKey("MS_SubRoutes"))
+			{
+				var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
+				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("databaseName"));
+				if (selectedData != null)
+					DatabaseName = selectedData.Values["databaseName"] as string;
+				else
+					DatabaseName = null;
+			}
 			else
-				DatabaseName = null;
+			{
+				if(values.ContainsKey("databaseName"))
+					DatabaseName = values["databaseName"] as string;
+				else
+					DatabaseName = null;
+			}
+			
+			
 		}
 
 		private void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
