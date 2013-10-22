@@ -955,19 +955,16 @@ namespace Raven.Client.Connection
 		private async Task WriteAsync(Stream streamToWrite)
 		{
 			postedStream = streamToWrite;
-
-			using (postedStream)
+			writeCalled = true;
+			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
-				Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
-				{
-					Content = new CompressedStreamContent(streamToWrite)
-				});
+				Content = new CompressedStreamContent(streamToWrite)
+			});
 
-				if (Response.IsSuccessStatusCode == false)
-					throw new ErrorResponseException(Response);
+			if (Response.IsSuccessStatusCode == false)
+				throw new ErrorResponseException(Response);
 
-				SetResponseHeaders(Response);
-			}
+			SetResponseHeaders(Response);
 		}
 
 		public async Task WriteAsync(string data)
