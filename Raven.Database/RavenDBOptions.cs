@@ -1,4 +1,5 @@
-﻿using Raven.Database.Config;
+﻿using System;
+using Raven.Database.Config;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
@@ -31,7 +32,27 @@ namespace Raven.Database
             }
             catch
             {
-                systemDatabase.Dispose();
+	            if (systemDatabase != null)
+	            {
+		            try
+		            {
+						systemDatabase.Dispose();
+		            }
+		            catch (Exception)
+		            {
+		            }
+	            }
+
+	            if (databasesLandlord != null)
+	            {
+		            try
+		            {
+						databasesLandlord.Dispose();
+		            }
+		            catch (Exception)
+		            {
+		            }
+	            }
                 throw;
             }
         }
