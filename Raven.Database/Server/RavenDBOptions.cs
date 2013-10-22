@@ -55,6 +55,7 @@ namespace Raven.Database.Server
 
 		public void Dispose()
 		{
+			mixedModeRequestAuthorizer.Dispose();
 			databasesLandlord.Dispose();
 			systemDatabase.Dispose();
 		}
