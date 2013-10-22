@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
@@ -1278,7 +1279,7 @@ namespace Raven.Database.Indexing
 					indexSearcher.Search(luceneQuery, gatherAllCollector);
 					return gatherAllCollector.ToTopDocs();
 				}
-			    int absFullPage = Math.Abs(pageSize + start); // need to protect against ridicilously high values of pageSize + start that overflow
+			    int absFullPage = Math.Abs(pageSize + start); // need to protect against ridiculously high values of pageSize + start that overflow
 			    var minPageSize = Math.Max(absFullPage, 1);
 
 				// NOTE: We get Start + Pagesize results back so we have something to page on
