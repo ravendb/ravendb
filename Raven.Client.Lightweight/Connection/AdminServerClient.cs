@@ -1,74 +1,95 @@
-﻿#if !SILVERLIGHT && !NETFX_CORE
+﻿﻿#if !SILVERLIGHT && !NETFX_CORE
 // -----------------------------------------------------------------------
 //  <copyright file="AdminDatabaseCommands.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
 using Raven.Abstractions.Data;
-using Raven.Client.Extensions;
-using Raven.Client.Connection.Async;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-
 	public class AdminServerClient : IAdminDatabaseCommands, IGlobalAdminDatabaseCommands
-    {
-        private readonly AsyncServerClient asyncServerClient;
-        private readonly AsyncAdminServerClient asyncAdminServerClient;
+	{
+		internal readonly ServerClient innerServerClient;
+		private readonly AdminRequestCreator adminRequest;
 
-        public AdminServerClient(AsyncServerClient asyncServerClient, AsyncAdminServerClient asyncAdminServerClient)
-        {
-            this.asyncServerClient = asyncServerClient;
-            this.asyncAdminServerClient = asyncAdminServerClient;
-        }
+		public AdminServerClient(ServerClient serverClient)
+		{
+			innerServerClient = serverClient;
+			adminRequest =
+				new AdminRequestCreator(
+					(url, method) => ((ServerClient)innerServerClient.ForSystemDatabase()).CreateRequest(url, method),
+					(url, method) => innerServerClient.CreateRequest(url, method),
+					(currentServerUrl, requestUrl, method) => innerServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method));
+		}
 
-        public void CreateDatabase(DatabaseDocument databaseDocument)
-        {
-            asyncAdminServerClient.CreateDatabaseAsync(databaseDocument).WaitUnwrap();
-        }
+		public void CreateDatabase(DatabaseDocument databaseDocument)
+		{
+			RavenJObject doc;
+			var req = adminRequest.CreateDatabase(databaseDocument, out doc);
 
-        public void DeleteDatabase(string databaseName, bool hardDelete = false)
-        {
-            asyncAdminServerClient.DeleteDatabaseAsync(databaseName, hardDelete);
-        }
+			req.Write(doc.ToString(Formatting.Indented));
+			req.ExecuteRequest();
+		}
 
-        public IDatabaseCommands Commands { get { return new ServerClient(asyncServerClient); } }
+		public void DeleteDatabase(string databaseName, bool hardDelete = false)
+		{
+			adminRequest.DeleteDatabase(databaseName, hardDelete).ExecuteRequest();
+		}
 
-        public void CompactDatabase(string databaseName)
-        {
-			asyncAdminServerClient.CompactDatabaseAsync(databaseName).WaitUnwrap();
-        }
+		public IDatabaseCommands Commands { get { return innerServerClient; } }
 
-        public void StopIndexing()
-        {
-			asyncAdminServerClient.StopIndexingAsync().WaitUnwrap();
-        }
+		public void CompactDatabase(string databaseName)
+		{
+			adminRequest.CompactDatabase(databaseName).ExecuteRequest();
+		}
 
-        public void StartIndexing()
-        {
-			asyncAdminServerClient.StartIndexingAsync().WaitUnwrap();
-        }
+		public void StopIndexing()
+		{
+			innerServerClient.ExecuteWithReplication("POST", operationUrl => adminRequest.StopIndexing(operationUrl).ExecuteRequest());
+		}
 
-        public void StartBackup(string backupLocation, DatabaseDocument databaseDocument)
-        {
-			asyncAdminServerClient.StartBackupAsync(backupLocation, databaseDocument).WaitUnwrap();
-        }
+		public void StartIndexing()
+		{
+			innerServerClient.ExecuteWithReplication("POST", operationUrl => adminRequest.StartIndexing(operationUrl).ExecuteRequest());
+		}
 
-        public void StartRestore(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
-        {
-            asyncAdminServerClient.StartRestoreAsync(restoreLocation, databaseLocation, databaseName, defrag);
-        }
+		public void StartBackup(string backupLocation, DatabaseDocument databaseDocument)
+		{
+			RavenJObject backupSettings;
+			var request = adminRequest.StartBackup(backupLocation, databaseDocument, out backupSettings);
 
-        public string GetIndexingStatus()
-        {
-            return asyncAdminServerClient.GetIndexingStatusAsync().Result;
-        }
+			request.Write(backupSettings.ToString(Formatting.None));
+			request.ExecuteRequest();
+		}
 
-        public AdminStatistics GetStatistics()
-        {
-            return asyncAdminServerClient.GetStatisticsAsync().Result;
-        }
-    }
+		public void StartRestore(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
+		{
+			RavenJObject restoreSettings;
+			var request = adminRequest.StartRestore(restoreLocation, databaseLocation, databaseName, defrag, out restoreSettings);
+
+			request.Write(restoreSettings.ToString(Formatting.None));
+			request.ExecuteRequest();
+		}
+
+		public string GetIndexingStatus()
+		{
+			return innerServerClient.ExecuteWithReplication("GET", operationUrl =>
+			{
+				var result = adminRequest.IndexingStatus(operationUrl).ReadResponseJson();
+
+				return result.Value<string>("IndexingStatus");
+			});
+		}
+
+		public AdminStatistics GetStatistics()
+		{
+			var json = (RavenJObject)adminRequest.AdminStats().ReadResponseJson();
+
+			return json.Deserialize<AdminStatistics>(innerServerClient.convention);
+		}
+	}
 }
 #endif

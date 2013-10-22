@@ -360,11 +360,11 @@ namespace Raven.Client.Silverlight.Connection
 		/// Adds the operation headers.
 		/// </summary>
 		/// <param name="operationsHeaders">The operations headers.</param>
-		public HttpJsonRequest AddOperationHeaders(NameValueCollection operationsHeaders)
+		public HttpJsonRequest AddOperationHeaders(IDictionary<string, string> operationsHeaders)
 		{
-			foreach (var key in operationsHeaders.Keys)
+			foreach (var header in operationsHeaders)
 			{
-                httpClient.DefaultRequestHeaders.Add(key, operationsHeaders.GetValues(key));
+				httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
 			}
 			return this;
 		}

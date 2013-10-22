@@ -345,12 +345,12 @@ namespace Raven.Client.Shard
 		#region Queries
 
 		protected override RavenQueryInspector<T> CreateRavenQueryInspector<T>(string indexName, bool isMapReduce, RavenQueryProvider<T> provider,
-		                                                                    RavenQueryStatistics ravenQueryStatistics,
-		                                                                    RavenQueryHighlightings highlightings)
+																			RavenQueryStatistics ravenQueryStatistics,
+																			RavenQueryHighlightings highlightings)
 		{
 #if !SILVERLIGHT
 			return new ShardedRavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, isMapReduce, shardStrategy,
-				 null, 
+				 null,
 				 shardDbCommands.Values.ToList());
 #else
 			return new RavenQueryInspector<T>(provider, ravenQueryStatistics, highlightings, indexName, null, this, null, isMapReduce);
@@ -367,7 +367,7 @@ namespace Raven.Client.Shard
 			return AsyncLuceneQuery<T>(indexName);
 		}
 
-		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null)
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25, string exclude = null)
 		{
 			IncrementRequestCount();
 			var shards = GetCommandsToOperateOn(new ShardRequestData
@@ -380,7 +380,7 @@ namespace Raven.Client.Shard
 			{
 				EntityType = typeof(T),
 				Keys = { keyPrefix }
-			}, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude))
+			}, (dbCmd, i) => dbCmd.StartsWithAsync(keyPrefix, start, pageSize, exclude: exclude))
 								.ContinueWith(task => (IEnumerable<T>)task.Result.SelectMany(x => x).Select(TrackEntity<T>).ToList());
 		}
 

@@ -22,15 +22,15 @@ namespace Raven.Client
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null);
+		Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25, string exclude = null);
 
-        /// <summary>
-        /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
-        /// <returns></returns>
-        IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
+		/// <summary>
+		/// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
+		/// </summary>
+		/// <typeparam name="T">The result of the query</typeparam>
+		/// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+		/// <returns></returns>
+		IAsyncDocumentQuery<T> AsyncLuceneQuery<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new();
 
 		/// <summary>
 		/// Query the specified index using Lucene syntax
@@ -72,7 +72,7 @@ namespace Raven.Client
 		/// CLR types along the way.
 		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
 		/// </summary>
-        Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query);
+		Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query);
 
 		/// <summary>
 		/// Stream the results on the query to the client, converting them to 

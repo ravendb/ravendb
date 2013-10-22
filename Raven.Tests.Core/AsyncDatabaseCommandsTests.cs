@@ -43,7 +43,7 @@ namespace Raven.Tests.Core
 					await session.SaveChangesAsync();
 				}
 
-				var documents = await store.AsyncDatabaseCommands.ForDatabase(dbname).StartsWithAsync("Companies", null, 0, 25);
+				var documents = await store.AsyncDatabaseCommands.ForDatabase(dbname).StartsWithAsync("Companies", 0, 25);
 				Assert.Equal(1, documents.Length);
 			}
 		}
