@@ -98,9 +98,10 @@ namespace Raven.Tests.Security.OAuth
 				}
 				}), new RavenJObject(), null);
 
+				var serverUrl = server.SystemDatabase.ServerUrl;
 				using (var store = new DocumentStore
 				{
-					Url = server.SystemDatabase.ServerUrl,
+					Url = serverUrl,
 					ApiKey = "sysadmin/ThisIsMySecret",
 					Conventions = {FailoverBehavior = FailoverBehavior.FailImmediately}
 				}.Initialize())
@@ -110,7 +111,7 @@ namespace Raven.Tests.Security.OAuth
 
 				using (var store = new DocumentStore
 				{
-					Url = server.SystemDatabase.ServerUrl,
+					Url = serverUrl,
 					ApiKey = "dbadmin/ThisIsMySecret"
 				}.Initialize())
 				{

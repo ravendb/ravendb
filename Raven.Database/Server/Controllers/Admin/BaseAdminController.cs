@@ -19,35 +19,39 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 		}
 
-		public override Task<HttpResponseMessage> ExecuteAsync(System.Web.Http.Controllers.HttpControllerContext controllerContext, System.Threading.CancellationToken cancellationToken)
+		public override async Task<HttpResponseMessage> ExecuteAsync(System.Web.Http.Controllers.HttpControllerContext controllerContext, System.Threading.CancellationToken cancellationToken)
 		{
 			InnerInitialization(controllerContext);
 			var authorizer = (MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
+			HttpResponseMessage authMsg;
+			if (authorizer.TryAuthorize(this, out authMsg) == false)
+			{
+				return authMsg;
+			}
+
 			var accessMode = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode;
 			if(accessMode == AnonymousUserAccessMode.Admin || accessMode == AnonymousUserAccessMode.All ||
 			(accessMode == AnonymousUserAccessMode.Get && InnerRequest.Method.Method == "GET"))
-				return base.ExecuteAsync(controllerContext, cancellationToken);
+				return await base.ExecuteAsync(controllerContext, cancellationToken);
 				
 			var user = authorizer.GetUser(this);
 			if (user == null)
-				return new CompletedTask<HttpResponseMessage>(GetMessageWithObject(
-					new
+				return GetMessageWithObject(new
 					{
 						Error = "The operation '" + GetRequestUrl() + "' is only available to administrators, and could not find the user to authorize with"
-					}, HttpStatusCode.Unauthorized));
+					}, HttpStatusCode.Unauthorized);
 
 			if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false &&
 			user.IsAdministrator(Database) == false && SupportedByAnyAdditionalRoles(user) == false)
 			{
-				return new CompletedTask<HttpResponseMessage>(GetMessageWithObject(
-					new
+				return GetMessageWithObject(new
 					{
 						Error = "The operation '" + GetRequestUrl() + "' is only available to administrators"
-					}, HttpStatusCode.Unauthorized));
+					}, HttpStatusCode.Unauthorized);
 			}
 			
-			return base.ExecuteAsync(controllerContext, cancellationToken);
+			return await base.ExecuteAsync(controllerContext, cancellationToken);
 		}
 
 		private bool SupportedByAnyAdditionalRoles(IPrincipal user)
