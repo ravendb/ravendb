@@ -51,10 +51,11 @@ namespace Raven.Studio.Features.Tasks
                 {
                     OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers,
                     ShouldExcludeExpired = false,
+                    BackupStream = sampleData,
                 };
                 var smuggler = new SmugglerApi(smugglerOptions, DatabaseCommands, s => Report(s));
 
-                await smuggler.ImportData(sampleData, smugglerOptions);
+                await smuggler.ImportData(smugglerOptions);
             }
 
             return DatabaseTaskOutcome.Succesful;

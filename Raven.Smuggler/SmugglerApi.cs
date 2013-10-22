@@ -64,13 +64,11 @@ namespace Raven.Smuggler
 			ConnectionStringOptions = connectionStringOptions;
 		}
 
-		public override async Task ImportData(Stream stream, SmugglerOptions options)
+        public override async Task ImportData(SmugglerOptions options, Stream stream)
 		{
 			SmugglerJintHelper.Initialize(options ?? SmugglerOptions);
 
-			var batchSize = options != null ? options.BatchSize : SmugglerOptions.BatchSize;
-
-			using (store = CreateStore())
+            using (store = CreateStore())
 			{
 				Task disposeTask = null;
 
@@ -78,17 +76,17 @@ namespace Raven.Smuggler
 				{
 					operation = store.BulkInsert(options: new BulkInsertOptions
 					{
-						BatchSize = batchSize,
+						BatchSize = options != null ? options.BatchSize : SmugglerOptions.BatchSize,
 						CheckForUpdates = true
 					});
 
 					operation.Report += text => ShowProgress(text);
 
-					await base.ImportData(stream, options);
+                    await base.ImportData(options, stream);
 				}
 				finally
 				{
-					disposeTask = operation.DisposeAsync();
+					 disposeTask = operation.DisposeAsync();
 				}
 
 				if (disposeTask != null)
@@ -98,19 +96,19 @@ namespace Raven.Smuggler
 			}
 		}
 
-		public override async Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental, PeriodicBackupStatus backupStatus = null)
+		public override async Task<string> ExportData(SmugglerOptions options, PeriodicBackupStatus backupStatus = null)
 		{
 			using (store = CreateStore())
 			{
-				return await base.ExportData(stream, options, incremental, backupStatus);
+				return await base.ExportData(options, backupStatus);
 			}
 		}
 
-		public override async Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental, bool lastEtagsFromFile, PeriodicBackupStatus lastEtag)
+		public override async Task<string> ExportData(SmugglerOptions options, Stream stream, bool lastEtagsFromFile, PeriodicBackupStatus lastEtag)
 		{
 			using (store = CreateStore())
 			{
-				return await base.ExportData(stream, options, incremental, lastEtagsFromFile, lastEtag);
+				return await base.ExportData(options, null, lastEtagsFromFile, lastEtag);
 			}
 		}
 
@@ -342,11 +340,11 @@ namespace Raven.Smuggler
 
 		public bool LastRequestErrored { get; set; }
 
-		protected override Task EnsureDatabaseExists()
+		protected async override Task EnsureDatabaseExists()
 		{
 			if (EnsuredDatabaseExists ||
 				string.IsNullOrWhiteSpace(ConnectionStringOptions.DefaultDatabase))
-				return new CompletedTask();
+				return;
 
 			EnsuredDatabaseExists = true;
 
@@ -356,7 +354,7 @@ namespace Raven.Smuggler
 			try
 			{
 				httpRavenRequestFactory.Create(docUrl, "GET", ConnectionStringOptions).ExecuteRequest();
-				return new CompletedTask();
+				return;
 			}
 			catch (WebException e)
 			{
@@ -370,8 +368,6 @@ namespace Raven.Smuggler
 			document.Remove("Id");
 			request.Write(document);
 			request.ExecuteRequest();
-
-			return new CompletedTask();
 		}
 	}
 }

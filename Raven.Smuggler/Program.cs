@@ -22,7 +22,7 @@ namespace Raven.Smuggler
 		private readonly RavenConnectionStringOptions connectionStringOptions;
 		private readonly SmugglerOptions options;
 		private readonly OptionSet optionSet;
-		bool incremental, waitForIndexing;
+		bool waitForIndexing;
 
 		private Program()
 		{
@@ -95,7 +95,7 @@ namespace Raven.Smuggler
 			            		{"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => Credentials.Password = value},
 			            		{"domain:", "The domain to use when the database requires the client to authenticate.", value => Credentials.Domain = value},
 			            		{"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
-								{"incremental", "States usage of incremental operations", _ => incremental = true },
+								{"incremental", "States usage of incremental operations", _ => options.Incremental = true },
 								{"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _=> waitForIndexing=true},
                                 {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true },
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
@@ -152,7 +152,7 @@ namespace Raven.Smuggler
 
 			if (options.BackupPath != null && Directory.Exists(options.BackupPath))
 			{
-				incremental = true;
+				options.Incremental = true;
 			}
 
 			var smugglerApi = new SmugglerApi(options, connectionStringOptions);
@@ -162,15 +162,15 @@ namespace Raven.Smuggler
 				switch (action)
 				{
 					case SmugglerAction.Import:
-						smugglerApi.ImportData(options, incremental).Wait();
+						smugglerApi.ImportData(options).Wait();
 						if (waitForIndexing)
 							smugglerApi.WaitForIndexing(options).Wait();
 						break;
 					case SmugglerAction.Export:
-						smugglerApi.ExportData(null, options, incremental).Wait();
+						smugglerApi.ExportData(options).Wait();
 						break;
                     case SmugglerAction.Between:
-                        smugglerApi.ExportData(null, options, incremental).Wait();
+				        throw new NotImplementedException();
                         break;
 				}
 			}

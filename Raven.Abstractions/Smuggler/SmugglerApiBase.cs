@@ -49,19 +49,19 @@ namespace Raven.Abstractions.Smuggler
 		protected abstract void ShowProgress(string format, params object[] args);
 
 		protected bool EnsuredDatabaseExists;
-		private const string IncrementalExportStateFile = "IncrementalExport.state.json";
+	    private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
 		protected SmugglerApiBase(SmugglerOptions smugglerOptions)
 		{
 			SmugglerOptions = smugglerOptions;
 		}
 
-		public virtual Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental, PeriodicBackupStatus backupStatus = null)
+		public virtual Task<string> ExportData(SmugglerOptions options, PeriodicBackupStatus backupStatus = null)
 		{
-			return ExportData(stream, options, incremental, true, backupStatus);
+			return ExportData(options, null, true, backupStatus);
 		}
 
-		public virtual async Task<string> ExportData(Stream stream, SmugglerOptions options, bool incremental, bool lastEtagsFromFile, PeriodicBackupStatus backupStatus)
+	    public virtual async Task<string> ExportData(SmugglerOptions options, Stream stream, bool lastEtagsFromFile, PeriodicBackupStatus backupStatus)
 		{
 			options = options ?? SmugglerOptions;
 			if (options == null)
@@ -70,7 +70,7 @@ namespace Raven.Abstractions.Smuggler
 			var file = options.BackupPath;
 
 #if !SILVERLIGHT
-			if (incremental)
+			if (options.Incremental)
 			{
 				if (Directory.Exists(options.BackupPath) == false)
 				{
@@ -98,15 +98,15 @@ namespace Raven.Abstractions.Smuggler
 				}
 			}
 #else
-			if(incremental)
+			if(options.Incremental)
 				throw new NotSupportedException("Incremental exports are not supported in SL.");
 #endif
 			await DetectServerSupportedFeatures();
 
 			bool ownedStream = stream == null;
-			try
+		    try
 			{
-				stream = stream ?? File.Create(file);
+                stream = stream ?? options.BackupStream ?? File.Create(file);
 				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
 #if SILVERLIGHT
                     CompressionLevel.BestCompression,
@@ -156,7 +156,7 @@ namespace Raven.Abstractions.Smuggler
 				}
 
 #if !SILVERLIGHT
-				if (incremental && lastEtagsFromFile)
+				if (options.Incremental && lastEtagsFromFile)
 					WriteLastEtagsFromFile(options);
 #endif
 				return file;
@@ -312,20 +312,33 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-#if !SILVERLIGHT
-		public virtual async Task ImportData(SmugglerOptions options, bool incremental = false)
+		public virtual async Task ImportData(SmugglerOptions options)
 		{
-			if (incremental == false)
-			{
-				using (FileStream fileStream = File.OpenRead(options.BackupPath))
-				{
-					await ImportData(fileStream, options);
-				}
-
+            if (options.Incremental == false)
+            {
+                Stream stream = options.BackupStream;
+                bool ownStream = false;
+                try
+                {
+                    if (stream == null)
+                    {
+                        stream = File.OpenRead(options.BackupPath);
+                        ownStream = true;
+                    }
+                    await ImportData(options, stream);
+                }
+                finally
+                {
+                    if (stream != null && ownStream)
+                        stream.Dispose();
+                }
 				return;
 			}
 
-			var files = Directory.GetFiles(Path.GetFullPath(options.BackupPath))
+#if SILVERLIGHT
+		    throw new NotSupportedException("Silverlight doesn't support importing an incremental dump files.");
+#else
+            var files = Directory.GetFiles(Path.GetFullPath(options.BackupPath))
 				.Where(file => ".ravendb-incremental-dump".Equals(Path.GetExtension(file), StringComparison.CurrentCultureIgnoreCase))
 				.OrderBy(File.GetLastWriteTimeUtc)
 				.ToArray();
@@ -344,16 +357,16 @@ namespace Raven.Abstractions.Smuggler
 			{
 				using (var fileStream = File.OpenRead(Path.Combine(options.BackupPath, files[i])))
 				{
-					await ImportData(fileStream, optionsWithoutIndexes);
+                    await ImportData(optionsWithoutIndexes, fileStream);
 				}
 			}
 
 			using (var fileStream = File.OpenRead(Path.Combine(options.BackupPath, files.Last())))
 			{
-				await ImportData(fileStream, options);
+                await ImportData(options, fileStream);
 			}
-		}
 #endif
+		}
 
 		protected class AttachmentExportInfo
 		{
@@ -364,7 +377,7 @@ namespace Raven.Abstractions.Smuggler
 
 		protected abstract Task EnsureDatabaseExists();
 
-		public async virtual Task ImportData(Stream stream, SmugglerOptions options)
+        public async virtual Task ImportData(SmugglerOptions options, Stream stream)
 		{
 			options = options ?? SmugglerOptions;
 			if (options == null)
@@ -378,7 +391,7 @@ namespace Raven.Abstractions.Smuggler
 			var sw = Stopwatch.StartNew();
 			// Try to read the stream compressed, otherwise continue uncompressed.
 			JsonTextReader jsonReader;
-			try
+            try
 			{
 				sizeStream = new CountingStream(new GZipStream(stream, CompressionMode.Decompress));
 				var streamReader = new StreamReader(sizeStream);

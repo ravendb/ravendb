@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -33,10 +34,17 @@ namespace Raven.Abstractions.Smuggler
 		/// </summary>
 		public string BackupPath { get; set; }
 
+        /// <summary>
+        /// The stream to write to when doing an export, or where to read from when doing an import.
+        /// </summary>
+        public Stream BackupStream { get; set; }
+
 		public List<FilterSetting> Filters { get; set; }
 
 		public Etag LastDocsEtag { get; set; }
 		public Etag LastAttachmentEtag { get; set; }
+        
+        public bool Incremental { get; set; }
 
 		/// <summary>
 		/// Specify the types to operate on. You can specify more than one type by combining items with the OR parameter.

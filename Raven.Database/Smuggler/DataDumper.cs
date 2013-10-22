@@ -27,10 +27,9 @@ namespace Raven.Database.Smuggler
 
 		private readonly DocumentDatabase _database;
 
-		protected override Task EnsureDatabaseExists()
+        protected async override Task EnsureDatabaseExists()
 		{
 			EnsuredDatabaseExists = true;
-			return new CompletedTask();
 		}
 
 		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
