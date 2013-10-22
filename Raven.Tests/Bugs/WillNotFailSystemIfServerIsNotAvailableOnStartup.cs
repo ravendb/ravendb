@@ -22,7 +22,7 @@ namespace Raven.Tests.Bugs
 			{
 				using (var session = store.OpenSession())
 				{
-					Assert.Throws<HttpRequestException>(() => session.Load<User>("user/1"));
+					Assert.Throws<WebException>(() => session.Load<User>("user/1"));
 				}
 
 				using (GetNewServer())
