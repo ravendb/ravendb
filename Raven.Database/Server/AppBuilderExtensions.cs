@@ -7,8 +7,8 @@ using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
 using Microsoft.Owin;
-using Raven.Database;
 using Raven.Database.Config;
+using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
@@ -38,14 +38,12 @@ namespace Owin
 				throw new ArgumentNullException("options");
 			}
 
-			DocumentDatabase documentDatabase = options.SystemDatabase;
-
 			// This is a katana specific key (i.e. non a standard OWIN key) to be notified
 			// when the host in being shut down. Works both in HttpListener and SystemWeb hosting
 			var appDisposing = app.Properties["host.OnAppDisposing"] as CancellationToken?;
 			if (appDisposing.HasValue)
 			{
-				appDisposing.Value.Register(documentDatabase.Dispose);
+				appDisposing.Value.Register(options.Dispose);
 			}
 
 			var httpConfiguration = new HttpConfiguration();
@@ -57,29 +55,29 @@ namespace Owin
 		private static void SetupConfig(HttpConfiguration cfg, DatabasesLandlord databasesLandlord,
 			MixedModeRequestAuthorizer mixedModeRequestAuthorizer)
 		{
-			cfg.Properties[typeof (DatabasesLandlord)] = databasesLandlord;
-			cfg.Properties[typeof (MixedModeRequestAuthorizer)] = mixedModeRequestAuthorizer;
+			cfg.Properties[typeof(DatabasesLandlord)] = databasesLandlord;
+			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = mixedModeRequestAuthorizer;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 
-			cfg.Services.Replace(typeof (IAssembliesResolver), new MyAssemblyResolver());
+			cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
 			cfg.Filters.Add(new RavenExceptionFilterAttribute());
 			cfg.MapHttpAttributeRoutes();
 			cfg.Routes.MapHttpRoute(
 				"API Default", "{controller}/{action}",
-				new {id = RouteParameter.Optional});
+				new { id = RouteParameter.Optional });
 
 			cfg.Routes.MapHttpRoute(
 				"Database Route", "databases/{databaseName}/{controller}/{action}",
-				new {id = RouteParameter.Optional});
+				new { id = RouteParameter.Optional });
 			cfg.MessageHandlers.Add(new GZipToJsonHandler());
-			cfg.Services.Replace(typeof (IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
+			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
 		}
 
 		private class MyAssemblyResolver : IAssembliesResolver
 		{
 			public ICollection<Assembly> GetAssemblies()
 			{
-				return new[] {typeof (RavenApiController).Assembly};
+				return new[] { typeof(RavenApiController).Assembly };
 			}
 		}
 
@@ -98,15 +96,15 @@ namespace Owin
 				return true;
 			}
 
-            public bool UseBufferedOutputStream(HttpResponseMessage response)
-            {
-                return (response.Content is ChangesPushContent ||
-                        response.Content is StreamsController.StreamQueryContent ||
-                        response.Content is StreamContent ||
-                        response.Content is PushStreamContent ||
-                        response.Content is JsonContent ||
+			public bool UseBufferedOutputStream(HttpResponseMessage response)
+			{
+				return (response.Content is ChangesPushContent ||
+						response.Content is StreamsController.StreamQueryContent ||
+						response.Content is StreamContent ||
+						response.Content is PushStreamContent ||
+						response.Content is JsonContent ||
 						response.Content is MultiGetController.MultiGetContent) == false;
-            }
-        }
-    }
+			}
+		}
+	}
 }

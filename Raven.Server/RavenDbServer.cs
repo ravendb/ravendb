@@ -7,37 +7,33 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Microsoft.Owin.Hosting;
-using Owin;
 using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Tenancy;
+using Raven.Database.Util;
 using Raven.Server.Discovery;
 
 namespace Raven.Server
 {
-	using System.Net;
-
 	public class RavenDbServer : IDisposable
 	{
 		private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
-		private readonly IDisposable server;
 		private readonly IServerThingsForTests serverThingsForTests;
 		private ClusterDiscoveryHost discoveryHost;
+		private readonly CompositeDisposable compositeDisposable = new CompositeDisposable();
 		private readonly RavenDBOptions options;
+
+		public RavenDbServer()
+			: this(new RavenConfiguration())
+		{}
 
 		public RavenDbServer(InMemoryRavenConfiguration configuration)
 		{
-			options = new RavenDBOptions(configuration);
-			//TODO DH: configuration.ServerUrl doesn't bind properly
-			server = WebApp.Start("http://+:" + configuration.Port, app =>
-			{
-				var listener = (HttpListener) app.Properties["System.Net.HttpListener"];
-				listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication | AuthenticationSchemes.Anonymous;
-				app.UseRavenDB(options);
-			});
+			var owinHttpServer = new OwinHttpServer(configuration);
+			options = owinHttpServer.Options;
+			compositeDisposable.Add(owinHttpServer);
 			ClusterDiscovery(configuration);
 			serverThingsForTests = new ServerThingsForTests(options);
 		}
@@ -57,7 +53,7 @@ namespace Raven.Server
 
 		public void Dispose()
 		{
-			server.Dispose();
+			compositeDisposable.Dispose();
 		}
 
 		private void ClusterDiscovery(InMemoryRavenConfiguration configuration)
@@ -88,6 +84,7 @@ namespace Raven.Server
 								"Cannot post notification for cluster discovert to: " + configuration.ServerUrl, e);
 						}
 					};
+					compositeDisposable.Add(discoveryHost);
 				}
 				catch (Exception e)
 				{
