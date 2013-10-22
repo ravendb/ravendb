@@ -110,19 +110,27 @@ namespace Raven.Database.Storage.Voron.Impl
 			if (Debugger.IsAttached == false)
 				return;
 
-			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var tx = env.NewTransaction(TransactionFlags.Read))
 			{
-				var tree = env.GetTree(tx, table.TableName);
-
-				var path = Path.Combine(Environment.CurrentDirectory, "test-tree.dot");
-				var rootPageNumber = tx.GetTreeInformation(tree).RootPageNumber;
-				TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
-
-				var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
-				var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
-				p.WaitForExit();
-				Process.Start(output);
+				RenderAndShow(tx, table, showEntries);
 			}
+		}
+
+		public void RenderAndShow(Transaction tx, TableBase table, int showEntries = 25)
+		{
+			if (Debugger.IsAttached == false)
+				return;
+
+			var tree = env.GetTree(tx, table.TableName);
+
+			var path = Path.Combine(Environment.CurrentDirectory, "test-tree.dot");
+			var rootPageNumber = tx.GetTreeInformation(tree).RootPageNumber;
+			TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
+
+			var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
+			var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
+			p.WaitForExit();
+			Process.Start(output);
 		}
 
 		public void Dispose()
