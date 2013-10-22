@@ -878,7 +878,7 @@ more responsive application.
 				if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
 					continue;
 
-				batchResult.Metadata["@etag"] = new RavenJValue(batchResult.Etag);
+				batchResult.Metadata["@etag"] = new RavenJValue((string)batchResult.Etag);
 				entitiesByKey[batchResult.Key] = entity;
 				documentMetadata.ETag = batchResult.Etag;
 				documentMetadata.Key = batchResult.Key;
