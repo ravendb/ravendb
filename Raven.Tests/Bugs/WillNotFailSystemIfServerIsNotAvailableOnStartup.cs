@@ -7,6 +7,7 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Web.Http;
 using Raven.Client.Document;
 using Xunit;
 
@@ -21,7 +22,7 @@ namespace Raven.Tests.Bugs
 			{
 				using (var session = store.OpenSession())
 				{
-					Assert.Throws<WebException>(() => session.Load<User>("user/1"));
+					Assert.Throws<HttpRequestException>(() => session.Load<User>("user/1"));
 				}
 
 				using (GetNewServer())
