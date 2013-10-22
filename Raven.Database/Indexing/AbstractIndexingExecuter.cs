@@ -243,11 +243,7 @@ namespace Raven.Database.Indexing
 
             using (context.IndexDefinitionStorage.CurrentlyIndexing())
             {
-                var lastIndexedGuidForAllIndexes =
-                    indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
-                var startEtag = CalculateSynchronizationEtag(synchronizationEtag, lastIndexedGuidForAllIndexes);
-
-                ExecuteIndexingWork(indexesToWorkOn, startEtag);
+               ExecuteIndexingWork(indexesToWorkOn, synchronizationEtag);
             }
 
             return true;
@@ -257,7 +253,7 @@ namespace Raven.Database.Indexing
 
         protected abstract bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork);
 
-        protected abstract void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag startEtag);
+        protected abstract void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag synchronizationEtag);
 
         protected abstract bool IsValidIndex(IndexStats indexesStat);
     }

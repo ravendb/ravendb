@@ -350,7 +350,7 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag startEtag)
+        protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag synchronizationEtag)
 		{
 			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn,
 				HandleReduceForIndex);
