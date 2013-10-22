@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
+using System.Web.Http.Routing;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -89,9 +90,10 @@ namespace Raven.Database.Server.Controllers
 			request = controllerContext.Request;
 			User = controllerContext.RequestContext.Principal;
 
-			var values = controllerContext.Request.GetRouteData().Values;
-			if (values.ContainsKey("databaseName"))
-				DatabaseName = controllerContext.Request.GetRouteData().Values["databaseName"] as string;
+			var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
+			var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("databaseName"));
+			if (selectedData != null)
+				DatabaseName = selectedData.Values["databaseName"] as string;
 			else
 				DatabaseName = null;
 		}
