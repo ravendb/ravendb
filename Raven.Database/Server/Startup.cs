@@ -12,6 +12,7 @@ namespace Raven.Database.Server
 			options = new RavenDBOptions(config);
 		}
 
+		//Would prefer not to expose this
 		public RavenDBOptions Options
 		{
 			get { return options; }
