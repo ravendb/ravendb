@@ -124,6 +124,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 				databaseDocument.Settings[Constants.RavenDataDir] = documentDataDir;
 				databaseDocument.Id = databaseName;
+				DatabasesLandlord.Protect(databaseDocument);
 				DatabasesLandlord.SystemDatabase.Put("Raven/Databases/" + databaseName, null, RavenJObject.FromObject(databaseDocument),
 					new RavenJObject(), null);
 
