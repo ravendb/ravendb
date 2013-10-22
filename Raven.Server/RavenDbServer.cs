@@ -100,12 +100,10 @@ namespace Raven.Server
 		private class ServerThingsForTests : IServerThingsForTests
 		{
 			private readonly RavenDBOptions options;
-			private readonly HttpServer httpServer;
 
 			public ServerThingsForTests(RavenDBOptions options)
 			{
 				this.options = options;
-				httpServer = httpServer;
 			}
 
 			public bool HasPendingRequests

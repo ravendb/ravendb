@@ -1,7 +1,10 @@
 ﻿using System;
+using System.ComponentModel.Composition;
 using System.Net;
 using Microsoft.Owin.Hosting;
+using Raven.Abstractions.MEF;
 using Raven.Database.Config;
+using Raven.Database.Server.Security.Windows;
 
 namespace Raven.Database.Server
 {
@@ -17,11 +20,17 @@ namespace Raven.Database.Server
 			server = WebApp.Start("http://+:" + config.Port, app =>
 			{
 				var listener = (HttpListener) app.Properties["System.Net.HttpListener"];
-				listener.AuthenticationSchemes = AuthenticationSchemes.IntegratedWindowsAuthentication |
-				                                 AuthenticationSchemes.Anonymous;
+				/*foreach (var configureHttpListener in ConfigureHttpListeners)
+				{
+					configureHttpListener.Value.Configure(listener, config);
+				}*/
+				new WindowsAuthConfigureHttpListener().Configure(listener, config);
 				startup.Configuration(app);
 			});
 		}
+
+		[ImportMany]
+		public OrderedPartCollection<IConfigureHttpListener> ConfigureHttpListeners { get; set; }
 
 		// Would prefer not to expose this.
 		public RavenDBOptions Options
