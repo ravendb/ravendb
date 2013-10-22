@@ -105,11 +105,11 @@ namespace Raven.Smuggler
 			}
 		}
 
-		public override async Task<string> ExportData(SmugglerOptions options, Stream stream, bool lastEtagsFromFile, PeriodicBackupStatus lastEtag)
+		public override async Task<string> ExportData(SmugglerOptions options, Stream stream, PeriodicBackupStatus lastEtag)
 		{
 			using (store = CreateStore())
 			{
-				return await base.ExportData(options, null, lastEtagsFromFile, lastEtag);
+				return await base.ExportData(options, null, lastEtag);
 			}
 		}
 

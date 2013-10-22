@@ -54,10 +54,10 @@ namespace Raven.Abstractions.Smuggler
 
 		public virtual Task<string> ExportData(SmugglerOptions options, PeriodicBackupStatus backupStatus = null)
 		{
-			return ExportData(options, null, true, backupStatus);
+			return ExportData(options, null, backupStatus);
 		}
 
-	    public virtual async Task<string> ExportData(SmugglerOptions options, Stream stream, bool lastEtagsFromFile, PeriodicBackupStatus backupStatus)
+	    public virtual async Task<string> ExportData(SmugglerOptions options, Stream stream, PeriodicBackupStatus backupStatus)
 	    {
 	        SetSmugglerOptions(options);
 
@@ -74,7 +74,7 @@ namespace Raven.Abstractions.Smuggler
 						Directory.CreateDirectory(options.BackupPath);
 				}
 
-				if (lastEtagsFromFile && backupStatus == null) ReadLastEtagsFromFile(options);
+				if (backupStatus == null) ReadLastEtagsFromFile(options);
 				if (backupStatus != null) ReadLastEtagsFromClass(options, backupStatus);
 
 				file = Path.Combine(options.BackupPath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
@@ -150,7 +150,7 @@ namespace Raven.Abstractions.Smuggler
 				}
 
 #if !SILVERLIGHT
-				if (options.Incremental && lastEtagsFromFile)
+				if (options.Incremental)
 					WriteLastEtagsFromFile(options);
 #endif
 				return file;
