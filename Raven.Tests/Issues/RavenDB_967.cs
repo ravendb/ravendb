@@ -56,17 +56,17 @@ namespace Raven.Tests.Issues
 				{
 					new ProductWithQueryInput().Execute(documentStore);
 
-					var smugglerApi = new SmugglerApi(options, new RavenConnectionStringOptions
+					var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
 					{
 						Url = documentStore.Url
 					});
 
-					smugglerApi.ExportData(null, options, false).Wait(TimeSpan.FromSeconds(15));
+					smugglerApi.ExportData(options).Wait(TimeSpan.FromSeconds(15));
 				}
 
 				using (var documentStore = NewRemoteDocumentStore())
 				{
-					var smugglerApi = new SmugglerApi(options, new RavenConnectionStringOptions
+					var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
 					{
 						Url = documentStore.Url
 					});

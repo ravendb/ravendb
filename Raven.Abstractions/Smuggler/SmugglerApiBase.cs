@@ -27,8 +27,9 @@ namespace Raven.Abstractions.Smuggler
 {
 	public abstract class SmugglerApiBase : ISmugglerApi
 	{
-		protected readonly SmugglerOptions SmugglerOptions;
 		private readonly Stopwatch stopwatch = Stopwatch.StartNew();
+
+        public SmugglerOptions SmugglerOptions { get; set; }
 
 		protected abstract Task<RavenJArray> GetIndexes(int totalCount);
 		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag);
@@ -51,21 +52,14 @@ namespace Raven.Abstractions.Smuggler
 		protected bool EnsuredDatabaseExists;
 	    private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
-		protected SmugglerApiBase(SmugglerOptions smugglerOptions)
-		{
-			SmugglerOptions = smugglerOptions;
-		}
-
 		public virtual Task<string> ExportData(SmugglerOptions options, PeriodicBackupStatus backupStatus = null)
 		{
 			return ExportData(options, null, true, backupStatus);
 		}
 
 	    public virtual async Task<string> ExportData(SmugglerOptions options, Stream stream, bool lastEtagsFromFile, PeriodicBackupStatus backupStatus)
-		{
-			options = options ?? SmugglerOptions;
-			if (options == null)
-				throw new ArgumentNullException("options");
+	    {
+	        SetSmugglerOptions(options);
 
 			var file = options.BackupPath;
 
@@ -168,7 +162,15 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		private void ReadLastEtagsFromClass(SmugglerOptions options, PeriodicBackupStatus backupStatus)
+	    protected void SetSmugglerOptions(SmugglerOptions options)
+	    {
+            if (options == null)
+                throw new ArgumentNullException("options");
+
+	        SmugglerOptions = options;
+	    }
+
+	    private void ReadLastEtagsFromClass(SmugglerOptions options, PeriodicBackupStatus backupStatus)
 		{
 			options.LastAttachmentEtag = backupStatus.LastAttachmentsEtag;
 			options.LastDocsEtag = backupStatus.LastDocsEtag;
@@ -279,7 +281,7 @@ namespace Raven.Abstractions.Smuggler
 				var lastEtagComparable = new ComparableByteArray(lastEtag);
 				if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 				{
-					lastEtag = EtagUtil.Increment(lastEtag, SmugglerOptions.BatchSize);
+                    lastEtag = EtagUtil.Increment(lastEtag, options.BatchSize);
 					ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
 
 					continue;
@@ -379,9 +381,7 @@ namespace Raven.Abstractions.Smuggler
 
         public async virtual Task ImportData(SmugglerOptions options, Stream stream)
 		{
-			options = options ?? SmugglerOptions;
-			if (options == null)
-				throw new ArgumentNullException("options");
+            SetSmugglerOptions(options);
 
 			await DetectServerSupportedFeatures();
 

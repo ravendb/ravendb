@@ -155,7 +155,7 @@ namespace Raven.Smuggler
 				options.Incremental = true;
 			}
 
-			var smugglerApi = new SmugglerApi(options, connectionStringOptions);
+			var smugglerApi = new SmugglerApi(connectionStringOptions);
 
 			try
 			{

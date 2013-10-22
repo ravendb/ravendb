@@ -31,8 +31,7 @@ namespace Raven.Studio.Features.Smuggler
 			return str;
 		}
 
-		public SmugglerApi(SmugglerOptions smugglerOptions, IAsyncDatabaseCommands commands, Action<string> output)
-			: base(smugglerOptions)
+		public SmugglerApi(IAsyncDatabaseCommands commands, Action<string> output)
 		{
 			this.commands = commands;
 			this.output = output;

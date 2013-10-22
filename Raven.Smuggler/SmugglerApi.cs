@@ -58,15 +58,16 @@ namespace Raven.Smuggler
 			}
 		}
 
-		public SmugglerApi(SmugglerOptions smugglerOptions, RavenConnectionStringOptions connectionStringOptions)
-			: base(smugglerOptions)
+		public SmugglerApi(RavenConnectionStringOptions connectionStringOptions)
 		{
 			ConnectionStringOptions = connectionStringOptions;
 		}
 
         public override async Task ImportData(SmugglerOptions options, Stream stream)
 		{
-			SmugglerJintHelper.Initialize(options ?? SmugglerOptions);
+            SetSmugglerOptions(options);
+
+			SmugglerJintHelper.Initialize(options);
 
             using (store = CreateStore())
 			{
@@ -76,7 +77,7 @@ namespace Raven.Smuggler
 				{
 					operation = store.BulkInsert(options: new BulkInsertOptions
 					{
-						BatchSize = options != null ? options.BatchSize : SmugglerOptions.BatchSize,
+                        BatchSize = options.BatchSize,
 						CheckForUpdates = true
 					});
 

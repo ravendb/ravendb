@@ -13,7 +13,7 @@ namespace Raven.Tests.Bugs
 	public class SmugglerTester : SmugglerApi
 	{
 		public SmugglerTester(RavenConnectionStringOptions connectionStringOptions)
-			: base(new SmugglerOptions(), connectionStringOptions)
+			: base(connectionStringOptions)
 		{
 		}
 

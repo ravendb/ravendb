@@ -106,12 +106,7 @@ namespace Raven.Studio.Features.Tasks
                     operateOnTypes |= ItemType.Transformers;
                 }
 
-                var smuggler = new SmugglerApi(new SmugglerOptions
-                {
-                    BatchSize = batchSize
-                },
-                                               DatabaseCommands,
-                                               message => Report(message));
+                var smuggler = new SmugglerApi(DatabaseCommands, message => Report(message));
 
                 var forwardtoUiBoundStream = new ForwardtoUIBoundStream(stream);
                 var taskGeneration = new Task<Task>(() => smuggler.ExportData(new SmugglerOptions

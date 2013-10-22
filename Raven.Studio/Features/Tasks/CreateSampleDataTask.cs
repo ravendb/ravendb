@@ -47,15 +47,13 @@ namespace Raven.Studio.Features.Tasks
             {
                 Report("Reading documents");
 
-                var smugglerOptions = new SmugglerOptions
+                var smuggler = new SmugglerApi(DatabaseCommands, s => Report(s));
+                await smuggler.ImportData(new SmugglerOptions
                 {
                     OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers,
                     ShouldExcludeExpired = false,
                     BackupStream = sampleData,
-                };
-                var smuggler = new SmugglerApi(smugglerOptions, DatabaseCommands, s => Report(s));
-
-                await smuggler.ImportData(smugglerOptions);
+                });
             }
 
             return DatabaseTaskOutcome.Succesful;

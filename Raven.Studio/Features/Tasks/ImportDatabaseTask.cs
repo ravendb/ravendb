@@ -103,7 +103,8 @@ namespace Raven.Studio.Features.Tasks
                     operateOnTypes |= ItemType.Transformers;
                 }
 
-                var smugglerOptions = new SmugglerOptions
+                var smuggler = new SmugglerApi(DatabaseCommands, message => Report(message));
+                await smuggler.ImportData(new SmugglerOptions
                 {
                     BatchSize = batchSize,
                     Filters = filterSettings,
@@ -111,11 +112,7 @@ namespace Raven.Studio.Features.Tasks
                     ShouldExcludeExpired = shouldExcludeExpired,
                     OperateOnTypes = operateOnTypes,
                     BackupStream = stream,
-                };
-
-                var smuggler = new SmugglerApi(smugglerOptions, DatabaseCommands, message => Report(message));
-
-                await smuggler.ImportData(smugglerOptions);
+                });
             }
 
             return DatabaseTaskOutcome.Succesful;
