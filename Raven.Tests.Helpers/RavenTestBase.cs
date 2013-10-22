@@ -117,7 +117,7 @@ namespace Raven.Tests.Helpers
 		}
 
 		public IDocumentStore 
-			NewRemoteDocumentStore(bool fiddler = true, RavenDbServer ravenDbServer = null, string databaseName = null,
+			NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
 			 bool runInMemory = true,
 			string dataDirectory = null,
 			string requestedStorage = null,
