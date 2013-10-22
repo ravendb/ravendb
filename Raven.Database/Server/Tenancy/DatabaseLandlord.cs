@@ -16,6 +16,7 @@ using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Commercial;
 using Raven.Database.Config;
+using Raven.Database.Impl;
 using Raven.Database.Plugins.Builtins.Tenants;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.WebApi;
@@ -431,8 +432,41 @@ namespace Raven.Database.Server.Tenancy
 			}
 		}
 
+		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
+
 		public void Dispose()
 		{
+			var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
+			using (ResourcesStoresCache.WithAllLocks())
+			{
+				// shut down all databases in parallel, avoid having to wait for each one
+				Parallel.ForEach(ResourcesStoresCache.Values, dbTask =>
+				{
+					if (dbTask.IsCompleted == false)
+					{
+						dbTask.ContinueWith(task =>
+						{
+							if (task.Status != TaskStatus.RanToCompletion)
+								return;
+
+							try
+							{
+								task.Result.Dispose();
+							}
+							catch (Exception e)
+							{
+								logger.WarnException("Failure in deferred disposal of a database", e);
+							}
+						});
+					}
+					else if (dbTask.Status == TaskStatus.RanToCompletion)
+					{
+						exceptionAggregator.Execute(dbTask.Result.Dispose);
+					}
+					// there is no else, the db is probably faulted
+				});
+				ResourcesStoresCache.Clear();
+			}
 		}
 
 		private int reqNum;

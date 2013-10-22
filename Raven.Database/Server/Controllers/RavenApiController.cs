@@ -337,7 +337,8 @@ namespace Raven.Database.Server.Controllers
 				HighlighterPostTags = GetQueryStringValues("postTags"),
 				ResultsTransformer = GetQueryStringValue("resultsTransformer"),
 				QueryInputs = ExtractQueryInputs(),
-				ExplainScores = GetExplainScores()				
+				ExplainScores = GetExplainScores(),
+				SortHints = GetSortHints()
 			};
 
 
@@ -362,6 +363,20 @@ namespace Raven.Database.Server.Controllers
 				};
 			}
 			return query;
+		}
+
+		private Dictionary<string, SortOptions> GetSortHints()
+		{
+			var result = new Dictionary<string, SortOptions>();
+
+			foreach (var header in InnerRequest.Headers.Where(pair => pair.Key.StartsWith("SortHint-")))
+			{
+				SortOptions sort;
+				Enum.TryParse(GetHeader(header.Key), true, out sort);
+				result.Add(header.Key, sort);
+			}
+
+			return result;
 		}
 
 		public Etag GetCutOffEtag()

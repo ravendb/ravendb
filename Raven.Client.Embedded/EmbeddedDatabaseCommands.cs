@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Exceptions;
@@ -483,8 +484,8 @@ namespace Raven.Client.Embedded
 		{
             if(query.PageSizeSet)
 			    query.PageSize = Math.Min(query.PageSize, database.Configuration.MaxPageSize);
-			CurrentOperationContext.Headers.Value = OperationsHeaders;
 
+			UpdateQueryFromHeaders(query, OperationsHeaders);
 			// metadataOnly is not supported for embedded
 
 			// indexEntriesOnly is not supported for embedded
@@ -525,6 +526,21 @@ namespace Raven.Client.Embedded
 			var docResults = queryResult.Results.Concat(queryResult.Includes);
 			return RetryOperationBecauseOfConflict(docResults, queryResult,
 			                                       () => Query(index, query, includes, metadataOnly, indexEntriesOnly));
+		}
+
+		private void UpdateQueryFromHeaders(IndexQuery query, NameValueCollection headers)
+		{
+			query.SortHints = new Dictionary<string, SortOptions>();
+
+			foreach (var header in headers.AllKeys.Where(key => key.StartsWith("SortHint-")))
+			{
+				var value = headers[header];
+				if (string.IsNullOrEmpty(value))
+					continue;
+				SortOptions sort;
+				Enum.TryParse(value, true, out sort);
+				query.SortHints.Add(header, sort);
+			}
 		}
 
 		/// <summary>

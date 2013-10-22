@@ -77,8 +77,7 @@ namespace Raven.Client.Connection
 			if (RequestTimeout != null)
 				request.Timeout = RequestTimeout.Value;
 
-			//TODO DH this is used to set up the authenticators
-			//ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs { Request = request.DefaultRequestHeaders });
+			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs { Request = request.webRequest });
 			return request;
 		}
 

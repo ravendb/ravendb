@@ -118,7 +118,7 @@ namespace Raven.Database.Server.Controllers
 
 			var token = apiKeyTuple.Item2;
 
-			return GetMessageWithObject(token.Serialize());
+			return GetMessageWithObject(token);
 		}
 
 		public HttpResponseMessage RespondWithChallenge()
@@ -136,7 +136,8 @@ namespace Raven.Database.Server.Controllers
 				{ OAuthHelper.Keys.Challenge, OAuthServerHelper.EncryptSymmetric(OAuthHelper.DictionaryToString(challengeData)) }
 			};
 			var msg = GetEmptyMessage(HttpStatusCode.PreconditionFailed);
-			msg.Headers.Add("WWW-Authenticate", OAuthHelper.Keys.WWWAuthenticateHeaderKey + " " + OAuthHelper.DictionaryToString(responseData));
+			var value = OAuthHelper.Keys.WWWAuthenticateHeaderKey + " " + OAuthHelper.DictionaryToString(responseData);
+			msg.Headers.TryAddWithoutValidation("WWW-Authenticate", value);
 
 			return msg;
 		}

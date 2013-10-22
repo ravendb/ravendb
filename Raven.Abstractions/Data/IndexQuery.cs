@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -50,6 +51,8 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The total size.</value>
 		public Reference<int> TotalSize { get; private set; }
+
+		public Dictionary<string, SortOptions> SortHints { get; set; } 
 
         /// <summary>
         /// Additional query inputs
