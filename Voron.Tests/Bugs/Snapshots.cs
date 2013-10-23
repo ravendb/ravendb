@@ -2,6 +2,7 @@
 {
 	using System;
 	using System.Collections.Generic;
+	using System.Diagnostics;
 	using System.IO;
 	using System.Text;
 	using System.Threading.Tasks;
@@ -22,17 +23,18 @@
 				var testBuffer = new byte[79];
 				rand.NextBytes(testBuffer);
 
-				var trees1 = CreateTrees(env, 10000, "tree_1_");
-				var trees2 = CreateTrees(env, 10000, "tree_2_");
+				var trees1 = CreateTrees(env, 1000, "a_tree_1_");
+				var trees2 = CreateTrees(env, 1000, "b_tree_2_");
 
+				var numberOfRecords = 0;
 				var commited = false;
 
 				var t1 = Task.Run(
 					() =>
 					{
-						while (commited == false)
+						while (!commited)
 						{
-							Validate(env, trees1, trees2, 0);
+							Validate(env, trees1, trees2, numberOfRecords, ref commited);
 						}
 					});
 
@@ -49,17 +51,17 @@
 					}
 
 					tx.Commit();
-
+					numberOfRecords = 1;
 					commited = true;
 				}
 
 				Task.WaitAll(t1);
-				
-				Validate(env, trees1, trees2, 1);
+
+				Validate(env, trees1, trees2, 1, ref commited);
 			}
 		}
 
-		private void Validate(StorageEnvironment env, IList<Tree> trees1, IList<Tree> trees2, int numberOfRecords)
+		private void Validate(StorageEnvironment env, IList<Tree> trees1, IList<Tree> trees2, int numberOfRecords, ref bool commited)
 		{
 			using (var snapshot = env.CreateSnapshot())
 			{
@@ -68,6 +70,10 @@
 					using (var iterator = snapshot.Iterate(tree.Name))
 					{
 						var seek = iterator.Seek(Slice.BeforeAllKeys);
+
+						if (numberOfRecords == 0 && commited)
+							return;
+
 						if (seek == false && numberOfRecords > 0)
 							Assert.True(false, "No records found, but we expect: " + numberOfRecords);
 
