@@ -76,9 +76,20 @@ namespace Raven.Storage.Managed
             return null;
         }
 
+		public IEnumerable<TaskMetadata> GetPendingTasksForDebug()
+		{
+			return storage.Tasks.Select(readResult => new TaskMetadata
+			                                          {
+				                                          Id = Etag.Parse(readResult.Key.Value<byte[]>("id")),
+				                                          AddedTime = readResult.Key.Value<DateTime>("time"),
+				                                          Type = readResult.Key.Value<string>("type"),
+				                                          Index = readResult.Key.Value<string>("index")
+			                                          });
+		}
         private void MergeSimilarTasks(DatabaseTask task, byte[] taskId)
         {
             var taskType = task.GetType().FullName;
+
 
             int totalTaskCount = 0;
             foreach (var keyForTaskToTryMerging in KeyForTaskToTryMergings(task, taskType, new Guid(taskId)))

@@ -246,6 +246,7 @@
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
+    <Compile Include="Issues\RavenDB_1435.cs" />
     <Compile Include="Linq\In.cs" />
     <Compile Include="Bugs\WhenQueringAsync.cs" />
     <Compile Include="Bugs\PatchShouldNotConvertFloatToInteger.cs" />
