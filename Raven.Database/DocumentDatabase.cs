@@ -2053,90 +2053,90 @@ namespace Raven.Database
                                       () => null, debugMode);
         }
 
-        private PatchResultData ApplyPatchInternal(string docId, Etag etag,
-                                                   TransactionInformation transactionInformation,
-                                                   Func<RavenJObject, int, RavenJObject> patcher,
-                                                   Func<RavenJObject> patcherIfMissing,
-                                                   Func<IList<JsonDocument>> getDocsCreatedInPatch,
-                                                   bool debugMode)
-        {
-            if (docId == null) throw new ArgumentNullException("docId");
-            docId = docId.Trim();
-            var result = new PatchResultData
-            {
-                PatchResult = PatchResult.Patched
-            };
+		private PatchResultData ApplyPatchInternal(string docId, Etag etag,
+										   TransactionInformation transactionInformation,
+										   Func<RavenJObject, int, RavenJObject> patcher,
+										   Func<RavenJObject> patcherIfMissing,
+										   Func<IList<JsonDocument>> getDocsCreatedInPatch,
+										   bool debugMode)
+		{
+			if (docId == null) throw new ArgumentNullException("docId");
+			docId = docId.Trim();
+			var result = new PatchResultData
+			{
+				PatchResult = PatchResult.Patched
+			};
 
-            bool shouldRetry = false;
-            int[] retries = { 128 };
-            Random rand = null;
-            do
-            {
-                TransactionalStorage.Batch(actions =>
-                {
-                    var doc = actions.Documents.DocumentByKey(docId, transactionInformation);
-                    if (etag != null && doc != null && doc.Etag != etag)
-                    {
-                        Debug.Assert(doc.Etag != null);
-                        throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
-                        {
-                            ActualETag = doc.Etag,
-                            ExpectedETag = etag,
-                        };
-                    }
+			bool shouldRetry = false;
+			int retries = 128;
+			Random rand = null;
+			do
+			{
+				var doc = Get(docId, transactionInformation);
 
-                    var jsonDoc = (doc != null ? patcher(doc.ToJson(), doc.SerializedSizeOnDisk) : patcherIfMissing());
-                    if (jsonDoc == null)
-                    {
-                        result.PatchResult = PatchResult.DocumentDoesNotExists;
-                    }
-                    else
-                    {
-                        if (debugMode)
-                        {
-                            result.Document = jsonDoc;
-                            result.PatchResult = PatchResult.Tested;
-                        }
-                        else
-                        {
-                            try
-                            {
-                                Put(doc == null ? docId : doc.Key, (doc == null ? null : doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
+				if (etag != null && doc != null && doc.Etag != etag)
+				{
+					Debug.Assert(doc.Etag != null);
+					throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
+					{
+						ActualETag = doc.Etag,
+						ExpectedETag = etag,
+					};
+				}
 
-                                var docsCreatedInPatch = getDocsCreatedInPatch();
-                                if (docsCreatedInPatch != null && docsCreatedInPatch.Count > 0)
-                                {
-                                    foreach (var docFromPatch in docsCreatedInPatch)
-                                    {
-                                        Put(docFromPatch.Key, docFromPatch.Etag, docFromPatch.DataAsJson,
-                                            docFromPatch.Metadata, transactionInformation);
-                                    }
-                                }
-                            }
-                            catch (ConcurrencyException)
-                            {
-                                if (actions.IsNested)
-                                    throw;
-                                if (retries[0]-- > 0)
-                                {
-                                    shouldRetry = true;
-                                    if (rand == null)
-                                        rand = new Random();
-                                    Thread.Sleep(rand.Next(5, Math.Max(retries[0] * 2, 10)));
-                                    return;
-                                }
-                                throw;
-                            }
-                            result.PatchResult = PatchResult.Patched;
-                        }
-                    }
-                    if (shouldRetry == false)
-                        workContext.ShouldNotifyAboutWork(() => "PATCH " + docId);
-                });
+				var jsonDoc = (doc != null ? patcher(doc.ToJson(), doc.SerializedSizeOnDisk) : patcherIfMissing());
+				if (jsonDoc == null)
+				{
+					result.PatchResult = PatchResult.DocumentDoesNotExists;
+				}
+				else
+				{
+					if (debugMode)
+					{
+						result.Document = jsonDoc;
+						result.PatchResult = PatchResult.Tested;
+					}
+					else
+					{
+						try
+						{
+							Put(doc == null ? docId : doc.Key, (doc == null ? null : doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
 
-            } while (shouldRetry);
-            return result;
-        }
+							var docsCreatedInPatch = getDocsCreatedInPatch();
+							if (docsCreatedInPatch != null && docsCreatedInPatch.Count > 0)
+							{
+								foreach (var docFromPatch in docsCreatedInPatch)
+								{
+									Put(docFromPatch.Key, docFromPatch.Etag, docFromPatch.DataAsJson,
+										docFromPatch.Metadata, transactionInformation);
+								}
+							}
+						}
+						catch (ConcurrencyException)
+						{
+							if (retries-- > 0)
+							{
+								shouldRetry = true;
+								if (rand == null)
+									rand = new Random();
+								Thread.Sleep(rand.Next(5, Math.Max(retries * 2, 10)));
+								continue;
+							}
+
+							throw;
+						}
+
+						result.PatchResult = PatchResult.Patched;
+					}
+				}
+
+				if (shouldRetry == false)
+					workContext.ShouldNotifyAboutWork(() => "PATCH " + docId);
+
+			} while (shouldRetry);
+
+			return result;
+		}
 
         public BatchResult[] Batch(IList<ICommandData> commands)
         {
