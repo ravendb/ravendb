@@ -664,7 +664,6 @@ namespace Raven.Abstractions.Smuggler
 			while (true)
 			{
 				var indexes = await GetIndexes(totalCount);
-
 				if (indexes.Length == 0)
 				{
 					ShowProgress("Done with reading indexes, total: {0}", totalCount);

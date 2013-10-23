@@ -21,10 +21,10 @@ namespace Raven.Database.Smuggler
 	{
 		public DataDumper(DocumentDatabase database)
 		{
-			_database = database;
+			this.database = database;
 		}
 
-		private readonly DocumentDatabase _database;
+		private readonly DocumentDatabase database;
 
         protected async override Task EnsureDatabaseExists()
 		{
@@ -62,14 +62,14 @@ namespace Raven.Database.Smuggler
 
 		protected override Task<RavenJArray> GetTransformers(int start)
 		{
-			return new CompletedTask<RavenJArray>(_database.GetTransformers(start, SmugglerOptions.BatchSize));
+			return new CompletedTask<RavenJArray>(database.GetTransformers(start, SmugglerOptions.BatchSize));
 		}
 
 		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
 		{
 			const int dummy = 0;
 
-			var enumerator = _database.GetDocuments(dummy, SmugglerOptions.BatchSize, lastEtag)
+			var enumerator = database.GetDocuments(dummy, SmugglerOptions.BatchSize, lastEtag)
 				.ToList()
 				.Cast<RavenJObject>()
 				.GetEnumerator();
@@ -79,7 +79,7 @@ namespace Raven.Database.Smuggler
 
 		protected override Task<RavenJArray> GetIndexes(int totalCount)
 		{
-			return new CompletedTask<RavenJArray>(_database.GetIndexes(totalCount, 128));
+			return new CompletedTask<RavenJArray>(database.GetIndexes(totalCount, 128));
 		}
 
 		protected override Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
@@ -91,7 +91,7 @@ namespace Raven.Database.Smuggler
 				// worse, if we are using http compression, this value is known to be wrong
 				// instead, we rely on the actual size of the data provided for us
 				attachmentExportInfo.Metadata.Remove("Content-Length");
-				_database.PutStatic(attachmentExportInfo.Key, null, attachmentExportInfo.Data,
+				database.PutStatic(attachmentExportInfo.Key, null, attachmentExportInfo.Data,
 									attachmentExportInfo.Metadata);
 			}
 
@@ -106,7 +106,7 @@ namespace Raven.Database.Smuggler
 				var key = metadata.Value<string>("@id");
 				document.Remove("@metadata");
 
-				_database.Put(key, null, document, metadata, null);
+				database.Put(key, null, document, metadata, null);
 			}
 
 			return new CompletedTask();
@@ -118,7 +118,7 @@ namespace Raven.Database.Smuggler
 			{
 				var transformerDefinition =
 					JsonConvert.DeserializeObject<TransformerDefinition>(transformer.Value<RavenJObject>("definition").ToString());
-				_database.PutTransform(transformerName, transformerDefinition);
+				database.PutTransform(transformerName, transformerDefinition);
 			}
 
 			return new CompletedTask();
@@ -133,7 +133,7 @@ namespace Raven.Database.Smuggler
 		{
 			if (index != null)
 			{
-				_database.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
+				database.PutIndex(indexName, index.Value<RavenJObject>("definition").JsonDeserialization<IndexDefinition>());
 			}
 
 			return new CompletedTask();
@@ -141,7 +141,7 @@ namespace Raven.Database.Smuggler
 
 		protected override Task<DatabaseStatistics> GetStats()
 		{
-			return new CompletedTask<DatabaseStatistics>(_database.Statistics);
+			return new CompletedTask<DatabaseStatistics>(database.Statistics);
 		}
 
 		protected override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
@@ -160,18 +160,18 @@ namespace Raven.Database.Smuggler
 		private RavenJArray GetAttachments(int start, Etag etag)
 		{
 			var array = new RavenJArray();
-			var attachmentInfos = _database.GetAttachments(start, 128, etag, null, 1024 * 1024 * 10);
+			var attachmentInfos = database.GetAttachments(start, 128, etag, null, 1024 * 1024 * 10);
 
 			foreach (var attachmentInfo in attachmentInfos)
 			{
-				var attachment = _database.GetStatic(attachmentInfo.Key);
+				var attachment = database.GetStatic(attachmentInfo.Key);
 				if (attachment == null)
 					return null;
 				var data = attachment.Data;
 				attachment.Data = () =>
 				{
 					var memoryStream = new MemoryStream();
-					_database.TransactionalStorage.Batch(accessor => data().CopyTo(memoryStream));
+					database.TransactionalStorage.Batch(accessor => data().CopyTo(memoryStream));
 					memoryStream.Position = 0;
 					return memoryStream;
 				};
