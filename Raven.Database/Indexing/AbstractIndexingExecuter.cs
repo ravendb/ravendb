@@ -50,7 +50,11 @@ namespace Raven.Database.Indexing
                         if (foundWork && onlyFoundIdleWork == false)
                             isIdle = false;
 
-                        while (context.RunIndexing) // we want to drain all of the pending tasks before the next run
+                        int runs = 32;
+
+                        // we want to drain all of the pending tasks before the next run
+                        // but we don't want to halt indexing completely
+                        while (context.RunIndexing && runs-- > 0)
                         {
                             if (ExecuteTasks() == false)
                                 break;
