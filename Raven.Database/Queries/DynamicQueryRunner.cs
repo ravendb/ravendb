@@ -97,7 +97,8 @@ namespace Raven.Database.Queries
 				HighlightedFields = query.HighlightedFields,
 				ResultsTransformer = query.ResultsTransformer,
 				QueryInputs = query.QueryInputs,
-				ExplainScores = query.ExplainScores
+				ExplainScores = query.ExplainScores,
+				SortHints = query.SortHints
 			};
 			if (indexQuery.SortedFields == null)
 				return indexQuery;
