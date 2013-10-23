@@ -20,6 +20,8 @@ namespace Voron
 		private ConcurrentDictionary<string, Tree> _trees
 			= new ConcurrentDictionary<string, Tree>(StringComparer.OrdinalIgnoreCase);
 
+		private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
+
 		private readonly bool _ownsPager;
 		private readonly IVirtualPager _pager;
 		private readonly SliceComparer _sliceComparer;
@@ -67,7 +69,7 @@ namespace Voron
 				WriteEmptyHeaderPage(_pager.Get(null, 1));
 
 				NextPageNumber = 2;
-				using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite, _freeSpaceRepository))
+				using (var tx = NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var root = Tree.Create(tx, _sliceComparer);
 					var freeSpace = Tree.Create(tx, _sliceComparer);
@@ -89,7 +91,7 @@ namespace Voron
 			FileHeader* entry = FindLatestFileHeadeEntry();
 			NextPageNumber = entry->LastPageNumber + 1;
 			_transactionsCounter = entry->TransactionId + 1;
-			using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite, _freeSpaceRepository))
+			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
 			{
 				var root = Tree.Open(tx, _sliceComparer, &entry->Root);
 				var freeSpace = Tree.Open(tx, _sliceComparer, &entry->FreeSpace);
@@ -258,7 +260,7 @@ namespace Voron
 					_txWriter.Wait();
 					txLockTaken = true;
 				}
-				var tx = new Transaction(_pager, this, txId, flags, _freeSpaceRepository);
+				var tx = new Transaction(_pager, this, txId, flags, _freeSpaceRepository, _txCommit);
 				_activeTransactions.TryAdd(txId, tx);
 				var state = _pager.TransactionBegan();
 				tx.AddPagerState(state);
