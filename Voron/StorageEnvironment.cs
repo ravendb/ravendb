@@ -12,380 +12,386 @@ using Voron.Trees;
 
 namespace Voron
 {
-    public unsafe class StorageEnvironment : IDisposable
-    {
-        private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
-            new ConcurrentDictionary<long, Transaction>();
+	public unsafe class StorageEnvironment : IDisposable
+	{
+		private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
+			new ConcurrentDictionary<long, Transaction>();
 
-        private readonly ConcurrentDictionary<string, Tree> _trees
-            = new ConcurrentDictionary<string, Tree>(StringComparer.OrdinalIgnoreCase);
+		private ConcurrentDictionary<string, Tree> _trees
+			= new ConcurrentDictionary<string, Tree>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly bool _ownsPager;
-        private readonly IVirtualPager _pager;
-        private readonly SliceComparer _sliceComparer;
+		private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
 
-        private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
+		private readonly bool _ownsPager;
+		private readonly IVirtualPager _pager;
+		private readonly SliceComparer _sliceComparer;
 
-        private long _transactionsCounter;
-        private readonly IFreeSpaceRepository _freeSpaceRepository;
+		private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
 
-        public TransactionMergingWriter Writer { get; private set; }
+		private long _transactionsCounter;
+		private readonly IFreeSpaceRepository _freeSpaceRepository;
 
-        public SnapshotReader CreateSnapshot()
-        {
-            return new SnapshotReader(NewTransaction(TransactionFlags.Read));
-        }
+		public TransactionMergingWriter Writer { get; private set; }
 
-        public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
-        {
-            try
-            {
-                _pager = pager;
-                _ownsPager = ownsPager;
-                _freeSpaceRepository = new NoFreeSpaceRepository();
-                _sliceComparer = NativeMethods.memcmp;
+		public SnapshotReader CreateSnapshot()
+		{
+			return new SnapshotReader(NewTransaction(TransactionFlags.Read));
+		}
 
-                Setup(pager);
+		public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
+		{
+			try
+			{
+				_pager = pager;
+				_ownsPager = ownsPager;
+				_freeSpaceRepository = new NoFreeSpaceRepository();
+				_sliceComparer = NativeMethods.memcmp;
 
-                FreeSpaceRoot.Name = "Free Space";
-	            Root.Name = Constants.RootTreeName;
+				Setup(pager);
 
-                Writer = new TransactionMergingWriter(this);
-            }
-            catch (Exception)
-            {
-                Dispose();
-                throw;
-            }
-        }
+				FreeSpaceRoot.Name = "Free Space";
+				Root.Name = Constants.RootTreeName;
 
-        private void Setup(IVirtualPager pager)
-        {
-            if (pager.NumberOfAllocatedPages == 0)
-            {
-                WriteEmptyHeaderPage(_pager.Get(null, 0));
-                WriteEmptyHeaderPage(_pager.Get(null, 1));
+				Writer = new TransactionMergingWriter(this);
+			}
+			catch (Exception)
+			{
+				Dispose();
+				throw;
+			}
+		}
 
-                NextPageNumber = 2;
-                using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite, _freeSpaceRepository))
-                {
-                    var root = Tree.Create(tx, _sliceComparer);
-                    var freeSpace = Tree.Create(tx, _sliceComparer);
+		private void Setup(IVirtualPager pager)
+		{
+			if (pager.NumberOfAllocatedPages == 0)
+			{
+				WriteEmptyHeaderPage(_pager.Get(null, 0));
+				WriteEmptyHeaderPage(_pager.Get(null, 1));
 
-                    // important to first create the two trees, then set them on the env
+				NextPageNumber = 2;
+				using (var tx = NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var root = Tree.Create(tx, _sliceComparer);
+					var freeSpace = Tree.Create(tx, _sliceComparer);
 
-                    FreeSpaceRoot = freeSpace;
-                    Root = root;
+					// important to first create the two trees, then set them on the env
 
-                    tx.UpdateRoots(root, freeSpace);
+					FreeSpaceRoot = freeSpace;
+					Root = root;
 
-                    tx.Commit();
-                }
-                return;
-            }
-            // existing db, let us load it
+					tx.UpdateRoots(root, freeSpace);
 
-            // the first two pages are allocated for double buffering tx commits
-            FileHeader* entry = FindLatestFileHeadeEntry();
-            NextPageNumber = entry->LastPageNumber + 1;
-            _transactionsCounter = entry->TransactionId + 1;
-            using (var tx = new Transaction(_pager, this, _transactionsCounter + 1, TransactionFlags.ReadWrite, _freeSpaceRepository))
-            {
-                var root = Tree.Open(tx, _sliceComparer, &entry->Root);
-                var freeSpace = Tree.Open(tx, _sliceComparer, &entry->FreeSpace);
+					tx.Commit();
+				}
+				return;
+			}
+			// existing db, let us load it
 
-                // important to first create the two trees, then set them on the env
-                FreeSpaceRoot = freeSpace;
-                Root = root;
+			// the first two pages are allocated for double buffering tx commits
+			FileHeader* entry = FindLatestFileHeadeEntry();
+			NextPageNumber = entry->LastPageNumber + 1;
+			_transactionsCounter = entry->TransactionId + 1;
+			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var root = Tree.Open(tx, _sliceComparer, &entry->Root);
+				var freeSpace = Tree.Open(tx, _sliceComparer, &entry->FreeSpace);
 
-                tx.Commit();
-            }
-        }
+				// important to first create the two trees, then set them on the env
+				FreeSpaceRoot = freeSpace;
+				Root = root;
 
-        public long NextPageNumber { get; set; }
+				tx.Commit();
+			}
+		}
 
-        public IFreeSpaceRepository FreeSpaceRepository
-        {
-            get { return _freeSpaceRepository; }
-        }
+		public long NextPageNumber { get; set; }
 
-        public SliceComparer SliceComparer
-        {
-            get { return _sliceComparer; }
-        }
+		public IFreeSpaceRepository FreeSpaceRepository
+		{
+			get { return _freeSpaceRepository; }
+		}
 
-        public Tree Root { get; private set; }
-        public Tree FreeSpaceRoot { get; private set; }
+		public SliceComparer SliceComparer
+		{
+			get { return _sliceComparer; }
+		}
 
-        public long OldestTransaction
-        {
-            get { return _activeTransactions.Keys.OrderBy(x => x).FirstOrDefault(); }
-        }
+		public Tree Root { get; private set; }
+		public Tree FreeSpaceRoot { get; private set; }
 
-        public int PageSize
-        {
-            get { return _pager.PageSize; }
-        }
+		public long OldestTransaction
+		{
+			get { return _activeTransactions.Keys.OrderBy(x => x).FirstOrDefault(); }
+		}
 
-	    public IEnumerable<Tree> Trees
-	    {
-		    get { return _trees.Values; }
-	    }
+		public int PageSize
+		{
+			get { return _pager.PageSize; }
+		}
 
-	    public Tree GetTree(Transaction tx, string name)
-        {
-            Tree tree;
-            if (_trees.TryGetValue(name, out tree))
-                return tree;
+		public IEnumerable<Tree> Trees
+		{
+			get { return _trees.Values; }
+		}
 
-            if (tx != null && tx.ModifiedTrees.TryGetValue(name, out tree))
-                return tree;
+		public Tree GetTree(Transaction tx, string name)
+		{
+			Tree tree;
+			if (_trees.TryGetValue(name, out tree))
+				return tree;
 
-            throw new InvalidOperationException("No such tree: " + name);
-        }
+			if (tx != null && tx.ModifiedTrees.TryGetValue(name, out tree))
+				return tree;
+
+			throw new InvalidOperationException("No such tree: " + name);
+		}
 
 
-        public void DeleteTree(Transaction tx, string name)
-        {
-            if (tx.Flags == (TransactionFlags.ReadWrite) == false)
-                throw new ArgumentException("Cannot create a new tree with a read only transaction");
+		public void DeleteTree(Transaction tx, string name)
+		{
+			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
+				throw new ArgumentException("Cannot create a new tree with a read only transaction");
 
-            Tree tree;
-            if (_trees.TryGetValue(name, out tree) == false)
-                return;
+			Tree tree;
+			if (_trees.TryGetValue(name, out tree) == false)
+				return;
 
-            foreach (var page in tree.AllPages(tx))
-            {
-                tx.FreePage(page);
-            }
+			foreach (var page in tree.AllPages(tx))
+			{
+				tx.FreePage(page);
+			}
 
-            Root.Delete(tx, name);
+			Root.Delete(tx, name);
 
-            tx.ModifiedTrees.Add(name, null);
-        }
+			tx.ModifiedTrees.Add(name, null);
+		}
 
-        public Tree CreateTree(Transaction tx, string name)
-        {
-            if (tx.Flags == (TransactionFlags.ReadWrite) == false)
-                throw new ArgumentException("Cannot create a new tree with a read only transaction");
+		public Tree CreateTree(Transaction tx, string name)
+		{
+			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
+				throw new ArgumentException("Cannot create a new tree with a read only transaction");
 
-            Tree tree;
-            if (_trees.TryGetValue(name, out tree) ||
-                tx.ModifiedTrees.TryGetValue(name, out tree))
-                return tree;
+			Tree tree;
+			if (_trees.TryGetValue(name, out tree) ||
+				tx.ModifiedTrees.TryGetValue(name, out tree))
+				return tree;
 
-            Slice key = name;
+			Slice key = name;
 
-            // we are in a write transaction, no need to handle locks
-            var header = (TreeRootHeader*)Root.DirectRead(tx, key);
-            if (header != null)
-            {
-                tree = Tree.Open(tx, _sliceComparer, header);
-                tree.Name = name;
-                tx.ModifiedTrees.Add(name, tree);
-                return tree;
-            }
+			// we are in a write transaction, no need to handle locks
+			var header = (TreeRootHeader*)Root.DirectRead(tx, key);
+			if (header != null)
+			{
+				tree = Tree.Open(tx, _sliceComparer, header);
+				tree.Name = name;
+				tx.ModifiedTrees.Add(name, tree);
+				return tree;
+			}
 
-            tree = Tree.Create(tx, _sliceComparer);
-            tree.Name = name;
-            var space = Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
-            tree.State.CopyTo((TreeRootHeader*)space);
+			tree = Tree.Create(tx, _sliceComparer);
+			tree.Name = name;
+			var space = Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
+			tree.State.CopyTo((TreeRootHeader*)space);
 
-            tx.ModifiedTrees.Add(name, tree);
+			tx.ModifiedTrees.Add(name, tree);
 
-            return tree;
-        }
+			return tree;
+		}
 
-        public void Dispose()
-        {
-            if (_ownsPager)
-                _pager.Dispose();
-        }
+		public void Dispose()
+		{
+			if (_ownsPager)
+				_pager.Dispose();
+		}
 
-        private void WriteEmptyHeaderPage(Page pg)
-        {
-            var fileHeader = ((FileHeader*)pg.Base);
-            fileHeader->MagicMarker = Constants.MagicMarker;
-            fileHeader->Version = Constants.CurrentVersion;
-            fileHeader->TransactionId = 0;
-            fileHeader->LastPageNumber = 1;
-            fileHeader->FreeSpace.RootPageNumber = -1;
-            fileHeader->Root.RootPageNumber = -1;
-        }
+		private void WriteEmptyHeaderPage(Page pg)
+		{
+			var fileHeader = ((FileHeader*)pg.Base);
+			fileHeader->MagicMarker = Constants.MagicMarker;
+			fileHeader->Version = Constants.CurrentVersion;
+			fileHeader->TransactionId = 0;
+			fileHeader->LastPageNumber = 1;
+			fileHeader->FreeSpace.RootPageNumber = -1;
+			fileHeader->Root.RootPageNumber = -1;
+		}
 
-        private FileHeader* FindLatestFileHeadeEntry()
-        {
-            Page fst = _pager.Get(null, 0);
-            Page snd = _pager.Get(null, 1);
+		private FileHeader* FindLatestFileHeadeEntry()
+		{
+			Page fst = _pager.Get(null, 0);
+			Page snd = _pager.Get(null, 1);
 
-            FileHeader* e1 = GetFileHeaderFrom(fst);
-            FileHeader* e2 = GetFileHeaderFrom(snd);
+			FileHeader* e1 = GetFileHeaderFrom(fst);
+			FileHeader* e2 = GetFileHeaderFrom(snd);
 
-            FileHeader* entry = e1;
-            if (e2->TransactionId > e1->TransactionId)
-            {
-                entry = e2;
-            }
-            return entry;
-        }
+			FileHeader* entry = e1;
+			if (e2->TransactionId > e1->TransactionId)
+			{
+				entry = e2;
+			}
+			return entry;
+		}
 
-        private FileHeader* GetFileHeaderFrom(Page p)
-        {
-            var fileHeader = ((FileHeader*)p.Base);
-            if (fileHeader->MagicMarker != Constants.MagicMarker)
-                throw new InvalidDataException(
-                    "The header page did not start with the magic marker, probably not a db file");
-            if (fileHeader->Version != Constants.CurrentVersion)
-                throw new InvalidDataException("This is a db file for version " + fileHeader->Version +
-                                               ", which is not compatible with the current version " +
-                                               Constants.CurrentVersion);
-            if (fileHeader->LastPageNumber >= _pager.NumberOfAllocatedPages)
-                throw new InvalidDataException("The last page number is beyond the number of allocated pages");
-            if (fileHeader->TransactionId < 0)
-                throw new InvalidDataException("The transaction number cannot be negative");
-            return fileHeader;
-        }
+		private FileHeader* GetFileHeaderFrom(Page p)
+		{
+			var fileHeader = ((FileHeader*)p.Base);
+			if (fileHeader->MagicMarker != Constants.MagicMarker)
+				throw new InvalidDataException(
+					"The header page did not start with the magic marker, probably not a db file");
+			if (fileHeader->Version != Constants.CurrentVersion)
+				throw new InvalidDataException("This is a db file for version " + fileHeader->Version +
+											   ", which is not compatible with the current version " +
+											   Constants.CurrentVersion);
+			if (fileHeader->LastPageNumber >= _pager.NumberOfAllocatedPages)
+				throw new InvalidDataException("The last page number is beyond the number of allocated pages");
+			if (fileHeader->TransactionId < 0)
+				throw new InvalidDataException("The transaction number cannot be negative");
+			return fileHeader;
+		}
 
-        public Transaction NewTransaction(TransactionFlags flags)
-        {
-            bool txLockTaken = false;
-            try
-            {
-                long txId = _transactionsCounter;
-                if (flags == (TransactionFlags.ReadWrite))
-                {
-                    txId = _transactionsCounter + 1;
-                    _txWriter.Wait();
-                    txLockTaken = true;
-                }
-                var tx = new Transaction(_pager, this, txId, flags, _freeSpaceRepository);
-                _activeTransactions.TryAdd(txId, tx);
-                var state = _pager.TransactionBegan();
-                tx.AddPagerState(state);
+		public Transaction NewTransaction(TransactionFlags flags)
+		{
+			bool txLockTaken = false;
+			try
+			{
+				long txId = _transactionsCounter;
+				if (flags == (TransactionFlags.ReadWrite))
+				{
+					txId = _transactionsCounter + 1;
+					_txWriter.Wait();
+					txLockTaken = true;
+				}
+				var tx = new Transaction(_pager, this, txId, flags, _freeSpaceRepository, _txCommit);
+				_activeTransactions.TryAdd(txId, tx);
+				var state = _pager.TransactionBegan();
+				tx.AddPagerState(state);
 
-                if (flags == TransactionFlags.ReadWrite)
-                {
-                    _freeSpaceRepository.UpdateSections(tx, OldestTransaction);
-                    tx.AfterCommit = TransactionAfterCommit;
-                }
+				if (flags == TransactionFlags.ReadWrite)
+				{
+					_freeSpaceRepository.UpdateSections(tx, OldestTransaction);
+					tx.AfterCommit = TransactionAfterCommit;
+				}
 
-                return tx;
-            }
-            catch (Exception)
-            {
-                if (txLockTaken)
-                    _txWriter.Release();
-                throw;
-            }
-        }
+				return tx;
+			}
+			catch (Exception)
+			{
+				if (txLockTaken)
+					_txWriter.Release();
+				throw;
+			}
+		}
 
-        private void TransactionAfterCommit(long txId)
-        {
-            Transaction tx;
-            _activeTransactions.TryGetValue(txId, out tx);
-        }
+		private void TransactionAfterCommit(long txId)
+		{
+			Transaction tx;
+			_activeTransactions.TryGetValue(txId, out tx);
+		}
 
-        internal void TransactionCompleted(long txId)
-        {
-            Transaction tx;
-            if (_activeTransactions.TryRemove(txId, out tx) == false)
-                return;
+		internal void TransactionCompleted(long txId)
+		{
+			Transaction tx;
+			if (_activeTransactions.TryRemove(txId, out tx) == false)
+				return;
 
-            if (tx.Flags != (TransactionFlags.ReadWrite))
-                return;
-            try
-            {
-                if (tx.Committed == false)
-                    return;
-                _transactionsCounter = txId;
-                if (tx.HasModifiedTrees == false)
-                    return;
-                foreach (var tree in tx.ModifiedTrees)
-                {
-                    Tree val = tree.Value;
-                    if (val == null)
-                        _trees.TryRemove(tree.Key, out val);
-                    else
-                        _trees.AddOrUpdate(tree.Key, val, (s, tree1) => val);
-                }
-            }
-            finally
-            {
-                _txWriter.Release();
+			if (tx.Flags != (TransactionFlags.ReadWrite))
+				return;
+			try
+			{
+				if (tx.Committed == false)
+					return;
+				_transactionsCounter = txId;
+				if (tx.HasModifiedTrees == false)
+					return;
 
-            }
-        }
+				var clonedTrees = new ConcurrentDictionary<string, Tree>(_trees);
+				foreach (var tree in tx.ModifiedTrees)
+				{
+					Tree val = tree.Value;
+					if (val == null)
+						clonedTrees.TryRemove(tree.Key, out val);
+					else
+						clonedTrees.AddOrUpdate(tree.Key, val, (s, tree1) => val);
+				}
 
-        public void Backup(Stream output)
-        {
-            Transaction txr = null;
-            try
-            {
-                var buffer = new byte[_pager.PageSize*16];
-                long nextPageNumber;
-                using (var txw = NewTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
-                {
-                    txr = NewTransaction(TransactionFlags.Read); // now have snapshot view
-                    nextPageNumber = txw.NextPageNumber;
-                    var firstPage = _pager.Get(txw, 0);
-                    using (var headerStream = new UnmanagedMemoryStream(firstPage.Base, _pager.PageSize*2))
-                    {
-                        while (headerStream.Position < headerStream.Length)
-                        {
-                            var read = headerStream.Read(buffer, 0, buffer.Length);
-                            output.Write(buffer, 0, read);
-                        }
-                    }
-                    //txw.Commit(); intentionally not committing
-                }
-                // now can copy everything else
-                var firtDataPage = _pager.Get(txr, 2);
-                using (
-                    var headerStream = new UnmanagedMemoryStream(firtDataPage.Base, _pager.PageSize*(nextPageNumber - 2))
-                    )
-                {
-                    while (headerStream.Position < headerStream.Length)
-                    {
-                        var read = headerStream.Read(buffer, 0, buffer.Length);
-                        output.Write(buffer, 0, read);
-                    }
-                }
-                //txr.Commit(); intentionally not committing
-            }
-            finally
-            {
-                if(txr!=null)
-                    txr.Dispose();
-            }
-        }
+				_trees = clonedTrees;
+			}
+			finally
+			{
+				_txWriter.Release();
 
-        public Dictionary<string, List<long>> AllPages(Transaction tx)
-        {
-            var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
+			}
+		}
+
+		public void Backup(Stream output)
+		{
+			Transaction txr = null;
+			try
+			{
+				var buffer = new byte[_pager.PageSize * 16];
+				long nextPageNumber;
+				using (var txw = NewTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
+				{
+					txr = NewTransaction(TransactionFlags.Read); // now have snapshot view
+					nextPageNumber = txw.NextPageNumber;
+					var firstPage = _pager.Get(txw, 0);
+					using (var headerStream = new UnmanagedMemoryStream(firstPage.Base, _pager.PageSize * 2))
+					{
+						while (headerStream.Position < headerStream.Length)
+						{
+							var read = headerStream.Read(buffer, 0, buffer.Length);
+							output.Write(buffer, 0, read);
+						}
+					}
+					//txw.Commit(); intentionally not committing
+				}
+				// now can copy everything else
+				var firtDataPage = _pager.Get(txr, 2);
+				using (
+					var headerStream = new UnmanagedMemoryStream(firtDataPage.Base, _pager.PageSize * (nextPageNumber - 2))
+					)
+				{
+					while (headerStream.Position < headerStream.Length)
+					{
+						var read = headerStream.Read(buffer, 0, buffer.Length);
+						output.Write(buffer, 0, read);
+					}
+				}
+				//txr.Commit(); intentionally not committing
+			}
+			finally
+			{
+				if (txr != null)
+					txr.Dispose();
+			}
+		}
+
+		public Dictionary<string, List<long>> AllPages(Transaction tx)
+		{
+			var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
 				{
 					{"Root", Root.AllPages(tx)},
 					{"Free Space Overhead", FreeSpaceRoot.AllPages(tx)},
 					{"Free Pages", _freeSpaceRepository.AllPages(tx)}
 				};
 
-            foreach (var tree in _trees)
-            {
-                results.Add(tree.Key, tree.Value.AllPages(tx));
-            }
+			foreach (var tree in _trees)
+			{
+				results.Add(tree.Key, tree.Value.AllPages(tx));
+			}
 
-            return results;
-        }
+			return results;
+		}
 
-        public EnvironmentStats Stats()
-        {
-            return new EnvironmentStats
-                {
-                    FreePages = _freeSpaceRepository.GetFreePageCount(),
-                    FreePagesOverhead = FreeSpaceRoot.State.PageCount,
-                    RootPages = Root.State.PageCount,
-                    HeaderPages = 2,
-                    UnallocatedPagesAtEndOfFile = _pager.NumberOfAllocatedPages - NextPageNumber
-                };
-        }
-    }
+		public EnvironmentStats Stats()
+		{
+			return new EnvironmentStats
+				{
+					FreePages = _freeSpaceRepository.GetFreePageCount(),
+					FreePagesOverhead = FreeSpaceRoot.State.PageCount,
+					RootPages = Root.State.PageCount,
+					HeaderPages = 2,
+					UnallocatedPagesAtEndOfFile = _pager.NumberOfAllocatedPages - NextPageNumber
+				};
+		}
+	}
 }

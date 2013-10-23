@@ -8,6 +8,8 @@ using Voron.Trees;
 
 namespace Voron.Impl
 {
+	using System.Threading;
+
 	public class Transaction : IDisposable
 	{
 		public long NextPageNumber;
@@ -24,6 +26,8 @@ namespace Voron.Impl
 		private readonly List<long> _freedPages = new List<long>();
 		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
 		private readonly IFreeSpaceRepository _freeSpaceRepository;
+
+		private readonly ReaderWriterLockSlim _txCommit;
 
 		public TransactionFlags Flags { get; private set; }
 
@@ -61,19 +65,28 @@ namespace Voron.Impl
 		{
 			get { return modifiedTrees != null; }
 		}
+		public PagerState LatestPagerState { get; private set; }
 
-		public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository)
+		public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository, ReaderWriterLockSlim txCommit)
 		{
 			_pager = pager;
 			_env = env;
 			_id = id;
 			_freeSpaceRepository = freeSpaceRepository;
+			_txCommit = txCommit;
 			Flags = flags;
-			NextPageNumber = env.NextPageNumber;
 
-			foreach (var tree in env.Trees)
+			try
 			{
-				GetTreeInformation(tree);
+				_txCommit.EnterReadLock();
+
+				NextPageNumber = env.NextPageNumber;
+				foreach (var tree in env.Trees)
+					GetTreeInformation(tree);
+			}
+			finally
+			{
+				_txCommit.ExitReadLock();
 			}
 		}
 
@@ -184,41 +197,45 @@ namespace Voron.Impl
 			if (Flags != (TransactionFlags.ReadWrite))
 				return; // nothing to do
 
-			FlushAllMultiValues();
-
-			_freeSpaceRepository.FlushFreeState(this);
-
-			foreach (var kvp in _treesInfo)
+			try
 			{
-				var txInfo = kvp.Value;
-				var tree = kvp.Key;
+				_txCommit.EnterWriteLock();
 
-				if (txInfo.RootPageNumber == tree.State.RootPageNumber &&
-				    (modifiedTrees == null || modifiedTrees.ContainsKey(tree.Name) == false))
-					continue; // not modified
+				FlushAllMultiValues();
 
-				tree.DebugValidateTree(this, txInfo.RootPageNumber);
-				txInfo.Flush();
-				if (string.IsNullOrEmpty(kvp.Key.Name))
-					continue;
-		
-				var treePtr = (TreeRootHeader*)_env.Root.DirectAdd(this, tree.Name, sizeof(TreeRootHeader));
-				tree.State.CopyTo(treePtr);
-			}
+				_freeSpaceRepository.FlushFreeState(this);
 
-			FlushFreePages();   // this is the the free space that is available when all concurrent transactions are done
+				foreach (var kvp in _treesInfo)
+				{
+					var txInfo = kvp.Value;
+					var tree = kvp.Key;
 
-			if (_rootTreeData != null)
-			{
-				_env.Root.DebugValidateTree(this, _rootTreeData.RootPageNumber);
-				_rootTreeData.Flush();
-			}
+					if (txInfo.RootPageNumber == tree.State.RootPageNumber &&
+						(modifiedTrees == null || modifiedTrees.ContainsKey(tree.Name) == false))
+						continue; // not modified
 
-			if (_fresSpaceTreeData != null)
-			{
-				_env.FreeSpaceRoot.DebugValidateTree(this, _fresSpaceTreeData.RootPageNumber);
-				_fresSpaceTreeData.Flush();
-			}
+					tree.DebugValidateTree(this, txInfo.RootPageNumber);
+					txInfo.Flush();
+					if (string.IsNullOrEmpty(kvp.Key.Name))
+						continue;
+
+					var treePtr = (TreeRootHeader*)_env.Root.DirectAdd(this, tree.Name, sizeof(TreeRootHeader));
+					tree.State.CopyTo(treePtr);
+				}
+
+				FlushFreePages();   // this is the the free space that is available when all concurrent transactions are done
+
+				if (_rootTreeData != null)
+				{
+					_env.Root.DebugValidateTree(this, _rootTreeData.RootPageNumber);
+					_rootTreeData.Flush();
+				}
+
+				if (_fresSpaceTreeData != null)
+				{
+					_env.FreeSpaceRoot.DebugValidateTree(this, _fresSpaceTreeData.RootPageNumber);
+					_fresSpaceTreeData.Flush();
+				}
 
 #if DEBUG
 			if (_env.Root != null && _env.FreeSpaceRoot != null)
@@ -227,7 +244,12 @@ namespace Voron.Impl
 			}
 #endif
 
-			_env.NextPageNumber = NextPageNumber;
+				_env.NextPageNumber = NextPageNumber;
+			}
+			finally
+			{
+				_txCommit.ExitWriteLock();
+			}
 
 			// Because we don't know in what order the OS will flush the pages 
 			// we need to do this twice, once for the data, and then once for the metadata
@@ -324,18 +346,18 @@ namespace Voron.Impl
 			if (tree == _env.Root)
 			{
 				return _rootTreeData ?? (_rootTreeData = new TreeDataInTransaction(_env.Root)
-					{
-						RootPageNumber = _env.Root.State.RootPageNumber
-					});
+				{
+					RootPageNumber = _env.Root.State.RootPageNumber
+				});
 			}
 
 			// ReSharper disable once PossibleUnintendedReferenceComparison
 			if (tree == _env.FreeSpaceRoot)
 			{
 				return _fresSpaceTreeData ?? (_fresSpaceTreeData = new TreeDataInTransaction(_env.FreeSpaceRoot)
-					{
-						RootPageNumber = _env.FreeSpaceRoot.State.RootPageNumber
-					});
+				{
+					RootPageNumber = _env.FreeSpaceRoot.State.RootPageNumber
+				});
 			}
 
 			TreeDataInTransaction c;
@@ -344,9 +366,9 @@ namespace Voron.Impl
 				return c;
 			}
 			c = new TreeDataInTransaction(tree)
-				{
-					RootPageNumber = tree.State.RootPageNumber
-				};
+			{
+				RootPageNumber = tree.State.RootPageNumber
+			};
 			_treesInfo.Add(tree, c);
 			return c;
 		}
@@ -383,6 +405,7 @@ namespace Voron.Impl
 
 		public void AddPagerState(PagerState state)
 		{
+			LatestPagerState = state;
 			_pagerStates.Add(state);
 		}
 
