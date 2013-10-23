@@ -19,6 +19,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
@@ -58,7 +59,15 @@ namespace Raven.Database.Server.Controllers
 			InnerInitialization(controllerContext);
 			var authorizer =
 				(MixedModeRequestAuthorizer) controllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
+			var result = new HttpResponseMessage();
+			DatabasesLandlord.PreRequestWork(this, async () => result = await ExceuteActualRequest(controllerContext, cancellationToken, authorizer));
 
+			return result;
+		}
+
+		private async Task<HttpResponseMessage> ExceuteActualRequest(HttpControllerContext controllerContext, CancellationToken cancellationToken,
+			MixedModeRequestAuthorizer authorizer)
+		{
 			HttpResponseMessage authMsg;
 			if (authorizer.TryAuthorize(this, out authMsg) == false)
 			{
@@ -116,7 +125,6 @@ namespace Raven.Database.Server.Controllers
 			AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion, msg);
 			AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
 			AddAccessControlHeaders(msg);
-
 		}
 
 		private void AddAccessControlHeaders(HttpResponseMessage msg)

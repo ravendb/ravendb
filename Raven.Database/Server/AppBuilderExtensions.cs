@@ -125,8 +125,7 @@ namespace Owin
 
 			public override async Task Invoke(IOwinContext context)
 			{
-				// Prerequest stuff
-
+				// Pre request stuff
 				await Next.Invoke(context);
 				// Post request stuff
 			}
