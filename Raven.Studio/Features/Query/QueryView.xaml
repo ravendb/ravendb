@@ -261,7 +261,6 @@
                     </Image>
 
 					<StackPanel Orientation="Horizontal" Margin="5">
-						<!--<TextBlock>For more information about lucene syntax </TextBlock>-->
 						<HyperlinkButton Command="{StaticResource NavigateToExternalUrlCommand}"
 								 CommandParameter="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html"
 								 TargetName="_blank">
