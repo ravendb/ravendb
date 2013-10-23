@@ -191,7 +191,7 @@ namespace Raven.Database.Queries
 
 					    if (indexQuery.SortedFields != null && indexQuery.SortedFields.Length > 0)
 						{
-							var sortInfo = DynamicQueryMapping.GetSortInfo(s => { });
+							var sortInfo = DynamicQueryMapping.GetSortInfo(s => { }, indexQuery);
 
 							foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
 							{
