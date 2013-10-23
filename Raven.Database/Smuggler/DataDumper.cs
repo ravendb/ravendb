@@ -65,7 +65,7 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask<RavenJArray>(_database.GetTransformers(start, SmugglerOptions.BatchSize));
 		}
 
-		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
+		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
 		{
 			const int dummy = 0;
 
@@ -74,7 +74,7 @@ namespace Raven.Database.Smuggler
 				.Cast<RavenJObject>()
 				.GetEnumerator();
 
-			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(enumerator));
+			return new AsyncEnumeratorBridge<RavenJObject>(enumerator);
 		}
 
 		protected override Task<RavenJArray> GetIndexes(int totalCount)

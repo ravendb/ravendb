@@ -28,12 +28,12 @@ namespace Raven.Smuggler
 	{
 		const int RetriesCount = 5;
 
-		protected override Task<RavenJArray> GetIndexes(int totalCount)
+		protected async override Task<RavenJArray> GetIndexes(int totalCount)
 		{
 			RavenJArray indexes = null;
 			var request = CreateRequest("/indexes?pageSize=" + SmugglerOptions.BatchSize + "&start=" + totalCount);
 			request.ExecuteRequest(reader => indexes = RavenJArray.Load(new JsonTextReader(reader)));
-			return new CompletedTask<RavenJArray>(indexes);
+			return indexes;
 		}
 
 		private static string StripQuotesIfNeeded(RavenJToken value)
@@ -141,12 +141,12 @@ namespace Raven.Smuggler
 			await FlushBatch();
 		}
 
-		protected override Task<string> GetVersion()
+		protected async override Task<string> GetVersion()
 		{
 			var request = CreateRequest("/build/version");
 			var version = request.ExecuteRequest<RavenJObject>();
 
-			return new CompletedTask<string>(version["ProductVersion"].ToString());
+			return version["ProductVersion"].ToString();
 		}
 
 		protected HttpRavenRequest CreateRequest(string url, string method = "GET")
@@ -191,12 +191,12 @@ namespace Raven.Smuggler
 			return s;
 		}
 
-		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
+		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
 		{
 			if (IsDocsStreamingSupported)
 			{
 				ShowProgress("Streaming documents from " + lastEtag);
-				return Commands.StreamDocsAsync(lastEtag);
+				return await Commands.StreamDocsAsync(lastEtag);
 			}
 			
 			int retries = RetriesCount;
@@ -210,7 +210,7 @@ namespace Raven.Smuggler
 					var request = CreateRequest(url);
 					request.ExecuteRequest(reader => documents = RavenJArray.Load(new JsonTextReader(reader)));
 
-					return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(documents.Values<RavenJObject>().GetEnumerator()));
+					return new AsyncEnumeratorBridge<RavenJObject>(documents.Values<RavenJObject>().GetEnumerator());
 				}
 				catch (Exception e)
 				{
@@ -268,15 +268,15 @@ namespace Raven.Smuggler
 			}
 		}
 
-		protected override Task<RavenJArray> GetTransformers(int start)
+		protected async override Task<RavenJArray> GetTransformers(int start)
 		{
 			if (IsTransformersSupported == false)
-				return new CompletedTask<RavenJArray>(new RavenJArray());
+				return new RavenJArray();
 
 			RavenJArray transformers = null;
 			var request = CreateRequest("/transformers?pageSize=" + SmugglerOptions.BatchSize + "&start=" + start);
 			request.ExecuteRequest(reader => transformers = RavenJArray.Load(new JsonTextReader(reader)));
-			return new CompletedTask<RavenJArray>(transformers);
+			return transformers;
 		}
 
 		protected override Task PutAttachment(AttachmentExportInfo attachmentExportInfo)
@@ -324,9 +324,9 @@ namespace Raven.Smuggler
 			return Commands.GetStatisticsAsync();
 		}
 
-		protected override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
+		protected async override Task<RavenJObject> TransformDocument(RavenJObject document, string transformScript)
 		{
-			return new CompletedTask<RavenJObject>(SmugglerJintHelper.Transform(transformScript, document));
+			return SmugglerJintHelper.Transform(transformScript, document);
 		}
 
 		private Task FlushBatch()

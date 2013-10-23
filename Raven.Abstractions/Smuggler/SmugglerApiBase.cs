@@ -74,7 +74,8 @@ namespace Raven.Abstractions.Smuggler
 						Directory.CreateDirectory(options.BackupPath);
 				}
 
-				if (backupStatus == null) ReadLastEtagsFromFile(options);
+				if (backupStatus == null) 
+                    ReadLastEtagsFromFile(options);
 				if (backupStatus != null) ReadLastEtagsFromClass(options, backupStatus);
 
 				file = Path.Combine(options.BackupPath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
@@ -242,14 +243,14 @@ namespace Raven.Abstractions.Smuggler
 			var totalCount = 0;
 			var lastReport = SystemTime.UtcNow;
 			var reportInterval = TimeSpan.FromSeconds(2);
-			var errorcount = 0;
+			var errorsCount = 0;
 			ShowProgress("Exporting Documents");
 
 			while (true)
 			{
 				using (var documents = await GetDocuments(lastEtag))
 				{
-					var watch = Stopwatch.StartNew();					
+					var sw = Stopwatch.StartNew();					
 
 					while (await documents.MoveNextAsync())
 					{
@@ -271,9 +272,9 @@ namespace Raven.Abstractions.Smuggler
 						}
 
 						lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
-						if (watch.ElapsedMilliseconds > 100)
-							errorcount++;
-						watch.Start();
+						if (sw.ElapsedMilliseconds > 100)
+							errorsCount++;
+						sw.Start();
 					}
 				}
 
