@@ -12,6 +12,8 @@ using Raven.Database.Tasks;
 
 namespace Raven.Storage.Esent.StorageActions
 {
+	using System.Collections.Generic;
+
 	public partial class DocumentStorageActions : ITasksStorageActions
 	{
 		public void AddTask(Task task, DateTime addedAt)
@@ -88,6 +90,26 @@ namespace Raven.Storage.Esent.StorageActions
 				return (T)task;
 			}
 			return null;
+		}
+
+		public IEnumerable<TaskMetadata> GetPendingTasksForDebug()
+		{
+			Api.MoveBeforeFirst(session, Tasks);
+			while (Api.TryMoveNext(session, Tasks))
+			{
+				var type = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
+				var index = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["for_index"], Encoding.Unicode);
+				var addedTime64 = Api.RetrieveColumnAsInt64(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
+				var id = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
+
+				yield return new TaskMetadata
+							 {
+								 Id = id,
+								 AddedTime = DateTime.FromBinary(addedTime64),
+								 Index = index,
+								 Type = type
+							 };
+			}
 		}
 
 		public void MergeSimilarTasks(Task task)

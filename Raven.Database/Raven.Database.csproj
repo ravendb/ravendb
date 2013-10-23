@@ -219,6 +219,7 @@
     <Compile Include="Server\Responders\Debugging\DebugIndexFields.cs" />
     <Compile Include="Server\Responders\Debugging\DebugLists.cs" />
     <Compile Include="Server\Responders\Debugging\DebugQueries.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugTasks.cs" />
     <Compile Include="Server\Responders\Debugging\ExecutingQueryInfo.cs" />
     <Compile Include="Server\Responders\SingleAuthToken.cs" />
     <Compile Include="Server\Responders\TransactionPrepare.cs" />
@@ -830,6 +831,7 @@
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
+    <Compile Include="Tasks\TaskMetadata.cs" />
     <Compile Include="Tasks\TouchMissingReferenceDocumentTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
