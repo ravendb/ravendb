@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
@@ -31,6 +32,11 @@ namespace Owin
 			return UseRavenDB(app, new RavenDBOptions(configuration));
 		}
 
+		private static IAppBuilder UseInterceptor(this IAppBuilder app, DatabasesLandlord databasesLandlord)
+		{
+			return app.Use(typeof (InterceptMiddleware), new[] {databasesLandlord});
+		}
+
 		public static IAppBuilder UseRavenDB(this IAppBuilder app, RavenDBOptions options)
 		{
 			if (options == null)
@@ -48,7 +54,8 @@ namespace Owin
 
 			var httpConfiguration = new HttpConfiguration();
 			SetupConfig(httpConfiguration, options.Landlord, options.MixedModeRequestAuthorizer);
-			app.UseWebApi(httpConfiguration);
+			app.UseInterceptor(options.Landlord)
+				.UseWebApi(httpConfiguration);
 			return app;
 		}
 
@@ -104,6 +111,24 @@ namespace Owin
 						response.Content is PushStreamContent ||
 						response.Content is JsonContent ||
 						response.Content is MultiGetController.MultiGetContent) == false;
+			}
+		}
+
+		private class InterceptMiddleware : OwinMiddleware
+		{
+			private readonly DatabasesLandlord databasesLandlord;
+
+			public InterceptMiddleware(OwinMiddleware next, DatabasesLandlord databasesLandlord) : base(next)
+			{
+				this.databasesLandlord = databasesLandlord;
+			}
+
+			public override async Task Invoke(IOwinContext context)
+			{
+				// Prerequest stuff
+
+				await Next.Invoke(context);
+				// Post request stuff
 			}
 		}
 	}
