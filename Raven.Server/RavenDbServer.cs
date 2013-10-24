@@ -12,6 +12,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.WebApi;
 using Raven.Database.Util;
 using Raven.Server.Discovery;
 
@@ -113,7 +114,7 @@ namespace Raven.Server
 
 			public int NumberOfRequests
 			{
-				get { return options.Landlord.NumberOfRequests; }
+				get { return options.RequestManager.NumberOfRequests; }
 			}
 
 			public DatabasesLandlord Landlord
@@ -121,9 +122,14 @@ namespace Raven.Server
 				get { return options.Landlord; }
 			}
 
+			public RequestManager RequestManager
+			{
+				get { return options.RequestManager; }
+			}
+
 			public void ResetNumberOfRequests()
 			{
-				options.Landlord.ResetNumberOfRequests();
+				options.RequestManager.ResetNumberOfRequests();
 			}
 
 			public Task<DocumentDatabase> GetDatabaseInternal(string databaseName)
@@ -139,6 +145,7 @@ namespace Raven.Server
 		bool HasPendingRequests { get; }
 		int NumberOfRequests { get; }
 		DatabasesLandlord Landlord { get; }
+		RequestManager RequestManager { get; }
 		void ResetNumberOfRequests();
 		Task<DocumentDatabase> GetDatabaseInternal(string databaseName);
 	}

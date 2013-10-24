@@ -812,6 +812,7 @@
     <Compile Include="Server\WebApi\Filters\RavenExceptionFilterAttribute.cs" />
     <Compile Include="Server\WebApi\IRavenServer.cs" />
     <Compile Include="Server\WebApi\Handlers\GZipToJsonHandler.cs" />
+    <Compile Include="Server\WebApi\RequestManager.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />

@@ -2,18 +2,11 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
-using Microsoft.Owin;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -23,9 +16,6 @@ using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Plugins.Builtins.Tenants;
-using Raven.Database.Server.Controllers;
-using Raven.Database.Server.Security;
-using Raven.Database.Server.WebApi;
 using Raven.Database.Util;
 
 namespace Raven.Database.Server.Tenancy
@@ -36,28 +26,20 @@ namespace Raven.Database.Server.Tenancy
 		private readonly DocumentDatabase systemDatabase;
 		private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
-		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { };
-		public event Action<string> DatabaseCleanupOccured;
-		public event EventHandler<BeforeRequestEventArgs> BeforeRequest;
-
 		public readonly AtomicDictionary<Task<DocumentDatabase>> ResourcesStoresCache =
 			new AtomicDictionary<Task<DocumentDatabase>>(StringComparer.OrdinalIgnoreCase);
 		public readonly ConcurrentDictionary<string, DateTime> DatabaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
-
 		protected readonly ConcurrentSet<string> LockedDatabases = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
+		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { };
+		public event Action<string> DatabaseCleanupOccured;
+
+		
+		private bool initialized;
 		public DatabasesLandlord(DocumentDatabase systemDatabase)
 		{
 			systemConfiguration = systemDatabase.Configuration;
 			this.systemDatabase = systemDatabase;
-
-			int val;
-			if (int.TryParse(systemConfiguration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
-				val = 900;
-			maxTimeDatabaseCanBeIdle = TimeSpan.FromSeconds(val);
-			if (int.TryParse(systemConfiguration.Settings["Raven/Tenants/FrequencyToCheckForIdleDatabases"], out val) == false)
-				val = 60;
-			frequencyToCheckForIdleDatabases = TimeSpan.FromSeconds(val);
 
 			Init();
 		}
@@ -267,96 +249,6 @@ namespace Raven.Database.Server.Tenancy
 			CleanupDatabase(@event.Name, skipIfActive: false);
 		}
 
-		private bool SetupRequestToProperDatabase(string tenantId)
-		{
-			var onBeforeRequest = BeforeRequest;
-			if (string.IsNullOrWhiteSpace(tenantId))
-			{
-				DatabaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
-				if (onBeforeRequest != null)
-				{
-					var args = new BeforeRequestEventArgs
-					{
-						IgnoreRequest = false,
-						TenantId = "System",
-						Database = systemDatabase
-					};
-					onBeforeRequest(this, args);
-					if (args.IgnoreRequest)
-						return false;
-				}
-
-				return true;
-			}
-
-			Task<DocumentDatabase> resourceStoreTask;
-			bool hasDb;
-			try
-			{
-				hasDb = TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
-			}
-			catch (Exception e)
-			{
-				OutputDatabaseOpenFailure(tenantId, e);
-				return false;
-			}
-			if (hasDb)
-			{
-				try
-				{
-					if (resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
-					{
-						var msg = "The database " + tenantId + " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.";
-						Logger.Warn(msg);
-						throw new HttpException(503, msg);
-					}
-					if (onBeforeRequest != null)
-					{
-						var args = new BeforeRequestEventArgs
-						{
-							IgnoreRequest = false,
-							TenantId = tenantId,
-							Database = resourceStoreTask.Result
-						};
-						onBeforeRequest(this, args);
-						if (args.IgnoreRequest)
-							return false;
-					}
-				}
-				catch (Exception e)
-				{
-					OutputDatabaseOpenFailure(tenantId, e);
-					return false;
-				}
-
-				DatabaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
-
-				//TODO: check
-				//if (string.IsNullOrEmpty(systemDatabase.Configuration.VirtualDirectory) == false && systemDatabase.Configuration.VirtualDirectory != "/")
-				//{
-				//	ctx.AdjustUrl(systemDatabase.Configuration.VirtualDirectory + match.Value);
-				//}
-				//else
-				//{
-				//	ctx.AdjustUrl(match.Value);
-				//}
-			}
-			else
-			{
-				var msg = "Could open database named: " + tenantId;
-				Logger.Warn(msg);
-				throw new HttpException(503, msg);
-			}
-			return true;
-		}
-
-		private static void OutputDatabaseOpenFailure(string tenantId, Exception e)
-		{
-			var msg = "Could open database named: " + tenantId;
-			Logger.WarnException(msg, e);
-			throw new HttpException(503, msg, e);
-		}
-
 		public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
 		{
 			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
@@ -448,191 +340,40 @@ namespace Raven.Database.Server.Tenancy
 			}
 		}
 
-		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
-
 		public void Dispose()
 		{
-			disposerLock.EnterWriteLock();
-			try
+			var exceptionAggregator = new ExceptionAggregator(Logger, "Could not properly dispose of HttpServer");
+			using (ResourcesStoresCache.WithAllLocks())
 			{
-				disposed = true;
-				var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
-				using (ResourcesStoresCache.WithAllLocks())
+				// shut down all databases in parallel, avoid having to wait for each one
+				Parallel.ForEach(ResourcesStoresCache.Values, dbTask =>
 				{
-					// shut down all databases in parallel, avoid having to wait for each one
-					Parallel.ForEach(ResourcesStoresCache.Values, dbTask =>
+					if (dbTask.IsCompleted == false)
 					{
-						if (dbTask.IsCompleted == false)
+						dbTask.ContinueWith(task =>
 						{
-							dbTask.ContinueWith(task =>
+							if (task.Status != TaskStatus.RanToCompletion)
+								return;
+
+							try
 							{
-								if (task.Status != TaskStatus.RanToCompletion)
-									return;
-
-								try
-								{
-									task.Result.Dispose();
-								}
-								catch (Exception e)
-								{
-									logger.WarnException("Failure in deferred disposal of a database", e);
-								}
-							});
-						}
-						else if (dbTask.Status == TaskStatus.RanToCompletion)
-						{
-							exceptionAggregator.Execute(dbTask.Result.Dispose);
-						}
-						// there is no else, the db is probably faulted
-					});
-					ResourcesStoresCache.Clear();
-				}
-				exceptionAggregator.Execute(() =>
-				{
-					if (serverTimer != null)
-						serverTimer.Dispose();
+								task.Result.Dispose();
+							}
+							catch (Exception e)
+							{
+								Logger.WarnException("Failure in deferred disposal of a database", e);
+							}
+						});
+					}
+					else if (dbTask.Status == TaskStatus.RanToCompletion)
+					{
+						exceptionAggregator.Execute(dbTask.Result.Dispose);
+					}
+					// there is no else, the db is probably faulted
 				});
-			}
-			finally
-			{
-				disposerLock.ExitWriteLock();
-			}
-
-		}
-
-		private int reqNum;
-		private int physicalRequestsCount;
-		public int NumberOfRequests
-		{
-			get { return Thread.VolatileRead(ref physicalRequestsCount); }
-		}
-
-		public void ResetNumberOfRequests()
-		{
-			//TODO: implement method
-			Interlocked.Exchange(ref reqNum, 0);
-			Interlocked.Exchange(ref physicalRequestsCount, 0);
-			//#if DEBUG
-			//			while (recentRequests.Count > 0)
-			//			{
-			//				string _;
-			//				recentRequests.TryDequeue(out _);
-			//			}
-			//#endif
-		}
-
-		public void IncrementRequestCount()
-		{
-			Interlocked.Increment(ref physicalRequestsCount);
-		}
-
-		public void DecrementRequestCount()
-		{
-			Interlocked.Decrement(ref physicalRequestsCount);
-		}
-
-		public void PreRequestWork(RavenApiController controller, Action action)
-		{
-			var isReadLockHeld = disposerLock.IsReadLockHeld;
-			if (isReadLockHeld == false)
-				disposerLock.EnterReadLock();
-			try
-			{
-				if (disposed)
-					return;
-
-				if (IsWriteRequest(controller.InnerRequest))
-				{
-					lastWriteRequest = SystemTime.UtcNow;
-				}
-
-				var sw = Stopwatch.StartNew();
-				try
-				{
-					action();
-					//ravenUiRequest = DispatchRequest(controller);
-				}
-				catch (Exception e)
-				{
-					//TODO: handle exception
-					//ExceptionHandler.TryHandleException(ctx, e);
-					//if (ShouldLogException(e))
-					//	logger.WarnException("Error on request", e);
-				}
-				finally
-				{
-					try
-					{
-						FinalizeRequestProcessing(controller, sw, ravenUiRequest: false/*TODO: check*/);
-					}
-					catch (Exception e)
-					{
-						logger.ErrorException("Could not finalize request properly", e);
-					}
-				}
-			}
-			finally
-			{
-				if (isReadLockHeld == false)
-					disposerLock.ExitReadLock();
+				ResourcesStoresCache.Clear();
 			}
 		}
-
-		private void ResetThreadLocalState()
-		{
-			try
-			{
-				CurrentOperationContext.Headers.Value = new NameValueCollection();
-				CurrentOperationContext.User.Value = null;
-				LogContext.DatabaseName.Value = null;
-				foreach (var disposable in CurrentOperationContext.RequestDisposables.Value)
-				{
-					disposable.Dispose();
-				}
-				CurrentOperationContext.RequestDisposables.Value.Clear();
-			}
-			catch
-			{
-				// this can happen during system shutdown
-			}
-		}
-
-		private static void AddHttpCompressionIfClientCanAcceptIt(RavenApiController controller)
-		{
-			var acceptEncoding = controller.GetHeader("Accept-Encoding");
-
-			if (string.IsNullOrEmpty(acceptEncoding))
-				return;
-
-			// The Studio xap is already a compressed file, it's a waste of time to try to compress it further.
-			var requestUrl = controller.GetRequestUrl();
-			if (String.Equals(requestUrl, "/silverlight/Raven.Studio.xap", StringComparison.OrdinalIgnoreCase))
-				return;
-
-			// gzip must be first, because chrome has an issue accepting deflate data
-			// when sending it json text
-			//TODO: set these
-			//if ((acceptEncoding.IndexOf("gzip", StringComparison.OrdinalIgnoreCase) != -1))
-			//{
-			//	ctx.SetResponseFilter(s => new GZipStream(s, CompressionMode.Compress, true));
-			//	ctx.Response.AddHeader("Content-Encoding", "gzip");
-			//}
-			//else if (acceptEncoding.IndexOf("deflate", StringComparison.OrdinalIgnoreCase) != -1)
-			//{
-			//	ctx.SetResponseFilter(s => new DeflateStream(s, CompressionMode.Compress, true));
-			//	ctx.Response.AddHeader("Content-Encoding", "deflate");
-			//}
-
-		}
-
-		private Timer serverTimer;
-		private bool initialized;
-		private readonly DateTime startUpTime = SystemTime.UtcNow;
-		private DateTime lastWriteRequest;
-		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
-		private readonly TimeSpan frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
-		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
-		private bool disposed;
 
 		public void Init()
 		{
@@ -640,104 +381,6 @@ namespace Raven.Database.Server.Tenancy
 				return;
 			initialized = true;
 			TenantDatabaseModified.Occured += TenantDatabaseRemoved;
-			serverTimer = new Timer(IdleOperations, null, frequencyToCheckForIdleDatabases, frequencyToCheckForIdleDatabases);
-		}
-
-		private static bool IsWriteRequest(HttpRequestMessage request)
-		{
-			return AbstractRequestAuthorizer.IsGetRequest(request.Method.Method, request.RequestUri.AbsoluteUri) == false;
-		}
-
-		private void FinalizeRequestProcessing(RavenApiController controller, Stopwatch sw, bool ravenUiRequest)
-		{
-			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
-			try
-			{
-				logHttpRequestStatsParam = new LogHttpRequestStatsParams(
-					sw,
-					null, //TODO: request.Headers,
-					controller.InnerRequest.Method.Method,
-					200, // TODO: responseCode,
-					controller.InnerRequest.RequestUri.PathAndQuery);
-			}
-			catch (Exception e)
-			{
-				logger.WarnException("Could not gather information to log request stats", e);
-			}
-
-			//ctx.FinalizeResponse();
-
-			if (ravenUiRequest || logHttpRequestStatsParam == null || sw == null)
-				return;
-
-			sw.Stop();
-
-			LogHttpRequestStats(logHttpRequestStatsParam, controller.DatabaseName);
-			//TODO: log
-			//ctx.OutputSavedLogItems(logger);
-		}
-
-		private void LogHttpRequestStats(LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName)
-		{
-			if (logger.IsDebugEnabled == false)
-				return;
-
-			// we filter out requests for the UI because they fill the log with information
-			// we probably don't care about them anyway. That said, we do output them if they take too
-			// long.
-			if (logHttpRequestStatsParams.Headers["Raven-Timer-Request"] == "true" &&
-				logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds <= 25)
-				return;
-
-			var curReq = Interlocked.Increment(ref reqNum);
-			logger.Debug("Request #{0,4:#,0}: {1,-7} - {2,5:#,0} ms - {5,-10} - {3} - {4}",
-							   curReq,
-							   logHttpRequestStatsParams.HttpMethod,
-							   logHttpRequestStatsParams.Stopwatch.ElapsedMilliseconds,
-							   logHttpRequestStatsParams.ResponseStatusCode,
-							   logHttpRequestStatsParams.RequestUri,
-							   databaseName);
-		}
-
-		private void IdleOperations(object state)
-		{
-			if ((SystemTime.UtcNow - lastWriteRequest).TotalMinutes < 1)
-				return;// not idle, we just had a write request coming in
-
-			try
-			{
-				SystemDatabase.RunIdleOperations();
-			}
-			catch (Exception e)
-			{
-				logger.ErrorException("Error during idle operation run for system database", e);
-			}
-
-			foreach (var documentDatabase in ResourcesStoresCache)
-			{
-				try
-				{
-					if (documentDatabase.Value.Status != TaskStatus.RanToCompletion)
-						continue;
-					documentDatabase.Value.Result.RunIdleOperations();
-				}
-				catch (Exception e)
-				{
-					logger.WarnException("Error during idle operation run for " + documentDatabase.Key, e);
-				}
-			}
-
-			var databasesToCleanup = DatabaseLastRecentlyUsed
-				.Where(x => (SystemTime.UtcNow - x.Value) > maxTimeDatabaseCanBeIdle)
-				.Select(x => x.Key)
-				.ToArray();
-
-			foreach (var db in databasesToCleanup)
-			{
-				// intentionally inside the loop, so we get better concurrency overall
-				// since shutting down a database can take a while
-				CleanupDatabase(db, skipIfActive: true);
-			}
 		}
 	}
 }

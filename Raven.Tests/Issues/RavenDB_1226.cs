@@ -57,13 +57,14 @@ namespace Raven.Tests.Issues
             int[] streamDocsRequestCounter = {0};
             using (var ravenServer = GetNewServer())
             {
-                ravenServer.Server.Landlord.BeforeRequest += (sender, args) =>
-                {
-                    if (args.Context.Request.RawUrl.Contains("/streams/docs?"))
-                    {
-                        Interlocked.Increment(ref streamDocsRequestCounter[0]);
-                    }
-                };
+				//TODO: not using beforeRequest anymore
+				//ravenServer.Server.RequestManager.BeforeRequest += (sender, args) =>
+				//{
+				//	if (args.Context.Request.RawUrl.Contains("/streams/docs?"))
+				//	{
+				//		Interlocked.Increment(ref streamDocsRequestCounter[0]);
+				//	}
+				//};
 
                 using (var documentStore = NewRemoteDocumentStore(ravenDbServer: ravenServer))
                 {

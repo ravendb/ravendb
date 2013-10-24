@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Resources;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -25,6 +26,7 @@ using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using System.Linq;
+using Raven.Database.Server.WebApi;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -60,7 +62,7 @@ namespace Raven.Database.Server.Controllers
 			var authorizer =
 				(MixedModeRequestAuthorizer) controllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 			var result = new HttpResponseMessage();
-			DatabasesLandlord.PreRequestWork(this, async () => result = await ExceuteActualRequest(controllerContext, cancellationToken, authorizer));
+			RequestManager.HandleActualRequest(this, async () => result = await ExceuteActualRequest(controllerContext, cancellationToken, authorizer));
 
 			return result;
 		}
@@ -76,7 +78,7 @@ namespace Raven.Database.Server.Controllers
 
 			var internalHeader = GetHeader("Raven-internal-request");
 			if (internalHeader == null || internalHeader != "true")
-				DatabasesLandlord.IncrementRequestCount();
+				RequestManager.IncrementRequestCount();
 
 			if (DatabaseName != null && await DatabasesLandlord.GetDatabaseInternal(DatabaseName) == null)
 			{
@@ -95,7 +97,8 @@ namespace Raven.Database.Server.Controllers
 
 		protected void InnerInitialization(HttpControllerContext controllerContext)
 		{
-			landlord = (DatabasesLandlord) controllerContext.Configuration.Properties[typeof (DatabasesLandlord)];
+			landlord = (DatabasesLandlord)controllerContext.Configuration.Properties[typeof(DatabasesLandlord)];
+			requestManager = (RequestManager)controllerContext.Configuration.Properties[typeof(RequestManager)];
 			request = controllerContext.Request;
 			User = controllerContext.RequestContext.Principal;
 
@@ -167,6 +170,17 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
+		private RequestManager requestManager;
+		public RequestManager RequestManager
+		{
+			get
+			{
+				if (Configuration == null)
+					return requestManager;
+				return (RequestManager)Configuration.Properties[typeof(RequestManager)];
+			}
+		}
+
 		public DocumentDatabase Database
 		{
 			get
@@ -174,7 +188,6 @@ namespace Raven.Database.Server.Controllers
 				var database = DatabasesLandlord.GetDatabaseInternal(DatabaseName);
 				if (database == null)
 				{
-					return null;
 					throw new InvalidOperationException("Could not find a database named: " + DatabaseName);
 				}
 

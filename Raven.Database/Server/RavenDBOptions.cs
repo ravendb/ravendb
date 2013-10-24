@@ -12,6 +12,7 @@ namespace Raven.Database.Server
 		private readonly DatabasesLandlord databasesLandlord;
 		private readonly MixedModeRequestAuthorizer mixedModeRequestAuthorizer;
 		private readonly DocumentDatabase systemDatabase;
+		private readonly RequestManager requestManager;
 
 		public RavenDBOptions(InMemoryRavenConfiguration configuration)
 		{
@@ -22,6 +23,7 @@ namespace Raven.Database.Server
 			{
 				systemDatabase.SpinBackgroundWorkers();
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
+				requestManager = new RequestManager(databasesLandlord);
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
 				mixedModeRequestAuthorizer.Initialize(systemDatabase,
 					new RavenServer(databasesLandlord.SystemDatabase, configuration));
@@ -53,11 +55,17 @@ namespace Raven.Database.Server
 			get { return databasesLandlord; }
 		}
 
+		public RequestManager RequestManager
+		{
+			get { return requestManager; }
+		}
+
 		public void Dispose()
 		{
 			mixedModeRequestAuthorizer.Dispose();
 			databasesLandlord.Dispose();
 			systemDatabase.Dispose();
+			requestManager.Dispose();
 		}
 
 		private class RavenServer : IRavenServer
