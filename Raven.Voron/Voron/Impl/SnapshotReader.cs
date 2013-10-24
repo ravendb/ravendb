@@ -71,7 +71,7 @@
 
 		}
 
-		public ushort ReadVersion(string treeName, Slice key, WriteBatch writeBatch = null)
+		public ushort? ReadVersion(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
 			if (writeBatch != null)
 			{
