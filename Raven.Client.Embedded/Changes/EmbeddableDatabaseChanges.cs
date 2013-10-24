@@ -135,6 +135,28 @@ namespace Raven.Client.Embedded.Changes
 			return ForDocumentsInCollection(collectionName);
 		}
 
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(string typeName)
+		{
+			if (typeName == null) throw new ArgumentNullException("typeName");
+
+			return new FilteringObservableWithTask<DocumentChangeNotification>(documentsObservable,
+				notification => string.Equals(typeName, notification.TypeName, StringComparison.OrdinalIgnoreCase));
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(Type type)
+		{
+			if (type == null) throw new ArgumentNullException("type");
+
+			var typeName = ReflectionUtil.GetFullNameWithoutVersionInformation(type);
+			return ForDocumentsOfType(typeName);
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType<TEntity>()
+		{
+			var typeName = ReflectionUtil.GetFullNameWithoutVersionInformation(typeof(TEntity));
+			return ForDocumentsOfType(typeName);
+		}
+
 		public IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts()
 		{
 			return new FilteringObservableWithTask<ReplicationConflictNotification>(replicationConflictsObservable,

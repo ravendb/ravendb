@@ -21,6 +21,9 @@ namespace Raven.Database.Server.Connections
 		private readonly ConcurrentSet<string> matchingDocumentsInCollection =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
+		private readonly ConcurrentSet<string> matchingDocumentsOfType =
+			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
 		private readonly ConcurrentSet<string> matchingBulkInserts =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
@@ -126,7 +129,16 @@ namespace Raven.Database.Server.Connections
 				return;
 			}
 
-			if (documentChangeNotification.Id != null || documentChangeNotification.CollectionName != null)
+			var hasType = documentChangeNotification.TypeName != null && matchingDocumentsOfType
+				.Any(x => string.Equals(x, documentChangeNotification.TypeName, StringComparison.InvariantCultureIgnoreCase));
+
+			if (hasType)
+			{
+				Enqueue(value);
+				return;
+			}
+
+			if (documentChangeNotification.Id != null || documentChangeNotification.CollectionName != null || documentChangeNotification.TypeName != null)
 			{
 				return;
 			}
@@ -210,6 +222,16 @@ namespace Raven.Database.Server.Connections
 		public void UnwatchDocumentInCollection(string name)
 		{
 			matchingDocumentsInCollection.TryRemove(name);
+		}
+
+		public void WatchDocumentOfType(string name)
+		{
+			matchingDocumentsOfType.TryAdd(name);
+		}
+
+		public void UnwatchDocumentOfType(string name)
+		{
+			matchingDocumentsOfType.TryRemove(name);
 		}
 
 		public void WatchAllReplicationConflicts()

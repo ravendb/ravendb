@@ -17,6 +17,7 @@ namespace Raven.Abstractions.Data
 		public DocumentChangeTypes Type { get; set; }
 		public string Id { get; set; }
 		public string CollectionName { get; set; }
+		public string TypeName { get; set; }
 		public Etag Etag { get; set; }
 		public string Message { get; set; }
 

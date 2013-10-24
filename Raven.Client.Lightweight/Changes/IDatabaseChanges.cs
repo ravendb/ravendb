@@ -18,6 +18,9 @@ namespace Raven.Client.Changes
 		IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix);
 		IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection(string collectionName);
 		IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection<TEntity>();
+		IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(string typeName);
+		IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(Type type);
+		IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType<TEntity>();
 		IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts();
 		IObservableWithTask<BulkInsertChangeNotification> ForBulkInsert(Guid operationId);
 

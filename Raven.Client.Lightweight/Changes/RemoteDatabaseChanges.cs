@@ -26,6 +26,7 @@ namespace Raven.Client.Changes
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
+		private readonly ConcurrentSet<string> watchedTypes = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedCollections = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedIndexes = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedBulkInserts = new ConcurrentSet<string>();
@@ -163,6 +164,11 @@ namespace Raven.Client.Changes
 			foreach (var watchedCollection in watchedCollections)
 			{
 				await Send("watch-collection", watchedCollection);
+			}
+
+			foreach (var watchedType in watchedTypes)
+			{
+				await Send("watch-type", watchedType);
 			}
 
 			foreach (var watchedIndex in watchedIndexes)
@@ -462,6 +468,52 @@ namespace Raven.Client.Changes
 		{
 			var collectionName = conventions.GetTypeTagName(typeof(TEntity));
 			return ForDocumentsInCollection(collectionName);
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(string typeName)
+		{
+			if (typeName == null) throw new ArgumentNullException("typeName");
+
+			var counter = counters.GetOrAdd("types/" + typeName, s =>
+			{
+				var documentSubscriptionTask = AfterConnection(() =>
+				{
+					watchedTypes.TryAdd(typeName);
+					return Send("watch-type", typeName);
+				});
+
+				return new LocalConnectionState(
+					() =>
+					{
+						watchedTypes.TryRemove(typeName);
+						Send("unwatch-type", typeName);
+						counters.Remove("types/" + typeName);
+					},
+					documentSubscriptionTask);
+			});
+
+			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
+				counter,
+				notification => string.Equals(typeName, notification.TypeName, StringComparison.OrdinalIgnoreCase));
+
+			counter.OnDocumentChangeNotification += taskedObservable.Send;
+			counter.OnError += taskedObservable.Error;
+
+			return taskedObservable;
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(Type type)
+		{
+			if (type == null) throw new ArgumentNullException("type");
+
+			var typeName = ReflectionUtil.GetFullNameWithoutVersionInformation(type);
+			return ForDocumentsOfType(typeName);
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType<TEntity>()
+		{
+			var typeName = ReflectionUtil.GetFullNameWithoutVersionInformation(typeof(TEntity));
+			return ForDocumentsOfType(typeName);
 		}
 
 		public IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts()
