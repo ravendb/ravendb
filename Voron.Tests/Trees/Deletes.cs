@@ -19,20 +19,20 @@ namespace Voron.Tests.Trees
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Add(tx, "a", new MemoryStream(buffer));
+				tx.State.Root.Add(tx, "a", new MemoryStream(buffer));
 
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				Assert.Equal(4, Env.RootTree(tx).State.PageCount);
-				Assert.Equal(3, Env.RootTree(tx).State.OverflowPages);
+				Assert.Equal(4, tx.State.Root.State.PageCount);
+				Assert.Equal(3, tx.State.Root.State.OverflowPages);
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Delete(tx, "a");
+				tx.State.Root.Delete(tx, "a");
 
 				tx.Commit();
 			}
@@ -40,13 +40,13 @@ namespace Voron.Tests.Trees
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				Assert.Equal(1, Env.RootTree(tx).State.PageCount);
-				Assert.Equal(0, Env.RootTree(tx).State.OverflowPages);
+				Assert.Equal(1, tx.State.Root.State.PageCount);
+				Assert.Equal(0, tx.State.Root.State.OverflowPages);
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				Assert.Null(Env.RootTree(tx).Read(tx, "a"));
+				Assert.Null(tx.State.Root.Read(tx, "a"));
 
 				tx.Commit();
 			}
@@ -61,7 +61,7 @@ namespace Voron.Tests.Trees
 			 {
 				 for (int i = 0; i < 1000; i++)
 				 {
-					 Env.RootTree(tx).Add(tx, string.Format("{0,5}",i), StreamFor("abcdefg"));
+					 tx.State.Root.Add(tx, string.Format("{0,5}",i), StreamFor("abcdefg"));
 				 }
 				 tx.Commit();
 			 }
@@ -76,7 +76,7 @@ namespace Voron.Tests.Trees
 			 {
 				 for (int i = 0; i < 15; i++)
 				 {
-					 Env.RootTree(tx).Delete(tx, string.Format("{0,5}", i));
+					 tx.State.Root.Delete(tx, string.Format("{0,5}", i));
 				 }
 				 tx.Commit();
 			 }
@@ -84,7 +84,7 @@ namespace Voron.Tests.Trees
 
              using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			 {
-                 var list = Keys(Env.RootTree(tx), tx);
+                 var list = Keys(tx.State.Root, tx);
 				 Assert.Equal(expected, list);
 			 }
 		 }

@@ -1,4 +1,5 @@
-﻿using Voron.Impl.FileHeaders;
+﻿using System;
+using Voron.Impl.FileHeaders;
 
 namespace Voron.Trees
 {
@@ -13,6 +14,20 @@ namespace Voron.Trees
 	    public TreeFlags Flags;
 
         public long RootPageNumber;
+        private bool _isModified;
+
+        public bool InWriteTransaction;
+
+        public bool IsModified
+        {
+            get { return _isModified; }
+            set
+            {
+                if (InWriteTransaction == false)
+                    throw new InvalidOperationException("Invalid operation outside of a write transaction");
+                _isModified = value;
+            }
+        }
 
         public void CopyTo(TreeRootHeader* header)
         {

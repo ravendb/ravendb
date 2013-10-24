@@ -59,14 +59,15 @@
 			}
 		}
 
-		private void ValidateMultiRecords(StorageEnvironment env, IEnumerable<Tree> trees, int documentCount, int i)
+		private void ValidateMultiRecords(StorageEnvironment env, IEnumerable<string> trees, int documentCount, int i)
 		{
 			using (var tx = env.NewTransaction(TransactionFlags.Read))
 			{
 				for (var j = 0; j < 10; j++)
 				{
-					foreach (var tree in trees)
+					foreach (var treeName in trees)
 					{
+					    var tree = tx.GetTree(treeName);
 						using (var iterator = tree.MultiRead(tx, (j % 10).ToString()))
 						{
 							Assert.True(iterator.Seek(Slice.BeforeAllKeys));
@@ -103,7 +104,7 @@
 			env.Writer.Write(batch);
 		}
 
-		private void AddMultiRecords(StorageEnvironment env, IList<Tree> trees, int documentCount, bool sequential)
+		private void AddMultiRecords(StorageEnvironment env, IList<string> trees, int documentCount, bool sequential)
 		{
 			var key = Guid.NewGuid().ToString();
 			var batch = new WriteBatch();
@@ -112,24 +113,24 @@
 			{
 				foreach (var tree in trees)
 				{
-					var value = sequential ? string.Format("tree_{0}_record_{1}_key_{2}", tree.Name, i, key) : Guid.NewGuid().ToString();
+					var value = sequential ? string.Format("tree_{0}_record_{1}_key_{2}", tree, i, key) : Guid.NewGuid().ToString();
 
-					batch.MultiAdd((i % 10).ToString(), value, tree.Name);
+					batch.MultiAdd((i % 10).ToString(), value, tree);
 				}
 			}
 
 			env.Writer.Write(batch);
 		}
 
-		private IList<Tree> CreateTrees(StorageEnvironment env, int number, string prefix)
+		private IList<string> CreateTrees(StorageEnvironment env, int number, string prefix)
 		{
-			var results = new List<Tree>();
+			var results = new List<string>();
 
 			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (var i = 0; i < number; i++)
 				{
-					results.Add(env.CreateTree(tx, prefix + i));
+					results.Add(env.CreateTree(tx, prefix + i).Name);
 				}
 
 				tx.Commit();

@@ -13,8 +13,6 @@ namespace Voron
 				throw new InvalidOperationException("Cannot fetch tree with empty name");			
 
 			Tree tree;
-			if (tx != null && tx.ModifiedTrees.TryGetValue(treeName, out tree))
-				return tree;
 
 			if (state.Trees.TryGetValue(treeName, out tree))
 				return tree;

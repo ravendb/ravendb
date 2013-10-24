@@ -17,9 +17,6 @@ namespace Voron
 		private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
 			new ConcurrentDictionary<long, Transaction>();
 
-	
-		private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
-
 		private readonly bool _ownsPager;
 		private readonly IVirtualPager _pager;
 		private readonly SliceComparer _sliceComparer;
@@ -31,7 +28,7 @@ namespace Voron
 
 		public TransactionMergingWriter Writer { get; private set; }
 
-		public StorageEnvironmentState State { get; internal set; }
+        public StorageEnvironmentState State { get; private set; }
 
 		public SnapshotReader CreateSnapshot()
 		{
@@ -127,18 +124,6 @@ namespace Voron
 			get { return State.NextPageNumber; }			
 		}
 
-		public Tree GetTree(Transaction tx, string name)
-		{
-			if (tx != null)
-				return tx.GetTree(name);
-
-			Tree tree;
-			if (!State.Trees.TryGetValue(name, out tree))
-				throw new InvalidOperationException("No such tree: " + name);
-			return tree;
-		}
-
-
 		public void DeleteTree(Transaction tx, string name)
 		{
 			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
@@ -153,9 +138,9 @@ namespace Voron
 				tx.FreePage(page);
 			}
 
-			tx.Root.Delete(tx, name);
+			tx.State.Root.Delete(tx, name);
 
-			tx.ModifiedTrees.Add(name, null);
+		    tx.DeletedTree(name);
 		}
 
 		public Tree CreateTree(Transaction tx, string name)
@@ -164,29 +149,28 @@ namespace Voron
 				throw new ArgumentException("Cannot create a new tree with a read only transaction");
 
 			Tree tree;
-			if (tx.ModifiedTrees.TryGetValue(name, out tree) ||
-				tx.State.Trees.TryGetValue(name, out tree))
+			if (tx.State.Trees.TryGetValue(name, out tree))
 				return tree;
 
 			Slice key = name;
 
 			// we are in a write transaction, no need to handle locks
-			var header = (TreeRootHeader*)tx.Root.DirectRead(tx, key);
+			var header = (TreeRootHeader*)tx.State.Root.DirectRead(tx, key);
 			if (header != null)
 			{
 				tree = Tree.Open(tx, _sliceComparer, header);
 				tree.Name = name;
-				tx.ModifiedTrees.Add(name, tree);
+				tx.State.AddTree(name, tree);
 				return tree;
 			}
 
 			tree = Tree.Create(tx, _sliceComparer);
 			tree.Name = name;
-			var space = tx.Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
+			var space = tx.State.Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
 
 			tree.State.CopyTo((TreeRootHeader*)space);
 
-			tx.ModifiedTrees.Add(name, tree);
+            tx.State.AddTree(name, tree);
 
 			return tree;
 		}
@@ -288,10 +272,12 @@ namespace Voron
 
 			if (tx.Flags != (TransactionFlags.ReadWrite))
 				return;
-			if (tx.Committed == false)
-				return;
-			_transactionsCounter = txId;
-			_txWriter.Release();
+		    if (tx.Committed)
+		    {
+		        _transactionsCounter = txId;
+		    }
+            _txWriter.Release();
+
 		}
 
 		public void Backup(Stream output)
@@ -354,15 +340,6 @@ namespace Voron
 			return results;
 		}
 
-		public Tree RootTree(Transaction tx)
-		{
-			return tx.GetTree(Constants.RootTreeName);
-		}
-		public Tree FreeSpaceRootTree(Transaction tx)
-		{
-			return tx.GetTree(Constants.FreeSpaceTreeName);
-		}
-
 		public EnvironmentStats Stats()
 		{
 			return new EnvironmentStats
@@ -374,59 +351,10 @@ namespace Voron
 					UnallocatedPagesAtEndOfFile = _pager.NumberOfAllocatedPages - NextPageNumber
 				};
 		}
-	}
 
-	public class StorageEnvironmentState
-	{
-		private Dictionary<string, Tree> _trees = new Dictionary<string, Tree>(StringComparer.OrdinalIgnoreCase);
-
-		internal Dictionary<string, Tree> Trees
-		{
-			get { return _trees; }
-		}
-
-		internal Tree Root { get; private set; }
-		internal Tree FreeSpaceRoot { get; private set; }
-		public long NextPageNumber { get; private set; }
-
-		internal StorageEnvironmentState() { }
-		internal StorageEnvironmentState(Tree freeSpaceRoot, Tree root,long nextPageNumber)
-		{
-			FreeSpaceRoot = freeSpaceRoot;
-			Root = root;
-			NextPageNumber = nextPageNumber;
-		}
-		
-		public StorageEnvironmentState CloneWithMutate(Dictionary<string, Tree> trees)
-		{
-			return new StorageEnvironmentState()
-			{
-				_trees = new Dictionary<string, Tree>(trees, StringComparer.OrdinalIgnoreCase),
-				Root = Root != null ? Root.Clone() : null,
-				FreeSpaceRoot = FreeSpaceRoot != null ? FreeSpaceRoot.Clone() : null,
-				NextPageNumber = NextPageNumber
-			};
-		}
-		public StorageEnvironmentState Clone()
-		{
-			return new StorageEnvironmentState()
-			{
-				_trees = new Dictionary<string, Tree>(Trees, StringComparer.OrdinalIgnoreCase),
-				Root = Root != null ? Root.Clone() : null,
-				FreeSpaceRoot = FreeSpaceRoot != null ? FreeSpaceRoot.Clone() : null,
-				NextPageNumber = NextPageNumber
-			};
-		}
-
-		public StorageEnvironmentState CloneWithMutate(long nextPageNumber)
-		{
-			return new StorageEnvironmentState()
-			{
-				_trees = new Dictionary<string, Tree>(Trees, StringComparer.OrdinalIgnoreCase),
-				Root = Root != null ? Root.Clone() : null,
-				FreeSpaceRoot = FreeSpaceRoot != null ? FreeSpaceRoot.Clone() : null,
-				NextPageNumber = nextPageNumber
-			};
-		}
+	    public void SetStateAfterTransactionCommit(StorageEnvironmentState state)
+	    {
+	        State = state;
+	    }
 	}
 }

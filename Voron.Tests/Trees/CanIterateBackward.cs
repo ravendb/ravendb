@@ -9,7 +9,7 @@ namespace Voron.Tests.Trees
 		public void SeekLastOnEmptyResultInFalse()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			using (var it = Env.RootTree(tx).Iterate(tx))
+			using (var it = tx.State.Root.Iterate(tx))
 			{
 				Assert.False(it.Seek(Slice.AfterAllKeys));
 
@@ -22,15 +22,15 @@ namespace Voron.Tests.Trees
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Add(tx, "a", new MemoryStream(0));
-				Env.RootTree(tx).Add(tx, "c", new MemoryStream(0));
-				Env.RootTree(tx).Add(tx, "b", new MemoryStream(0));
+				tx.State.Root.Add(tx, "a", new MemoryStream(0));
+				tx.State.Root.Add(tx, "c", new MemoryStream(0));
+				tx.State.Root.Add(tx, "b", new MemoryStream(0));
 
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			using (var it = Env.RootTree(tx).Iterate(tx))
+			using (var it = tx.State.Root.Iterate(tx))
 			{
 				Assert.True(it.Seek(Slice.AfterAllKeys));
 				Assert.Equal("c", it.CurrentKey.ToString());
@@ -44,15 +44,15 @@ namespace Voron.Tests.Trees
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Add(tx, "a", new MemoryStream(0));
-				Env.RootTree(tx).Add(tx, "c", new MemoryStream(0));
-				Env.RootTree(tx).Add(tx, "b", new MemoryStream(0));
+				tx.State.Root.Add(tx, "a", new MemoryStream(0));
+				tx.State.Root.Add(tx, "c", new MemoryStream(0));
+				tx.State.Root.Add(tx, "b", new MemoryStream(0));
 
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			using (var it = Env.RootTree(tx).Iterate(tx))
+			using (var it = tx.State.Root.Iterate(tx))
 			{
 				Assert.True(it.Seek(Slice.AfterAllKeys));
 				Assert.Equal("c", it.CurrentKey.ToString());

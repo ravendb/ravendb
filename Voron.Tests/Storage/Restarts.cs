@@ -16,12 +16,12 @@ namespace Voron.Tests.Storage
                 {
                     using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                     {
-                        env.RootTree(tx).Add(tx, "test/1", new MemoryStream());
+                        tx.State.Root.Add(tx, "test/1", new MemoryStream());
                         tx.Commit();
                     }
                     using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                     {
-                        env.RootTree(tx).Add(tx, "test/2", new MemoryStream());
+                        tx.State.Root.Add(tx, "test/2", new MemoryStream());
                         tx.Commit();
                     }
                 }
@@ -30,8 +30,8 @@ namespace Voron.Tests.Storage
                 {
                     using (var tx = env.NewTransaction(TransactionFlags.Read))
                     {
-                        Assert.NotNull(env.RootTree(tx).Read(tx, "test/1"));
-                        Assert.NotNull(env.RootTree(tx).Read(tx, "test/2"));
+                        Assert.NotNull(tx.State.Root.Read(tx, "test/1"));
+                        Assert.NotNull(tx.State.Root.Read(tx, "test/2"));
                         tx.Commit();
                     }
                 }
@@ -52,7 +52,7 @@ namespace Voron.Tests.Storage
                     }
                     using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                     {
-	                    var tree = env.GetTree(tx,"test");
+	                    var tree = tx.GetTree("test");
 	                    tree.Add(tx, "test", Stream.Null);
                         tx.Commit();
 					
@@ -70,7 +70,7 @@ namespace Voron.Tests.Storage
 
 					using (var tx = env.NewTransaction(TransactionFlags.Read))
                     {
-	                    var tree = env.GetTree(tx,"test");
+	                    var tree = tx.GetTree("test");
 	                    Assert.NotNull(tree.Read(tx, "test"));
                         tx.Commit();
                     }

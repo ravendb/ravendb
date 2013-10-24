@@ -50,7 +50,8 @@ namespace Voron.Trees
 					OverflowPages = header->OverflowPages,
 					LeafPages = header->LeafPages,
 					EntriesCount = header->EntriesCount,
-					Flags = header->Flags
+					Flags = header->Flags,
+                    InWriteTransaction = tx.Flags.HasFlag(TransactionFlags.ReadWrite)
 				}
 			};
 		}
@@ -63,7 +64,8 @@ namespace Voron.Trees
 				_state =
 				{
 					Depth = 1,
-					Flags = flags
+					Flags = flags,
+                    InWriteTransaction = true
 				}
 			};
 			
@@ -73,22 +75,25 @@ namespace Voron.Trees
 
 		public void Add(Transaction tx, Slice key, Stream value, ushort? version = null)
 		{
-			if (value == null) throw new ArgumentNullException("value");
+             
+            if (value == null) throw new ArgumentNullException("value");
 			if (value.Length > int.MaxValue)
 				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
-			var pos = DirectAdd(tx, key, (int)value.Length, version: version);
+
+            State.IsModified = true;
+            
+            var pos = DirectAdd(tx, key, (int)value.Length, version: version);
 
 			using (var ums = new UnmanagedMemoryStream(pos, value.Length, value.Length, FileAccess.ReadWrite))
 			{
 				value.CopyTo(ums);
 			}
-
-			AddToModifiedTreesIfNeeded(tx);
+		    
 		}
 
 		public void MultiDelete(Transaction tx, Slice key, Slice value, ushort? version = null)
 		{
-			tx.Pager.EnsureEnoughSpace(tx, value.Size);
+            State.IsModified = true;
 
 			using (var cursor = tx.NewCursor(this))
 			{
@@ -108,7 +113,7 @@ namespace Voron.Trees
 
 					tree.Delete(tx, value, version);
 
-					if (State.EntriesCount > 1)
+					if (tree.State.EntriesCount > 1)
 						return;
 					// convert back to simple key/val
 					var iterator = tree.Iterate(tx);
@@ -119,25 +124,25 @@ namespace Voron.Trees
 					dataToSave.CopyTo(ptr);
 
 					tx.TryRemoveMultiValueTree(this, key);
-					tx.FreePage(State.RootPageNumber);
+                    tx.FreePage(tree.State.RootPageNumber);
 				}
 				else //the regular key->value pattern
 				{
 					Delete(tx, key, version);
 				}
 			}
-			AddToModifiedTreesIfNeeded(tx);
 		}
 
 		public void MultiAdd(Transaction tx, Slice key, Slice value, ushort? version = null)
 		{
-			if (value == null) throw new ArgumentNullException("value");
+            
+            if (value == null) throw new ArgumentNullException("value");
 			if (value.Size > tx.Pager.MaxNodeSize)
 				throw new ArgumentException("Cannot add a value to child tree that is over " + tx.Pager.MaxNodeSize + " bytes in size", "value");
 			if (value.Size == 0)
 				throw new ArgumentException("Cannot add empty value to child tree");
 
-			tx.Pager.EnsureEnoughSpace(tx, value.Size);
+            State.IsModified = true;
 
 			using (var cursor = tx.NewCursor(this))
 			{
@@ -175,8 +180,6 @@ namespace Voron.Trees
 					DirectAdd(tx, key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
 				}
 			}
-
-			AddToModifiedTreesIfNeeded(tx);
 		}
 
 		internal byte* DirectAdd(Transaction tx, Slice key, int len, NodeFlags nodeType = NodeFlags.Data, ushort? version = null)
@@ -399,6 +402,8 @@ namespace Voron.Trees
 		{
 			if (tx.Flags == (TransactionFlags.ReadWrite) == false) throw new ArgumentException("Cannot delete a value in a read only transaction");
 
+            State.IsModified = true;
+
 			using (var cursor = tx.NewCursor(this))
 			{
 				var page = FindPageFor(tx, key, cursor);
@@ -424,8 +429,6 @@ namespace Voron.Trees
 
 				page.DebugValidate(tx, _cmp, State.RootPageNumber);
 			}
-
-			AddToModifiedTreesIfNeeded(tx);
 		}
 
 		public TreeIterator Iterate(Transaction tx, WriteBatch writeBatch = null)
@@ -587,13 +590,13 @@ namespace Voron.Trees
 
 		private Tree OpenOrCreateMultiValueTree(Transaction tx, Slice key, NodeHeader* item)
 		{
-			var childTreeHeader =
-				(TreeRootHeader*)((byte*)item + item->KeySize + Constants.NodeHeaderSize);
 			Tree tree;
 			if (tx.TryGetMultiValueTree(this, key, out tree))
 				return tree;
 
-			tree = childTreeHeader != null ?
+		    var childTreeHeader =
+		        (TreeRootHeader*) ((byte*) item + item->KeySize + Constants.NodeHeaderSize);
+            tree = childTreeHeader != null ?
 				Open(tx, _cmp, childTreeHeader) :
 				Create(tx, _cmp);
 
@@ -613,12 +616,6 @@ namespace Voron.Trees
 		{
 			Add,
 			Delete
-		}
-		private void AddToModifiedTreesIfNeeded(Transaction tx)
-		{
-			if (!String.IsNullOrWhiteSpace(Name) &&
-				!tx.ModifiedTrees.ContainsKey(Name))
-				tx.ModifiedTrees.Add(Name, this);
 		}
 
 		public Tree Clone()

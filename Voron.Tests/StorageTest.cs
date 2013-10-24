@@ -50,9 +50,9 @@ namespace Voron.Tests
         protected void RenderAndShow(Transaction tx, int showEntries = 25, string name = null)
         {
             if (name == null)
-                RenderAndShow(tx, Env.RootTree(tx), showEntries);
+                RenderAndShow(tx, tx.State.Root, showEntries);
             else
-                RenderAndShow(tx, Env.GetTree(tx, name), showEntries);
+                RenderAndShow(tx, tx.GetTree(name), showEntries);
         }
 
         protected void RenderAndShow(Transaction tx, Tree root, int showEntries = 25)
@@ -71,9 +71,9 @@ namespace Voron.Tests
 
         protected unsafe Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
         {
-            using (var c = tx.NewCursor(Env.RootTree(tx)))
+            using (var c = tx.NewCursor(tx.State.Root))
             {
-                var p = Env.RootTree(tx).FindPageFor(tx, key, c);
+                var p = tx.State.Root.FindPageFor(tx, key, c);
                 var node = p.Search(key, Env.SliceComparer);
 
                 if (node == null)
@@ -89,15 +89,15 @@ namespace Voron.Tests
             }
         }
 
-		protected IList<Tree> CreateTrees(StorageEnvironment env, int number, string prefix)
+		protected IList<string> CreateTrees(StorageEnvironment env, int number, string prefix)
 		{
-			var results = new List<Tree>();
+            var results = new List<string>();
 
 			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (var i = 0; i < number; i++)
 				{
-					results.Add(env.CreateTree(tx, prefix + i));
+					results.Add(env.CreateTree(tx, prefix + i).Name);
 				}
 
 				tx.Commit();

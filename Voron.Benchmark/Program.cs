@@ -116,7 +116,7 @@ namespace Voron.Benchmark
                     foreach (var l in _randomNumbers)
                     {
                         ms.Position = 0;
-                        env.RootTree(tx).Add(tx, l.ToString("0000000000000000"), ms);
+                        tx.State.Root.Add(tx, l.ToString("0000000000000000"), ms);
                     }
 
                     tx.Commit();
@@ -148,7 +148,7 @@ namespace Voron.Benchmark
                     for (long i = 0; i < Transactions * ItemsPerTransaction; i++)
                     {
                         ms.Position = 0;
-                        env.RootTree(tx).Add(tx, i.ToString("0000000000000000"), ms);
+                        tx.State.Root.Add(tx, i.ToString("0000000000000000"), ms);
                     }
 
                     tx.Commit();
@@ -182,7 +182,7 @@ namespace Voron.Benchmark
                         {
                             ms.Position = 0;
                             enumerator.MoveNext();
-                            env.RootTree(tx).Add(tx, (enumerator.Current).ToString("0000000000000000"), ms);
+                            tx.State.Root.Add(tx, (enumerator.Current).ToString("0000000000000000"), ms);
                         }
                         tx.Commit();
                     }
@@ -215,7 +215,7 @@ namespace Voron.Benchmark
                         for (long i = 0; i < ItemsPerTransaction; i++)
                         {
                             ms.Position = 0;
-                            env.RootTree(tx).Add(tx, (counter++).ToString("0000000000000000"), ms);
+                            tx.State.Root.Add(tx, (counter++).ToString("0000000000000000"), ms);
                         }
 
                         tx.Commit();
@@ -245,7 +245,7 @@ namespace Voron.Benchmark
                             {
                                 var current = j * currentBase;
                                 var key = current.ToString("0000000000000000");
-                                using (var stream = env.RootTree(tx).Read(tx, key).Stream)
+                                using (var stream = tx.State.Root.Read(tx, key).Stream)
                                 {
                                     while (stream.Read(ms, 0, ms.Length) != 0)
                                     {
@@ -312,7 +312,7 @@ namespace Voron.Benchmark
                     for (int i = 0; i < Transactions * ItemsPerTransaction; i++)
                     {
                         var key = i.ToString("0000000000000000");
-                        using (var stream = env.RootTree(tx).Read(tx, key).Stream)
+                        using (var stream = tx.State.Root.Read(tx, key).Stream)
                         {
                             while (stream.Read(ms, 0, ms.Length) != 0)
                             {
@@ -346,7 +346,7 @@ namespace Voron.Benchmark
                     for (long i = 0; i < Transactions * ItemsPerTransaction; i++)
                     {
                         ms.Position = 0;
-                        env.RootTree(tx).Add(tx, i.ToString("0000000000000000"), ms);
+                        tx.State.Root.Add(tx, i.ToString("0000000000000000"), ms);
                     }
 
                     tx.Commit();
@@ -367,7 +367,7 @@ namespace Voron.Benchmark
                             {
                                 var current = j * currentBase;
                                 var key = current.ToString("0000000000000000");
-                                using (var stream = env.RootTree(tx).Read(tx, key).Stream)
+                                using (var stream = tx.State.Root.Read(tx, key).Stream)
                                 {
                                     while (stream.Read(ms, 0, ms.Length) != 0)
                                     {

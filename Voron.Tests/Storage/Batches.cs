@@ -19,7 +19,7 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -46,7 +46,7 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -73,7 +73,7 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
                 
                 tx.Commit();
             }
@@ -102,7 +102,7 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -128,7 +128,7 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -154,7 +154,7 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -181,14 +181,14 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("updated foo1"));
+                tx.GetTree("tree").Add(tx, "foo1", StreamFor("updated foo1"));
 
                 tx.Commit();
             }
@@ -213,14 +213,14 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                Env.GetTree(tx, "tree").Add(tx, "foo1", StreamFor("updated foo1"));
+                tx.GetTree("tree").Add(tx, "foo1", StreamFor("updated foo1"));
 
                 tx.Commit();
             }
@@ -243,13 +243,13 @@
 		public async Task SingleItemBatchTest()
 		{
 			var batch = new WriteBatch();
-			batch.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")), null);
+			batch.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")), Constants.RootTreeName);
 
 			await Env.Writer.WriteAsync(batch);
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				using (var stream = Env.RootTree(tx).Read(tx, "key/1").Stream)
+				using (var stream = tx.State.Root.Read(tx, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();
@@ -266,7 +266,7 @@
 			var batch = new WriteBatch();
 			for (int i = 0; i < numberOfItems; i++)
 			{
-				batch.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), null);
+                batch.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), Constants.RootTreeName);
 			}
 
 			await Env.Writer.WriteAsync(batch);
@@ -275,7 +275,7 @@
 			{
 				for (int i = 0; i < numberOfItems; i++)
 				{
-					using (var stream = Env.RootTree(tx).Read(tx, "key/" + i).Stream)
+					using (var stream = tx.State.Root.Read(tx, "key/" + i).Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
@@ -294,8 +294,8 @@
 			var batch2 = new WriteBatch();
 			for (int i = 0; i < numberOfItems; i++)
 			{
-				batch1.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), null);
-				batch2.Add("yek/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), null);
+                batch1.Add("key/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), Constants.RootTreeName);
+                batch2.Add("yek/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), Constants.RootTreeName);
 			}
 
 			await Task.WhenAll(Env.Writer.WriteAsync(batch1), Env.Writer.WriteAsync(batch2));
@@ -304,14 +304,14 @@
 			{
 				for (int i = 0; i < numberOfItems; i++)
 				{
-					using (var stream = Env.RootTree(tx).Read(tx, "key/" + i).Stream)
+					using (var stream = tx.State.Root.Read(tx, "key/" + i).Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
 						Assert.Equal(i.ToString(CultureInfo.InvariantCulture), result);
 					}
 
-					using (var stream = Env.RootTree(tx).Read(tx, "yek/" + i).Stream)
+					using (var stream = tx.State.Root.Read(tx, "yek/" + i).Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
@@ -334,13 +334,11 @@
 				batch2.Add("yek/" + i, new MemoryStream(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), "tree2");
 			}
 
-			Tree t1;
-			Tree t2;
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				t1 = Env.CreateTree(tx, "tree1");
-				t2 = Env.CreateTree(tx, "tree2");
+				Env.CreateTree(tx, "tree1");
+				Env.CreateTree(tx, "tree2");
 
 				tx.Commit();
 			}
@@ -351,14 +349,14 @@
 			{
 				for (int i = 0; i < numberOfItems; i++)
 				{
-					using (var stream = t1.Read(tx, "key/" + i).Stream)
+					using (var stream = tx.GetTree("tree1").Read(tx, "key/" + i).Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
 						Assert.Equal(i.ToString(CultureInfo.InvariantCulture), result);
 					}
 
-					using (var stream = t2.Read(tx, "yek/" + i).Stream)
+					using (var stream = tx.GetTree("tree2").Read(tx, "yek/" + i).Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
@@ -375,13 +373,11 @@
 			batch.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree1")), "tree1");
 			batch.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree2")), "tree2");
 
-			Tree t1;
-			Tree t2;
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				t1 = Env.CreateTree(tx, "tree1");
-				t2 = Env.CreateTree(tx, "tree2");
+				Env.CreateTree(tx, "tree1");
+				Env.CreateTree(tx, "tree2");
 
 				tx.Commit();
 			}
@@ -390,14 +386,14 @@
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				using (var stream = t1.Read(tx, "key/1").Stream)
+				using (var stream = tx.GetTree("tree1").Read(tx, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();
 					Assert.Equal("tree1", result);
 				}
 
-				using (var stream = t2.Read(tx, "key/1").Stream)
+				using (var stream = tx.GetTree("tree2").Read(tx, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();
@@ -418,13 +414,11 @@
 			var batch3 = new WriteBatch();
 			batch3.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree3")), "tree3");
 
-			Tree t1;
-			Tree t3;
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				t1 = Env.CreateTree(tx, "tree1");
-				t3 = Env.CreateTree(tx, "tree3");
+				Env.CreateTree(tx, "tree1");
+				Env.CreateTree(tx, "tree3");
 
 				tx.Commit();
 			}
@@ -440,14 +434,14 @@
 
 				using (var tx = Env.NewTransaction(TransactionFlags.Read))
 				{
-					using (var stream = t1.Read(tx, "key/1").Stream)
+					using (var stream = tx.GetTree("tree1").Read(tx, "key/1").Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
 						Assert.Equal("tree1", result);
 					}
 
-					using (var stream = t3.Read(tx, "key/1").Stream)
+					using (var stream = tx.GetTree("tree3").Read(tx, "key/1").Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
@@ -469,18 +463,15 @@
 			var batch3 = new WriteBatch();
 			batch3.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("tree3")), "tree3");
 
-			Tree t1;
-			Tree t3;
-
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				t1 = Env.CreateTree(tx, "tree1");
-				t3 = Env.CreateTree(tx, "tree3");
+				Env.CreateTree(tx, "tree1");
+				Env.CreateTree(tx, "tree3");
 
 				tx.Commit();
 			}
 
-			Env.Writer._semaphore.Wait(1000); // forcing to build one batch group from all batches that will be added between this line and _semaphore.Release
+            Assert.True(Env.Writer._semaphore.Wait(1000)); // forcing to build one batch group from all batches that will be added between this line and _semaphore.Release
 
 			var tasks = new[]
 				            {
@@ -503,14 +494,14 @@
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				using (var stream = t1.Read(tx, "key/1").Stream)
+				using (var stream = tx.GetTree("tree1").Read(tx, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();
 					Assert.Equal("tree1", result);
 				}
 
-				using (var stream = t3.Read(tx, "key/1").Stream)
+				using (var stream = tx.GetTree("tree3").Read(tx, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();

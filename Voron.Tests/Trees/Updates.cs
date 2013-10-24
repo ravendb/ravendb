@@ -15,15 +15,15 @@ namespace Voron.Tests.Trees
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Add(tx, "a", new MemoryStream(buffer));
+				tx.State.Root.Add(tx, "a", new MemoryStream(buffer));
 
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				Assert.Equal(4, Env.RootTree(tx).State.PageCount);
-				Assert.Equal(3, Env.RootTree(tx).State.OverflowPages);
+				Assert.Equal(4, tx.State.Root.State.PageCount);
+				Assert.Equal(3, tx.State.Root.State.OverflowPages);
 			}
 
 			buffer = new byte[8192 * 2];
@@ -32,7 +32,7 @@ namespace Voron.Tests.Trees
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Add(tx, "a", new MemoryStream(buffer));
+				tx.State.Root.Add(tx, "a", new MemoryStream(buffer));
 
 				tx.Commit();
 			}
@@ -40,8 +40,8 @@ namespace Voron.Tests.Trees
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				Assert.Equal(6, Env.RootTree(tx).State.PageCount);
-				Assert.Equal(5, Env.RootTree(tx).State.OverflowPages);				
+				Assert.Equal(6, tx.State.Root.State.PageCount);
+				Assert.Equal(5, tx.State.Root.State.OverflowPages);				
 			}
 		}
 
@@ -51,9 +51,9 @@ namespace Voron.Tests.Trees
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Add(tx, "1", new MemoryStream(new byte[1100]));
-				Env.RootTree(tx).Add(tx, "2", new MemoryStream(new byte[1100]));
-				Env.RootTree(tx).Add(tx, "3", new MemoryStream(new byte[1100]));
+				tx.State.Root.Add(tx, "1", new MemoryStream(new byte[1100]));
+				tx.State.Root.Add(tx, "2", new MemoryStream(new byte[1100]));
+				tx.State.Root.Add(tx, "3", new MemoryStream(new byte[1100]));
 
 				tx.Commit();
 			}
@@ -61,7 +61,7 @@ namespace Voron.Tests.Trees
 			// update that is too big
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Add(tx, "1", new MemoryStream(new byte[tx.Pager.MaxNodeSize - 25]));
+				tx.State.Root.Add(tx, "1", new MemoryStream(new byte[tx.Pager.MaxNodeSize - 25]));
                 RenderAndShow(tx);
 
 				tx.Commit();
@@ -71,8 +71,8 @@ namespace Voron.Tests.Trees
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				Assert.Equal(3, Env.RootTree(tx).State.PageCount);
-				Assert.Equal(0, Env.RootTree(tx).State.OverflowPages);
+				Assert.Equal(3, tx.State.Root.State.PageCount);
+				Assert.Equal(0, tx.State.Root.State.OverflowPages);
 			}
 		}
 
@@ -81,8 +81,8 @@ namespace Voron.Tests.Trees
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Add(tx, "test", StreamFor("1"));
-				Env.RootTree(tx).Add(tx, "test", StreamFor("2"));
+				tx.State.Root.Add(tx, "test", StreamFor("1"));
+				tx.State.Root.Add(tx, "test", StreamFor("2"));
 
 				var readKey = ReadKey(tx, "test");
 				Assert.Equal("test", readKey.Item1);
@@ -95,9 +95,9 @@ namespace Voron.Tests.Trees
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Add(tx, "test/1", StreamFor("1"));
-				Env.RootTree(tx).Add(tx, "test/2", StreamFor("2"));
-				Env.RootTree(tx).Add(tx, "test/1", StreamFor("3"));
+				tx.State.Root.Add(tx, "test/1", StreamFor("1"));
+				tx.State.Root.Add(tx, "test/2", StreamFor("2"));
+				tx.State.Root.Add(tx, "test/1", StreamFor("3"));
 
 				var readKey = ReadKey(tx, "test/1");
 				Assert.Equal("test/1", readKey.Item1);
@@ -115,9 +115,9 @@ namespace Voron.Tests.Trees
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Add(tx, "test/1", StreamFor("1"));
-				Env.RootTree(tx).Add(tx, "test/2", StreamFor("2"));
-				Env.RootTree(tx).Add(tx, "test/2", StreamFor("3"));
+				tx.State.Root.Add(tx, "test/1", StreamFor("1"));
+				tx.State.Root.Add(tx, "test/2", StreamFor("2"));
+				tx.State.Root.Add(tx, "test/2", StreamFor("3"));
 
 				var readKey = ReadKey(tx, "test/1");
 				Assert.Equal("test/1", readKey.Item1);
@@ -136,10 +136,10 @@ namespace Voron.Tests.Trees
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Add(tx, "test", StreamFor("1"));
+				tx.State.Root.Add(tx, "test", StreamFor("1"));
 				Assert.NotNull(ReadKey(tx, "test"));
 
-				Env.RootTree(tx).Delete(tx, "test");
+				tx.State.Root.Delete(tx, "test");
 				Assert.Null(ReadKey(tx, "test"));
 			}
 		}
@@ -149,11 +149,11 @@ namespace Voron.Tests.Trees
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Add(tx, "test/1", StreamFor("1"));
-				Env.RootTree(tx).Add(tx, "test/2", StreamFor("1"));
+				tx.State.Root.Add(tx, "test/1", StreamFor("1"));
+				tx.State.Root.Add(tx, "test/2", StreamFor("1"));
 				Assert.NotNull(ReadKey(tx, "test/2"));
 
-				Env.RootTree(tx).Delete(tx, "test/2");
+				tx.State.Root.Delete(tx, "test/2");
 				Assert.Null(ReadKey(tx, "test/2"));
 				Assert.NotNull(ReadKey(tx, "test/1"));
 			}
@@ -164,11 +164,11 @@ namespace Voron.Tests.Trees
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.RootTree(tx).Add(tx, "test/1", StreamFor("1"));
-				Env.RootTree(tx).Add(tx, "test/2", StreamFor("1"));
+				tx.State.Root.Add(tx, "test/1", StreamFor("1"));
+				tx.State.Root.Add(tx, "test/2", StreamFor("1"));
 				Assert.NotNull(ReadKey(tx, "test/1"));
 
-				Env.RootTree(tx).Delete(tx, "test/1");
+				tx.State.Root.Delete(tx, "test/1");
 				Assert.Null(ReadKey(tx, "test/1"));
 				Assert.NotNull(ReadKey(tx, "test/2"));
 			}
