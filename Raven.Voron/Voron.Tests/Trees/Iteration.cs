@@ -15,13 +15,13 @@ namespace Voron.Tests.Trees
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var iterator = Env.Root.Iterate(tx);
+				var iterator = tx.State.Root.Iterate(tx);
 				Assert.False(iterator.Seek(Slice.BeforeAllKeys));
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var iterator = Env.Root.Iterate(tx);
+				var iterator = tx.State.Root.Iterate(tx);
 				Assert.False(iterator.Seek(Slice.AfterAllKeys));
 			}
 		}
@@ -37,7 +37,7 @@ namespace Voron.Tests.Trees
 			{
 				for (int i = 0; i < 25; i++)
 				{
-					Env.Root.Add(tx, i.ToString("0000"), new MemoryStream(buffer));
+					tx.State.Root.Add(tx, i.ToString("0000"), new MemoryStream(buffer));
 				}
 
 				tx.Commit();
@@ -45,14 +45,13 @@ namespace Voron.Tests.Trees
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var iterator = Env.Root.Iterate(tx);
+				var iterator = tx.State.Root.Iterate(tx);
 				Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
 				var slice = new Slice(SliceOptions.Key);
 				for (int i = 0; i < 24; i++)
 				{
 					slice.Set(iterator.Current);
-
 					Assert.Equal(i.ToString("0000"), slice);
 
 					Assert.True(iterator.MoveNext());
@@ -83,8 +82,8 @@ namespace Voron.Tests.Trees
                     using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                     {
                         Env.CreateTree(tx, "tree");
-                        Env.GetTree(tx, "tree").Add(tx, "Test1", value);
-                        Env.GetTree(tx, "tree").Add(tx, "Test2", test2EntryValue);
+                        tx.GetTree("tree").Add(tx, "Test1", value);
+                        tx.GetTree("tree").Add(tx, "Test2", test2EntryValue);
 
                         tx.Commit();
                     }
@@ -132,8 +131,8 @@ namespace Voron.Tests.Trees
                     using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
                     {
                         Env.CreateTree(tx, "tree");
-                        Env.GetTree(tx, "tree").Add(tx, "Test1", value);
-                        Env.GetTree(tx, "tree").Add(tx, "Test2", test2EntryValue);
+                        tx.GetTree("tree").Add(tx, "Test1", value);
+                        tx.GetTree("tree").Add(tx, "Test2", test2EntryValue);
 
                         tx.Commit();
                     }
@@ -175,8 +174,8 @@ namespace Voron.Tests.Trees
 	        using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 	        {
 	            Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "Test1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test2", memoryStream);
 
                 tx.Commit();
             }
@@ -213,9 +212,9 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "Test1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test2", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test3", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test3", memoryStream);
 
                 tx.Commit();
             }
@@ -254,9 +253,9 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "Test1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test2", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test3", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test3", memoryStream);
 
                 tx.Commit();
             }
@@ -295,10 +294,10 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "Test1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test2", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test3", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test4", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test3", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test4", memoryStream);
 
                 tx.Commit();
             }
@@ -336,10 +335,10 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "Test1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test2", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test3", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test4", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test3", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test4", memoryStream);
 
                 tx.Commit();
             }
@@ -377,9 +376,9 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "Test1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test2", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test8", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test8", memoryStream);
 
                 tx.Commit();
             }
@@ -421,9 +420,9 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "Test1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test2", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test8", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test8", memoryStream);
 
                 tx.Commit();
             }
@@ -453,7 +452,7 @@ namespace Voron.Tests.Trees
         }
 
         [Fact(Skip = "Not supported currently")]
-        public void Iterator_BackwardIteration_With_WriteBatch()
+		public void Iterator_BackwardIteration_With_WriteBatch()
         {
             var random = new Random();
             var buffer = new byte[512];
@@ -464,8 +463,8 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "Test1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Test2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Test2", memoryStream);
 
                 tx.Commit();
             }
@@ -503,12 +502,12 @@ namespace Voron.Tests.Trees
 	        using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 	        {
 	            Env.CreateTree(tx, "tree");
-	            Env.GetTree(tx, "tree").Add(tx, "Foo1", memoryStream);
-	            Env.GetTree(tx, "tree").Add(tx, "Bar1", memoryStream);
-	            Env.GetTree(tx, "tree").Add(tx, "Foo2", memoryStream);
-	            Env.GetTree(tx, "tree").Add(tx, "Bar2", memoryStream);
-	            Env.GetTree(tx, "tree").Add(tx, "Foo3", memoryStream);
-	            Env.GetTree(tx, "tree").Add(tx, "Bar3", memoryStream);
+	            tx.GetTree("tree").Add(tx, "Foo1", memoryStream);
+	            tx.GetTree("tree").Add(tx, "Bar1", memoryStream);
+	            tx.GetTree("tree").Add(tx, "Foo2", memoryStream);
+	            tx.GetTree("tree").Add(tx, "Bar2", memoryStream);
+	            tx.GetTree("tree").Add(tx, "Foo3", memoryStream);
+	            tx.GetTree("tree").Add(tx, "Bar3", memoryStream);
 
 	            tx.Commit();
 	        }
@@ -552,10 +551,10 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "Bar1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Bar2", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Bar3", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Bar4", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar3", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar4", memoryStream);
 
                 tx.Commit();
             }
@@ -595,8 +594,8 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "Bar1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Bar2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar2", memoryStream);
 
                 tx.Commit();
             }
@@ -637,10 +636,10 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "Bar1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Bar2", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Bar3", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Bar4", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar3", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar4", memoryStream);
 
                 tx.Commit();
             }
@@ -677,10 +676,10 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "Bar1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Bar2", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Bar3", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Bar4", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar3", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar4", memoryStream);
 
                 tx.Commit();
             }
@@ -717,12 +716,12 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                Env.GetTree(tx, "tree").Add(tx, "Foo1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Bar1", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Foo2", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Bar2", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Foo3", memoryStream);
-                Env.GetTree(tx, "tree").Add(tx, "Bar3", memoryStream);
+                tx.GetTree("tree").Add(tx, "Foo1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar1", memoryStream);
+                tx.GetTree("tree").Add(tx, "Foo2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar2", memoryStream);
+                tx.GetTree("tree").Add(tx, "Foo3", memoryStream);
+                tx.GetTree("tree").Add(tx, "Bar3", memoryStream);
 
                 tx.Commit();
             }

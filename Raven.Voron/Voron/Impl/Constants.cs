@@ -22,5 +22,6 @@ namespace Voron.Impl
 	    public const int CurrentVersion = 0x00010009;
 
 		public const string RootTreeName = "Root";
+		public const string FreeSpaceTreeName = "Free Space";
 	}
 }

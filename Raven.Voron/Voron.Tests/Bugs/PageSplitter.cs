@@ -29,11 +29,9 @@
 				{
 					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 					{
-						foreach (var tree in trees)
+						foreach (var treeName in trees)
 						{
-							if (id == "244276974/13/250/2092845878")
-							{
-							}
+						    var tree = tx.GetTree(treeName);
 
 							tree.Add(tx, id, new MemoryStream(testBuffer));
 						}
@@ -41,10 +39,6 @@
 						tx.Commit();
 
 						addedIds.Add(id);
-						if (addedIds.Count >= 8887)
-						{
-							//ValidateRecords(env, trees, addedIds);
-						}
 					}
 				}
 
@@ -69,8 +63,9 @@
 				{
 					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 					{
-						foreach (var tree in trees)
+						foreach (var treeName in trees)
 						{
+						    var tree = tx.GetTree(treeName);
 							tree.Add(tx, id, new MemoryStream(testBuffer));
 						}
 
@@ -82,13 +77,13 @@
 			}
 		}
 
-		private void ValidateRecords(StorageEnvironment env, IEnumerable<Tree> trees, IList<string> ids)
+		private void ValidateRecords(StorageEnvironment env, IEnumerable<string> trees, IList<string> ids)
 		{
 			using (var snapshot = env.CreateSnapshot())
 			{
 				foreach (var tree in trees)
 				{
-					using (var iterator = snapshot.Iterate(tree.Name))
+					using (var iterator = snapshot.Iterate(tree))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
@@ -99,13 +94,13 @@
 						{
 							keys.Add(iterator.CurrentKey.ToString());
 							Assert.True(ids.Contains(iterator.CurrentKey.ToString()));
-							Assert.NotNull(snapshot.Read(tree.Name, iterator.CurrentKey));
+							Assert.NotNull(snapshot.Read(tree, iterator.CurrentKey));
 
 							count++;
 						}
 						while (iterator.MoveNext());
 
-						Assert.Equal(ids.Count, tree.State.EntriesCount);
+                        Assert.Equal(ids.Count, snapshot.Transaction.GetTree(tree).State.EntriesCount);
 						Assert.Equal(ids.Count, count);
 						Assert.Equal(ids.Count, keys.Count);
 					}
