@@ -17,7 +17,7 @@ namespace Raven.Abstractions.Util
         public async Task<bool> WaitAsync(int timeout)
         {
             var task = tcs.Task;
-#if !NET45
+#if SILVERLIGHT
             return await TaskEx.WhenAny(task, TaskEx.Delay(timeout)) == task;
 
 #else
@@ -33,7 +33,9 @@ namespace Raven.Abstractions.Util
             {
                 var current = tcs;
                 if (!current.Task.IsCompleted ||
+#pragma warning disable 420
                     Interlocked.CompareExchange(ref tcs, new TaskCompletionSource<bool>(), current) == current)
+#pragma warning restore 420
                     return;
             }
         }

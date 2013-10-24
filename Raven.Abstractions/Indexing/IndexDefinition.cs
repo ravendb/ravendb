@@ -157,7 +157,9 @@ namespace Raven.Abstractions.Indexing
 			return Maps.SequenceEqual(other.Maps) &&
 					Equals(other.Name, Name) &&
 					Equals(other.Reduce, Reduce) &&
+#pragma warning disable 612,618
 					Equals(other.TransformResults, TransformResults) &&
+#pragma warning restore 612,618
 					DictionaryEquals(other.Stores, Stores) &&
 					DictionaryEquals(other.Indexes, Indexes) &&
 					DictionaryEquals(other.Analyzers, Analyzers) &&
@@ -240,7 +242,9 @@ namespace Raven.Abstractions.Indexing
 				int result = Maps.Where(x => x != null).Aggregate(0, (acc, val) => acc * 397 ^ val.GetHashCode());
 				result = (result * 397) ^ Maps.Count;
 				result = (result * 397) ^ (Reduce != null ? Reduce.GetHashCode() : 0);
+#pragma warning disable 612,618
 				result = (result * 397) ^ (TransformResults != null ? TransformResults.GetHashCode() : 0);
+#pragma warning restore 612,618
 				result = (result * 397) ^ DictionaryHashCode(Stores);
 				result = (result * 397) ^ DictionaryHashCode(Indexes);
 				result = (result * 397) ^ DictionaryHashCode(Analyzers);
@@ -310,7 +314,9 @@ namespace Raven.Abstractions.Indexing
 			{
 				Name = Name,
 				Reduce = Reduce,
+#pragma warning disable 612,618
 				TransformResults = TransformResults,
+#pragma warning restore 612,618
 				cachedHashCodeAsBytes = cachedHashCodeAsBytes
 			};
 
