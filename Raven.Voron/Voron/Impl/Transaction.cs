@@ -97,7 +97,7 @@ namespace Voron.Impl
             }
         }
 
-        internal Tree GetTree(string treeName)
+        public Tree GetTree(string treeName)
         {
             return State.GetTree(treeName, this);
         }

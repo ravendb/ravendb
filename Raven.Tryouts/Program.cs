@@ -16,14 +16,14 @@ namespace Raven.Tryouts
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new MapIndexRecoveryTests())
-				{
-					x.ShouldRecoverMapIndexFromLastCommitPoint();
-				}
-//				using (var x = new MapReduce())
+//				using (var x = new MapIndexRecoveryTests())
 //				{
-//					x.DoesNotOverReduce();
+//					x.ShouldRecoverMapIndexFromLastCommitPoint();
 //				}
+				using (var x = new MapReduce())
+				{
+					x.DoesNotOverReduce();
+				}
 
 			}
 			

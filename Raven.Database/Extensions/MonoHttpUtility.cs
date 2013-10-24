@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Web.Util;
 
 namespace Raven.Database.Extensions
 {
@@ -379,11 +380,7 @@ namespace Raven.Database.Extensions
 		{
 			if (bytes == null)
 				return null;
-#if NET_4_0
 			return MonoHttpEncoder.Current.UrlEncode(bytes, offset, count);
-#else
-			return HttpEncoder.UrlEncodeToBytes (bytes, offset, count);
-#endif
 		}
 
 		public static string UrlEncodeUnicode(string str)

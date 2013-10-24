@@ -101,7 +101,7 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			using (var tx = env.NewTransaction(TransactionFlags.Read))
 			{
-				return env.GetTree(tx, table.TableName).State.EntriesCount;
+				return tx.GetTree(table.TableName).State.EntriesCount;
 			}
 		}
 
@@ -121,14 +121,14 @@ namespace Raven.Database.Storage.Voron.Impl
 			if (Debugger.IsAttached == false)
 				return;
 
-			var tree = env.GetTree(tx, table.TableName);
+			var tree = tx.GetTree(table.TableName);
 
 			var path = Path.Combine(Environment.CurrentDirectory, "test-tree.dot");
-			var rootPageNumber = tx.GetTreeInformation(tree).RootPageNumber;
+			var rootPageNumber = tree.State.RootPageNumber;
 			TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
 
 			var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
-			var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
+			var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.32\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
 			p.WaitForExit();
 			Process.Start(output);
 		}

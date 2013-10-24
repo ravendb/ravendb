@@ -20,7 +20,7 @@ namespace Raven.Abstractions.MissingFromBCL
 		{
 			return type;
 		}
-#if !MONO && !NET45
+#if SILVERLIGHT
 		public static Type GetTypeInfo(this Type type)
 		{
 			return type;
