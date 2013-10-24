@@ -263,7 +263,8 @@ namespace Raven.Database.Data
 		public static DynamicSortInfo[] GetSortInfo(Action<string> addField, IndexQuery indexQuery)
 		{
 			var sortInfo = new List<DynamicSortInfo>();
-
+			if(indexQuery.SortHints == null)
+				return new DynamicSortInfo[0];
 			foreach (var sortOptions in indexQuery.SortHints)
 			{
 				sortInfo.Add(new DynamicSortInfo

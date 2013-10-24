@@ -14,6 +14,7 @@ using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.WebApi;
 using Raven.Database.Server.WebApi.Filters;
 using Raven.Database.Server.WebApi.Handlers;
 
@@ -53,17 +54,17 @@ namespace Owin
 			}
 
 			var httpConfiguration = new HttpConfiguration();
-			SetupConfig(httpConfiguration, options.Landlord, options.MixedModeRequestAuthorizer);
+			SetupConfig(httpConfiguration, options.Landlord, options.MixedModeRequestAuthorizer, options.RequestManager);
 			app.UseInterceptor(options.Landlord)
 				.UseWebApi(httpConfiguration);
 			return app;
 		}
 
-		private static void SetupConfig(HttpConfiguration cfg, DatabasesLandlord databasesLandlord,
-			MixedModeRequestAuthorizer mixedModeRequestAuthorizer)
+		private static void SetupConfig(HttpConfiguration cfg, DatabasesLandlord databasesLandlord, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, RequestManager requestManager)
 		{
 			cfg.Properties[typeof(DatabasesLandlord)] = databasesLandlord;
 			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = mixedModeRequestAuthorizer;
+			cfg.Properties[typeof(RequestManager)] = requestManager;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 
 			cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
@@ -125,8 +126,7 @@ namespace Owin
 
 			public override async Task Invoke(IOwinContext context)
 			{
-				// Prerequest stuff
-
+				// Pre request stuff
 				await Next.Invoke(context);
 				// Post request stuff
 			}

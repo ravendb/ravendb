@@ -6,9 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -18,8 +16,6 @@ using Raven.Database.Commercial;
 using Raven.Database.Config;
 using Raven.Database.Impl;
 using Raven.Database.Plugins.Builtins.Tenants;
-using Raven.Database.Server.Security;
-using Raven.Database.Server.WebApi;
 using Raven.Database.Util;
 
 namespace Raven.Database.Server.Tenancy
@@ -30,20 +26,22 @@ namespace Raven.Database.Server.Tenancy
 		private readonly DocumentDatabase systemDatabase;
 		private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 
-		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { };
-		public event Action<string> DatabaseCleanupOccured;
-		public event EventHandler<BeforeRequestEventArgs> BeforeRequest;
-
 		public readonly AtomicDictionary<Task<DocumentDatabase>> ResourcesStoresCache =
 			new AtomicDictionary<Task<DocumentDatabase>>(StringComparer.OrdinalIgnoreCase);
 		public readonly ConcurrentDictionary<string, DateTime> DatabaseLastRecentlyUsed = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
-
 		protected readonly ConcurrentSet<string> LockedDatabases = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
+		public event Action<InMemoryRavenConfiguration> SetupTenantDatabaseConfiguration = delegate { };
+		public event Action<string> DatabaseCleanupOccured;
+
+		
+		private bool initialized;
 		public DatabasesLandlord(DocumentDatabase systemDatabase)
 		{
 			systemConfiguration = systemDatabase.Configuration;
 			this.systemDatabase = systemDatabase;
+
+			Init();
 		}
 
 		public DocumentDatabase SystemDatabase
@@ -251,96 +249,6 @@ namespace Raven.Database.Server.Tenancy
 			CleanupDatabase(@event.Name, skipIfActive: false);
 		}
 
-		private bool SetupRequestToProperDatabase(string tenantId)
-		{
-			var onBeforeRequest = BeforeRequest;
-			if (string.IsNullOrWhiteSpace(tenantId))
-			{
-				DatabaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
-				if (onBeforeRequest != null)
-				{
-					var args = new BeforeRequestEventArgs
-					{
-						IgnoreRequest = false,
-						TenantId = "System",
-						Database = systemDatabase
-					};
-					onBeforeRequest(this, args);
-					if (args.IgnoreRequest)
-						return false;
-				}
-
-				return true;
-			}
-
-			Task<DocumentDatabase> resourceStoreTask;
-			bool hasDb;
-			try
-			{
-				hasDb = TryGetOrCreateResourceStore(tenantId, out resourceStoreTask);
-			}
-			catch (Exception e)
-			{
-				OutputDatabaseOpenFailure(tenantId, e);
-				return false;
-			}
-			if (hasDb)
-			{
-				try
-				{
-					if (resourceStoreTask.Wait(TimeSpan.FromSeconds(30)) == false)
-					{
-						var msg = "The database " + tenantId + " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.";
-						Logger.Warn(msg);
-						throw new HttpException(503, msg);
-					}
-					if (onBeforeRequest != null)
-					{
-						var args = new BeforeRequestEventArgs
-						{
-							IgnoreRequest = false,
-							TenantId = tenantId,
-							Database = resourceStoreTask.Result
-						};
-						onBeforeRequest(this, args);
-						if (args.IgnoreRequest)
-							return false;
-					}
-				}
-				catch (Exception e)
-				{
-					OutputDatabaseOpenFailure(tenantId, e);
-					return false;
-				}
-
-				DatabaseLastRecentlyUsed.AddOrUpdate(tenantId, SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
-
-				//TODO: check
-				//if (string.IsNullOrEmpty(systemDatabase.Configuration.VirtualDirectory) == false && systemDatabase.Configuration.VirtualDirectory != "/")
-				//{
-				//	ctx.AdjustUrl(systemDatabase.Configuration.VirtualDirectory + match.Value);
-				//}
-				//else
-				//{
-				//	ctx.AdjustUrl(match.Value);
-				//}
-			}
-			else
-			{
-				var msg = "Could open database named: " + tenantId;
-				Logger.Warn(msg);
-				throw new HttpException(503, msg);
-			}
-			return true;
-		}
-
-		private static void OutputDatabaseOpenFailure(string tenantId, Exception e)
-		{
-			var msg = "Could open database named: " + tenantId;
-			Logger.WarnException(msg, e);
-			throw new HttpException(503, msg, e);
-		}
-
 		public bool TryGetOrCreateResourceStore(string tenantId, out Task<DocumentDatabase> database)
 		{
 			if (ResourcesStoresCache.TryGetValue(tenantId, out database))
@@ -432,11 +340,9 @@ namespace Raven.Database.Server.Tenancy
 			}
 		}
 
-		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
-
 		public void Dispose()
 		{
-			var exceptionAggregator = new ExceptionAggregator(logger, "Could not properly dispose of HttpServer");
+			var exceptionAggregator = new ExceptionAggregator(Logger, "Could not properly dispose of HttpServer");
 			using (ResourcesStoresCache.WithAllLocks())
 			{
 				// shut down all databases in parallel, avoid having to wait for each one
@@ -455,7 +361,7 @@ namespace Raven.Database.Server.Tenancy
 							}
 							catch (Exception e)
 							{
-								logger.WarnException("Failure in deferred disposal of a database", e);
+								Logger.WarnException("Failure in deferred disposal of a database", e);
 							}
 						});
 					}
@@ -469,35 +375,12 @@ namespace Raven.Database.Server.Tenancy
 			}
 		}
 
-		private int reqNum;
-		private int physicalRequestsCount;
-		public int NumberOfRequests
+		public void Init()
 		{
-			get { return Thread.VolatileRead(ref physicalRequestsCount); }
-		}
-
-		public void ResetNumberOfRequests()
-		{
-			//TODO: implement method
-			Interlocked.Exchange(ref reqNum, 0);
-			Interlocked.Exchange(ref physicalRequestsCount, 0);
-			//#if DEBUG
-			//			while (recentRequests.Count > 0)
-			//			{
-			//				string _;
-			//				recentRequests.TryDequeue(out _);
-			//			}
-			//#endif
-		}
-
-		public void IncrementRequestCount()
-		{
-			Interlocked.Increment(ref physicalRequestsCount);
-		}
-
-		public void DecrementRequestCount()
-		{
-			Interlocked.Decrement(ref physicalRequestsCount);
+			if(initialized)
+				return;
+			initialized = true;
+			TenantDatabaseModified.Occured += TenantDatabaseRemoved;
 		}
 	}
 }
