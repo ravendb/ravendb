@@ -101,7 +101,7 @@ namespace Raven.Client.Document
 					{
 						if (countDown.Active)
 						{
-#if NET45
+#if !SILVERLIGHT
 							await Task.Delay(100);
 #else
 							await TaskEx.Delay(100);

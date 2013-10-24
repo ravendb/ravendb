@@ -47,7 +47,7 @@ namespace Raven.Client.Connection
 				if (status.Value<bool>("Completed"))
 					return status.Value<RavenJToken>("State");
 
-#if NET45
+#if !SILVERLIGHT
 				await Task.Delay(500);
 #else
 				await TaskEx.Delay(500);

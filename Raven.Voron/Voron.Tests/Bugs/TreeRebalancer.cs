@@ -22,8 +22,9 @@
 				{
 					for (var i = 0; i < 120; i++)
 					{
-						foreach (var multiTree in multiTrees)
+						foreach (var multiTreeName in multiTrees)
 						{
+						    var multiTree = tx.GetTree(multiTreeName);
 							var id = Guid.NewGuid().ToString();
 
 							addedIds.Add("test/0/user-" + i, id);
@@ -32,8 +33,9 @@
 						}
 					}
 
-					foreach (var multiTree in multiTrees)
+					foreach (var multiTreeName in multiTrees)
 					{
+                        var multiTree = tx.GetTree(multiTreeName);
 						multiTree.MultiAdd(tx, "test/0/user-50", Guid.NewGuid().ToString());
 					}
 
@@ -45,8 +47,10 @@
 				{
 					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 					{
-						foreach (var multiTree in multiTrees)
-						{
+                        foreach (var multiTreeName in multiTrees)
+                        {
+                            var multiTree = tx.GetTree(multiTreeName);
+					
 							multiTree.MultiDelete(tx, "test/0/user-" + i, addedIds["test/0/user-" + i]);
 						}
 
@@ -64,8 +68,10 @@
 						{
 						}
 
-						foreach (var multiTree in multiTrees)
-						{
+                        foreach (var multiTreeName in multiTrees)
+                        {
+                            var multiTree = tx.GetTree(multiTreeName);
+					
 							multiTree.MultiDelete(tx, "test/0/user-" + i, addedIds["test/0/user-" + i]);
 						}
 
@@ -79,13 +85,13 @@
 			}
 		}
 
-		private void ValidateMulti(StorageEnvironment env, IEnumerable<Tree> trees)
+		private void ValidateMulti(StorageEnvironment env, IEnumerable<string> trees)
 		{
 			using (var snapshot = env.CreateSnapshot())
 			{
 				foreach (var tree in trees)
 				{
-					using (var iterator = snapshot.MultiRead(tree.Name, "test/0/user-50"))
+					using (var iterator = snapshot.MultiRead(tree, "test/0/user-50"))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 

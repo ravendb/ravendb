@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Tests.Indexes;
+using Raven.Tests.Indexes.Recovery;
 using Raven.Tests.Notifications;
 using Raven.Tests.Track;
 using Raven.Tests.Views;
@@ -11,14 +12,19 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			for (int i = 0; i < 100; i++)
+			for (int i = 0; i < 1000; i++)
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-                using (var x = new MapReduce())
+//				using (var x = new MapIndexRecoveryTests())
+//				{
+//					x.ShouldRecoverMapIndexFromLastCommitPoint();
+//				}
+				using (var x = new MapReduce())
 				{
 					x.DoesNotOverReduce();
 				}
+
 			}
 			
 		}
