@@ -26,6 +26,7 @@ namespace Raven.Client.Changes
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 		private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedPrefixes = new ConcurrentSet<string>();
+		private readonly ConcurrentSet<string> watchedCollections = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedIndexes = new ConcurrentSet<string>();
 		private readonly ConcurrentSet<string> watchedBulkInserts = new ConcurrentSet<string>();
 		private bool watchAllDocs;
@@ -158,6 +159,12 @@ namespace Raven.Client.Changes
 			{
 				await Send("watch-prefix", watchedPrefix);
 			}
+
+			foreach (var watchedCollection in watchedCollections)
+			{
+				await Send("watch-collection", watchedCollection);
+			}
+
 			foreach (var watchedIndex in watchedIndexes)
 			{
 				await Send("watch-indexes", watchedIndex);
@@ -417,6 +424,44 @@ namespace Raven.Client.Changes
 			counter.OnError += taskedObservable.Error;
 
 			return taskedObservable;
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection(string collectionName)
+		{
+			if (collectionName == null) throw new ArgumentNullException("collectionName");
+
+			var counter = counters.GetOrAdd("collections/" + collectionName, s =>
+			{
+				var documentSubscriptionTask = AfterConnection(() =>
+				{
+					watchedCollections.TryAdd(collectionName);
+					return Send("watch-collection", collectionName);
+				});
+
+				return new LocalConnectionState(
+					() =>
+					{
+						watchedCollections.TryRemove(collectionName);
+						Send("unwatch-collection", collectionName);
+						counters.Remove("collections/" + collectionName);
+					},
+					documentSubscriptionTask);
+			});
+
+			var taskedObservable = new TaskedObservable<DocumentChangeNotification>(
+				counter,
+				notification => string.Equals(collectionName, notification.CollectionName, StringComparison.OrdinalIgnoreCase));
+
+			counter.OnDocumentChangeNotification += taskedObservable.Send;
+			counter.OnError += taskedObservable.Error;
+
+			return taskedObservable;
+		}
+
+		public IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection<TEntity>()
+		{
+			var collectionName = conventions.GetTypeTagName(typeof(TEntity));
+			return ForDocumentsInCollection(collectionName);
 		}
 
 		public IObservableWithTask<ReplicationConflictNotification> ForAllReplicationConflicts()

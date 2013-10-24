@@ -8,56 +8,60 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Server.Connections
 {
-    public class ConnectionState
-    {
-        private readonly ConcurrentSet<string> matchingIndexes =
-            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
-        private readonly ConcurrentSet<string> matchingDocuments =
-            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+	public class ConnectionState
+	{
+		private readonly ConcurrentSet<string> matchingIndexes =
+			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingDocuments =
+			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-        private readonly ConcurrentSet<string> matchingDocumentPrefixes =
-            new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ConcurrentSet<string> matchingDocumentPrefixes =
+			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
+		private readonly ConcurrentSet<string> matchingDocumentsInCollection =
+			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
 		private readonly ConcurrentSet<string> matchingBulkInserts =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-        private EventsTransport eventsTransport;
+		private EventsTransport eventsTransport;
 
-        private int watchAllDocuments;
-        private int watchAllIndexes;
-        private int watchAllReplicationConflicts;
+		private int watchAllDocuments;
+		private int watchAllIndexes;
+		private int watchAllReplicationConflicts;
 
-        public ConnectionState(EventsTransport eventsTransport)
-        {
-            this.eventsTransport = eventsTransport;
-        }
+		public ConnectionState(EventsTransport eventsTransport)
+		{
+			this.eventsTransport = eventsTransport;
+		}
 
-        public object DebugStatus
-        {
-            get
-            {
-                return new
-                {
-                    eventsTransport.Id,
-                    eventsTransport.Connected,
-                    WatchAllDocuments = watchAllDocuments > 0,
-                    WatchAllIndexes = watchAllIndexes > 0,
-                    WatchDocumentPrefixes = matchingDocumentPrefixes.ToArray(),
-                    WatchIndexes = matchingIndexes.ToArray(),
-                    WatchDocuments = matchingDocuments.ToArray(),
-                };
-            }
-        }
+		public object DebugStatus
+		{
+			get
+			{
+				return new
+				{
+					eventsTransport.Id,
+					eventsTransport.Connected,
+					WatchAllDocuments = watchAllDocuments > 0,
+					WatchAllIndexes = watchAllIndexes > 0,
+					WatchDocumentPrefixes = matchingDocumentPrefixes.ToArray(),
+					WatchDocumentsInCollection = matchingDocumentsInCollection.ToArray(),
+					WatchIndexes = matchingIndexes.ToArray(),
+					WatchDocuments = matchingDocuments.ToArray(),
+				};
+			}
+		}
 
-        public void WatchIndex(string name)
-        {
-            matchingIndexes.TryAdd(name);
-        }
+		public void WatchIndex(string name)
+		{
+			matchingIndexes.TryAdd(name);
+		}
 
-        public void UnwatchIndex(string name)
-        {
-            matchingIndexes.TryRemove(name);
-        }
+		public void UnwatchIndex(string name)
+		{
+			matchingIndexes.TryRemove(name);
+		}
 
 		public void WatchBulkInsert(string operationId)
 		{
@@ -69,15 +73,15 @@ namespace Raven.Database.Server.Connections
 			matchingBulkInserts.TryRemove(operationId);
 		}
 
-        public void WatchAllIndexes()
-        {
-            Interlocked.Increment(ref watchAllIndexes);
-        }
+		public void WatchAllIndexes()
+		{
+			Interlocked.Increment(ref watchAllIndexes);
+		}
 
-        public void UnwatchAllIndexes()
-        {
-            Interlocked.Decrement(ref watchAllIndexes);
-        }
+		public void UnwatchAllIndexes()
+		{
+			Interlocked.Decrement(ref watchAllIndexes);
+		}
 
 		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
 		{
@@ -89,118 +93,144 @@ namespace Raven.Database.Server.Connections
 			Enqueue(value);
 		}
 
-        public void Send(DocumentChangeNotification documentChangeNotification)
-        {
-            var value = new { Value = documentChangeNotification, Type = "DocumentChangeNotification" };
-            if (watchAllDocuments > 0)
-            {
-                Enqueue(value);
-                return;
-            }
+		public void Send(DocumentChangeNotification documentChangeNotification)
+		{
+			var value = new { Value = documentChangeNotification, Type = "DocumentChangeNotification" };
+			if (watchAllDocuments > 0)
+			{
+				Enqueue(value);
+				return;
+			}
 
-            if (documentChangeNotification.Id != null)
-            {
-                if (matchingDocuments.Contains(documentChangeNotification.Id))
-                {
-                    Enqueue(value);
-                    return;
-                }
+			if (documentChangeNotification.Id != null && matchingDocuments.Contains(documentChangeNotification.Id))
+			{
+				Enqueue(value);
+				return;
+			}
 
-                var hasPrefix = matchingDocumentPrefixes.Any(
-                        x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
-                if (hasPrefix == false)
-                    return;
-            }
-            Enqueue(value);
-        }
+			var hasPrefix = documentChangeNotification.Id != null && matchingDocumentPrefixes
+				.Any(x => documentChangeNotification.Id.StartsWith(x, StringComparison.InvariantCultureIgnoreCase));
 
-        public void Send(IndexChangeNotification indexChangeNotification)
-        {
-            var value = new { Value = indexChangeNotification, Type = "IndexChangeNotification" };
+			if (hasPrefix)
+			{
+				Enqueue(value);
+				return;
+			}
 
-            if (watchAllIndexes > 0)
-            {
-                Enqueue(value);
-                return;
-            }
+			var hasCollection = documentChangeNotification.CollectionName != null && matchingDocumentsInCollection
+				.Any(x => string.Equals(x, documentChangeNotification.CollectionName, StringComparison.InvariantCultureIgnoreCase));
 
-            if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
-                return;
+			if (hasCollection)
+			{
+				Enqueue(value);
+				return;
+			}
 
-            Enqueue(value);
-        }
+			if (documentChangeNotification.Id != null || documentChangeNotification.CollectionName != null)
+			{
+				return;
+			}
 
-        public void Send(ReplicationConflictNotification replicationConflictNotification)
-        {
-            var value = new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" };
+			Enqueue(value);
+		}
 
-            if (watchAllReplicationConflicts <= 0)
-            {
-                return;
-            }
+		public void Send(IndexChangeNotification indexChangeNotification)
+		{
+			var value = new { Value = indexChangeNotification, Type = "IndexChangeNotification" };
 
-            Enqueue(value);
-        }
+			if (watchAllIndexes > 0)
+			{
+				Enqueue(value);
+				return;
+			}
 
-        private void Enqueue(object msg)
-        {
-            if (eventsTransport == null || eventsTransport.Connected == false)
-            {
-                return;
-            }
+			if (matchingIndexes.Contains(indexChangeNotification.Name) == false)
+				return;
 
-            eventsTransport.SendAsync(msg);
-        }
+			Enqueue(value);
+		}
 
-        public void WatchAllDocuments()
-        {
-            Interlocked.Increment(ref watchAllDocuments);
-        }
+		public void Send(ReplicationConflictNotification replicationConflictNotification)
+		{
+			var value = new { Value = replicationConflictNotification, Type = "ReplicationConflictNotification" };
 
-        public void UnwatchAllDocuments()
-        {
-            Interlocked.Decrement(ref watchAllDocuments);
-        }
+			if (watchAllReplicationConflicts <= 0)
+			{
+				return;
+			}
 
-        public void WatchDocument(string name)
-        {
-            matchingDocuments.TryAdd(name);
-        }
+			Enqueue(value);
+		}
 
-        public void UnwatchDocument(string name)
-        {
-            matchingDocuments.TryRemove(name);
-        }
+		private void Enqueue(object msg)
+		{
+			if (eventsTransport == null || eventsTransport.Connected == false)
+			{
+				return;
+			}
 
-        public void WatchDocumentPrefix(string name)
-        {
-            matchingDocumentPrefixes.TryAdd(name);
-        }
+			eventsTransport.SendAsync(msg);
+		}
 
-        public void UnwatchDocumentPrefix(string name)
-        {
-            matchingDocumentPrefixes.TryRemove(name);
-        }
+		public void WatchAllDocuments()
+		{
+			Interlocked.Increment(ref watchAllDocuments);
+		}
 
-        public void WatchAllReplicationConflicts()
-        {
-            Interlocked.Increment(ref watchAllReplicationConflicts);
-        }
+		public void UnwatchAllDocuments()
+		{
+			Interlocked.Decrement(ref watchAllDocuments);
+		}
 
-        public void UnwatchAllReplicationConflicts()
-        {
-            Interlocked.Decrement(ref watchAllReplicationConflicts);
-        }
+		public void WatchDocument(string name)
+		{
+			matchingDocuments.TryAdd(name);
+		}
 
-        public void Reconnect(EventsTransport transport)
-        {
-            eventsTransport = transport;
-        }
+		public void UnwatchDocument(string name)
+		{
+			matchingDocuments.TryRemove(name);
+		}
 
-        public void Dispose()
-        {
-            if (eventsTransport != null)
-                eventsTransport.Dispose();
-        }
-    }
+		public void WatchDocumentPrefix(string name)
+		{
+			matchingDocumentPrefixes.TryAdd(name);
+		}
+
+		public void UnwatchDocumentPrefix(string name)
+		{
+			matchingDocumentPrefixes.TryRemove(name);
+		}
+
+		public void WatchDocumentInCollection(string name)
+		{
+			matchingDocumentsInCollection.TryAdd(name);
+		}
+
+		public void UnwatchDocumentInCollection(string name)
+		{
+			matchingDocumentsInCollection.TryRemove(name);
+		}
+
+		public void WatchAllReplicationConflicts()
+		{
+			Interlocked.Increment(ref watchAllReplicationConflicts);
+		}
+
+		public void UnwatchAllReplicationConflicts()
+		{
+			Interlocked.Decrement(ref watchAllReplicationConflicts);
+		}
+
+		public void Reconnect(EventsTransport transport)
+		{
+			eventsTransport = transport;
+		}
+
+		public void Dispose()
+		{
+			if (eventsTransport != null)
+				eventsTransport.Dispose();
+		}
+	}
 }
