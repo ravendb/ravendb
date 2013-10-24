@@ -15,11 +15,11 @@ namespace Voron.Trees
 	    private readonly NodeFlags _nodeType;
 	    private readonly ushort _nodeVersion;
         private readonly Cursor _cursor;
-        private readonly TreeDataInTransaction _txInfo;
+		private readonly TreeMutableState _treeState;
         private readonly Page _page;
         private Page _parentPage;
 
-        public PageSplitter(Transaction tx, SliceComparer cmp, Slice newKey, int len, long pageNumber, NodeFlags nodeType, ushort nodeVersion, Cursor cursor, TreeDataInTransaction txInfo)
+        public PageSplitter(Transaction tx, SliceComparer cmp, Slice newKey, int len, long pageNumber, NodeFlags nodeType, ushort nodeVersion, Cursor cursor, TreeMutableState treeState)
         {
             _tx = tx;
             _cmp = cmp;
@@ -29,22 +29,22 @@ namespace Voron.Trees
 	        _nodeType = nodeType;
 	        _nodeVersion = nodeVersion;
             _cursor = cursor;
-            _txInfo = txInfo;
+            _treeState = treeState;
             _page = _cursor.Pop();
         }
 
         public byte* Execute()
         {
             var rightPage = Tree.NewPage(_tx, _page.Flags, 1);
-            _txInfo.RecordNewPage(_page, 1);
+            _treeState.RecordNewPage(_page, 1);
             rightPage.Flags = _page.Flags;
             if (_cursor.PageCount == 0) // we need to do a root split
             {
                 var newRootPage = Tree.NewPage(_tx, PageFlags.Branch, 1);
                 _cursor.Push(newRootPage);
-                _txInfo.RootPageNumber = newRootPage.PageNumber;
-                _txInfo.State.Depth++;
-                _txInfo.RecordNewPage(newRootPage, 1);
+                _treeState.RootPageNumber = newRootPage.PageNumber;
+                _treeState.Depth++;
+                _treeState.RecordNewPage(newRootPage, 1);
 
                 // now add implicit left page
 				newRootPage.AddPageRefNode(0, Slice.BeforeAllKeys, _page.PageNumber);
@@ -184,7 +184,7 @@ namespace Voron.Trees
         {
             if (_parentPage.SizeLeft < SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize)
             {
-                new PageSplitter(_tx, _cmp, seperatorKey, -1, rightPage.PageNumber, NodeFlags.PageRef, 0, _cursor, _txInfo).Execute();
+                new PageSplitter(_tx, _cmp, seperatorKey, -1, rightPage.PageNumber, NodeFlags.PageRef, 0, _cursor, _treeState).Execute();
             }
             else
             {

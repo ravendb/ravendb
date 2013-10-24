@@ -1,471 +1,389 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Voron.Impl.FileHeaders;
 using Voron.Trees;
+using Voron.Util;
 
 namespace Voron.Impl
 {
-	using System.Threading;
+    public class Transaction : IDisposable
+    {
+        public long NextPageNumber
+        {
+            get
+            {
+                return _state.NextPageNumber;
+            }
+        }
 
-	public class Transaction : IDisposable
-	{
-		public long NextPageNumber;
+        private IVirtualPager _pager;
+        private StorageEnvironment _env;
+        private long _id;
 
-		private readonly IVirtualPager _pager;
-		private readonly StorageEnvironment _env;
-		private readonly long _id;
+        private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
+        private readonly Dictionary<long, long> _dirtyPages = new Dictionary<long, long>();
+        private readonly List<long> _freedPages = new List<long>();
+        private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
+        private IFreeSpaceRepository _freeSpaceRepository;
 
-		private TreeDataInTransaction _rootTreeData;
-		private TreeDataInTransaction _fresSpaceTreeData;
-		private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
-		private readonly Dictionary<Tree, TreeDataInTransaction> _treesInfo = new Dictionary<Tree, TreeDataInTransaction>();
-		private readonly Dictionary<long, long> _dirtyPages = new Dictionary<long, long>();
-		private readonly List<long> _freedPages = new List<long>();
-		private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
-		private readonly IFreeSpaceRepository _freeSpaceRepository;
+        private List<string> _deletedTrees;
 
-		private readonly ReaderWriterLockSlim _txCommit;
+        public TransactionFlags Flags { get; private set; }
 
-		public TransactionFlags Flags { get; private set; }
+        internal StorageEnvironment Environment
+        {
+            get { return _env; }
+        }
 
-		public StorageEnvironment Environment
-		{
-			get { return _env; }
-		}
+        public IVirtualPager Pager
+        {
+            get { return _pager; }
+        }
 
-		public IVirtualPager Pager
-		{
-			get { return _pager; }
-		}
+        public long Id
+        {
+            get { return _id; }
+        }
 
-		public long Id
-		{
-			get { return _id; }
-		}
+        internal Action<long> AfterCommit = delegate { };
+        private StorageEnvironmentState _state;
 
-		internal Action<long> AfterCommit = delegate { };
-		private Dictionary<string, Tree> modifiedTrees;
+        public Page TempPage
+        {
+            get { return _pager.TempPage; }
+        }
 
-		public Page TempPage
-		{
-			get { return _pager.TempPage; }
-		}
+        public bool Committed { get; private set; }
 
-		public Dictionary<string, Tree> ModifiedTrees
-		{
-			get { return modifiedTrees ?? (modifiedTrees = new Dictionary<string, Tree>(StringComparer.OrdinalIgnoreCase)); }
-		}
+        public PagerState LatestPagerState { get; private set; }
 
-		public bool Committed { get; private set; }
-
-		public bool HasModifiedTrees
-		{
-			get { return modifiedTrees != null; }
-		}
-		public PagerState LatestPagerState { get; private set; }
-
-		public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository, ReaderWriterLockSlim txCommit)
-		{
-			_pager = pager;
-			_env = env;
-			_id = id;
-			_freeSpaceRepository = freeSpaceRepository;
-			_txCommit = txCommit;
-			Flags = flags;
-
-			try
-			{
-				_txCommit.EnterReadLock();
-
-				NextPageNumber = env.NextPageNumber;
-				foreach (var tree in env.Trees)
-					GetTreeInformation(tree);
-			}
-			finally
-			{
-				_txCommit.ExitReadLock();
-			}
-		}
-
-		public Page ModifyCursor(Tree tree, Cursor c)
-		{
-			var txInfo = GetTreeInformation(tree);
-			return ModifyCursor(txInfo, c);
-		}
-
-		public Page ModifyCursor(TreeDataInTransaction txInfo, Cursor c)
-		{
-			Debug.Assert(c.Pages.Count > 0); // cannot modify an empty cursor
-
-			var node = c.Pages.Last;
-			while (node != null)
-			{
-				var parent = node.Next != null ? node.Next.Value : null;
-				c.Update(node, ModifyPage(txInfo.Tree, parent, node.Value.PageNumber, c));
-				node = node.Previous;
-			}
-
-			txInfo.RootPageNumber = c.Pages.Last.Value.PageNumber;
-
-			return c.Pages.First.Value;
-		}
-
-		public unsafe Page ModifyPage(Tree tree, Page parent, long p, Cursor c)
-		{
-			long dirtyPageNum;
-			Page page;
-			if (_dirtyPages.TryGetValue(p, out dirtyPageNum))
-			{
-				page = c.GetPage(dirtyPageNum) ?? _pager.Get(this, dirtyPageNum);
-				page.Dirty = true;
-				UpdateParentPageNumber(parent, page.PageNumber);
-				return page;
-			}
-			var newPage = AllocatePage(1);
-			newPage.Dirty = true;
-			var newPageNum = newPage.PageNumber;
-			page = c.GetPage(p) ?? _pager.Get(this, p);
-			NativeMethods.memcpy(newPage.Base, page.Base, _pager.PageSize);
-			newPage.LastSearchPosition = page.LastSearchPosition;
-			newPage.LastMatch = page.LastMatch;
-			newPage.PageNumber = newPageNum;
-			FreePage(p);
-			_dirtyPages[p] = newPage.PageNumber;
-			UpdateParentPageNumber(parent, newPage.PageNumber);
-			return newPage;
-		}
-
-		private static unsafe void UpdateParentPageNumber(Page parent, long pageNumber)
-		{
-			if (parent == null)
-				return;
-
-			if (parent.Dirty == false)
-				throw new InvalidOperationException("The parent page must already been dirtied, but wasn't");
-
-			var node = parent.GetNode(parent.LastSearchPositionOrLastEntry);
-			node->PageNumber = pageNumber;
-		}
-
-		public Page GetReadOnlyPage(long n)
-		{
-			long dirtyPage;
-			if (_dirtyPages.TryGetValue(n, out dirtyPage))
-				n = dirtyPage;
-			return _pager.Get(this, n);
-		}
-
-		public Page AllocatePage(int num)
-		{
-			Page page = _freeSpaceRepository.TryAllocateFromFreeSpace(this, num);
-			if (page == null) // allocate from end of file
-			{
-				if (num > 1)
-					_pager.EnsureContinious(this, NextPageNumber, num);
-				page = _pager.Get(this, NextPageNumber);
-				page.PageNumber = NextPageNumber;
-				NextPageNumber += num;
-			}
-			page.Lower = (ushort)Constants.PageHeaderSize;
-			page.Upper = (ushort)_pager.PageSize;
-			page.Dirty = true;
-			_dirtyPages[page.PageNumber] = page.PageNumber;
-			return page;
-		}
+        public StorageEnvironmentState State
+        {
+            get { return _state; }
+        }
 
 
-		internal unsafe int GetNumberOfFreePages(NodeHeader* node)
-		{
-			return GetNodeDataSize(node) / Constants.PageNumberSize;
-		}
+        public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository)
+        {
+            _pager = pager;
+            _env = env;
+            _id = id;
+            _freeSpaceRepository = freeSpaceRepository;
+            Flags = flags;
 
-		internal unsafe int GetNodeDataSize(NodeHeader* node)
-		{
-			if (node->Flags == (NodeFlags.PageRef)) // lots of data, enough to overflow!
-			{
-				var overflowPage = GetReadOnlyPage(node->PageNumber);
-				return overflowPage.OverflowSize;
-			}
-			return node->DataSize;
-		}
+            if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
+            {
+                _state = env.State;
+                return;
+            }
 
-		public unsafe void Commit()
-		{
-			if (Flags != (TransactionFlags.ReadWrite))
-				return; // nothing to do
+            _state = env.State.Clone();
+            MarkTreesForWriteTransaction();
+        }
 
-			try
-			{
-				_txCommit.EnterWriteLock();
+        private void MarkTreesForWriteTransaction()
+        {
+            if (_state.Root != null)
+                _state.Root.State.InWriteTransaction = true;
+            if (_state.FreeSpaceRoot != null)
+                _state.FreeSpaceRoot.State.InWriteTransaction = true;
+            foreach (var tree in _state.Trees.Values)
+            {
+                tree.State.InWriteTransaction = true;
+            }
+        }
 
-				FlushAllMultiValues();
+        internal Tree GetTree(string treeName)
+        {
+            return State.GetTree(treeName, this);
+        }
 
-				_freeSpaceRepository.FlushFreeState(this);
+        public Page ModifyCursor(Tree tree, Cursor c)
+        {
+            Debug.Assert(c.Pages.Count > 0); // cannot modify an empty cursor
 
-				foreach (var kvp in _treesInfo)
-				{
-					var txInfo = kvp.Value;
-					var tree = kvp.Key;
+            var node = c.Pages.Last;
+            while (node != null)
+            {
+                var parent = node.Next != null ? node.Next.Value : null;
+                c.Update(node, ModifyPage(tree, parent, node.Value.PageNumber, c));
+                node = node.Previous;
+            }
 
-					if (txInfo.RootPageNumber == tree.State.RootPageNumber &&
-						(modifiedTrees == null || modifiedTrees.ContainsKey(tree.Name) == false))
-						continue; // not modified
+            tree.State.RootPageNumber = c.Pages.Last.Value.PageNumber;
 
-					tree.DebugValidateTree(this, txInfo.RootPageNumber);
-					txInfo.Flush();
-					if (string.IsNullOrEmpty(kvp.Key.Name))
-						continue;
+            return c.Pages.First.Value;
+        }
 
-					var treePtr = (TreeRootHeader*)_env.Root.DirectAdd(this, tree.Name, sizeof(TreeRootHeader));
-					tree.State.CopyTo(treePtr);
-				}
+        public unsafe Page ModifyPage(Tree tree, Page parent, long p, Cursor c)
+        {
+            long dirtyPageNum;
+            Page page;
+            if (_dirtyPages.TryGetValue(p, out dirtyPageNum))
+            {
+                page = c.GetPage(dirtyPageNum) ?? _pager.Get(this, dirtyPageNum);
+                page.Dirty = true;
+                UpdateParentPageNumber(parent, page.PageNumber);
+                return page;
+            }
+            var newPage = AllocatePage(1);
+            newPage.Dirty = true;
+            var newPageNum = newPage.PageNumber;
+            page = c.GetPage(p) ?? _pager.Get(this, p);
+            NativeMethods.memcpy(newPage.Base, page.Base, _pager.PageSize);
+            newPage.LastSearchPosition = page.LastSearchPosition;
+            newPage.LastMatch = page.LastMatch;
+            newPage.PageNumber = newPageNum;
+            FreePage(p);
+            _dirtyPages[p] = newPage.PageNumber;
+            UpdateParentPageNumber(parent, newPage.PageNumber);
+            return newPage;
+        }
 
-				FlushFreePages();   // this is the the free space that is available when all concurrent transactions are done
+        private static unsafe void UpdateParentPageNumber(Page parent, long pageNumber)
+        {
+            if (parent == null)
+                return;
 
-				if (_rootTreeData != null)
-				{
-					_env.Root.DebugValidateTree(this, _rootTreeData.RootPageNumber);
-					_rootTreeData.Flush();
-				}
+            if (parent.Dirty == false)
+                throw new InvalidOperationException("The parent page must already been dirtied, but wasn't");
 
-				if (_fresSpaceTreeData != null)
-				{
-					_env.FreeSpaceRoot.DebugValidateTree(this, _fresSpaceTreeData.RootPageNumber);
-					_fresSpaceTreeData.Flush();
-				}
+            var node = parent.GetNode(parent.LastSearchPositionOrLastEntry);
+            node->PageNumber = pageNumber;
+        }
+
+        public Page GetReadOnlyPage(long n)
+        {
+            long dirtyPage;
+            if (_dirtyPages.TryGetValue(n, out dirtyPage))
+                n = dirtyPage;
+            return _pager.Get(this, n);
+        }
+
+        public Page AllocatePage(int num)
+        {
+            Page page = _freeSpaceRepository.TryAllocateFromFreeSpace(this, num);
+            if (page == null) // allocate from end of file
+            {
+                if (num > 1)
+                    _pager.EnsureContinious(this, NextPageNumber, num);
+                page = _pager.Get(this, NextPageNumber);
+                page.PageNumber = NextPageNumber;
+                _state.NextPageNumber += num;
+            }
+            page.Lower = (ushort)Constants.PageHeaderSize;
+            page.Upper = (ushort)_pager.PageSize;
+            page.Dirty = true;
+            _dirtyPages[page.PageNumber] = page.PageNumber;
+            return page;
+        }
+
+
+        internal unsafe int GetNumberOfFreePages(NodeHeader* node)
+        {
+            return GetNodeDataSize(node) / Constants.PageNumberSize;
+        }
+
+        internal unsafe int GetNodeDataSize(NodeHeader* node)
+        {
+            if (node->Flags == (NodeFlags.PageRef)) // lots of data, enough to overflow!
+            {
+                var overflowPage = GetReadOnlyPage(node->PageNumber);
+                return overflowPage.OverflowSize;
+            }
+            return node->DataSize;
+        }
+
+        public unsafe void Commit()
+        {
+            if (Flags != (TransactionFlags.ReadWrite))
+                return; // nothing to do
+
+            FlushAllMultiValues();
+            _freeSpaceRepository.FlushFreeState(this);
+
+            if (_deletedTrees != null)
+            {
+                foreach (var deletedTree in _deletedTrees)
+                {
+                    State.RemoveTree(deletedTree);
+                }
+            }
+
+            State.Root.State.InWriteTransaction = false;
+            State.FreeSpaceRoot.State.InWriteTransaction = false;
+
+            foreach (var treeKvp in State.Trees)
+            {
+                treeKvp.Value.State.InWriteTransaction = false;
+                var treeState = treeKvp.Value.State;
+                if (treeState.IsModified)
+                {
+                    var treePtr = (TreeRootHeader*)State.Root.DirectAdd(this, treeKvp.Key, sizeof(TreeRootHeader));
+                    treeState.CopyTo(treePtr);
+                }
+            }
+
 
 #if DEBUG
-			if (_env.Root != null && _env.FreeSpaceRoot != null)
-			{
-				Debug.Assert(_env.Root.State.RootPageNumber != _env.FreeSpaceRoot.State.RootPageNumber);
-			}
+            if (State.Root != null && State.FreeSpaceRoot != null)
+            {
+                Debug.Assert(State.Root.State.RootPageNumber != State.FreeSpaceRoot.State.RootPageNumber);
+            }
 #endif
+            // Because we don't know in what order the OS will flush the pages 
+            // we need to do this twice, once for the data, and then once for the metadata
 
-				_env.NextPageNumber = NextPageNumber;
-			}
-			finally
-			{
-				_txCommit.ExitWriteLock();
-			}
+            var sortedPagesToFlush = _dirtyPages.Select(x => x.Value).Distinct().ToList();
+            sortedPagesToFlush.Sort();
+            _pager.Flush(sortedPagesToFlush);
 
-			// Because we don't know in what order the OS will flush the pages 
-			// we need to do this twice, once for the data, and then once for the metadata
+            if (_freeSpaceRepository != null)
+                _freeSpaceRepository.LastTransactionPageUsage(sortedPagesToFlush.Count);
 
-			var sortedPagesToFlush = _dirtyPages.Select(x => x.Value).Distinct().ToList();
-			sortedPagesToFlush.Sort();
-			_pager.Flush(sortedPagesToFlush);
+            Page relevantPage = _pager.Get(this, _id & 1);
+            WriteHeader(relevantPage); // this will cycle between the first and second pages
 
-			if (_freeSpaceRepository != null)
-				_freeSpaceRepository.LastTransactionPageUsage(sortedPagesToFlush.Count);
+            _pager.Flush(_id & 1); // and now we flush the metadata as well
 
-			WriteHeader(_pager.Get(this, _id & 1)); // this will cycle between the first and second pages
+            _pager.Sync();
 
-			_pager.Flush(_id & 1); // and now we flush the metadata as well
+            _env.SetStateAfterTransactionCommit(State);
 
-			_pager.Sync();
+            Committed = true;
 
-			Committed = true;
+            AfterCommit(_id);
+        }
 
-			AfterCommit(_id);
-		}
+        private unsafe void FlushAllMultiValues()
+        {
+            if (_multiValueTrees == null)
+                return;
 
-		private unsafe void FlushAllMultiValues()
-		{
-			if (_multiValueTrees == null)
-				return;
+            foreach (var multiValueTree in _multiValueTrees)
+            {
+                var parentTree = multiValueTree.Key.Item1;
+                var key = multiValueTree.Key.Item2;
+                var childTree = multiValueTree.Value;
 
-			foreach (var multiValueTree in _multiValueTrees)
-			{
-				var parentTree = multiValueTree.Key.Item1;
-				var key = multiValueTree.Key.Item2;
-				var childTree = multiValueTree.Value;
+                var trh = (TreeRootHeader*)parentTree.DirectAdd(this, key, sizeof(TreeRootHeader));
+                childTree.State.CopyTo(trh);
 
-				TreeDataInTransaction value;
-				if (_treesInfo.TryGetValue(childTree, out value) == false)
-					continue;
+                parentTree.SetAsMultiValueTreeRef(this, key);
+            }
+        }
 
-				_treesInfo.Remove(childTree);
-				var trh = (TreeRootHeader*)parentTree.DirectAdd(this, key, sizeof(TreeRootHeader));
-				value.State.CopyTo(trh);
+        private unsafe void WriteHeader(Page pg)
+        {
+            var fileHeader = (FileHeader*)pg.Base;
+            fileHeader->TransactionId = _id;
+            fileHeader->LastPageNumber = NextPageNumber - 1;
 
-				parentTree.SetAsMultiValueTreeRef(this, key);
-			}
-		}
+            State.FreeSpaceRoot.State.CopyTo(&fileHeader->FreeSpace);
+            State.Root.State.CopyTo(&fileHeader->Root);
+        }
 
-		private unsafe void WriteHeader(Page pg)
-		{
-			var fileHeader = (FileHeader*)pg.Base;
-			fileHeader->TransactionId = _id;
-			fileHeader->LastPageNumber = NextPageNumber - 1;
-			_env.FreeSpaceRoot.State.CopyTo(&fileHeader->FreeSpace);
-			_env.Root.State.CopyTo(&fileHeader->Root);
-		}
+        private void FlushFreePages()
+        {
+            int iterationCounter = 0;
+            while (_freedPages.Count != 0)
+            {
+                Slice slice = string.Format("tx/{0:0000000000000000000}/{1}", _id, iterationCounter);
 
-		private void FlushFreePages()
-		{
-			int iterationCounter = 0;
-			while (_freedPages.Count != 0)
-			{
-				Slice slice = string.Format("tx/{0:0000000000000000000}/{1}", _id, iterationCounter);
+                iterationCounter++;
+                using (var ms = new MemoryStream())
+                using (var binaryWriter = new BinaryWriter(ms))
+                {
+                    _freeSpaceRepository.RegisterFreePages(slice, _id, _freedPages);
+                    foreach (var freePage in _freedPages)
+                    {
+                        binaryWriter.Write(freePage);
+                    }
+                    _freedPages.Clear();
 
-				iterationCounter++;
-				using (var ms = new MemoryStream())
-				using (var binaryWriter = new BinaryWriter(ms))
-				{
-					_freeSpaceRepository.RegisterFreePages(slice, _id, _freedPages);
-					foreach (var freePage in _freedPages)
-					{
-						binaryWriter.Write(freePage);
-					}
-					_freedPages.Clear();
+                    ms.Position = 0;
 
-					ms.Position = 0;
+                    // this may cause additional pages to be freed, so we need need the while loop to track them all
+                    State.FreeSpaceRoot.Add(this, slice, ms);
+                    ms.Position = 0; // so if we have additional freed pages, they will be added
+                }
+            }
+        }
 
-					// this may cause additional pages to be freed, so we need need the while loop to track them all
-					_env.FreeSpaceRoot.Add(this, slice, ms);
-					ms.Position = 0; // so if we have additional freed pages, they will be added
-				}
-			}
-		}
+        public void Dispose()
+        {
+            _env.TransactionCompleted(_id);
+            foreach (var pagerState in _pagerStates)
+            {
+                pagerState.Release();
+            }
+        }
 
-		public void Dispose()
-		{
-			_env.TransactionCompleted(_id);
-			foreach (var pagerState in _pagerStates)
-			{
-				pagerState.Release();
-			}
-		}
-
-		public TreeDataInTransaction GetTreeInformation(Tree tree)
-		{
-			// ReSharper disable once PossibleUnintendedReferenceComparison
-			if (tree == _env.Root)
-			{
-				return _rootTreeData ?? (_rootTreeData = new TreeDataInTransaction(_env.Root)
-				{
-					RootPageNumber = _env.Root.State.RootPageNumber
-				});
-			}
-
-			// ReSharper disable once PossibleUnintendedReferenceComparison
-			if (tree == _env.FreeSpaceRoot)
-			{
-				return _fresSpaceTreeData ?? (_fresSpaceTreeData = new TreeDataInTransaction(_env.FreeSpaceRoot)
-				{
-					RootPageNumber = _env.FreeSpaceRoot.State.RootPageNumber
-				});
-			}
-
-			TreeDataInTransaction c;
-			if (_treesInfo.TryGetValue(tree, out c))
-			{
-				return c;
-			}
-			c = new TreeDataInTransaction(tree)
-			{
-				RootPageNumber = tree.State.RootPageNumber
-			};
-			_treesInfo.Add(tree, c);
-			return c;
-		}
-
-		public void FreePage(long pageNumber)
-		{
-			_dirtyPages.Remove(pageNumber);
+        public void FreePage(long pageNumber)
+        {
+            _dirtyPages.Remove(pageNumber);
 #if DEBUG
-			Debug.Assert(pageNumber >= 2 && pageNumber <= _pager.NumberOfAllocatedPages);
-			Debug.Assert(_freedPages.Contains(pageNumber) == false);
+            Debug.Assert(pageNumber >= 2 && pageNumber <= _pager.NumberOfAllocatedPages);
+            Debug.Assert(_freedPages.Contains(pageNumber) == false);
 #endif
-			_freedPages.Add(pageNumber);
-		}
+            _freedPages.Add(pageNumber);
+        }
 
-		internal void UpdateRoots(Tree root, Tree freeSpace)
-		{
-			if (_treesInfo.TryGetValue(root, out _rootTreeData))
-			{
-				_treesInfo.Remove(root);
-			}
-			else
-			{
-				_rootTreeData = new TreeDataInTransaction(root);
-			}
-			if (_treesInfo.TryGetValue(freeSpace, out _fresSpaceTreeData))
-			{
-				_treesInfo.Remove(freeSpace);
-			}
-			else
-			{
-				_fresSpaceTreeData = new TreeDataInTransaction(freeSpace);
-			}
-		}
+        internal void UpdateRootsIfNeeded(Tree root, Tree freeSpace)
+        {
+            //can only happen during initial transaction that creates Root and FreeSpaceRoot trees
+            if (State.Root == null && State.FreeSpaceRoot == null && State.Trees.Count == 0)
+            {
+                State.Root = root;
+                State.FreeSpaceRoot = freeSpace;
+            }
+        }
 
-		public void AddPagerState(PagerState state)
-		{
-			LatestPagerState = state;
-			_pagerStates.Add(state);
-		}
+        public void AddPagerState(PagerState state)
+        {
+            LatestPagerState = state;
+            _pagerStates.Add(state);
+        }
 
-		public Cursor NewCursor(Tree tree)
-		{
-			return new Cursor();
-		}
+        public Cursor NewCursor(Tree tree)
+        {
+            return new Cursor();
+        }
 
-		public unsafe void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
-		{
-			if (_multiValueTrees == null)
-				_multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer(_env.SliceComparer));
-			mvTree.IsMultiValueTree = true;
-			_multiValueTrees.Add(Tuple.Create(tree, key), mvTree);
-		}
+        public unsafe void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
+        {
+            if (_multiValueTrees == null)
+                _multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer(_env.SliceComparer));
+            mvTree.IsMultiValueTree = true;
+            _multiValueTrees.Add(Tuple.Create(tree, key), mvTree);
+        }
 
-		public bool TryGetMultiValueTree(Tree tree, Slice key, out Tree mvTree)
-		{
-			mvTree = null;
-			if (_multiValueTrees == null)
-				return false;
-			return _multiValueTrees.TryGetValue(Tuple.Create(tree, key), out mvTree);
-		}
+        public bool TryGetMultiValueTree(Tree tree, Slice key, out Tree mvTree)
+        {
+            mvTree = null;
+            if (_multiValueTrees == null)
+                return false;
+            return _multiValueTrees.TryGetValue(Tuple.Create(tree, key), out mvTree);
+        }
 
-		public bool TryRemoveMultiValueTree(Tree parentTree, Slice key)
-		{
-			var keyToRemove = Tuple.Create(parentTree, key);
-			if (_multiValueTrees == null || !_multiValueTrees.ContainsKey(keyToRemove))
-				return false;
+        public bool TryRemoveMultiValueTree(Tree parentTree, Slice key)
+        {
+            var keyToRemove = Tuple.Create(parentTree, key);
+            if (_multiValueTrees == null || !_multiValueTrees.ContainsKey(keyToRemove))
+                return false;
 
-			return _multiValueTrees.Remove(keyToRemove);
-		}
+            return _multiValueTrees.Remove(keyToRemove);
+        }
 
-	}
-
-	internal unsafe class TreeAndSliceComparer : IEqualityComparer<Tuple<Tree, Slice>>
-	{
-		private readonly SliceComparer _comparer;
-
-		public TreeAndSliceComparer(SliceComparer comparer)
-		{
-			_comparer = comparer;
-		}
-
-		public bool Equals(Tuple<Tree, Slice> x, Tuple<Tree, Slice> y)
-		{
-			if (x == null && y == null)
-				return true;
-			if (x == null || y == null)
-				return false;
-
-			if (x.Item1 != y.Item1)
-				return false;
-
-			return x.Item2.Compare(y.Item2, _comparer) == 0;
-		}
-
-		public int GetHashCode(Tuple<Tree, Slice> obj)
-		{
-			return obj.Item1.GetHashCode() ^ 397 * obj.Item2.GetHashCode();
-		}
-	}
+        public void DeletedTree(string name)
+        {
+            if (_deletedTrees == null)
+                _deletedTrees = new List<string>();
+            _deletedTrees.Add(name);
+        }
+    }
 }

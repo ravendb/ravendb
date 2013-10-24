@@ -10,7 +10,6 @@
 	using System.Threading.Tasks;
 
 	using Extensions;
-	using Trees;
 
 	public class TransactionMergingWriter
 	{
@@ -115,7 +114,7 @@
 		{
 			foreach (var g in operations.GroupBy(x => x.TreeName))
 			{
-				var tree = GetTree(g.Key);
+				var tree = tx.State.GetTree(g.Key,tx);
 				foreach (var operation in g)
 				{
 					operation.Reset();
@@ -197,14 +196,6 @@
 			list.Insert(indexOfMine, mine);
 
 			return list;
-		}
-
-		private Tree GetTree(string treeName)
-		{
-			if (treeName == null)
-				return _env.Root;
-
-			return _env.GetTree(null, treeName);
 		}
 
 		private class OutstandingWrite

@@ -20,11 +20,10 @@
 			var testBuffer = new byte[757];
 			rand.NextBytes(testBuffer);
 
-			Tree t1 = null;
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				t1 = Env.CreateTree(tx, "tree1");
+				Env.CreateTree(tx, "tree1");
 				tx.Commit();
 			}
 
@@ -49,6 +48,7 @@
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
+			    var t1 = tx.GetTree("tree1");
 				t1.Delete(tx, "Foo180"); // rebalancer fails to move 1st node from one branch to another
 			}
 		}

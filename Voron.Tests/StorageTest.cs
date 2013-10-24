@@ -50,9 +50,9 @@ namespace Voron.Tests
         protected void RenderAndShow(Transaction tx, int showEntries = 25, string name = null)
         {
             if (name == null)
-                RenderAndShow(tx, Env.Root, showEntries);
+                RenderAndShow(tx, tx.State.Root, showEntries);
             else
-                RenderAndShow(tx, Env.GetTree(tx, name), showEntries);
+                RenderAndShow(tx, tx.GetTree(name), showEntries);
         }
 
         protected void RenderAndShow(Transaction tx, Tree root, int showEntries = 25)
@@ -60,20 +60,20 @@ namespace Voron.Tests
             if (Debugger.IsAttached == false)
                 return;
             var path = Path.Combine(Environment.CurrentDirectory, "test-tree.dot");
-            var rootPageNumber = tx.GetTreeInformation(root).RootPageNumber;
+            var rootPageNumber = tx.GetTree(root.Name).State.RootPageNumber;
             TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
 
             var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
-            var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
+            var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.32\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
             p.WaitForExit();
             Process.Start(output);
         }
 
         protected unsafe Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
         {
-            using (var c = tx.NewCursor(Env.Root))
+            using (var c = tx.NewCursor(tx.State.Root))
             {
-                var p = Env.Root.FindPageFor(tx, key, c);
+                var p = tx.State.Root.FindPageFor(tx, key, c);
                 var node = p.Search(key, Env.SliceComparer);
 
                 if (node == null)
@@ -89,15 +89,15 @@ namespace Voron.Tests
             }
         }
 
-		protected IList<Tree> CreateTrees(StorageEnvironment env, int number, string prefix)
+		protected IList<string> CreateTrees(StorageEnvironment env, int number, string prefix)
 		{
-			var results = new List<Tree>();
+            var results = new List<string>();
 
 			using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (var i = 0; i < number; i++)
 				{
-					results.Add(env.CreateTree(tx, prefix + i));
+					results.Add(env.CreateTree(tx, prefix + i).Name);
 				}
 
 				tx.Commit();

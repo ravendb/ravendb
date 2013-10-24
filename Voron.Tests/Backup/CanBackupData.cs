@@ -16,7 +16,7 @@ namespace Voron.Tests.Backup
             random.NextBytes(buffer);
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                Env.Root.Add(tx, "a", new MemoryStream(buffer));
+                tx.State.Root.Add(tx, "a", new MemoryStream(buffer));
                 tx.Commit();
             }
 
@@ -29,7 +29,7 @@ namespace Voron.Tests.Backup
             {
                 using (var tx = env.NewTransaction(TransactionFlags.Read))
                 {
-                    var readResult = env.Root.Read(tx, "a");
+                    var readResult = tx.State.Root.Read(tx, "a");
                     Assert.NotNull(readResult);
                     var memoryStream = new MemoryStream();
                     readResult.Stream.CopyTo(memoryStream);

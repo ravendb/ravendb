@@ -17,11 +17,6 @@ namespace Voron
 		private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
 			new ConcurrentDictionary<long, Transaction>();
 
-		private ConcurrentDictionary<string, Tree> _trees
-			= new ConcurrentDictionary<string, Tree>(StringComparer.OrdinalIgnoreCase);
-
-		private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
-
 		private readonly bool _ownsPager;
 		private readonly IVirtualPager _pager;
 		private readonly SliceComparer _sliceComparer;
@@ -32,6 +27,8 @@ namespace Voron
 		private readonly IFreeSpaceRepository _freeSpaceRepository;
 
 		public TransactionMergingWriter Writer { get; private set; }
+
+        public StorageEnvironmentState State { get; private set; }
 
 		public SnapshotReader CreateSnapshot()
 		{
@@ -49,8 +46,8 @@ namespace Voron
 
 				Setup(pager);
 
-				FreeSpaceRoot.Name = "Free Space";
-				Root.Name = Constants.RootTreeName;
+				State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
+				State.Root.Name = Constants.RootTreeName;
 
 				Writer = new TransactionMergingWriter(this);
 			}
@@ -67,19 +64,15 @@ namespace Voron
 			{
 				WriteEmptyHeaderPage(_pager.Get(null, 0));
 				WriteEmptyHeaderPage(_pager.Get(null, 1));
-
-				NextPageNumber = 2;
+				const int InitialNextPageNumber = 2;
+				State = new StorageEnvironmentState(null, null, InitialNextPageNumber);
 				using (var tx = NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var root = Tree.Create(tx, _sliceComparer);
 					var freeSpace = Tree.Create(tx, _sliceComparer);
 
 					// important to first create the two trees, then set them on the env
-
-					FreeSpaceRoot = freeSpace;
-					Root = root;
-
-					tx.UpdateRoots(root, freeSpace);
+					tx.UpdateRootsIfNeeded(root, freeSpace);
 
 					tx.Commit();
 				}
@@ -89,22 +82,17 @@ namespace Voron
 
 			// the first two pages are allocated for double buffering tx commits
 			FileHeader* entry = FindLatestFileHeadeEntry();
-			NextPageNumber = entry->LastPageNumber + 1;
 			_transactionsCounter = entry->TransactionId + 1;
+			State = new StorageEnvironmentState(null, null, entry->LastPageNumber + 1);
 			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
 			{
 				var root = Tree.Open(tx, _sliceComparer, &entry->Root);
 				var freeSpace = Tree.Open(tx, _sliceComparer, &entry->FreeSpace);
 
-				// important to first create the two trees, then set them on the env
-				FreeSpaceRoot = freeSpace;
-				Root = root;
-
+				tx.UpdateRootsIfNeeded(root, freeSpace);
 				tx.Commit();
 			}
 		}
-
-		public long NextPageNumber { get; set; }
 
 		public IFreeSpaceRepository FreeSpaceRepository
 		{
@@ -115,9 +103,6 @@ namespace Voron
 		{
 			get { return _sliceComparer; }
 		}
-
-		public Tree Root { get; private set; }
-		public Tree FreeSpaceRoot { get; private set; }
 
 		public long OldestTransaction
 		{
@@ -131,29 +116,21 @@ namespace Voron
 
 		public IEnumerable<Tree> Trees
 		{
-			get { return _trees.Values; }
+			get { return State.Trees.Values; }
 		}
 
-		public Tree GetTree(Transaction tx, string name)
+		public long NextPageNumber
 		{
-			Tree tree;
-			if (_trees.TryGetValue(name, out tree))
-				return tree;
-
-			if (tx != null && tx.ModifiedTrees.TryGetValue(name, out tree))
-				return tree;
-
-			throw new InvalidOperationException("No such tree: " + name);
+			get { return State.NextPageNumber; }			
 		}
-
 
 		public void DeleteTree(Transaction tx, string name)
 		{
 			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
-				throw new ArgumentException("Cannot create a new tree with a read only transaction");
+				throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");
 
 			Tree tree;
-			if (_trees.TryGetValue(name, out tree) == false)
+			if (tx.State.Trees.TryGetValue(name, out tree) == false)
 				return;
 
 			foreach (var page in tree.AllPages(tx))
@@ -161,9 +138,9 @@ namespace Voron
 				tx.FreePage(page);
 			}
 
-			Root.Delete(tx, name);
+			tx.State.Root.Delete(tx, name);
 
-			tx.ModifiedTrees.Add(name, null);
+		    tx.DeletedTree(name);
 		}
 
 		public Tree CreateTree(Transaction tx, string name)
@@ -172,28 +149,28 @@ namespace Voron
 				throw new ArgumentException("Cannot create a new tree with a read only transaction");
 
 			Tree tree;
-			if (_trees.TryGetValue(name, out tree) ||
-				tx.ModifiedTrees.TryGetValue(name, out tree))
+			if (tx.State.Trees.TryGetValue(name, out tree))
 				return tree;
 
 			Slice key = name;
 
 			// we are in a write transaction, no need to handle locks
-			var header = (TreeRootHeader*)Root.DirectRead(tx, key);
+			var header = (TreeRootHeader*)tx.State.Root.DirectRead(tx, key);
 			if (header != null)
 			{
 				tree = Tree.Open(tx, _sliceComparer, header);
 				tree.Name = name;
-				tx.ModifiedTrees.Add(name, tree);
+				tx.State.AddTree(name, tree);
 				return tree;
 			}
 
 			tree = Tree.Create(tx, _sliceComparer);
 			tree.Name = name;
-			var space = Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
+			var space = tx.State.Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
+
 			tree.State.CopyTo((TreeRootHeader*)space);
 
-			tx.ModifiedTrees.Add(name, tree);
+            tx.State.AddTree(name, tree);
 
 			return tree;
 		}
@@ -260,7 +237,7 @@ namespace Voron
 					_txWriter.Wait();
 					txLockTaken = true;
 				}
-				var tx = new Transaction(_pager, this, txId, flags, _freeSpaceRepository, _txCommit);
+				var tx = new Transaction(_pager, this, txId, flags, _freeSpaceRepository);
 				_activeTransactions.TryAdd(txId, tx);
 				var state = _pager.TransactionBegan();
 				tx.AddPagerState(state);
@@ -295,31 +272,12 @@ namespace Voron
 
 			if (tx.Flags != (TransactionFlags.ReadWrite))
 				return;
-			try
-			{
-				if (tx.Committed == false)
-					return;
-				_transactionsCounter = txId;
-				if (tx.HasModifiedTrees == false)
-					return;
+		    if (tx.Committed)
+		    {
+		        _transactionsCounter = txId;
+		    }
+            _txWriter.Release();
 
-				var clonedTrees = new ConcurrentDictionary<string, Tree>(_trees);
-				foreach (var tree in tx.ModifiedTrees)
-				{
-					Tree val = tree.Value;
-					if (val == null)
-						clonedTrees.TryRemove(tree.Key, out val);
-					else
-						clonedTrees.AddOrUpdate(tree.Key, val, (s, tree1) => val);
-				}
-
-				_trees = clonedTrees;
-			}
-			finally
-			{
-				_txWriter.Release();
-
-			}
 		}
 
 		public void Backup(Stream output)
@@ -369,12 +327,12 @@ namespace Voron
 		{
 			var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
 				{
-					{"Root", Root.AllPages(tx)},
-					{"Free Space Overhead", FreeSpaceRoot.AllPages(tx)},
+					{"Root", State.Root.AllPages(tx)},
+					{"Free Space Overhead", State.FreeSpaceRoot.AllPages(tx)},
 					{"Free Pages", _freeSpaceRepository.AllPages(tx)}
 				};
 
-			foreach (var tree in _trees)
+			foreach (var tree in State.Trees)
 			{
 				results.Add(tree.Key, tree.Value.AllPages(tx));
 			}
@@ -387,11 +345,16 @@ namespace Voron
 			return new EnvironmentStats
 				{
 					FreePages = _freeSpaceRepository.GetFreePageCount(),
-					FreePagesOverhead = FreeSpaceRoot.State.PageCount,
-					RootPages = Root.State.PageCount,
+					FreePagesOverhead = State.FreeSpaceRoot.State.PageCount,
+					RootPages = State.Root.State.PageCount,
 					HeaderPages = 2,
 					UnallocatedPagesAtEndOfFile = _pager.NumberOfAllocatedPages - NextPageNumber
 				};
 		}
+
+	    public void SetStateAfterTransactionCommit(StorageEnvironmentState state)
+	    {
+	        State = state;
+	    }
 	}
 }

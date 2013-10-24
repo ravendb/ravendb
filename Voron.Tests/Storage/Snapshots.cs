@@ -12,7 +12,7 @@ namespace Voron.Tests.Storage
 		public void SingleItemBatchTest()
 		{
 			var batch = new WriteBatch();
-			batch.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")), null);
+            batch.Add("key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")), Constants.RootTreeName);
 
 			Env.Writer.Write(batch);
 
@@ -32,7 +32,7 @@ namespace Voron.Tests.Storage
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.Root.Add(tx, "key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")));
+				tx.State.Root.Add(tx, "key/1", new MemoryStream(Encoding.UTF8.GetBytes("123")));
 
 				tx.Commit();
 			}
@@ -40,7 +40,7 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				using(var stream = Env.Root.Read(tx, "key/1").Stream)
+				using(var stream = tx.State.Root.Read(tx, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();
