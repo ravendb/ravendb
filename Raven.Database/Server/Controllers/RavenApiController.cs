@@ -63,7 +63,7 @@ namespace Raven.Database.Server.Controllers
 				(MixedModeRequestAuthorizer) controllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 			var result = new HttpResponseMessage();
 			RequestManager.HandleActualRequest(this, async () => result = await ExceuteActualRequest(controllerContext, cancellationToken, authorizer));
-
+			RequestManager.AddAccessControlHeaders(this, result);
 			return result;
 		}
 

@@ -105,6 +105,7 @@ namespace Raven.Database.Server.WebApi
 				}
 				finally
 				{
+
 					try
 					{
 						FinalizeRequestProcessing(controller, sw, ravenUiRequest: false/*TODO: check*/);
@@ -119,6 +120,37 @@ namespace Raven.Database.Server.WebApi
 			{
 				if (isReadLockHeld == false)
 					disposerLock.ExitReadLock();
+			}
+		}
+
+		// Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
+		public void AddAccessControlHeaders(RavenApiController controller, HttpResponseMessage msg)
+		{
+			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlAllowOrigin))
+				return;
+
+			controller.AddHeader("Access-Control-Allow-Credentials", "true", msg);
+
+			bool originAllowed = landlord.SystemConfiguration.AccessControlAllowOrigin == "*" ||
+					landlord.SystemConfiguration.AccessControlAllowOrigin.Split(' ')
+						.Any(o => o == controller.GetHeader("Origin"));
+			if (originAllowed)
+			{
+				controller.AddHeader("Access-Control-Allow-Origin", controller.GetHeader("Origin"), msg);
+			}
+
+			controller.AddHeader("Access-Control-Max-Age", landlord.SystemConfiguration.AccessControlMaxAge, msg);
+			controller.AddHeader("Access-Control-Allow-Methods", landlord.SystemConfiguration.AccessControlAllowMethods, msg);
+			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlRequestHeaders))
+			{
+				// allow whatever headers are being requested
+				var hdr = controller.GetHeader("Access-Control-Request-Headers"); // typically: "x-requested-with"
+				if (hdr != null) 
+					controller.AddHeader("Access-Control-Allow-Headers", hdr, msg);
+			}
+			else
+			{
+				controller.AddHeader("Access-Control-Request-Headers", landlord.SystemConfiguration.AccessControlRequestHeaders, msg);
 			}
 		}
 
