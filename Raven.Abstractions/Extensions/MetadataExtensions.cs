@@ -128,7 +128,7 @@ namespace Raven.Abstractions.Extensions
 			var metadata = new RavenJObject();
 			foreach (var header in self)
 			{
-				if(header.Key.StartsWith("Temp"))
+                if (header.Key.StartsWith("Temp", StringComparison.OrdinalIgnoreCase) || header.Key.StartsWith("X-NewRelic", StringComparison.OrdinalIgnoreCase))
 					continue;
 				if(header.Key == Constants.DocumentIdFieldName)
 					continue;

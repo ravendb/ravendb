@@ -23,6 +23,8 @@ using System.Linq;
 
 namespace Raven.Database.Commercial
 {
+	using Raven.Abstractions;
+
 	internal class ValidateLicense : IDisposable
 	{
 		public static LicensingStatus CurrentLicense { get; set; }
@@ -100,12 +102,21 @@ namespace Raven.Database.Commercial
 				{
 					attributes[licenseAttribute.Key] = licenseAttribute.Value;
 				}
-		
+
+				var message = "Valid license at " + licensePath;
+				var status = "Commercial - " + licenseValidator.LicenseType;
+
+				if (licenseValidator.IsOemLicense() && licenseValidator.ExpirationDate < SystemTime.UtcNow)
+				{
+					message = string.Format("Expired ({0}) OEM license at {1}", licenseValidator.ExpirationDate.ToShortDateString(), licensePath);
+					status += " (Expired)";
+				}
+
 				CurrentLicense = new LicensingStatus
 				{
-					Status = "Commercial - " + licenseValidator.LicenseType,
+					Status = status,
 					Error = false,
-					Message = "Valid license at " + licensePath,
+					Message = message,
 					Attributes = attributes
 				};
 			}
@@ -116,13 +127,15 @@ namespace Raven.Database.Commercial
 				try
 				{
 					var xmlDocument = new XmlDocument();
-					xmlDocument.LoadXml(licensePath);
-					var sig = xmlDocument.SelectSingleNode("/license/Signature");
-					if (sig != null && sig.ParentNode != null)
-						sig.ParentNode.RemoveChild(sig);
-					var stringBuilder = new StringBuilder();
-					xmlDocument.WriteTo(XmlWriter.Create(stringBuilder));
-					licenseText = stringBuilder.ToString();
+					xmlDocument.Load(licensePath);
+					var ns = new XmlNamespaceManager(xmlDocument.NameTable);
+					ns.AddNamespace("sig", "http://www.w3.org/2000/09/xmldsig#");
+					var sig = xmlDocument.SelectSingleNode("/license/sig:Signature",ns);
+					if (sig != null)
+					{
+						sig.RemoveAll();
+					}
+					licenseText = xmlDocument.InnerXml;
 				}
 				catch (Exception)
 				{
