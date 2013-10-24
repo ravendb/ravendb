@@ -214,7 +214,7 @@
 			public OutstandingWrite(WriteBatch batch)
 			{
 				Batch = batch;
-				Size = batch.Size;
+				Size = batch.Size();
 				Status = OutstandingWriteStatus.Pending;
 			}
 
