@@ -108,14 +108,13 @@
 		{
 			var tree = GetTree(treeName);
 			return tree.MultiRead(Transaction, key);
-
 		}
 
 		private Tree GetTree(string treeName)
 		{
-			var tree = treeName == null ? _env.Root : Transaction.Environment.GetTree(Transaction, treeName);
+			var tree = treeName == null ? Transaction.State.Root : Transaction.State.GetTree(treeName, Transaction);
 			return tree;
-		}
+		}	
 
 		private static Stream CloneStream(Stream source)
 		{

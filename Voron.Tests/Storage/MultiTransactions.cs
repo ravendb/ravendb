@@ -22,7 +22,7 @@ namespace Voron.Tests.Storage
                         for (long i = 0; i < 100; i++)
                         {
                             ms.Position = 0;
-                            env.Root.Add(tx, (x * i).ToString("0000000000000000"), ms);
+                            env.RootTree(tx).Add(tx, (x * i).ToString("0000000000000000"), ms);
                         }
 
                         tx.Commit();

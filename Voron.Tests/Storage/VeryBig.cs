@@ -44,7 +44,7 @@ namespace Voron.Tests.Storage
 				{
 					for (int j = 0; j < 12; j++)
 					{
-						Env.Root.Add(tx, string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
+						Env.RootTree(tx).Add(tx, string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
 					}
 					tx.Commit();
 				}
@@ -68,7 +68,7 @@ namespace Voron.Tests.Storage
 
 					for (int j = 0; j < 12; j++)
 					{
-						Env.Root.Add(tx, string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
+						Env.RootTree(tx).Add(tx, string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
 					}
 					tx.Commit();
 				}

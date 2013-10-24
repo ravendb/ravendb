@@ -249,7 +249,7 @@
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				using (var stream = Env.Root.Read(tx, "key/1").Stream)
+				using (var stream = Env.RootTree(tx).Read(tx, "key/1").Stream)
 				using (var reader = new StreamReader(stream))
 				{
 					var result = reader.ReadToEnd();
@@ -275,7 +275,7 @@
 			{
 				for (int i = 0; i < numberOfItems; i++)
 				{
-					using (var stream = Env.Root.Read(tx, "key/" + i).Stream)
+					using (var stream = Env.RootTree(tx).Read(tx, "key/" + i).Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
@@ -304,14 +304,14 @@
 			{
 				for (int i = 0; i < numberOfItems; i++)
 				{
-					using (var stream = Env.Root.Read(tx, "key/" + i).Stream)
+					using (var stream = Env.RootTree(tx).Read(tx, "key/" + i).Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();
 						Assert.Equal(i.ToString(CultureInfo.InvariantCulture), result);
 					}
 
-					using (var stream = Env.Root.Read(tx, "yek/" + i).Stream)
+					using (var stream = Env.RootTree(tx).Read(tx, "yek/" + i).Stream)
 					using (var reader = new StreamReader(stream))
 					{
 						var result = reader.ReadToEnd();

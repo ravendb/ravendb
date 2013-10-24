@@ -40,5 +40,23 @@ namespace Voron.Trees
                     RootPageNumber = RootPageNumber
                 };
         }
+
+		public void RecordNewPage(Page p, int num)
+		{
+			PageCount++;
+			var flags = p.Flags;
+			if (flags == (PageFlags.Branch))
+			{
+				BranchPages++;
+			}
+			else if (flags == (PageFlags.Leaf))
+			{
+				LeafPages++;
+			}
+			else if (flags == (PageFlags.Overflow))
+			{
+				OverflowPages += num;
+			}
+		}
     }
 }

@@ -11,7 +11,7 @@ namespace Voron.Debugging
         [Conditional("DEBUG")]
         public static void RenderFreeSpace(Transaction tx)
         {
-            RenderAndShow(tx, tx.GetTreeInformation(tx.Environment.FreeSpaceRoot).RootPageNumber, 1);
+            RenderAndShow(tx, tx.GetTree(tx.Environment.State.FreeSpaceRoot.Name).State.RootPageNumber, 1);
         }
 
 		[Conditional("DEBUG")]

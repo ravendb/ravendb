@@ -18,15 +18,19 @@ namespace Voron.Tests.Trees
             List<long> allPages = null;
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                Env.Root.Add(tx, "a", new MemoryStream(buffer));
-                allPages = Env.Root.AllPages(tx);
-                RenderAndShow(tx, 1);
+                Env.RootTree(tx).Add(tx, "a", new MemoryStream(buffer));
+                allPages = Env.RootTree(tx).AllPages(tx);
+	            var testState = Env.RootTree(tx).State;
                 tx.Commit();
-            }
+				RenderAndShow(tx, 1);
+			}
 
-            Assert.Equal(Env.Root.State.PageCount, allPages.Count);
-            Assert.Equal(4, Env.Root.State.PageCount);
-            Assert.Equal(3, Env.Root.State.OverflowPages);
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				Assert.Equal(Env.RootTree(tx).State.PageCount, allPages.Count);
+				Assert.Equal(4, Env.RootTree(tx).State.PageCount);
+				Assert.Equal(3, Env.RootTree(tx).State.OverflowPages);
+			}
         }
 
 		[Fact]
@@ -34,7 +38,7 @@ namespace Voron.Tests.Trees
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.Root.Add(tx, "test", StreamFor("value"));
+				Env.RootTree(tx).Add(tx, "test", StreamFor("value"));
 			}
 		}
 
@@ -43,9 +47,9 @@ namespace Voron.Tests.Trees
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.Root.Add(tx, "b", StreamFor("2"));
-				Env.Root.Add(tx, "c", StreamFor("3"));
-				Env.Root.Add(tx, "a", StreamFor("1"));
+				Env.RootTree(tx).Add(tx, "b", StreamFor("2"));
+				Env.RootTree(tx).Add(tx, "c", StreamFor("3"));
+				Env.RootTree(tx).Add(tx, "a", StreamFor("1"));
 				var actual = ReadKey(tx, "a");
 
 				Assert.Equal("a", actual.Item1);
@@ -59,9 +63,12 @@ namespace Voron.Tests.Trees
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Slice key = "test";
-				Env.Root.Add(tx, key, StreamFor("value"));
-                Assert.Equal(1, Env.Root.State.PageCount);
-                Assert.Equal(1, Env.Root.State.LeafPages);
+				Env.RootTree(tx).Add(tx, key, StreamFor("value"));
+
+				tx.Commit();
+
+                Assert.Equal(1, Env.RootTree(tx).State.PageCount);
+                Assert.Equal(1, Env.RootTree(tx).State.LeafPages);
 			}
 		}
 
@@ -75,7 +82,7 @@ namespace Voron.Tests.Trees
 				for (int i = 0; i < 256; i++)
 				{
 					stream.Position = 0;
-					Env.Root.Add(tx, "test-" + i, stream);
+					Env.RootTree(tx).Add(tx, "test-" + i, stream);
 
 				}
 
@@ -84,10 +91,10 @@ namespace Voron.Tests.Trees
 				if (tx.Environment.PageSize != 4096)
 					return;
 // ReSharper restore ConditionIsAlwaysTrueOrFalse
-                Assert.Equal(4, Env.Root.State.PageCount);
-                Assert.Equal(3, Env.Root.State.LeafPages);
-                Assert.Equal(1, Env.Root.State.BranchPages);
-                Assert.Equal(2, Env.Root.State.Depth);
+                Assert.Equal(4, Env.RootTree(tx).State.PageCount);
+                Assert.Equal(3, Env.RootTree(tx).State.LeafPages);
+                Assert.Equal(1, Env.RootTree(tx).State.BranchPages);
+                Assert.Equal(2, Env.RootTree(tx).State.Depth);
 
 			}
 		}
@@ -100,7 +107,7 @@ namespace Voron.Tests.Trees
 			{
 				for (int i = 0; i < count; i++)
 				{
-					Env.Root.Add(tx, "test-" + i.ToString("000"), StreamFor("val-" + i));
+					Env.RootTree(tx).Add(tx, "test-" + i.ToString("000"), StreamFor("val-" + i));
 					
 				}
 
@@ -133,7 +140,7 @@ namespace Voron.Tests.Trees
 						{
 							
 						}
-						Env.Root.Add(tx, "test-" + j.ToString("000") + "-" + i.ToString("000"), stream);
+						Env.RootTree(tx).Add(tx, "test-" + j.ToString("000") + "-" + i.ToString("000"), stream);
 					}
 				}
 

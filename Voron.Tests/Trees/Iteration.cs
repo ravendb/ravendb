@@ -15,13 +15,13 @@ namespace Voron.Tests.Trees
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var iterator = Env.Root.Iterate(tx);
+				var iterator = Env.RootTree(tx).Iterate(tx);
 				Assert.False(iterator.Seek(Slice.BeforeAllKeys));
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var iterator = Env.Root.Iterate(tx);
+				var iterator = Env.RootTree(tx).Iterate(tx);
 				Assert.False(iterator.Seek(Slice.AfterAllKeys));
 			}
 		}
@@ -37,7 +37,7 @@ namespace Voron.Tests.Trees
 			{
 				for (int i = 0; i < 25; i++)
 				{
-					Env.Root.Add(tx, i.ToString("0000"), new MemoryStream(buffer));
+					Env.RootTree(tx).Add(tx, i.ToString("0000"), new MemoryStream(buffer));
 				}
 
 				tx.Commit();
@@ -45,14 +45,17 @@ namespace Voron.Tests.Trees
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var iterator = Env.Root.Iterate(tx);
+				var iterator = Env.RootTree(tx).Iterate(tx);
 				Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
 				var slice = new Slice(SliceOptions.Key);
 				for (int i = 0; i < 24; i++)
 				{
 					slice.Set(iterator.Current);
-
+					if (iterator.CurrentKey.ToString().Equals("Root"))
+					{
+						
+					}
 					Assert.Equal(i.ToString("0000"), slice);
 
 					Assert.True(iterator.MoveNext());
@@ -453,7 +456,7 @@ namespace Voron.Tests.Trees
         }
 
         [Fact(Skip = "Not supported currently")]
-        public void Iterator_BackwardIteration_With_WriteBatch()
+		public void Iterator_BackwardIteration_With_WriteBatch()
         {
             var random = new Random();
             var buffer = new byte[512];

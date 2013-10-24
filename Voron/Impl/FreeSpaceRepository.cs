@@ -76,7 +76,7 @@ namespace Voron.Impl
 
         public Page TryAllocateFromFreeSpace(Transaction tx, int num)
         {
-            if (_env.FreeSpaceRoot == null)
+            if (_env.State.FreeSpaceRoot == null)
                 return null;// this can happen the first time FreeSpaceRoot tree is created
 
             long page;
@@ -141,7 +141,7 @@ namespace Voron.Impl
         {
             long freePages = 0;
             using (var tx = _env.NewTransaction(TransactionFlags.Read))
-            using (var it = _env.FreeSpaceRoot.Iterate(tx))
+            using (var it = _env.State.FreeSpaceRoot.Iterate(tx))
             {
                 if (it.Seek(Slice.BeforeAllKeys) == false)
                 {
@@ -215,7 +215,7 @@ namespace Voron.Impl
 
             current = null;
             int currentMax = 0;
-            using (var it = _env.FreeSpaceRoot.Iterate(tx))
+			using (var it = _env.State.FreeSpaceRoot.Iterate(tx))
             {
                 it.RequiredPrefix = _sectionsPrefix;
                 it.MaxKey = end;
@@ -314,7 +314,7 @@ namespace Voron.Impl
                 // may change it, so we first allocate it (and deal with all the changes)
                 // then we write the values
 
-                var ptr = _env.FreeSpaceRoot.DirectAdd(tx, section.Key, size);
+				var ptr = _env.State.FreeSpaceRoot.DirectAdd(tx, section.Key, size);
                 using (var ums = new UnmanagedMemoryStream(ptr, size, size, FileAccess.ReadWrite))
                 using (var writer = new BinaryWriter(ums))
                 {
@@ -344,7 +344,7 @@ namespace Voron.Impl
                 Sequences = new ConsecutiveSequences()
             };
 
-	        var read = _env.FreeSpaceRoot.Read(tx, key);
+			var read = _env.State.FreeSpaceRoot.Read(tx, key);
 			if (read == null)
 				return section;
 
@@ -377,7 +377,7 @@ namespace Voron.Impl
             // read all the freed transactions to memory, we expect this
             // number to be pretty small, so we don't worry about holding it all 
             // in memory
-            using (var it = _env.FreeSpaceRoot.Iterate(tx))
+			using (var it = _env.State.FreeSpaceRoot.Iterate(tx))
             {
                 it.RequiredPrefix = _txPrefix;
 
@@ -453,7 +453,7 @@ namespace Voron.Impl
 
                 foreach (var slice in local)
                 {
-                    _env.FreeSpaceRoot.Delete(tx, slice);
+					_env.State.FreeSpaceRoot.Delete(tx, slice);
                 }
             }
 
@@ -490,7 +490,7 @@ namespace Voron.Impl
                     _writingFreSpace = true; //we don't want to recurse into free space while deleting the empty free space
                     try
                     {
-                        _env.FreeSpaceRoot.Delete(tx, old);
+						_env.State.FreeSpaceRoot.Delete(tx, old);
                     }
                     finally
                     {
@@ -516,7 +516,7 @@ namespace Voron.Impl
             if (_current != null)
                 results.AddRange(_current.Sequences);
 
-            using (var it = _env.FreeSpaceRoot.Iterate(tx))
+			using (var it = _env.State.FreeSpaceRoot.Iterate(tx))
             {
                 it.RequiredPrefix = _sectionsPrefix;
 

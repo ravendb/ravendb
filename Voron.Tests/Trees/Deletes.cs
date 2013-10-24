@@ -19,28 +19,34 @@ namespace Voron.Tests.Trees
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.Root.Add(tx, "a", new MemoryStream(buffer));
+				Env.RootTree(tx).Add(tx, "a", new MemoryStream(buffer));
 
 				tx.Commit();
 			}
 
-			Assert.Equal(4, Env.Root.State.PageCount);
-			Assert.Equal(3, Env.Root.State.OverflowPages);
-                                    
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				Env.Root.Delete(tx, "a");
+				Assert.Equal(4, Env.RootTree(tx).State.PageCount);
+				Assert.Equal(3, Env.RootTree(tx).State.OverflowPages);
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.RootTree(tx).Delete(tx, "a");
 
 				tx.Commit();
 			}
 
 
-			Assert.Equal(1, Env.Root.State.PageCount);
-			Assert.Equal(0, Env.Root.State.OverflowPages);
-
-            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				Assert.Null(Env.Root.Read(tx, "a"));
+				Assert.Equal(1, Env.RootTree(tx).State.PageCount);
+				Assert.Equal(0, Env.RootTree(tx).State.OverflowPages);
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				Assert.Null(Env.RootTree(tx).Read(tx, "a"));
 
 				tx.Commit();
 			}
@@ -55,7 +61,7 @@ namespace Voron.Tests.Trees
 			 {
 				 for (int i = 0; i < 1000; i++)
 				 {
-					 Env.Root.Add(tx, string.Format("{0,5}",i), StreamFor("abcdefg"));
+					 Env.RootTree(tx).Add(tx, string.Format("{0,5}",i), StreamFor("abcdefg"));
 				 }
 				 tx.Commit();
 			 }
@@ -70,7 +76,7 @@ namespace Voron.Tests.Trees
 			 {
 				 for (int i = 0; i < 15; i++)
 				 {
-					 Env.Root.Delete(tx, string.Format("{0,5}", i));
+					 Env.RootTree(tx).Delete(tx, string.Format("{0,5}", i));
 				 }
 				 tx.Commit();
 			 }
@@ -78,7 +84,7 @@ namespace Voron.Tests.Trees
 
              using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			 {
-                 var list = Keys(Env.Root, tx);
+                 var list = Keys(Env.RootTree(tx), tx);
 				 Assert.Equal(expected, list);
 			 }
 		 }
