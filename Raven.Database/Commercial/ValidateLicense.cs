@@ -23,6 +23,8 @@ using System.Linq;
 
 namespace Raven.Database.Commercial
 {
+	using Raven.Abstractions;
+
 	internal class ValidateLicense : IDisposable
 	{
 		public static LicensingStatus CurrentLicense { get; set; }
@@ -100,12 +102,21 @@ namespace Raven.Database.Commercial
 				{
 					attributes[licenseAttribute.Key] = licenseAttribute.Value;
 				}
-		
+
+				var message = "Valid license at " + licensePath;
+				var status = "Commercial - " + licenseValidator.LicenseType;
+
+				if (licenseValidator.IsOemLicense() && licenseValidator.ExpirationDate < SystemTime.UtcNow)
+				{
+					message = string.Format("Expired ({0}) OEM license at {1}", licenseValidator.ExpirationDate.ToShortDateString(), licensePath);
+					status += " (Expired)";
+				}
+
 				CurrentLicense = new LicensingStatus
 				{
-					Status = "Commercial - " + licenseValidator.LicenseType,
+					Status = status,
 					Error = false,
-					Message = "Valid license at " + licensePath,
+					Message = message,
 					Attributes = attributes
 				};
 			}
