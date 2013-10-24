@@ -854,6 +854,8 @@ namespace Raven.Database
                                     Id = key,
                                     Type = DocumentChangeTypes.Put,
                                     Etag = newEtag,
+									CollectionName = metadata.Value<string>(Constants.RavenEntityName),
+									TypeName = metadata.Value<string>(Constants.RavenClrType)
                                 }, metadata);
                             });
 
@@ -1131,6 +1133,8 @@ namespace Raven.Database
                                 {
                                     Id = key,
                                     Type = DocumentChangeTypes.Delete,
+									CollectionName = metadataVar.Value<string>(Constants.RavenEntityName),
+									TypeName = metadataVar.Value<string>(Constants.RavenClrType)
                                 }, metadataVar);
                             });
 
