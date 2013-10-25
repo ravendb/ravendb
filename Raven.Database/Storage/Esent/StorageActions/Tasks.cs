@@ -98,7 +98,7 @@ namespace Raven.Storage.Esent.StorageActions
 			while (Api.TryMoveNext(session, Tasks))
 			{
 				var type = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["task_type"], Encoding.Unicode);
-				var index = Api.RetrieveColumnAsString(session, Tasks, tableColumnsCache.TasksColumns["for_index"], Encoding.Unicode);
+				var index = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["for_index"]);
 				var addedTime64 = Api.RetrieveColumnAsInt64(session, Tasks, tableColumnsCache.TasksColumns["added_at"]).Value;
 				var id = Api.RetrieveColumnAsInt32(session, Tasks, tableColumnsCache.TasksColumns["id"]).Value;
 
@@ -106,7 +106,7 @@ namespace Raven.Storage.Esent.StorageActions
 							 {
 								 Id = id,
 								 AddedTime = DateTime.FromBinary(addedTime64),
-								 Index = index,
+								 IndexId = index ?? -1,
 								 Type = type
 							 };
 			}

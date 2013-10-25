@@ -43,7 +43,7 @@ namespace Raven.Tests.Issues
 
 					var task = tasks[0];
 
-					AssertTask(task, task.Id is Etag ? (object)Etag.Parse("00000000-0000-0000-0000-000000000001") : 1, date1, "index1", typeof(RemoveFromIndexTask));
+					AssertTask(task, task.Id is Etag ? (object)Etag.Parse("00000000-0000-0000-0000-000000000001") : 1, date1,  1, typeof(RemoveFromIndexTask));
 				});
 
 				storage.Batch(accessor => accessor.Tasks.AddTask(new TouchMissingReferenceDocumentTask
@@ -61,7 +61,7 @@ namespace Raven.Tests.Issues
 
 					TaskMetadata t1 = null;
 					TaskMetadata t2 = null;
-					if (tasks[0].Index == "index1")
+					if (tasks[0].IndexId == 1)
 					{
 						t1 = tasks[0];
 						t2 = tasks[1];
@@ -72,17 +72,17 @@ namespace Raven.Tests.Issues
 						t2 = tasks[0];
 					}
 
-					AssertTask(t1, t1.Id is Etag ? (object)Etag.Parse("00000000-0000-0000-0000-000000000001") : 1, date1, "index1", typeof(RemoveFromIndexTask));
-					AssertTask(t2, t2.Id is Etag ? (object)Etag.Parse("00000000-0000-0000-0000-000000000002") : 2, date2, "index2", typeof(TouchMissingReferenceDocumentTask));
+					AssertTask(t1, t1.Id is Etag ? (object)Etag.Parse("00000000-0000-0000-0000-000000000001") : 1, date1, 1, typeof(RemoveFromIndexTask));
+					AssertTask(t2, t2.Id is Etag ? (object)Etag.Parse("00000000-0000-0000-0000-000000000002") : 2, date2, 2, typeof(TouchMissingReferenceDocumentTask));
 				});
 			}
 		}
 
-		private void AssertTask(TaskMetadata task, object expectedId, DateTime expectedAddedTime, string expecedIndex, Type expectedType)
+		private void AssertTask(TaskMetadata task, object expectedId, DateTime expectedAddedTime, int expecedIndex, Type expectedType)
 		{
 			Assert.Equal(expectedType.FullName, task.Type);
 			Assert.Equal(expectedAddedTime, task.AddedTime);
-			Assert.Equal(expecedIndex, task.Index);
+			Assert.Equal(expecedIndex, task.IndexId);
 			Assert.Equal(expectedId, task.Id);
 		}
 	}

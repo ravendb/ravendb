@@ -83,7 +83,7 @@ namespace Raven.Storage.Managed
 				                                          Id = Etag.Parse(readResult.Key.Value<byte[]>("id")),
 				                                          AddedTime = readResult.Key.Value<DateTime>("time"),
 				                                          Type = readResult.Key.Value<string>("type"),
-				                                          Index = readResult.Key.Value<string>("index")
+				                                          IndexId = readResult.Key.Value<int>("index")
 			                                          });
 		}
         private void MergeSimilarTasks(DatabaseTask task, byte[] taskId)
