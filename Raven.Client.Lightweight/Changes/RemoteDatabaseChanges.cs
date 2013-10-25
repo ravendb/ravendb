@@ -84,7 +84,7 @@ namespace Raven.Client.Changes
                 clientSideHeartbeatTimer = null;
             }
 
-            var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials,
+            var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, null,
                                                                 conventions)
             {
                 AvoidCachingRequest = true
@@ -249,7 +249,7 @@ namespace Raven.Client.Changes
 
                     sendUrl = sendUrl.NoCache();
 
-                    var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions)
+                    var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, null, conventions)
                     {
                         AvoidCachingRequest = true
                     };

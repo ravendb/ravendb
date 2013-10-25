@@ -114,10 +114,10 @@ namespace Raven.Tests.Security.OAuth
 					ApiKey = "dbadmin/ThisIsMySecret"
 				}.Initialize())
 				{
-					store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/admin/changeDbId", "POST", null, store.Conventions))
+					store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/admin/changeDbId", "POST", null, null, store.Conventions))
 						.ExecuteRequest();// can do admin stuff
 
-					var httpJsonRequest = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/debug/user-info", "GET", null, store.Conventions));
+					var httpJsonRequest = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/debug/user-info", "GET", null, null, store.Conventions));
 
 					var json = (RavenJObject)httpJsonRequest.ReadResponseJson();
 

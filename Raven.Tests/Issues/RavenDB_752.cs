@@ -26,18 +26,9 @@ namespace Raven.Tests.Issues
 			{
 				ReplicationDestinations =
 					{
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:2"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:3"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:4"
-						},
+						new OperationMetadata("http://localhost:2"),
+						new OperationMetadata("http://localhost:3"),
+						new OperationMetadata("http://localhost:4")
 					}
 			};
 
@@ -71,18 +62,9 @@ namespace Raven.Tests.Issues
 			{
 				ReplicationDestinations =
 					{
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:2"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:3"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:4"
-						},
+						new OperationMetadata("http://localhost:2"),
+						new OperationMetadata("http://localhost:3"),
+						new OperationMetadata("http://localhost:4")
 					}
 			};
 
@@ -116,18 +98,9 @@ namespace Raven.Tests.Issues
 			{
 				ReplicationDestinations =
 					{
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:2"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:3"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:4"
-						},
+						new OperationMetadata("http://localhost:2"),
+						new OperationMetadata("http://localhost:3"),
+						new OperationMetadata("http://localhost:4")
 					}
 			};
 
@@ -161,18 +134,9 @@ namespace Raven.Tests.Issues
 			{
 				ReplicationDestinations =
 					{
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:2"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:3"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:4"
-						},
+						new OperationMetadata("http://localhost:2"),
+						new OperationMetadata("http://localhost:3"),
+						new OperationMetadata("http://localhost:4")
 					}
 			};
 

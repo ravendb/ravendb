@@ -44,7 +44,7 @@ namespace Raven.Client.Connection
 		private const string RavenReplicationDestinations = "Raven/Replication/Destinations";
 		protected DateTime lastReplicationUpdate = DateTime.MinValue;
 		private readonly object replicationLock = new object();
-		private List<ReplicationDestinationData> replicationDestinations = new List<ReplicationDestinationData>();
+		private List<OperationMetadata> replicationDestinations = new List<OperationMetadata>();
 		private static readonly List<OperationMetadata> Empty = new List<OperationMetadata>();
 		protected static int readStripingBase;
 
@@ -52,8 +52,8 @@ namespace Raven.Client.Connection
 		/// Notify when the failover status changed
 		/// </summary>
 		public event EventHandler<FailoverStatusChangedEventArgs> FailoverStatusChanged = delegate { };
-		
-		public List<ReplicationDestinationData> ReplicationDestinations
+
+		public List<OperationMetadata> ReplicationDestinations
 		{
 			get { return replicationDestinations; }
 		}
@@ -70,7 +70,7 @@ namespace Raven.Client.Connection
 					return Empty;
 
 				return replicationDestinations
-					.Select(replicationDestinationData => new OperationMetadata(replicationDestinationData.Url, replicationDestinationData.ApiKey))
+					.Select(operationMetadata => new OperationMetadata(operationMetadata))
 					.ToList();
 			}
 		}
@@ -347,7 +347,7 @@ namespace Raven.Client.Connection
 				JsonDocument document;
 				try
 				{
-					document = commands.DirectGet(new OperationMetadata(commands.Url, null), RavenReplicationDestinations);
+					document = commands.DirectGet(new OperationMetadata(commands.Url), RavenReplicationDestinations);
 					failureCounts[commands.Url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				}
 				catch (Exception e)
@@ -379,16 +379,13 @@ namespace Raven.Client.Connection
 				if (string.IsNullOrEmpty(url) || x.Disabled || x.IgnoredClient)
 					return null;
 				if (string.IsNullOrEmpty(x.Database))
-					return new ReplicationDestinationData
-					{
-						Url = url,
-						ApiKey = x.ApiKey
-					};
-				return new ReplicationDestinationData
-				{
-					Url = MultiDatabase.GetRootDatabaseUrl(url) + "/databases/" + x.Database + "/",
-					ApiKey = x.ApiKey
-				};
+					return new OperationMetadata(url, x.Username, x.Password, x.ApiKey);
+
+				return new OperationMetadata(
+					MultiDatabase.GetRootDatabaseUrl(url) + "/databases/" + x.Database + "/",
+					x.Username,
+					x.Password,
+					x.ApiKey);
 			})
 				// filter out replication destination that don't have the url setup, we don't know how to reach them
 				// so we might as well ignore them. Probably private replication destination (using connection string names only)
@@ -437,7 +434,7 @@ namespace Raven.Client.Connection
 			var timeoutThrown = false;
 
 			var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
-			var primaryOperation = new OperationMetadata(primaryUrl, null);
+			var primaryOperation = new OperationMetadata(primaryUrl);
 
 			var shouldReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 			if (shouldReadFromAllServers && method == "GET")
@@ -450,20 +447,20 @@ namespace Raven.Client.Connection
 					// if it is failing, ignore that, and move to the master or any of the replicas
 					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex].Url, currentRequest, method, false))
 					{
-						if (TryOperation(operation, localReplicationDestinations[replicationIndex], true, out result, out timeoutThrown))
+						if (TryOperation(operation, localReplicationDestinations[replicationIndex], true, true, out result, out timeoutThrown))
 							return result;
 					}
 				}
 			}
 
-			if (ShouldExecuteUsing(primaryUrl, currentRequest, method, true))
+			if (ShouldExecuteUsing(primaryOperation.Url, currentRequest, method, true))
 			{
-				if (TryOperation(operation, primaryOperation, !timeoutThrown && localReplicationDestinations.Count > 0, out result, out timeoutThrown))
+				if (TryOperation(operation, primaryOperation, false, !timeoutThrown && localReplicationDestinations.Count > 0, out result, out timeoutThrown))
 					return result;
-				if (!timeoutThrown && IsFirstFailure(primaryUrl) &&
-					TryOperation(operation, primaryOperation, localReplicationDestinations.Count > 0, out result, out timeoutThrown))
+				if (!timeoutThrown && IsFirstFailure(primaryOperation.Url) &&
+					TryOperation(operation, primaryOperation, false, localReplicationDestinations.Count > 0, out result, out timeoutThrown))
 					return result;
-				IncrementFailureCount(primaryUrl);
+				IncrementFailureCount(primaryOperation.Url);
 			}
 
 			for (var i = 0; i < localReplicationDestinations.Count; i++)
@@ -471,11 +468,11 @@ namespace Raven.Client.Connection
 				var replicationDestination = localReplicationDestinations[i];
 				if (ShouldExecuteUsing(replicationDestination.Url, currentRequest, method, false) == false)
 					continue;
-				if (TryOperation(operation, replicationDestination, !timeoutThrown, out result, out timeoutThrown))
+				if (TryOperation(operation, replicationDestination, true, !timeoutThrown, out result, out timeoutThrown))
 					return result;
 				if (!timeoutThrown && IsFirstFailure(replicationDestination.Url) &&
-				    TryOperation(operation, replicationDestination, localReplicationDestinations.Count > i + 1, out result,
-				                 out timeoutThrown))
+					TryOperation(operation, replicationDestination, true, localReplicationDestinations.Count > i + 1, out result,
+								 out timeoutThrown))
 					return result;
 				IncrementFailureCount(replicationDestination.Url);
 			}
@@ -485,17 +482,27 @@ There is a high probability of a network problem preventing access to all the re
 Failed to get in touch with any of the " + (1 + localReplicationDestinations.Count) + " Raven instances.");
 		}
 
-		protected virtual bool TryOperation<T>(Func<OperationMetadata, T> operation, OperationMetadata operationMetadata, bool avoidThrowing, out T result, out bool wasTimeout)
+		protected virtual bool TryOperation<T>(Func<OperationMetadata, T> operation, OperationMetadata operationMetadata, bool tryWithPrimaryCredentials, bool avoidThrowing, out T result, out bool wasTimeout)
 		{
 			try
 			{
-				result = operation(operationMetadata);
+				result = operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url) : operationMetadata);
 				ResetFailureCount(operationMetadata.Url);
 				wasTimeout = false;
 				return true;
 			}
 			catch (Exception e)
 			{
+				var webException = e as WebException;
+				if (tryWithPrimaryCredentials && operationMetadata.HasCredentials() && webException != null)
+				{
+					var response = webException.Response as HttpWebResponse;
+					if (response != null && response.StatusCode == HttpStatusCode.Unauthorized)
+					{
+						return TryOperation(operation, operationMetadata, false, avoidThrowing, out result, out wasTimeout);
+					}
+				}
+
 				if (avoidThrowing == false)
 					throw;
 				result = default(T);
@@ -518,7 +525,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
 		private Task<T> ExecuteWithReplicationAsync<T>(ExecuteWithReplicationState<T> state)
 		{
-			var primaryOperation = new OperationMetadata(state.PrimaryUrl, null);
+			var primaryOperation = new OperationMetadata(state.PrimaryUrl);
 
 			switch (state.State)
 			{
@@ -538,7 +545,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 							{
 								return AttemptOperationAndOnFailureCallExecuteWithReplication(state.ReplicationDestinations[replicationIndex],
 																							  state.With(ExecuteWithReplicationStates.AfterTryingWithStripedServer),
-																							  state.ReplicationDestinations.Count > state.LastAttempt +1);
+																							  state.ReplicationDestinations.Count > state.LastAttempt + 1);
 							}
 						}
 					}
@@ -551,7 +558,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
 					return AttemptOperationAndOnFailureCallExecuteWithReplication(primaryOperation,
 																					state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrl),
-																					state.ReplicationDestinations.Count > 
+																					state.ReplicationDestinations.Count >
 																					state.LastAttempt + 1 && !state.TimeoutThrown);
 
 				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrl:
@@ -583,7 +590,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
 					return AttemptOperationAndOnFailureCallExecuteWithReplication(destination,
 																				  state.With(ExecuteWithReplicationStates.TryAllServersSecondAttempt),
-																				  state.ReplicationDestinations.Count > 
+																				  state.ReplicationDestinations.Count >
 																				  state.LastAttempt + 1 && !state.TimeoutThrown);
 				case ExecuteWithReplicationStates.TryAllServersSecondAttempt:
 					destination = state.ReplicationDestinations[state.LastAttempt];
@@ -733,7 +740,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 					case WebExceptionStatus.ReceiveFailure:
 					case WebExceptionStatus.PipelineFailure:
 					case WebExceptionStatus.ConnectionClosed:
-					
+
 #endif
 					case WebExceptionStatus.ConnectFailure:
 					case WebExceptionStatus.SendFailure:
@@ -757,9 +764,9 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			}
 			return
 #if !NETFX_CORE
-				e.InnerException is SocketException ||
+ e.InnerException is SocketException ||
 #endif
-				e.InnerException is IOException;
+ e.InnerException is IOException;
 		}
 
 		public virtual void Dispose()
@@ -778,15 +785,32 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 	public class OperationMetadata
 	{
-		public OperationMetadata(string url, string apiKey)
+		public OperationMetadata(string url, string username = null, string password = null, string apiKey = null)
 		{
 			Url = url;
 			ApiKey = apiKey;
+
+			if (!string.IsNullOrEmpty(username) && string.IsNullOrEmpty(password))
+				Credentials = new NetworkCredential(username, password);
+		}
+
+		public OperationMetadata(OperationMetadata operationMetadata)
+		{
+			Url = operationMetadata.Url;
+			ApiKey = operationMetadata.ApiKey;
+			Credentials = operationMetadata.Credentials;
 		}
 
 		public string Url { get; private set; }
 
 		public string ApiKey { get; private set; }
+
+		public ICredentials Credentials { get; private set; }
+
+		public bool HasCredentials()
+		{
+			return !string.IsNullOrEmpty(ApiKey) || Credentials != null;
+		}
 	}
 
 	/// <summary>
@@ -802,22 +826,5 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		/// The url whose failover status changed
 		/// </summary>
 		public string Url { get; set; }
-	}
-
-	public class ReplicationDestinationData
-	{
-		public ReplicationDestinationData()
-		{
-		}
-
-		public ReplicationDestinationData(ReplicationDestinationData other)
-		{
-			Url = other.Url;
-			ApiKey = other.ApiKey;
-		}
-
-		public string Url { get; set; }
-
-		public string ApiKey { get; set; }
 	}
 }

@@ -64,6 +64,8 @@ namespace Raven.Client.Connection
 
 		private string operationUrl;
 
+		private readonly string apiKey;
+
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
 
 		/// <summary>
@@ -77,6 +79,7 @@ namespace Raven.Client.Connection
 			HttpJsonRequestFactory factory)
 		{
 			Url = requestParams.Url;
+			apiKey = requestParams.ApiKey;
 			this.factory = factory;
 			owner = requestParams.Owner;
 			conventions = requestParams.Convention;
@@ -264,7 +267,7 @@ namespace Raven.Client.Connection
 			if (conventions.HandleUnauthorizedResponse == null)
 				return false;
 
-			var handleUnauthorizedResponse = conventions.HandleUnauthorizedResponse(unauthorizedResponse);
+			var handleUnauthorizedResponse = conventions.HandleUnauthorizedResponse(unauthorizedResponse, apiKey);
 			if (handleUnauthorizedResponse == null)
 				return false;
 
@@ -285,7 +288,7 @@ namespace Raven.Client.Connection
 			if (conventions.HandleUnauthorizedResponseAsync == null)
 				return false;
 
-			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse);
+			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse, apiKey);
 			if (unauthorizedResponseAsync == null)
 				return false;
 

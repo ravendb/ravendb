@@ -108,15 +108,15 @@ namespace Raven.Client.Connection
 			return new Uri(url);
 		}
 
-		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, Document.DocumentConvention convention)
+		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, string apiKey, Document.DocumentConvention convention)
 		{
-			return requestor.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, "GET", credentials, convention));
+			return requestor.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, "GET", credentials, apiKey, convention));
 		}
 
-		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, DocumentConvention convention, IDictionary<string, string> operationsHeaders, string method)
+		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, string apiKey, DocumentConvention convention, IDictionary<string, string> operationsHeaders, string method)
 		{
 			var httpJsonRequest = requestor.jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(requestor, url, method, credentials, convention)
+				new CreateHttpJsonRequestParams(requestor, url, method, credentials, apiKey, convention)
 					.AddOperationHeaders(operationsHeaders));
 			
 			return httpJsonRequest;

@@ -137,12 +137,12 @@ namespace Raven.Client.Connection
 		public RavenJToken ExecuteGetRequest(string requestUrl)
 		{
 			EnsureIsNotNullOrEmpty(requestUrl, "url");
-			return ExecuteWithReplication("GET", serverUrl =>
+			return ExecuteWithReplication("GET", operationMetadata =>
 			{
 				var metadata = new RavenJObject();
 				AddTransactionInformation(metadata);
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, serverUrl + requestUrl, "GET", metadata, credentials, convention)
+					new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, "GET", metadata, operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 						.AddOperationHeaders(OperationsHeaders));
 
 				return request.ReadResponseJson();
@@ -153,7 +153,7 @@ namespace Raven.Client.Connection
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention).AddOperationHeaders(OperationsHeaders);
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, null, convention).AddOperationHeaders(OperationsHeaders);
 			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
@@ -205,7 +205,7 @@ namespace Raven.Client.Connection
 
 			AddTransactionInformation(metadata);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
+				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -318,13 +318,13 @@ namespace Raven.Client.Connection
 
 		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
 		{
-			return ExecuteWithReplication("GET", url =>
+			return ExecuteWithReplication("GET", operationMetadata =>
 			{
-				var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
+				var requestUri = operationMetadata.Url + "/docs/?start=" + start + "&pageSize=" + pageSize;
 				if (metadataOnly)
 					requestUri += "&metadata-only=true";
 				RavenJToken result = jsonRequestFactory
-					.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
+					.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.ReadResponseJson();
 				return ((RavenJArray)result).Cast<RavenJObject>().ToJsonDocuments().ToArray();
@@ -355,7 +355,7 @@ namespace Raven.Client.Connection
 				actualUrl += "&metadata-only=true";
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
+				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -389,7 +389,7 @@ namespace Raven.Client.Connection
 				key = Uri.EscapeDataString(key);
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, method, metadata, credentials, convention)
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, method, metadata, operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -471,7 +471,7 @@ namespace Raven.Client.Connection
 				metadata["ETag"] = etag.ToString();
 			}
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, "POST", metadata, credentials, convention))
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, "POST", metadata, operationMetadata.Credentials, operationMetadata.ApiKey, convention))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 
@@ -500,7 +500,7 @@ namespace Raven.Client.Connection
 				metadata["ETag"] = etag.ToString();
 			}
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, "PUT", metadata, credentials, convention))
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, "PUT", metadata, operationMetadata.Credentials, operationMetadata.ApiKey, convention))
 				.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer,
 											 convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -537,7 +537,7 @@ namespace Raven.Client.Connection
 				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
 																						 operationMetadata.Url + "/static/?startsWith=" +
 																						 idPrefix + "&start=" + start + "&pageSize=" +
-																						 pageSize, method, credentials, convention))
+																						 pageSize, method, operationMetadata.Credentials, operationMetadata.ApiKey, convention))
 																						 .AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			var result = webRequest.ReadResponseJson();
@@ -578,7 +578,7 @@ namespace Raven.Client.Connection
 
 		private Attachment DirectGetAttachment(string method, string key, OperationMetadata operationMetadata)
 		{
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, method, credentials, convention))
+			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, method, operationMetadata.Credentials, operationMetadata.ApiKey, convention))
 							.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 			Func<Stream> data;
 			try
@@ -675,7 +675,7 @@ namespace Raven.Client.Connection
 				metadata["ETag"] = etag.ToString();
 			}
 			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, "DELETE", metadata, credentials, convention))
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/static/" + key, "DELETE", metadata, operationMetadata.Credentials, operationMetadata.ApiKey, convention))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			webRequest.ExecuteRequest();
@@ -697,7 +697,7 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", operationMetadata =>
 			{
 				var url2 = (operationMetadata.Url + "/indexes/?start=" + start + "&pageSize=" + pageSize).NoCache();
-				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", operationMetadata.Credentials, operationMetadata.ApiKey, convention));
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				var result = request.ReadResponseJson();
@@ -714,7 +714,7 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", operationMetadata =>
 			{
 				var url2 = (operationMetadata.Url + "/transformers?start=" + start + "&pageSize=" + pageSize).NoCache();
-				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", credentials, convention));
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url2, "GET", operationMetadata.Credentials, operationMetadata.ApiKey, convention));
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				var result = request.ReadResponseJson();
@@ -738,12 +738,12 @@ namespace Raven.Client.Connection
 			ExecuteWithReplication("DELETE", u => DirectDeleteTransformer(name, u));
 		}
 
-		private void DirectDeleteTransformer(string name, OperationMetadata operationUrl)
+		private void DirectDeleteTransformer(string name, OperationMetadata operationMetadata)
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationUrl + "/transformers/" + name, "DELETE", credentials, convention)
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transformers/" + name, "DELETE", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationUrl.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			request.ExecuteRequest();
 		}
@@ -751,7 +751,7 @@ namespace Raven.Client.Connection
 		private TransformerDefinition DirectGetTransformer(string transformerName, OperationMetadata operationMetadata)
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transformers/" + transformerName, "GET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transformers/" + transformerName, "GET", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -785,7 +785,7 @@ namespace Raven.Client.Connection
 		private object DirectResetIndex(string name, OperationMetadata operationMetadata)
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/indexes/" + name, "RESET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/indexes/" + name, "RESET", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -797,7 +797,7 @@ namespace Raven.Client.Connection
 		private string[] DirectGetIndexNames(int start, int pageSize, OperationMetadata operationMetadata)
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/indexes/?namesOnly=true&start=" + start + "&pageSize=" + pageSize, "GET", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -820,7 +820,7 @@ namespace Raven.Client.Connection
 		private IndexDefinition DirectGetIndex(string indexName, OperationMetadata operationMetadata)
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/indexes/" + indexName + "?definition=yes", "GET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/indexes/" + indexName + "?definition=yes", "GET", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -850,7 +850,7 @@ namespace Raven.Client.Connection
 				metadata.Add("ETag", etag.ToString());
 			AddTransactionInformation(metadata);
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, "DELETE", metadata, credentials, convention)
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, "DELETE", metadata, operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -926,7 +926,7 @@ namespace Raven.Client.Connection
 			string requestUri = operationMetadata.Url + "/transformers/" + name;
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
+				new CreateHttpJsonRequestParams(this, requestUri, "PUT", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -955,7 +955,7 @@ namespace Raven.Client.Connection
 			string requestUri = operationMetadata.Url + "/indexes/" + name;
 
 	        var checkIndexExists = jsonRequestFactory.CreateHttpJsonRequest(
-	            new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
+				new CreateHttpJsonRequestParams(this, requestUri, "HEAD", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 	                .AddOperationHeaders(OperationsHeaders))
 													 .AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer,
 	                                                                              convention.FailoverBehavior,
@@ -982,7 +982,7 @@ namespace Raven.Client.Connection
 	        }
 
 	        var request = jsonRequestFactory.CreateHttpJsonRequest(
-	            new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
+	            new CreateHttpJsonRequestParams(this, requestUri, "PUT", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 	                .AddOperationHeaders(OperationsHeaders))
 	                                        .AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer,
 	                                                                     convention.FailoverBehavior,
@@ -1086,7 +1086,7 @@ namespace Raven.Client.Connection
 			EnsureIsNotNullOrEmpty(index, "index");
 			string path = query.GetIndexQueryUrl(url, index, "streams/query", includePageSizeEvenIfNotExplicitlySet: false);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, path, "GET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, path, "GET", credentials, null, convention)
 					.AddOperationHeaders(OperationsHeaders))
 											.AddReplicationStatusHeaders(Url, url, replicationInformer,
 																		 convention.FailoverBehavior,
@@ -1164,7 +1164,7 @@ namespace Raven.Client.Connection
 
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", credentials, null, convention)
 					.AddOperationHeaders(OperationsHeaders))
 				.AddReplicationStatusHeaders(Url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1229,7 +1229,7 @@ namespace Raven.Client.Connection
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, path, "GET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, path, "GET", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 				{
 					AvoidCachingRequest = query.DisableCaching
 				}.AddOperationHeaders(OperationsHeaders))
@@ -1273,7 +1273,7 @@ namespace Raven.Client.Connection
 		private void DirectDeleteIndex(string name, OperationMetadata operationMetadata)
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/indexes/" + name, "DELETE", credentials, convention)
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/indexes/" + name, "DELETE", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1330,7 +1330,7 @@ namespace Raven.Client.Connection
 			{
 				path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
 				request = jsonRequestFactory.CreateHttpJsonRequest(
-						new CreateHttpJsonRequestParams(this, path, "GET", metadata, credentials, convention)
+						new CreateHttpJsonRequestParams(this, path, "GET", metadata, operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 							.AddOperationHeaders(OperationsHeaders))
 							.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1338,7 +1338,7 @@ namespace Raven.Client.Connection
 			else
 			{
 				request = jsonRequestFactory.CreateHttpJsonRequest(
-						new CreateHttpJsonRequestParams(this, path, "POST", metadata, credentials, convention)
+						new CreateHttpJsonRequestParams(this, path, "POST", metadata, operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 							.AddOperationHeaders(OperationsHeaders))
 							.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1421,7 +1421,7 @@ namespace Raven.Client.Connection
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var req = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", "POST", metadata, credentials, convention)
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", "POST", metadata, operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1461,7 +1461,7 @@ namespace Raven.Client.Connection
 		private void DirectCommit(string txId, OperationMetadata operationMetadata)
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/commit?tx=" + txId, "POST", credentials, convention)
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/commit?tx=" + txId, "POST", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1486,7 +1486,7 @@ namespace Raven.Client.Connection
 		private void DirectRollback(string txId, OperationMetadata operationMetadata)
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/rollback?tx=" + txId, "POST", credentials, convention)
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/rollback?tx=" + txId, "POST", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1510,7 +1510,7 @@ namespace Raven.Client.Connection
 		public BuildNumber GetBuildNumber()
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, url + "/build/version", "GET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, url + "/build/version", "GET", credentials, null, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 			var result = httpJsonRequest.ReadResponseJson();
@@ -1521,7 +1521,7 @@ namespace Raven.Client.Connection
 		private void DirectPrepareTransaction(string txId, OperationMetadata operationMetadata)
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/prepare?tx=" + txId, "POST", credentials, convention)
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/prepare?tx=" + txId, "POST", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1608,7 +1608,7 @@ namespace Raven.Client.Connection
 			{
 				string path = queryToDelete.GetIndexQueryUrl(operationMetadata.Url, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, path, "DELETE", credentials, convention)
+					new CreateHttpJsonRequestParams(this, path, "DELETE", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 						.AddOperationHeaders(OperationsHeaders))
 						.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 				RavenJToken jsonResponse;
@@ -1693,7 +1693,7 @@ namespace Raven.Client.Connection
 			{
 				string path = queryToUpdate.GetIndexQueryUrl(operationMetadata.Url, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, path, method, credentials, convention)
+					new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 						.AddOperationHeaders(OperationsHeaders))
 						.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1748,7 +1748,7 @@ namespace Raven.Client.Connection
 													 suggestionQuery.Popularity);
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
+					new CreateHttpJsonRequestParams(this, requestUri, "GET", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 						.AddOperationHeaders(OperationsHeaders))
 						.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1779,7 +1779,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public DatabaseStatistics GetStatistics()
 		{
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/stats", "GET", credentials, convention));
+			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/stats", "GET", credentials, null, convention));
 
 			var jo = (RavenJObject)httpJsonRequest.ReadResponseJson();
 			return jo.Deserialize<DatabaseStatistics>(convention);
@@ -1790,10 +1790,10 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public long NextIdentityFor(string name)
 		{
-			return ExecuteWithReplication("POST", url =>
+			return ExecuteWithReplication("POST", operationMetadata =>
 			{
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, url + "/identity/next?name=" + Uri.EscapeDataString(name), "POST", credentials, convention)
+					new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/identity/next?name=" + Uri.EscapeDataString(name), "POST", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 						.AddOperationHeaders(OperationsHeaders));
 
 				var readResponseJson = request.ReadResponseJson();
@@ -1807,10 +1807,10 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public long SeedIdentityFor(string name, long value)
 		{
-			return ExecuteWithReplication("POST", url =>
+			return ExecuteWithReplication("POST", operationMetadata =>
 			{
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, url + "/identity/seed?name=" + Uri.EscapeDataString(name) + "&value=" + Uri.EscapeDataString(value.ToString(CultureInfo.InvariantCulture)), "POST", credentials, convention)
+					new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/identity/seed?name=" + Uri.EscapeDataString(name) + "&value=" + Uri.EscapeDataString(value.ToString(CultureInfo.InvariantCulture)), "POST", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 						.AddOperationHeaders(OperationsHeaders));
 
 				var readResponseJson = request.ReadResponseJson();
@@ -1846,7 +1846,7 @@ namespace Raven.Client.Connection
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			HttpJsonRequest request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, "HEAD", credentials, convention)
+				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, "HEAD", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 					.AddOperationHeaders(OperationsHeaders))
 					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1890,7 +1890,7 @@ namespace Raven.Client.Connection
 											  var multiGetOperation = new MultiGetOperation(this, convention, operationMetadata.Url, requests);
 
 											  var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.
-																																					RequestUri, "POST", credentials, convention));
+																																					RequestUri, "POST", operationMetadata.Credentials, operationMetadata.ApiKey, convention));
 
 											  var requestsForServer =
 												  multiGetOperation.PreparingForCachingRequest(jsonRequestFactory);
@@ -1938,7 +1938,7 @@ namespace Raven.Client.Connection
 													 Uri.EscapeDataString(fromValue ?? ""));
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
+					new CreateHttpJsonRequestParams(this, requestUri, "GET", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 						.AddOperationHeaders(OperationsHeaders))
 						.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1966,7 +1966,7 @@ namespace Raven.Client.Connection
 																pageSize);
 
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, requestUri, "GET", credentials, convention)
+					new CreateHttpJsonRequestParams(this, requestUri, "GET", operationMetadata.Credentials, operationMetadata.ApiKey, convention)
 						.AddOperationHeaders(OperationsHeaders))
 						.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -2000,7 +2000,7 @@ namespace Raven.Client.Connection
 					requestUri += "&facets=" + Uri.EscapeDataString(facetsJson);
 
                 var request = jsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(this, requestUri, method, credentials, convention)
+					new CreateHttpJsonRequestParams(this, requestUri, method, operationMetadata.Credentials, operationMetadata.ApiKey, convention)
                         .AddOperationHeaders(OperationsHeaders))
 						.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -2200,7 +2200,7 @@ namespace Raven.Client.Connection
 		public RavenJToken GetOperationStatus(long id)
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, "GET", credentials, convention)
+				new CreateHttpJsonRequestParams(this, url + "/operation/status?id=" + id, "GET", credentials, null, convention)
 					.AddOperationHeaders(OperationsHeaders));
 			try
 			{

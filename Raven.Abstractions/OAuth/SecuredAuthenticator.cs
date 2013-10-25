@@ -18,11 +18,11 @@ namespace Raven.Abstractions.OAuth
 {
 	public class SecuredAuthenticator : AbstractAuthenticator
 	{
-		private readonly string apiKey;
+		private readonly string _apiKey;
 
 		public SecuredAuthenticator(string apiKey)
 		{
-			this.apiKey = apiKey;
+			_apiKey = apiKey;
 		}
 
 		public override void ConfigureRequest(object sender, WebRequestEventArgs e)
@@ -32,7 +32,7 @@ namespace Raven.Abstractions.OAuth
 				base.ConfigureRequest(sender, e);
 				return;
 			}
-			if (apiKey != null)
+			if (_apiKey != null)
 			{
 #if NETFX_CORE
 				e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
@@ -42,7 +42,7 @@ namespace Raven.Abstractions.OAuth
 			}
 		}
 
-		private Tuple<HttpWebRequest, string> PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge)
+		private Tuple<HttpWebRequest, string> PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge, string apiKey)
 		{
 #if !SILVERLIGHT
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
@@ -97,8 +97,10 @@ namespace Raven.Abstractions.OAuth
 
 
 #if !SILVERLIGHT && !NETFX_CORE
-		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource)
+		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey)
 		{
+			apiKey = apiKey ?? _apiKey;
+
 			string serverRSAExponent = null;
 			string serverRSAModulus = null;
 			string challenge = null;
@@ -112,7 +114,7 @@ namespace Raven.Abstractions.OAuth
 			while (true)
 			{
 				tries++;
-				var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRSAExponent, serverRSAModulus, challenge);
+				var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRSAExponent, serverRSAModulus, challenge, apiKey);
 				var authRequest = authRequestTuple.Item1;
 				if (authRequestTuple.Item2 != null)
 				{
@@ -163,16 +165,18 @@ namespace Raven.Abstractions.OAuth
 		}
 #endif
 
-		public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string baseUrl, string oauthSource)
+		public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string apiKey)
 		{
-			return DoOAuthRequestAsync(baseUrl, oauthSource, null, null, null, 0);
+			return DoOAuthRequestAsync(baseUrl, oauthSource, null, null, null, apiKey, 0);
 		}
 
-		private Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, int tries)
+		private Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, string apiKey, int tries)
 		{
 			if (oauthSource == null) throw new ArgumentNullException("oauthSource");
 
-			var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRsaExponent, serverRsaModulus, challenge);
+			apiKey = apiKey ?? _apiKey;
+
+			var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRsaExponent, serverRsaModulus, challenge, apiKey);
 			var authRequest = authRequestTuple.Item1;
 
 			Task sendDataTask = new CompletedTask();
@@ -242,6 +246,7 @@ namespace Raven.Abstractions.OAuth
 													   challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent),
 													   challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus),
 													   challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge),
+													   apiKey,
 													   tries + 1);
 						}
 					}).Unwrap();

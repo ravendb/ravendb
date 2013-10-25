@@ -16,13 +16,14 @@ namespace Raven.Client.Connection
 {
 	public class CreateHttpJsonRequestParams
 	{
-		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, RavenJObject metadata, ICredentials credentials, DocumentConvention convention)
+		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, RavenJObject metadata, ICredentials credentials, string apiKey, DocumentConvention convention)
 		{
 			Owner = self;
 			Url = url;
 			Method = method;
 			Metadata = metadata;
 			Credentials = credentials;
+			ApiKey = apiKey;
 			Convention = convention;
 			operationsHeadersCollection = new NameValueCollection();
 		}
@@ -95,8 +96,8 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, ICredentials credentials, DocumentConvention convention)
-			: this(self, url, method, new RavenJObject(), credentials, convention)
+		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, ICredentials credentials, string apiKey, DocumentConvention convention)
+			: this(self, url, method, new RavenJObject(), credentials, apiKey, convention)
 		{
 			
 		}
@@ -133,6 +134,9 @@ namespace Raven.Client.Connection
 		public string Method { get; set; }
 		public RavenJObject Metadata { get; set; }
 		public ICredentials Credentials { get; set; }
+
+		public string ApiKey { get; set; }
+
 		public DocumentConvention Convention { get; set; }
 		public bool DisableRequestCompression { get; set; }
 	}

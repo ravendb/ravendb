@@ -120,6 +120,7 @@ namespace Raven.Client.Silverlight.Connection
 
 		internal HttpJsonRequest(CreateHttpJsonRequestParams requestParams, HttpJsonRequestFactory factory)
 		{
+			apiKey = requestParams.ApiKey;
 			this.url = requestParams.Url;
 			this.conventions = requestParams.Convention;
 			this.factory = factory;
@@ -154,6 +155,8 @@ namespace Raven.Client.Silverlight.Connection
 		}
 
 		private bool requestSendToServer;
+
+		private readonly string apiKey;
 
 		/// <summary>
 		/// Begins the read response string.
@@ -226,7 +229,7 @@ namespace Raven.Client.Silverlight.Connection
 			if (conventions.HandleUnauthorizedResponseAsync == null)
 				return null;
 
-			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse);
+			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse, apiKey);
 
 			if (unauthorizedResponseAsync == null)
 				return null;

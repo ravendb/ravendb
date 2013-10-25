@@ -21,6 +21,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Indexes
 {
+	using System.Net;
+
 	/// <summary>
 	/// Base class for creating indexes
 	/// </summary>
@@ -448,7 +450,7 @@ namespace Raven.Client.Indexes
 				? replicationUrl
 				: replicationUrl + "/databases/" + replicationDestination.Database;
 
-			return new OperationMetadata(url, replicationDestination.ApiKey);
+			return new OperationMetadata(url, replicationDestination.Username, replicationDestination.Password, replicationDestination.ApiKey);
 		}
 
 #if !SILVERLIGHT && !NETFX_CORE

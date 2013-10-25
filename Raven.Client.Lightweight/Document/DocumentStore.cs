@@ -509,14 +509,14 @@ namespace Raven.Client.Document
 
 #if !SILVERLIGHT && !NETFX_CORE
 
-			Conventions.HandleUnauthorizedResponse = response =>
+			Conventions.HandleUnauthorizedResponse = (response, apiKey) =>
 			{
 				var oauthSource = response.Headers["OAuth-Source"];
 
 				if (string.IsNullOrEmpty(oauthSource) == false &&
 					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
 				{
-					return basicAuthenticator.DoOAuthRequest(oauthSource);
+					return basicAuthenticator.DoOAuthRequest(oauthSource, apiKey);
 				}
 
 				if (ApiKey == null)
@@ -528,7 +528,7 @@ namespace Raven.Client.Document
 				if (string.IsNullOrEmpty(oauthSource))
 					oauthSource = Url + "/OAuth/API-Key";
 
-				return securedAuthenticator.DoOAuthRequest(oauthSource);
+				return securedAuthenticator.DoOAuthRequest(oauthSource, apiKey);
 			};
 #endif
 
@@ -543,14 +543,14 @@ namespace Raven.Client.Document
 				return null;
 			};
 
-			Conventions.HandleUnauthorizedResponseAsync = unauthorizedResponse =>
+			Conventions.HandleUnauthorizedResponseAsync = (unauthorizedResponse, apiKey) =>
 			{
 				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
 
 				if (string.IsNullOrEmpty(oauthSource) == false &&
 					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
 				{
-					return basicAuthenticator.HandleOAuthResponseAsync(oauthSource);
+					return basicAuthenticator.HandleOAuthResponseAsync(oauthSource, apiKey);
 				}
 
 				if (ApiKey == null)
@@ -562,7 +562,7 @@ namespace Raven.Client.Document
 				if (string.IsNullOrEmpty(oauthSource))
 					oauthSource = this.Url + "/OAuth/API-Key";
 
-				return securedAuthenticator.DoOAuthRequestAsync(Url, oauthSource);
+				return securedAuthenticator.DoOAuthRequestAsync(Url, oauthSource, apiKey);
 			};
 
 		}
@@ -638,7 +638,7 @@ namespace Raven.Client.Document
 
 #if SILVERLIGHT
 			// required to ensure just a single auth dialog
-			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions))
+			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, null, Conventions))
 				.ExecuteRequestAsync();
 			jsonRequestFactory.ConfigureRequest += (sender, args) =>
 			{

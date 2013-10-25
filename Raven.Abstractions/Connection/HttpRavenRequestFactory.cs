@@ -78,7 +78,7 @@ namespace Raven.Abstractions.Connection
 					return new SecuredAuthenticator(options.ApiKey);
 				});
 
-			return authenticator.DoOAuthRequest(oauthSource);
+			return authenticator.DoOAuthRequest(oauthSource, options.ApiKey);
 		}
 	}
 }
