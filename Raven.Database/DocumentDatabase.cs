@@ -1382,7 +1382,8 @@ namespace Raven.Database
                         if (viewGenerator == null)
                             throw new IndexDoesNotExistsException("Could not find index named: " + indexName);
 
-                        if (viewGenerator.ForEntityNames.Count > 0)
+                        if (index.IsMapReduce == false && // we can't use this optimization for map/reduce indexes
+						    viewGenerator.ForEntityNames.Count > 0)
                         {
                             var old = query.CutoffEtag;
                             var collections = viewGenerator.ForEntityNames.Select(GetLastEtagForCollection);
@@ -1403,7 +1404,6 @@ namespace Raven.Database
                             var indexInstance = IndexStorage.GetIndexInstance(indexName);
                             stale = stale || (indexInstance != null && indexInstance.IsMapIndexingInProgress);
                         }
-
                         indexTimestamp = actions.Staleness.IndexLastUpdatedAt(index.IndexId);
                         var indexFailureInformation = actions.Indexing.GetFailureRate(index.IndexId);
                         if (indexFailureInformation.IsInvalidIndex)
