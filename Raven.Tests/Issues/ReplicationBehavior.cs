@@ -35,8 +35,8 @@ namespace Raven.Tests.Issues
 				var req = i + 1;
 				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", req, 1, url =>
 				{
-					urlsTried.Add(Tuple.Create(req, url));
-					if (url.EndsWith("1"))
+					urlsTried.Add(Tuple.Create(req, url.Url));
+					if (url.Url.EndsWith("1"))
 						throw new WebException("bad", WebExceptionStatus.ConnectFailure);
 
 					return 1;
@@ -78,7 +78,7 @@ namespace Raven.Tests.Issues
 				var req = i + 1;
 				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", req, req, url =>
 				{
-					urlsTried.Add(Tuple.Create(req, url));
+					urlsTried.Add(Tuple.Create(req, url.Url));
 					return 1;
 				});
 			}

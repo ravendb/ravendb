@@ -30,6 +30,8 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Connection
 {
+	using System.Collections;
+
 	/// <summary>
 	/// Replication and failover management on the client side
 	/// </summary>
@@ -43,7 +45,7 @@ namespace Raven.Client.Connection
 		protected DateTime lastReplicationUpdate = DateTime.MinValue;
 		private readonly object replicationLock = new object();
 		private List<ReplicationDestinationData> replicationDestinations = new List<ReplicationDestinationData>();
-		private static readonly List<string> Empty = new List<string>();
+		private static readonly List<OperationMetadata> Empty = new List<OperationMetadata>();
 		protected static int readStripingBase;
 
 		/// <summary>
@@ -60,14 +62,16 @@ namespace Raven.Client.Connection
 		/// Gets the replication destinations.
 		/// </summary>
 		/// <value>The replication destinations.</value>
-		public List<string> ReplicationDestinationsUrls
+		public List<OperationMetadata> ReplicationDestinationsUrls
 		{
 			get
 			{
 				if (conventions.FailoverBehavior == FailoverBehavior.FailImmediately)
 					return Empty;
 
-				return replicationDestinations.Select(replicationDestinationData => replicationDestinationData.Url).ToList();
+				return replicationDestinations
+					.Select(replicationDestinationData => new OperationMetadata(replicationDestinationData.Url, replicationDestinationData.ApiKey))
+					.ToList();
 			}
 		}
 
@@ -180,7 +184,6 @@ namespace Raven.Client.Connection
 				failureCounter.LastCheck = SystemTime.UtcNow;
 				return true;
 			}
-
 
 			if (currentRequest % GetCheckRepetitionRate(failureCounter.Value) == 0)
 			{
@@ -305,7 +308,7 @@ namespace Raven.Client.Connection
 			lock (this)
 			{
 				var serverHash = ServerHash.GetServerHash(commands.Url);
-				return commands.DirectGetAsync(commands.Url, RavenReplicationDestinations).ContinueWith((Task<JsonDocument> getTask) =>
+				return commands.DirectGetAsync(new OperationMetadata(commands.Url, null), RavenReplicationDestinations).ContinueWith((Task<JsonDocument> getTask) =>
 				{
 					JsonDocument document;
 					if (getTask.Status == TaskStatus.RanToCompletion)
@@ -344,7 +347,7 @@ namespace Raven.Client.Connection
 				JsonDocument document;
 				try
 				{
-					document = commands.DirectGet(commands.Url, RavenReplicationDestinations);
+					document = commands.DirectGet(new OperationMetadata(commands.Url, null), RavenReplicationDestinations);
 					failureCounts[commands.Url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				}
 				catch (Exception e)
@@ -379,10 +382,12 @@ namespace Raven.Client.Connection
 					return new ReplicationDestinationData
 					{
 						Url = url,
+						ApiKey = x.ApiKey
 					};
 				return new ReplicationDestinationData
 				{
 					Url = MultiDatabase.GetRootDatabaseUrl(url) + "/databases/" + x.Database + "/",
+					ApiKey = x.ApiKey
 				};
 			})
 				// filter out replication destination that don't have the url setup, we don't know how to reach them
@@ -426,12 +431,13 @@ namespace Raven.Client.Connection
 
 		#region ExecuteWithReplication
 
-		public virtual T ExecuteWithReplication<T>(string method, string primaryUrl, int currentRequest, int currentReadStripingBase, Func<string, T> operation)
+		public virtual T ExecuteWithReplication<T>(string method, string primaryUrl, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, T> operation)
 		{
 			T result;
 			var timeoutThrown = false;
 
 			var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
+			var primaryOperation = new OperationMetadata(primaryUrl, null);
 
 			var shouldReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
 			if (shouldReadFromAllServers && method == "GET")
@@ -442,7 +448,7 @@ namespace Raven.Client.Connection
 				if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
 				{
 					// if it is failing, ignore that, and move to the master or any of the replicas
-					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex], currentRequest, method, false))
+					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex].Url, currentRequest, method, false))
 					{
 						if (TryOperation(operation, localReplicationDestinations[replicationIndex], true, out result, out timeoutThrown))
 							return result;
@@ -452,10 +458,10 @@ namespace Raven.Client.Connection
 
 			if (ShouldExecuteUsing(primaryUrl, currentRequest, method, true))
 			{
-				if (TryOperation(operation, primaryUrl, !timeoutThrown && localReplicationDestinations.Count > 0, out result, out timeoutThrown))
+				if (TryOperation(operation, primaryOperation, !timeoutThrown && localReplicationDestinations.Count > 0, out result, out timeoutThrown))
 					return result;
 				if (!timeoutThrown && IsFirstFailure(primaryUrl) &&
-				    TryOperation(operation, primaryUrl, localReplicationDestinations.Count > 0, out result, out timeoutThrown))
+					TryOperation(operation, primaryOperation, localReplicationDestinations.Count > 0, out result, out timeoutThrown))
 					return result;
 				IncrementFailureCount(primaryUrl);
 			}
@@ -463,15 +469,15 @@ namespace Raven.Client.Connection
 			for (var i = 0; i < localReplicationDestinations.Count; i++)
 			{
 				var replicationDestination = localReplicationDestinations[i];
-				if (ShouldExecuteUsing(replicationDestination, currentRequest, method, false) == false)
+				if (ShouldExecuteUsing(replicationDestination.Url, currentRequest, method, false) == false)
 					continue;
 				if (TryOperation(operation, replicationDestination, !timeoutThrown, out result, out timeoutThrown))
 					return result;
-				if (!timeoutThrown && IsFirstFailure(replicationDestination) &&
+				if (!timeoutThrown && IsFirstFailure(replicationDestination.Url) &&
 				    TryOperation(operation, replicationDestination, localReplicationDestinations.Count > i + 1, out result,
 				                 out timeoutThrown))
 					return result;
-				IncrementFailureCount(replicationDestination);
+				IncrementFailureCount(replicationDestination.Url);
 			}
 			// this should not be thrown, but since I know the value of should...
 			throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
@@ -479,12 +485,12 @@ There is a high probability of a network problem preventing access to all the re
 Failed to get in touch with any of the " + (1 + localReplicationDestinations.Count) + " Raven instances.");
 		}
 
-		protected virtual bool TryOperation<T>(Func<string, T> operation, string operationUrl, bool avoidThrowing, out T result, out bool wasTimeout)
+		protected virtual bool TryOperation<T>(Func<OperationMetadata, T> operation, OperationMetadata operationMetadata, bool avoidThrowing, out T result, out bool wasTimeout)
 		{
 			try
 			{
-				result = operation(operationUrl);
-				ResetFailureCount(operationUrl);
+				result = operation(operationMetadata);
+				ResetFailureCount(operationMetadata.Url);
 				wasTimeout = false;
 				return true;
 			}
@@ -505,13 +511,15 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
 		#region ExecuteWithReplicationAsync
 
-		public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, int currentRequest, int currentReadStripingBase, Func<string, Task<T>> operation)
+		public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation)
 		{
 			return ExecuteWithReplicationAsync(new ExecuteWithReplicationState<T>(method, primaryUrl, currentRequest, currentReadStripingBase, operation));
 		}
 
 		private Task<T> ExecuteWithReplicationAsync<T>(ExecuteWithReplicationState<T> state)
 		{
+			var primaryOperation = new OperationMetadata(state.PrimaryUrl, null);
+
 			switch (state.State)
 			{
 				case ExecuteWithReplicationStates.Start:
@@ -526,7 +534,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 						if (replicationIndex < state.ReplicationDestinations.Count && replicationIndex >= 0)
 						{
 							// if it is failing, ignore that, and move to the master or any of the replicas
-							if (ShouldExecuteUsing(state.ReplicationDestinations[replicationIndex], state.CurrentRequest, state.Method, false))
+							if (ShouldExecuteUsing(state.ReplicationDestinations[replicationIndex].Url, state.CurrentRequest, state.Method, false))
 							{
 								return AttemptOperationAndOnFailureCallExecuteWithReplication(state.ReplicationDestinations[replicationIndex],
 																							  state.With(ExecuteWithReplicationStates.AfterTryingWithStripedServer),
@@ -541,14 +549,14 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 					if (!ShouldExecuteUsing(state.PrimaryUrl, state.CurrentRequest, state.Method, true))
 						goto case ExecuteWithReplicationStates.TryAllServers; // skips both checks
 
-					return AttemptOperationAndOnFailureCallExecuteWithReplication(state.PrimaryUrl,
+					return AttemptOperationAndOnFailureCallExecuteWithReplication(primaryOperation,
 																					state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrl),
 																					state.ReplicationDestinations.Count > 
 																					state.LastAttempt + 1 && !state.TimeoutThrown);
 
 				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrl:
 					if (!state.TimeoutThrown && IsFirstFailure(state.PrimaryUrl))
-						return AttemptOperationAndOnFailureCallExecuteWithReplication(state.PrimaryUrl,
+						return AttemptOperationAndOnFailureCallExecuteWithReplication(primaryOperation,
 																					  state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice),
 																					  state.ReplicationDestinations.Count > state.LastAttempt + 1);
 
@@ -567,7 +575,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 						goto case ExecuteWithReplicationStates.AfterTryingAllServers;
 
 					var destination = state.ReplicationDestinations[state.LastAttempt];
-					if (!ShouldExecuteUsing(destination, state.CurrentRequest, state.Method, false))
+					if (!ShouldExecuteUsing(destination.ToString(), state.CurrentRequest, state.Method, false))
 					{
 						// continue the next iteration of the loop
 						goto case ExecuteWithReplicationStates.TryAllServers;
@@ -579,14 +587,14 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 																				  state.LastAttempt + 1 && !state.TimeoutThrown);
 				case ExecuteWithReplicationStates.TryAllServersSecondAttempt:
 					destination = state.ReplicationDestinations[state.LastAttempt];
-					if (!state.TimeoutThrown && IsFirstFailure(destination))
+					if (!state.TimeoutThrown && IsFirstFailure(destination.Url))
 						return AttemptOperationAndOnFailureCallExecuteWithReplication(destination,
 																					  state.With(ExecuteWithReplicationStates.TryAllServersFailedTwice),
 																					  state.ReplicationDestinations.Count > state.LastAttempt + 1);
 
 					goto case ExecuteWithReplicationStates.TryAllServersFailedTwice;
 				case ExecuteWithReplicationStates.TryAllServersFailedTwice:
-					IncrementFailureCount(state.ReplicationDestinations[state.LastAttempt]);
+					IncrementFailureCount(state.ReplicationDestinations[state.LastAttempt].Url);
 
 					// continue the next iteration of the loop
 					goto case ExecuteWithReplicationStates.TryAllServers;
@@ -601,14 +609,14 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			}
 		}
 
-		protected virtual Task<T> AttemptOperationAndOnFailureCallExecuteWithReplication<T>(string url, ExecuteWithReplicationState<T> state, bool avoidThrowing)
+		protected virtual Task<T> AttemptOperationAndOnFailureCallExecuteWithReplication<T>(OperationMetadata operationMetadata, ExecuteWithReplicationState<T> state, bool avoidThrowing)
 		{
-			Task<Task<T>> finalTask = state.Operation(url).ContinueWith(task =>
+			Task<Task<T>> finalTask = state.Operation(operationMetadata).ContinueWith(task =>
 			{
 				switch (task.Status)
 				{
 					case TaskStatus.RanToCompletion:
-						ResetFailureCount(url);
+						ResetFailureCount(operationMetadata.Url);
 						var tcs = new TaskCompletionSource<T>();
 						tcs.SetResult(task.Result);
 						return tcs.Task;
@@ -640,7 +648,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 		protected class ExecuteWithReplicationState<T>
 		{
-			public ExecuteWithReplicationState(string method, string primaryUrl, int currentRequest, int readStripingBase, Func<string, Task<T>> operation)
+			public ExecuteWithReplicationState(string method, string primaryUrl, int currentRequest, int readStripingBase, Func<OperationMetadata, Task<T>> operation)
 			{
 				Method = method;
 				PrimaryUrl = primaryUrl;
@@ -652,14 +660,14 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			}
 
 			public readonly string Method;
-			public readonly Func<string, Task<T>> Operation;
+			public readonly Func<OperationMetadata, Task<T>> Operation;
 			public readonly string PrimaryUrl;
 			public readonly int CurrentRequest;
 			public readonly int ReadStripingBase;
 
 			public ExecuteWithReplicationStates State = ExecuteWithReplicationStates.Start;
 			public int LastAttempt = -1;
-			public List<string> ReplicationDestinations;
+			public List<OperationMetadata> ReplicationDestinations;
 			public bool TimeoutThrown;
 
 			public ExecuteWithReplicationState<T> With(ExecuteWithReplicationStates state)
@@ -768,6 +776,19 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		}
 	}
 
+	public class OperationMetadata
+	{
+		public OperationMetadata(string url, string apiKey)
+		{
+			Url = url;
+			ApiKey = apiKey;
+		}
+
+		public string Url { get; private set; }
+
+		public string ApiKey { get; private set; }
+	}
+
 	/// <summary>
 	/// The event arguments for when the failover status changed
 	/// </summary>
@@ -785,6 +806,18 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 	public class ReplicationDestinationData
 	{
+		public ReplicationDestinationData()
+		{
+		}
+
+		public ReplicationDestinationData(ReplicationDestinationData other)
+		{
+			Url = other.Url;
+			ApiKey = other.ApiKey;
+		}
+
 		public string Url { get; set; }
+
+		public string ApiKey { get; set; }
 	}
 }

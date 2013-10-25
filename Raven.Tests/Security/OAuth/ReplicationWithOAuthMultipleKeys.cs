@@ -38,7 +38,7 @@ namespace Raven.Tests.Security.OAuth
 		protected override void ConfigureDatabase(Database.DocumentDatabase database)
 		{
 			var apiKey = apiKeys[databaseCounter++];
-			database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+			database.Put("Raven/ApiKeys/" + apiKey.Split('/')[0], null, RavenJObject.FromObject(new ApiKeyDefinition
 			{
 				Name = apiKey.Split('/')[0],
 				Secret = apiKey.Split('/')[1],

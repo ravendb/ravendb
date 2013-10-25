@@ -47,7 +47,7 @@ namespace Raven.Tests.Issues
 			{
 				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", 1, 1, url =>
 				{
-					urlsTried.Add(url);
+					urlsTried.Add(url.Url);
 					throw new WebException("Timeout", WebExceptionStatus.Timeout);
 
 					return 1;
@@ -92,7 +92,7 @@ namespace Raven.Tests.Issues
 			{
 				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", 1, 1, url =>
 				{
-					urlsTried.Add(url);
+					urlsTried.Add(url.Url);
 					throw new WebException("Timeout", WebExceptionStatus.Timeout);
 
 					return 1;
@@ -136,7 +136,7 @@ namespace Raven.Tests.Issues
 			var aggregateException = Assert.Throws<AggregateException>(() =>
 				replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", 1, 1, url =>
 				{
-					urlsTried.Add(url);
+					urlsTried.Add(url.Url);
 
 					return new CompletedTask<int>(new WebException("Timeout", WebExceptionStatus.Timeout));
 				}).Wait()
@@ -181,7 +181,7 @@ namespace Raven.Tests.Issues
 			var aggregateException = Assert.Throws<AggregateException>(() =>
 				replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", 1, 1, url =>
 				{
-					urlsTried.Add(url);
+					urlsTried.Add(url.Url);
 
 					return new CompletedTask<int>(new WebException("Timeout", WebExceptionStatus.Timeout));
 				}).Wait()
