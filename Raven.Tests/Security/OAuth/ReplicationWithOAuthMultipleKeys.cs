@@ -123,6 +123,13 @@ namespace Raven.Tests.Security.OAuth
 			new MyIndex().Execute(store1);
 
 			Assert.NotNull(store2.DatabaseCommands.GetIndex("MyIndex"));
+
+			var serverClient = ((ServerClient)store1.DatabaseCommands);
+			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+
+			servers[0].Dispose();
+
+			Assert.NotNull(store1.DatabaseCommands.GetIndex("MyIndex"));
 		}
 
 		[Fact]
@@ -136,6 +143,13 @@ namespace Raven.Tests.Security.OAuth
 
 			await new MyIndex().ExecuteAsync(store1.AsyncDatabaseCommands, store1.Conventions);
 			Assert.NotNull(await store2.AsyncDatabaseCommands.GetIndexAsync("MyIndex"));
+
+			var serverClient = ((ServerClient)store1.DatabaseCommands);
+			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
+
+			servers[0].Dispose();
+
+			Assert.NotNull(await store1.AsyncDatabaseCommands.GetIndexAsync("MyIndex"));
 		}
 
 		public class MyIndex : AbstractIndexCreationTask<Company>
