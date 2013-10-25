@@ -30,7 +30,7 @@ namespace Raven.Tests.Issues
 
 				storage.Batch(accessor => accessor.Tasks.AddTask(new RemoveFromIndexTask()
 																 {
-																	 Index = "index1"
+																	 Index = 1
 																 }, date1));
 
 				storage.Batch(accessor =>
@@ -48,7 +48,7 @@ namespace Raven.Tests.Issues
 
 				storage.Batch(accessor => accessor.Tasks.AddTask(new TouchMissingReferenceDocumentTask
 																 {
-																	 Index = "index2"
+																	 Index = 2
 																 }, date2));
 
 				storage.Batch(accessor =>

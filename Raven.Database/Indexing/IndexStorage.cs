@@ -57,6 +57,8 @@ namespace Raven.Database.Indexing
 		private readonly Analyzer dummyAnalyzer = new SimpleAnalyzer();
 		private DateTime latestPersistedQueryTime;
 		private readonly FileStream crashMarker;
+		private ConcurrentDictionary<int, Index> indexes =
+			new ConcurrentDictionary<int, Index>();
 
 		public IndexStorage(IndexDefinitionStorage indexDefinitionStorage, InMemoryRavenConfiguration configuration, DocumentDatabase documentDatabase)
 		{
@@ -239,9 +241,10 @@ namespace Raven.Database.Indexing
 		                var field = decodedKey.Substring(0, lastIndexOfDistance);
 		                var extension = new SuggestionQueryIndexExtension(
 		                    documentDatabase.WorkContext,
-		                    Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), searcher.IndexReader.Directory() is RAMDirectory,
+		                    Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName, key), 
 		                    SuggestionQueryRunner.GetStringDistance(distanceType),
-		                    field,
+							searcher.IndexReader.Directory() is RAMDirectory,
+							field,
 		                    accuracy);
 		                indexImplementation.SetExtension(key, extension);
 		            }
@@ -1045,12 +1048,12 @@ namespace Raven.Database.Indexing
 			});
 		}
 
-		private IndexStats GetIndexStats(IStorageActionsAccessor accessor, string indexName)
+		private IndexStats GetIndexStats(IStorageActionsAccessor accessor, int indexId)
 		{
-			var indexStats = accessor.Indexing.GetIndexStats(indexName);
+			var indexStats = accessor.Indexing.GetIndexStats(indexId);
 			if (indexStats == null)
 				return null;
-			indexStats.LastQueryTimestamp = GetLastQueryTime(indexName);
+			indexStats.LastQueryTimestamp = GetLastQueryTime(indexId);
 			return indexStats;
 		}
 

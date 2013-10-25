@@ -837,7 +837,7 @@ namespace Raven.Database
                         {
                             SetPerCollectionEtags(documents);
                             etagSynchronizer.UpdateSynchronizationState(documents);
-                            prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).AfterStorageCommitBeforeWorkNotifications(documents);
+                            prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, null).AfterStorageCommitBeforeWorkNotifications(documents);
                         });
 
                         if (addDocumentResult.Updated)
@@ -1267,7 +1267,7 @@ namespace Raven.Database
             }
 
 
-			InvokeSuggestionIndexing(fixedName, definition);
+			InvokeSuggestionIndexing(name, definition);
 
             TransactionalStorage.Batch(actions =>
             {
@@ -1319,8 +1319,10 @@ namespace Raven.Database
                 var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
                     workContext,
                     Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", name, indexExtensionKey),
+					SuggestionQueryRunner.GetStringDistance(suggestionOption.Distance),
                     configuration.RunInMemory,
-                    field);
+                    field,
+					suggestionOption.Accuracy);
 
                 IndexStorage.SetIndexExtension(name, indexExtensionKey, suggestionQueryIndexExtension);
             }
