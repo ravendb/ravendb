@@ -35,6 +35,13 @@ namespace Raven.Database.Server.Responders.Debugging
 					.ToList();
 			});
 
+			foreach (var taskMetadata in tasks)
+			{
+				var indexInstance = Database.IndexStorage.GetIndexInstance(taskMetadata.IndexId);
+				if (indexInstance != null)
+					taskMetadata.IndexName = indexInstance.PublicName;
+			}
+
 			context.WriteJson(tasks);
 		}
 	}
