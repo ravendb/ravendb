@@ -100,7 +100,7 @@ namespace Owin
 			public bool UseBufferedOutputStream(HttpResponseMessage response)
 			{
 				return (response.Content is ChangesPushContent ||
-						response.Content is StreamsController.StreamQueryContent ||
+						/*response.Content is StreamsController.StreamQueryContent ||*/
 						response.Content is StreamContent ||
 						/*response.Content is PushStreamContent ||
 						response.Content is JsonContent ||*/
