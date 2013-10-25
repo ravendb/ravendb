@@ -102,8 +102,8 @@ namespace Owin
 				return (response.Content is ChangesPushContent ||
 						response.Content is StreamsController.StreamQueryContent ||
 						response.Content is StreamContent ||
-						response.Content is PushStreamContent ||
-						response.Content is JsonContent ||
+						/*response.Content is PushStreamContent ||
+						response.Content is JsonContent ||*/
 						response.Content is MultiGetController.MultiGetContent) == false;
 			}
 		}
