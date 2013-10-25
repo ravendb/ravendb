@@ -1266,9 +1266,6 @@ namespace Raven.Database
                     break;
             }
 
-
-			InvokeSuggestionIndexing(name, definition);
-
             TransactionalStorage.Batch(actions =>
             {
                 definition.IndexId = (int)GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions, null);
