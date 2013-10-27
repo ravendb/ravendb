@@ -14,6 +14,47 @@
 	public class MultiAdds
 	{
 		[Fact]
+		public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail()
+		{
+			using (var Env = new StorageEnvironment(new PureMemoryPager()))
+			{
+
+				var random = new Random();
+				var inputData = new List<byte[]>();
+				for (int i = 0; i < 250; i++)
+				{
+					var buffer = new byte[1000];
+					random.NextBytes(buffer);
+					inputData.Add(buffer);
+				}
+
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					Env.CreateTree(tx, "foo");
+					tx.Commit();
+				}
+
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = tx.GetTree("foo");
+					foreach (var buffer in inputData)
+						tree.MultiAdd(tx, "ChildTreeKey", new Slice(buffer));
+
+					tx.Commit();
+				}
+
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = tx.GetTree("foo");
+					foreach (var buffer in inputData)
+						Assert.DoesNotThrow(() => tree.MultiDelete(tx, "ChildTreeKey", new Slice(buffer)));
+
+					tx.Commit();
+				}
+			}
+		}
+
+		[Fact]
 		public void SplitterIssue()
 		{
 			const int DocumentCount = 10;
