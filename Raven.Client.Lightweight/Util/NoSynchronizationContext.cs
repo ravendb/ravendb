@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="SafeSyncronizationContext.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="NoSynchronizationContext.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -9,7 +9,7 @@ using Raven.Abstractions.Extensions;
 
 namespace Raven.Client.Util
 {
-	public static class NoSyncronizationContext
+	public static class NoSynchronizationContext
 	{
 		 public static IDisposable Scope()
 		 {

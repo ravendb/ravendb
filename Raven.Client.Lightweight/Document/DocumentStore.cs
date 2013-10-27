@@ -723,7 +723,7 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(database) == false)
 				dbUrl = dbUrl + "/databases/" + database;
 
-			using(NoSyncronizationContext.Scope())
+			using(NoSynchronizationContext.Scope())
 			{
 				return new RemoteDatabaseChanges(dbUrl,
 					Credentials,
