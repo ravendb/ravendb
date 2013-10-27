@@ -70,6 +70,8 @@ namespace Owin
 				"Database Route", "databases/{databaseName}/{controller}/{action}",
 				new { id = RouteParameter.Optional });
 			cfg.MessageHandlers.Add(new GZipToJsonHandler());
+			cfg.MessageHandlers.Add(new CompressHandler());
+
 			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
 			return cfg;
 		}
@@ -100,10 +102,10 @@ namespace Owin
 			public bool UseBufferedOutputStream(HttpResponseMessage response)
 			{
 				return (response.Content is ChangesPushContent ||
-						/*response.Content is StreamsController.StreamQueryContent ||*/
+						response.Content is StreamsController.StreamQueryContent ||
 						response.Content is StreamContent ||
-						/*response.Content is PushStreamContent ||
-						response.Content is JsonContent ||*/
+						response.Content is PushStreamContent ||
+						response.Content is JsonContent ||
 						response.Content is MultiGetController.MultiGetContent) == false;
 			}
 		}

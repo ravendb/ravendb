@@ -810,6 +810,7 @@
     <Compile Include="Server\WebApi\Attributes\HttpEvalAttribute.cs" />
     <Compile Include="Server\WebApi\Attributes\HttpResetAttribute.cs" />
     <Compile Include="Server\WebApi\Filters\RavenExceptionFilterAttribute.cs" />
+    <Compile Include="Server\WebApi\Handlers\CompressHandler.cs" />
     <Compile Include="Server\WebApi\IRavenServer.cs" />
     <Compile Include="Server\WebApi\Handlers\GZipToJsonHandler.cs" />
     <Compile Include="Server\WebApi\RequestManager.cs" />
