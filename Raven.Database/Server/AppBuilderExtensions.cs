@@ -60,7 +60,7 @@ namespace Owin
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 
 			cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
-			cfg.Filters.Add(new RavenExceptionFilterAttribute());
+			//cfg.Filters.Add(new RavenExceptionFilterAttribute());
 			cfg.MapHttpAttributeRoutes();
 			cfg.Routes.MapHttpRoute(
 				"API Default", "{controller}/{action}",
@@ -103,7 +103,7 @@ namespace Owin
 					    response.Content is StreamsController.StreamQueryContent ||
 						response.Content is StreamContent ||
 						response.Content is PushStreamContent ||
-						response.Content is JsonContent ||
+						/*response.Content is JsonContent ||*/
 						response.Content is MultiGetController.MultiGetContent) == false;
 			}
 		}
