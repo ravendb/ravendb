@@ -66,7 +66,7 @@ namespace Raven.Client.Document
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 #endif
         {
-            using (NoSyncronizationContext.Scope())
+            using (NoSynchronizationContext.Scope())
             {
                 OperationId = Guid.NewGuid();
                 operationClient = client;
@@ -311,7 +311,7 @@ namespace Raven.Client.Document
             if (disposed)
                 return;
 
-            using (NoSyncronizationContext.Scope())
+            using (NoSynchronizationContext.Scope())
             {
                 var disposeAsync = DisposeAsync().ConfigureAwait(false);
                 disposeAsync.GetAwaiter().GetResult();
