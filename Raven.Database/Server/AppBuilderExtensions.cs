@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.Hosting;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
@@ -110,8 +111,15 @@ namespace Owin
 
 			public bool UseBufferedOutputStream(HttpResponseMessage response)
 			{
-				return false;
+				if (HostingEnvironment.IsHosted)
+				{
+					if(DateTime.Now > new DateTime(2013,12,31))
+						throw new InvalidOperationException("This bug was supposed to be fixed by now");
 
+					return (response.Content is ChangesPushContent ||
+						response.Content is PushStreamContent ||
+						response.Content is MultiGetController.MultiGetContent) == false;
+				}
 				return (response.Content is ChangesPushContent ||
 						response.Content is StreamsController.StreamQueryContent ||
 						response.Content is StreamContent ||
