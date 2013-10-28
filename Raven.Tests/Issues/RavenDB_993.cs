@@ -72,7 +72,7 @@ namespace Raven.Tests.Issues
 
 			var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
 			                                                                                db1Url + "/admin/replicationInfo",
-																							"POST", CredentialCache.DefaultCredentials, null, store1.Conventions));
+																							"POST", new OperationMetadata.OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
 			request.Write(replicationDocument.DataAsJson.ToString(Formatting.None));
 			var result = request.ReadResponseJson() as RavenJArray;
@@ -128,7 +128,7 @@ namespace Raven.Tests.Issues
 
 			var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
 																							db1Url + "/admin/replicationInfo",
-																							"POST", CredentialCache.DefaultCredentials, null, store1.Conventions));
+																							"POST", new OperationMetadata.OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
 			request.Write(replicationDocument.DataAsJson.ToString(Formatting.None));
 			var result = request.ReadResponseJson() as RavenJArray;
@@ -167,7 +167,7 @@ namespace Raven.Tests.Issues
 
 			var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
 																							db1Url + "/admin/replicationInfo",
-																							"POST", CredentialCache.DefaultCredentials, null, store1.Conventions));
+																							"POST", new OperationMetadata.OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
 			request.Write(replicationDocument.DataAsJson.ToString(Formatting.None));
 			var result = request.ReadResponseJson() as RavenJArray;
@@ -204,7 +204,7 @@ namespace Raven.Tests.Issues
 
 			var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
 																							db1Url + "/admin/replicationInfo",
-																							"POST", CredentialCache.DefaultCredentials, null, store1.Conventions));
+																							"POST", new OperationMetadata.OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
 
 

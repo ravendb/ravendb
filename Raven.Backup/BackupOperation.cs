@@ -72,7 +72,7 @@ namespace Raven.Backup
 			uriString += url;
 			if (Incremental)
 				uriString += "?incremental=true";
-			var req = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, Credentials, null, store.Conventions));
+			var req = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationMetadata.OperationCredentials(ApiKey, CredentialCache.DefaultCredentials), store.Conventions));
 
 			if (Timeout.HasValue)
 			{

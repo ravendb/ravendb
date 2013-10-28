@@ -18,13 +18,6 @@ namespace Raven.Abstractions.OAuth
 {
 	public class SecuredAuthenticator : AbstractAuthenticator
 	{
-		private readonly string _apiKey;
-
-		public SecuredAuthenticator(string apiKey)
-		{
-			_apiKey = apiKey;
-		}
-
 		public override void ConfigureRequest(object sender, WebRequestEventArgs e)
 		{
 			if (CurrentOauthToken != null)
@@ -32,7 +25,8 @@ namespace Raven.Abstractions.OAuth
 				base.ConfigureRequest(sender, e);
 				return;
 			}
-			if (_apiKey != null)
+
+			if (e.Credentials.ApiKey != null)
 			{
 #if NETFX_CORE
 				e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
@@ -99,8 +93,6 @@ namespace Raven.Abstractions.OAuth
 #if !SILVERLIGHT && !NETFX_CORE
 		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey)
 		{
-			apiKey = apiKey ?? _apiKey;
-
 			string serverRSAExponent = null;
 			string serverRSAModulus = null;
 			string challenge = null;
@@ -173,8 +165,6 @@ namespace Raven.Abstractions.OAuth
 		private Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, string apiKey, int tries)
 		{
 			if (oauthSource == null) throw new ArgumentNullException("oauthSource");
-
-			apiKey = apiKey ?? _apiKey;
 
 			var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRsaExponent, serverRsaModulus, challenge, apiKey);
 			var authRequest = authRequestTuple.Item1;

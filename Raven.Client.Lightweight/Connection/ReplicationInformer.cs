@@ -347,7 +347,7 @@ namespace Raven.Client.Connection
 				JsonDocument document;
 				try
 				{
-					document = commands.DirectGet(new OperationMetadata(commands.Url), RavenReplicationDestinations);
+					document = commands.DirectGet(new OperationMetadata(commands.Url, commands.Credentials), RavenReplicationDestinations);
 					failureCounts[commands.Url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				}
 				catch (Exception e)
@@ -379,12 +379,13 @@ namespace Raven.Client.Connection
 				if (string.IsNullOrEmpty(url) || x.Disabled || x.IgnoredClient)
 					return null;
 				if (string.IsNullOrEmpty(x.Database))
-					return new OperationMetadata(url, x.Username, x.Password, x.ApiKey);
+					return new OperationMetadata(url, x.Username, x.Password, x.Domain, x.ApiKey);
 
 				return new OperationMetadata(
 					MultiDatabase.GetRootDatabaseUrl(url) + "/databases/" + x.Database + "/",
 					x.Username,
 					x.Password,
+					x.Domain,
 					x.ApiKey);
 			})
 				// filter out replication destination that don't have the url setup, we don't know how to reach them
@@ -428,7 +429,7 @@ namespace Raven.Client.Connection
 
 		#region ExecuteWithReplication
 
-		public virtual T ExecuteWithReplication<T>(string method, string primaryUrl, ICredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, T> operation)
+		public virtual T ExecuteWithReplication<T>(string method, string primaryUrl, OperationMetadata.OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, T> operation)
 		{
 			T result;
 			var timeoutThrown = false;
@@ -489,7 +490,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 			try
 			{
 				
-				result = operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials, primaryOperationMetadata.ApiKey) : operationMetadata);
+				result = operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata);
 				ResetFailureCount(operationMetadata.Url);
 				wasTimeout = false;
 				return true;
@@ -497,7 +498,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 			catch (Exception e)
 			{
 				var webException = e as WebException;
-				if (tryWithPrimaryCredentials && operationMetadata.HasCredentials() && webException != null)
+				if (tryWithPrimaryCredentials && operationMetadata.Credentials.HasCredentials() && webException != null)
 				{
 					IncrementFailureCount(operationMetadata.Url);
 
@@ -523,7 +524,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
 		#region ExecuteWithReplicationAsync
 
-		public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, ICredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation)
+		public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationMetadata.OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation)
 		{
 			return ExecuteWithReplicationAsync(new ExecuteWithReplicationState<T>(method, primaryUrl, primaryCredentials, currentRequest, currentReadStripingBase, operation));
 		}
@@ -625,7 +626,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		{
 			var tryWithPrimaryCredentials = IsFirstFailure(operationMetadata.Url) && primaryOperationMetadata != null;
 
-			Task<Task<T>> finalTask = state.Operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials, primaryOperationMetadata.ApiKey) : operationMetadata).ContinueWith(task =>
+			Task<Task<T>> finalTask = state.Operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata).ContinueWith(task =>
 			{
 				switch (task.Status)
 				{
@@ -648,7 +649,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 							var aggregateException = task.Exception;
 							var webException = aggregateException.ExtractSingleInnerException() as WebException;
 
-							if (tryWithPrimaryCredentials && operationMetadata.HasCredentials() && webException != null)
+							if (tryWithPrimaryCredentials && operationMetadata.Credentials.HasCredentials() && webException != null)
 							{
 								IncrementFailureCount(operationMetadata.Url);
 
@@ -680,7 +681,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 		protected class ExecuteWithReplicationState<T>
 		{
-			public ExecuteWithReplicationState(string method, string primaryUrl, ICredentials primaryCredentials, int currentRequest, int readStripingBase, Func<OperationMetadata, Task<T>> operation)
+			public ExecuteWithReplicationState(string method, string primaryUrl, OperationMetadata.OperationCredentials primaryCredentials, int currentRequest, int readStripingBase, Func<OperationMetadata, Task<T>> operation)
 			{
 				Method = method;
 				PrimaryUrl = primaryUrl;
@@ -697,7 +698,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			public readonly string PrimaryUrl;
 			public readonly int CurrentRequest;
 			public readonly int ReadStripingBase;
-			public readonly ICredentials PrimaryCredentials;
+			public readonly OperationMetadata.OperationCredentials PrimaryCredentials;
 
 			public ExecuteWithReplicationStates State = ExecuteWithReplicationStates.Start;
 			public int LastAttempt = -1;
@@ -812,38 +813,55 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 	public class OperationMetadata
 	{
-		public OperationMetadata(string url, string username = null, string password = null, string apiKey = null)
+		public OperationMetadata(string url, string username = null, string password = null, string domain = null, string apiKey = null)
 		{
 			Url = url;
-			ApiKey = apiKey;
 
-			if (!string.IsNullOrEmpty(username) && string.IsNullOrEmpty(password))
-				Credentials = new NetworkCredential(username, password);
+			ICredentials credentials = null;
+			if (!string.IsNullOrEmpty(username))
+				credentials = new NetworkCredential(username, password ?? string.Empty, domain ?? string.Empty);
+
+			Credentials = new OperationCredentials(apiKey, credentials);
 		}
 
 		public OperationMetadata(string url, ICredentials credentials, string apiKey = null)
 		{
 			Url = url;
-			ApiKey = apiKey;
-			Credentials = credentials;
+			Credentials = new OperationCredentials(apiKey, credentials);
+		}
+
+		public OperationMetadata(string url, OperationCredentials credentials)
+		{
+			Url = url;
+			Credentials = new OperationCredentials(credentials.ApiKey, credentials.Credentials);
 		}
 
 		public OperationMetadata(OperationMetadata operationMetadata)
 		{
 			Url = operationMetadata.Url;
-			ApiKey = operationMetadata.ApiKey;
-			Credentials = operationMetadata.Credentials;
+			Credentials = new OperationCredentials(operationMetadata.Credentials.ApiKey, operationMetadata.Credentials.Credentials);
 		}
 
 		public string Url { get; private set; }
 
-		public string ApiKey { get; private set; }
+		public OperationCredentials Credentials { get; private set; }
 
-		public ICredentials Credentials { get; private set; }
-
-		public bool HasCredentials()
+		public class OperationCredentials
 		{
-			return !string.IsNullOrEmpty(ApiKey) || Credentials != null;
+			public OperationCredentials(string apiKey, ICredentials credentials)
+			{
+				ApiKey = apiKey;
+				Credentials = credentials;
+			}
+
+			public ICredentials Credentials { get; private set; }
+
+			public string ApiKey { get; private set; }
+
+			public bool HasCredentials()
+			{
+				return !string.IsNullOrEmpty(ApiKey) || Credentials != null;
+			}
 		}
 	}
 

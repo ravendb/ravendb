@@ -32,7 +32,7 @@ namespace Raven.Client.Changes
         private bool watchAllIndexes;
         private Timer clientSideHeartbeatTimer;
         private readonly string url;
-        private readonly ICredentials credentials;
+        private readonly OperationMetadata.OperationCredentials credentials;
         private readonly HttpJsonRequestFactory jsonRequestFactory;
         private readonly DocumentConvention conventions;
         private readonly ReplicationInformer replicationInformer;
@@ -47,6 +47,7 @@ namespace Raven.Client.Changes
 
         public RemoteDatabaseChanges(
             string url,
+			string apiKey,
             ICredentials credentials,
             HttpJsonRequestFactory jsonRequestFactory,
             DocumentConvention conventions,
@@ -58,7 +59,7 @@ namespace Raven.Client.Changes
             id = Interlocked.Increment(ref connectionCounter) + "/" +
                  Base62Util.Base62Random();
             this.url = url;
-            this.credentials = credentials;
+            this.credentials = new OperationMetadata.OperationCredentials(apiKey, credentials);
             this.jsonRequestFactory = jsonRequestFactory;
             this.conventions = conventions;
             this.replicationInformer = replicationInformer;
@@ -84,7 +85,7 @@ namespace Raven.Client.Changes
                 clientSideHeartbeatTimer = null;
             }
 
-            var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials, null,
+            var requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, "GET", credentials,
                                                                 conventions)
             {
                 AvoidCachingRequest = true
@@ -249,7 +250,7 @@ namespace Raven.Client.Changes
 
                     sendUrl = sendUrl.NoCache();
 
-                    var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, null, conventions)
+                    var requestParams = new CreateHttpJsonRequestParams(null, sendUrl, "GET", credentials, conventions)
                     {
                         AvoidCachingRequest = true
                     };

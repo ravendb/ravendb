@@ -126,8 +126,7 @@ namespace Raven.Client.Document
 				null,
 				destinationUrl.LastReplicatedEtagFor(documentStore.Url),
 				"GET",
-				documentStore.Credentials,
-				documentStore.ApiKey,
+				new OperationMetadata.OperationCredentials(documentStore.ApiKey, documentStore.Credentials), 
 				documentStore.Conventions);
 			var httpJsonRequest = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 			var json = await httpJsonRequest.ReadResponseJsonAsync();

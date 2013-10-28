@@ -28,8 +28,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			                                                                   servers[0].Database.ServerUrl +
 																			   "admin/replication/purge-tombstones?docEtag=" + last,
 			                                                                   "POST",
-			                                                                   CredentialCache.DefaultCredentials,
-																			   null,
+																			   new OperationMetadata.OperationCredentials(null, CredentialCache.DefaultCredentials),
 			                                                                   store1.Conventions);
 			 store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();
 
@@ -59,8 +58,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 																			   servers[0].Database.ServerUrl +
 																			   "admin/replication/purge-tombstones?docEtag=" + last,
 																			   "POST",
-																			   CredentialCache.DefaultCredentials,
-																			   null,
+																			   new OperationMetadata.OperationCredentials(null, CredentialCache.DefaultCredentials),
 																			   store1.Conventions);
 			 store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();
 

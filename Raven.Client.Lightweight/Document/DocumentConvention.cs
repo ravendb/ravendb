@@ -593,7 +593,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Handles unauthenticated responses, usually by authenticating against the oauth server
 		/// </summary>
-		public Func<HttpWebResponse, string, Action<HttpWebRequest>> HandleUnauthorizedResponse { get; set; }
+		public Func<HttpWebResponse, OperationMetadata.OperationCredentials, Action<HttpWebRequest>> HandleUnauthorizedResponse { get; set; }
 
 		/// <summary>
 		/// Handles forbidden responses
@@ -604,13 +604,13 @@ namespace Raven.Client.Document
 		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
 		/// in async manner
 		/// </summary>
-		public Func<HttpWebResponse, string, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }
+		public Func<HttpWebResponse, OperationMetadata.OperationCredentials, Task<Action<HttpWebRequest>>> HandleUnauthorizedResponseAsync { get; set; }
 
 		/// <summary>
 		/// Begins handling of forbidden responses
 		/// in async manner
 		/// </summary>
-		public Func<HttpWebResponse, Task<Action<HttpWebRequest>>> HandleForbiddenResponseAsync { get; set; }
+		public Func<HttpWebResponse, OperationMetadata.OperationCredentials, Task<Action<HttpWebRequest>>> HandleForbiddenResponseAsync { get; set; }
 
 		/// <summary>
 		/// When RavenDB needs to convert between a string id to a value type like int or guid, it calls

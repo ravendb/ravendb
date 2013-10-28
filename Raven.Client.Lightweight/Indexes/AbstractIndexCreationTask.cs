@@ -450,7 +450,7 @@ namespace Raven.Client.Indexes
 				? replicationUrl
 				: replicationUrl + "/databases/" + replicationDestination.Database;
 
-			return new OperationMetadata(url, replicationDestination.Username, replicationDestination.Password, replicationDestination.ApiKey);
+			return new OperationMetadata(url, replicationDestination.Username, replicationDestination.Password, replicationDestination.Domain, replicationDestination.ApiKey);
 		}
 
 #if !SILVERLIGHT && !NETFX_CORE

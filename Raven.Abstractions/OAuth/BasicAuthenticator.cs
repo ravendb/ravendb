@@ -17,12 +17,10 @@ namespace Raven.Abstractions.OAuth
 {
 	public class BasicAuthenticator : AbstractAuthenticator
 	{
-		private readonly string _apiKey;
 		private readonly bool enableBasicAuthenticationOverUnsecuredHttp;
 	
-		public BasicAuthenticator(string apiKey, bool enableBasicAuthenticationOverUnsecuredHttp)
+		public BasicAuthenticator(bool enableBasicAuthenticationOverUnsecuredHttp)
 		{
-			_apiKey = apiKey;
 			this.enableBasicAuthenticationOverUnsecuredHttp = enableBasicAuthenticationOverUnsecuredHttp;
 		}
 
@@ -51,8 +49,6 @@ namespace Raven.Abstractions.OAuth
 #if !SILVERLIGHT && !NETFX_CORE
 		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey)
 		{
-			apiKey = apiKey ?? _apiKey;
-
 			var authRequest = PrepareOAuthRequest(oauthSource, apiKey);
 			using (var response = authRequest.GetResponse())
 			{
