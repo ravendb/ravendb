@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using Amazon;
 using Amazon.Glacier.Transfer;
+using Amazon.RDS.Model;
 using Amazon.S3.Model;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
@@ -148,10 +149,9 @@ namespace Raven.Database.Bundles.PeriodicBackups
 						    {
 						        BackupPath = backupPath,
 						        StartDocsEtag = localBackupStatus.LastDocsEtag,
-						        StartAttachmentEtag = localBackupStatus.LastAttachmentsEtag,
+						        StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag,
 						    };
-							var dd = new DataDumper(documentDatabase);
-							var exportResult = await dd.ExportData(null, null, backupStatus);
+						    var exportResult = await new DataDumper(documentDatabase).ExportData(options, backupStatus);
 
 							// No-op if nothing has changed
                             if (exportResult.LastDocsEtag == localBackupStatus.LastDocsEtag &&

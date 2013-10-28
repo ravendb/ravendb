@@ -26,18 +26,18 @@ namespace Raven.Abstractions.Smuggler
             OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
             Timeout = TimeSpan.FromSeconds(30);
             ShouldExcludeExpired = false;
-            StartAttachmentEtag = StartDocsEtag = Etag.Empty;
+            StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
         }
 
         /// <summary>
-        /// Start exporting from the specified document etag
+        /// Start exporting from the specified documents etag
         /// </summary>
         public Etag StartDocsEtag { get; set; }
 
         /// <summary>
-        /// Start exporting from the specified attachment etag
+        /// Start exporting from the specified attachments etag
         /// </summary>
-        public Etag StartAttachmentEtag { get; set; }
+        public Etag StartAttachmentsEtag { get; set; }
 
         /// <summary>
         /// The number of document or attachments or indexes or transformers to load in each call to the RavenDB database.

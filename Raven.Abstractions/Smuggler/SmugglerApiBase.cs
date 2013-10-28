@@ -138,7 +138,7 @@ namespace Raven.Abstractions.Smuggler
 					jsonWriter.WriteStartArray();
 					if (options.OperateOnTypes.HasFlag(ItemType.Attachments))
 					{
-						result.LastAttachmentsEtag = await ExportAttachments(jsonWriter, options.StartAttachmentEtag);
+						result.LastAttachmentsEtag = await ExportAttachments(jsonWriter, options.StartAttachmentsEtag);
 					}
 					jsonWriter.WriteEndArray();
 
@@ -177,8 +177,8 @@ namespace Raven.Abstractions.Smuggler
 
 	    private void ReadLastEtagsFromClass(SmugglerOptions options, PeriodicBackupStatus backupStatus)
 		{
-			options.StartAttachmentEtag = backupStatus.LastAttachmentsEtag;
-			options.StartDocumentEtag = backupStatus.LastDocsEtag;
+			options.StartAttachmentsEtag = backupStatus.LastAttachmentsEtag;
+			options.StartDocsEtag = backupStatus.LastDocsEtag;
 		}
 
 		public static void ReadLastEtagsFromFile(SmugglerOptions options)
@@ -201,8 +201,8 @@ namespace Raven.Abstractions.Smuggler
 					log.WarnException("Could not parse etag document from file : " + etagFileLocation + ", ignoring, will start from scratch", e);
 					return;
 				}
-				options.StartDocumentEtag = Etag.Parse(ravenJObject.Value<string>("LastDocEtag"));
-				options.StartAttachmentEtag = Etag.Parse(ravenJObject.Value<string>("LastAttachmentEtag"));
+				options.StartDocsEtag = Etag.Parse(ravenJObject.Value<string>("LastDocEtag"));
+				options.StartAttachmentsEtag = Etag.Parse(ravenJObject.Value<string>("LastAttachmentEtag"));
 			}
 		}
 
