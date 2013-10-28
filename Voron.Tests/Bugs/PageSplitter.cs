@@ -1,4 +1,6 @@
-﻿namespace Voron.Tests.Bugs
+﻿using System.Text;
+
+namespace Voron.Tests.Bugs
 {
 	using System;
 	using System.Collections.Generic;
@@ -11,6 +13,44 @@
 
 	public class PageSplitter : StorageTest
 	{
+		readonly Random _random = new Random(1234);
+
+		private string RandomString(int size)
+		{
+			var builder = new StringBuilder();
+			for (int i = 0; i < size; i++)
+			{
+				builder.Append(Convert.ToChar(Convert.ToInt32(Math.Floor(26 * _random.NextDouble() + 65))));
+			}
+
+			return builder.ToString();
+		}
+
+		[Fact]
+		public void TreeAdds_WithVeryLargeKey()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.CreateTree(tx, "foo");
+				tx.Commit();
+			}
+
+			var inputData = new List<string>();
+			for (int i = 0; i < 1000; i++)
+			{
+				inputData.Add(RandomString(2000));
+			}
+			
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var tree = tx.GetTree("foo");
+				foreach (var keyString in inputData)
+					Assert.DoesNotThrow(() => tree.Add(tx, keyString, new MemoryStream(new byte[]{ 1 , 2, 3 , 4})));
+
+				tx.Commit();
+			}
+		}
+
 		[Fact(Skip = "Long running")]
 		public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
 		{
