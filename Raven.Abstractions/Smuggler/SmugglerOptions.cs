@@ -22,6 +22,7 @@ namespace Raven.Abstractions.Smuggler
         public SmugglerOptionsBase()
         {
             BatchSize = 1024;
+            OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
         }
 
         /// <summary>
@@ -37,6 +38,13 @@ namespace Raven.Abstractions.Smuggler
                 batchSize = value;
             }
         }
+
+        /// <summary>
+        /// Specify the types to operate on. You can specify more than one type by combining items with the OR parameter.
+        /// Default is all items.
+        /// Usage example: OperateOnTypes = ItemType.Indexes | ItemType.Transformers | ItemType.Documents | ItemType.Attachments.
+        /// </summary>
+        public ItemType OperateOnTypes { get; set; }
     }
 
     public class SmugglerOptions : SmugglerOptionsBase
@@ -44,7 +52,6 @@ namespace Raven.Abstractions.Smuggler
 		public SmugglerOptions()
 		{
 			Filters = new List<FilterSetting>();
-			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
 			Timeout = 30 * 1000; // 30 seconds
 			ShouldExcludeExpired = false;
 			LastAttachmentEtag = LastDocsEtag = Etag.Empty;
@@ -69,13 +76,6 @@ namespace Raven.Abstractions.Smuggler
         public bool Incremental { get; set; }
 
         public string TransformScript { get; set; }
-
-		/// <summary>
-		/// Specify the types to operate on. You can specify more than one type by combining items with the OR parameter.
-		/// Default is all items.
-		/// Usage example: OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments.
-		/// </summary>
-		public ItemType OperateOnTypes { get; set; }
 
 		public ItemType ItemTypeParser(string items)
 		{

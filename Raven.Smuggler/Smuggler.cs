@@ -30,7 +30,14 @@ namespace Raven.Smuggler
             {
                 await EnsureDatabaseExists(importStore, options.To.DefaultDatabase);
                 
-                await ExportIndexes(exportStore, importStore, options.BatchSize);
+                if (options.OperateOnTypes.HasFlag(ItemType.Indexes))
+                {
+                    await ExportIndexes(exportStore, importStore, options.BatchSize);
+                }
+                if (options.OperateOnTypes.HasFlag(ItemType.Transformers))
+                {
+                    await ExportTransformers(exportStore, importStore, options.BatchSize);
+                }
             }
         }
 
@@ -69,6 +76,27 @@ namespace Raven.Smuggler
                 {
                     var indexName = await importStore.AsyncDatabaseCommands.PutIndexAsync(index.Name, index, true);
                     ShowProgress("Succesfully PUT index '{0}'", indexName);
+                }
+            }
+        }
+
+        private static async Task ExportTransformers(DocumentStore exportStore, DocumentStore importStore, int batchSize)
+        {
+            var totalCount = 0;
+            while (true)
+            {
+                var transformers = await exportStore.AsyncDatabaseCommands.GetTransformersAsync(totalCount, batchSize);
+                if (transformers.Length == 0)
+                {
+                    ShowProgress("Done with reading transformers, total: {0}", totalCount);
+                    break;
+                }
+                totalCount += transformers.Length;
+                ShowProgress("Reading batch of {0,3} transformers, read so far: {1,10:#,#;;0}", transformers.Length, totalCount);
+                foreach (var transformer in transformers)
+                {
+                    var transformerName = await importStore.AsyncDatabaseCommands.PutTransformerAsync(transformer.Name, transformer);
+                    ShowProgress("Succesfully PUT transformer '{0}'", transformerName);
                 }
             }
         }
