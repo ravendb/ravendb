@@ -1891,7 +1891,7 @@ namespace Raven.Client.Connection.Async
 			currentlyExecuting = true;
 			try
 			{
-				return replicationInformer.ExecuteWithReplicationAsync(method, Url, currentRequest, readStripingBase, operation)
+				return replicationInformer.ExecuteWithReplicationAsync(method, Url, credentials, currentRequest, readStripingBase, operation)
 					.ContinueWith(task =>
 					{
 						currentlyExecuting = false;
@@ -1954,7 +1954,7 @@ namespace Raven.Client.Connection.Async
 		internal Task<bool> TryResolveConflictByUsingRegisteredListenersAsync(string key, Etag etag, string[] conflictIds, OperationMetadata operationMetadata = null)
 		{
 			if (operationMetadata == null)
-				operationMetadata = new OperationMetadata(Url, null);
+				operationMetadata = new OperationMetadata(Url);
 
 			if (conflictListeners.Length > 0 && resolvingConflict == false)
 			{

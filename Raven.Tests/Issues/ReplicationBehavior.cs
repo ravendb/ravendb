@@ -30,7 +30,7 @@ namespace Raven.Tests.Issues
 			for (int i = 0; i < 5000; i++)
 			{
 				var req = i + 1;
-				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", req, 1, url =>
+				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", null, req, 1, url =>
 				{
 					urlsTried.Add(Tuple.Create(req, url.Url));
 					if (url.Url.EndsWith("1"))
@@ -64,7 +64,7 @@ namespace Raven.Tests.Issues
 			for (int i = 0; i < 10; i++)
 			{
 				var req = i + 1;
-				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", req, req, url =>
+				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", null, req, req, url =>
 				{
 					urlsTried.Add(Tuple.Create(req, url.Url));
 					return 1;

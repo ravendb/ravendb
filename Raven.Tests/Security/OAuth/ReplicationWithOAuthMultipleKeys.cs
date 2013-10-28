@@ -83,7 +83,7 @@ namespace Raven.Tests.Security.OAuth
 		}
 
 		[Fact]
-		public async Task Can_Failover_With_Different_Api_Key_aysnc()
+		public async Task Can_Failover_With_Different_Api_Key_async()
 		{
 			var store1 = CreateStore(enableAuthorization: true);
 			Authentication.EnableOnce();

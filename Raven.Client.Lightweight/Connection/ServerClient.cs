@@ -160,9 +160,9 @@ namespace Raven.Client.Connection
 
 		private void ExecuteWithReplication(string method, Action<OperationMetadata> operation)
 		{
-			ExecuteWithReplication<object>(method, operationUrl =>
+			ExecuteWithReplication<object>(method, operationMetadata =>
 			{
-				operation(operationUrl);
+				operation(operationMetadata);
 				return null;
 			});
 		}
@@ -170,7 +170,7 @@ namespace Raven.Client.Connection
 		private T ExecuteWithReplication<T>(string method, Func<OperationMetadata, T> operation)
 		{
 			int currentRequest = convention.IncrementRequestCount();
-			return replicationInformer.ExecuteWithReplication(method, url, currentRequest, readStripingBase, operation);
+			return replicationInformer.ExecuteWithReplication(method, url, credentials, currentRequest, readStripingBase, operation);
 		}
 
 		/// <summary>

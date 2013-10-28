@@ -511,6 +511,8 @@ namespace Raven.Client.Document
 
 			Conventions.HandleUnauthorizedResponse = (response, apiKey) =>
 			{
+				apiKey = apiKey ?? ApiKey;
+
 				var oauthSource = response.Headers["OAuth-Source"];
 
 				if (string.IsNullOrEmpty(oauthSource) == false &&
@@ -519,7 +521,7 @@ namespace Raven.Client.Document
 					return basicAuthenticator.DoOAuthRequest(oauthSource, apiKey);
 				}
 
-				if (ApiKey == null)
+				if (apiKey == null)
 				{
 					AssertUnauthorizedCredentialSupportWindowsAuth(response);
 
@@ -545,6 +547,8 @@ namespace Raven.Client.Document
 
 			Conventions.HandleUnauthorizedResponseAsync = (unauthorizedResponse, apiKey) =>
 			{
+				apiKey = apiKey ?? ApiKey;
+
 				var oauthSource = unauthorizedResponse.Headers["OAuth-Source"];
 
 				if (string.IsNullOrEmpty(oauthSource) == false &&
@@ -553,7 +557,7 @@ namespace Raven.Client.Document
 					return basicAuthenticator.HandleOAuthResponseAsync(oauthSource, apiKey);
 				}
 
-				if (ApiKey == null)
+				if (apiKey == null)
 				{
 					AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse);
 					return null;
