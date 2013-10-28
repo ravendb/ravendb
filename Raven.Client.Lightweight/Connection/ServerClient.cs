@@ -348,7 +348,22 @@ namespace Raven.Client.Connection
 			});
 		}
 
-		/// <summary>
+	    public JsonDocument[] GetDocuments(Etag fromEtag, int pageSize, bool metadataOnly = false)
+	    {
+            return ExecuteWithReplication("GET", url =>
+            {
+                var requestUri = url + "/docs/?etag=" + fromEtag + "&pageSize=" + pageSize;
+                if (metadataOnly)
+                    requestUri += "&metadata-only=true";
+                RavenJToken result = jsonRequestFactory
+                    .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
+                    .AddOperationHeaders(OperationsHeaders))
+                    .ReadResponseJson();
+                return ((RavenJArray)result).Cast<RavenJObject>().ToJsonDocuments().ToArray();
+            });
+	    }
+
+	    /// <summary>
 		/// Puts the document with the specified key in the database
 		/// </summary>
 		/// <param name="key">The key.</param>

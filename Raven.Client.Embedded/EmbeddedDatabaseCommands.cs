@@ -715,6 +715,26 @@ namespace Raven.Client.Embedded
 				.ToArray();
 		}
 
+        /// <summary>
+        /// Begins an async get operation for documents
+        /// </summary>
+        /// <param name="fromEtag">The ETag of the first document to start with</param>
+        /// <param name="pageSize">Size of the page.</param>
+        /// <param name="metadataOnly">Load just the document metadata</param>
+        /// <remarks>
+        /// This is primarily useful for administration of a database
+        /// </remarks>
+        public JsonDocument[] GetDocuments(Etag fromEtag, int pageSize, bool metadataOnly = false)
+        {
+            // As this is embedded we don't care for the metadata only value
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
+            return database
+                .GetDocuments(0, pageSize, fromEtag)
+                .Cast<RavenJObject>()
+                .ToJsonDocuments()
+                .ToArray();
+        }
+
 		/// <summary>
 		/// Executed the specified commands as a single batch
 		/// </summary>

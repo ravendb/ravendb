@@ -863,7 +863,28 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+	    public Task<JsonDocument[]> GetDocumentsAsync(Etag fromEtag, int pageSize, bool metadataOnly = false)
+	    {
+            return ExecuteWithReplication("GET", async url =>
+            {
+                var requestUri = url + "/docs/?etag=" + fromEtag + "&pageSize=" + pageSize;
+                if (metadataOnly)
+                    requestUri += "&metadata-only=true";
+                var result =
+                    (RavenJArray)
+                    await
+                    jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET",
+                                                                                             credentials, convention)
+                    .AddOperationHeaders(OperationsHeaders))
+                                                                   .ReadResponseJsonAsync();
+
+                return result.Cast<RavenJObject>()
+                                                .ToJsonDocuments()
+                             .ToArray();
+            });
+	    }
+
+	    public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
 			var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
 			return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "EVAL");

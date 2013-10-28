@@ -71,6 +71,17 @@ namespace Raven.Client.Connection.Async
 		/// </remarks>
 		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false);
 
+        /// <summary>
+        /// Begins an async get operation for documents
+        /// </summary>
+        /// <param name="fromEtag">The ETag of the first document to start with</param>
+        /// <param name="pageSize">Size of the page.</param>
+        /// <param name="metadataOnly">Load just the document metadata</param>
+        /// <remarks>
+        /// This is primarily useful for administration of a database
+        /// </remarks>
+        Task<JsonDocument[]> GetDocumentsAsync(Etag fromEtag, int pageSize, bool metadataOnly = false);
+
 		/// <summary>
 		/// Begins the async query.
 		/// </summary>
