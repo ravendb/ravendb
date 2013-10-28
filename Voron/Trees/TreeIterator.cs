@@ -149,7 +149,10 @@ namespace Voron.Trees
 
 		public Slice MaxKey { get; set; }
 
-
+	    public long TreeRootPage
+	    {
+            get { return  this._tree.State.RootPageNumber; }
+	    }
 	}
 
 	public static class IteratorExtensions
