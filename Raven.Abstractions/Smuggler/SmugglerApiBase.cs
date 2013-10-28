@@ -116,7 +116,7 @@ namespace Raven.Abstractions.Smuggler
 					jsonWriter.WriteStartObject();
 					jsonWriter.WritePropertyName("Indexes");
 					jsonWriter.WriteStartArray();
-					if ((options.OperateOnTypes & ItemType.Indexes) == ItemType.Indexes)
+					if (options.OperateOnTypes.HasFlag(ItemType.Indexes))
 					{
 						await ExportIndexes(jsonWriter);
 					}

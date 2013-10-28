@@ -15,7 +15,15 @@ using System.Linq;
 
 namespace Raven.Abstractions.Smuggler
 {
-	public class SmugglerOptions
+    public class SmugglerOptionsBase
+    {
+        /// <summary>
+        /// The number of document or attachments or indexes or transformers to load in each call to the RavenDB database.
+        /// </summary>
+        public int BatchSize { get; set; }
+    }
+
+    public class SmugglerOptions : SmugglerOptionsBase
 	{
 		public SmugglerOptions()
 		{
@@ -67,12 +75,7 @@ namespace Raven.Abstractions.Smuggler
 		/// The timeout for requests
 		/// </summary>
 		public int Timeout { get; set; }
-
-		/// <summary>
-		/// The batch size for loading to ravendb
-		/// </summary>
-		public int BatchSize { get; set; }
-
+		
 		public virtual bool MatchFilters(RavenJToken item)
 		{
 			foreach (var filter in Filters)
@@ -128,7 +131,7 @@ namespace Raven.Abstractions.Smuggler
 		}
 	}
 
-    public class SmugglerBetweenOptions : SmugglerOptions
+    public class SmugglerBetweenOptions : SmugglerOptionsBase
     {
         public RavenConnectionStringOptions From { get; set; }
 

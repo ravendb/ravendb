@@ -22,19 +22,54 @@ namespace Raven.Smuggler
     {
         public static async Task Between(SmugglerBetweenOptions options)
         {
+            SetDatabaseNameIfEmpty(options.From);
+            SetDatabaseNameIfEmpty(options.To);
+
+            using (var exportStore = CreateStore(options.From))
             using (var importStore = CreateStore(options.To))
             {
-                var databaseName = options.To.DefaultDatabase;
-                if (string.IsNullOrWhiteSpace(databaseName))
+                await EnsureDatabaseExists(importStore, options.To.DefaultDatabase);
+                
+                await ExportIndexes(exportStore, importStore, options.BatchSize);
+            }
+        }
+
+        private static async Task EnsureDatabaseExists(DocumentStore store, string databaseName)
+        {
+            if (string.IsNullOrWhiteSpace(databaseName) == false)
+                await store.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(databaseName);
+        }
+
+        private static void SetDatabaseNameIfEmpty(RavenConnectionStringOptions connection)
+        {
+            if (string.IsNullOrWhiteSpace(connection.DefaultDatabase) == false)
+                return;
+            
+            var index = connection.Url.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
+            if (index != -1)
+            {
+                connection.DefaultDatabase = connection.Url.Substring(index + "/databases/".Length).Trim(new[] {'/'});
+            }
+        }
+
+        private static async Task ExportIndexes(DocumentStore exportStore, DocumentStore importStore, int batchSize)
+        {
+            var totalCount = 0;
+            while (true)
+            {
+                var indexes = await exportStore.AsyncDatabaseCommands.GetIndexesAsync(totalCount, batchSize);
+                if (indexes.Length == 0)
                 {
-                    var index = options.To.Url.IndexOf("/databases/", StringComparison.OrdinalIgnoreCase);
-                    if (index != -1)
-                    {
-                        databaseName = options.To.Url.Substring(index + "/databases/".Length).Trim(new[] {'/'});
-                    }
+                    ShowProgress("Done with reading indexes, total: {0}", totalCount);
+                    break;
                 }
-                if (string.IsNullOrWhiteSpace(databaseName) == false)
-                    await importStore.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(databaseName);
+                totalCount += indexes.Length;
+                ShowProgress("Reading batch of {0,3} indexes, read so far: {1,10:#,#;;0}", indexes.Length, totalCount);
+                foreach (var index in indexes)
+                {
+                    var indexName = await importStore.AsyncDatabaseCommands.PutIndexAsync(index.Name, index, true);
+                    ShowProgress("Succesfully PUT index '{0}'", indexName);
+                }
             }
         }
 
@@ -49,6 +84,11 @@ namespace Raven.Smuggler
             };
             store.Initialize();
             return store;
+        }
+
+        private static void ShowProgress(string format, params object[] args)
+        {
+            Console.WriteLine(format, args);
         }
     }
 }
