@@ -91,9 +91,6 @@ namespace Raven.Storage.Managed
 
 		public bool IsMapStale(int view)
 		{
-      // Same here, I can do a Read from the Lists really easily
-      // I guess that's what I'm doing then
-
 			var readResult = storage.LastIndexedEtags.Read(view.ToString());
 
 			if (readResult == null)
