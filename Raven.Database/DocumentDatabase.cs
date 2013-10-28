@@ -416,7 +416,7 @@ namespace Raven.Database
                         {
                             var indexInstance = IndexStorage.GetIndexInstance(indexId);
                             return (indexInstance != null && indexInstance.IsMapIndexingInProgress) ||
-                                                                 actions.Staleness.IsIndexStale(indexId, null, null);
+                                                                 actions.Staleness.IsIndexStale(indexId, null, null, null);
                         })
                                                       .Select(indexId =>
                                                       {
@@ -1375,22 +1375,13 @@ namespace Raven.Database
                         if (viewGenerator == null)
                             throw new IndexDoesNotExistsException("Could not find index named: " + indexName);
 
-                        if (index.IsMapReduce == false && // we can't use this optimization for map/reduce indexes
-						    viewGenerator.ForEntityNames.Count > 0)
-                        {
-                            var old = query.CutoffEtag;
-                            var collections = viewGenerator.ForEntityNames.Select(GetLastEtagForCollection);
-                            query.CutoffEtag = collections.Max();
-                            // the query value is smaller than the latest collection value, so we'll use that
-                            if (old != null && old.CompareTo(query.CutoffEtag) < 0)
-                            {
-                                query.CutoffEtag = old;
-                            }
-                        }
+                        var collectionNames = index.IsMapReduce && viewGenerator.ForEntityNames.Count > 0
+                            ? viewGenerator.ForEntityNames
+                            : null;
 
                         resultEtag = GetIndexEtag(index.Name, null, query.ResultsTransformer);
 
-                        stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, query.CutoffEtag);
+                        stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, query.CutoffEtag, collectionNames);
 
                         if (stale == false && query.Cutoff == null && query.CutoffEtag == null)
                         {
@@ -1547,7 +1538,7 @@ namespace Raven.Database
                     actions =>
                     {
                         var definition = IndexDefinitionStorage.GetIndexDefinition(index);
-                        isStale = actions.Staleness.IsIndexStale(definition.IndexId, query.Cutoff, null);
+                        isStale = actions.Staleness.IsIndexStale(definition.IndexId, query.Cutoff, null, null);
 
                         if (isStale == false && query.Cutoff == null)
                         {
@@ -2443,7 +2434,7 @@ namespace Raven.Database
                 if (indexInstance == null)
                     return;
                 isStale = (indexInstance.IsMapIndexingInProgress) ||
-                          accessor.Staleness.IsIndexStale(indexInstance.indexId, null, null);
+                          accessor.Staleness.IsIndexStale(indexInstance.indexId, null, null, null);
                 lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
                 var indexStats = accessor.Indexing.GetIndexStats(indexInstance.indexId);
                 if (indexStats != null)
