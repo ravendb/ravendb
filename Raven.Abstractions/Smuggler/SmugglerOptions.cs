@@ -15,7 +15,7 @@ using System.Linq;
 
 namespace Raven.Abstractions.Smuggler
 {
-    public class SmugglerOptionsBase
+    public abstract class SmugglerOptionsBase
     {
         private int batchSize;
 
@@ -26,7 +26,18 @@ namespace Raven.Abstractions.Smuggler
             OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
             Timeout = TimeSpan.FromSeconds(30);
             ShouldExcludeExpired = false;
+            StartAttachmentEtag = StartDocsEtag = Etag.Empty;
         }
+
+        /// <summary>
+        /// Start exporting from the specified document etag
+        /// </summary>
+        public Etag StartDocsEtag { get; set; }
+
+        /// <summary>
+        /// Start exporting from the specified attachment etag
+        /// </summary>
+        public Etag StartAttachmentEtag { get; set; }
 
         /// <summary>
         /// The number of document or attachments or indexes or transformers to load in each call to the RavenDB database.
@@ -118,7 +129,6 @@ namespace Raven.Abstractions.Smuggler
 	{
 		public SmugglerOptions()
 		{
-			LastAttachmentEtag = LastDocsEtag = Etag.Empty;
 		}
 
 		/// <summary>
@@ -130,10 +140,6 @@ namespace Raven.Abstractions.Smuggler
         /// The stream to write to when doing an export, or where to read from when doing an import.
         /// </summary>
         public Stream BackupStream { get; set; }
-
-		public Etag LastDocsEtag { get; set; }
-
-		public Etag LastAttachmentEtag { get; set; }
         
         public bool Incremental { get; set; }
 

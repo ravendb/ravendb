@@ -52,12 +52,12 @@ namespace Raven.Abstractions.Smuggler
 		protected bool EnsuredDatabaseExists;
 	    private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
-		public virtual Task<string> ExportData(SmugglerOptions options, PeriodicBackupStatus backupStatus = null)
+        public virtual Task<ExportDataResult> ExportData(SmugglerOptions options, PeriodicBackupStatus backupStatus = null)
 		{
 			return ExportData(options, null, backupStatus);
 		}
 
-	    public virtual async Task<string> ExportData(SmugglerOptions options, Stream stream, PeriodicBackupStatus backupStatus)
+	    public virtual async Task<ExportDataResult> ExportData(SmugglerOptions options, Stream stream, PeriodicBackupStatus backupStatus)
 	    {
 	        SetSmugglerOptions(options);
 
@@ -102,7 +102,11 @@ namespace Raven.Abstractions.Smuggler
 		    try
 			{
                 stream = stream ?? options.BackupStream ?? File.Create(file);
-				using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
+			    var result = new ExportDataResult
+			    {
+			        FilePath = file
+			    };
+			    using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
 #if SILVERLIGHT
                     CompressionLevel.BestCompression,
 #endif
@@ -126,7 +130,7 @@ namespace Raven.Abstractions.Smuggler
 					jsonWriter.WriteStartArray();
 					if (options.OperateOnTypes.HasFlag(ItemType.Documents))
 					{
-						options.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.LastDocsEtag);
+                        result.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.StartDocsEtag);
 					}
 					jsonWriter.WriteEndArray();
 
@@ -134,7 +138,7 @@ namespace Raven.Abstractions.Smuggler
 					jsonWriter.WriteStartArray();
 					if (options.OperateOnTypes.HasFlag(ItemType.Attachments))
 					{
-						options.LastAttachmentEtag = await ExportAttachments(jsonWriter, options.LastAttachmentEtag);
+						result.LastAttachmentsEtag = await ExportAttachments(jsonWriter, options.StartAttachmentEtag);
 					}
 					jsonWriter.WriteEndArray();
 
@@ -152,9 +156,9 @@ namespace Raven.Abstractions.Smuggler
 
 #if !SILVERLIGHT
 				if (options.Incremental)
-					WriteLastEtagsFromFile(options);
+					WriteLastEtagsFromFile(result, options.BackupPath);
 #endif
-				return file;
+				return result;
 			}
 			finally
 			{
@@ -173,8 +177,8 @@ namespace Raven.Abstractions.Smuggler
 
 	    private void ReadLastEtagsFromClass(SmugglerOptions options, PeriodicBackupStatus backupStatus)
 		{
-			options.LastAttachmentEtag = backupStatus.LastAttachmentsEtag;
-			options.LastDocsEtag = backupStatus.LastDocsEtag;
+			options.StartAttachmentEtag = backupStatus.LastAttachmentsEtag;
+			options.StartDocumentEtag = backupStatus.LastDocsEtag;
 		}
 
 		public static void ReadLastEtagsFromFile(SmugglerOptions options)
@@ -197,20 +201,20 @@ namespace Raven.Abstractions.Smuggler
 					log.WarnException("Could not parse etag document from file : " + etagFileLocation + ", ignoring, will start from scratch", e);
 					return;
 				}
-				options.LastDocsEtag = Etag.Parse(ravenJObject.Value<string>("LastDocEtag"));
-				options.LastAttachmentEtag = Etag.Parse(ravenJObject.Value<string>("LastAttachmentEtag"));
+				options.StartDocumentEtag = Etag.Parse(ravenJObject.Value<string>("LastDocEtag"));
+				options.StartAttachmentEtag = Etag.Parse(ravenJObject.Value<string>("LastAttachmentEtag"));
 			}
 		}
 
-		public static void WriteLastEtagsFromFile(SmugglerOptions options)
+		public static void WriteLastEtagsFromFile(ExportDataResult result, string backupPath)
 		{
-			var etagFileLocation = Path.Combine(options.BackupPath, IncrementalExportStateFile);
+			var etagFileLocation = Path.Combine(backupPath, IncrementalExportStateFile);
 			using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
 			{
 				new RavenJObject
 					{
-						{"LastDocEtag", options.LastDocsEtag.ToString()},
-						{"LastAttachmentEtag", options.LastAttachmentEtag.ToString()}
+						{"LastDocEtag", result.LastDocsEtag.ToString()},
+						{"LastAttachmentEtag", result.LastAttachmentsEtag.ToString()}
 					}.WriteTo(new JsonTextWriter(streamWriter));
 				streamWriter.Flush();
 			}
@@ -714,5 +718,13 @@ namespace Raven.Abstractions.Smuggler
 		public bool IsTransformersSupported { get; private set; }
 		public bool IsDocsStreamingSupported { get; private set; }
 	}
+
+    public class ExportDataResult
+    {
+        public string FilePath { get; set; }
+        public Etag LastDocsEtag { get; set; }
+
+        public Etag LastAttachmentsEtag { get; set; }
+    }
 }
 #endif
