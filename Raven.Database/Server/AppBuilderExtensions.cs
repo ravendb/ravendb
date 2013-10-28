@@ -60,7 +60,7 @@ namespace Owin
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 
 			cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
-			cfg.Filters.Add(new RavenExceptionFilterAttribute());
+			//cfg.Filters.Add(new RavenExceptionFilterAttribute());
 			cfg.MapHttpAttributeRoutes();
 			cfg.Routes.MapHttpRoute(
 				"API Default", "{controller}/{action}",
