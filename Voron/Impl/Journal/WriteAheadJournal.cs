@@ -126,28 +126,30 @@ namespace Voron.Impl.Journal
 
 		internal void WriteFileHeader(long? pageToWriteHeader = null)
 		{
-			var fileHeaderPage = _dataPager.TempPage;
+            var fileHeaderPage = _dataPager.TempPage;
 
-			if (pageToWriteHeader == null)
-				fileHeaderPage.PageNumber = _dataFlushCounter & 1;
-			else
-				fileHeaderPage.PageNumber = pageToWriteHeader.Value;
+		    NativeMethods.memset((fileHeaderPage.Base + Constants.PageHeaderSize), 0,
+		                         _dataPager.PageSize - Constants.PageHeaderSize);
 
-			var header = ((FileHeader*)fileHeaderPage.Base + Constants.PageHeaderSize);
+		    if (pageToWriteHeader == null)
+		        fileHeaderPage.PageNumber = _dataFlushCounter & 1;
+		    else
+		        fileHeaderPage.PageNumber = pageToWriteHeader.Value;
 
-			header->MagicMarker = Constants.MagicMarker;
-			header->Version = Constants.CurrentVersion;
-			header->TransactionId = _fileHeader->TransactionId;
-			header->LastPageNumber = _fileHeader->LastPageNumber;
-			header->FreeSpace = _fileHeader->FreeSpace;
-			header->LogInfo = _fileHeader->LogInfo;
-			header->Root = _fileHeader->Root;
+		    var header = (FileHeader*) (fileHeaderPage.Base + Constants.PageHeaderSize);
+		    header->MagicMarker = Constants.MagicMarker;
+		    header->Version = Constants.CurrentVersion;
+		    header->TransactionId = _fileHeader->TransactionId;
+		    header->LastPageNumber = _fileHeader->LastPageNumber;
 
-			_dataPager.Write(fileHeaderPage);
-			_dataPager.Sync();
+		    header->Root = _fileHeader->Root;
+		    header->FreeSpace = _fileHeader->FreeSpace;
+		    header->LogInfo = _fileHeader->LogInfo;
+
+		    _dataPager.Write(fileHeaderPage);
 		}
 
-		public void TransactionBegin(Transaction tx)
+	    public void TransactionBegin(Transaction tx)
 		{
 			if(_disabled)
 				return;
@@ -329,10 +331,12 @@ namespace Voron.Impl.Journal
 
 		private FileHeader* GetEmptyFileHeader()
 		{
-			if(_inMemoryHeader == IntPtr.Zero)
-				_inMemoryHeader = Marshal.AllocHGlobal(_dataPager.PageSize);
+		    if (_inMemoryHeader == IntPtr.Zero)
+		        _inMemoryHeader = Marshal.AllocHGlobal(_dataPager.PageSize);
 
-			var header = (FileHeader*) _inMemoryHeader;
+		    NativeMethods.memset((byte*)_inMemoryHeader.ToPointer(), 0, _dataPager.PageSize);
+
+		    var header = (FileHeader*) _inMemoryHeader;
 
 			header->MagicMarker = Constants.MagicMarker;
 			header->Version = Constants.CurrentVersion;
