@@ -331,5 +331,10 @@ namespace Voron
 	    {
 	        State = state;
 	    }
+
+	    public void FlushLogToDataFile(object state = null)
+	    {
+	        _journal.ApplyLogsToDataFile();
+	    }
 	}
 }

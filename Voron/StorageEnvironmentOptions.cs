@@ -57,7 +57,7 @@ namespace Voron
                 {
                     Directory.CreateDirectory(_basePath);
                 }
-                return new MemoryMapPager(Path.Combine(_basePath, "db.voron"), _flushMode);
+                return new FilePager(Path.Combine(_basePath, "db.voron"), _flushMode);
             }
 
             public override IVirtualPager DataPager

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
@@ -32,9 +33,7 @@ namespace Voron.Impl
 
 			if (safeHandle.IsInvalid)
 			{
-				throw new IOException("Unable to create or open file + '" + file + "'. Win32 Error Code " +
-				                      Marshal.GetLastWin32Error());
-				//if get windows error code 5 this means access denied. You must try to run the program as admin privileges.
+                throw new Win32Exception();
 			}   
 
 			_fileHandle = safeHandle.DangerousGetHandle();
@@ -141,8 +140,7 @@ namespace Voron.Impl
 
 			if (NativeFileMethods.WriteFile(_fileHandle, new IntPtr(page.Base), (uint) toWrite, out written, ref nativeOverlapped) == false)
 			{
-				var win32Error = Marshal.GetLastWin32Error();
-				throw new IOException("Writing to file failed. Error code: " + win32Error);
+				throw new Win32Exception();
 			}
 
 			Debug.Assert(toWrite == written);

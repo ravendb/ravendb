@@ -76,10 +76,11 @@ namespace Voron.Impl
                 _journal.GetSnapshots().ForEach(AddLogSnapshot);
                 return;
             }
-            
+
+            _state = env.State.Clone();
+
             _journal.Files.ForEach(SetLogReference);
             _journal.TransactionBegin(this);
-            _state = env.State.Clone();
             MarkTreesForWriteTransaction();
         }
 

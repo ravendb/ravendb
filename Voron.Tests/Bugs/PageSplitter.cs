@@ -11,7 +11,7 @@
 
 	public class PageSplitter : StorageTest
 	{
-		[Fact(Skip = "Long running")]
+		[Fact]
 		public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
 		{
 			var ids = ReadIds("data.txt");
@@ -46,7 +46,7 @@
 			}
 		}
 
-		[Fact(Skip = "Long running")]
+		[Fact]
 		public void PageSplitterShouldCalculateSeparatorKeyCorrectly2()
 		{
 			var ids = ReadIds("data2.txt");

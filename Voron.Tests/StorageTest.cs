@@ -25,7 +25,13 @@ namespace Voron.Tests
             if (Directory.Exists("test.data"))
                 Directory.Delete("test.data", true);
             _options = StorageEnvironmentOptions.ForPath("test.data");
+            Configure(_options);
             _storageEnvironment = new StorageEnvironment(_options);
+        }
+
+        protected virtual void Configure(StorageEnvironmentOptions options)
+        {
+            
         }
 
 	    protected Stream StreamFor(string val)
