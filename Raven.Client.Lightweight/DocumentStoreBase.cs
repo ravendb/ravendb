@@ -99,9 +99,9 @@ namespace Raven.Client
 			indexCreationTask.Execute(DatabaseCommands, Conventions);
 		}
 
-	    public async Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
+	    public Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
 	    {
-	        await indexCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
+	        return indexCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
 	    }
 
 	    /// <summary>
@@ -111,6 +111,11 @@ namespace Raven.Client
 		{
 			transformerCreationTask.Execute(DatabaseCommands, Conventions);
 		}
+
+	    public Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask)
+	    {
+	        return transformerCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
+	    }
 #endif
 
 		private DocumentConvention conventions;

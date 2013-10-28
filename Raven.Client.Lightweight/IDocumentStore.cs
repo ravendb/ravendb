@@ -158,6 +158,8 @@ namespace Raven.Client
 		/// Executes the transformer creation
 		/// </summary>
 		void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask);
+
+        Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask);
 #endif
 
 		/// <summary>
