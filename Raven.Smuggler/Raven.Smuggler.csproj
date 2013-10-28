@@ -72,6 +72,7 @@
     </Compile>
     <Compile Include="Imports\SmugglerJintHelper.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="Smuggler.cs" />
     <Compile Include="SmugglerApi.cs" />
   </ItemGroup>
   <ItemGroup>

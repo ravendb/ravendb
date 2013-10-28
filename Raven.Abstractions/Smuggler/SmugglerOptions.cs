@@ -17,8 +17,6 @@ namespace Raven.Abstractions.Smuggler
 {
 	public class SmugglerOptions
 	{
-		public string TransformScript { get; set; }
-
 		public SmugglerOptions()
 		{
 			Filters = new List<FilterSetting>();
@@ -42,9 +40,12 @@ namespace Raven.Abstractions.Smuggler
 		public List<FilterSetting> Filters { get; set; }
 
 		public Etag LastDocsEtag { get; set; }
+
 		public Etag LastAttachmentEtag { get; set; }
         
         public bool Incremental { get; set; }
+
+        public string TransformScript { get; set; }
 
 		/// <summary>
 		/// Specify the types to operate on. You can specify more than one type by combining items with the OR parameter.
@@ -126,6 +127,13 @@ namespace Raven.Abstractions.Smuggler
 			return dateTime >= SystemTime.UtcNow;
 		}
 	}
+
+    public class SmugglerBetweenOptions : SmugglerOptions
+    {
+        public RavenConnectionStringOptions From { get; set; }
+
+        public RavenConnectionStringOptions To { get; set; }
+    }
 
 	[Flags]
 	public enum ItemType
