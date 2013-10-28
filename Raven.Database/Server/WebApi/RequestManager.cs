@@ -204,7 +204,7 @@ namespace Raven.Database.Server.WebApi
 			}
 			else
 			{
-				var msg = "Could open database named: " + tenantId;
+				var msg = "Could not find a database named: " + tenantId;
 				Logger.Warn(msg);
 				throw new HttpException(503, msg);
 			}

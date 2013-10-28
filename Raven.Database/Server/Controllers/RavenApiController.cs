@@ -12,6 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
@@ -62,8 +63,20 @@ namespace Raven.Database.Server.Controllers
 			var authorizer =
 				(MixedModeRequestAuthorizer) controllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 			var result = new HttpResponseMessage();
+			try
+			{
+				RequestManager.HandleActualRequest(this, async () =>
+				{
+					result = await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
 
-			RequestManager.HandleActualRequest(this, async () => result = await ExecuteActualRequest(controllerContext, cancellationToken, authorizer));
+
+				});
+			}
+			catch (HttpException httpException)
+			{
+				result = GetMessageWithObject(new {Error = httpException.Message}, HttpStatusCode.ServiceUnavailable);
+			}
+
 			RequestManager.AddAccessControlHeaders(this, result);
 			return result;
 		}
