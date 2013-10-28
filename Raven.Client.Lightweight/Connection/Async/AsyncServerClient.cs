@@ -55,7 +55,7 @@ namespace Raven.Client.Connection.Async
 		private readonly IDocumentConflictListener[] conflictListeners;
 		private readonly string _url;
 		private readonly string rootUrl;
-		private readonly OperationMetadata.OperationCredentials credentials;
+		private readonly OperationCredentials credentials;
 		private readonly DocumentConvention convention;
 		private IDictionary<string, string> operationsHeaders = new Dictionary<string, string>();
 		internal readonly HttpJsonRequestFactory jsonRequestFactory;
@@ -94,7 +94,7 @@ namespace Raven.Client.Connection.Async
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;
 			this.convention = convention;
-			this.credentials = new OperationMetadata.OperationCredentials(apiKey, credentials);
+			this.credentials = new OperationCredentials(apiKey, credentials);
 			_apiKey = apiKey;
 			_credentials = credentials;
 			this.databaseName = databaseName;

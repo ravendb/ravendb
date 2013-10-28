@@ -8,8 +8,6 @@ using Raven.Abstractions.OAuth;
 
 namespace Raven.Abstractions.Connection
 {
-	using Raven.Client.Connection;
-
 	public class HttpRavenRequestFactory
 	{
 		public int? RequestTimeoutInMs { get; set; }
@@ -27,7 +25,7 @@ namespace Raven.Abstractions.Connection
 				return;
 			}
 
-			var webRequestEventArgs = new WebRequestEventArgs { Request = request, Credentials = new OperationMetadata.OperationCredentials(options.ApiKey, options.Credentials)};
+			var webRequestEventArgs = new WebRequestEventArgs { Request = request, Credentials = new OperationCredentials(options.ApiKey, options.Credentials)};
 
 			AbstractAuthenticator existingAuthenticator;
 			if (authenticators.TryGetValue(GetCacheKey(options), out existingAuthenticator))

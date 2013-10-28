@@ -39,6 +39,8 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Document
 {
+	using Raven.Abstractions.Connection;
+
 	/// <summary>
 	/// Manages access to RavenDB and open sessions to work with RavenDB.
 	/// </summary>
@@ -638,7 +640,7 @@ namespace Raven.Client.Document
 
 #if SILVERLIGHT
 			// required to ensure just a single auth dialog
-			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, (Url + "/docs?pageSize=0").NoCache(), "GET", new OperationMetadata.OperationCredentials(ApiKey, Credentials), Conventions))
+			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, (Url + "/docs?pageSize=0").NoCache(), "GET", new OperationCredentials(ApiKey, Credentials), Conventions))
 				.ExecuteRequestAsync();
 			jsonRequestFactory.ConfigureRequest += (sender, args) =>
 			{

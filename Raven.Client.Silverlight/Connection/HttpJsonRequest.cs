@@ -156,7 +156,7 @@ namespace Raven.Client.Silverlight.Connection
 
 		private bool requestSendToServer;
 
-		private readonly OperationMetadata.OperationCredentials _credentials;
+		private readonly OperationCredentials _credentials;
 
 		/// <summary>
 		/// Begins the read response string.

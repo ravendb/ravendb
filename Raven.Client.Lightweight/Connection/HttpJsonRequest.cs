@@ -66,7 +66,7 @@ namespace Raven.Client.Connection
 
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
 
-		private readonly OperationMetadata.OperationCredentials _credentials;
+		private readonly OperationCredentials _credentials;
 
 		/// <summary>
 		/// Gets or sets the response headers.

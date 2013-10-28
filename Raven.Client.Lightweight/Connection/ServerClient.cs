@@ -53,7 +53,7 @@ namespace Raven.Client.Connection
 		private bool resolvingConflict;
 		private bool resolvingConflictRetries;
 
-		public OperationMetadata.OperationCredentials Credentials { get; private set; }
+		public OperationCredentials Credentials { get; private set; }
 
 		private readonly ICredentials _credentials;
 		private readonly string _apiKey;
@@ -73,7 +73,7 @@ namespace Raven.Client.Connection
 		public ServerClient(string url, DocumentConvention convention, string apiKey, ICredentials credentials, Func<string, ReplicationInformer> replicationInformerGetter, string databaseName, HttpJsonRequestFactory jsonRequestFactory, Guid? currentSessionId, IDocumentConflictListener[] conflictListeners)
 		{
 			profilingInformation = ProfilingInformation.CreateProfilingInformation(currentSessionId);
-			Credentials = new OperationMetadata.OperationCredentials(apiKey, credentials);
+			Credentials = new OperationCredentials(apiKey, credentials);
 			this._apiKey = apiKey;
 			this._credentials = credentials;
 			this.replicationInformerGetter = replicationInformerGetter;

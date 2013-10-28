@@ -13,6 +13,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Backup
 {
+	using Raven.Abstractions.Connection;
+
 	public class BackupOperation : IDisposable
 	{
 		private DocumentStore store;
@@ -72,7 +74,7 @@ namespace Raven.Backup
 			uriString += url;
 			if (Incremental)
 				uriString += "?incremental=true";
-			var req = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationMetadata.OperationCredentials(ApiKey, CredentialCache.DefaultCredentials), store.Conventions));
+			var req = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationCredentials(ApiKey, CredentialCache.DefaultCredentials), store.Conventions));
 
 			if (Timeout.HasValue)
 			{

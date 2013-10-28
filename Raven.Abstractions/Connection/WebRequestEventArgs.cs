@@ -13,8 +13,6 @@ using Raven.Client.Silverlight.Connection;
 
 namespace Raven.Abstractions.Connection
 {
-	using Raven.Client.Connection;
-
 	/// <summary>
 	/// Event arguments for the event of creating a <see cref="WebRequest"/>
 	/// </summary>
@@ -44,6 +42,6 @@ namespace Raven.Abstractions.Connection
 		public HttpJsonRequest JsonRequest { get; set; }
 #endif
 
-		public OperationMetadata.OperationCredentials Credentials { get; set; }
+		public OperationCredentials Credentials { get; set; }
 	}
 }

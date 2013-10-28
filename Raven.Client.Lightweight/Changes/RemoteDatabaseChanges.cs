@@ -21,7 +21,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Changes
 {
-    public class RemoteDatabaseChanges : IDatabaseChanges, IDisposable, IObserver<string>
+	using Raven.Abstractions.Connection;
+
+	public class RemoteDatabaseChanges : IDatabaseChanges, IDisposable, IObserver<string>
     {
         private static readonly ILog logger = LogManager.GetCurrentClassLogger();
         private readonly ConcurrentSet<string> watchedDocs = new ConcurrentSet<string>();
@@ -32,7 +34,7 @@ namespace Raven.Client.Changes
         private bool watchAllIndexes;
         private Timer clientSideHeartbeatTimer;
         private readonly string url;
-        private readonly OperationMetadata.OperationCredentials credentials;
+        private readonly OperationCredentials credentials;
         private readonly HttpJsonRequestFactory jsonRequestFactory;
         private readonly DocumentConvention conventions;
         private readonly ReplicationInformer replicationInformer;
@@ -59,7 +61,7 @@ namespace Raven.Client.Changes
             id = Interlocked.Increment(ref connectionCounter) + "/" +
                  Base62Util.Base62Random();
             this.url = url;
-            this.credentials = new OperationMetadata.OperationCredentials(apiKey, credentials);
+            this.credentials = new OperationCredentials(apiKey, credentials);
             this.jsonRequestFactory = jsonRequestFactory;
             this.conventions = conventions;
             this.replicationInformer = replicationInformer;

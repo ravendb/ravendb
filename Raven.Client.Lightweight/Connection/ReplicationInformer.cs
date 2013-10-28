@@ -32,6 +32,8 @@ namespace Raven.Client.Connection
 {
 	using System.Collections;
 
+	using Raven.Abstractions.Connection;
+
 	/// <summary>
 	/// Replication and failover management on the client side
 	/// </summary>
@@ -429,7 +431,7 @@ namespace Raven.Client.Connection
 
 		#region ExecuteWithReplication
 
-		public virtual T ExecuteWithReplication<T>(string method, string primaryUrl, OperationMetadata.OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, T> operation)
+		public virtual T ExecuteWithReplication<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, T> operation)
 		{
 			T result;
 			var timeoutThrown = false;
@@ -524,7 +526,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 
 		#region ExecuteWithReplicationAsync
 
-		public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationMetadata.OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation)
+		public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation)
 		{
 			return ExecuteWithReplicationAsync(new ExecuteWithReplicationState<T>(method, primaryUrl, primaryCredentials, currentRequest, currentReadStripingBase, operation));
 		}
@@ -681,7 +683,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 
 		protected class ExecuteWithReplicationState<T>
 		{
-			public ExecuteWithReplicationState(string method, string primaryUrl, OperationMetadata.OperationCredentials primaryCredentials, int currentRequest, int readStripingBase, Func<OperationMetadata, Task<T>> operation)
+			public ExecuteWithReplicationState(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int readStripingBase, Func<OperationMetadata, Task<T>> operation)
 			{
 				Method = method;
 				PrimaryUrl = primaryUrl;
@@ -698,7 +700,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			public readonly string PrimaryUrl;
 			public readonly int CurrentRequest;
 			public readonly int ReadStripingBase;
-			public readonly OperationMetadata.OperationCredentials PrimaryCredentials;
+			public readonly OperationCredentials PrimaryCredentials;
 
 			public ExecuteWithReplicationStates State = ExecuteWithReplicationStates.Start;
 			public int LastAttempt = -1;
@@ -845,24 +847,6 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		public string Url { get; private set; }
 
 		public OperationCredentials Credentials { get; private set; }
-
-		public class OperationCredentials
-		{
-			public OperationCredentials(string apiKey, ICredentials credentials)
-			{
-				ApiKey = apiKey;
-				Credentials = credentials;
-			}
-
-			public ICredentials Credentials { get; private set; }
-
-			public string ApiKey { get; private set; }
-
-			public bool HasCredentials()
-			{
-				return !string.IsNullOrEmpty(ApiKey) || Credentials != null;
-			}
-		}
 	}
 
 	/// <summary>
