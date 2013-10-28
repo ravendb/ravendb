@@ -148,8 +148,7 @@ namespace Voron.Trees
 
         public void RemoveNode(int index)
         {
-            Debug.Assert(IsBranch == false || index > 0 || NumberOfEntries == 2); // cannot remove implicit left in branches, unless as part of removing this node entirely
-            Debug.Assert(index < NumberOfEntries);
+            Debug.Assert(index >= 0 || index < NumberOfEntries);
 
             var node = GetNode(index);
 

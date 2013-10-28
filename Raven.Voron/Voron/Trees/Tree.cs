@@ -117,7 +117,7 @@ namespace Voron.Trees
 						return;
 					// convert back to simple key/val
 					var iterator = tree.Iterate(tx);
-					if (!iterator.Seek(Slice.BeforeAllKeys))
+					if(!iterator.Seek(Slice.BeforeAllKeys))
 						throw new InvalidDataException("MultiDelete() failed : sub-tree is empty where it should not be, this is probably a Voron bug.");
 
 					var dataToSave = iterator.CurrentKey;
@@ -137,6 +137,7 @@ namespace Voron.Trees
 
 		public void MultiAdd(Transaction tx, Slice key, Slice value, ushort? version = null)
 		{
+            
             if (value == null) throw new ArgumentNullException("value");
 			if (value.Size > tx.Pager.MaxNodeSize)
 				throw new ArgumentException("Cannot add a value to child tree that is over " + tx.Pager.MaxNodeSize + " bytes in size", "value");
@@ -173,8 +174,7 @@ namespace Voron.Trees
 				else // need to turn to tree
 				{
 					var tree = Create(tx, _cmp, TreeFlags.MultiValue);
-					var current = NodeHeader.GetData(tx, item);				
-					
+					var current = NodeHeader.GetData(tx, item);
 					tree.DirectAdd(tx, current, 0);
 					tree.DirectAdd(tx, value, 0);
 					tx.AddMultiValueTree(this, key, tree);
@@ -228,7 +228,6 @@ namespace Voron.Trees
 				byte* dataPos;
 				if (page.HasSpaceFor(key, len) == false)
 				{
-					
 					var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
 					dataPos = pageSplitter.Execute();
 
@@ -471,7 +470,7 @@ namespace Voron.Trees
 
 		}
 
-		public ushort? ReadVersion(Transaction tx, Slice key)
+		public ushort ReadVersion(Transaction tx, Slice key)
 		{
 			using (var cursor = tx.NewCursor(this))
 			{
@@ -479,7 +478,7 @@ namespace Voron.Trees
 				var node = p.Search(key, _cmp);
 
 				if (node == null || new Slice(node).Compare(key, _cmp) != 0)
-					return null;
+					return 0;
 
 				return node->Version;
 			}

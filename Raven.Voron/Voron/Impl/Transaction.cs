@@ -204,8 +204,7 @@ namespace Voron.Impl
                 return; // nothing to do
 
             FlushAllMultiValues();
-			FlushFreePages();
-			_freeSpaceRepository.FlushFreeState(this);
+            _freeSpaceRepository.FlushFreeState(this);
 
             if (_deletedTrees != null)
             {
@@ -228,6 +227,7 @@ namespace Voron.Impl
                     treeState.CopyTo(treePtr);
                 }
             }
+
 
 #if DEBUG
             if (State.Root != null && State.FreeSpaceRoot != null)
@@ -270,9 +270,8 @@ namespace Voron.Impl
                 var key = multiValueTree.Key.Item2;
                 var childTree = multiValueTree.Value;
 
-	            var trh = (TreeRootHeader*)parentTree.DirectAdd(this, key, sizeof(TreeRootHeader));	            
-
-	            childTree.State.CopyTo(trh);
+                var trh = (TreeRootHeader*)parentTree.DirectAdd(this, key, sizeof(TreeRootHeader));
+                childTree.State.CopyTo(trh);
 
                 parentTree.SetAsMultiValueTreeRef(this, key);
             }

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using Voron.Impl;
 
@@ -147,7 +149,10 @@ namespace Voron.Trees
 
 		public Slice MaxKey { get; set; }
 
-
+	    public long TreeRootPage
+	    {
+            get { return  this._tree.State.RootPageNumber; }
+	    }
 	}
 
 	public static class IteratorExtensions
