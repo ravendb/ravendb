@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
@@ -32,6 +33,12 @@ namespace Owin
 			return UseRavenDB(app, new RavenDBOptions(configuration));
 		}
 
+		private static IAppBuilder UseInterceptor(this IAppBuilder app)
+		{
+			return app.Use(typeof(InterceptMiddleware));
+		}
+
+
 		public static IAppBuilder UseRavenDB(this IAppBuilder app, RavenDBOptions options)
 		{
 			if (options == null)
@@ -47,7 +54,10 @@ namespace Owin
 				appDisposing.Value.Register(options.Dispose);
 			}
 
-			app.UseWebApi(CreateHttpCfg(options.Landlord, options.MixedModeRequestAuthorizer, options.RequestManager));
+			app
+				//uncomment for debug 
+					.UseInterceptor()
+				.UseWebApi(CreateHttpCfg(options.Landlord, options.MixedModeRequestAuthorizer, options.RequestManager));
 			return app;
 		}
 
@@ -60,7 +70,7 @@ namespace Owin
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 
 			cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
-			//cfg.Filters.Add(new RavenExceptionFilterAttribute());
+			cfg.Filters.Add(new RavenExceptionFilterAttribute());
 			cfg.MapHttpAttributeRoutes();
 			cfg.Routes.MapHttpRoute(
 				"API Default", "{controller}/{action}",
@@ -69,8 +79,7 @@ namespace Owin
 			cfg.Routes.MapHttpRoute(
 				"Database Route", "databases/{databaseName}/{controller}/{action}",
 				new { id = RouteParameter.Optional });
-			cfg.MessageHandlers.Add(new GZipToJsonHandler());
-			cfg.MessageHandlers.Add(new CompressHandler());
+			cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
 
 			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
 			return cfg;
@@ -101,12 +110,28 @@ namespace Owin
 
 			public bool UseBufferedOutputStream(HttpResponseMessage response)
 			{
+				return false;
+
 				return (response.Content is ChangesPushContent ||
 						response.Content is StreamsController.StreamQueryContent ||
 						response.Content is StreamContent ||
 						response.Content is PushStreamContent ||
 						response.Content is JsonContent ||
 						response.Content is MultiGetController.MultiGetContent) == false;
+			}
+		}
+
+		private class InterceptMiddleware : OwinMiddleware
+		{
+			public InterceptMiddleware(OwinMiddleware next) : base(next)
+			{
+			}
+
+			public override async Task Invoke(IOwinContext context)
+			{
+				// Pre request stuff
+				await Next.Invoke(context);
+				// Post request stuff
 			}
 		}
 	}
