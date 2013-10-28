@@ -61,7 +61,7 @@ namespace Voron.Tests.Trees
 			// update that is too big
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.Add(tx, "1", new MemoryStream(new byte[tx.Pager.MaxNodeSize - 25]));
+				tx.State.Root.Add(tx, "1", new MemoryStream(new byte[tx.DataPager.MaxNodeSize - 25]));
                 RenderAndShow(tx);
 
 				tx.Commit();

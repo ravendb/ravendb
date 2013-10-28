@@ -13,7 +13,7 @@ namespace Voron.Tests
 	public abstract class StorageTest : IDisposable
     {
         private readonly StorageEnvironment _storageEnvironment;
-        private IVirtualPager _pager;
+        private StorageEnvironmentOptions _options;
 
         public StorageEnvironment Env
         {
@@ -22,19 +22,13 @@ namespace Voron.Tests
 
         protected StorageTest()
         {
-            FilePager();
-            //_pager = new PureMemoryPager();
-            _storageEnvironment = new StorageEnvironment(_pager);
+            if (Directory.Exists("test.data"))
+                Directory.Delete("test.data", true);
+            _options = StorageEnvironmentOptions.ForPath("test.data");
+            _storageEnvironment = new StorageEnvironment(_options);
         }
 
-        private void FilePager()
-        {
-            if (File.Exists("test.data"))
-                File.Delete("test.data");
-            _pager = new MemoryMapPager("test.data");
-        }
-
-        protected Stream StreamFor(string val)
+	    protected Stream StreamFor(string val)
         {
             return new MemoryStream(Encoding.UTF8.GetBytes(val));
         }
@@ -42,9 +36,9 @@ namespace Voron.Tests
         public void Dispose()
         {
             _storageEnvironment.Dispose();
-            _pager.Dispose();
-            if (File.Exists("test.data"))
-                File.Delete("test.data");
+            _options.Dispose();
+            if (Directory.Exists("test.data"))
+                Directory.Delete("test.data", true);
         }
 
         protected void RenderAndShow(Transaction tx, int showEntries = 25, string name = null)

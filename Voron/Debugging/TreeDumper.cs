@@ -71,7 +71,7 @@ digraph structs {
                         for (int i = 0; i < p.NumberOfEntries; i++)
                         {
                             var node = p.GetNode(i);
-                            if (node->PageNumber < 0 || node->PageNumber > tx.NextPageNumber)
+                            if (node->PageNumber < 0 || node->PageNumber > tx.State.NextPageNumber)
                             {
                                 writer.Write("		p_{0}_refs [label=\"CORRUPTED\"; Color=RED];", p.PageNumber);
                                 stack.Clear();

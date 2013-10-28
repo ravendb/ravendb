@@ -1,9 +1,10 @@
-﻿namespace Voron.Impl
-{
-	using System;
-	using System.Collections.Generic;
-	using System.Runtime.InteropServices;
+﻿using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using Voron.Trees;
 
+namespace Voron.Impl
+{
 	public unsafe class PureMemoryPager : AbstractPager
 	{
 		private IntPtr _ptr;
@@ -16,8 +17,12 @@
 			_base = (byte*)_ptr.ToPointer();
 			NumberOfAllocatedPages = data.Length / PageSize;
 			PagerState.Release();
-			PagerState = CreateNewPagerState(_base, _ptr);
-
+			PagerState = new PagerState
+			{
+				Ptr = _ptr,
+                Base = _base
+			};
+			PagerState.AddRef();
 			fixed (byte* origin = data)
 			{
 				NativeMethods.memcpy(_base, origin, data.Length);
@@ -30,17 +35,22 @@
 			_base = (byte*)_ptr.ToPointer();
 			NumberOfAllocatedPages = _allocatedSize / PageSize;
 			PagerState.Release();
-			PagerState = CreateNewPagerState(_base, _ptr);
+			PagerState = new PagerState
+				{
+					Ptr = _ptr,
+					Base = _base
+				};
+			PagerState.AddRef();
 		}
 
-		public override void EnsureEnoughSpace(Transaction tx, int len)
-		{
-			var pages = 10; // TODO [ppekrol] When using PureMemoryPager, all memory allocations are causing issues with writes (contex is working on 'old' memory) - this will be fixed after LogFile is introduced by Arek.
-			if (ShouldGoToOverflowPage(len))
-				pages = GetNumberOfOverflowPages(tx, len);
+	    public override int Write(Page page)
+	    {
+			var toWrite = page.IsOverflow ? (page.OverflowSize + Constants.PageHeaderSize): PageSize;
 
-			EnsureContinious(tx, tx.NextPageNumber, pages);
-		}
+			NativeMethods.memcpy(AcquirePagePointer(page.PageNumber), page.Base, toWrite);
+
+		    return toWrite;
+	    }
 
 		public override void Dispose()
 		{
@@ -49,19 +59,30 @@
 			_base = null;
 		}
 
-		public override void Flush(List<long> sortedPagesToFlush)
-		{
-			//nothing to do here
-		}
-
-		public override void Flush(long headerPageId)
-		{
-			// also nothing to do
-		}
-
 		public override void Sync()
 		{
 			// nothing to do here
+		}
+
+		public override void Flush(long startPage, long count)
+		{
+			// nothing to do here
+		}
+
+		public override byte* AcquirePagePointer(long pageNumber)
+		{
+			return _base + (pageNumber * PageSize);
+		}
+
+		private PagerState CreateNewPagerState(byte* newBase, IntPtr newPtr)
+		{
+			var newPager = new PagerState
+			{
+				Base = newBase,
+				Ptr = newPtr
+			};
+			newPager.AddRef(); // one for the pager
+			return newPager;
 		}
 
 		public override void AllocateMorePages(Transaction tx, long newLength)
@@ -78,8 +99,9 @@
 			_base = newBase;
 			_ptr = newPtr;
 
-			PagerState.Release(); // when the last transaction using this is over, will dispose it
-			PagerState newPager = CreateNewPagerState(newBase, newPtr);
+
+			var newPager = new PagerState { Ptr = newPtr, Base = _base };
+			newPager.AddRef(); // one for the pager
 
 			if (tx != null) // we only pass null during startup, and we don't need it there
 			{
@@ -88,17 +110,6 @@
 			}
 
 			PagerState = newPager;
-		}
-
-		private PagerState CreateNewPagerState(byte* newBase, IntPtr newPtr)
-		{
-			var newPager = new PagerState
-			{
-				Base = newBase,
-				Ptr = newPtr
-			};
-			newPager.AddRef(); // one for the pager
-			return newPager;
 		}
 	}
 }

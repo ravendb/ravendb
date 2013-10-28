@@ -31,7 +31,7 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail()
 		{
-			using (var Env = new StorageEnvironment(new PureMemoryPager()))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
 			{
 				var inputData = new List<byte[]>();
 				for (int i = 0; i < 250; i++)
@@ -39,13 +39,13 @@ namespace Voron.Tests.Bugs
                     inputData.Add(Encoding.UTF8.GetBytes(RandomString(1000)));
 				}
 
-				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					Env.CreateTree(tx, "foo");
+					env.CreateTree(tx, "foo");
 					tx.Commit();
 				}
 
-				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.GetTree("foo");
 					foreach (var buffer in inputData)
@@ -54,7 +54,7 @@ namespace Voron.Tests.Bugs
 					tx.Commit();
 				}
 
-				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.GetTree("foo");
 				    for (int index = 0; index < inputData.Count; index++)
@@ -78,7 +78,7 @@ namespace Voron.Tests.Bugs
 		{
 			const int DocumentCount = 10;
 
-			using (var env = new StorageEnvironment(new PureMemoryPager()))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
 			{
 				var rand = new Random();
 				var testBuffer = new byte[168];
