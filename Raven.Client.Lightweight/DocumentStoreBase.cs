@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 #if !SILVERLIGHT
 using System.Collections.Specialized;
 #endif
@@ -98,7 +99,12 @@ namespace Raven.Client
 			indexCreationTask.Execute(DatabaseCommands, Conventions);
 		}
 
-		/// <summary>
+	    public async Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask)
+	    {
+	        await indexCreationTask.ExecuteAsync(AsyncDatabaseCommands, Conventions);
+	    }
+
+	    /// <summary>
 		/// Executes the transformer creation
 		/// </summary>
 		public virtual void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)
