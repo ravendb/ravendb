@@ -373,7 +373,8 @@ namespace Raven.Database.Server.Controllers
 				ResultsTransformer = GetQueryStringValue("resultsTransformer"),
 				QueryInputs = ExtractQueryInputs(),
 				ExplainScores = GetExplainScores(),
-				SortHints = GetSortHints()
+				SortHints = GetSortHints(),
+				IsDistinct = IsDistinct()
 			};
 
 
@@ -398,6 +399,24 @@ namespace Raven.Database.Server.Controllers
 				};
 			}
 			return query;
+		}
+
+		private bool IsDistinct()
+		{
+			var distinct = GetQueryStringValue("distinct");
+			if (string.Equals("true", distinct, StringComparison.OrdinalIgnoreCase))
+				return true;
+			var aggAsString = GetQueryStringValue("aggregation"); // 2.x legacy support
+			if (aggAsString == null)
+				return false;
+
+			if (string.Equals("Distinct", aggAsString, StringComparison.OrdinalIgnoreCase))
+				return true;
+
+			if (string.Equals("None", aggAsString, StringComparison.OrdinalIgnoreCase))
+				return false;
+
+			throw new NotSupportedException("AggregationOperation (except Distinct) is no longer supported");
 		}
 
 		private Dictionary<string, SortOptions> GetSortHints()
