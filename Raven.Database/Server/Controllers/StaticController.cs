@@ -90,7 +90,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var filename = id;
 
-			var newEtag = Database.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync(), InnerRequest.Headers.FilterHeadersAttachment());
+			var newEtag = Database.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync(), InnerRequest.Content.Headers.FilterHeadersAttachment());
 
 			var msg = GetEmptyMessage(HttpStatusCode.NoContent);
 

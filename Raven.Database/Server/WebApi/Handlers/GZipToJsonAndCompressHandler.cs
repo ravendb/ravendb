@@ -56,13 +56,6 @@ namespace Raven.Database.Server.WebApi.Handlers
 				}
 			}
 
-			// Replace the original content-type with content type
-			// of decompressed data. In our case, we can assume application/json. A
-			// more generic and reuseable handler would need some other 
-			// way to differentiate the decompressed content type.
-			request.Content.Headers.Remove("Content-Type");
-			request.Content.Headers.Add("Content-Type", "application/json");
-
 			response = await base.SendAsync(request, cancellationToken);
 			return Compress(response);
 		}
