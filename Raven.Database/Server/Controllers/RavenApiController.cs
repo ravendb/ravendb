@@ -62,12 +62,13 @@ namespace Raven.Database.Server.Controllers
 			var authorizer =
 				(MixedModeRequestAuthorizer) controllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
 			var result = new HttpResponseMessage();
-			RequestManager.HandleActualRequest(this, async () => result = await ExceuteActualRequest(controllerContext, cancellationToken, authorizer));
+
+			RequestManager.HandleActualRequest(this, async () => result = await ExecuteActualRequest(controllerContext, cancellationToken, authorizer));
 			RequestManager.AddAccessControlHeaders(this, result);
 			return result;
 		}
 
-		private async Task<HttpResponseMessage> ExceuteActualRequest(HttpControllerContext controllerContext, CancellationToken cancellationToken,
+		private async Task<HttpResponseMessage> ExecuteActualRequest(HttpControllerContext controllerContext, CancellationToken cancellationToken,
 			MixedModeRequestAuthorizer authorizer)
 		{
 			HttpResponseMessage authMsg;
