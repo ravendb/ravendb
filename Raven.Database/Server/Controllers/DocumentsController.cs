@@ -147,7 +147,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var docId = id;
 			var json = await ReadJsonAsync();
-			var putResult = Database.Put(docId, GetEtag(), json, InnerRequest.Headers.FilterHeaders(), GetRequestTransaction());
+			var putResult = Database.Put(docId, GetEtag(), json, InnerRequest.Content.Headers.FilterHeaders(), GetRequestTransaction());
 			return GetMessageWithObject(putResult, HttpStatusCode.Created);
 		}
 
