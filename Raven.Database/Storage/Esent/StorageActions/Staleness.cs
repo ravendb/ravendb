@@ -89,6 +89,17 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public bool IsMapStale(int view)
 		{
+      // Okay
+      // If I have a list of the entity names here
+      // then I can read the staleness for each collection
+      // If it's null, I should ignore it because we don't want to use
+      // this optimisation
+      // I will also add a method to this interface
+      // So this is responsible for storing the information in its own way
+      // SetLastEtagForCollection
+      // GetLastEtagForCollection
+      // And this can be on the Staleness actions
+      // Now let's look at the managed storage
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
 			Api.MakeKey(session, IndexesStats, view, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexesStats, SeekGrbit.SeekEQ) == false)
