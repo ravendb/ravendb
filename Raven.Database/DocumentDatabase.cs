@@ -898,10 +898,7 @@ namespace Raven.Database
 
         private void SetLastEtagForCollection(IStorageActionsAccessor actions, string collectionName, Etag etag)
         {
-            actions.Lists.Set("Raven/Collection/Etag", collectionName, RavenJObject.FromObject(new
-            {
-                Etag = etag.ToByteArray()
-            }), UuidType.Documents);
+            actions.Staleness.SetLastEtagForCollection(collectionName, etag);
         }
 
         public Etag GetLastEtagForCollection(string collectionName)
@@ -909,11 +906,7 @@ namespace Raven.Database
             Etag value = Etag.Empty;
             TransactionalStorage.Batch(accessor =>
             {
-                var dbvalue = accessor.Lists.Read("Raven/Collection/Etag", collectionName);
-                if (dbvalue != null)
-                {
-                    value = Etag.Parse(dbvalue.Data.Value<Byte[]>("Etag"));
-                }
+                value = accessor.Staleness.GetLastEtagForCollection(collectionName);
             });
             return value;
         }

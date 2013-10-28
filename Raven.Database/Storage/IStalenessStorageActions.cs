@@ -19,5 +19,8 @@ namespace Raven.Database.Storage
 		Etag GetMostRecentDocumentEtag();
 		Etag GetMostRecentAttachmentEtag();
 		int GetIndexTouchCount(int view);
+
+    void SetLastEtagForCollection(string collection, Etag etag);
+  Etag GetLastEtagForCollection(string collection);
 	}
 }

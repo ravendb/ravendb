@@ -19,13 +19,15 @@ namespace Raven.Storage.Managed
 	public class StalenessStorageActions : IStalenessStorageActions
 	{
 		private readonly TableStorage storage;
+	    private readonly IListsStorageActions listStorageActions;
 
-		public StalenessStorageActions(TableStorage storage)
+	    public StalenessStorageActions(TableStorage storage, IListsStorageActions listStorageActions)
 		{
-			this.storage = storage;
+		    this.storage = storage;
+		    this.listStorageActions = listStorageActions;
 		}
 
-		public bool IsIndexStale(int view, DateTime? cutOff, Etag cutoffEtag)
+	    public bool IsIndexStale(int view, DateTime? cutOff, Etag cutoffEtag)
 		{
 			var indexingStatsReadResult = storage.IndexingStats.Read(view.ToString());
 			var lastIndexedEtagsReadResult = storage.LastIndexedEtags.Read(view.ToString());
@@ -78,6 +80,9 @@ namespace Raven.Storage.Managed
 
 		public bool IsMapStale(int view)
 		{
+      // Same here, I can do a Read from the Lists really easily
+      // I guess that's what I'm doing then
+
 			var readResult = storage.LastIndexedEtags.Read(view.ToString());
 
 			if (readResult == null)
@@ -126,7 +131,25 @@ namespace Raven.Storage.Managed
 			return readResult.Key.Value<int>("touches");
 		}
 
-		public Etag GetMostRecentDocumentEtag()
+	    public void SetLastEtagForCollection(string collection, Etag etag)
+	    {
+            this.listStorageActions.Set("Raven/Collection/Etag", collection, RavenJObject.FromObject(new
+            {
+                Etag = etag.ToByteArray()
+            }), UuidType.Documents);
+	    }
+
+	    public Etag GetLastEtagForCollection(string collection)
+	    {
+            var dbvalue = this.listStorageActions.Read("Raven/Collection/Etag", collection);
+            if (dbvalue != null)
+            {
+                return Etag.Parse(dbvalue.Data.Value<Byte[]>("Etag"));
+            }
+	        return Etag.Empty;
+	    }
+
+	    public Etag GetMostRecentDocumentEtag()
 		{
 			foreach (var doc in storage.Documents["ByEtag"].SkipFromEnd(0))
 			{
