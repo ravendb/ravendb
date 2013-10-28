@@ -117,7 +117,9 @@ namespace Voron.Trees
 						return;
 					// convert back to simple key/val
 					var iterator = tree.Iterate(tx);
-					iterator.Seek(Slice.BeforeAllKeys);
+					if(!iterator.Seek(Slice.BeforeAllKeys))
+						throw new InvalidDataException("MultiDelete() failed : sub-tree is empty where it should not be, this is probably a Voron bug.");
+
 					var dataToSave = iterator.CurrentKey;
 
 					var ptr = DirectAdd(tx, key, dataToSave.Size);

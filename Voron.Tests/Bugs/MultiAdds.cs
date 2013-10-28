@@ -1,4 +1,6 @@
-﻿namespace Voron.Tests.Bugs
+﻿using System.Text;
+
+namespace Voron.Tests.Bugs
 {
 	using System;
 	using System.Collections.Generic;
@@ -13,6 +15,64 @@
 
 	public class MultiAdds
 	{
+        Random random = new Random(1234);
+
+        private string RandomString(int size)
+        {
+            var builder = new StringBuilder();
+            for (int i = 0; i < size; i++)
+            {
+                builder.Append(Convert.ToChar(Convert.ToInt32(Math.Floor(26 * random.NextDouble() + 65))));
+            }
+
+            return builder.ToString();
+        }
+
+		[Fact]
+		public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail()
+		{
+			using (var Env = new StorageEnvironment(new PureMemoryPager()))
+			{
+				var inputData = new List<byte[]>();
+				for (int i = 0; i < 250; i++)
+				{
+                    inputData.Add(Encoding.UTF8.GetBytes(RandomString(1000)));
+				}
+
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					Env.CreateTree(tx, "foo");
+					tx.Commit();
+				}
+
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = tx.GetTree("foo");
+					foreach (var buffer in inputData)
+						tree.MultiAdd(tx, "ChildTreeKey", new Slice(buffer));
+
+					tx.Commit();
+				}
+
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = tx.GetTree("foo");
+				    for (int index = 0; index < inputData.Count; index++)
+				    {
+				        var buffer = inputData[index];
+                        if (index == 130)
+                        {
+                            var it = (TreeIterator)tree.MultiRead(tx, "ChildTreeKey");
+                            DebugStuff.RenderAndShow(tx, it.TreeRootPage, 1);
+                        }
+				        Assert.DoesNotThrow(() => tree.MultiDelete(tx, "ChildTreeKey", new Slice(buffer)));
+				    }
+
+				    tx.Commit();
+				}
+			}
+		}
+
 		[Fact]
 		public void SplitterIssue()
 		{
