@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -166,7 +167,7 @@ namespace Raven.Smuggler
 			}
 			builder.Append(url);
 			var httpRavenRequest = httpRavenRequestFactory.Create(builder.ToString(), method, ConnectionStringOptions);
-			httpRavenRequest.WebRequest.Timeout = SmugglerOptions.Timeout;
+			httpRavenRequest.WebRequest.Timeout = SmugglerOptions.Timeout.Milliseconds;
 			if (LastRequestErrored)
 			{
 				httpRavenRequest.WebRequest.KeepAlive = false;
@@ -217,7 +218,7 @@ namespace Raven.Smuggler
 					if (retries-- == 0)
 						throw;
 					LastRequestErrored = true;
-					ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e, RetriesCount);
+					ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e);
 				}
 			}
 		}
@@ -334,6 +335,7 @@ namespace Raven.Smuggler
 			return new CompletedTask();
 		}
 
+        [StringFormatMethod("format")]
 		protected override void ShowProgress(string format, params object[] args)
 		{
 			Console.WriteLine(format, args);

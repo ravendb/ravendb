@@ -57,7 +57,7 @@ namespace Raven.Tests.Smuggler
 
                         using (var session2 = store2.OpenAsyncSession("Database2"))
                         {
-                            // Assert.Equal(2, await session2.Query<User>().CountAsync());
+                            Assert.Equal(2, await session2.Query<User>().CountAsync());
                         }
                     }
                 }

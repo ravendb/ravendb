@@ -21,8 +21,11 @@ namespace Raven.Abstractions.Smuggler
 
         public SmugglerOptionsBase()
         {
+            Filters = new List<FilterSetting>();
             BatchSize = 1024;
             OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
+            Timeout = TimeSpan.FromSeconds(30);
+            ShouldExcludeExpired = false;
         }
 
         /// <summary>
@@ -45,15 +48,76 @@ namespace Raven.Abstractions.Smuggler
         /// Usage example: OperateOnTypes = ItemType.Indexes | ItemType.Transformers | ItemType.Documents | ItemType.Attachments.
         /// </summary>
         public ItemType OperateOnTypes { get; set; }
+
+        /// <summary>
+        /// Filters to use to filter the documents that we will export/import.
+        /// </summary>
+        public List<FilterSetting> Filters { get; set; }
+
+        public virtual bool MatchFilters(RavenJToken item)
+        {
+            foreach (var filter in Filters)
+            {
+                bool matchedFilter = false;
+                foreach (var tuple in item.SelectTokenWithRavenSyntaxReturningFlatStructure(filter.Path))
+                {
+                    if (tuple == null || tuple.Item1 == null)
+                        continue;
+                    var val = tuple.Item1.Type == JTokenType.String
+                                ? tuple.Item1.Value<string>()
+                                : tuple.Item1.ToString(Formatting.None);
+                    matchedFilter |= filter.Values.Any(value => String.Equals(val, value, StringComparison.OrdinalIgnoreCase)) ==
+                                     filter.ShouldMatch;
+                }
+                if (matchedFilter == false)
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Should we exclude any documents which have already expired by checking the expiration meta property created by the expiration bundle
+        /// </summary>
+        public bool ShouldExcludeExpired { get; set; }
+
+        public virtual bool ExcludeExpired(RavenJToken item)
+        {
+            var metadata = item.Value<RavenJObject>("@metadata");
+
+            const string RavenExpirationDate = "Raven-Expiration-Date";
+
+            // check for expired documents and exclude them if expired
+            if (metadata == null)
+            {
+                return false;
+            }
+            var property = metadata[RavenExpirationDate];
+            if (property == null)
+                return false;
+
+            DateTime dateTime;
+            try
+            {
+                dateTime = property.Value<DateTime>();
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+
+            return dateTime >= SystemTime.UtcNow;
+        }
+
+        /// <summary>
+        /// The timeout for requests
+        /// </summary>
+        public TimeSpan Timeout { get; set; }
     }
 
     public class SmugglerOptions : SmugglerOptionsBase
 	{
 		public SmugglerOptions()
 		{
-			Filters = new List<FilterSetting>();
-			Timeout = 30 * 1000; // 30 seconds
-			ShouldExcludeExpired = false;
 			LastAttachmentEtag = LastDocsEtag = Etag.Empty;
 		}
 
@@ -66,8 +130,6 @@ namespace Raven.Abstractions.Smuggler
         /// The stream to write to when doing an export, or where to read from when doing an import.
         /// </summary>
         public Stream BackupStream { get; set; }
-
-		public List<FilterSetting> Filters { get; set; }
 
 		public Etag LastDocsEtag { get; set; }
 
@@ -84,65 +146,6 @@ namespace Raven.Abstractions.Smuggler
 				return ItemType.Documents | ItemType.Indexes | ItemType.Attachments;
 			}
 			return (ItemType)Enum.Parse(typeof(ItemType), items, ignoreCase: true);
-		}
-
-		/// <summary>
-		/// The timeout for requests
-		/// </summary>
-		public int Timeout { get; set; }
-		
-		public virtual bool MatchFilters(RavenJToken item)
-		{
-			foreach (var filter in Filters)
-			{
-				bool matchedFilter = false;
-				foreach (var tuple in item.SelectTokenWithRavenSyntaxReturningFlatStructure(filter.Path))
-				{
-					if (tuple == null || tuple.Item1 == null)
-						continue;
-					var val = tuple.Item1.Type == JTokenType.String
-								? tuple.Item1.Value<string>()
-								: tuple.Item1.ToString(Formatting.None);
-					matchedFilter |= filter.Values.Any(value => String.Equals(val, value, StringComparison.OrdinalIgnoreCase)) ==
-									 filter.ShouldMatch;
-				}
-				if (matchedFilter == false)
-					return false;
-			}
-			return true;
-		}
-
-		/// <summary>
-		/// Should we exclude any documents which have already expired by checking the expiration meta property created by the expiration bundle
-		/// </summary>
-		public bool ShouldExcludeExpired { get; set; }
-
-		public virtual bool ExcludeExpired(RavenJToken item)
-		{
-			var metadata = item.Value<RavenJObject>("@metadata");
-
-			const string RavenExpirationDate = "Raven-Expiration-Date";
-
-			// check for expired documents and exclude them if expired
-			if (metadata == null)
-			{
-				return false;
-			}
-			var property = metadata[RavenExpirationDate];
-			if (property == null)
-				return false;
-
-			DateTime dateTime;
-			try
-			{
-				dateTime = property.Value<DateTime>();
-			}
-			catch (FormatException)
-			{
-				return false;
-			}
-
-			return dateTime >= SystemTime.UtcNow;
 		}
 	}
 

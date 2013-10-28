@@ -4,22 +4,30 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using NDesk.Options;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
+using Raven.Abstractions.Util;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Smuggler
 {
     public static class SmugglerOp
     {
+        const int RetriesCount = 5;
+
+        private static bool isDocsStreamingSupported;
+
         public static async Task Between(SmugglerBetweenOptions options)
         {
             SetDatabaseNameIfEmpty(options.From);
@@ -37,6 +45,14 @@ namespace Raven.Smuggler
                 if (options.OperateOnTypes.HasFlag(ItemType.Transformers))
                 {
                     await ExportTransformers(exportStore, importStore, options.BatchSize);
+                }
+                if (options.OperateOnTypes.HasFlag(ItemType.Documents))
+                {
+                    await ExportDocuments(exportStore, importStore, options);
+                }
+                if (options.OperateOnTypes.HasFlag(ItemType.Attachments))
+                {
+                    // await ExportAttachments(exportStore, importStore, options.BatchSize);
                 }
             }
         }
@@ -80,6 +96,111 @@ namespace Raven.Smuggler
             }
         }
 
+        private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptionsBase options, Etag fromEtag = null)
+        {
+            var totalCount = 0;
+            var lastReport = SystemTime.UtcNow;
+            var reportInterval = TimeSpan.FromSeconds(2);
+            ShowProgress("Exporting Documents");
+
+            while (true)
+            {
+                if (isDocsStreamingSupported)
+                {
+                    ShowProgress("Streaming documents from " + fromEtag);
+                    using (var documentsEnumerator = await exportStore.AsyncDatabaseCommands.StreamDocsAsync(fromEtag))
+                    {
+                        while (await documentsEnumerator.MoveNextAsync())
+                        {
+                            var document = documentsEnumerator.Current;
+
+                            if (!options.MatchFilters(document))
+                                continue;
+                            if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
+                                continue;
+
+                            var metadata = document.Value<RavenJObject>("@metadata");
+                            var id = metadata.Value<string>("@id");
+                            var etag = Etag.Parse(metadata.Value<string>("@etag")); // TODO(fitzchak): Should we specify the etag here?
+                            document.Remove("@metadata");
+                            await importStore.AsyncDatabaseCommands.PutAsync(id, etag, document, metadata);
+                            totalCount++;
+
+                            if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                            {
+                                ShowProgress("Exported {0} documents", totalCount);
+                                lastReport = SystemTime.UtcNow;
+                            }
+
+                            fromEtag = etag;
+                        }
+                    }
+                }
+                else
+                {
+                    int retries = RetriesCount;
+                    var originalRequestTimeout = exportStore.JsonRequestFactory.RequestTimeout;
+                    exportStore.JsonRequestFactory.RequestTimeout = options.Timeout;
+                    try
+                    {
+                        while (true)
+                        {
+                            try
+                            {
+                                ShowProgress("Get documents from " + fromEtag);
+                                var documents = await exportStore.AsyncDatabaseCommands.GetDocumentsAsync(fromEtag, options.BatchSize);
+                                foreach (var document in documents)
+                                {
+                                    fromEtag = document.Etag;
+                                    
+                                    RavenJToken ravenJObject = document.ToJson();
+                                    if (!options.MatchFilters(ravenJObject))
+                                        continue;
+                                    if (options.ShouldExcludeExpired && options.ExcludeExpired(ravenJObject))
+                                        continue;
+
+                                    await importStore.AsyncDatabaseCommands.PutAsync(document.Key, document.Etag, document.DataAsJson, document.Metadata);
+                                    totalCount++;
+
+                                    if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                                    {
+                                        ShowProgress("Exported {0} documents", totalCount);
+                                        lastReport = SystemTime.UtcNow;
+                                    }
+                                }
+                                break;
+                            }
+                            catch (Exception e)
+                            {
+                                if (retries-- == 0)
+                                    throw;
+                                exportStore.JsonRequestFactory.RequestTimeout = TimeSpan.FromSeconds(exportStore.JsonRequestFactory.RequestTimeout.Value.Seconds * 2);
+                                ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e);
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        exportStore.JsonRequestFactory.RequestTimeout = originalRequestTimeout;
+                    }
+                }
+
+                // In a case that we filter all the results, the formEtag hasn't updaed to the latest, 
+                // but we still need to continue until we finish all the docs.
+                var databaseStatistics = await exportStore.AsyncDatabaseCommands.GetStatisticsAsync();
+                var lastEtagComparable = new ComparableByteArray(fromEtag);
+                if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
+                {
+                    fromEtag = EtagUtil.Increment(fromEtag, options.BatchSize);
+                    ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", fromEtag);
+                    continue;
+                }
+
+                ShowProgress("Done with reading documents, total: {0}", totalCount);
+                return fromEtag;
+            }
+        }
+
         private static async Task ExportTransformers(DocumentStore exportStore, DocumentStore importStore, int batchSize)
         {
             var totalCount = 0;
@@ -114,6 +235,7 @@ namespace Raven.Smuggler
             return store;
         }
 
+        [StringFormatMethod("format")]
         private static void ShowProgress(string format, params object[] args)
         {
             Console.WriteLine(format, args);
