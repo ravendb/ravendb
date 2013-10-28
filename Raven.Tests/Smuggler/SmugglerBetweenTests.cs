@@ -22,7 +22,7 @@ namespace Raven.Tests.Smuggler
         public async Task ShouldWork()
         {
             using (var server1 = GetNewServer(port: 8079))
-            using (var store1 = NewRemoteDocumentStore(ravenDbServer: server1))
+            using (var store1 = NewRemoteDocumentStore(ravenDbServer: server1, databaseName: "Database1"))
             {
                 store1.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("Database1");
                 await new UsersIndex().ExecuteAsync(store1);
@@ -49,7 +49,7 @@ namespace Raven.Tests.Smuggler
                         },
                     });
 
-                    using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2))
+                    using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
                     {
                         await AssertDatabaseHasIndex<UsersIndex>(store2);
 

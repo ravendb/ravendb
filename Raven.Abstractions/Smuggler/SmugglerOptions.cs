@@ -17,10 +17,26 @@ namespace Raven.Abstractions.Smuggler
 {
     public class SmugglerOptionsBase
     {
+        private int batchSize;
+
+        public SmugglerOptionsBase()
+        {
+            BatchSize = 1024;
+        }
+
         /// <summary>
         /// The number of document or attachments or indexes or transformers to load in each call to the RavenDB database.
         /// </summary>
-        public int BatchSize { get; set; }
+        public int BatchSize
+        {
+            get { return batchSize; }
+            set
+            {
+                if (value < 1)
+                    throw new InvalidOperationException("Batch size cannot be zero or a negative number");
+                batchSize = value;
+            }
+        }
     }
 
     public class SmugglerOptions : SmugglerOptionsBase
@@ -30,7 +46,6 @@ namespace Raven.Abstractions.Smuggler
 			Filters = new List<FilterSetting>();
 			OperateOnTypes = ItemType.Indexes | ItemType.Documents | ItemType.Attachments | ItemType.Transformers;
 			Timeout = 30 * 1000; // 30 seconds
-			BatchSize = 1024;
 			ShouldExcludeExpired = false;
 			LastAttachmentEtag = LastDocsEtag = Etag.Empty;
 		}
