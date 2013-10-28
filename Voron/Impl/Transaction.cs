@@ -247,10 +247,8 @@ namespace Voron.Impl
         public void FreePage(long pageNumber)
         {
             _dirtyPages.Remove(pageNumber);
-#if DEBUG
-            Debug.Assert(pageNumber >= 2 && pageNumber <= _dataPager.NumberOfAllocatedPages);
+            Debug.Assert(pageNumber >= 2);
             Debug.Assert(_freedPages.Contains(pageNumber) == false);
-#endif
             _freedPages.Add(pageNumber);
         }
 

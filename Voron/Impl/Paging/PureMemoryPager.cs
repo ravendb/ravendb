@@ -46,7 +46,8 @@ namespace Voron.Impl
 	    public override int Write(Page page)
 	    {
 			var toWrite = page.IsOverflow ? (page.OverflowSize + Constants.PageHeaderSize): PageSize;
-
+            EnsureContinuous(null, page.PageNumber,toWrite / PageSize);
+            
 			NativeMethods.memcpy(AcquirePagePointer(page.PageNumber), page.Base, toWrite);
 
 		    return toWrite;
@@ -87,8 +88,10 @@ namespace Voron.Impl
 
 		public override void AllocateMorePages(Transaction tx, long newLength)
 		{
-			if (newLength <= _allocatedSize)
+			if (newLength < _allocatedSize)
 				throw new ArgumentException("Cannot set the legnth to less than the current length");
+		    if (newLength == _allocatedSize)
+		        return; // nothing to do
 
 			var oldSize = _allocatedSize;
 			_allocatedSize = newLength;

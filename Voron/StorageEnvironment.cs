@@ -183,7 +183,7 @@ namespace Voron
 			var space = tx.State.Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
 
 			tree.State.CopyTo((TreeRootHeader*)space);
-
+		    tree.State.IsModified = true;
             tx.State.AddTree(name, tree);
 
 			return tree;

@@ -60,7 +60,9 @@ namespace Voron.Tests.Bugs
 
                     using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                     {
-                        Assert.NotNull(tx.GetTree("events").Read(tx, "test"));
+                        var tree = tx.GetTree("events");
+                        var readResult = tree.Read(tx, "test");
+                        Assert.NotNull(readResult);
 
                         tx.Commit();
                     }

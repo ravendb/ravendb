@@ -16,7 +16,7 @@ namespace Voron.Tests.Storage
         [Fact]
         public void MemoryMapPagerReleasesPagerState()
         {
-            PagerReleasesPagerState(() => new MemoryMapPager("test.data"));
+            PagerReleasesPagerState(() => new MemoryMapPager("test.data\\db.voron"));
         }
 
         private static void PagerReleasesPagerState(Func<AbstractPager> constructor)

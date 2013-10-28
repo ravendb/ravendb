@@ -69,7 +69,7 @@ namespace Voron.Impl
 			return state;
 		}
 
-        public virtual void EnsureContinuous(Transaction tx, long requestedPageNumber, int pageCount)
+        public void EnsureContinuous(Transaction tx, long requestedPageNumber, int pageCount)
         {
             if (requestedPageNumber + pageCount <= NumberOfAllocatedPages)
                 return;
@@ -77,11 +77,14 @@ namespace Voron.Impl
             // this ensure that if we want to get a range that is more than the current expansion
             // we will increase as much as needed in one shot
             var minRequested = (requestedPageNumber + pageCount) * PageSize;
-            var allocationSize = NumberOfAllocatedPages * PageSize;
+            var allocationSize = Math.Max(NumberOfAllocatedPages * PageSize, PageSize);
             while (minRequested > allocationSize)
             {
                 allocationSize = GetNewLength(allocationSize);
             }
+
+            AllocateMorePages(tx, allocationSize);
+
         }
 
 		public bool ShouldGoToOverflowPage(int len)
