@@ -18,6 +18,8 @@ namespace Voron
 
         public abstract IVirtualPager CreateLogPager(string name);
 
+        protected bool disposed;
+
         protected StorageEnvironmentOptions()
         {
             LogFileSize = 64 * 1024 * 1024;
@@ -77,6 +79,9 @@ namespace Voron
 
             public override void Dispose()
             {
+                if (disposed)
+                    return;
+                disposed = true;
                 if(_dataPager.IsValueCreated)
                     _dataPager.Value.Dispose();
                 foreach (var journal in _journals)
@@ -116,6 +121,10 @@ namespace Voron
 
             public override void Dispose()
             {
+                if (disposed)
+                    return;
+                disposed = true;
+
                 _dataPager.Dispose();
                 foreach (var virtualPager in _logs)
                 {

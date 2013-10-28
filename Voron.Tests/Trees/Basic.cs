@@ -20,9 +20,7 @@ namespace Voron.Tests.Trees
             {
                 tx.State.Root.Add(tx, "a", new MemoryStream(buffer));
                 allPages = tx.State.Root.AllPages(tx);
-	            var testState = tx.State.Root.State;
                 tx.Commit();
-				RenderAndShow(tx, 1);
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
@@ -87,10 +85,8 @@ namespace Voron.Tests.Trees
 				}
 
 				tx.Commit();
-// ReSharper disable ConditionIsAlwaysTrueOrFalse
-				if (tx.Environment.PageSize != 4096)
+				if (tx.DataPager.PageSize != 4096)
 					return;
-// ReSharper restore ConditionIsAlwaysTrueOrFalse
                 Assert.Equal(4, tx.State.Root.State.PageCount);
                 Assert.Equal(3, tx.State.Root.State.LeafPages);
                 Assert.Equal(1, tx.State.Root.State.BranchPages);

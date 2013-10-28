@@ -237,6 +237,11 @@ namespace Voron.Impl
             {
                 pagerState.Release();
             }
+
+            foreach (var releaseLog in _releaseLogActions)
+            {
+                releaseLog();
+            }
         }
 
         public void FreePage(long pageNumber)

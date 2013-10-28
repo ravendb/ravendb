@@ -64,7 +64,7 @@ namespace Voron.Tests
             TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
 
             var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
-            var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.32\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
+            var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
             p.WaitForExit();
             Process.Start(output);
         }
