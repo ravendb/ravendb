@@ -864,6 +864,13 @@ namespace Raven.Client.Document
 			                       .ToArray();
 		}
 
+		public Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query)
+		{
+			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, null, null);
+			var lazyOp = new LazyMoreLikeThisOperation<TResult>(multiLoadOperation, query);
+			return AddLazyOperation<TResult[]>(lazyOp, null);
+		}
+
 		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude)
 		{
 			var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this);
