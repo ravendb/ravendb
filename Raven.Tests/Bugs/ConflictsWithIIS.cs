@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Tests.Bugs.Identifiers;
+using Xunit;
 
 namespace Raven.Tests.Bugs
 {
@@ -16,7 +18,14 @@ namespace Raven.Tests.Bugs
 			public int StatusId { get; set; }
 		}
 
-		[IISExpressInstalledFact]
+		[Fact]
+		public void WhyWasntThisFixed()
+		{
+			if(DateTime.Today > new DateTime(2013,11,1))
+				throw new InvalidOleVariantTypeException("This bug SHOULD HAVE BEEN FIXED BY NOW, this test is failing to remind you of that.");
+		}
+
+		[IISExpressInstalledFact(Skip = "Waiting for RavenDB-1445")]
 		public void MultiThreadedInsert()
 		{
 			const int threadCount = 4;
@@ -35,7 +44,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		[IISExpressInstalledFact]
+		[IISExpressInstalledFact(Skip = "Waiting for RavenDB-1445")]
 		public void InnefficientMultiThreadedInsert()
 		{
 			const int threadCount = 4;

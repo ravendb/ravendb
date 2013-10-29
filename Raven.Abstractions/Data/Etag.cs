@@ -235,6 +235,31 @@ namespace Raven.Abstractions.Data
 			return Parse(s);
 		}
 
+        public static implicit operator Etag(Guid g)
+        {
+            return Parse(g.ToByteArray());
+        }
+
+        public static implicit operator Guid?(Etag e)
+        {
+            if (e == null)
+                return null;
+            return new Guid(e.ToByteArray());
+        }
+
+
+
+        public static implicit operator Etag(Guid? g)
+        {
+            if (g == null)
+                return null;
+            return Parse(g.Value.ToByteArray());
+        }
+
+        public static implicit operator Guid(Etag e)
+        {
+            return new Guid(e.ToByteArray());
+        }
 
 		public Etag HashWith(Etag other)
 		{

@@ -13,6 +13,7 @@ using Raven.Abstractions.Logging;
 using Raven.Client.Embedded;
 using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Util;
+using Raven.Tests.MailingList;
 using Xunit;
 
 namespace Raven.Tests.Bundles.SqlReplication
@@ -141,13 +142,10 @@ CREATE TABLE [dbo].[Orders]
 				var eventSlim = new ManualResetEventSlim(false);
 
 				int testCount = 5000;
-				int numberOfLoops = 0;
 				store.DocumentDatabase.StartupTasks.OfType<SqlReplicationTask>()
 					.First().AfterReplicationCompleted += successCount =>
 					{
-						numberOfLoops++;
-
-						if (numberOfLoops == 4)
+						if (GetOrdersCount() == testCount)
 							eventSlim.Set();
 					};
 
@@ -171,18 +169,24 @@ CREATE TABLE [dbo].[Orders]
 
 				eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-				var providerFactory =
-					DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
-				using (var con = providerFactory.CreateConnection())
-				{
-					con.ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
-					con.Open();
+				Assert.Equal(testCount, GetOrdersCount());
 
-					using (var dbCommand = con.CreateCommand())
-					{
-						dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
-						Assert.Equal(testCount, dbCommand.ExecuteScalar());
-					}
+			}
+		}
+
+		private static int GetOrdersCount()
+		{
+			var providerFactory =
+					DbProviderFactories.GetFactory(FactIfSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+			using (var con = providerFactory.CreateConnection())
+			{
+				con.ConnectionString = FactIfSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+				con.Open();
+
+				using (var dbCommand = con.CreateCommand())
+				{
+					dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+					return (int) dbCommand.ExecuteScalar();
 				}
 			}
 		}

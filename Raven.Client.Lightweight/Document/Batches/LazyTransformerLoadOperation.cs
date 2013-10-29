@@ -11,23 +11,29 @@ namespace Raven.Client.Document.Batches
 #if !SILVERLIGHT
 	public class LazyTransformerLoadOperation<T> : ILazyOperation
 	{
-		private readonly string key;
-		private readonly string transfomer;
+		private readonly string[] ids;
+		private readonly string transformer;
 		private readonly LoadTransformerOperation loadTransformerOperation;
 		private readonly bool singleResult;
 
-		public LazyTransformerLoadOperation(string key, string transfomer, LoadTransformerOperation loadTransformerOperation, bool singleResult)
+		public LazyTransformerLoadOperation(string[] ids, string transformer, LoadTransformerOperation loadTransformerOperation, bool singleResult)
 		{
-			this.key = key;
-			this.transfomer = transfomer;
+			this.ids = ids;
+			this.transformer = transformer;
 			this.loadTransformerOperation = loadTransformerOperation;
 			this.singleResult = singleResult;
 		}
 
 		public GetRequest CreateRequest()
 		{
-			string path = "/queries/" + Uri.EscapeDataString(key) + "&transformer=" + transfomer;
-			return new GetRequest { Url = path };
+			string query = "?" + string.Join("&", ids.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
+			if (!string.IsNullOrEmpty(transformer))
+				query += "&transformer=" + transformer;
+			return new GetRequest
+			{
+				Url = "/queries/",
+				Query = query
+			};
 		}
 
 		public object Result { get; set; }
@@ -63,7 +69,7 @@ namespace Raven.Client.Document.Batches
 
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
-			return commands.Get(new[] {key}, null, transfomer);
+			return commands.Get(ids, null, transformer);
 		}
 
 		public void HandleEmbeddedResponse(object result)

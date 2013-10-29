@@ -175,8 +175,9 @@ namespace Raven.Client.Document
 		Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id)
 		{
 			var transformer = new TTransformer().TransformerName;
-			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(id, transformer,
-																		  new LoadTransformerOperation(this, transformer, 1),
+			var ids = new[] { id };
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(ids, transformer,
+																		  new LoadTransformerOperation(this, transformer, ids),
 																		  singleResult: true);
 			return AddLazyOperation<TResult>(lazyLoadOperation, null);
 		}
@@ -184,9 +185,10 @@ namespace Raven.Client.Document
 		Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(string[] ids)
 		{
 			var transformer = new TTransformer().TransformerName;
-			var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, null);
-			var lazyOp = new LazyMultiLoadOperation<TResult>(multiLoadOperation, ids, null, transformer);
-			return AddLazyOperation<TResult[]>(lazyOp, null);
+			var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(ids, transformer,
+																		  new LoadTransformerOperation(this, transformer, ids),
+																		  singleResult: false);
+			return AddLazyOperation<TResult[]>(lazyLoadOperation, null);
 		}
 
 		/// <summary>
@@ -330,7 +332,7 @@ namespace Raven.Client.Document
 			IncrementRequestCount();
 
 			var multiLoadResult = DatabaseCommands.Get(ids, new string[] {}, transformer, queryInputs);
-			return new LoadTransformerOperation(this, transformer, ids.Length).Complete<T>(multiLoadResult);
+			return new LoadTransformerOperation(this, transformer, ids).Complete<T>(multiLoadResult);
 		}
 	
 		internal object ProjectionToInstance(RavenJObject y, Type type)

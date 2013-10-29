@@ -35,9 +35,13 @@ namespace Raven.Database.Server.Responders.Admin
 			bool incrementalBackup;
 			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
 				incrementalBackup = false;
-			if (backupRequest.DatabaseDocument == null)
+			if (backupRequest.DatabaseDocument == null && Database.Name != null)
 			{
-				backupRequest.DatabaseDocument = SystemDatabase.Get("Raven/Databases/" + Database.Name, null).DataAsJson.JsonDeserialization<DatabaseDocument>();
+				var jsonDocument = SystemDatabase.Get("Raven/Databases/" + Database.Name, null);
+				if (jsonDocument != null)
+				{
+					backupRequest.DatabaseDocument = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
+				}
 			}
 			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
 			context.SetStatusToCreated(BackupStatus.RavenBackupStatusDocumentKey);

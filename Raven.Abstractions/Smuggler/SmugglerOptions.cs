@@ -178,5 +178,10 @@ namespace Raven.Abstractions.Smuggler
 		public string Path { get; set; }
 		public List<string> Values { get; set; }
 		public bool ShouldMatch { get; set; }
+
+		public FilterSetting()
+		{
+			Values = new List<string>();
+		}
 	}
 }
