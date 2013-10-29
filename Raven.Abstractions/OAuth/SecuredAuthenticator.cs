@@ -26,7 +26,7 @@ namespace Raven.Abstractions.OAuth
 				return;
 			}
 
-			if (e.Credentials.ApiKey != null)
+			if (e.Credentials != null && e.Credentials.ApiKey != null)
 			{
 #if NETFX_CORE
 				e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
