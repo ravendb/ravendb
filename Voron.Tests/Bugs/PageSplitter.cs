@@ -38,7 +38,7 @@ namespace Voron.Tests.Bugs
             var inputData = new List<string>();
             for (int i = 0; i < 1000; i++)
             {
-                inputData.Add(RandomString(2000));
+                inputData.Add(RandomString(1024));
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -46,10 +46,6 @@ namespace Voron.Tests.Bugs
                 var tree = tx.GetTree("foo");
                 for (int i = 0; i < inputData.Count; i++)
                 {
-                    if (i >= 18)
-                    {
-                        RenderAndShow(tx, tree, 1);
-                    }
                     var keyString = inputData[i];
                     Assert.DoesNotThrow(() => tree.Add(tx, keyString, new MemoryStream(new byte[] {1, 2, 3, 4})));
                 }

@@ -36,7 +36,7 @@ namespace Voron.Tests.Bugs
 				var inputData = new List<byte[]>();
 				for (int i = 0; i < 1000; i++)
 				{
-                    inputData.Add(Encoding.UTF8.GetBytes(RandomString(2000)));
+                    inputData.Add(Encoding.UTF8.GetBytes(RandomString(1024)));
 				}
 
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
@@ -51,11 +51,11 @@ namespace Voron.Tests.Bugs
 					for (int index = 0; index < inputData.Count; index++)
 					{
 						var buffer = inputData[index];
-//						if (index == 18)
-//						{
-//							var it = (TreeIterator)tree.MultiRead(tx, "ChildTreeKey");
-//							DebugStuff.RenderAndShow(tx, it.TreeRootPage, 1);
-//						}
+                        if (index == 18)
+                        {
+                            var it = (TreeIterator)tree.MultiRead(tx, "ChildTreeKey");
+                            DebugStuff.RenderAndShow(tx, it.TreeRootPage, 1);
+                        }
 						Assert.DoesNotThrow(() => tree.MultiAdd(tx, "ChildTreeKey", new Slice(buffer)));
 					}
 					tx.Commit();

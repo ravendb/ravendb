@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Voron.Trees;
 
@@ -16,7 +17,8 @@ namespace Voron.Impl
 
 		protected AbstractPager()
 		{
-			MaxNodeSize = (PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage;
+			MaxNodeSize = 1024;
+            Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
 			PageMaxSpace = PageSize - Constants.PageHeaderSize;
 			PageMinSpace = (int)(PageMaxSpace * 0.33);
 			PagerState = new PagerState();
