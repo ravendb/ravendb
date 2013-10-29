@@ -66,7 +66,7 @@ namespace Voron.Impl.Journal
 
 		public void RecoverDatabase(FileHeader* fileHeader, out TransactionHeader* lastTxHeader)
 		{
-			_fileHeader = fileHeader;
+			_fileHeader = CopyFileHeader(fileHeader);
 			var logInfo = fileHeader->LogInfo;
 
 			lastTxHeader = null;
@@ -101,6 +101,10 @@ namespace Voron.Impl.Journal
 
 			_logIndex = logInfo.RecentLog;
 			_dataFlushCounter = logInfo.DataFlushCounter + 1;
+
+			var lastFile = Files.Last();
+			if (lastFile.AvailablePages >= 2) // it must have at least one page for the next transaction header and one page for data
+				CurrentFile = lastFile;
 		}
 
 		public void UpdateLogInfo()
@@ -260,6 +264,15 @@ namespace Voron.Impl.Journal
 			header->LogInfo.LastSyncedLogPage = -1;
 
 			return header;
+		}
+
+		private FileHeader* CopyFileHeader(FileHeader* fileHeader)
+		{
+			Debug.Assert(_inMemoryHeader != IntPtr.Zero);
+
+			NativeMethods.memcpy((byte*)_inMemoryHeader, (byte*)fileHeader, sizeof(FileHeader));
+
+			return (FileHeader*)_inMemoryHeader;
 		}
 
 		public List<LogSnapshot> GetSnapshots()
