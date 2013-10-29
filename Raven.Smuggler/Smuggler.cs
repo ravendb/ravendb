@@ -4,15 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Text;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using NDesk.Options;
 using Raven.Abstractions;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
@@ -37,7 +31,7 @@ namespace Raven.Smuggler
             using (var importStore = CreateStore(options.To))
             {
                 await EnsureDatabaseExists(importStore, options.To.DefaultDatabase);
-                
+
                 if (options.OperateOnTypes.HasFlag(ItemType.Indexes))
                 {
                     await ExportIndexes(exportStore, importStore, options.BatchSize);
@@ -59,8 +53,16 @@ namespace Raven.Smuggler
 
         private static async Task EnsureDatabaseExists(DocumentStore store, string databaseName)
         {
-            if (string.IsNullOrWhiteSpace(databaseName) == false)
-                await store.AsyncDatabaseCommands.GlobalAdmin.EnsureDatabaseExistsAsync(databaseName);
+            if (string.IsNullOrWhiteSpace(databaseName))
+                return;
+
+            var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+
+			var get = await store.AsyncDatabaseCommands.GetAsync(doc.Id);
+			if (get != null)
+				return;
+
+            await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc);
         }
 
         private static void SetDatabaseNameIfEmpty(RavenConnectionStringOptions connection)
