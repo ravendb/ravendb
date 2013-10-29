@@ -206,6 +206,9 @@ namespace Voron
 		{
 			if (_options.OwnsPagers)
 				_options.Dispose();
+
+			if(_journal != null)
+				_journal.Dispose();
 		}
 
 		private FileHeader* FindLatestFileHeadeEntry()
