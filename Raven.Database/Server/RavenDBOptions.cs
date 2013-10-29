@@ -19,10 +19,10 @@ namespace Raven.Database.Server
 			{
 				throw new ArgumentNullException("configuration");
 			}
-			//TODO DH: should we do HttpEndpointRegistration.RegisterHttpEndpointTarget(); here?
 			systemDatabase = new DocumentDatabase(configuration);
 			try
 			{
+				HttpEndpointRegistration.RegisterHttpEndpointTarget();
 				systemDatabase.SpinBackgroundWorkers();
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
