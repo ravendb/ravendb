@@ -8,7 +8,6 @@ namespace Raven.Database.Server
 {
 	public sealed class RavenDBOptions : IDisposable
 	{
-		private readonly InMemoryRavenConfiguration configuration;
 		private readonly DatabasesLandlord databasesLandlord;
 		private readonly MixedModeRequestAuthorizer mixedModeRequestAuthorizer;
 		private readonly DocumentDatabase systemDatabase;
@@ -16,7 +15,6 @@ namespace Raven.Database.Server
 
 		public RavenDBOptions(InMemoryRavenConfiguration configuration)
 		{
-			this.configuration = configuration;
 			//TODO DH: should we do HttpEndpointRegistration.RegisterHttpEndpointTarget(); here?
 			systemDatabase = new DocumentDatabase(configuration);
 			try
