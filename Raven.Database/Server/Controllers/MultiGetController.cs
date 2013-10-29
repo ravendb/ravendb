@@ -33,6 +33,15 @@ namespace Raven.Database.Server.Controllers
 				var requests = await ReadJsonObjectAsync<GetRequest[]>();
 				var results = new HttpResponseMessage[requests.Length];
 
+				foreach (var getRequest in requests)
+				{
+					getRequest.Headers.Add("Raven-internal-request", "true");
+					if (DatabaseName != null)
+					{
+						getRequest.Url = "databases/" + DatabaseName + getRequest.Url;
+					}
+				}
+
 				await ExecuteRequests(results, requests);
 
 				return new HttpResponseMessage(HttpStatusCode.OK)
@@ -142,10 +151,14 @@ namespace Raven.Database.Server.Controllers
 
 		private async Task<HttpResponseMessage> HandleActualRequestAsync(GetRequest request)
 		{
+			var query = "";
+			if (request.Query != null)
+				query = request.Query.TrimStart('?');
+
 			var msg = new HttpRequestMessage(HttpMethod.Get, new UriBuilder
 			{
 				Host = "multi.get",
-				Query = request.Query.TrimStart('?'),
+				Query = query,
 				Path = request.Url
 			}.Uri);
 			msg.SetConfiguration(Configuration);
