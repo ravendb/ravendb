@@ -333,7 +333,8 @@ namespace Voron
 
 	    public void FlushLogToDataFile(object state = null)
 	    {
-	        _journal.ApplyLogsToDataFile();
+	        var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
+	        journalApplicator.ApplyLogsToDataFile();
 	    }
 	}
 }

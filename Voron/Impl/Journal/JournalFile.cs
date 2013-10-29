@@ -169,7 +169,12 @@ namespace Voron.Impl.Journal
 			get { return _pager; }
 		}
 
-		private void Sync()
+        public ImmutableDictionary<long, long> PageTranslationTable
+        {
+            get { return _pageTranslationTable; }
+        }
+
+        private void Sync()
 		{
 			var start = _lastSyncedPage + 1;
 			var count = _writePage - start;
@@ -262,14 +267,14 @@ namespace Voron.Impl.Journal
 
         public TransactionHeader* RecoverAndValidate(long startRead, TransactionHeader* lastTxHeader)
         {
-            var logFileReader = new LogFileReader(_pager, _pageTranslationTable);
-            var header = logFileReader.RecoverAndValidate(startRead, lastTxHeader);
+            var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
+            logFileReader.RecoverAndValidate();
 
-            _pageTranslationTable = logFileReader.PageTranslationTable;
+            _pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
             _writePage = logFileReader.WritePage;
             _lastSyncedPage = logFileReader.LastSyncedPage;
 
-            return header;
+            return logFileReader.LastTransactionHeader;
         }
 	}
 }

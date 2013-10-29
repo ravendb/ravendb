@@ -39,7 +39,12 @@ namespace Voron.Impl.Journal
 			_fileHeader = GetEmptyFileHeader();
 		}
 
-		private JournalFile NextFile(Transaction tx)
+	    public IVirtualPager DataPager
+	    {
+	        get { return _dataPager; }
+	    }
+
+	    private JournalFile NextFile(Transaction tx)
 		{
 			_logIndex++;
 
@@ -103,22 +108,6 @@ namespace Voron.Impl.Journal
 			_fileHeader->LogInfo.RecentLog = Files.Count > 0 ? _logIndex : -1;
 			_fileHeader->LogInfo.LogFilesCount = Files.Count;
 			_fileHeader->LogInfo.DataFlushCounter = _dataFlushCounter;
-		}
-
-		public void UpdateFileHeaderAfterDataFileSync()
-		{
-            //_fileHeader->TransactionId = commitPoint.TransactionId;
-            //_fileHeader->LastPageNumber = commitPoint.TxLastPageNumber;
-
-            //_fileHeader->LogInfo.LastSyncedLog = commitPoint.LogNumber;
-            //_fileHeader->LogInfo.LastSyncedLogPage = commitPoint.LastWrittenLogPage;
-            //_fileHeader->LogInfo.DataFlushCounter = _dataFlushCounter;
-
-            //_env.FreeSpaceHandling.CopyStateTo(&_fileHeader->FreeSpace);
-            //_env.Root.State.CopyTo(&_fileHeader->Root);
-
-            throw new NotImplementedException("Fix me");
-
 		}
 
 		internal void WriteFileHeader(long? pageToWriteHeader = null)
@@ -229,79 +218,8 @@ namespace Voron.Impl.Journal
 			return CurrentFile.Allocate(startPage, numberOfPages);
 		}
 
-		public void ApplyLogsToDataFile()
-		{
-            var processingLogs = Files; // thread safety copy
-
-            if (processingLogs.Count == 0)
-				return;
-
-			var lastSyncedLog = _fileHeader->LogInfo.LastSyncedLog;
-			var lastSyncedPage = _fileHeader->LogInfo.LastSyncedLogPage;
-
-			Debug.Assert(processingLogs.First().Number >= lastSyncedLog);
-
-			var pagesToWrite = new Dictionary<long, Page>();
-		    var lastLogFile = -1;
-
-            // TODO: FIXME
-            //for (var i = recentLogIndex; i >= 0; i--)
-            //{
-            //    var log = processingLogs[i];
-
-            //    foreach (var pageNumber in log.GetModifiedPages(log.Number == lastSyncedLog ? lastSyncedPage : (long?) null))
-            //    {
-            //        if (pagesToWrite.ContainsKey(pageNumber) == false)
-            //        {
-            //            pagesToWrite[pageNumber] = log.ReadPage(null, pageNumber);
-            //        }
-            //    }
-            //}
-
-			var sortedPages = pagesToWrite.OrderBy(x => x.Key).Select(x => x.Value).ToList();
-
-			if(sortedPages.Count == 0)
-				return;
-
-			var last = sortedPages.Last();
-
-			_dataPager.EnsureContinuous(null, last.PageNumber, last.IsOverflow ? _env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize) : 1);
-
-			foreach (var page in sortedPages)
-			{
-				_dataPager.Write(page);
-			}
-
-			_dataPager.Sync();
-
-			UpdateFileHeaderAfterDataFileSync();
-
-            var fullLogs = processingLogs.GetRange(0, lastLogFile);
-
-			foreach (var fullLog in fullLogs)
-			{
-				if (_env.Options.DeleteUnusedLogFiles)
-					fullLog.DeleteOnClose();
-			}
-
-			UpdateLogInfo();
-
-            Files = Files.RemoveRange(0, lastLogFile);
-
-			foreach (var fullLog in fullLogs)
-			{
-				fullLog.Release();
-			}
-
-			if (Files.Count == 0)
-				CurrentFile = null;
-
-			WriteFileHeader();
-
-			_dataFlushCounter++;
-		}
-
-		public void Dispose()
+	
+	    public void Dispose()
 		{
 			if (_inMemoryHeader != IntPtr.Zero)
 			{
@@ -347,6 +265,135 @@ namespace Voron.Impl.Journal
 		public List<LogSnapshot> GetSnapshots()
 		{
 			return Files.Select(x => x.GetSnapshot()).ToList();
-		} 
+		}
+
+        public class JournalApplicator
+        {
+            private readonly WriteAheadJournal _waj;
+            private readonly long _oldestActiveTransaction;
+            private long _lastSyncedLog;
+            private long _lastSyncedPage;
+            private TransactionHeader* _lastTransactionHeader;
+
+            public JournalApplicator(WriteAheadJournal waj, long oldestActiveTransaction)
+            {
+                _waj = waj;
+                _oldestActiveTransaction = oldestActiveTransaction;
+            }
+
+            public void ApplyLogsToDataFile()
+            {
+                using (var tx = _waj._env.NewTransaction(TransactionFlags.Read))
+                {
+                    var jrnls = _waj.Files; // thread safety copy
+
+                    if (jrnls.Count == 0)
+                        return;
+
+                    var pagesToWrite = ReadTransactionsToFlush(_oldestActiveTransaction, jrnls);
+
+                    if (pagesToWrite.Count == 0)
+                        return;
+
+                    Debug.Assert(_lastTransactionHeader != null);
+
+                    var sortedPages = pagesToWrite.OrderBy(x => x.Key)
+                                                  .Select(x => x.Value.ReadPage(null, x.Key))
+                                                  .ToList();
+
+                    var last = sortedPages.Last();
+
+                    _waj.DataPager.EnsureContinuous(null, last.PageNumber,
+                                                    last.IsOverflow
+                                                        ? _waj._env.Options.DataPager.GetNumberOfOverflowPages(
+                                                            last.OverflowSize)
+                                                        : 1);
+
+                    foreach (var page in sortedPages)
+                    {
+                        _waj.DataPager.Write(page);
+                    }
+
+                    _waj.DataPager.Sync();
+
+                    UpdateFileHeaderAfterDataFileSync(tx);
+
+                    var journalFiles = jrnls.RemoveAll(x => x.Number >= _lastSyncedLog);
+                    foreach (var fullLog in journalFiles)
+                    {
+                        if (_waj._env.Options.DeleteUnusedLogFiles)
+                            fullLog.DeleteOnClose();
+                    }
+
+                    _waj.UpdateLogInfo();
+                    
+                    _waj.Files = _waj.Files.RemoveAll(x => x.Number < _lastSyncedLog);
+
+                    foreach (var fullLog in journalFiles)
+                    {
+                        fullLog.Release();
+                    }
+
+                    if (_waj.Files.Count == 0)
+                        _waj.CurrentFile = null;
+
+                    _waj.WriteFileHeader();
+
+                    _waj._dataFlushCounter++;
+
+                    tx.Commit();
+                }
+            }
+
+            private Dictionary<long, JournalFile> ReadTransactionsToFlush(long oldestActiveTransaction, ImmutableList<JournalFile> jrnls)
+            {
+                _lastSyncedLog = _waj._fileHeader->LogInfo.LastSyncedLog;
+                _lastSyncedPage = _waj._fileHeader->LogInfo.LastSyncedLogPage;
+
+                Debug.Assert(jrnls.First().Number >= _lastSyncedLog);
+
+                var pagesToWrite = new Dictionary<long, JournalFile>();
+
+                _lastTransactionHeader = null;
+                foreach (var file in jrnls)
+                {
+                    var startPage = file.Number == _waj._fileHeader->LogInfo.LastSyncedLog ? _waj._fileHeader->LogInfo.LastSyncedLogPage + 1 : 0;
+                    var journalReader = new JournalReader(file.Pager, startPage, _lastTransactionHeader);
+
+                    while (journalReader.ReadOneTransaction())
+                    {
+                        _lastTransactionHeader = journalReader.LastTransactionHeader;
+                        if (_lastTransactionHeader->TransactionId < oldestActiveTransaction)
+                            break;
+                        _lastSyncedLog = file.Number;
+                        _lastSyncedPage = journalReader.LastSyncedPage;
+                    }
+                    
+                    foreach (var pageNumber in journalReader.TransactionPageTranslation.Keys)
+                    {
+                        pagesToWrite[pageNumber] = file;
+                    }
+
+                    if (_lastTransactionHeader != null && _lastTransactionHeader->TransactionId < oldestActiveTransaction)
+                        break;
+                        
+                }
+                return pagesToWrite;
+            }
+
+
+            public void UpdateFileHeaderAfterDataFileSync(Transaction tx)
+            {
+                _waj._fileHeader->TransactionId = _lastTransactionHeader->TransactionId;
+                _waj._fileHeader->LastPageNumber = _lastTransactionHeader->LastPageNumber;
+
+                _waj._fileHeader->LogInfo.LastSyncedLog = _lastSyncedLog;
+                _waj._fileHeader->LogInfo.LastSyncedLogPage = _lastSyncedPage;
+                _waj._fileHeader->LogInfo.DataFlushCounter = _waj._dataFlushCounter;
+
+                tx.State.Root.State.CopyTo(&_waj._fileHeader->Root);
+                tx.State.FreeSpaceRoot.State.CopyTo(&_waj._fileHeader->Root);
+            }
+        }
 	}
 }

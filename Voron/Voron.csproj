@@ -59,7 +59,7 @@
     <Compile Include="Impl\FlushMode.cs" />
     <Compile Include="Impl\IFreeSpaceRepository.cs" />
     <Compile Include="Impl\Journal\JournalFile.cs" />
-    <Compile Include="Impl\Journal\LogFileReader.cs" />
+    <Compile Include="Impl\Journal\JournalReader.cs" />
     <Compile Include="Impl\Journal\LogInfo.cs" />
     <Compile Include="Impl\Journal\LogSnapshot.cs" />
     <Compile Include="Impl\Journal\TransactionHeader.cs" />
