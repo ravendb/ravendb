@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;
+using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
 using Raven.Smuggler;
@@ -62,6 +63,12 @@ namespace Raven.Tests.Smuggler
                 }
             }
         }
+
+        protected override void ModifyStore(DocumentStore documentStore)
+        {
+            documentStore.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
+        }
+
 
         private async Task AssertDatabaseHasIndex<TIndex>(IDocumentStore store) where TIndex : AbstractIndexCreationTask, new()
         {

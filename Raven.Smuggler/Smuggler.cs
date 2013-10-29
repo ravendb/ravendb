@@ -233,7 +233,11 @@ namespace Raven.Smuggler
                 Url = connection.Url,
                 ApiKey = connection.ApiKey,
                 Credentials = connection.Credentials,
-                DefaultDatabase = connection.DefaultDatabase
+                DefaultDatabase = connection.DefaultDatabase,
+                Conventions =
+                {
+                    FailoverBehavior = FailoverBehavior.FailImmediately, 
+                }
             };
             store.Initialize();
             return store;
