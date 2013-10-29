@@ -30,7 +30,8 @@ namespace Voron.Trees
 	        _nodeVersion = nodeVersion;
             _cursor = cursor;
             _treeState = treeState;
-            _page = _cursor.Pop();
+			_page = tx.ModifyPage(_cursor.Pages.First.Value.PageNumber, _cursor);
+			_cursor.Pop();
         }
 
         public byte* Execute()

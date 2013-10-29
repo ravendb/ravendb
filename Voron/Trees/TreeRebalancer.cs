@@ -26,7 +26,7 @@ namespace Voron.Trees
                 return null;
             }
 
-            var parentPage = cursor.ParentPage;
+			var parentPage = _tx.ModifyPage(cursor.ParentPage.PageNumber, cursor);
             if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
             {
                 // need to delete the implicit left page, shift right 
