@@ -31,37 +31,31 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail()
 		{
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+			using (var Env = new StorageEnvironment(new PureMemoryPager()))
 			{
 				var inputData = new List<byte[]>();
 				for (int i = 0; i < 1000; i++)
 				{
-                    inputData.Add(Encoding.UTF8.GetBytes(RandomString(1024)));
+                    inputData.Add(Encoding.UTF8.GetBytes(RandomString(2000)));
 				}
 
-				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					env.CreateTree(tx, "foo");
+					Env.CreateTree(tx, "foo");
 					tx.Commit();
 				}
 
-				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.GetTree("foo");
-					for (int index = 0; index < inputData.Count; index++)
-					{
-						var buffer = inputData[index];
-                        if (index == 18)
-                        {
-                            var it = (TreeIterator)tree.MultiRead(tx, "ChildTreeKey");
-                            DebugStuff.RenderAndShow(tx, it.TreeRootPage, 1);
-                        }
+					foreach (var buffer in inputData)
+					{						
 						Assert.DoesNotThrow(() => tree.MultiAdd(tx, "ChildTreeKey", new Slice(buffer)));
 					}
 					tx.Commit();
 				}
 
-				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.GetTree("foo");
 				    foreach (var buffer in inputData)
@@ -77,7 +71,7 @@ namespace Voron.Tests.Bugs
 		{
 			const int DocumentCount = 10;
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+			using (var env = new StorageEnvironment(new PureMemoryPager()))
 			{
 				var rand = new Random();
 				var testBuffer = new byte[168];
