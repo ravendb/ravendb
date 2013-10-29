@@ -28,7 +28,7 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 				var userMetadata = session.Advanced.GetMetadataFor(loadedUser);
 				var constraintsMeta = userMetadata.Value<RavenJArray>("Ensure-Unique-Constraints");
 				Assert.NotNull(constraintsMeta);
-				Assert.Equal(1, constraintsMeta.Length);
+				Assert.Equal(2, constraintsMeta.Length);
 			}
 		}
 
