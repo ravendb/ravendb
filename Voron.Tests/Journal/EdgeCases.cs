@@ -24,7 +24,7 @@ namespace Voron.Tests.Log
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var bytes = new byte[5 * Env.PageSize]; // 5 pages should fill in the log file completely
+				var bytes = new byte[4 * Env.PageSize]; 
 				tx.State.Root.Add(tx, "items/0", new MemoryStream(bytes));
 				tx.Commit();
 			}

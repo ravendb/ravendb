@@ -24,7 +24,7 @@ namespace Voron.Tests.Log
 		{
 			using (var tx0 = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var bytes = new byte[5 * Env.PageSize]; // 5 pages should fill in the log file completely
+				var bytes = new byte[4 * Env.PageSize]; 
                 tx0.State.Root.Add(tx0, "items/0", new MemoryStream(bytes));
 				//tx0.Commit(); intentionally
 			}
@@ -36,7 +36,7 @@ namespace Voron.Tests.Log
 			// should reuse pages allocated by uncommitted tx0
 			using (var tx1 = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var bytes = new byte[3 * Env.PageSize]; // here we allocate less pages
+				var bytes = new byte[2 * Env.PageSize]; // here we allocate less pages
                 tx1.State.Root.Add(tx1, "items/1", new MemoryStream(bytes));
 				tx1.Commit();
 			}

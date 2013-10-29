@@ -23,7 +23,7 @@ namespace Voron.Tests.Trees
                     tx.State.Root.Add(tx, string.Format("{0}9", i), new MemoryStream(new byte[8192]));
 
                     var rootPageNumber = tx.GetTree(tx.State.Root.Name).State.RootPageNumber;
-                    var rootPage = tx.DataPager.Read(rootPageNumber);
+                    var rootPage = tx.GetReadOnlyPage(rootPageNumber);
                     Assert.Equal(rootPage.ItemCount, 9 * (i + 1));
                 }
 
@@ -42,7 +42,7 @@ namespace Voron.Tests.Trees
                     tx.State.Root.Delete(tx, string.Format("{0}9", i));
 
 					var rootPageNumber = tx.GetTree(tx.State.Root.Name).State.RootPageNumber;
-					var rootPage = tx.DataPager.Read(rootPageNumber);
+					var rootPage = tx.GetReadOnlyPage(rootPageNumber);
                     Assert.Equal(rootPage.ItemCount, 9 * i);
                 }
 
@@ -68,7 +68,7 @@ namespace Voron.Tests.Trees
                     tx.State.Root.Add(tx, string.Format("{0}9", i), new MemoryStream(new byte[8192]));
 
 					var rootPageNumber = tx.GetTree(tx.State.Root.Name).State.RootPageNumber;
-					var rootPage = tx.DataPager.Read(rootPageNumber);
+					var rootPage = tx.GetReadOnlyPage(rootPageNumber);
                     Assert.Equal(rootPage.ItemCount, 9 * (i + 1));
                 }
 
@@ -87,7 +87,7 @@ namespace Voron.Tests.Trees
                     tx.State.Root.Add(tx, string.Format("{0}1", i), new MemoryStream(new byte[8192]));
 
 					var rootPageNumber = tx.GetTree(tx.State.Root.Name).State.RootPageNumber;
-					var rootPage = tx.DataPager.Read(rootPageNumber);
+					var rootPage = tx.GetReadOnlyPage(rootPageNumber);
                     Assert.Equal(rootPage.ItemCount, 9 * 80);
                 }
 
