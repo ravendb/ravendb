@@ -65,7 +65,7 @@ namespace Voron.Tests.Bugs
 		{
 			var ids = ReadIds("data.txt");
 
-			using (var env = new StorageEnvironment(new PureMemoryPager()))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
 			{
 				var rand = new Random();
 				var testBuffer = new byte[79];
@@ -100,7 +100,7 @@ namespace Voron.Tests.Bugs
 		{
 			var ids = ReadIds("data2.txt");
 
-			using (var env = new StorageEnvironment(new PureMemoryPager()))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
 			{
 				var rand = new Random();
 				var testBuffer = new byte[69];

@@ -31,7 +31,7 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail()
 		{
-			using (var Env = new StorageEnvironment(new PureMemoryPager()))
+			using (var Env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
 			{
 				var inputData = new List<byte[]>();
 				for (int i = 0; i < 1000; i++)
@@ -71,7 +71,7 @@ namespace Voron.Tests.Bugs
 		{
 			const int DocumentCount = 10;
 
-			using (var env = new StorageEnvironment(new PureMemoryPager()))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
 			{
 				var rand = new Random();
 				var testBuffer = new byte[168];
