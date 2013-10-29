@@ -24,6 +24,8 @@ namespace Owin
 {
 	public static class AppBuilderExtensions
 	{
+		private static string HostOnAppDisposing = "host.OnAppDisposing";
+
 		public static IAppBuilder UseRavenDB(this IAppBuilder app)
 		{
 			return UseRavenDB(app, new RavenConfiguration());
@@ -47,12 +49,17 @@ namespace Owin
 				throw new ArgumentNullException("options");
 			}
 
-			// This is a katana specific key (i.e. not a standard OWIN key) to be notified
-			// when the host in being shut down. Works both in HttpListener and SystemWeb hosting
-			var appDisposing = app.Properties["host.OnAppDisposing"] as CancellationToken?;
-			if (appDisposing.HasValue)
+			if (app.Properties.ContainsKey(HostOnAppDisposing))
 			{
-				appDisposing.Value.Register(options.Dispose);
+				// This is a katana specific key (i.e. not a standard OWIN key) to be notified
+				// when the host in being shut down. Works both in HttpListener and SystemWeb hosting
+				// Until owin spec is officially updated, there is no other way to know the host
+ 				// is shutting down / disposing
+				var appDisposing = app.Properties[HostOnAppDisposing] as CancellationToken?;
+				if (appDisposing.HasValue)
+				{
+					appDisposing.Value.Register(options.Dispose);
+				}
 			}
 
 			app
