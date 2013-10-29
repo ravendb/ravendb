@@ -39,14 +39,13 @@ namespace Raven.Server
 			serverThingsForTests = new ServerThingsForTests(options);
 		}
 
-		//TODO DH: does this need to be exposed? Seems to be required for low level tests that the client
-		//API does not expose
+		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
 		public DocumentDatabase SystemDatabase
 		{
 			get { return options.SystemDatabase; }
 		}
 
-		//TODO DH: does this need to be exposed?
+		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
 		public IServerThingsForTests Server
 		{
 			get { return serverThingsForTests; }
@@ -97,7 +96,7 @@ namespace Raven.Server
 			}
 		}
 
-		//TODO DH: need a better name
+		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
 		private class ServerThingsForTests : IServerThingsForTests
 		{
 			private readonly RavenDBOptions options;
@@ -129,7 +128,7 @@ namespace Raven.Server
 		}
 	}
 
-	//TODO DH: need a better name
+	//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
 	public interface IServerThingsForTests
 	{
 		bool HasPendingRequests { get; }
