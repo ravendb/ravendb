@@ -103,8 +103,8 @@ namespace Voron.Impl.Journal
         {
             if (current->TransactionId < 0)
                 throw new InvalidDataException("Transaction id cannot be less than 0 (Tx: " + current->TransactionId);
-            if (current->TxMarker.HasFlag(TransactionMarker.Start) == false)
-                throw new InvalidDataException("Transaction must have Start marker");
+			if (current->TxMarker.HasFlag(TransactionMarker.Start) == false && current->TxMarker.HasFlag(TransactionMarker.Split) == false)
+                throw new InvalidDataException("Transaction must have Start or Split marker");
             if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
                 throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
             if (current->PageCount > 0 && current->Crc == 0)
