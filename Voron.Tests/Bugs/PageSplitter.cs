@@ -46,7 +46,7 @@ namespace Voron.Tests.Bugs
                 var tree = tx.GetTree("foo");
                 for (int i = 0; i < inputData.Count; i++)
                 {
-                    if (i >= 19)
+                    if (i >= 18)
                     {
                         RenderAndShow(tx, tree, 1);
                     }
