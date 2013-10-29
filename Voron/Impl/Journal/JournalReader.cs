@@ -113,23 +113,22 @@ namespace Voron.Impl.Journal
             if (previous == null)
                 return;
 
-            if (previous->TxMarker.HasFlag(TransactionMarker.Split))
+            if (previous->TxMarker.HasFlag(TransactionMarker.Split) && previous->TxMarker.HasFlag(TransactionMarker.Start))
             {
                 if (current->TxMarker.HasFlag(TransactionMarker.Split) == false)
-                    throw new InvalidDataException("Previous transaction have a split marker, so the current one should have it too");
+                    throw new InvalidDataException("Previous transaction have a Start|Split marker, so the current one should have Split marker too");
 
-                if (current->TransactionId == previous->TransactionId)
+                if (current->TransactionId != previous->TransactionId)
                     throw new InvalidDataException("Split transaction should have the same id in the log. Expected id: " +
                                                    previous->TransactionId + ", got: " + current->TransactionId);
             }
-            else
+            else if (previous->TxMarker.HasFlag(TransactionMarker.Commit))
             {
-                if (current->TransactionId != 1 && // 1 is a first storage transaction which does not increment transaction counter after commit
-                    current->TransactionId - previous->TransactionId != 1)
-                    throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) + ", got:" +
-                                                   current->TransactionId);
+				if (current->TransactionId != 1 && // 1 is a first storage transaction which does not increment transaction counter after commit
+				   current->TransactionId - previous->TransactionId != 1)
+					throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) + ", got:" +
+												   current->TransactionId);
             }
-
         }
     }
 }
