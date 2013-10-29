@@ -200,6 +200,8 @@ namespace Voron.Trees
 				var foundPage = FindPageFor(tx, key, cursor);
 
 			    var page = tx.ModifyPage(foundPage.PageNumber, cursor);
+                
+                cursor.Update(cursor.Pages.First, page);
 
 				ushort nodeVersion = 0;
 				if (page.LastMatch == 0) // this is an update operation

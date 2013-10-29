@@ -85,13 +85,22 @@ namespace Voron
 			// existing db, let us load it
 
 			// the first two pages are allocated for double buffering tx commits
-			FileHeader* entry = FindLatestFileHeadeEntry();
-			_transactionsCounter = entry->TransactionId + 1;
-			State = new StorageEnvironmentState(null, null, entry->LastPageNumber + 1);
+			var entry = FindLatestFileHeadeEntry();
+            TransactionHeader* header;
+	        _journal.RecoverDatabase(entry, out header);
+
+	        var nextPageNumber = (header == null ? entry->LastPageNumber : header->LastPageNumber) + 1; 
+            State = new StorageEnvironmentState(null, null, nextPageNumber)
+                {
+                    NextPageNumber = nextPageNumber
+                };
+
+	        _transactionsCounter = (header == null ? entry->TransactionId : header->TransactionId) + 1;
+            
 			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var root = Tree.Open(tx, _sliceComparer, &entry->Root);
-				var freeSpace = Tree.Open(tx, _sliceComparer, &entry->FreeSpace);
+                var root = Tree.Open(tx, _sliceComparer, header == null ? &entry->Root : &header->Root);
+                var freeSpace = Tree.Open(tx, _sliceComparer, header == null ? &entry->Root : &header->FreeSpace);
 
 				tx.UpdateRootsIfNeeded(root, freeSpace);
 				tx.Commit();
@@ -193,17 +202,6 @@ namespace Voron
 		{
 			if (_options.OwnsPagers)
 				_options.Dispose();
-		}
-
-		private void WriteEmptyHeaderPage(Page pg)
-		{
-			var fileHeader = ((FileHeader*)pg.Base);
-			fileHeader->MagicMarker = Constants.MagicMarker;
-			fileHeader->Version = Constants.CurrentVersion;
-			fileHeader->TransactionId = 0;
-			fileHeader->LastPageNumber = 1;
-			fileHeader->FreeSpace.RootPageNumber = -1;
-			fileHeader->Root.RootPageNumber = -1;
 		}
 
 		private FileHeader* FindLatestFileHeadeEntry()

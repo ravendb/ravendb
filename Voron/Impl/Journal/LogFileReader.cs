@@ -98,8 +98,8 @@ namespace Voron.Impl.Journal
 
         private void ValidateHeader(TransactionHeader* current, TransactionHeader* previous)
         {
-            if (current->TxId < 0)
-                throw new InvalidDataException("Transaction id cannot be less than 0 (Tx: " + current->TxId);
+            if (current->TransactionId < 0)
+                throw new InvalidDataException("Transaction id cannot be less than 0 (Tx: " + current->TransactionId);
             if (current->TxMarker.HasFlag(TransactionMarker.Start) == false)
                 throw new InvalidDataException("Transaction must have Start marker");
             if (current->LastPageNumber < 0)
@@ -115,16 +115,16 @@ namespace Voron.Impl.Journal
                 if (current->TxMarker.HasFlag(TransactionMarker.Split) == false)
                     throw new InvalidDataException("Previous transaction have a split marker, so the current one should have it too");
 
-                if (current->TxId == previous->TxId)
+                if (current->TransactionId == previous->TransactionId)
                     throw new InvalidDataException("Split transaction should have the same id in the log. Expected id: " +
-                                                   previous->TxId + ", got: " + current->TxId);
+                                                   previous->TransactionId + ", got: " + current->TransactionId);
             }
             else
             {
-                if (current->TxId != 1 && // 1 is a first storage transaction which does not increment transaction counter after commit
-                    current->TxId - previous->TxId != 1)
-                    throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TxId + 1) + ", got:" +
-                                                   current->TxId);
+                if (current->TransactionId != 1 && // 1 is a first storage transaction which does not increment transaction counter after commit
+                    current->TransactionId - previous->TransactionId != 1)
+                    throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) + ", got:" +
+                                                   current->TransactionId);
             }
 
         }

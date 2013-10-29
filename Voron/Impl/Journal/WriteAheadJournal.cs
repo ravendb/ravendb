@@ -59,7 +59,7 @@ namespace Voron.Impl.Journal
 			return log;
 		}
 
-		public bool TryRecover(FileHeader* fileHeader, out TransactionHeader* lastTxHeader)
+		public void RecoverDatabase(FileHeader* fileHeader, out TransactionHeader* lastTxHeader)
 		{
 			_fileHeader = fileHeader;
 			var logInfo = fileHeader->LogInfo;
@@ -68,7 +68,7 @@ namespace Voron.Impl.Journal
 
 			if (logInfo.LogFilesCount == 0)
 			{
-				return false;
+				return;
 			}
 
 			for (var logNumber = logInfo.RecentLog - logInfo.LogFilesCount + 1; logNumber <= logInfo.RecentLog; logNumber++)
@@ -91,14 +91,11 @@ namespace Voron.Impl.Journal
 				if (logItem.Number == logInfo.LastSyncedLog)
 					startRead = logInfo.LastSyncedLogPage + 1;
 
-
 				lastTxHeader = logItem.RecoverAndValidate(startRead, lastTxHeader);
 			}
 
 			_logIndex = logInfo.RecentLog;
 			_dataFlushCounter = logInfo.DataFlushCounter + 1;
-
-			return true;
 		}
 
 		public void UpdateLogInfo()
@@ -110,7 +107,7 @@ namespace Voron.Impl.Journal
 
 		public void UpdateFileHeaderAfterDataFileSync()
 		{
-            //_fileHeader->TransactionId = commitPoint.TxId;
+            //_fileHeader->TransactionId = commitPoint.TransactionId;
             //_fileHeader->LastPageNumber = commitPoint.TxLastPageNumber;
 
             //_fileHeader->LogInfo.LastSyncedLog = commitPoint.LogNumber;
@@ -128,15 +125,9 @@ namespace Voron.Impl.Journal
 		{
             var fileHeaderPage = _dataPager.TempPage;
 
-		    NativeMethods.memset((fileHeaderPage.Base + Constants.PageHeaderSize), 0,
-		                         _dataPager.PageSize - Constants.PageHeaderSize);
+		    long page = pageToWriteHeader ?? _dataFlushCounter & 1;
 
-		    if (pageToWriteHeader == null)
-		        fileHeaderPage.PageNumber = _dataFlushCounter & 1;
-		    else
-		        fileHeaderPage.PageNumber = pageToWriteHeader.Value;
-
-		    var header = (FileHeader*) (fileHeaderPage.Base + Constants.PageHeaderSize);
+		    var header = (FileHeader*) (fileHeaderPage.Base);
 		    header->MagicMarker = Constants.MagicMarker;
 		    header->Version = Constants.CurrentVersion;
 		    header->TransactionId = _fileHeader->TransactionId;
@@ -146,7 +137,7 @@ namespace Voron.Impl.Journal
 		    header->FreeSpace = _fileHeader->FreeSpace;
 		    header->LogInfo = _fileHeader->LogInfo;
 
-		    _dataPager.Write(fileHeaderPage);
+		    _dataPager.Write(fileHeaderPage, page);
 		}
 
 	    public void TransactionBegin(Transaction tx)

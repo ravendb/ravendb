@@ -13,15 +13,6 @@ namespace Voron.Util
 	{
 		public const uint MaskDelta = 0xa282ead8;
 
-		public static uint ForEmptyInitialBuffer(int pageSize)
-		{
-			var emptyBuffer = new byte[pageSize];
-			fixed (byte* ptr = emptyBuffer)
-			{
-				return Value(ptr, 0, pageSize);
-			}
-		}
-
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static int Mask(uint crc)
 		{
@@ -49,7 +40,6 @@ namespace Voron.Util
 		public static uint Extend(uint crc, byte* ptr, int offset, int count)
 		{
 			// This method contains really ugly code repetitions, but it increases the performance significantly
-
 			unchecked
 			{
 				fixed (uint* t0 = Table_0)
@@ -148,19 +138,10 @@ namespace Voron.Util
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static uint Value(byte* data, int offset, int count)
 		{
-			try
-			{
-				return Extend(0, data, offset, count);
-			}
-			catch (Exception)
-			{
-				
-				throw;
-			}
-			
+		    return Extend(0, data, offset, count);
 		}
 
-		private readonly static uint[] Table_0 = new uint[256]
+	    private readonly static uint[] Table_0 = new uint[256]
 			{
 				0x00000000, 0xf26b8303, 0xe13b70f7, 0x1350f3f4,
 				0xc79a971f, 0x35f1141c, 0x26a1e7e8, 0xd4ca64eb,

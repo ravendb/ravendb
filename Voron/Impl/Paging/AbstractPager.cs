@@ -97,7 +97,7 @@ namespace Voron.Impl
             return (PageSize - 1 + overflowSize) / (PageSize) + 1;
 		}
 
-	    public abstract int Write(Page page);
+	    public abstract void Write(Page page, long? pageNumber);
 
 	    public virtual void Dispose()
         {

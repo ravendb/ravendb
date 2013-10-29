@@ -19,7 +19,7 @@ namespace Voron.Impl.Journal
 		public long PageNumberInLogFile;
 
 		[FieldOffset(16)]
-		public long TxId;
+		public long TransactionId;
 
 		[FieldOffset(24)]
 		public long NextPageNumber;

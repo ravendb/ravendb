@@ -94,7 +94,7 @@ namespace Voron.Impl.Journal
 
 			_currentTxHeader = GetTransactionHeader();
 
-			_currentTxHeader->TxId = tx.Id;
+			_currentTxHeader->TransactionId = tx.Id;
 			_currentTxHeader->NextPageNumber = tx.State.NextPageNumber;
 			_currentTxHeader->LastPageNumber = -1;
 			_currentTxHeader->PageCount = -1;
@@ -117,7 +117,7 @@ namespace Voron.Impl.Journal
 			else
 			{
 				_currentTxHeader = GetTransactionHeader();
-				_currentTxHeader->TxId = tx.Id;
+				_currentTxHeader->TransactionId = tx.Id;
 				_currentTxHeader->NextPageNumber = tx.State.NextPageNumber;
 				_currentTxHeader->TxMarker = TransactionMarker.Split;
 				_currentTxHeader->PageCount = -1;
@@ -185,7 +185,7 @@ namespace Voron.Impl.Journal
 			long logPageNumber;
 
 			if (tx != null &&
-				_currentTxHeader != null && _currentTxHeader->TxId == tx.Id // we are in the log file where we are currently writing in
+				_currentTxHeader != null && _currentTxHeader->TransactionId == tx.Id // we are in the log file where we are currently writing in
 				&& _transactionPageTranslationTable.TryGetValue(pageNumber, out logPageNumber))
 				return _pager.Read(logPageNumber);
 
@@ -263,7 +263,7 @@ namespace Voron.Impl.Journal
         public TransactionHeader* RecoverAndValidate(long startRead, TransactionHeader* lastTxHeader)
         {
             var logFileReader = new LogFileReader(_pager, _pageTranslationTable);
-            var header = logFileReader.RecoverAndValidate(_lastSyncedPage, lastTxHeader);
+            var header = logFileReader.RecoverAndValidate(startRead, lastTxHeader);
 
             _pageTranslationTable = logFileReader.PageTranslationTable;
             _writePage = logFileReader.WritePage;

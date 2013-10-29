@@ -11,10 +11,10 @@ using Microsoft.Win32.SafeHandles;
 
 namespace Voron.Impl
 {
-	public static class NativeFileMethods
+	public static unsafe class NativeFileMethods
 	{
 		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern bool WriteFile(IntPtr hFile, IntPtr lpBuffer, uint nNumberOfBytesToWrite,
+		public static extern bool WriteFile(IntPtr hFile, byte* lpBuffer, uint nNumberOfBytesToWrite,
 		                                    out uint lpNumberOfBytesWritten, [In] ref NativeOverlapped lpOverlapped);
 
 

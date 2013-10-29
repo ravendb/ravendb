@@ -43,14 +43,13 @@ namespace Voron.Impl
 			PagerState.AddRef();
 		}
 
-	    public override int Write(Page page)
+	    public override void Write(Page page, long? pageNumber)
 	    {
 			var toWrite = page.IsOverflow ? (page.OverflowSize + Constants.PageHeaderSize): PageSize;
-            EnsureContinuous(null, page.PageNumber,toWrite / PageSize);
+	        var requestedPageNumber = pageNumber ?? page.PageNumber;
+	        EnsureContinuous(null, requestedPageNumber,toWrite / PageSize);
             
-			NativeMethods.memcpy(AcquirePagePointer(page.PageNumber), page.Base, toWrite);
-
-		    return toWrite;
+			NativeMethods.memcpy(AcquirePagePointer(requestedPageNumber), page.Base, toWrite);
 	    }
 
 		public override void Dispose()

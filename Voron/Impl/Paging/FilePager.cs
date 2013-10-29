@@ -124,11 +124,10 @@ namespace Voron.Impl
 				_fileStream.Flush(true);
 		}
 
-		public override int Write(Page page)
+		public override void Write(Page page, long? pageNumber)
 		{
-			uint written;
-
-			var position = page.PageNumber * PageSize;
+		    var number = pageNumber ?? page.PageNumber;
+		    var position = number * PageSize;
 
 			var nativeOverlapped = new NativeOverlapped()
 			{
@@ -136,16 +135,19 @@ namespace Voron.Impl
 				OffsetHigh = (int)(position >> 32)
 			};
 
-			var toWrite = page.IsOverflow ? (page.OverflowSize + Constants.PageHeaderSize) : PageSize;
+			var toWrite = (uint)(page.IsOverflow ? (page.OverflowSize + Constants.PageHeaderSize) : PageSize);
 
-			if (NativeFileMethods.WriteFile(_fileHandle, new IntPtr(page.Base), (uint) toWrite, out written, ref nativeOverlapped) == false)
-			{
-				throw new Win32Exception();
-			}
-
-			Debug.Assert(toWrite == written);
-
-			return toWrite;
+            var startWrite = page.Base;
+            while (toWrite != 0)
+		    {
+		        uint written;
+		        if (NativeFileMethods.WriteFile(_fileHandle, startWrite, toWrite, out written, ref nativeOverlapped) == false)
+                {
+                    throw new Win32Exception();
+                }
+		        toWrite -= written;
+		        startWrite += written;
+		    }
 		}
 
 	    public override void Dispose()

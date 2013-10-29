@@ -141,7 +141,6 @@ namespace Voron.Impl
             }
 
             var page = _journal.Allocate(this, pageNumber.Value, numberOfPages);
-
             page.PageNumber = pageNumber.Value;
             page.Lower = (ushort)Constants.PageHeaderSize;
             page.Upper = (ushort)_dataPager.PageSize;
