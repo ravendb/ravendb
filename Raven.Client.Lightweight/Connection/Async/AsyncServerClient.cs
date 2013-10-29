@@ -1461,71 +1461,97 @@ namespace Raven.Client.Connection.Async
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 
-			return ExecuteWithReplication("GET", operationMetadata =>
-			{
-				var metadata = new RavenJObject();
-				AddTransactionInformation(metadata);
-				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/static/" + key).NoCache(), "GET", metadata, operationMetadata.Credentials, convention)
-					.AddOperationHeaders(OperationsHeaders));
-
-				request.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-
-				return request
-					.ReadResponseBytesAsync()
-					.ContinueWith(task =>
-					{
-						switch (task.Status)
-						{
-							case TaskStatus.RanToCompletion:
-								var memoryStream = new MemoryStream(task.Result);
-								return new Attachment
-								{
-									Data = () => memoryStream,
-									Size = task.Result.Length,
-									Etag = request.GetEtagHeader(),
-									Metadata = request.ResponseHeaders.FilterHeadersAttachment()
-								};
-
-							case TaskStatus.Faulted:
-								var webException = task.Exception.ExtractSingleInnerException() as WebException;
-								if (webException != null)
-								{
-									var response = webException.Response as HttpWebResponse;
-									if (response != null)
-									{
-										switch (response.StatusCode)
-										{
-											case HttpStatusCode.NotFound:
-												return null;
-
-											case HttpStatusCode.Conflict:
-												var conflictsDoc = RavenJObject.Load(new BsonReader(response.GetResponseStreamWithHttpDecompression()));
-												var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
-
-												throw new ConflictException("Conflict detected on " + key +
-																			", conflict must be resolved before the attachment will be accessible", true)
-												{
-													ConflictedVersionIds = conflictIds,
-													Etag = response.GetEtagHeader()
-												};
-										}
-									}
-								}
-								// This will rethrow the task's exception.
-								task.AssertNotFailed();
-								return null;
-
-							case TaskStatus.Canceled:
-								throw new TaskCanceledException();
-
-							default:
-								throw new InvalidOperationException("Invalid task status");
-						}
-					});
-			});
+			return ExecuteWithReplication("GET", operationMetadata => DirectGetAttachmentAsync(key, operationMetadata, "GET"));
 		}
 
-		/// <summary>
+        public Task<Attachment> HeadAttachmentAsync(string key)
+        {
+            EnsureIsNotNullOrEmpty(key, "key");
+
+            return ExecuteWithReplication("HEAD", operationMetadata => DirectGetAttachmentAsync(key, operationMetadata, "HEAD"));
+        }
+
+	    private Task<Attachment> DirectGetAttachmentAsync(string key, OperationMetadata operationMetadata, string method)
+	    {
+	        var metadata = new RavenJObject();
+	        AddTransactionInformation(metadata);
+	        var request =
+	            jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+	                                                                                     (operationMetadata.Url + "/static/" +
+	                                                                                      key).NoCache(), method, metadata,
+	                                                                                     operationMetadata.Credentials,
+	                                                                                     convention)
+	                                                         .AddOperationHeaders(OperationsHeaders));
+
+	        request.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
+	                                            HandleReplicationStatusChanges);
+
+	        return request
+	            .ReadResponseBytesAsync()
+	            .ContinueWith(task =>
+	            {
+	                switch (task.Status)
+	                {
+	                    case TaskStatus.RanToCompletion:
+	                        var memoryStream = new MemoryStream(task.Result);
+	                        return new Attachment
+	                        {
+	                            Data = () =>
+	                            {
+	                                if (method != "GET")
+	                                    throw new InvalidOperationException( "Cannot get attachment data from an attachment loaded using HEAD request.");
+                                    return memoryStream;
+	                            },
+	                            Size = task.Result.Length,
+	                            Etag = request.GetEtagHeader(),
+	                            Metadata = request.ResponseHeaders.FilterHeadersAttachment()
+	                        };
+
+	                    case TaskStatus.Faulted:
+	                        var webException = task.Exception.ExtractSingleInnerException() as WebException;
+	                        if (webException != null)
+	                        {
+	                            var response = webException.Response as HttpWebResponse;
+	                            if (response != null)
+	                            {
+	                                switch (response.StatusCode)
+	                                {
+	                                    case HttpStatusCode.NotFound:
+	                                        return null;
+
+	                                    case HttpStatusCode.Conflict:
+	                                        var conflictsDoc =
+	                                            RavenJObject.Load(
+	                                                new BsonReader(response.GetResponseStreamWithHttpDecompression()));
+	                                        var conflictIds =
+	                                            conflictsDoc.Value<RavenJArray>("Conflicts")
+	                                                        .Select(x => x.Value<string>())
+	                                                        .ToArray();
+
+	                                        throw new ConflictException("Conflict detected on " + key +
+	                                                                    ", conflict must be resolved before the attachment will be accessible",
+	                                                                    true)
+	                                        {
+	                                            ConflictedVersionIds = conflictIds,
+	                                            Etag = response.GetEtagHeader()
+	                                        };
+	                                }
+	                            }
+	                        }
+	                        // This will rethrow the task's exception.
+	                        task.AssertNotFailed();
+	                        return null;
+
+	                    case TaskStatus.Canceled:
+	                        throw new TaskCanceledException();
+
+	                    default:
+	                        throw new InvalidOperationException("Invalid task status");
+	                }
+	            });
+	    }
+
+	    /// <summary>
 		/// Deletes the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
