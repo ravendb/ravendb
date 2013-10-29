@@ -35,11 +35,6 @@ namespace Raven.Database.Server
 			}
 		}
 
-		public InMemoryRavenConfiguration Configuration
-		{
-			get { return configuration; }
-		}
-
 		public DocumentDatabase SystemDatabase
 		{
 			get { return systemDatabase; }
