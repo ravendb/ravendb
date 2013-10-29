@@ -1,9 +1,10 @@
-﻿namespace Voron.Impl
-{
-	using System;
-	using System.Collections.Generic;
-	using System.Runtime.InteropServices;
+﻿using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using Voron.Trees;
 
+namespace Voron.Impl
+{
 	public unsafe class PureMemoryPager : AbstractPager
 	{
 		private IntPtr _ptr;
@@ -16,8 +17,12 @@
 			_base = (byte*)_ptr.ToPointer();
 			NumberOfAllocatedPages = data.Length / PageSize;
 			PagerState.Release();
-			PagerState = CreateNewPagerState(_base, _ptr);
-
+			PagerState = new PagerState
+			{
+				Ptr = _ptr,
+                Base = _base
+			};
+			PagerState.AddRef();
 			fixed (byte* origin = data)
 			{
 				NativeMethods.memcpy(_base, origin, data.Length);
@@ -30,17 +35,22 @@
 			_base = (byte*)_ptr.ToPointer();
 			NumberOfAllocatedPages = _allocatedSize / PageSize;
 			PagerState.Release();
-			PagerState = CreateNewPagerState(_base, _ptr);
+			PagerState = new PagerState
+				{
+					Ptr = _ptr,
+					Base = _base
+				};
+			PagerState.AddRef();
 		}
 
-		public override void EnsureEnoughSpace(Transaction tx, int len)
-		{
-			var pages = 10; // TODO [ppekrol] When using PureMemoryPager, all memory allocations are causing issues with writes (contex is working on 'old' memory) - this will be fixed after LogFile is introduced by Arek.
-			if (ShouldGoToOverflowPage(len))
-				pages = GetNumberOfOverflowPages(tx, len);
-
-			EnsureContinious(tx, tx.NextPageNumber, pages);
-		}
+	    public override void Write(Page page, long? pageNumber)
+	    {
+			var toWrite = page.IsOverflow ? (page.OverflowSize + Constants.PageHeaderSize): PageSize;
+	        var requestedPageNumber = pageNumber ?? page.PageNumber;
+	        EnsureContinuous(null, requestedPageNumber,toWrite / PageSize);
+            
+			NativeMethods.memcpy(AcquirePagePointer(requestedPageNumber), page.Base, toWrite);
+	    }
 
 		public override void Dispose()
 		{
@@ -49,45 +59,19 @@
 			_base = null;
 		}
 
-		public override void Flush(List<long> sortedPagesToFlush)
-		{
-			//nothing to do here
-		}
-
-		public override void Flush(long headerPageId)
-		{
-			// also nothing to do
-		}
-
 		public override void Sync()
 		{
 			// nothing to do here
 		}
 
-		public override void AllocateMorePages(Transaction tx, long newLength)
+		public override void Flush(long startPage, long count)
 		{
-			if (newLength <= _allocatedSize)
-				throw new ArgumentException("Cannot set the legnth to less than the current length");
+			// nothing to do here
+		}
 
-			var oldSize = _allocatedSize;
-			_allocatedSize = newLength;
-			NumberOfAllocatedPages = _allocatedSize / PageSize;
-			var newPtr = Marshal.AllocHGlobal(new IntPtr(_allocatedSize));
-			var newBase = (byte*)newPtr.ToPointer();
-			NativeMethods.memcpy(newBase, _base, new IntPtr(oldSize));
-			_base = newBase;
-			_ptr = newPtr;
-
-			PagerState.Release(); // when the last transaction using this is over, will dispose it
-			PagerState newPager = CreateNewPagerState(newBase, newPtr);
-
-			if (tx != null) // we only pass null during startup, and we don't need it there
-			{
-				newPager.AddRef(); // one for the current transaction
-				tx.AddPagerState(newPager);
-			}
-
-			PagerState = newPager;
+		public override byte* AcquirePagePointer(long pageNumber)
+		{
+			return _base + (pageNumber * PageSize);
 		}
 
 		private PagerState CreateNewPagerState(byte* newBase, IntPtr newPtr)
@@ -99,6 +83,35 @@
 			};
 			newPager.AddRef(); // one for the pager
 			return newPager;
+		}
+
+		public override void AllocateMorePages(Transaction tx, long newLength)
+		{
+			if (newLength < _allocatedSize)
+				throw new ArgumentException("Cannot set the legnth to less than the current length");
+		    if (newLength == _allocatedSize)
+		        return; // nothing to do
+
+			var oldSize = _allocatedSize;
+			_allocatedSize = newLength;
+			NumberOfAllocatedPages = _allocatedSize / PageSize;
+			var newPtr = Marshal.AllocHGlobal(new IntPtr(_allocatedSize));
+			var newBase = (byte*)newPtr.ToPointer();
+			NativeMethods.memcpy(newBase, _base, new IntPtr(oldSize));
+			_base = newBase;
+			_ptr = newPtr;
+
+
+			var newPager = new PagerState { Ptr = newPtr, Base = _base };
+			newPager.AddRef(); // one for the pager
+
+			if (tx != null) // we only pass null during startup, and we don't need it there
+			{
+				newPager.AddRef(); // one for the current transaction
+				tx.AddPagerState(newPager);
+			}
+
+			PagerState = newPager;
 		}
 	}
 }

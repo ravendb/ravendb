@@ -1,34 +1,28 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.Journal;
 using Voron.Trees;
-using Voron.Util;
 
 namespace Voron.Impl
 {
     public class Transaction : IDisposable
     {
-        public long NextPageNumber
-        {
-            get
-            {
-                return _state.NextPageNumber;
-            }
-        }
+        private readonly IVirtualPager _dataPager;
+        private readonly StorageEnvironment _env;
+        private readonly long _id;
 
-        private IVirtualPager _pager;
-        private StorageEnvironment _env;
-        private long _id;
-
+        private readonly WriteAheadJournal _journal;
         private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
-        private readonly Dictionary<long, long> _dirtyPages = new Dictionary<long, long>();
+        private readonly HashSet<long> _dirtyPages = new HashSet<long>();
         private readonly List<long> _freedPages = new List<long>();
         private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
-        private IFreeSpaceRepository _freeSpaceRepository;
+        private readonly IFreeSpaceRepository _freeSpaceRepository;
+
+        internal readonly List<LogSnapshot> LogSnapshots = new List<LogSnapshot>();
+        private readonly List<Action> _releaseLogActions = new List<Action>(); 
 
         private List<string> _deletedTrees;
 
@@ -39,9 +33,9 @@ namespace Voron.Impl
             get { return _env; }
         }
 
-        public IVirtualPager Pager
+        public IVirtualPager DataPager
         {
-            get { return _pager; }
+            get { return _dataPager; }
         }
 
         public long Id
@@ -54,7 +48,7 @@ namespace Voron.Impl
 
         public Page TempPage
         {
-            get { return _pager.TempPage; }
+            get { return _dataPager.TempPage; }
         }
 
         public bool Committed { get; private set; }
@@ -67,10 +61,11 @@ namespace Voron.Impl
         }
 
 
-        public Transaction(IVirtualPager pager, StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository)
+        public Transaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository)
         {
-            _pager = pager;
+            _dataPager = env.Options.DataPager;
             _env = env;
+            _journal = env.Journal;
             _id = id;
             _freeSpaceRepository = freeSpaceRepository;
             Flags = flags;
@@ -78,10 +73,14 @@ namespace Voron.Impl
             if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
             {
                 _state = env.State;
+                _journal.GetSnapshots().ForEach(AddLogSnapshot);
                 return;
             }
 
             _state = env.State.Clone();
+
+            _journal.Files.ForEach(SetLogReference);
+            _journal.TransactionBegin(this);
             MarkTreesForWriteTransaction();
         }
 
@@ -102,85 +101,55 @@ namespace Voron.Impl
             return State.GetTree(treeName, this);
         }
 
-        public Page ModifyCursor(Tree tree, Cursor c)
+        public unsafe Page ModifyPage(long p, Cursor c)
         {
-            Debug.Assert(c.Pages.Count > 0); // cannot modify an empty cursor
-
-            var node = c.Pages.Last;
-            while (node != null)
-            {
-                var parent = node.Next != null ? node.Next.Value : null;
-                c.Update(node, ModifyPage(tree, parent, node.Value.PageNumber, c));
-                node = node.Previous;
-            }
-
-            tree.State.RootPageNumber = c.Pages.Last.Value.PageNumber;
-
-            return c.Pages.First.Value;
-        }
-
-        public unsafe Page ModifyPage(Tree tree, Page parent, long p, Cursor c)
-        {
-            long dirtyPageNum;
             Page page;
-            if (_dirtyPages.TryGetValue(p, out dirtyPageNum))
+            if (_dirtyPages.Contains(p))
             {
-                page = c.GetPage(dirtyPageNum) ?? _pager.Get(this, dirtyPageNum);
+                page = c.GetPage(p) ?? _journal.ReadPage(this, p);
                 page.Dirty = true;
-                UpdateParentPageNumber(parent, page.PageNumber);
+
                 return page;
             }
-            var newPage = AllocatePage(1);
-            newPage.Dirty = true;
-            var newPageNum = newPage.PageNumber;
-            page = c.GetPage(p) ?? _pager.Get(this, p);
-            NativeMethods.memcpy(newPage.Base, page.Base, _pager.PageSize);
+
+            page = c.GetPage(p) ?? _journal.ReadPage(this, p) ?? _dataPager.Read(p);
+
+            var newPage = AllocatePage(1, p); // allocate new page in a log file but with the same number
+
+            NativeMethods.memcpy(newPage.Base, page.Base, _dataPager.PageSize);
             newPage.LastSearchPosition = page.LastSearchPosition;
             newPage.LastMatch = page.LastMatch;
-            newPage.PageNumber = newPageNum;
-            FreePage(p);
-            _dirtyPages[p] = newPage.PageNumber;
-            UpdateParentPageNumber(parent, newPage.PageNumber);
+
             return newPage;
-        }
-
-        private static unsafe void UpdateParentPageNumber(Page parent, long pageNumber)
-        {
-            if (parent == null)
-                return;
-
-            if (parent.Dirty == false)
-                throw new InvalidOperationException("The parent page must already been dirtied, but wasn't");
-
-            var node = parent.GetNode(parent.LastSearchPositionOrLastEntry);
-            node->PageNumber = pageNumber;
         }
 
         public Page GetReadOnlyPage(long n)
         {
-            long dirtyPage;
-            if (_dirtyPages.TryGetValue(n, out dirtyPage))
-                n = dirtyPage;
-            return _pager.Get(this, n);
+            return _journal.ReadPage(this, n) ?? _dataPager.Read(n);
         }
 
-        public Page AllocatePage(int num)
+        public Page AllocatePage(int numberOfPages, long? pageNumber = null)
         {
-            Page page = _freeSpaceRepository.TryAllocateFromFreeSpace(this, num);
-            if (page == null) // allocate from end of file
+            if (pageNumber == null)
             {
-                if (num > 1)
-                    _pager.EnsureContinious(this, NextPageNumber, num);
-                page = _pager.Get(this, NextPageNumber);
-                page.PageNumber = NextPageNumber;
-                _state.NextPageNumber += num;
+                pageNumber = _freeSpaceRepository.TryAllocateFromFreeSpace(this, numberOfPages);
+                if (pageNumber == null) // allocate from end of file
+                {
+                    pageNumber = State.NextPageNumber;
+                    State.NextPageNumber += numberOfPages;
+                }
             }
+
+            var page = _journal.Allocate(this, pageNumber.Value, numberOfPages);
+            page.PageNumber = pageNumber.Value;
             page.Lower = (ushort)Constants.PageHeaderSize;
-            page.Upper = (ushort)_pager.PageSize;
+            page.Upper = (ushort)_dataPager.PageSize;
             page.Dirty = true;
-            _dirtyPages[page.PageNumber] = page.PageNumber;
+
+            _dirtyPages.Add(page.PageNumber);
             return page;
         }
+
 
 
         internal unsafe int GetNumberOfFreePages(NodeHeader* node)
@@ -235,27 +204,10 @@ namespace Voron.Impl
                 Debug.Assert(State.Root.State.RootPageNumber != State.FreeSpaceRoot.State.RootPageNumber);
             }
 #endif
-            // Because we don't know in what order the OS will flush the pages 
-            // we need to do this twice, once for the data, and then once for the metadata
 
-            var sortedPagesToFlush = _dirtyPages.Select(x => x.Value).Distinct().ToList();
-            sortedPagesToFlush.Sort();
-            _pager.Flush(sortedPagesToFlush);
-
-            if (_freeSpaceRepository != null)
-                _freeSpaceRepository.LastTransactionPageUsage(sortedPagesToFlush.Count);
-
-            Page relevantPage = _pager.Get(this, _id & 1);
-            WriteHeader(relevantPage); // this will cycle between the first and second pages
-
-            _pager.Flush(_id & 1); // and now we flush the metadata as well
-
-            _pager.Sync();
-
-            _env.SetStateAfterTransactionCommit(State);
-
+            _journal.TransactionCommit(this);
+            _env.SetStateAfterTransactionCommit(State); 
             Committed = true;
-
             AfterCommit(_id);
         }
 
@@ -277,43 +229,6 @@ namespace Voron.Impl
             }
         }
 
-        private unsafe void WriteHeader(Page pg)
-        {
-            var fileHeader = (FileHeader*)pg.Base;
-            fileHeader->TransactionId = _id;
-            fileHeader->LastPageNumber = NextPageNumber - 1;
-
-            State.FreeSpaceRoot.State.CopyTo(&fileHeader->FreeSpace);
-            State.Root.State.CopyTo(&fileHeader->Root);
-        }
-
-        private void FlushFreePages()
-        {
-            int iterationCounter = 0;
-            while (_freedPages.Count != 0)
-            {
-                Slice slice = string.Format("tx/{0:0000000000000000000}/{1}", _id, iterationCounter);
-
-                iterationCounter++;
-                using (var ms = new MemoryStream())
-                using (var binaryWriter = new BinaryWriter(ms))
-                {
-                    _freeSpaceRepository.RegisterFreePages(slice, _id, _freedPages);
-                    foreach (var freePage in _freedPages)
-                    {
-                        binaryWriter.Write(freePage);
-                    }
-                    _freedPages.Clear();
-
-                    ms.Position = 0;
-
-                    // this may cause additional pages to be freed, so we need need the while loop to track them all
-                    State.FreeSpaceRoot.Add(this, slice, ms);
-                    ms.Position = 0; // so if we have additional freed pages, they will be added
-                }
-            }
-        }
-
         public void Dispose()
         {
             _env.TransactionCompleted(_id);
@@ -321,15 +236,18 @@ namespace Voron.Impl
             {
                 pagerState.Release();
             }
+
+            foreach (var releaseLog in _releaseLogActions)
+            {
+                releaseLog();
+            }
         }
 
         public void FreePage(long pageNumber)
         {
             _dirtyPages.Remove(pageNumber);
-#if DEBUG
-            Debug.Assert(pageNumber >= 2 && pageNumber <= _pager.NumberOfAllocatedPages);
+            Debug.Assert(pageNumber >= 2);
             Debug.Assert(_freedPages.Contains(pageNumber) == false);
-#endif
             _freedPages.Add(pageNumber);
         }
 
@@ -384,6 +302,23 @@ namespace Voron.Impl
             if (_deletedTrees == null)
                 _deletedTrees = new List<string>();
             _deletedTrees.Add(name);
+        }
+
+
+        private void AddLogSnapshot(LogSnapshot snapshot)
+        {
+            if (LogSnapshots.Any(x => x.File.Number == snapshot.File.Number))
+                throw new InvalidOperationException("Cannot add a snapshot of log file with number " + snapshot.File.Number +
+                                                    " to the transaction, because it already exists in a snapshot collection");
+
+            LogSnapshots.Add(snapshot);
+            SetLogReference(snapshot.File);
+        }
+
+        public void SetLogReference(JournalFile journal)
+        {
+            journal.AddRef();
+            _releaseLogActions.Add(journal.Release);
         }
     }
 }

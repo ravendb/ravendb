@@ -10,7 +10,7 @@ namespace Voron.Tests.Storage
         [Fact]
         public void ShouldWork()
         {
-            using (var env = new StorageEnvironment(new PureMemoryPager()))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
             {
                 for (int x = 0; x < 10; x++)
                 {

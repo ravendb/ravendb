@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using Voron.Impl.Journal;
 
 namespace Voron.Impl.FileHeaders
 {
@@ -39,5 +40,11 @@ namespace Voron.Impl.FileHeaders
         /// </summary>
         [FieldOffset(90)]
         public TreeRootHeader Root;
+
+        /// <summary>
+        /// Information about the journal log info
+        /// </summary>
+        [FieldOffset(152)] 
+        public LogInfo LogInfo;
     }
 }

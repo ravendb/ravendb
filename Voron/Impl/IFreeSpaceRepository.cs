@@ -5,7 +5,7 @@ namespace Voron.Impl
 {
     public interface IFreeSpaceRepository
     {
-        Page TryAllocateFromFreeSpace(Transaction tx, int num);
+        long? TryAllocateFromFreeSpace(Transaction tx, int num);
         long GetFreePageCount();
         void FlushFreeState(Transaction transaction);
         void LastTransactionPageUsage(int pages);
@@ -17,7 +17,7 @@ namespace Voron.Impl
 
     public class NoFreeSpaceRepository : IFreeSpaceRepository
     {
-        public Page TryAllocateFromFreeSpace(Transaction tx, int num)
+        public long? TryAllocateFromFreeSpace(Transaction tx, int num)
         {
             return null;
         }
