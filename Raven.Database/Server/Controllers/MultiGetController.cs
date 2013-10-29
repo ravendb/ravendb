@@ -145,7 +145,7 @@ namespace Raven.Database.Server.Controllers
 			var msg = new HttpRequestMessage(HttpMethod.Get, new UriBuilder
 			{
 				Host = "multi.get",
-				Query = request.Query,
+				Query = request.Query.TrimStart('?'),
 				Path = request.Url
 			}.Uri);
 			msg.SetConfiguration(Configuration);
