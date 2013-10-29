@@ -15,7 +15,7 @@
 		{
 			var addedIds = new Dictionary<string, string>();
 
-			using (var env = new StorageEnvironment(new PureMemoryPager()))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
 			{
 				var multiTrees = CreateTrees(env, 1, "multiTree");
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))

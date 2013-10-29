@@ -103,7 +103,7 @@ namespace Voron.Trees
 					return; //nothing to delete - key not found
 				}
 
-				page = tx.ModifyCursor(this, cursor);
+				page = tx.ModifyPage(page.PageNumber, cursor);
 
 				var item = page.GetNode(page.LastSearchPosition);
 
@@ -139,8 +139,8 @@ namespace Voron.Trees
 		{
             
             if (value == null) throw new ArgumentNullException("value");
-			if (value.Size > tx.Pager.MaxNodeSize)
-				throw new ArgumentException("Cannot add a value to child tree that is over " + tx.Pager.MaxNodeSize + " bytes in size", "value");
+			if (value.Size > tx.DataPager.MaxNodeSize)
+				throw new ArgumentException("Cannot add a value to child tree that is over " + tx.DataPager.MaxNodeSize + " bytes in size", "value");
 			if (value.Size == 0)
 				throw new ArgumentException("Cannot add empty value to child tree");
 
@@ -157,7 +157,7 @@ namespace Voron.Trees
 					return;
 				}
 
-				page = tx.ModifyCursor(this, cursor);
+				page = tx.ModifyPage(page.PageNumber, cursor);
 
 				var item = page.GetNode(page.LastSearchPosition);
 
@@ -191,17 +191,17 @@ namespace Voron.Trees
 			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
 				throw new ArgumentException("Cannot add a value in a read only transaction");
 
-			if (key.Size > tx.Pager.MaxNodeSize)
-				throw new ArgumentException("Key size is too big, must be at most " + tx.Pager.MaxNodeSize + " bytes, but was " + key.Size, "key");
-
-			tx.Pager.EnsureEnoughSpace(tx, len);
+			if (key.Size > tx.DataPager.MaxNodeSize)
+				throw new ArgumentException("Key size is too big, must be at most " + tx.DataPager.MaxNodeSize + " bytes, but was " + key.Size, "key");
 
 			using (var cursor = tx.NewCursor(this))
 			{
 
-				FindPageFor(tx, key, cursor);
+				var foundPage = FindPageFor(tx, key, cursor);
 
-				var page = tx.ModifyCursor(this, cursor);
+			    var page = tx.ModifyPage(foundPage.PageNumber, cursor);
+                
+                cursor.Update(cursor.Pages.First, page);
 
 				ushort nodeVersion = 0;
 				if (page.LastMatch == 0) // this is an update operation
@@ -218,7 +218,7 @@ namespace Voron.Trees
 				var lastSearchPosition = page.LastSearchPosition; // searching for overflow pages might change this
 				byte* overFlowPos = null;
 				var pageNumber = -1L;
-				if (tx.Pager.ShouldGoToOverflowPage(len))
+				if (tx.DataPager.ShouldGoToOverflowPage(len))
 				{
 					pageNumber = WriteToOverflowPages(tx, State, len, out overFlowPos);
 					len = -1;
@@ -265,8 +265,8 @@ namespace Voron.Trees
 		{
 			using (var cursor = tx.NewCursor(this))
 			{
-				FindPageFor(tx, key, cursor);
-				var page = tx.ModifyCursor(this, cursor);
+				var foundPage = FindPageFor(tx, key, cursor);
+				var page = tx.ModifyPage(foundPage.PageNumber, cursor);
 
 				if (page.LastMatch != 0)
 					return false; // not there
@@ -283,7 +283,7 @@ namespace Voron.Trees
 
 		private long WriteToOverflowPages(Transaction tx, TreeMutableState txInfo, int overflowSize, out byte* dataPos)
 		{
-			var numberOfPages = tx.Pager.GetNumberOfOverflowPages(tx, overflowSize);
+			var numberOfPages = tx.DataPager.GetNumberOfOverflowPages(overflowSize);
 			var overflowPageStart = tx.AllocatePage(numberOfPages);
 			overflowPageStart.Flags = PageFlags.Overflow;
 			overflowPageStart.OverflowSize = overflowSize;
@@ -300,7 +300,7 @@ namespace Voron.Trees
 			if (node->Flags == (NodeFlags.PageRef)) // this is an overflow pointer
 			{
 				var overflowPage = tx.GetReadOnlyPage(node->PageNumber);
-				var numberOfPages = tx.Pager.GetNumberOfOverflowPages(tx, overflowPage.OverflowSize);
+				var numberOfPages = tx.DataPager.GetNumberOfOverflowPages(overflowPage.OverflowSize);
 				for (int i = 0; i < numberOfPages; i++)
 				{
 					tx.FreePage(overflowPage.PageNumber + i);
@@ -414,7 +414,7 @@ namespace Voron.Trees
 				if (page.LastMatch != 0)
 					return; // not an exact match, can't delete
 
-				page = tx.ModifyCursor(this, cursor);
+				page = tx.ModifyPage(page.PageNumber, cursor);
 
 				State.EntriesCount--;
 				ushort nodeVersion;
@@ -566,7 +566,7 @@ namespace Voron.Trees
 					{
 						// This is an overflow page
 						var overflowPage = tx.GetReadOnlyPage(pageNumber);
-						var numberOfPages = tx.Pager.GetNumberOfOverflowPages(tx, overflowPage.OverflowSize);
+						var numberOfPages = tx.DataPager.GetNumberOfOverflowPages(overflowPage.OverflowSize);
 						for (long j = 0; j < numberOfPages; ++j)
 							results.Add(overflowPage.PageNumber + j);
 					}

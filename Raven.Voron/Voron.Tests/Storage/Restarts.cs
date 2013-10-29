@@ -10,9 +10,10 @@ namespace Voron.Tests.Storage
         [Fact]
         public void DataIsKeptAfterRestart()
         {
-            using (var pureMemoryPager = new PureMemoryPager())
+            using (var pureMemoryPager = StorageEnvironmentOptions.GetInMemory())
             {
-                using (var env = new StorageEnvironment(pureMemoryPager, ownsPager: false))
+                pureMemoryPager.OwnsPagers = false;
+                using (var env = new StorageEnvironment(pureMemoryPager))
                 {
                     using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                     {
@@ -35,15 +36,16 @@ namespace Voron.Tests.Storage
                         tx.Commit();
                     }
                 }
-           }
+            }
         }
 
         [Fact]
         public void DataIsKeptAfterRestartForSubTrees()
         {
-            using (var pureMemoryPager = new PureMemoryPager())
+            using (var pureMemoryPager = StorageEnvironmentOptions.GetInMemory())
             {
-                using (var env = new StorageEnvironment(pureMemoryPager, ownsPager: false))
+                pureMemoryPager.OwnsPagers = false;
+                using (var env = new StorageEnvironment(pureMemoryPager))
                 {
                     using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                     {
@@ -52,12 +54,12 @@ namespace Voron.Tests.Storage
                     }
                     using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                     {
-	                    var tree = tx.GetTree("test");
-	                    tree.Add(tx, "test", Stream.Null);
+                        var tree = tx.GetTree("test");
+                        tree.Add(tx, "test", Stream.Null);
                         tx.Commit();
-					
-						Assert.NotNull(tree.Read(tx, "test"));
-					}
+
+                        Assert.NotNull(tree.Read(tx, "test"));
+                    }
                 }
 
                 using (var env = new StorageEnvironment(pureMemoryPager))
@@ -68,10 +70,10 @@ namespace Voron.Tests.Storage
                         tx.Commit();
                     }
 
-					using (var tx = env.NewTransaction(TransactionFlags.Read))
+                    using (var tx = env.NewTransaction(TransactionFlags.Read))
                     {
-	                    var tree = tx.GetTree("test");
-	                    Assert.NotNull(tree.Read(tx, "test"));
+                        var tree = tx.GetTree("test");
+                        Assert.NotNull(tree.Read(tx, "test"));
                         tx.Commit();
                     }
                 }

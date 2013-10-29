@@ -47,8 +47,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable, Version=1.0.27.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="System.Collections.Immutable">
       <HintPath>..\..\packages\Microsoft.Bcl.Immutable.1.0.27\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
@@ -57,7 +56,6 @@
   <ItemGroup>
     <Compile Include="Debugging\EnvironmentStats.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
-    <Compile Include="Impl\AbstractPager.cs" />
     <Compile Include="Impl\ConsecutiveSequences.cs" />
     <Compile Include="Impl\Constants.cs" />
     <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
@@ -65,19 +63,28 @@
     <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
     <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
     <Compile Include="Impl\FlushMode.cs" />
-    <Compile Include="Impl\FreeSpaceRepository.cs" />
     <Compile Include="Impl\IFreeSpaceRepository.cs" />
-    <Compile Include="Impl\IVirtualPager.cs" />
-    <Compile Include="Impl\MemoryMapPager.cs" />
+    <Compile Include="Impl\Journal\JournalFile.cs" />
+    <Compile Include="Impl\Journal\JournalReader.cs" />
+    <Compile Include="Impl\Journal\LogInfo.cs" />
+    <Compile Include="Impl\Journal\LogSnapshot.cs" />
+    <Compile Include="Impl\Journal\TransactionHeader.cs" />
+    <Compile Include="Impl\Journal\TransactionMarker.cs" />
+    <Compile Include="Impl\Journal\WriteAheadJournal.cs" />
     <Compile Include="Impl\PagerState.cs" />
-    <Compile Include="Impl\PureMemoryPager.cs" />
+    <Compile Include="Impl\Paging\AbstractPager.cs" />
+    <Compile Include="Impl\Paging\FilePager.cs" />
+    <Compile Include="Impl\Paging\IVirtualPager.cs" />
+    <Compile Include="Impl\Paging\MemoryMappedPager.cs" />
+    <Compile Include="Impl\Paging\PureMemoryPager.cs" />
     <Compile Include="Impl\SliceEqualityComparer.cs" />
     <Compile Include="Impl\SnapshotReader.cs" />
     <Compile Include="Impl\TransactionMergingWriter.cs" />
     <Compile Include="Impl\TreeAndSliceComparer.cs" />
     <Compile Include="Impl\WriteBatch.cs" />
     <Compile Include="ReadResult.cs" />
-    <Compile Include="StorageEnvironmentState.cs" />
+    <Compile Include="StorageEnvironmentOptions.cs" />
+    <Compile Include="Impl\StorageEnvironmentState.cs" />
     <Compile Include="TransactionFlags.cs" />
     <Compile Include="Trees\CombinedIterator.cs" />
     <Compile Include="Trees\Cursor.cs" />
@@ -105,6 +112,8 @@
     <Compile Include="Trees\TreeDataInTransaction.cs" />
     <Compile Include="Trees\TreeMutableState.cs" />
     <Compile Include="Trees\TreeRebalancer.cs" />
+    <Compile Include="Util\Crc.cs" />
+    <Compile Include="Util\NativeFileMethods.cs" />
     <Compile Include="Util\TreeExtensions.cs" />
     <Compile Include="Util\UnmanagedBits.cs" />
   </ItemGroup>

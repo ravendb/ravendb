@@ -4,7 +4,9 @@ namespace Voron.Impl
 {
 	public unsafe class Constants
 	{
-        public const ulong MagicMarker = 0xB16BAADC0DEF0015; 
+        public const ulong MagicMarker = 0xB16BAADC0DEF0015;
+
+        public const ulong TransactionHeaderMarker = 0x1A4C92AD90ABC123; 
 
 		/// <summary>
 		/// If there are less than 2 keys in a page, we no longer have a tree

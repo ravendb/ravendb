@@ -4,24 +4,26 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.Journal;
 using Voron.Trees;
 
 namespace Voron
 {
 	public unsafe class StorageEnvironment : IDisposable
 	{
-		private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
+	    private readonly StorageEnvironmentOptions _options;
+
+	    private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
 			new ConcurrentDictionary<long, Transaction>();
 
-		private readonly bool _ownsPager;
-		private readonly IVirtualPager _pager;
+		private readonly IVirtualPager _dataPager;
 		private readonly SliceComparer _sliceComparer;
 
-		private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
+        private readonly WriteAheadJournal _journal;
+        private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
 
 		private long _transactionsCounter;
 		private readonly IFreeSpaceRepository _freeSpaceRepository;
@@ -35,16 +37,17 @@ namespace Voron
 			return new SnapshotReader(NewTransaction(TransactionFlags.Read));
 		}
 
-		public StorageEnvironment(IVirtualPager pager, bool ownsPager = true)
+		public StorageEnvironment(StorageEnvironmentOptions options)
 		{
-			try
+		    try
 			{
-				_pager = pager;
-				_ownsPager = ownsPager;
+                _options = options;
+                _dataPager = options.DataPager;
 				_freeSpaceRepository = new NoFreeSpaceRepository();
 				_sliceComparer = NativeMethods.memcmp;
+                _journal = new WriteAheadJournal(this);
 
-				Setup(pager);
+				Setup(_dataPager);
 
 				State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
 				State.Root.Name = Constants.RootTreeName;
@@ -58,14 +61,15 @@ namespace Voron
 			}
 		}
 
-		private void Setup(IVirtualPager pager)
+	    private void Setup(IVirtualPager pager)
 		{
 			if (pager.NumberOfAllocatedPages == 0)
 			{
-				WriteEmptyHeaderPage(_pager.Get(null, 0));
-				WriteEmptyHeaderPage(_pager.Get(null, 1));
-				const int InitialNextPageNumber = 2;
-				State = new StorageEnvironmentState(null, null, InitialNextPageNumber);
+                _journal.WriteFileHeader(0);
+                _journal.WriteFileHeader(1);
+                _dataPager.Sync();
+				const int initialNextPageNumber = 2;
+				State = new StorageEnvironmentState(null, null, initialNextPageNumber);
 				using (var tx = NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var root = Tree.Create(tx, _sliceComparer);
@@ -81,13 +85,22 @@ namespace Voron
 			// existing db, let us load it
 
 			// the first two pages are allocated for double buffering tx commits
-			FileHeader* entry = FindLatestFileHeadeEntry();
-			_transactionsCounter = entry->TransactionId + 1;
-			State = new StorageEnvironmentState(null, null, entry->LastPageNumber + 1);
+			var entry = FindLatestFileHeadeEntry();
+            TransactionHeader* header;
+	        _journal.RecoverDatabase(entry, out header);
+
+	        var nextPageNumber = (header == null ? entry->LastPageNumber : header->LastPageNumber) + 1; 
+            State = new StorageEnvironmentState(null, null, nextPageNumber)
+                {
+                    NextPageNumber = nextPageNumber
+                };
+
+	        _transactionsCounter = (header == null ? entry->TransactionId : header->TransactionId) + 1;
+            
 			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var root = Tree.Open(tx, _sliceComparer, &entry->Root);
-				var freeSpace = Tree.Open(tx, _sliceComparer, &entry->FreeSpace);
+                var root = Tree.Open(tx, _sliceComparer, header == null ? &entry->Root : &header->Root);
+                var freeSpace = Tree.Open(tx, _sliceComparer, header == null ? &entry->Root : &header->FreeSpace);
 
 				tx.UpdateRootsIfNeeded(root, freeSpace);
 				tx.Commit();
@@ -111,7 +124,7 @@ namespace Voron
 
 		public int PageSize
 		{
-			get { return _pager.PageSize; }
+			get { return _dataPager.PageSize; }
 		}
 
 		public IEnumerable<Tree> Trees
@@ -124,7 +137,17 @@ namespace Voron
 			get { return State.NextPageNumber; }			
 		}
 
-		public void DeleteTree(Transaction tx, string name)
+	    public StorageEnvironmentOptions Options
+	    {
+	        get { return _options; }
+	    }
+
+	    public WriteAheadJournal Journal
+	    {
+	        get { return _journal; }
+	    }
+
+	    public void DeleteTree(Transaction tx, string name)
 		{
 			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
 				throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");
@@ -169,7 +192,7 @@ namespace Voron
 			var space = tx.State.Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
 
 			tree.State.CopyTo((TreeRootHeader*)space);
-
+		    tree.State.IsModified = true;
             tx.State.AddTree(name, tree);
 
 			return tree;
@@ -177,25 +200,14 @@ namespace Voron
 
 		public void Dispose()
 		{
-			if (_ownsPager)
-				_pager.Dispose();
-		}
-
-		private void WriteEmptyHeaderPage(Page pg)
-		{
-			var fileHeader = ((FileHeader*)pg.Base);
-			fileHeader->MagicMarker = Constants.MagicMarker;
-			fileHeader->Version = Constants.CurrentVersion;
-			fileHeader->TransactionId = 0;
-			fileHeader->LastPageNumber = 1;
-			fileHeader->FreeSpace.RootPageNumber = -1;
-			fileHeader->Root.RootPageNumber = -1;
+			if (_options.OwnsPagers)
+				_options.Dispose();
 		}
 
 		private FileHeader* FindLatestFileHeadeEntry()
 		{
-			Page fst = _pager.Get(null, 0);
-			Page snd = _pager.Get(null, 1);
+			Page fst = _dataPager.Read(0);
+			Page snd = _dataPager.Read(1);
 
 			FileHeader* e1 = GetFileHeaderFrom(fst);
 			FileHeader* e2 = GetFileHeaderFrom(snd);
@@ -218,7 +230,7 @@ namespace Voron
 				throw new InvalidDataException("This is a db file for version " + fileHeader->Version +
 											   ", which is not compatible with the current version " +
 											   Constants.CurrentVersion);
-			if (fileHeader->LastPageNumber >= _pager.NumberOfAllocatedPages)
+			if (fileHeader->LastPageNumber >= _dataPager.NumberOfAllocatedPages)
 				throw new InvalidDataException("The last page number is beyond the number of allocated pages");
 			if (fileHeader->TransactionId < 0)
 				throw new InvalidDataException("The transaction number cannot be negative");
@@ -237,9 +249,9 @@ namespace Voron
 					_txWriter.Wait();
 					txLockTaken = true;
 				}
-				var tx = new Transaction(_pager, this, txId, flags, _freeSpaceRepository);
+				var tx = new Transaction(this, txId, flags, _freeSpaceRepository);
 				_activeTransactions.TryAdd(txId, tx);
-				var state = _pager.TransactionBegan();
+				var state = _dataPager.TransactionBegan();
 				tx.AddPagerState(state);
 
 				if (flags == TransactionFlags.ReadWrite)
@@ -282,45 +294,7 @@ namespace Voron
 
 		public void Backup(Stream output)
 		{
-			Transaction txr = null;
-			try
-			{
-				var buffer = new byte[_pager.PageSize * 16];
-				long nextPageNumber;
-				using (var txw = NewTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
-				{
-					txr = NewTransaction(TransactionFlags.Read); // now have snapshot view
-					nextPageNumber = txw.NextPageNumber;
-					var firstPage = _pager.Get(txw, 0);
-					using (var headerStream = new UnmanagedMemoryStream(firstPage.Base, _pager.PageSize * 2))
-					{
-						while (headerStream.Position < headerStream.Length)
-						{
-							var read = headerStream.Read(buffer, 0, buffer.Length);
-							output.Write(buffer, 0, read);
-						}
-					}
-					//txw.Commit(); intentionally not committing
-				}
-				// now can copy everything else
-				var firtDataPage = _pager.Get(txr, 2);
-				using (
-					var headerStream = new UnmanagedMemoryStream(firtDataPage.Base, _pager.PageSize * (nextPageNumber - 2))
-					)
-				{
-					while (headerStream.Position < headerStream.Length)
-					{
-						var read = headerStream.Read(buffer, 0, buffer.Length);
-						output.Write(buffer, 0, read);
-					}
-				}
-				//txr.Commit(); intentionally not committing
-			}
-			finally
-			{
-				if (txr != null)
-					txr.Dispose();
-			}
+           throw new NotImplementedException();
 		}
 
 		public Dictionary<string, List<long>> AllPages(Transaction tx)
@@ -348,13 +322,19 @@ namespace Voron
 					FreePagesOverhead = State.FreeSpaceRoot.State.PageCount,
 					RootPages = State.Root.State.PageCount,
 					HeaderPages = 2,
-					UnallocatedPagesAtEndOfFile = _pager.NumberOfAllocatedPages - NextPageNumber
+					UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber
 				};
 		}
 
 	    public void SetStateAfterTransactionCommit(StorageEnvironmentState state)
 	    {
 	        State = state;
+	    }
+
+	    public void FlushLogToDataFile(object state = null)
+	    {
+	        var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
+	        journalApplicator.ApplyLogsToDataFile();
 	    }
 	}
 }

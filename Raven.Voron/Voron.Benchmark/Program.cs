@@ -97,8 +97,7 @@ namespace Voron.Benchmark
 
         private static void FillRandomOneTransaction(Stopwatch sw, FlushMode flushMode)
         {
-            var memoryMapPager = new MemoryMapPager(Path, flushMode);
-            using (var env = new StorageEnvironment(memoryMapPager))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path, flushMode)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -106,7 +105,7 @@ namespace Voron.Benchmark
 
                 using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    memoryMapPager.AllocateMorePages(tx, 1024 * 1024 * 768);
+                    env.Options.DataPager.AllocateMorePages(tx, 1024 * 1024 * 768);
                     tx.Commit();
                 }
 
@@ -128,8 +127,7 @@ namespace Voron.Benchmark
 
         private static void FillSeqOneTransaction(Stopwatch sw, FlushMode flushMode)
         {
-            var memoryMapPager = new MemoryMapPager(Path, flushMode);
-            using (var env = new StorageEnvironment(memoryMapPager))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path, flushMode)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -137,7 +135,7 @@ namespace Voron.Benchmark
 
                 using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    memoryMapPager.AllocateMorePages(tx, 1024 * 1024 * 768);
+                    env.Options.DataPager.AllocateMorePages(tx, 1024 * 1024 * 768);
                     tx.Commit();
                 }
 
@@ -159,8 +157,7 @@ namespace Voron.Benchmark
 
         private static void FillRandomMultipleTransaction(Stopwatch sw, FlushMode flushMode)
         {
-            var memoryMapPager = new MemoryMapPager(Path, flushMode);
-            using (var env = new StorageEnvironment(memoryMapPager))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path, flushMode)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -168,7 +165,7 @@ namespace Voron.Benchmark
 
                 using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    memoryMapPager.AllocateMorePages(tx, 1024 * 1024 * 768);
+                    env.Options.DataPager.AllocateMorePages(tx, 1024 * 1024 * 768);
                     tx.Commit();
                 }
 
@@ -193,8 +190,7 @@ namespace Voron.Benchmark
 
         private static void FillSeqMultipleTransaction(Stopwatch sw, FlushMode flushMode)
         {
-            var memoryMapPager = new MemoryMapPager(Path, flushMode);
-            using (var env = new StorageEnvironment(memoryMapPager))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path, flushMode)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -202,7 +198,7 @@ namespace Voron.Benchmark
 
                 using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    memoryMapPager.AllocateMorePages(tx, 1024 * 1024 * 768);
+                    env.Options.DataPager.AllocateMorePages(tx, 1024 * 1024 * 768);
                     tx.Commit();
                 }
 
@@ -228,7 +224,7 @@ namespace Voron.Benchmark
 
         private static void ReadOneTransaction_Parallel(Stopwatch sw, int concurrency)
         {
-            using (var env = new StorageEnvironment(new MemoryMapPager(Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var countdownEvent = new CountdownEvent(concurrency);
 
@@ -266,7 +262,7 @@ namespace Voron.Benchmark
 
 		private static void FillBatchReadBatchOneTransaction(Stopwatch sw, int iterations)
 		{
-			using (var env = new StorageEnvironment(new MemoryMapPager(Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
 			{
 				sw.Start();
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
@@ -303,7 +299,7 @@ namespace Voron.Benchmark
 
         private static void ReadOneTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(new MemoryMapPager(Path)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 sw.Start();
                 using (var tx = env.NewTransaction(TransactionFlags.Read))
@@ -328,15 +324,14 @@ namespace Voron.Benchmark
 
         private static void ReadAndWriteOneTransaction(Stopwatch sw, int concurrency)
         {
-            var memoryMapPager = new MemoryMapPager(Path, FlushMode.None);
-            using (var env = new StorageEnvironment(memoryMapPager))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path, FlushMode.None)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
 
                 using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    memoryMapPager.AllocateMorePages(tx, 1024 * 1024 * 768);
+                    env.Options.DataPager.AllocateMorePages(tx, 1024 * 1024 * 768);
                     tx.Commit();
                 }
 

@@ -11,7 +11,11 @@ namespace Voron.Trees
         public void Update(LinkedListNode<Page> node, Page newVal)
         {
             if (node.Value.PageNumber == newVal.PageNumber)
+            {
+                _pagesByNum[node.Value.PageNumber] = newVal;
+                node.Value = newVal;
                 return;
+            }
             _pagesByNum[node.Value.PageNumber] = newVal;
             _pagesByNum.Add(newVal.PageNumber, newVal);
             node.Value = newVal;

@@ -56,5 +56,17 @@ namespace Voron.Impl
 
 			return sz;
 		}
+
+        public static int NodeEntryWithAnotherKey(NodeHeader* other, Slice key)
+        {
+            var keySize = key == null ? other->KeySize : key.Size;
+            var sz = keySize + Constants.NodeHeaderSize;
+            if (other->Flags == NodeFlags.Data || other->Flags == NodeFlags.MultiValuePageRef)
+                sz += other->DataSize;
+
+            sz += sz & 1;
+
+            return sz;
+        }
 	}
 }

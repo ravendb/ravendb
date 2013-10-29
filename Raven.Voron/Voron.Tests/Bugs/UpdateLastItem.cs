@@ -10,9 +10,10 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void ShouldWork()
 		{
-			using (var pager = new PureMemoryPager())
+			using (var options = StorageEnvironmentOptions.GetInMemory())
 			{
-				using (var env = new StorageEnvironment(pager, false))
+			    options.OwnsPagers = false;
+				using (var env = new StorageEnvironment(options))
 				{
 					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 					{
@@ -29,7 +30,7 @@ namespace Voron.Tests.Bugs
 					}
 				}
 
-				using (var env = new StorageEnvironment(pager, false))
+				using (var env = new StorageEnvironment(options))
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					tx.State.Root.DirectAdd(tx, "events", sizeof(TreeRootHeader));
