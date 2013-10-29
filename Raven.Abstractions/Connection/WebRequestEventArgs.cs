@@ -41,5 +41,7 @@ namespace Raven.Abstractions.Connection
 	/// </summary>
 		public HttpJsonRequest JsonRequest { get; set; }
 #endif
+
+		public OperationCredentials Credentials { get; set; }
 	}
 }

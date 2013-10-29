@@ -17,19 +17,17 @@ namespace Raven.Abstractions.OAuth
 {
 	public class BasicAuthenticator : AbstractAuthenticator
 	{
-		private readonly string apiKey;
 		private readonly bool enableBasicAuthenticationOverUnsecuredHttp;
 	
-		public BasicAuthenticator(string apiKey, bool enableBasicAuthenticationOverUnsecuredHttp)
+		public BasicAuthenticator(bool enableBasicAuthenticationOverUnsecuredHttp)
 		{
-			this.apiKey = apiKey;
 			this.enableBasicAuthenticationOverUnsecuredHttp = enableBasicAuthenticationOverUnsecuredHttp;
 		}
 
 
-		public Task<Action<HttpWebRequest>> HandleOAuthResponseAsync(string oauthSource)
+		public Task<Action<HttpWebRequest>> HandleOAuthResponseAsync(string oauthSource, string apiKey)
 		{
-			var authRequest = PrepareOAuthRequest(oauthSource);
+			var authRequest = PrepareOAuthRequest(oauthSource, apiKey);
 			return Task<WebResponse>.Factory.FromAsync(authRequest.BeginGetResponse, authRequest.EndGetResponse, null)
 				.AddUrlIfFaulting(authRequest.RequestUri)
 				.ConvertSecurityExceptionToServerNotFound()
@@ -49,9 +47,9 @@ namespace Raven.Abstractions.OAuth
 		}
 
 #if !SILVERLIGHT && !NETFX_CORE
-		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource)
+		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey)
 		{
-			var authRequest = PrepareOAuthRequest(oauthSource);
+			var authRequest = PrepareOAuthRequest(oauthSource, apiKey);
 			using (var response = authRequest.GetResponse())
 			{
 				using (var stream = response.GetResponseStreamWithHttpDecompression())
@@ -64,7 +62,7 @@ namespace Raven.Abstractions.OAuth
 		}
 #endif
 
-		private HttpWebRequest PrepareOAuthRequest(string oauthSource)
+		private HttpWebRequest PrepareOAuthRequest(string oauthSource, string apiKey)
 		{
 #if !SILVERLIGHT
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
