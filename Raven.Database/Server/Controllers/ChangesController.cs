@@ -101,7 +101,7 @@ namespace Raven.Database.Server.Controllers
 
 		[HttpGet]
 		[Route("changes/events")]
-		[Route("databases/{databaseNames}/changes/events")]
+		[Route("databases/{databaseName}/changes/events")]
 		public HttpResponseMessage ChangesEvents()
 		{
 			var eventsTransport = new ChangesPushContent(this);
