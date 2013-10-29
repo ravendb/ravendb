@@ -60,6 +60,7 @@
     <Compile Include="Bugs\Deletes.cs" />
     <Compile Include="Bugs\EmptyTree.cs" />
     <Compile Include="Bugs\PageSplitter.cs" />
+    <Compile Include="Bugs\Disposing.cs" />
     <Compile Include="Bugs\TreeRebalancer.cs" />
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
