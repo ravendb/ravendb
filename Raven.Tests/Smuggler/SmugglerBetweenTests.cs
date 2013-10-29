@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using System.Linq;
 using System.Threading.Tasks;
-using Lucene.Net.Documents;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;
