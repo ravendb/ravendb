@@ -51,9 +51,9 @@ namespace Voron.Tests.Trees
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.Add(tx, "1", new MemoryStream(new byte[1100]));
-				tx.State.Root.Add(tx, "2", new MemoryStream(new byte[1100]));
-				tx.State.Root.Add(tx, "3", new MemoryStream(new byte[1100]));
+				tx.State.Root.Add(tx, "1", new MemoryStream(new byte[1000]));
+				tx.State.Root.Add(tx, "2", new MemoryStream(new byte[1000]));
+				tx.State.Root.Add(tx, "3", new MemoryStream(new byte[1000]));
 
 				tx.Commit();
 			}
@@ -61,12 +61,10 @@ namespace Voron.Tests.Trees
 			// update that is too big
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.State.Root.Add(tx, "1", new MemoryStream(new byte[tx.DataPager.MaxNodeSize - 25]));
-                RenderAndShow(tx);
+				tx.State.Root.Add(tx, "1", new MemoryStream(new byte[1024]));
 
 				tx.Commit();
 			}
-
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
 				Assert.Equal(3, tx.State.Root.State.PageCount);

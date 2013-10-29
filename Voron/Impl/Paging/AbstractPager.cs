@@ -96,7 +96,7 @@ namespace Voron.Impl
 
 		public int GetNumberOfOverflowPages(int overflowSize)
 		{
-            return (PageSize - 1 + overflowSize) / (PageSize) + 1;
+		    return (overflowSize/PageSize) + (overflowSize%PageSize == 0 ? 0 : 1);
 		}
 
 	    public abstract void Write(Page page, long? pageNumber);
