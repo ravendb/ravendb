@@ -96,6 +96,7 @@ namespace Voron.Impl
 
 		public int GetNumberOfOverflowPages(int overflowSize)
 		{
+		    overflowSize += Constants.PageHeaderSize;
 		    return (overflowSize/PageSize) + (overflowSize%PageSize == 0 ? 0 : 1);
 		}
 
