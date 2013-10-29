@@ -40,7 +40,7 @@ namespace Voron.Tests.Bugs
 			var inputData = new List<string>();
 			for (int i = 0; i < 1000; i++)
 			{
-				inputData.Add(RandomString(2000));
+				inputData.Add(RandomString(1024));
 			}
 			
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

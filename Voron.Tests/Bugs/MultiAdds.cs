@@ -36,7 +36,7 @@ namespace Voron.Tests.Bugs
 				var inputData = new List<byte[]>();
 				for (int i = 0; i < 1000; i++)
 				{
-                    inputData.Add(Encoding.UTF8.GetBytes(RandomString(2000)));
+                    inputData.Add(Encoding.UTF8.GetBytes(RandomString(1024)));
 				}
 
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
