@@ -10,6 +10,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Json.Linq;
@@ -93,115 +94,136 @@ namespace Raven.Smuggler
                 foreach (var index in indexes)
                 {
                     var indexName = await importStore.AsyncDatabaseCommands.PutIndexAsync(index.Name, index, true);
-                    ShowProgress("Succesfully PUT index '{0}'", indexName);
+                    ShowProgress("Successfully PUT index '{0}'", indexName);
                 }
             }
         }
 
-        private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptionsBase options, Etag fromEtag = null)
+        private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptionsBase options)
         {
+            string lastEtag = options.StartDocsEtag;
             var totalCount = 0;
             var lastReport = SystemTime.UtcNow;
             var reportInterval = TimeSpan.FromSeconds(2);
             ShowProgress("Exporting Documents");
 
-            while (true)
+            var bulkInsertOperation = importStore.BulkInsert(null, new BulkInsertOptions
             {
-                if (isDocsStreamingSupported)
+                BatchSize = options.BatchSize,
+                CheckForUpdates = true,
+            });
+            bulkInsertOperation.Report += text => ShowProgress(text);
+
+            try
+            {
+                while (true)
                 {
-                    ShowProgress("Streaming documents from " + fromEtag);
-                    using (var documentsEnumerator = await exportStore.AsyncDatabaseCommands.StreamDocsAsync(fromEtag))
+                    if (isDocsStreamingSupported)
                     {
-                        while (await documentsEnumerator.MoveNextAsync())
+                        ShowProgress("Streaming documents from " + lastEtag);
+                        using (var documentsEnumerator = await exportStore.AsyncDatabaseCommands.StreamDocsAsync(lastEtag))
                         {
-                            var document = documentsEnumerator.Current;
-
-                            if (!options.MatchFilters(document))
-                                continue;
-                            if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
-                                continue;
-
-                            var metadata = document.Value<RavenJObject>("@metadata");
-                            var id = metadata.Value<string>("@id");
-                            var etag = Etag.Parse(metadata.Value<string>("@etag")); // TODO(fitzchak): Should we specify the etag here?
-                            document.Remove("@metadata");
-                            await importStore.AsyncDatabaseCommands.PutAsync(id, etag, document, metadata);
-                            totalCount++;
-
-                            if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                            while (await documentsEnumerator.MoveNextAsync())
                             {
-                                ShowProgress("Exported {0} documents", totalCount);
-                                lastReport = SystemTime.UtcNow;
-                            }
+                                var document = documentsEnumerator.Current;
 
-                            fromEtag = etag;
-                        }
-                    }
-                }
-                else
-                {
-                    int retries = RetriesCount;
-                    var originalRequestTimeout = exportStore.JsonRequestFactory.RequestTimeout;
-                    var timeout = options.Timeout.Seconds;
-                    if (timeout < 30)
-                        timeout = 30;
-                    try
-                    {
-                        while (true)
-                        {
-                            try
-                            {
-                                ShowProgress("Get documents from " + fromEtag);
-                                var documents = await exportStore.AsyncDatabaseCommands.GetDocumentsAsync(fromEtag, options.BatchSize);
-                                foreach (var document in documents)
+                                if (!options.MatchFilters(document))
+                                    continue;
+                                if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
+                                    continue;
+
+                                var metadata = document.Value<RavenJObject>("@metadata");
+                                var id = metadata.Value<string>("@id");
+                                var etag = Etag.Parse(metadata.Value<string>("@etag"));
+                                document.Remove("@metadata");
+                                bulkInsertOperation.Store(document, metadata, id);
+                                totalCount++;
+
+                                if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
                                 {
-                                    fromEtag = document.Etag;
-                                    
-                                    RavenJToken ravenJObject = document.ToJson();
-                                    if (!options.MatchFilters(ravenJObject))
-                                        continue;
-                                    if (options.ShouldExcludeExpired && options.ExcludeExpired(ravenJObject))
-                                        continue;
-
-                                    await importStore.AsyncDatabaseCommands.PutAsync(document.Key, document.Etag, document.DataAsJson, document.Metadata);
-                                    totalCount++;
-
-                                    if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-                                    {
-                                        ShowProgress("Exported {0} documents", totalCount);
-                                        lastReport = SystemTime.UtcNow;
-                                    }
+                                    ShowProgress("Exported {0} documents", totalCount);
+                                    lastReport = SystemTime.UtcNow;
                                 }
-                                break;
-                            }
-                            catch (Exception e)
-                            {
-                                if (retries-- == 0)
-                                    throw;
-                                exportStore.JsonRequestFactory.RequestTimeout = TimeSpan.FromSeconds(timeout *= 2);
-                                ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e);
+
+                                lastEtag = etag;
                             }
                         }
                     }
-                    finally
+                    else
                     {
-                        exportStore.JsonRequestFactory.RequestTimeout = originalRequestTimeout;
+                        int retries = RetriesCount;
+                        var originalRequestTimeout = exportStore.JsonRequestFactory.RequestTimeout;
+                        var timeout = options.Timeout.Seconds;
+                        if (timeout < 30)
+                            timeout = 30;
+                        try
+                        {
+                            while (true)
+                            {
+                                try
+                                {
+                                    ShowProgress("Get documents from " + lastEtag);
+                                    var documents = await ((AsyncServerClient)exportStore.AsyncDatabaseCommands).GetDocumentsInternalAsync(null, lastEtag, options.BatchSize);
+                                    foreach (RavenJObject document in documents)
+                                    {
+                                        var metadata = document.Value<RavenJObject>("@metadata");
+                                        var id = metadata.Value<string>("@id");
+                                        var etag = Etag.Parse(metadata.Value<string>("@etag"));
+                                        document.Remove("@metadata");
+                                        metadata.Remove("@id");
+                                        metadata.Remove("@etag");
+
+                                        if (!options.MatchFilters(document))
+                                            continue;
+                                        if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
+                                            continue;
+
+                                        bulkInsertOperation.Store(document, metadata, id);
+                                        totalCount++;
+
+                                        if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+                                        {
+                                            ShowProgress("Exported {0} documents", totalCount);
+                                            lastReport = SystemTime.UtcNow;
+                                        }
+                                        lastEtag = etag;
+                                    }
+                                    break;
+                                }
+                                catch (Exception e)
+                                {
+                                    if (retries-- == 0)
+                                        throw;
+                                    exportStore.JsonRequestFactory.RequestTimeout = TimeSpan.FromSeconds(timeout *= 2);
+                                    importStore.JsonRequestFactory.RequestTimeout = TimeSpan.FromSeconds(timeout *= 2);
+                                    ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e);
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            exportStore.JsonRequestFactory.RequestTimeout = originalRequestTimeout;
+                        }
                     }
-                }
 
-                // In a case that we filter all the results, the formEtag hasn't updaed to the latest, 
-                // but we still need to continue until we finish all the docs.
-                var databaseStatistics = await exportStore.AsyncDatabaseCommands.GetStatisticsAsync();
-                var lastEtagComparable = new ComparableByteArray(fromEtag);
-                if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
-                {
-                    fromEtag = EtagUtil.Increment(fromEtag, options.BatchSize);
-                    ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", fromEtag);
-                    continue;
-                }
+                    // In a case that we filter all the results, the formEtag hasn't updaed to the latest, 
+                    // but we still need to continue until we finish all the docs.
+                    var databaseStatistics = await exportStore.AsyncDatabaseCommands.GetStatisticsAsync();
+                    var lastEtagComparable = new ComparableByteArray(lastEtag);
+                    if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
+                    {
+                        lastEtag = EtagUtil.Increment(lastEtag, options.BatchSize);
+                        ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
+                        continue;
+                    }
 
-                ShowProgress("Done with reading documents, total: {0}", totalCount);
-                return fromEtag;
+                    ShowProgress("Done with reading documents, total: {0}", totalCount);
+                    return lastEtag;
+                }
+            }
+            finally
+            {
+                bulkInsertOperation.Dispose();
             }
         }
 
@@ -221,7 +243,7 @@ namespace Raven.Smuggler
                 foreach (var transformer in transformers)
                 {
                     var transformerName = await importStore.AsyncDatabaseCommands.PutTransformerAsync(transformer.Name, transformer);
-                    ShowProgress("Succesfully PUT transformer '{0}'", transformerName);
+                    ShowProgress("Successfully PUT transformer '{0}'", transformerName);
                 }
             }
         }
@@ -236,10 +258,14 @@ namespace Raven.Smuggler
                 DefaultDatabase = connection.DefaultDatabase,
                 Conventions =
                 {
-                    FailoverBehavior = FailoverBehavior.FailImmediately, 
+                    FailoverBehavior = FailoverBehavior.FailImmediately,
+                    ShouldCacheRequest = s => false,
+                    ShouldAggressiveCacheTrackChanges = false,
+                    ShouldSaveChangesForceAggressiveCacheCheck = false,
                 }
             };
             store.Initialize();
+            store.JsonRequestFactory.DisableAllCaching();
             return store;
         }
 

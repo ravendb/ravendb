@@ -846,20 +846,11 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("GET", async url =>
 			{
-				var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
-				if (metadataOnly)
-					requestUri += "&metadata-only=true";
-				var result =
-					(RavenJArray)
-					await
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET",
-																							 credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-																   .ReadResponseJsonAsync();
+                var result = await GetDocumentsInternalAsync(start, null, pageSize, metadataOnly);
 
-				return result.Cast<RavenJObject>()
-												.ToJsonDocuments()
-							 .ToArray();
+			    return result.Cast<RavenJObject>()
+			                 .ToJsonDocuments()
+			                 .ToArray();
 			});
 		}
 
@@ -867,21 +858,31 @@ namespace Raven.Client.Connection.Async
 	    {
             return ExecuteWithReplication("GET", async url =>
             {
-                var requestUri = url + "/docs/?etag=" + fromEtag + "&pageSize=" + pageSize;
-                if (metadataOnly)
-                    requestUri += "&metadata-only=true";
-                var result =
-                    (RavenJArray)
-                    await
-                    jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET",
-                                                                                             credentials, convention)
-                    .AddOperationHeaders(OperationsHeaders))
-                                                                   .ReadResponseJsonAsync();
-
+                var result = await GetDocumentsInternalAsync(null, fromEtag, pageSize, metadataOnly);
                 return result.Cast<RavenJObject>()
-                                                .ToJsonDocuments()
+                             .ToJsonDocuments()
                              .ToArray();
             });
+	    }
+
+        public async Task<RavenJArray> GetDocumentsInternalAsync(int? start, Etag fromEtag, int pageSize, bool metadataOnly = false)
+        {
+            var requestUri = url + "/docs/?";
+            if (start.HasValue && start.Value > 0)
+            {
+                requestUri += "start=" + start;
+            }
+            else
+            {
+                requestUri += "etag=" + fromEtag;
+            }
+            requestUri += "&pageSize=" + pageSize;
+	        if (metadataOnly)
+	            requestUri += "&metadata-only=true";
+	        var @params = new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
+	            .AddOperationHeaders(OperationsHeaders);
+	        return (RavenJArray) await jsonRequestFactory.CreateHttpJsonRequest(@params)
+	                                                    .ReadResponseJsonAsync();
 	    }
 
 	    public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
@@ -1961,7 +1962,7 @@ namespace Raven.Client.Connection.Async
 
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
 		{
-			get { return this; }
+            get { return (IAsyncGlobalAdminDatabaseCommands)this.ForSystemDatabase(); }
 		}
 
 		async Task<AdminStatistics> IAsyncGlobalAdminDatabaseCommands.GetStatisticsAsync()
