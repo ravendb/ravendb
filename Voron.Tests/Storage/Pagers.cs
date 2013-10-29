@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using Voron.Impl;
 using Xunit;
 
@@ -16,7 +17,16 @@ namespace Voron.Tests.Storage
         [Fact]
         public void MemoryMapPagerReleasesPagerState()
         {
-            PagerReleasesPagerState(() => new MemoryMapPager("test.data\\db.voron"));
+            PagerReleasesPagerState(() => new MemoryMapPager("db.voron"));
+            File.Delete("db.voron");
+        }
+
+
+        [Fact]
+        public void FilePagerReleasesPagerState()
+        {
+            PagerReleasesPagerState(() => new FilePager("db.voron"));
+            File.Delete("db.voron");
         }
 
         private static void PagerReleasesPagerState(Func<AbstractPager> constructor)
