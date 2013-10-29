@@ -185,7 +185,8 @@ namespace Voron.Trees
         {
             if (_parentPage.SizeLeft < SizeOf.BranchEntry(seperatorKey) + Constants.NodeOffsetSize)
             {
-                new PageSplitter(_tx, _cmp, seperatorKey, -1, rightPage.PageNumber, NodeFlags.PageRef, 0, _cursor, _treeState).Execute();
+                var pageSplitter = new PageSplitter(_tx, _cmp, seperatorKey, -1, rightPage.PageNumber, NodeFlags.PageRef, 0, _cursor, _treeState);
+                pageSplitter.Execute();
             }
             else
             {

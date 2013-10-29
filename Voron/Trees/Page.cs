@@ -233,11 +233,11 @@ namespace Voron.Trees
         /// </summary>
         internal void CopyNodeDataToEndOfPage(NodeHeader* other, Slice key = null)
         {
-            Debug.Assert(SizeOf.NodeEntry(other) + Constants.NodeOffsetSize <= SizeLeft);
+            Debug.Assert(SizeOf.NodeEntryWithAnotherKey(other, key) + Constants.NodeOffsetSize <= SizeLeft);
             
             var index = NumberOfEntries;
 
-            var nodeSize = SizeOf.NodeEntry(other);
+            var nodeSize = SizeOf.NodeEntryWithAnotherKey(other, key);
 
             key = key ?? new Slice(other);
 
