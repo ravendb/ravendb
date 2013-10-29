@@ -65,8 +65,6 @@ namespace Voron.Tests.Trees
                 RenderAndShow(tx);
 
 				tx.Commit();
-
-
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))

@@ -38,7 +38,7 @@ namespace Voron.Impl.FreeSpace
 {
     public sealed class StreamBitArray
     {
-        readonly int[] _inner = new int[32];
+        readonly int[] _inner = new int[64];
 
         public int SetCount { get; private set; }
 
@@ -52,7 +52,7 @@ namespace Voron.Impl.FreeSpace
             var br = new BinaryReader(stream);
 
             SetCount = br.ReadInt32();
-            for (var i = 0; i < 32; i++)
+            for (var i = 0; i < _inner.Length; i++)
             {
                 _inner[i] = br.ReadInt32();
             }
@@ -118,7 +118,7 @@ namespace Voron.Impl.FreeSpace
         public int GetEndRangeCount()
         {
             int c = 0;
-            for (int i = _inner.Length * 32; i >= 0; i--)
+            for (int i = _inner.Length * 32 -1; i >= 0; i--)
             {
                 if (Get(i) == false)
                     break;
