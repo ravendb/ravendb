@@ -769,6 +769,11 @@ namespace Raven.Client.Shard
 						  .ToArray();
 		}
 
+		public Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query)
+		{
+			throw new NotSupportedException("Not supported for sharded session");
+		}
+
 		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude)
 		{
 			IncrementRequestCount();

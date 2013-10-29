@@ -83,6 +83,7 @@
     <Compile Include="Connection\CompressedStreamContent.cs" />
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Connection\NameValueCollectionExtensions.cs" />
+    <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />
     <Compile Include="Document\Batches\LazyTransformerLoadOperation.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryContext.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryStorage.cs" />
