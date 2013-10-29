@@ -65,9 +65,13 @@ namespace Voron
 		{
 			if (pager.NumberOfAllocatedPages == 0)
 			{
+				_dataPager.EnsureContinuous(null, 0, 2); // for file headers
+
                 _journal.WriteFileHeader(0);
                 _journal.WriteFileHeader(1);
+
                 _dataPager.Sync();
+
 				const int initialNextPageNumber = 2;
 				State = new StorageEnvironmentState(null, null, initialNextPageNumber);
 				using (var tx = NewTransaction(TransactionFlags.ReadWrite))
