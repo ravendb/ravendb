@@ -140,7 +140,9 @@ namespace Raven.Smuggler
                 {
                     int retries = RetriesCount;
                     var originalRequestTimeout = exportStore.JsonRequestFactory.RequestTimeout;
-                    exportStore.JsonRequestFactory.RequestTimeout = options.Timeout;
+                    var timeout = options.Timeout.Seconds;
+                    if (timeout < 30)
+                        timeout = 30;
                     try
                     {
                         while (true)
@@ -174,7 +176,7 @@ namespace Raven.Smuggler
                             {
                                 if (retries-- == 0)
                                     throw;
-                                exportStore.JsonRequestFactory.RequestTimeout = TimeSpan.FromSeconds(exportStore.JsonRequestFactory.RequestTimeout.Value.Seconds * 2);
+                                exportStore.JsonRequestFactory.RequestTimeout = TimeSpan.FromSeconds(timeout *= 2);
                                 ShowProgress("Error reading from database, remaining attempts {0}, will retry. Error: {1}", retries, e);
                             }
                         }
