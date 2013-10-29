@@ -50,14 +50,16 @@
   <ItemGroup>
     <Compile Include="Debugging\EnvironmentStats.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
-    <Compile Include="Impl\ConsecutiveSequences.cs" />
     <Compile Include="Impl\Constants.cs" />
     <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />
     <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
     <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
     <Compile Include="Impl\FlushMode.cs" />
-    <Compile Include="Impl\IFreeSpaceRepository.cs" />
+    <Compile Include="Impl\FreeSpace\StreamBitArray.cs" />
+    <Compile Include="Impl\FreeSpace\FreeSpaceHandling.cs" />
+    <Compile Include="Impl\FreeSpace\IFreeSpaceHandling.cs" />
+    <Compile Include="Impl\FreeSpace\NoFreeSpaceHandling.cs" />
     <Compile Include="Impl\Journal\JournalFile.cs" />
     <Compile Include="Impl\Journal\JournalReader.cs" />
     <Compile Include="Impl\Journal\LogInfo.cs" />
@@ -107,12 +109,20 @@
     <Compile Include="Trees\TreeMutableState.cs" />
     <Compile Include="Trees\TreeRebalancer.cs" />
     <Compile Include="Util\Crc.cs" />
+    <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
+    <Compile Include="Util\Conversion\DoubleConverter.cs" />
+    <Compile Include="Util\Conversion\EndianBitConverter.cs" />
+    <Compile Include="Util\Conversion\Endianness.cs" />
+    <Compile Include="Util\Conversion\LittleEndianBitConverter.cs" />
     <Compile Include="Util\NativeFileMethods.cs" />
     <Compile Include="Util\TreeExtensions.cs" />
     <Compile Include="Util\UnmanagedBits.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Util\Conversion\readme.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

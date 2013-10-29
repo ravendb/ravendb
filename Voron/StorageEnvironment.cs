@@ -7,6 +7,7 @@ using System.Threading;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Trees;
 
@@ -26,7 +27,7 @@ namespace Voron
         private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
 
 		private long _transactionsCounter;
-		private readonly IFreeSpaceRepository _freeSpaceRepository;
+		private readonly IFreeSpaceHandling _freeSpaceHandling;
 
 		public TransactionMergingWriter Writer { get; private set; }
 
@@ -43,7 +44,7 @@ namespace Voron
 			{
                 _options = options;
                 _dataPager = options.DataPager;
-				_freeSpaceRepository = new NoFreeSpaceRepository();
+				_freeSpaceHandling = new FreeSpaceHandling(this);
 				_sliceComparer = NativeMethods.memcmp;
                 _journal = new WriteAheadJournal(this);
 
@@ -107,9 +108,9 @@ namespace Voron
 			}
 		}
 
-		public IFreeSpaceRepository FreeSpaceRepository
+		public IFreeSpaceHandling FreeSpaceHandling
 		{
-			get { return _freeSpaceRepository; }
+			get { return _freeSpaceHandling; }
 		}
 
 		public SliceComparer SliceComparer
@@ -249,14 +250,13 @@ namespace Voron
 					_txWriter.Wait();
 					txLockTaken = true;
 				}
-				var tx = new Transaction(this, txId, flags, _freeSpaceRepository);
+				var tx = new Transaction(this, txId, flags, _freeSpaceHandling);
 				_activeTransactions.TryAdd(txId, tx);
 				var state = _dataPager.TransactionBegan();
 				tx.AddPagerState(state);
 
 				if (flags == TransactionFlags.ReadWrite)
 				{
-					_freeSpaceRepository.UpdateSections(tx, OldestTransaction);
 					tx.AfterCommit = TransactionAfterCommit;
 				}
 
@@ -303,7 +303,7 @@ namespace Voron
 				{
 					{"Root", State.Root.AllPages(tx)},
 					{"Free Space Overhead", State.FreeSpaceRoot.AllPages(tx)},
-					{"Free Pages", _freeSpaceRepository.AllPages(tx)}
+					{"Free Pages", _freeSpaceHandling.AllPages(tx)}
 				};
 
 			foreach (var tree in State.Trees)
@@ -318,7 +318,7 @@ namespace Voron
 		{
 			return new EnvironmentStats
 				{
-					FreePages = _freeSpaceRepository.GetFreePageCount(),
+					FreePages = _freeSpaceHandling.GetFreePageCount(),
 					FreePagesOverhead = State.FreeSpaceRoot.State.PageCount,
 					RootPages = State.Root.State.PageCount,
 					HeaderPages = 2,

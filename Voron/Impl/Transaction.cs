@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Trees;
 
@@ -17,9 +18,8 @@ namespace Voron.Impl
         private readonly WriteAheadJournal _journal;
         private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
         private readonly HashSet<long> _dirtyPages = new HashSet<long>();
-        private readonly List<long> _freedPages = new List<long>();
         private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
-        private readonly IFreeSpaceRepository _freeSpaceRepository;
+        private readonly IFreeSpaceHandling _freeSpaceHandling;
 
         internal readonly List<LogSnapshot> LogSnapshots = new List<LogSnapshot>();
         private readonly List<Action> _releaseLogActions = new List<Action>(); 
@@ -61,13 +61,13 @@ namespace Voron.Impl
         }
 
 
-        public Transaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceRepository freeSpaceRepository)
+        public Transaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling)
         {
             _dataPager = env.Options.DataPager;
             _env = env;
             _journal = env.Journal;
             _id = id;
-            _freeSpaceRepository = freeSpaceRepository;
+            _freeSpaceHandling = freeSpaceHandling;
             Flags = flags;
 
             if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
@@ -132,7 +132,7 @@ namespace Voron.Impl
         {
             if (pageNumber == null)
             {
-                pageNumber = _freeSpaceRepository.TryAllocateFromFreeSpace(this, numberOfPages);
+                pageNumber = _freeSpaceHandling.TryAllocateFromFreeSpace(this, numberOfPages);
                 if (pageNumber == null) // allocate from end of file
                 {
                     pageNumber = State.NextPageNumber;
@@ -173,7 +173,6 @@ namespace Voron.Impl
                 return; // nothing to do
 
             FlushAllMultiValues();
-            _freeSpaceRepository.FlushFreeState(this);
 
             if (_deletedTrees != null)
             {
@@ -197,14 +196,12 @@ namespace Voron.Impl
                 }
             }
 
-
 #if DEBUG
             if (State.Root != null && State.FreeSpaceRoot != null)
             {
                 Debug.Assert(State.Root.State.RootPageNumber != State.FreeSpaceRoot.State.RootPageNumber);
             }
 #endif
-
             _journal.TransactionCommit(this);
             _env.SetStateAfterTransactionCommit(State); 
             Committed = true;
@@ -245,10 +242,9 @@ namespace Voron.Impl
 
         public void FreePage(long pageNumber)
         {
-            _dirtyPages.Remove(pageNumber);
             Debug.Assert(pageNumber >= 2);
-            Debug.Assert(_freedPages.Contains(pageNumber) == false);
-            _freedPages.Add(pageNumber);
+            _dirtyPages.Remove(pageNumber);
+            _freeSpaceHandling.FreePage(this, pageNumber);
         }
 
         internal void UpdateRootsIfNeeded(Tree root, Tree freeSpace)
