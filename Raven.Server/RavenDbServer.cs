@@ -117,16 +117,6 @@ namespace Raven.Server
 				get { return options.RequestManager.NumberOfRequests; }
 			}
 
-			public DatabasesLandlord Landlord
-			{
-				get { return options.Landlord; }
-			}
-
-			public RequestManager RequestManager
-			{
-				get { return options.RequestManager; }
-			}
-
 			public void ResetNumberOfRequests()
 			{
 				options.RequestManager.ResetNumberOfRequests();
@@ -144,8 +134,6 @@ namespace Raven.Server
 	{
 		bool HasPendingRequests { get; }
 		int NumberOfRequests { get; }
-		DatabasesLandlord Landlord { get; }
-		RequestManager RequestManager { get; }
 		void ResetNumberOfRequests();
 		Task<DocumentDatabase> GetDatabaseInternal(string databaseName);
 	}
