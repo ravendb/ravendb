@@ -23,7 +23,7 @@ namespace Raven.Database.Storage.Voron.Impl
 		public TableStorage(IPersistanceSource persistanceSource)
 		{
 			this.persistanceSource = persistanceSource;
-			env = new StorageEnvironment(persistanceSource.Pager, ownsPager: false);
+			env = new StorageEnvironment(persistanceSource.Options);
 
 			Initialize();
 			CreateSchema();
@@ -41,11 +41,11 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			var reportData = new Dictionary<string, object>
 	        {
-	            {"MaxNodeSize", persistanceSource.Pager.MaxNodeSize},
-	            {"NumberOfAllocatedPages", persistanceSource.Pager.NumberOfAllocatedPages},
-	            {"PageMaxSpace", persistanceSource.Pager.PageMaxSpace},
-	            {"PageMinSpace", persistanceSource.Pager.PageMinSpace},
-	            {"PageSize", persistanceSource.Pager.PageSize},
+	            {"MaxNodeSize", persistanceSource.Options.DataPager.MaxNodeSize},
+	            {"NumberOfAllocatedPages", persistanceSource.Options.DataPager.NumberOfAllocatedPages},
+	            {"PageMaxSpace", persistanceSource.Options.DataPager.PageMaxSpace},
+	            {"PageMinSpace", persistanceSource.Options.DataPager.PageMinSpace},
+	            {"PageSize", persistanceSource.Options.DataPager.PageSize},
                 {"Documents", GetEntriesCount(Documents)},
                 {"Indexes", GetEntriesCount(IndexingStats)},
                 {"Attachments", GetEntriesCount(Attachments)},

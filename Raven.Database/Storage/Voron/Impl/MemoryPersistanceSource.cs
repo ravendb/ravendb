@@ -1,23 +1,23 @@
 ﻿namespace Raven.Database.Storage.Voron.Impl
 {
-	using global::Voron.Impl;
+	using global::Voron;
 
 	public class MemoryPersistanceSource : IPersistanceSource
 	{
 		public MemoryPersistanceSource()
 		{
 			CreatedNew = true;
-			Pager = new PureMemoryPager();
+			Options = new StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions();
 		}
 
-		public IVirtualPager Pager { get; private set; }
+		public StorageEnvironmentOptions Options { get; private set; }
 
 		public bool CreatedNew { get; private set; }
 
 		public void Dispose()
 		{
-			if (Pager != null)
-				Pager.Dispose();
+			if (Options != null)
+				Options.Dispose();
 		}
 	}
 }

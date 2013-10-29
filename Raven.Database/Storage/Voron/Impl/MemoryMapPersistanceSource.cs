@@ -5,6 +5,7 @@
 
 	using Raven.Database.Config;
 
+	using global::Voron;
 	using global::Voron.Impl;
 
 	public class MemoryMapPersistanceSource : IPersistanceSource
@@ -28,7 +29,7 @@
 			Initialize();
 		}
 
-		public IVirtualPager Pager { get; private set; }
+		public StorageEnvironmentOptions Options { get; private set; }
 
 		public bool CreatedNew { get; private set; }
 
@@ -46,13 +47,13 @@
 				CreatedNew = true;
 			}
 
-		    Pager = new MemoryMapPager(storageFilePath);
+		    Options = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(storageFilePath, FlushMode.Full);
 		}
 
 		public void Dispose()
 		{
-			if (Pager != null)
-				Pager.Dispose();
+			if (Options != null)
+				Options.Dispose();
 		}
 	}
 }

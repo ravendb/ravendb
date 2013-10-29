@@ -2,11 +2,11 @@
 {
 	using System;
 
-	using global::Voron.Impl;
+	using global::Voron;
 
 	public interface IPersistanceSource : IDisposable
 	{
-		IVirtualPager Pager { get; }
+		StorageEnvironmentOptions Options { get; }
 
 		bool CreatedNew { get; }
 	}
