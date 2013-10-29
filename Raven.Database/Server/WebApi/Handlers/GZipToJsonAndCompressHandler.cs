@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Database.Server.Connections;
 
 namespace Raven.Database.Server.WebApi.Handlers
 {
@@ -62,7 +63,10 @@ namespace Raven.Database.Server.WebApi.Handlers
 
 		public HttpResponseMessage Compress(HttpResponseMessage response)
 		{
-			if (response.RequestMessage != null && response.RequestMessage.Headers.AcceptEncoding != null && response.RequestMessage.Headers.AcceptEncoding.Count != 0)
+			if (response.RequestMessage != null && 
+				response.RequestMessage.Headers.AcceptEncoding != null && 
+				response.RequestMessage.Headers.AcceptEncoding.Count != 0 && 
+				response.Content is ChangesPushContent == false)
 			{
 				string encodingType = response.RequestMessage.Headers.AcceptEncoding.First().Value;
 
