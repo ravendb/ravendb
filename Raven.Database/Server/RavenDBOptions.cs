@@ -15,6 +15,10 @@ namespace Raven.Database.Server
 
 		public RavenDBOptions(InMemoryRavenConfiguration configuration)
 		{
+			if (configuration == null)
+			{
+				throw new ArgumentNullException("configuration");
+			}
 			//TODO DH: should we do HttpEndpointRegistration.RegisterHttpEndpointTarget(); here?
 			systemDatabase = new DocumentDatabase(configuration);
 			try
