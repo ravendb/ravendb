@@ -15,14 +15,14 @@ namespace Voron.Tests.Bugs
 
 	public class MultiAdds
 	{
-        Random random = new Random(1234);
+		readonly Random _random = new Random(1234);
 
         private string RandomString(int size)
         {
             var builder = new StringBuilder();
             for (int i = 0; i < size; i++)
             {
-                builder.Append(Convert.ToChar(Convert.ToInt32(Math.Floor(26 * random.NextDouble() + 65))));
+                builder.Append(Convert.ToChar(Convert.ToInt32(Math.Floor(26 * _random.NextDouble() + 65))));
             }
 
             return builder.ToString();
@@ -34,9 +34,9 @@ namespace Voron.Tests.Bugs
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
 			{
 				var inputData = new List<byte[]>();
-				for (int i = 0; i < 250; i++)
+				for (int i = 0; i < 1000; i++)
 				{
-                    inputData.Add(Encoding.UTF8.GetBytes(RandomString(1000)));
+                    inputData.Add(Encoding.UTF8.GetBytes(RandomString(2000)));
 				}
 
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
@@ -48,27 +48,26 @@ namespace Voron.Tests.Bugs
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.GetTree("foo");
-					foreach (var buffer in inputData)
-						tree.MultiAdd(tx, "ChildTreeKey", new Slice(buffer));
-
+					for (int index = 0; index < inputData.Count; index++)
+					{
+						var buffer = inputData[index];
+//						if (index == 18)
+//						{
+//							var it = (TreeIterator)tree.MultiRead(tx, "ChildTreeKey");
+//							DebugStuff.RenderAndShow(tx, it.TreeRootPage, 1);
+//						}
+						Assert.DoesNotThrow(() => tree.MultiAdd(tx, "ChildTreeKey", new Slice(buffer)));
+					}
 					tx.Commit();
 				}
 
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.GetTree("foo");
-				    for (int index = 0; index < inputData.Count; index++)
-				    {
-				        var buffer = inputData[index];
-                        if (index == 130)
-                        {
-                            var it = (TreeIterator)tree.MultiRead(tx, "ChildTreeKey");
-                            DebugStuff.RenderAndShow(tx, it.TreeRootPage, 1);
-                        }
-				        Assert.DoesNotThrow(() => tree.MultiDelete(tx, "ChildTreeKey", new Slice(buffer)));
-				    }
+				    foreach (var buffer in inputData)
+					    Assert.DoesNotThrow(() => tree.MultiDelete(tx, "ChildTreeKey", new Slice(buffer)));
 
-				    tx.Commit();
+					tx.Commit();
 				}
 			}
 		}
