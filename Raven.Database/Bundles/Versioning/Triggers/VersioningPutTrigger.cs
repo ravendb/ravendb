@@ -37,7 +37,7 @@ namespace Raven.Bundles.Versioning.Triggers
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			VersioningConfiguration versioningConfiguration;
-			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
+			if (TryGetVersioningConfiguration(key, document, metadata, out versioningConfiguration) == false)
 				return;
 
 			var revision = GetNextRevisionNumber(key);
@@ -57,7 +57,7 @@ namespace Raven.Bundles.Versioning.Triggers
 		public override void AfterPut(string key, RavenJObject document, RavenJObject metadata, Etag etag, TransactionInformation transactionInformation)
 		{
 			VersioningConfiguration versioningConfiguration;
-			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
+			if (TryGetVersioningConfiguration(key, document, metadata, out versioningConfiguration) == false)
 				return;
 
 			using (Database.DisableAllTriggersForCurrentThread())
@@ -147,7 +147,7 @@ namespace Raven.Bundles.Versioning.Triggers
 			return lastRevisionDoc;
 		}
 
-		private bool TryGetVersioningConfiguration(string key, RavenJObject metadata,
+		private bool TryGetVersioningConfiguration(string key, RavenJObject document, RavenJObject metadata,
 												   out VersioningConfiguration versioningConfiguration)
 		{
 			versioningConfiguration = null;
@@ -160,8 +160,14 @@ namespace Raven.Bundles.Versioning.Triggers
 			versioningConfiguration = Database.GetDocumentVersioningConfiguration(metadata);
 			if (versioningConfiguration == null || versioningConfiguration.Exclude)
 				return false;
-			return true;
+
+		    return VersionThisUpdate(key, document, metadata);
 		}
+
+        protected virtual bool VersionThisUpdate(string key, RavenJObject document, RavenJObject metadata)
+        {
+            return true;
+        }
 
 		private void RemoveOldRevisions(string key, int revision, VersioningConfiguration versioningConfiguration, TransactionInformation transactionInformation)
 		{

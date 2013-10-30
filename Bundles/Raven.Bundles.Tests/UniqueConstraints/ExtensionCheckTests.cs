@@ -68,6 +68,28 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 			}
 		}
 
+        [Fact]
+        public void Check_works_on_enumerable_property()
+        {
+            var user1 = new User { Id = "users/1", Email = "user1@bar.com", Name = "James", TaskIds = new []{"TaskA", "TaskB"}};
+            var checkUser1 = new User { Id = "users/2", Email = "user2@bar.com", Name = "Watson", TaskIds = new[] { "TaskA"} };
+            var checkUser2 = new User { Id = "users/3", Email = "user3@bar.com", Name = "Sherlock", TaskIds = new[] { "TaskB", "TaskC" } };
+            var checkUser3 = new User { Id = "users/3", Email = "user3@bar.com", Name = "Sherlock", TaskIds = new[] { "TaskC", "TaskD" } };
+
+            using (var session = DocumentStore.OpenSession())
+            {
+                session.Store(user1);
+                session.SaveChanges();
+            }
+
+            using (var session = DocumentStore.OpenSession())
+            {
+                Assert.False(session.CheckForUniqueConstraints(checkUser1).ConstraintsAreFree());
+                Assert.False(session.CheckForUniqueConstraints(checkUser2).ConstraintsAreFree());
+                Assert.True(session.CheckForUniqueConstraints(checkUser3).ConstraintsAreFree());;
+            }
+        }
+
 		/* 
 		 * Can't use OperationVetoedException here for some reason I don't understand 
 		 * The code won't compile.
