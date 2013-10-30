@@ -705,6 +705,7 @@
     <Compile Include="Issues\RavenDB_556.cs" />
     <Compile Include="Issues\RavenDB_579.cs" />
     <Compile Include="Linq\OfTypeSupport.cs" />
+    <Compile Include="Linq\SelectDictionaryItem.cs" />
     <Compile Include="Linq\SelectManyShouldWork.cs" />
     <Compile Include="Linq\WhereStringEquals.cs" />
     <Compile Include="MailingList\Accounts.cs" />
@@ -1125,8 +1126,6 @@
     <Compile Include="Linq\DynamicQueriesWithStaticIndexes.cs" />
     <Compile Include="Linq\OrderBy.cs" />
     <Compile Include="Linq\RavenDB14.cs" />
-    <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
-    <Compile Include="Linq\SampleGeoLocation.cs" />
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="MailingList\AddMapForAllTest.cs" />
