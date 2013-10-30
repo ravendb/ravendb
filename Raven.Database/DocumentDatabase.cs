@@ -889,19 +889,24 @@ namespace Raven.Database
                      .Where(x => x.Key != null)
                      .Select(x => new { Etag = x.Max(y => y.Etag), CollectionName = x.Key.ToString() })
                      .ToArray();
-
+         
+             foreach (var collection in collections)
+                 SetLastEtagForCollection(collection.CollectionName, collection.Etag);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        private void SetLastEtagForCollection(IStorageActionsAccessor actions, string collectionName, Etag etag)
+        private void SetLastEtagForCollection( string collectionName, Etag etag)
         {
             Etag lastEtag;
             if (lastCollectionEtags.TryGetValue(collectionName, out lastEtag))
             {
                 if (lastEtag.CompareTo(etag) > 0) return;
             }
-            actions.Staleness.SetLastEtagForCollection(collectionName, etag);
-            lastCollectionEtags[collectionName] = etag;
+             TransactionalStorage.Batch(accessor =>
+             {
+                accessor.Staleness.SetLastEtagForCollection(collectionName, etag);
+                lastCollectionEtags[collectionName] = etag;
+             });
         }
 
         public Etag GetLastEtagForCollection(string collectionName)
