@@ -39,7 +39,8 @@ namespace Raven.Database.Server.Controllers
 	{
 		public string DatabaseName
 		{
-			get; private set;
+			get;
+			private set;
 		}
 
 		public HttpRequestMessage InnerRequest
@@ -52,7 +53,8 @@ namespace Raven.Database.Server.Controllers
 
 		public new IPrincipal User
 		{
-			get; set;
+			get;
+			set;
 		}
 
 		private HttpRequestMessage request;
@@ -61,7 +63,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			InnerInitialization(controllerContext);
 			var authorizer =
-				(MixedModeRequestAuthorizer) controllerContext.Configuration.Properties[typeof (MixedModeRequestAuthorizer)];
+				(MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 			var result = new HttpResponseMessage();
 			try
 			{
@@ -74,7 +76,7 @@ namespace Raven.Database.Server.Controllers
 			}
 			catch (HttpException httpException)
 			{
-				result = GetMessageWithObject(new {Error = httpException.Message}, HttpStatusCode.ServiceUnavailable);
+				result = GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable);
 			}
 
 			RequestManager.AddAccessControlHeaders(this, result);
@@ -97,7 +99,7 @@ namespace Raven.Database.Server.Controllers
 			if (DatabaseName != null && await DatabasesLandlord.GetDatabaseInternal(DatabaseName) == null)
 			{
 				var msg = "Could not find a database named: " + DatabaseName;
-				return GetMessageWithObject(new {Error = msg}, HttpStatusCode.ServiceUnavailable);
+				return GetMessageWithObject(new { Error = msg }, HttpStatusCode.ServiceUnavailable);
 			}
 
 			var sp = Stopwatch.StartNew();
@@ -128,13 +130,13 @@ namespace Raven.Database.Server.Controllers
 			}
 			else
 			{
-				if(values.ContainsKey("databaseName"))
+				if (values.ContainsKey("databaseName"))
 					DatabaseName = values["databaseName"] as string;
 				else
 					DatabaseName = null;
 			}
-			
-			
+
+
 		}
 
 		private void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
@@ -180,7 +182,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				if (Configuration == null)
 					return landlord;
-				return (DatabasesLandlord) Configuration.Properties[typeof (DatabasesLandlord)];
+				return (DatabasesLandlord)Configuration.Properties[typeof(DatabasesLandlord)];
 			}
 		}
 
@@ -541,7 +543,18 @@ namespace Raven.Database.Server.Controllers
 				switch (header.Key)
 				{
 					case "Content-Type":
-						msg.Content.Headers.ContentType = new MediaTypeHeaderValue(header.Value.Value<string>());
+						var headerValue = header.Value.Value<string>();
+						string charset = null;
+						if (headerValue.Contains("charset="))
+						{
+							var splits = headerValue.Split(';');
+							headerValue = splits[0];
+
+							charset = splits[1].Split('=')[1];
+						}
+
+						msg.Content.Headers.ContentType = new MediaTypeHeaderValue(headerValue){CharSet = charset};
+						
 						break;
 					default:
 						if (header.Value.Type == JTokenType.Date)
@@ -648,14 +661,14 @@ namespace Raven.Database.Server.Controllers
 			if (msg == null)
 				msg = GetEmptyMessage(status);
 
-			var jsonContent = ((JsonContent) msg.Content);
+			var jsonContent = ((JsonContent)msg.Content);
 			var jsonp = GetQueryStringValue("jsonp");
 
 			WriteHeaders(headers, etag, msg);
 
 			if (string.IsNullOrEmpty(jsonp) == false)
 			{
-				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/javascript") {CharSet = "utf-8"};
+				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/javascript") { CharSet = "utf-8" };
 				jsonContent.Jsonp = jsonp;
 			}
 			else
