@@ -62,8 +62,8 @@ namespace Voron.Tests.Log
                 tx.Commit();
             }
 
-            // however we put that into 5 log files
-            Assert.True(Env.Journal.Files.Count == 5);
+            // however we put that into 3 log files
+            Assert.Equal(3, Env.Journal.Files.Count);
 
             // and still can read from both files
             for (var i = 0; i < 15; i++)

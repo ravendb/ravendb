@@ -231,9 +231,6 @@ namespace Voron.Trees
 					var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
 					dataPos = pageSplitter.Execute();
 
-					if (overFlowPos != null)
-						cursor.IncrementItemCount();
-
 					DebugValidateTree(tx, State.RootPageNumber);
 				}
 				else
@@ -252,7 +249,6 @@ namespace Voron.Trees
 						default:
 							throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
 					}
-					cursor.IncrementItemCount();
 					page.DebugValidate(tx, _cmp, State.RootPageNumber);
 				}
 				if (overFlowPos != null)
@@ -310,7 +306,6 @@ namespace Voron.Trees
 				State.PageCount -= numberOfPages;
 			}
 			page.RemoveNode(page.LastSearchPosition);
-			cursor.DecrementItemCount();
 		}
 
 		[Conditional("VALIDATE")]
