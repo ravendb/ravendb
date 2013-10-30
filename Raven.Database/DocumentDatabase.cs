@@ -161,7 +161,7 @@ namespace Raven.Database
         private System.Threading.Tasks.Task reducingBackgroundTask;
         private readonly TaskScheduler backgroundTaskScheduler;
         private readonly object idleLocker = new object();
-        private readonly Dictionary<string, Etag> lastCollectionEtags = new Dictionary<string, Etag>(); 
+        private readonly ConcurrentDictionary<string, Etag> lastCollectionEtags = new ConcurrentDictionary<string, Etag>();
 
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -704,6 +704,7 @@ namespace Raven.Database
                 TransportState.OnIdle();
                 IndexStorage.RunIdleOperations();
                 ClearCompletedPendingTasks();
+                FlushLastEtagsForCollections();
             }
             finally
             {
@@ -891,22 +892,19 @@ namespace Raven.Database
                      .ToArray();
          
              foreach (var collection in collections)
-                 SetLastEtagForCollection(collection.CollectionName, collection.Etag);
+                 UpdateLastEtagForCollection(collection.CollectionName, collection.Etag);
         }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        private void SetLastEtagForCollection( string collectionName, Etag etag)
+        private void UpdateLastEtagForCollection(string collectionName, Etag etag)
         {
-            Etag lastEtag;
-            if (lastCollectionEtags.TryGetValue(collectionName, out lastEtag))
-            {
-                if (lastEtag.CompareTo(etag) > 0) return;
-            }
-             TransactionalStorage.Batch(accessor =>
-             {
-                accessor.Staleness.SetLastEtagForCollection(collectionName, etag);
-                lastCollectionEtags[collectionName] = etag;
-             });
+            lastCollectionEtags.AddOrUpdate(collectionName, etag,
+                (v, oldEtag) => etag.CompareTo(oldEtag) < 0 ? oldEtag : etag);
+        }
+
+        private void FlushLastEtagsForCollections()
+        {
+             TransactionalStorage.Batch(accessor => 
+                 lastCollectionEtags.ForEach(x=> accessor.Staleness.SetLastEtagForCollection(x.Key,x.Value)));
         }
 
         public Etag GetLastEtagForCollection(string collectionName)
