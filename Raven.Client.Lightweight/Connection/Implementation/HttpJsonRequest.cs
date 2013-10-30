@@ -1056,26 +1056,22 @@ namespace Raven.Client.Connection
 			await ExecuteRequestAsync();
 		}
 
-		private async Task WriteAsync(Stream streamToWrite)
-		{
-			postedStream = streamToWrite;
+	    private async Task WriteAsync(Stream streamToWrite)
+	    {
+	        postedStream = streamToWrite;
 
-			using (postedStream)
-			using (var dataStream = new GZipStream(postedStream, CompressionMode.Compress))
-			{
-				Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
-				{
-					Content = new StreamContent(dataStream)
-				});
+	        Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
+	        {
+	            Content = new CompressedStreamContent(streamToWrite)
+	        });
 
-				if (Response.IsSuccessStatusCode == false)
-					throw new ErrorResponseException(Response);
+	        if (Response.IsSuccessStatusCode == false)
+	            throw new ErrorResponseException(Response);
 
-				SetResponseHeaders(Response);
-			}
-		}
+	        SetResponseHeaders(Response);
+	    }
 
-		public async Task WriteAsync(string data)
+	    public async Task WriteAsync(string data)
 		{
 			writeCalled = true;
 			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)

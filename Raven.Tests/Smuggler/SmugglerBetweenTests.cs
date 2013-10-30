@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -10,6 +11,7 @@ using Raven.Abstractions.Smuggler;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
+using Raven.Json.Linq;
 using Raven.Smuggler;
 using Xunit;
 
@@ -31,6 +33,8 @@ namespace Raven.Tests.Smuggler
                     await session.StoreAsync(new User {Name = "Fitzchak Yitzchaki"});
                     await session.SaveChangesAsync();
                 }
+                await store1.AsyncDatabaseCommands.PutAttachmentAsync("ayende", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
+                await store1.AsyncDatabaseCommands.PutAttachmentAsync("fitzchak", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
 
                 using (var server2 = GetNewServer(port: 8078))
                 {
