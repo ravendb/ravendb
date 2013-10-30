@@ -33,7 +33,7 @@ namespace Raven.Database.Server.Controllers
 				var requests = await ReadJsonObjectAsync<GetRequest[]>();
 				var results = new HttpResponseMessage[requests.Length];
 
-				foreach (var getRequest in requests)
+				foreach (var getRequest in requests.Where(getRequest => getRequest != null))
 				{
 					getRequest.Headers.Add("Raven-internal-request", "true");
 					if (DatabaseName != null)
