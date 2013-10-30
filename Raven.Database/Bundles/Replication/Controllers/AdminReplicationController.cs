@@ -15,7 +15,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 {
 	[ExportMetadata("Bundle", "Replication")]
 	[InheritedExport(typeof(RavenApiController))]
-	public class AdminReplicationController : BaseAdminController
+	public class AdminReplicationController : AdminBundlesApiController
 	{
 		private readonly HttpRavenRequestFactory requestFactory;
 
@@ -180,5 +180,9 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			}
 		}
 
+		public override string BundleName
+		{
+			get { return "Replication"; }
+		}
 	}
 }

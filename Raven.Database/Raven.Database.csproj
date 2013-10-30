@@ -246,6 +246,8 @@
     <Compile Include="Prefetching\ConcurrentJsonDocumentSortedList.cs" />
     <Compile Include="Prefetching\Prefetcher.cs" />
     <Compile Include="Prefetching\PrefetchingUser.cs" />
+    <Compile Include="Server\Controllers\AdminBundlesApiController.cs" />
+    <Compile Include="Server\Controllers\BundlesApiController.cs" />
     <Compile Include="Server\RavenDBOptions.cs" />
     <Compile Include="Server\Connections\IEventsTransport.cs" />
     <Compile Include="Server\Connections\ChangesPushContent.cs" />
