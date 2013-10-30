@@ -145,6 +145,54 @@
 		}
 
 		[Fact]
+		public void StorageRecoveryShouldWorkWhenThereAreMultipleCommitedTransactions()
+		{
+			var path = "test2.data";
+
+			if (Directory.Exists(path))
+				Directory.Delete(path, true);
+
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			{
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					for (var i = 0; i < 100; i++)
+					{
+						env.CreateTree(tx, "atree" + i);
+					}
+
+					tx.Commit();
+				}
+
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					for (var i = 0; i < 1; i++)
+					{
+						env.CreateTree(tx, "btree" + i);
+					}
+
+					tx.Commit();
+				}
+			}
+
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
+			{
+				using (var tx = env.NewTransaction(TransactionFlags.Read))
+				{
+					for (var i = 0; i < 100; i++)
+					{
+						Assert.NotNull(tx.GetTree("atree" + i));
+					}
+
+					for (var i = 0; i < 1; i++)
+					{
+						Assert.NotNull(tx.GetTree("btree" + i));
+					}
+				}
+			}
+		}
+
+		[Fact]
 		public void StorageRecoveryShouldWorkForSplitTransactions()
 		{
 			var random = new Random(1234);

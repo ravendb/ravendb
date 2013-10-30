@@ -51,7 +51,6 @@ namespace Voron.Trees
 				newRootPage.AddPageRefNode(0, Slice.BeforeAllKeys, _page.PageNumber);
                 _parentPage = newRootPage;
                 _parentPage.LastSearchPosition++;
-                _parentPage.ItemCount = _page.ItemCount;
             }
             else
             {
@@ -71,15 +70,12 @@ namespace Voron.Trees
                     // here we steal the last entry from the current page so we maintain the implicit null left entry
                     var node = _page.GetNode(_page.NumberOfEntries - 1);
                     Debug.Assert(node->Flags == NodeFlags.PageRef);
-                    var itemsMoved = _tx.GetReadOnlyPage(node->PageNumber).ItemCount;
 					rightPage.AddPageRefNode(0, Slice.Empty, node->PageNumber);
 					pos = AddNodeToPage(rightPage, 1);
-                    rightPage.ItemCount = itemsMoved;
     
                     AddSeparatorToParentPage(rightPage, new Slice(node));
 
                     _page.RemoveNode(_page.NumberOfEntries - 1);
-                    _page.ItemCount -= itemsMoved;
                 }
                 else
                 {
@@ -87,7 +83,6 @@ namespace Voron.Trees
 					pos = AddNodeToPage(rightPage, 0);
                 }
                 _cursor.Push(rightPage);
-                IncrementItemCountIfNecessary();
                 return pos;
             }
 
@@ -144,18 +139,14 @@ namespace Voron.Trees
             for (int i = splitIndex; i < nKeys; i++)
             {
                 var node = _page.GetNode(i);
-                var itemsMoved = 1;
                 if (_page.IsBranch && rightPage.NumberOfEntries == 0)
                 {
                     rightPage.CopyNodeDataToEndOfPage(node, Slice.Empty);
-                    itemsMoved = _tx.GetReadOnlyPage(node->PageNumber).ItemCount;
                 }
                 else
                 {
                     rightPage.CopyNodeDataToEndOfPage(node);
                 }
-                rightPage.ItemCount += itemsMoved;
-                _page.ItemCount -= itemsMoved;
             }
             _page.Truncate(_tx, splitIndex);
 
@@ -171,16 +162,8 @@ namespace Voron.Trees
 
 			var dataPos = AddNodeToPage(p, pos);
 			_cursor.Push(p);
-			IncrementItemCountIfNecessary();
 			return dataPos;
 		}
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void IncrementItemCountIfNecessary()
-        {
-            if (_len > -1)
-                _cursor.IncrementItemCount();
-        }
 
         private void AddSeparatorToParentPage(Page rightPage, Slice seperatorKey)
         {

@@ -35,8 +35,6 @@ namespace Voron.Trees
 
         public int OverflowSize { get { return _header->OverflowSize; } set { _header->OverflowSize = value; } }
 
-        public int ItemCount { get { return _header->ItemCount; } set { _header->ItemCount = value; } }
-
         public ushort* KeysOffsets
         {
             get { return (ushort*)(_base + Constants.PageHeaderSize); }

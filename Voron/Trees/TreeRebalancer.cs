@@ -90,7 +90,7 @@ namespace Voron.Trees
                 var node = right.GetNode(i);
                 left.CopyNodeDataToEndOfPage(node, key);
             }
-            left.ItemCount += right.ItemCount;
+
             parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry); // unlink the right sibling
             _tx.FreePage(right.PageNumber);
         }
@@ -154,9 +154,6 @@ namespace Voron.Trees
 			if(dataPos != null)
 				NativeMethods.memcpy(dataPos, val, fromNode->DataSize);
             
-			--@from.ItemCount;
-            ++to.ItemCount;
-
             from.RemoveNode(from.LastSearchPositionOrLastEntry);
 
             var pos = parentPage.LastSearchPositionOrLastEntry;
@@ -180,9 +177,6 @@ namespace Voron.Trees
 
             var fromNode = from.GetNode(from.LastSearchPosition);
             long pageNum = fromNode->PageNumber;
-            var itemsMoved = _tx.GetReadOnlyPage(pageNum).ItemCount;
-            from.ItemCount -= itemsMoved;
-            to.ItemCount += itemsMoved;
 
             if (to.LastSearchPosition == 0)
             {
