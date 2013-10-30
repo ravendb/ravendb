@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Abstractions;
@@ -47,7 +48,7 @@ namespace Raven.Smuggler
                 }
                 if (options.OperateOnTypes.HasFlag(ItemType.Attachments))
                 {
-                    // await ExportAttachments(exportStore, importStore, options.BatchSize);
+                    await ExportAttachments(exportStore, importStore, options);
                 }
             }
         }
@@ -224,6 +225,41 @@ namespace Raven.Smuggler
             finally
             {
                 bulkInsertOperation.Dispose();
+            }
+        }
+
+        private async static Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptionsBase options)
+        {
+            Etag lastEtag = options.StartAttachmentsEtag;
+            int totalCount = 0;
+            while (true)
+            {
+                var attachments = await exportStore.AsyncDatabaseCommands.GetAttachmentsAsync(lastEtag, options.BatchSize);
+                if (attachments.Length == 0)
+                {
+                    var databaseStatistics = await exportStore.AsyncDatabaseCommands.GetStatisticsAsync();
+                    var lastEtagComparable = new ComparableByteArray(lastEtag);
+                    if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
+                    {
+                        lastEtag = EtagUtil.Increment(lastEtag, options.BatchSize);
+                        ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
+                        continue;
+                    }
+                    ShowProgress("Done with reading attachments, total: {0}", totalCount);
+                    return lastEtag;
+                }
+
+                totalCount += attachments.Length;
+                ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachments.Length, totalCount);
+                foreach (var attachmentInformation in attachments)
+                {
+                    ShowProgress("Downloading attachment: {0}", attachmentInformation.Key);
+
+                    var attachment = await exportStore.AsyncDatabaseCommands.GetAttachmentAsync(attachmentInformation.Key);
+                    await importStore.AsyncDatabaseCommands.PutAttachmentAsync(attachment.Key, null, attachment.Data(), attachment.Metadata);
+                }
+
+                lastEtag = Etag.Parse(attachments.Last().Etag);
             }
         }
 

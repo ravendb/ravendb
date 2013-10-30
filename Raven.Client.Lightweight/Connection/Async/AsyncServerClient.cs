@@ -13,6 +13,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Database.Data;
 #if SILVERLIGHT || NETFX_CORE
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
@@ -1355,7 +1356,22 @@ namespace Raven.Client.Connection.Async
 				.ToArray();
 		}
 
-		/// <summary>
+        public Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int pageSize)
+	    {
+	        return ExecuteWithReplication("GET", async operationUrl =>
+	        {
+                var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (operationUrl + "/static/?pageSize=" + pageSize + "&etag=" + startEtag).NoCache(), "GET", credentials, convention)
+	                .AddOperationHeaders(OperationsHeaders));
+
+                request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+				
+                var json = (RavenJArray)await request.ReadResponseJsonAsync();
+                return json.Select( x => JsonConvert.DeserializeObject<AttachmentInformation>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
+                            .ToArray();
+	        });
+	    }
+
+	    /// <summary>
 		/// Puts the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>

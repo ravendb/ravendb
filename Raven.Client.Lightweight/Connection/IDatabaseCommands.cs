@@ -1,3 +1,4 @@
+using Raven.Database.Data;
 #if !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="IDatabaseCommands.cs" company="Hibernating Rhinos LTD">
@@ -516,6 +517,8 @@ namespace Raven.Client.Connection
 		/// Gets the build number
 		/// </summary>
 		BuildNumber GetBuildNumber();
+
+	    AttachmentInformation[] GetAttachments(Etag startEtag, int batchSize);
 	}
 
 	public interface IGlobalAdminDatabaseCommands

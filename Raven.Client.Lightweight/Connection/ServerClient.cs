@@ -1,3 +1,4 @@
+using Raven.Database.Data;
 #if !SILVERLIGHT && !NETFX_CORE
 //-----------------------------------------------------------------------
 // <copyright file="ServerClient.cs" company="Hibernating Rhinos LTD">
@@ -597,6 +598,21 @@ namespace Raven.Client.Connection
 		{
 			return ExecuteWithReplication("GET", operationUrl => DirectGetAttachment("GET", key, operationUrl));
 		}
+
+        public AttachmentInformation[] GetAttachments(Etag startEtag, int pageSize)
+        {
+            return ExecuteWithReplication("GET", operationUrl =>
+            {
+                var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (operationUrl + "/static/?pageSize=" + pageSize + "&etag=" + startEtag).NoCache(), "GET", credentials, convention)
+                    .AddOperationHeaders(OperationsHeaders));
+
+                request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+                var json = (RavenJArray) request.ReadResponseJson();
+                return json.Select(x => JsonConvert.DeserializeObject<AttachmentInformation>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
+                            .ToArray();
+            });
+        }
 
 		/// <summary>
 		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
@@ -1540,7 +1556,7 @@ namespace Raven.Client.Connection
 			return ((RavenJObject)result).Deserialize<BuildNumber>(convention);
 		}
 
-		private void DirectPrepareTransaction(string txId, string operationUrl)
+	    private void DirectPrepareTransaction(string txId, string operationUrl)
 		{
 			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, operationUrl + "/transaction/prepare?tx=" + txId, "POST", credentials, convention)

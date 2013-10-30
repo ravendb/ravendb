@@ -266,6 +266,16 @@ namespace Raven.Client.Embedded
 			return attachment;
 		}
 
+        /// <summary>
+        /// Gets the attachment by the specified key
+        /// </summary>
+        /// <returns></returns>
+        public AttachmentInformation[] GetAttachments(Etag startEtag, int pageSize)
+        {
+            CurrentOperationContext.Headers.Value = OperationsHeaders;
+            return database.GetAttachments(0, pageSize, startEtag, null, long.MaxValue);
+        }
+
 		/// <summary>
 		/// Get the attachment information for the attachments with the same idprefix
 		/// </summary>

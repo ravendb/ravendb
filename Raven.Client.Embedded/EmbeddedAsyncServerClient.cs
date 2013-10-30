@@ -15,6 +15,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
+using Raven.Database.Data;
 using Raven.Database.Server;
 using Raven.Json.Linq;
 
@@ -318,7 +319,12 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<string[]>(databaseCommands.GetDatabaseNames(pageSize, start));
 		}
 
-		public Task PutAttachmentAsync(string key, Etag etag, Stream stream, RavenJObject metadata)
+	    public Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int batchSize)
+	    {
+            return new CompletedTask<AttachmentInformation[]>(databaseCommands.GetAttachments(startEtag, batchSize));
+	    }
+
+	    public Task PutAttachmentAsync(string key, Etag etag, Stream stream, RavenJObject metadata)
 		{
 			databaseCommands.PutAttachment(key, etag, stream, metadata);
 			return new CompletedTask();

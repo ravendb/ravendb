@@ -493,7 +493,6 @@
     <Compile Include="Server\Security\Windows\WindowsRequestAuthorizer.cs" />
     <Compile Include="Impl\CachedDocument.cs" />
     <Compile Include="Impl\DatabaseBulkOperations.cs" />
-    <Compile Include="Data\AttachmentInformation.cs" />
     <Compile Include="Data\BackupRequest.cs" />
     <Compile Include="Data\DynamicQueryMapping.cs" />
     <Compile Include="Data\DynamicQueryMappingItem.cs" />

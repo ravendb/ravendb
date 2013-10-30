@@ -22,6 +22,7 @@ using Raven.Client.WinRT.Connection;
 #endif
 using Raven.Client.Changes;
 using Raven.Client.Document;
+using Raven.Database.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
@@ -279,6 +280,12 @@ namespace Raven.Client.Connection.Async
 		/// Gets the list of databases from the server asynchronously
 		/// </summary>
 		Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0);
+
+        /// <summary>
+        /// Gets the attachments asynchronously
+        /// </summary>
+        /// <returns></returns>
+        Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int batchSize);
 
 		/// <summary>
 		/// Puts the attachment with the specified key asynchronously
