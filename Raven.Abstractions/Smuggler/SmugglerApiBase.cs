@@ -333,20 +333,18 @@ namespace Raven.Abstractions.Smuggler
 			if (files.Length == 0)
 				return;
 
-			var optionsWithoutIndexes = new SmugglerOptions
-											{
-												BackupPath = options.BackupPath,
-												Filters = options.Filters,
-												OperateOnTypes = options.OperateOnTypes & ~ItemType.Indexes
-											};
+		    var previousOperateOnTypes = options.OperateOnTypes;
+		    options.OperateOnTypes = options.OperateOnTypes & ~ItemType.Indexes;
 
 			for (var i = 0; i < files.Length - 1; i++)
 			{
 				using (var fileStream = File.OpenRead(Path.Combine(options.BackupPath, files[i])))
 				{
-					await ImportData(fileStream, optionsWithoutIndexes);
+					await ImportData(fileStream, options);
 				}
 			}
+
+		    options.OperateOnTypes = previousOperateOnTypes;
 
 			using (var fileStream = File.OpenRead(Path.Combine(options.BackupPath, files.Last())))
 			{
