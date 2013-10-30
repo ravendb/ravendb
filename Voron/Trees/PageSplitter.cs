@@ -55,7 +55,8 @@ namespace Voron.Trees
             else
             {
                 // we already popped the page, so the current one on the stack is what the parent of the page
-                _parentPage = _cursor.CurrentPage;
+	            _parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _cursor);
+				_cursor.Update(_cursor.Pages.First, _parentPage);
             }
 
             if (_page.LastSearchPosition >= _page.NumberOfEntries)

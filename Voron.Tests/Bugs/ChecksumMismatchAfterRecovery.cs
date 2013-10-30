@@ -36,8 +36,8 @@ namespace Voron.Tests.Bugs
 			{
 				buffer[i] = 13;
 			}
-			var options = StorageEnvironmentOptions.ForPath(_dataPath);
 
+			var options = StorageEnvironmentOptions.ForPath(_dataPath);
 
 			using (var env = new StorageEnvironment(options))
 			{
@@ -62,9 +62,9 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			var options2 = StorageEnvironmentOptions.ForPath(_dataPath);
+			options = StorageEnvironmentOptions.ForPath(_dataPath);
 
-			using (var env = new StorageEnvironment(options2))
+			using (var env = new StorageEnvironment(options))
 			{
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
