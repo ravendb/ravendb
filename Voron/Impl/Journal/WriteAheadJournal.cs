@@ -20,7 +20,7 @@ namespace Voron.Impl.Journal
 	{
 		private readonly StorageEnvironment _env;
 		private readonly IVirtualPager _dataPager;
-		private readonly Func<long, string> _logName = number => string.Format("{0:D19}.journal", number);
+		internal readonly Func<long, string> LogName = number => string.Format("{0:D19}.journal", number);
 
 		private IList<JournalFile> _splitJournalFiles;
 		private long _logIndex = -1;
@@ -49,7 +49,7 @@ namespace Voron.Impl.Journal
 		{
 			_logIndex++;
 
-			var logPager = _env.Options.CreateLogPager(_logName(_logIndex));
+			var logPager = _env.Options.CreateLogPager(LogName(_logIndex));
 
 			logPager.AllocateMorePages(null, _env.Options.LogFileSize);
 
@@ -79,10 +79,10 @@ namespace Voron.Impl.Journal
 
 			for (var logNumber = logInfo.RecentLog - logInfo.LogFilesCount + 1; logNumber <= logInfo.RecentLog; logNumber++)
 			{
-				var pager = _env.Options.CreateLogPager(_logName(logNumber));
+				var pager = _env.Options.CreateLogPager(LogName(logNumber));
 
 				if (pager.NumberOfAllocatedPages != (_env.Options.LogFileSize/pager.PageSize))
-					throw new InvalidDataException("Log file " + _logName(logNumber) + " should contain " +
+					throw new InvalidDataException("Log file " + LogName(logNumber) + " should contain " +
                                                    (_env.Options.LogFileSize / pager.PageSize) + " pages, while it has " +
 					                               pager.NumberOfAllocatedPages + " pages allocated.");
 				var log = new JournalFile(pager, logNumber);
@@ -337,9 +337,9 @@ namespace Voron.Impl.Journal
                             fullLog.DeleteOnClose();
                     }
 
+					_waj.Files = _waj.Files.RemoveAll(x => x.Number < _lastSyncedLog);
+
                     _waj.UpdateLogInfo();
-                    
-                    _waj.Files = _waj.Files.RemoveAll(x => x.Number < _lastSyncedLog);
 
                     foreach (var fullLog in journalFiles)
                     {

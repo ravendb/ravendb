@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
+using System.IO.Packaging;
 using System.Linq;
 using System.Threading;
 using Voron.Debugging;
@@ -300,9 +302,74 @@ namespace Voron
 
 		}
 
-		public void Backup(Stream output)
+		public void FullBackup(string backupPath)
 		{
-           throw new NotImplementedException();
+			Transaction txr = null;
+			try
+			{
+				using (var package = Package.Open(backupPath, FileMode.Create))
+				{
+					// data file backup
+					var dataPart = package.CreatePart(new Uri("/db.voron", UriKind.Relative),
+					                                  System.Net.Mime.MediaTypeNames.Application.Octet);
+
+					var dataStream = dataPart.GetStream();
+
+					long allocatedPages;
+
+					using (var txw = NewTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
+					{
+						txr = NewTransaction(TransactionFlags.Read); // now have snapshot view
+						allocatedPages = _dataPager.NumberOfAllocatedPages;
+
+						var firstPage = _dataPager.Read(0);
+
+						CopyFile(firstPage.Base, _dataPager.PageSize*2, dataStream);
+
+						//txw.Commit(); intentionally not committing
+					}
+
+					// now can copy everything else
+					var firstDataPage = _dataPager.Read(2);
+
+					CopyFile(firstDataPage.Base, _dataPager.PageSize*(allocatedPages - 2), dataStream);
+
+					// log files backup
+					foreach (var journalFile in _journal.Files)
+					{
+						var journalPart = package.CreatePart(new Uri("/" + _journal.LogName(journalFile.Number), UriKind.Relative),
+						                                     System.Net.Mime.MediaTypeNames.Application.Octet);
+
+						CopyFile(journalFile.Pager.Read(0).Base, _options.LogFileSize, journalPart.GetStream());
+					}
+
+					//txr.Commit(); intentionally not committing
+				}
+			}
+			finally
+			{
+				if (txr != null)
+					txr.Dispose();
+			}
+		}
+
+		public static void RestoreFullBackup(string backupPath, string voronDataDir)
+		{
+			ZipFile.ExtractToDirectory(backupPath, voronDataDir);
+		}
+
+		private void CopyFile(byte* ptr, long count, Stream output)
+		{
+			var buffer = new byte[_dataPager.PageSize * 16];
+
+			using (var stream = new UnmanagedMemoryStream(ptr, count))
+			{
+				while (stream.Position < stream.Length)
+				{
+					var read = stream.Read(buffer, 0, buffer.Length);
+					output.Write(buffer, 0, read);
+				}
+			}
 		}
 
 		public Dictionary<string, List<long>> AllPages(Transaction tx)

@@ -58,7 +58,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Backup\CanBackupData.cs" />
+    <Compile Include="Backup\FullBackup.cs" />
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\MultiAdds.cs" />
     <Compile Include="Bugs\Snapshots.cs" />

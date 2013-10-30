@@ -39,7 +39,7 @@ namespace Voron.Tests
             return new MemoryStream(Encoding.UTF8.GetBytes(val));
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             _storageEnvironment.Dispose();
             _options.Dispose();
