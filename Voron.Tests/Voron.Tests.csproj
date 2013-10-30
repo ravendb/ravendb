@@ -55,6 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Backup\CanBackupData.cs" />
+    <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\MultiAdds.cs" />
     <Compile Include="Bugs\Snapshots.cs" />
     <Compile Include="Bugs\Deletes.cs" />
