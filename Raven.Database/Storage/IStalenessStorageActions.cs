@@ -12,7 +12,7 @@ namespace Raven.Database.Storage
 {
 	public interface IStalenessStorageActions
 	{
-		bool IsIndexStale(int view, DateTime? cutOff, Etag cutoffEtag, IEnumerable<string> collectionNames);
+	    bool IsIndexStale(int view, DateTime? cutOff, Etag cutoffEtag);
 
 		bool IsReduceStale(int view);
 		bool IsMapStale(int view);
@@ -21,8 +21,5 @@ namespace Raven.Database.Storage
 		Etag GetMostRecentDocumentEtag();
 		Etag GetMostRecentAttachmentEtag();
 		int GetIndexTouchCount(int view);
-
-    void SetLastEtagForCollection(string collection, Etag etag);
-    Etag GetLastEtagForCollection(string collection);
 	}
 }

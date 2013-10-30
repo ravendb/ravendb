@@ -311,7 +311,7 @@ namespace Raven.Database.Server.Responders
 	        Database.TransactionalStorage.Batch(
                 accessor =>
                 {
-	                isIndexStale = accessor.Staleness.IsIndexStale(definition.IndexId, indexQuery.Cutoff, indexQuery.CutoffEtag, null);
+	                isIndexStale = accessor.Staleness.IsIndexStale(definition.IndexId, indexQuery.Cutoff, indexQuery.CutoffEtag);
 					if (isIndexStale == false && indexQuery.Cutoff == null && indexQuery.CutoffEtag == null)
 					{
 						var indexInstance = Database.IndexStorage.GetIndexInstance(index);

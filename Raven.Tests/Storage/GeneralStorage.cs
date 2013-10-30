@@ -148,7 +148,7 @@ namespace Raven.Tests.Storage
 
 			db.TransactionalStorage.Batch(actions =>
 			{
-				var isIndexStale = actions.Staleness.IsIndexStale(100, null, null, null);
+				var isIndexStale = actions.Staleness.IsIndexStale(100, null, null);
 				Assert.False(isIndexStale);
 			});
 		}

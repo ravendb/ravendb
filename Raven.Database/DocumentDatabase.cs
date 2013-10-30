@@ -17,6 +17,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Microsoft.Data.Edm.Library;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
@@ -244,6 +245,7 @@ namespace Raven.Database
                     indexingExecuter = new IndexingExecuter(workContext, etagSynchronizer, prefetcher);
 
                     InitializeTriggersExceptIndexCodecs();
+                    InitializeLastCollectionEtags();
                     SecondStageInitialization();
 
                     ExecuteStartupTasks();
@@ -255,6 +257,7 @@ namespace Raven.Database
                 }
             }
         }
+
 
         private static void InitializeEncryption(InMemoryRavenConfiguration configuration)
         {
@@ -417,7 +420,7 @@ namespace Raven.Database
                         {
                             var indexInstance = IndexStorage.GetIndexInstance(indexId);
                             return (indexInstance != null && indexInstance.IsMapIndexingInProgress) ||
-                                                                 actions.Staleness.IsIndexStale(indexId, null, null, null);
+                                                                 actions.Staleness.IsIndexStale(indexId, null, null);
                         })
                                                       .Select(indexId =>
                                                       {
@@ -837,7 +840,7 @@ namespace Raven.Database
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
                         }, documents =>
                         {
-                            SetPerCollectionEtags(documents);
+                            UpdatePerCollectionEtags(documents);
                             etagSynchronizer.UpdateSynchronizationState(documents);
                             prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, null).AfterStorageCommitBeforeWorkNotifications(documents);
                         });
@@ -884,7 +887,7 @@ namespace Raven.Database
             }
         }
 
-        private void SetPerCollectionEtags(JsonDocument[] documents)
+        private void UpdatePerCollectionEtags(JsonDocument[] documents)
         {
             var collections = documents.GroupBy(x => x.Metadata[Constants.RavenEntityName])
                      .Where(x => x.Key != null)
@@ -901,10 +904,18 @@ namespace Raven.Database
                 (v, oldEtag) => etag.CompareTo(oldEtag) < 0 ? oldEtag : etag);
         }
 
+        private  void InitializeLastCollectionEtags()
+        {
+            TransactionalStorage.Batch(accessor =>
+                accessor.Lists.Read("Raven/Collection/Etag", Etag.Empty, null, int.MaxValue)
+                    .ForEach(x => lastCollectionEtags[x.Key] = Etag.Parse(x.Data.Value<Byte[]>("Etag"))));
+        }
+
         private void FlushLastEtagsForCollections()
         {
              TransactionalStorage.Batch(accessor => 
-                 lastCollectionEtags.ForEach(x=> accessor.Staleness.SetLastEtagForCollection(x.Key,x.Value)));
+                 lastCollectionEtags.ForEach(x=> 
+                     accessor.Lists.Set("Raven/Collection/Etag", x.Key, RavenJObject.FromObject(new { Etag = x.Value }), UuidType.Documents)));
         }
 
         public Etag GetLastEtagForCollection(string collectionName)
@@ -912,7 +923,8 @@ namespace Raven.Database
             Etag value = Etag.Empty;
             TransactionalStorage.Batch(accessor =>
             {
-                value = accessor.Staleness.GetLastEtagForCollection(collectionName);
+                var dbvalue = accessor.Lists.Read("Raven/Collection/Etag", collectionName);
+                if (dbvalue != null) value = Etag.Parse(dbvalue.Data.Value<Byte[]>("Etag"));
             });
             return value;
         }
@@ -1381,13 +1393,9 @@ namespace Raven.Database
                         if (viewGenerator == null)
                             throw new IndexDoesNotExistsException("Could not find index named: " + indexName);
 
-                        var collectionNames = index.IsMapReduce && viewGenerator.ForEntityNames.Count > 0
-                            ? viewGenerator.ForEntityNames
-                            : null;
-
                         resultEtag = GetIndexEtag(index.Name, null, query.ResultsTransformer);
 
-                        stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, query.CutoffEtag, collectionNames);
+                        stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, OptimizeCutoffForIndex(indexName, query.CutoffEtag));
 
                         if (stale == false && query.Cutoff == null && query.CutoffEtag == null)
                         {
@@ -1470,6 +1478,17 @@ namespace Raven.Database
             }
         }
 
+        private Etag OptimizeCutoffForIndex(string indexName, Etag cutoffEtag)
+        {
+            if (cutoffEtag != null) return cutoffEtag;
+            var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
+            if (viewGenerator.ReduceDefinition == null && viewGenerator.ForEntityNames.Count > 0)
+            {
+                return viewGenerator.ForEntityNames.Select(GetLastEtagForCollection).Max();
+            }
+            return null;
+        }
+
 
         private void RemoveFromCurrentlyRunningQueryList(string index, ExecutingQueryInfo queryStat)
         {
@@ -1544,7 +1563,7 @@ namespace Raven.Database
                     actions =>
                     {
                         var definition = IndexDefinitionStorage.GetIndexDefinition(index);
-                        isStale = actions.Staleness.IsIndexStale(definition.IndexId, query.Cutoff, null, null);
+                        isStale = actions.Staleness.IsIndexStale(definition.IndexId, query.Cutoff, null);
 
                         if (isStale == false && query.Cutoff == null)
                         {
@@ -2440,7 +2459,7 @@ namespace Raven.Database
                 if (indexInstance == null)
                     return;
                 isStale = (indexInstance.IsMapIndexingInProgress) ||
-                          accessor.Staleness.IsIndexStale(indexInstance.indexId, null, null, null);
+                          accessor.Staleness.IsIndexStale(indexInstance.indexId, null, null);
                 lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
                 var indexStats = accessor.Indexing.GetIndexStats(indexInstance.indexId);
                 if (indexStats != null)
