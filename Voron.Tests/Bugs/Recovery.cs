@@ -4,10 +4,10 @@
 
 	using Xunit;
 
-	public class Disposing : StorageTest
+	public class Recovery : StorageTest
 	{
 		[Fact]
-		public void DisposingAndRecreatingStorageShouldWork()
+		public void StorageRecoveryShouldWorkWhenThereAreNoTransactionsToRecoverFromLog()
 		{
 			var path = "test2.data";
 
@@ -24,7 +24,7 @@
 		}
 
 		[Fact]
-		public void DisposingAndRecreatingStorageShouldWork2()
+		public void StorageRecoveryShouldWorkForWhenThereAreCommitedAndUncommitedTransactions()
 		{
 			var path = "test2.data";
 
@@ -54,11 +54,18 @@
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
+				using (var tx = env.NewTransaction(TransactionFlags.Read))
+				{
+					for (var i = 0; i < 10000; i++)
+					{
+						Assert.NotNull(tx.GetTree("tree" + i));
+					}
+				}
 			}
 		}
 
 		[Fact]
-		public void DisposingAndRecreatingStorageShouldWork3()
+		public void StorageRecoveryShouldWorkWhenThereAreCommitedAndUncommitedTransactions2()
 		{
 			var path = "test2.data";
 
@@ -90,6 +97,14 @@
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
+				using (var tx = env.NewTransaction(TransactionFlags.Read))
+				{
+					for (var i = 0; i < 10000; i++)
+					{
+						Assert.NotNull(tx.GetTree("atree" + i));
+						Assert.NotNull(tx.GetTree("btree" + i));
+					}
+				}
 			}
 		}
 	}
