@@ -232,12 +232,20 @@ namespace Voron.Impl.Journal
 			}
 
             if (_env.Options.OwnsPagers)
+            {
+	            foreach (var logFile in Files)
+	            {
+		            logFile.Dispose();
+	            }
+            }
+            else
 			{
 				foreach (var logFile in Files)
 				{
-					logFile.Dispose();
+					GC.SuppressFinalize(logFile);
 				}
-			}
+	            
+            }
 
 			Files.Clear();
 		}
@@ -387,8 +395,23 @@ namespace Voron.Impl.Journal
                         pagesToWrite[pageNumber] = file;
                     }
 
-                    if (_lastTransactionHeader != null && _lastTransactionHeader->TransactionId < oldestActiveTransaction)
-                        break;
+                    if (_lastTransactionHeader != null &&
+                        _lastTransactionHeader->TransactionId < oldestActiveTransaction)
+                    {
+						// optimization: do not writes pages that have already have newer version in the rest of the journal
+						journalReader.TransactionPageTranslation.Clear();
+						// read the rest of the journal file
+	                    while (journalReader.ReadOneTransaction())
+	                    {
+	                    }
+
+	                    foreach (var supercedingPage in journalReader.TransactionPageTranslation.Keys)
+	                    {
+		                    pagesToWrite.Remove(supercedingPage);
+	                    }
+
+	                    break;
+                    }
                         
                 }
                 return pagesToWrite;

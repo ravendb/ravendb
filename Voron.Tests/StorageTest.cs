@@ -12,7 +12,7 @@ namespace Voron.Tests
 
 	public abstract class StorageTest : IDisposable
     {
-        private readonly StorageEnvironment _storageEnvironment;
+        private StorageEnvironment _storageEnvironment;
         private StorageEnvironmentOptions _options;
 
         public StorageEnvironment Env
@@ -45,6 +45,11 @@ namespace Voron.Tests
             _options.Dispose();
             if (Directory.Exists("test.data"))
                 Directory.Delete("test.data", true);
+
+	        _storageEnvironment = null;
+	        _options = null;
+	        GC.Collect(GC.MaxGeneration);
+			GC.WaitForPendingFinalizers();
         }
 
         protected void RenderAndShow(Transaction tx, int showEntries = 25, string name = null)

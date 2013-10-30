@@ -44,19 +44,18 @@ namespace Voron.Impl.Journal
 			_writePage = lastSyncedPage + 1;
 		}
 
+	    private StackTrace st = new StackTrace(true);
+
 		~JournalFile()
 		{
-			if (_disposed == false)
-			{
-				Dispose();
+			Dispose();
 
-				Trace.WriteLine(
-					"Disposing a log file from finalizer! It should be diposed by using LogFile.Release() instead!. Log file number: " +
-					Number + ". Number of references: " + _refs);
-			}
+			Trace.WriteLine(
+				"Disposing a journal file from finalizer! It should be diposed by using JournalFile.Release() instead!. Log file number: " +
+				Number + ". Number of references: " + _refs + " " + st);
 		}
 
-		internal long WritePagePosition
+	    internal long WritePagePosition
 		{
 			get { return _writePage; }
 		}
@@ -247,12 +246,9 @@ namespace Voron.Impl.Journal
 
 		public void Dispose()
 		{
-			if(_disposed)
-				throw new ObjectDisposedException("Log file is already disposed");
-
+			DisposeWithoutClosingPager();
 			_pager.Dispose();
 
-			_disposed = true;
 		}
 
 		public LogSnapshot GetSnapshot()
@@ -275,5 +271,15 @@ namespace Voron.Impl.Journal
 
             return logFileReader.LastTransactionHeader;
         }
+
+	    public void DisposeWithoutClosingPager()
+	    {
+			if (_disposed)
+				return;
+
+			GC.SuppressFinalize(this);
+
+			_disposed = true;
+	    }
 	}
 }
