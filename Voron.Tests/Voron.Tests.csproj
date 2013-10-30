@@ -60,6 +60,7 @@
     <Compile Include="Bugs\Deletes.cs" />
     <Compile Include="Bugs\EmptyTree.cs" />
     <Compile Include="Bugs\PageSplitter.cs" />
+    <Compile Include="Bugs\Recovery.cs" />
     <Compile Include="Bugs\TreeRebalancer.cs" />
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
@@ -86,6 +87,7 @@
     <Compile Include="StorageTest.cs" />
     <Compile Include="Trees\Rebalance.cs" />
     <Compile Include="Trees\Updates.cs" />
+    <Compile Include="Util\CrcTests.cs" />
     <Compile Include="Util\StreamExtensions.cs" />
   </ItemGroup>
   <ItemGroup>

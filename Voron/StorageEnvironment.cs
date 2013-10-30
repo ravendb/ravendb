@@ -66,9 +66,13 @@ namespace Voron
 		{
 			if (pager.NumberOfAllocatedPages == 0)
 			{
+				_dataPager.EnsureContinuous(null, 0, 2); // for file headers
+
                 _journal.WriteFileHeader(0);
                 _journal.WriteFileHeader(1);
+
                 _dataPager.Sync();
+
 				const int initialNextPageNumber = 2;
 				State = new StorageEnvironmentState(null, null, initialNextPageNumber);
 				using (var tx = NewTransaction(TransactionFlags.ReadWrite))
@@ -86,7 +90,7 @@ namespace Voron
 			// existing db, let us load it
 
 			// the first two pages are allocated for double buffering tx commits
-			var entry = FindLatestFileHeadeEntry();
+			var entry = FindLatestFileHeaderEntry();
             TransactionHeader* header;
 	        _journal.RecoverDatabase(entry, out header);
 
@@ -104,6 +108,7 @@ namespace Voron
                 var freeSpace = Tree.Open(tx, _sliceComparer, header == null ? &entry->Root : &header->FreeSpace);
 
 				tx.UpdateRootsIfNeeded(root, freeSpace);
+				tx.RecoverTreesIfNeeded();
 				tx.Commit();
 			}
 		}
@@ -203,9 +208,12 @@ namespace Voron
 		{
 			if (_options.OwnsPagers)
 				_options.Dispose();
+
+			if(_journal != null)
+				_journal.Dispose();
 		}
 
-		private FileHeader* FindLatestFileHeadeEntry()
+		private FileHeader* FindLatestFileHeaderEntry()
 		{
 			Page fst = _dataPager.Read(0);
 			Page snd = _dataPager.Read(1);

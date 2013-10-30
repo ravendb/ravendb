@@ -257,6 +257,22 @@ namespace Voron.Impl
             }
         }
 
+		internal void RecoverTreesIfNeeded()
+		{
+			using (var iterator = State.Root.Iterate(this))
+			{
+				if (!iterator.Seek(Slice.Empty))
+					return;
+
+				do
+				{
+					var key = iterator.CurrentKey;
+					Environment.CreateTree(this, key.ToString());
+				}
+				while (iterator.MoveNext());
+			}
+		}
+
         public void AddPagerState(PagerState state)
         {
             LatestPagerState = state;

@@ -22,7 +22,7 @@ namespace Voron.Impl.Journal
 		private readonly IVirtualPager _dataPager;
 		private readonly Func<long, string> _logName = number => string.Format("{0:D19}.journal", number);
 
-		private JournalFile _splitJournalFile;
+		private IList<JournalFile> _splitJournalFiles;
 		private long _logIndex = -1;
 		private FileHeader* _fileHeader;
 		private IntPtr _inMemoryHeader;
@@ -37,6 +37,7 @@ namespace Voron.Impl.Journal
 			_env = env;
 			_dataPager = _env.Options.DataPager;
 			_fileHeader = GetEmptyFileHeader();
+			_splitJournalFiles = new List<JournalFile>();
 		}
 
 	    public IVirtualPager DataPager
@@ -66,7 +67,7 @@ namespace Voron.Impl.Journal
 
 		public void RecoverDatabase(FileHeader* fileHeader, out TransactionHeader* lastTxHeader)
 		{
-			_fileHeader = fileHeader;
+			_fileHeader = CopyFileHeader(fileHeader);
 			var logInfo = fileHeader->LogInfo;
 
 			lastTxHeader = null;
@@ -101,6 +102,10 @@ namespace Voron.Impl.Journal
 
 			_logIndex = logInfo.RecentLog;
 			_dataFlushCounter = logInfo.DataFlushCounter + 1;
+
+			var lastFile = Files.Last();
+			if (lastFile.AvailablePages >= 2) // it must have at least one page for the next transaction header and one page for data
+				CurrentFile = lastFile;
 		}
 
 		public void UpdateLogInfo()
@@ -137,11 +142,11 @@ namespace Voron.Impl.Journal
 			if (CurrentFile == null)
 				CurrentFile = NextFile(tx);
 
-			if (_splitJournalFile != null) // last split transaction was not committed
+			if (_splitJournalFiles.Count > 0) // last split transaction was not committed
 			{
-				Debug.Assert(_splitJournalFile.LastTransactionCommitted == false);
-				CurrentFile = _splitJournalFile;
-				_splitJournalFile = null;
+				Debug.Assert(_splitJournalFiles.All(x => x.LastTransactionCommitted == false));
+				CurrentFile = _splitJournalFiles[0];
+				_splitJournalFiles.Clear();
 			}
 
 			CurrentFile.TransactionBegin(tx);
@@ -152,10 +157,12 @@ namespace Voron.Impl.Journal
 			if(_disabled)
 				return;
 
-			if (_splitJournalFile != null)
+			if (_splitJournalFiles.Count > 0)
 			{
-				_splitJournalFile.TransactionCommit(tx);
-				_splitJournalFile = null;
+				foreach (var journalFile in _splitJournalFiles)
+					journalFile.TransactionCommit(tx);
+
+				_splitJournalFiles.Clear();
 			}
 
 			CurrentFile.TransactionCommit(tx);
@@ -199,16 +206,12 @@ namespace Voron.Impl.Journal
 		{
 			if (CurrentFile.AvailablePages < numberOfPages)
 			{
-				if (_splitJournalFile != null) // we are already in a split transaction and don't allow to spread a transaction over more than two log files
-					throw new InvalidOperationException(
-						"Transaction attempted to put data in more than two log files. It's not allowed. The transaction is too large.");
-
 				// here we need to mark that transaction is split in both log files
 				// it will have th following transaction markers in the headers
 				// log_1: [Start|Split] log_2: [Split|Commit]
 
 				CurrentFile.TransactionSplit(tx);
-				_splitJournalFile = CurrentFile;
+				_splitJournalFiles.Add(CurrentFile);
 
 				CurrentFile = NextFile(tx);
 
@@ -260,6 +263,15 @@ namespace Voron.Impl.Journal
 			header->LogInfo.LastSyncedLogPage = -1;
 
 			return header;
+		}
+
+		private FileHeader* CopyFileHeader(FileHeader* fileHeader)
+		{
+			Debug.Assert(_inMemoryHeader != IntPtr.Zero);
+
+			NativeMethods.memcpy((byte*)_inMemoryHeader, (byte*)fileHeader, sizeof(FileHeader));
+
+			return (FileHeader*)_inMemoryHeader;
 		}
 
 		public List<LogSnapshot> GetSnapshots()

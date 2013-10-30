@@ -160,18 +160,20 @@ namespace Voron.Trees
             _page.Truncate(_tx, splitIndex);
 
             // actually insert the new key
-            return (currentIndex > splitIndex || newPosition && currentIndex == splitIndex)
+            return ((currentIndex > splitIndex || newPosition && currentIndex == splitIndex) &&
+				rightPage.HasSpaceFor(_newKey, _nodeType == NodeFlags.PageRef ? -1 : _len))
                 ? InsertNewKey(rightPage) : InsertNewKey(_page);
         }
 
         private byte* InsertNewKey(Page p)
         {
-            var pos = p.NodePositionFor(_newKey, _cmp);
+			var pos = p.NodePositionFor(_newKey, _cmp);
+
 			var dataPos = AddNodeToPage(p, pos);
-            _cursor.Push(p);
-            IncrementItemCountIfNecessary();
-            return dataPos;
-        }
+			_cursor.Push(p);
+			IncrementItemCountIfNecessary();
+			return dataPos;
+		}
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void IncrementItemCountIfNecessary()

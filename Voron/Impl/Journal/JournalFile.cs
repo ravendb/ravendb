@@ -112,7 +112,6 @@ namespace Voron.Impl.Journal
 			if (_currentTxHeader != null)
 			{
 				_currentTxHeader->TxMarker |= TransactionMarker.Split;
-				_currentTxHeader->PageCount = _allocatedPagesInTransaction;
 			}
 			else
 			{
