@@ -707,7 +707,7 @@ namespace Raven.Database
                 TransportState.OnIdle();
                 IndexStorage.RunIdleOperations();
                 ClearCompletedPendingTasks();
-                FlushLastEtagsForCollections();
+                WriteLastEtagsForCollections();
             }
             finally
             {
@@ -911,14 +911,14 @@ namespace Raven.Database
                     .ForEach(x => lastCollectionEtags[x.Key] = Etag.Parse(x.Data.Value<Byte[]>("Etag"))));
         }
 
-        private void FlushLastEtagsForCollections()
+        private void WriteLastEtagsForCollections()
         {
              TransactionalStorage.Batch(accessor => 
                  lastCollectionEtags.ForEach(x=> 
                      accessor.Lists.Set("Raven/Collection/Etag", x.Key, RavenJObject.FromObject(new { Etag = x.Value }), UuidType.Documents)));
         }
 
-        public Etag GetLastEtagForCollection(string collectionName)
+        public Etag ReadLastETagForCollection(string collectionName)
         {
             Etag value = Etag.Empty;
             TransactionalStorage.Batch(accessor =>
@@ -927,6 +927,25 @@ namespace Raven.Database
                 if (dbvalue != null) value = Etag.Parse(dbvalue.Data.Value<Byte[]>("Etag"));
             });
             return value;
+        }
+
+        public Etag GetLastEtagForCollection(string collectionName)
+        {
+            Etag result = Etag.Empty;
+            if (lastCollectionEtags.TryGetValue(collectionName, out result))
+                return result;
+            return Etag.Empty;
+        }
+
+        private Etag OptimizeCutoffForIndex(string indexName, Etag cutoffEtag)
+        {
+            if (cutoffEtag != null) return cutoffEtag;
+            var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
+            if (viewGenerator.ReduceDefinition == null && viewGenerator.ForEntityNames.Count > 0)
+            {
+                return viewGenerator.ForEntityNames.Select(GetLastEtagForCollection).Max();
+            }
+            return null;
         }
 
         internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
@@ -1478,16 +1497,6 @@ namespace Raven.Database
             }
         }
 
-        private Etag OptimizeCutoffForIndex(string indexName, Etag cutoffEtag)
-        {
-            if (cutoffEtag != null) return cutoffEtag;
-            var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
-            if (viewGenerator.ReduceDefinition == null && viewGenerator.ForEntityNames.Count > 0)
-            {
-                return viewGenerator.ForEntityNames.Select(GetLastEtagForCollection).Max();
-            }
-            return null;
-        }
 
 
         private void RemoveFromCurrentlyRunningQueryList(string index, ExecutingQueryInfo queryStat)
