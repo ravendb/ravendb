@@ -224,6 +224,7 @@
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
     <Compile Include="Issues\RavenDB_1435.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
+    <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\In.cs" />
     <Compile Include="Bugs\WhenQueringAsync.cs" />
     <Compile Include="Bugs\PatchShouldNotConvertFloatToInteger.cs" />
@@ -1122,7 +1123,6 @@
     <Compile Include="Json\RavenJObjects.cs" />
     <Compile Include="Json\JsonUri.cs" />
     <Compile Include="Linq\Any.cs" />
-    <Compile Include="Linq\CommitInfo.cs" />
     <Compile Include="Linq\DynamicQueriesWithStaticIndexes.cs" />
     <Compile Include="Linq\OrderBy.cs" />
     <Compile Include="Linq\RavenDB14.cs" />
