@@ -1302,16 +1302,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					break;
                     //for example .Select(product => product.Properties["VendorName"])
                 case ExpressionType.Call:
-			        var methodCall = (MethodCallExpression)body;
-			        newExpressionType = methodCall.Type;
-			        var member = (MemberExpression)methodCall.Object;
-                    if (methodCall.Arguments.Count > 0)
-			        {
-			            var constantExpression = (ConstantExpression) methodCall.Arguments[0];
-			            var docField = (string) constantExpression.Value;
-
-                        AddToFieldsToFetch(member.Member.Name + "." + docField, null);
-			        }
+			        var expressionInfo = GetMember(body);
+                    AddToFieldsToFetch(expressionInfo.Path, null);
 			        break;
 
 				default:

@@ -28,14 +28,12 @@ namespace Raven.Tests.Linq
                     });
                     session.SaveChanges();
                 }
-
+                WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var vendor = session.Query<Product>().Select(product => product.Properties["Vendor"]).FirstOrDefault();
                     Assert.Equal("Hibernating Rhinos", vendor);
                     
-                    var query = session.Query<Product>().Select(product => product.Properties["Vendor"]).ToString();
-                    Assert.Equal("<Properties.Vendor>: ", query);
                 }
             }
         }
