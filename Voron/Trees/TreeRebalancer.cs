@@ -25,8 +25,9 @@ namespace Voron.Trees
                 RebalanceRoot(cursor, page);
                 return null;
             }
-
+			
 			var parentPage = _tx.ModifyPage(cursor.ParentPage.PageNumber, cursor);
+
             if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
             {
                 // need to delete the implicit left page, shift right 
@@ -39,21 +40,20 @@ namespace Voron.Trees
                 }
                 else // will be set to rights by the next rebalance call
                 {
-                    parentPage.RemoveNode(parentPage.LastSearchPosition);
+                    parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry);
                 }
                 cursor.Pop();
                 return parentPage;
             }
 
             var minKeys = page.IsBranch ? 2 : 1;
-            if (page.SizeUsed >= _tx.DataPager.PageMinSpace &&
+            if ((page.SizeUsed >= _tx.DataPager.PageMinSpace) &&
                 page.NumberOfEntries >= minKeys)
                 return null; // above space/keys thresholds
 
             Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
 
             var sibling = SetupMoveOrMerge(cursor, page, parentPage);
-
             Debug.Assert(sibling.PageNumber != page.PageNumber);
 
             minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
@@ -69,17 +69,37 @@ namespace Voron.Trees
                 return parentPage;
             }
 
-            if (page.LastSearchPosition == 0) // this is the right page, merge left
+			if (page.LastSearchPosition == 0) // this is the right page, merge left
             {
-                MergePages(parentPage, sibling, page);
+				if (!HasEnoughSpaceToCopyNodes(sibling, page))
+					return null;
+					MergePages(parentPage, sibling, page);
             }
             else // this is the left page, merge right
             {
-                MergePages(parentPage, page, sibling);
+				if (!HasEnoughSpaceToCopyNodes(page, sibling))
+					return null;
+					MergePages(parentPage, page, sibling);
             }
             cursor.Pop();
             return parentPage;
         }
+
+	    private bool HasEnoughSpaceToCopyNodes(Page left, Page right)
+	    {
+		    var actualSpaceNeeded = 0;
+		    var previousSearchPosition = right.LastSearchPosition;
+		    for (int i = 0; i < right.NumberOfEntries; i++)
+		    {
+			    right.LastSearchPosition = i;
+			    var key = GetActualKey(right, right.LastSearchPositionOrLastEntry);
+			    var node = right.GetNode(i);
+			    actualSpaceNeeded += (SizeOf.NodeEntryWithAnotherKey(node, key) + Constants.NodeOffsetSize);
+		    }
+
+		    right.LastSearchPosition = previousSearchPosition; //previous position --> prevent mutation of parameter
+		    return left.SizeLeft >= actualSpaceNeeded;
+	    }
 
         private void MergePages(Page parentPage, Page left, Page right)
         {
@@ -88,6 +108,7 @@ namespace Voron.Trees
                 right.LastSearchPosition = i;
                 var key = GetActualKey(right, right.LastSearchPositionOrLastEntry);
                 var node = right.GetNode(i);
+
                 left.CopyNodeDataToEndOfPage(node, key);
             }
             left.ItemCount += right.ItemCount;

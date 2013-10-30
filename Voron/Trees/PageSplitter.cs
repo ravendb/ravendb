@@ -160,8 +160,7 @@ namespace Voron.Trees
             _page.Truncate(_tx, splitIndex);
 
             // actually insert the new key
-            return ((currentIndex > splitIndex || newPosition && currentIndex == splitIndex) &&
-				rightPage.HasSpaceFor(_newKey, _nodeType == NodeFlags.PageRef ? -1 : _len))
+            return (currentIndex > splitIndex || newPosition && currentIndex == splitIndex)
                 ? InsertNewKey(rightPage) : InsertNewKey(_page);
         }
 

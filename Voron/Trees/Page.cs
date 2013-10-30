@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using Voron.Debugging;
 using Voron.Impl;
@@ -233,28 +234,28 @@ namespace Voron.Trees
         /// </summary>
         internal void CopyNodeDataToEndOfPage(NodeHeader* other, Slice key = null)
         {
-            Debug.Assert(SizeOf.NodeEntryWithAnotherKey(other, key) + Constants.NodeOffsetSize <= SizeLeft);
+			var nodeKey = key ?? new Slice(other);
+			Debug.Assert(SizeOf.NodeEntryWithAnotherKey(other, nodeKey) + Constants.NodeOffsetSize <= SizeLeft);
             
             var index = NumberOfEntries;
 
-            var nodeSize = SizeOf.NodeEntryWithAnotherKey(other, key);
+            var nodeSize = SizeOf.NodeEntryWithAnotherKey(other, nodeKey);
 
-            key = key ?? new Slice(other);
 
-			if (other->KeySize == 0) // when copy first item from branch which is implicit ref
+			if (other->KeySize == 0 && key == null) // when copy first item from branch which is implicit ref
 			{
-				nodeSize += key.Size;
+				nodeSize += nodeKey.Size;
 			}
 
-            Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
+            Debug.Assert(IsBranch == false || index != 0 || nodeKey.Size == 0);// branch page's first item must be the implicit ref
 
 	        var nodeVersion = other->Version; // every time new node is allocated the version is increased, but in this case we do not want to increase it
 			if (nodeVersion > 0)
 				nodeVersion -= 1;
 
-            var newNode = AllocateNewNode(index, key, nodeSize, nodeVersion);
+            var newNode = AllocateNewNode(index, nodeKey, nodeSize, nodeVersion);
             newNode->Flags = other->Flags;
-            key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
+            nodeKey.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
 
             if (IsBranch || other->Flags==(NodeFlags.PageRef))
             {

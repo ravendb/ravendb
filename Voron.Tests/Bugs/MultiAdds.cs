@@ -58,8 +58,17 @@ namespace Voron.Tests.Bugs
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.GetTree("foo");
-				    foreach (var buffer in inputData)
-					    Assert.DoesNotThrow(() => tree.MultiDelete(tx, "ChildTreeKey", new Slice(buffer)));
+					for (int i = 0; i < inputData.Count; i++)
+					{
+						var buffer = inputData[i];
+						if (i == 45)
+						{
+//							using (var iter = (TreeIterator)tree.MultiRead(tx, "ChildTreeKey"))
+//								DebugStuff.RenderAndShow(tx, iter.TreeRootPage, 1);
+						}
+						Assert.DoesNotThrow(() => tree.MultiDelete(tx, "ChildTreeKey", new Slice(buffer)));
+						Trace.WriteLine(i);
+					}
 
 					tx.Commit();
 				}
