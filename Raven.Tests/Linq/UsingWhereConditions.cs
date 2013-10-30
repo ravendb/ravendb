@@ -182,5 +182,16 @@ namespace Raven.Tests.Linq
 			documentSession.Store(new CommitInfo { Author = "kenny", PathInRepo = "/src/test/SecondTest/test1.txt", Repository = Repo, Revision = 7, Date = SystemTime.UtcNow, CommitMessage = "Seventh commit" });
 			documentSession.SaveChanges();
 		}
+
+        public class CommitInfo
+        {
+            public string Id { get; set; }
+            public string Author { get; set; }
+            public string PathInRepo { get; set; }
+            public string Repository { get; set; }
+            public int Revision { get; set; }
+            public DateTime Date { get; set; }
+            public string CommitMessage { get; set; }
+        }
 	}
 }

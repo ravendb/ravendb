@@ -87,5 +87,32 @@ select new { GeoHash = SampleGeoLocation.GeoHash(doc.loc, doc.lang) }
 		{
 			return RavenJArray.Parse(json).Cast<RavenJObject>().Select(JsonToExpando.Convert);
 		}
+
+        public class SampleDynamicCompilationExtension : AbstractDynamicCompilationExtension
+        {
+            public override string[] GetNamespacesToImport()
+            {
+                return new[]
+			{
+				typeof (SampleGeoLocation).Namespace
+			};
+            }
+
+            public override string[] GetAssembliesToReference()
+            {
+                return new[]
+			{
+				typeof (SampleGeoLocation).Assembly.Location
+			};
+            }
+        }
+
+        public static class SampleGeoLocation
+        {
+            public static string GeoHash(int lon, int lang)
+            {
+                return lon + "#" + lang;
+            }
+        }
 	}
 }

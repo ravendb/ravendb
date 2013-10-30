@@ -1300,6 +1300,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
 					break;
+                    //for example .Select(product => product.Properties["VendorName"])
+                case ExpressionType.Call:
+			        var expressionInfo = GetMember(body);
+                    AddToFieldsToFetch(expressionInfo.Path, null);
+			        break;
 
 				default:
 					throw new NotSupportedException("Node not supported: " + body.NodeType);
@@ -1333,7 +1338,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				FieldsToFetch.Add(docField);
 			}
-			if (docField != renamedField)
+            if (renamedField != null && docField != renamedField)
 			{
 				if (identityProperty == null)
 				{
@@ -1508,7 +1513,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				afterQueryExecuted(queryResult);
 			}
-
 			return executeQuery;
 		}
 #endif
