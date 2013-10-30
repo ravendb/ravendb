@@ -888,6 +888,8 @@
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
+    <Compile Include="Security\OAuth\ReplicationWithOAuthMultipleKeys.cs" />
+    <Compile Include="Security\ReplicationWithMixedSecurity.cs" />
     <Compile Include="Spatial\BoundingBoxIndexTests.cs" />
     <Compile Include="Spatial\CartesianTests.cs" />
     <Compile Include="Spatial\Clustering.cs" />

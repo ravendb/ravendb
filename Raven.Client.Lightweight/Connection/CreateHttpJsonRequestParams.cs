@@ -14,9 +14,11 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
+	using Raven.Abstractions.Connection;
+
 	public class CreateHttpJsonRequestParams
 	{
-		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, RavenJObject metadata, ICredentials credentials, DocumentConvention convention)
+		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, RavenJObject metadata, OperationCredentials credentials, DocumentConvention convention)
 		{
 			Owner = self;
 			Url = url;
@@ -95,7 +97,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, ICredentials credentials, DocumentConvention convention)
+		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, OperationCredentials credentials, DocumentConvention convention)
 			: this(self, url, method, new RavenJObject(), credentials, convention)
 		{
 			
@@ -132,7 +134,8 @@ namespace Raven.Client.Connection
 
 		public string Method { get; set; }
 		public RavenJObject Metadata { get; set; }
-		public ICredentials Credentials { get; set; }
+		public OperationCredentials Credentials { get; set; }
+
 		public DocumentConvention Convention { get; set; }
 		public bool DisableRequestCompression { get; set; }
 	}
