@@ -23,6 +23,6 @@ namespace Raven.Database.Storage
 		int GetIndexTouchCount(int view);
 
     void SetLastEtagForCollection(string collection, Etag etag);
-  Etag GetLastEtagForCollection(string collection);
+    Etag GetLastEtagForCollection(string collection);
 	}
 }

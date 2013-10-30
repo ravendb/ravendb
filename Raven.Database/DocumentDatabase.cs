@@ -161,6 +161,7 @@ namespace Raven.Database
         private System.Threading.Tasks.Task reducingBackgroundTask;
         private readonly TaskScheduler backgroundTaskScheduler;
         private readonly object idleLocker = new object();
+        private readonly Dictionary<string, Etag> lastCollectionEtags = new Dictionary<string, Etag>(); 
 
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -889,16 +890,18 @@ namespace Raven.Database
                      .Select(x => new { Etag = x.Max(y => y.Etag), CollectionName = x.Key.ToString() })
                      .ToArray();
 
-            TransactionalStorage.Batch(accessor =>
-            {
-                foreach (var collection in collections)
-                    SetLastEtagForCollection(accessor, collection.CollectionName, collection.Etag);
-            });
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         private void SetLastEtagForCollection(IStorageActionsAccessor actions, string collectionName, Etag etag)
         {
+            Etag lastEtag;
+            if (lastCollectionEtags.TryGetValue(collectionName, out lastEtag))
+            {
+                if (lastEtag.CompareTo(etag) > 0) return;
+            }
             actions.Staleness.SetLastEtagForCollection(collectionName, etag);
+            lastCollectionEtags[collectionName] = etag;
         }
 
         public Etag GetLastEtagForCollection(string collectionName)

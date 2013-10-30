@@ -25,13 +25,6 @@ namespace Raven.Tests.Bugs
 
 
 		[Fact]
-		public void WhyWasntThisFixed()
-		{
-			if (DateTime.Today > new DateTime(2013, 11, 1))
-				throw new InvalidOleVariantTypeException("This bug SHOULD HAVE BEEN FIXED BY NOW, this test is failing to remind you of that.");
-		}
-
-		[Fact(Skip = "Waiting for RavenDB-1445")]
 		public void MultiThreadedInsert()
 		{
 			const int threadCount = 4;
