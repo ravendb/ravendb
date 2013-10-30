@@ -33,7 +33,7 @@ namespace Raven.Abstractions.OAuth
 		}
 
 #if !SILVERLIGHT && !NETFX_CORE
-		public abstract Action<HttpWebRequest> DoOAuthRequest(string oauthSource);
+		public abstract Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey);
 		#endif
 	}
 }

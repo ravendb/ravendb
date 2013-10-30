@@ -172,19 +172,19 @@ namespace Raven.Tests.Bundles.Replication
 			return CreateStoreAtPort(previousServer.Database.Configuration.Port, enableAuthentication);
 		}
 
-		protected void TellFirstInstanceToReplicateToSecondInstance(string apiKey = null)
+		protected void TellFirstInstanceToReplicateToSecondInstance(string apiKey = null, string username = null, string password = null, string domain = null)
 		{
-			TellInstanceToReplicateToAnotherInstance(0, 1, apiKey);
+			TellInstanceToReplicateToAnotherInstance(0, 1, apiKey, username, password, domain);
 		}
 
-		protected void TellSecondInstanceToReplicateToFirstInstance(string apiKey = null)
+		protected void TellSecondInstanceToReplicateToFirstInstance(string apiKey = null, string username = null, string password = null, string domain = null)
 		{
-			TellInstanceToReplicateToAnotherInstance(1, 0, apiKey);
+			TellInstanceToReplicateToAnotherInstance(1, 0, apiKey, username, password, domain);
 		}
 
-		protected void TellInstanceToReplicateToAnotherInstance(int src, int dest, string apiKey = null)
+		protected void TellInstanceToReplicateToAnotherInstance(int src, int dest, string apiKey = null, string username = null, string password = null, string domain = null)
 		{
-			RunReplication(stores[src], stores[dest], apiKey: apiKey);
+			RunReplication(stores[src], stores[dest], apiKey: apiKey, username: username, password: password, domain: domain);
 		}
 
 		protected void RunReplication(IDocumentStore source, IDocumentStore destination,
@@ -192,7 +192,10 @@ namespace Raven.Tests.Bundles.Replication
 			bool disabled = false,
 			bool ignoredClient = false,
 			string apiKey = null,
-			string db = null)
+			string db = null,
+			string username = null,
+			string password = null,
+			string domain = null)
 		{
 			Console.WriteLine("Replicating from {0} to {1} with db = {2}.", source.Url, destination.Url, db ?? Constants.SystemDatabase);
 			using (var session = source.OpenSession(db))
@@ -204,12 +207,19 @@ namespace Raven.Tests.Bundles.Replication
 							destination.Url.Replace("localhost", "ipv4.fiddler"),
 					TransitiveReplicationBehavior = transitiveReplicationBehavior,
 					Disabled = disabled,
-					IgnoredClient = ignoredClient
+					IgnoredClient = ignoredClient,
 				};
 				if (db != null)
 					replicationDestination.Database = db;
 				if (apiKey != null)
 					replicationDestination.ApiKey = apiKey;
+				if (username != null)
+				{
+					replicationDestination.Username = username;
+					replicationDestination.Password = password;
+					replicationDestination.Domain = domain;
+				}
+
 				SetupDestination(replicationDestination);
 				session.Store(new ReplicationDocument
 				{
