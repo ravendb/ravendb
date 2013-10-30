@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Xunit.Extensions;
 
 namespace Voron.Tests.Bugs
 {
@@ -28,13 +29,19 @@ namespace Voron.Tests.Bugs
             return builder.ToString();
         }
 
-		[Fact]
-		public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail()
+		[Theory]
+        [InlineData(0500)]
+        [InlineData(1000)]
+        [InlineData(2000)]
+        [InlineData(3000)]
+        [InlineData(4000)]
+        [InlineData(5000)]
+		public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail(int size)
 		{
 			using (var Env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
 			{
 				var inputData = new List<byte[]>();
-				for (int i = 0; i < 1000; i++)
+				for (int i = 0; i < size; i++)
 				{
                     inputData.Add(Encoding.UTF8.GetBytes(RandomString(1024)));
 				}
@@ -61,13 +68,7 @@ namespace Voron.Tests.Bugs
 					for (int i = 0; i < inputData.Count; i++)
 					{
 						var buffer = inputData[i];
-						if (i == 45)
-						{
-//							using (var iter = (TreeIterator)tree.MultiRead(tx, "ChildTreeKey"))
-//								DebugStuff.RenderAndShow(tx, iter.TreeRootPage, 1);
-						}
 						Assert.DoesNotThrow(() => tree.MultiDelete(tx, "ChildTreeKey", new Slice(buffer)));
-						Trace.WriteLine(i);
 					}
 
 					tx.Commit();
