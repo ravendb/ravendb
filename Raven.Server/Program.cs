@@ -25,7 +25,6 @@ using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
-using Raven.Database.Server.Responders.Admin;
 using Raven.Database.Util;
 
 namespace Raven.Server
@@ -38,7 +37,6 @@ namespace Raven.Server
 		private static void Main(string[] args)
 		{
 			cmdLineArgs = args;
-			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 			if (RunningInInteractiveMode(args))
 			{
 				try
