@@ -107,7 +107,7 @@ namespace Voron
 			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
 			{
                 var root = Tree.Open(tx, _sliceComparer, header == null ? &entry->Root : &header->Root);
-                var freeSpace = Tree.Open(tx, _sliceComparer, header == null ? &entry->Root : &header->FreeSpace);
+                var freeSpace = Tree.Open(tx, _sliceComparer, header == null ? &entry->FreeSpace : &header->FreeSpace);
 
 				tx.UpdateRootsIfNeeded(root, freeSpace);
 				tx.Commit();
