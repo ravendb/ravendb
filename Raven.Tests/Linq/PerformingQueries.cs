@@ -63,7 +63,7 @@ namespace Raven.Tests.Linq
             {
                 Map = @"
 from doc in docs
-select new { GeoHash = SampleGeoLocation.GeoHash(doc.loc, doc.lang) }
+select new { GeoHash = PerformingQueries.SampleGeoLocation.GeoHash(doc.loc, doc.lang) }
 "
             },
                                                       new OrderedPartCollection<AbstractDynamicCompilationExtension>
