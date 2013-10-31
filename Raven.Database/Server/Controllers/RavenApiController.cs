@@ -51,6 +51,35 @@ namespace Raven.Database.Server.Controllers
 			}
 		}
 
+		public HttpHeaders InnerHeaders
+		{
+			get
+			{
+				var headers = new Headers();
+				foreach (var header in InnerRequest.Headers)
+				{
+					if (header.Value.Count() == 1)
+						headers.Add(header.Key, header.Value.First());
+					else
+						headers.Add(header.Key, header.Value.ToList());
+				}
+
+
+				if (InnerRequest.Content == null) 
+					return headers;
+				
+				foreach (var header in InnerRequest.Content.Headers)
+				{
+					if (header.Value.Count() == 1)
+						headers.Add(header.Key, header.Value.First());
+					else
+						headers.Add(header.Key, header.Value.ToList());
+				}
+
+				return headers;
+			}
+		}
+
 		public new IPrincipal User
 		{
 			get;
@@ -701,16 +730,16 @@ namespace Raven.Database.Server.Controllers
 
 		public string GetHeader(string key)
 		{
-			if (InnerRequest.Headers.Contains(key) == false)
+			if (InnerHeaders.Contains(key) == false)
 				return null;
-			return InnerRequest.Headers.GetValues(key).FirstOrDefault();
+			return InnerHeaders.GetValues(key).FirstOrDefault();
 		}
 
 		public List<string> GetHeaders(string key)
 		{
-			if (InnerRequest.Headers.Contains(key) == false)
+			if (InnerHeaders.Contains(key) == false)
 				return null;
-			return InnerRequest.Headers.GetValues(key).ToList();
+			return InnerHeaders.GetValues(key).ToList();
 		}
 
 		public bool HasCookie(string key)
@@ -846,5 +875,10 @@ namespace Raven.Database.Server.Controllers
 			var rawUrl = InnerRequest.RequestUri.PathAndQuery;
 			return UrlExtension.GetRequestUrlFromRawUrl(rawUrl, DatabasesLandlord.SystemConfiguration);
 		}
+	}
+
+	public class Headers : HttpHeaders
+	{
+		
 	}
 }
