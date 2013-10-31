@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Voron.Impl.FileHeaders;
 using Voron.Trees;
 
@@ -28,10 +29,12 @@ namespace Voron.Impl.Journal
 		private long _logIndex = -1;
 		private FileHeader* _fileHeader;
 		private IntPtr _inMemoryHeader;
-		private long _dataFlushCounter = 0;
+		private long _dataFlushCounter;
 		
 		internal ImmutableList<JournalFile> Files = ImmutableList<JournalFile>.Empty;
 		internal JournalFile CurrentFile;
+
+        private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 
 		public WriteAheadJournal(StorageEnvironment env)
 		{
@@ -41,11 +44,6 @@ namespace Voron.Impl.Journal
 			_splitJournalFiles = new List<JournalFile>();
 		    _currentLogFileSize = env.Options.InitialLogFileSize;
 		}
-
-	    public IVirtualPager DataPager
-	    {
-	        get { return _dataPager; }
-	    }
 
 	    private JournalFile NextFile(Transaction tx)
 		{
@@ -66,16 +64,30 @@ namespace Voron.Impl.Journal
 			log.AddRef(); // one reference added by a creator - write ahead log
 			tx.SetLogReference(log); // and the next one for the current transaction
 
-			Files = Files.Add(log);
+		
+            // protect against readers trying to modify anything here
+            _locker.EnterReadLock();
+	        try
+	        {
+                Files = Files.Add(log);
 
-			UpdateLogInfo();
-			WriteFileHeader();
+                UpdateLogInfo();
+                WriteFileHeader();
+	        }
+	        finally
+	        {
+	            _locker.ExitWriteLock();
+	        }
+
 
 			return log;
 		}
 
 		public void RecoverDatabase(FileHeader* fileHeader, out TransactionHeader* lastTxHeader)
 		{
+            // note, we don't need to do any concurrency here, happens as a single threaded
+            // fashion on db startup
+
 			_fileHeader = CopyFileHeader(fileHeader);
 			var logInfo = fileHeader->LogInfo;
 
@@ -336,7 +348,7 @@ namespace Voron.Impl.Journal
 
                     var last = sortedPages.Last();
 
-                    _waj.DataPager.EnsureContinuous(null, last.PageNumber,
+                    _waj._dataPager.EnsureContinuous(null, last.PageNumber,
                                                     last.IsOverflow
                                                         ? _waj._env.Options.DataPager.GetNumberOfOverflowPages(
                                                             last.OverflowSize)
@@ -344,10 +356,10 @@ namespace Voron.Impl.Journal
 
                     foreach (var page in sortedPages)
                     {
-                        _waj.DataPager.Write(page);
+                        _waj._dataPager.Write(page);
                     }
 
-                    _waj.DataPager.Sync();
+                    _waj._dataPager.Sync();
 
                     UpdateFileHeaderAfterDataFileSync(tx);
 
