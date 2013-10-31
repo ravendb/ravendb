@@ -35,18 +35,6 @@ namespace Voron.Trees
             }
         }
 
-        public void DecrementItemCount()
-        {
-            foreach (var page in Pages)
-                --page.ItemCount;
-        }
-
-        public void IncrementItemCount()
-        {
-            foreach (var page in Pages)
-                ++page.ItemCount;
-        }
-
         public Page CurrentPage
         {
             get

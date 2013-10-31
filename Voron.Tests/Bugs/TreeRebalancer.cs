@@ -2,10 +2,6 @@
 {
 	using System;
 	using System.Collections.Generic;
-
-	using Voron.Impl;
-	using Voron.Trees;
-
 	using Xunit;
 
 	public class TreeRebalancer : StorageTest

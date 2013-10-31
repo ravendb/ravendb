@@ -20,14 +20,16 @@ namespace Voron.Impl.Journal
 	{
 		private readonly StorageEnvironment _env;
 		private readonly IVirtualPager _dataPager;
-		private readonly Func<long, string> _logName = number => string.Format("{0:D19}.journal", number);
+		internal readonly Func<long, string> LogName = number => string.Format("{0:D19}.journal", number);
 
-		private JournalFile _splitJournalFile;
+	    private long _currentLogFileSize;
+	    private DateTime _lastFile;
+		private readonly IList<JournalFile> _splitJournalFiles;
+
 		private long _logIndex = -1;
 		private FileHeader* _fileHeader;
 		private IntPtr _inMemoryHeader;
 		private long _dataFlushCounter = 0;
-		private bool _disabled;
 
 		internal ImmutableList<JournalFile> Files = ImmutableList<JournalFile>.Empty;
 		internal JournalFile CurrentFile;
@@ -37,6 +39,13 @@ namespace Voron.Impl.Journal
 			_env = env;
 			_dataPager = _env.Options.DataPager;
 			_fileHeader = GetEmptyFileHeader();
+			_splitJournalFiles = new List<JournalFile>();
+		    _currentLogFileSize = env.Options.InitialLogFileSize;
+		}
+
+		internal FileHeader* FileHeader
+		{
+			get { return _fileHeader; }
 		}
 
 	    public IVirtualPager DataPager
@@ -48,9 +57,16 @@ namespace Voron.Impl.Journal
 		{
 			_logIndex++;
 
-			var logPager = _env.Options.CreateLogPager(_logName(_logIndex));
+			var logPager = _env.Options.CreateJournalPager(LogName(_logIndex));
 
-			logPager.AllocateMorePages(null, _env.Options.LogFileSize);
+	        var now = DateTime.UtcNow ;
+            if ((now - _lastFile).TotalSeconds < 90)
+            {
+                _currentLogFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentLogFileSize * 2);
+            }
+	        _lastFile = now;
+
+	        logPager.AllocateMorePages(null, _currentLogFileSize);
 
 			var log = new JournalFile(logPager, _logIndex);
 			log.AddRef(); // one reference added by a creator - write ahead log
@@ -67,7 +83,7 @@ namespace Voron.Impl.Journal
 		public void RecoverDatabase(FileHeader* fileHeader, out TransactionHeader* lastTxHeader)
 		{
 			_fileHeader = CopyFileHeader(fileHeader);
-			var logInfo = fileHeader->LogInfo;
+			var logInfo = _fileHeader->LogInfo;
 
 			lastTxHeader = null;
 
@@ -78,12 +94,8 @@ namespace Voron.Impl.Journal
 
 			for (var logNumber = logInfo.RecentLog - logInfo.LogFilesCount + 1; logNumber <= logInfo.RecentLog; logNumber++)
 			{
-				var pager = _env.Options.CreateLogPager(_logName(logNumber));
-
-				if (pager.NumberOfAllocatedPages != (_env.Options.LogFileSize/pager.PageSize))
-					throw new InvalidDataException("Log file " + _logName(logNumber) + " should contain " +
-                                                   (_env.Options.LogFileSize / pager.PageSize) + " pages, while it has " +
-					                               pager.NumberOfAllocatedPages + " pages allocated.");
+				var pager = _env.Options.CreateJournalPager(LogName(logNumber));
+			    _currentLogFileSize = pager.NumberOfAllocatedPages;
 				var log = new JournalFile(pager, logNumber);
 				log.AddRef(); // creator reference - write ahead log
 				Files = Files.Add(log);
@@ -112,6 +124,8 @@ namespace Voron.Impl.Journal
 			_fileHeader->LogInfo.RecentLog = Files.Count > 0 ? _logIndex : -1;
 			_fileHeader->LogInfo.LogFilesCount = Files.Count;
 			_fileHeader->LogInfo.DataFlushCounter = _dataFlushCounter;
+
+			_fileHeader->BackupInfo.LastCreatedJournal = _logIndex;
 		}
 
 		internal void WriteFileHeader(long? pageToWriteHeader = null)
@@ -120,7 +134,7 @@ namespace Voron.Impl.Journal
 
 		    long page = pageToWriteHeader ?? _dataFlushCounter & 1;
 
-		    var header = (FileHeader*) (fileHeaderPage.Base);
+			var header = (FileHeader*)(fileHeaderPage.Base);
 		    header->MagicMarker = Constants.MagicMarker;
 		    header->Version = Constants.CurrentVersion;
 		    header->TransactionId = _fileHeader->TransactionId;
@@ -135,17 +149,14 @@ namespace Voron.Impl.Journal
 
 	    public void TransactionBegin(Transaction tx)
 		{
-			if(_disabled)
-				return;
-			
 			if (CurrentFile == null)
 				CurrentFile = NextFile(tx);
 
-			if (_splitJournalFile != null) // last split transaction was not committed
+			if (_splitJournalFiles.Count > 0) // last split transaction was not committed
 			{
-				Debug.Assert(_splitJournalFile.LastTransactionCommitted == false);
-				CurrentFile = _splitJournalFile;
-				_splitJournalFile = null;
+				Debug.Assert(_splitJournalFiles.All(x => x.LastTransactionCommitted == false));
+				CurrentFile = _splitJournalFiles[0];
+				_splitJournalFiles.Clear();
 			}
 
 			CurrentFile.TransactionBegin(tx);
@@ -153,13 +164,12 @@ namespace Voron.Impl.Journal
 
 		public void TransactionCommit(Transaction tx)
 		{
-			if(_disabled)
-				return;
-
-			if (_splitJournalFile != null)
+			if (_splitJournalFiles.Count > 0)
 			{
-				_splitJournalFile.TransactionCommit(tx);
-				_splitJournalFile = null;
+				foreach (var journalFile in _splitJournalFiles)
+					journalFile.TransactionCommit(tx);
+
+				_splitJournalFiles.Clear();
 			}
 
 			CurrentFile.TransactionCommit(tx);
@@ -176,7 +186,7 @@ namespace Voron.Impl.Journal
 			if (tx.Flags == TransactionFlags.Read)
 			{
 				// read log snapshots from the back to get the most recent version of a page
-				for (var i = tx.LogSnapshots.Count -1; i >= 0; i--)
+				for (var i = tx.LogSnapshots.Count - 1; i >= 0; i--)
 				{
 					var page = tx.LogSnapshots[i].ReadPage(pageNumber);
 					if (page != null)
@@ -203,16 +213,12 @@ namespace Voron.Impl.Journal
 		{
 			if (CurrentFile.AvailablePages < numberOfPages)
 			{
-				if (_splitJournalFile != null) // we are already in a split transaction and don't allow to spread a transaction over more than two log files
-					throw new InvalidOperationException(
-						"Transaction attempted to put data in more than two log files. It's not allowed. The transaction is too large.");
-
 				// here we need to mark that transaction is split in both log files
 				// it will have th following transaction markers in the headers
-				// log_1: [Start|Split] log_2: [Split|Commit]
+				// log_1: [Start|Split|Commit] log_2: [Split|Commit]
 
 				CurrentFile.TransactionSplit(tx);
-				_splitJournalFile = CurrentFile;
+				_splitJournalFiles.Add(CurrentFile);
 
 				CurrentFile = NextFile(tx);
 
@@ -222,7 +228,38 @@ namespace Voron.Impl.Journal
 			return CurrentFile.Allocate(startPage, numberOfPages);
 		}
 
+		public IList<Tuple<Page, int>> AllocateForOverflow(Transaction tx, long startPage, int numberOfPages)
+		{
+			var pages = new List<Tuple<Page, int>>();
+
+			if (CurrentFile.AvailablePages < numberOfPages)
+			{
+				CurrentFile.TransactionSplit(tx);
+				_splitJournalFiles.Add(CurrentFile);
 	
+				while (numberOfPages > 0)
+				{
+					CurrentFile = NextFile(tx);
+					CurrentFile.TransactionSplit(tx);
+
+					var allocatedPages = Math.Min((int)CurrentFile.AvailablePages, numberOfPages);
+
+					pages.Add(new Tuple<Page, int>(CurrentFile.Allocate(startPage, allocatedPages), allocatedPages));
+
+					startPage += allocatedPages;
+					numberOfPages -= allocatedPages;
+
+					if (numberOfPages > 0)
+						_splitJournalFiles.Add(CurrentFile);
+				}
+
+				return pages;
+			}
+
+			pages.Add(new Tuple<Page, int>(CurrentFile.Allocate(startPage, numberOfPages), numberOfPages));
+			return pages;
+		}
+
 	    public void Dispose()
 		{
 			if (_inMemoryHeader != IntPtr.Zero)
@@ -232,19 +269,19 @@ namespace Voron.Impl.Journal
 			}
 
             if (_env.Options.OwnsPagers)
-            {
-	            foreach (var logFile in Files)
-	            {
-		            logFile.Dispose();
-	            }
-            }
+			{
+				foreach (var logFile in Files)
+				{
+					logFile.Dispose();
+				}
+			}
             else
 			{
 				foreach (var logFile in Files)
 				{
 					GC.SuppressFinalize(logFile);
 				}
-	            
+
             }
 
 			Files.Clear();
@@ -257,7 +294,7 @@ namespace Voron.Impl.Journal
 
 		    NativeMethods.memset((byte*)_inMemoryHeader.ToPointer(), 0, _dataPager.PageSize);
 
-		    var header = (FileHeader*) _inMemoryHeader;
+			var header = (FileHeader*)_inMemoryHeader;
 
 			header->MagicMarker = Constants.MagicMarker;
 			header->Version = Constants.CurrentVersion;
@@ -342,14 +379,14 @@ namespace Voron.Impl.Journal
                     var journalFiles = jrnls.RemoveAll(x => x.Number >= _lastSyncedLog);
                     foreach (var fullLog in journalFiles)
                     {
-                        if (_waj._env.Options.DeleteUnusedLogFiles)
+						if (_waj._env.Options.IncrementalBackupEnabled == false)
                             fullLog.DeleteOnClose();
                     }
 
+					_waj.Files = _waj.Files.RemoveAll(x => x.Number < _lastSyncedLog);
+
                     _waj.UpdateLogInfo();
                     
-                    _waj.Files = _waj.Files.RemoveAll(x => x.Number < _lastSyncedLog);
-
                     foreach (var fullLog in journalFiles)
                     {
                         fullLog.Release();
@@ -410,7 +447,7 @@ namespace Voron.Impl.Journal
 		                    pagesToWrite.Remove(supercedingPage);
 	                    }
 
-	                    break;
+                        break;
                     }
                         
                 }

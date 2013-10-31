@@ -16,7 +16,7 @@ namespace Voron.Tests.Log
 		// all tests here relay on the fact than one log file can contains max 10 pages
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
-			options.LogFileSize = 10 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
 		}
 
 		[Fact]
@@ -74,7 +74,7 @@ namespace Voron.Tests.Log
 			var bytes = new byte[1024];
 			new Random().NextBytes(bytes);
 
-			// everything is done in one transaction but it takes 2 log files - transaction split
+			// everything is done in one transaction but it takes 3 log files - transaction split
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				Assert.True(Env.Journal.Files.Count == 1);
@@ -84,7 +84,7 @@ namespace Voron.Tests.Log
                     tx.State.Root.Add(tx, "item/" + i, new MemoryStream(bytes));
 				}
 
-				Assert.True(Env.Journal.Files.Count == 2); // verify that it really takes 2 pages
+				Assert.Equal(3, Env.Journal.Files.Count); // verify that it really takes 3 pages
 
 				// tx.Commit(); do not commit
 			}

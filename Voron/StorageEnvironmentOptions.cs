@@ -8,23 +8,48 @@ namespace Voron
 {
     public abstract class StorageEnvironmentOptions : IDisposable
     {
-        public long LogFileSize { get; set; }
+        public long MaxLogFileSize
+        {
+            get { return _maxLogFileSize; }
+            set
+            {
+                if (value < _initialLogFileSize)
+                    InitialLogFileSize = value;
+                _maxLogFileSize = value;
+            }
+        }
+
+        public long InitialLogFileSize
+        {
+            get { return _initialLogFileSize; }
+            set
+            {
+                if (value > MaxLogFileSize)
+                    MaxLogFileSize = value;
+                _initialLogFileSize = value;
+            }
+        }
 
         public bool OwnsPagers { get; set; }
 
-        public bool DeleteUnusedLogFiles { get; set; }
+        public bool IncrementalBackupEnabled { get; set; }
 
         public abstract IVirtualPager DataPager { get; }
 
-        public abstract IVirtualPager CreateLogPager(string name);
+        public abstract IVirtualPager CreateJournalPager(string name, string dir = null);
 
-        protected bool disposed;
+        protected bool Disposed;
+        private long _initialLogFileSize;
+        private long _maxLogFileSize;
 
         protected StorageEnvironmentOptions()
         {
-            LogFileSize = 64 * 1024 * 1024;
+            MaxLogFileSize = 64 * 1024 * 1024;
+
+            InitialLogFileSize = 64 * 1024;
+
             OwnsPagers = true;
-            DeleteUnusedLogFiles = true;
+            IncrementalBackupEnabled = false;
         }
 
         public static StorageEnvironmentOptions GetInMemory()
@@ -70,23 +95,23 @@ namespace Voron
                 }
             }
 
-            public override IVirtualPager CreateLogPager(string name)
+            public override IVirtualPager CreateJournalPager(string name, string dir = null)
             {
-                var path = Path.Combine(_basePath, name);
+				var path = Path.Combine(dir ?? _basePath, name);
                 var orAdd = _journals.GetOrAdd(name, _ => new Lazy<IVirtualPager>(() => new MemoryMapPager(path, _flushMode)));
                 return orAdd.Value;
             }
 
             public override void Dispose()
             {
-                if (disposed)
+                if (Disposed)
                     return;
-                disposed = true;
-                if(_dataPager.IsValueCreated)
+                Disposed = true;
+                if (_dataPager.IsValueCreated)
                     _dataPager.Value.Dispose();
                 foreach (var journal in _journals)
                 {
-                    if(journal.Value.IsValueCreated)
+                    if (journal.Value.IsValueCreated)
                         journal.Value.Value.Dispose();
                 }
             }
@@ -109,7 +134,7 @@ namespace Voron
                 get { return _dataPager; }
             }
 
-            public override IVirtualPager CreateLogPager(string name)
+            public override IVirtualPager CreateJournalPager(string name, string dir)
             {
                 IVirtualPager value;
                 if (_logs.TryGetValue(name, out value))
@@ -121,9 +146,9 @@ namespace Voron
 
             public override void Dispose()
             {
-                if (disposed)
+                if (Disposed)
                     return;
-                disposed = true;
+                Disposed = true;
 
                 _dataPager.Dispose();
                 foreach (var virtualPager in _logs)
