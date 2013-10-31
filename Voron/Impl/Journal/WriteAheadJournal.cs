@@ -208,7 +208,7 @@ namespace Voron.Impl.Journal
 			{
 				// here we need to mark that transaction is split in both log files
 				// it will have th following transaction markers in the headers
-				// log_1: [Start|Split] log_2: [Split|Commit]
+				// log_1: [Start|Split|Commit] log_2: [Split|Commit]
 
 				CurrentFile.TransactionSplit(tx);
 				_splitJournalFiles.Add(CurrentFile);
