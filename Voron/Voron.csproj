@@ -119,7 +119,7 @@
     <Compile Include="Util\NativeFileMethods.cs" />
     <Compile Include="Util\OverflowStream.cs" />
     <Compile Include="Impl\Backup\BackupMethods.cs" />
-    <Compile Include="Util\DataCopyHelper.cs" />
+    <Compile Include="Util\DataCopier.cs" />
     <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\LittleEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\EndianBitConverter.cs" />

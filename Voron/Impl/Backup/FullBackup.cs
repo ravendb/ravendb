@@ -5,20 +5,22 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Immutable;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.IO.Packaging;
+using Voron.Impl.Journal;
 using Voron.Util;
 
 namespace Voron.Impl.Backup
 {
 	public unsafe class FullBackup
 	{
-		public void ToFile(StorageEnvironment env, string backupPath)
+		public void ToFile(StorageEnvironment env, string backupPath, CompressionOption compression = CompressionOption.Maximum)
 		{
 			var dataPager = env.Options.DataPager;
-			var bufferSize = dataPager.PageSize * 16;
-
+			var copier = new DataCopier(dataPager.PageSize*16);
 			Transaction txr = null;
 			try
 			{
@@ -26,21 +28,39 @@ namespace Voron.Impl.Backup
 				{
 					// data file backup
 					var dataPart = package.CreatePart(new Uri("/db.voron", UriKind.Relative),
-													  System.Net.Mime.MediaTypeNames.Application.Octet);
+													  System.Net.Mime.MediaTypeNames.Application.Octet,
+													  compression);
+					Debug.Assert(dataPart != null);
 
 					var dataStream = dataPart.GetStream();
 
 					long allocatedPages;
 
+					ImmutableList<JournalFile> files; // thread safety copy
+					long lastWrittenLogPage = -1;
+					long lastWrittenLogFile = -1;
 					using (var txw = env.NewTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
 					{
 						txr = env.NewTransaction(TransactionFlags.Read); // now have snapshot view
 						allocatedPages = dataPager.NumberOfAllocatedPages;
 
+						// log files backup
+
+						files = env.Journal.Files;
+
+						files.ForEach(x => x.AddRef());
+
+						if (env.Journal.CurrentFile != null)
+						{
+							lastWrittenLogFile = env.Journal.CurrentFile.Number;
+							lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition - 1;
+						}
+
+
 						var firstPage = dataPager.Read(0);
 
 
-						DataCopyHelper.ToStream(firstPage.Base, dataPager.PageSize * 2, bufferSize, dataStream);
+						copier.ToStream(firstPage.Base, dataPager.PageSize * 2, dataStream);
 
 						//txw.Commit(); intentionally not committing
 					}
@@ -48,13 +68,7 @@ namespace Voron.Impl.Backup
 					// now can copy everything else
 					var firstDataPage = dataPager.Read(2);
 
-					DataCopyHelper.ToStream(firstDataPage.Base, dataPager.PageSize * (allocatedPages - 2), bufferSize, dataStream);
-
-					// log files backup
-
-					var files = env.Journal.Files; // thread safety copy
-
-					files.ForEach(x => x.AddRef());
+					copier.ToStream(firstDataPage.Base, dataPager.PageSize * (allocatedPages - 2), dataStream);
 
 					try
 					{
@@ -62,10 +76,17 @@ namespace Voron.Impl.Backup
 						{
 							var journalPart = package.CreatePart(
 								new Uri("/" + env.Journal.LogName(journalFile.Number), UriKind.Relative),
-								System.Net.Mime.MediaTypeNames.Application.Octet);
+								System.Net.Mime.MediaTypeNames.Application.Octet, 
+								compression);
 
-							DataCopyHelper.ToStream(journalFile.Pager.Read(0).Base, env.Options.MaxLogFileSize, bufferSize,
-							                        journalPart.GetStream());
+							Debug.Assert(journalPart != null);
+
+							var pagesToCopy = journalFile.Pager.NumberOfAllocatedPages;
+							if (journalFile.Number == lastWrittenLogFile)
+								pagesToCopy = lastWrittenLogPage;
+							copier.ToStream(journalFile.Pager.Read(0).Base,
+								pagesToCopy*journalFile.Pager.PageSize,
+								journalPart.GetStream());
 						}
 					}
 					finally
