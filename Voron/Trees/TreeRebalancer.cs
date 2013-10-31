@@ -61,6 +61,10 @@ namespace Voron.Trees
             if (sibling.SizeUsed > _tx.DataPager.PageMinSpace &&
                 sibling.NumberOfEntries > minKeys)
             {
+	            if (page.PageNumber == 916 && sibling.PageNumber == 1866)
+	            {
+		            
+	            }
                 // neighbor is over the min size and has enough key, can move just one key to  the current page
                 if(page.IsBranch)
                     MoveBranchNode(parentPage, sibling, page);

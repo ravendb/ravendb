@@ -10,6 +10,12 @@ namespace Voron.Debugging
 {
     public unsafe class TreeDumper
     {
+	    public static void DumpHumanReadable(Transaction tx, string path, Page start, int showNodesEvery = 25)
+	    {
+		    using (var writer = File.CreateText(path))
+		    {
+		    }
+	    }
         public static void Dump(Transaction tx, string path, Page start, int showNodesEvery = 25)
         {
             using (var writer = File.CreateText(path))
@@ -100,7 +106,7 @@ digraph structs {
         {
             if (key.Length <= size)
                 return key;
-            return key.Substring(0, size - 3) + "...";
+	        return "..." + key.Substring(key.Length - size - 3, size - 3);
         }
 
         private static unsafe string GetBranchNodeString(int i, Slice key, Page p, NodeHeader* node)
