@@ -81,6 +81,7 @@
     <Compile Include="Storage\Pagers.cs" />
     <Compile Include="Storage\Restarts.cs" />
     <Compile Include="Storage\Snapshots.cs" />
+    <Compile Include="Storage\SplittingVeryBig.cs" />
     <Compile Include="Storage\VeryBig.cs" />
     <Compile Include="Trees\Basic.cs" />
     <Compile Include="Trees\CanIterateBackward.cs" />

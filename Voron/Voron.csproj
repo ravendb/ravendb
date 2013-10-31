@@ -90,6 +90,7 @@
     <Compile Include="Impl\NativeMethods.cs" />
     <Compile Include="Trees\EmptyIterator.cs" />
     <Compile Include="Trees\IIterator.cs" />
+    <Compile Include="Util\MultiBytePointer.cs" />
     <Compile Include="Trees\SingleEntryIterator.cs" />
     <Compile Include="Trees\TreeIterator.cs" />
     <Compile Include="Trees\NodeFlags.cs" />
@@ -110,6 +111,7 @@
     <Compile Include="Trees\TreeDataInTransaction.cs" />
     <Compile Include="Trees\TreeMutableState.cs" />
     <Compile Include="Trees\TreeRebalancer.cs" />
+    <Compile Include="Util\OverflowStream.cs" />
     <Compile Include="Util\Crc.cs" />
     <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\DoubleConverter.cs" />
