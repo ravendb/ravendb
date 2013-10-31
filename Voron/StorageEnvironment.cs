@@ -110,7 +110,6 @@ namespace Voron
                 var freeSpace = Tree.Open(tx, _sliceComparer, header == null ? &entry->Root : &header->FreeSpace);
 
 				tx.UpdateRootsIfNeeded(root, freeSpace);
-				tx.RecoverTreesIfNeeded();
 				tx.Commit();
 			}
 		}

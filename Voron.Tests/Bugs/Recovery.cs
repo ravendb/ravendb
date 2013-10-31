@@ -38,9 +38,11 @@
 			{
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
+					var tree = env.CreateTree(tx, "tree");
+
 					for (var i = 0; i < 100; i++)
 					{
-						env.CreateTree(tx, "tree" + i);
+						tree.Add(tx, "key" + i, new MemoryStream());
 					}
 
 					tx.Commit();
@@ -49,11 +51,21 @@
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					env.CreateTree(tx, "tree");
+
+					tx.Commit();
+				}
+
+
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
+					var tree = tx.GetTree("tree");
+
 					for (var i = 0; i < 100; i++)
 					{
-						Assert.NotNull(tx.GetTree("tree" + i));
+						Assert.NotNull(tree.Read(tx, "key" + i));
 					}
 				}
 			}
@@ -71,10 +83,7 @@
 			{
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					for (var i = 0; i < 10000; i++)
-					{
-						env.CreateTree(tx, "tree" + i);
-					}
+					env.CreateTree(tx, "tree");
 
 					tx.Commit();
 				}
@@ -83,20 +92,13 @@
 				{
 					for (var i = 0; i < 10000; i++)
 					{
-						tx.GetTree("tree" + i).Add(tx, "a" + i, new MemoryStream());
+						tx.GetTree("tree").Add(tx, "a" + i, new MemoryStream());
 					}
 				}
 			}
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
-				using (var tx = env.NewTransaction(TransactionFlags.Read))
-				{
-					for (var i = 0; i < 10000; i++)
-					{
-						Assert.NotNull(tx.GetTree("tree" + i));
-					}
-				}
 			}
 		}
 
@@ -112,11 +114,8 @@
 			{
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					for (var i = 0; i < 10000; i++)
-					{
-						env.CreateTree(tx, "atree" + i);
-						env.CreateTree(tx, "btree" + i);
-					}
+					env.CreateTree(tx, "atree");
+					env.CreateTree(tx, "btree");
 
 					tx.Commit();
 				}
@@ -125,22 +124,14 @@
 				{
 					for (var i = 0; i < 10000; i++)
 					{
-						tx.GetTree("atree" + i).Add(tx, "a" + i, new MemoryStream());
-						tx.GetTree("btree" + i).MultiAdd(tx, "a" + i, "a" + i);
+						tx.GetTree("atree").Add(tx, "a" + i, new MemoryStream());
+						tx.GetTree("btree").MultiAdd(tx, "a" + i, "a" + i);
 					}
 				}
 			}
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
-				using (var tx = env.NewTransaction(TransactionFlags.Read))
-				{
-					for (var i = 0; i < 10000; i++)
-					{
-						Assert.NotNull(tx.GetTree("atree" + i));
-						Assert.NotNull(tx.GetTree("btree" + i));
-					}
-				}
 			}
 		}
 
@@ -156,9 +147,11 @@
 			{
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					for (var i = 0; i < 100; i++)
+					var tree = env.CreateTree(tx, "atree");
+
+					for (var i = 0; i < 1000; i++)
 					{
-						env.CreateTree(tx, "atree" + i);
+						tree.Add(tx, "key" + i, new MemoryStream());
 					}
 
 					tx.Commit();
@@ -166,9 +159,11 @@
 
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
+					var tree = env.CreateTree(tx, "btree");
+
 					for (var i = 0; i < 1; i++)
 					{
-						env.CreateTree(tx, "btree" + i);
+						tree.Add(tx, "key" + i, new MemoryStream());
 					}
 
 					tx.Commit();
@@ -177,16 +172,27 @@
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					env.CreateTree(tx, "atree");
+					env.CreateTree(tx, "btree");
+
+					tx.Commit();
+				}
+
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
-					for (var i = 0; i < 100; i++)
+					var aTree = tx.GetTree("atree");
+					var bTree = tx.GetTree("btree");
+
+					for (var i = 0; i < 1000; i++)
 					{
-						Assert.NotNull(tx.GetTree("atree" + i));
+						Assert.NotNull(aTree.Read(tx, "key" + i));
 					}
 
 					for (var i = 0; i < 1; i++)
 					{
-						Assert.NotNull(tx.GetTree("btree" + i));
+						Assert.NotNull(bTree.Read(tx, "key" + i));
 					}
 				}
 			}
@@ -204,9 +210,11 @@
 			{
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
+					var tree = env.CreateTree(tx, "atree");
+
 					for (var i = 0; i < 1000; i++)
 					{
-						env.CreateTree(tx, "atree" + i);
+						tree.Add(tx, "key" + i, new MemoryStream());
 					}
 
 					tx.Commit();
@@ -214,13 +222,11 @@
 
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
+					var tree = env.CreateTree(tx, "btree");
+
 					for (var i = 0; i < 5; i++)
 					{
-						if (i == 4)
-						{
-						}
-
-						env.CreateTree(tx, "btree" + i);
+						tree.Add(tx, "key" + i, new MemoryStream());
 					}
 
 					tx.Commit();
@@ -229,16 +235,27 @@
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					env.CreateTree(tx, "atree");
+					env.CreateTree(tx, "btree");
+
+					tx.Commit();
+				}
+
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
-					for (var i = 0; i < 100; i++)
+					var aTree = tx.GetTree("atree");
+					var bTree = tx.GetTree("btree");
+
+					for (var i = 0; i < 1000; i++)
 					{
-						Assert.NotNull(tx.GetTree("atree" + i));
+						Assert.NotNull(aTree.Read(tx, "key" + i));
 					}
 
-					for (var i = 0; i < 1; i++)
+					for (var i = 0; i < 5; i++)
 					{
-						Assert.NotNull(tx.GetTree("btree" + i));
+						Assert.NotNull(bTree.Read(tx, "key" + i));
 					}
 				}
 			}
@@ -263,11 +280,7 @@
 			{
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					for (var i = 0; i < count; i++)
-					{
-						env.CreateTree(tx, "atree" + i);
-					}
-
+					env.CreateTree(tx, "atree");
 					env.CreateTree(tx, "btree");
 
 					tx.Commit();
@@ -275,11 +288,12 @@
 
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
+					var aTree = tx.GetTree("atree");
 					var bTree = tx.GetTree("btree");
 
 					for (var i = 0; i < count; i++)
 					{
-						tx.GetTree("atree" + i).Add(tx, "a" + i, new MemoryStream(buffer));
+						aTree.Add(tx, "a" + i, new MemoryStream(buffer));
 						bTree.MultiAdd(tx, "a", "a" + i);
 					}
 
@@ -294,16 +308,21 @@
 
 			using (var env = new StorageEnvironment(options))
 			{
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					env.CreateTree(tx, "atree");
+					env.CreateTree(tx, "btree");
+
+					tx.Commit();
+				}
+
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
+					var aTree = tx.GetTree("atree");
 					var bTree = tx.GetTree("btree");
-					Assert.NotNull(bTree);
 
 					for (var i = 0; i < count; i++)
 					{
-						var aTree = tx.GetTree("atree" + i);
-						Assert.NotNull(aTree);
-
 						var read = aTree.Read(tx, "a" + i);
 						Assert.NotNull(read);
 
