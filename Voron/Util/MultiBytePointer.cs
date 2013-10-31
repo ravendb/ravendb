@@ -69,7 +69,6 @@
 					}
 					while (_currentPointer.Value.AvailableLength > 0 && lengthToWrite > 0);
 					
-					stream.Flush();
 					_currentPointer = _currentPointer.Next;
 				}
 			}
