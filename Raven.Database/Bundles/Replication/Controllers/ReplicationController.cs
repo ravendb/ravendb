@@ -19,10 +19,13 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.Replication.Controllers
 {
-	[ExportMetadata("Bundle", "Replication")]
-	[InheritedExport(typeof(RavenApiController))]
 	public class ReplicationController : BundlesApiController
 	{
+		public override string BundleName
+		{
+			get { return "replication"; }
+		}
+
 		private ReplicationTask replicationTask;
 		public ReplicationTask ReplicationTask
 		{
@@ -374,11 +377,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				ReplicationConflictResolvers = AttachmentReplicationConflictResolvers,
 				Src = src
 			}.Replicate(id, metadata, data);
-		}
-
-		public override string BundleName
-		{
-			get { return "Replication"; }
 		}
 	}
 }

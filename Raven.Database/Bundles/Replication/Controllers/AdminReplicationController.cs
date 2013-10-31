@@ -13,10 +13,13 @@ using Raven.Database.Server.Controllers.Admin;
 
 namespace Raven.Database.Bundles.Replication.Controllers
 {
-	[ExportMetadata("Bundle", "Replication")]
-	[InheritedExport(typeof(RavenApiController))]
 	public class AdminReplicationController : AdminBundlesApiController
 	{
+		public override string BundleName
+		{
+			get { return "replication"; }
+		}
+
 		private readonly HttpRavenRequestFactory requestFactory;
 
 		public AdminReplicationController()
@@ -178,11 +181,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 			{
 				return streamReader.ReadToEnd();
 			}
-		}
-
-		public override string BundleName
-		{
-			get { return "Replication"; }
 		}
 	}
 }

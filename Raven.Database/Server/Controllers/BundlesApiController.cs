@@ -15,7 +15,7 @@ namespace Raven.Database.Server.Controllers
 			InnerInitialization(controllerContext);
 			if (DatabasesLandlord.SystemConfiguration.ActiveBundles.Contains(BundleName) == false)
 			{
-				throw new InvalidOperationException("Don't have the Bundle " + BundleName + "active");
+				throw new InvalidOperationException("Don't have the Bundle " + BundleName + " active");
 			}
 
 			return base.ExecuteAsync(controllerContext, cancellationToken);
