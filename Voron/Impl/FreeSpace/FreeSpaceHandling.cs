@@ -35,17 +35,117 @@ namespace Voron.Impl.FreeSpace
                 {
                     return TryFindSmallValue(tx, it, num);
                 }
-                return TryFindLargeValue(it, num);
+                return TryFindLargeValue(tx, it, num);
             }
         }
 
-        private long? TryFindLargeValue(TreeIterator it, int num)
+        private long? TryFindLargeValue(Transaction tx, TreeIterator it, int num)
         {
-            // TODO: Daniel's have fun with it
+	        int numberOfNeededFullSections = num/NumberOfPagesInSection;
+	        int numberOfExtraBitsNeeded = num%NumberOfPagesInSection;
+	        int foundSections = 0;
+	        Slice startSection = null;
+	        long? startSectionId = null;
+			var sections = new List<Slice>();
+
+	        do
+	        {
+				using (var stream = it.CreateStreamForCurrent())
+				{
+					var current = new StreamBitArray(stream);
+					var currentSectionId = it.CurrentKey.ToInt64();
+
+					//need to find full free pages
+					if (current.SetCount < NumberOfPagesInSection)
+					{
+						ResetSections(ref foundSections, sections, ref startSection, ref startSectionId);
+						continue;
+					}
+
+					//those sections are not following each other in the memory
+					if (startSectionId != null && currentSectionId != startSectionId + foundSections)
+					{
+						ResetSections(ref foundSections, sections, ref startSection, ref startSectionId);
+					}
+
+					//set the first section of the sequence
+					if (startSection == null)
+					{
+						startSection = it.CurrentKey;
+						startSectionId = currentSectionId;
+					}
+
+					sections.Add(it.CurrentKey);
+					foundSections++;
+
+					if (foundSections != numberOfNeededFullSections) 
+						continue;
+					
+					//we found enough full sections now we need just a bit more
+					if (numberOfExtraBitsNeeded == 0)
+					{
+						foreach (var section in sections)
+						{
+							tx.State.FreeSpaceRoot.Delete(tx, section);
+						}
+
+						return startSectionId * NumberOfPagesInSection;
+					}
+
+					var nextSectionId = currentSectionId + 1;
+					var nextId = new Slice(EndianBitConverter.Big.GetBytes(nextSectionId));
+					var read = tx.State.FreeSpaceRoot.Read(tx, nextId);
+					if (read == null)
+					{
+						//not a following next section
+						ResetSections(ref foundSections, sections, ref startSection, ref startSectionId);
+						continue;
+					}
+
+					var next = new StreamBitArray(read.Stream);
+
+					if (next.HasStartRangeCount(numberOfExtraBitsNeeded) == false)
+					{
+						//not enough start range count
+						ResetSections(ref foundSections, sections, ref startSection, ref startSectionId);
+						continue;
+					}
+
+					//mark selected bits to false
+					if (next.SetCount == numberOfExtraBitsNeeded)
+					{
+						tx.State.FreeSpaceRoot.Delete(tx, nextId);
+					}
+					else
+					{
+						for (int i = 0; i < numberOfExtraBitsNeeded; i++)
+						{
+							next.Set(i, false);
+						}
+						tx.State.FreeSpaceRoot.Add(tx, nextId, next.ToStream());
+					}
+
+					foreach (var section in sections)
+					{
+						tx.State.FreeSpaceRoot.Delete(tx, section);
+					}
+
+					return startSectionId * NumberOfPagesInSection;
+				}
+	        } while (it.MoveNext());
+
             return null;
         }
 
-        private long? TryFindSmallValue(Transaction tx, TreeIterator it, int num)
+	    private static void ResetSections(ref int foundSections, List<Slice> sections, ref Slice startSection, ref long? startSectionId)
+	    {
+		    foundSections = 0;
+		    startSection = null;
+		    startSectionId = null;
+		    sections.Clear();
+	    }
+
+	    private long? TryFindSmallValue(Transaction tx, TreeIterator it, int num)
         {
             do
             {
