@@ -8,7 +8,27 @@ namespace Voron
 {
     public abstract class StorageEnvironmentOptions : IDisposable
     {
-        public long LogFileSize { get; set; }
+        public long MaxLogFileSize
+        {
+            get { return _maxLogFileSize; }
+            set
+            {
+                if (value < _initialLogFileSize)
+                    InitialLogFileSize = value;
+                _maxLogFileSize = value;
+            }
+        }
+
+        public long InitialLogFileSize
+        {
+            get { return _initialLogFileSize; }
+            set
+            {
+                if (value > MaxLogFileSize)
+                    MaxLogFileSize = value;
+                _initialLogFileSize = value;
+            }
+        }
 
         public bool OwnsPagers { get; set; }
 
@@ -18,11 +38,16 @@ namespace Voron
 
         public abstract IVirtualPager CreateLogPager(string name);
 
-        protected bool disposed;
+        protected bool Disposed;
+        private long _initialLogFileSize;
+        private long _maxLogFileSize;
 
         protected StorageEnvironmentOptions()
         {
-            LogFileSize = 64 * 1024 * 1024;
+            MaxLogFileSize = 64 * 1024 * 1024;
+
+            InitialLogFileSize = 64 * 1024;
+
             OwnsPagers = true;
             DeleteUnusedLogFiles = true;
         }
@@ -79,14 +104,14 @@ namespace Voron
 
             public override void Dispose()
             {
-                if (disposed)
+                if (Disposed)
                     return;
-                disposed = true;
-                if(_dataPager.IsValueCreated)
+                Disposed = true;
+                if (_dataPager.IsValueCreated)
                     _dataPager.Value.Dispose();
                 foreach (var journal in _journals)
                 {
-                    if(journal.Value.IsValueCreated)
+                    if (journal.Value.IsValueCreated)
                         journal.Value.Value.Dispose();
                 }
             }
@@ -121,9 +146,9 @@ namespace Voron
 
             public override void Dispose()
             {
-                if (disposed)
+                if (Disposed)
                     return;
-                disposed = true;
+                Disposed = true;
 
                 _dataPager.Dispose();
                 foreach (var virtualPager in _logs)

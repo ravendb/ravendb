@@ -31,7 +31,11 @@ namespace Voron.Trees
 
             if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
             {
-                // need to delete the implicit left page, shift right 
+				if (page.PageNumber == 2053 && parentPage.PageNumber == 726)
+				{
+					DebugStuff.DumpHumanReadable(_tx, _tree.State.RootPageNumber, "before-2053-removal-");
+				}
+				// need to delete the implicit left page, shift right 
                 if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2)
                 {
 					var newImplicit = parentPage.GetNode(1)->PageNumber;
@@ -43,7 +47,16 @@ namespace Voron.Trees
                 {
                     parentPage.RemoveNode(parentPage.LastSearchPositionOrLastEntry);
                 }
+				
+				_tx.FreePage(page.PageNumber);
                 cursor.Pop();
+
+				if (page.PageNumber == 2053 && parentPage.PageNumber == 726)
+				{
+					DebugStuff.DumpHumanReadable(_tx, _tree.State.RootPageNumber, "after-2053-removal-");
+				}
+
+
                 return parentPage;
             }
 
@@ -60,13 +73,20 @@ namespace Voron.Trees
             minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
             if (sibling.SizeUsed > _tx.DataPager.PageMinSpace &&
                 sibling.NumberOfEntries > minKeys)
-            {
+            {	         
                 // neighbor is over the min size and has enough key, can move just one key to  the current page
-                if(page.IsBranch)
-                    MoveBranchNode(parentPage, sibling, page);
-                else
-                    MoveLeafNode(parentPage, sibling, page);
-                cursor.Pop();
+	            if (page.IsBranch)
+	            {
+		            if (page.PageNumber == 916 && sibling.PageNumber == 1866)
+		            {
+			            DebugStuff.DumpHumanReadable(_tx,_tree.State.RootPageNumber,"before-exception-");
+		            }
+		            MoveBranchNode(parentPage, sibling, page);
+	            }
+	            else
+		            MoveLeafNode(parentPage, sibling, page);
+	            cursor.Pop();
+
                 return parentPage;
             }
 
@@ -74,15 +94,16 @@ namespace Voron.Trees
             {
 				if (!HasEnoughSpaceToCopyNodes(sibling, page))
 					return null;
-					MergePages(parentPage, sibling, page);
+				MergePages(parentPage, sibling, page);
             }
             else // this is the left page, merge right
             {
 				if (!HasEnoughSpaceToCopyNodes(page, sibling))
 					return null;
-					MergePages(parentPage, page, sibling);
+				MergePages(parentPage, page, sibling);
             }
-            cursor.Pop();
+            cursor.Pop();			
+
             return parentPage;
         }
 

@@ -274,7 +274,7 @@
 				Directory.Delete(path, true);
 
 			var options = StorageEnvironmentOptions.ForPath(path);
-			options.LogFileSize = 10 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
 
 			using (var env = new StorageEnvironment(options))
 			{
@@ -304,7 +304,7 @@
 			var expectedString = Encoding.UTF8.GetString(buffer);
 
 			options = StorageEnvironmentOptions.ForPath(path);
-			options.LogFileSize = 10 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
 
 			using (var env = new StorageEnvironment(options))
 			{
