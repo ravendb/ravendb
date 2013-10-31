@@ -45,7 +45,7 @@ namespace Voron.Impl.Journal
 			_currentLogFileSize = env.Options.InitialLogFileSize;
 		}
 
-		private JournalFile NextFile(Transaction tx)
+		private JournalFile NextFile(Transaction tx, int numberOfPages = 0)
 		{
 			_logIndex++;
 
@@ -54,7 +54,7 @@ namespace Voron.Impl.Journal
 			var now = DateTime.UtcNow;
 			if ((now - _lastFile).TotalSeconds < 90)
 			{
-				_currentLogFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentLogFileSize * 2);
+				_currentLogFileSize = Math.Min(_env.Options.MaxLogFileSize, Math.Max(numberOfPages, _currentLogFileSize * 2));
 			}
 			_lastFile = now;
 
@@ -225,7 +225,7 @@ namespace Voron.Impl.Journal
 				CurrentFile.TransactionSplit(tx);
 				_splitJournalFiles.Add(CurrentFile);
 
-				CurrentFile = NextFile(tx);
+				CurrentFile = NextFile(tx, numberOfPages);
 
 				CurrentFile.TransactionSplit(tx);
 			}
@@ -244,7 +244,7 @@ namespace Voron.Impl.Journal
 
 				while (numberOfPages > 0)
 				{
-					CurrentFile = NextFile(tx);
+					CurrentFile = NextFile(tx, numberOfPages);
 					CurrentFile.TransactionSplit(tx);
 
 					var allocatedPages = Math.Min((int)CurrentFile.AvailablePages, numberOfPages);
