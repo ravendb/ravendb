@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using Voron.Impl.Backup;
 using Voron.Impl.Journal;
 
 namespace Voron.Impl.FileHeaders
@@ -18,7 +19,7 @@ namespace Voron.Impl.FileHeaders
         [FieldOffset(8)]
         public int Version;
         /// <summary>
-        /// The transaction id that commited this page
+        /// The transaction id that committed this page
         /// </summary>
         [FieldOffset(12)]
         public long TransactionId;
@@ -46,5 +47,11 @@ namespace Voron.Impl.FileHeaders
         /// </summary>
         [FieldOffset(152)] 
         public LogInfo LogInfo;
+
+		/// <summary>
+		/// Information about an incremental backup
+		/// </summary>
+	    [FieldOffset(192)] 
+		public IncrementalBackupInfo BackupInfo;
     }
 }

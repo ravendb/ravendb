@@ -47,36 +47,6 @@ namespace Voron.Tests.Trees
 
 
 		[Fact]
-		public void UpdateThatIsBiggerThanPageSize()
-		{
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				tx.State.Root.Add(tx, "1", new MemoryStream(new byte[1100]));
-				tx.State.Root.Add(tx, "2", new MemoryStream(new byte[1100]));
-				tx.State.Root.Add(tx, "3", new MemoryStream(new byte[1100]));
-
-				tx.Commit();
-			}
-
-			// update that is too big
-            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				tx.State.Root.Add(tx, "1", new MemoryStream(new byte[tx.DataPager.MaxNodeSize - 25]));
-                RenderAndShow(tx);
-
-				tx.Commit();
-
-
-			}
-
-			using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			{
-				Assert.Equal(3, tx.State.Root.State.PageCount);
-				Assert.Equal(0, tx.State.Root.State.OverflowPages);
-			}
-		}
-
-		[Fact]
 		public void CanAddAndUpdate()
 		{
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

@@ -20,7 +20,7 @@ namespace Voron.Trees
 		[FieldOffset(13)]
 		public int OverflowSize;
 
-        [FieldOffset(17)]
-        public int ItemCount;
+		[FieldOffset(17)]
+		public long NextOverflowPage;
 	}
 }

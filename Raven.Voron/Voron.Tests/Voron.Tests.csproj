@@ -49,21 +49,27 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="xunit">
-      <HintPath>..\packages\xunit.1.9.1\lib\net20\xunit.dll</HintPath>
+    <Reference Include="xunit, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
+    </Reference>
+    <Reference Include="xunit.extensions">
+      <HintPath>..\packages\xunit.extensions.1.9.2\lib\net20\xunit.extensions.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Backup\CanBackupData.cs" />
+    <Compile Include="Backups\Full.cs" />
+    <Compile Include="Backups\Incremental.cs" />
+    <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\MultiAdds.cs" />
     <Compile Include="Bugs\Snapshots.cs" />
     <Compile Include="Bugs\Deletes.cs" />
     <Compile Include="Bugs\EmptyTree.cs" />
     <Compile Include="Bugs\PageSplitter.cs" />
+    <Compile Include="Bugs\Recovery.cs" />
     <Compile Include="Bugs\TreeRebalancer.cs" />
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
-    <Compile Include="Impl\ConsecutiveSequencesTests.cs" />
     <Compile Include="Journal\BasicActions.cs" />
     <Compile Include="Journal\EdgeCases.cs" />
     <Compile Include="Journal\UncommittedTransactions.cs" />
@@ -76,21 +82,19 @@
     <Compile Include="Storage\Pagers.cs" />
     <Compile Include="Storage\Restarts.cs" />
     <Compile Include="Storage\Snapshots.cs" />
+    <Compile Include="Storage\SplittingVeryBig.cs" />
     <Compile Include="Storage\VeryBig.cs" />
     <Compile Include="Trees\Basic.cs" />
     <Compile Include="Trees\CanIterateBackward.cs" />
     <Compile Include="Trees\Deletes.cs" />
     <Compile Include="Trees\FreeSpaceTest.cs" />
-    <Compile Include="Trees\ItemsCount.cs" />
     <Compile Include="Trees\Iteration.cs" />
     <Compile Include="Trees\MultipleTrees.cs" />
     <Compile Include="StorageTest.cs" />
     <Compile Include="Trees\Rebalance.cs" />
     <Compile Include="Trees\Updates.cs" />
+    <Compile Include="Util\CrcTests.cs" />
     <Compile Include="Util\StreamExtensions.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Voron\Voron.csproj">
@@ -105,6 +109,12 @@
     <Content Include="Bugs\Data\data2.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Impl\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />

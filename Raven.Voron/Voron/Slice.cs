@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Voron.Impl;
 using Voron.Trees;
+using Voron.Util.Conversion;
 
 namespace Voron
 {
@@ -218,7 +219,7 @@ namespace Voron
 			if (Size != sizeof (long))
 				throw new NotSupportedException("Invalid size for int 64 key");
 			if (_array != null)
-				return BitConverter.ToInt64(_array, 0);
+				return EndianBitConverter.Big.ToInt64(_array, 0);
 			return *(long*) _pointer;
 		}
 	}

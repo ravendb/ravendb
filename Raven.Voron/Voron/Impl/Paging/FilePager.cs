@@ -127,6 +127,9 @@ namespace Voron.Impl
 		public override void Write(Page page, long? pageNumber)
 		{
 		    var number = pageNumber ?? page.PageNumber;
+
+			Debug.Assert(number <= NumberOfAllocatedPages);
+
 		    var position = number * PageSize;
 
 			var nativeOverlapped = new NativeOverlapped()

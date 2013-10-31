@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Voron.Impl;
 using Voron.Trees;
@@ -10,6 +13,65 @@ namespace Voron.Debugging
 {
     public unsafe class TreeDumper
     {
+	    public static void DumpHumanReadable(Transaction tx, string path, Page start)
+	    {
+		    using (var writer = File.CreateText(path))
+		    {
+                var stack = new Stack<Page>();
+                stack.Push(start);
+				writer.WriteLine("Root page #{0}",start.PageNumber);
+			    while (stack.Count > 0)
+			    {
+					var currentPage = stack.Pop();
+				    if (currentPage.IsLeaf)
+				    {						
+						writer.WriteLine();
+						writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Leaf), Used: {3}", currentPage.PageNumber,currentPage.NumberOfEntries,currentPage.Flags, currentPage.SizeUsed);
+						if(currentPage.NumberOfEntries <= 0)
+							writer.WriteLine("Empty page (tree corrupted?)");
+					    
+						var key = new Slice(SliceOptions.Key);
+					    for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries;nodeIndex++)
+					    {
+						    var node = currentPage.GetNode(nodeIndex);
+							key.Set(node);
+							writer.WriteLine("Node #{0}, Flags = {1}, {4} = {2}, Key = {3}, Entry Size: {5}", nodeIndex, node->Flags, node->DataSize, MaxString(key.ToString(), 25), node->Flags == NodeFlags.Data ? "Size" : "Page",
+                                SizeOf.NodeEntry(node));
+					    }
+						writer.WriteLine();
+				    }
+				    else if(currentPage.IsBranch) 
+				    {
+						writer.WriteLine();
+						writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Branch), Used: {3}", currentPage.PageNumber, currentPage.NumberOfEntries, currentPage.Flags, currentPage.SizeUsed);
+
+						var key = new Slice(SliceOptions.Key);
+						for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries; nodeIndex++)
+						{
+							var node = currentPage.GetNode(nodeIndex);
+							writer.WriteLine("Node #{2}, {0}  / to page #{1}, Entry Size: {3}", GetBranchNodeString(nodeIndex, key, currentPage, node), node->PageNumber, nodeIndex,
+                                SizeOf.NodeEntry(node));
+						}
+
+						for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries; nodeIndex++)
+						{
+							var node = currentPage.GetNode(nodeIndex);
+							if (node->PageNumber < 0 || node->PageNumber > tx.State.NextPageNumber)
+							{
+								writer.Write("Found invalid reference to page #{0}", currentPage.PageNumber);
+								stack.Clear();
+								break;
+							}
+
+							var child = tx.GetReadOnlyPage(node->PageNumber);
+							stack.Push(child);
+						}
+						
+						writer.WriteLine();
+					}
+			    }
+		    }
+	    }
         public static void Dump(Transaction tx, string path, Page start, int showNodesEvery = 25)
         {
             using (var writer = File.CreateText(path))
@@ -32,9 +94,9 @@ digraph structs {
 	subgraph cluster_p_{0} {{ 
 		label=""Page #{0}"";
 		color={3};
-	p_{0} [label=""Page: {0}|{1}|Entries: {2:#,#} | Item Count: {4} | {5:p} utilization""];
+	p_{0} [label=""Page: {0}|{1}|Entries: {2:#,#} | {4:p} utilization""];
 
-", p.PageNumber, p.Flags, p.NumberOfEntries, p.IsLeaf ? "black" : "blue", p.ItemCount,
+", p.PageNumber, p.Flags, p.NumberOfEntries, p.IsLeaf ? "black" : "blue",
     Math.Round(((tx.Environment.PageSize - p.SizeLeft) / (double)tx.Environment.PageSize), 2));
                     var key = new Slice(SliceOptions.Key);
                     if (p.IsLeaf && showNodesEvery > 0)
@@ -100,7 +162,7 @@ digraph structs {
         {
             if (key.Length <= size)
                 return key;
-            return key.Substring(0, size - 3) + "...";
+            return key.Substring(0, (size/2)) + "..." + key.Substring(key.Length - size/2, size/2);
         }
 
         private static unsafe string GetBranchNodeString(int i, Slice key, Page p, NodeHeader* node)
