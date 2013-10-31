@@ -1,10 +1,11 @@
 ﻿using System;
 using System.IO;
+using Voron.Impl.Backup;
 using Xunit;
 
-namespace Voron.Tests.Backup
+namespace Voron.Tests.Backups
 {
-    public class FullBackup : StorageTest
+    public class Full : StorageTest
     {
 	    private const string _backupFile = "voron-test.backup";
 	    private const string _recoveredStoragePath = "backup-test.data";
@@ -14,7 +15,7 @@ namespace Voron.Tests.Backup
 			options.MaxLogFileSize = 1000 * options.DataPager.PageSize;
 		}
 
-	    public FullBackup()
+	    public Full()
 	    {
 		    DeleteBackupData();
 	    }
@@ -62,13 +63,12 @@ namespace Voron.Tests.Backup
 				tx.Commit();
 			}
 
-			Env.FullBackup(_backupFile);
+			BackupMethods.Full.ToFile(Env, _backupFile);
 
-			StorageEnvironment.RestoreFullBackup(_backupFile, _recoveredStoragePath);
+			BackupMethods.Full.Restore(_backupFile, _recoveredStoragePath);
 
 		    var options = StorageEnvironmentOptions.ForPath(_recoveredStoragePath);
 		    options.MaxLogFileSize = Env.Options.MaxLogFileSize;
-	        options.InitialLogFileSize = Env.Options.InitialLogFileSize;
 
 			using (var env = new StorageEnvironment(options))
 			{

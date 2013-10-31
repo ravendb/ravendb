@@ -2,12 +2,11 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
-using System.IO.Packaging;
 using System.Linq;
 using System.Threading;
 using Voron.Debugging;
 using Voron.Impl;
+using Voron.Impl.Backup;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
@@ -27,7 +26,7 @@ namespace Voron
 		private readonly IVirtualPager _dataPager;
 		private readonly SliceComparer _sliceComparer;
 
-        private readonly WriteAheadJournal _journal;
+        internal WriteAheadJournal _journal;
         private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
 
 		private long _transactionsCounter;
@@ -155,6 +154,11 @@ namespace Voron
 	    {
 	        get { return _journal; }
 	    }
+
+		public IncrementalBackupInfo BackupInfo
+		{
+			get { return _journal.FileHeader->BackupInfo; }
+		}
 
 	    public void DeleteTree(Transaction tx, string name)
 		{
@@ -302,78 +306,6 @@ namespace Voron
 		    }
             _txWriter.Release();
 
-		}
-
-		public void FullBackup(string backupPath)
-		{
-			Transaction txr = null;
-			try
-			{
-				using (var package = Package.Open(backupPath, FileMode.Create))
-				{
-					// data file backup
-					var dataPart = package.CreatePart(new Uri("/db.voron", UriKind.Relative),
-					                                  System.Net.Mime.MediaTypeNames.Application.Octet, 
-                                                      CompressionOption.Normal);
-
-					var dataStream = dataPart.GetStream();
-
-					long allocatedPages;
-
-					using (var txw = NewTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
-					{
-						txr = NewTransaction(TransactionFlags.Read); // now have snapshot view
-						allocatedPages = _dataPager.NumberOfAllocatedPages;
-
-						var firstPage = _dataPager.Read(0);
-
-						CopyFile(firstPage.Base, _dataPager.PageSize*2, dataStream);
-
-						//txw.Commit(); intentionally not committing
-					}
-
-					// now can copy everything else
-					var firstDataPage = _dataPager.Read(2);
-
-					CopyFile(firstDataPage.Base, _dataPager.PageSize*(allocatedPages - 2), dataStream);
-
-					// log files backup
-					foreach (var journalFile in _journal.Files)
-					{
-						var journalPart = package.CreatePart(new Uri("/" + _journal.LogName(journalFile.Number), UriKind.Relative),
-						                                     System.Net.Mime.MediaTypeNames.Application.Octet,
-                                                             CompressionOption.Normal);
-
-						CopyFile(journalFile.Pager.Read(0).Base, journalFile.Pager.PageSize * journalFile.Pager.NumberOfAllocatedPages, journalPart.GetStream());
-					}
-
-					//txr.Commit(); intentionally not committing
-				}
-			}
-			finally
-			{
-				if (txr != null)
-					txr.Dispose();
-			}
-		}
-
-		public static void RestoreFullBackup(string backupPath, string voronDataDir)
-		{
-			ZipFile.ExtractToDirectory(backupPath, voronDataDir);
-		}
-
-		private void CopyFile(byte* ptr, long count, Stream output)
-		{
-			var buffer = new byte[_dataPager.PageSize * 16];
-
-			using (var stream = new UnmanagedMemoryStream(ptr, count))
-			{
-				while (stream.Position < stream.Length)
-				{
-					var read = stream.Read(buffer, 0, buffer.Length);
-					output.Write(buffer, 0, read);
-				}
-			}
 		}
 
 		public Dictionary<string, List<long>> AllPages(Transaction tx)

@@ -25,6 +25,7 @@ namespace Voron.Impl.Journal
 	    private long _currentLogFileSize;
 	    private DateTime _lastFile;
 		private readonly IList<JournalFile> _splitJournalFiles;
+
 		private long _logIndex = -1;
 		private FileHeader* _fileHeader;
 		private IntPtr _inMemoryHeader;
@@ -42,6 +43,11 @@ namespace Voron.Impl.Journal
 		    _currentLogFileSize = env.Options.InitialLogFileSize;
 		}
 
+		internal FileHeader* FileHeader
+		{
+			get { return _fileHeader; }
+		}
+
 		public IVirtualPager DataPager
 		{
 			get { return _dataPager; }
@@ -51,7 +57,7 @@ namespace Voron.Impl.Journal
 		{
 			_logIndex++;
 
-			var logPager = _env.Options.CreateLogPager(LogName(_logIndex));
+			var logPager = _env.Options.CreateJournalPager(LogName(_logIndex));
 
 	        var now = DateTime.UtcNow ;
             if ((now - _lastFile).TotalSeconds < 90)
@@ -77,7 +83,7 @@ namespace Voron.Impl.Journal
 		public void RecoverDatabase(FileHeader* fileHeader, out TransactionHeader* lastTxHeader)
 		{
 			_fileHeader = CopyFileHeader(fileHeader);
-			var logInfo = fileHeader->LogInfo;
+			var logInfo = _fileHeader->LogInfo;
 
 			lastTxHeader = null;
 
@@ -88,7 +94,7 @@ namespace Voron.Impl.Journal
 
 			for (var logNumber = logInfo.RecentLog - logInfo.LogFilesCount + 1; logNumber <= logInfo.RecentLog; logNumber++)
 			{
-				var pager = _env.Options.CreateLogPager(LogName(logNumber));
+				var pager = _env.Options.CreateJournalPager(LogName(logNumber));
 			    _currentLogFileSize = pager.NumberOfAllocatedPages;
 				var log = new JournalFile(pager, logNumber);
 				log.AddRef(); // creator reference - write ahead log
@@ -118,6 +124,8 @@ namespace Voron.Impl.Journal
 			_fileHeader->LogInfo.RecentLog = Files.Count > 0 ? _logIndex : -1;
 			_fileHeader->LogInfo.LogFilesCount = Files.Count;
 			_fileHeader->LogInfo.DataFlushCounter = _dataFlushCounter;
+
+			_fileHeader->BackupInfo.LastCreatedJournal = _logIndex;
 		}
 
 		internal void WriteFileHeader(long? pageToWriteHeader = null)
@@ -363,7 +371,7 @@ namespace Voron.Impl.Journal
 					var journalFiles = jrnls.RemoveAll(x => x.Number >= _lastSyncedLog);
 					foreach (var fullLog in journalFiles)
 					{
-						if (_waj._env.Options.DeleteUnusedLogFiles)
+						if (_waj._env.Options.IncrementalBackupEnabled == false)
 							fullLog.DeleteOnClose();
 					}
 
