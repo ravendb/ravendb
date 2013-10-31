@@ -5,8 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
-using System.Linq;
-using Voron.Impl;
 using Xunit;
 
 namespace Voron.Tests.Log

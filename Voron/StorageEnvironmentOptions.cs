@@ -32,11 +32,11 @@ namespace Voron
 
         public bool OwnsPagers { get; set; }
 
-        public bool DeleteUnusedLogFiles { get; set; }
+        public bool IncrementalBackupEnabled { get; set; }
 
         public abstract IVirtualPager DataPager { get; }
 
-        public abstract IVirtualPager CreateLogPager(string name);
+        public abstract IVirtualPager CreateJournalPager(string name, string dir = null);
 
         protected bool Disposed;
         private long _initialLogFileSize;
@@ -49,7 +49,7 @@ namespace Voron
             InitialLogFileSize = 64 * 1024;
 
             OwnsPagers = true;
-            DeleteUnusedLogFiles = true;
+            IncrementalBackupEnabled = false;
         }
 
         public static StorageEnvironmentOptions GetInMemory()
@@ -95,9 +95,9 @@ namespace Voron
                 }
             }
 
-            public override IVirtualPager CreateLogPager(string name)
+            public override IVirtualPager CreateJournalPager(string name, string dir = null)
             {
-                var path = Path.Combine(_basePath, name);
+				var path = Path.Combine(dir ?? _basePath, name);
                 var orAdd = _journals.GetOrAdd(name, _ => new Lazy<IVirtualPager>(() => new MemoryMapPager(path, _flushMode)));
                 return orAdd.Value;
             }
@@ -134,7 +134,7 @@ namespace Voron
                 get { return _dataPager; }
             }
 
-            public override IVirtualPager CreateLogPager(string name)
+            public override IVirtualPager CreateJournalPager(string name, string dir)
             {
                 IVirtualPager value;
                 if (_logs.TryGetValue(name, out value))

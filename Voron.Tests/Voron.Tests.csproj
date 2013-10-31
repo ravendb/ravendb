@@ -58,7 +58,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Backup\FullBackup.cs" />
+    <Compile Include="Backups\Full.cs" />
+    <Compile Include="Backups\Incremental.cs" />
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\MultiAdds.cs" />
     <Compile Include="Bugs\Snapshots.cs" />
@@ -81,6 +82,7 @@
     <Compile Include="Storage\Pagers.cs" />
     <Compile Include="Storage\Restarts.cs" />
     <Compile Include="Storage\Snapshots.cs" />
+    <Compile Include="Storage\SplittingVeryBig.cs" />
     <Compile Include="Storage\VeryBig.cs" />
     <Compile Include="Trees\Basic.cs" />
     <Compile Include="Trees\CanIterateBackward.cs" />
