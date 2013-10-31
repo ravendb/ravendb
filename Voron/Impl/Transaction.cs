@@ -140,6 +140,8 @@ namespace Voron.Impl
                 }
             }
 
+            Debug.Assert(pageNumber < State.NextPageNumber);
+
             var page = _journal.Allocate(this, pageNumber.Value, numberOfPages);
             page.PageNumber = pageNumber.Value;
             page.Lower = (ushort)Constants.PageHeaderSize;

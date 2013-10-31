@@ -26,7 +26,7 @@ namespace Voron.Debugging
 				    if (currentPage.IsLeaf)
 				    {						
 						writer.WriteLine();
-						writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Leaf)", currentPage.PageNumber,currentPage.NumberOfEntries,currentPage.Flags);
+						writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Leaf), Used: {3}", currentPage.PageNumber,currentPage.NumberOfEntries,currentPage.Flags, currentPage.SizeUsed);
 						if(currentPage.NumberOfEntries <= 0)
 							writer.WriteLine("Empty page (tree corrupted?)");
 					    
@@ -35,20 +35,22 @@ namespace Voron.Debugging
 					    {
 						    var node = currentPage.GetNode(nodeIndex);
 							key.Set(node);
-							writer.WriteLine("Node #{0}, Flags = {1}, {4} = {2}, Key = {3}", nodeIndex, node->Flags, node->DataSize, MaxString(key.ToString(), 25), node->Flags == NodeFlags.Data ? "Size" : "Page");
+							writer.WriteLine("Node #{0}, Flags = {1}, {4} = {2}, Key = {3}, Entry Size: {5}", nodeIndex, node->Flags, node->DataSize, MaxString(key.ToString(), 25), node->Flags == NodeFlags.Data ? "Size" : "Page",
+                                SizeOf.NodeEntry(node));
 					    }
 						writer.WriteLine();
 				    }
 				    else if(currentPage.IsBranch) 
 				    {
 						writer.WriteLine();
-						writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Branch)", currentPage.PageNumber, currentPage.NumberOfEntries, currentPage.Flags);
+						writer.WriteLine("Page #{0}, NumberOfEntries = {1}, Flags = {2} (Branch), Used: {3}", currentPage.PageNumber, currentPage.NumberOfEntries, currentPage.Flags, currentPage.SizeUsed);
 
 						var key = new Slice(SliceOptions.Key);
 						for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries; nodeIndex++)
 						{
 							var node = currentPage.GetNode(nodeIndex);
-							writer.WriteLine("Node #{2}, {0}  / to page {1}", GetBranchNodeString(nodeIndex, key, currentPage, node), node->PageNumber, nodeIndex);
+							writer.WriteLine("Node #{2}, {0}  / to page #{1}, Entry Size: {3}", GetBranchNodeString(nodeIndex, key, currentPage, node), node->PageNumber, nodeIndex,
+                                SizeOf.NodeEntry(node));
 						}
 
 						for (int nodeIndex = 0; nodeIndex < currentPage.NumberOfEntries; nodeIndex++)
@@ -160,7 +162,7 @@ digraph structs {
         {
             if (key.Length <= size)
                 return key;
-	        return "..." + key.Substring(key.Length - size - 3, size - 3);
+            return key.Substring(0, (size/2)) + "..." + key.Substring(key.Length - size/2, size/2);
         }
 
         private static unsafe string GetBranchNodeString(int i, Slice key, Page p, NodeHeader* node)

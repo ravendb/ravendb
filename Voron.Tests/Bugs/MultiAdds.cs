@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Xunit.Extensions;
 
 namespace Voron.Tests.Bugs
 {
@@ -32,61 +33,47 @@ namespace Voron.Tests.Bugs
 			return builder.Append("-").Append(indexString).ToString();
         }
 
-		[Fact]
-		public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail()
+		[Theory]
+        [InlineData(0500)]
+        [InlineData(1000)]
+        [InlineData(2000)]
+        [InlineData(3000)]
+        [InlineData(4000)]
+        [InlineData(5000)]
+		public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail(int size)
 		{
-			using (var Env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
 			{
 				var inputData = new List<byte[]>();
-				for (int i = 0; i < 3000; i++)
+				for (int i = 0; i < size; i++)
 				{
                     inputData.Add(Encoding.UTF8.GetBytes(RandomString(1024)));
 				}
 
-				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					Env.CreateTree(tx, "foo");
+					env.CreateTree(tx, "foo");
 					tx.Commit();
 				}
 
-				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.GetTree("foo");
 					for (int i = 0; i < inputData.Count; i++)
 					{
 						var buffer = inputData[i];
-						Assert.DoesNotThrow(() => tree.MultiAdd(tx, "ChildTreeKey", new Slice(buffer)));
-						using (var treeIterator = (TreeIterator)tree.MultiRead(tx, "ChildTreeKey"))
-						{
-							long branchPageNumberWithDuplicates;
-							if (DebugStuff.HasDuplicateBranchReferences(tx, tx.GetReadOnlyPage(treeIterator.TreeRootPage), out branchPageNumberWithDuplicates))
-							{
-								DebugStuff.DumpHumanReadable(tx, treeIterator.TreeRootPage, "duplicate-branch-references-");
-							}
-						}
+					    tree.MultiAdd(tx, "ChildTreeKey", new Slice(buffer));
 					}
 					tx.Commit();
 				}
 
-				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.GetTree("foo");
 					for (int i = 0; i < inputData.Count; i++)
 					{
 						var buffer = inputData[i];
-						using (var treeIterator = (TreeIterator) tree.MultiRead(tx, "ChildTreeKey"))
-						{
-							long branchPageNumberWithDuplicates;
-							if (DebugStuff.HasDuplicateBranchReferences(tx, tx.GetReadOnlyPage(treeIterator.TreeRootPage), out branchPageNumberWithDuplicates))
-							{
-								DebugStuff.DumpHumanReadable(tx, treeIterator.TreeRootPage, "duplicate-branch-references-");
-							}
-						}
-//						if (i >= 2923)
-//						{
-//							using(var treeIterator = (TreeIterator)tree.MultiRead(tx, "ChildTreeKey"))
-//								DebugStuff.DumpHumanReadable(tx, treeIterator.TreeRootPage,i + "-");
-//						}
+                        
 						Assert.DoesNotThrow(() => tree.MultiDelete(tx, "ChildTreeKey", new Slice(buffer)));
 					}
 

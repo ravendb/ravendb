@@ -88,7 +88,7 @@ namespace Voron.Impl.FreeSpace
                     count++;
                     if (count == num)
                     {
-                        page = currentSectionId << 12 | (NumberOfPagesInSection + start) ;
+                        page = currentSectionId * NumberOfPagesInSection  + start ;
                         break;
                     }
                 }
@@ -166,7 +166,7 @@ namespace Voron.Impl.FreeSpace
             }
 
 
-            result = currentSectionId << 12 | (NumberOfPagesInSection - currentRange);
+            result = currentSectionId * NumberOfPagesInSection + currentRange;
             return true;
         }
 
