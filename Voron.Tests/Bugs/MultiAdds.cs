@@ -52,9 +52,18 @@ namespace Voron.Tests.Bugs
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.GetTree("foo");
-					foreach (var buffer in inputData)
-					{						
+					for (int i = 0; i < inputData.Count; i++)
+					{
+						var buffer = inputData[i];
 						Assert.DoesNotThrow(() => tree.MultiAdd(tx, "ChildTreeKey", new Slice(buffer)));
+						using (var treeIterator = (TreeIterator)tree.MultiRead(tx, "ChildTreeKey"))
+						{
+							long branchPageNumberWithDuplicates;
+							if (DebugStuff.HasDuplicateBranchReferences(tx, tx.GetReadOnlyPage(treeIterator.TreeRootPage), out branchPageNumberWithDuplicates))
+							{
+								DebugStuff.DumpHumanReadable(tx, treeIterator.TreeRootPage, "duplicate-branch-references-");
+							}
+						}
 					}
 					tx.Commit();
 				}
@@ -65,10 +74,18 @@ namespace Voron.Tests.Bugs
 					for (int i = 0; i < inputData.Count; i++)
 					{
 						var buffer = inputData[i];
-//						if (i >= 1113)
+						using (var treeIterator = (TreeIterator) tree.MultiRead(tx, "ChildTreeKey"))
+						{
+							long branchPageNumberWithDuplicates;
+							if (DebugStuff.HasDuplicateBranchReferences(tx, tx.GetReadOnlyPage(treeIterator.TreeRootPage), out branchPageNumberWithDuplicates))
+							{
+								DebugStuff.DumpHumanReadable(tx, treeIterator.TreeRootPage, "duplicate-branch-references-");
+							}
+						}
+//						if (i >= 2923)
 //						{
 //							using(var treeIterator = (TreeIterator)tree.MultiRead(tx, "ChildTreeKey"))
-//								DebugStuff.RenderAndShow(tx, treeIterator.TreeRootPage,1);
+//								DebugStuff.DumpHumanReadable(tx, treeIterator.TreeRootPage,i + "-");
 //						}
 						Assert.DoesNotThrow(() => tree.MultiDelete(tx, "ChildTreeKey", new Slice(buffer)));
 					}
