@@ -157,10 +157,13 @@ namespace Voron
 
 		public IncrementalBackupInfo BackupInfo
 		{
-			get { return _journal.FileHeader->BackupInfo; }
+			get
+			{
+				throw new NotImplementedException();
+			}
 		}
 
-	    public void DeleteTree(Transaction tx, string name)
+		public void DeleteTree(Transaction tx, string name)
 		{
 			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
 				throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");

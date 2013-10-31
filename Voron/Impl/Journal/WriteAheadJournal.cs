@@ -67,7 +67,7 @@ namespace Voron.Impl.Journal
 
 		
             // protect against readers trying to modify anything here
-            _locker.EnterReadLock();
+            _locker.EnterWriteLock();
 	        try
 	        {
 			Files = Files.Add(log);
