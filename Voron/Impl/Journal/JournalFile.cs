@@ -16,7 +16,7 @@ using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
-    public unsafe class JournalFile : IDisposable
+	public unsafe class JournalFile : IDisposable
 	{
 		private const int PagesTakenByHeader = 1;
 
@@ -44,7 +44,7 @@ namespace Voron.Impl.Journal
 			_writePage = lastSyncedPage + 1;
 		}
 
-	    private StackTrace st = new StackTrace(true);
+		private StackTrace st = new StackTrace(true);
 
 		~JournalFile()
 		{
@@ -55,7 +55,7 @@ namespace Voron.Impl.Journal
 				Number + ". Number of references: " + _refs + " " + st);
 		}
 
-	    internal long WritePagePosition
+		internal long WritePagePosition
 		{
 			get { return _writePage; }
 		}
@@ -64,7 +64,7 @@ namespace Voron.Impl.Journal
 
 		public IEnumerable<long> GetModifiedPages(long? lastLogPageSyncedWithDataFile)
 		{
-			if(lastLogPageSyncedWithDataFile == null)
+			if (lastLogPageSyncedWithDataFile == null)
 				return _pageTranslationTable.Keys;
 
 			return _pageTranslationTable.Where(x => x.Value > lastLogPageSyncedWithDataFile).Select(x => x.Key);
@@ -120,7 +120,7 @@ namespace Voron.Impl.Journal
 				_currentTxHeader->TxMarker = TransactionMarker.Split;
 				_currentTxHeader->PageCount = -1;
 				_currentTxHeader->Crc = 0;
-			}	
+			}
 		}
 
 		public void TransactionCommit(Transaction tx)
@@ -134,10 +134,10 @@ namespace Voron.Impl.Journal
 			_currentTxHeader->PageCount = _allocatedPagesInTransaction;
 			_currentTxHeader->OverflowPageCount = _overflowPagesInTransaction;
 			tx.State.Root.State.CopyTo(&_currentTxHeader->Root);
-            tx.State.FreeSpaceRoot.State.CopyTo(&_currentTxHeader->FreeSpace);
+			tx.State.FreeSpaceRoot.State.CopyTo(&_currentTxHeader->FreeSpace);
 
-			var crcOffset = (int) (_currentTxHeader->PageNumberInLogFile + PagesTakenByHeader)*_pager.PageSize;
-			var crcCount = (_allocatedPagesInTransaction + _overflowPagesInTransaction)*_pager.PageSize;
+			var crcOffset = (int)(_currentTxHeader->PageNumberInLogFile + PagesTakenByHeader) * _pager.PageSize;
+			var crcCount = (_allocatedPagesInTransaction + _overflowPagesInTransaction) * _pager.PageSize;
 
 			_currentTxHeader->Crc = Crc.Value(_pager.PagerState.Base, crcOffset, crcCount);
 
@@ -149,7 +149,7 @@ namespace Voron.Impl.Journal
 
 		private TransactionHeader* GetTransactionHeader()
 		{
-			var result = (TransactionHeader*) Allocate(-1, PagesTakenByHeader).Base;
+			var result = (TransactionHeader*)Allocate(-1, PagesTakenByHeader).Base;
 			result->HeaderMarker = Constants.TransactionHeaderMarker;
 			result->PageNumberInLogFile = _writePage - PagesTakenByHeader;
 
@@ -166,12 +166,12 @@ namespace Voron.Impl.Journal
 			get { return _pager; }
 		}
 
-        public ImmutableDictionary<long, long> PageTranslationTable
-        {
-            get { return _pageTranslationTable; }
-        }
+		public ImmutableDictionary<long, long> PageTranslationTable
+		{
+			get { return _pageTranslationTable; }
+		}
 
-        private void Sync()
+		private void Sync()
 		{
 			var start = _lastSyncedPage + 1;
 			var count = _writePage - start;
@@ -193,7 +193,7 @@ namespace Voron.Impl.Journal
 
 			if (_pageTranslationTable.TryGetValue(pageNumber, out logPageNumber))
 				return _pager.Read(logPageNumber);
-			
+
 			return null;
 		}
 
@@ -259,26 +259,26 @@ namespace Voron.Impl.Journal
 				};
 		}
 
-        public TransactionHeader* RecoverAndValidate(long startRead, TransactionHeader* lastTxHeader)
-        {
-            var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
-            logFileReader.RecoverAndValidate();
+		public TransactionHeader* RecoverAndValidate(long startRead, TransactionHeader* lastTxHeader)
+		{
+			var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
+			logFileReader.RecoverAndValidate();
 
-            _pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
-            _writePage = logFileReader.WritePage;
-            _lastSyncedPage = logFileReader.LastSyncedPage;
+			_pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
+			_writePage = logFileReader.WritePage;
+			_lastSyncedPage = logFileReader.LastSyncedPage;
 
-            return logFileReader.LastTransactionHeader;
-        }
+			return logFileReader.LastTransactionHeader;
+		}
 
-	    public void DisposeWithoutClosingPager()
-	    {
+		public void DisposeWithoutClosingPager()
+		{
 			if (_disposed)
 				return;
 
 			GC.SuppressFinalize(this);
 
 			_disposed = true;
-	    }
+		}
 	}
 }

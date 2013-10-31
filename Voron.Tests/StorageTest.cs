@@ -29,7 +29,20 @@ namespace Voron.Tests
 			_storageEnvironment = new StorageEnvironment(_options);
 		}
 
-		private void DeleteDirectory(string dir)
+		protected void RestartDatabase()
+		{
+			var ownsPagers = _options.OwnsPagers;
+			_options.OwnsPagers = false;
+
+			_storageEnvironment.Dispose();
+
+			_options.OwnsPagers = ownsPagers;
+
+			_storageEnvironment = new StorageEnvironment(_options);
+
+		}
+
+		protected void DeleteDirectory(string dir)
 		{
 			if (Directory.Exists(dir) == false)
 				return;

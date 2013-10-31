@@ -113,9 +113,9 @@
     <Compile Include="Trees\TreeDataInTransaction.cs" />
     <Compile Include="Trees\TreeMutableState.cs" />
     <Compile Include="Trees\TreeRebalancer.cs" />
-    <Compile Include="Util\OverflowStream.cs" />
+    <Compile Include="Util\Conversion\Endianness.cs" />
+    <Compile Include="Util\Crc.cs" />
     <Compile Include="Util\NativeFileMethods.cs" />
-    <Compile Include="Util\OverflowStream.cs" />
     <Compile Include="Impl\Backup\BackupMethods.cs" />
     <Compile Include="Util\DataCopier.cs" />
     <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />

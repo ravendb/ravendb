@@ -2,13 +2,19 @@
 using System.Collections.Generic;
 using System.IO;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Voron.Tests.Storage
 {
 	public class BigValues : StorageTest
 	{
-		[Fact]
-		public void CanReuseLargeSpace()
+		[Theory]
+		[InlineData(0)]
+		[InlineData(1)]
+		[InlineData(2)]
+		[InlineData(3)]
+		[InlineData(4)]
+		public void CanReuseLargeSpace(int restartCount)
 		{
 			var random = new Random(43321);
 			var buffer = new byte[1024 * 1024 * 6 + 283];
@@ -18,6 +24,9 @@ namespace Voron.Tests.Storage
 				tx.State.Root.Add(tx, new Slice(BitConverter.GetBytes(1203)), new MemoryStream(buffer));
 				tx.Commit();
 			}
+
+			if (restartCount >= 1)
+				RestartDatabase();
 
 			Env.FlushLogToDataFile();
 
@@ -29,6 +38,9 @@ namespace Voron.Tests.Storage
 				tx.Commit();
 			}
 
+			if (restartCount >= 2)
+				RestartDatabase();
+
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				buffer = new byte[1024 * 1024 * 3 + 1238];
@@ -37,7 +49,13 @@ namespace Voron.Tests.Storage
 				tx.Commit();
 			}
 
+			if (restartCount >= 3)
+				RestartDatabase();
+
 			Env.FlushLogToDataFile();
+
+			if (restartCount >= 4)
+				RestartDatabase();
 
 			Assert.Equal(old ,Env.Options.DataPager.NumberOfAllocatedPages);
 
