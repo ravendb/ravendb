@@ -278,6 +278,27 @@ namespace Voron.Impl.Journal
 			return Files.Select(x => x.GetSnapshot()).ToList();
 		}
 
+
+        public bool HasTransactionsToFlush()
+        {
+            var currentFile = CurrentFile;
+            if (currentFile == null)
+                return false;
+
+            using (var tx = _env.NewTransaction(TransactionFlags.Read))
+            {
+                var lastSyncedLog = _fileHeader->LogInfo.LastSyncedLog;
+                var lastSyncedLogPage = _fileHeader->LogInfo.LastSyncedLogPage;
+
+                if (lastSyncedLog == currentFile.Number &&
+                    lastSyncedLogPage == currentFile.WritePagePosition - 1)
+                    return false;
+
+                tx.Commit();
+                return true;
+            }
+        }
+
         public class JournalApplicator
         {
             private readonly WriteAheadJournal _waj;
@@ -291,6 +312,7 @@ namespace Voron.Impl.Journal
                 _waj = waj;
                 _oldestActiveTransaction = oldestActiveTransaction;
             }
+
 
             public void ApplyLogsToDataFile()
             {
