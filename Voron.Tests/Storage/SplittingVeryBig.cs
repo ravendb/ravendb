@@ -9,7 +9,7 @@
 	{
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
-			options.LogFileSize = 10 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
 		}
 
 		[Fact]
@@ -57,7 +57,7 @@
 			random.NextBytes(buffer);
 
 			var options = StorageEnvironmentOptions.ForPath(path);
-			options.LogFileSize = 10 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
 
 			using (var env = new StorageEnvironment(options))
 			{
@@ -75,7 +75,7 @@
 			}
 
 			options = StorageEnvironmentOptions.ForPath(path);
-			options.LogFileSize = 10 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
 
 			using (var env = new StorageEnvironment(options))
 			{
