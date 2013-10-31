@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.IO.Packaging;
 using Voron.Impl.Backup;
 using Xunit;
 

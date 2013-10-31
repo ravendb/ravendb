@@ -22,6 +22,7 @@ namespace Voron.Impl.Backup
 			if (env.Options.IncrementalBackupEnabled == false)
 				throw new InvalidOperationException("Incremental backup is disabled for this storage");
 
+			var copier = new DataCopier(env.PageSize*16);
 			var backupInfo = env.BackupInfo;
 
 			using (var package = Package.Open(backupPath, FileMode.Create))
@@ -42,11 +43,10 @@ namespace Voron.Impl.Backup
 					journalFile.AddRef();
 					try
 					{
-						var bufferSize = journalFile.Pager.PageSize * 16;
 
 						//TODO Read(0)
-						
-						DataCopyHelper.ToStream(journalFile.Pager.Read(0).Base, env.Options.MaxLogFileSize, bufferSize, part.GetStream());
+
+						copier.ToStream(journalFile.Pager.Read(0).Base, env.Options.MaxLogFileSize, part.GetStream());
 					}
 					finally
 					{
