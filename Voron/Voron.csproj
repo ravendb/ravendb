@@ -46,18 +46,25 @@
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Debugging\EnvironmentStats.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
-    <Compile Include="Impl\ConsecutiveSequences.cs" />
+    <Compile Include="Impl\Backup\FullBackup.cs" />
+    <Compile Include="Impl\Backup\IncrementalBackupInfo.cs" />
     <Compile Include="Impl\Constants.cs" />
     <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
+    <Compile Include="Impl\Backup\IncrementalBackup.cs" />
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />
     <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
     <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
     <Compile Include="Impl\FlushMode.cs" />
-    <Compile Include="Impl\IFreeSpaceRepository.cs" />
+    <Compile Include="Impl\FreeSpace\StreamBitArray.cs" />
+    <Compile Include="Impl\FreeSpace\FreeSpaceHandling.cs" />
+    <Compile Include="Impl\FreeSpace\IFreeSpaceHandling.cs" />
+    <Compile Include="Impl\FreeSpace\NoFreeSpaceHandling.cs" />
     <Compile Include="Impl\Journal\JournalFile.cs" />
     <Compile Include="Impl\Journal\JournalReader.cs" />
     <Compile Include="Impl\Journal\LogInfo.cs" />
@@ -86,6 +93,9 @@
     <Compile Include="Impl\NativeMethods.cs" />
     <Compile Include="Trees\EmptyIterator.cs" />
     <Compile Include="Trees\IIterator.cs" />
+    <Compile Include="Util\Conversion\Endianness.cs" />
+    <Compile Include="Util\Crc.cs" />
+    <Compile Include="Util\MultiBytePointer.cs" />
     <Compile Include="Trees\SingleEntryIterator.cs" />
     <Compile Include="Trees\TreeIterator.cs" />
     <Compile Include="Trees\NodeFlags.cs" />
@@ -106,17 +116,24 @@
     <Compile Include="Trees\TreeDataInTransaction.cs" />
     <Compile Include="Trees\TreeMutableState.cs" />
     <Compile Include="Trees\TreeRebalancer.cs" />
-    <Compile Include="Util\Crc.cs" />
     <Compile Include="Util\NativeFileMethods.cs" />
+    <Compile Include="Util\OverflowStream.cs" />
+    <Compile Include="Impl\Backup\BackupMethods.cs" />
+    <Compile Include="Util\DataCopyHelper.cs" />
+    <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
+    <Compile Include="Util\Conversion\LittleEndianBitConverter.cs" />
+    <Compile Include="Util\Conversion\EndianBitConverter.cs" />
     <Compile Include="Util\TreeExtensions.cs" />
-    <Compile Include="Util\UnmanagedBits.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Util\Conversion\readme.txt" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>

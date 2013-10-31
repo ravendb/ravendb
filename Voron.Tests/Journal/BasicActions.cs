@@ -16,7 +16,7 @@ namespace Voron.Tests.Log
         // all tests here relay on the fact than one log file can contains max 10 pages
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.LogFileSize = 10 * options.DataPager.PageSize;
+            options.MaxLogFileSize = 10 * options.DataPager.PageSize;
         }
 
         [Fact]
@@ -62,8 +62,8 @@ namespace Voron.Tests.Log
                 tx.Commit();
             }
 
-            // however we put that into 2 log files
-            Assert.True(Env.Journal.Files.Count == 2);
+            // however we put that into 3 log files
+            Assert.Equal(3, Env.Journal.Files.Count);
 
             // and still can read from both files
             for (var i = 0; i < 15; i++)
