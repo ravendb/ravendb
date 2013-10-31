@@ -79,6 +79,7 @@ namespace Voron.Impl.Journal
 				_locker.ExitWriteLock();
 			}
 
+			_dataPager.Sync(); // we have to flush the new log information to disk, may be expensive, so we do it outside the lock
 
 			return log;
 		}
