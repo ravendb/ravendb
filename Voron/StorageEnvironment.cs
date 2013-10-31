@@ -14,8 +14,6 @@ using Voron.Trees;
 
 namespace Voron
 {
-	using System.Diagnostics;
-
 	public unsafe class StorageEnvironment : IDisposable
 	{
 	    private readonly StorageEnvironmentOptions _options;
@@ -205,10 +203,9 @@ namespace Voron
 
 			tree = Tree.Create(tx, _sliceComparer);
 			tree.Name = name;
+			var space = tx.State.Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
 
-			var ptr = tx.State.Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
-			Debug.Assert(ptr.Count == 1);
-			tree.State.CopyTo((TreeRootHeader*)ptr.FirstPointer);
+			tree.State.CopyTo((TreeRootHeader*)space);
 		    tree.State.IsModified = true;
             tx.State.AddTree(name, tree);
 
