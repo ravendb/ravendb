@@ -11,7 +11,7 @@ namespace Voron.Tests.Backup
 
 	    protected override void Configure(StorageEnvironmentOptions options)
 		{
-			options.LogFileSize = 1000 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 1000 * options.DataPager.PageSize;
 		}
 
 	    public FullBackup()
@@ -67,7 +67,8 @@ namespace Voron.Tests.Backup
 			StorageEnvironment.RestoreFullBackup(_backupFile, _recoveredStoragePath);
 
 		    var options = StorageEnvironmentOptions.ForPath(_recoveredStoragePath);
-		    options.LogFileSize = Env.Options.LogFileSize;
+		    options.MaxLogFileSize = Env.Options.MaxLogFileSize;
+	        options.InitialLogFileSize = Env.Options.InitialLogFileSize;
 
 			using (var env = new StorageEnvironment(options))
 			{

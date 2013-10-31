@@ -22,13 +22,14 @@ namespace Voron.Impl.Journal
 		private readonly IVirtualPager _dataPager;
 		internal readonly Func<long, string> LogName = number => string.Format("{0:D19}.journal", number);
 
-		private IList<JournalFile> _splitJournalFiles;
+	    private long _currentLogFileSize;
+	    private DateTime _lastFile;
+		private readonly IList<JournalFile> _splitJournalFiles;
 		private long _logIndex = -1;
 		private FileHeader* _fileHeader;
 		private IntPtr _inMemoryHeader;
 		private long _dataFlushCounter = 0;
-		private bool _disabled;
-
+		
 		internal ImmutableList<JournalFile> Files = ImmutableList<JournalFile>.Empty;
 		internal JournalFile CurrentFile;
 
@@ -38,6 +39,7 @@ namespace Voron.Impl.Journal
 			_dataPager = _env.Options.DataPager;
 			_fileHeader = GetEmptyFileHeader();
 			_splitJournalFiles = new List<JournalFile>();
+		    _currentLogFileSize = env.Options.InitialLogFileSize;
 		}
 
 	    public IVirtualPager DataPager
@@ -51,7 +53,14 @@ namespace Voron.Impl.Journal
 
 			var logPager = _env.Options.CreateLogPager(LogName(_logIndex));
 
-			logPager.AllocateMorePages(null, _env.Options.LogFileSize);
+	        var now = DateTime.UtcNow ;
+            if ((now - _lastFile).TotalSeconds < 90)
+            {
+                _currentLogFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentLogFileSize * 2);
+            }
+	        _lastFile = now;
+
+	        logPager.AllocateMorePages(null, _currentLogFileSize);
 
 			var log = new JournalFile(logPager, _logIndex);
 			log.AddRef(); // one reference added by a creator - write ahead log
@@ -80,11 +89,7 @@ namespace Voron.Impl.Journal
 			for (var logNumber = logInfo.RecentLog - logInfo.LogFilesCount + 1; logNumber <= logInfo.RecentLog; logNumber++)
 			{
 				var pager = _env.Options.CreateLogPager(LogName(logNumber));
-
-				if (pager.NumberOfAllocatedPages != (_env.Options.LogFileSize/pager.PageSize))
-					throw new InvalidDataException("Log file " + LogName(logNumber) + " should contain " +
-                                                   (_env.Options.LogFileSize / pager.PageSize) + " pages, while it has " +
-					                               pager.NumberOfAllocatedPages + " pages allocated.");
+			    _currentLogFileSize = pager.NumberOfAllocatedPages;
 				var log = new JournalFile(pager, logNumber);
 				log.AddRef(); // creator reference - write ahead log
 				Files = Files.Add(log);
@@ -136,9 +141,6 @@ namespace Voron.Impl.Journal
 
 	    public void TransactionBegin(Transaction tx)
 		{
-			if(_disabled)
-				return;
-			
 			if (CurrentFile == null)
 				CurrentFile = NextFile(tx);
 
@@ -154,9 +156,6 @@ namespace Voron.Impl.Journal
 
 		public void TransactionCommit(Transaction tx)
 		{
-			if(_disabled)
-				return;
-
 			if (_splitJournalFiles.Count > 0)
 			{
 				foreach (var journalFile in _splitJournalFiles)

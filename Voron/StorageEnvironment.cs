@@ -310,7 +310,8 @@ namespace Voron
 				{
 					// data file backup
 					var dataPart = package.CreatePart(new Uri("/db.voron", UriKind.Relative),
-					                                  System.Net.Mime.MediaTypeNames.Application.Octet);
+					                                  System.Net.Mime.MediaTypeNames.Application.Octet, 
+                                                      CompressionOption.Normal);
 
 					var dataStream = dataPart.GetStream();
 
@@ -337,9 +338,10 @@ namespace Voron
 					foreach (var journalFile in _journal.Files)
 					{
 						var journalPart = package.CreatePart(new Uri("/" + _journal.LogName(journalFile.Number), UriKind.Relative),
-						                                     System.Net.Mime.MediaTypeNames.Application.Octet);
+						                                     System.Net.Mime.MediaTypeNames.Application.Octet,
+                                                             CompressionOption.Normal);
 
-						CopyFile(journalFile.Pager.Read(0).Base, _options.LogFileSize, journalPart.GetStream());
+						CopyFile(journalFile.Pager.Read(0).Base, journalFile.Pager.PageSize * journalFile.Pager.NumberOfAllocatedPages, journalPart.GetStream());
 					}
 
 					//txr.Commit(); intentionally not committing
