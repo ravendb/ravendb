@@ -34,7 +34,8 @@ namespace Raven.Database.Storage.Voron.Impl
 			if (outputStream == null) throw new ArgumentNullException("outputStream");
 			if (!outputStream.CanWrite) throw new ArgumentException("must be writable stream", "outputStream");
 
-			env.Backup(outputStream);
+			throw new NotImplementedException("not yet implemented");
+			//env.Backup(outputStream);
 		}
 
 		internal Dictionary<string, object> GenerateReportOnStorage()
