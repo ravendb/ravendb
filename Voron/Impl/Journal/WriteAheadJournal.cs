@@ -22,7 +22,7 @@ namespace Voron.Impl.Journal
 		private readonly IVirtualPager _dataPager;
 		internal readonly Func<long, string> LogName = number => string.Format("{0:D19}.journal", number);
 
-		private long _currentLogFileSize;
+		private long _currentJournalFileSize;
 		private DateTime _lastFile;
 		private readonly IList<JournalFile> _splitJournalFiles;
 
@@ -42,7 +42,7 @@ namespace Voron.Impl.Journal
 			_dataPager = _env.Options.DataPager;
 			_fileHeader = GetEmptyFileHeader();
 			_splitJournalFiles = new List<JournalFile>();
-			_currentLogFileSize = env.Options.InitialLogFileSize;
+			_currentJournalFileSize = env.Options.InitialLogFileSize;
 		}
 
 		private JournalFile NextFile(Transaction tx, int numberOfPages = 1)
@@ -54,11 +54,11 @@ namespace Voron.Impl.Journal
 			var now = DateTime.UtcNow;
 			if ((now - _lastFile).TotalSeconds < 90)
 			{
-				_currentLogFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentLogFileSize * 2);
+				_currentJournalFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentJournalFileSize * 2);
 			}
-			var actualLogSize = _currentLogFileSize;
-			var minRequiredsize = (numberOfPages + 1)*logPager.PageSize; // number of pages + tx header page
-			if (_currentLogFileSize < minRequiredsize)
+			var actualLogSize = _currentJournalFileSize;
+			var minRequiredsize = (numberOfPages + 1) * logPager.PageSize; // number of pages + tx header page
+			if (_currentJournalFileSize < minRequiredsize)
 			{
 				actualLogSize = minRequiredsize;
 			}
@@ -108,7 +108,7 @@ namespace Voron.Impl.Journal
 			for (var logNumber = logInfo.RecentLog - logInfo.LogFilesCount + 1; logNumber <= logInfo.RecentLog; logNumber++)
 			{
 				var pager = _env.Options.CreateJournalPager(LogName(logNumber));
-				_currentLogFileSize = pager.NumberOfAllocatedPages * pager.PageSize;
+				RecoverCurrentJournalSize(pager);
 				var log = new JournalFile(pager, logNumber);
 				log.AddRef(); // creator reference - write ahead log
 				Files = Files.Add(log);
@@ -130,6 +130,21 @@ namespace Voron.Impl.Journal
 			var lastFile = Files.Last();
 			if (lastFile.AvailablePages >= 2) // it must have at least one page for the next transaction header and one page for data
 				CurrentFile = lastFile;
+		}
+
+		private void RecoverCurrentJournalSize(IVirtualPager pager)
+		{
+			var journalSize = pager.NumberOfAllocatedPages * pager.PageSize;
+			if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
+				return;
+
+			// we want to ignore big single value log files (a log file with a single 2 MB value is considered rare), so we don't
+			// want to jump the size just for a single value, so we ignore values that aren't multiples of the 
+			// initial size (our base)
+			if (journalSize%_env.Options.InitialLogFileSize != 0)
+				return;
+
+			_currentJournalFileSize = journalSize;
 		}
 
 		public void UpdateLogInfo()
