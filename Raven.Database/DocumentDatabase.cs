@@ -902,11 +902,16 @@ namespace Raven.Database
 
         private void SeekAnyMissingCollectionEtags()
         {
-            var lastKnownEtag = lastCollectionEtags["All"];
-            if (lastKnownEtag == null) return;
+            var lastKnownEtag = Etag.Empty;
             var lastDatabaseEtag = Etag.Empty;
+
+            if (!lastCollectionEtags.TryGetValue("All", out lastKnownEtag))
+                lastKnownEtag = Etag.Empty;
+
             TransactionalStorage.Batch(accessor => { lastDatabaseEtag = accessor.Staleness.GetMostRecentDocumentEtag(); });
+
             if (lastDatabaseEtag == lastKnownEtag) return;
+
             TransactionalStorage.Batch(accessor => UpdatePerCollectionEtags(
                 accessor.Documents.GetDocumentsAfter(lastKnownEtag, 1000)));
             SeekAnyMissingCollectionEtags();
