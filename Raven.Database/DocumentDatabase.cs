@@ -946,7 +946,7 @@ namespace Raven.Database
             TransactionalStorage.Batch(accessor =>
             {
                 var dbvalue = accessor.Lists.Read("Raven/Collection/Etag", collectionName);
-                if (dbvalue != null) value = Etag.Parse(dbvalue.Data.Value<Byte[]>("Etag"));
+                if (dbvalue != null) value = Etag.Parse(dbvalue.Data.Value<string>("Etag"));
             });
             return value;
         }
@@ -956,7 +956,7 @@ namespace Raven.Database
             Etag result = Etag.Empty;
             if (lastCollectionEtags.TryGetValue(collectionName, out result))
                 return result;
-            return Etag.Empty;
+            return null;
         }
 
         private Etag OptimizeCutoffForIndex(string indexName, Etag cutoffEtag)
@@ -965,7 +965,10 @@ namespace Raven.Database
             var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
             if (viewGenerator.ReduceDefinition == null && viewGenerator.ForEntityNames.Count > 0)
             {
-                return viewGenerator.ForEntityNames.Select(GetLastEtagForCollection).Max();
+                var etags = viewGenerator.ForEntityNames.Select(GetLastEtagForCollection)
+                                        .Where(x=> x != null);
+                if (etags.Any())
+                    return etags.Max();
             }
             return null;
         }
