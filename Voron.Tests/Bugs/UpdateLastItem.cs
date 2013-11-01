@@ -10,33 +10,27 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void ShouldWork()
 		{
-			using (var options = StorageEnvironmentOptions.GetInMemory())
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-			    options.OwnsPagers = false;
-				using (var env = new StorageEnvironment(options))
-				{
-					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-					{
-						tx.State.Root.DirectAdd(tx, "events", sizeof (TreeRootHeader));
-						tx.State.Root.DirectAdd(tx, "aggregations", sizeof (TreeRootHeader));
-						tx.State.Root.DirectAdd(tx, "aggregation-status", sizeof (TreeRootHeader));
-						tx.Commit();
-					}
-					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-					{
-						tx.State.Root.DirectAdd(tx, "events", sizeof (TreeRootHeader));
+				tx.State.Root.DirectAdd(tx, "events", sizeof (TreeRootHeader));
+				tx.State.Root.DirectAdd(tx, "aggregations", sizeof (TreeRootHeader));
+				tx.State.Root.DirectAdd(tx, "aggregation-status", sizeof (TreeRootHeader));
+				tx.Commit();
+			}
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				tx.State.Root.DirectAdd(tx, "events", sizeof (TreeRootHeader));
 
-						tx.Commit();
-					}
-				}
+				tx.Commit();
+			}
 
-				using (var env = new StorageEnvironment(options))
-				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					tx.State.Root.DirectAdd(tx, "events", sizeof(TreeRootHeader));
+			RestartDatabase();
 
-					tx.Commit();
-				}
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				tx.State.Root.DirectAdd(tx, "events", sizeof (TreeRootHeader));
+
+				tx.Commit();
 			}
 		}
 	}

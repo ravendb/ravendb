@@ -68,7 +68,7 @@ namespace Voron
 
 		private unsafe void LoadExistingDatabase()
 		{
-// the first two pages are allocated for double buffering tx commits
+			// the first two pages are allocated for double buffering tx commits
 			var entry = FindLatestFileHeaderEntry();
 			TransactionHeader* header;
 			_journal.RecoverDatabase(entry, out header);
