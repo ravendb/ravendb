@@ -508,6 +508,10 @@ namespace Raven.Database
                 }
             }
 
+            // I really don't know if this is the right place - I can't find much in the way
+            // Of explicit shutdown code though
+            this.WriteLastEtagsForCollections();
+
             var exceptionAggregator = new ExceptionAggregator(log, "Could not properly dispose of DatabaseDocument");
 
             exceptionAggregator.Execute(() =>
