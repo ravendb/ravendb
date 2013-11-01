@@ -896,7 +896,7 @@ namespace Raven.Database
         {
             TransactionalStorage.Batch(accessor =>
                 accessor.Lists.Read("Raven/Collection/Etag", Etag.Empty, null, int.MaxValue)
-                    .ForEach(x => lastCollectionEtags[x.Key] = Etag.Parse(x.Data.Value<Byte[]>("Etag"))));
+                    .ForEach(x => lastCollectionEtags[x.Key] = Etag.Parse(x.Data.Value<string>("Etag"))));
             SeekAnyMissingCollectionEtags();
         }
 
