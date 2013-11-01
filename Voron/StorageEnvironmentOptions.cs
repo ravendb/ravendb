@@ -36,7 +36,7 @@ namespace Voron
 
         public abstract IVirtualPager DataPager { get; }
 
-        public abstract IVirtualPager CreateJournalPager(string name, string dir = null);
+        public abstract IVirtualPager CreateJournalPager(string name);
 
         protected bool Disposed;
         private long _initialLogFileSize;
@@ -95,9 +95,9 @@ namespace Voron
                 }
             }
 
-            public override IVirtualPager CreateJournalPager(string name, string dir = null)
+            public override IVirtualPager CreateJournalPager(string name)
             {
-				var path = Path.Combine(dir ?? _basePath, name);
+				var path = Path.Combine(_basePath, name);
                 var orAdd = _journals.GetOrAdd(name, _ => new Lazy<IVirtualPager>(() => new MemoryMapPager(path, _flushMode)));
                 return orAdd.Value;
             }
@@ -115,6 +115,15 @@ namespace Voron
                         journal.Value.Value.Dispose();
                 }
             }
+
+	        public override bool TryDeletePager(string name)
+	        {
+		        var file = Path.Combine(_basePath, name);
+		        if (File.Exists(file) == false)
+			        return false;
+		        File.Delete(file);
+		        return true;
+	        }
         }
 
         public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
@@ -134,7 +143,7 @@ namespace Voron
                 get { return _dataPager; }
             }
 
-            public override IVirtualPager CreateJournalPager(string name, string dir)
+            public override IVirtualPager CreateJournalPager(string name)
             {
                 IVirtualPager value;
                 if (_logs.TryGetValue(name, out value))
@@ -156,9 +165,21 @@ namespace Voron
                     virtualPager.Value.Dispose();
                 }
             }
+
+	        public override bool TryDeletePager(string name)
+	        {
+		        IVirtualPager value;
+		        if (_logs.TryGetValue(name, out value) == false)
+			        return false;
+		        _logs.Remove(name);
+				value.Dispose();
+		        return true;
+	        }
         }
 
         public abstract void Dispose();
+
+	    public abstract bool TryDeletePager(string name);
     }
 
 }

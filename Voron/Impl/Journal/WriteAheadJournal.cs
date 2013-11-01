@@ -105,7 +105,22 @@ namespace Voron.Impl.Journal
 				return;
 			}
 
-			for (var logNumber = logInfo.RecentLog - logInfo.LogFilesCount + 1; logNumber <= logInfo.RecentLog; logNumber++)
+			var oldestLogFileStillInUse = logInfo.RecentLog - logInfo.LogFilesCount + 1;
+			if (_env.Options.IncrementalBackupEnabled == false)
+			{
+				// we want to check that we cleanup old log files if they aren't needed
+				// this is more just to be safe than anything else, they shouldn't be there.
+				var unusedfiles = oldestLogFileStillInUse;
+				while (true)
+				{
+					unusedfiles--;
+					if (_env.Options.TryDeletePager(LogName(unusedfiles)) == false)
+						break;
+				}
+				
+			}
+
+			for (var logNumber = oldestLogFileStillInUse; logNumber <= logInfo.RecentLog; logNumber++)
 			{
 				var pager = _env.Options.CreateJournalPager(LogName(logNumber));
 				RecoverCurrentJournalSize(pager);

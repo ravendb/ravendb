@@ -66,7 +66,7 @@ namespace Voron
 			}
 		}
 
-		private unsafe void LoadExistingDatabase()
+		private void LoadExistingDatabase()
 		{
 			// the first two pages are allocated for double buffering tx commits
 			var entry = FindLatestFileHeaderEntry();
