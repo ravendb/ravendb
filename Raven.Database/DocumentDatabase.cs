@@ -894,8 +894,7 @@ namespace Raven.Database
         private void UpdatePerCollectionEtags(JsonDocument[] documents)
         {
             var collections = documents.GroupBy(x => x.Metadata[Constants.RavenEntityName])
-                     .Where(x => x.Key != null)
-                     .Select(x => new { Etag = x.Max(y => y.Etag), CollectionName = x.Key.ToString() })
+                .Select(x => new { Etag = x.Max(y => y.Etag), CollectionName = x.Key != null ? x.Key.ToString() : "All" })
                      .ToArray();
          
              foreach (var collection in collections)
