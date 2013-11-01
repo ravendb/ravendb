@@ -108,7 +108,7 @@ namespace Voron.Impl.Journal
 			for (var logNumber = logInfo.RecentLog - logInfo.LogFilesCount + 1; logNumber <= logInfo.RecentLog; logNumber++)
 			{
 				var pager = _env.Options.CreateJournalPager(LogName(logNumber));
-				_currentLogFileSize = pager.NumberOfAllocatedPages;
+				_currentLogFileSize = pager.NumberOfAllocatedPages * pager.PageSize;
 				var log = new JournalFile(pager, logNumber);
 				log.AddRef(); // creator reference - write ahead log
 				Files = Files.Add(log);
