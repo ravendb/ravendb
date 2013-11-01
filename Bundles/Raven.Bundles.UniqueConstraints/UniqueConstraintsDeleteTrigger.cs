@@ -36,14 +36,14 @@ namespace Raven.Bundles.UniqueConstraints
 			    var constraint = Util.GetConstraint(property);
                 var prefix = "UniqueConstraints/" + entityName + constraint.PropName+ "/"; // UniqueConstraints/EntityNamePropertyName/
                 var prop = doc.DataAsJson[constraint.PropName];
-				if (prop == null || prop.Type == JTokenType.Null)
-					continue;
-				var array = prop as RavenJArray;
-				var checkKeys = array != null ? array.Select(p => p.Value<string>()) : new[] {prop.Value<string>()};
 
-				foreach (var checkKey in checkKeys)
+			    string[] uniqueValues;
+                if (!Util.TryGetUniqueValues(prop, out uniqueValues))
+                    continue;
+
+				foreach (var uniqueValue in uniqueValues)
 				{
-					Database.Delete(prefix + Util.EscapeUniqueValue(checkKey, constraint.CaseInsensitive), null, transactionInformation);
+					Database.Delete(prefix + Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive), null, transactionInformation);
 				}
 			}
 		}
