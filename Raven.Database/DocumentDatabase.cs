@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Microsoft.Data.Edm.Library;
+using Mono.CSharp;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
@@ -891,12 +892,31 @@ namespace Raven.Database
             }
         }
 
-        private void UpdatePerCollectionEtags(JsonDocument[] documents)
+        private  void InitializeLastCollectionEtags()
+        {
+            TransactionalStorage.Batch(accessor =>
+                accessor.Lists.Read("Raven/Collection/Etag", Etag.Empty, null, int.MaxValue)
+                    .ForEach(x => lastCollectionEtags[x.Key] = Etag.Parse(x.Data.Value<Byte[]>("Etag"))));
+            SeekAnyMissingCollectionEtags();
+        }
+
+        private void SeekAnyMissingCollectionEtags()
+        {
+            var lastKnownEtag = lastCollectionEtags["All"];
+            if (lastKnownEtag == null) return;
+            var lastDatabaseEtag = Etag.Empty;
+            TransactionalStorage.Batch(accessor => { lastDatabaseEtag = accessor.Staleness.GetMostRecentDocumentEtag(); });
+            if (lastDatabaseEtag == lastKnownEtag) return;
+            TransactionalStorage.Batch(accessor => UpdatePerCollectionEtags(
+                accessor.Documents.GetDocumentsAfter(lastKnownEtag, 1000)));
+            SeekAnyMissingCollectionEtags();
+        }
+
+        private void UpdatePerCollectionEtags(IEnumerable<JsonDocument> documents)
         {
             var collections = documents.GroupBy(x => x.Metadata[Constants.RavenEntityName])
                 .Select(x => new { Etag = x.Max(y => y.Etag), CollectionName = x.Key != null ? x.Key.ToString() : "All" })
                      .ToArray();
-         
              foreach (var collection in collections)
                  UpdateLastEtagForCollection(collection.CollectionName, collection.Etag);
         }
@@ -907,12 +927,6 @@ namespace Raven.Database
                 (v, oldEtag) => etag.CompareTo(oldEtag) < 0 ? oldEtag : etag);
         }
 
-        private  void InitializeLastCollectionEtags()
-        {
-            TransactionalStorage.Batch(accessor =>
-                accessor.Lists.Read("Raven/Collection/Etag", Etag.Empty, null, int.MaxValue)
-                    .ForEach(x => lastCollectionEtags[x.Key] = Etag.Parse(x.Data.Value<Byte[]>("Etag"))));
-        }
 
         private void WriteLastEtagsForCollections()
         {
@@ -1395,7 +1409,7 @@ namespace Raven.Database
                     return null;
                 };
                 var stale = false;
-                Tuple<DateTime, Etag> indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
+                System.Tuple<DateTime, Etag> indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
                 Etag resultEtag = Etag.Empty;
                 var nonAuthoritativeInformation = false;
 
@@ -1998,7 +2012,7 @@ namespace Raven.Database
 		        });
         }
 
-        public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag, ScriptedPatchRequest patch,
+        public System.Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag, ScriptedPatchRequest patch,
                                                                TransactionInformation transactionInformation, bool debugMode = false)
         {
             ScriptedJsonPatcher scriptedJsonPatcher = null;
@@ -2018,7 +2032,7 @@ namespace Raven.Database
             return Tuple.Create(applyPatchInternal, scriptedJsonPatcher == null ? new List<string>() : scriptedJsonPatcher.Debug);
         }
 
-        public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag,
+        public System.Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag,
                                                                ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata,
                                                                TransactionInformation transactionInformation, bool debugMode = false)
         {
