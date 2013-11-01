@@ -12,9 +12,9 @@ namespace Voron.Tryout
 	        for (int i = 0; i < 10000; i++)
 	        {
 		        Console.WriteLine(i);
-		        using (var x = new Batches())
+				using (var x = new BigValues())
 		        {
-			        x.ReadVersion_Items_From_Both_WriteBatch_And_Snapshot_Deleted_Key_Returns_Version0();
+			        x.CanReuseLargeSpace(4);
 		        }
 	        }
         }

@@ -49,7 +49,10 @@ namespace Voron
 				_sliceComparer = NativeMethods.memcmp;
                 _journal = new WriteAheadJournal(this);
 
-				Setup(_dataPager);
+				if (_dataPager.NumberOfAllocatedPages == 0)
+					CreateNewDatabase();
+				else // existing db, let us load it
+					LoadExistingDatabase();
 
 				State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
 				State.Root.Name = Constants.RootTreeName;
@@ -63,52 +66,50 @@ namespace Voron
 			}
 		}
 
-	    private void Setup(IVirtualPager pager)
+		private unsafe void LoadExistingDatabase()
 		{
-			if (pager.NumberOfAllocatedPages == 0)
-			{
-				_dataPager.EnsureContinuous(null, 0, 2); // for file headers
-
-                _journal.WriteFileHeader(0);
-                _journal.WriteFileHeader(1);
-
-                _dataPager.Sync();
-
-				const int initialNextPageNumber = 2;
-				State = new StorageEnvironmentState(null, null, initialNextPageNumber);
-				using (var tx = NewTransaction(TransactionFlags.ReadWrite))
-				{
-					var root = Tree.Create(tx, _sliceComparer);
-					var freeSpace = Tree.Create(tx, _sliceComparer);
-
-					// important to first create the two trees, then set them on the env
-					tx.UpdateRootsIfNeeded(root, freeSpace);
-
-					tx.Commit();
-				}
-				return;
-			}
-			// existing db, let us load it
-
-			// the first two pages are allocated for double buffering tx commits
+// the first two pages are allocated for double buffering tx commits
 			var entry = FindLatestFileHeaderEntry();
-            TransactionHeader* header;
-	        _journal.RecoverDatabase(entry, out header);
+			TransactionHeader* header;
+			_journal.RecoverDatabase(entry, out header);
 
-	        var nextPageNumber = (header == null ? entry->LastPageNumber : header->LastPageNumber) + 1; 
-            State = new StorageEnvironmentState(null, null, nextPageNumber)
-                {
-                    NextPageNumber = nextPageNumber
-                };
+			var nextPageNumber = (header == null ? entry->LastPageNumber : header->LastPageNumber) + 1;
+			State = new StorageEnvironmentState(null, null, nextPageNumber)
+			{
+				NextPageNumber = nextPageNumber
+			};
 
-	        _transactionsCounter = (header == null ? entry->TransactionId : header->TransactionId) + 1;
-            
+			_transactionsCounter = (header == null ? entry->TransactionId : header->TransactionId);
+
 			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
 			{
-                var root = Tree.Open(tx, _sliceComparer, header == null ? &entry->Root : &header->Root);
-                var freeSpace = Tree.Open(tx, _sliceComparer, header == null ? &entry->FreeSpace : &header->FreeSpace);
+				var root = Tree.Open(tx, _sliceComparer, header == null ? &entry->Root : &header->Root);
+				var freeSpace = Tree.Open(tx, _sliceComparer, header == null ? &entry->FreeSpace : &header->FreeSpace);
 
 				tx.UpdateRootsIfNeeded(root, freeSpace);
+				tx.Commit();
+			}
+		}
+
+		private void CreateNewDatabase()
+		{
+			_dataPager.EnsureContinuous(null, 0, 2); // for file headers
+
+			_journal.WriteFileHeader(0);
+			_journal.WriteFileHeader(1);
+
+			_dataPager.Sync();
+
+			const int initialNextPageNumber = 2;
+			State = new StorageEnvironmentState(null, null, initialNextPageNumber);
+			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var root = Tree.Create(tx, _sliceComparer);
+				var freeSpace = Tree.Create(tx, _sliceComparer);
+
+				// important to first create the two trees, then set them on the env
+				tx.UpdateRootsIfNeeded(root, freeSpace);
+
 				tx.Commit();
 			}
 		}
