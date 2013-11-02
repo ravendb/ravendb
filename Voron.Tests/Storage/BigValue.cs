@@ -49,10 +49,43 @@ namespace Voron.Tests.Storage
 				tx.Commit();
 			}
 
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var readResult = tx.State.Root.Read(tx, new Slice(BitConverter.GetBytes(1203)));
+				Assert.NotNull(readResult);
+
+				var memoryStream = new MemoryStream();
+				readResult.Stream.CopyTo(memoryStream);
+				Assert.Equal(buffer, memoryStream.ToArray());
+				tx.Commit();
+			}
+
 			if (restartCount >= 3)
 				RestartDatabase();
 
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var readResult = tx.State.Root.Read(tx, new Slice(BitConverter.GetBytes(1203)));
+				Assert.NotNull(readResult);
+
+				var memoryStream = new MemoryStream();
+				readResult.Stream.CopyTo(memoryStream);
+				Assert.Equal(buffer, memoryStream.ToArray());
+				tx.Commit();
+			}
+
 			Env.FlushLogToDataFile();
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var readResult = tx.State.Root.Read(tx, new Slice(BitConverter.GetBytes(1203)));
+				Assert.NotNull(readResult);
+
+				var memoryStream = new MemoryStream();
+				readResult.Stream.CopyTo(memoryStream);
+				Assert.Equal(buffer, memoryStream.ToArray());
+				tx.Commit();
+			}
 
 			if (restartCount >= 4)
 				RestartDatabase();

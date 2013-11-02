@@ -524,7 +524,7 @@ namespace Voron.Impl.Journal
 				_waj._fileHeader->LastPageNumber = _lastTransactionHeader->LastPageNumber;
 
 				_waj._fileHeader->LogInfo.LastSyncedLog = _lastSyncedLog;
-				_waj._fileHeader->LogInfo.LastSyncedLogPage = _lastSyncedPage;
+				_waj._fileHeader->LogInfo.LastSyncedLogPage = _lastSyncedPage == 0 ? -1 : _lastSyncedPage;
 				_waj._fileHeader->LogInfo.DataFlushCounter = _waj._dataFlushCounter;
 
 				tx.State.Root.State.CopyTo(&_waj._fileHeader->Root);
