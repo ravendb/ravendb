@@ -1,41 +1,38 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
-using Raven.Abstractions.Data;
-using Raven.Bundles.Authorization.Model;
-using Raven.Database.Extensions;
-using Raven.Database.Server;
-using Raven.Database.Server.Abstractions;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Web.Http;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Bundles.Authorization.Model;
+using Raven.Database.Server.Controllers;
 
-namespace Raven.Bundles.Authorization.Responders
+namespace Raven.Bundles.Authorization.Controllers
 {
-	public class IsAllowed : AbstractRequestResponder
+	public class IsAllowedController : BundlesApiController
 	{
-		public override string UrlPattern
+		public override string BundleName
 		{
-			get { return "^/authorization/IsAllowed/(.+)"; }
+			get { return "authorization"; }
 		}
 
-		public override string[] SupportedVerbs
+		[HttpGet]
+		[Route("authorization/IsAllowed/{*id}")]
+		[Route("databases/{databaseName}/authorization/IsAllowed/{*id}")]
+		public HttpResponseMessage IsAllowed(string id)
 		{
-			get { return new string[] { "GET" }; }
-		}
+			var userId = id;
 
-		public override void Respond(IHttpContext context)
-		{
-			var match = urlMatcher.Match(context.GetRequestUrl());
-			var userId = match.Groups[1].Value;
-
-			var docIds = context.Request.QueryString.GetValues("id");
-			var operation = context.Request.QueryString["operation"];
-			var transactionInformation = GetRequestTransaction(context);
+			var docIds = GetQueryStringValues("id");
+			var operation = GetQueryStringValue("operation");
+			var transactionInformation = GetRequestTransaction();
 
 			if (docIds == null || string.IsNullOrEmpty(operation) || string.IsNullOrEmpty(userId))
 			{
-				context.SetStatusToBadRequest();
-				return;
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
 			}
 
 			// we don't want security to take hold when we are trying to ask about security
@@ -43,14 +40,13 @@ namespace Raven.Bundles.Authorization.Responders
 			{
 				var documents = docIds.Select(docId => Database.GetDocumentMetadata(docId, transactionInformation)).ToArray();
 				var etag = CalculateEtag(documents, userId);
-				if (context.MatchEtag(etag))
+				if (MatchEtag(etag))
 				{
-					context.SetStatusToNotModified();
-					return;
+					return GetEmptyMessage(HttpStatusCode.NotModified);
 				}
-
-				context.Response.AddHeader("ETag", etag.ToString());
-				context.WriteJson(GenerateAuthorizationResponse(documents, docIds, operation, userId));
+				var msg = GetMessageWithObject(GenerateAuthorizationResponse(documents, docIds, operation, userId));
+				AddHeader("ETag", etag.ToString(), msg);
+				return msg;
 			}
 		}
 
