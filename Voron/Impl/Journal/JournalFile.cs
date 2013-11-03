@@ -37,6 +37,11 @@ namespace Voron.Impl.Journal
 			_writePage = 0;
 		}
 
+		public override string ToString()
+		{
+			return string.Format("Number: {0}", Number);
+		}
+
 		public JournalFile(IVirtualPager pager, long logNumber, long lastSyncedPage)
 			: this(pager, logNumber)
 		{

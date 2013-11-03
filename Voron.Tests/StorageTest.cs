@@ -14,7 +14,7 @@ namespace Voron.Tests
 	public abstract class StorageTest : IDisposable
 	{
 		private StorageEnvironment _storageEnvironment;
-		private StorageEnvironmentOptions _options;
+		protected StorageEnvironmentOptions _options;
 
 		public StorageEnvironment Env
 		{
@@ -31,15 +31,24 @@ namespace Voron.Tests
 
 		protected void RestartDatabase()
 		{
+			StopDatabase();
+
+			StartDatabase();
+		}
+
+		protected void StartDatabase()
+		{
+			_storageEnvironment = new StorageEnvironment(_options);
+		}
+
+		protected void StopDatabase()
+		{
 			var ownsPagers = _options.OwnsPagers;
 			_options.OwnsPagers = false;
 
 			_storageEnvironment.Dispose();
 
 			_options.OwnsPagers = ownsPagers;
-
-			_storageEnvironment = new StorageEnvironment(_options);
-
 		}
 
 		protected void DeleteDirectory(string dir)

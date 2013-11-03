@@ -20,8 +20,7 @@ namespace Voron.Impl.Journal
 	{
 		private readonly StorageEnvironment _env;
 		private readonly IVirtualPager _dataPager;
-		internal readonly Func<long, string> LogName = number => string.Format("{0:D19}.journal", number);
-
+		
 		private long _currentJournalFileSize;
 		private DateTime _lastFile;
 		private readonly IList<JournalFile> _splitJournalFiles;
@@ -49,7 +48,7 @@ namespace Voron.Impl.Journal
 		{
 			_logIndex++;
 
-			var logPager = _env.Options.CreateJournalPager(LogName(_logIndex));
+			var logPager = _env.Options.CreateJournalPager(_logIndex);
 
 			var now = DateTime.UtcNow;
 			if ((now - _lastFile).TotalSeconds < 90)
@@ -96,16 +95,16 @@ namespace Voron.Impl.Journal
 			// fashion on db startup
 
 			_fileHeader = CopyFileHeader(fileHeader);
-			var logInfo = _fileHeader->LogInfo;
+			var logInfo = _fileHeader->Journal;
 
 			lastTxHeader = null;
 
-			if (logInfo.LogFilesCount == 0)
+			if (logInfo.JournalFilesCount == 0)
 			{
 				return;
 			}
 
-			var oldestLogFileStillInUse = logInfo.RecentLog - logInfo.LogFilesCount + 1;
+			var oldestLogFileStillInUse = logInfo.CurrentJounral - logInfo.JournalFilesCount + 1;
 			if (_env.Options.IncrementalBackupEnabled == false)
 			{
 				// we want to check that we cleanup old log files if they aren't needed
@@ -114,15 +113,15 @@ namespace Voron.Impl.Journal
 				while (true)
 				{
 					unusedfiles--;
-					if (_env.Options.TryDeletePager(LogName(unusedfiles)) == false)
+					if (_env.Options.TryDeletePager(unusedfiles) == false)
 						break;
 				}
 				
 			}
 
-			for (var logNumber = oldestLogFileStillInUse; logNumber <= logInfo.RecentLog; logNumber++)
+			for (var logNumber = oldestLogFileStillInUse; logNumber <= logInfo.CurrentJounral; logNumber++)
 			{
-				var pager = _env.Options.CreateJournalPager(LogName(logNumber));
+				var pager = _env.Options.CreateJournalPager(logNumber);
 				RecoverCurrentJournalSize(pager);
 				var log = new JournalFile(pager, logNumber);
 				log.AddRef(); // creator reference - write ahead log
@@ -133,13 +132,13 @@ namespace Voron.Impl.Journal
 			{
 				long startRead = 0;
 
-				if (logItem.Number == logInfo.LastSyncedLog)
-					startRead = logInfo.LastSyncedLogPage + 1;
+				if (logItem.Number == logInfo.LastSyncedJournal)
+					startRead = logInfo.LastSyncedJournalPage + 1;
 
 				lastTxHeader = logItem.RecoverAndValidate(startRead, lastTxHeader);
 			}
 
-			_logIndex = logInfo.RecentLog;
+			_logIndex = logInfo.CurrentJounral;
 			_dataFlushCounter = logInfo.DataFlushCounter + 1;
 
 			var lastFile = Files.Last();
@@ -164,9 +163,9 @@ namespace Voron.Impl.Journal
 
 		public void UpdateLogInfo()
 		{
-			_fileHeader->LogInfo.RecentLog = Files.Count > 0 ? _logIndex : -1;
-			_fileHeader->LogInfo.LogFilesCount = Files.Count;
-			_fileHeader->LogInfo.DataFlushCounter = _dataFlushCounter;
+			_fileHeader->Journal.CurrentJounral = Files.Count > 0 ? _logIndex : -1;
+			_fileHeader->Journal.JournalFilesCount = Files.Count;
+			_fileHeader->Journal.DataFlushCounter = _dataFlushCounter;
 
 			_fileHeader->BackupInfo.LastCreatedJournal = _logIndex;
 		}
@@ -185,7 +184,7 @@ namespace Voron.Impl.Journal
 
 			header->Root = _fileHeader->Root;
 			header->FreeSpace = _fileHeader->FreeSpace;
-			header->LogInfo = _fileHeader->LogInfo;
+			header->Journal = _fileHeader->Journal;
 
 			_dataPager.Write(fileHeaderPage, page);
 		}
@@ -312,11 +311,11 @@ namespace Voron.Impl.Journal
 			header->LastPageNumber = 1;
 			header->FreeSpace.RootPageNumber = -1;
 			header->Root.RootPageNumber = -1;
-			header->LogInfo.DataFlushCounter = -1;
-			header->LogInfo.RecentLog = -1;
-			header->LogInfo.LogFilesCount = 0;
-			header->LogInfo.LastSyncedLog = -1;
-			header->LogInfo.LastSyncedLogPage = -1;
+			header->Journal.DataFlushCounter = -1;
+			header->Journal.CurrentJounral = -1;
+			header->Journal.JournalFilesCount = 0;
+			header->Journal.LastSyncedJournal = -1;
+			header->Journal.LastSyncedJournalPage = -1;
 
 			return header;
 		}
@@ -328,6 +327,19 @@ namespace Voron.Impl.Journal
 			NativeMethods.memcpy((byte*)_inMemoryHeader, (byte*)fileHeader, sizeof(FileHeader));
 
 			return (FileHeader*)_inMemoryHeader;
+		}
+
+		public JournalInfo GetCurrentJournalInfo()
+		{
+			_locker.EnterReadLock();
+			try
+			{
+				return _fileHeader->Journal;
+			}
+			finally
+			{
+				_locker.ExitReadLock();
+			}
 		}
 
 		public List<LogSnapshot> GetSnapshots()
@@ -347,8 +359,8 @@ namespace Voron.Impl.Journal
 
 				using (var tx = _env.NewTransaction(TransactionFlags.Read))
 				{
-					var lastSyncedLog = _fileHeader->LogInfo.LastSyncedLog;
-					var lastSyncedLogPage = _fileHeader->LogInfo.LastSyncedLogPage;
+					var lastSyncedLog = _fileHeader->Journal.LastSyncedJournal;
+					var lastSyncedLogPage = _fileHeader->Journal.LastSyncedJournalPage;
 
 					if (lastSyncedLog == currentFile.Number &&
 						lastSyncedLogPage == currentFile.WritePagePosition - 1)
@@ -388,8 +400,8 @@ namespace Voron.Impl.Journal
 					try
 					{
 						_jrnls = _waj.Files;
-						_lastSyncedLog = _waj._fileHeader->LogInfo.LastSyncedLog;
-						_lastSyncedPage = _waj._fileHeader->LogInfo.LastSyncedLogPage;
+						_lastSyncedLog = _waj._fileHeader->Journal.LastSyncedJournal;
+						_lastSyncedPage = _waj._fileHeader->Journal.LastSyncedJournalPage;
 						Debug.Assert(_jrnls.First().Number >= _lastSyncedLog);
 					}
 					finally
@@ -523,9 +535,9 @@ namespace Voron.Impl.Journal
 				_waj._fileHeader->TransactionId = _lastTransactionHeader->TransactionId;
 				_waj._fileHeader->LastPageNumber = _lastTransactionHeader->LastPageNumber;
 
-				_waj._fileHeader->LogInfo.LastSyncedLog = _lastSyncedLog;
-				_waj._fileHeader->LogInfo.LastSyncedLogPage = _lastSyncedPage == 0 ? -1 : _lastSyncedPage;
-				_waj._fileHeader->LogInfo.DataFlushCounter = _waj._dataFlushCounter;
+				_waj._fileHeader->Journal.LastSyncedJournal = _lastSyncedLog;
+				_waj._fileHeader->Journal.LastSyncedJournalPage = _lastSyncedPage == 0 ? -1 : _lastSyncedPage;
+				_waj._fileHeader->Journal.DataFlushCounter = _waj._dataFlushCounter;
 
 				tx.State.Root.State.CopyTo(&_waj._fileHeader->Root);
 				tx.State.FreeSpaceRoot.State.CopyTo(&_waj._fileHeader->Root);

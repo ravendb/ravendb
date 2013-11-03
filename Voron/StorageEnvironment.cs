@@ -231,7 +231,7 @@ namespace Voron
 			FileHeader* e2 = GetFileHeaderFrom(snd);
 
 			FileHeader* entry = e1;
-			if (e2->LogInfo.DataFlushCounter > e1->LogInfo.DataFlushCounter)
+			if (e2->Journal.DataFlushCounter > e1->Journal.DataFlushCounter)
 			{
 				entry = e2;
 			}

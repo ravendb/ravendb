@@ -36,7 +36,7 @@ namespace Voron
 
         public abstract IVirtualPager DataPager { get; }
 
-        public abstract IVirtualPager CreateJournalPager(string name);
+        public abstract IVirtualPager CreateJournalPager(long number);
 
         protected bool Disposed;
         private long _initialLogFileSize;
@@ -95,8 +95,9 @@ namespace Voron
                 }
             }
 
-            public override IVirtualPager CreateJournalPager(string name)
+            public override IVirtualPager CreateJournalPager(long number)
             {
+	            var name = LogName(number);
 				var path = Path.Combine(_basePath, name);
                 var orAdd = _journals.GetOrAdd(name, _ => new Lazy<IVirtualPager>(() => new MemoryMapPager(path, _flushMode)));
                 return orAdd.Value;
@@ -116,8 +117,9 @@ namespace Voron
                 }
             }
 
-	        public override bool TryDeletePager(string name)
+	        public override bool TryDeletePager(long number)
 	        {
+		        var name = LogName(number);
 		        var file = Path.Combine(_basePath, name);
 		        if (File.Exists(file) == false)
 			        return false;
@@ -143,8 +145,9 @@ namespace Voron
                 get { return _dataPager; }
             }
 
-            public override IVirtualPager CreateJournalPager(string name)
+            public override IVirtualPager CreateJournalPager(long number)
             {
+	            var name = LogName(number);
                 IVirtualPager value;
                 if (_logs.TryGetValue(name, out value))
                     return value;
@@ -166,8 +169,9 @@ namespace Voron
                 }
             }
 
-	        public override bool TryDeletePager(string name)
+	        public override bool TryDeletePager(long number)
 	        {
+		        var name = LogName(number);
 		        IVirtualPager value;
 		        if (_logs.TryGetValue(name, out value) == false)
 			        return false;
@@ -177,9 +181,14 @@ namespace Voron
 	        }
         }
 
+	    public static string LogName(long number)
+		{
+			return string.Format("{0:D19}.journal", number);
+		}
+
         public abstract void Dispose();
 
-	    public abstract bool TryDeletePager(string name);
+	    public abstract bool TryDeletePager(long number);
     }
 
 }

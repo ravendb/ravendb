@@ -75,7 +75,7 @@ namespace Voron.Impl.Backup
 						foreach (var journalFile in files)
 						{
 							var journalPart = package.CreatePart(
-								new Uri("/" + env.Journal.LogName(journalFile.Number), UriKind.Relative),
+								new Uri("/" + StorageEnvironmentOptions.LogName(journalFile.Number), UriKind.Relative),
 								System.Net.Mime.MediaTypeNames.Application.Octet, 
 								compression);
 

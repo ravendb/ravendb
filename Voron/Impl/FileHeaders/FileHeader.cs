@@ -46,7 +46,7 @@ namespace Voron.Impl.FileHeaders
         /// Information about the journal log info
         /// </summary>
         [FieldOffset(152)] 
-        public LogInfo LogInfo;
+        public JournalInfo Journal;
 
 		/// <summary>
 		/// Information about an incremental backup

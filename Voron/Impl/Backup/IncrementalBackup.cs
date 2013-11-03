@@ -30,13 +30,13 @@ namespace Voron.Impl.Backup
 				//TODO LastBackedUpJournal lub LastBackedUpJournal + 1
 				for (var journalNum = backupInfo.LastBackedUpJournal; journalNum <= backupInfo.LastCreatedJournal; journalNum++)
 				{
-					var part = package.CreatePart(new Uri("/" + env.Journal.LogName(journalNum), UriKind.Relative),
+					var part = package.CreatePart(new Uri("/" + StorageEnvironmentOptions.LogName(journalNum), UriKind.Relative),
 														 System.Net.Mime.MediaTypeNames.Application.Octet);
 
 					var journalFile = env.Journal.Files.Find(x => x.Number == journalNum); // first check if it is a journal file in use
 					if (journalFile == null)
 					{
-						journalFile = new JournalFile(env.Options.CreateJournalPager(env.Journal.LogName(journalNum)), journalNum);
+						journalFile = new JournalFile(env.Options.CreateJournalPager(journalNum), journalNum);
 						journalFile.DeleteOnClose(); // we can remove the journal after backup because it's not in use
 					}
 

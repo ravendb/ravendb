@@ -49,10 +49,6 @@ namespace Voron.Tests.Bugs
 				for (int index = 0; index < inputData.Count; index++)
 				{
 					var keyString = inputData[index];
-					if (index == 18)
-					{
-						Debugger.Break();
-					}
 					Assert.DoesNotThrow(() => tree.Add(tx, keyString, new MemoryStream(new byte[] {1, 2, 3, 4})));
 				}
 

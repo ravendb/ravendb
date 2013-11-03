@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Voron.Util;
 
@@ -41,7 +42,7 @@ namespace Voron.Impl.Journal
 			var current = (TransactionHeader*)_pager.Read(_readingPage).Base;
 
 			if (current->HeaderMarker != Constants.TransactionHeaderMarker)
-				return false;
+				return false; // not a transaction page
 
 			ValidateHeader(current, LastTransactionHeader);
 
@@ -80,9 +81,7 @@ namespace Voron.Impl.Journal
 			}
 
 			if (crc != current->Crc)
-			{
-				throw new InvalidDataException("Checksum mismatch"); //TODO this is temporary, ini the future this condition will just mean that transaction was not committed
-			}
+				return false; // this indicate that the transaction wasn't committed properly
 			return true;
 		}
 

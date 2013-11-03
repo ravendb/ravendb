@@ -64,6 +64,7 @@
     <Compile Include="Backups\Incremental.cs" />
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\MultiAdds.cs" />
+    <Compile Include="Bugs\RecoveryMultipleJournals.cs" />
     <Compile Include="Bugs\Snapshots.cs" />
     <Compile Include="Bugs\Deletes.cs" />
     <Compile Include="Bugs\EmptyTree.cs" />
