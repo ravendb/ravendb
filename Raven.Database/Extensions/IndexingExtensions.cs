@@ -182,12 +182,6 @@ namespace Raven.Database.Extensions
 		public static SortOptions? GetSortOption(this IndexDefinition self, string name, IndexQuery query)
 		{
 			SortOptions value;
-			if (self.SortOptions.TryGetValue(name, out value))
-			{
-				return value;
-			}
-			if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
-				return value;
 
 			if (name.EndsWith("_Range"))
 			{
@@ -198,6 +192,13 @@ namespace Raven.Database.Extensions
 				if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
 					return value;
 			}
+
+			if (self.SortOptions.TryGetValue(name, out value))
+			{
+				return value;
+			}
+			if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
+				return value;
 
 			if (query == null || query.SortHints == null)
 				return value;
