@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,15 +12,19 @@ namespace Raven.Database.Server.Controllers
 	{
 		public abstract string BundleName { get; }
 
-		public override Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
+		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			InnerInitialization(controllerContext);
-			if (DatabasesLandlord.SystemConfiguration.ActiveBundles.Contains(BundleName) == false)
+			var config = DatabasesLandlord.CreateTenantConfiguration(DatabaseName);
+			if (config.ActiveBundles.Contains(BundleName) == false)
 			{
-				throw new InvalidOperationException("Don't have the Bundle " + BundleName + "active");
+				return GetMessageWithObject(new
+				{
+					Error = "Could not figure out what to do"
+				}, HttpStatusCode.BadRequest);
 			}
 
-			return base.ExecuteAsync(controllerContext, cancellationToken);
+			return await base.ExecuteAsync(controllerContext, cancellationToken);
 		}
 	}
 }

@@ -138,6 +138,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 		private void FillStatus(ReplicationInfoStatus replicationInfoStatus, WebException e)
 		{
+			e = (WebException) e.GetBaseException();
 			var response = e.Response as HttpWebResponse;
 			if (response == null)
 			{
