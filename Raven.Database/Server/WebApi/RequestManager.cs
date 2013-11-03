@@ -37,6 +37,8 @@ namespace Raven.Database.Server.WebApi
 			get { return Thread.VolatileRead(ref physicalRequestsCount); }
 		}
 
+		public event EventHandler<BeforeRequestWebApiEventArgs> BeforeRequest;
+
 		public RequestManager(DatabasesLandlord landlord)
 		{
 			this.landlord = landlord;
@@ -98,7 +100,7 @@ namespace Raven.Database.Server.WebApi
 				var sw = Stopwatch.StartNew();
 				try
 				{
-					if (SetupRequestToProperDatabase(controller.DatabaseName))
+					if (SetupRequestToProperDatabase(controller))
 					{
 						action();
 					}
@@ -154,11 +156,27 @@ namespace Raven.Database.Server.WebApi
 			}
 		}
 
-		private bool SetupRequestToProperDatabase(string tenantId)
+		private bool SetupRequestToProperDatabase(RavenApiController controller)
 		{
+			var onBeforeRequest = BeforeRequest;
+			var tenantId = controller.DatabaseName;
+
 			if (string.IsNullOrWhiteSpace(tenantId))
 			{
 				landlord.DatabaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
+				if (onBeforeRequest != null)
+				{
+					var args = new BeforeRequestWebApiEventArgs
+					{
+						Controller = controller,
+						IgnoreRequest = false,
+						TenantId = "System",
+						Database = landlord.SystemDatabase
+					};
+					onBeforeRequest(this, args);
+					if (args.IgnoreRequest)
+						return false;
+				}
 				return true;
 			}
 
@@ -182,6 +200,19 @@ namespace Raven.Database.Server.WebApi
 						var msg = "The database " + tenantId + " is currently being loaded, but after 30 seconds, this request has been aborted. Please try again later, database loading continues.";
 						Logger.Warn(msg);
 						throw new HttpException(503, msg);
+					}
+					if (onBeforeRequest != null)
+					{
+						var args = new BeforeRequestWebApiEventArgs()
+						{
+							Controller = controller,
+							IgnoreRequest = false,
+							TenantId = tenantId,
+							Database = resourceStoreTask.Result
+						};
+						onBeforeRequest(this, args);
+						if (args.IgnoreRequest)
+							return false;
 					}
 				}
 				catch (Exception e)

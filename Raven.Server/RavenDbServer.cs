@@ -125,6 +125,8 @@ namespace Raven.Server
 			{
 				return options.Landlord.GetDatabaseInternal(databaseName);
 			}
+
+			public RequestManager RequestManager { get { return options.RequestManager; } }
 		}
 	}
 
@@ -135,5 +137,7 @@ namespace Raven.Server
 		int NumberOfRequests { get; }
 		void ResetNumberOfRequests();
 		Task<DocumentDatabase> GetDatabaseInternal(string databaseName);
+
+		RequestManager RequestManager { get; }
 	}
 }
