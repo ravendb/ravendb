@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.Backup;
@@ -11,43 +12,48 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Trees;
+using Voron.Util;
 
 namespace Voron
 {
-	public unsafe class StorageEnvironment : IDisposable
+	public class StorageEnvironment : IDisposable
 	{
-	    private readonly StorageEnvironmentOptions _options;
+		private readonly StorageEnvironmentOptions _options;
 
-	    private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
+		private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
 			new ConcurrentDictionary<long, Transaction>();
 
 		private readonly IVirtualPager _dataPager;
 		private readonly SliceComparer _sliceComparer;
 
-        internal WriteAheadJournal _journal;
-        private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
+		internal WriteAheadJournal _journal;
+		private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
+		private readonly AsyncManualResetEvent _flushWriter = new AsyncManualResetEvent();
 
 		private long _transactionsCounter;
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
+		private readonly Task _flushingTask;
+
+		private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
 		public TransactionMergingWriter Writer { get; private set; }
 
-        public StorageEnvironmentState State { get; private set; }
+		public StorageEnvironmentState State { get; private set; }
 
 		public SnapshotReader CreateSnapshot()
 		{
 			return new SnapshotReader(NewTransaction(TransactionFlags.Read));
 		}
 
-		public StorageEnvironment(StorageEnvironmentOptions options)
+		public unsafe StorageEnvironment(StorageEnvironmentOptions options)
 		{
-		    try
+			try
 			{
-                _options = options;
-                _dataPager = options.DataPager;
+				_options = options;
+				_dataPager = options.DataPager;
 				_freeSpaceHandling = new FreeSpaceHandling(this);
 				_sliceComparer = NativeMethods.memcmp;
-                _journal = new WriteAheadJournal(this);
+				_journal = new WriteAheadJournal(this);
 
 				if (_dataPager.NumberOfAllocatedPages == 0)
 					CreateNewDatabase();
@@ -58,6 +64,9 @@ namespace Voron
 				State.Root.Name = Constants.RootTreeName;
 
 				Writer = new TransactionMergingWriter(this);
+
+				if (_options.ManualFlushing == false)
+					_flushingTask = FlushWritesToDataFileAsync();
 			}
 			catch (Exception)
 			{
@@ -66,7 +75,7 @@ namespace Voron
 			}
 		}
 
-		private void LoadExistingDatabase()
+		private unsafe void LoadExistingDatabase()
 		{
 			// the first two pages are allocated for double buffering tx commits
 			var entry = FindLatestFileHeaderEntry();
@@ -91,7 +100,7 @@ namespace Voron
 			}
 		}
 
-		private void CreateNewDatabase()
+		private unsafe void CreateNewDatabase()
 		{
 			_dataPager.EnsureContinuous(null, 0, 2); // for file headers
 
@@ -119,7 +128,7 @@ namespace Voron
 			get { return _freeSpaceHandling; }
 		}
 
-		public SliceComparer SliceComparer
+		public unsafe SliceComparer SliceComparer
 		{
 			get { return _sliceComparer; }
 		}
@@ -141,18 +150,18 @@ namespace Voron
 
 		public long NextPageNumber
 		{
-			get { return State.NextPageNumber; }			
+			get { return State.NextPageNumber; }
 		}
 
-	    public StorageEnvironmentOptions Options
-	    {
-	        get { return _options; }
-	    }
+		public StorageEnvironmentOptions Options
+		{
+			get { return _options; }
+		}
 
-	    public WriteAheadJournal Journal
-	    {
-	        get { return _journal; }
-	    }
+		public WriteAheadJournal Journal
+		{
+			get { return _journal; }
+		}
 
 		public IncrementalBackupInfo BackupInfo
 		{
@@ -178,10 +187,10 @@ namespace Voron
 
 			tx.State.Root.Delete(tx, name);
 
-		    tx.DeletedTree(name);
+			tx.DeletedTree(name);
 		}
 
-		public Tree CreateTree(Transaction tx, string name)
+		public unsafe Tree CreateTree(Transaction tx, string name)
 		{
 			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
 				throw new ArgumentException("Cannot create a new tree with a read only transaction");
@@ -207,22 +216,39 @@ namespace Voron
 			var space = tx.State.Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
 
 			tree.State.CopyTo((TreeRootHeader*)space);
-		    tree.State.IsModified = true;
-            tx.State.AddTree(name, tree);
+			tree.State.IsModified = true;
+			tx.State.AddTree(name, tree);
 
 			return tree;
 		}
 
 		public void Dispose()
 		{
+			_cancellationTokenSource.Cancel();
+			_flushWriter.Set();
+
 			if (_options.OwnsPagers)
 				_options.Dispose();
 
-			if(_journal != null)
+			if (_journal != null)
 				_journal.Dispose();
+
+			if (_flushingTask != null)
+			{
+
+				switch (_flushingTask.Status)
+				{
+					case TaskStatus.RanToCompletion:
+					case TaskStatus.Canceled:
+						return;
+					default:
+						_flushingTask.Wait();
+						break;
+				}
+			}
 		}
 
-		private FileHeader* FindLatestFileHeaderEntry()
+		private unsafe FileHeader* FindLatestFileHeaderEntry()
 		{
 			Page fst = _dataPager.Read(0);
 			Page snd = _dataPager.Read(1);
@@ -238,7 +264,7 @@ namespace Voron
 			return entry;
 		}
 
-		private FileHeader* GetFileHeaderFrom(Page p)
+		private unsafe FileHeader* GetFileHeaderFrom(Page p)
 		{
 			var fileHeader = ((FileHeader*)p.Base);
 			if (fileHeader->MagicMarker != Constants.MagicMarker)
@@ -301,11 +327,11 @@ namespace Voron
 
 			if (tx.Flags != (TransactionFlags.ReadWrite))
 				return;
-		    if (tx.Committed)
-		    {
-		        _transactionsCounter = txId;
-		    }
-            _txWriter.Release();
+			if (tx.Committed)
+			{
+				_transactionsCounter = txId;
+			}
+			_txWriter.Release();
 
 		}
 
@@ -338,15 +364,61 @@ namespace Voron
 				};
 		}
 
-	    public void SetStateAfterTransactionCommit(StorageEnvironmentState state)
-	    {
-	        State = state;
-	    }
+		public void SetStateAfterTransactionCommit(StorageEnvironmentState state)
+		{
+			State = state;
+		}
 
-	    public void FlushLogToDataFile(object state = null)
-	    {
-	        var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
-	        journalApplicator.ApplyLogsToDataFile();
-	    }
+		private void OnTransactionCommit()
+		{
+			if (_options.ManualFlushing)
+				return;
+
+			if (_flushingTask.IsFaulted)
+				_flushingTask.Wait(); // throw the error, important to expose this to the callers
+			if (_flushingTask.IsCompleted || _flushingTask.IsCanceled)
+				throw new InvalidOperationException(
+					"The flushing task is cancelled or completed, this should never be the case while transactions are running");
+
+			// force this to run as a separate task, to avoid holding up the transaction thread
+			Task.Run(() => _flushWriter.Set());
+		}
+
+		private async Task FlushWritesToDataFileAsync()
+		{
+			while (_cancellationTokenSource.IsCancellationRequested == false)
+			{
+				_cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+				var hasWrites = await _flushWriter.WaitAsync(_options.IdleFlushTimeout);
+
+				_cancellationTokenSource.Token.ThrowIfCancellationRequested();
+				
+				var sizeOfUnflushedTransactionsInJournalFile = _journal.SizeOfUnflushedTransactionsInJournalFile();
+				if(hasWrites)
+					_flushWriter.Reset();
+
+				if (sizeOfUnflushedTransactionsInJournalFile == 0)
+					continue;
+			
+				if (hasWrites == false ||
+					sizeOfUnflushedTransactionsInJournalFile >= _options.MaxNumberOfPagesInJournalBeforeFlush)
+				{
+					// we either reached our the max size we allow in the journal file before flush flushing (and therefor require a flush)
+					// we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
+					// while there isn't any other activity going on.
+					var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
+					journalApplicator.ApplyLogsToDataFile();
+				}
+			}
+		}
+
+		public void FlushLogToDataFile()
+		{
+			if (_options.ManualFlushing == false)
+				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
+			var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
+			journalApplicator.ApplyLogsToDataFile();
+		}
 	}
 }

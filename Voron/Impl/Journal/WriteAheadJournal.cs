@@ -348,26 +348,29 @@ namespace Voron.Impl.Journal
 		}
 
 
-		public bool HasTransactionsToFlush()
+		public long SizeOfUnflushedTransactionsInJournalFile()
 		{
 			_locker.EnterReadLock();
 			try
 			{
 				var currentFile = CurrentFile;
 				if (currentFile == null)
-					return false;
+					return 0;
 
 				using (var tx = _env.NewTransaction(TransactionFlags.Read))
 				{
 					var lastSyncedLog = _fileHeader->Journal.LastSyncedJournal;
 					var lastSyncedLogPage = _fileHeader->Journal.LastSyncedJournalPage;
 
-					if (lastSyncedLog == currentFile.Number &&
-						lastSyncedLogPage == currentFile.WritePagePosition - 1)
-						return false;
+					var sum = Files.Sum(file =>
+					{
+						if(file.Number == lastSyncedLog && lastSyncedLog != 0)
+							return lastSyncedLogPage - currentFile.WritePagePosition - 1;
+						return file.WritePagePosition == 0 ? 0 : file.WritePagePosition - 1;
+					});
 
 					tx.Commit();
-					return true;
+					return sum;
 				}
 			}
 			finally

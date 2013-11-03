@@ -32,11 +32,17 @@ namespace Voron
 
         public bool OwnsPagers { get; set; }
 
+		public bool ManualFlushing { get; set; }
+
         public bool IncrementalBackupEnabled { get; set; }
 
         public abstract IVirtualPager DataPager { get; }
 
-        public abstract IVirtualPager CreateJournalPager(long number);
+	    public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
+
+	    public int IdleFlushTimeout { get; set; }
+
+	    public abstract IVirtualPager CreateJournalPager(long number);
 
         protected bool Disposed;
         private long _initialLogFileSize;
@@ -44,6 +50,10 @@ namespace Voron
 
         protected StorageEnvironmentOptions()
         {
+	        MaxNumberOfPagesInJournalBeforeFlush = 1024; // 4 MB
+
+	        IdleFlushTimeout = 5000; // 5 seconds
+
             MaxLogFileSize = 64 * 1024 * 1024;
 
             InitialLogFileSize = 64 * 1024;

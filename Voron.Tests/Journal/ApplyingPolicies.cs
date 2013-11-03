@@ -4,10 +4,15 @@ namespace Voron.Tests.Journal
 {
     public class ApplyingPolicies : StorageTest
     {
-        [Fact]
+	    protected override void Configure(StorageEnvironmentOptions options)
+	    {
+		    options.ManualFlushing = true;
+	    }
+
+	    [Fact]
         public void DbStartUpRequiresFlushing()
         {
-            Assert.True(Env.Journal.HasTransactionsToFlush());
+            Assert.True(Env.Journal.SizeOfUnflushedTransactionsInJournalFile() > 0);
         }
 
         [Fact]
@@ -15,7 +20,7 @@ namespace Voron.Tests.Journal
         {
             Env.FlushLogToDataFile();
             Assert.NotNull(Env.Journal.CurrentFile);
-            Assert.False(Env.Journal.HasTransactionsToFlush());
+            Assert.False(Env.Journal.SizeOfUnflushedTransactionsInJournalFile() == 0);
         }
     }
 }

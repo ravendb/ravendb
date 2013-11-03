@@ -8,6 +8,11 @@ namespace Voron.Tests.Storage
 {
 	public class BigValues : StorageTest
 	{
+		protected override void Configure(StorageEnvironmentOptions options)
+		{
+			options.ManualFlushing = true;
+		}
+
 		[Theory]
 		[InlineData(0)]
 		[InlineData(1)]
