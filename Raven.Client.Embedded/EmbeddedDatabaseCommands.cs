@@ -539,7 +539,9 @@ namespace Raven.Client.Embedded
 					continue;
 				SortOptions sort;
 				Enum.TryParse(value, true, out sort);
-				query.SortHints.Add(header, sort);
+				var key = header.EndsWith("_Range") ? header.Substring(0, header.Length - "_Range".Length) : header;
+
+				query.SortHints.Add(key, sort);
 			}
 		}
 

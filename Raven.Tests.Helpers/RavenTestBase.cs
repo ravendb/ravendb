@@ -176,7 +176,7 @@ namespace Raven.Tests.Helpers
 				DataDirectory = dataDirectory ?? NewDataPath(),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 #if DEBUG
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif
 				DefaultStorageTypeName = storageType,
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin
