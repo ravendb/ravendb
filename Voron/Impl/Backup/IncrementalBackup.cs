@@ -70,10 +70,13 @@ namespace Voron.Impl.Backup
 							var pagesToCopy = journalFile.Pager.NumberOfAllocatedPages;
 
 							if (journalFile.Number == backupInfo.LastBackedUpJournal)
+							{
 								start = backupInfo.LastBackedUpJournalPage + 1;
+								pagesToCopy -= start;
+							}
 
 							if (journalFile.Number == lastWrittenLogFile)
-								pagesToCopy = lastWrittenLogPage + 1;
+								pagesToCopy -= (journalFile.Pager.NumberOfAllocatedPages - lastWrittenLogPage - 1);
 
 							copier.ToStream(journalFile.Pager.Read(start).Base, pagesToCopy*journalFile.Pager.PageSize, part.GetStream());
 
