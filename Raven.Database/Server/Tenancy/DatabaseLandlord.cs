@@ -56,6 +56,8 @@ namespace Raven.Database.Server.Tenancy
 
 		public InMemoryRavenConfiguration CreateTenantConfiguration(string tenantId)
 		{
+			if (string.IsNullOrWhiteSpace(tenantId) || tenantId.Equals("<system>", StringComparison.OrdinalIgnoreCase))
+				return systemConfiguration;
 			var document = GetTenantDatabaseDocument(tenantId);
 			if (document == null)
 				return null;
