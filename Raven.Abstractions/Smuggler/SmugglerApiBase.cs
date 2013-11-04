@@ -700,7 +700,6 @@ namespace Raven.Abstractions.Smuggler
 			var subSmugglerVersion = smugglerVersion.Substring(0, 3);
 
 			var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
-			var intSmugglerVersion = int.Parse(subSmugglerVersion.Replace(".", string.Empty));
 
 			if (intServerVersion < 25)
 			{

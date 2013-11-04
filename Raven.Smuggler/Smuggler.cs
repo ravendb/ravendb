@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -22,8 +23,6 @@ namespace Raven.Smuggler
     {
         const int RetriesCount = 5;
 
-        private static bool isDocsStreamingSupported;
-
         public static async Task Between(SmugglerBetweenOptions options)
         {
             SetDatabaseNameIfEmpty(options.From);
@@ -34,17 +33,20 @@ namespace Raven.Smuggler
             {
                 await EnsureDatabaseExists(importStore, options.To.DefaultDatabase);
 
+                var exportStoreSupportedFeatures = await DetectServerSupportedFeatures(exportStore);
+                var importStoreSupportedFeatures = await DetectServerSupportedFeatures(importStore);
+
                 if (options.OperateOnTypes.HasFlag(ItemType.Indexes))
                 {
                     await ExportIndexes(exportStore, importStore, options.BatchSize);
                 }
-                if (options.OperateOnTypes.HasFlag(ItemType.Transformers))
+                if (options.OperateOnTypes.HasFlag(ItemType.Transformers) && exportStoreSupportedFeatures.IsTransformersSupported && importStoreSupportedFeatures.IsTransformersSupported)
                 {
                     await ExportTransformers(exportStore, importStore, options.BatchSize);
                 }
                 if (options.OperateOnTypes.HasFlag(ItemType.Documents))
                 {
-                    await ExportDocuments(exportStore, importStore, options);
+                    await ExportDocuments(exportStore, importStore, options, exportStoreSupportedFeatures);
                 }
                 if (options.OperateOnTypes.HasFlag(ItemType.Attachments))
                 {
@@ -100,7 +102,7 @@ namespace Raven.Smuggler
             }
         }
 
-        private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptionsBase options)
+        private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptionsBase options, ServerSupportedFeatures exportStoreSupportedFeatures)
         {
             string lastEtag = options.StartDocsEtag;
             var totalCount = 0;
@@ -119,7 +121,7 @@ namespace Raven.Smuggler
             {
                 while (true)
                 {
-                    if (isDocsStreamingSupported)
+                    if (exportStoreSupportedFeatures.IsDocsStreamingSupported)
                     {
                         ShowProgress("Streaming documents from " + lastEtag);
                         using (var documentsEnumerator = await exportStore.AsyncDatabaseCommands.StreamDocsAsync(lastEtag))
@@ -305,10 +307,54 @@ namespace Raven.Smuggler
             return store;
         }
 
+        private static async Task<ServerSupportedFeatures> DetectServerSupportedFeatures(DocumentStore store)
+        {
+#if !SILVERLIGHT
+            var buildNumber = await store.AsyncDatabaseCommands.GetBuildNumberAsync();
+            if (buildNumber == null || string.IsNullOrEmpty(buildNumber.ProductVersion))
+            {
+                ShowProgress("Server version is not available. Running in legacy mode which does not support transformers and documents streaming.");
+                return new ServerSupportedFeatures
+                {
+                    IsTransformersSupported = false,
+                    IsDocsStreamingSupported = false,
+                };
+            }
+
+            var smugglerVersion = FileVersionInfo.GetVersionInfo(typeof(SmugglerApiBase).Assembly.Location).ProductVersion;
+            var subSmugglerVersion = smugglerVersion.Substring(0, 3);
+
+            var subServerVersion = buildNumber.ProductVersion.Substring(0, 3);
+            var intServerVersion = int.Parse(subServerVersion.Replace(".", string.Empty));
+
+            if (intServerVersion < 25)
+            {
+                ShowProgress("Running in legacy mode, importing/exporting transformers is not supported. Server version: {0}. Smuggler version: {1}.", subServerVersion, subSmugglerVersion);
+                return new ServerSupportedFeatures
+                {
+                    IsTransformersSupported = false,
+                    IsDocsStreamingSupported = false,
+                };
+            }
+#endif
+
+            return new ServerSupportedFeatures
+            {
+                IsTransformersSupported = true,
+                IsDocsStreamingSupported = true,
+            };
+        }
+
         [StringFormatMethod("format")]
         private static void ShowProgress(string format, params object[] args)
         {
             Console.WriteLine(format, args);
         }
+    }
+
+    public class ServerSupportedFeatures
+    {
+        public bool IsTransformersSupported { get; set; }
+        public bool IsDocsStreamingSupported { get; set; }
     }
 }

@@ -802,11 +802,11 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		public BuildNumber GetBuildNumber()
 		{
-			return new BuildNumber
-			       {
-				       BuildVersion = DocumentDatabase.BuildVersion,
-					   ProductVersion = DocumentDatabase.ProductVersion
-			       };
+		    return new BuildNumber
+		    {
+		        BuildVersion = DocumentDatabase.BuildVersion,
+		        ProductVersion = DocumentDatabase.ProductVersion
+		    };
 		}
 
 		/// <summary>
