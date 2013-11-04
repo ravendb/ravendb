@@ -76,7 +76,7 @@ namespace Voron.Tests.Bugs
 				//tx.Commit(); - not committing here
 			}
 
-			Assert.Equal(currentJournalInfo.CurrentJounral, Env.Journal.GetCurrentJournalInfo().CurrentJounral);
+			Assert.Equal(currentJournalInfo.CurrentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
@@ -84,7 +84,7 @@ namespace Voron.Tests.Bugs
 				tx.Commit();
 			}
 
-			Assert.Equal(currentJournalInfo.CurrentJounral, Env.Journal.GetCurrentJournalInfo().CurrentJounral);
+			Assert.Equal(currentJournalInfo.CurrentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
 		}
 
 		[Fact]
@@ -109,14 +109,14 @@ namespace Voron.Tests.Bugs
 				tx.Commit();
 			}
 
-			var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJounral;
+			var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
 
 			StopDatabase();
 
 			CorruptPage(lastJournal - 1, page: 2, pos: 3);
 
 			StartDatabase();
-			Assert.Equal(currentJournalInfo.CurrentJounral, Env.Journal.GetCurrentJournalInfo().CurrentJounral);
+			Assert.Equal(currentJournalInfo.CurrentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
 
 		}
 
@@ -139,7 +139,7 @@ namespace Voron.Tests.Bugs
 				}
 			}
 
-			var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJounral;
+			var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
 			var lastJournalPosition = Env.Journal.CurrentFile.WritePagePosition;
 
 			StopDatabase();

@@ -105,7 +105,7 @@ namespace Voron.Impl.Journal
 				return;
 			}
 
-			var oldestLogFileStillInUse = logInfo.CurrentJounral - logInfo.JournalFilesCount + 1;
+			var oldestLogFileStillInUse = logInfo.CurrentJournal - logInfo.JournalFilesCount + 1;
 			if (_env.Options.IncrementalBackupEnabled == false)
 			{
 				// we want to check that we cleanup old log files if they aren't needed
@@ -120,7 +120,7 @@ namespace Voron.Impl.Journal
 				
 			}
 
-			for (var logNumber = oldestLogFileStillInUse; logNumber <= logInfo.CurrentJounral; logNumber++)
+			for (var logNumber = oldestLogFileStillInUse; logNumber <= logInfo.CurrentJournal; logNumber++)
 			{
 				var pager = _env.Options.CreateJournalPager(logNumber);
 				RecoverCurrentJournalSize(pager);
@@ -139,7 +139,7 @@ namespace Voron.Impl.Journal
 				lastTxHeader = logItem.RecoverAndValidate(startRead, lastTxHeader);
 			}
 
-			_logIndex = logInfo.CurrentJounral;
+			_logIndex = logInfo.CurrentJournal;
 			_dataFlushCounter = logInfo.DataFlushCounter + 1;
 
 			var lastFile = Files.Last();
@@ -164,7 +164,7 @@ namespace Voron.Impl.Journal
 
 		public void UpdateLogInfo()
 		{
-			_fileHeader->Journal.CurrentJounral = Files.Count > 0 ? _logIndex : -1;
+			_fileHeader->Journal.CurrentJournal = Files.Count > 0 ? _logIndex : -1;
 			_fileHeader->Journal.JournalFilesCount = Files.Count;
 			_fileHeader->Journal.DataFlushCounter = _dataFlushCounter;
 
@@ -313,7 +313,7 @@ namespace Voron.Impl.Journal
 			header->FreeSpace.RootPageNumber = -1;
 			header->Root.RootPageNumber = -1;
 			header->Journal.DataFlushCounter = -1;
-			header->Journal.CurrentJounral = -1;
+			header->Journal.CurrentJournal = -1;
 			header->Journal.JournalFilesCount = 0;
 			header->Journal.LastSyncedJournal = -1;
 			header->Journal.LastSyncedJournalPage = -1;
