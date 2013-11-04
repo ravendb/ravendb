@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
@@ -30,6 +31,20 @@ namespace Raven.Bundles.UniqueConstraints
                 default:
                     throw new ArgumentOutOfRangeException(property.Type.ToString());
             }
+        }
+
+
+        public static bool TryGetUniqueValues(RavenJToken prop, out string[] uniqueValues)
+        {
+            if (prop == null || prop.Type == JTokenType.Null)
+            {
+                uniqueValues = null;
+                return false;
+            }
+
+            var array = prop as RavenJArray;
+            uniqueValues = array != null ? array.Select(p => p.Value<string>()).ToArray() : new[] { prop.Value<string>() };
+            return true;
         }
 	}
 
