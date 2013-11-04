@@ -896,7 +896,8 @@ namespace Raven.Database
         {
             TransactionalStorage.Batch(accessor =>
                 accessor.Lists.Read("Raven/Collection/Etag", Etag.Empty, null, int.MaxValue)
-                    .ForEach(x => lastCollectionEtags[x.Key] = Etag.Parse(x.Data.Value<string>("Etag"))));
+                    .ForEach(x =>
+                        lastCollectionEtags[x.Key] = Etag.Parse(x.Data.Value<string>("Etag"))));
             SeekAnyMissingCollectionEtags();
         }
 
@@ -914,16 +915,23 @@ namespace Raven.Database
 
             TransactionalStorage.Batch(accessor => UpdatePerCollectionEtags(
                 accessor.Documents.GetDocumentsAfter(lastKnownEtag, 1000)));
+
             SeekAnyMissingCollectionEtags();
         }
 
         private void UpdatePerCollectionEtags(IEnumerable<JsonDocument> documents)
         {
+            if (!documents.Any()) return;
+
             var collections = documents.GroupBy(x => x.Metadata[Constants.RavenEntityName])
-                .Select(x => new { Etag = x.Max(y => y.Etag), CollectionName = x.Key != null ? x.Key.ToString() : "All" })
+                .Where(x=>x.Key != null)
+                .Select(x => new { Etag = x.Max(y => y.Etag), CollectionName = x.Key.ToString()})
                      .ToArray();
+             
              foreach (var collection in collections)
                  UpdateLastEtagForCollection(collection.CollectionName, collection.Etag);
+
+            UpdateLastEtagForCollection("All", documents.Max(x=>x.Etag));
         }
 
         private void UpdateLastEtagForCollection(string collectionName, Etag etag)
