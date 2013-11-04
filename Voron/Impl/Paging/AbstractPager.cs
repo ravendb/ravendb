@@ -103,6 +103,8 @@ namespace Voron.Impl
 
 		public abstract void Write(Page page, long? pageNumber);
 
+		public bool Disposed { get; private set; }
+
 		public virtual void Dispose()
 		{
 			if (_tempPage != IntPtr.Zero)
@@ -110,6 +112,8 @@ namespace Voron.Impl
 				Marshal.FreeHGlobal(_tempPage);
 				_tempPage = IntPtr.Zero;
 			}
+
+			Disposed = true;
 		}
 
 		public abstract void AllocateMorePages(Transaction tx, long newLength);
