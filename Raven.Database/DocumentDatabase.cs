@@ -173,6 +173,8 @@ namespace Raven.Database
 
             using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
             {
+                log.Debug("Start loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
+
                 if (configuration.IsTenantDatabase == false)
                 {
                     validateLicense = new ValidateLicense();
@@ -245,6 +247,7 @@ namespace Raven.Database
                     SecondStageInitialization();
 
                     ExecuteStartupTasks();
+                    log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
                 }
                 catch (Exception)
                 {
@@ -461,6 +464,9 @@ namespace Raven.Database
         {
             if (disposed)
                 return;
+
+            log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+
             var onDisposing = Disposing;
             if (onDisposing != null)
             {
@@ -563,6 +569,8 @@ namespace Raven.Database
                 exceptionAggregator.Execute(workContext.Dispose);
 
             exceptionAggregator.ThrowIfNeeded();
+
+            log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
         }
 
         public void StopBackgroundWorkers()
