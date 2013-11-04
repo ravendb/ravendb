@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading;
@@ -97,7 +98,7 @@ namespace Owin
 		{
 			public ICollection<Assembly> GetAssemblies()
 			{
-				return new[] { typeof(RavenApiController).Assembly };
+				return AppDomain.CurrentDomain.GetAssemblies().ToList(); ;
 			}
 		}
 
