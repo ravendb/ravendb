@@ -12,19 +12,14 @@ using Raven.Database.Server.Controllers;
 
 namespace Raven.Bundles.Authorization.Controllers
 {
-	public class IsAllowedController : BundlesApiController
+	public class IsAllowedController : RavenApiController
 	{
-		public override string BundleName
-		{
-			get { return "authorization"; }
-		}
-
 		[HttpGet]
-		[Route("authorization/IsAllowed/{*id}")]
-		[Route("databases/{databaseName}/authorization/IsAllowed/{*id}")]
-		public HttpResponseMessage IsAllowed(string id)
+		[Route("authorization/IsAllowed/{*userId}")]
+		[Route("databases/{databaseName}/authorization/IsAllowed/{*userId}")]
+		public HttpResponseMessage IsAllowed(string userId)
 		{
-			var userId = id;
+			//var userId = id;
 
 			var docIds = GetQueryStringValues("id");
 			var operation = GetQueryStringValue("operation");
@@ -45,7 +40,7 @@ namespace Raven.Bundles.Authorization.Controllers
 					return GetEmptyMessage(HttpStatusCode.NotModified);
 				}
 				var msg = GetMessageWithObject(GenerateAuthorizationResponse(documents, docIds, operation, userId));
-				AddHeader("ETag", etag.ToString(), msg);
+				WriteETag(etag, msg);
 				return msg;
 			}
 		}
