@@ -17,7 +17,7 @@ namespace Voron.Impl.Backup
 {
 	public unsafe class FullBackup
 	{
-		public void ToFile(StorageEnvironment env, string backupPath, CompressionOption compression = CompressionOption.Maximum)
+		public void ToFile(StorageEnvironment env, string backupPath, CompressionOption compression = CompressionOption.Normal)
 		{
 			var dataPager = env.Options.DataPager;
 			var copier = new DataCopier(dataPager.PageSize*16);
