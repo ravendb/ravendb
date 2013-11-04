@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Voron.Impl.Backup;
 using Voron.Impl.FileHeaders;
 using Voron.Trees;
 
@@ -167,7 +168,7 @@ namespace Voron.Impl.Journal
 			_fileHeader->Journal.JournalFilesCount = Files.Count;
 			_fileHeader->Journal.DataFlushCounter = _dataFlushCounter;
 
-			_fileHeader->BackupInfo.LastCreatedJournal = _logIndex;
+			_fileHeader->IncrementalBackup.LastCreatedJournal = _logIndex;
 		}
 
 		internal void WriteFileHeader(long? pageToWriteHeader = null)
@@ -316,6 +317,9 @@ namespace Voron.Impl.Journal
 			header->Journal.JournalFilesCount = 0;
 			header->Journal.LastSyncedJournal = -1;
 			header->Journal.LastSyncedJournalPage = -1;
+			header->IncrementalBackup.LastBackedUpJournal = -1;
+			header->IncrementalBackup.LastBackedUpJournalPage = -1;
+			header->IncrementalBackup.LastCreatedJournal = -1;
 
 			return header;
 		}
@@ -340,6 +344,35 @@ namespace Voron.Impl.Journal
 			{
 				_locker.ExitReadLock();
 			}
+		}
+
+		public IncrementalBackupInfo GetIncrementalBackupInfo()
+		{
+			_locker.EnterReadLock();
+			try
+			{
+				return _fileHeader->IncrementalBackup;
+			}
+			finally
+			{
+				_locker.ExitReadLock();
+			}
+		}
+
+		public void UpdateAfterIncrementalBackup(long lastBackedUpJournalFile, long lastBackedUpJournalFilePage)
+		{
+			_locker.EnterWriteLock();
+			try
+			{
+				_fileHeader->IncrementalBackup.LastBackedUpJournal = lastBackedUpJournalFile;
+				_fileHeader->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpJournalFilePage;
+			}
+			finally
+			{
+				_locker.ExitWriteLock();
+			}
+
+			_dataPager.Sync(); // we have to flush the new backup information to disk
 		}
 
 		public List<LogSnapshot> GetSnapshots()
@@ -544,6 +577,21 @@ namespace Voron.Impl.Journal
 
 				tx.State.Root.State.CopyTo(&_waj._fileHeader->Root);
 				tx.State.FreeSpaceRoot.State.CopyTo(&_waj._fileHeader->Root);
+			}
+		}
+
+		public void Clear()
+		{
+			_locker.EnterWriteLock();
+			try
+			{
+				Files.ForEach(x => x.Release());
+				Files = Files.Clear();
+				CurrentFile = null;
+			}
+			finally
+			{
+				_locker.ExitWriteLock();
 			}
 		}
 	}

@@ -24,9 +24,9 @@ namespace Voron
 			new ConcurrentDictionary<long, Transaction>();
 
 		private readonly IVirtualPager _dataPager;
-		private readonly SliceComparer _sliceComparer;
+		internal readonly SliceComparer _sliceComparer;
 
-		internal WriteAheadJournal _journal;
+		private WriteAheadJournal _journal;
 		private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
 		private readonly AsyncManualResetEvent _flushWriter = new AsyncManualResetEvent();
 
@@ -161,14 +161,6 @@ namespace Voron
 		public WriteAheadJournal Journal
 		{
 			get { return _journal; }
-		}
-
-		public IncrementalBackupInfo BackupInfo
-		{
-			get
-			{
-				throw new NotImplementedException();
-			}
 		}
 
 		public void DeleteTree(Transaction tx, string name)

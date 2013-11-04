@@ -27,7 +27,7 @@ namespace Voron.Tests.Backups
 			Clean();
 		}
 
-		[Fact(Skip="Not implemented yet")]
+		[Fact]
 		public void CanBackupAndRestoreOnEmptyStorage()
 		{
 			var random = new Random();
@@ -40,6 +40,8 @@ namespace Voron.Tests.Backups
 				{
 					tx.State.Root.Add(tx, "items/" + i, new MemoryStream(buffer));
 				}
+
+				RenderAndShow(tx, 1);
 
 				tx.Commit();
 			}
@@ -67,7 +69,9 @@ namespace Voron.Tests.Backups
 
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
-					for (int i = 0; i < 1000; i++)
+					RenderAndShow(tx, 1);
+
+					for (int i = 0; i < 500; i++)
 					{
 						var readResult = tx.State.Root.Read(tx, "items/" + i);
 						Assert.NotNull(readResult);
