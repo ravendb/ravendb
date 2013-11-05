@@ -1105,8 +1105,8 @@ namespace Raven.Database
                                 {
                                     Id = key,
                                     Type = DocumentChangeTypes.Delete,
-									CollectionName = metadataVar.Value<string>(Constants.RavenEntityName),
-									TypeName = metadataVar.Value<string>(Constants.RavenClrType)
+									CollectionName = metadataVar != null ? metadataVar.Value<string>(Constants.RavenEntityName) : "",
+									TypeName = metadataVar != null ? metadataVar.Value<string>(Constants.RavenClrType) : ""
                                 }, metadataVar);
                             });
 
