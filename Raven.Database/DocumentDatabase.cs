@@ -508,9 +508,13 @@ namespace Raven.Database
                 }
             }
 
-            lastCollectionEtags.Flush();
-
             var exceptionAggregator = new ExceptionAggregator(log, "Could not properly dispose of DatabaseDocument");
+
+			exceptionAggregator.Execute(() =>
+			{
+				if (lastCollectionEtags != null)
+					lastCollectionEtags.Flush();
+			});
 
             exceptionAggregator.Execute(() =>
             {
