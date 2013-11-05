@@ -110,6 +110,15 @@ namespace Voron
 	            var name = LogName(number);
 				var path = Path.Combine(_basePath, name);
                 var orAdd = _journals.GetOrAdd(name, _ => new Lazy<IVirtualPager>(() => new MemoryMapPager(path, _flushMode)));
+
+				if (orAdd.Value.Disposed)
+				{
+					var newPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(path, _flushMode));
+					if (_journals.TryUpdate(name, newPager, orAdd) == false)
+						throw new InvalidOperationException("Could not update journal pager");
+					orAdd = newPager;
+				}
+
                 return orAdd.Value;
             }
 

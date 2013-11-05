@@ -15,7 +15,7 @@ namespace Voron.Impl.Journal
 		public long DataFlushCounter;
 
 		[FieldOffset(8)]
-		public long CurrentJounral;
+		public long CurrentJournal;
 
 		[FieldOffset(16)]
 		public int JournalFilesCount;
