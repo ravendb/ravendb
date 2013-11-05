@@ -1,6 +1,9 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using Amazon.SimpleEmail.Model;
+using ICSharpCode.NRefactory.CSharp.Refactoring.ExtractMethod;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Linq;
@@ -23,26 +26,28 @@ namespace Raven.Database
         {
             TransactionalStorage.Batch(accessor =>
                 accessor.Lists.Read("Raven/Collection/Etag", Etag.Empty, null, int.MaxValue)
-                    .ForEach(x => lastCollectionEtags[x.Key] = Etag.Parse(x.Data.Value<string>("Etag"))));
-            SeekAnyMissingCollectionEtags();
-        }
+                   .ForEach(x => lastCollectionEtags[x.Key] = Etag.Parse(x.Data.Value<string>("Etag"))));
 
-        private void SeekAnyMissingCollectionEtags()
-        {
             var lastKnownEtag = Etag.Empty;
-            var lastDatabaseEtag = Etag.Empty;
-
             if (!lastCollectionEtags.TryGetValue("All", out lastKnownEtag))
                 lastKnownEtag = Etag.Empty;
-
+            var lastDatabaseEtag = Etag.Empty;
             TransactionalStorage.Batch(accessor => { lastDatabaseEtag = accessor.Staleness.GetMostRecentDocumentEtag(); });
+            SeekMissingEtagsFrom(lastKnownEtag, lastDatabaseEtag);
+        }
 
-            if (lastDatabaseEtag == lastKnownEtag) return;
+        private void SeekMissingEtagsFrom(Etag lastKnownEtag, Etag destinationEtag)
+        {
+            if (lastKnownEtag.CompareTo(destinationEtag) >= 0) return;
 
-            TransactionalStorage.Batch(accessor => UpdatePerCollectionEtags(
-                accessor.Documents.GetDocumentsAfter(lastKnownEtag, 1000)));
+            TransactionalStorage.Batch(accessor =>
+            {
+                lastKnownEtag = UpdatePerCollectionEtags(
+                    accessor.Documents.GetDocumentsAfter(lastKnownEtag, 1000));
+            });
 
-            SeekAnyMissingCollectionEtags();
+            if(lastKnownEtag != null)
+                SeekMissingEtagsFrom(lastKnownEtag, destinationEtag);
         }
 
 
@@ -76,9 +81,9 @@ namespace Raven.Database
             return null;
         }
 
-        public void UpdatePerCollectionEtags(IEnumerable<JsonDocument> documents)
+        public Etag UpdatePerCollectionEtags(IEnumerable<JsonDocument> documents)
         {
-            if (!documents.Any()) return;
+            if (!documents.Any()) return null;
 
             var collections = documents.GroupBy(x => x.Metadata[Constants.RavenEntityName])
                 .Where(x=>x.Key != null)
@@ -88,7 +93,9 @@ namespace Raven.Database
             foreach (var collection in collections)
                 UpdateLastEtagForCollection(collection.CollectionName, collection.Etag);
 
-            UpdateLastEtagForCollection("All", documents.Max(x=>x.Etag));
+            var maximumEtag = documents.Max(x => x.Etag);
+            UpdateLastEtagForCollection("All", maximumEtag);
+            return maximumEtag;
         }
 
         private void UpdateLastEtagForCollection(string collectionName, Etag etag)
