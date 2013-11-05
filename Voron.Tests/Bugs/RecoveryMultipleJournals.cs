@@ -88,6 +88,47 @@ namespace Voron.Tests.Bugs
 		}
 
 		[Fact]
+		public void CanResetLogInfoAfterBigUncommitedTransaction2()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.CreateTree(tx, "tree");
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (var i = 0; i < 1000; i++)
+				{
+					tx.GetTree("tree").Add(tx, "a" + i, new MemoryStream(new byte[100]));
+				}
+				tx.Commit(); 
+			}
+
+			var currentJournalInfo = Env.Journal.GetCurrentJournalInfo();
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (var i = 0; i < 1000; i++)
+				{
+					tx.GetTree("tree").Add(tx, "b" + i, new MemoryStream(new byte[100]));
+				}
+				//tx.Commit(); - not committing here
+			}
+
+			Assert.Equal(currentJournalInfo.CurrentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				tx.GetTree("tree").Add(tx, "b", new MemoryStream(new byte[100]));
+				tx.Commit();
+			}
+
+			Assert.Equal(currentJournalInfo.CurrentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
+		}
+
+		[Fact]
 		public void CanResetLogInfoAfterBigUncommitedTransactionWithRestart()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

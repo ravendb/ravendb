@@ -8,7 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Voron.Impl.Backup;
@@ -90,10 +92,11 @@ namespace Voron.Impl.Journal
 			return log;
 		}
 
-		public void RecoverDatabase(FileHeader* fileHeader, out TransactionHeader* lastTxHeader)
+		public void RecoverDatabase(FileHeader* fileHeader, out TransactionHeader* lastTxHeader,out bool hadIntegrityIssues)
 		{
 			// note, we don't need to do any concurrency here, happens as a single threaded
 			// fashion on db startup
+			hadIntegrityIssues = false;
 
 			_fileHeader = CopyFileHeader(fileHeader);
 			var logInfo = _fileHeader->Journal;
@@ -120,31 +123,87 @@ namespace Voron.Impl.Journal
 				
 			}
 
+			var transactionHeaders = new Stack<Tuple<long, TransactionHeader>>();
 			for (var logNumber = oldestLogFileStillInUse; logNumber <= logInfo.CurrentJournal; logNumber++)
 			{
 				var pager = _env.Options.CreateJournalPager(logNumber);
 				RecoverCurrentJournalSize(pager);
 				var log = new JournalFile(pager, logNumber);
-				log.AddRef(); // creator reference - write ahead log
-				Files = Files.Add(log);
-			}
 
-			foreach (var logItem in Files)
-			{
 				long startRead = 0;
 
-				if (logItem.Number == logInfo.LastSyncedJournal)
+				if (log.Number == logInfo.LastSyncedJournal)
 					startRead = logInfo.LastSyncedJournalPage + 1;
 
-				lastTxHeader = logItem.RecoverAndValidate(startRead, lastTxHeader);
+				lastTxHeader = log.RecoverAndValidate(startRead, lastTxHeader);
+
+				if (lastTxHeader != null)
+				{
+					var lastTxHeaderClone = new TransactionHeader();
+					NativeMethods.memcpy((byte*) (&lastTxHeaderClone), (byte*) lastTxHeader, Marshal.SizeOf(typeof (TransactionHeader)));
+					transactionHeaders.Push(Tuple.Create(logNumber, lastTxHeaderClone));
+				}
+
+				log.AddRef(); // creator reference - write ahead log
+				Files = Files.Add(log);
+
+				if (log.HasIntegrityIssues) //this should prevent further loading of transactions
+				{
+					//if part of multi-log transaction, go back to the file in which the multi-log transaction started
+					BacktraceMultiLogTransactionIfNeeded(lastTxHeader, logNumber, transactionHeaders);
+
+					hadIntegrityIssues = true;
+					break;
+				}
 			}
+
+			if (hadIntegrityIssues)
+				logInfo.CurrentJournal = Files.Count;
 
 			_logIndex = logInfo.CurrentJournal;
 			_dataFlushCounter = logInfo.DataFlushCounter + 1;
 
-			var lastFile = Files.Last();
-			if (lastFile.AvailablePages >= 2) // it must have at least one page for the next transaction header and one page for data
-				CurrentFile = lastFile;
+			if (Files.IsEmpty == false)
+			{
+				var lastFile = Files.Last();
+				if (lastFile.AvailablePages >= 2)
+					// it must have at least one page for the next transaction header and one page for data
+					CurrentFile = lastFile;
+
+			}
+
+			if (hadIntegrityIssues)
+			{
+				UpdateLogInfo();
+				WriteFileHeader();
+			}
+		}
+
+		//should be inlined if possible --> introduced method here only to make code more comprehensible
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private void BacktraceMultiLogTransactionIfNeeded(TransactionHeader* lastTxHeader, long logNumber,
+			Stack<Tuple<long, TransactionHeader>> transactionHeaders)
+		{
+			if (lastTxHeader->TxMarker.HasFlag(TransactionMarker.Split) && !lastTxHeader->TxMarker.HasFlag(TransactionMarker.Start))
+			{
+				var txHeaderTuple = Tuple.Create(logNumber, transactionHeaders.Peek().Item2);
+				while (txHeaderTuple.Item2.TxMarker.HasFlag(TransactionMarker.Split) &&
+				       !txHeaderTuple.Item2.TxMarker.HasFlag(TransactionMarker.Start) &&
+				       transactionHeaders.Count > 0)
+					txHeaderTuple = transactionHeaders.Pop();
+
+				//precaution
+				if (txHeaderTuple.Item2.TxMarker.HasFlag(TransactionMarker.Split) &&
+				    !txHeaderTuple.Item2.TxMarker.HasFlag(TransactionMarker.Start))
+				{
+					throw new InvalidDataException("Unable to recover database - could not find multi-log transaction start. ");
+				}
+
+				var filesToRelease = Files.GetRange((int) txHeaderTuple.Item1, Files.Count - (int) txHeaderTuple.Item1).ToList();
+				filesToRelease.ForEach(file => file.Release());
+
+				Files = Files.GetRange(0, (int) txHeaderTuple.Item1);
+			}
 		}
 
 		private void RecoverCurrentJournalSize(IVirtualPager pager)
@@ -222,6 +281,28 @@ namespace Voron.Impl.Journal
 				CurrentFile = null; // it will force new log file creation when next transaction will start
 			}
 		}
+
+		public void TransactionRollback(Transaction tx)
+		{
+			if (_splitJournalFiles.Count <= 0) return;
+
+			CurrentFile = _splitJournalFiles[0];
+
+			var relevantFile = Files.FirstOrDefault(file => file.Number == CurrentFile.Number);
+			Debug.Assert(relevantFile != null);
+
+			var filesToRelease = Files.GetRange(Files.IndexOf(relevantFile) + 1, Files.Count - Files.IndexOf(relevantFile) - 1)
+									  .ToList();
+			filesToRelease.ForEach(file => file.Release());
+
+			Files = Files.GetRange(0, Files.IndexOf(relevantFile) + 1);
+
+			_logIndex -= _splitJournalFiles.Count;
+			_splitJournalFiles.Clear();
+			UpdateLogInfo();
+			WriteFileHeader();
+		}
+
 
 		public Page ReadPage(Transaction tx, long pageNumber)
 		{

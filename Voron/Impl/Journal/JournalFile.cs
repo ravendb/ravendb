@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using Voron.Trees;
@@ -151,7 +150,7 @@ namespace Voron.Impl.Journal
 			Sync();
 		}
 
-
+		
 		private TransactionHeader* GetTransactionHeader()
 		{
 			var result = (TransactionHeader*)Allocate(-1, PagesTakenByHeader).Base;
@@ -175,6 +174,8 @@ namespace Voron.Impl.Journal
 		{
 			get { return _pageTranslationTable; }
 		}
+
+		public bool HasIntegrityIssues { get; private set; }
 
 		private void Sync()
 		{
@@ -258,16 +259,17 @@ namespace Voron.Impl.Journal
 		public LogSnapshot GetSnapshot()
 		{
 			return new LogSnapshot
-				{
-					File = this,
-					PageTranslations = _pageTranslationTable
-				};
+			{
+				File = this,
+				PageTranslations = _pageTranslationTable
+			};
 		}
 
 		public TransactionHeader* RecoverAndValidate(long startRead, TransactionHeader* lastTxHeader)
 		{
 			var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
 			logFileReader.RecoverAndValidate();
+			HasIntegrityIssues = logFileReader.HasIntegrityIssues;
 
 			_pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
 			_writePage = logFileReader.WritePage;
@@ -275,6 +277,7 @@ namespace Voron.Impl.Journal
 
 			return logFileReader.LastTransactionHeader;
 		}
+
 
 		public void DisposeWithoutClosingPager()
 		{

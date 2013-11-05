@@ -53,6 +53,8 @@ namespace Voron.Impl
 
         public bool Committed { get; private set; }
 
+		public bool RolledBack { get; private set; }
+
         public PagerState LatestPagerState { get; private set; }
 
         public StorageEnvironmentState State
@@ -171,7 +173,7 @@ namespace Voron.Impl
 
         public unsafe void Commit()
         {
-            if (Flags != (TransactionFlags.ReadWrite))
+            if (Flags != (TransactionFlags.ReadWrite) || RolledBack)
                 return; // nothing to do
 
             FlushAllMultiValues();
@@ -210,6 +212,16 @@ namespace Voron.Impl
             AfterCommit(_id);
         }
 
+		public void Rollback()
+		{
+			if (Committed || RolledBack || Flags != (TransactionFlags.ReadWrite))
+				return;
+
+			RolledBack = true;
+			_journal.TransactionRollback(this);
+		}
+
+
         private unsafe void FlushAllMultiValues()
         {
             if (_multiValueTrees == null)
@@ -230,6 +242,9 @@ namespace Voron.Impl
 
         public void Dispose()
         {
+			if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
+		        Rollback();
+
             _env.TransactionCompleted(_id);
             foreach (var pagerState in _pagerStates)
             {
@@ -242,7 +257,8 @@ namespace Voron.Impl
             }
         }
 
-        public void FreePage(long pageNumber)
+
+	    public void FreePage(long pageNumber)
         {
             Debug.Assert(pageNumber >= 2);
             _dirtyPages.Remove(pageNumber);

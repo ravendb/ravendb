@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using Voron.Util;
 
@@ -13,6 +12,7 @@ namespace Voron.Impl.Journal
 		private long _readingPage;
 		private readonly Dictionary<long, long> _transactionPageTranslation = new Dictionary<long, long>();
 
+		public bool HasIntegrityIssues { get; private set; }
 
 		public long WritePage
 		{
@@ -26,6 +26,7 @@ namespace Voron.Impl.Journal
 
 		public JournalReader(IVirtualPager pager, long startPage, TransactionHeader* previous)
 		{
+			HasIntegrityIssues = false;
 			_pager = pager;
 			_readingPage = startPage;
 			LastTransactionHeader = previous;
@@ -42,7 +43,12 @@ namespace Voron.Impl.Journal
 			var current = (TransactionHeader*)_pager.Read(_readingPage).Base;
 
 			if (current->HeaderMarker != Constants.TransactionHeaderMarker)
+			{
+				if (current->HeaderMarker != 0 && current->TxMarker != TransactionMarker.None)
+					HasIntegrityIssues = true;
+
 				return false; // not a transaction page
+			}
 
 			ValidateHeader(current, LastTransactionHeader);
 
@@ -81,7 +87,11 @@ namespace Voron.Impl.Journal
 			}
 
 			if (crc != current->Crc)
-				return false; // this indicate that the transaction wasn't committed properly
+			{
+				HasIntegrityIssues = true;
+				return false;
+			}
+
 			return true;
 		}
 
