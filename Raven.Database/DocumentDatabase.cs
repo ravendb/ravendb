@@ -111,7 +111,7 @@ namespace Raven.Database
         private readonly List<IDisposable> toDispose = new List<IDisposable>();
 
         private long pendingTaskCounter;
-        private readonly ConcurrentDictionary<long, PendingTaskAndState> pendingTasks = new ConcurrentDictionary<long, PendingTaskAndState>();
+        private readonly ConcurrentDictionary<long, PendingTaskAndState> pendingTasks = new ConcurrentDictionary<long, DocumentDatabase.PendingTaskAndState>();
 
         private readonly InFlightTransactionalState inFlightTransactionalState;
 
@@ -163,7 +163,6 @@ namespace Raven.Database
         private System.Threading.Tasks.Task reducingBackgroundTask;
         private readonly TaskScheduler backgroundTaskScheduler;
         private readonly object idleLocker = new object();
-        private readonly ConcurrentDictionary<string, Etag> lastCollectionEtags = new ConcurrentDictionary<string, Etag>();
 
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -213,6 +212,7 @@ namespace Raven.Database
                 {
                     sequentialUuidGenerator = new SequentialUuidGenerator();
                     TransactionalStorage.Initialize(sequentialUuidGenerator, DocumentCodecs);
+                    lastCollectionEtags = new LastCollectionEtags(TransactionalStorage);
                 }
                 catch (Exception)
                 {
@@ -246,10 +246,9 @@ namespace Raven.Database
                     indexingExecuter = new IndexingExecuter(workContext, etagSynchronizer, prefetcher);
 
                     InitializeTriggersExceptIndexCodecs();
-                    InitializeLastCollectionEtags();
                     SecondStageInitialization();
-
                     ExecuteStartupTasks();
+                    lastCollectionEtags.Initialize();
                 }
                 catch (Exception)
                 {
@@ -509,9 +508,7 @@ namespace Raven.Database
                 }
             }
 
-            // I really don't know if this is the right place - I can't find much in the way
-            // Of explicit shutdown code though
-            this.WriteLastEtagsForCollections();
+            lastCollectionEtags.Flush();
 
             var exceptionAggregator = new ExceptionAggregator(log, "Could not properly dispose of DatabaseDocument");
 
@@ -712,7 +709,7 @@ namespace Raven.Database
                 TransportState.OnIdle();
                 IndexStorage.RunIdleOperations();
                 ClearCompletedPendingTasks();
-                WriteLastEtagsForCollections();
+                lastCollectionEtags.Flush();
             }
             finally
             {
@@ -728,7 +725,7 @@ namespace Raven.Database
                 var task = taskAndState.Value.Task;
                 if (task.IsCompleted || task.IsCanceled || task.IsFaulted)
                 {
-                    PendingTaskAndState value;
+                    DocumentDatabase.PendingTaskAndState value;
                     pendingTasks.TryRemove(taskAndState.Key, out value);
                 }
                 if (task.Exception != null)
@@ -845,7 +842,7 @@ namespace Raven.Database
                             SkipDeleteFromIndex = addDocumentResult.Updated == false
                         }, documents =>
                         {
-                            UpdatePerCollectionEtags(documents);
+                            lastCollectionEtags.UpdatePerCollectionEtags(documents);
                             etagSynchronizer.UpdateSynchronizationState(documents);
                             prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, null).AfterStorageCommitBeforeWorkNotifications(documents);
                         });
@@ -892,94 +889,6 @@ namespace Raven.Database
             }
         }
 
-        private  void InitializeLastCollectionEtags()
-        {
-            TransactionalStorage.Batch(accessor =>
-                accessor.Lists.Read("Raven/Collection/Etag", Etag.Empty, null, int.MaxValue)
-                    .ForEach(x =>
-                        lastCollectionEtags[x.Key] = Etag.Parse(x.Data.Value<string>("Etag"))));
-            SeekAnyMissingCollectionEtags();
-        }
-
-        private void SeekAnyMissingCollectionEtags()
-        {
-            var lastKnownEtag = Etag.Empty;
-            var lastDatabaseEtag = Etag.Empty;
-
-            if (!lastCollectionEtags.TryGetValue("All", out lastKnownEtag))
-                lastKnownEtag = Etag.Empty;
-
-            TransactionalStorage.Batch(accessor => { lastDatabaseEtag = accessor.Staleness.GetMostRecentDocumentEtag(); });
-
-            if (lastDatabaseEtag == lastKnownEtag) return;
-
-            TransactionalStorage.Batch(accessor => UpdatePerCollectionEtags(
-                accessor.Documents.GetDocumentsAfter(lastKnownEtag, 1000)));
-
-            SeekAnyMissingCollectionEtags();
-        }
-
-        private void UpdatePerCollectionEtags(IEnumerable<JsonDocument> documents)
-        {
-            if (!documents.Any()) return;
-
-            var collections = documents.GroupBy(x => x.Metadata[Constants.RavenEntityName])
-                .Where(x=>x.Key != null)
-                .Select(x => new { Etag = x.Max(y => y.Etag), CollectionName = x.Key.ToString()})
-                     .ToArray();
-             
-             foreach (var collection in collections)
-                 UpdateLastEtagForCollection(collection.CollectionName, collection.Etag);
-
-            UpdateLastEtagForCollection("All", documents.Max(x=>x.Etag));
-        }
-
-        private void UpdateLastEtagForCollection(string collectionName, Etag etag)
-        {
-            lastCollectionEtags.AddOrUpdate(collectionName, etag,
-                (v, oldEtag) => etag.CompareTo(oldEtag) < 0 ? oldEtag : etag);
-        }
-
-
-        private void WriteLastEtagsForCollections()
-        {
-             TransactionalStorage.Batch(accessor => 
-                 lastCollectionEtags.ForEach(x=> 
-                     accessor.Lists.Set("Raven/Collection/Etag", x.Key, RavenJObject.FromObject(new { Etag = x.Value }), UuidType.Documents)));
-        }
-
-        public Etag ReadLastETagForCollection(string collectionName)
-        {
-            Etag value = Etag.Empty;
-            TransactionalStorage.Batch(accessor =>
-            {
-                var dbvalue = accessor.Lists.Read("Raven/Collection/Etag", collectionName);
-                if (dbvalue != null) value = Etag.Parse(dbvalue.Data.Value<string>("Etag"));
-            });
-            return value;
-        }
-
-        public Etag GetLastEtagForCollection(string collectionName)
-        {
-            Etag result = Etag.Empty;
-            if (lastCollectionEtags.TryGetValue(collectionName, out result))
-                return result;
-            return null;
-        }
-
-        private Etag OptimizeCutoffForIndex(string indexName, Etag cutoffEtag)
-        {
-            if (cutoffEtag != null) return cutoffEtag;
-            var viewGenerator = IndexDefinitionStorage.GetViewGenerator(indexName);
-            if (viewGenerator.ReduceDefinition == null && viewGenerator.ForEntityNames.Count > 0)
-            {
-                var etags = viewGenerator.ForEntityNames.Select(GetLastEtagForCollection)
-                                        .Where(x=> x != null);
-                if (etags.Any())
-                    return etags.Max();
-            }
-            return null;
-        }
 
         internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions)
         {
@@ -1447,7 +1356,7 @@ namespace Raven.Database
 
                         resultEtag = GetIndexEtag(index.Name, null, query.ResultsTransformer);
 
-                        stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, OptimizeCutoffForIndex(indexName, query.CutoffEtag));
+                        stale = actions.Staleness.IsIndexStale(index.IndexId, query.Cutoff, lastCollectionEtags.OptimizeCutoffForIndex(viewGenerator, query.CutoffEtag));
 
                         if (stale == false && query.Cutoff == null && query.CutoffEtag == null)
                         {
@@ -1691,7 +1600,7 @@ namespace Raven.Database
 
             long taskId;
             AddTask(task, null, out taskId);
-            PendingTaskAndState value;
+            DocumentDatabase.PendingTaskAndState value;
             task.ContinueWith(_ => pendingTasks.TryRemove(taskId, out value));
 
 
@@ -2373,6 +2282,8 @@ namespace Raven.Database
         static string productVersion;
         private readonly SequentialUuidGenerator sequentialUuidGenerator;
         private readonly TransportState transportState;
+        private readonly LastCollectionEtags lastCollectionEtags;
+
         public static string ProductVersion
         {
             get
@@ -2431,6 +2342,8 @@ namespace Raven.Database
                 return transportState;
             }
         }
+
+        public LastCollectionEtags LastCollectionEtags { get { return lastCollectionEtags; } }
 
         /// <summary>
         /// Get the total index storage size taken by the indexes on the disk.
@@ -2656,7 +2569,7 @@ namespace Raven.Database
             if (task.Status == TaskStatus.Created)
                 throw new ArgumentException("Task must be started before it gets added to the database.", "task");
             var localId = id = Interlocked.Increment(ref pendingTaskCounter);
-            pendingTasks.TryAdd(localId, new PendingTaskAndState
+            pendingTasks.TryAdd(localId, new DocumentDatabase.PendingTaskAndState
             {
                 Task = task,
                 State = state
@@ -2665,7 +2578,7 @@ namespace Raven.Database
 
         public object GetTaskState(long id)
         {
-            PendingTaskAndState value;
+            DocumentDatabase.PendingTaskAndState value;
             if (pendingTasks.TryGetValue(id, out value))
             {
                 if (value.Task.IsFaulted || value.Task.IsCanceled)

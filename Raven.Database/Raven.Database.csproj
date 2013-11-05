@@ -210,6 +210,7 @@
     <Compile Include="Impl\DTC\MuninInFlightTransactionalState.cs" />
     <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
+    <Compile Include="LastCollectionEtags.cs" />
     <Compile Include="Linq\AttachmentForIndexing.cs" />
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />
