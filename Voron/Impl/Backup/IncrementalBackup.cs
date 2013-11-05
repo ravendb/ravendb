@@ -65,7 +65,8 @@ namespace Voron.Impl.Backup
 							usedJournals.Add(journalFile);
 
 							var part = package.CreatePart(new Uri("/" + StorageEnvironmentOptions.LogName(journalNum), UriKind.Relative),
-							                              System.Net.Mime.MediaTypeNames.Application.Octet);
+							                              System.Net.Mime.MediaTypeNames.Application.Octet,
+														  compression);
 							var start = 0L;
 							var pagesToCopy = journalFile.Pager.NumberOfAllocatedPages;
 
@@ -122,8 +123,6 @@ namespace Voron.Impl.Backup
 				env.Options.ManualFlushing = true;
 				env.FlushLogToDataFile();
 				env.Options.ManualFlushing = old;
-				//env._journal.Dispose();
-				//env._journal = new WriteAheadJournal(env);
 
 				List<string> journalNames;
 
