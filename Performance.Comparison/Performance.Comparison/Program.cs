@@ -31,28 +31,26 @@ namespace Performance.Comparison
 			{
 				Console.WriteLine("Testing: " + test.StorageName);
 
-				var writeSeq = test.WriteSequential();
-				var items = writeSeq.Sum(x => x.ProcessedItems);
-				double totalDuration = writeSeq.Sum(x => x.Duration);
-				WritePerfData("WriteSeq", test, writeSeq);
-				Console.WriteLine("Write sequential ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
+				//var writeSeq = test.WriteSequential();
+				//var items = writeSeq.Sum(x => x.ProcessedItems);
+				//double totalDuration = writeSeq.Sum(x => x.Duration);
+				//WritePerfData("WriteSeq", test, writeSeq);
+				//Console.WriteLine("Write sequential ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
 
-				var readSeq = test.ReadSequential();
-				items = readSeq.ProcessedItems;
-				totalDuration = readSeq.Duration;
-				WritePerfData("ReadSeq", test, writeSeq);
-				Console.WriteLine("Read sequential ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
+				//var readSeq = test.ReadSequential();
+				//items = readSeq.ProcessedItems;
+				//totalDuration = readSeq.Duration;
+				//WritePerfData("ReadSeq", test, readSeq);
+				//Console.WriteLine("Read sequential ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
 
-				var writeRandom = test.WriteRandom(randomIds);
-				items = writeRandom.Sum(x => x.ProcessedItems);
-				totalDuration = writeRandom.Sum(x => x.Duration);
-				WritePerfData("WriteRandom", test, writeSeq);
-				Console.WriteLine("Write random ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
+				//var writeRandom = test.WriteRandom(randomIds);
+				//items = writeRandom.Sum(x => x.ProcessedItems);
+				//totalDuration = writeRandom.Sum(x => x.Duration);
+				//Console.WriteLine("Write random ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
 
 				var readRandom = test.ReadRandom(randomIds);
-				items = readRandom.ProcessedItems;
-				totalDuration = readRandom.Duration;
-				WritePerfData("ReadRandom", test, writeSeq);
+				var items = readRandom.ProcessedItems;
+				var totalDuration = readRandom.Duration;
 				Console.WriteLine("Read random ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
 
 				Console.WriteLine("---------------------------");
