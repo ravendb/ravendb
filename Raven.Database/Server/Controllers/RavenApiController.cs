@@ -98,6 +98,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				RequestManager.HandleActualRequest(this, async () =>
 				{
+					SetHeaders();
 					result = await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
 
 
@@ -110,6 +111,14 @@ namespace Raven.Database.Server.Controllers
 
 			RequestManager.AddAccessControlHeaders(this, result);
 			return result;
+		}
+
+		private void SetHeaders()
+		{
+			foreach (var innerHeader in InnerHeaders)
+			{
+				CurrentOperationContext.Headers.Value[innerHeader.Key] = innerHeader.Value.FirstOrDefault();
+			}
 		}
 
 		private async Task<HttpResponseMessage> ExecuteActualRequest(HttpControllerContext controllerContext, CancellationToken cancellationToken,
