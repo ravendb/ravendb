@@ -50,7 +50,7 @@ namespace Raven.Tests
             var licenseGenerator = new LicenseGenerator(rsa.ToXmlString(true));
             var licenseValues = new Dictionary<string, string>();
 
-            var license = licenseGenerator.Generate("Foo", Guid.NewGuid(), DateTime.Now, licenseValues, LicenseType.Subscription);
+            var license = licenseGenerator.Generate("Foo", Guid.NewGuid(), DateTime.Today.AddDays(1), licenseValues, LicenseType.Subscription);
             var licenseValidator = new StringLicenseValidator(rsa.ToXmlString(false), license)
             {
                 DisableFloatingLicenses = true,
