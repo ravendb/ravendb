@@ -84,16 +84,41 @@ namespace Voron.Benchmark
 
         private static void Time(string name, Action<Stopwatch> action, bool delete = true)
         {
-            if (File.Exists(Path) && delete)
-                File.Delete(Path);
-            else
-                FlushOsBuffer();
+	        if (delete)
+		        DeleteDirectory(Path);
+			else
+				FlushOsBuffer();
             var sp = new Stopwatch();
             Console.Write("{0,-35}: running...", name);
             action(sp);
 
             Console.WriteLine("\r{0,-35}: {1,10:#,#} ms {2,10:#,#} ops / sec", name, sp.ElapsedMilliseconds, Transactions * ItemsPerTransaction / sp.Elapsed.TotalSeconds);
         }
+
+		private static void DeleteDirectory(string dir)
+		{
+			if (Directory.Exists(dir) == false)
+				return;
+
+			for (int i = 0; i < 10; i++)
+			{
+				try
+				{
+					Directory.Delete(dir, true);
+					return;
+				}
+				catch (DirectoryNotFoundException)
+				{
+					return;
+				}
+				catch (Exception)
+				{
+					Thread.Sleep(13);
+				}
+			}
+
+			Directory.Delete(dir, true);
+		}
 
         private static void FillRandomOneTransaction(Stopwatch sw, FlushMode flushMode)
         {
