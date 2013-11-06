@@ -60,6 +60,8 @@ namespace Voron.Impl.Journal
 
 			for (var i = 0; i < current->PageCount; i++)
 			{
+				Debug.Assert(_pager.Disposed == false);
+
 				var page = _pager.Read(_readingPage);
 
 				_transactionPageTranslation[page.PageNumber] = _readingPage;
