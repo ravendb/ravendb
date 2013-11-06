@@ -90,11 +90,6 @@ namespace Voron
 				return;
 			}
 
-//			if (hadIntegrityIssues)
-//			{
-//				entry = FindLatestFileHeaderEntry();
-//				header = null;
-//			}
 
 			var nextPageNumber = (header == null ? entry->LastPageNumber : header->LastPageNumber) + 1;
 			State = new StorageEnvironmentState(null, null, nextPageNumber)

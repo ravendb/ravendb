@@ -123,7 +123,7 @@ namespace Voron.Impl.Journal
 				
 			}
 
-			var transactionHeaders = new Stack<Tuple<long, TransactionHeader>>();
+			var transactionMarkers = new Stack<Tuple<long, TransactionMarker>>();
 			for (var logNumber = oldestLogFileStillInUse; logNumber <= logInfo.CurrentJournal; logNumber++)
 			{
 				var pager = _env.Options.CreateJournalPager(logNumber);
@@ -137,12 +137,10 @@ namespace Voron.Impl.Journal
 
 				lastTxHeader = log.RecoverAndValidate(startRead, lastTxHeader);
 
+				Debug.Assert(lastTxHeader->TxMarker != TransactionMarker.None);
+
 				if (lastTxHeader != null)
-				{
-					var lastTxHeaderClone = new TransactionHeader();
-					NativeMethods.memcpy((byte*) (&lastTxHeaderClone), (byte*) lastTxHeader, Marshal.SizeOf(typeof (TransactionHeader)));
-					transactionHeaders.Push(Tuple.Create(logNumber, lastTxHeaderClone));
-				}
+					transactionMarkers.Push(Tuple.Create(logNumber, lastTxHeader->TxMarker));
 
 				log.AddRef(); // creator reference - write ahead log
 				Files = Files.Add(log);
@@ -150,18 +148,20 @@ namespace Voron.Impl.Journal
 				if (log.HasIntegrityIssues) //this should prevent further loading of transactions
 				{
 					//if part of multi-log transaction, go back to the file in which the multi-log transaction started
-					BacktraceMultiLogTransactionIfNeeded(lastTxHeader, logNumber, transactionHeaders);
-
+					FindAndApplyLastUncorruptedTransaction(ref lastTxHeader, transactionMarkers);
+					
 					hadIntegrityIssues = true;
 					break;
 				}
+
 			}
 
 			if (hadIntegrityIssues)
-				logInfo.CurrentJournal = Files.Count;
+				logInfo.CurrentJournal = Files.Count - 1;
 
 			_logIndex = logInfo.CurrentJournal;
 			_dataFlushCounter = logInfo.DataFlushCounter + 1;
+
 
 			if (Files.IsEmpty == false)
 			{
@@ -169,7 +169,6 @@ namespace Voron.Impl.Journal
 				if (lastFile.AvailablePages >= 2)
 					// it must have at least one page for the next transaction header and one page for data
 					CurrentFile = lastFile;
-
 			}
 
 			if (hadIntegrityIssues)
@@ -181,28 +180,43 @@ namespace Voron.Impl.Journal
 
 		//should be inlined if possible --> introduced method here only to make code more comprehensible
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private void BacktraceMultiLogTransactionIfNeeded(TransactionHeader* lastTxHeader, long logNumber,
-			Stack<Tuple<long, TransactionHeader>> transactionHeaders)
+		private void FindAndApplyLastUncorruptedTransaction(ref TransactionHeader* lastTxHeader, Stack<Tuple<long, TransactionMarker>> transactionMarkers)
 		{
 			if (lastTxHeader->TxMarker.HasFlag(TransactionMarker.Split) && !lastTxHeader->TxMarker.HasFlag(TransactionMarker.Start))
 			{
-				var txHeaderTuple = Tuple.Create(logNumber, transactionHeaders.Peek().Item2);
-				while (txHeaderTuple.Item2.TxMarker.HasFlag(TransactionMarker.Split) &&
-				       !txHeaderTuple.Item2.TxMarker.HasFlag(TransactionMarker.Start) &&
-				       transactionHeaders.Count > 0)
-					txHeaderTuple = transactionHeaders.Pop();
+				Tuple<long, TransactionMarker> txMarkerTuple;
+				do
+				{
+					txMarkerTuple = transactionMarkers.Pop();
+				} while (txMarkerTuple.Item2.HasFlag(TransactionMarker.Split) && !txMarkerTuple.Item2.HasFlag(TransactionMarker.Start) && transactionMarkers.Count > 0); 
 
 				//precaution
-				if (txHeaderTuple.Item2.TxMarker.HasFlag(TransactionMarker.Split) &&
-				    !txHeaderTuple.Item2.TxMarker.HasFlag(TransactionMarker.Start))
+				if (txMarkerTuple.Item2.HasFlag(TransactionMarker.Split) && !txMarkerTuple.Item2.HasFlag(TransactionMarker.Start))
+					throw new InvalidDataException("Unable to recover database - found integrity issues, and could not find multi-log transaction start to roll-back to. ");
+
+				var filesToRelease = Files.GetRange((int) txMarkerTuple.Item1 + 1, Files.Count - (int) txMarkerTuple.Item1 - 1).ToList();
+				var lastCorruptedTxTransactionId = lastTxHeader->TransactionId;
+				filesToRelease.ForEach(file => file.Release());
+				
+				Files = Files.GetRange(0, (int) txMarkerTuple.Item1 + 1);
+				if (!Files.IsEmpty)
 				{
-					throw new InvalidDataException("Unable to recover database - could not find multi-log transaction start. ");
+					if (Files.Count > 1)
+					{
+						var lastFileIndex = Files.IndexOf(Files.Last());
+						var journalFiles = Files.ToList();
+						var previousTxHeader = journalFiles[lastFileIndex - 1].LastTransactionHeader;
+						var lastJournalFile = journalFiles.Last();
+						lastJournalFile.RecoverAndValidateConditionally(0, previousTxHeader,
+							txHeader => txHeader.TransactionId < lastCorruptedTxTransactionId);
+
+						Files.SetItem(lastFileIndex, lastJournalFile);
+					}
+					else
+						Files.Last().RecoverAndValidateConditionally(0, null,txHeader => txHeader.TransactionId < lastCorruptedTxTransactionId);
 				}
 
-				var filesToRelease = Files.GetRange((int) txHeaderTuple.Item1, Files.Count - (int) txHeaderTuple.Item1).ToList();
-				filesToRelease.ForEach(file => file.Release());
-
-				Files = Files.GetRange(0, (int) txHeaderTuple.Item1);
+				lastTxHeader = Files.IsEmpty == false ? Files.Last().LastTransactionHeader : null;
 			}
 		}
 

@@ -73,6 +73,7 @@ namespace Voron.Impl.Journal
 
 			return _pageTranslationTable.Where(x => x.Value > lastLogPageSyncedWithDataFile).Select(x => x.Key);
 		}
+		public TransactionHeader* LastTransactionHeader { get; private set; }
 
 		public bool LastTransactionCommitted
 		{
@@ -106,7 +107,7 @@ namespace Voron.Impl.Journal
 
 			_allocatedPagesInTransaction = 0;
 			_overflowPagesInTransaction = 0;
-
+			LastTransactionHeader = _currentTxHeader;
 			_transactionPageTranslationTable.Clear();
 		}
 
@@ -204,7 +205,7 @@ namespace Voron.Impl.Journal
 		}
 
 		public Page Allocate(long startPage, int numberOfPages)
-		{
+		{			
 			Debug.Assert(_writePage + numberOfPages <= _pager.NumberOfAllocatedPages);
 
 			var result = _pager.GetWritable(_writePage);
@@ -270,10 +271,25 @@ namespace Voron.Impl.Journal
 			var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
 			logFileReader.RecoverAndValidate();
 			HasIntegrityIssues = logFileReader.HasIntegrityIssues;
+			
+			_pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
+			_writePage = logFileReader.WritePage;
+			_lastSyncedPage = logFileReader.LastSyncedPage;
+			LastTransactionHeader = logFileReader.LastTransactionHeader;
+
+			return logFileReader.LastTransactionHeader;
+		}
+
+		public TransactionHeader* RecoverAndValidateConditionally(long startRead, TransactionHeader* lastTxHeader,Func<TransactionHeader,bool> stopConditionFunc)
+		{
+			var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
+			logFileReader.RecoverAndValidateConditionally(stopConditionFunc);
+			HasIntegrityIssues = logFileReader.HasIntegrityIssues;
 
 			_pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
 			_writePage = logFileReader.WritePage;
 			_lastSyncedPage = logFileReader.LastSyncedPage;
+			LastTransactionHeader = logFileReader.LastTransactionHeader;
 
 			return logFileReader.LastTransactionHeader;
 		}

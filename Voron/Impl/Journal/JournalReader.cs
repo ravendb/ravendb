@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Voron.Util;
 
@@ -10,6 +11,8 @@ namespace Voron.Impl.Journal
 		private long _lastSyncedPage;
 		private long _writePage;
 		private long _readingPage;
+		private readonly long _startPage;
+		private readonly TransactionHeader* _previous;
 		private readonly Dictionary<long, long> _transactionPageTranslation = new Dictionary<long, long>();
 
 		public bool HasIntegrityIssues { get; private set; }
@@ -29,40 +32,62 @@ namespace Voron.Impl.Journal
 			HasIntegrityIssues = false;
 			_pager = pager;
 			_readingPage = startPage;
+			_startPage = startPage;
+			_previous = previous;
 			LastTransactionHeader = previous;
 
 		}
 
 		public TransactionHeader* LastTransactionHeader { get; private set; }
 
+		private bool ReadOneTransactionConditionally(Func<TransactionHeader, bool> stopConditionFunc)
+		{
+			if (_readingPage >= _pager.NumberOfAllocatedPages)
+				return false;
+
+			TransactionHeader* current;
+			if (!TryReadAndValidateHeader(out current)) return false;
+
+			if (!stopConditionFunc(*current))
+				return false;
+
+			for (var i = 0; i < current->PageCount; i++)
+			{
+				var page = _pager.Read(_readingPage);
+
+				_transactionPageTranslation[page.PageNumber] = _readingPage;
+
+				if (page.IsOverflow)
+				{
+					var numOfPages = _pager.GetNumberOfOverflowPages(page.OverflowSize);
+					_readingPage += numOfPages;
+				}
+				else
+				{
+					_readingPage++;
+				}
+
+				_lastSyncedPage = _readingPage - 1;
+				_writePage = _lastSyncedPage + 1;
+			}
+			
+			LastTransactionHeader = current;
+			return true;
+		}
+
+	
 		public bool ReadOneTransaction()
 		{
 			if (_readingPage >= _pager.NumberOfAllocatedPages)
 				return false;
 
-			var current = (TransactionHeader*)_pager.Read(_readingPage).Base;
-
-			if (current->HeaderMarker != Constants.TransactionHeaderMarker)
-			{
-				if (current->HeaderMarker != 0 && current->TxMarker != TransactionMarker.None)
-					HasIntegrityIssues = true;
-
-				return false; // not a transaction page
-			}
-
-			ValidateHeader(current, LastTransactionHeader);
-
-			if (current->TxMarker.HasFlag(TransactionMarker.Commit) == false)
-			{
-				_readingPage += current->PageCount + current->OverflowPageCount;
-				return false;
-			}
-
-			LastTransactionHeader = current;
-
-			_readingPage++;
+			TransactionHeader* current;
+			if (!TryReadAndValidateHeader(out current)) return false;
 
 			uint crc = 0;
+			var writePageBeforeCrcCheck = _writePage;
+			var lastSyncedPageBeforeCrcCheck = _lastSyncedPage;
+			var readingPageBeforeCrcCheck = _readingPage;
 
 			for (var i = 0; i < current->PageCount; i++)
 			{
@@ -89,10 +114,28 @@ namespace Voron.Impl.Journal
 			if (crc != current->Crc)
 			{
 				HasIntegrityIssues = true;
+
+				//undo changes to those variables if CRC doesn't match
+				_writePage = writePageBeforeCrcCheck;
+				_lastSyncedPage = lastSyncedPageBeforeCrcCheck;
+				_readingPage = readingPageBeforeCrcCheck;
+
 				return false;
 			}
 
+			//update CurrentTransactionHeader _only_ if the CRC check is passed
+			LastTransactionHeader = current;
+			
 			return true;
+		}
+
+		public void RecoverAndValidateConditionally(Func<TransactionHeader, bool> stopConditionFunc)
+		{
+			_readingPage = _startPage;
+			LastTransactionHeader = _previous;
+			while (ReadOneTransactionConditionally(stopConditionFunc))
+			{
+			}			
 		}
 
 		public void RecoverAndValidate()
@@ -105,6 +148,30 @@ namespace Voron.Impl.Journal
 		public Dictionary<long, long> TransactionPageTranslation
 		{
 			get { return _transactionPageTranslation; }
+		}
+
+		private bool TryReadAndValidateHeader(out TransactionHeader* current)
+		{
+			current = (TransactionHeader*)_pager.Read(_readingPage).Base;
+
+			if (current->HeaderMarker != Constants.TransactionHeaderMarker)
+			{
+				if (current->HeaderMarker != 0 && current->TxMarker != TransactionMarker.None)
+					HasIntegrityIssues = true;
+
+				return false; // not a transaction page
+			}
+
+			ValidateHeader(current, LastTransactionHeader);
+
+			if (current->TxMarker.HasFlag(TransactionMarker.Commit) == false)
+			{
+				_readingPage += current->PageCount + current->OverflowPageCount;
+				return false;
+			}
+
+			_readingPage++;
+			return true;
 		}
 
 		private void ValidateHeader(TransactionHeader* current, TransactionHeader* previous)

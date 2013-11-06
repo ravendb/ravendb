@@ -82,6 +82,7 @@ namespace Voron.Impl
             _state = env.State.Clone();
 
             _journal.Files.ForEach(SetLogReference);
+			
             _journal.TransactionBegin(this);
             MarkTreesForWriteTransaction();
         }
