@@ -632,12 +632,9 @@ namespace Voron.Impl.Journal
 					var startPage = file.Number == _lastSyncedLog ? _lastSyncedPage + 1 : 0;
 					var journalReader = new JournalReader(file.Pager, startPage, _lastTransactionHeader);
 
-					while (journalReader.ReadOneTransaction())
+					while (journalReader.ReadOneTransaction(header => oldestActiveTransaction == 0 || header.TransactionId < oldestActiveTransaction))
 					{
 						_lastTransactionHeader = journalReader.LastTransactionHeader;
-						if (_lastTransactionHeader->TransactionId < oldestActiveTransaction)
-							break;
-
 						_lastSyncedLog = file.Number;
 						_lastSyncedPage = journalReader.LastSyncedPage;
 					}
