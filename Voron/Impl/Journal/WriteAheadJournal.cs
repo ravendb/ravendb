@@ -546,9 +546,7 @@ namespace Voron.Impl.Journal
 						_lastTransactionHeader = journalReader.LastTransactionHeader;
 						if (_lastTransactionHeader->TransactionId < oldestActiveTransaction)
 							break;
-						//TODO arek
-						//Debugger.Launch();
-						//Console.WriteLine("Last synced log " + file.Number);
+
 						_lastSyncedLog = file.Number;
 						_lastSyncedPage = journalReader.LastSyncedPage;
 					}
