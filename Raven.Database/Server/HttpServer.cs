@@ -243,8 +243,8 @@ namespace Raven.Database.Server
 							TotalDatabaseSize = totalDatabaseSize,
 							TotalDatabaseHumaneSize = DatabaseSize.Humane(totalDatabaseSize),
 							CountOfDocuments = documentDatabase.Database.Statistics.CountOfDocuments,
-							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.RequestsPerSecond, 2),
-							ConcurrentRequests = documentDatabase.Database.WorkContext.ConcurrentRequests,
+							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.PerformanceCounters.RequestsPerSecond, 2),
+							ConcurrentRequests = documentDatabase.Database.WorkContext.PerformanceCounters.ConcurrentRequests,
 							DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 						}
 				};
@@ -806,7 +806,7 @@ namespace Raven.Database.Server
 			}
 			finally
 			{
-				CurrentDatabase.WorkContext.DecrementConcurrentRequestsCounter();
+				CurrentDatabase.WorkContext.PerformanceCounters.DecrementConcurrentRequestsCounter();
 				ResetThreadLocalState();
 				if (onResponseEnd != null)
 					onResponseEnd();
@@ -870,8 +870,8 @@ namespace Raven.Database.Server
 		protected void OnDispatchingRequest(IHttpContext ctx)
 		{
 			ctx.Response.AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion);
-			CurrentDatabase.WorkContext.IncrementRequestsPerSecCounter();
-			CurrentDatabase.WorkContext.IncrementConcurrentRequestsCounter();
+			CurrentDatabase.WorkContext.PerformanceCounters.IncrementRequestsPerSecCounter();
+			CurrentDatabase.WorkContext.PerformanceCounters.IncrementConcurrentRequestsCounter();
 		}
 
 		public DocumentDatabase CurrentDatabase
