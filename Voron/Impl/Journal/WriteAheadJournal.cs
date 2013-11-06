@@ -556,8 +556,6 @@ namespace Voron.Impl.Journal
 					if (pagesToWrite.Count == 0)
 						return;
 
-					Console.WriteLine("Applying pages: " + pagesToWrite.Count);
-
 					Debug.Assert(_lastTransactionHeader != null);
 
 					var sortedPages = pagesToWrite.OrderBy(x => x.Key)
