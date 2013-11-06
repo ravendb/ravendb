@@ -632,7 +632,12 @@ namespace Voron.Impl.Journal
 					var startPage = file.Number == _lastSyncedLog ? _lastSyncedPage + 1 : 0;
 					var journalReader = new JournalReader(file.Pager, startPage, _lastTransactionHeader);
 
-					while (journalReader.ReadOneTransaction(header => oldestActiveTransaction == 0 || header.TransactionId < oldestActiveTransaction))
+					// we need to ensure that we aren't overwriting pages that are currently being seen by existing transactions
+					Func<TransactionHeader, bool> readUntil =
+						header => oldestActiveTransaction == 0 || // it means there is no active transaction
+									header.TransactionId < oldestActiveTransaction;
+
+					while (journalReader.ReadOneTransaction(readUntil))
 					{
 						_lastTransactionHeader = journalReader.LastTransactionHeader;
 						_lastSyncedLog = file.Number;
