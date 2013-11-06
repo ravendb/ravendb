@@ -170,7 +170,7 @@ namespace Raven.Database.Indexing
 			var lastModified = lastByEtag.LastModified.Value;
 			var lastEtag = lastByEtag.Etag;
 
-			context.PerformanceCounters.IndexedPerSecIncreaseBy(jsonDocs.Count);
+			context.PerformanceCounters.IndexedPerSecond.IncrementBy(jsonDocs.Count);
 			var result = FilterIndexes(indexesToWorkOn, jsonDocs, lastEtag).ToList();
 
 			ExecuteAllInterleaved(result, index => HandleIndexingFor(index, lastEtag, lastModified));

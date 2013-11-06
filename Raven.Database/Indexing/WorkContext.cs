@@ -244,14 +244,10 @@ namespace Raven.Database.Indexing
 
 		public void Init(string name)
 		{
-			if (Configuration.RunInMemory)
+			if (Configuration.RunInMemory == false)
 			{
-                PerformanceCounters.UsePerformanceCounters = false;
-				return;
+                PerformanceCounters.Setup(name ?? Constants.SystemDatabase);
 			}
-
-			name = name ?? Constants.SystemDatabase;
-            PerformanceCounters.Setup(name);
 		}
 
 		public void ReportIndexingActualBatchSize(int size)

@@ -172,7 +172,7 @@ namespace Raven.Database.Indexing
 							.ToArray();
 						var reduceKeys = new HashSet<string>(persistedResults.Select(x => x.ReduceKey),
 															 StringComparer.InvariantCultureIgnoreCase);
-                        context.PerformanceCounters.ReducedPerSecIncreaseBy(results.Length);
+                        context.PerformanceCounters.ReducedPerSecond.IncrementBy(results.Length);
 
 						context.CancellationToken.ThrowIfCancellationRequested();
 						var reduceTimeWatcher = Stopwatch.StartNew();
@@ -292,7 +292,7 @@ namespace Raven.Database.Indexing
 						.Where(x => x.Data != null)
 						.GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
 						.ToArray();
-            context.PerformanceCounters.ReducedPerSecIncreaseBy(results.Length);
+            context.PerformanceCounters.ReducedPerSecond.IncrementBy(results.Length);
 
 			context.TransactionalStorage.Batch(actions =>
 				context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, 2, context, actions, reduceKeys, state.Sum(x=>x.Item2.Count))

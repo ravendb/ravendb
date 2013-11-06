@@ -4,9 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
 using System.Security;
+using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Util
@@ -20,81 +23,162 @@ namespace Raven.Database.Util
         /// </summary>
         public const string CategoryName = "RavenDB 2.0";
 
+       // REVIEW: Is this long enough to determine if it *would* hang forever?
+        private static readonly TimeSpan PerformanceCounterWaitTimeout = TimeSpan.FromSeconds(2);
+
         public PerformanceCountersManager()
         {
-            UsePerformanceCounters = true;
+            InitNoOpCounters();
         }
 
-        public bool UsePerformanceCounters { get; set; }
+        [PerformanceCounter(Name = "# docs / sec", CounterType = PerformanceCounterType.RateOfCountsPerSecond32, Description = "Number of documents per second.")]
+        public IPerformanceCounter DocsPerSecond { get; private set; }
 
-        public PerformanceCounter DocsPerSecCounter { get; private set; }
-        public PerformanceCounter IndexedPerSecCounter { get; private set; }
-        public PerformanceCounter ReducedPerSecCounter { get; private set; }
-        public PerformanceCounter RequestsPerSecCounter { get; private set; }
-        public PerformanceCounter ConcurrentRequestsCounter { get; private set; }
+        [PerformanceCounter(Name = "# docs indexed / sec", CounterType = PerformanceCounterType.RateOfCountsPerSecond32, Description = "Number of documents indexed per second.")]
+        public IPerformanceCounter IndexedPerSecond { get; private set; }
+
+        [PerformanceCounter(Name = "# docs reduced / sec", CounterType = PerformanceCounterType.RateOfCountsPerSecond32, Description = "Number of documents reduced per second.")]
+        public IPerformanceCounter ReducedPerSecond { get; private set; }
+
+        [PerformanceCounter(Name = "# req / sec", CounterType = PerformanceCounterType.RateOfCountsPerSecond32, Description = "Number of requests per second.")]
+        public IPerformanceCounter RequestsPerSecond { get; private set; }
+
+        [PerformanceCounter(Name = "# of concurrent requests", CounterType = PerformanceCounterType.NumberOfItems32, Description = "Number of concurrent requests.")]
+        public IPerformanceCounter ConcurrentRequests { get; private set; }
 
         public void Setup(string name)
         {
             try
             {
-                SetupPerformanceCounter(GetPerformanceCounterName(name));
+                InstallCounters(name);
+                SetCounterProperties(GetPerformanceCounterName(name));
             }
             catch (UnauthorizedAccessException e)
             {
                 log.WarnException("Could not setup performance counters properly because of access permissions, perf counters will not be used", e);
-                UsePerformanceCounters = false;
             }
             catch (SecurityException e)
             {
                 log.WarnException("Could not setup performance counters properly because of access permissions, perf counters will not be used", e);
-                UsePerformanceCounters = false;
             }
         }
 
-        private void SetupPerformanceCounter(string name)
+        private void InstallCounters(string name)
         {
-            var instances = new Dictionary<string, PerformanceCounterType>
-			{
-				{"# docs / sec", PerformanceCounterType.RateOfCountsPerSecond32},
-				{"# docs indexed / sec", PerformanceCounterType.RateOfCountsPerSecond32}, 
-				{"# docs reduced / sec", PerformanceCounterType.RateOfCountsPerSecond32},
-				{"# req / sec", PerformanceCounterType.RateOfCountsPerSecond32}, 
-				{"# of concurrent requests", PerformanceCounterType.NumberOfItems32}
-			};
-
-            if (IsValidCategory(instances, name) == false)
+            if (IsValidCategory(name) == false)
             {
-                var counterCreationDataCollection = new CounterCreationDataCollection();
-                foreach (var instance in instances)
+                var counterCreationData = CounterProperties.Select(p =>
                 {
-                    counterCreationDataCollection.Add(new CounterCreationData
-                    {
-                        CounterName = instance.Key,
-                        CounterType = instance.Value
-                    });
-                }
+                    var attribute = GetPerformanceCounterAttribute(p);
+                    return new CounterCreationData(attribute.Name, attribute.Description, attribute.CounterType);
+                }).ToArray();
 
-                PerformanceCounterCategory.Create(CategoryName, "RavenDB Performance Counters", PerformanceCounterCategoryType.MultiInstance, counterCreationDataCollection);
+                var createDataCollection = new CounterCreationDataCollection(counterCreationData);
+
+                PerformanceCounterCategory.Create(CategoryName, "RavenDB Performance Counters", PerformanceCounterCategoryType.MultiInstance, createDataCollection);
                 PerformanceCounter.CloseSharedResources(); // http://blog.dezfowler.com/2007/08/net-performance-counter-problems.html
             }
-
-            DocsPerSecCounter = new PerformanceCounter(CategoryName, "# docs / sec", name, false);
-            IndexedPerSecCounter = new PerformanceCounter(CategoryName, "# docs indexed / sec", name, false);
-            ReducedPerSecCounter = new PerformanceCounter(CategoryName, "# docs reduced / sec", name, false);
-            RequestsPerSecCounter = new PerformanceCounter(CategoryName, "# req / sec", name, false);
-            ConcurrentRequestsCounter = new PerformanceCounter(CategoryName, "# of concurrent requests", name, false);
         }
 
-        private bool IsValidCategory(Dictionary<string, PerformanceCounterType> instances, string instanceName)
+        private void SetCounterProperties(string instanceName)
         {
-            if (PerformanceCounterCategory.Exists(CategoryName) == false)
+            var canLoadCounters = true;
+
+            foreach (var property in CounterProperties)
+            {
+                PerformanceCounterAttribute attribute = GetPerformanceCounterAttribute(property);
+                if (attribute == null)
+                    continue;
+
+                IPerformanceCounter counter = null;
+                if (canLoadCounters)
+                {
+                    counter = LoadCounter(CategoryName, attribute.Name, instanceName, isReadOnly: false);
+
+                    if (counter == null)
+                    {
+                        // We failed to load the counter so skip the rest
+                        canLoadCounters = false;
+                    }
+                }
+
+                counter = counter ?? NoOpCounter;
+
+                // Initialize the counter sample
+                counter.NextValue();
+
+                property.SetValue(this, counter, null);
+            }
+        }
+
+        private void InitNoOpCounters()
+        {
+            // Set all the counter properties to no-op by default.
+            // These will get reset to real counters when/if the Initialize method is called.
+            foreach (var property in CounterProperties)
+            {
+                property.SetValue(this, new NoOpPerformanceCounter(), null);
+            }
+        }
+
+        private readonly static PropertyInfo[] CounterProperties = GetCounterPropertyInfo();
+        private readonly static IPerformanceCounter NoOpCounter = new NoOpPerformanceCounter();
+
+        internal static PropertyInfo[] GetCounterPropertyInfo()
+        {
+            return typeof (PerformanceCountersManager)
+                .GetProperties()
+                .Where(p => p.PropertyType == typeof (IPerformanceCounter))
+                .ToArray();
+        }
+
+        internal static PerformanceCounterAttribute GetPerformanceCounterAttribute(PropertyInfo property)
+        {
+            return property.GetCustomAttributes(typeof(PerformanceCounterAttribute), false)
+                    .Cast<PerformanceCounterAttribute>()
+                    .SingleOrDefault();
+        }
+
+        private IPerformanceCounter LoadCounter(string categoryName, string counterName, string instanceName, bool isReadOnly)
+        {
+            // See http://msdn.microsoft.com/en-us/library/356cx381.aspx for the list of exceptions
+            // and when they are thrown. 
+            try
+            {
+                return new PerformanceCounterWrapper(new PerformanceCounter(categoryName, counterName, instanceName, isReadOnly));
+            }
+            catch (InvalidOperationException ex)
+            {
+                log.Warn("Performance counter failed to load: " + ex.GetBaseException());
+                return null;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                log.Warn("Performance counter failed to load: " + ex.GetBaseException());
+                return null;
+            }
+            catch (Win32Exception ex)
+            {
+                log.Warn("Performance counter failed to load: " + ex.GetBaseException());
+                return null;
+            }
+            catch (PlatformNotSupportedException ex)
+            {
+                log.Warn("Performance counter failed to load: " + ex.GetBaseException());
+                return null;
+            }
+        }
+
+        private bool IsValidCategory(string instanceName)
+        {
+            if (PerformanceCounterExistsSlow(instanceName))
                 return false;
 
-            foreach (var performanceCounterType in instances)
+            foreach (var counter in CounterProperties)
             {
                 try
                 {
-                    new PerformanceCounter(CategoryName, performanceCounterType.Key, instanceName, readOnly: true).Dispose();
+                    LoadCounter(CategoryName, counter.Name, instanceName, isReadOnly: true).Close();
                 }
                 catch (Exception)
                 {
@@ -105,90 +189,45 @@ namespace Raven.Database.Util
             return true;
         }
 
-        public float RequestsPerSecond
-        {
-            get
-            {
-                if (UsePerformanceCounters == false)
-                    return -1;
-                return RequestsPerSecCounter.NextValue();
-            }
-        }
-
-        public int ConcurrentRequests
-        {
-            get
-            {
-                if (UsePerformanceCounters == false)
-                    return -1;
-                return (int)ConcurrentRequestsCounter.NextValue();
-            }
-        }
-
-        public void DocsPerSecIncreaseBy(int numOfDocs)
-        {
-            if (UsePerformanceCounters)
-            {
-                DocsPerSecCounter.IncrementBy(numOfDocs);
-            }
-        }
-        public void IndexedPerSecIncreaseBy(int numOfDocs)
-        {
-            if (UsePerformanceCounters)
-            {
-                IndexedPerSecCounter.IncrementBy(numOfDocs);
-            }
-        }
-        public void ReducedPerSecIncreaseBy(int numOfDocs)
-        {
-            if (UsePerformanceCounters)
-            {
-                ReducedPerSecCounter.IncrementBy(numOfDocs);
-            }
-        }
-
-        public void IncrementRequestsPerSecCounter()
-        {
-            if (UsePerformanceCounters)
-            {
-                RequestsPerSecCounter.Increment();
-            }
-        }
-
-        public void IncrementConcurrentRequestsCounter()
-        {
-            if (UsePerformanceCounters)
-            {
-                ConcurrentRequestsCounter.Increment();
-            }
-        }
-
-        public void DecrementConcurrentRequestsCounter()
-        {
-            if (UsePerformanceCounters)
-            {
-                ConcurrentRequestsCounter.Decrement();
-            }
-        }
-
         private string GetPerformanceCounterName(string name)
         {
             // dealing with names who are very long (there is a limit of 80 chars for counter name)
             return name.Length > 70 ? name.Remove(70) : name;
         }
 
+        private void UnloadCounters()
+        {
+            foreach (var property in CounterProperties)
+            {
+                var counter = property.GetValue(this, null) as IPerformanceCounter;
+                counter.Close();
+                counter.RemoveInstance();
+            }
+        }
+
         public void Dispose()
         {
-            if (DocsPerSecCounter != null)
-                DocsPerSecCounter.Dispose();
-            if (ReducedPerSecCounter != null)
-                ReducedPerSecCounter.Dispose();
-            if (RequestsPerSecCounter != null)
-                RequestsPerSecCounter.Dispose();
-            if (ConcurrentRequestsCounter != null)
-                ConcurrentRequestsCounter.Dispose();
-            if (IndexedPerSecCounter != null)
-                IndexedPerSecCounter.Dispose();
+            UnloadCounters();
+        }
+
+        private static bool PerformanceCounterExistsSlow(string counterName)
+        {
+            // Fire this off on an separate thread
+            var task = Task.Factory.StartNew(() => PerformanceCounterExists(counterName));
+
+            if (!task.Wait(PerformanceCounterWaitTimeout))
+            {
+                // If it timed out then throw
+                throw new OperationCanceledException();
+            }
+
+            return task.Result;
+        }
+
+        private static bool PerformanceCounterExists(string counterName)
+        {
+            return PerformanceCounterCategory.Exists(CategoryName) &&
+                   PerformanceCounterCategory.CounterExists(counterName, CategoryName);
         }
     }
 }

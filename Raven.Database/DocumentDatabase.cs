@@ -769,7 +769,7 @@ namespace Raven.Database
 
         public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
-            workContext.PerformanceCounters.DocsPerSecIncreaseBy(1);
+            workContext.PerformanceCounters.DocsPerSecond.Increment();
             key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
             RemoveReservedProperties(document);
             RemoveMetadataReservedProperties(metadata);
