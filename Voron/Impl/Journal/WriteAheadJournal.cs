@@ -613,8 +613,6 @@ namespace Voron.Impl.Journal
 						foreach (var fullLog in journalFiles)
 						{
 							fullLog.Release();
-
-							Console.WriteLine("Released " + fullLog.Number);
 						}
 					}
 
