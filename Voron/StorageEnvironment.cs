@@ -234,7 +234,7 @@ namespace Voron
 				{
 					case TaskStatus.RanToCompletion:
 					case TaskStatus.Canceled:
-						return;
+						break;
 					default:
 						_flushingTask.Wait();
 						break;
