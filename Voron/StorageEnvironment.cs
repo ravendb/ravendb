@@ -228,15 +228,8 @@ namespace Voron
 			_cancellationTokenSource.Cancel();
 			_flushWriter.Set();
 
-			if (_options.OwnsPagers)
-				_options.Dispose();
-
-			if (_journal != null)
-				_journal.Dispose();
-
 			if (_flushingTask != null)
 			{
-
 				switch (_flushingTask.Status)
 				{
 					case TaskStatus.RanToCompletion:
@@ -247,6 +240,12 @@ namespace Voron
 						break;
 				}
 			}
+
+			if (_options.OwnsPagers)
+				_options.Dispose();
+
+			if (_journal != null)
+				_journal.Dispose();
 		}
 
 		private unsafe FileHeader* FindLatestFileHeaderEntry()
