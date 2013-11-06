@@ -110,8 +110,13 @@ namespace Performance.Comparison.Voron
 
 		private PerformanceRecord Read(string operation, IEnumerable<int> ids)
 		{
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(dataPath)))
+		    var options = StorageEnvironmentOptions.ForPath(dataPath);
+		    options.ManualFlushing = true;
+
+			using (var env = new StorageEnvironment(options))
 			{
+                env.FlushLogToDataFile();
+
 				var ms = new byte[128];
 				var sw = Stopwatch.StartNew();
 
