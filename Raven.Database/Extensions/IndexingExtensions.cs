@@ -191,6 +191,9 @@ namespace Raven.Database.Extensions
 
 				if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
 					return value;
+
+				if (query != null && query.SortHints != null && query.SortHints.ContainsKey("SortHint-" + nameWithoutRange))
+					return query.SortHints["SortHint-" + nameWithoutRange];
 			}
 
 			if (self.SortOptions.TryGetValue(name, out value))
