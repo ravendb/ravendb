@@ -239,14 +239,22 @@ namespace Voron.Impl.Journal
 				return null;
 			}
 
-			// write transactions can read directly from logs
-			for (var i = Files.Count - 1; i >= 0; i--)
+			_locker.EnterReadLock();
+			try
 			{
-				var page = Files[i].ReadPage(tx, pageNumber);
-				if (page != null)
-					return page;
+				// write transactions can read directly from logs
+				for (var i = Files.Count - 1; i >= 0; i--)
+				{
+					var page = Files[i].ReadPage(tx, pageNumber);
+					if (page != null)
+						return page;
+				}
 			}
-
+			finally
+			{
+				_locker.ExitReadLock();
+			}
+			
 			return null;
 		}
 
@@ -453,6 +461,8 @@ namespace Voron.Impl.Journal
 					if (pagesToWrite.Count == 0)
 						return;
 
+					Console.WriteLine("Applying pages: " + pagesToWrite.Count);
+
 					Debug.Assert(_lastTransactionHeader != null);
 
 					var sortedPages = pagesToWrite.OrderBy(x => x.Key)
@@ -510,6 +520,8 @@ namespace Voron.Impl.Journal
 						foreach (var fullLog in journalFiles)
 						{
 							fullLog.Release();
+
+							Console.WriteLine("Released " + fullLog.Number);
 						}
 					}
 
@@ -534,6 +546,9 @@ namespace Voron.Impl.Journal
 						_lastTransactionHeader = journalReader.LastTransactionHeader;
 						if (_lastTransactionHeader->TransactionId < oldestActiveTransaction)
 							break;
+						//TODO arek
+						//Debugger.Launch();
+						//Console.WriteLine("Last synced log " + file.Number);
 						_lastSyncedLog = file.Number;
 						_lastSyncedPage = journalReader.LastSyncedPage;
 					}
