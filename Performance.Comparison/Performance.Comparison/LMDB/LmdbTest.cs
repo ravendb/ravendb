@@ -9,11 +9,11 @@
 
     using LightningDB;
 
-    public class LmdbTest : IStoragePerformanceTest
+    public class LmdbTest : StoragePerformanceTestBase
     {
         private readonly string _path;
 
-        public string StorageName
+        public override string StorageName
         {
             get
             {
@@ -21,9 +21,16 @@
             }
         }
 
-        public LmdbTest(string path)
+        public LmdbTest(string path, byte[] buffer)
+            : base(buffer)
         {
             _path = Path.Combine(path, "lmdb");
+        }
+
+        ~LmdbTest()
+        {
+            if (Directory.Exists(_path))
+                Directory.Delete(_path, true);
         }
 
         private LightningEnvironment NewEnvironment(bool delete = true)
@@ -36,51 +43,47 @@
 
             var env = new LightningEnvironment(_path, EnvironmentOpenFlags.None)
                           {
-                              MapSize = 500 * 1024 * 1024
+                              MapSize = 1024 * 1024 * 1024 * (long)10
                           };
             env.Open();
 
             return env;
         }
 
-        public List<PerformanceRecord> WriteSequential()
+        public override List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ItemsPerTransaction * Constants.WriteTransactions);
-
-            return Write(string.Format("[LMDB] sequential write ({0} items)", Constants.ItemsPerTransaction), sequentialIds,
+            return Write(string.Format("[LMDB] sequential write ({0} items)", Constants.ItemsPerTransaction), data,
                          Constants.ItemsPerTransaction, Constants.WriteTransactions);
         }
 
-        public List<PerformanceRecord> WriteRandom(HashSet<int> randomIds)
+        public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data)
         {
-            return Write(string.Format("[LMDB] random write ({0} items)", Constants.ItemsPerTransaction), randomIds,
+            return Write(string.Format("[LMDB] random write ({0} items)", Constants.ItemsPerTransaction), data,
                          Constants.ItemsPerTransaction, Constants.WriteTransactions);
         }
 
-        public PerformanceRecord ReadSequential()
+        public override PerformanceRecord ReadSequential()
         {
             var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
 
             return Read(string.Format("[LMDB] sequential read ({0} items)", Constants.ReadItems), sequentialIds);
         }
 
-        public PerformanceRecord ReadRandom(HashSet<int> randomIds)
+        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds)
         {
             return Read(string.Format("[LMDB] random read ({0} items)", Constants.ReadItems), randomIds);
         }
 
-        private List<PerformanceRecord> Write(string operation, IEnumerable<int> ids, int itemsPerTransaction, int numberOfTransactions)
+        private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions)
         {
-            var value = new byte[128];
-            new Random().NextBytes(value);
-
+            byte[] valueToWrite = null;
             var records = new List<PerformanceRecord>();
 
             using (var env = NewEnvironment())
             {
                 var sw = new Stopwatch();
 
-                var enumerator = ids.GetEnumerator();
+                var enumerator = data.GetEnumerator();
 
                 for (var transactions = 0; transactions < numberOfTransactions; transactions++)
                 {
@@ -93,7 +96,9 @@
                         {
                             enumerator.MoveNext();
 
-                            tx.Put(db, Encoding.UTF8.GetBytes(enumerator.Current.ToString("0000000000000000")), value);
+                            valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
+
+                            tx.Put(db, Encoding.UTF8.GetBytes(enumerator.Current.Id.ToString("0000000000000000")), valueToWrite);
                         }
 
                         tx.Commit();
@@ -128,7 +133,9 @@
                 {
                     foreach (var id in ids)
                     {
-                        tx.Get(db, Encoding.UTF8.GetBytes(id.ToString("0000000000000000")));
+                        var value = tx.Get(db, Encoding.UTF8.GetBytes(id.ToString("0000000000000000")));
+
+                        Debug.Assert(value != null);
 
                         processed++;
                     }

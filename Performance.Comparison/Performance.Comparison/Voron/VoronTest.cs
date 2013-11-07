@@ -14,19 +14,20 @@ using Voron.Impl;
 
 namespace Performance.Comparison.Voron
 {
-	public class VoronTest : IStoragePerformanceTest
+	public class VoronTest : StoragePerformanceTestBase
 	{
 		private readonly FlushMode flushMode;
 		private const string dataDir = "voron-perf-test";
 		private readonly string dataPath;
 
-		public VoronTest(string path, FlushMode flushMode)
+		public VoronTest(string path, FlushMode flushMode, byte[] buffer)
+		    : base(buffer)
 		{
 			this.flushMode = flushMode;
 			dataPath = Path.Combine(path, dataDir);
 		}
 
-		public string StorageName { get { return "Voron"; } }
+		public override string StorageName { get { return "Voron"; } }
 
 		private void NewStorage()
 		{
@@ -34,48 +35,44 @@ namespace Performance.Comparison.Voron
 				Directory.Delete(dataPath, true); //TODO do it in more robust way
 		}
 
-		public List<PerformanceRecord> WriteSequential()
+		public override List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data)
 		{
-			var sequentialIds = Enumerable.Range(0, Constants.ItemsPerTransaction * Constants.WriteTransactions);
-
-			return Write(string.Format("[Voron] sequential write ({0} items)", Constants.ItemsPerTransaction), sequentialIds,
+			return Write(string.Format("[Voron] sequential write ({0} items)", Constants.ItemsPerTransaction), data,
 						 Constants.ItemsPerTransaction, Constants.WriteTransactions);
 		}
 
 
-		public List<PerformanceRecord> WriteRandom(HashSet<int> randomIds)
+        public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data)
 		{
-			return Write(string.Format("[Voron] random write ({0} items)", Constants.ItemsPerTransaction), randomIds,
+			return Write(string.Format("[Voron] random write ({0} items)", Constants.ItemsPerTransaction), data,
 						 Constants.ItemsPerTransaction, Constants.WriteTransactions);
 		}
 
-		public PerformanceRecord ReadSequential()
+		public override PerformanceRecord ReadSequential()
 		{
 			var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
 
 			return Read(string.Format("[Voron] sequential read ({0} items)", Constants.ReadItems), sequentialIds);
 		}
 
-		public PerformanceRecord ReadRandom(HashSet<int> randomIds)
+		public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds)
 		{
 			return Read(string.Format("[Voron] random read ({0} items)", Constants.ReadItems), randomIds);
 		}
 
-		private List<PerformanceRecord> Write(string operation, IEnumerable<int> ids, int itemsPerTransaction, int numberOfTransactions)
+		private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions)
 		{
+		    byte[] valueToWrite = null;
+
 			NewStorage();
 
 			var records = new List<PerformanceRecord>();
-
-			var value = new byte[128];
-			new Random().NextBytes(value);
-			 var ms = new MemoryStream(value);
 
 			var sw = new Stopwatch();
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(dataPath, flushMode)))
             {
-				var enumerator = ids.GetEnumerator();
+				var enumerator = data.GetEnumerator();
 				sw.Restart();
 				for (var transactions = 0; transactions < numberOfTransactions; transactions++)
 				{
@@ -85,8 +82,10 @@ namespace Performance.Comparison.Voron
 						for (var i = 0; i < itemsPerTransaction; i++)
 						{
 							enumerator.MoveNext();
-							ms.Position = 0;
-							tx.State.Root.Add(tx, enumerator.Current.ToString("0000000000000000"), ms);
+
+                            valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
+
+                            tx.State.Root.Add(tx, enumerator.Current.Id.ToString("0000000000000000"), new MemoryStream(valueToWrite));
 						}
 
 						tx.Commit();

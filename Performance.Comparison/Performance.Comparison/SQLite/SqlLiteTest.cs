@@ -14,20 +14,21 @@ using System.Linq;
 
 namespace Performance.Comparison.SQLite
 {
-	public class SqlLiteTest : IStoragePerformanceTest
+	public class SqlLiteTest : StoragePerformanceTestBase
 	{
 		private readonly string path;
 		private readonly string connectionString;
 		private readonly string dbFileName;
 
-		public SqlLiteTest(string path)
+		public SqlLiteTest(string path, byte[] buffer)
+		    : base(buffer)
 		{
 			this.path = path;
 			dbFileName = Path.Combine(path, "sqlite-perf-test.s3db");
 			connectionString = string.Format("Data Source={0}", dbFileName);
 		}
 
-		public string StorageName { get { return "SQLite"; } }
+		public override string StorageName { get { return "SQLite"; } }
 
 		private void NewDatabase()
 		{
@@ -47,40 +48,41 @@ namespace Performance.Comparison.SQLite
 			}
 		}
 
-		public List<PerformanceRecord> WriteSequential()
+        public override List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data)
 		{
-			var sequentialIds = Enumerable.Range(0, Constants.ItemsPerTransaction * Constants.WriteTransactions);
-
-			return Write(string.Format("[SQLite] sequential write ({0} items)", Constants.ItemsPerTransaction), sequentialIds,
+			return Write(string.Format("[SQLite] sequential write ({0} items)", Constants.ItemsPerTransaction), data,
 						 Constants.ItemsPerTransaction, Constants.WriteTransactions);
 		}
 
-		public List<PerformanceRecord> WriteRandom(HashSet<int> randomIds)
+        public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data)
 		{
-			return Write(string.Format("[SQLite] random write ({0} items)", Constants.ItemsPerTransaction), randomIds,
+			return Write(string.Format("[SQLite] random write ({0} items)", Constants.ItemsPerTransaction), data,
 						 Constants.ItemsPerTransaction, Constants.WriteTransactions);
 		}
 
-		public PerformanceRecord ReadSequential()
+		public override PerformanceRecord ReadSequential()
 		{
 			var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
 
 			return Read(string.Format("[SQLite] sequential read ({0} items)", Constants.ReadItems), sequentialIds);
 		}
 
-		public PerformanceRecord ReadRandom(HashSet<int> randomIds)
+		public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds)
 		{
 			return Read(string.Format("[SQLite] random read ({0} items)", Constants.ReadItems), randomIds);
 		}
 
-		private List<PerformanceRecord> Write(string operation, IEnumerable<int> ids, int itemsPerTransaction, int numberOfTransactions)
-		{
+        private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions)
+        {
+            byte[] valueToWrite = null;
+
 			NewDatabase();
 
-			var records = new List<PerformanceRecord>();
+            var random = new Random();
+            var value = new byte[data.Max(x => x.ValueSize)];
+            random.NextBytes(value);
 
-			var value = new byte[128];
-			new Random().NextBytes(value);
+			var records = new List<PerformanceRecord>();
 
 			var sw = new Stopwatch();
 
@@ -88,7 +90,7 @@ namespace Performance.Comparison.SQLite
 			{
 				connection.Open();
 
-				var enumerator = ids.GetEnumerator();
+				var enumerator = data.GetEnumerator();
 				sw.Restart();
 				for (var transactions = 0; transactions < numberOfTransactions; transactions++)
 				{
@@ -99,10 +101,12 @@ namespace Performance.Comparison.SQLite
 						{
 							enumerator.MoveNext();
 
+						    valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
+
 							using (var command = new SQLiteCommand("INSERT INTO Items (Id, Value) VALUES (@id, @value)", connection))
 							{
-								command.Parameters.Add("@id", DbType.Int32, 4).Value = enumerator.Current;
-								command.Parameters.Add("@value", DbType.Binary, 128).Value = value;
+								command.Parameters.Add("@id", DbType.Int32, 4).Value = enumerator.Current.Id;
+                                command.Parameters.Add("@value", DbType.Binary, 128).Value = valueToWrite;
 
 								var affectedRows = command.ExecuteNonQuery();
 

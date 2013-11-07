@@ -79,6 +79,8 @@
     <Compile Include="SQLCE\SqlCeTest.cs" />
     <Compile Include="SQLite\SqlLiteTest.cs" />
     <Compile Include="SQLServer\SqlServerTest.cs" />
+    <Compile Include="StoragePerformanceTestBase.cs" />
+    <Compile Include="TestData.cs" />
     <Compile Include="Voron\VoronTest.cs" />
   </ItemGroup>
   <ItemGroup>

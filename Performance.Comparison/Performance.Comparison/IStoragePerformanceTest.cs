@@ -12,9 +12,9 @@ namespace Performance.Comparison
 	{
 		string StorageName { get; }
 
-		List<PerformanceRecord> WriteSequential();
-		List<PerformanceRecord> WriteRandom(HashSet<int> randomIds);
+		List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data);
+        List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data);
 		PerformanceRecord ReadSequential();
-		PerformanceRecord ReadRandom(HashSet<int> randomIds);
+		PerformanceRecord ReadRandom(IEnumerable<int> randomIds);
 	}
 }

@@ -8,7 +8,7 @@
 
     using Microsoft.Isam.Esent.Interop;
 
-    public class EsentTest : IStoragePerformanceTest
+    public class EsentTest : StoragePerformanceTestBase
     {
         private readonly string _path;
 
@@ -30,7 +30,7 @@
 
         private JET_DBID _dbid;
 
-        public string StorageName
+        public override string StorageName
         {
             get
             {
@@ -38,10 +38,17 @@
             }
         }
 
-        public EsentTest(string path)
+        public EsentTest(string path, byte[] buffer)
+            : base(buffer)
         {
             _path = Path.Combine(path, "esent");
             _configurator = new Configurator();
+        }
+
+        ~EsentTest()
+        {
+            if (Directory.Exists(_path))
+                Directory.Delete(_path, true);
         }
 
         public void CreateInstance(bool delete = true)
@@ -111,46 +118,42 @@
             }
         }
 
-        public List<PerformanceRecord> WriteSequential()
+        public override List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ItemsPerTransaction * Constants.WriteTransactions);
-
-            return Write(string.Format("[Esent] sequential write ({0} items)", Constants.ItemsPerTransaction), sequentialIds,
+            return Write(string.Format("[Esent] sequential write ({0} items)", Constants.ItemsPerTransaction), data,
                          Constants.ItemsPerTransaction, Constants.WriteTransactions);
         }
 
-        public List<PerformanceRecord> WriteRandom(HashSet<int> randomIds)
+        public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data)
         {
-            return Write(string.Format("[Esent] random write ({0} items)", Constants.ItemsPerTransaction), randomIds,
+            return Write(string.Format("[Esent] random write ({0} items)", Constants.ItemsPerTransaction), data,
                          Constants.ItemsPerTransaction, Constants.WriteTransactions);
         }
 
-        public PerformanceRecord ReadSequential()
+        public override PerformanceRecord ReadSequential()
         {
             var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
 
             return Read(string.Format("[Esent] sequential read ({0} items)", Constants.ReadItems), sequentialIds);
         }
 
-        public PerformanceRecord ReadRandom(HashSet<int> randomIds)
+        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds)
         {
             return Read(string.Format("[Esent] random read ({0} items)", Constants.ReadItems), randomIds);
         }
 
-        private List<PerformanceRecord> Write(string operation, IEnumerable<int> ids, int itemsPerTransaction, int numberOfTransactions)
+        private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions)
         {
             try
             {
-                var value = new byte[128];
-                new Random().NextBytes(value);
-
+                byte[] valueToWrite = null;
                 var records = new List<PerformanceRecord>();
 
                 CreateInstance();
 
                 var sw = new Stopwatch();
 
-                var enumerator = ids.GetEnumerator();
+                var enumerator = data.GetEnumerator();
 
                 for (var transactions = 0; transactions < numberOfTransactions; transactions++)
                 {
@@ -162,9 +165,11 @@
                         {
                             enumerator.MoveNext();
 
+                            valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
+
                             Api.JetPrepareUpdate(_sesid, _tableid, JET_prep.Insert);
-                            Api.SetColumn(_sesid, _tableid, _primaryColumnId, enumerator.Current);
-                            Api.SetColumn(_sesid, _tableid, _secondaryColumnId, value);
+                            Api.SetColumn(_sesid, _tableid, _primaryColumnId, enumerator.Current.Id);
+                            Api.SetColumn(_sesid, _tableid, _secondaryColumnId, valueToWrite);
                             Api.JetUpdate(_sesid, _tableid);
                         }
 
@@ -209,7 +214,9 @@
                     Api.MakeKey(_sesid, _tableid, id, MakeKeyGrbit.NewKey);
                     Api.JetSeek(_sesid, _tableid, SeekGrbit.SeekEQ);
 
-                    Api.RetrieveColumn(_sesid, _tableid, _secondaryColumnId);
+                    var value = Api.RetrieveColumn(_sesid, _tableid, _secondaryColumnId);
+
+                    Debug.Assert(value != null);
 
                     processed++;
                 }
