@@ -61,6 +61,10 @@ namespace Raven.Database.Util
             {
                 log.WarnException("Could not setup performance counters properly because of access permissions, perf counters will not be used", e);
             }
+            catch (OperationCanceledException e)
+            {
+                log.WarnException("Could not setup performance counters properly. Perf counters will not be used", e);
+            }
         }
 
         private void InstallCounters(string name)
@@ -171,7 +175,7 @@ namespace Raven.Database.Util
 
         private bool IsValidCategory(string instanceName)
         {
-            if (PerformanceCounterExistsSlow(instanceName))
+            if (PerformanceCounterExistsSlow() == false)
                 return false;
 
             foreach (var counter in CounterProperties)
@@ -210,13 +214,14 @@ namespace Raven.Database.Util
             UnloadCounters();
         }
 
-        private static bool PerformanceCounterExistsSlow(string counterName)
+        private static bool PerformanceCounterExistsSlow()
         {
             // Fire this off on an separate thread
-            var task = Task.Factory.StartNew(() => PerformanceCounterExists(counterName));
+            var task = Task.Factory.StartNew(() => PerformanceCounterExists());
 
             if (!task.Wait(PerformanceCounterWaitTimeout))
             {
+                log.Warn("We could not check if the performance counter category '{0}' exist or not, because it took more then 2 minutes. We will not use the performace counter feature.", CategoryName);
                 // If it timed out then throw
                 throw new OperationCanceledException();
             }
@@ -224,10 +229,9 @@ namespace Raven.Database.Util
             return task.Result;
         }
 
-        private static bool PerformanceCounterExists(string counterName)
+        private static bool PerformanceCounterExists()
         {
-            return PerformanceCounterCategory.Exists(CategoryName) &&
-                   PerformanceCounterCategory.CounterExists(counterName, CategoryName);
+            return PerformanceCounterCategory.Exists(CategoryName);
         }
     }
 }
