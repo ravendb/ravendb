@@ -124,9 +124,70 @@ namespace Voron.Tests.Backups
 
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
-					RenderAndShow(tx, 1);
-
 					for (int i = 0; i < 1000; i++)
+					{
+						var readResult = tx.State.Root.Read(tx, "items/" + i);
+						Assert.NotNull(readResult);
+						var memoryStream = new MemoryStream();
+						readResult.Stream.CopyTo(memoryStream);
+						Assert.Equal(memoryStream.ToArray(), buffer);
+					}
+				}
+			}
+		}
+
+		[Fact]
+		public void IncrementalBackupShouldCopyJustNewPagesSinceLastBackup()
+		{
+			var random = new Random();
+			var buffer = new byte[100];
+			random.NextBytes(buffer);
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (int i = 0; i < 5; i++)
+				{
+					tx.State.Root.Add(tx, "items/" + i, new MemoryStream(buffer));
+				}
+
+				tx.Commit();
+			}
+
+			var usedPagesInJournal = Env.Journal.CurrentFile.WritePagePosition;
+
+			var backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupFile(0));
+
+			Assert.Equal(usedPagesInJournal, backedUpPages);
+
+			var writePos = Env.Journal.CurrentFile.WritePagePosition;
+		
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				for (int i = 5; i < 10; i++)
+				{
+					tx.State.Root.Add(tx, "items/" + i, new MemoryStream(buffer));
+				}
+
+				tx.Commit();
+			}
+
+			var usedByLastTransaction = Env.Journal.CurrentFile.WritePagePosition - writePos;
+
+			backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupFile(1));
+
+			Assert.Equal(usedByLastTransaction, backedUpPages);
+
+			var options = StorageEnvironmentOptions.ForPath(_restoredStoragePath);
+			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
+
+			using (var env = new StorageEnvironment(options))
+			{
+				BackupMethods.Incremental.Restore(env, _incrementalBackupFile(0));
+				BackupMethods.Incremental.Restore(env, _incrementalBackupFile(1));
+
+				using (var tx = env.NewTransaction(TransactionFlags.Read))
+				{
+					for (int i = 0; i < 10; i++)
 					{
 						var readResult = tx.State.Root.Read(tx, "items/" + i);
 						Assert.NotNull(readResult);

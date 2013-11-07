@@ -19,27 +19,38 @@ namespace Voron.Impl.Backup
 {
 	public unsafe class IncrementalBackup
 	{
-		public void ToFile(StorageEnvironment env, string backupPath, CompressionOption compression = CompressionOption.Normal)
+		public long ToFile(StorageEnvironment env, string backupPath, CompressionOption compression = CompressionOption.Normal)
 		{
 			if (env.Options.IncrementalBackupEnabled == false)
 				throw new InvalidOperationException("Incremental backup is disabled for this storage");
 
+			long numberOfBackedUpPages = 0;
+
 			var copier = new DataCopier(env.PageSize*16);
 			var backupSuccess = true;
 
-			using (env.NewTransaction(TransactionFlags.Read))
-			{
-				var backupInfo = env.Journal.GetIncrementalBackupInfo();
-				var usedJournals = new List<JournalFile>();
+			IncrementalBackupInfo backupInfo;
+			long lastWrittenLogPage = -1;
+			long lastWrittenLogFile = -1;
 
-				long lastWrittenLogPage = -1;
-				long lastWrittenLogFile = -1;
+			using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				backupInfo = env.Journal.GetIncrementalBackupInfo();
+
+				txw.Rollback(); // will move back the current journal write position moved by current tx (this tx won't be committed anyways)
 
 				if (env.Journal.CurrentFile != null)
 				{
 					lastWrittenLogFile = env.Journal.CurrentFile.Number;
 					lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition - 1;
 				}
+
+				// txw.Commit(); intentionally not committing
+			}
+
+			using (env.NewTransaction(TransactionFlags.Read))
+			{
+				var usedJournals = new List<JournalFile>();
 
 				try
 				{
@@ -83,8 +94,10 @@ namespace Voron.Impl.Backup
 
 							if (journalFile.Number == backupInfo.LastCreatedJournal)
 							{
-								lastBackedUpPage = start + pagesToCopy -1; //TODO verify
+								lastBackedUpPage = start + pagesToCopy - 1;
 							}
+
+							numberOfBackedUpPages += pagesToCopy;
 						}
 						
 						Debug.Assert(lastBackedUpPage != -1);
@@ -112,6 +125,8 @@ namespace Voron.Impl.Backup
 						file.Release();
 					}
 				}
+
+				return numberOfBackedUpPages;
 			}
 		}
 
