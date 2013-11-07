@@ -49,8 +49,11 @@ namespace Voron.Impl.Journal
 			TransactionHeader* current;
 			if (!TryReadAndValidateHeader(out current)) return false;
 
-			if (stopReadingCondition!= null && !stopReadingCondition(*current))
+			if (stopReadingCondition != null && !stopReadingCondition(*current))
+			{
+				_readingPage--; // if the read tx header does not fulfill our condition we have to move back the read index to allow read it again later if needed
 				return false;
+			}
 
 			uint crc = 0;
 			var writePageBeforeCrcCheck = _writePage;

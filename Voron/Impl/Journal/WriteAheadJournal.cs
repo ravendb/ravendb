@@ -635,7 +635,7 @@ namespace Voron.Impl.Journal
 					// we need to ensure that we aren't overwriting pages that are currently being seen by existing transactions
 					Func<TransactionHeader, bool> readUntil =
 						header => oldestActiveTransaction == 0 || // it means there is no active transaction
-									header.TransactionId < oldestActiveTransaction;
+									header.TransactionId < oldestActiveTransaction; // only transactions older than currently the oldest active one
 
 					while (journalReader.ReadOneTransaction(readUntil))
 					{
@@ -649,8 +649,9 @@ namespace Voron.Impl.Journal
 						pagesToWrite[pageNumber] = file;
 					}
 
-					if (_lastTransactionHeader != null &&
-						_lastTransactionHeader->TransactionId < oldestActiveTransaction)
+					var hasJournalMoreWrittenPages = journalReader.LastSyncedPage < (file.WritePagePosition - 1);
+
+					if (journalReader.TransactionPageTranslation.Count > 0 && hasJournalMoreWrittenPages)
 					{
 						// optimization: do not writes pages that have already have newer version in the rest of the journal
 						journalReader.TransactionPageTranslation.Clear();
@@ -663,10 +664,7 @@ namespace Voron.Impl.Journal
 						{
 							pagesToWrite.Remove(supercedingPage);
 						}
-
-						break;
 					}
-
 				}
 				return pagesToWrite;
 			}
