@@ -10,6 +10,7 @@ using Voron.Impl;
 
 namespace Performance.Comparison
 {
+    using Performance.Comparison.Esent;
     using Performance.Comparison.LMDB;
 
     class Program
@@ -26,8 +27,9 @@ namespace Performance.Comparison
 					//new SqlServerTest(),
 					//new SqlLiteTest(path),
 					//new SqlCeTest(path),
-                    new LmdbTest(path),
-					new VoronTest(path, FlushMode.Full)
+                    //new LmdbTest(path),
+                    new EsentTest(path),
+                    new VoronTest(path, FlushMode.Full)
 				};
 
 			foreach (var test in performanceTests)
