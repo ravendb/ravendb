@@ -465,6 +465,8 @@ namespace Voron.Impl.Journal
 			{
 				_fileHeader->IncrementalBackup.LastBackedUpJournal = lastBackedUpJournalFile;
 				_fileHeader->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpJournalFilePage;
+
+				WriteFileHeader();
 			}
 			finally
 			{
