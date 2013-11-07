@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace Raven.Database.Util
+﻿namespace Raven.Database.Util
 {
     internal class NoOpPerformanceCounter : IPerformanceCounter
     {
@@ -14,17 +12,17 @@ namespace Raven.Database.Util
 
         public long Decrement()
         {
-            return 0;
+            return -1;
         }
 
         public long Increment()
         {
-            return 0;
+            return -1;
         }
 
         public long IncrementBy(long value)
         {
-            return 0;
+            return -1;
         }
 
         public float NextValue()
