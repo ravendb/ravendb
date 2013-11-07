@@ -268,13 +268,6 @@ namespace Voron.Impl.Journal
 			if (CurrentFile == null)
 				CurrentFile = NextFile(tx);
 
-			if (_splitJournalFiles.Count > 0) // last split transaction was not committed
-			{
-				Debug.Assert(_splitJournalFiles.All(x => x.LastTransactionCommitted == false));
-				CurrentFile = _splitJournalFiles[0];
-				_splitJournalFiles.Clear();
-			}
-
 			CurrentFile.TransactionBegin(tx);
 		}
 
@@ -298,23 +291,26 @@ namespace Voron.Impl.Journal
 
 		public void TransactionRollback(Transaction tx)
 		{
-			if (_splitJournalFiles.Count <= 0) return;
+			if (_splitJournalFiles.Count > 0) // transaction split into multiple journals
+			{
+				CurrentFile = _splitJournalFiles[0];
 
-			CurrentFile = _splitJournalFiles[0];
+				var relevantFile = Files.FirstOrDefault(file => file.Number == CurrentFile.Number);
+				Debug.Assert(relevantFile != null);
 
-			var relevantFile = Files.FirstOrDefault(file => file.Number == CurrentFile.Number);
-			Debug.Assert(relevantFile != null);
+				var filesToRelease = Files.GetRange(Files.IndexOf(relevantFile) + 1, Files.Count - Files.IndexOf(relevantFile) - 1)
+										  .ToList();
+				filesToRelease.ForEach(file => file.Release());
 
-			var filesToRelease = Files.GetRange(Files.IndexOf(relevantFile) + 1, Files.Count - Files.IndexOf(relevantFile) - 1)
-									  .ToList();
-			filesToRelease.ForEach(file => file.Release());
+				Files = Files.GetRange(0, Files.IndexOf(relevantFile) + 1);
 
-			Files = Files.GetRange(0, Files.IndexOf(relevantFile) + 1);
+				_logIndex -= _splitJournalFiles.Count;
+				_splitJournalFiles.Clear();
+				UpdateLogInfo();
+				WriteFileHeader();
+			}
 
-			_logIndex -= _splitJournalFiles.Count;
-			_splitJournalFiles.Clear();
-			UpdateLogInfo();
-			WriteFileHeader();
+			CurrentFile.TransactionRollback(tx);
 		}
 
 

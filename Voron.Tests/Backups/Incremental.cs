@@ -124,8 +124,6 @@ namespace Voron.Tests.Backups
 
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
-					RenderAndShow(tx, 1);
-
 					for (int i = 0; i < 1000; i++)
 					{
 						var readResult = tx.State.Root.Read(tx, "items/" + i);

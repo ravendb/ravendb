@@ -90,12 +90,6 @@ namespace Voron.Impl.Journal
 
 		public void TransactionBegin(Transaction tx)
 		{
-			if (LastTransactionCommitted == false)
-			{
-				// last transaction did not commit, we need to move back the write page position
-				_writePage = _lastSyncedPage + 1;
-			}
-
 			_currentTxHeader = GetTransactionHeader();
 
 			_currentTxHeader->TransactionId = tx.Id;
@@ -152,6 +146,14 @@ namespace Voron.Impl.Journal
 			Sync();
 		}
 
+		public void TransactionRollback(Transaction tx)
+		{
+			Debug.Assert(tx.Committed == false);
+			Debug.Assert(LastTransactionCommitted == false);
+
+			// last transaction did not commit, we need to move back the write page position
+			_writePage = _lastSyncedPage + 1;
+		}
 		
 		private TransactionHeader* GetTransactionHeader()
 		{
