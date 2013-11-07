@@ -180,6 +180,12 @@ namespace Raven.Database.Util
 
             foreach (var counter in CounterProperties)
             {
+                if (PerformanceCounterCategory.CounterExists(counter.Name, CategoryName) == false)
+                {
+                    PerformanceCounterCategory.Delete(CategoryName);
+                    return false;
+                }
+
                 try
                 {
                     new PerformanceCounter(CategoryName, counter.Name, instanceName, readOnly: true).Close();
