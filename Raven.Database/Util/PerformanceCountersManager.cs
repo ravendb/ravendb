@@ -178,9 +178,9 @@ namespace Raven.Database.Util
             {
                 try
                 {
-                    LoadCounter(CategoryName, counter.Name, instanceName, isReadOnly: true).Close();
+                    new PerformanceCounter(CategoryName, counter.Name, instanceName, readOnly: true).Close();
                 }
-                catch (Exception)
+                catch (InvalidOperationException)
                 {
                     PerformanceCounterCategory.Delete(CategoryName);
                     return false;
