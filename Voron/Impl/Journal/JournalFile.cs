@@ -135,7 +135,6 @@ namespace Voron.Impl.Journal
 			_transactionPageTranslationTable.Clear();
 
 			_currentTxHeader->LastPageNumber = tx.State.NextPageNumber - 1;
-			_currentTxHeader->TxMarker |= TransactionMarker.Commit;
 			_currentTxHeader->PageCount = _allocatedPagesInTransaction;
 			_currentTxHeader->OverflowPageCount = _overflowPagesInTransaction;
 			tx.State.Root.State.CopyTo(&_currentTxHeader->Root);
@@ -145,6 +144,8 @@ namespace Voron.Impl.Journal
 			var crcCount = (_allocatedPagesInTransaction + _overflowPagesInTransaction) * _pager.PageSize;
 
 			_currentTxHeader->Crc = Crc.Value(_pager.PagerState.Base, crcOffset, crcCount);
+
+			_currentTxHeader->TxMarker |= TransactionMarker.Commit;
 
 			_currentTxHeader = null;
 

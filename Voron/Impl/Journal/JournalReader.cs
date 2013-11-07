@@ -41,7 +41,7 @@ namespace Voron.Impl.Journal
 
 		public TransactionHeader* LastTransactionHeader { get; private set; }
 
-		private bool ReadOneTransactionConditionally(Func<TransactionHeader, bool> stopConditionFunc)
+		public bool ReadOneTransaction(Func<TransactionHeader, bool> stopReadingCondition = null, bool checkCrc = true)
 		{
 			if (_readingPage >= _pager.NumberOfAllocatedPages)
 				return false;
@@ -49,41 +49,11 @@ namespace Voron.Impl.Journal
 			TransactionHeader* current;
 			if (!TryReadAndValidateHeader(out current)) return false;
 
-			if (!stopConditionFunc(*current))
-				return false;
-
-			for (var i = 0; i < current->PageCount; i++)
+			if (stopReadingCondition != null && !stopReadingCondition(*current))
 			{
-				var page = _pager.Read(_readingPage);
-
-				_transactionPageTranslation[page.PageNumber] = _readingPage;
-
-				if (page.IsOverflow)
-				{
-					var numOfPages = _pager.GetNumberOfOverflowPages(page.OverflowSize);
-					_readingPage += numOfPages;
-				}
-				else
-				{
-					_readingPage++;
-				}
-
-				_lastSyncedPage = _readingPage - 1;
-				_writePage = _lastSyncedPage + 1;
-			}
-			
-			LastTransactionHeader = current;
-			return true;
-		}
-
-	
-		public bool ReadOneTransaction()
-		{
-			if (_readingPage >= _pager.NumberOfAllocatedPages)
+				_readingPage--; // if the read tx header does not fulfill our condition we have to move back the read index to allow read it again later if needed
 				return false;
-
-			TransactionHeader* current;
-			if (!TryReadAndValidateHeader(out current)) return false;
+			}
 
 			uint crc = 0;
 			var writePageBeforeCrcCheck = _writePage;
@@ -102,19 +72,22 @@ namespace Voron.Impl.Journal
 				{
 					var numOfPages = _pager.GetNumberOfOverflowPages(page.OverflowSize);
 					_readingPage += numOfPages;
-					crc = Crc.Extend(crc, page.Base, 0, numOfPages * _pager.PageSize);
+
+					if(checkCrc)
+						crc = Crc.Extend(crc, page.Base, 0, numOfPages * _pager.PageSize);
 				}
 				else
 				{
 					_readingPage++;
-					crc = Crc.Extend(crc, page.Base, 0, _pager.PageSize);
+					if (checkCrc)
+						crc = Crc.Extend(crc, page.Base, 0, _pager.PageSize);
 				}
 
 				_lastSyncedPage = _readingPage - 1;
 				_writePage = _lastSyncedPage + 1;
 			}
 
-			if (crc != current->Crc)
+			if (checkCrc && crc != current->Crc)
 			{
 				HasIntegrityIssues = true;
 
@@ -136,7 +109,7 @@ namespace Voron.Impl.Journal
 		{
 			_readingPage = _startPage;
 			LastTransactionHeader = _previous;
-			while (ReadOneTransactionConditionally(stopConditionFunc))
+			while (ReadOneTransaction(stopConditionFunc, checkCrc: false))
 			{
 			}			
 		}
@@ -185,8 +158,8 @@ namespace Voron.Impl.Journal
 				throw new InvalidDataException("Transaction must have Start or Split marker");
 			if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
 				throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
-			if (current->PageCount > 0 && current->Crc == 0)
-				throw new InvalidDataException("Transaction checksum can't be equal to 0");
+			if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Crc == 0)
+				throw new InvalidDataException("Committed and not empty transaction checksum can't be equal to 0");
 
 			if (previous == null)
 				return;
