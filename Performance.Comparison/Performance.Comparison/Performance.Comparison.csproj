@@ -44,8 +44,9 @@
     <Reference Include="Esent.Interop">
       <HintPath>..\packages\ManagedEsent.1.8.3.2\lib\net40\Esent.Interop.dll</HintPath>
     </Reference>
-    <Reference Include="LightningDB">
-      <HintPath>..\packages\LightningDB.0.8.0.52232\lib\net40\LightningDB.dll</HintPath>
+    <Reference Include="LightningDB, Version=0.0.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\libs\LightningDB.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

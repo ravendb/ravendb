@@ -33,11 +33,11 @@ namespace Performance.Comparison
 
             var performanceTests = new List<IStoragePerformanceTest>()
 				{
-					//new SqlServerTest(),
-					//new SqlLiteTest(path),
-					//new SqlCeTest(path),
-                    //new LmdbTest(path, buffer),
-                    //new EsentTest(path),
+					new SqlServerTest(buffer),
+					new SqlLiteTest(path, buffer),
+					new SqlCeTest(path, buffer),
+                    new LmdbTest(path, buffer),
+                    new EsentTest(path, buffer),
                     new VoronTest(path, FlushMode.Full, buffer)
 				};
 
