@@ -540,7 +540,16 @@ namespace Raven.Client.Embedded
 				SortOptions sort;
 				Enum.TryParse(value, true, out sort);
 
-				query.SortHints.Add(header, sort);
+				var key = header;
+
+				if(DateTime.Now > new DateTime(2013,11,30))
+					throw new Exception("This is an ugly code that was supposed to be fixed by this time");
+				if (sort == SortOptions.Long && key.EndsWith("_Range"))
+				{
+					key = key.Substring(0, key.Length - "_Range".Length);
+				}
+
+				query.SortHints.Add(key, sort);
 			}
 		}
 
