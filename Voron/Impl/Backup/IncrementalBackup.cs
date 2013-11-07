@@ -19,10 +19,12 @@ namespace Voron.Impl.Backup
 {
 	public unsafe class IncrementalBackup
 	{
-		public void ToFile(StorageEnvironment env, string backupPath, CompressionOption compression = CompressionOption.Normal)
+		public long ToFile(StorageEnvironment env, string backupPath, CompressionOption compression = CompressionOption.Normal)
 		{
 			if (env.Options.IncrementalBackupEnabled == false)
 				throw new InvalidOperationException("Incremental backup is disabled for this storage");
+
+			long numberOfBackedUpPages = 0;
 
 			var copier = new DataCopier(env.PageSize*16);
 			var backupSuccess = true;
@@ -94,6 +96,8 @@ namespace Voron.Impl.Backup
 							{
 								lastBackedUpPage = start + pagesToCopy - 1;
 							}
+
+							numberOfBackedUpPages += pagesToCopy;
 						}
 						
 						Debug.Assert(lastBackedUpPage != -1);
@@ -121,6 +125,8 @@ namespace Voron.Impl.Backup
 						file.Release();
 					}
 				}
+
+				return numberOfBackedUpPages;
 			}
 		}
 
