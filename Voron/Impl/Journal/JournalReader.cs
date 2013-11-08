@@ -18,6 +18,8 @@ namespace Voron.Impl.Journal
 
 		public bool HasIntegrityIssues { get; private set; }
 
+		public bool EncounteredStopCondition { get; private set; }
+
 		public long WritePage
 		{
 			get { return _writePage; }
@@ -52,6 +54,7 @@ namespace Voron.Impl.Journal
 			if (stopReadingCondition != null && !stopReadingCondition(*current))
 			{
 				_readingPage--; // if the read tx header does not fulfill our condition we have to move back the read index to allow read it again later if needed
+				EncounteredStopCondition = true;
 				return false;
 			}
 
