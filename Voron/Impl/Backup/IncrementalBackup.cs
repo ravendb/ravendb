@@ -134,10 +134,10 @@ namespace Voron.Impl.Backup
 		{
 			using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var old = env.Options.ManualFlushing;
-				env.Options.ManualFlushing = true;
-				env.FlushLogToDataFile();
-				env.Options.ManualFlushing = old;
+				using (env.Options.AllowManualFlushing())
+				{
+					env.FlushLogToDataFile();
+				}
 
 				List<string> journalNames;
 
