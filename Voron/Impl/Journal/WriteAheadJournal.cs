@@ -37,6 +37,7 @@ namespace Voron.Impl.Journal
 		internal JournalFile CurrentFile;
 
 		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
+		private readonly object _fileHeaderProtector = new object();
 
 		public WriteAheadJournal(StorageEnvironment env)
 		{
@@ -87,7 +88,10 @@ namespace Voron.Impl.Journal
 				_locker.ExitWriteLock();
 			}
 
-			_dataPager.Sync(); // we have to flush the new log information to disk, may be expensive, so we do it outside the lock
+			lock (_fileHeaderProtector)
+			{
+				_dataPager.Sync(); // we have to flush the new log information to disk, may be expensive, so we do it outside the lock
+			}
 
 			return log;
 		}
@@ -260,7 +264,10 @@ namespace Voron.Impl.Journal
 			header->FreeSpace = _fileHeader->FreeSpace;
 			header->Journal = _fileHeader->Journal;
 
-			_dataPager.Write(fileHeaderPage, page);
+			lock (_fileHeaderProtector)
+			{
+				_dataPager.Write(fileHeaderPage, page);
+			}
 		}
 
 		public void TransactionBegin(Transaction tx)
@@ -473,7 +480,10 @@ namespace Voron.Impl.Journal
 				_locker.ExitWriteLock();
 			}
 
-			_dataPager.Sync(); // we have to flush the new backup information to disk
+			lock (_fileHeaderProtector)
+			{
+				_dataPager.Sync(); // we have to flush the new backup information to disk
+			}
 		}
 
 		public List<LogSnapshot> GetSnapshots()
@@ -600,8 +610,10 @@ namespace Voron.Impl.Journal
 								journalFile.DeleteOnClose();
 						}
 
-						_waj._dataPager.Sync();
-
+						lock (_waj._fileHeaderProtector)
+						{
+							_waj._dataPager.Sync();
+						}
 					}
 					finally
 					{
