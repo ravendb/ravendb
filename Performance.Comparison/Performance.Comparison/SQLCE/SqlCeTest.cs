@@ -119,7 +119,8 @@ namespace Performance.Comparison.SQLCE
 						Operation = operation,
 						Time = DateTime.Now,
 						Duration = sw.ElapsedMilliseconds,
-						ProcessedItems = itemsPerTransaction
+						ProcessedItems = itemsPerTransaction,
+                        Memory = GetMemory()
 					});
 				}
 
@@ -172,7 +173,8 @@ namespace Performance.Comparison.SQLCE
 					Operation = operation,
 					Time = DateTime.Now,
 					Duration = sw.ElapsedMilliseconds,
-					ProcessedItems = processed
+					ProcessedItems = processed,
+                    Memory = GetMemory()
 				};
 			}
 		}

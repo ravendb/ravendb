@@ -183,7 +183,8 @@
                         Operation = operation,
                         Time = DateTime.Now,
                         Duration = sw.ElapsedMilliseconds,
-                        ProcessedItems = itemsPerTransaction
+                        ProcessedItems = itemsPerTransaction,
+                        Memory = GetMemory()
                     });
                 }
 
@@ -228,7 +229,8 @@
                     Operation = operation,
                     Time = DateTime.Now,
                     Duration = sw.ElapsedMilliseconds,
-                    ProcessedItems = processed
+                    ProcessedItems = processed,
+                    Memory = GetMemory()
                 };
             }
             finally

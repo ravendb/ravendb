@@ -41,53 +41,63 @@ namespace Performance.Comparison
                     new VoronTest(path, FlushMode.Full, buffer)
 				};
 
-            foreach (var test in performanceTests)
+            for(var i = 0; i < performanceTests.Count; i++)
             {
+                var test = performanceTests[i];
+
                 Console.WriteLine("Testing: " + test.StorageName);
 
                 var writeSeq = test.WriteSequential(sequentialIds);
                 var items = writeSeq.Sum(x => x.ProcessedItems);
                 double totalDuration = writeSeq.Sum(x => x.Duration);
+                var avgMemoryInMegaBytes = writeSeq.Average(x => x.Memory) / (1024 * 1024);
                 //WritePerfData("WriteSeq", test, writeSeq);
-                Console.WriteLine("Write sequential ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
+                Console.WriteLine("Write seq    ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
 
                 var readSeq = test.ReadSequential();
                 items = readSeq.ProcessedItems;
                 totalDuration = readSeq.Duration;
+                avgMemoryInMegaBytes = readSeq.Memory / (1024 * 1024);
                 //WritePerfData("ReadSeq", test, readSeq);
-                Console.WriteLine("Read sequential ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
+                Console.WriteLine("Read seq     ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
 
                 var writeRandom = test.WriteRandom(randomIds);
                 items = writeRandom.Sum(x => x.ProcessedItems);
                 totalDuration = writeRandom.Sum(x => x.Duration);
-                Console.WriteLine("Write random ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
+                avgMemoryInMegaBytes = writeRandom.Average(x => x.Memory) / (1024 * 1024);
+                Console.WriteLine("Write rnd    ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
 
                 var readRandom = test.ReadRandom(randomIds.Select(x => x.Id));
                 items = readRandom.ProcessedItems;
                 totalDuration = readRandom.Duration;
-                Console.WriteLine("Read random ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
+                avgMemoryInMegaBytes = readRandom.Memory / (1024 * 1024);
+                Console.WriteLine("Read rnd     ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
 
                 writeSeq = test.WriteSequential(sequentialIdsLarge);
                 items = writeSeq.Sum(x => x.ProcessedItems);
                 totalDuration = writeSeq.Sum(x => x.Duration);
+                avgMemoryInMegaBytes = writeSeq.Average(x => x.Memory) / (1024 * 1024);
                 //WritePerfData("WriteSeq", test, writeSeq);
-                Console.WriteLine("Write large sequential ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
+                Console.WriteLine("Write lrg seq    ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
 
                 readSeq = test.ReadSequential();
                 items = readSeq.ProcessedItems;
                 totalDuration = readSeq.Duration;
+                avgMemoryInMegaBytes = readSeq.Memory / (1024 * 1024);
                 //WritePerfData("ReadSeq", test, readSeq);
-                Console.WriteLine("Read large sequential ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
+                Console.WriteLine("Read lrg seq     ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
 
                 writeRandom = test.WriteRandom(randomIdsLarge);
                 items = writeRandom.Sum(x => x.ProcessedItems);
                 totalDuration = writeRandom.Sum(x => x.Duration);
-                Console.WriteLine("Write large random ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
+                avgMemoryInMegaBytes = writeRandom.Average(x => x.Memory) / (1024 * 1024);
+                Console.WriteLine("Write lrg rnd    ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
 
                 readRandom = test.ReadRandom(randomIdsLarge.Select(x => x.Id));
                 items = readRandom.ProcessedItems;
                 totalDuration = readRandom.Duration;
-                Console.WriteLine("Read large random ->  {0} items in {1} sec, {2,10:#,#} ops / sec", items, totalDuration / 1000, items / (totalDuration / 1000));
+                avgMemoryInMegaBytes = readRandom.Memory / (1024 * 1024);
+                Console.WriteLine("Read lrg rnd     ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
 
                 Console.WriteLine("---------------------------");
             }
