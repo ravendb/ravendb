@@ -50,19 +50,19 @@ namespace Voron.Impl.Backup
 
 						files.ForEach(x => x.AddRef());
 
+						txw.Rollback(); // will move back the current journal write position moved by current tx (this tx won't be committed anyways)
+
 						if (env.Journal.CurrentFile != null)
 						{
 							lastWrittenLogFile = env.Journal.CurrentFile.Number;
 							lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition - 1;
 						}
 
-
 						var firstPage = dataPager.Read(0);
-
 
 						copier.ToStream(firstPage.Base, dataPager.PageSize * 2, dataStream);
 
-						//txw.Commit(); intentionally not committing
+						// txw.Commit(); intentionally not committing
 					}
 
 					// now can copy everything else
@@ -83,7 +83,7 @@ namespace Voron.Impl.Backup
 
 							var pagesToCopy = journalFile.Pager.NumberOfAllocatedPages;
 							if (journalFile.Number == lastWrittenLogFile)
-								pagesToCopy = lastWrittenLogPage;
+								pagesToCopy = lastWrittenLogPage + 1;
 							copier.ToStream(journalFile.Pager.Read(0).Base,
 								pagesToCopy*journalFile.Pager.PageSize,
 								journalPart.GetStream());
@@ -93,8 +93,6 @@ namespace Voron.Impl.Backup
 					{
 						files.ForEach(x => x.Release());
 					}
-
-					//txr.Commit(); intentionally not committing
 				}
 			}
 			finally

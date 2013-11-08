@@ -80,7 +80,16 @@ namespace Voron
 			// the first two pages are allocated for double buffering tx commits
 			var entry = FindLatestFileHeaderEntry();
 			TransactionHeader* header;
-			_journal.RecoverDatabase(entry, out header);
+			bool hadIntegrityIssues;
+			_journal.RecoverDatabase(entry, out header,out hadIntegrityIssues);
+			if (_journal.Files.IsEmpty && hadIntegrityIssues)
+			{
+				_journal.Dispose();
+				_journal = new WriteAheadJournal(this);
+				CreateNewDatabase();				
+				return;
+			}
+
 
 			var nextPageNumber = (header == null ? entry->LastPageNumber : header->LastPageNumber) + 1;
 			State = new StorageEnvironmentState(null, null, nextPageNumber)
@@ -219,24 +228,28 @@ namespace Voron
 			_cancellationTokenSource.Cancel();
 			_flushWriter.Set();
 
-			if (_options.OwnsPagers)
-				_options.Dispose();
-
-			if (_journal != null)
-				_journal.Dispose();
-
-			if (_flushingTask != null)
+			try
 			{
-
-				switch (_flushingTask.Status)
+				if (_flushingTask != null)
 				{
-					case TaskStatus.RanToCompletion:
-					case TaskStatus.Canceled:
-						return;
-					default:
-						_flushingTask.Wait();
-						break;
+					switch (_flushingTask.Status)
+					{
+						case TaskStatus.RanToCompletion:
+						case TaskStatus.Canceled:
+							break;
+						default:
+							_flushingTask.Wait();
+							break;
+					}
 				}
+			}
+			finally
+			{
+				if (_options.OwnsPagers)
+					_options.Dispose();
+
+				if (_journal != null)
+					_journal.Dispose();
 			}
 		}
 

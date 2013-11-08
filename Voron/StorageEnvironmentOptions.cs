@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Voron
 {
@@ -71,6 +72,15 @@ namespace Voron
         {
             return new DirectoryStorageEnvironmentOptions(path, flushMode);
         }
+
+		public IDisposable AllowManualFlushing()
+		{
+			var old = ManualFlushing;
+			ManualFlushing = true;
+
+			return new DisposableAction(() => ManualFlushing = old);
+		}
+
 
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {

@@ -116,6 +116,7 @@
     <Compile Include="Util\AsyncManualResetEvent.cs" />
     <Compile Include="Util\Conversion\Endianness.cs" />
     <Compile Include="Util\Crc.cs" />
+    <Compile Include="Util\DisposableAction.cs" />
     <Compile Include="Util\NativeFileMethods.cs" />
     <Compile Include="Impl\Backup\BackupMethods.cs" />
     <Compile Include="Util\DataCopier.cs" />

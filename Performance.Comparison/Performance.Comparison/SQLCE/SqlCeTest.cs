@@ -14,18 +14,19 @@ using System.Linq;
 
 namespace Performance.Comparison.SQLCE
 {
-	public class SqlCeTest : IStoragePerformanceTest
+	public class SqlCeTest : StoragePerformanceTestBase
 	{
 		private readonly string connectionString;
 		private readonly string dbFileName;
 
-		public SqlCeTest(string path)
+		public SqlCeTest(string path, byte[] buffer)
+		    : base(buffer)
 		{
 			dbFileName = Path.Combine(path, "sqlce-perf-test.sdf");
 			connectionString = string.Format("Data Source={0}", dbFileName);
 		}
 
-		public string StorageName { get { return "SQL CE";  } }
+		public override string StorageName { get { return "SQL CE";  } }
 
 		private void NewDatabase()
 		{
@@ -47,40 +48,37 @@ namespace Performance.Comparison.SQLCE
 				}
 			}
 		}
-		public List<PerformanceRecord> WriteSequential()
+        public override List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data)
 		{
-			var sequentialIds = Enumerable.Range(0, Constants.ItemsPerTransaction * Constants.WriteTransactions);
-
-			return Write(string.Format("[SQL CE] sequential write ({0} items)", Constants.ItemsPerTransaction), sequentialIds,
+			return Write(string.Format("[SQL CE] sequential write ({0} items)", Constants.ItemsPerTransaction), data,
 						 Constants.ItemsPerTransaction, Constants.WriteTransactions);
 		}
 
-		public List<PerformanceRecord> WriteRandom(HashSet<int> randomIds)
+        public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data)
 		{
-			return Write(string.Format("[SQL CE] random write ({0} items)", Constants.ItemsPerTransaction), randomIds,
+			return Write(string.Format("[SQL CE] random write ({0} items)", Constants.ItemsPerTransaction), data,
 						 Constants.ItemsPerTransaction, Constants.WriteTransactions);
 		}
 
-		public PerformanceRecord ReadSequential()
+		public override PerformanceRecord ReadSequential()
 		{
 			var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
 
 			return Read(string.Format("[SQL CE] sequential read ({0} items)", Constants.ReadItems), sequentialIds);
 		}
 
-		public PerformanceRecord ReadRandom(HashSet<int> randomIds)
+		public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds)
 		{
 			return Read(string.Format("[SQL CE] random read ({0} items)", Constants.ReadItems), randomIds);
 		}
 
-		private List<PerformanceRecord> Write(string operation, IEnumerable<int> ids, int itemsPerTransaction, int numberOfTransactions)
-		{
+        private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions)
+        {
+            byte[] valueToWrite = null;
+
 			NewDatabase();
 
 			var records = new List<PerformanceRecord>();
-
-			var value = new byte[128];
-			new Random().NextBytes(value);
 
 			var sw = new Stopwatch();
 
@@ -88,7 +86,7 @@ namespace Performance.Comparison.SQLCE
 			{
 				connection.Open();
 
-				var enumerator = ids.GetEnumerator();
+				var enumerator = data.GetEnumerator();
 				sw.Restart();
 				for (var transactions = 0; transactions < numberOfTransactions; transactions++)
 				{
@@ -99,10 +97,12 @@ namespace Performance.Comparison.SQLCE
 						{
 							enumerator.MoveNext();
 
+						    valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
+
 							using (var command = new SqlCeCommand("INSERT INTO Items (Id, Value) VALUES (@id, @value)", connection))
 							{
-								command.Parameters.Add("@id", SqlDbType.Int, 4).Value = enumerator.Current;
-								command.Parameters.Add("@value", SqlDbType.Binary, 128).Value = value;
+								command.Parameters.Add("@id", SqlDbType.Int, 4).Value = enumerator.Current.Id;
+                                command.Parameters.Add("@value", SqlDbType.Binary, 128).Value = valueToWrite;
 
 								var affectedRows = command.ExecuteNonQuery();
 
@@ -119,7 +119,8 @@ namespace Performance.Comparison.SQLCE
 						Operation = operation,
 						Time = DateTime.Now,
 						Duration = sw.ElapsedMilliseconds,
-						ProcessedItems = itemsPerTransaction
+						ProcessedItems = itemsPerTransaction,
+                        Memory = GetMemory()
 					});
 				}
 
@@ -172,7 +173,8 @@ namespace Performance.Comparison.SQLCE
 					Operation = operation,
 					Time = DateTime.Now,
 					Duration = sw.ElapsedMilliseconds,
-					ProcessedItems = processed
+					ProcessedItems = processed,
+                    Memory = GetMemory()
 				};
 			}
 		}

@@ -43,7 +43,6 @@
 
 			using (var snapshot = Env.CreateSnapshot())
 			{
-                RenderAndShow(snapshot.Transaction, snapshot.Transaction.GetTree("tree1"), 1);
                 using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 				    var t1 = tx.GetTree("tree1");
@@ -54,8 +53,6 @@
 
 					tx.Commit();
 				}
-
-                RenderAndShow(snapshot.Transaction,snapshot.Transaction.GetTree("tree1"),1);
 
 				for (var i = 0; i < DocumentCount; i++)
 				{

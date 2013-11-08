@@ -1,56 +1,64 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="VoronTest.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using Voron;
-using Voron.Impl;
-
-namespace Performance.Comparison.Voron
+﻿namespace Performance.Comparison.LMDB
 {
-    public class VoronTest : StoragePerformanceTestBase
-    {
-        private readonly FlushMode flushMode;
-        private const string dataDir = "voron-perf-test";
-        private readonly string dataPath;
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Text;
 
-        public VoronTest(string path, FlushMode flushMode, byte[] buffer)
+    using LightningDB;
+
+    public class LmdbTest : StoragePerformanceTestBase
+    {
+        private readonly string _path;
+
+        public override string StorageName
+        {
+            get
+            {
+                return "LMDB";
+            }
+        }
+
+        public LmdbTest(string path, byte[] buffer)
             : base(buffer)
         {
-            this.flushMode = flushMode;
-            dataPath = Path.Combine(path, dataDir);
+            _path = Path.Combine(path, "lmdb");
         }
 
-        ~VoronTest()
+        ~LmdbTest()
         {
-            if (Directory.Exists(dataPath))
-                Directory.Delete(dataPath, true);
+            if (Directory.Exists(_path))
+                Directory.Delete(_path, true);
         }
 
-        public override string StorageName { get { return "Voron"; } }
-
-        private void NewStorage()
+        private LightningEnvironment NewEnvironment(bool delete = true)
         {
-            if (Directory.Exists(dataPath))
-                Directory.Delete(dataPath, true); //TODO do it in more robust way
+            if (delete && Directory.Exists(_path))
+                Directory.Delete(_path, true);
+
+            if (!Directory.Exists(_path))
+                Directory.CreateDirectory(_path);
+
+            var env = new LightningEnvironment(_path, EnvironmentOpenFlags.None)
+                          {
+                              MapSize = 1024 * 1024 * 1024 * (long)10
+                          };
+            env.Open();
+
+            return env;
         }
 
         public override List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data)
         {
-            return Write(string.Format("[Voron] sequential write ({0} items)", Constants.ItemsPerTransaction), data,
+            return Write(string.Format("[LMDB] sequential write ({0} items)", Constants.ItemsPerTransaction), data,
                          Constants.ItemsPerTransaction, Constants.WriteTransactions);
         }
 
-
         public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data)
         {
-            return Write(string.Format("[Voron] random write ({0} items)", Constants.ItemsPerTransaction), data,
+            return Write(string.Format("[LMDB] random write ({0} items)", Constants.ItemsPerTransaction), data,
                          Constants.ItemsPerTransaction, Constants.WriteTransactions);
         }
 
@@ -58,32 +66,31 @@ namespace Performance.Comparison.Voron
         {
             var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
 
-            return Read(string.Format("[Voron] sequential read ({0} items)", Constants.ReadItems), sequentialIds);
+            return Read(string.Format("[LMDB] sequential read ({0} items)", Constants.ReadItems), sequentialIds);
         }
 
         public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds)
         {
-            return Read(string.Format("[Voron] random read ({0} items)", Constants.ReadItems), randomIds);
+            return Read(string.Format("[LMDB] random read ({0} items)", Constants.ReadItems), randomIds);
         }
 
         private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions)
         {
             byte[] valueToWrite = null;
-
-            NewStorage();
-
             var records = new List<PerformanceRecord>();
 
-            var sw = new Stopwatch();
-
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(dataPath, flushMode)))
+            using (var env = NewEnvironment())
             {
+                var sw = new Stopwatch();
+
                 var enumerator = data.GetEnumerator();
-                sw.Restart();
+
                 for (var transactions = 0; transactions < numberOfTransactions; transactions++)
                 {
                     sw.Restart();
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+
+                    using (var tx = env.BeginTransaction())
+                    using (var db = tx.OpenDatabase())
                     {
                         for (var i = 0; i < itemsPerTransaction; i++)
                         {
@@ -91,11 +98,12 @@ namespace Performance.Comparison.Voron
 
                             valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
 
-                            tx.State.Root.Add(tx, enumerator.Current.Id.ToString("0000000000000000"), new MemoryStream(valueToWrite));
+                            tx.Put(db, Encoding.UTF8.GetBytes(enumerator.Current.Id.ToString("0000000000000000")), valueToWrite);
                         }
 
                         tx.Commit();
                     }
+
                     sw.Stop();
 
                     records.Add(new PerformanceRecord
@@ -116,30 +124,19 @@ namespace Performance.Comparison.Voron
 
         private PerformanceRecord Read(string operation, IEnumerable<int> ids)
         {
-            var options = StorageEnvironmentOptions.ForPath(dataPath);
-            options.ManualFlushing = true;
-
-            using (var env = new StorageEnvironment(options))
+            using (var env = NewEnvironment(delete: false))
             {
-                env.FlushLogToDataFile();
-
-                var ms = new byte[128];
                 var sw = Stopwatch.StartNew();
 
                 var processed = 0;
-
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
+                using (var tx = env.BeginTransaction())
+                using (var db = tx.OpenDatabase())
                 {
                     foreach (var id in ids)
                     {
+                        var value = tx.Get(db, Encoding.UTF8.GetBytes(id.ToString("0000000000000000")));
 
-                        var key = id.ToString("0000000000000000");
-                        using (var stream = tx.State.Root.Read(tx, key).Stream)
-                        {
-                            while (stream.Read(ms, 0, ms.Length) != 0)
-                            {
-                            }
-                        }
+                        Debug.Assert(value != null);
 
                         processed++;
                     }

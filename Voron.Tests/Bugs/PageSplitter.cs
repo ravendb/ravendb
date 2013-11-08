@@ -56,7 +56,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact(Skip = "Long running")]
+		[Fact]
 		public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
 		{
 			var ids = ReadIds("data.txt");
@@ -91,7 +91,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact(Skip = "Long running")]
+		[Fact]
 		public void PageSplitterShouldCalculateSeparatorKeyCorrectly2()
 		{
 			var ids = ReadIds("data2.txt");
