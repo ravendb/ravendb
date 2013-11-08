@@ -675,6 +675,9 @@ namespace Voron.Impl.Journal
 							pagesToWrite.Remove(supercedingPage);
 						}
 					}
+
+					if(journalReader.EncounteredStopCondition)
+						break;
 				}
 				return pagesToWrite;
 			}
