@@ -218,6 +218,7 @@
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
+    <Compile Include="Bugs\LoDash.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
     <Compile Include="Issues\RavenDB_1435.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
