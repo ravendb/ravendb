@@ -119,6 +119,7 @@ namespace Raven.Database.Indexing
 					workerWorkCounter = currentWorkCounter;
 					return true;
 				}
+                CancellationToken.ThrowIfCancellationRequested();
 				log.Debug("No work was found, workerWorkCounter: {0}, for: {1}, will wait for additional work", workerWorkCounter, name);
 				var forWork = Monitor.Wait(waitForWork, timeout);
 				if (forWork)

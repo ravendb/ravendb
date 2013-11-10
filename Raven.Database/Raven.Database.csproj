@@ -249,7 +249,9 @@
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
     <Compile Include="Impl\DTC\MuninInFlightTransactionalState.cs" />
+    <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
+    <Compile Include="LastCollectionEtags.cs" />
     <Compile Include="Linq\AttachmentForIndexing.cs" />
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
     <Compile Include="Linq\Ast\ThrowOnInvalidMethodCallsInReduce.cs" />
@@ -300,10 +302,12 @@
     <Compile Include="Server\Controllers\TransformersController.cs" />
     <Compile Include="Server\OwinHttpServer.cs" />
     <Compile Include="Server\Responders\Admin\AdminDetailedSizeBreakdown.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugDocumentsCount.cs" />
     <Compile Include="Server\Responders\Debugging\DebugIndexFields.cs" />
     <Compile Include="Server\Responders\Admin\AdminLohCompaction.cs" />
     <Compile Include="Server\Responders\Debugging\DebugLists.cs" />
     <Compile Include="Server\Responders\Debugging\DebugQueries.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugTasks.cs" />
     <Compile Include="Server\Responders\Debugging\ExecutingQueryInfo.cs" />
     <Compile Include="Server\Responders\SingleAuthToken.cs" />
     <Compile Include="Server\Responders\TransactionPrepare.cs" />
@@ -922,6 +926,7 @@
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
+    <Compile Include="Tasks\TaskMetadata.cs" />
     <Compile Include="Tasks\TouchMissingReferenceDocumentTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\CompositeDisposable.cs" />
@@ -953,7 +958,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Json\Map.js" />
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
     <EmbeddedResource Include="Json\lodash.js" />

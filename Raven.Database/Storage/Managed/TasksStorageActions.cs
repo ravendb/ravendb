@@ -76,9 +76,20 @@ namespace Raven.Storage.Managed
             return null;
         }
 
+		public IEnumerable<TaskMetadata> GetPendingTasksForDebug()
+		{
+			return storage.Tasks.Select(readResult => new TaskMetadata
+			                                          {
+				                                          Id = Etag.Parse(readResult.Key.Value<byte[]>("id")),
+				                                          AddedTime = readResult.Key.Value<DateTime>("time"),
+				                                          Type = readResult.Key.Value<string>("type"),
+				                                          IndexId = readResult.Key.Value<int>("index")
+			                                          });
+		}
         private void MergeSimilarTasks(DatabaseTask task, byte[] taskId)
         {
             var taskType = task.GetType().FullName;
+
 
             int totalTaskCount = 0;
             foreach (var keyForTaskToTryMerging in KeyForTaskToTryMergings(task, taskType, new Guid(taskId)))
@@ -130,11 +141,11 @@ namespace Raven.Storage.Managed
 	            {"index", task.Index},
 	            {"type", taskType},
 	        })
-                                                  .Where(x => new Guid(x.Value<byte[]>("id")) != taskId)
-                                                  .TakeWhile(x =>
-                                                             task.Index.Equals(x.Value<int>("index")) &&
-                                                             StringComparer.OrdinalIgnoreCase.Equals(
-                                                                 x.Value<string>("type"), taskType)
+                .Where(x => new Guid(x.Value<byte[]>("id")) != taskId)
+                    .TakeWhile(x => StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("type"), taskType))
+                    .Where(x => new Guid(x.Value<byte[]>("id")) != taskId)
+                    .TakeWhile(x => task.Index.Equals(x.Value<int>("index")) &&
+                                    StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("type"), taskType)
                 );
         }
     }

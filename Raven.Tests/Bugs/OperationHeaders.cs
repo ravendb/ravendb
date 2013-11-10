@@ -27,6 +27,7 @@ namespace Raven.Tests.Bugs
 		{
 			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
 			path = Path.Combine(path, "TestDb").Substring(6);
+			IOExtensions.DeleteDirectory(path);
 		}
 
 		public void Dispose()

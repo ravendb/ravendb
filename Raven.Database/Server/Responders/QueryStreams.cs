@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Raven.Abstractions;
 using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
@@ -118,7 +119,7 @@ namespace Raven.Database.Server.Responders
 
 			public void WriteHeader()
 			{
-				writer = new StreamWriter(context.Response.OutputStream);
+				writer = new StreamWriter(context.Response.OutputStream, Encoding.UTF8);
 			}
 
 			public void Write(RavenJObject result)

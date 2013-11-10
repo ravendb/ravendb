@@ -84,13 +84,13 @@
 
 							<sdk:DataGrid.Columns>
 								<sdk:DataGridTextColumn Header="Path"
-														Binding="{Binding Path}"
+														Binding="{Binding Path, Mode=TwoWay}"
 														Width="Auto"/>
 								<sdk:DataGridTextColumn Header="Value"
-														Binding="{Binding Value}"
+														Binding="{Binding Values, Mode=TwoWay}"
 														Width="Auto"/>
 								<sdk:DataGridCheckBoxColumn Header="Should Match"
-															Binding="{Binding ShouldMatch}" 
+															Binding="{Binding ShouldMatch, Mode=TwoWay}" 
 															Width="Auto" 
 															CanUserResize="False"
 															CanUserReorder="False"/>

@@ -57,7 +57,7 @@ namespace Raven.Tests.Bugs
 				var putResult2 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null);
 				var putResult3 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null); // update
 
-				var docs = store.DocumentDatabase.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty);
+				var docs = store.DocumentDatabase.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, null).GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty);
 
 				Assert.Equal(2, docs.Count);
 				Assert.Equal(putResult1.ETag, docs[0].Etag); // the document taken from memory
@@ -78,7 +78,7 @@ namespace Raven.Tests.Bugs
 				var putResult2 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null);
 				var putResult3 = store.DocumentDatabase.Put("key/2", null, new RavenJObject(), new RavenJObject(), null); // update
 
-				var docs = store.DocumentDatabase.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty);
+				var docs = store.DocumentDatabase.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, null).GetDocumentsBatchFrom(Raven.Abstractions.Data.Etag.Empty);
 				Assert.Equal(2, docs.Count);
 				Assert.Equal(putResult1.ETag, docs[0].Etag);
 				Assert.Equal(putResult3.ETag, docs[1].Etag);

@@ -1,68 +1,57 @@
 ﻿using System;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
-using Raven.Abstractions;
+using System.Threading.Tasks;
+using Raven.Abstractions.Data;
+using Raven.Client;
+using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Backup
 {
-	public class BackupOperation
+	public class BackupOperation : IDisposable
 	{
+		private DocumentStore store;
 		public string ServerUrl { get; set; }
 		public string BackupPath { get; set; }
 		public bool NoWait { get; set; }
+		public NetworkCredential Credentials { get; set; }
 
 		public bool Incremental { get; set; }
+		public int? Timeout { get; set; }
+		public string ApiKey { get; set; }
+		public string Database { get; set; }
+
+		public BackupOperation()
+		{
+			Credentials = CredentialCache.DefaultNetworkCredentials;
+		}
 
 		public bool InitBackup()
 		{
 			ServerUrl = ServerUrl.TrimEnd('/');
 
+			store = new DocumentStore {Url = ServerUrl, DefaultDatabase = Database, ApiKey = ApiKey};
+			store.Initialize();
+			
 			var json = @"{ ""BackupLocation"": """ + BackupPath.Replace("\\", "\\\\") + @""" }";
 
-			var uriString = ServerUrl + "/admin/backup";
+			var url = "/admin/backup";
 			if (Incremental)
-				uriString += "?incremental=true";
-			var req = WebRequest.Create(uriString);
-			req.Method = "POST";
-			req.UseDefaultCredentials = true;
-			req.PreAuthenticate = true;
-			req.Credentials = CredentialCache.DefaultCredentials;
-
-			using (var streamWriter = new StreamWriter(req.GetRequestStream()))
-			{
-				streamWriter.WriteLine(json);
-				streamWriter.Flush();
-			}
-
+				url += "?incremental=true";
+			var req = CreateRequest(url, "POST");
+			
+			req.Write(json);
 			try
 			{
 				Console.WriteLine("Sending json {0} to {1}", json, ServerUrl);
 
-				using (var resp = req.GetResponse())
-				using (var reader = new StreamReader(resp.GetResponseStream()))
-				{
-					var response = reader.ReadToEnd();
-					Console.WriteLine(response);
-				}
-			}
-			catch (WebException we)
-			{
-				var response = we.Response as HttpWebResponse;
-				if(response == null)
-				{
-					Console.WriteLine(we.Message);
-					return false;
-				}
-				Console.WriteLine(response.StatusCode + " " + response.StatusDescription);
-				using(var reader = new StreamReader(response.GetResponseStream()))
-				{
-					Console.WriteLine(reader.ReadToEnd());
-					return false;
-				}
+				var response = req.ReadResponseJson();
+				Console.WriteLine(response);
 			}
 			catch (Exception exc)
 			{
@@ -73,15 +62,35 @@ namespace Raven.Backup
 			return true;
 		}
 
+		private HttpJsonRequest CreateRequest(string url, string method)
+		{
+			var uriString = ServerUrl;
+			if (string.IsNullOrWhiteSpace(Database) == false)
+			{
+				uriString += "/databases/" + Database;
+			}
+			uriString += url;
+			if (Incremental)
+				uriString += "?incremental=true";
+			var req = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, Credentials, store.Conventions));
+
+			if (Timeout.HasValue)
+			{
+				req.Timeout = TimeSpan.FromMilliseconds(Timeout.Value);
+			}
+			
+			return req;
+		}
+
+
 		public void WaitForBackup()
 		{
-			JObject doc = null;
+			BackupStatus status = null;
 
-			while (doc == null)
+			while (status == null)
 			{
 				Thread.Sleep(100); // Allow the server to process the request
-
-				doc = GetStatusDoc();
+				status = GetStatusDoc();
 			}
 
 			if (NoWait)
@@ -90,45 +99,26 @@ namespace Raven.Backup
 				return;
 			}
 
-			while (doc.Value<bool>("IsRunning"))
+			while (status.IsRunning)
 			{
 				Thread.Sleep(1000);
-
-				doc = GetStatusDoc();
+				status = GetStatusDoc();
 			}
-
-			var res = from msg in doc["Messages"]
-					  select new
-								{
-									Message = msg.Value<string>("Message"),
-									Timestamp = msg.Value<DateTime>("Timestamp"),
-									Severity = msg.Value<string>("Severity")
-								};
-
-			foreach (var msg in res)
+			
+			foreach (var msg in status.Messages)
 			{
-				Console.WriteLine(string.Format("[{0}] {1}", msg.Timestamp, msg.Message));
+				Console.WriteLine("[{0}] {1}", msg.Timestamp, msg.Message);
 			}
 		}
 
-		public JObject GetStatusDoc()
+		public BackupStatus GetStatusDoc()
 		{
-			var req = WebRequest.Create(ServerUrl + "/docs/Raven/Backup/Status");
-			req.Method = "GET";
-			req.UseDefaultCredentials = true;
-			req.PreAuthenticate = true;
-			req.Credentials = CredentialCache.DefaultCredentials;
+			var req = CreateRequest("/docs/" + BackupStatus.RavenBackupStatusDocumentKey, "GET");
 
 			try
 			{
-				JObject ret;
-				using (var resp = req.GetResponse())
-				using (var reader = new StreamReader(resp.GetResponseStream()))
-				{
-					var response = reader.ReadToEnd();
-					ret = JObject.Parse(response);
-				}
-				return ret;
+				var json = (RavenJObject)req.ReadResponseJson();
+				return json.Deserialize<BackupStatus>(store.Conventions);
 			}
 			catch (WebException ex)
 			{
@@ -144,6 +134,13 @@ namespace Raven.Backup
 			}
 
 			return null;
+		}
+
+		public void Dispose()
+		{
+			var _store = store;
+			if (_store != null)
+				_store.Dispose();
 		}
 	}
 }

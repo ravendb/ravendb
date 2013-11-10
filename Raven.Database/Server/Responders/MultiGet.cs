@@ -193,7 +193,9 @@ namespace Raven.Database.Server.Responders
 			    req.Headers.TryGetValue(Constants.RavenClientVersion, out ravenClientVersion);
 			    QueryString = HttpRequestHelper.ParseQueryStringWithLegacySupport(
                                                     ravenClientVersion, 
-                                                    req.Query ?? string.Empty);
+                                                    (req.Query ?? string.Empty).Replace("+", "%2B"));
+
+				
 				Url = new UriBuilder(realRequest.Url)
 				{
 					Query = req.Query,

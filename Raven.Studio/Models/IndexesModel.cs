@@ -115,9 +115,9 @@ namespace Raven.Studio.Models
 			Indexes.Clear();
 			
 			if(string.IsNullOrWhiteSpace(SearchText.Value))
-                Indexes.AddRange(statistics.Indexes.Select(stats => new IndexItem { Name = stats.PublicName, GroupName = GetIndexGroup(stats), IndexStats = stats }));
+                Indexes.AddRange(statistics.Indexes.Where(stats => stats != null).Select(stats => new IndexItem { Name = stats.PublicName, GroupName = GetIndexGroup(stats), IndexStats = stats }));
 			else
-				Indexes.AddRange(statistics.Indexes
+				Indexes.AddRange(statistics.Indexes.Where(stats => stats != null)
 					.Where(stats => stats.PublicName.IndexOf(SearchText.Value, StringComparison.InvariantCultureIgnoreCase) != -1)
                     .Select(stats => new IndexItem { Name = stats.PublicName, GroupName = GetIndexGroup(stats), IndexStats = stats }));
 

@@ -113,6 +113,12 @@ namespace Raven.Abstractions.Extensions
 			"X-Original-URL"
 		};
 
+		private static readonly HashSet<string> prefixesInHeadersToIgnoreClient = new HashSet<string>
+		                                                                       {
+																				   "Temp",
+			                                                                       "X-NewRelic"
+		                                                                       }; 
+
 		/// <summary>
 		/// Filters the headers from unwanted headers
 		/// </summary>
@@ -126,7 +132,7 @@ namespace Raven.Abstractions.Extensions
 			var metadata = new RavenJObject();
 			foreach (var header in self)
 			{
-				if(header.Key.StartsWith("Temp"))
+				if (prefixesInHeadersToIgnoreClient.Any(prefix => header.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 					continue;
 				if(header.Key == Constants.DocumentIdFieldName)
 					continue;
@@ -156,7 +162,7 @@ namespace Raven.Abstractions.Extensions
 			var metadata = new RavenJObject();
 			foreach (var header in self.Headers)
 			{
-				if (header.Key.StartsWith("Temp"))
+				if (prefixesInHeadersToIgnoreClient.Any(prefix => header.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 					continue;
 				if (headersToIgnoreClient.Contains(header.Key))
 					continue;
@@ -187,7 +193,7 @@ namespace Raven.Abstractions.Extensions
 			  var metadata = new RavenJObject();
 			foreach (var header in self)
 			{
-				if (header.Key.StartsWith("Temp"))
+				if (prefixesInHeadersToIgnoreClient.Any(prefix => header.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 					continue;
 				if (headersToIgnoreClient.Contains(header.Key))
 					continue;
@@ -221,7 +227,7 @@ namespace Raven.Abstractions.Extensions
 			{
 				try
 				{
-					if (header.StartsWith("Temp"))
+					if (prefixesInHeadersToIgnoreClient.Any(prefix => header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 						continue;
 					if (headersToIgnoreClient.Contains(header))
 						continue;
@@ -268,7 +274,7 @@ namespace Raven.Abstractions.Extensions
 				var header = a.Key;
 				try
 				{
-					if (header.StartsWith("Temp"))
+					if (prefixesInHeadersToIgnoreClient.Any(prefix => header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
 						continue;
 					if (headersToIgnoreClient.Contains(header))
 						continue;

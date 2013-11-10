@@ -34,8 +34,8 @@ namespace Raven.Storage.Managed
 			MapReduce = mappedResultsStorageAction;
 			Queue = new QueueStorageActions(storage, generator);
 			Tasks = new TasksStorageActions(storage, generator);
-			Staleness = new StalenessStorageActions(storage);
 			Lists = new ListsStorageActions(storage, generator);
+			Staleness = new StalenessStorageActions(storage, Lists);
 		}
 
 		public IListsStorageActions Lists { get; private set; }

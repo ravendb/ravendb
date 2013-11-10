@@ -81,6 +81,22 @@ namespace Raven.Database.Server.Responders
 			{
 				connectionState.UnwatchDocumentPrefix(name);
 			}
+			else if (Match(cmd, "watch-collection"))
+			{
+				connectionState.WatchDocumentInCollection(name);
+			}
+			else if (Equals(cmd, "unwatch-collection"))
+			{
+				connectionState.UnwatchDocumentInCollection(name);
+			}
+			else if (Match(cmd, "watch-type"))
+			{
+				connectionState.WatchDocumentOfType(name);
+			}
+			else if (Equals(cmd, "unwatch-type"))
+			{
+				connectionState.UnwatchDocumentOfType(name);
+			}
 			else if (Match(cmd, "watch-replication-conflicts"))
 			{
 				connectionState.WatchAllReplicationConflicts();

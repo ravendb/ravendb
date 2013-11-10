@@ -62,8 +62,10 @@ namespace Raven.Database.Queries
 				var suggestionQueryIndexExtension = new SuggestionQueryIndexExtension(
 					database.WorkContext,
 					Path.Combine(database.Configuration.IndexStoragePath, "Raven-Suggestions", indexName, indexExtensionKey),
+					GetStringDistance(suggestionQuery.Distance ?? StringDistanceTypes.Default),
 					indexReader.Directory() is RAMDirectory,
-					suggestionQuery.Field);
+					suggestionQuery.Field,
+					suggestionQuery.Accuracy ?? 0.5f);
 
 				database.IndexStorage.SetIndexExtension(indexName, indexExtensionKey, suggestionQueryIndexExtension);
 

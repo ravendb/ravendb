@@ -196,10 +196,12 @@ namespace Raven.Database.Queries
 							foreach (var sortedField in indexQuery.SortedFields) // with matching sort options
 							{
 								var normalizedFieldName = DynamicQueryMapping.ReplaceInvalidCharactersForFields(sortedField.Field);
-								if (normalizedFieldName.StartsWith(Constants.RandomFieldName))
-                                    return new DynamicQueryOptimizerResult(indexName, DynamicQueryMatchType.Failure);
+							    if (normalizedFieldName.EndsWith("_Range"))
+							        normalizedFieldName = normalizedFieldName.Substring(0, normalizedFieldName.Length - "_Range".Length);
+							    if (normalizedFieldName.StartsWith(Constants.RandomFieldName))
+							        continue; // virtual field that we don't sort by
 
-								// if the field is not in the output, then we can't sort on it. 
+							    // if the field is not in the output, then we can't sort on it. 
 								if (abstractViewGenerator.ContainsField(normalizedFieldName) == false)
 								{
 									explain(indexName,

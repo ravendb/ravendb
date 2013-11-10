@@ -25,6 +25,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		private readonly DbCommandBuilder commandBuilder;
 		private readonly DbConnection connection;
 		private readonly DbTransaction tx;
+		private readonly List<Func<DbParameter, String, Boolean>> stringParserList;
 
 		private static ILog log = LogManager.GetCurrentClassLogger();
 
@@ -65,6 +66,46 @@ namespace Raven.Database.Bundles.SqlReplication
 			}
 
 			tx = connection.BeginTransaction();
+
+			stringParserList = new List<Func<DbParameter, string, bool>> { 
+				(colParam, value) => {
+					if( char.IsDigit( value[ 0 ] ) ) {
+							DateTime dateTime;
+							if (DateTime.TryParseExact(value, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture,
+														DateTimeStyles.RoundtripKind, out dateTime))
+							{
+								switch( providerFactory.GetType( ).Name ) {
+									case "MySqlClientFactory":
+										colParam.Value = dateTime.ToString( "yyyy-MM-dd HH:mm:ss.ffffff" );
+										break;
+									default:
+										colParam.Value = dateTime;
+										break;
+								}
+								return true;
+							}
+					}
+					return false;
+				},
+				(colParam, value) => {
+					if( char.IsDigit( value[ 0 ] ) ) {
+						DateTimeOffset dateTimeOffset;
+						if( DateTimeOffset.TryParseExact( value, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+														 DateTimeStyles.RoundtripKind, out dateTimeOffset ) ) {
+							switch( providerFactory.GetType( ).Name ) {
+								case "MySqlClientFactory":
+									colParam.Value = dateTimeOffset.ToUniversalTime().ToString( "yyyy-MM-dd HH:mm:ss.ffffff" );
+									break;
+								default:
+									colParam.Value = dateTimeOffset;
+									break;
+							}
+							return true;
+						}
+					}
+					return false;
+				}
+			};
 		}
 
 		public bool Execute(ConversionScriptResult scriptResult)
@@ -74,7 +115,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			{
 				// first, delete all the rows that might already exist there
 				DeleteItems(sqlReplicationTable.TableName, sqlReplicationTable.DocumentKeyColumn, cfg.ParameterizeDeletesDisabled,
-				            identifiers);
+										identifiers);
 			}
 
 			foreach (var sqlReplicationTable in cfg.SqlReplicationTables)
@@ -105,6 +146,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					cmd.Transaction = tx;
 
+					database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
+
 					var sb = new StringBuilder("INSERT INTO ")
 						.Append(commandBuilder.QuoteIdentifier(tableName))
 						.Append(" (")
@@ -124,8 +167,8 @@ namespace Raven.Database.Bundles.SqlReplication
 					cmd.Parameters.Add(pkParam);
 
 					sb.Append(") \r\nVALUES (")
-					  .Append(GetParameterName(providerFactory, commandBuilder, pkName))
-					  .Append(", ");
+						.Append(GetParameterName(providerFactory, commandBuilder, pkName))
+						.Append(", ");
 
 					foreach (var column in itemToReplicate.Columns)
 					{
@@ -133,7 +176,7 @@ namespace Raven.Database.Bundles.SqlReplication
 							continue;
 						var colParam = cmd.CreateParameter();
 						colParam.ParameterName = column.Key;
-						SetParamValue(colParam, column.Value);
+						SetParamValue( colParam, column.Value, stringParserList );
 						cmd.Parameters.Add(colParam);
 						sb.Append(GetParameterName(providerFactory, commandBuilder, column.Key)).Append(", ");
 					}
@@ -162,6 +205,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			using (var cmd = connection.CreateCommand())
 			{
 				cmd.Transaction = tx;
+				database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 				for (int i = 0; i < identifiers.Count; i += maxParams)
 				{
 					cmd.Parameters.Clear();
@@ -236,11 +280,11 @@ namespace Raven.Database.Bundles.SqlReplication
 			(Func<DbCommandBuilder, string, string>)
 			Delegate.CreateDelegate(typeof(Func<DbCommandBuilder, string, string>),
 									typeof(DbCommandBuilder).GetMethod("GetParameterName",
-																	   BindingFlags.Instance | BindingFlags.NonPublic, Type.DefaultBinder,
-																	   new[] { typeof(string) }, null));
+																		 BindingFlags.Instance | BindingFlags.NonPublic, Type.DefaultBinder,
+																		 new[] { typeof(string) }, null));
 
 
-		private static void SetParamValue(DbParameter colParam, RavenJToken val)
+		private static void SetParamValue(DbParameter colParam, RavenJToken val, List<Func<DbParameter, String, Boolean>> stringParsers)
 		{
 			if (val == null)
 				colParam.Value = DBNull.Value;
@@ -257,22 +301,9 @@ namespace Raven.Database.Bundles.SqlReplication
 						return;
 					case JTokenType.String:
 						var value = val.Value<string>();
-						if (value.Length > 0)
-						{
-							if (char.IsDigit(value[0]))
-							{
-								DateTime dateTime;
-								if (DateTime.TryParseExact(value, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture,
-														   DateTimeStyles.RoundtripKind, out dateTime))
-								{
-									colParam.Value = dateTime;
-									return;
-								}
-								DateTimeOffset dateTimeOffset;
-								if (DateTimeOffset.TryParseExact(value, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-																 DateTimeStyles.RoundtripKind, out dateTimeOffset))
-								{
-									colParam.Value = dateTimeOffset;
+						if( value.Length > 0 && stringParsers != null ) {
+							foreach( var parser in stringParsers ) {
+								if( parser( colParam, value ) ) {
 									return;
 								}
 							}
@@ -309,7 +340,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			{
 				log.WarnException(
 					string.Format("Could not find provider factory {0} to replicate to sql for {1}, ignoring", cfg.FactoryName,
-								  cfg.Name), e);
+									cfg.Name), e);
 
 				database.AddAlert(new Alert
 				{
@@ -318,7 +349,7 @@ namespace Raven.Database.Bundles.SqlReplication
 					Exception = e.ToString(),
 					Title = "Sql Replication Count not find factory provider",
 					Message = string.Format("Could not find factory provider {0} to replicate to sql for {1}, ignoring", cfg.FactoryName,
-								  cfg.Name),
+									cfg.Name),
 					UniqueKey = string.Format("Sql Replication Provider Not Found: {0}, {1}", cfg.Name, cfg.FactoryName)
 				});
 

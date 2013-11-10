@@ -243,12 +243,16 @@ namespace Raven.Database.Server.Security
 		public List<string> GetApprovedDatabases(IPrincipal user, IHttpContext context)
 		{
 			var authHeader = context.Request.Headers["Authorization"];
+			List<string> approved;
 			if (string.IsNullOrEmpty(authHeader) == false && authHeader.StartsWith("Bearer "))
-			{
-				return oAuthRequestAuthorizer.GetApprovedDatabases(user);
-			}
+				approved = oAuthRequestAuthorizer.GetApprovedDatabases(user);
+			else
+				approved = windowsRequestAuthorizer.GetApprovedDatabases(user);
 
-			return windowsRequestAuthorizer.GetApprovedDatabases(user);
+			if (approved.Contains("*"))
+				return databases.ToList();
+
+			return approved;
 		}
 
 		public List<string> GetApprovedDatabases(IPrincipal user, RavenApiController controller)
