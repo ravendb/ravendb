@@ -148,7 +148,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			var query = "";
 			if (request.Query != null)
-				query = request.Query.TrimStart('?');
+				query = request.Query.TrimStart('?').Replace("+", "%2B");
 
 			var msg = new HttpRequestMessage(HttpMethod.Get, new UriBuilder
 			{
