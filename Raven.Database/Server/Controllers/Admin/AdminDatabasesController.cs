@@ -48,6 +48,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			if (configuration == null)
 				return;
+
 			Database.Delete(docKey, null, null);
 			bool result;
 

@@ -34,6 +34,7 @@ namespace Raven.Database.Server.Controllers
 					result = GetEmptyMessage(HttpStatusCode.NotFound);
 					return;
 				}
+
 				if (MatchEtag(attachmentAndHeaders.Etag))
 				{
 					result = GetEmptyMessage(HttpStatusCode.NotModified);
@@ -50,6 +51,7 @@ namespace Raven.Database.Server.Controllers
 							outputStream.Flush();
 						}
 					}));
+
 				WriteHeaders(attachmentAndHeaders.Metadata, attachmentAndHeaders.Etag, result);
 
 			});
@@ -75,7 +77,6 @@ namespace Raven.Database.Server.Controllers
 					result = GetEmptyMessage(HttpStatusCode.NotModified);
 					return;
 				}
-
 
 				WriteHeaders(attachmentAndHeaders.Metadata, attachmentAndHeaders.Etag, result);
 				//TODO: set length

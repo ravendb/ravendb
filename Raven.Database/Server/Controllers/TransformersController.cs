@@ -54,9 +54,7 @@ namespace Raven.Database.Server.Controllers
 			var transformer = id;
 			var data = await ReadJsonObjectAsync<TransformerDefinition>();
 			if (data == null || string.IsNullOrEmpty(data.TransformResults))
-			{
 				return GetMessageWithString("Expected json document with 'TransformResults' property", HttpStatusCode.BadRequest);
-			}
 
 			try
 			{
@@ -67,7 +65,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				return GetMessageWithObject(new
 				{
-					Message = ex.Message,
+					ex.Message,
 					Error = ex.ToString()
 				}, HttpStatusCode.BadRequest);
 			}

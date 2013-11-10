@@ -34,11 +34,11 @@ namespace Raven.Database.Server.Controllers
 				writer.Write(Jsonp);
 				writer.Write("(");
 			}
+
 			Token.WriteTo(new JsonTextWriter(writer), Default.Converters);
+
 			if (string.IsNullOrEmpty(Jsonp) == false)
-			{
 				writer.Write(")");
-			}
 
 			writer.Flush();
 			return Task.FromResult(true);

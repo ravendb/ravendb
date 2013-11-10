@@ -71,9 +71,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 
 			if (databaseName == Constants.SystemDatabase)
-			{
 				return GetMessageWithString("Cannot do an online restore for the <system> database", HttpStatusCode.BadRequest);
-			}
 
 			var ravenConfiguration = new RavenConfiguration
 			{
@@ -90,14 +88,9 @@ namespace Raven.Database.Server.Controllers.Admin
 			}
 
 			if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, "Raven.ravendb")))
-			{
-				ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
-
-			}
+				ravenConfiguration.DefaultStorageTypeName = typeof (Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 			else if (Directory.Exists(Path.Combine(restoreRequest.RestoreLocation, "new")))
-			{
-				ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
-			}
+				ravenConfiguration.DefaultStorageTypeName = typeof (Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 
 			ravenConfiguration.CustomizeValuesForTenant(databaseName);
 			ravenConfiguration.Initialize();
@@ -157,9 +150,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			documentDataDir = databaseLocation;
 
 			if (!documentDataDir.StartsWith("~/") && !documentDataDir.StartsWith(@"~\"))
-			{
-				documentDataDir = "~/" + documentDataDir.TrimStart(new[] { '/', '\\' });
-			}
+				documentDataDir = "~/" + documentDataDir.TrimStart(new[] {'/', '\\'});
 
 			return Path.Combine(baseDataPath, documentDataDir.Substring(2));
 		}
@@ -223,9 +214,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			var concurrency = InnerRequest.RequestUri.ParseQueryString()["concurrency"];
 
 			if (string.IsNullOrEmpty(concurrency) == false)
-			{
 				Database.Configuration.MaxNumberOfParallelIndexTasks = Math.Max(1, int.Parse(concurrency));
-			}
 
 			Database.SpinIndexingWorkers();
 		}

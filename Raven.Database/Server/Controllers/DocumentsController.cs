@@ -30,9 +30,7 @@ namespace Raven.Database.Server.Controllers
 
 			lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
 			if (MatchEtag(lastDocEtag))
-			{
 				return GetEmptyMessage(HttpStatusCode.NotModified);
-			}
 
 			var startsWith = GetQueryStringValue("startsWith");
 			HttpResponseMessage msg;
@@ -120,9 +118,7 @@ namespace Raven.Database.Server.Controllers
 						return;
 					}
 					if (documentMetadata.NonAuthoritativeInformation != null && documentMetadata.NonAuthoritativeInformation.Value)
-					{
 						msg.StatusCode = HttpStatusCode.NonAuthoritativeInformation;
-					}
 
 					msg = GetDocumentDirectly(docId, msg);
 				});
@@ -192,9 +188,7 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			if (doc.NonAuthoritativeInformation != null && doc.NonAuthoritativeInformation.Value)
-			{
 				msg.StatusCode = HttpStatusCode.NonAuthoritativeInformation;
-			}
 
 			Debug.Assert(doc.Etag != null);
 			doc.Metadata[Constants.LastModified] = doc.LastModified;

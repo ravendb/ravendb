@@ -34,15 +34,12 @@ namespace Raven.Database.Server.Controllers
 			// If admin, show all dbs
 
 			List<string> approvedDatabases = null;
-			var code = HttpStatusCode.OK;
 
 			if (DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
 				var user = User;
 				if (user == null)
-				{
 					return null;
-				}
 
 				if (user.IsAdministrator(DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode) == false)
 				{
@@ -59,9 +56,7 @@ namespace Raven.Database.Server.Controllers
 			});
 
 			if (MatchEtag(lastDocEtag))
-			{
 				return GetEmptyMessage(HttpStatusCode.NotModified);
-			}
 
 			var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, GetStart(),
 																	GetPageSize(Database.Configuration.MaxPageSize));
@@ -70,9 +65,7 @@ namespace Raven.Database.Server.Controllers
 				.ToArray();
 
 			if (approvedDatabases != null)
-			{
 				data = data.Where(s => approvedDatabases.Contains(s)).ToArray();
-			}
 
 			var msg = GetMessageWithObject(data);
 			WriteHeaders(new RavenJObject(), lastDocEtag, msg);
@@ -129,7 +122,6 @@ namespace Raven.Database.Server.Controllers
 			if (absSize > KB)
 				return string.Format("{0:#,#.##;;0} KBytes", size / KB);
 			return string.Format("{0:#,#;;0} Bytes", size);
-
 		}
 	}
 }

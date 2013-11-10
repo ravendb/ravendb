@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -11,7 +10,6 @@ using System.Web.Http.Controllers;
 using System.Web.Http.Dispatcher;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Database.Server.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.Controllers
@@ -27,6 +25,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			if (recursive.Value)
 				throw new InvalidOperationException("Nested requests to multi_get are not supported");
+
 			recursive.Value = true;
 			try
 			{
@@ -77,13 +76,11 @@ namespace Raven.Database.Server.Controllers
 						writer.WriteNull();
 						continue;
 					}
-					writer.WriteStartObject();
 
+					writer.WriteStartObject();
 					writer.WritePropertyName("Status");
 					writer.WriteValue((int) result.StatusCode);
-
 					writer.WritePropertyName("Headers");
-
 					writer.WriteStartObject();
 
 					foreach (var header in result.Headers.Concat(result.Content.Headers))
@@ -96,7 +93,6 @@ namespace Raven.Database.Server.Controllers
 					}
 
 					writer.WriteEndObject();
-
 					writer.WritePropertyName("Result");
 
 					var jsonContent = (JsonContent)result.Content;
@@ -106,7 +102,6 @@ namespace Raven.Database.Server.Controllers
 
 					writer.WriteEndObject();
 				}
-
 
 				writer.WriteEndArray();
 				writer.Flush();

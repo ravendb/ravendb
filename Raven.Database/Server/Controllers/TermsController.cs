@@ -16,9 +16,7 @@ namespace Raven.Database.Server.Controllers
 
 			var indexEtag = Database.GetIndexEtag(index, null);
 			if (MatchEtag(indexEtag))
-			{
 				return GetEmptyMessage(HttpStatusCode.NotModified);
-			}
 
 			var executeGetTermsQuery = Database.ExecuteGetTermsQuery(index, GetQueryStringValue("field"),
 				GetQueryStringValue("fromValue"), GetPageSize(Database.Configuration.MaxPageSize));

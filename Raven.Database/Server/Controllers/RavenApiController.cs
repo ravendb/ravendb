@@ -62,7 +62,6 @@ namespace Raven.Database.Server.Controllers
 						headers.Add(header.Key, header.Value.ToList());
 				}
 
-
 				if (InnerRequest.Content == null) 
 					return headers;
 				
@@ -85,21 +84,18 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		private HttpRequestMessage request;
-		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext,
-			CancellationToken cancellationToken)
+		public override async Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
 		{
 			InnerInitialization(controllerContext);
-			var authorizer =
-				(MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
+			var authorizer = (MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 			var result = new HttpResponseMessage();
+
 			try
 			{
 				RequestManager.HandleActualRequest(this, async () =>
 				{
 					SetHeaders();
 					result = await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
-
-
 				});
 			}
 			catch (HttpException httpException)
@@ -124,9 +120,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			HttpResponseMessage authMsg;
 			if (authorizer.TryAuthorize(this, out authMsg) == false)
-			{
 				return authMsg;
-			}
 
 			var internalHeader = GetHeader("Raven-internal-request");
 			if (internalHeader == null || internalHeader != "true")
@@ -159,6 +153,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				var routeDatas = (IHttpRouteData[])controllerContext.Request.GetRouteData().Values["MS_SubRoutes"];
 				var selectedData = routeDatas.FirstOrDefault(data => data.Values.ContainsKey("databaseName"));
+
 				if (selectedData != null)
 					DatabaseName = selectedData.Values["databaseName"] as string;
 				else
@@ -171,8 +166,6 @@ namespace Raven.Database.Server.Controllers
 				else
 					DatabaseName = null;
 			}
-
-
 		}
 
 		private void AddRavenHeader(HttpResponseMessage msg, Stopwatch sp)
@@ -189,7 +182,7 @@ namespace Raven.Database.Server.Controllers
 
 			AddHeader("Access-Control-Allow-Credentials", "true", msg);
 
-			bool originAllowed = DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin == "*" ||
+			var originAllowed = DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin == "*" ||
 					DatabasesLandlord.SystemConfiguration.AccessControlAllowOrigin.Split(' ')
 						.Any(o => o == GetHeader("Origin"));
 			if (originAllowed)
@@ -199,6 +192,7 @@ namespace Raven.Database.Server.Controllers
 
 			AddHeader("Access-Control-Max-Age", DatabasesLandlord.SystemConfiguration.AccessControlMaxAge, msg);
 			AddHeader("Access-Control-Allow-Methods", DatabasesLandlord.SystemConfiguration.AccessControlAllowMethods, msg);
+
 			if (string.IsNullOrEmpty(DatabasesLandlord.SystemConfiguration.AccessControlRequestHeaders))
 			{
 				// allow whatever headers are being requested
@@ -360,11 +354,7 @@ namespace Raven.Database.Server.Controllers
 		public Etag GetEtagFromQueryString()
 		{
 			var etagAsString = GetQueryStringValue("etag");
-			if (etagAsString != null)
-			{
-				return Etag.Parse(etagAsString);
-			}
-			return null;
+			return etagAsString != null ? Etag.Parse(etagAsString) : null;
 		}
 
 		protected TransactionInformation GetRequestTransaction()
@@ -377,6 +367,7 @@ namespace Raven.Database.Server.Controllers
 			var parts = txInfo.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length != 2)
 				throw new ArgumentException("'Raven-Transaction-Information' is in invalid format, expected format is: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx, hh:mm:ss'");
+			
 			return new TransactionInformation
 			{
 				Id = parts[0],
@@ -419,13 +410,13 @@ namespace Raven.Database.Server.Controllers
 			var spatialFieldName = GetQueryStringValue("spatialField") ?? Constants.DefaultSpatialFieldName;
 			var queryShape = GetQueryStringValue("queryShape");
 			SpatialUnits units;
-			bool unitsSpecified = Enum.TryParse(GetQueryStringValue("spatialUnits"), out units);
+			var unitsSpecified = Enum.TryParse(GetQueryStringValue("spatialUnits"), out units);
 			double distanceErrorPct;
 			if (!double.TryParse(GetQueryStringValue("distErrPrc"), out distanceErrorPct))
 				distanceErrorPct = Constants.DefaultSpatialDistanceErrorPct;
 			SpatialRelation spatialRelation;
-			if (Enum.TryParse(GetQueryStringValue("spatialRelation"), false, out spatialRelation)
-				&& !string.IsNullOrWhiteSpace(queryShape))
+			
+			if (Enum.TryParse(GetQueryStringValue("spatialRelation"), false, out spatialRelation) && !string.IsNullOrWhiteSpace(queryShape))
 			{
 				return new SpatialIndexQuery(query)
 				{
@@ -436,6 +427,7 @@ namespace Raven.Database.Server.Controllers
 					DistanceErrorPercentage = distanceErrorPct,
 				};
 			}
+
 			return query;
 		}
 
@@ -480,6 +472,7 @@ namespace Raven.Database.Server.Controllers
 
 				return Etag.Parse(etagAsString);
 			}
+
 			return null;
 		}
 
@@ -502,6 +495,7 @@ namespace Raven.Database.Server.Controllers
 					return result;
 				throw new BadRequestException("Could not parse cut off query parameter as date");
 			}
+
 			return null;
 		}
 
@@ -527,9 +521,8 @@ namespace Raven.Database.Server.Controllers
 
 					yield return highlightedField;
 				}
-				else
-					throw new BadRequestException(
-						"Could not parse highlight query parameter as field highlight options");
+				else 
+					throw new BadRequestException("Could not parse highlight query parameter as field highlight options");
 			}
 		}
 
@@ -545,6 +538,7 @@ namespace Raven.Database.Server.Controllers
 					result[realkey] = GetQueryStringValue(key);
 				}
 			}
+
 			return result;
 		}
 
@@ -599,9 +593,7 @@ namespace Raven.Database.Server.Controllers
 							var iso8601 = GetDateString(header.Value, "o");
 							msg.Content.Headers.Add(header.Key, rfc1123);
 							if (header.Key.StartsWith("Raven-") == false)
-							{
 								msg.Content.Headers.Add("Raven-" + header.Key, iso8601);
-							}
 						}
 						else
 						{
@@ -729,6 +721,7 @@ namespace Raven.Database.Server.Controllers
 				Etag result;
 				if (Etag.TryParse(etagAsString, out result))
 					return result;
+
 				throw new BadRequestException("Could not parse If-None-Match or If-Match header as Guid");
 			}
 
@@ -806,9 +799,7 @@ namespace Raven.Database.Server.Controllers
 			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-None-Match");
 			var fileEtag = File.GetLastWriteTimeUtc(filePath).ToString("G");
 			if (etagValue == fileEtag)
-			{
 				return GetEmptyMessage(HttpStatusCode.NotModified);
-			}
 
 			var msg = new HttpResponseMessage
 			{
@@ -825,19 +816,16 @@ namespace Raven.Database.Server.Controllers
 			var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
 			var currentFileEtag = EmbeddedLastChangedDate + docPath;
 			if (etagValue == currentFileEtag)
-			{
 				return GetEmptyMessage(HttpStatusCode.NotModified);
-			}
 
 			byte[] bytes;
-			string resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", ".");
-			//TODO: check the typeof
+			var resourceName = "Raven.Database.Server.WebUI." + docPath.Replace("/", ".");
+
 			using (var resource = typeof(IHttpContext).Assembly.GetManifestResourceStream(resourceName))
 			{
 				if (resource == null)
-				{
 					return GetEmptyMessage(HttpStatusCode.NotFound);
-				}
+
 				bytes = resource.ReadData();
 			}
 			var msg = new HttpResponseMessage

@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions;
@@ -46,14 +42,11 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			if (InnerRequest.Content.Headers.ContentLength == 0)
-			{
 				return RespondWithChallenge();
-			}
 
-			string requestContents;
 			//using (var reader = new StreamReader(context.Request.InputStream))
 			//	requestContents = reader.ReadToEnd();
-			requestContents = await ReadStringAsync();
+			var requestContents = await ReadStringAsync();
 
 			var requestContentsDictionary = OAuthHelper.ParseDictionary(requestContents);
 			var rsaExponent = requestContentsDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent);
@@ -66,9 +59,7 @@ namespace Raven.Database.Server.Controllers
 
 			var encryptedData = requestContentsDictionary.GetOrDefault(OAuthHelper.Keys.EncryptedData);
 			if (string.IsNullOrEmpty(encryptedData))
-			{
 				return RespondWithChallenge();
-			}
 
 			var challengeDictionary = OAuthHelper.ParseDictionary(OAuthServerHelper.DecryptAsymmetric(encryptedData));
 			var apiKeyName = challengeDictionary.GetOrDefault(OAuthHelper.Keys.APIKeyName);
@@ -76,17 +67,12 @@ namespace Raven.Database.Server.Controllers
 			var response = challengeDictionary.GetOrDefault(OAuthHelper.Keys.Response);
 
 			if (string.IsNullOrEmpty(apiKeyName) || string.IsNullOrEmpty(challenge) || string.IsNullOrEmpty(response))
-			{
 				return RespondWithChallenge();
-			}
 
 			var challengeData = OAuthHelper.ParseDictionary(OAuthServerHelper.DecryptSymmetric(challenge));
 			var timestampStr = challengeData.GetOrDefault(OAuthHelper.Keys.ChallengeTimestamp);
 			if (string.IsNullOrEmpty(timestampStr))
-			{
 				return RespondWithChallenge();
-				
-			}
 
 			var challengeTimestamp = OAuthServerHelper.ParseDateTime(timestampStr);
 			if (challengeTimestamp + MaxChallengeAge < SystemTime.UtcNow || challengeTimestamp > SystemTime.UtcNow)
@@ -135,6 +121,7 @@ namespace Raven.Database.Server.Controllers
 				{ OAuthHelper.Keys.RSAModulus, OAuthServerHelper.RSAModulus },
 				{ OAuthHelper.Keys.Challenge, OAuthServerHelper.EncryptSymmetric(OAuthHelper.DictionaryToString(challengeData)) }
 			};
+
 			var msg = GetEmptyMessage(HttpStatusCode.PreconditionFailed);
 			var value = OAuthHelper.Keys.WWWAuthenticateHeaderKey + " " + OAuthHelper.DictionaryToString(responseData);
 			msg.Headers.TryAddWithoutValidation("WWW-Authenticate", value);

@@ -83,7 +83,7 @@ namespace Raven.Database.Server.Controllers
 
 				return GetMessageWithObject(new
 				{
-					Message = ex.Message,
+					ex.Message,
 					IndexDefinitionProperty = compilationException != null ? compilationException.IndexDefinitionProperty : "",
 					ProblematicText = compilationException != null ? compilationException.ProblematicText : "",
 					Error = ex.ToString()

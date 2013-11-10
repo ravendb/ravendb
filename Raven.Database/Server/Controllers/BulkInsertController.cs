@@ -29,7 +29,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				// this is a no-op request which is there just to force the client HTTP layer to handle the authentication
 				// only used for legacy clients
-				return GetEmptyMessage(HttpStatusCode.OK);
+				return GetEmptyMessage();
 			}
 			if ("generate-single-use-auth-token".Equals(GetQueryStringValue("op"), StringComparison.InvariantCultureIgnoreCase))
 			{
@@ -38,7 +38,6 @@ namespace Raven.Database.Server.Controllers
 				// we KNOW that the user have access to this db for writing, since they got here, so there is no issue in generating 
 				// a single use token for them.
 
-				//TODO: after adding the authorzier
 				var authorizer = (MixedModeRequestAuthorizer)Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
 				var token = authorizer.GenerateSingleUseAuthToken(Database, User, this);
@@ -49,9 +48,8 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			if (HttpContext.Current != null)
-			{
-				HttpContext.Current.Server.ScriptTimeout = 60 * 60 * 6; // six hours should do it, I think.
-			}
+				HttpContext.Current.Server.ScriptTimeout = 60*60*6; // six hours should do it, I think.
+
 			var options = new BulkInsertOptions
 			{
 				CheckForUpdates = GetCheckForUpdates(),
@@ -63,7 +61,7 @@ namespace Raven.Database.Server.Controllers
 
 			var status = new BulkInsertStatus();
 
-			int documents = 0;
+			var documents = 0;
 			var mre = new ManualResetEventSlim(false);
 
 			var inputStream = await InnerRequest.Content.ReadAsStreamAsync();
@@ -100,7 +98,6 @@ namespace Raven.Database.Server.Controllers
 		{
 			try
 			{
-
 				using (inputStream)
 				{
 					var binaryReader = new BinaryReader(inputStream);
@@ -135,7 +132,7 @@ namespace Raven.Database.Server.Controllers
 				var reader = new BinaryReader(stream);
 				var count = reader.ReadInt32();
 
-				for (int i = 0; i < count; i++)
+				for (var i = 0; i < count; i++)
 				{
 					var doc = (RavenJObject)RavenJToken.ReadFrom(new BsonReader(reader));
 

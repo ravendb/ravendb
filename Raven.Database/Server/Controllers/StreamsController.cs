@@ -30,7 +30,7 @@ namespace Raven.Database.Server.Controllers
 			var start = GetStart();
 			var etag = GetEtagFromQueryString();
 			var startsWith = GetQueryStringValue("startsWith");
-			int pageSize = GetPageSize(int.MaxValue);
+			var pageSize = GetPageSize(int.MaxValue);
 			var matches = GetQueryStringValue("matches");
 			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
 				pageSize = int.MaxValue;
@@ -64,15 +64,9 @@ namespace Raven.Database.Server.Controllers
 					using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 					{
 						if (string.IsNullOrEmpty(startsWith))
-						{
-							Database.GetDocuments(start, pageSize, etag,
-								doc => doc.WriteTo(writer));
-						}
+							Database.GetDocuments(start, pageSize, etag, doc => doc.WriteTo(writer));
 						else
-						{
-							Database.GetDocumentsWithIdStartingWith(startsWith, matches, null,
-								start, pageSize, doc => doc.WriteTo(writer));
-						}
+							Database.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, doc => doc.WriteTo(writer));
 					}
 				});
 
@@ -98,6 +92,7 @@ namespace Raven.Database.Server.Controllers
 				query.PageSize = 0;
 
 			var accessor = Database.TransactionalStorage.CreateAccessor();
+
 			try
 			{
 				var queryOp = new DocumentDatabase.DatabaseQueryOperation(Database, index, query, accessor);
@@ -111,8 +106,7 @@ namespace Raven.Database.Server.Controllers
 				msg.Headers.Add("Raven-Index", queryOp.Header.Index);
 				msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
 				msg.Headers.Add("Raven-Index-Timestamp",
-					queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
-						CultureInfo.InvariantCulture));
+					queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
 
 			}
 			catch (Exception)
@@ -164,9 +158,7 @@ namespace Raven.Database.Server.Controllers
 		private static IOutputWriter GetOutputWriter(HttpRequestMessage req, Stream stream)
 		{
 			var useExcelFormat = "excel".Equals(GetQueryStringValue(req, "format"), StringComparison.InvariantCultureIgnoreCase);
-			if (useExcelFormat)
-				return new ExcelOutputWriter(stream);
-			return new JsonOutputWriter(stream);
+			return useExcelFormat ? (IOutputWriter) new ExcelOutputWriter(stream) : new JsonOutputWriter(stream);
 		}
 
 		public interface IOutputWriter : IDisposable
@@ -259,9 +251,8 @@ namespace Raven.Database.Server.Controllers
 			{
 				var needsQuoutes = val.IndexOfAny(RequireQuotesChars) != -1;
 				if (needsQuoutes)
-				{
 					writer.Write('"');
-				}
+
 				writer.Write(needsQuoutes ? val.Replace("\"", "\"\"") : val);
 				if (needsQuoutes)
 					writer.Write('"');

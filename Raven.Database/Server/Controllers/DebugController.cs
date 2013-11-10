@@ -35,6 +35,7 @@ namespace Raven.Database.Server.Controllers
 			var cfg = RavenJObject.FromObject(Database.Configuration);
 			cfg["OAuthTokenKey"] = "<not shown>";
 			var changesAllowed = Database.Configuration.Settings["Raven/Versioning/ChangesToRevisionsAllowed"];
+
 			if (string.IsNullOrWhiteSpace(changesAllowed) == false)
 				cfg["Raven/Versioning/ChangesToRevisionsAllowed"] = changesAllowed;
 
@@ -97,7 +98,6 @@ namespace Raven.Database.Server.Controllers
 				listItem = accessor.Lists.Read(listName, key);
 				if (listItem == null)
 					throw new HttpException(400, "Not found");
-
 			});
 
 			if (listItem == null)

@@ -26,9 +26,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			HttpResponseMessage authMsg;
 			if (authorizer.TryAuthorize(this, out authMsg) == false)
-			{
 				return authMsg;
-			}
 
 			var accessMode = DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode;
 			if(accessMode == AnonymousUserAccessMode.Admin || accessMode == AnonymousUserAccessMode.All ||

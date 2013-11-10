@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Web.Http;
-using Raven.Abstractions.MEF;
-using Raven.Database.Plugins;
 using Raven.Database.Plugins.Builtins;
 
 namespace Raven.Database.Server.Controllers
@@ -56,12 +53,7 @@ namespace Raven.Database.Server.Controllers
 				}
 			});
 			
-			if (matchingPath != null)
-			{
-				return WriteFile(matchingPath);
-			}
-
-			return WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Studio.xap");
+			return matchingPath != null ? WriteFile(matchingPath) : WriteEmbeddedFile(DatabasesLandlord.SystemConfiguration.WebDir, "Raven.Studio.xap");
 		}
 
 		public static IEnumerable<string> GetPaths(string fileName, string webDir)

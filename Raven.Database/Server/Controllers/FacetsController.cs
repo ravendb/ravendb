@@ -78,7 +78,7 @@ namespace Raven.Database.Server.Controllers
 							return TryGetFacetsFromString(index, out etag, out facets, facetsJson);
 					}
 
-					JsonDocument jsonDocument = Database.Get(facetSetupDoc, null);
+					var jsonDocument = Database.Get(facetSetupDoc, null);
 					if (jsonDocument == null)
 					{
 						return GetMessageWithString("Could not find facet document: " + facetSetupDoc, HttpStatusCode.NotFound);
@@ -89,9 +89,7 @@ namespace Raven.Database.Server.Controllers
 					facets = jsonDocument.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
 
 					if (facets == null || !facets.Any())
-					{
 						return GetMessageWithString("No facets found in facets setup document:" + facetSetupDoc, HttpStatusCode.NotFound);
-					}
 					break;
 				case "POST":
 					return TryGetFacetsFromString(index, out etag, out facets, await ReadStringAsync());
@@ -99,6 +97,7 @@ namespace Raven.Database.Server.Controllers
 					return GetMessageWithString("No idea how to handle this request", HttpStatusCode.BadRequest);
 
 			}
+
 			return GetEmptyMessage();
 		}
 

@@ -36,15 +36,15 @@ namespace Raven.Database.Server.Controllers
 				itemsToLoad = await ReadJsonArrayAsync();
 			else
 				itemsToLoad = new RavenJArray(GetQueryStringValues("id").Cast<object>());
+
 			var result = new MultiLoadResult();
 			var loadedIds = new HashSet<string>();
 			var includes = GetQueryStringValues("include") ?? new string[0];
 			var transformer = GetQueryStringValue("transformer") ?? GetQueryStringValue("resultTransformer");
-
 			var queryInputs = ExtractQueryInputs();
-
 			var transactionInformation = GetRequestTransaction();
 			var includedEtags = new List<byte>();
+
 			Database.TransactionalStorage.Batch(actions =>
 			{
 				foreach (RavenJToken item in itemsToLoad)
@@ -52,7 +52,7 @@ namespace Raven.Database.Server.Controllers
 					var value = item.Value<string>();
 					if (loadedIds.Add(value) == false)
 						continue;
-					JsonDocument documentByKey = string.IsNullOrEmpty(transformer)
+					var documentByKey = string.IsNullOrEmpty(transformer)
 										? Database.Get(value, transactionInformation)
 										: Database.GetWithTransformer(value, transformer, transactionInformation, queryInputs);
 					if (documentByKey == null)
@@ -60,9 +60,8 @@ namespace Raven.Database.Server.Controllers
 					result.Results.Add(documentByKey.ToJson());
 
 					if (documentByKey.Etag != null)
-					{
 						includedEtags.AddRange(documentByKey.Etag.ToByteArray());
-					}
+
 					includedEtags.Add((documentByKey.NonAuthoritativeInformation ?? false) ? (byte)0 : (byte)1);
 				}
 
