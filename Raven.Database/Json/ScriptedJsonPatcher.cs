@@ -326,8 +326,12 @@ function ExecutePatchScript(docInner){{
 
 			var jintEngine = new JintEngine()
 				.AllowClr(false)
-				.SetDebugMode(false)
-				.SetMaxRecursions(50)
+#if DEBUG
+				.SetDebugMode(true)
+#else
+                .SetDebugMode(false)
+#endif
+                .SetMaxRecursions(50)
 				.SetMaxSteps(maxSteps);
 
             AddScript(jintEngine, "Raven.Database.Json.lodash.js");
