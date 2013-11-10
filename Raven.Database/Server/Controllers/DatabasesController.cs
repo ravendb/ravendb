@@ -34,6 +34,11 @@ namespace Raven.Database.Server.Controllers
 			// If admin, show all dbs
 
 			List<string> approvedDatabases = null;
+			var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, GetStart(),
+																	GetPageSize(Database.Configuration.MaxPageSize));
+			var data = databases
+				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
+				.ToArray();
 
 			if (DatabasesLandlord.SystemConfiguration.AnonymousUserAccessMode == AnonymousUserAccessMode.None)
 			{
@@ -45,7 +50,7 @@ namespace Raven.Database.Server.Controllers
 				{
 					var authorizer = (MixedModeRequestAuthorizer)this.ControllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 
-					approvedDatabases = authorizer.GetApprovedDatabases(user, this);
+					approvedDatabases = authorizer.GetApprovedDatabases(user, this, data);
 				}
 			}
 
@@ -57,12 +62,6 @@ namespace Raven.Database.Server.Controllers
 
 			if (MatchEtag(lastDocEtag))
 				return GetEmptyMessage(HttpStatusCode.NotModified);
-
-			var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, GetStart(),
-																	GetPageSize(Database.Configuration.MaxPageSize));
-			var data = databases
-				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
-				.ToArray();
 
 			if (approvedDatabases != null)
 				data = data.Where(s => approvedDatabases.Contains(s)).ToArray();
