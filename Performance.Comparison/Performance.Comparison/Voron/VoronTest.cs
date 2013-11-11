@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Voron;
 using Voron.Impl;
 
@@ -27,18 +28,21 @@ namespace Performance.Comparison.Voron
             dataPath = Path.Combine(path, dataDir);
         }
 
-        ~VoronTest()
-        {
-            if (Directory.Exists(dataPath))
-                Directory.Delete(dataPath, true);
-        }
-
         public override string StorageName { get { return "Voron"; } }
 
         private void NewStorage()
         {
-            if (Directory.Exists(dataPath))
-                Directory.Delete(dataPath, true); //TODO do it in more robust way
+            while (Directory.Exists(dataPath))
+            {
+                try
+                {
+                    Directory.Delete(dataPath, true);
+                }
+                catch (Exception e)
+                {
+                    Thread.Sleep(100);
+                }
+            }
         }
 
         public override List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data, PerfTracker perfTracker)

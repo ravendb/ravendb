@@ -2,22 +2,14 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Performance.Comparison.SQLCE;
-using Performance.Comparison.SQLite;
-using Performance.Comparison.SQLServer;
 using Performance.Comparison.Voron;
 using Voron.Impl;
 
 namespace Performance.Comparison
 {
-    using System.Security.Policy;
-
-    using Performance.Comparison.Esent;
-    using Performance.Comparison.LMDB;
-
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             var random = new Random();
             var buffer = new byte[87 * 1024];
@@ -34,11 +26,11 @@ namespace Performance.Comparison
         
             var performanceTests = new List<IStoragePerformanceTest>()
 				{
-					new SqlServerTest(buffer),
-					new SqlLiteTest(path, buffer),
-					new SqlCeTest(path, buffer),
-                    new LmdbTest(path, buffer),
-                    new EsentTest(path, buffer),
+                    //new SqlServerTest(buffer),
+                    //new SqlLiteTest(path, buffer),
+                    //new SqlCeTest(path, buffer),
+                    //new LmdbTest(path, buffer),
+                    //new EsentTest(path, buffer),
                     new VoronTest(path, FlushMode.Full, buffer)
 				};
 
@@ -71,6 +63,9 @@ namespace Performance.Comparison
                 totalDuration = readRandom.Duration;
                 OutputResults("Read rnd", items, totalDuration, perfTracker);
 
+                if (test.CanHandleBigData==false)
+                    continue;
+
                 writeSeq = test.WriteSequential(sequentialIdsLarge, perfTracker);
                 items = writeSeq.Sum(x => x.ProcessedItems);
                 totalDuration = writeSeq.Sum(x => x.Duration);
@@ -98,7 +93,8 @@ namespace Performance.Comparison
        
         private static void OutputResults(string name, long itemsCount, double duration, PerfTracker perfTracker)
         {
-            Console.WriteLine("{0}:\t\t{1,10:#,#;;0} items in {2,10:#,#;;0} sec, {3,10:#,#} ops/s. Mem: {3:0} MB", name, itemsCount / 1000, duration, itemsCount / (duration / 1000));
+            Console.WriteLine("{0}:\t{1,10:#,#;;0} items in {2,10:#,#;;0} sec, {3,10:#,#} ops/s.", name, itemsCount / 1000, duration, itemsCount / (duration / 1000));
+            Console.WriteLine(string.Join(", ", from f in perfTracker.Checkout() select f.ToString("##,###.00")));
         }
 
         private static void WritePerfData(string name, IStoragePerformanceTest test, List<PerformanceRecord> writeSeq)
