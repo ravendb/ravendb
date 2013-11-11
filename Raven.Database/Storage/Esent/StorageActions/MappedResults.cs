@@ -867,12 +867,21 @@ namespace Raven.Storage.Esent.StorageActions
 			if (Api.TrySeek(session, ReduceKeysStatus, SeekGrbit.SeekGE) == false)
 				yield break;
 
+
 			if (TryMoveTableRecords(ReduceKeysStatus, start, false))
 				yield break;
 
 			do
 			{
-				var reduceKey = Api.RetrieveColumnAsString(session, ReduceKeysStatus,
+
+			    var indexFromDb = Api.RetrieveColumnAsInt32(session, ReduceKeysStatus,
+			                                                tableColumnsCache.ReduceKeysStatusColumns["view"],
+			                                                RetrieveColumnGrbit.RetrieveFromIndex);
+
+                if (view != indexFromDb)
+                    break; 
+
+                var reduceKey = Api.RetrieveColumnAsString(session, ReduceKeysStatus,
 											   tableColumnsCache.ReduceKeysStatusColumns["reduce_key"]);
 
 				var reduceType = Api.RetrieveColumnAsInt32(session, ReduceKeysStatus, tableColumnsCache.ReduceKeysStatusColumns["reduce_type"]).Value;

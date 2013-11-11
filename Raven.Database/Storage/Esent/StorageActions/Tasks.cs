@@ -119,6 +119,7 @@ namespace Raven.Storage.Esent.StorageActions
 
 			Api.JetSetCurrentIndex(session, Tasks, "by_index_and_task_type");
 
+
 		    if (task.SeparateTasksByIndex)
 		    {
 		        Api.MakeKey(session, Tasks, task.Index, MakeKeyGrbit.NewKey);
@@ -132,6 +133,7 @@ namespace Raven.Storage.Esent.StorageActions
                 Api.MakeKey(session, Tasks, expectedTaskType, Encoding.Unicode, MakeKeyGrbit.None);
                 Api.JetSetIndexRange(session, Tasks, SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);
             }
+
 		    else
 		    {
 		        if (Api.TryMoveFirst(session, Tasks) == false)

@@ -35,14 +35,14 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			this.writeBatch = writeBatch;
 		}
 
-		public void AddTask(Task task, DateTime addedAt)
+		public void AddTask(DatabaseTask task, DateTime addedAt)
 		{
 			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
 			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
 			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);
 
 			var type = task.GetType().FullName;
-			var index = task.Index ?? string.Empty;
+			var index = task.Index;
 			var id = generator.CreateSequentialUuid(UuidType.Tasks);
 			var idAsString = id.ToString();
 
@@ -51,7 +51,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				idAsString,
 				new RavenJObject
 				{
-					{ "index", task.Index },
+					{ "index", index },
 					{ "id", id.ToByteArray() },
 					{ "time", addedAt },
 					{ "type", type },
@@ -76,7 +76,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		public T GetMergedTask<T>() where T : Task
+		public T GetMergedTask<T>() where T : DatabaseTask
 		{
 			var type = CreateKey(typeof(T).FullName);
 			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
@@ -91,10 +91,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					ushort version;
 					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch, out version);
 
-					Task task;
+					DatabaseTask task;
 					try
 					{
-						task = Task.ToTask(value.Value<string>("type"), value.Value<byte[]>("task"));
+						task = DatabaseTask.ToTask(value.Value<string>("type"), value.Value<byte[]>("task"));
 					}
 					catch (Exception e)
 					{
@@ -115,7 +115,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			return null;
 		}
 
-		private void MergeSimilarTasks(Task task, byte[] taskId)
+		private void MergeSimilarTasks(DatabaseTask task, byte[] taskId)
 		{
 			var id = Etag.Parse(taskId);
 			var type = task.GetType().FullName;
@@ -137,10 +137,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 					ushort version;
 					var value = LoadJson(tableStorage.Tasks, iterator.CurrentKey, writeBatch, out version);
 
-					Task existingTask;
+					DatabaseTask existingTask;
 					try
 					{
-						existingTask = Task.ToTask(value.Value<string>("type"), value.Value<byte[]>("task"));
+						existingTask = DatabaseTask.ToTask(value.Value<string>("type"), value.Value<byte[]>("task"));
 					}
 					catch (Exception e)
 					{
@@ -162,10 +162,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			}
 		}
 
-		private void RemoveTask(Slice taskId, string index, string type)
+		private void RemoveTask(Slice taskId, int index, string type)
 		{
-			index = index ?? string.Empty;
-
 			var tasksByType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByType);
 			var tasksByIndex = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndex);
 			var tasksByIndexAndType = tableStorage.Tasks.GetIndex(Tables.Tasks.Indices.ByIndexAndType);

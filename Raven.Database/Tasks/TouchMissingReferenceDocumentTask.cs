@@ -19,13 +19,14 @@ namespace Raven.Database.Tasks
             return string.Format("Index: {0}, Keys: {1}", Index, string.Join(", ", Keys));
         }
 
-        
+
         public override bool SeparateTasksByIndex
         {
             get { return false; }
         }
 
         public override void Merge(DatabaseTask task)
+        public override void Merge(Task task)
         {
             var t = (TouchMissingReferenceDocumentTask)task;
             Keys.UnionWith(t.Keys);
@@ -46,7 +47,9 @@ namespace Raven.Database.Tasks
                     foreach (var index in context.IndexStorage.Indexes)
                     {
                         var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(index, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
+
                         set.Add(key);
+                    set.Add(key);
                     }
                     try
                     {

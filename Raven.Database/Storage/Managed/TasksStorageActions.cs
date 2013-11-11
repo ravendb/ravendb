@@ -76,6 +76,7 @@ namespace Raven.Storage.Managed
             return null;
         }
 
+
 		public IEnumerable<TaskMetadata> GetPendingTasksForDebug()
 		{
 			return storage.Tasks.Select(readResult => new TaskMetadata
@@ -119,6 +120,8 @@ namespace Raven.Storage.Managed
             }
         }
 
+
+
         private IEnumerable<RavenJToken> KeyForTaskToTryMergings(DatabaseTask task, string taskType, Guid taskId)
         {
             if (task.SeparateTasksByIndex == false)
@@ -138,10 +141,14 @@ namespace Raven.Storage.Managed
 
             return storage.Tasks["ByIndexAndType"].SkipTo(new RavenJObject
 	        {
+
 	            {"index", task.Index},
 	            {"type", taskType},
 	        })
+
                 .Where(x => new Guid(x.Value<byte[]>("id")) != taskId)
+
+
                     .TakeWhile(x => StringComparer.OrdinalIgnoreCase.Equals(x.Value<string>("type"), taskType))
                     .Where(x => new Guid(x.Value<byte[]>("id")) != taskId)
                     .TakeWhile(x => task.Index.Equals(x.Value<int>("index")) &&

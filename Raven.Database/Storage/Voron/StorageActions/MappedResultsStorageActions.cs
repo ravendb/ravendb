@@ -40,7 +40,7 @@
 			this.writeBatch = writeBatch;
 		}
 
-		public IEnumerable<ReduceKeyAndCount> GetKeysStats(string view, int start, int pageSize)
+		public IEnumerable<ReduceKeyAndCount> GetKeysStats(int view, int start, int pageSize)
 		{
 			var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
 			using (var iterator = reduceKeyCountsByView.MultiRead(Snapshot, CreateKey(view)))
@@ -66,7 +66,7 @@
 			}
 		}
 
-		public void PutMappedResult(string view, string docId, string reduceKey, RavenJObject data)
+		public void PutMappedResult(int view, string docId, string reduceKey, RavenJObject data)
 		{
 			var mappedResultsByViewAndDocumentId = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndDocumentId);
 			var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
@@ -104,7 +104,7 @@
 			mappedResultsByViewAndReduceKeyAndSourceBucket.MultiAdd(writeBatch, CreateKey(view, reduceKey, bucket), idAsString);
 		}
 
-		public void IncrementReduceKeyCounter(string view, string reduceKey, int val)
+		public void IncrementReduceKeyCounter(int view, string reduceKey, int val)
 		{
 			var key = CreateKey(view, reduceKey);
 
@@ -118,7 +118,7 @@
 			AddReduceKeyCount(key, view, reduceKey, newValue, version);
 		}
 
-		private void DecrementReduceKeyCounter(string view, string reduceKey, int val)
+		private void DecrementReduceKeyCounter(int view, string reduceKey, int val)
 		{
 			var key = CreateKey(view, reduceKey);
 
@@ -144,7 +144,7 @@
 			AddReduceKeyCount(key, view, reduceKey, newValue, reduceKeyCountVersion);
 		}
 
-		public void DeleteMappedResultsForDocumentId(string documentId, string view, Dictionary<ReduceKeyAndBucket, int> removed)
+		public void DeleteMappedResultsForDocumentId(string documentId, int view, Dictionary<ReduceKeyAndBucket, int> removed)
 		{
 			var viewAndDocumentId = CreateKey(view, documentId);
 
@@ -172,7 +172,7 @@
 			}
 		}
 
-		public void UpdateRemovedMapReduceStats(string view, Dictionary<ReduceKeyAndBucket, int> removed)
+		public void UpdateRemovedMapReduceStats(int view, Dictionary<ReduceKeyAndBucket, int> removed)
 		{
 			foreach (var keyAndBucket in removed)
 			{
@@ -180,7 +180,7 @@
 			}
 		}
 
-		public void DeleteMappedResultsForView(string view)
+		public void DeleteMappedResultsForView(int view)
 		{
 			var deletedReduceKeys = new List<string>();
 			var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
@@ -212,7 +212,7 @@
 			}
 		}
 
-		public IEnumerable<string> GetKeysForIndexForDebug(string view, int start, int take)
+		public IEnumerable<string> GetKeysForIndexForDebug(int view, int start, int take)
 		{
 			var mappedResultsByView = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByView);
 			using (var iterator = mappedResultsByView.MultiRead(Snapshot, CreateKey(view)))
@@ -237,7 +237,7 @@
 			}
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(string view, string key, int start, int take)
+		public IEnumerable<MappedResultInfo> GetMappedResultsForDebug(int view, string key, int start, int take)
 		{
 			var viewAndReduceKey = CreateKey(view, key);
 			var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
@@ -271,7 +271,7 @@
 			}
 		}
 
-		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(string view, string key, int level, int start, int take)
+		public IEnumerable<MappedResultInfo> GetReducedResultsForDebug(int view, string key, int level, int start, int take)
 		{
 			var viewAndReduceKeyAndLevel = CreateKey(view, key, level);
 			var reduceResultsByViewAndReduceKeyAndLevel =
@@ -308,7 +308,7 @@
 			}
 		}
 
-		public IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(string view, int start, int take)
+		public IEnumerable<ScheduledReductionDebugInfo> GetScheduledReductionForDebug(int view, int start, int take)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
 			using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, CreateKey(view)))
@@ -337,7 +337,7 @@
 			}
 		}
 
-		public void ScheduleReductions(string view, int level, ReduceKeyAndBucket reduceKeysAndBuckets)
+		public void ScheduleReductions(int view, int level, ReduceKeyAndBucket reduceKeysAndBuckets)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
 			var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
@@ -382,12 +382,11 @@
 						ushort version;
 						var value = LoadJson(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch, out version);
 
-						var indexFromDb = value.Value<string>("view");
+						var indexFromDb = value.Value<int>("view");
 						var levelFromDb = value.Value<int>("level");
 						var reduceKeyFromDb = value.Value<string>("reduceKey");
 
-						if (string.Equals(indexFromDb, getItemsToReduceParams.Index, StringComparison.OrdinalIgnoreCase) == false ||
-						levelFromDb != getItemsToReduceParams.Level)
+						if (indexFromDb != getItemsToReduceParams.Index || levelFromDb != getItemsToReduceParams.Level)
 							break;
 
 						if (string.Equals(reduceKeyFromDb, reduceKey, StringComparison.Ordinal) == false)
@@ -425,7 +424,7 @@
 			}
 		}
 
-		private IEnumerable<MappedResultInfo> GetResultsForBucket(string view, int level, string reduceKey, int bucket, bool loadData)
+		private IEnumerable<MappedResultInfo> GetResultsForBucket(int view, int level, string reduceKey, int bucket, bool loadData)
 		{
 			switch (level)
 			{
@@ -439,7 +438,7 @@
 			}
 		}
 
-		private IEnumerable<MappedResultInfo> GetReducedResultsForBucket(string view, string reduceKey, int level, int bucket, bool loadData)
+		private IEnumerable<MappedResultInfo> GetReducedResultsForBucket(int view, string reduceKey, int level, int bucket, bool loadData)
 		{
 			var viewAndReduceKeyAndLevelAndBucket = CreateKey(view, reduceKey, level, bucket);
 
@@ -479,7 +478,7 @@
 			}
 		}
 
-		private IEnumerable<MappedResultInfo> GetMappedResultsForBucket(string view, string reduceKey, int bucket, bool loadData)
+		private IEnumerable<MappedResultInfo> GetMappedResultsForBucket(int view, string reduceKey, int bucket, bool loadData)
 		{
 			var viewAndReduceKeyAndSourceBucket = CreateKey(view, reduceKey, bucket);
 
@@ -545,7 +544,7 @@
 					result.Timestamp = value.Value<DateTime>("timestamp");
 				}
 
-				var view = value.Value<string>("view");
+				var view = value.Value<int>("view");
 				var level = value.Value<int>("level");
 				var reduceKey = value.Value<string>("reduceKey");
 
@@ -555,7 +554,7 @@
 			return hasResult ? result : null;
 		}
 
-		public void DeleteScheduledReduction(string view, int level, string reduceKey)
+		public void DeleteScheduledReduction(int view, int level, string reduceKey)
 		{
 			var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
 			using (var iterator = scheduledReductionsByViewAndLevelAndReduceKey.MultiRead(Snapshot, CreateKey(view, level, reduceKey)))
@@ -572,7 +571,7 @@
 			}
 		}
 
-		public void PutReducedResult(string view, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data)
+		public void PutReducedResult(int view, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data)
 		{
 			var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket =
 				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByViewAndReduceKeyAndLevelAndSourceBucket);
@@ -618,7 +617,7 @@
 			reduceResultsByView.MultiAdd(writeBatch, CreateKey(view), idAsString);
 		}
 
-		public void RemoveReduceResults(string view, int level, string reduceKey, int sourceBucket)
+		public void RemoveReduceResults(int view, int level, string reduceKey, int sourceBucket)
 		{
 			var viewAndReduceKeyAndLevelAndSourceBucket = CreateKey(view, reduceKey, level, sourceBucket);
 			var reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket =
@@ -637,7 +636,7 @@
 			}
 		}
 
-		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(string view, int take, int limitOfItemsToReduceInSingleStep)
+		public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int view, int take, int limitOfItemsToReduceInSingleStep)
 		{
 			if (take <= 0)
 				take = 1;
@@ -677,7 +676,7 @@
 				.Take(take);
 		}
 
-		private int GetNumberOfMappedItemsPerReduceKey(string view, string reduceKey)
+		private int GetNumberOfMappedItemsPerReduceKey(int view, string reduceKey)
 		{
 			var key = CreateKey(view, reduceKey);
 
@@ -689,7 +688,7 @@
 			return value.Value<int>("mappedItemsCount");
 		}
 
-		public void UpdatePerformedReduceType(string view, string reduceKey, ReduceType reduceType)
+		public void UpdatePerformedReduceType(int view, string reduceKey, ReduceType reduceType)
 		{
 			var key = CreateKey(view, reduceKey);
 			var version = tableStorage.ReduceKeyTypes.ReadVersion(Snapshot, key);
@@ -697,7 +696,7 @@
 			AddReduceKeyType(key, view, reduceKey, reduceType, version);
 		}
 
-		private void DeleteReduceKeyCount(string key, string view, ushort? expectedVersion)
+		private void DeleteReduceKeyCount(string key, int view, ushort? expectedVersion)
 		{
 			var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
 
@@ -705,7 +704,7 @@
 			reduceKeyCountsByView.MultiDelete(writeBatch, CreateKey(view), key);
 		}
 
-		private void DeleteReduceKeyType(string key, string view, ushort? expectedVersion)
+		private void DeleteReduceKeyType(string key, int view, ushort? expectedVersion)
 		{
 			var reduceKeyTypesByView = tableStorage.ReduceKeyTypes.GetIndex(Tables.ReduceKeyTypes.Indices.ByView);
 
@@ -713,7 +712,7 @@
 			reduceKeyTypesByView.MultiDelete(writeBatch, CreateKey(view), key);
 		}
 
-		private void AddReduceKeyCount(string key, string view, string reduceKey, int count, ushort? expectedVersion)
+		private void AddReduceKeyCount(string key, int view, string reduceKey, int count, ushort? expectedVersion)
 		{
 			var reduceKeyCountsByView = tableStorage.ReduceKeyCounts.GetIndex(Tables.ReduceKeyCounts.Indices.ByView);
 
@@ -730,7 +729,7 @@
 			reduceKeyCountsByView.MultiAdd(writeBatch, CreateKey(view), key);
 		}
 
-		private void AddReduceKeyType(string key, string view, string reduceKey, ReduceType status, ushort? expectedVersion)
+		private void AddReduceKeyType(string key, int view, string reduceKey, ReduceType status, ushort? expectedVersion)
 		{
 			var reduceKeyTypesByView = tableStorage.ReduceKeyTypes.GetIndex(Tables.ReduceKeyTypes.Indices.ByView);
 
@@ -747,7 +746,7 @@
 			reduceKeyTypesByView.MultiAdd(writeBatch, CreateKey(view), key);
 		}
 
-		public ReduceType GetLastPerformedReduceType(string view, string reduceKey)
+		public ReduceType GetLastPerformedReduceType(int view, string reduceKey)
 		{
 			var key = CreateKey(view, reduceKey);
 
@@ -759,7 +758,7 @@
 			return (ReduceType)value.Value<int>("reduceType");
 		}
 
-		public IEnumerable<int> GetMappedBuckets(string view, string reduceKey)
+		public IEnumerable<int> GetMappedBuckets(int view, string reduceKey)
 		{
 			var viewAndReduceKey = CreateKey(view, reduceKey);
 			var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
@@ -780,7 +779,7 @@
 			}
 		}
 
-		public IEnumerable<MappedResultInfo> GetMappedResults(string view, IEnumerable<string> keysToReduce, bool loadData)
+		public IEnumerable<MappedResultInfo> GetMappedResults(int view, IEnumerable<string> keysToReduce, bool loadData)
 		{
 			var mappedResultsByViewAndReduceKey = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.ByViewAndReduceKey);
 			var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
@@ -828,7 +827,7 @@
 			}
 		}
 
-		public IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(string view, int start, int take)
+		public IEnumerable<ReduceTypePerKey> GetReduceKeysAndTypes(int view, int start, int take)
 		{
 			var reduceKeyTypesByView = tableStorage.ReduceKeyTypes.GetIndex(Tables.ReduceKeyTypes.Indices.ByView);
 			using (var iterator = reduceKeyTypesByView.MultiRead(Snapshot, CreateKey(view)))
@@ -850,7 +849,7 @@
 			}
 		}
 
-		public void DeleteScheduledReductionForView(string view)
+		public void DeleteScheduledReductionForView(int view)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
 
@@ -868,7 +867,7 @@
 					if (value == null)
 						continue;
 
-					var v = value.Value<string>("view");
+					var v = value.Value<int>("view");
 					var level = value.Value<int>("level");
 					var reduceKey = value.Value<string>("reduceKey");
 
@@ -878,7 +877,7 @@
 			}
 		}
 
-		public void RemoveReduceResultsForView(string view)
+		public void RemoveReduceResultsForView(int view)
 		{
 			var reduceResultsByView =
 				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByView);
@@ -898,7 +897,7 @@
 			}
 		}
 
-		private void DeleteScheduledReduction(Slice id, string view, int level, string reduceKey)
+		private void DeleteScheduledReduction(Slice id, int view, int level, string reduceKey)
 		{
 			var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
 			var scheduledReductionsByViewAndLevelAndReduceKey = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByViewAndLevelAndReduceKey);
@@ -910,7 +909,7 @@
 			scheduledReductionsByViewAndLevel.MultiDelete(writeBatch, CreateKey(view, level), id);
 		}
 
-		private void DeleteMappedResult(Slice id, string view, string documentId, string reduceKey, string bucket)
+		private void DeleteMappedResult(Slice id, int view, string documentId, string reduceKey, string bucket)
 		{
 			var viewAndDocumentId = CreateKey(view, documentId);
 			var viewAndReduceKey = CreateKey(view, reduceKey);

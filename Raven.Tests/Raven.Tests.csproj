@@ -648,10 +648,10 @@
     <Compile Include="Issues\RavenDB_1353.cs" />
     <Compile Include="Issues\RavenDB_1345.cs" />
     <Compile Include="Issues\RavenDB_1346.cs" />
-    <Compile Include="Issues\RavenDB_1374 .cs" />
     <Compile Include="Issues\RavenDB_1379.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Issues\RavenDB_1374 .cs" />
     <Compile Include="Issues\RavenDB_1359 .cs" />
     <Compile Include="Issues\RavenDB_1377.cs" />
     <Compile Include="Issues\RavenDB_1410.cs" />
