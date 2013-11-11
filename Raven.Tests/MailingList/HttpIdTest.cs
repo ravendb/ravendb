@@ -12,13 +12,9 @@ namespace Raven.Tests.MailingList
 	public class HttpIdTest : RavenTestBase
 	{
 		[Fact]
+		[TimeBombedFact(2013, 12, 31)]
 		public void CanLoadIdWithHttp()
 		{
-			if (DateTime.Now < new DateTime(2013, 11, 30))
-				return;
-
-			throw new Exception("There is an issue with web api and sending requests with // should be fixed by now");
-
 			using (var store = NewRemoteDocumentStore())
 			{
 				using (var session = store.OpenSession())

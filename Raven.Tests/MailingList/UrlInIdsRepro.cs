@@ -33,13 +33,9 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
+		[TimeBombedFact(2013, 12, 31)]
 		public void CanSaveAndRetrieveTestOpenId()
 		{
-			if (DateTime.Now < new DateTime(2013, 11, 30))
-				return;
-
-			throw new Exception("There is an issue with web api and sending requests with // should be fixed by now");
-
 			using (var store = NewRemoteDocumentStore())
 			{
 				string id;
