@@ -69,9 +69,20 @@ namespace Raven.Abstractions.Data
 				}
 			}
 
+		    if (mode == FacetMode.Ranges)
+		    {
+		        if (other.Name.Type == typeof (int) ||
+		            other.Name.Type == typeof (long) ||
+		            other.Name.Type == typeof (double) ||
+		            other.Name.Type == typeof (short) ||
+		            other.Name.Type == typeof (float) ||
+		            other.Name.Type == typeof (decimal))
+		            name += "_Range";
+		    }
+
 			return new Facet
 			{
-				Name = mode == FacetMode.Default ? name : name + "_Range",
+				Name = name,
 				Mode = mode,
 				Ranges = ranges
 			};
@@ -209,7 +220,6 @@ namespace Raven.Abstractions.Data
 				//The nullable stuff here it a bit weird, but it helps with trying to cast Value types
 				case "System.DateTime":
                     return ((DateTime)value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
-                    return RavenQuery.Escape(((DateTime)value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
                 case "System.Int32":
 					return NumberUtil.NumberToString(((int)value));
 				case "System.Int64":

@@ -14,10 +14,74 @@ namespace Raven.Tests.Bugs.Facets
     public class DateTimeFacets : FacetTestBase
     {
         [Fact]
+        public void ManualCheck()
+        {
+
+            var now = DateTime.Today;
+            var dates = new List<DateTime>{
+                now.AddDays(-10),
+                now.AddDays(-7),
+                now.AddDays(0),
+                now.AddDays(7)
+            };
+
+
+            var facetsNewWay = new List<Facet>
+			    {
+				    new Facet<Camera>
+				    {
+					    Name = x => x.DateOfListing,
+                        Ranges =
+                           {
+                               x => x.DateOfListing < now.AddDays(-10),
+                               x => x.DateOfListing > now.AddDays(-10) && x.DateOfListing < now.AddDays(-7),
+                               x => x.DateOfListing > now.AddDays(-7) && x.DateOfListing < now.AddDays(0),
+                               x => x.DateOfListing > now.AddDays(0) && x.DateOfListing < now.AddDays(7),
+                               x => x.DateOfListing > now.AddDays(7)
+                           }
+				    }
+                };
+            var facetOldSchool = new List<Facet>{
+                    new Facet
+                                     {
+                                         Name = "DateOfListing",
+                                         Mode = FacetMode.Ranges,
+                                         Ranges = new List<string>{
+                                             string.Format("[NULL TO {0:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0], dates[1]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[1], dates[2]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[2], dates[3]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO NULL]", dates[3])
+                                         }
+                                     }
+                };
+
+            for (int i = 0; i < facetOldSchool.Count; i++)
+            {
+                var o = facetOldSchool[i];
+                var n= facetsNewWay[i];
+                Assert.Equal(o.Name, n.Name);
+                Assert.Equal(o.AggregationField, n.AggregationField);
+                Assert.Equal(o.DisplayName, n.DisplayName);
+                Assert.Equal(o.Aggregation, n.Aggregation);
+                Assert.Equal(o.IncludeRemainingTerms, n.IncludeRemainingTerms);
+                Assert.Equal(o.MaxResults, n.MaxResults);
+                Assert.Equal(o.Mode, n.Mode);
+                Assert.Equal(o.TermSortMode, n.TermSortMode);
+                Assert.Equal(o.Ranges.Count, n.Ranges.Count);
+
+                for (int j = 0; j < o.Ranges.Count; j++)
+                {
+                    Assert.Equal(o.Ranges[i], n.Ranges[i]);
+                }
+            }
+        }
+
+        [Fact]
         public void PrestonThinksDateRangeQueryShouldProduceCorrectResultsWhenBuiltWithClient()
         {
             var cameras = GetCameras(30);
-            var now = DateTime.Now;
+            var now = DateTime.Today;
 
             //putting some in the past and some in the future
             for (int x = 0; x < cameras.Count; x++)
@@ -45,23 +109,13 @@ namespace Raven.Tests.Bugs.Facets
 				    {
 					    Name = x => x.DateOfListing,
                         Ranges =
-                            {
-                                x => x.DateOfListing <= dates[0],
-                                x => x.DateOfListing > dates[0] && x.DateOfListing < dates[1],
-                                x => x.DateOfListing > dates[1] && x.DateOfListing < dates[2],
-                                x => x.DateOfListing > dates[2] && x.DateOfListing < dates[3],
-                                x => x.DateOfListing >= dates[3]
-                            }
-
-                        //throws exception if i have the .AddDays call in the definition, should it?
-                        //Ranges =
-                        //    {
-                        //        x => x.DateOfListing <= now.AddDays(-10),
-                        //        x => x.DateOfListing > now.AddDays(-10) && x.DateOfListing < now.AddDays(-7),
-                        //        x => x.DateOfListing > now.AddDays(-7) && x.DateOfListing < now.AddDays(0),
-                        //        x => x.DateOfListing > now.AddDays(0) && x.DateOfListing < now.AddDays(7),
-                        //        x => x.DateOfListing >= now.AddDays(7)
-                        //    }
+                           {
+                               x => x.DateOfListing < now.AddDays(-10),
+                               x => x.DateOfListing > now.AddDays(-10) && x.DateOfListing < now.AddDays(-7),
+                               x => x.DateOfListing > now.AddDays(-7) && x.DateOfListing < now.AddDays(0),
+                               x => x.DateOfListing > now.AddDays(0) && x.DateOfListing < now.AddDays(7),
+                               x => x.DateOfListing > now.AddDays(7)
+                           }
 				    }
                 };
                 var facetOldSchool = new List<Facet>{
@@ -70,11 +124,11 @@ namespace Raven.Tests.Bugs.Facets
                                          Name = "DateOfListing",
                                          Mode = FacetMode.Ranges,
                                          Ranges = new List<string>{
-                                             string.Format("[NULL TO {0:yyyy-MM-ddTHH-mm-ss.fffffff}]", dates[0]),
-                                             string.Format("[{0:yyyy-MM-ddTHH-mm-ss.fffffff} TO {1:yyyy-MM-ddTHH-mm-ss.fffffff}]", dates[0], dates[1]),
-                                             string.Format("[{0:yyyy-MM-ddTHH-mm-ss.fffffff} TO {1:yyyy-MM-ddTHH-mm-ss.fffffff}]", dates[1], dates[2]),
-                                             string.Format("[{0:yyyy-MM-ddTHH-mm-ss.fffffff} TO {1:yyyy-MM-ddTHH-mm-ss.fffffff}]", dates[2], dates[3]),
-                                             string.Format("[{0:yyyy-MM-ddTHH-mm-ss.fffffff} TO NULL]", dates[3])
+                                             string.Format("[NULL TO {0:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0], dates[1]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[1], dates[2]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[2], dates[3]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO NULL]", dates[3])
                                          }
                                      }
                 };
