@@ -218,6 +218,10 @@
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
+    <Compile Include="Bugs\Errors\OrQueries.cs" />
+    <Compile Include="Bugs\Facets\FacetErrors.cs" />
+    <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
+    <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
     <Compile Include="Issues\RavenDB_1435.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
@@ -1529,9 +1533,7 @@
   <ItemGroup>
     <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Bugs\Facets\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
