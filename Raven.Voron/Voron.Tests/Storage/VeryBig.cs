@@ -6,13 +6,6 @@ namespace Voron.Tests.Storage
 {
 	public class VeryBig : StorageTest
 	{
-        protected override void Configure(StorageEnvironmentOptions options)
-        {
-            if(DateTime.Now > new DateTime(2013,11,2))
-                throw new InvalidOperationException("this should be removed and it'll still work");
-            options.InitialLogFileSize = 65*1024*1024;
-        }
-
 		[Fact]
 		public void CanGrowBeyondInitialSize()
 		{

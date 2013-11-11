@@ -6,10 +6,9 @@
 
 using System;
 using System.IO;
-using Voron.Impl;
 using Xunit;
 
-namespace Voron.Tests.Log
+namespace Voron.Tests.Journal
 {
     public class BasicActions : StorageTest
     {
@@ -17,6 +16,7 @@ namespace Voron.Tests.Log
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.MaxLogFileSize = 10 * options.DataPager.PageSize;
+	        options.ManualFlushing = true;
         }
 
         [Fact]
@@ -91,24 +91,21 @@ namespace Voron.Tests.Log
         }
 
         [Fact]
-        public void LogFileShouldOverridePagesAllocatedByAbortedTransaction()
+        public void ShouldMoveBackTheJournalsWritePagePositionAfterAbortedTransaction()
         {
-            using (var tx1 = Env.NewTransaction(TransactionFlags.ReadWrite))
+			var writePosition = Env.Journal.CurrentFile.WritePagePosition;
+	        
+	        using (var tx1 = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 tx1.State.Root.Add(tx1, "items/1", StreamFor("values/1"));
+
+				Assert.True(Env.Journal.CurrentFile.WritePagePosition > writePosition);
+
                 // tx1.Commit(); aborted transaction
             }
-            var writePosition = Env.Journal.CurrentFile.WritePagePosition;
 
-            // should reuse pages allocated by tx1
-            using (var tx2 = Env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                tx2.State.Root.Add(tx2, "items/2", StreamFor("values/2"));
-                tx2.Commit();
-            }
-
-            Assert.Equal(0, Env.Journal.CurrentFile.Number); // still the same log
-            Assert.Equal(writePosition, Env.Journal.CurrentFile.WritePagePosition);
+			Assert.Equal(0, Env.Journal.CurrentFile.Number); // still the same log
+			Assert.Equal(writePosition, Env.Journal.CurrentFile.WritePagePosition); 
         }
 
         [Fact]

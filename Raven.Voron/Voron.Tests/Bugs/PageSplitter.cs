@@ -49,10 +49,6 @@ namespace Voron.Tests.Bugs
 				for (int index = 0; index < inputData.Count; index++)
 				{
 					var keyString = inputData[index];
-					if (index == 18)
-					{
-						Debugger.Break();
-					}
 					Assert.DoesNotThrow(() => tree.Add(tx, keyString, new MemoryStream(new byte[] {1, 2, 3, 4})));
 				}
 
@@ -60,7 +56,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact(Skip = "Long running")]
+		[Fact]
 		public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
 		{
 			var ids = ReadIds("data.txt");
@@ -95,7 +91,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		[Fact(Skip = "Long running")]
+		[Fact]
 		public void PageSplitterShouldCalculateSeparatorKeyCorrectly2()
 		{
 			var ids = ReadIds("data2.txt");

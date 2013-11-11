@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.IO.Packaging;
 using Voron.Impl.Backup;
 using Xunit;
 
@@ -13,6 +14,7 @@ namespace Voron.Tests.Backups
 	    protected override void Configure(StorageEnvironmentOptions options)
 		{
 			options.MaxLogFileSize = 1000 * options.DataPager.PageSize;
+		    options.ManualFlushing = true;
 		}
 
 	    public Full()
