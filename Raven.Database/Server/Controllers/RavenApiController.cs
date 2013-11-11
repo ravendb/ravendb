@@ -881,7 +881,7 @@ namespace Raven.Database.Server.Controllers
 			return UrlExtension.GetRequestUrlFromRawUrl(rawUrl, DatabasesLandlord.SystemConfiguration);
 		}
 
-		private void HandleReplication(HttpResponseMessage msg)
+		protected void HandleReplication(HttpResponseMessage msg)
 		{
 			var clientPrimaryServerUrl = GetHeader(Constants.RavenClientPrimaryServerUrl);
 			var clientPrimaryServerLastCheck = GetHeader(Constants.RavenClientPrimaryServerLastCheck);

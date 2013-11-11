@@ -42,11 +42,14 @@ namespace Raven.Database.Server.Controllers
 				}
 
 				await ExecuteRequests(results, requests);
-
-				return new HttpResponseMessage(HttpStatusCode.OK)
+				var result = new HttpResponseMessage(HttpStatusCode.OK)
 				{
 					Content = new MultiGetContent(results)
 				};
+
+				HandleReplication(result);
+
+				return result;
 			}
 			finally
 			{
