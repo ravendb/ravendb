@@ -71,16 +71,17 @@ namespace Raven.Abstractions.Data
 
 		    if (mode == FacetMode.Ranges)
 		    {
-		        if (other.Name.Type == typeof (int) ||
-		            other.Name.Type == typeof (long) ||
-		            other.Name.Type == typeof (double) ||
-		            other.Name.Type == typeof (short) ||
-		            other.Name.Type == typeof (float) ||
-		            other.Name.Type == typeof (decimal))
+		        var type = GetExpressionType(other.Name);
+		        if (type == typeof (int) ||
+		            type == typeof (long) ||
+		            type == typeof (double) ||
+		            type == typeof (short) ||
+		            type == typeof (float) ||
+		            type == typeof (decimal))
 		            name += "_Range";
 		    }
 
-			return new Facet
+		    return new Facet
 			{
 				Name = name,
 				Mode = mode,
@@ -88,7 +89,20 @@ namespace Raven.Abstractions.Data
 			};
 		}
 
-		public static string Parse(Expression<Func<T, bool>> expr)
+	    private static Type GetExpressionType(Expression expr)
+	    {
+            switch (expr.NodeType)
+	        {
+                case ExpressionType.Lambda:
+	                return GetExpressionType(((LambdaExpression) expr).Body);
+                case ExpressionType.Convert:
+                    return GetExpressionType(((UnaryExpression)expr).Operand);
+                default:
+	                return expr.Type;
+	        }
+	    }
+
+	    public static string Parse(Expression<Func<T, bool>> expr)
 		{
 			Expression body = expr.Body;
 
@@ -219,7 +233,7 @@ namespace Raven.Abstractions.Data
 			{
 				//The nullable stuff here it a bit weird, but it helps with trying to cast Value types
 				case "System.DateTime":
-                    return ((DateTime)value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture);
+                    return RavenQuery.Escape(((DateTime)value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
                 case "System.Int32":
 					return NumberUtil.NumberToString(((int)value));
 				case "System.Int64":
