@@ -126,7 +126,7 @@ namespace Raven.Database.Server.Controllers.Admin
 					RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
 			}, TaskCreationOptions.LongRunning);
 
-			return new HttpResponseMessage(HttpStatusCode.OK);
+			return GetEmptyMessage();
 		}
 
 		private string ResolveTenantDataDirectory(string databaseLocation, string databaseName, out string documentDataDir)

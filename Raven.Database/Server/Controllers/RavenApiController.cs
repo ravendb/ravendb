@@ -20,6 +20,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Json;
+using Raven.Bundles.Replication.Tasks;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
@@ -172,7 +173,6 @@ namespace Raven.Database.Server.Controllers
 		{
 			AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion, msg);
 			AddHeader("Temp-Request-Time", sp.ElapsedMilliseconds.ToString("#,#;;0", CultureInfo.InvariantCulture), msg);
-			AddAccessControlHeaders(msg);
 		}
 
 		private void AddAccessControlHeaders(HttpResponseMessage msg)
@@ -658,6 +658,9 @@ namespace Raven.Database.Server.Controllers
 
 			WriteETag(etag, msg);
 
+			AddAccessControlHeaders(msg);
+			HandleReplication(msg);
+
 			return msg;
 		}
 
@@ -667,7 +670,11 @@ namespace Raven.Database.Server.Controllers
 			{
 				Content = new JsonContent(msg)
 			};
+
 			WriteETag(etag, resMsg);
+
+			AddAccessControlHeaders(resMsg);
+			HandleReplication(resMsg);
 
 			return resMsg;
 		}
@@ -679,6 +686,9 @@ namespace Raven.Database.Server.Controllers
 				Content = new JsonContent()
 			};
 			WriteETag(etag, resMsg);
+
+			AddAccessControlHeaders(resMsg);
+			HandleReplication(resMsg);
 
 			return resMsg;
 		}
@@ -869,6 +879,33 @@ namespace Raven.Database.Server.Controllers
 		{
 			var rawUrl = InnerRequest.RequestUri.PathAndQuery;
 			return UrlExtension.GetRequestUrlFromRawUrl(rawUrl, DatabasesLandlord.SystemConfiguration);
+		}
+
+		private void HandleReplication(HttpResponseMessage msg)
+		{
+			var clientPrimaryServerUrl = GetHeader(Constants.RavenClientPrimaryServerUrl);
+			var clientPrimaryServerLastCheck = GetHeader(Constants.RavenClientPrimaryServerLastCheck);
+			if (string.IsNullOrEmpty(clientPrimaryServerUrl) || string.IsNullOrEmpty(clientPrimaryServerLastCheck))
+			{
+				return;
+			}
+
+			DateTime primaryServerLastCheck;
+			if (DateTime.TryParse(clientPrimaryServerLastCheck, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out primaryServerLastCheck) == false)
+			{
+				return;
+			}
+
+			var replicationTask = Database.StartupTasks.OfType<ReplicationTask>().FirstOrDefault();
+			if (replicationTask == null)
+			{
+				return;
+			}
+
+			if (replicationTask.IsHeartbeatAvailable(clientPrimaryServerUrl, primaryServerLastCheck))
+			{
+				msg.Headers.TryAddWithoutValidation(Constants.RavenForcePrimaryServerCheck, "True");
+			}
 		}
 	}
 

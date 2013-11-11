@@ -97,7 +97,7 @@ namespace Raven.Database.Server.Controllers
 		public HttpResponseMessage DocGet(string id)
 		{
 			var docId = id;
-			var msg = new HttpResponseMessage(HttpStatusCode.OK) { Content = new JsonContent() };
+			var msg = GetEmptyMessage();
 			if (string.IsNullOrEmpty(GetHeader("If-None-Match")))
 				return GetDocumentDirectly(docId, msg);
 
