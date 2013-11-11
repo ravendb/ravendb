@@ -25,9 +25,9 @@ namespace Owin
 {
 	public static class AppBuilderExtensions
 	{
-		private static string HostOnAppDisposing = "host.OnAppDisposing";
+	    private const string HostOnAppDisposing = "host.OnAppDisposing";
 
-		public static IAppBuilder UseRavenDB(this IAppBuilder app)
+	    public static IAppBuilder UseRavenDB(this IAppBuilder app)
 		{
 			return UseRavenDB(app, new RavenConfiguration());
 		}
@@ -65,7 +65,7 @@ namespace Owin
 
 			app
 				//uncomment for debug 
-					.UseInterceptor()
+				.UseInterceptor()
 				.UseWebApi(CreateHttpCfg(options.Landlord, options.MixedModeRequestAuthorizer, options.RequestManager));
 			return app;
 		}
