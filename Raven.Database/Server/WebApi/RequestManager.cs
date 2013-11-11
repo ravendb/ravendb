@@ -3,12 +3,14 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Impl;
+using Raven.Database.Impl.Clustering;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -304,9 +306,9 @@ namespace Raven.Database.Server.WebApi
 			{
 				logHttpRequestStatsParam = new LogHttpRequestStatsParams(
 					sw,
-					null, //TODO: request.Headers,
+					GetHeaders(controller.InnerHeaders), //TODO: request.Headers,
 					controller.InnerRequest.Method.Method,
-					200, // TODO: responseCode,
+					500, // TODO: responseCode,
 					controller.InnerRequest.RequestUri.PathAndQuery);
 			}
 			catch (Exception e)
@@ -322,6 +324,17 @@ namespace Raven.Database.Server.WebApi
 			LogHttpRequestStats(logHttpRequestStatsParam, controller.DatabaseName);
 			//TODO: log
 			//OutputSavedLogItems(logger);
+		}
+
+		private NameValueCollection GetHeaders(HttpHeaders innerHeaders)
+		{
+			var result = new NameValueCollection();
+			foreach (var innerHeader in innerHeaders)
+			{
+				result.Add(innerHeader.Key, innerHeader.Value.FirstOrDefault());
+			}
+
+			return result;
 		}
 
 		private void LogHttpRequestStats(LogHttpRequestStatsParams logHttpRequestStatsParams, string databaseName)
