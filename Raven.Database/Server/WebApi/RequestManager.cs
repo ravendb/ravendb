@@ -84,7 +84,7 @@ namespace Raven.Database.Server.WebApi
 			}
 		}
 
-		public void HandleActualRequest(RavenApiController controller, Action action)
+		public async Task HandleActualRequest(RavenApiController controller, Func<Task> action)
 		{
 			var isReadLockHeld = disposerLock.IsReadLockHeld;
 			if (isReadLockHeld == false)
@@ -104,7 +104,7 @@ namespace Raven.Database.Server.WebApi
 				{
 					if (SetupRequestToProperDatabase(controller))
 					{
-						action();
+						await action();
 					}
 				}
 				finally
