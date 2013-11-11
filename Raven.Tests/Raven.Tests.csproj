@@ -218,7 +218,7 @@
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
-    <Compile Include="Bugs\Errors\OrQueries.cs" />
+    <Compile Include="Bugs\Errors\QueryIssues.cs" />
     <Compile Include="Bugs\Facets\FacetErrors.cs" />
     <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
     <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
