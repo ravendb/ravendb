@@ -2552,6 +2552,12 @@ namespace Raven.Database
                     if (document == null)
                         return;
 
+                    if (document.Metadata.ContainsKey("Raven-Read-Veto"))
+                    {
+                        result = document;
+                        return;
+                    }
+
                     var storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
                     if (storedTransformer == null)
                         throw new InvalidOperationException("No transformer with the name: " + transformer);
