@@ -27,6 +27,7 @@ using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Responders.Admin;
 using Raven.Database.Util;
+using Raven.Storage.Voron;
 
 namespace Raven.Server
 {
@@ -371,6 +372,10 @@ Configuration options:
 				{
 					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 				}
+                else if (File.Exists(Path.Combine(backupLocation, "Raven.voron")))
+                {
+                    ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;                    
+                }
 				else if (Directory.Exists(Path.Combine(backupLocation, "new")))
 				{
 					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;

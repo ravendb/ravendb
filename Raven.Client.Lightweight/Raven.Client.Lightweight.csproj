@@ -41,6 +41,7 @@
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
     <DocumentationFile>..\build\Raven.Client.Lightweight.XML</DocumentationFile>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -283,7 +284,6 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">

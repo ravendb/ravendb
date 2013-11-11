@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.IO;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -17,9 +18,10 @@ namespace Raven.Tests.MailingList
 		{
 			using(var store = NewDocumentStore())
 			{
-				using (Stream s = new MemoryStream())
+				var dummyImageBytes = new Byte[] { 1,2,3,4 }; //creating empty attachment will fail
+				using (var dummyImageData = new MemoryStream(dummyImageBytes))
 				{
-					store.DatabaseCommands.PutAttachment("images/image.jpg", null, s,
+					store.DatabaseCommands.PutAttachment("images/image.jpg", null, dummyImageData,
 					                                     new RavenJObject {{"Content-Type", "image/jpeg"}});
 				}
 
@@ -37,9 +39,10 @@ namespace Raven.Tests.MailingList
 				Url = "http://localhost:8079"
 			}.Initialize())
 			{
-				using (Stream s = new MemoryStream())
+				var dummyImageBytes = new Byte[] { 1, 2, 3, 4 }; //creating empty attachment will fail
+				using (var dummyImageData = new MemoryStream(dummyImageBytes))
 				{
-					store.DatabaseCommands.PutAttachment("images/image.jpg", null, s,
+					store.DatabaseCommands.PutAttachment("images/image.jpg", null, dummyImageData,
 														 new RavenJObject { { "Content-Type", "image/jpeg" } });
 				}
 

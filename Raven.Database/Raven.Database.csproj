@@ -40,7 +40,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>..\build\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;NET_4_0</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;NET_4_0 NET45</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>1607, 1591</NoWarn>
@@ -130,6 +130,10 @@
     </Reference>
     <Reference Include="NetTopologySuite">
       <HintPath>..\SharedLibs\NetTopologySuite.dll</HintPath>
+    </Reference>
+    <Reference Include="NLog, Version=2.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\NLog.2.1.0\lib\net45\NLog.dll</HintPath>
     </Reference>
     <Reference Include="Spatial4n.Core.NTS">
       <HintPath>..\SharedLibs\Spatial4n.Core.NTS.dll</HintPath>
@@ -744,6 +748,7 @@
     <Compile Include="Server\Connections\TransportState.cs" />
     <Compile Include="Server\Connections\TimeSensitiveStore.cs" />
     <Compile Include="Smuggler\DataDumper.cs" />
+    <Compile Include="Storage\BaseRestoreOperation.cs" />
     <Compile Include="Storage\DocumentInTransactionData.cs" />
     <Compile Include="Storage\Esent\Backup\BackupOperation.cs" />
     <Compile Include="Storage\Esent\Backup\EsentBackup.cs" />
@@ -835,6 +840,30 @@
     <Compile Include="Storage\Managed\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Managed\TasksStorageActions.cs" />
     <Compile Include="Storage\Managed\TransactionalStorage.cs" />
+    <Compile Include="Storage\Voron\Backup\BackupOperation.cs" />
+    <Compile Include="Storage\Voron\Backup\RestoreOperation.cs" />
+    <Compile Include="Storage\Voron\StorageActions\DocumentsStorageActions.cs" />
+    <Compile Include="Storage\Voron\StorageActions\AttachmentsStorageActions.cs" />
+    <Compile Include="Storage\Voron\Impl\Index.cs" />
+    <Compile Include="Storage\Voron\StorageActions\GeneralStorageActions.cs" />
+    <Compile Include="Storage\Voron\StorageActions\IndexingStorageActions.cs" />
+    <Compile Include="Storage\Voron\Impl\Table.cs" />
+    <Compile Include="Storage\Voron\Impl\IPersistanceSource.cs" />
+    <Compile Include="Storage\Voron\Impl\MemoryMapPersistanceSource.cs" />
+    <Compile Include="Storage\Voron\Impl\MemoryPersistanceSource.cs" />
+    <Compile Include="Storage\Voron\StorageActions\ListsStorageActions.cs" />
+    <Compile Include="Storage\Voron\StorageActions\MappedResultsStorageActions.cs" />
+    <Compile Include="Storage\Voron\StorageActions\QueueStorageActions.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StalenessStorageActions.cs" />
+    <Compile Include="Storage\Voron\StorageActionsAccessor.cs" />
+    <Compile Include="Storage\Voron\Impl\TableBase.cs" />
+    <Compile Include="Storage\Voron\Impl\Tables.cs" />
+    <Compile Include="Storage\Voron\Impl\TableStorage.cs" />
+    <Compile Include="Storage\Voron\StorageActions\StorageActionsBase.cs" />
+    <Compile Include="Storage\Voron\StorageActions\TasksStorageActions.cs" />
+    <Compile Include="Storage\Voron\StorageActions\Util.cs" />
+    <Compile Include="Storage\Voron\TransactionalStorage.cs" />
+    <Compile Include="Storage\Voron\VoronInFlightTransactionalState.cs" />
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\DatabaseTask.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
@@ -972,6 +1001,10 @@
       <Project>{6828A6A5-B925-4716-8D08-2B26353C54C2}</Project>
       <Name>Raven.Studio</Name>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
+      <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
+      <Name>Voron %28Voron\Voron%29</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

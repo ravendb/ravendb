@@ -649,6 +649,9 @@
     <Compile Include="Issues\RavenDB_1345.cs" />
     <Compile Include="Issues\RavenDB_1346.cs" />
     <Compile Include="Issues\RavenDB_1374 .cs" />
+    <Compile Include="Issues\RavenDB_1379.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Issues\RavenDB_1359 .cs" />
     <Compile Include="Issues\RavenDB_1377.cs" />
     <Compile Include="Issues\RavenDB_1410.cs" />
@@ -907,6 +910,7 @@
     <Compile Include="NestedIndexing\CanTrackWhatCameFromWhat.cs" />
     <Compile Include="NestedIndexing\Item.cs" />
     <Compile Include="NestedIndexing\WithMapReduce.cs" />
+    <Compile Include="NonIncrementalBackupRestoreTest.cs" />
     <Compile Include="Notifications\ReplicationConflicts.cs" />
     <Compile Include="Notifications\ReplicationConflicts_Embedded.cs" />
     <Compile Include="Patching\BigDoc.cs" />
@@ -1255,6 +1259,17 @@
     <Compile Include="Spatial\WktSanitizerTests.cs" />
     <Compile Include="Storage\Bugs\GetReduceKeysAndTypesNotPagingProperly.cs" />
     <Compile Include="Storage\Lists.cs" />
+    <Compile Include="Storage\TransactionalStorageTestBase.cs" />
+    <Compile Include="Storage\Voron\AttachmentActionsStorageTests.cs" />
+    <Compile Include="Storage\Voron\GeneralStorageActionsTests.cs" />
+    <Compile Include="Storage\Voron\IndexingStorageActionsTests.cs" />
+    <Compile Include="Storage\Voron\MappedResultsStorageActionsTests.cs" />
+    <Compile Include="Storage\Voron\StalenessStorageActionsTests.cs" />
+    <Compile Include="Storage\Voron\StorageIntegrationTests.cs" />
+    <Compile Include="Storage\Voron\ListStorageActionsTests.cs" />
+    <Compile Include="Storage\Voron\QueueStorageActionsTests.cs" />
+    <Compile Include="Storage\Voron\TasksStorageActionsTests.cs" />
+    <Compile Include="Storage\Voron\DocumentsStorageActionsTests.cs" />
     <Compile Include="Stress\InlineValueAttribute.cs" />
     <Compile Include="Suggestions\SuggestionsUsingAnIndex.cs" />
     <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />
@@ -1534,9 +1549,9 @@
       <Project>{14f2d508-8e06-407b-9451-97e99538e26b}</Project>
       <Name>Raven.Tests.Helpers</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Web\Raven.Web.csproj">
-      <Project>{f49c2ed0-1844-44b4-a595-5fd152853b9c}</Project>
-      <Name>Raven.Web</Name>
+    <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
+      <Project>{ff83c7c2-bc7b-4dcc-a782-49ef9bbd9390}</Project>
+      <Name>Voron %28Voron\Voron%29</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

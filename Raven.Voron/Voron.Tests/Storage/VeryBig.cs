@@ -1,0 +1,85 @@
+﻿using System;
+using System.IO;
+using Xunit;
+
+namespace Voron.Tests.Storage
+{
+	public class VeryBig : StorageTest
+	{
+        protected override void Configure(StorageEnvironmentOptions options)
+        {
+            if(DateTime.Now > new DateTime(2013,11,2))
+                throw new InvalidOperationException("this should be removed and it'll still work");
+            options.InitialLogFileSize = 65*1024*1024;
+        }
+
+		[Fact]
+		public void CanGrowBeyondInitialSize()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.CreateTree(tx, "test");
+				tx.Commit();
+			}
+
+			var buffer = new byte[1024 * 512];
+			new Random().NextBytes(buffer);
+
+			for (int i = 0; i < 20; i++)
+			{
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					var tree = tx.GetTree("test");
+					for (int j = 0; j < 12; j++)
+					{
+						tree.Add(tx, string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
+					}
+					tx.Commit();
+				}
+			}
+		}
+
+		[Fact]
+		public void CanGrowBeyondInitialSize_Root()
+		{
+			var buffer = new byte[1024 * 512];
+			new Random().NextBytes(buffer);
+
+			for (int i = 0; i < 20; i++)
+			{
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					for (int j = 0; j < 12; j++)
+					{
+						tx.State.Root.Add(tx, string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
+					}
+					tx.Commit();
+				}
+			}
+		}
+		[Fact]
+		public void CanGrowBeyondInitialSize_WithAnotherTree()
+		{
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				Env.CreateTree(tx, "test");
+				tx.Commit();
+			}
+			var buffer = new byte[1024 * 512];
+			new Random().NextBytes(buffer);
+
+			for (int i = 0; i < 20; i++)
+			{
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+
+					for (int j = 0; j < 12; j++)
+					{
+						tx.State.Root.Add(tx, string.Format("{0:000}-{1:000}", j, i), new MemoryStream(buffer));
+					}
+					tx.Commit();
+				}
+			}
+		}
+	}
+}
