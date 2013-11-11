@@ -1,1 +1,0 @@
-& ".\Tools\StatLight\StatLight.exe" "-x=.\Raven.Tests.Silverlight\Bin\Debug\Raven.Tests.Silverlight.xap" "--OverrideTestProvider=MSTestWithCustomProvider" "--ReportOutputFile=.\Raven.Tests.Silverlight.Results.xml"
