@@ -12,9 +12,11 @@ namespace Performance.Comparison
 	{
 		string StorageName { get; }
 
-		List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data);
-        List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data);
-		PerformanceRecord ReadSequential();
-		PerformanceRecord ReadRandom(IEnumerable<int> randomIds);
+        bool CanHandleBigData { get;  }
+
+		List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data, PerfTracker perfTracker);
+        List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data, PerfTracker perfTracker);
+		PerformanceRecord ReadSequential(PerfTracker perfTracker);
+		PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker);
 	}
 }

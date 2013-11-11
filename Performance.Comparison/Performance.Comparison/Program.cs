@@ -23,7 +23,7 @@ namespace Performance.Comparison
             var buffer = new byte[87 * 1024];
             random.NextBytes(buffer);
 
-            var path = @"c:\work\temp\";
+            var path = @"D:\temp\";
 
             var sequentialIds = InitSequentialNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 128, maxValueSize: 128);
             var randomIds = InitRandomNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 128, maxValueSize: 128);
@@ -31,6 +31,7 @@ namespace Performance.Comparison
             var sequentialIdsLarge = InitSequentialNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 512, maxValueSize: 87 * 1024);
             var randomIdsLarge = InitRandomNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 512, maxValueSize: 87 * 1024);
 
+        
             var performanceTests = new List<IStoragePerformanceTest>()
 				{
 					new SqlServerTest(buffer),
@@ -41,66 +42,63 @@ namespace Performance.Comparison
                     new VoronTest(path, FlushMode.Full, buffer)
 				};
 
+            var perfTracker = new PerfTracker();
             for(var i = 0; i < performanceTests.Count; i++)
             {
                 var test = performanceTests[i];
 
                 Console.WriteLine("Testing: " + test.StorageName);
 
-                var writeSeq = test.WriteSequential(sequentialIds);
+                var writeSeq = test.WriteSequential(sequentialIds, perfTracker);
                 var items = writeSeq.Sum(x => x.ProcessedItems);
                 double totalDuration = writeSeq.Sum(x => x.Duration);
-                var avgMemoryInMegaBytes = writeSeq.Average(x => x.Memory) / (1024 * 1024);
                 //WritePerfData("WriteSeq", test, writeSeq);
-                Console.WriteLine("Write seq    ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
+                OutputResults("Write Seq", items, totalDuration, perfTracker);
 
-                var readSeq = test.ReadSequential();
+                var readSeq = test.ReadSequential(perfTracker);
                 items = readSeq.ProcessedItems;
                 totalDuration = readSeq.Duration;
-                avgMemoryInMegaBytes = readSeq.Memory / (1024 * 1024);
                 //WritePerfData("ReadSeq", test, readSeq);
-                Console.WriteLine("Read seq     ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
+                OutputResults("Read Seq", items, totalDuration, perfTracker);
 
-                var writeRandom = test.WriteRandom(randomIds);
+                var writeRandom = test.WriteRandom(randomIds, perfTracker);
                 items = writeRandom.Sum(x => x.ProcessedItems);
                 totalDuration = writeRandom.Sum(x => x.Duration);
-                avgMemoryInMegaBytes = writeRandom.Average(x => x.Memory) / (1024 * 1024);
-                Console.WriteLine("Write rnd    ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
+                OutputResults("Write rnd", items, totalDuration, perfTracker);
 
-                var readRandom = test.ReadRandom(randomIds.Select(x => x.Id));
+                var readRandom = test.ReadRandom(randomIds.Select(x => x.Id), perfTracker);
                 items = readRandom.ProcessedItems;
                 totalDuration = readRandom.Duration;
-                avgMemoryInMegaBytes = readRandom.Memory / (1024 * 1024);
-                Console.WriteLine("Read rnd     ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
+                OutputResults("Read rnd", items, totalDuration, perfTracker);
 
-                writeSeq = test.WriteSequential(sequentialIdsLarge);
+                writeSeq = test.WriteSequential(sequentialIdsLarge, perfTracker);
                 items = writeSeq.Sum(x => x.ProcessedItems);
                 totalDuration = writeSeq.Sum(x => x.Duration);
-                avgMemoryInMegaBytes = writeSeq.Average(x => x.Memory) / (1024 * 1024);
                 //WritePerfData("WriteSeq", test, writeSeq);
-                Console.WriteLine("Write lrg seq    ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
+                OutputResults("Write lrg seq", items, totalDuration, perfTracker);
 
-                readSeq = test.ReadSequential();
+                readSeq = test.ReadSequential(perfTracker);
                 items = readSeq.ProcessedItems;
                 totalDuration = readSeq.Duration;
-                avgMemoryInMegaBytes = readSeq.Memory / (1024 * 1024);
                 //WritePerfData("ReadSeq", test, readSeq);
-                Console.WriteLine("Read lrg seq     ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
+                OutputResults("Read lrg seq", items, totalDuration, perfTracker);
 
-                writeRandom = test.WriteRandom(randomIdsLarge);
+                writeRandom = test.WriteRandom(randomIdsLarge, perfTracker);
                 items = writeRandom.Sum(x => x.ProcessedItems);
                 totalDuration = writeRandom.Sum(x => x.Duration);
-                avgMemoryInMegaBytes = writeRandom.Average(x => x.Memory) / (1024 * 1024);
-                Console.WriteLine("Write lrg rnd    ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
+                OutputResults("Write lrg rnd", items, totalDuration, perfTracker);
 
-                readRandom = test.ReadRandom(randomIdsLarge.Select(x => x.Id));
+                readRandom = test.ReadRandom(randomIdsLarge.Select(x => x.Id), perfTracker);
                 items = readRandom.ProcessedItems;
                 totalDuration = readRandom.Duration;
-                avgMemoryInMegaBytes = readRandom.Memory / (1024 * 1024);
-                Console.WriteLine("Read lrg rnd     ->  {0} items in {1} sec, {2,10:#,#} ops/s. Mem: {3:0} MB", items, totalDuration / 1000, items / (totalDuration / 1000), avgMemoryInMegaBytes);
-
-                Console.WriteLine("---------------------------");
+                OutputResults("Read lrg rnd", items, totalDuration, perfTracker);
             }
+        }
+
+       
+        private static void OutputResults(string name, long itemsCount, double duration, PerfTracker perfTracker)
+        {
+            Console.WriteLine("{0}:\t\t{1,10:#,#;;0} items in {2,10:#,#;;0} sec, {3,10:#,#} ops/s. Mem: {3:0} MB", name, itemsCount / 1000, duration, itemsCount / (duration / 1000));
         }
 
         private static void WritePerfData(string name, IStoragePerformanceTest test, List<PerformanceRecord> writeSeq)

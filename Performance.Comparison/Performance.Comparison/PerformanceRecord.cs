@@ -14,6 +14,5 @@ namespace Performance.Comparison
 		public DateTime Time;
 		public long Duration;
 		public long ProcessedItems;
-	    public long Memory;
 	}
 }

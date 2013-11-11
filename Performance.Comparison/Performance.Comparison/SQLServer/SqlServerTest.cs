@@ -42,31 +42,31 @@ namespace Performance.Comparison.SQLServer
                 }
             }
         }
-        public override List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data)
+        public override List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data, PerfTracker perfTracker)
         {
             return Write(string.Format("[SQL Server] sequential write ({0} items)", Constants.ItemsPerTransaction), data,
-                         Constants.ItemsPerTransaction, Constants.WriteTransactions);
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker)   ;
         }
 
-        public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data)
+        public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data, PerfTracker perfTracker)
         {
             return Write(string.Format("[SQL Server] random write ({0} items)", Constants.ItemsPerTransaction), data,
-                         Constants.ItemsPerTransaction, Constants.WriteTransactions);
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
         }
 
-        public override PerformanceRecord ReadSequential()
+        public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
             var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
 
-            return Read(string.Format("[SQL Server] sequential read ({0} items)", Constants.ReadItems), sequentialIds);
+            return Read(string.Format("[SQL Server] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
-        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds)
+        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker)
         {
-            return Read(string.Format("[SQL Server] random read ({0} items)", Constants.ReadItems), randomIds);
+            return Read(string.Format("[SQL Server] random read ({0} items)", Constants.ReadItems), randomIds, perfTracker);
         }
 
-        private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions)
+        private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker)
         {
             byte[] valueToWrite = null;
 
@@ -104,7 +104,7 @@ namespace Performance.Comparison.SQLServer
 							    command.Parameters.Add("@value", SqlDbType.Binary, 128).Value = valueToWrite;
 
 								var affectedRows = command.ExecuteNonQuery();
-
+                                perfTracker.Increment();
 								Debug.Assert(affectedRows == 1);
 							}
 						}
@@ -118,8 +118,7 @@ namespace Performance.Comparison.SQLServer
 						Operation = operation,
 						Time = DateTime.Now,
 						Duration = sw.ElapsedMilliseconds,
-						ProcessedItems = itemsPerTransaction,
-                        Memory = GetMemory()
+						ProcessedItems = itemsPerTransaction
 					});
 				}
 
@@ -129,7 +128,7 @@ namespace Performance.Comparison.SQLServer
 			return records;
 		}
 
-        private PerformanceRecord Read(string operation, IEnumerable<int> ids)
+        private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
         {
             var buffer = new byte[128];
 
@@ -158,6 +157,7 @@ namespace Performance.Comparison.SQLServer
                                     {
                                         fieldOffset += bytesRead;
                                     }
+                                    perfTracker.Increment();
                                 }
                             }
                         }
@@ -173,8 +173,7 @@ namespace Performance.Comparison.SQLServer
                     Operation = operation,
                     Time = DateTime.Now,
                     Duration = sw.ElapsedMilliseconds,
-                    ProcessedItems = processed,
-                    Memory = GetMemory()
+                    ProcessedItems = processed
                 };
             }
         }

@@ -118,31 +118,31 @@
             }
         }
 
-        public override List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data)
+        public override List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data, PerfTracker perfTracker)
         {
             return Write(string.Format("[Esent] sequential write ({0} items)", Constants.ItemsPerTransaction), data,
-                         Constants.ItemsPerTransaction, Constants.WriteTransactions);
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
         }
 
-        public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data)
+        public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data, PerfTracker perfTracker)
         {
             return Write(string.Format("[Esent] random write ({0} items)", Constants.ItemsPerTransaction), data,
-                         Constants.ItemsPerTransaction, Constants.WriteTransactions);
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
         }
 
-        public override PerformanceRecord ReadSequential()
+        public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
             var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
 
-            return Read(string.Format("[Esent] sequential read ({0} items)", Constants.ReadItems), sequentialIds);
+            return Read(string.Format("[Esent] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
-        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds)
+        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker)
         {
-            return Read(string.Format("[Esent] random read ({0} items)", Constants.ReadItems), randomIds);
+            return Read(string.Format("[Esent] random read ({0} items)", Constants.ReadItems), randomIds, perfTracker);
         }
 
-        private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions)
+        private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker)
         {
             try
             {
@@ -166,11 +166,12 @@
                             enumerator.MoveNext();
 
                             valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
-
                             Api.JetPrepareUpdate(_sesid, _tableid, JET_prep.Insert);
                             Api.SetColumn(_sesid, _tableid, _primaryColumnId, enumerator.Current.Id);
                             Api.SetColumn(_sesid, _tableid, _secondaryColumnId, valueToWrite);
                             Api.JetUpdate(_sesid, _tableid);
+                            perfTracker.Increment();
+
                         }
 
                         tx.Commit(CommitTransactionGrbit.None);
@@ -184,7 +185,6 @@
                         Time = DateTime.Now,
                         Duration = sw.ElapsedMilliseconds,
                         ProcessedItems = itemsPerTransaction,
-                        Memory = GetMemory()
                     });
                 }
 
@@ -198,7 +198,7 @@
             }
         }
 
-        private PerformanceRecord Read(string operation, IEnumerable<int> ids)
+        private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
         {
             try
             {
@@ -216,6 +216,7 @@
                     Api.JetSeek(_sesid, _tableid, SeekGrbit.SeekEQ);
 
                     var value = Api.RetrieveColumn(_sesid, _tableid, _secondaryColumnId);
+                    perfTracker.Increment();
 
                     Debug.Assert(value != null);
 
@@ -229,8 +230,7 @@
                     Operation = operation,
                     Time = DateTime.Now,
                     Duration = sw.ElapsedMilliseconds,
-                    ProcessedItems = processed,
-                    Memory = GetMemory()
+                    ProcessedItems = processed
                 };
             }
             finally
