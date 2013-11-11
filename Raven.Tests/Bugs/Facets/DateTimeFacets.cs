@@ -47,11 +47,11 @@ namespace Raven.Tests.Bugs.Facets
                                          Name = "DateOfListing",
                                          Mode = FacetMode.Ranges,
                                          Ranges = new List<string>{
-                                             string.Format("[NULL TO {0:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0], dates[1]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[1], dates[2]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[2], dates[3]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO NULL]", dates[3])
+                                             string.Format("[NULL TO {0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[0]),
+                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO {1:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[0], dates[1]),
+                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO {1:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[1], dates[2]),
+                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO {1:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[2], dates[3]),
+                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO NULL]", dates[3])
                                          }
                                      }
                 };
@@ -123,12 +123,12 @@ namespace Raven.Tests.Bugs.Facets
                                      {
                                          Name = "DateOfListing",
                                          Mode = FacetMode.Ranges,
-                                         Ranges = new List<string>{
-                                             string.Format("[NULL TO {0:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0], dates[1]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[1], dates[2]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[2], dates[3]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO NULL]", dates[3])
+                                        Ranges = new List<string>{
+                                             string.Format("[NULL TO {0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[0]),
+                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO {1:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[0], dates[1]),
+                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO {1:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[1], dates[2]),
+                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO {1:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[2], dates[3]),
+                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO NULL]", dates[3])
                                          }
                                      }
                 };
