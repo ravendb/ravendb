@@ -222,6 +222,7 @@
     <Compile Include="Bugs\Facets\FacetErrors.cs" />
     <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
     <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
+    <Compile Include="Bugs\SafeGaz.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
     <Compile Include="Issues\RavenDB_1435.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
