@@ -93,7 +93,7 @@ namespace Raven.Database.Server.Controllers
 
 			try
 			{
-				RequestManager.HandleActualRequest(this, async () =>
+				await RequestManager.HandleActualRequest(this, async () =>
 				{
 					SetHeaders();
 					result = await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
