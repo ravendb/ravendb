@@ -22,7 +22,7 @@ namespace Raven.Tests.Notifications
 		{
 		}
 
-		[IISExpressInstalledFact]
+		//[IISExpressInstalledFact]
 		[TimeBombedFact(2013, 12, 31)]
 		public void CheckNotificationInIIS()
 		{

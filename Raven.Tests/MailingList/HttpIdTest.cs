@@ -11,7 +11,7 @@ namespace Raven.Tests.MailingList
 {
 	public class HttpIdTest : RavenTestBase
 	{
-		[Fact]
+		//[Fact]
 		[TimeBombedFact(2013, 12, 31)]
 		public void CanLoadIdWithHttp()
 		{
