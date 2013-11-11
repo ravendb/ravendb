@@ -123,7 +123,7 @@ namespace Performance.Comparison.Voron
             {
                 env.FlushLogToDataFile();
 
-                var ms = new byte[128];
+                var ms = new byte[4096];
                 var sw = Stopwatch.StartNew();
 
                 var processed = 0;

@@ -106,7 +106,7 @@ namespace Performance.Comparison.SQLite
 							using (var command = new SQLiteCommand("INSERT INTO Items (Id, Value) VALUES (@id, @value)", connection))
 							{
 								command.Parameters.Add("@id", DbType.Int32, 4).Value = enumerator.Current.Id;
-                                command.Parameters.Add("@value", DbType.Binary, 128).Value = valueToWrite;
+                                command.Parameters.Add("@value", DbType.Binary, valueToWrite.Length).Value = valueToWrite;
 
 								var affectedRows = command.ExecuteNonQuery();
 							    perfTracker.Increment();
@@ -135,7 +135,7 @@ namespace Performance.Comparison.SQLite
 
 		private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
 		{
-			var buffer = new byte[128];
+			var buffer = new byte[4096];
 
 			using (var connection = new SQLiteConnection(connectionString))
 			{

@@ -101,7 +101,7 @@ namespace Performance.Comparison.SQLServer
 							{
 								command.Transaction = tx;
 								command.Parameters.Add("@id", SqlDbType.Int, 4).Value = enumerator.Current.Id;
-							    command.Parameters.Add("@value", SqlDbType.Binary, 128).Value = valueToWrite;
+                                command.Parameters.Add("@value", SqlDbType.Binary, valueToWrite.Length).Value = valueToWrite;
 
 								var affectedRows = command.ExecuteNonQuery();
                                 perfTracker.Increment();
@@ -130,7 +130,7 @@ namespace Performance.Comparison.SQLServer
 
         private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
         {
-            var buffer = new byte[128];
+            var buffer = new byte[4096];
 
             using (var connection = new SqlConnection(connectionString))
             {
