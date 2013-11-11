@@ -44,11 +44,13 @@
       <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.27\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
     <Reference Include="xunit, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
@@ -62,6 +64,7 @@
     <Compile Include="Backups\Incremental.cs" />
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\MultiAdds.cs" />
+    <Compile Include="Bugs\RecoveryMultipleJournals.cs" />
     <Compile Include="Bugs\Snapshots.cs" />
     <Compile Include="Bugs\Deletes.cs" />
     <Compile Include="Bugs\EmptyTree.cs" />
@@ -70,13 +73,16 @@
     <Compile Include="Bugs\TreeRebalancer.cs" />
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
+    <Compile Include="Journal\ApplyingPolicies.cs" />
     <Compile Include="Journal\BasicActions.cs" />
     <Compile Include="Journal\EdgeCases.cs" />
+    <Compile Include="Journal\Mvcc.cs" />
     <Compile Include="Journal\UncommittedTransactions.cs" />
     <Compile Include="MultiValueTree.cs" />
     <Compile Include="Optimizations\Writes.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Storage\Batches.cs" />
+    <Compile Include="Storage\BigValue.cs" />
     <Compile Include="Storage\Concurrency.cs" />
     <Compile Include="Storage\MultiTransactions.cs" />
     <Compile Include="Storage\Pagers.cs" />
@@ -110,9 +116,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Impl\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>

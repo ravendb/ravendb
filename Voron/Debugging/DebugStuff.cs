@@ -13,6 +13,7 @@ namespace Voron.Debugging
 {
 	public class DebugStuff
 	{
+		private static DateTime _lastGenerated;
         [Conditional("DEBUG")]
         public static void RenderFreeSpace(Transaction tx)
         {
@@ -91,6 +92,15 @@ namespace Voron.Debugging
 		{
 			if (Debugger.IsAttached == false)
 				return;
+
+			var dateTime = DateTime.UtcNow;
+
+			if ((dateTime - _lastGenerated).TotalSeconds < 2.5)
+			{
+				return;
+			}
+			_lastGenerated = dateTime;
+
 			var path = Path.Combine(Environment.CurrentDirectory, "output.dot");
 			TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(startPageNumber), showNodesEvery);
 

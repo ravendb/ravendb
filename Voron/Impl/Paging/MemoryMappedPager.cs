@@ -115,7 +115,6 @@ namespace Voron.Impl
 				PagerState = null;
 			}
 			_fileStream.Dispose();
-
 			if(DeleteOnClose)
 				_fileInfo.Delete();
 		}

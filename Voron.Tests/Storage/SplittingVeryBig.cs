@@ -47,16 +47,13 @@
 		[Fact]
 		public void ShouldBeAbleToWriteValuesGreaterThanLogAndRecoverThem()
 		{
-			var path = "test2.data";
-
-			if (Directory.Exists(path))
-				Directory.Delete(path, true);
+			DeleteDirectory("test2.data");
 
 			var random = new Random(1234);
 			var buffer = new byte[1024 * 512];
 			random.NextBytes(buffer);
 
-			var options = StorageEnvironmentOptions.ForPath(path);
+			var options = StorageEnvironmentOptions.ForPath("test2.data");
 			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
 
 			using (var env = new StorageEnvironment(options))
@@ -74,7 +71,7 @@
 				}
 			}
 
-			options = StorageEnvironmentOptions.ForPath(path);
+			options = StorageEnvironmentOptions.ForPath("test2.data");
 			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
 
 			using (var env = new StorageEnvironment(options))
@@ -97,6 +94,8 @@
 					}
 				}
 			}
+
+			DeleteDirectory("test2.data");
 		}
 	}
 }

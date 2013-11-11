@@ -6,10 +6,9 @@
 
 using System;
 using System.IO;
-using Voron.Impl;
 using Xunit;
 
-namespace Voron.Tests.Log
+namespace Voron.Tests.Journal
 {
 	public class UncommittedTransactions : StorageTest
 	{
@@ -22,16 +21,20 @@ namespace Voron.Tests.Log
 		[Fact]
 		public void ShouldReusePagesOfUncommittedTransactionEvenIfItFilledTheLogCompletely()
 		{
+			var availablePagesBeforeTx = Env.Journal.CurrentFile.AvailablePages;
+			long writePositionInUncommittedTransaction;
+
 			using (var tx0 = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				var bytes = new byte[4 * Env.PageSize]; 
                 tx0.State.Root.Add(tx0, "items/0", new MemoryStream(bytes));
+
+				writePositionInUncommittedTransaction = Env.Journal.CurrentFile.WritePagePosition;
+
 				//tx0.Commit(); intentionally
 			}
 
-			Assert.Equal(0, Env.Journal.CurrentFile.AvailablePages);
-
-			var writePositionAfterUncommittedTransaction = Env.Journal.CurrentFile.WritePagePosition;
+			Assert.Equal(availablePagesBeforeTx, Env.Journal.CurrentFile.AvailablePages);
 
 			// should reuse pages allocated by uncommitted tx0
 			using (var tx1 = Env.NewTransaction(TransactionFlags.ReadWrite))
@@ -42,7 +45,7 @@ namespace Voron.Tests.Log
 			}
 
 			Assert.Equal(0, Env.Journal.CurrentFile.Number);
-			Assert.True(Env.Journal.CurrentFile.WritePagePosition < writePositionAfterUncommittedTransaction);
+			Assert.True(Env.Journal.CurrentFile.WritePagePosition < writePositionInUncommittedTransaction);
 		}
 
 		[Fact]

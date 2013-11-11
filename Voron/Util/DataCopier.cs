@@ -8,18 +8,23 @@ using System.IO;
 
 namespace Voron.Util
 {
-	public unsafe static class DataCopyHelper
+	public unsafe class DataCopier
 	{
-		internal static void ToStream(byte* ptr, long count, int bufferSize, Stream output)
-		{
-			var buffer = new byte[bufferSize];
+		private readonly byte[] _buffer;
 
+		public DataCopier(int bufferSize)
+		{
+			_buffer = new byte[bufferSize];
+		}
+
+		public void ToStream(byte* ptr, long count, Stream output)
+		{
 			using (var stream = new UnmanagedMemoryStream(ptr, count))
 			{
 				while (stream.Position < stream.Length)
 				{
-					var read = stream.Read(buffer, 0, buffer.Length);
-					output.Write(buffer, 0, read);
+					var read = stream.Read(_buffer, 0, _buffer.Length);
+					output.Write(_buffer, 0, read);
 				}
 			}
 		}

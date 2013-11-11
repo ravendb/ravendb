@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using Voron.Trees;
@@ -16,7 +15,7 @@ using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
-    public unsafe class JournalFile : IDisposable
+	public unsafe class JournalFile : IDisposable
 	{
 		private const int PagesTakenByHeader = 1;
 
@@ -37,6 +36,11 @@ namespace Voron.Impl.Journal
 			_writePage = 0;
 		}
 
+		public override string ToString()
+		{
+			return string.Format("Number: {0}", Number);
+		}
+
 		public JournalFile(IVirtualPager pager, long logNumber, long lastSyncedPage)
 			: this(pager, logNumber)
 		{
@@ -44,16 +48,15 @@ namespace Voron.Impl.Journal
 			_writePage = lastSyncedPage + 1;
 		}
 
+		private StackTrace st = new StackTrace(true);
+
 		~JournalFile()
 		{
-			if (_disposed == false)
-			{
-				Dispose();
+			Dispose();
 
-				Trace.WriteLine(
-					"Disposing a log file from finalizer! It should be diposed by using LogFile.Release() instead!. Log file number: " +
-					Number + ". Number of references: " + _refs);
-			}
+			Trace.WriteLine(
+				"Disposing a journal file from finalizer! It should be diposed by using JournalFile.Release() instead!. Log file number: " +
+				Number + ". Number of references: " + _refs + " " + st);
 		}
 
 		internal long WritePagePosition
@@ -65,11 +68,12 @@ namespace Voron.Impl.Journal
 
 		public IEnumerable<long> GetModifiedPages(long? lastLogPageSyncedWithDataFile)
 		{
-			if(lastLogPageSyncedWithDataFile == null)
+			if (lastLogPageSyncedWithDataFile == null)
 				return _pageTranslationTable.Keys;
 
 			return _pageTranslationTable.Where(x => x.Value > lastLogPageSyncedWithDataFile).Select(x => x.Key);
 		}
+		public TransactionHeader* LastTransactionHeader { get; private set; }
 
 		public bool LastTransactionCommitted
 		{
@@ -86,12 +90,6 @@ namespace Voron.Impl.Journal
 
 		public void TransactionBegin(Transaction tx)
 		{
-			if (LastTransactionCommitted == false)
-			{
-				// last transaction did not commit, we need to move back the write page position
-				_writePage = _lastSyncedPage + 1;
-			}
-
 			_currentTxHeader = GetTransactionHeader();
 
 			_currentTxHeader->TransactionId = tx.Id;
@@ -103,7 +101,7 @@ namespace Voron.Impl.Journal
 
 			_allocatedPagesInTransaction = 0;
 			_overflowPagesInTransaction = 0;
-
+			LastTransactionHeader = _currentTxHeader;
 			_transactionPageTranslationTable.Clear();
 		}
 
@@ -121,7 +119,7 @@ namespace Voron.Impl.Journal
 				_currentTxHeader->TxMarker = TransactionMarker.Split;
 				_currentTxHeader->PageCount = -1;
 				_currentTxHeader->Crc = 0;
-			}	
+			}
 		}
 
 		public void TransactionCommit(Transaction tx)
@@ -131,26 +129,35 @@ namespace Voron.Impl.Journal
 			_transactionPageTranslationTable.Clear();
 
 			_currentTxHeader->LastPageNumber = tx.State.NextPageNumber - 1;
-			_currentTxHeader->TxMarker |= TransactionMarker.Commit;
 			_currentTxHeader->PageCount = _allocatedPagesInTransaction;
 			_currentTxHeader->OverflowPageCount = _overflowPagesInTransaction;
 			tx.State.Root.State.CopyTo(&_currentTxHeader->Root);
-            tx.State.FreeSpaceRoot.State.CopyTo(&_currentTxHeader->FreeSpace);
+			tx.State.FreeSpaceRoot.State.CopyTo(&_currentTxHeader->FreeSpace);
 
-			var crcOffset = (int) (_currentTxHeader->PageNumberInLogFile + PagesTakenByHeader)*_pager.PageSize;
-			var crcCount = (_allocatedPagesInTransaction + _overflowPagesInTransaction)*_pager.PageSize;
+			var crcOffset = (int)(_currentTxHeader->PageNumberInLogFile + PagesTakenByHeader) * _pager.PageSize;
+			var crcCount = (_allocatedPagesInTransaction + _overflowPagesInTransaction) * _pager.PageSize;
 
 			_currentTxHeader->Crc = Crc.Value(_pager.PagerState.Base, crcOffset, crcCount);
+
+			_currentTxHeader->TxMarker |= TransactionMarker.Commit;
 
 			_currentTxHeader = null;
 
 			Sync();
 		}
 
+		public void TransactionRollback(Transaction tx)
+		{
+			Debug.Assert(tx.Committed == false);
+			Debug.Assert(LastTransactionCommitted == false);
 
+			// last transaction did not commit, we need to move back the write page position
+			_writePage = _lastSyncedPage + 1;
+		}
+		
 		private TransactionHeader* GetTransactionHeader()
 		{
-			var result = (TransactionHeader*) Allocate(-1, PagesTakenByHeader).Base;
+			var result = (TransactionHeader*)Allocate(-1, PagesTakenByHeader).Base;
 			result->HeaderMarker = Constants.TransactionHeaderMarker;
 			result->PageNumberInLogFile = _writePage - PagesTakenByHeader;
 
@@ -167,12 +174,14 @@ namespace Voron.Impl.Journal
 			get { return _pager; }
 		}
 
-        public ImmutableDictionary<long, long> PageTranslationTable
-        {
-            get { return _pageTranslationTable; }
-        }
+		public ImmutableDictionary<long, long> PageTranslationTable
+		{
+			get { return _pageTranslationTable; }
+		}
 
-        private void Sync()
+		public bool HasIntegrityIssues { get; private set; }
+
+		private void Sync()
 		{
 			var start = _lastSyncedPage + 1;
 			var count = _writePage - start;
@@ -194,12 +203,12 @@ namespace Voron.Impl.Journal
 
 			if (_pageTranslationTable.TryGetValue(pageNumber, out logPageNumber))
 				return _pager.Read(logPageNumber);
-			
+
 			return null;
 		}
 
 		public Page Allocate(long startPage, int numberOfPages)
-		{
+		{			
 			Debug.Assert(_writePage + numberOfPages <= _pager.NumberOfAllocatedPages);
 
 			var result = _pager.GetWritable(_writePage);
@@ -246,33 +255,57 @@ namespace Voron.Impl.Journal
 
 		public void Dispose()
 		{
-			if(_disposed)
-				throw new ObjectDisposedException("Log file is already disposed");
-
+			DisposeWithoutClosingPager();
 			_pager.Dispose();
 
-			_disposed = true;
 		}
 
 		public LogSnapshot GetSnapshot()
 		{
 			return new LogSnapshot
-				{
-					File = this,
-					PageTranslations = _pageTranslationTable
-				};
+			{
+				File = this,
+				PageTranslations = _pageTranslationTable
+			};
 		}
 
-        public TransactionHeader* RecoverAndValidate(long startRead, TransactionHeader* lastTxHeader)
-        {
-            var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
-            logFileReader.RecoverAndValidate();
+		public TransactionHeader* RecoverAndValidate(long startRead, TransactionHeader* lastTxHeader)
+		{
+			var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
+			logFileReader.RecoverAndValidate();
+			HasIntegrityIssues = logFileReader.HasIntegrityIssues;
+			
+			_pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
+			_writePage = logFileReader.WritePage;
+			_lastSyncedPage = logFileReader.LastSyncedPage;
+			LastTransactionHeader = logFileReader.LastTransactionHeader;
 
-            _pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
-            _writePage = logFileReader.WritePage;
-            _lastSyncedPage = logFileReader.LastSyncedPage;
+			return logFileReader.LastTransactionHeader;
+		}
 
-            return logFileReader.LastTransactionHeader;
-        }
+		public TransactionHeader* RecoverAndValidateConditionally(long startRead, TransactionHeader* lastTxHeader,Func<TransactionHeader,bool> stopConditionFunc)
+		{
+			var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
+			logFileReader.RecoverAndValidateConditionally(stopConditionFunc);
+			HasIntegrityIssues = logFileReader.HasIntegrityIssues;
+
+			_pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
+			_writePage = logFileReader.WritePage;
+			_lastSyncedPage = logFileReader.LastSyncedPage;
+			LastTransactionHeader = logFileReader.LastTransactionHeader;
+
+			return logFileReader.LastTransactionHeader;
+		}
+
+
+		public void DisposeWithoutClosingPager()
+		{
+			if (_disposed)
+				return;
+
+			GC.SuppressFinalize(this);
+
+			_disposed = true;
+		}
 	}
 }

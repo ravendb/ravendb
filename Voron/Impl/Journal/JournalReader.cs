@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Voron.Util;
 
@@ -10,8 +12,13 @@ namespace Voron.Impl.Journal
 		private long _lastSyncedPage;
 		private long _writePage;
 		private long _readingPage;
+		private readonly long _startPage;
+		private readonly TransactionHeader* _previous;
 		private readonly Dictionary<long, long> _transactionPageTranslation = new Dictionary<long, long>();
 
+		public bool HasIntegrityIssues { get; private set; }
+
+		public bool EncounteredStopCondition { get; private set; }
 
 		public long WritePage
 		{
@@ -25,40 +32,41 @@ namespace Voron.Impl.Journal
 
 		public JournalReader(IVirtualPager pager, long startPage, TransactionHeader* previous)
 		{
+			HasIntegrityIssues = false;
 			_pager = pager;
 			_readingPage = startPage;
+			_startPage = startPage;
+			_previous = previous;
 			LastTransactionHeader = previous;
 
 		}
 
 		public TransactionHeader* LastTransactionHeader { get; private set; }
 
-		public bool ReadOneTransaction()
+		public bool ReadOneTransaction(Func<TransactionHeader, bool> stopReadingCondition = null, bool checkCrc = true)
 		{
 			if (_readingPage >= _pager.NumberOfAllocatedPages)
 				return false;
 
-			var current = (TransactionHeader*)_pager.Read(_readingPage).Base;
+			TransactionHeader* current;
+			if (!TryReadAndValidateHeader(out current)) return false;
 
-			if (current->HeaderMarker != Constants.TransactionHeaderMarker)
-				return false;
-
-			ValidateHeader(current, LastTransactionHeader);
-
-			if (current->TxMarker.HasFlag(TransactionMarker.Commit) == false)
+			if (stopReadingCondition != null && !stopReadingCondition(*current))
 			{
-				_readingPage += current->PageCount + current->OverflowPageCount;
+				_readingPage--; // if the read tx header does not fulfill our condition we have to move back the read index to allow read it again later if needed
+				EncounteredStopCondition = true;
 				return false;
 			}
 
-			LastTransactionHeader = current;
-
-			_readingPage++;
-
 			uint crc = 0;
+			var writePageBeforeCrcCheck = _writePage;
+			var lastSyncedPageBeforeCrcCheck = _lastSyncedPage;
+			var readingPageBeforeCrcCheck = _readingPage;
 
 			for (var i = 0; i < current->PageCount; i++)
 			{
+				Debug.Assert(_pager.Disposed == false);
+
 				var page = _pager.Read(_readingPage);
 
 				_transactionPageTranslation[page.PageNumber] = _readingPage;
@@ -67,23 +75,46 @@ namespace Voron.Impl.Journal
 				{
 					var numOfPages = _pager.GetNumberOfOverflowPages(page.OverflowSize);
 					_readingPage += numOfPages;
-					crc = Crc.Extend(crc, page.Base, 0, numOfPages * _pager.PageSize);
+
+					if(checkCrc)
+						crc = Crc.Extend(crc, page.Base, 0, numOfPages * _pager.PageSize);
 				}
 				else
 				{
 					_readingPage++;
-					crc = Crc.Extend(crc, page.Base, 0, _pager.PageSize);
+					if (checkCrc)
+						crc = Crc.Extend(crc, page.Base, 0, _pager.PageSize);
 				}
 
 				_lastSyncedPage = _readingPage - 1;
 				_writePage = _lastSyncedPage + 1;
 			}
 
-			if (crc != current->Crc)
+			if (checkCrc && crc != current->Crc)
 			{
-				throw new InvalidDataException("Checksum mismatch"); //TODO this is temporary, ini the future this condition will just mean that transaction was not committed
+				HasIntegrityIssues = true;
+
+				//undo changes to those variables if CRC doesn't match
+				_writePage = writePageBeforeCrcCheck;
+				_lastSyncedPage = lastSyncedPageBeforeCrcCheck;
+				_readingPage = readingPageBeforeCrcCheck;
+
+				return false;
 			}
+
+			//update CurrentTransactionHeader _only_ if the CRC check is passed
+			LastTransactionHeader = current;
+			
 			return true;
+		}
+
+		public void RecoverAndValidateConditionally(Func<TransactionHeader, bool> stopConditionFunc)
+		{
+			_readingPage = _startPage;
+			LastTransactionHeader = _previous;
+			while (ReadOneTransaction(stopConditionFunc, checkCrc: false))
+			{
+			}			
 		}
 
 		public void RecoverAndValidate()
@@ -98,6 +129,30 @@ namespace Voron.Impl.Journal
 			get { return _transactionPageTranslation; }
 		}
 
+		private bool TryReadAndValidateHeader(out TransactionHeader* current)
+		{
+			current = (TransactionHeader*)_pager.Read(_readingPage).Base;
+
+			if (current->HeaderMarker != Constants.TransactionHeaderMarker)
+			{
+				if (current->HeaderMarker != 0 && current->TxMarker != TransactionMarker.None)
+					HasIntegrityIssues = true;
+
+				return false; // not a transaction page
+			}
+
+			ValidateHeader(current, LastTransactionHeader);
+
+			if (current->TxMarker.HasFlag(TransactionMarker.Commit) == false)
+			{
+				_readingPage += current->PageCount + current->OverflowPageCount;
+				return false;
+			}
+
+			_readingPage++;
+			return true;
+		}
+
 		private void ValidateHeader(TransactionHeader* current, TransactionHeader* previous)
 		{
 			if (current->TransactionId < 0)
@@ -106,8 +161,8 @@ namespace Voron.Impl.Journal
 				throw new InvalidDataException("Transaction must have Start or Split marker");
 			if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
 				throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
-			if (current->PageCount > 0 && current->Crc == 0)
-				throw new InvalidDataException("Transaction checksum can't be equal to 0");
+			if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Crc == 0)
+				throw new InvalidDataException("Committed and not empty transaction checksum can't be equal to 0");
 
 			if (previous == null)
 				return;

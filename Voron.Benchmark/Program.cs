@@ -29,34 +29,34 @@ namespace Voron.Benchmark
 #endif
             _randomNumbers = InitRandomNumbers(Transactions * ItemsPerTransaction);
 
-            //Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
-            //Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
-            //Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
+            Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
+            Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
+            Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
 
-            //Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
-            //Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
-            //Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
+            Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
+            Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
+            Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
 
-            //Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
-            //Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
-            //Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
+            Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
+            Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
+            Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
 
-            //Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
-            //Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
-            //Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
+            Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
+            Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
+            Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
 
-            //Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
+            Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
 
-            //Time("read seq", ReadOneTransaction, delete: false);
-            //Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
-            //Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
-            //Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
-            //Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
-            //Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
+            Time("read seq", ReadOneTransaction, delete: false);
+            Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
+            Time("read parallel 2", sw => ReadOneTransaction_Parallel(sw, 2), delete: false);
+            Time("read parallel 4", sw => ReadOneTransaction_Parallel(sw, 4), delete: false);
+            Time("read parallel 8", sw => ReadOneTransaction_Parallel(sw, 8), delete: false);
+            Time("read parallel 16", sw => ReadOneTransaction_Parallel(sw, 16), delete: false);
 
-			Time("fill batch read batch", sw => FillBatchReadBatchOneTransaction(sw, 1000 * ItemsPerTransaction));
+            Time("fill batch read batch", sw => FillBatchReadBatchOneTransaction(sw, 1000 * ItemsPerTransaction));
 
-            //Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4));
+            Time("fill seq non then read parallel 4", stopwatch => ReadAndWriteOneTransaction(stopwatch, 4));
 
         }
 
@@ -84,16 +84,41 @@ namespace Voron.Benchmark
 
         private static void Time(string name, Action<Stopwatch> action, bool delete = true)
         {
-            if (File.Exists(Path) && delete)
-                File.Delete(Path);
-            else
-                FlushOsBuffer();
+	        if (delete)
+		        DeleteDirectory(Path);
+			else
+				FlushOsBuffer();
             var sp = new Stopwatch();
             Console.Write("{0,-35}: running...", name);
             action(sp);
 
             Console.WriteLine("\r{0,-35}: {1,10:#,#} ms {2,10:#,#} ops / sec", name, sp.ElapsedMilliseconds, Transactions * ItemsPerTransaction / sp.Elapsed.TotalSeconds);
         }
+
+		private static void DeleteDirectory(string dir)
+		{
+			if (Directory.Exists(dir) == false)
+				return;
+
+			for (int i = 0; i < 10; i++)
+			{
+				try
+				{
+					Directory.Delete(dir, true);
+					return;
+				}
+				catch (DirectoryNotFoundException)
+				{
+					return;
+				}
+				catch (Exception)
+				{
+					Thread.Sleep(13);
+				}
+			}
+
+			Directory.Delete(dir, true);
+		}
 
         private static void FillRandomOneTransaction(Stopwatch sw, FlushMode flushMode)
         {

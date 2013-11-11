@@ -14,8 +14,7 @@
 		{
 			var path = "test2.data";
 
-			if (Directory.Exists(path))
-				Directory.Delete(path, true);
+			DeleteDirectory(path);
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
@@ -24,15 +23,15 @@
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
 			}
+
+			DeleteDirectory(path);
 		}
 
 		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereSingleTransactionToRecoverFromLog()
 		{
 			var path = "test2.data";
-
-			if (Directory.Exists(path))
-				Directory.Delete(path, true);
+			DeleteDirectory(path);
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
@@ -69,6 +68,8 @@
 					}
 				}
 			}
+
+			DeleteDirectory(path);
 		}
 
 		[Fact]
@@ -76,8 +77,7 @@
 		{
 			var path = "test2.data";
 
-			if (Directory.Exists(path))
-				Directory.Delete(path, true);
+			DeleteDirectory(path);
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
@@ -100,15 +100,15 @@
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
 			}
+
+			DeleteDirectory(path);
 		}
 
 		[Fact]
 		public void StorageRecoveryShouldWorkWhenThereAreCommitedAndUncommitedTransactions2()
 		{
 			var path = "test2.data";
-
-			if (Directory.Exists(path))
-				Directory.Delete(path, true);
+			DeleteDirectory(path);
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
@@ -133,6 +133,8 @@
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
 			}
+
+			DeleteDirectory(path);
 		}
 
 		[Fact]
@@ -140,8 +142,7 @@
 		{
 			var path = "test2.data";
 
-			if (Directory.Exists(path))
-				Directory.Delete(path, true);
+			DeleteDirectory(path);
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
@@ -196,6 +197,8 @@
 					}
 				}
 			}
+
+			DeleteDirectory(path);
 		}
 
 		[Fact]
@@ -203,8 +206,7 @@
 		{
 			var path = "test2.data";
 
-			if (Directory.Exists(path))
-				Directory.Delete(path, true);
+			DeleteDirectory(path);
 
 			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(path)))
 			{
@@ -259,6 +261,8 @@
 					}
 				}
 			}
+
+			DeleteDirectory(path);
 		}
 
 		[Fact]
@@ -269,9 +273,7 @@
 			random.NextBytes(buffer);
 			var path = "test2.data";
 			var count = 1000;
-
-			if (Directory.Exists(path))
-				Directory.Delete(path, true);
+			DeleteDirectory(path);
 
 			var options = StorageEnvironmentOptions.ForPath(path);
 			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
@@ -347,6 +349,8 @@
 					}
 				}
 			}
+
+			DeleteDirectory(path);
 		}
 	}
 }
