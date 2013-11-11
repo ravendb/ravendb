@@ -115,6 +115,17 @@ namespace Raven.Studio.Models
 			}
 		}
 
+		public bool HasExpirationBundle
+		{
+			get
+			{
+				return DatabaseDocument != null &&
+				       DatabaseDocument.Value.Settings != null &&
+				       DatabaseDocument.Value.Settings.ContainsKey("Raven/ActiveBundles") &&
+				       DatabaseDocument.Value.Settings["Raven/ActiveBundles"].Split(';').Contains("DocumentExpiration", StringComparer.OrdinalIgnoreCase);
+			}
+		}
+
 		public BindableCollection<TaskModel> Tasks { get; private set; }
 
 		public IObservable<DocumentChangeNotification> DocumentChanges

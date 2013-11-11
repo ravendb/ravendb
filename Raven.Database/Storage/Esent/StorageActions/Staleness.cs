@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
@@ -15,6 +16,7 @@ using Raven.Database.Json;
 using Raven.Database.Storage;
 using Raven.Database.Extensions;
 using System.Linq;
+using Raven.Json.Linq;
 
 namespace Raven.Storage.Esent.StorageActions
 {
@@ -165,5 +167,6 @@ namespace Raven.Storage.Esent.StorageActions
 
 			return Api.RetrieveColumnAsInt32(session, IndexesEtags, tableColumnsCache.IndexesEtagsColumns["touches"]).Value;
 		}
+
 	}
 }

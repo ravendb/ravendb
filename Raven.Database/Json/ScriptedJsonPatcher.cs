@@ -34,6 +34,8 @@ namespace Raven.Database.Json
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
+		private readonly Dictionary<string, JTokenType> propertiesTypeByName;
+
 		public ScriptedJsonPatcher(DocumentDatabase database = null)
 		{
 			if (database == null)
@@ -56,6 +58,7 @@ namespace Raven.Database.Json
 					return jsonDocument == null ? null : jsonDocument.ToJson();
 				};
 			}
+			propertiesTypeByName = new Dictionary<string, JTokenType>();
 		}
 
 		public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch, int size = 0, string docId = null)
@@ -163,7 +166,7 @@ namespace Raven.Database.Json
 			return ToRavenJObject(jsObject);
 		}
 
-		public static RavenJObject ToRavenJObject(JsObject jsObject)
+		public RavenJObject ToRavenJObject(JsObject jsObject)
 		{
 			var rjo = new RavenJObject();
 			foreach (var key in jsObject.GetKeys())
@@ -180,12 +183,12 @@ namespace Raven.Database.Json
 					case JsInstance.CLASS_FUNCTION:
 						continue;
 				}
-				rjo[key] = ToRavenJToken(jsInstance);
+				rjo[key] = ToRavenJToken(jsInstance, key);
 			}
 			return rjo;
 		}
 
-		private static RavenJToken ToRavenJToken(JsInstance v)
+		private RavenJToken ToRavenJToken(JsInstance v, string propertyName)
 		{
 			switch (v.Class)
 			{
@@ -198,6 +201,17 @@ namespace Raven.Database.Json
 				case JsInstance.TYPE_NUMBER:
 				case JsInstance.CLASS_NUMBER:
 					var num = (double)v.Value;
+
+					JTokenType type;
+					if (propertiesTypeByName.TryGetValue(propertyName, out type))
+					{
+						if (type == JTokenType.Float)
+							return new RavenJValue(num);
+						if (type == JTokenType.Integer)
+							return new RavenJValue((long) num);
+					}
+
+					// If we don't have the type, assume that if the number ending with ".0" it actually an integer.
 					var integer = Math.Truncate(num);
 					if (Math.Abs(num - integer) < double.Epsilon)
 						return new RavenJValue((long)integer);
@@ -220,7 +234,7 @@ namespace Raven.Database.Json
 					for (int i = 0; i < jsArray.Length; i++)
 					{
 						var jsInstance = jsArray.get(i);
-						var ravenJToken = ToRavenJToken(jsInstance);
+						var ravenJToken = ToRavenJToken(jsInstance, propertyName);
 						if (ravenJToken == null)
 							continue;
 						rja.Add(ravenJToken);
@@ -237,18 +251,20 @@ namespace Raven.Database.Json
 			}
 		}
 
-		protected static JsObject ToJsObject(IGlobal global, RavenJObject doc)
+		protected JsObject ToJsObject(IGlobal global, RavenJObject doc)
 		{
 			var jsObject = global.ObjectClass.New();
 			foreach (var prop in doc)
 			{
+				if (prop.Value is RavenJValue)
+					propertiesTypeByName[prop.Key] = prop.Value.Type;
 				var val = ToJsInstance(global, prop.Value);
 				jsObject.DefineOwnProperty(prop.Key, val);
 			}
 			return jsObject;
 		}
 
-		private static JsInstance ToJsInstance(IGlobal global, RavenJToken value)
+		private JsInstance ToJsInstance(IGlobal global, RavenJToken value)
 		{
 			switch (value.Type)
 			{
@@ -286,7 +302,7 @@ namespace Raven.Database.Json
 			}
 		}
 
-		private static JsArray ToJsArray(IGlobal global, RavenJArray array)
+		private JsArray ToJsArray(IGlobal global, RavenJArray array)
 		{
 			var jsArr = global.ArrayClass.New();
 			for (int i = 0; i < array.Length; i++)
@@ -312,12 +328,10 @@ function ExecutePatchScript(docInner){{
 				.AllowClr(false)
 				.SetDebugMode(false)
 				.SetMaxRecursions(50)
-				.SetMaxSteps(10 * 1000);
+				.SetMaxSteps(maxSteps);
 
-
-			AddScript(jintEngine, "Raven.Database.Json.Map.js");
+            AddScript(jintEngine, "Raven.Database.Json.lodash.js");
 			AddScript(jintEngine, "Raven.Database.Json.ToJson.js");
-			AddScript(jintEngine, "Raven.Database.Json.lodash.js");
 			AddScript(jintEngine, "Raven.Database.Json.RavenDB.js");
 
 			jintEngine.SetFunction("LoadDocument", ((Func<string, object>)(value =>

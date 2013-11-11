@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 
 namespace Raven.Client.Document.Batches
@@ -126,6 +127,8 @@ namespace Raven.Client.Document.Batches
 		/// Load documents with the specified key prefix
 		/// </summary>
 		Lazy<TResult[]> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null);
+
+		Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query);
 	}
 
 	/// <summary>

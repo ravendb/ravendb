@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Tests.Bugs.Identifiers;
+using Xunit;
 
 namespace Raven.Tests.Bugs
 {

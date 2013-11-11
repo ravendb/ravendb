@@ -874,6 +874,88 @@ namespace Raven.Client.Connection
 			HttpRequestHelper.WriteDataToRequest(webRequest, data, factory.DisableRequestCompression);
 		}
 
+
+		/// <summary>
+		/// Begins the write operation
+		/// </summary>
+		/// <param name="dataToWrite">The byte array.</param>
+		/// <param name="callback">The callback.</param>
+		/// <param name="state">The state.</param>
+		/// <returns></returns>
+		public IAsyncResult BeginWrite(string dataToWrite, AsyncCallback callback, object state)
+		{
+			writeCalled = true;
+			postedData = dataToWrite;
+
+			return webRequest.BeginGetRequestStream(callback, state);
+		}
+
+		/// <summary>
+		/// Ends the write operation.
+		/// </summary>
+		/// <param name="result">The result.</param>
+		public void EndWrite(IAsyncResult result)
+		{
+			using (var dataStream = webRequest.EndGetRequestStream(result))
+			using (var compressed = new GZipStream(dataStream, CompressionMode.Compress))
+            using (var writer = factory.DisableRequestCompression == false ?
+                    new StreamWriter(compressed, Encoding.UTF8) :
+                    new StreamWriter(dataStream, Encoding.UTF8))
+			{
+				writer.Write(postedData);
+				writer.Flush();
+#if !MONO
+                if (factory.DisableRequestCompression == false)
+                    compressed.Flush();
+#endif
+				dataStream.Flush();
+			}
+		}
+
+
+		private class ImmediateCompletionResult : IAsyncResult, IDisposable
+		{
+			private ManualResetEvent manualResetEvent;
+
+			public bool IsCompleted
+			{
+				get { return true; }
+			}
+
+			public WaitHandle AsyncWaitHandle
+			{
+				get
+				{
+					if (manualResetEvent == null)
+					{
+						lock (this)
+						{
+							if (manualResetEvent == null)
+								manualResetEvent = new ManualResetEvent(true);
+						}
+					}
+					return manualResetEvent;
+				}
+			}
+
+			public object AsyncState
+			{
+				get { return null; }
+			}
+
+			public bool CompletedSynchronously
+			{
+				get { return true; }
+			}
+
+			public void Dispose()
+			{
+				if (manualResetEvent != null)
+					manualResetEvent.Close();
+			}
+		}
+
+
 		public void Write(Stream streamToWrite)
 		{
 			writeCalled = true;

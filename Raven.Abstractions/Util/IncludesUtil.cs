@@ -45,8 +45,11 @@ namespace Raven.Abstractions.Util
 					break;
 				case JTokenType.String:
 			        var value = token.Value<string>();
-                    if (loadId(value, null) == false)
-                        loadId(value, prefix);
+                    // we need to check on both of them, with id & without id
+                    // because people will do products/1 and detaisl/products/1 and want to be able
+                    // to include on that
+			        loadId(value, prefix);
+			        loadId(value, null);
 					break;
 				case JTokenType.Integer:
 					try

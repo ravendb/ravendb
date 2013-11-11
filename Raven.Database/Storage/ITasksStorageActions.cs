@@ -8,11 +8,15 @@ using Raven.Database.Tasks;
 
 namespace Raven.Database.Storage
 {
+	using System.Collections.Generic;
+
 	public interface ITasksStorageActions
 	{
 		void AddTask(DatabaseTask task, DateTime addedAt);
 		bool HasTasks { get; }
 		long ApproximateTaskCount { get; }
+
+		IEnumerable<TaskMetadata> GetPendingTasksForDebug();
 		T GetMergedTask<T>() where T : DatabaseTask;
 	}
 }

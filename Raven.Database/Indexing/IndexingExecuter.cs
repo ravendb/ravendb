@@ -37,7 +37,7 @@ namespace Raven.Database.Indexing
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			etagSynchronizer = synchronizer.GetSynchronizer(EtagSynchronizerType.Indexer);
-			prefetchingBehavior = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer);
+			prefetchingBehavior = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
@@ -109,9 +109,13 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag startEtag)
+        protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag synchronizationEtag)
 		{
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
+
+            var lastIndexedGuidForAllIndexes =
+                   indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
+            var startEtag = CalculateSynchronizationEtag(synchronizationEtag, lastIndexedGuidForAllIndexes);
 
 			context.CancellationToken.ThrowIfCancellationRequested();
 

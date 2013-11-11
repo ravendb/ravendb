@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Document;
@@ -21,6 +22,7 @@ namespace Raven.Tests.Bugs
             configuration.DefaultStorageTypeName = "esent";
             configuration.RunInMemory = false;
         }
+
 
 		[Fact]
 		public void MultiThreadedInsert()

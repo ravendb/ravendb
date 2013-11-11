@@ -25,8 +25,10 @@ namespace Raven.Database.Queries
 		public SuggestionQueryIndexExtension(
 			WorkContext workContext,
 			string key,
+			StringDistance distanceType,
 			bool isRunInMemory,
-			string field)
+			string field,
+			float accuracy)
 		{
 			this.workContext = workContext;
 			this.key = key;
@@ -42,7 +44,8 @@ namespace Raven.Database.Queries
 			}
 
 			this.spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(directory, null);
-			this.spellChecker.SetAccuracy(0f);
+			this.spellChecker.SetAccuracy(accuracy);
+			this.spellChecker.setStringDistance(distanceType);
 		}
 
 		public void Init(IndexReader reader)

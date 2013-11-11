@@ -54,7 +54,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		public void Execute(DocumentDatabase database)
 		{
 			etagSynchronizer = database.EtagSynchronizer.GetSynchronizer(EtagSynchronizerType.SqlReplicator);
-			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.SqlReplicator);
+			prefetchingBehavior = database.Prefetcher.GetPrefetchingBehavior(PrefetchingUser.SqlReplicator, null);
 
 			Database = database;
 			Database.OnDocumentChange += (sender, notification, metadata) =>
@@ -281,9 +281,13 @@ namespace Raven.Database.Bundles.SqlReplication
 				finally
 				{
 					AfterReplicationCompleted(successes.Count);
-					var lastMinReplicatedEtag = localReplicationStatus.LastReplicatedEtags.Min(x => new ComparableByteArray(x.LastDocEtag.ToByteArray())).ToEtag();
-					prefetchingBehavior.CleanupDocuments(lastMinReplicatedEtag);
-					prefetchingBehavior.UpdateAutoThrottler(documents, replicationDuration.Elapsed);
+					var min = localReplicationStatus.LastReplicatedEtags.Min(x => new ComparableByteArray(x.LastDocEtag.ToByteArray()));
+					if (min != null)
+					{
+						var lastMinReplicatedEtag = min.ToEtag();
+						prefetchingBehavior.CleanupDocuments(lastMinReplicatedEtag);
+						prefetchingBehavior.UpdateAutoThrottler(documents, replicationDuration.Elapsed);
+					}
 				}
 			}
 		}
@@ -438,6 +442,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			var result = new ConversionScriptResult();
 			foreach (var jsonDocument in docs)
 			{
+				Database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 				if (string.IsNullOrEmpty(cfg.RavenEntityName) == false)
 				{
 					var entityName = jsonDocument.Metadata.Value<string>(Constants.RavenEntityName);

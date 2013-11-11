@@ -84,7 +84,33 @@ namespace Raven.Storage.Managed
 			return Etag.Parse(match.Value<byte[]>("etag"));
 		}
 
-		public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
+	    public DebugDocumentStats GetDocumentStatsVerySlowly()
+	    {
+	        var sp = Stopwatch.StartNew();
+	        var stat = new DebugDocumentStats {Total = GetDocumentsCount()};
+            foreach (var readResult in storage.Documents)
+            {
+                var key = readResult.Key.Value<string>("key");
+                if (key.StartsWith("Raven/", StringComparison.OrdinalIgnoreCase))
+                    stat.System++;
+
+                var metadata = readResult.Data().ToJObject();
+
+                var entityName = metadata.Value<string>(Constants.RavenEntityName);
+                if (string.IsNullOrEmpty(entityName))
+                    stat.NoCollection++;
+                else
+                    stat.IncrementCollection(entityName);
+
+                if (metadata.ContainsKey("Raven-Delete-Marker"))
+                    stat.Tombstones++;
+            }
+
+	        stat.TimeToGenerate = sp.Elapsed;
+	        return stat;
+	    }
+
+	    public IEnumerable<JsonDocument> GetDocumentsWithIdStartingWith(string idPrefix, int start, int take)
 		{
 			return storage.Documents["ByKey"].SkipTo(new RavenJObject { { "key", idPrefix } })
 				.Skip(start)

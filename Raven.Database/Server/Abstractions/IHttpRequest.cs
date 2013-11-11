@@ -7,6 +7,7 @@ using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Web;
+using Microsoft.Isam.Esent.Interop;
 
 namespace Raven.Database.Server.Abstractions
 {

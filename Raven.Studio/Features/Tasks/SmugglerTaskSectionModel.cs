@@ -25,7 +25,7 @@ namespace Raven.Studio.Features.Tasks
 		public SmugglerTaskSectionModel()
 		{
 			Options = new Observable<SmugglerOptions> {Value = new SmugglerOptions()};
-			Filters = new ObservableCollection<FilterSetting>();
+			Filters = new ObservableCollection<InternalFilterSetting>();
 			IncludeDocuments = new Observable<bool> {Value = true};
 			IncludeIndexes = new Observable<bool> {Value = true};
             RemoveAnalyzers = new Observable<bool>{Value = false};
@@ -48,7 +48,7 @@ namespace Raven.Studio.Features.Tasks
 		}
 
 		public Observable<SmugglerOptions> Options { get; set; }
-		public ObservableCollection<FilterSetting> Filters { get; set; }
+		public ObservableCollection<InternalFilterSetting> Filters { get; set; }
 		public Observable<bool> IncludeDocuments { get; set; }
 		public Observable<bool> IncludeIndexes { get; set; }
 		public Observable<bool> IncludeAttachments { get; set; }
@@ -63,7 +63,7 @@ namespace Raven.Studio.Features.Tasks
 			{
 				return new ActionCommand(() =>
 				{
-					Filters.Add(new FilterSetting());
+					Filters.Add(new InternalFilterSetting());
 					OnPropertyChanged(() => Options);
 				});
 			}
@@ -75,7 +75,7 @@ namespace Raven.Studio.Features.Tasks
 			{
 				return new ActionCommand(param =>
 				{
-					var filter = param as FilterSetting;
+					var filter = param as InternalFilterSetting;
 					if (filter != null)
 						Filters.Remove(filter);
 				});
@@ -101,7 +101,14 @@ namespace Raven.Studio.Features.Tasks
 
 	    protected List<FilterSetting> GetFilterSettings()
 	    {
-	        return Filters.Concat(GetCollectionFilterSettings()).ToList();
+		    var baseFilters = Filters.Select(internalFilterSetting => new FilterSetting
+		    {
+			    Path = internalFilterSetting.Path, 
+				Values = internalFilterSetting.Values.Split(',').ToList(), 
+				ShouldMatch = internalFilterSetting.ShouldMatch
+		    }).ToList();
+
+		    return baseFilters.Concat(GetCollectionFilterSettings()).ToList();
 	    }
 
 	    private IEnumerable<FilterSetting> GetCollectionFilterSettings()
@@ -134,5 +141,12 @@ namespace Raven.Studio.Features.Tasks
 		{
 			Name = name;
 		}
+	}
+
+	public class InternalFilterSetting
+	{
+		public string Path { get; set; }
+		public string Values { get; set; }
+		public bool ShouldMatch { get; set; }
 	}
 }

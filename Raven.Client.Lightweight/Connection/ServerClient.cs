@@ -400,7 +400,7 @@ namespace Raven.Client.Connection
 			var method = String.IsNullOrEmpty(key) ? "POST" : "PUT";
 			AddTransactionInformation(metadata);
 			if (etag != null)
-				metadata["ETag"] = new RavenJValue(etag);
+				metadata["ETag"] = new RavenJValue((string)etag);
 
 			if (key != null)
 				key = Uri.EscapeDataString(key);

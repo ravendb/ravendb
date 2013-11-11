@@ -898,13 +898,13 @@ more responsive application.
                 if (entitiesAndMetadata.TryGetValue(entity, out documentMetadata) == false)
                     continue;
 
-                batchResult.Metadata["@etag"] = new RavenJValue(batchResult.Etag);
-                entitiesByKey[batchResult.Key] = entity;
-                documentMetadata.ETag = batchResult.Etag;
-                documentMetadata.Key = batchResult.Key;
-                documentMetadata.OriginalMetadata = (RavenJObject)batchResult.Metadata.CloneToken();
-                documentMetadata.Metadata = batchResult.Metadata;
-                documentMetadata.OriginalValue = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
+				batchResult.Metadata["@etag"] = new RavenJValue((string)batchResult.Etag);
+				entitiesByKey[batchResult.Key] = entity;
+				documentMetadata.ETag = batchResult.Etag;
+				documentMetadata.Key = batchResult.Key;
+				documentMetadata.OriginalMetadata = (RavenJObject)batchResult.Metadata.CloneToken();
+				documentMetadata.Metadata = batchResult.Metadata;
+				documentMetadata.OriginalValue = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
 
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, batchResult.Key);
 
