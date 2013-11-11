@@ -72,7 +72,6 @@ namespace Voron.Tests.Bugs
 					for (int i = 0; i < 100; i++)
 					{
 						var readResult = tx.State.Root.Read(tx, "items/" + i);
-						Console.WriteLine(i);
 						Assert.NotNull(readResult);
 						var memoryStream = new MemoryStream();
 						readResult.Stream.CopyTo(memoryStream);

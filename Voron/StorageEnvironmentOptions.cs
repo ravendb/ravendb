@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Voron
 {
@@ -32,11 +33,17 @@ namespace Voron
 
         public bool OwnsPagers { get; set; }
 
+		public bool ManualFlushing { get; set; }
+
         public bool IncrementalBackupEnabled { get; set; }
 
         public abstract IVirtualPager DataPager { get; }
 
-        public abstract IVirtualPager CreateJournalPager(string name, string dir = null);
+	    public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
+
+	    public int IdleFlushTimeout { get; set; }
+
+	    public abstract IVirtualPager CreateJournalPager(long number);
 
         protected bool Disposed;
         private long _initialLogFileSize;
@@ -44,6 +51,10 @@ namespace Voron
 
         protected StorageEnvironmentOptions()
         {
+	        MaxNumberOfPagesInJournalBeforeFlush = 1024; // 4 MB
+
+	        IdleFlushTimeout = 5000; // 5 seconds
+
             MaxLogFileSize = 64 * 1024 * 1024;
 
             InitialLogFileSize = 64 * 1024;
@@ -61,6 +72,15 @@ namespace Voron
         {
             return new DirectoryStorageEnvironmentOptions(path, flushMode);
         }
+
+		public IDisposable AllowManualFlushing()
+		{
+			var old = ManualFlushing;
+			ManualFlushing = true;
+
+			return new DisposableAction(() => ManualFlushing = old);
+		}
+
 
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
@@ -95,10 +115,20 @@ namespace Voron
                 }
             }
 
-            public override IVirtualPager CreateJournalPager(string name, string dir = null)
+            public override IVirtualPager CreateJournalPager(long number)
             {
-				var path = Path.Combine(dir ?? _basePath, name);
+	            var name = LogName(number);
+				var path = Path.Combine(_basePath, name);
                 var orAdd = _journals.GetOrAdd(name, _ => new Lazy<IVirtualPager>(() => new MemoryMapPager(path, _flushMode)));
+
+				if (orAdd.Value.Disposed)
+				{
+					var newPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(path, _flushMode));
+					if (_journals.TryUpdate(name, newPager, orAdd) == false)
+						throw new InvalidOperationException("Could not update journal pager");
+					orAdd = newPager;
+				}
+
                 return orAdd.Value;
             }
 
@@ -115,6 +145,16 @@ namespace Voron
                         journal.Value.Value.Dispose();
                 }
             }
+
+	        public override bool TryDeletePager(long number)
+	        {
+		        var name = LogName(number);
+		        var file = Path.Combine(_basePath, name);
+		        if (File.Exists(file) == false)
+			        return false;
+		        File.Delete(file);
+		        return true;
+	        }
         }
 
         public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
@@ -134,8 +174,9 @@ namespace Voron
                 get { return _dataPager; }
             }
 
-            public override IVirtualPager CreateJournalPager(string name, string dir)
+            public override IVirtualPager CreateJournalPager(long number)
             {
+	            var name = LogName(number);
                 IVirtualPager value;
                 if (_logs.TryGetValue(name, out value))
                     return value;
@@ -156,9 +197,27 @@ namespace Voron
                     virtualPager.Value.Dispose();
                 }
             }
+
+	        public override bool TryDeletePager(long number)
+	        {
+		        var name = LogName(number);
+		        IVirtualPager value;
+		        if (_logs.TryGetValue(name, out value) == false)
+			        return false;
+		        _logs.Remove(name);
+				value.Dispose();
+		        return true;
+	        }
         }
 
+	    public static string LogName(long number)
+		{
+			return string.Format("{0:D19}.journal", number);
+		}
+
         public abstract void Dispose();
+
+	    public abstract bool TryDeletePager(long number);
     }
 
 }

@@ -14,6 +14,8 @@ namespace Voron.Impl
 
 		Page TempPage { get; }
 
+		bool Disposed { get; }
+
 		long NumberOfAllocatedPages { get; }
 		int PageSize { get; }
 		int MaxNodeSize { get; }

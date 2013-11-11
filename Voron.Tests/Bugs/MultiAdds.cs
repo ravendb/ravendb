@@ -17,20 +17,16 @@ namespace Voron.Tests.Bugs
 	public class MultiAdds
 	{
 		readonly Random _random = new Random(1234);
-		private int _incrementedIndex = 0;
+
         private string RandomString(int size)
         {
             var builder = new StringBuilder();
-
-// ReSharper disable once SpecifyACultureInStringConversionExplicitly
-	        var indexString = _incrementedIndex.ToString().PadLeft(4, '0');
-
-            for (int i = 0; i < size - 5; i++)
+            for (int i = 0; i < size; i++)
             {
                 builder.Append(Convert.ToChar(Convert.ToInt32(Math.Floor(26 * _random.NextDouble() + 65))));
             }
-			_incrementedIndex++;
-			return builder.Append("-").Append(indexString).ToString();
+
+            return builder.ToString();
         }
 
 		[Theory]
@@ -42,7 +38,7 @@ namespace Voron.Tests.Bugs
         [InlineData(5000)]
 		public void MultiAdds_And_MultiDeletes_After_Causing_PageSplit_DoNot_Fail(int size)
 		{
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+			using (var Env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
 			{
 				var inputData = new List<byte[]>();
 				for (int i = 0; i < size; i++)
@@ -50,30 +46,28 @@ namespace Voron.Tests.Bugs
                     inputData.Add(Encoding.UTF8.GetBytes(RandomString(1024)));
 				}
 
-				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					env.CreateTree(tx, "foo");
+					Env.CreateTree(tx, "foo");
 					tx.Commit();
 				}
 
-				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.GetTree("foo");
-					for (int i = 0; i < inputData.Count; i++)
-					{
-						var buffer = inputData[i];
-					    tree.MultiAdd(tx, "ChildTreeKey", new Slice(buffer));
+					foreach (var buffer in inputData)
+					{						
+						Assert.DoesNotThrow(() => tree.MultiAdd(tx, "ChildTreeKey", new Slice(buffer)));
 					}
 					tx.Commit();
 				}
-
-				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				
+				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var tree = tx.GetTree("foo");
 					for (int i = 0; i < inputData.Count; i++)
 					{
 						var buffer = inputData[i];
-                        
 						Assert.DoesNotThrow(() => tree.MultiDelete(tx, "ChildTreeKey", new Slice(buffer)));
 					}
 

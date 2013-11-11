@@ -9,9 +9,7 @@ using Voron.Trees;
 
 namespace Voron.Impl
 {
-	using System.Collections;
-
-	public class Transaction : IDisposable
+    public class Transaction : IDisposable
     {
         private readonly IVirtualPager _dataPager;
         private readonly StorageEnvironment _env;
@@ -55,6 +53,8 @@ namespace Voron.Impl
 
         public bool Committed { get; private set; }
 
+		public bool RolledBack { get; private set; }
+
         public PagerState LatestPagerState { get; private set; }
 
         public StorageEnvironmentState State
@@ -82,6 +82,7 @@ namespace Voron.Impl
             _state = env.State.Clone();
 
             _journal.Files.ForEach(SetLogReference);
+			
             _journal.TransactionBegin(this);
             MarkTreesForWriteTransaction();
         }
@@ -154,33 +155,7 @@ namespace Voron.Impl
             return page;
         }
 
-		public LinkedList<Tuple<Page, int>> AllocatePagesForOverflow(int numberOfPages)
-		{
-			var pageNumber = State.NextPageNumber;
-			State.NextPageNumber += numberOfPages;
 
-			var results = new LinkedList<Tuple<Page, int>>();
-
-			var pages = _journal.AllocateForOverflow(this, pageNumber, numberOfPages);
-			foreach (var item in pages)
-			{
-				var page = item.Item1;
-				var allocatedPages = item.Item2;
-
-				page.PageNumber = pageNumber;
-				page.Lower = (ushort)Constants.PageHeaderSize;
-				page.Upper = (ushort)_dataPager.PageSize;
-				page.Dirty = true;
-
-				_dirtyPages.Add(page.PageNumber);
-
-				results.AddLast(new Tuple<Page, int>(page, _dataPager.PageSize * allocatedPages));
-
-				pageNumber += allocatedPages;
-			}
-
-			return results;
-		}
 
         internal unsafe int GetNumberOfFreePages(NodeHeader* node)
         {
@@ -199,7 +174,7 @@ namespace Voron.Impl
 
         public unsafe void Commit()
         {
-            if (Flags != (TransactionFlags.ReadWrite))
+            if (Flags != (TransactionFlags.ReadWrite) || RolledBack)
                 return; // nothing to do
 
             FlushAllMultiValues();
@@ -221,9 +196,7 @@ namespace Voron.Impl
                 var treeState = treeKvp.Value.State;
                 if (treeState.IsModified)
                 {
-                    var ptr = State.Root.DirectAdd(this, treeKvp.Key, sizeof(TreeRootHeader));
-					Debug.Assert(ptr.Count == 1);
-	                var treePtr = (TreeRootHeader*)ptr.FirstPointer;
+                    var treePtr = (TreeRootHeader*)State.Root.DirectAdd(this, treeKvp.Key, sizeof(TreeRootHeader));
                     treeState.CopyTo(treePtr);
                 }
             }
@@ -240,6 +213,16 @@ namespace Voron.Impl
             AfterCommit(_id);
         }
 
+		public void Rollback()
+		{
+			if (Committed || RolledBack || Flags != (TransactionFlags.ReadWrite))
+				return;
+
+			RolledBack = true;
+			_journal.TransactionRollback(this);
+		}
+
+
         private unsafe void FlushAllMultiValues()
         {
             if (_multiValueTrees == null)
@@ -251,10 +234,7 @@ namespace Voron.Impl
                 var key = multiValueTree.Key.Item2;
                 var childTree = multiValueTree.Value;
 
-                var ptr = parentTree.DirectAdd(this, key, sizeof(TreeRootHeader));
-				Debug.Assert(ptr.Count == 1);
-
-				var trh = (TreeRootHeader*)ptr.FirstPointer;
+                var trh = (TreeRootHeader*)parentTree.DirectAdd(this, key, sizeof(TreeRootHeader));
                 childTree.State.CopyTo(trh);
 
                 parentTree.SetAsMultiValueTreeRef(this, key);
@@ -263,6 +243,9 @@ namespace Voron.Impl
 
         public void Dispose()
         {
+			if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
+		        Rollback();
+
             _env.TransactionCompleted(_id);
             foreach (var pagerState in _pagerStates)
             {
@@ -275,7 +258,8 @@ namespace Voron.Impl
             }
         }
 
-        public void FreePage(long pageNumber)
+
+	    public void FreePage(long pageNumber)
         {
             Debug.Assert(pageNumber >= 2);
             _dirtyPages.Remove(pageNumber);

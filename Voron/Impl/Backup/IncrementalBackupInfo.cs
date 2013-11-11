@@ -14,7 +14,10 @@ namespace Voron.Impl.Backup
 		[FieldOffset(0)]
 		public long LastBackedUpJournal;
 
-		[FieldOffset(8)]
+		[FieldOffset(8)] 
+		public long LastBackedUpJournalPage;
+
+		[FieldOffset(16)]
 		public long LastCreatedJournal;
 	}
 }

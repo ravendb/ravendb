@@ -7,7 +7,7 @@
 using System.IO;
 using Xunit;
 
-namespace Voron.Tests.Log
+namespace Voron.Tests.Journal
 {
 	public class EdgeCases : StorageTest
 	{
