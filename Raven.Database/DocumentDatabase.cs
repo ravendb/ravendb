@@ -1864,42 +1864,49 @@ namespace Raven.Database
             return list;
         }
 
-        public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, Action<RavenJObject> addDoc)
-        {
-            if (idPrefix == null)
-                throw new ArgumentNullException("idPrefix");
-            idPrefix = idPrefix.Trim();
-            TransactionalStorage.Batch(actions =>
-            {
-                bool returnedDocs = false;
-                while (true)
-                {
-                    int docCount = 0;
-                    var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
-                    var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
-                    foreach (var doc in documents)
-                    {
-                        docCount++;
-                        string keyTest = doc.Key.Substring(idPrefix.Length);
-                        if (!WildcardMatcher.Matches(matches, keyTest) || WildcardMatcher.MatchesExclusion(exclude, keyTest))
-                            continue;
-                        DocumentRetriever.EnsureIdInMetadata(doc);
-                        var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
-                        JsonDocument document = nonAuthoritativeInformationBehavior != null ? nonAuthoritativeInformationBehavior(doc) : doc;
-                        document = documentRetriever
-                            .ExecuteReadTriggers(doc, null, ReadOperation.Load);
-                        if (document == null)
-                            continue;
+		public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, Action<RavenJObject> addDoc)
+		{
+			if (idPrefix == null)
+				throw new ArgumentNullException("idPrefix");
+			idPrefix = idPrefix.Trim();
+			TransactionalStorage.Batch(actions =>
+			{
+				int docCount = 0;
+				int innerStart = 0;
+				int skipCount = 0;
+				while (true)
+				{
+					int currentfetchedDocs = 0;
 
-                        addDoc(document.ToJson());
-                        returnedDocs = true;
-                    }
-                    if (returnedDocs || docCount == 0)
-                        break;
-                    start += docCount;
-                }
-            });
-        }
+					var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, innerStart, pageSize);
+					var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
+					foreach (var doc in documents)
+					{
+						if (docCount >= pageSize)
+							break;
+
+						currentfetchedDocs++;
+						string keyTest = doc.Key.Substring(idPrefix.Length);
+						if (!WildcardMatcher.Matches(matches, keyTest) || WildcardMatcher.MatchesExclusion(exclude, keyTest))
+							continue;
+						DocumentRetriever.EnsureIdInMetadata(doc);
+						var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);						
+						var document = nonAuthoritativeInformationBehavior != null ? nonAuthoritativeInformationBehavior(doc) : doc;
+						document = documentRetriever.ExecuteReadTriggers(doc, null, ReadOperation.Load);
+						if (document == null || (skipCount++) < start)
+							continue;
+
+						docCount++;
+						addDoc(document.ToJson());
+					}
+
+					if (currentfetchedDocs == 0 || docCount >= pageSize)
+						break;
+
+					innerStart += currentfetchedDocs;
+				}
+			});
+		}
 
         public RavenJArray GetDocuments(int start, int pageSize, Etag etag)
         {
