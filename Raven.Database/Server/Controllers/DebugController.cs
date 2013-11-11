@@ -115,6 +115,20 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
+		[Route("debug/sl0w-d0c-c0unts")]
+		[Route("debug/sl0w-d0c-c0unts")]
+		public HttpResponseMessage SlowDocCounts()
+		{
+			DebugDocumentStats stat = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				stat = accessor.Documents.GetDocumentStatsVerySlowly();
+			});
+
+			return GetMessageWithObject(stat);
+		}
+
+		[HttpGet]
 		[HttpPost]
 		[Route("debug/user-info")]
 		[Route("databases/{databaseName}/debug/user-info")]
