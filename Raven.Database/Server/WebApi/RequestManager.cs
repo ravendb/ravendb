@@ -161,7 +161,7 @@ namespace Raven.Database.Server.WebApi
 			var onBeforeRequest = BeforeRequest;
 			var tenantId = controller.DatabaseName;
 
-			if (string.IsNullOrWhiteSpace(tenantId))
+			if (string.IsNullOrWhiteSpace(tenantId) || tenantId == "<system>")
 			{
 				landlord.DatabaseLastRecentlyUsed.AddOrUpdate("System", SystemTime.UtcNow, (s, time) => SystemTime.UtcNow);
 				if (onBeforeRequest != null)

@@ -32,6 +32,8 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet][Route("silverlight/{*id}")]
 		public HttpResponseMessage SilverlightUi(string id)
 		{
+			if (id.Contains(".xap") == false)
+				return GetEmptyMessage();
 			Database.ExtensionsState.GetOrAdd("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
 			{
 				new CreateSilverlightIndexes().SilverlightWasRequested(Database);

@@ -69,8 +69,8 @@ namespace Raven.Database.Server.WebApi.Handlers
 				response.Content is ChangesPushContent == false)
 			{
 				string encodingType = response.RequestMessage.Headers.AcceptEncoding.First().Value;
-
-				response.Content = new CompressedContent(response.Content, encodingType);
+				if (encodingType == "gzip" || encodingType == "deflate")
+					response.Content = new CompressedContent(response.Content, encodingType);
 			}
 
 			return response;
