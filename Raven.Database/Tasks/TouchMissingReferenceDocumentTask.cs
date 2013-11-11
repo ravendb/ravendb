@@ -26,7 +26,6 @@ namespace Raven.Database.Tasks
         }
 
         public override void Merge(DatabaseTask task)
-        public override void Merge(Task task)
         {
             var t = (TouchMissingReferenceDocumentTask)task;
             Keys.UnionWith(t.Keys);

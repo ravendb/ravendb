@@ -585,5 +585,12 @@
 				return documentData;
 			}
 		}
+
+
+		public DebugDocumentStats GetDocumentStatsVerySlowly()
+		{
+			//TODO : write implementation _before_ finishing merge of Voron stuff into 3.0
+			throw new NotImplementedException();
+		}
 	}
 }

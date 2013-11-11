@@ -173,5 +173,12 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			tasksByIndex.MultiDelete(writeBatch, CreateKey(index), taskId);
 			tasksByIndexAndType.MultiDelete(writeBatch, CreateKey(index, type), taskId);
 		}
+
+
+		public System.Collections.Generic.IEnumerable<TaskMetadata> GetPendingTasksForDebug()
+		{
+			//TODO : write implementation _before_ finishing merge of Voron stuff into 3.0
+			throw new NotImplementedException();
+		}
 	}
 }
