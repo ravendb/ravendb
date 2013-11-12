@@ -24,7 +24,7 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			var name = GetQueryStringValue("value");
-			var connectionState = Database.TransportState.For(id);
+			var connectionState = Database.TransportState.For(id, this);
 			var cmd = GetQueryStringValue("command");
 			if (Match(cmd, "disconnect"))
 			{

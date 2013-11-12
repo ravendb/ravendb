@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.Server.Controllers;
 
 namespace Raven.Database.Server.Connections
 {
@@ -93,14 +94,18 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
-		public ConnectionState For(string id)
+		public ConnectionState For(string id, RavenApiController controller = null)
 		{
 			return connections.GetOrAdd(id, _ =>
-			                                	{
-			                                		var connectionState = new ConnectionState(null);
-			                                		TimeSensitiveStore.Missing(id);
-			                                		return connectionState;
-			                                	});
+			{
+				IEventsTransport eventsTransport = null;
+				if (controller != null)
+					eventsTransport = new ChangesPushContent(controller);
+				
+				var connectionState = new ConnectionState(eventsTransport);
+				TimeSensitiveStore.Missing(id);
+				return connectionState;
+			});
 		}
 
 	    public object[] DebugStatuses
