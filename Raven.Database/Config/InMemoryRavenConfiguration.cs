@@ -858,7 +858,10 @@ namespace Raven.Database.Config
 				case "munin":
 					storageEngine = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 					break;
-			}
+                case "voron":
+                    storageEngine = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+                    break;
+            }
 			var type = Type.GetType(storageEngine);
 
 			if (type == null)
@@ -870,7 +873,7 @@ namespace Raven.Database.Config
 		private string SelectStorageEngine()
 		{
 			if (RunInMemory)
-				return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
+				return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
 
 			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{
@@ -878,6 +881,10 @@ namespace Raven.Database.Config
 				{
 					return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 				}
+                if (File.Exists(Path.Combine(DataDirectory, "Raven.voron")))
+                {
+                    return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+                }
 				if (File.Exists(Path.Combine(DataDirectory, "Data")))
 					return typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 			}

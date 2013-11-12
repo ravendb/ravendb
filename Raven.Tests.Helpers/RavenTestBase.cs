@@ -29,6 +29,7 @@ using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Storage.Voron;
 using Xunit;
 using Xunit.Sdk;
 
@@ -155,7 +156,7 @@ namespace Raven.Tests.Helpers
 			else if (requestedStorage != null)
 				defaultStorageType = requestedStorage;
 			else
-				defaultStorageType = "munin";
+				defaultStorageType = "voron";
 			return defaultStorageType;
 		}
 
@@ -224,17 +225,19 @@ namespace Raven.Tests.Helpers
 			return ravenDbServer;
 		}
 
-		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null)
+		public ITransactionalStorage NewTransactionalStorage(string requestedStorage = null, string dataDir = null, bool runInMemory = false, OrderedPartCollection<AbstractDocumentCodec> documentCodecs = null)
 		{
 			ITransactionalStorage newTransactionalStorage;
 			string storageType = GetDefaultStorageType(requestedStorage);
 
 			if (storageType == "munin")
-				newTransactionalStorage = new Storage.Managed.TransactionalStorage(new RavenConfiguration {DataDirectory = dataDir ?? NewDataPath(),}, () => { });
+				newTransactionalStorage = new Storage.Managed.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
+			else if (storageType == "voron")
+				newTransactionalStorage = new TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), RunInMemory = runInMemory }, () => { });
 			else
-				newTransactionalStorage = new Storage.Esent.TransactionalStorage(new RavenConfiguration {DataDirectory = dataDir ?? NewDataPath(),}, () => { });
+				newTransactionalStorage = new Storage.Esent.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
 
-			newTransactionalStorage.Initialize(new DummyUuidGenerator(), new OrderedPartCollection<AbstractDocumentCodec>());
+			newTransactionalStorage.Initialize(new DummyUuidGenerator(), (documentCodecs == null) ? new OrderedPartCollection<AbstractDocumentCodec>() : documentCodecs );
 			return newTransactionalStorage;
 		}
 

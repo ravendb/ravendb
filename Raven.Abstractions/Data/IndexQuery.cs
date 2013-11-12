@@ -184,10 +184,6 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Gets the index query URL.
 		/// </summary>
-		/// <param name="operationUrl">The operation URL.</param>
-		/// <param name="index">The index.</param>
-		/// <param name="operationName">Name of the operation.</param>
-		/// <returns></returns>
 		public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true)
 		{
 			if (operationUrl.EndsWith("/"))
