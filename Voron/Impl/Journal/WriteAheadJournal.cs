@@ -250,23 +250,23 @@ namespace Voron.Impl.Journal
 
 		internal void WriteFileHeader(long? pageToWriteHeader = null)
 		{
-			var fileHeaderPage = _dataPager.TempPage;
-
-			long page = pageToWriteHeader ?? _dataFlushCounter & 1;
-
-			var header = (FileHeader*)(fileHeaderPage.Base);
-			header->MagicMarker = Constants.MagicMarker;
-			header->Version = Constants.CurrentVersion;
-			header->TransactionId = _fileHeader->TransactionId;
-			header->LastPageNumber = _fileHeader->LastPageNumber;
-
-			header->Root = _fileHeader->Root;
-			header->FreeSpace = _fileHeader->FreeSpace;
-			header->Journal = _fileHeader->Journal;
-			header->IncrementalBackup = _fileHeader->IncrementalBackup;
-
 			lock (_fileHeaderProtector)
 			{
+				var fileHeaderPage = _dataPager.TempPage;
+
+				long page = pageToWriteHeader ?? _dataFlushCounter & 1;
+
+				var header = (FileHeader*)(fileHeaderPage.Base);
+				header->MagicMarker = Constants.MagicMarker;
+				header->Version = Constants.CurrentVersion;
+				header->TransactionId = _fileHeader->TransactionId;
+				header->LastPageNumber = _fileHeader->LastPageNumber;
+
+				header->Root = _fileHeader->Root;
+				header->FreeSpace = _fileHeader->FreeSpace;
+				header->Journal = _fileHeader->Journal;
+				header->IncrementalBackup = _fileHeader->IncrementalBackup;
+
 				_dataPager.Write(fileHeaderPage, page);
 			}
 		}
