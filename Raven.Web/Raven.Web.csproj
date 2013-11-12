@@ -74,10 +74,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Raven.Database\RavenDB.snk">
-      <Link>RavenDB.snk</Link>
-    </None>
-    <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
