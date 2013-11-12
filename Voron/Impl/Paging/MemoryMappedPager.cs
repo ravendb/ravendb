@@ -91,14 +91,18 @@ namespace Voron.Impl
 		public override void Write(Page page, long? pageNumber)
 		{
 		    var startPage = pageNumber ?? page.PageNumber;
-		    var position = startPage * PageSize;
 
-			var toWrite = page.IsOverflow ? (page.OverflowSize + Constants.PageHeaderSize) : PageSize;
+			var toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
 
-			NativeMethods.memcpy(PagerState.Base + position, page.Base, toWrite);
+			WriteDirect(page, startPage, toWrite);
 		}
 
-		public override void Dispose()
+	    public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
+	    {
+            NativeMethods.memcpy(PagerState.Base + pagePosition * PageSize, start.Base, pagesToWrite * PageSize);
+	    }
+
+	    public override void Dispose()
 		{
 			base.Dispose();
 			if (PagerState != null)

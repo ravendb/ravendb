@@ -26,7 +26,6 @@ namespace Voron.Impl.Journal
 		
 		private long _currentJournalFileSize;
 		private DateTime _lastFile;
-		private readonly IList<JournalFile> _splitJournalFiles;
 
 		private long _logIndex = -1;
 		private FileHeader* _fileHeader;
@@ -44,7 +43,6 @@ namespace Voron.Impl.Journal
 			_env = env;
 			_dataPager = _env.Options.DataPager;
 			_fileHeader = GetEmptyFileHeader();
-			_splitJournalFiles = new List<JournalFile>();
 			_currentJournalFileSize = env.Options.InitialLogFileSize;
 		}
 
@@ -271,83 +269,6 @@ namespace Voron.Impl.Journal
 			}
 		}
 
-		public void TransactionBegin(Transaction tx)
-		{
-			if (CurrentFile == null)
-				CurrentFile = NextFile(tx);
-
-			CurrentFile.TransactionBegin(tx);
-		}
-
-		public void TransactionCommit(Transaction tx)
-		{
-			if (_splitJournalFiles.Count > 0)
-			{
-				foreach (var journalFile in _splitJournalFiles)
-					journalFile.TransactionCommit(tx);
-
-				_splitJournalFiles.Clear();
-			}
-
-			CurrentFile.TransactionCommit(tx);
-
-			if (CurrentFile.AvailablePages < 2) // it must have at least one page for the next transaction header and one page for data
-			{
-				CurrentFile = null; // it will force new log file creation when next transaction will start
-			}
-		}
-
-		public void TransactionRollback(Transaction tx)
-		{
-			if (_splitJournalFiles.Count > 0) // transaction split into multiple journals
-			{
-				CurrentFile = _splitJournalFiles[0];
-
-				List<JournalFile> filesToRelease = null;
-				JournalFile relevantFile;
-
-				_locker.EnterReadLock();
-				try
-				{
-					relevantFile = Files.FirstOrDefault(file => file.Number == CurrentFile.Number);
-					Debug.Assert(relevantFile != null);
-
-					filesToRelease = Files.GetRange(Files.IndexOf(relevantFile) + 1, Files.Count - Files.IndexOf(relevantFile) - 1)
-					                      .ToList();
-				}
-				finally
-				{
-					_locker.ExitReadLock();
-
-					if (filesToRelease != null) 
-						filesToRelease.ForEach(file => file.Release());
-				}
-
-				_locker.EnterWriteLock();
-				try
-				{
-					Files = Files.GetRange(0, Files.IndexOf(relevantFile) + 1);
-
-					_logIndex -= _splitJournalFiles.Count;
-					_splitJournalFiles.Clear();
-					UpdateLogInfo();
-					WriteFileHeader();
-				}
-				finally
-				{
-					_locker.ExitWriteLock();
-				}
-
-				lock (_fileHeaderProtector)
-				{
-					_dataPager.Sync(); // sync updated file header
-				}
-			}
-
-			CurrentFile.TransactionRollback(tx);
-		}
-
-
 		public Page ReadPage(Transaction tx, long pageNumber)
 		{
 			// read transactions have to read from log snapshots
@@ -370,7 +291,7 @@ namespace Voron.Impl.Journal
 				// write transactions can read directly from logs
 				for (var i = Files.Count - 1; i >= 0; i--)
 				{
-					var page = Files[i].ReadPage(tx, pageNumber);
+					var page = Files[i].ReadPage(pageNumber);
 					if (page != null)
 						return page;
 				}
@@ -383,33 +304,13 @@ namespace Voron.Impl.Journal
 			return null;
 		}
 
-		public Page Allocate(Transaction tx, long startPage, int numberOfPages)
-		{
-			if (CurrentFile.AvailablePages < numberOfPages)
-			{
-				// here we need to mark that transaction is split in both log files
-				// it will have the following transaction markers in the headers
-				// log_1: [Start|Split|Commit] log_2: [Split|Commit]
-
-				CurrentFile.TransactionSplit(tx);
-				_splitJournalFiles.Add(CurrentFile);
-
-				CurrentFile = NextFile(tx, numberOfPages);
-
-				CurrentFile.TransactionSplit(tx);
-			}
-
-			return CurrentFile.Allocate(startPage, numberOfPages);
-		}
-
-
 		public void Dispose()
 		{
 			if (_inMemoryHeader != IntPtr.Zero)
 			{
 				Marshal.FreeHGlobal(_inMemoryHeader);
 				_inMemoryHeader = IntPtr.Zero;
-			}
+			}	
 
 			if (_env.Options.OwnsPagers)
 			{
@@ -594,7 +495,7 @@ namespace Voron.Impl.Journal
 					Debug.Assert(_lastTransactionHeader != null);
 
 					var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-												  .Select(x => x.Value.ReadPage(null, x.Key))
+												  .Select(x => x.Value.ReadPage(x.Key))
 												  .ToList();
 
 					var last = sortedPages.Last();
@@ -738,5 +639,14 @@ namespace Voron.Impl.Journal
 				_locker.ExitWriteLock();
 			}
 		}
+
+	    public void WriteToJournal(Transaction tx, int pageCount)
+	    {
+	        if (CurrentFile == null || CurrentFile.AvailablePages < pageCount)
+	        {
+	            CurrentFile = NextFile(tx, pageCount);
+            }
+	        CurrentFile.Write(tx, pageCount);
+	    }
 	}
 }

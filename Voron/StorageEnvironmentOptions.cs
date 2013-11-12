@@ -106,7 +106,7 @@ namespace Voron
                 {
                     Directory.CreateDirectory(_basePath);
                 }
-                return new FilePager(Path.Combine(_basePath, "db.voron"), NativeFileAttributes.Normal);
+                return new FilePager(Path.Combine(_basePath, "db.voron"));
             }
 
             public override IVirtualPager DataPager
@@ -146,6 +146,8 @@ namespace Voron
                 Disposed = true;
                 if (_dataPager.IsValueCreated)
                     _dataPager.Value.Dispose();
+                if(_scratchPager.IsValueCreated)
+                    _scratchPager.Value.Dispose();
                 foreach (var journal in _journals)
                 {
                     if (journal.Value.IsValueCreated)
@@ -205,7 +207,7 @@ namespace Voron
                 if (Disposed)
                     return;
                 Disposed = true;
-
+                _scratchPager.Dispose();
                 _dataPager.Dispose();
                 foreach (var virtualPager in _logs)
                 {
