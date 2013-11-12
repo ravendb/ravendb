@@ -94,11 +94,11 @@ namespace Voron.Impl.Journal
 			return log;
 		}
 
-		public void RecoverDatabase(FileHeader* fileHeader, out TransactionHeader* lastTxHeader,out bool hadIntegrityIssues)
+		public void RecoverDatabase(FileHeader* fileHeader, out TransactionHeader* lastTxHeader,out bool requireHeaderUpdate)
 		{
 			// note, we don't need to do any concurrency here, happens as a single threaded
 			// fashion on db startup
-			hadIntegrityIssues = false;
+			requireHeaderUpdate = false;
 
 			_fileHeader = CopyFileHeader(fileHeader);
 			var logInfo = _fileHeader->Journal;
@@ -125,7 +125,6 @@ namespace Voron.Impl.Journal
 				
 			}
 
-			var transactionMarkers = new Stack<Tuple<long, TransactionMarker>>();
 			for (var logNumber = oldestLogFileStillInUse; logNumber <= logInfo.CurrentJournal; logNumber++)
 			{
 				var pager = _env.Options.CreateJournalPager(logNumber);
@@ -139,23 +138,19 @@ namespace Voron.Impl.Journal
 
 				lastTxHeader = log.RecoverAndValidate(startRead, lastTxHeader);
 
-				Debug.Assert(lastTxHeader->TxMarker != TransactionMarker.None);
+                if (log.RequireHeaderUpdate) //this should prevent further loading of transactions
+                {
+                    requireHeaderUpdate = true;
+                    break;
+                }
 
-				if (lastTxHeader != null)
-					transactionMarkers.Push(Tuple.Create(logNumber, lastTxHeader->TxMarker));
+				Debug.Assert(lastTxHeader->TxMarker != TransactionMarker.None);
 
 				log.AddRef(); // creator reference - write ahead log
 				Files = Files.Add(log);
-
-				if (log.HasIntegrityIssues) //this should prevent further loading of transactions
-				{
-					hadIntegrityIssues = true;
-					break;
-				}
-
 			}
 
-			if (hadIntegrityIssues)
+			if (requireHeaderUpdate)
 				logInfo.CurrentJournal = Files.Count - 1;
 
 			_logIndex = logInfo.CurrentJournal;
@@ -170,7 +165,7 @@ namespace Voron.Impl.Journal
 					CurrentFile = lastFile;
 			}
 
-			if (hadIntegrityIssues)
+			if (requireHeaderUpdate)
 			{
 				UpdateLogInfo();
 				WriteFileHeader();
@@ -179,17 +174,11 @@ namespace Voron.Impl.Journal
 
 		private void RecoverCurrentJournalSize(IVirtualPager pager)
 		{
-			var journalSize = pager.NumberOfAllocatedPages * pager.PageSize;
+			var journalSize = AbstractPager.NearestPowerOfTwo(pager.NumberOfAllocatedPages * pager.PageSize);
 			if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
 				return;
 
-			// we want to ignore big single value log files (a log file with a single 2 MB value is considered rare), so we don't
-			// want to jump the size just for a single value, so we ignore values that aren't multiples of the 
-			// initial size (our base)
-			if (journalSize%_env.Options.InitialLogFileSize != 0)
-				return;
-
-			_currentJournalFileSize = journalSize;
+		    _currentJournalFileSize = journalSize;
 		}
 
 		public void UpdateLogInfo()
@@ -430,6 +419,8 @@ namespace Voron.Impl.Journal
 					try
 					{
 						_jrnls = _waj.Files;
+                        if(_jrnls.Count == 0)
+                            return; // nothing to do
 						_lastSyncedLog = _waj._fileHeader->Journal.LastSyncedJournal;
 						_lastSyncedPage = _waj._fileHeader->Journal.LastSyncedJournalPage;
 						Debug.Assert(_jrnls.First().Number >= _lastSyncedLog);
@@ -602,6 +593,10 @@ namespace Voron.Impl.Journal
 	            CurrentFile = NextFile(tx, pageCount);
             }
 	        CurrentFile.Write(tx, pageCount);
+	        if (CurrentFile.AvailablePages == 0)
+	        {
+	            CurrentFile = null;
+	        }
 	    }
 	}
 }

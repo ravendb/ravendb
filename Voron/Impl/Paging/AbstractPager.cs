@@ -163,7 +163,7 @@ namespace Voron.Impl
 		}
 
 
-	    private static long NearestPowerOfTwo(long v)
+	    public static long NearestPowerOfTwo(long v)
 	    {
 	        v--;
 	        v |= v >> 1;

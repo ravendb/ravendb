@@ -16,7 +16,7 @@ namespace Voron.Impl.Journal
 		private readonly TransactionHeader* _previous;
 		private readonly Dictionary<long, long> _transactionPageTranslation = new Dictionary<long, long>();
 
-		public bool HasIntegrityIssues { get; private set; }
+		public bool RequireHeaderUpdate { get; private set; }
 
 		public bool EncounteredStopCondition { get; private set; }
 
@@ -32,7 +32,7 @@ namespace Voron.Impl.Journal
 
 		public JournalReader(IVirtualPager pager, long startPage, TransactionHeader* previous)
 		{
-			HasIntegrityIssues = false;
+			RequireHeaderUpdate = false;
 			_pager = pager;
 			_readingPage = startPage;
 			_startPage = startPage;
@@ -92,7 +92,7 @@ namespace Voron.Impl.Journal
 
 			if (checkCrc && crc != current->Crc)
 			{
-				HasIntegrityIssues = true;
+				RequireHeaderUpdate = true;
 
 				//undo changes to those variables if CRC doesn't match
 				_writePage = writePageBeforeCrcCheck;
@@ -135,9 +135,7 @@ namespace Voron.Impl.Journal
 
 			if (current->HeaderMarker != Constants.TransactionHeaderMarker)
 			{
-				if (current->HeaderMarker != 0 && current->TxMarker != TransactionMarker.None)
-					HasIntegrityIssues = true;
-
+			    RequireHeaderUpdate = true;
 				return false; // not a transaction page
 			}
 
@@ -145,7 +143,8 @@ namespace Voron.Impl.Journal
 
 			if (current->TxMarker.HasFlag(TransactionMarker.Commit) == false)
 			{
-				_readingPage += current->PageCount + current->OverflowPageCount;
+			    // uncommitted transaction, probably
+			    RequireHeaderUpdate = true;
 				return false;
 			}
 

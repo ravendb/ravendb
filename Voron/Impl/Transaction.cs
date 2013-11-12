@@ -114,7 +114,7 @@ namespace Voron.Impl
             _txHeader->LastPageNumber = -1;
             _txHeader->PageCount = -1;
             _txHeader->Crc = 0;
-            _txHeader->TxMarker = TransactionMarker.Start;
+            _txHeader->TxMarker = TransactionMarker.None;
 
             _allocatedPagesInTransaction = 0;
             _overflowPagesInTransaction = 0;

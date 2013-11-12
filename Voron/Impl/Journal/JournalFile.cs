@@ -86,7 +86,7 @@ namespace Voron.Impl.Journal
 			get { return _pageTranslationTable; }
 		}
 
-		public bool HasIntegrityIssues { get; private set; }
+		public bool RequireHeaderUpdate { get; private set; }
 
 	    public Page ReadPage(long pageNumber)
 		{
@@ -139,7 +139,7 @@ namespace Voron.Impl.Journal
 		{
 			var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
 			logFileReader.RecoverAndValidate();
-			HasIntegrityIssues = logFileReader.HasIntegrityIssues;
+			RequireHeaderUpdate = logFileReader.RequireHeaderUpdate;
 			
 			_pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
 			_writePage = logFileReader.WritePage;
@@ -152,7 +152,7 @@ namespace Voron.Impl.Journal
 		{
 			var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
 			logFileReader.RecoverAndValidateConditionally(stopConditionFunc);
-			HasIntegrityIssues = logFileReader.HasIntegrityIssues;
+			RequireHeaderUpdate = logFileReader.RequireHeaderUpdate;
 
 			_pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
 			_writePage = logFileReader.WritePage;
