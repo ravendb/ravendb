@@ -11,7 +11,9 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class SilverlightController : RavenApiController
 	{
-		[HttpGet][Route("silverlight/ensureStartup")]
+		[HttpGet]
+		[Route("silverlight/ensureStartup")]
+		[Route("databases/{databaseName}/silverlight/ensureStartup")]
 		public HttpResponseMessage SilverlightEnsureStartup()
 		{
 			Database.ExtensionsState.GetOrAdd("SilverlightUI.NotifiedAboutSilverlightBeingRequested", s =>
@@ -28,7 +30,6 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(new { ok = true });
 		}
 
-		//TODO: fix the routing 
 		[HttpGet][Route("silverlight/{*id}")]
 		public HttpResponseMessage SilverlightUi(string id)
 		{
