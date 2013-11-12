@@ -1,4 +1,5 @@
-﻿using Raven.Abstractions.Smuggler;
+﻿using System.Threading.Tasks;
+using Raven.Abstractions.Smuggler;
 using Raven.Database.Smuggler;
 using Xunit;
 using System.Linq;
@@ -8,15 +9,15 @@ namespace Raven.Tests.MailingList
 	public class TroyMapReduceImport : RavenTest
 	{
 		[Fact]
-		public void CanGetCorrectResult()
+		public async Task CanGetCorrectResult()
 		{
 			using (var store = NewDocumentStore())
 			{
 				var smugglerOptions = new SmugglerOptions();
-				var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions);
+				var dataDumper = new DataDumper(store.DocumentDatabase);
 				using (var stream = typeof(TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.Sandbox.ravendump"))
 				{
-					dataDumper.ImportData(stream, smugglerOptions).Wait();
+                    await dataDumper.ImportData(smugglerOptions, stream);
 				}
 
 				using(var s = store.OpenSession())
@@ -30,15 +31,15 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void CanGetCorrectResult_esent()
+		public async Task CanGetCorrectResult_esent()
 		{
 			using (var store = NewDocumentStore(requestedStorage: "esent"))
 			{
 				var smugglerOptions = new SmugglerOptions();
-				var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions);
+				var dataDumper = new DataDumper(store.DocumentDatabase);
 				using (var stream = typeof(TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.MailingList.Sandbox.ravendump"))
 				{
-					dataDumper.ImportData(stream, smugglerOptions).Wait();
+                    await dataDumper.ImportData(smugglerOptions, stream);
 				}
 
 				WaitForUserToContinueTheTest(store);

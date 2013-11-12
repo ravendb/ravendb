@@ -28,24 +28,26 @@
     <NoWarn>1591</NoWarn>
     <DocumentationFile>bin\Debug\Raven.Abstractions.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
-    <OutputPath>..\build\</OutputPath>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <NoWarn>1591</NoWarn>
+    <DocumentationFile>bin\Debug\Raven.Abstractions.xml</DocumentationFile>
     <DocumentationFile>..\build\Raven.Abstractions.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\build\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
+    <DocumentationFile>bin\Release\Raven.Abstractions.xml</DocumentationFile>
     <DocumentationFile>..\build\Raven.Abstractions.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
@@ -100,6 +102,7 @@
     <Compile Include="Commands\DeleteCommandData.cs" />
     <Compile Include="Commands\PatchCommandData.cs" />
     <Compile Include="Commands\PutCommandData.cs" />
+    <Compile Include="Connection\CompressedStringContent.cs" />
     <Compile Include="Connection\CountingStream.cs" />
     <Compile Include="Connection\ErrorResponseException.cs" />
     <Compile Include="Connection\HttpRavenRequest.cs" />
@@ -115,6 +118,7 @@
     <Compile Include="Data\Alert.cs" />
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
+    <Compile Include="Data\AttachmentInformation.cs" />
     <Compile Include="Data\FailoverServers.cs" />
     <Compile Include="Data\HighlightedField.cs" />
     <Compile Include="Data\BulkInsertOptions.cs" />

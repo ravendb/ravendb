@@ -58,7 +58,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\build\sl5\</OutputPath>
+    <OutputPath>bin\Release\sl5\</OutputPath>
     <DefineConstants>DEBUG;TRACE;SILVERLIGHT</DefineConstants>
     <NoStdLib>true</NoStdLib>
     <NoConfig>true</NoConfig>
@@ -68,7 +68,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\build\sl5\</OutputPath>
+    <OutputPath>bin\Release\sl5\</OutputPath>
     <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
     <NoStdLib>true</NoStdLib>
     <NoConfig>true</NoConfig>
@@ -118,6 +118,7 @@
     </Reference>
     <Reference Include="System.Reactive.Core, Version=2.1.30214.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-Core.2.1.30214.0\lib\SL5\System.Reactive.Core.dll</HintPath>    </Reference>
     </Reference>
     <Reference Include="System.Reactive.Interfaces, Version=2.1.30214.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -125,11 +126,17 @@
     </Reference>
     <Reference Include="System.Reactive.Linq, Version=2.1.30214.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-Linq.2.1.30214.0\lib\SL5\System.Reactive.Linq.dll</HintPath>
     </Reference>
     <Reference Include="System.Reactive.PlatformServices, Version=2.1.30214.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Rx-PlatformServices.2.1.30214.0\lib\SL5\System.Reactive.PlatformServices.dll</HintPath>
     </Reference>
+    <Reference Include="System.Runtime">
+      <HintPath>..\packages\Microsoft.Bcl.1.0.19\lib\sl5\System.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks">
+      <HintPath>..\packages\Microsoft.Bcl.1.0.19\lib\sl5\System.Threading.Tasks.dll</HintPath>
     <Reference Include="System.Reactive.Core">
       <HintPath>..\packages\Rx-Core.2.1.30214.0\lib\SL5\System.Reactive.Core.dll</HintPath>
     </Reference>

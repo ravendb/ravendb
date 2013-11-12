@@ -22,6 +22,7 @@ using Raven.Client.WinRT.Connection;
 #endif
 using Raven.Client.Changes;
 using Raven.Client.Document;
+using Raven.Database.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
@@ -70,6 +71,17 @@ namespace Raven.Client.Connection.Async
 		/// This is primarily useful for administration of a database
 		/// </remarks>
 		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false);
+
+        /// <summary>
+        /// Begins an async get operation for documents
+        /// </summary>
+        /// <param name="fromEtag">The ETag of the first document to start with</param>
+        /// <param name="pageSize">Size of the page.</param>
+        /// <param name="metadataOnly">Load just the document metadata</param>
+        /// <remarks>
+        /// This is primarily useful for administration of a database
+        /// </remarks>
+        Task<JsonDocument[]> GetDocumentsAsync(Etag fromEtag, int pageSize, bool metadataOnly = false);
 
 		/// <summary>
 		/// Begins the async query.
@@ -268,6 +280,12 @@ namespace Raven.Client.Connection.Async
 		/// Gets the list of databases from the server asynchronously
 		/// </summary>
 		Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0);
+
+        /// <summary>
+        /// Gets the attachments asynchronously
+        /// </summary>
+        /// <returns></returns>
+        Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int batchSize);
 
 		/// <summary>
 		/// Puts the attachment with the specified key asynchronously

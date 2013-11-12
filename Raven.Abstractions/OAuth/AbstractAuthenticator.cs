@@ -1,12 +1,22 @@
 using System;
-using System.Net;
 using Raven.Abstractions.Connection;
+#if !SILVERLIGHT && !NETFX_CORE
+using System.Net;
+#endif
+using System.Net.Http;
+using System.Net.Http.Headers;
 
 namespace Raven.Abstractions.OAuth
 {
 	public abstract class AbstractAuthenticator
 	{
-		protected string CurrentOauthToken;
+		protected readonly string ApiKey;
+		protected string CurrentOauthToken { get; set; }
+
+		protected AbstractAuthenticator(string apiKey)
+		{
+			ApiKey = apiKey;
+		}
 
 		public virtual void ConfigureRequest(object sender, WebRequestEventArgs e)
 		{
@@ -14,12 +24,28 @@ namespace Raven.Abstractions.OAuth
 				return;
 
 #if NETFX_CORE || SILVERLIGHT
-			e.Client.DefaultRequestHeaders.Add("Authorization", CurrentOauthToken);
+			SetAuthorization(e.Client);
 #else
-			SetHeader(e.Request.Headers, "Authorization", CurrentOauthToken);
+			SetHeader(e.Request.Headers, "Authorization", "Bearer " + CurrentOauthToken);
 #endif
-			}
+		}
 
+		protected void SetAuthorization(HttpClient httpClient)
+		{
+			if (string.IsNullOrEmpty(CurrentOauthToken))
+				return;
+
+			try
+			{
+				httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CurrentOauthToken);
+			}
+			catch (Exception ex)
+			{
+				throw new InvalidOperationException(string.Format("Could not set the Authorization to the value 'Bearer {0}'", CurrentOauthToken), ex);
+			}
+		}
+
+#if !SILVERLIGHT && !NETFX_CORE
 		protected static void SetHeader(WebHeaderCollection headers, string key, string value)
 		{
 			try
@@ -32,8 +58,7 @@ namespace Raven.Abstractions.OAuth
 			}
 		}
 
-#if !SILVERLIGHT && !NETFX_CORE
 		public abstract Action<HttpWebRequest> DoOAuthRequest(string oauthSource);
-		#endif
+#endif
 	}
 }

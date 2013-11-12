@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using Amazon;
 using Amazon.Glacier.Transfer;
+using Amazon.RDS.Model;
 using Amazon.S3.Model;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
@@ -144,18 +145,17 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 							var backupPath = localBackupConfigs.LocalFolderName ??
 							                 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicBackup-Temp");
-							var options = new SmugglerOptions
-							{
-								BackupPath = backupPath,
-								LastDocsEtag = localBackupStatus.LastDocsEtag,
-								LastAttachmentEtag = localBackupStatus.LastAttachmentsEtag
-							};
-							var dd = new DataDumper(documentDatabase, options);
-							var filePath = await dd.ExportData(null, null, true, backupStatus);
+						    var options = new SmugglerOptions
+						    {
+						        BackupPath = backupPath,
+						        StartDocsEtag = localBackupStatus.LastDocsEtag,
+						        StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag,
+						    };
+						    var exportResult = await new DataDumper(documentDatabase).ExportData(options, backupStatus);
 
 							// No-op if nothing has changed
-							if (options.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-							    options.LastAttachmentEtag == localBackupStatus.LastAttachmentsEtag)
+                            if (exportResult.LastDocsEtag == localBackupStatus.LastDocsEtag &&
+                                exportResult.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag)
 							{
 								logger.Info("Periodic backup returned prematurely, nothing has changed since last backup");
 								return;
@@ -163,15 +163,15 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 							try
 							{
-								UploadToServer(filePath, localBackupConfigs);
+								UploadToServer(exportResult.FilePath, localBackupConfigs);
 							}
 							finally
 							{
-								IOExtensions.DeleteDirectory(filePath);
+                                IOExtensions.DeleteDirectory(exportResult.FilePath);
 							}
 
-							localBackupStatus.LastAttachmentsEtag = options.LastAttachmentEtag;
-							localBackupStatus.LastDocsEtag = options.LastDocsEtag;
+                            localBackupStatus.LastAttachmentsEtag = exportResult.LastAttachmentsEtag;
+                            localBackupStatus.LastDocsEtag = exportResult.LastDocsEtag;
 							localBackupStatus.LastBackup = SystemTime.UtcNow;
 
 							var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);

@@ -20,24 +20,25 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\build\</OutputPath>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>..\build\Raven.Client.Embedded.xml</DocumentationFile>
+    <DocumentationFile>bin\Debug\Raven.Client.Embedded.xml</DocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\build\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Client.Embedded.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
+    <DocumentationFile>bin\Release\Raven.Client.Embedded.XML</DocumentationFile>
     <DocumentationFile>..\build\Raven.Client.Embedded.XML</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>

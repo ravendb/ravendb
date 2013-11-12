@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
@@ -147,10 +148,18 @@ namespace Raven.Client
 		/// </summary>
 		void ExecuteIndex(AbstractIndexCreationTask indexCreationTask);
 
+        /// <summary>
+        /// Executes the index creation.
+        /// </summary>
+        /// <param name="indexCreationTask"></param>
+        Task ExecuteIndexAsync(AbstractIndexCreationTask indexCreationTask);
+
 		/// <summary>
 		/// Executes the transformer creation
 		/// </summary>
 		void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask);
+
+        Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask);
 #endif
 
 		/// <summary>

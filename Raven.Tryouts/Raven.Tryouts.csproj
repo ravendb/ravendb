@@ -50,7 +50,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\build\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -111,7 +111,6 @@
     </Reference>
     <Reference Include="System.Reactive.Linq, Version=2.1.30214.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\build\System.Reactive.Linq.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml.Linq">

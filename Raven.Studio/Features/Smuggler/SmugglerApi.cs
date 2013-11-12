@@ -31,22 +31,19 @@ namespace Raven.Studio.Features.Smuggler
 			return str;
 		}
 
-		public SmugglerApi(SmugglerOptions smugglerOptions, IAsyncDatabaseCommands commands, Action<string> output)
-			: base(smugglerOptions)
+		public SmugglerApi(IAsyncDatabaseCommands commands, Action<string> output)
 		{
 			this.commands = commands;
 			this.output = output;
 			batch = new List<RavenJObject>();
 		}
 
-		protected override Task<RavenJArray> GetIndexes(int totalCount)
+		protected override async Task<RavenJArray> GetIndexes(int totalCount)
 		{
 			var url = ("/indexes?pageSize=" + SmugglerOptions.BatchSize + "&start=" + totalCount).NoCache();
 			var request = commands.CreateRequest(url, "GET");
 
-			return request
-				.ReadResponseJsonAsync()
-				.ContinueWith(task => ((RavenJArray)task.Result));
+		    return (RavenJArray)await request.ReadResponseJsonAsync();
 		}
 
 		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)

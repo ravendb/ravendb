@@ -49,16 +49,16 @@ namespace Raven.Tests.Issues
 
 						session.SaveChanges();
 					}
-					var smugglerApi = new SmugglerApi(options, new RavenConnectionStringOptions
+					var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
 					{
 						Url = store.Url
 					});
-					await smugglerApi.ExportData(null, options, false);
+					await smugglerApi.ExportData(options);
 				}
 
 				using (var documentStore = NewRemoteDocumentStore())
 				{
-					var smugglerApi = new SmugglerApi(options, new RavenConnectionStringOptions
+					var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
 					{
 						Url = documentStore.Url
 					});
@@ -110,16 +110,16 @@ namespace Raven.Tests.Issues
 
 						session.SaveChanges();
 					}
-					var smugglerApi = new SmugglerApi(options, new RavenConnectionStringOptions
+					var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
 					{
 						Url = store.Url
 					});
-					await smugglerApi.ExportData(null, options, false);
+					await smugglerApi.ExportData(options);
 				}
 
 				using (var store = NewRemoteDocumentStore())
 				{
-					var smugglerApi = new SmugglerApi(options, new RavenConnectionStringOptions
+					var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
 					{
 						Url = store.Url
 					});

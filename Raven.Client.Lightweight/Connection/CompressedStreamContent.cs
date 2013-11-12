@@ -25,6 +25,7 @@ namespace Raven.Client.Connection
 
 		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
+            using (data)
 			using (var dataStream = new GZipStream(stream, CompressionMode.Compress, true))
 			{
 			    await data.CopyToAsync(dataStream);
@@ -34,12 +35,6 @@ namespace Raven.Client.Connection
 
 		protected override bool TryComputeLength(out long length)
 		{
-		    /*if (data.CanSeek)
-		    {
-		        length = data.Length;
-		        return true;
-		    }*/
-
 		    length = -1;
 		    return false;
 		}

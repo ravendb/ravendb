@@ -36,7 +36,7 @@ namespace Raven.Abstractions.Util
 
 		public CompletedTask() : this(default(T)) { }
 
-		public CompletedTask(T result)
+	    public CompletedTask(T result)
 		{
 			this.Result = result;
 		}

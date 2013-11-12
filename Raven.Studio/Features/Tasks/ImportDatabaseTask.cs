@@ -103,18 +103,16 @@ namespace Raven.Studio.Features.Tasks
                     operateOnTypes |= ItemType.Transformers;
                 }
 
-                var smugglerOptions = new SmugglerOptions
+                var smuggler = new SmugglerApi(DatabaseCommands, message => Report(message));
+                await smuggler.ImportData(new SmugglerOptions
                 {
                     BatchSize = batchSize,
                     Filters = filterSettings,
                     TransformScript = transformScript,
                     ShouldExcludeExpired = shouldExcludeExpired,
-                    OperateOnTypes = operateOnTypes
-                };
-
-                var smuggler = new SmugglerApi(smugglerOptions, DatabaseCommands, message => Report(message));
-
-                await smuggler.ImportData(stream, smugglerOptions);
+                    OperateOnTypes = operateOnTypes,
+                    BackupStream = stream,
+                });
             }
 
             return DatabaseTaskOutcome.Succesful;

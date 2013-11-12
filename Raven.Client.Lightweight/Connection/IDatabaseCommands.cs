@@ -1,3 +1,4 @@
+using Raven.Database.Data;
 #if !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="IDatabaseCommands.cs" company="Hibernating Rhinos LTD">
@@ -74,6 +75,17 @@ namespace Raven.Client.Connection
 		/// This is primarily useful for administration of a database
 		/// </remarks>
 		JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false);
+
+        /// <summary>
+        /// Get documents from server
+        /// </summary>
+        /// <param name="fromEtag">The ETag of the first document to start with</param>
+        /// <param name="pageSize">Size of the page.</param>
+        /// <param name="metadataOnly">Load just the document metadata</param>
+        /// <remarks>
+        /// This is primarily useful for administration of a database
+        /// </remarks>
+        JsonDocument[] GetDocuments(Etag fromEtag, int pageSize, bool metadataOnly = false);
 
 		/// <summary>
 		/// Puts the document in the database with the specified key
@@ -478,6 +490,8 @@ namespace Raven.Client.Connection
 		/// Gets the build number
 		/// </summary>
 		BuildNumber GetBuildNumber();
+
+	    AttachmentInformation[] GetAttachments(Etag startEtag, int batchSize);
 	}
 
 	public interface IGlobalAdminDatabaseCommands

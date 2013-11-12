@@ -22,7 +22,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\bin\debug\</OutputPath>
+    <OutputPath>bin\Debug</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -32,7 +32,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\build\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -49,6 +49,9 @@
     <AssemblyOriginatorKeyFile>..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="JetBrains.Annotations">
+      <HintPath>..\packages\JetBrains.Annotations.7.0\lib\net45\JetBrains.Annotations.dll</HintPath>
+    </Reference>
     <Reference Include="Jint.Raven">
       <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
     </Reference>
@@ -68,6 +71,7 @@
     </Compile>
     <Compile Include="Imports\SmugglerJintHelper.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="Smuggler.cs" />
     <Compile Include="SmugglerApi.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -80,6 +84,7 @@
       <Link>RavenDB.snk</Link>
     </None>
     <None Include="app.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">

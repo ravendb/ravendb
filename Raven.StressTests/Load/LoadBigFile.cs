@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.IO;
+using System.Threading.Tasks;
 using Raven.Abstractions.Smuggler;
 using Raven.Database.Smuggler;
 using Raven.Tests;
@@ -11,20 +11,19 @@ namespace Raven.StressTests.Load
 	public class LoadBigFile : RavenTest
 	{
 		[Fact]
-		public void ShouldTakeUnder30Minutes()
+		public async Task ShouldTakeUnder30Minutes()
 		{
 			var sw = Stopwatch.StartNew();
-			var smugglerOptions = new SmugglerOptions();
 
-			using (var store = NewDocumentStore())
+		    using (var store = NewDocumentStore())
 			{
 				using (var stream = typeof(LoadBigFile).Assembly.GetManifestResourceStream("Raven.StressTests.Load.LoadBigFile.dump"))
 				{
-					var dataDumper = new DataDumper(store.DocumentDatabase, smugglerOptions)
+					var dataDumper = new DataDumper(store.DocumentDatabase)
 					{
 						Progress = Console.WriteLine
 					};
-					dataDumper.ImportData(stream, smugglerOptions);
+					await dataDumper.ImportData(new SmugglerOptions(), stream);
 				}
 			}
 			sw.Stop();

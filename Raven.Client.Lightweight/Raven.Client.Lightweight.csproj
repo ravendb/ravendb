@@ -21,25 +21,26 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\build\</OutputPath>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>TRACE;DEBUG;CLIENT</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <DocumentationFile>..\build\Raven.Client.Lightweight.xml</DocumentationFile>
+    <DocumentationFile>bin\Debug\Raven.Client.Lightweight.xml</DocumentationFile>
     <NoWarn>1573, 1587, 1591</NoWarn>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\build\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE;CLIENT</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <StyleCopTreatErrorsAsWarnings>false</StyleCopTreatErrorsAsWarnings>
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
+    <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
     <DocumentationFile>..\build\Raven.Client.Lightweight.XML</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
@@ -80,7 +81,6 @@
     <Compile Include="Connection\AdminRequestCreator.cs" />
     <Compile Include="Connection\AdminServerClient.cs" />
     <Compile Include="Connection\Async\AsyncAdminServerClient.cs" />
-    <Compile Include="Connection\CompressedStringContent.cs" />
     <Compile Include="Connection\ConnectionOptions.cs" />
     <Compile Include="Connection\CompressedStreamContent.cs" />
     <Compile Include="Connection\Operation.cs" />

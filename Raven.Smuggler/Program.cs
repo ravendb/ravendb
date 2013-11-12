@@ -22,7 +22,7 @@ namespace Raven.Smuggler
 		private readonly RavenConnectionStringOptions connectionStringOptions;
 		private readonly SmugglerOptions options;
 		private readonly OptionSet optionSet;
-		bool incremental, waitForIndexing;
+		bool waitForIndexing;
 
 		private Program()
 		{
@@ -88,14 +88,14 @@ namespace Raven.Smuggler
 								{
 			            			"transform-file:", "Transform documents using a given script file (import only)", script => options.TransformScript = File.ReadAllText(script)
 			            		},
-								{"timeout:", "The timeout to use for requests", s => options.Timeout = int.Parse(s) },
+								{"timeout:", "The timeout to use for requests, in seconds", s => options.Timeout = TimeSpan.FromSeconds(int.Parse(s)) },
 								{"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s) },
 			            		{"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
 			            		{"u|user|username:", "The username to use when the database requires the client to authenticate.", value => Credentials.UserName = value},
 			            		{"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => Credentials.Password = value},
 			            		{"domain:", "The domain to use when the database requires the client to authenticate.", value => Credentials.Domain = value},
 			            		{"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
-								{"incremental", "States usage of incremental operations", _ => incremental = true },
+								{"incremental", "States usage of incremental operations", _ => options.Incremental = true },
 								{"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _=> waitForIndexing=true},
                                 {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true },
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
@@ -119,11 +119,13 @@ namespace Raven.Smuggler
 			if (args.Length < 3)
 				PrintUsageAndExit(-1);
 
-			SmugglerAction action = SmugglerAction.Export;
+			var action = SmugglerAction.Export;
 			if (string.Equals(args[0], "in", StringComparison.OrdinalIgnoreCase))
 				action = SmugglerAction.Import;
 			else if (string.Equals(args[0], "out", StringComparison.OrdinalIgnoreCase))
 				action = SmugglerAction.Export;
+            else if (string.Equals(args[0], "between", StringComparison.OrdinalIgnoreCase))
+                action = SmugglerAction.Between;
 			else
 				PrintUsageAndExit(-1);
 
@@ -150,23 +152,26 @@ namespace Raven.Smuggler
 
 			if (options.BackupPath != null && Directory.Exists(options.BackupPath))
 			{
-				incremental = true;
+				options.Incremental = true;
 			}
 
-			var smugglerApi = new SmugglerApi(options, connectionStringOptions);
+			var smugglerApi = new SmugglerApi(connectionStringOptions);
 
 			try
 			{
 				switch (action)
 				{
 					case SmugglerAction.Import:
-						smugglerApi.ImportData(options, incremental).Wait();
+						smugglerApi.ImportData(options).Wait();
 						if (waitForIndexing)
 							smugglerApi.WaitForIndexing(options).Wait();
 						break;
 					case SmugglerAction.Export:
-						smugglerApi.ExportData(null, options, incremental).Wait();
+						smugglerApi.ExportData(options).Wait();
 						break;
+                    case SmugglerAction.Between:
+				        throw new NotImplementedException();
+                        break;
 				}
 			}
 			catch (AggregateException ex)
@@ -228,10 +233,12 @@ Smuggler Import/Export utility for RavenDB
 Copyright (C) 2008 - {0} - Hibernating Rhinos
 ----------------------------------------
 Usage:
-	- Import the dump.raven file to a local instance:
-		Raven.Smuggler in http://localhost:8080/ dump.raven
-	- Export a local instance to dump.raven:
-		Raven.Smuggler out http://localhost:8080/ dump.raven
+	- Import the dump.raven file to the MyDatabase database of the specified RavenDB instance:
+		Raven.Smuggler in http://localhost:8080/ dump.raven --database=MyDatabase
+	- Export from MyDatabase database of the specified RavenDB instance to the dump.raven file:
+		Raven.Smuggler out http://localhost:8080/ dump.raven --database=MyDatabase
+	- Export from Database1 to Database2 on a different RavenDB instance:
+		Raven.Smuggler between http://localhost:8080/databases/Database1 http://localhost:8081/databases/Database2
 
 Command line options:", SystemTime.UtcNow.Year);
 

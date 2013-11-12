@@ -13,6 +13,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Database.Data;
 #if SILVERLIGHT || NETFX_CORE
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
@@ -846,24 +847,46 @@ namespace Raven.Client.Connection.Async
 		{
 			return ExecuteWithReplication("GET", async url =>
 			{
-				var requestUri = url + "/docs/?start=" + start + "&pageSize=" + pageSize;
-				if (metadataOnly)
-					requestUri += "&metadata-only=true";
-				var result =
-					(RavenJArray)
-					await
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET",
-																							 credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-																   .ReadResponseJsonAsync();
+                var result = await GetDocumentsInternalAsync(start, null, pageSize, metadataOnly);
 
-				return result.Cast<RavenJObject>()
-												.ToJsonDocuments()
-							 .ToArray();
+			    return result.Cast<RavenJObject>()
+			                 .ToJsonDocuments()
+			                 .ToArray();
 			});
 		}
 
-		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+	    public Task<JsonDocument[]> GetDocumentsAsync(Etag fromEtag, int pageSize, bool metadataOnly = false)
+	    {
+            return ExecuteWithReplication("GET", async url =>
+            {
+                var result = await GetDocumentsInternalAsync(null, fromEtag, pageSize, metadataOnly);
+                return result.Cast<RavenJObject>()
+                             .ToJsonDocuments()
+                             .ToArray();
+            });
+	    }
+
+        public async Task<RavenJArray> GetDocumentsInternalAsync(int? start, Etag fromEtag, int pageSize, bool metadataOnly = false)
+        {
+            var requestUri = url + "/docs/?";
+            if (start.HasValue && start.Value > 0)
+            {
+                requestUri += "start=" + start;
+            }
+            else
+            {
+                requestUri += "etag=" + fromEtag;
+            }
+            requestUri += "&pageSize=" + pageSize;
+	        if (metadataOnly)
+	            requestUri += "&metadata-only=true";
+	        var @params = new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "GET", credentials, convention)
+	            .AddOperationHeaders(OperationsHeaders);
+	        return (RavenJArray) await jsonRequestFactory.CreateHttpJsonRequest(@params)
+	                                                    .ReadResponseJsonAsync();
+	    }
+
+	    public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
 			var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
 			return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "EVAL");
@@ -1333,7 +1356,22 @@ namespace Raven.Client.Connection.Async
 				.ToArray();
 		}
 
-		/// <summary>
+        public Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int pageSize)
+	    {
+	        return ExecuteWithReplication("GET", async operationUrl =>
+	        {
+                var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (operationUrl + "/static/?pageSize=" + pageSize + "&etag=" + startEtag).NoCache(), "GET", credentials, convention)
+	                .AddOperationHeaders(OperationsHeaders));
+
+                request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+				
+                var json = (RavenJArray)await request.ReadResponseJsonAsync();
+                return json.Select( x => JsonConvert.DeserializeObject<AttachmentInformation>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
+                            .ToArray();
+	        });
+	    }
+
+	    /// <summary>
 		/// Puts the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -1387,10 +1425,6 @@ namespace Raven.Client.Connection.Async
 				{
 					var result = await request.ReadResponseBytesAsync();
 					var memoryStream = new MemoryStream(result);
-					if (request.Response.StatusCode == HttpStatusCode.Conflict)
-					{
-						await request.ReadResponseJsonAsync();//throw the conflict exception
-					}
 					return new Attachment
 					{
 						Data = () => memoryStream,
@@ -1944,7 +1978,7 @@ namespace Raven.Client.Connection.Async
 
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
 		{
-			get { return this; }
+            get { return (IAsyncGlobalAdminDatabaseCommands)this.ForSystemDatabase(); }
 		}
 
 		async Task<AdminStatistics> IAsyncGlobalAdminDatabaseCommands.GetStatisticsAsync()
