@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Debugging;
@@ -47,6 +49,11 @@ namespace Voron
 
 		public unsafe StorageEnvironment(StorageEnvironmentOptions options)
 		{
+			if(options == null)
+				throw new ArgumentNullException("options");
+
+			Debug.Assert(options.DataPager != null);
+
 			try
 			{
 				_options = options;
