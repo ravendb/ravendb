@@ -68,9 +68,9 @@ namespace Voron
             return new PureMemoryStorageEnvironmentOptions();
         }
 
-        public static StorageEnvironmentOptions ForPath(string path, FlushMode flushMode = FlushMode.Full)
+        public static StorageEnvironmentOptions ForPath(string path)
         {
-            return new DirectoryStorageEnvironmentOptions(path, flushMode);
+            return new DirectoryStorageEnvironmentOptions(path);
         }
 
 		public IDisposable AllowManualFlushing()
@@ -84,16 +84,14 @@ namespace Voron
 
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
-            private readonly FlushMode _flushMode;
             private readonly string _basePath;
             private readonly Lazy<IVirtualPager> _dataPager;
 
             private readonly ConcurrentDictionary<string, Lazy<IVirtualPager>> _journals =
                 new ConcurrentDictionary<string, Lazy<IVirtualPager>>(StringComparer.OrdinalIgnoreCase);
 
-            public DirectoryStorageEnvironmentOptions(string basePath, FlushMode flushMode)
+            public DirectoryStorageEnvironmentOptions(string basePath)
             {
-                _flushMode = flushMode;
                 _basePath = Path.GetFullPath(basePath);
                 _dataPager = new Lazy<IVirtualPager>(CreateDataPager);
             }
@@ -104,7 +102,7 @@ namespace Voron
                 {
                     Directory.CreateDirectory(_basePath);
                 }
-                return new FilePager(Path.Combine(_basePath, "db.voron"), _flushMode);
+                return new FilePager(Path.Combine(_basePath, "db.voron"), NativeFileAttributes.Normal);
             }
 
             public override IVirtualPager DataPager
@@ -119,11 +117,11 @@ namespace Voron
             {
 	            var name = LogName(number);
 				var path = Path.Combine(_basePath, name);
-                var orAdd = _journals.GetOrAdd(name, _ => new Lazy<IVirtualPager>(() => new MemoryMapPager(path, _flushMode)));
+                var orAdd = _journals.GetOrAdd(name, _ => new Lazy<IVirtualPager>(() => new MemoryMapPager(path)));
 
 				if (orAdd.Value.Disposed)
 				{
-					var newPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(path, _flushMode));
+					var newPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(path));
 					if (_journals.TryUpdate(name, newPager, orAdd) == false)
 						throw new InvalidOperationException("Could not update journal pager");
 					orAdd = newPager;

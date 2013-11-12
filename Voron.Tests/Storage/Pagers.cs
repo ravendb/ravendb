@@ -25,7 +25,7 @@ namespace Voron.Tests.Storage
         [Fact]
         public void FilePagerReleasesPagerState()
         {
-            PagerReleasesPagerState(() => new FilePager("db.voron"));
+            PagerReleasesPagerState(() => new FilePager("db.voron", NativeFileAttributes.Normal));
             File.Delete("db.voron");
         }
 

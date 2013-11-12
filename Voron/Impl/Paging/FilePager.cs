@@ -12,14 +12,12 @@ namespace Voron.Impl
 {
 	public unsafe class FilePager : AbstractPager
 	{
-		private readonly FlushMode _flushMode;
 		private readonly FileStream _fileStream;
 		private readonly IntPtr _fileHandle;
-		private FileInfo _fileInfo;
+		private readonly FileInfo _fileInfo;
 
-		public FilePager(string file, FlushMode flushMode = FlushMode.Full)
+		public FilePager(string file, NativeFileAttributes fileAttributes)
 		{
-			_flushMode = flushMode;
 			_fileInfo = new FileInfo(file);
 
 			var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
@@ -28,7 +26,7 @@ namespace Voron.Impl
 			                                              NativeFileAccess.GenericRead | NativeFileAccess.GenericWrite,
 			                                              NativeFileShare.Read, IntPtr.Zero,
 			                                              NativeFileCreationDisposition.OpenAlways,
-														  NativeFileAttributes.Normal, //TODO here we could pass Write_Through or (and) NoBuffering
+                                                          fileAttributes,
 														  IntPtr.Zero);
 
 			if (safeHandle.IsInvalid)
@@ -120,8 +118,7 @@ namespace Voron.Impl
 
 		public override void Sync()
 		{
-			if (_flushMode == FlushMode.Full)
-				_fileStream.Flush(true);
+		    _fileStream.Flush(true);
 		}
 
 		public override void Write(Page page, long? pageNumber)

@@ -9,9 +9,8 @@ namespace Voron.Impl
 {
 	public unsafe class MemoryMapPager : AbstractPager
 	{
-		private readonly FlushMode _flushMode;
 		private readonly FileStream _fileStream;
-		private FileInfo _fileInfo;
+		private readonly FileInfo _fileInfo;
 
 		[DllImport("kernel32.dll", SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
@@ -21,9 +20,8 @@ namespace Voron.Impl
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
-		public MemoryMapPager(string file, FlushMode flushMode = FlushMode.Full)
+		public MemoryMapPager(string file)
 		{
-			_flushMode = flushMode;
 			_fileInfo = new FileInfo(file);
 			var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
 			_fileStream = _fileInfo.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
@@ -87,8 +85,7 @@ namespace Voron.Impl
 
 		public override void Sync()
 		{
-		    if (_flushMode == FlushMode.Full)
-                FlushFileBuffers(_fileStream.SafeFileHandle);
+             FlushFileBuffers(_fileStream.SafeFileHandle);
 		}
 
 		public override void Write(Page page, long? pageNumber)
@@ -103,9 +100,6 @@ namespace Voron.Impl
 
 		public override void Flush(long startPage, long count)
 		{
-			if(_flushMode == FlushMode.None)
-				return;
-
 			long numberOfBytesToFlush = count * PageSize;
 			long start = startPage * PageSize;
 			FlushViewOfFile(PagerState.Base + start, new IntPtr(numberOfBytesToFlush));
