@@ -250,22 +250,23 @@ namespace Voron.Impl.Journal
 
 		internal void WriteFileHeader(long? pageToWriteHeader = null)
 		{
-			var fileHeaderPage = _dataPager.TempPage;
-
-			long page = pageToWriteHeader ?? _dataFlushCounter & 1;
-
-			var header = (FileHeader*)(fileHeaderPage.Base);
-			header->MagicMarker = Constants.MagicMarker;
-			header->Version = Constants.CurrentVersion;
-			header->TransactionId = _fileHeader->TransactionId;
-			header->LastPageNumber = _fileHeader->LastPageNumber;
-
-			header->Root = _fileHeader->Root;
-			header->FreeSpace = _fileHeader->FreeSpace;
-			header->Journal = _fileHeader->Journal;
-
 			lock (_fileHeaderProtector)
 			{
+				var fileHeaderPage = _dataPager.TempPage;
+
+				long page = pageToWriteHeader ?? _dataFlushCounter & 1;
+
+				var header = (FileHeader*)(fileHeaderPage.Base);
+				header->MagicMarker = Constants.MagicMarker;
+				header->Version = Constants.CurrentVersion;
+				header->TransactionId = _fileHeader->TransactionId;
+				header->LastPageNumber = _fileHeader->LastPageNumber;
+
+				header->Root = _fileHeader->Root;
+				header->FreeSpace = _fileHeader->FreeSpace;
+				header->Journal = _fileHeader->Journal;
+				header->IncrementalBackup = _fileHeader->IncrementalBackup;
+
 				_dataPager.Write(fileHeaderPage, page);
 			}
 		}
@@ -302,19 +303,45 @@ namespace Voron.Impl.Journal
 			{
 				CurrentFile = _splitJournalFiles[0];
 
-				var relevantFile = Files.FirstOrDefault(file => file.Number == CurrentFile.Number);
-				Debug.Assert(relevantFile != null);
+				List<JournalFile> filesToRelease = null;
+				JournalFile relevantFile;
 
-				var filesToRelease = Files.GetRange(Files.IndexOf(relevantFile) + 1, Files.Count - Files.IndexOf(relevantFile) - 1)
-										  .ToList();
-				filesToRelease.ForEach(file => file.Release());
+				_locker.EnterReadLock();
+				try
+				{
+					relevantFile = Files.FirstOrDefault(file => file.Number == CurrentFile.Number);
+					Debug.Assert(relevantFile != null);
 
-				Files = Files.GetRange(0, Files.IndexOf(relevantFile) + 1);
+					filesToRelease = Files.GetRange(Files.IndexOf(relevantFile) + 1, Files.Count - Files.IndexOf(relevantFile) - 1)
+					                      .ToList();
+				}
+				finally
+				{
+					_locker.ExitReadLock();
 
-				_logIndex -= _splitJournalFiles.Count;
-				_splitJournalFiles.Clear();
-				UpdateLogInfo();
-				WriteFileHeader();
+					if (filesToRelease != null) 
+						filesToRelease.ForEach(file => file.Release());
+				}
+
+				_locker.EnterWriteLock();
+				try
+				{
+					Files = Files.GetRange(0, Files.IndexOf(relevantFile) + 1);
+
+					_logIndex -= _splitJournalFiles.Count;
+					_splitJournalFiles.Clear();
+					UpdateLogInfo();
+					WriteFileHeader();
+				}
+				finally
+				{
+					_locker.ExitWriteLock();
+				}
+
+				lock (_fileHeaderProtector)
+				{
+					_dataPager.Sync(); // sync updated file header
+				}
 			}
 
 			CurrentFile.TransactionRollback(tx);
