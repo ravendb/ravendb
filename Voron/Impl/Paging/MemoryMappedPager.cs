@@ -2,6 +2,7 @@
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 using Voron.Trees;
 
 namespace Voron.Impl
@@ -15,6 +16,10 @@ namespace Voron.Impl
 		[DllImport("kernel32.dll", SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
 		extern static bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
 		public MemoryMapPager(string file, FlushMode flushMode = FlushMode.Full)
 		{
@@ -82,8 +87,8 @@ namespace Voron.Impl
 
 		public override void Sync()
 		{
-			if (_flushMode == FlushMode.Full)
-				_fileStream.Flush(true);
+		    if (_flushMode == FlushMode.Full)
+                FlushFileBuffers(_fileStream.SafeFileHandle);
 		}
 
 		public override void Write(Page page, long? pageNumber)
