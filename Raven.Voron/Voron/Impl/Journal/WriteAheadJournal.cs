@@ -41,6 +41,11 @@ namespace Voron.Impl.Journal
 
 		public WriteAheadJournal(StorageEnvironment env)
 		{
+			if(env == null)
+				throw new ArgumentNullException("env");
+			Debug.Assert(env.Options != null);
+			Debug.Assert(env.Options.DataPager != null);
+
 			_env = env;
 			_dataPager = _env.Options.DataPager;
 			_fileHeader = GetEmptyFileHeader();
@@ -533,7 +538,10 @@ namespace Voron.Impl.Journal
 			private ImmutableList<JournalFile> _jrnls;
 
 			public JournalApplicator(WriteAheadJournal waj, long oldestActiveTransaction)
-			{
+			{				
+				if(_waj == null)
+					throw new ArgumentNullException("waj");
+
 				_waj = waj;
 				_oldestActiveTransaction = oldestActiveTransaction;
 			}
@@ -570,8 +578,10 @@ namespace Voron.Impl.Journal
 												  .Select(x => x.Value.ReadPage(null, x.Key))
 												  .ToList();
 
-					var last = sortedPages.Last();
+					var last = sortedPages.LastOrDefault();
 
+					Debug.Assert(last != null);
+					
 					var lastPage = last.IsOverflow == false ? 1 :
 						_waj._env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
 

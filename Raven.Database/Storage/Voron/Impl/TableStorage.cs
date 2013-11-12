@@ -22,7 +22,12 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public TableStorage(IPersistanceSource persistanceSource)
 		{
+			if(persistanceSource == null)
+				throw new ArgumentNullException("persistanceSource");
+
 			this.persistanceSource = persistanceSource;
+			
+			Debug.Assert(persistanceSource.Options != null);
 			env = new StorageEnvironment(persistanceSource.Options);
 
 			Initialize();
