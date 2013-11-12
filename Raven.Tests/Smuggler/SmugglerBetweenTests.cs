@@ -42,12 +42,12 @@ namespace Raven.Tests.Smuggler
                     {
                         From = new RavenConnectionStringOptions
                         {
-                            Url = server1.Server.Configuration.ServerUrl,
+                            Url = "http://localhost:8079",
                             DefaultDatabase = "Database1",
                         },
                         To = new RavenConnectionStringOptions
                         {
-                            Url = server1.Server.Configuration.ServerUrl,
+                            Url = "http://localhost:8078",
                             DefaultDatabase = "Database2",
                         },
                     });
