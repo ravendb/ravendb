@@ -539,7 +539,7 @@ namespace Voron.Impl.Journal
 
 			public JournalApplicator(WriteAheadJournal waj, long oldestActiveTransaction)
 			{				
-				if(_waj == null)
+				if(waj == null)
 					throw new ArgumentNullException("waj");
 
 				_waj = waj;
