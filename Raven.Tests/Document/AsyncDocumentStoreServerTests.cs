@@ -216,7 +216,7 @@ namespace Raven.Tests.Document
 	                query = await DocumentStore.AsyncDatabaseCommands.QueryAsync("dynamic",
 	                                                                             new IndexQuery
 	                                                                             {
-		                                                                             FieldsToFetch = new[] {"Contacts,Surname"}
+	                                                                                 FieldsToFetch = new[] {"Contacts,Surname"}
 	                                                                             },
 	                                                                             new string[0]);
 

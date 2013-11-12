@@ -19,6 +19,7 @@ namespace Raven.Tests.Bugs
 		}
 
 		[IISExpressInstalledFact]
+		[TimeBombedFact(2013, 12, 31)]
 		public void MultiThreadedInsert()
 		{
 			const int threadCount = 4;

@@ -3,7 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Extensions;
@@ -29,7 +31,7 @@ namespace Raven.Tests.Bundles.Encryption
 						{"Raven/Encryption/EncryptIndexes", "True"}
 					},
 				};
-				await store.AsyncDatabaseCommands.CreateDatabaseAsync(db1);
+				await store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(db1);
 
 				using (var session = store.OpenAsyncSession("Db1"))
 				{

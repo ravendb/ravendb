@@ -140,7 +140,7 @@ namespace Raven.Client.Embedded
 
 		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
 		{
-			return new CompletedTask<MultiLoadResult>(databaseCommands.Get(keys, includes,transformer: transformer, queryInputs:queryInputs, metadataOnly: metadataOnly));
+			return new CompletedTask<MultiLoadResult>(databaseCommands.Get(keys, includes, transformer: transformer, queryInputs: queryInputs, metadataOnly: metadataOnly));
 		}
 
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false)
@@ -357,8 +357,9 @@ namespace Raven.Client.Embedded
 			return new CompletedTask();
 		}
 
-		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null ) {
-			return new CompletedTask<FacetResults>( databaseCommands.GetFacets( index, query, facetSetupDoc, start, pageSize ) );
+		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null)
+		{
+			return new CompletedTask<FacetResults>(databaseCommands.GetFacets(index, query, facetSetupDoc, start, pageSize));
 		}
 
 		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null)
@@ -380,7 +381,8 @@ namespace Raven.Client.Embedded
 
 		public Task<BuildNumber> GetBuildNumberAsync()
 		{
-			return new CompletedTask<BuildNumber>(databaseCommands.GetBuildNumber());			
+			// No sync equivalent on IDatabaseCommands.
+			throw new NotSupportedException();
 		}
 
 		// TODO arek
@@ -436,11 +438,11 @@ namespace Raven.Client.Embedded
 		}
 
 		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
-		                            int pageSize = 2147483647)
+									int pageSize = 2147483647)
 		{
 			var streamDocs = databaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
 			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(streamDocs));
-	
+
 		}
 
 

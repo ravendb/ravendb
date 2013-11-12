@@ -103,6 +103,17 @@ namespace Raven.Database.Server.Responders
 				Response = new MultiGetHttpResponse(getResponse, realContext.Response);
 			}
 
+			public MultiGetHttpContext(InMemoryRavenConfiguration configuration, GetRequest req, string tenantId)
+			{
+				this.configuration = configuration;
+				this.tenantId = tenantId;
+				getResponse = new GetResponse();
+				if (req == null)
+					return;
+				Request = new MultiGetHttpRequest(req, realContext.Request);
+				Response = new MultiGetHttpResponse(getResponse, realContext.Response);
+			}
+
 			public GetResponse Complete()
 			{
 				if (getResponse.Result != null)

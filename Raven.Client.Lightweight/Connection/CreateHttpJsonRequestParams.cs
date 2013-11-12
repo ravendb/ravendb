@@ -32,7 +32,7 @@ namespace Raven.Client.Connection
 			operationsHeadersDictionary = operationsHeaders;
 			foreach (var operationsHeader in operationsHeaders)
 			{
-				operationHeadersHash = (operationHeadersHash*397) ^ operationsHeader.Key.GetHashCode();
+				operationHeadersHash = (operationHeadersHash * 397) ^ operationsHeader.Key.GetHashCode();
 				if (operationsHeader.Value != null)
 				{
 					operationHeadersHash = (operationHeadersHash * 397) ^ operationsHeader.Value.GetHashCode();
@@ -53,7 +53,7 @@ namespace Raven.Client.Connection
 			{
 				operationHeadersHash = (operationHeadersHash * 397) ^ operationsHeader.GetHashCode();
 				var values = operationsHeaders.GetValues(operationsHeader);
-				if (values == null) 
+				if (values == null)
 					continue;
 
 				foreach (var header in values.Where(header => header != null))
@@ -73,7 +73,7 @@ namespace Raven.Client.Connection
 					webRequest.Headers[kvp.Key] = kvp.Value;
 				}
 			}
-			if(operationsHeadersCollection != null)
+			if (operationsHeadersCollection != null)
 			{
 				foreach (string header in operationsHeadersCollection)
 				{
@@ -93,7 +93,7 @@ namespace Raven.Client.Connection
 		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, ICredentials credentials, DocumentConvention convention)
 			: this(self, url, method, new RavenJObject(), credentials, convention)
 		{
-			
+
 		}
 
 		private int operationHeadersHash;

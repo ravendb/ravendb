@@ -21,7 +21,7 @@ namespace Raven.Database.Config
 
 			// Authentication
 			{"Raven/AnonymousAccess", "string", "Get,All,None", "Determines what actions an anonymous user can do. Get - read only, All - read & write, None - allows access to only authenticated users. Default: Get."},
-			{"Raven/OAuthTokenServer", "string", null, "The url clients should use for authenticating when using OAuth mode. Default: http://RavenDB-Server-Url/OAuth/AccessToken - the internal OAuth server"},
+			{"Raven/OAuthTokenServer", "string", null, "The url clients should use for authenticating when using OAuth mode. Default: http://RavenDB-Server-Url/OAuth/API-Key - the internal OAuth server"},
 			{"Raven/OAuthTokenCertificate", "string", null, "The base 64 to the OAuth key use to communicate with the server. Default: none. If no key is specified, one will be automatically created."},
 
 			// Network

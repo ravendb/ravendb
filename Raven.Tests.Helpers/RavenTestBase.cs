@@ -117,7 +117,8 @@ namespace Raven.Tests.Helpers
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
 
-		public IDocumentStore NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
+		public IDocumentStore 
+			NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
 			 bool runInMemory = true,
 			string dataDirectory = null,
 			string requestedStorage = null,
@@ -176,7 +177,7 @@ namespace Raven.Tests.Helpers
 				DataDirectory = dataDirectory ?? NewDataPath(),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 #if DEBUG
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif
 				DefaultStorageTypeName = storageType,
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin
@@ -217,7 +218,7 @@ namespace Raven.Tests.Helpers
 
 			if (enableAuthentication)
 			{
-				EnableAuthentication(ravenDbServer.Database);
+				EnableAuthentication(ravenDbServer.SystemDatabase);
 				ModifyConfiguration(ravenConfiguration);
 			}
 
@@ -258,7 +259,7 @@ namespace Raven.Tests.Helpers
 
 		protected virtual void CreateDefaultIndexes(IDocumentStore documentStore)
 		{
-			new RavenDocumentsByEntityName().Execute(documentStore);
+			new RavenDocumentsByEntityName().Execute(documentStore.DatabaseCommands, documentStore.Conventions);
 		}
 
 		public static void WaitForIndexing(IDocumentStore store, string db = null)

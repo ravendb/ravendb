@@ -9,7 +9,7 @@ namespace Raven.Abstractions.Connection
 		/// <returns>
 		/// Returns <see cref="T:System.Collections.Generic.IEnumerable`1"/>.
 		/// </returns>
-		public static string GetFirstValue(this HttpResponseHeaders headers, string name)
+		public static string GetFirstValue(this HttpHeaders headers, string name)
 		{
 			IEnumerable<string> values;
 			if (!headers.TryGetValues(name, out values))
@@ -20,7 +20,7 @@ namespace Raven.Abstractions.Connection
 		/// <returns>
 		/// Returns <see cref="T:System.Collections.Generic.IEnumerable`1"/>.
 		/// </returns>
-		public static string[] GetAllValues(this HttpResponseHeaders headers, string name)
+		public static string[] GetAllValues(this HttpHeaders headers, string name)
 		{
 			IEnumerable<string> values;
 			if (!headers.TryGetValues(name, out values))

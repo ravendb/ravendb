@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Abstractions.Connection;
 using Raven.Client.Document;
 using Xunit;
 using Raven.Client.Extensions;

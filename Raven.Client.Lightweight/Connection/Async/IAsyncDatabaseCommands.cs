@@ -46,7 +46,7 @@ namespace Raven.Client.Connection.Async
 		/// Admin operations for current database
 		/// </summary>
 		IAsyncAdminDatabaseCommands Admin { get; }
-		
+
 		IAsyncInfoDatabaseCommands Info { get; }
 
 		/// <summary>
@@ -184,7 +184,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="etag">The etag.</param>
 		/// <param name="document">The document.</param>
 		/// <param name="metadata">The metadata.</param>
-        Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata);
+		Task<PutResult> PutAsync(string key, Etag etag, RavenJObject document, RavenJObject metadata);
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -274,9 +274,9 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-        /// <param name="stream">The data stream.</param>
+		/// <param name="stream">The data stream.</param>
 		/// <param name="metadata">The metadata.</param>
-        Task PutAttachmentAsync(string key, Etag etag, Stream stream, RavenJObject metadata);
+		Task PutAttachmentAsync(string key, Etag etag, Stream stream, RavenJObject metadata);
 
 		/// <summary>
 		/// Gets the attachment by the specified key asynchronously
@@ -290,7 +290,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="key">The key.</param>
 		/// <param name="etag">The etag.</param>
-        Task DeleteAttachmentAsync(string key, Etag etag);
+		Task DeleteAttachmentAsync(string key, Etag etag);
 
 		///<summary>
 		/// Get the possible terms for the specified field in the index asynchronously
@@ -336,7 +336,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null );
+		Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null);
 
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
@@ -424,7 +424,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		Task CompactDatabaseAsync(string databaseName);
 	}
-	
+
 	public interface IAsyncAdminDatabaseCommands
 	{
 		/// <summary>

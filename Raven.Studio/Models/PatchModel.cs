@@ -768,21 +768,21 @@ namespace Raven.Studio.Models
 			                    .Finally(() => patchModel.InProcess.Value = false);
                             break;
 
-                        case PatchOnOptions.Collection:
-                            ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(PatchModel.CollectionsIndex,
-                                                                                                new IndexQuery { Query = "Tag:" + patchModel.SelectedItem }, request)
+						case PatchOnOptions.Collection:
+							ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(PatchModel.CollectionsIndex,
+																								new IndexQuery { Query = "Tag:" + patchModel.SelectedItem }, request)
 																								.ContinueOnSuccessInTheUIThread(() => patchModel.UpdateCollectionSource())
-                                                                                                 .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
+																								 .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
 																								 .Finally(() => patchModel.InProcess.Value = false);
-                            break;
+							break;
 
-                        case PatchOnOptions.Index:
-                            ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(patchModel.SelectedItem, new IndexQuery { Query = patchModel.QueryDoc.CurrentSnapshot.Text },
-                                                                                                request)
+						case PatchOnOptions.Index:
+							ApplicationModel.Database.Value.AsyncDatabaseCommands.UpdateByIndex(patchModel.SelectedItem, new IndexQuery { Query = patchModel.QueryDoc.CurrentSnapshot.Text },
+																								request)
 																								.ContinueOnSuccessInTheUIThread(() => patchModel.UpdateCollectionSource())
-                                                                                                 .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
+																								 .ContinueOnUIThread(t => { if (t.IsFaulted) patchModel.HandlePatchError(t.Exception); })
 																								 .Finally(() => patchModel.InProcess.Value = false);
-                            break;
+							break;
                     }
 
 					

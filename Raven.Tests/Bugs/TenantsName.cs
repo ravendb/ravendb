@@ -27,7 +27,7 @@ namespace Raven.Tests.Bugs
 
 				var databaseCommands = documentStore.DatabaseCommands.ForDatabase(tenantName);
 				exception = Assert.Throws<InvalidOperationException>(() => databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject()));
-				Assert.Equal("Could not find a database named: %20%20%20Tenant%20with%20some%20%20%20%20spaces%20%20%20%20%20in%20it%20", exception.Message);
+				Assert.Equal("Could not find a database named: " + tenantName, exception.Message);
 			}
 		}
 	}

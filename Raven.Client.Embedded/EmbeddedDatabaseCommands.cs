@@ -10,6 +10,7 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Exceptions;
@@ -486,8 +487,8 @@ namespace Raven.Client.Embedded
 		{
             if(query.PageSizeSet)
 			    query.PageSize = Math.Min(query.PageSize, database.Configuration.MaxPageSize);
-			CurrentOperationContext.Headers.Value = OperationsHeaders;
 
+			UpdateQueryFromHeaders(query, OperationsHeaders);
 			// metadataOnly is not supported for embedded
 
 			// indexEntriesOnly is not supported for embedded
@@ -530,6 +531,31 @@ namespace Raven.Client.Embedded
 			                                       () => Query(index, query, includes, metadataOnly, indexEntriesOnly));
 		}
 
+		private void UpdateQueryFromHeaders(IndexQuery query, NameValueCollection headers)
+		{
+			query.SortHints = new Dictionary<string, SortOptions>();
+
+			foreach (var header in headers.AllKeys.Where(key => key.StartsWith("SortHint-")))
+			{
+				var value = headers[header];
+				if (string.IsNullOrEmpty(value))
+					continue;
+				SortOptions sort;
+				Enum.TryParse(value, true, out sort);
+
+				var key = header;
+
+				if(DateTime.Now > new DateTime(2013,11,30))
+					throw new Exception("This is an ugly code that was supposed to be fixed by this time");
+				if (sort == SortOptions.Long && key.EndsWith("_Range"))
+				{
+					key = key.Substring(0, key.Length - "_Range".Length);
+				}
+
+				query.SortHints.Add(key, sort);
+			}
+		}
+
 		/// <summary>
 		/// Queries the specified index in the Raven flavored Lucene query syntax. Will return *all* results, regardless
 		/// of the number of items that might be returned.
@@ -553,12 +579,18 @@ namespace Raven.Client.Embedded
 						// the cache for that, to avoid filling it up very quickly
 						using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 						{
-							database.Query(index, query, information =>
+							database.TransactionalStorage.Batch(accessor =>
 							{
-								localQueryHeaderInfo = information;
-								waitForHeaders.Set();
-								setWaitHandle = false;
-							}, items.Add);
+								using (var op = new DocumentDatabase.DatabaseQueryOperation(database, index, query, accessor))
+								{
+									op.Init();
+									localQueryHeaderInfo = op.Header;
+									waitForHeaders.Set();
+									setWaitHandle = false;
+									op.Execute(items.Add);
+								}	
+							});
+							
 						}
 					}
 					catch (Exception e)

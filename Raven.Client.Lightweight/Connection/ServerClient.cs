@@ -103,7 +103,8 @@ namespace Raven.Client.Connection
 		/// <value>The operations headers.</value>
 		public NameValueCollection OperationsHeaders
 		{
-			get; set;
+			get;
+			set;
 		}
 
 		/// <summary>
@@ -117,12 +118,12 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("GET", u => DirectGet(u, key));
 		}
 
-	    public IGlobalAdminDatabaseCommands GlobalAdmin
-	    {
-	        get { return new AdminServerClient(this); }
-	    }
+		public IGlobalAdminDatabaseCommands GlobalAdmin
+		{
+			get { return new AdminServerClient(this); }
+		}
 
-	    /// <summary>
+		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
@@ -154,7 +155,7 @@ namespace Raven.Client.Connection
 			});
 		}
 
-		public HttpJsonRequest CreateRequest(string requestUrl, string method,  bool disableRequestCompression = false)
+		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
@@ -173,7 +174,7 @@ namespace Raven.Client.Connection
 			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
 
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams)
-			                         .AddReplicationStatusHeaders(url, currentServerUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+									 .AddReplicationStatusHeaders(url, currentServerUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 		}
 
 		internal void ExecuteWithReplication(string method, Action<string> operation)
@@ -211,7 +212,7 @@ namespace Raven.Client.Connection
 			if (key.Length > 127 || string.IsNullOrEmpty(transformer) == false)
 			{
 				// avoid hitting UrlSegmentMaxLength limits in Http.sys
-				var multiLoadResult = DirectGet(new[] {key}, serverUrl, new string[0], transformer, new Dictionary<string, RavenJToken>(), false);
+				var multiLoadResult = DirectGet(new[] { key }, serverUrl, new string[0], transformer, new Dictionary<string, RavenJToken>(), false);
 				var result = multiLoadResult.Results.FirstOrDefault();
 				if (result == null)
 					return null;
@@ -219,7 +220,7 @@ namespace Raven.Client.Connection
 			}
 
 			var metadata = new RavenJObject();
-		    var actualUrl = serverUrl + "/docs/" + Uri.EscapeDataString(key);
+			var actualUrl = serverUrl + "/docs/" + Uri.EscapeDataString(key);
 
 			AddTransactionInformation(metadata);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -273,15 +274,15 @@ namespace Raven.Client.Connection
 
 		private void HandleReplicationStatusChanges(string forceCheck, string primaryUrl, string currentUrl)
 		{
-			if (primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase)) 
+			if (primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
 				return;
 
-				bool shouldForceCheck;
-				if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
-				{
+			bool shouldForceCheck;
+			if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
+			{
 				replicationInformer.ForceCheck(primaryUrl, shouldForceCheck);
-				}
 			}
+		}
 
 		private ConflictException TryResolveConflictOrCreateConcurrencyException(string key, RavenJObject conflictsDoc, Etag etag)
 		{
@@ -367,7 +368,7 @@ namespace Raven.Client.Connection
 			AddTransactionInformation(metadata);
 			var actualUrl = string.Format("{0}/docs?startsWith={1}&matches={4}&exclude={5}&start={2}&pageSize={3}", operationUrl,
 										  Uri.EscapeDataString(keyPrefix), start.ToInvariantString(), pageSize.ToInvariantString(),
-                                          Uri.EscapeDataString(matches ?? ""), Uri.EscapeDataString(exclude ?? ""));
+										  Uri.EscapeDataString(matches ?? ""), Uri.EscapeDataString(exclude ?? ""));
 			if (metadataOnly)
 				actualUrl += "&metadata-only=true";
 
@@ -909,7 +910,7 @@ namespace Raven.Client.Connection
 			EnsureIsNotNullOrEmpty(name, "name");
 
 			return ExecuteWithReplication("PUT", operationUrl => DirectPutTransformer(name, operationUrl, indexDef));
-	
+
 		}
 
 		/// <summary>
@@ -938,110 +939,110 @@ namespace Raven.Client.Connection
 			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
 
 
-            try
-            {
-			    var responseJson = (RavenJObject)request.ReadResponseJson();
-			    return responseJson.Value<string>("Transformer");
-            }
-            catch (WebException e)
-            {
-                Exception newException;
-                if (ShouldRethrowIndexException(e, out newException))
-                {
-                    if (newException != null)
-                        throw new TransformCompilationException(newException.Message, e);
-                }
-                throw;
-            }
+			try
+			{
+				var responseJson = (RavenJObject)request.ReadResponseJson();
+				return responseJson.Value<string>("Transformer");
+			}
+			catch (WebException e)
+			{
+				Exception newException;
+				if (ShouldRethrowIndexException(e, out newException))
+				{
+					if (newException != null)
+						throw new TransformCompilationException(newException.Message, e);
+				}
+				throw;
+			}
 		}
 
-	    public string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)
-	    {
-	        string requestUri = operationUrl + "/indexes/" + name;
+		public string DirectPutIndex(string name, string operationUrl, bool overwrite, IndexDefinition definition)
+		{
+			string requestUri = operationUrl + "/indexes/" + name;
 
-	        var checkIndexExists = jsonRequestFactory.CreateHttpJsonRequest(
-	            new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
-	                .AddOperationHeaders(OperationsHeaders))
-	                                                 .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer,
-	                                                                              convention.FailoverBehavior,
-	                                                                              HandleReplicationStatusChanges);
+			var checkIndexExists = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, requestUri, "HEAD", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+													 .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer,
+																				  convention.FailoverBehavior,
+																				  HandleReplicationStatusChanges);
 
 
-	        try
-	        {
-	            // If the index doesn't exist this will throw a NotFound exception and continue with a PUT request
-	            checkIndexExists.ExecuteRequest();
-	            if (!overwrite)
-	                throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
-	        }
-	        catch (WebException e)
-	        {
-	            Exception newException;
-	            if (ShouldRethrowIndexException(e, out newException))
-	            {
-	                if (newException != null)
-	                    throw newException;
-	                throw;
-	            }
-                
-	        }
+			try
+			{
+				// If the index doesn't exist this will throw a NotFound exception and continue with a PUT request
+				checkIndexExists.ExecuteRequest();
+				if (!overwrite)
+					throw new InvalidOperationException("Cannot put index: " + name + ", index already exists");
+			}
+			catch (WebException e)
+			{
+				Exception newException;
+				if (ShouldRethrowIndexException(e, out newException))
+				{
+					if (newException != null)
+						throw newException;
+					throw;
+				}
 
-	        var request = jsonRequestFactory.CreateHttpJsonRequest(
-	            new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
-	                .AddOperationHeaders(OperationsHeaders))
-	                                        .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer,
-	                                                                     convention.FailoverBehavior,
-	                                                                     HandleReplicationStatusChanges);
+			}
 
-	        request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
+			var request = jsonRequestFactory.CreateHttpJsonRequest(
+				new CreateHttpJsonRequestParams(this, requestUri, "PUT", credentials, convention)
+					.AddOperationHeaders(OperationsHeaders))
+											.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer,
+																		 convention.FailoverBehavior,
+																		 HandleReplicationStatusChanges);
 
-	        try
-	        {
-	            var responseJson = (RavenJObject) request.ReadResponseJson();
-	            return responseJson.Value<string>("Index");
-	        }
-	        catch (WebException e)
-	        {
-                Exception newException;
-                if (ShouldRethrowIndexException(e, out newException))
-                {
-                    if (newException != null)
-                        throw newException;
-                }
-                throw;
-            }
-	    }
+			request.Write(JsonConvert.SerializeObject(definition, Default.Converters));
 
-	    private static bool ShouldRethrowIndexException(WebException e, out Exception newEx)
-	    {
-	        newEx = null;
-	        var httpWebResponse = e.Response as HttpWebResponse;
-	        if (httpWebResponse == null)
-	            return true;
+			try
+			{
+				var responseJson = (RavenJObject)request.ReadResponseJson();
+				return responseJson.Value<string>("Index");
+			}
+			catch (WebException e)
+			{
+				Exception newException;
+				if (ShouldRethrowIndexException(e, out newException))
+				{
+					if (newException != null)
+						throw newException;
+				}
+				throw;
+			}
+		}
 
-	        if (httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
-	        {
-	            var error = e.TryReadErrorResponseObject(
-	                new {Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = ""});
+		private static bool ShouldRethrowIndexException(WebException e, out Exception newEx)
+		{
+			newEx = null;
+			var httpWebResponse = e.Response as HttpWebResponse;
+			if (httpWebResponse == null)
+				return true;
 
-	            if (error == null)
-	            {
-	                return true;
-	            }
+			if (httpWebResponse.StatusCode == HttpStatusCode.InternalServerError)
+			{
+				var error = e.TryReadErrorResponseObject(
+					new { Error = "", Message = "", IndexDefinitionProperty = "", ProblematicText = "" });
 
-                newEx = new IndexCompilationException(error.Message, e)
-	            {
-	                IndexDefinitionProperty = error.IndexDefinitionProperty,
-	                ProblematicText = error.ProblematicText
-	            };
+				if (error == null)
+				{
+					return true;
+				}
 
-	            return true;
-	        }
+				newEx = new IndexCompilationException(error.Message, e)
+				{
+					IndexDefinitionProperty = error.IndexDefinitionProperty,
+					ProblematicText = error.ProblematicText
+				};
 
-	        return (httpWebResponse.StatusCode != HttpStatusCode.NotFound);
-	    }
+				return true;
+			}
 
-	    /// <summary>
+			return (httpWebResponse.StatusCode != HttpStatusCode.NotFound);
+		}
+
+		/// <summary>
 		/// Puts the index definition for the specified name
 		/// </summary>
 		/// <typeparam name="TDocument">The type of the document.</typeparam>
@@ -1153,20 +1154,20 @@ namespace Raven.Client.Connection
 				{
 					sb.Append("startsWith=").Append(Uri.EscapeDataString(startsWith)).Append("&");
 				}
-				if(matches != null)
+				if (matches != null)
 				{
 					sb.Append("matches=").Append(Uri.EscapeDataString(matches)).Append("&");
 				}
-			    if (exclude != null)
-			    {
-			        sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
-			    }
+				if (exclude != null)
+				{
+					sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
+				}
 			}
-			
+
 			if (start != 0)
 				sb.Append("start=").Append(start).Append("&");
-			if(pageSize!=int.MaxValue)
-                sb.Append("pageSize=").Append(pageSize).Append("&");
+			if (pageSize != int.MaxValue)
+				sb.Append("pageSize=").Append(pageSize).Append("&");
 
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -1212,7 +1213,7 @@ namespace Raven.Client.Connection
 
 				while (true)
 				{
-					if(reader.Read() == false)
+					if (reader.Read() == false)
 						throw new InvalidOperationException("Unexpected end of data");
 
 					if (reader.TokenType == JsonToken.EndArray)
@@ -1239,9 +1240,9 @@ namespace Raven.Client.Connection
 				{
 					AvoidCachingRequest = query.DisableCaching
 				}.AddOperationHeaders(OperationsHeaders))
-			    .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer,
-			                                    convention.FailoverBehavior,
-			                                    HandleReplicationStatusChanges);
+				.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer,
+												convention.FailoverBehavior,
+												HandleReplicationStatusChanges);
 
 			RavenJObject json;
 			try
@@ -1287,30 +1288,30 @@ namespace Raven.Client.Connection
 			request.ExecuteRequest();
 		}
 
-	    /// <summary>
-	    /// Gets the results for the specified ids.
-	    /// </summary>
-	    /// <param name="ids">The ids.</param>
-	    /// <param name="includes">The includes.</param>
-	    /// <param name="transformer"></param>
-	    /// <param name="queryInputs"></param>
-	    /// <param name="metadataOnly">Load just the document metadata</param>
-	    /// <returns></returns>
-	    public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
+		/// <summary>
+		/// Gets the results for the specified ids.
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		/// <param name="includes">The includes.</param>
+		/// <param name="transformer"></param>
+		/// <param name="queryInputs"></param>
+		/// <param name="metadataOnly">Load just the document metadata</param>
+		/// <returns></returns>
+		public MultiLoadResult Get(string[] ids, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
 		{
 			return ExecuteWithReplication("GET", u => DirectGet(ids, u, includes, transformer, queryInputs ?? new Dictionary<string, RavenJToken>(), metadataOnly));
 		}
 
-	    /// <summary>
-	    /// Perform a direct get for loading multiple ids in one request
-	    /// </summary>
-	    /// <param name="ids">The ids.</param>
-	    /// <param name="operationUrl">The operation URL.</param>
-	    /// <param name="includes">The includes.</param>
-	    /// <param name="transformer"></param>
-	    /// <param name="metadataOnly"></param>
-	    /// <returns></returns>
-	    public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs, bool metadataOnly)
+		/// <summary>
+		/// Perform a direct get for loading multiple ids in one request
+		/// </summary>
+		/// <param name="ids">The ids.</param>
+		/// <param name="operationUrl">The operation URL.</param>
+		/// <param name="includes">The includes.</param>
+		/// <param name="transformer"></param>
+		/// <param name="metadataOnly"></param>
+		/// <returns></returns>
+		public MultiLoadResult DirectGet(string[] ids, string operationUrl, string[] includes, string transformer, Dictionary<string, RavenJToken> queryInputs, bool metadataOnly)
 		{
 			var path = operationUrl + "/queries/?";
 			if (metadataOnly)
@@ -1319,17 +1320,17 @@ namespace Raven.Client.Connection
 			{
 				path += "&" + string.Join("&", includes.Select(x => "include=" + x).ToArray());
 			}
-	        if (!string.IsNullOrEmpty(transformer))
-	            path += "&transformer=" + transformer;
+			if (!string.IsNullOrEmpty(transformer))
+				path += "&transformer=" + transformer;
 
 
 			if (queryInputs != null)
 			{
 				path = queryInputs.Aggregate(path, (current, queryInput) => current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
 			}
-		    var metadata = new RavenJObject();
+			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-		    var uniqueIds = new HashSet<string>(ids);
+			var uniqueIds = new HashSet<string>(ids);
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
 			// we are fine with that, requests to load that many items are probably going to be rare
 			HttpJsonRequest request;
@@ -1356,18 +1357,19 @@ namespace Raven.Client.Connection
 			var result = (RavenJObject)request.ReadResponseJson();
 
 			var results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList();
-	        var multiLoadResult = new MultiLoadResult
-	        {
-	            Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList()
-	        };
+			var multiLoadResult = new MultiLoadResult
+			{
+				Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList()
+			};
 
-            if(string.IsNullOrEmpty(transformer)) {
-                multiLoadResult.Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id, StringComparison.OrdinalIgnoreCase))).ToList();
-			} 
-            else
-            {
-                multiLoadResult.Results = results;
-            }
+			if (string.IsNullOrEmpty(transformer))
+			{
+				multiLoadResult.Results = ids.Select(id => results.FirstOrDefault(r => string.Equals(r["@metadata"].Value<string>("@id"), id, StringComparison.OrdinalIgnoreCase))).ToList();
+			}
+			else
+			{
+				multiLoadResult.Results = results;
+			}
 
 
 			var docResults = multiLoadResult.Results.Concat(multiLoadResult.Includes);
@@ -1452,11 +1454,11 @@ namespace Raven.Client.Connection
 			return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
 		}
 
-	    /// <summary>
-	    /// Commits the specified tx id.
-	    /// </summary>
-	    /// <param name="txId">The tx id.</param>
-	    public void Commit(string txId)
+		/// <summary>
+		/// Commits the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		public void Commit(string txId)
 		{
 			ExecuteWithReplication<object>("POST", u =>
 			{
@@ -1476,11 +1478,11 @@ namespace Raven.Client.Connection
 			httpJsonRequest.ReadResponseJson();
 		}
 
-	    /// <summary>
-	    /// Rollbacks the specified tx id.
-	    /// </summary>
-	    /// <param name="txId">The tx id.</param>
-	    public void Rollback(string txId)
+		/// <summary>
+		/// Rollbacks the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		public void Rollback(string txId)
 		{
 			ExecuteWithReplication<object>("POST", u =>
 			{
@@ -1578,9 +1580,9 @@ namespace Raven.Client.Connection
 			if (databaseUrl == Url)
 				return this;
 			return new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, database, jsonRequestFactory, currentSessionId, conflictListeners)
-				   {
-					   OperationsHeaders = OperationsHeaders
-				   };
+			{
+				OperationsHeaders = OperationsHeaders
+			};
 		}
 
 		public IDatabaseCommands ForSystemDatabase()
@@ -1637,7 +1639,7 @@ namespace Raven.Client.Connection
 				{
 					if (serverBuild != 13 || (serverBuild == 13 && jsonResponse.Value<long>("OperationId") == default(long)))
 					{
-					return null;
+						return null;
 					}
 				}
 
@@ -1645,7 +1647,7 @@ namespace Raven.Client.Connection
 
 				if (opId == null || opId.Type != JTokenType.Integer)
 					return null;
-				
+
 				return new Operation(this, opId.Value<long>());
 			});
 		}
@@ -1992,41 +1994,41 @@ namespace Raven.Client.Connection
 			});
 		}
 
-        /// <summary>
-        /// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
-        /// </summary>
-        /// <param name="index">Name of the index</param>
-        /// <param name="query">Query to build facet results</param>
-        /// <param name="facets">List of facets</param>
-        /// <param name="start">Start index for paging</param>
-        /// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-        public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize)
-        {
+		/// <summary>
+		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
+		/// </summary>
+		/// <param name="index">Name of the index</param>
+		/// <param name="query">Query to build facet results</param>
+		/// <param name="facets">List of facets</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public FacetResults GetFacets(string index, IndexQuery query, List<Facet> facets, int start, int? pageSize)
+		{
 			string facetsJson = JsonConvert.SerializeObject(facets);
-	        var method = facetsJson.Length > 1024 ? "POST" : "GET";
+			var method = facetsJson.Length > 1024 ? "POST" : "GET";
 			return ExecuteWithReplication(method, operationUrl =>
-            {
-                var requestUri = operationUrl + string.Format("/facets/{0}?{1}&facetStart={2}&facetPageSize={3}",
-                                                                Uri.EscapeUriString(index),
-                                                                query.GetMinimalQueryString(),
-                                                                start,
-                                                                pageSize);
+			{
+				var requestUri = operationUrl + string.Format("/facets/{0}?{1}&facetStart={2}&facetPageSize={3}",
+																Uri.EscapeUriString(index),
+																query.GetMinimalQueryString(),
+																start,
+																pageSize);
 
-				if(method == "GET")
+				if (method == "GET")
 					requestUri += "&facets=" + Uri.EscapeDataString(facetsJson);
 
-                var request = jsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(this, requestUri, method, credentials, convention)
-                        .AddOperationHeaders(OperationsHeaders))
-                        .AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, requestUri, method, credentials, convention)
+						.AddOperationHeaders(OperationsHeaders))
+						.AddReplicationStatusHeaders(Url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				if (method != "GET")
 					request.Write(facetsJson);
 
-                var json = (RavenJObject)request.ReadResponseJson();
-                return json.JsonDeserialization<FacetResults>();
-            });
-        }
+				var json = (RavenJObject)request.ReadResponseJson();
+				return json.JsonDeserialization<FacetResults>();
+			});
+		}
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
@@ -2257,15 +2259,15 @@ namespace Raven.Client.Connection
 		}
 		#region IAsyncAdminDatabaseCommands
 
-	    /// <summary>
-	    /// Admin operations, like create/delete database.
-	    /// </summary>
-	    public IAdminDatabaseCommands Admin
-	    {
-	        get { return new AdminServerClient(this); }
-	    }
+		/// <summary>
+		/// Admin operations, like create/delete database.
+		/// </summary>
+		public IAdminDatabaseCommands Admin
+		{
+			get { return new AdminServerClient(this); }
+		}
 
-	    public void CreateDatabase(DatabaseDocument databaseDocument)
+		public void CreateDatabase(DatabaseDocument databaseDocument)
 		{
 			if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
 				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");

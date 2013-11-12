@@ -4,7 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Web.Http;
 using Raven.Database.Config;
+using Raven.Database.Server.Controllers;
 
 namespace Raven.Database.Server.Abstractions
 {
@@ -14,6 +16,12 @@ namespace Raven.Database.Server.Abstractions
 		{
 			var rawUrl = context.Request.RawUrl;
 			return GetRequestUrlFromRawUrl(rawUrl, context.Configuration);
+		}
+
+		public static string GetRequestUrl(this RavenApiController controller)
+		{
+			var rawUrl = controller.InnerRequest.RequestUri.AbsoluteUri;
+			return GetRequestUrlFromRawUrl(rawUrl, controller.DatabasesLandlord.SystemConfiguration);
 		}
 
 		public static string GetRequestUrlFromRawUrl(string rawUrl, InMemoryRavenConfiguration configuration)

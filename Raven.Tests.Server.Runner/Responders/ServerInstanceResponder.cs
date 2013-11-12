@@ -125,12 +125,12 @@ namespace Raven.Tests.Server.Runner.Responders
 
 			if (serverConfiguration.UseCommercialLicense)
 			{
-				EnableAuthentication(server.Database);
+				EnableAuthentication(server.SystemDatabase);
 			}
 
             if (serverConfiguration.HasApiKey)
             {
-                server.Database.Put("Raven/ApiKeys/" + serverConfiguration.ApiKeyName, null, RavenJObject.FromObject(new ApiKeyDefinition
+                server.SystemDatabase.Put("Raven/ApiKeys/" + serverConfiguration.ApiKeyName, null, RavenJObject.FromObject(new ApiKeyDefinition
                 {
                     Name = serverConfiguration.ApiKeyName,
                     Secret = serverConfiguration.ApiKeySecret,

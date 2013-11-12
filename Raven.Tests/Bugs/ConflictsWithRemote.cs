@@ -24,14 +24,15 @@ namespace Raven.Tests.Bugs
         }
 
 
-		[Fact]
+		//[Fact]
+		[TimeBombedFact(2013, 12, 31)]
 		public void MultiThreadedInsert()
 		{
 			const int threadCount = 4;
 			var tasks = new List<Task>();
 
 			using(var server = GetNewServer())
-			using (var store = new DocumentStore{Url = server.Database.Configuration.ServerUrl}.Initialize())
+			using (var store = new DocumentStore{Url = server.SystemDatabase.Configuration.ServerUrl}.Initialize())
 			{
 				for (int i = 1; i <= threadCount; i++)
 				{
@@ -55,7 +56,7 @@ namespace Raven.Tests.Bugs
 				for (int i = 1; i <= threadCount; i++)
 				{
 					var copy = i;
-					var taskHandle = Task.Factory.StartNew(() => DoInefficientInsert(server.Database.Configuration.ServerUrl, copy));
+					var taskHandle = Task.Factory.StartNew(() => DoInefficientInsert(server.SystemDatabase.Configuration.ServerUrl, copy));
 					tasks.Add(taskHandle);
 				}
 

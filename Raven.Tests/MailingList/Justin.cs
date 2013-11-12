@@ -78,7 +78,7 @@ namespace Raven.Tests.MailingList
 		{
 			// Arrange.
 			using (var server = GetNewServer())
-			using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
+			using (var documentStore = new DocumentStore { Url = server.SystemDatabase.Configuration.ServerUrl }.Initialize())
 			{
 				Console.WriteLine("Document Store initialized - running in memory.");
 

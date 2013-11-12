@@ -154,7 +154,7 @@ namespace Raven.Storage.Esent
         public void StartBackupOperation(DocumentDatabase docDb, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase)
         {
             if (new InstanceParameters(instance).Recovery == false)
-                throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to true.");
+                throw new InvalidOperationException("Cannot start backup operation since the recovery option is disabled. In order to enable the recovery please set the RunInUnreliableYetFastModeThatIsNotSuitableForProduction configuration parameter value to false.");
 
             var backupOperation = new BackupOperation(docDb, docDb.Configuration.DataDirectory, backupDestinationDirectory, incrementalBackup, documentDatabase);
             Task.Factory.StartNew(backupOperation.Execute);
@@ -673,7 +673,14 @@ namespace Raven.Storage.Esent
             }
         }
 
-        public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
+	    public IStorageActionsAccessor CreateAccessor()
+	    {
+		    var pht = new DocumentStorageActions(instance, database, tableColumnsCache, DocumentCodecs, generator,
+			    documentCacher, null, this);
+			return new StorageActionsAccessor(pht);
+	    }
+
+	    public void ExecuteImmediatelyOrRegisterForSynchronization(Action action)
         {
             if (current.Value == null)
             {

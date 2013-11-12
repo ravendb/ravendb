@@ -112,8 +112,13 @@ namespace Raven.Storage.Managed
 				handler();
 		}
 
+		public event Action OnDispose;
+
 		public void Dispose()
 		{
+			var onDispose = OnDispose;
+			if (onDispose != null)
+				onDispose();
 			Indexing.Dispose();
 		}
 	}

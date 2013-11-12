@@ -38,11 +38,10 @@ namespace Raven.Bundles.Authorization.Responders
 				return;
 			}
 
-
 			// we don't want security to take hold when we are trying to ask about security
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				var documents = docIds.Select(docId=>Database.GetDocumentMetadata(docId, transactionInformation)).ToArray();
+				var documents = docIds.Select(docId => Database.GetDocumentMetadata(docId, transactionInformation)).ToArray();
 				var etag = CalculateEtag(documents, userId);
 				if (context.MatchEtag(etag))
 				{
@@ -78,7 +77,7 @@ namespace Raven.Bundles.Authorization.Responders
 				var authorizationDecisions = new AuthorizationDecisions(Database);
 				var isAllowed = authorizationDecisions.IsAllowed(userId, operation, docId, document.Metadata, reasons.Add);
 
-				list.Add(new OperationAllowedResult {IsAllowed = isAllowed, Reasons = reasons});
+				list.Add(new OperationAllowedResult { IsAllowed = isAllowed, Reasons = reasons });
 			}
 			return list;
 		}
@@ -87,14 +86,14 @@ namespace Raven.Bundles.Authorization.Responders
 		{
 			Etag etag;
 
-			using(var md5 = MD5.Create())
+			using (var md5 = MD5.Create())
 			{
-				var etags =new List<byte>();
+				var etags = new List<byte>();
 
 				etags.AddRange(documents.SelectMany(x => x == null ? Guid.Empty.ToByteArray() : (x.Etag ?? Etag.Empty).ToByteArray()));
 
 				var userDoc = Database.Get(userId, null);
-				if(userDoc == null)
+				if (userDoc == null)
 				{
 					etags.AddRange(Guid.Empty.ToByteArray());
 				}
@@ -108,7 +107,7 @@ namespace Raven.Bundles.Authorization.Responders
 					}
 				}
 
-				etag =Etag.Parse(md5.ComputeHash(etags.ToArray()));
+				etag = Etag.Parse(md5.ComputeHash(etags.ToArray()));
 			}
 			return etag;
 		}

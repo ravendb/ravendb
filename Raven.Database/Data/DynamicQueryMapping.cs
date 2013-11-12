@@ -176,7 +176,7 @@ namespace Raven.Database.Data
 				{
 					if (fields.Any(x => x.Item2 == fieldName || x.Item2 == (fieldName + "_Range")) == false)
 						fields.Add(Tuple.Create(fieldName, fieldName));
-				})
+				}, query)
 			};
 			dynamicQueryMapping.SetupFieldsToIndex(query, fields);
 			dynamicQueryMapping.SetupSortDescriptors(dynamicQueryMapping.SortDescriptors);
@@ -260,31 +260,20 @@ namespace Raven.Database.Data
 			return replaceInvalidCharacterForFields.Replace(field, "_");
 		}
 
-		public static DynamicSortInfo[] GetSortInfo(Action<string> addField)
+		public static DynamicSortInfo[] GetSortInfo(Action<string> addField, IndexQuery indexQuery)
 		{
-			var headers = CurrentOperationContext.Headers.Value;
 			var sortInfo = new List<DynamicSortInfo>();
-			String[] sortHintHeaders = headers.AllKeys
-				.Where(key => key.StartsWith("SortHint")).ToArray();
-			foreach (string sortHintHeader in sortHintHeaders)
+			if(indexQuery.SortHints == null)
+				return new DynamicSortInfo[0];
+			foreach (var sortOptions in indexQuery.SortHints)
 			{
-				String[] split = sortHintHeader.Split(sortHintHeader.Contains("-") ? '-' : '_'); // we only use _ for backward compatibility
-				String fieldName = Uri.UnescapeDataString(split[1]);
-				if (fieldName == Constants.TemporaryScoreValue)
-					continue;
-
-				if (fieldName.EndsWith("_Range"))
-					fieldName = fieldName.Substring(0, fieldName.Length - "_Range".Length);
-				string fieldType = headers[sortHintHeader];
-
 				sortInfo.Add(new DynamicSortInfo
 				{
-					Field = fieldName,
-					FieldType = (SortOptions)Enum.Parse(typeof(SortOptions), fieldType)
+					Field = sortOptions.Key.Substring("SortHint-".Length),
+					FieldType = sortOptions.Value
 				});
-
-				addField(fieldName);
 			}
+
 			return sortInfo.ToArray();
 		}
 

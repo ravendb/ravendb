@@ -22,6 +22,7 @@ namespace Raven.Database.Storage.Voron
 	public class StorageActionsAccessor : IStorageActionsAccessor
 	{
         private readonly DateTime createdAt = SystemTime.UtcNow;
+		public event Action OnDispose;
 
 		public StorageActionsAccessor(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, IDocumentCacher documentCacher, WriteBatch writeBatch, SnapshotReader snapshot, TableStorage storage, TransactionalStorage transactionalStorage)
 		{
@@ -39,7 +40,9 @@ namespace Raven.Database.Storage.Voron
 
 		public void Dispose()
 		{
-			//do nothing for now
+			var onDispose = OnDispose;
+			if (onDispose != null)
+				onDispose();
 		}
 
 		public IDocumentStorageActions Documents { get; private set; }

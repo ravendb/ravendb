@@ -6,55 +6,59 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
+using Raven.Database.Server.Tenancy;
+using Raven.Database.Server.WebApi;
+using Raven.Database.Util;
 using Raven.Server.Discovery;
 
 namespace Raven.Server
 {
 	public class RavenDbServer : IDisposable
 	{
-		private static ILog logger = LogManager.GetCurrentClassLogger();
-		private readonly DocumentDatabase database;
-		private readonly HttpServer server;
+		private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
+		private readonly IServerThingsForTests serverThingsForTests;
 		private ClusterDiscoveryHost discoveryHost;
+		private readonly CompositeDisposable compositeDisposable = new CompositeDisposable();
+		private readonly RavenDBOptions options;
 
-		public DocumentDatabase Database
+		public RavenDbServer()
+			: this(new RavenConfiguration())
+		{}
+
+		public RavenDbServer(InMemoryRavenConfiguration configuration)
 		{
-			get { return database; }
+			var owinHttpServer = new OwinHttpServer(configuration);
+			options = owinHttpServer.Options;
+			compositeDisposable.Add(owinHttpServer);
+			ClusterDiscovery(configuration);
+			serverThingsForTests = new ServerThingsForTests(options);
 		}
 
-		public HttpServer Server
+		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
+		public DocumentDatabase SystemDatabase
 		{
-			get { return server; }
+			get { return options.SystemDatabase; }
 		}
 
-		public RavenDbServer(InMemoryRavenConfiguration settings)
+		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
+		public IServerThingsForTests Server
 		{
-			database = new DocumentDatabase(settings);
-
-			try
-			{
-				database.SpinBackgroundWorkers();
-				server = new HttpServer(settings, database);
-				server.StartListening();
-			}
-			catch (Exception)
-			{
-				database.Dispose();
-				database = null;
-				
-				throw;
-			}
-
-			ClusterDiscovery(settings);
+			get { return serverThingsForTests; }
 		}
 
-		private void ClusterDiscovery(InMemoryRavenConfiguration settings)
+		public void Dispose()
 		{
-			if (settings.DisableClusterDiscovery == false)
+			compositeDisposable.Dispose();
+		}
+
+		private void ClusterDiscovery(InMemoryRavenConfiguration configuration)
+		{
+			if (configuration.DisableClusterDiscovery == false)
 			{
 				discoveryHost = new ClusterDiscoveryHost();
 				try
@@ -65,34 +69,75 @@ namespace Raven.Server
 						var httpClient = new HttpClient(new HttpClientHandler());
 						var values = new Dictionary<string, string>
 						{
-							{"Url", settings.ServerUrl},
-							{"ClusterName", settings.ClusterName},
+							{"Url", configuration.ServerUrl},
+							{"ClusterName", configuration.ClusterName},
 						};
 						try
 						{
-							var result = await httpClient.PostAsync(args.ClusterManagerUrl, new FormUrlEncodedContent(values));
+							HttpResponseMessage result =
+								await httpClient.PostAsync(args.ClusterManagerUrl, new FormUrlEncodedContent(values));
 							result.EnsureSuccessStatusCode();
 						}
 						catch (Exception e)
 						{
-							logger.ErrorException("Cannot post notification for cluster discovert to: " + settings.ServerUrl, e);
+							Logger.ErrorException(
+								"Cannot post notification for cluster discovert to: " + configuration.ServerUrl, e);
 						}
 					};
+					compositeDisposable.Add(discoveryHost);
 				}
 				catch (Exception e)
 				{
 					discoveryHost.Dispose();
 					discoveryHost = null;
 
-					logger.ErrorException("Cannot setup cluster discovery" , e);
+					Logger.ErrorException("Cannot setup cluster discovery", e);
 				}
 			}
 		}
 
-		public void Dispose()
+		//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
+		private class ServerThingsForTests : IServerThingsForTests
 		{
-			server.Dispose();
-			database.Dispose();
+			private readonly RavenDBOptions options;
+
+			public ServerThingsForTests(RavenDBOptions options)
+			{
+				this.options = options;
+			}
+
+			public bool HasPendingRequests
+			{
+				get { return false; } //TODO DH: fix (copied from WebApiServer)
+			}
+
+			public int NumberOfRequests
+			{
+				get { return options.RequestManager.NumberOfRequests; }
+			}
+
+			public void ResetNumberOfRequests()
+			{
+				options.RequestManager.ResetNumberOfRequests();
+			}
+
+			public Task<DocumentDatabase> GetDatabaseInternal(string databaseName)
+			{
+				return options.Landlord.GetDatabaseInternal(databaseName);
+			}
+
+			public RequestManager RequestManager { get { return options.RequestManager; } }
 		}
+	}
+
+	//TODO http://issues.hibernatingrhinos.com/issue/RavenDB-1451
+	public interface IServerThingsForTests
+	{
+		bool HasPendingRequests { get; }
+		int NumberOfRequests { get; }
+		void ResetNumberOfRequests();
+		Task<DocumentDatabase> GetDatabaseInternal(string databaseName);
+
+		RequestManager RequestManager { get; }
 	}
 }

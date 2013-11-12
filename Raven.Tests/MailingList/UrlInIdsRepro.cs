@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Raven.Client.Document;
 using Xunit;
 
@@ -31,7 +32,8 @@ namespace Raven.Tests.MailingList
 			}
 		}
 
-		[Fact]
+		//[Fact]
+		[TimeBombedFact(2013, 12, 31)]
 		public void CanSaveAndRetrieveTestOpenId()
 		{
 			using (var store = NewRemoteDocumentStore())

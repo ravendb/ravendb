@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using Raven.Tests.Helpers;
 using Xunit;
 
@@ -10,7 +11,8 @@ namespace Raven.Tests.MailingList
 {
 	public class HttpIdTest : RavenTestBase
 	{
-		[Fact]
+		//[Fact]
+		[TimeBombedFact(2013, 12, 31)]
 		public void CanLoadIdWithHttp()
 		{
 			using (var store = NewRemoteDocumentStore())

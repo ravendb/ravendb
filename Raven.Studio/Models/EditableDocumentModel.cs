@@ -765,7 +765,6 @@ namespace Raven.Studio.Models
 				                                                        HRef = "/Edit?id=" + key
 			                                                        })
 			                                         .ToArray();
-
 			References.Match(referenceModels);
 		}
 

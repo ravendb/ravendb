@@ -25,8 +25,9 @@ namespace Raven.Database.Storage
 	    IDisposable WriteLock();
 		IDisposable DisableBatchNesting();
 
-	    void Batch(Action<IStorageActionsAccessor> action);
+		IStorageActionsAccessor CreateAccessor();
 
+		void Batch(Action<IStorageActionsAccessor> action);
 		void ExecuteImmediatelyOrRegisterForSynchronization(Action action);
 		bool Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs);
 		void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase);

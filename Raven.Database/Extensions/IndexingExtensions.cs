@@ -168,7 +168,7 @@ namespace Raven.Database.Extensions
 									var dsort = new SpatialDistanceFieldComparatorSource(spatialField, shape.GetCenter());
 									return new SortField(Constants.DistanceFieldName, dsort, sortedField.Descending);
 								}
-								var sortOptions = GetSortOption(indexDefinition, sortedField.Field);
+								var sortOptions = GetSortOption(indexDefinition, sortedField.Field, self);
 								if (sortOptions == null || sortOptions == SortOptions.None)
 									return new SortField(sortedField.Field, CultureInfo.InvariantCulture, sortedField.Descending);
 
@@ -179,15 +179,9 @@ namespace Raven.Database.Extensions
 		}
 
 
-		public static SortOptions? GetSortOption(this IndexDefinition self, string name)
+		public static SortOptions? GetSortOption(this IndexDefinition self, string name, IndexQuery query)
 		{
 			SortOptions value;
-			if (self.SortOptions.TryGetValue(name, out value))
-			{
-				return value;
-			}
-			if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
-				return value;
 
 			if (name.EndsWith("_Range"))
 			{
@@ -197,15 +191,25 @@ namespace Raven.Database.Extensions
 
 				if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
 					return value;
+
+				if (query != null && query.SortHints != null && query.SortHints.ContainsKey("SortHint-" + nameWithoutRange))
+					return query.SortHints["SortHint-" + nameWithoutRange];
 			}
-			if (CurrentOperationContext.Headers.Value == null)
+
+			if (self.SortOptions.TryGetValue(name, out value))
+			{
+				return value;
+			}
+			if (self.SortOptions.TryGetValue(Constants.AllFields, out value))
 				return value;
 
-			var hint = CurrentOperationContext.Headers.Value["SortHint-" + name];
-			if (string.IsNullOrEmpty(hint))
+			if (query == null || query.SortHints == null)
 				return value;
-			Enum.TryParse(hint, true, out value);
-			return value;
+
+			if (query.SortHints.ContainsKey("SortHint-" + name) == false)
+				return value;
+
+			return query.SortHints["SortHint-" + name];
 		}
 	}
 }

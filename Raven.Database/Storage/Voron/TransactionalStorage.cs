@@ -83,6 +83,22 @@ namespace Raven.Storage.Voron
 			return new DisposableAction(() => disableBatchNesting.Value = null);
 		}
 
+		public IStorageActionsAccessor CreateAccessor()
+		{
+			var snapshot = tableStorage.CreateSnapshot();
+			var writeBatch = new WriteBatch();
+			
+			var accessor = new StorageActionsAccessor(uuidGenerator, _documentCodecs,
+					documentCacher, writeBatch, snapshot, tableStorage,this);
+			accessor.OnDispose += () =>
+			{
+				snapshot.Dispose();
+				writeBatch.Dispose();
+			};
+
+			return accessor;
+		}
+
 		public void Batch(Action<IStorageActionsAccessor> action)
 		{
 			if (disposerLock.IsReadLockHeld && disableBatchNesting.Value == null) // we are currently in a nested Batch call and allow to nest batches

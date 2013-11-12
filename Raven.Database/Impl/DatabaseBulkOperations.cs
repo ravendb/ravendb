@@ -66,7 +66,8 @@ namespace Raven.Database.Impl
 				SortedFields = indexQuery.SortedFields,
 				HighlighterPreTags = indexQuery.HighlighterPreTags,
 				HighlighterPostTags = indexQuery.HighlighterPostTags,
-				HighlightedFields = indexQuery.HighlightedFields
+				HighlightedFields = indexQuery.HighlightedFields,
+				SortHints = indexQuery.SortHints
 			};
 
 			bool stale;

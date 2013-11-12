@@ -16,7 +16,7 @@
 					{
 					}
 
-					Assert.Equal(ravenDbServer.Database.TransactionalStorage.FriendlyName, "Voron");
+					Assert.Equal(ravenDbServer.SystemDatabase.TransactionalStorage.FriendlyName, "Voron");
 				}
 			});
 		}

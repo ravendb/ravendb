@@ -70,11 +70,11 @@ namespace Raven.Tests.Bundles.Replication
 
 			if (enableAuthorization)
 			{
-				EnableAuthentication(ravenDbServer.Database);
+				EnableAuthentication(ravenDbServer.SystemDatabase);
 				ConfigureServer(serverConfiguration);
 			}
 
-			var documentStore = new DocumentStore { Url = ravenDbServer.Database.Configuration.ServerUrl };
+			var documentStore = new DocumentStore { Url = ravenDbServer.SystemDatabase.Configuration.ServerUrl };
 			ConfigureStore(documentStore);
 			if (configureStore != null)
 				configureStore(documentStore);
@@ -82,7 +82,7 @@ namespace Raven.Tests.Bundles.Replication
 
 			stores.Add(documentStore);
 
-			ConfigureDatabase(ravenDbServer.Database);
+			ConfigureDatabase(ravenDbServer.SystemDatabase);
 			return documentStore;
 		}
 
@@ -144,15 +144,15 @@ namespace Raven.Tests.Bundles.Replication
 		{
 			var previousServer = servers[index];
 
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.Database.Configuration.Port);
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.SystemDatabase.Configuration.Port);
 			var serverConfiguration = new RavenConfiguration
 			{
 				Settings = { { "Raven/ActiveBundles", "replication" } },
                 AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
-				DataDirectory = previousServer.Database.Configuration.DataDirectory,
+				DataDirectory = previousServer.SystemDatabase.Configuration.DataDirectory,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				RunInMemory = previousServer.Database.Configuration.RunInMemory,
-				Port = previousServer.Database.Configuration.Port,
+				RunInMemory = previousServer.SystemDatabase.Configuration.RunInMemory,
+				Port = previousServer.SystemDatabase.Configuration.Port,
 				UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
 				DefaultStorageTypeName = GetDefaultStorageType()
 			};
@@ -170,9 +170,9 @@ namespace Raven.Tests.Bundles.Replication
 
 			var previousServer = servers[index];
 			previousServer.Dispose();
-			IOExtensions.DeleteDirectory(previousServer.Database.Configuration.DataDirectory);
+			IOExtensions.DeleteDirectory(previousServer.SystemDatabase.Configuration.DataDirectory);
 
-			return CreateStoreAtPort(previousServer.Database.Configuration.Port, enableAuthentication);
+			return CreateStoreAtPort(previousServer.SystemDatabase.Configuration.Port, enableAuthentication);
 		}
 
 		protected void TellFirstInstanceToReplicateToSecondInstance(string apiKey = null)
