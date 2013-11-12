@@ -2,14 +2,19 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
 
     public abstract class StoragePerformanceTestBase : IStoragePerformanceTest
     {
         private readonly byte[] _buffer;
 
+        private readonly Process _process;
+
         protected StoragePerformanceTestBase(byte[] buffer)
         {
             _buffer = buffer;
+            _process = Process.GetCurrentProcess();
+            GC.Collect();
         }
 
         public abstract string StorageName { get; }
@@ -34,6 +39,13 @@
             Array.Copy(_buffer, currentValue, newSize);
 
             return currentValue;
+        }
+
+        protected long GetMemory()
+        {
+            _process.Refresh();
+
+            return _process.PrivateMemorySize64;
         }
     }
 }
