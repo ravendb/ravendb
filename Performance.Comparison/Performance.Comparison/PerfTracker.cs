@@ -1,6 +1,8 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,13 +16,19 @@ namespace Performance.Comparison
 
         public PerfTracker()
         {
-            RecreateCategory();
+            try
+            {
+                RecreateCategory();
 
-            _counter = new PerformanceCounter("Voron Perf Test", "Ops/Sec", false);
+                _counter = new PerformanceCounter("Voron Perf Test", "Ops/Sec", false);
+            }
+            catch (Exception e)
+            {
 
+            }
             Task.Run(() =>
             {
-                while (ShouldStop == false)
+                while (ShouldStop == false && _counter != null)
                 {
                     Thread.Sleep(1000);
                     _values.Enqueue(_counter.NextValue());
@@ -30,7 +38,10 @@ namespace Performance.Comparison
 
         public IEnumerable<float> Checkout()
         {
+            if (_counter == null)
+                return Enumerable.Empty<float>();
             var copy = _values;
+            _counter.RawValue = 0;
             _values = new ConcurrentQueue<float>();
             return copy;
         }
@@ -39,6 +50,8 @@ namespace Performance.Comparison
 
         public void Increment()
         {
+            if (_counter == null)
+                return;
             _counter.Increment();
         }
 
