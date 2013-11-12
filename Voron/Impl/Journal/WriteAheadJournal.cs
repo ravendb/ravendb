@@ -149,9 +149,6 @@ namespace Voron.Impl.Journal
 
 				if (log.HasIntegrityIssues) //this should prevent further loading of transactions
 				{
-					//if part of multi-log transaction, go back to the file in which the multi-log transaction started
-					FindAndApplyLastUncorruptedTransaction(ref lastTxHeader, transactionMarkers);
-					
 					hadIntegrityIssues = true;
 					break;
 				}
@@ -177,48 +174,6 @@ namespace Voron.Impl.Journal
 			{
 				UpdateLogInfo();
 				WriteFileHeader();
-			}
-		}
-
-		//should be inlined if possible --> introduced method here only to make code more comprehensible
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private void FindAndApplyLastUncorruptedTransaction(ref TransactionHeader* lastTxHeader, Stack<Tuple<long, TransactionMarker>> transactionMarkers)
-		{
-			if (lastTxHeader->TxMarker.HasFlag(TransactionMarker.Split) && !lastTxHeader->TxMarker.HasFlag(TransactionMarker.Start))
-			{
-				Tuple<long, TransactionMarker> txMarkerTuple;
-				do
-				{
-					txMarkerTuple = transactionMarkers.Pop();
-				} while (txMarkerTuple.Item2.HasFlag(TransactionMarker.Split) && !txMarkerTuple.Item2.HasFlag(TransactionMarker.Start) && transactionMarkers.Count > 0); 
-
-				//precaution
-				if (txMarkerTuple.Item2.HasFlag(TransactionMarker.Split) && !txMarkerTuple.Item2.HasFlag(TransactionMarker.Start))
-					throw new InvalidDataException("Unable to recover database - found integrity issues, and could not find multi-log transaction start to roll-back to. ");
-
-				var filesToRelease = Files.GetRange((int) txMarkerTuple.Item1 + 1, Files.Count - (int) txMarkerTuple.Item1 - 1).ToList();
-				var lastCorruptedTxTransactionId = lastTxHeader->TransactionId;
-				filesToRelease.ForEach(file => file.Release());
-				
-				Files = Files.GetRange(0, (int) txMarkerTuple.Item1 + 1);
-				if (!Files.IsEmpty)
-				{
-					if (Files.Count > 1)
-					{
-						var lastFileIndex = Files.IndexOf(Files.Last());
-						var journalFiles = Files.ToList();
-						var previousTxHeader = journalFiles[lastFileIndex - 1].LastTransactionHeader;
-						var lastJournalFile = journalFiles.Last();
-						lastJournalFile.RecoverAndValidateConditionally(0, previousTxHeader,
-							txHeader => txHeader.TransactionId < lastCorruptedTxTransactionId);
-
-						Files.SetItem(lastFileIndex, lastJournalFile);
-					}
-					else
-						Files.Last().RecoverAndValidateConditionally(0, null,txHeader => txHeader.TransactionId < lastCorruptedTxTransactionId);
-				}
-
-				lastTxHeader = Files.IsEmpty == false ? Files.Last().LastTransactionHeader : null;
 			}
 		}
 

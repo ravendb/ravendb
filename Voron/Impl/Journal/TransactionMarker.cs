@@ -13,7 +13,6 @@ namespace Voron.Impl.Journal
 	{
 		None = 0x0,
 		Start = 0x1,
-		Split = 0x2,
 		Commit = 0x4,
 	}
 }

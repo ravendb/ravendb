@@ -155,46 +155,21 @@ namespace Voron.Impl.Journal
 
 		private void ValidateHeader(TransactionHeader* current, TransactionHeader* previous)
 		{
-			if (current->TransactionId < 0)
-				throw new InvalidDataException("Transaction id cannot be less than 0 (Tx: " + current->TransactionId);
-			if (current->TxMarker.HasFlag(TransactionMarker.Start) == false && current->TxMarker.HasFlag(TransactionMarker.Split) == false)
-				throw new InvalidDataException("Transaction must have Start or Split marker");
-			if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
-				throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
-			if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Crc == 0)
-				throw new InvalidDataException("Committed and not empty transaction checksum can't be equal to 0");
+		    if (current->TransactionId < 0)
+		        throw new InvalidDataException("Transaction id cannot be less than 0 (Tx: " + current->TransactionId + " )");
+		    if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
+		        throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
+		    if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Crc == 0)
+		        throw new InvalidDataException("Committed and not empty transaction checksum can't be equal to 0");
 
-			if (previous == null)
-				return;
-
-			if (previous->TxMarker.HasFlag(TransactionMarker.Split) && previous->TxMarker.HasFlag(TransactionMarker.Commit))
-			{
-				if (current->TxMarker.HasFlag(TransactionMarker.Split) && current->TxMarker.HasFlag(TransactionMarker.Commit) && !current->TxMarker.HasFlag(TransactionMarker.Start))
-				{
-					if (current->TransactionId != previous->TransactionId)
-						throw new InvalidDataException("Split transaction should have the same id in the log. Expected id: " +
-													   previous->TransactionId + ", got: " + current->TransactionId);
-				}
-			}
-			else if (previous->TxMarker.HasFlag(TransactionMarker.Split))
-			{
-				if (previous->TxMarker.HasFlag(TransactionMarker.Start))
-				{
-					if (current->TxMarker.HasFlag(TransactionMarker.Split) == false)
-						throw new InvalidDataException("Previous transaction have a Start|Split marker, so the current one should have Split marker too");
-
-					if (current->TransactionId != previous->TransactionId)
-						throw new InvalidDataException("Split transaction should have the same id in the log. Expected id: " +
-													   previous->TransactionId + ", got: " + current->TransactionId);
-				}
-			}
-			else if (previous->TxMarker.HasFlag(TransactionMarker.Commit))
-			{
-				if (current->TransactionId != 1 && // 1 is a first storage transaction which does not increment transaction counter after commit
-				   current->TransactionId - previous->TransactionId != 1)
-					throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) + ", got:" +
-												   current->TransactionId);
-			}
+		    if (previous == null)
+		        return;
+		    
+            if (current->TransactionId != 1 &&
+		        // 1 is a first storage transaction which does not increment transaction counter after commit
+		        current->TransactionId - previous->TransactionId != 1)
+		        throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) +
+		                                       ", got:" + current->TransactionId);
 		}
 	}
 }
