@@ -263,6 +263,7 @@ namespace Voron.Impl.Journal
 			header->Root = _fileHeader->Root;
 			header->FreeSpace = _fileHeader->FreeSpace;
 			header->Journal = _fileHeader->Journal;
+			header->IncrementalBackup = _fileHeader->IncrementalBackup;
 
 			lock (_fileHeaderProtector)
 			{
