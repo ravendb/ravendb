@@ -38,7 +38,7 @@ select new {
 
 		public MapReduce()
 		{
-			store = NewDocumentStore();
+			store = NewDocumentStore(runInMemory: true);
 			db = store.DocumentDatabase;
 			db.PutIndex("CommentsCountPerBlog", new IndexDefinition{Map = map, Reduce = reduce, Indexes = {{"blog_id", FieldIndexing.NotAnalyzed}}});
 		}
@@ -75,6 +75,7 @@ select new {
 		    Assert.Equal(@"{""blog_id"":3,""comments_length"":14}", q.Results[0].ToString(Formatting.None));
 		}
 
+		//issue --> indice name : scheduled_reductions_by_view -->multi-tree key commentscountperblog
 		[Fact]
 		public void DoesNotOverReduce() 
 		{

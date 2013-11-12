@@ -1,4 +1,5 @@
 using System;
+using Raven.Abstractions.Connection;
 using Raven.Tests.Bugs.Identifiers;
 using System.Linq;
 using Xunit;

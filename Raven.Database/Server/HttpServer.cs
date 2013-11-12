@@ -27,6 +27,7 @@ using Raven.Database.Commercial;
 using Raven.Database.Plugins;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Responders;
+using Raven.Database.Server.WebApi;
 using Raven.Database.Util;
 using Raven.Database.Util.Streams;
 using Raven.Imports.Newtonsoft.Json;
@@ -44,7 +45,7 @@ using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server
 {
-	public class HttpServer : IDisposable
+	public class HttpServer : IRavenServer, IDisposable
 	{
 		private readonly DateTime startUpTime = SystemTime.UtcNow;
 		private DateTime lastWriteRequest;

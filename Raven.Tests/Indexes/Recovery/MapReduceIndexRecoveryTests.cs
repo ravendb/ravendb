@@ -33,8 +33,8 @@ namespace Raven.Tests.Indexes.Recovery
 				{
 					index.Execute(store);
 
-                    indexFullPath = Path.Combine(server.Database.Configuration.IndexStoragePath,
-                                             server.Database.IndexStorage.GetIndexInstance(index.IndexName).IndexId.ToString(CultureInfo.InvariantCulture));
+                    indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
+                                             server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName).IndexId.ToString(CultureInfo.InvariantCulture));
 
 					using (var session = store.OpenSession())
 					{

@@ -746,7 +746,7 @@ namespace Raven.Client.Connection
 		{
 			foreach (var header in operationsHeaders)
 			{
-				headers[header.Key] = header.Value;
+				httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
 			}
 			return this;
 		}
@@ -839,9 +839,19 @@ namespace Raven.Client.Connection
 					continue;
 
 				var headerName = prop.Key;
-				if (headerName == "ETag")
-					headerName = "If-None-Match";
 				var value = prop.Value.Value<object>().ToString();
+				if (headerName == "ETag")
+				{
+					headerName = "If-None-Match";
+					if (!value.StartsWith("\""))
+					{
+						value = "\"" + value;
+					}
+					if (!value.EndsWith("\""))
+					{
+						value = value + "\"";
+					}
+				}
 
 				bool isRestricted;
 				try
@@ -1059,17 +1069,17 @@ namespace Raven.Client.Connection
 	    private async Task WriteAsync(Stream streamToWrite)
 	    {
 	        postedStream = streamToWrite;
+			writeCalled = true;
+			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
+			{
+				Content = new CompressedStreamContent(streamToWrite)
+			});
 
-	        Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
-	        {
-	            Content = new CompressedStreamContent(streamToWrite)
-	        });
+			if (Response.IsSuccessStatusCode == false)
+				throw new ErrorResponseException(Response);
 
-	        if (Response.IsSuccessStatusCode == false)
-	            throw new ErrorResponseException(Response);
-
-	        SetResponseHeaders(Response);
-	    }
+			SetResponseHeaders(Response);
+		}
 
 	    public async Task WriteAsync(string data)
 		{

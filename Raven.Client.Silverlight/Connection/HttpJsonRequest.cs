@@ -337,7 +337,7 @@ namespace Raven.Client.Silverlight.Connection
 
 			writeCalled = true;
 			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
-												{
+			{
 													Content = new CompressedStringContent(data, factory.DisableRequestCompression),
 												});
 
@@ -349,7 +349,7 @@ namespace Raven.Client.Silverlight.Connection
 		/// <summary>
 		/// Begins the write operation
 		/// </summary>
-		public async Task WriteAsync(Stream stream)
+		private async Task WriteAsync(Stream stream)
 		{
 			writeCalled = true;
 			postedData = stream;

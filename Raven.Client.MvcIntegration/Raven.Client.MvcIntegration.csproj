@@ -80,10 +80,22 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Scripts\backbone.min.map" />
+    <None Include="Scripts\jquery-2.0.3.min.map" />
+    <None Include="Scripts\underscore.min.map" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="js\tools\node.exe" />
     <Content Include="js\tools\r.js" />
+    <Content Include="Scripts\backbone.js" />
+    <Content Include="Scripts\backbone.min.js" />
+    <Content Include="Scripts\jquery-2.0.3.intellisense.js" />
+    <Content Include="Scripts\jquery-2.0.3.js" />
+    <Content Include="Scripts\jquery-2.0.3.min.js" />
+    <Content Include="Scripts\r.js" />
+    <Content Include="Scripts\require.js" />
+    <Content Include="Scripts\underscore.js" />
+    <Content Include="Scripts\underscore.min.js" />
     <EmbeddedResource Include="Content\ravendb-profiler.min.js" />
     <Content Include="js\vendor\jquery.js" />
     <Content Include="js\app.build.js" />

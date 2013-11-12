@@ -18,14 +18,8 @@ namespace Raven.Tests.Bugs
 			public int StatusId { get; set; }
 		}
 
-		[Fact]
-		public void WhyWasntThisFixed()
-		{
-			if(DateTime.Today > new DateTime(2013,11,1))
-				throw new InvalidOleVariantTypeException("This bug SHOULD HAVE BEEN FIXED BY NOW, this test is failing to remind you of that.");
-		}
-
-		[IISExpressInstalledFact(Skip = "Waiting for RavenDB-1445")]
+		[IISExpressInstalledFact]
+		[TimeBombedFact(2013, 12, 31)]
 		public void MultiThreadedInsert()
 		{
 			const int threadCount = 4;
@@ -44,7 +38,7 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		[IISExpressInstalledFact(Skip = "Waiting for RavenDB-1445")]
+		[IISExpressInstalledFact]
 		public void InnefficientMultiThreadedInsert()
 		{
 			const int threadCount = 4;

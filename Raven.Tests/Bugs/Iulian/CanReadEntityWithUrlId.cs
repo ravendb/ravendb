@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Xunit;
 using Raven.Client.Document;
 
@@ -15,7 +13,8 @@ namespace Raven.Tests.Bugs.Iulian
 			public string Tag { get; set; }
 		}
 
-		[Fact]
+		//[Fact]
+		[TimeBombedFact(2013, 12, 31)]
 		public void Can_Load_entities_with_id_containing_url()
 		{
 			var id = @"mssage@msmq://local/Sample.AppService";

@@ -5,6 +5,8 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
+	using Xunit.Extensions;
+
 	public class ManyDocumentBeingIndexed : RavenTest
 	{
 		public class TestDocument
@@ -17,10 +19,12 @@ namespace Raven.Tests.Bugs
 			configuration.MaxPageSize = 10000;
 		}
 
-		[Fact]
-		public void WouldBeIndexedProperly()
+		[Theory]
+		[InlineData("esent")]
+		[InlineData("voron")]
+		public void WouldBeIndexedProperly(string requestedStorage)
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewDocumentStore(requestedStorage: requestedStorage))
 			{
 				using (var session = store.OpenSession())
 				{

@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Connection.Async;
@@ -75,13 +75,13 @@ namespace Raven.Client.Connection
 		public static string Doc(this string url, string key)
 		{
 
-			return url + "/docs/" 
+			return url + "/docs/"
 #if SILVERLIGHT 
 				+ HttpUtility.UrlEncode(key)
 #else
-				+ key
+ + key
 #endif
-				;
+;
 		}
 
 		public static string Docs(this string url, int start, int pageSize)
@@ -101,7 +101,7 @@ namespace Raven.Client.Connection
 
 		public static string NoCache(this string url)
 		{
-#if !SILVERLIGHT 
+#if !SILVERLIGHT
 			return url;
 #else
 			return (url.Contains("?"))
@@ -125,7 +125,7 @@ namespace Raven.Client.Connection
 			var httpJsonRequest = requestor.jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(requestor, url, method, credentials, convention)
 					.AddOperationHeaders(operationsHeaders));
-			
+
 			return httpJsonRequest;
 		}
 	}

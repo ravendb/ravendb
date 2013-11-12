@@ -9,6 +9,7 @@ using Raven.Abstractions.Data;
 #if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #else
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
@@ -28,6 +29,7 @@ using Ionic.Zlib;
 
 namespace Raven.Client.Document
 {
+
     public interface ILowLevelBulkInsertOperation : IDisposable
     {
         Guid OperationId { get; }

@@ -41,6 +41,8 @@
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
     <DocumentationFile>bin\Release\Raven.Client.Lightweight.XML</DocumentationFile>
+    <DocumentationFile>..\build\Raven.Client.Lightweight.XML</DocumentationFile>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>
@@ -78,10 +80,13 @@
     <Compile Include="Bundles\Versioning\VersioningExtensions.cs" />
     <Compile Include="Connection\AdminRequestCreator.cs" />
     <Compile Include="Connection\AdminServerClient.cs" />
+    <Compile Include="Connection\Async\AsyncAdminServerClient.cs" />
+    <Compile Include="Connection\CompressedStringContent.cs" />
     <Compile Include="Connection\ConnectionOptions.cs" />
     <Compile Include="Connection\CompressedStreamContent.cs" />
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Connection\NameValueCollectionExtensions.cs" />
+    <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />
     <Compile Include="Document\Batches\LazyTransformerLoadOperation.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryContext.cs" />
     <Compile Include="Document\DTC\IsolatedStorageTransactionRecoveryStorage.cs" />
@@ -281,7 +286,6 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">

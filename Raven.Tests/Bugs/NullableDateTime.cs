@@ -107,12 +107,12 @@ namespace Raven.Tests.Bugs
 			                                                   	{
 			                                                   		HostName = "localhost",
 			                                                   		DataDirectory = path,
-			                                                   		Port = 8088,
+			                                                   		Port = 8079,
 			                                                   		AccessControlAllowOrigin = "*",
 			                                                   		AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
 			                                                   	}))
 			using (IDocumentStore documentStore = new
-				Raven.Client.Document.DocumentStore {Url = "http://localhost:8088/"}.Initialize())
+				Raven.Client.Document.DocumentStore {Url = "http://localhost:8079/"}.Initialize())
 			{
 				using (IDocumentSession session = documentStore.OpenSession())
 				{

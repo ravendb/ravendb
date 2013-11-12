@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Raven.Abstractions;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -56,21 +57,34 @@ namespace Raven.Database.Server.Responders
 					// the cache for that, to avoid filling it up very quickly
 					using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 					{
-						Database.Query(index, query, information =>
+						try
 						{
-							context.Response.AddHeader("Raven-Result-Etag", information.ResultEtag.ToString());
-							context.Response.AddHeader("Raven-Index-Etag", information.IndexEtag.ToString());
-							context.Response.AddHeader("Raven-Is-Stale", information.IsStable ? "true" : "false");
-							context.Response.AddHeader("Raven-Index", information.Index);
-							context.Response.AddHeader("Raven-Total-Results", information.TotalResults.ToString(CultureInfo.InvariantCulture));
-							context.Response.AddHeader("Raven-Index-Timestamp",
-							                           information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
-							                                                               CultureInfo.InvariantCulture));
+							Database.Query(index, query, information =>
+							{
+								context.Response.AddHeader("Raven-Result-Etag", information.ResultEtag.ToString());
+								context.Response.AddHeader("Raven-Index-Etag", information.IndexEtag.ToString());
+								context.Response.AddHeader("Raven-Is-Stale", information.IsStable ? "true" : "false");
+								context.Response.AddHeader("Raven-Index", information.Index);
+								context.Response.AddHeader("Raven-Total-Results",
+									information.TotalResults.ToString(CultureInfo.InvariantCulture));
+								context.Response.AddHeader("Raven-Index-Timestamp",
+									information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
+										CultureInfo.InvariantCulture));
 
-							if (isHeadRequest)
-								return;
-							writer.WriteHeader();
-						}, writer.Write);
+								if (isHeadRequest)
+									return;
+								writer.WriteHeader();
+							}, writer.Write);
+						}
+						catch (IndexDoesNotExistsException e)
+						{
+							if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase))
+							{
+								throw new NotSupportedException(@"StreamQuery() does not support querying dynamic indexes. It is designed to be used with large data-sets and is unlikely to return all data-set after 15 sec of indexing, like Query() does.", e);
+							}
+
+							throw;						
+						}
 					}
 				}
 			}

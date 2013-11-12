@@ -140,7 +140,7 @@ namespace Raven.Tests.Bundles.Expiration
 			JsonDocument documentByKey = null;
 			for (int i = 0; i < 100; i++)
 			{
-				ravenDbServer.Database.TransactionalStorage.Batch(accessor =>
+				ravenDbServer.SystemDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					documentByKey = accessor.Documents.DocumentByKey("companies/1", null);
 				});

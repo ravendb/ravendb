@@ -25,7 +25,7 @@ namespace Raven.Tests.Bugs.Embedded
 			{
 				Configuration =
 					{
-						DefaultStorageTypeName = "munin"
+						DefaultStorageTypeName = "voron"
 					},
 				Url = "http://localhost:8079"
 			})

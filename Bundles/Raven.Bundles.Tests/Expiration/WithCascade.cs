@@ -69,7 +69,7 @@ namespace Raven.Bundles.Tests.Expiration
 			JsonDocument documentByKey = null;
 			for (int i = 0; i < 50; i++)
 			{
-				ravenDbServer.Database.TransactionalStorage.Batch(accessor =>
+				ravenDbServer.SystemDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					documentByKey = accessor.Documents.DocumentByKey("doc/1", null);
 
@@ -82,7 +82,7 @@ namespace Raven.Bundles.Tests.Expiration
 			Assert.Null(documentByKey);
 
 
-			ravenDbServer.Database.TransactionalStorage.Batch(accessor => Assert.Null(accessor.Attachments.GetAttachment("item")));
+			ravenDbServer.SystemDatabase.TransactionalStorage.Batch(accessor => Assert.Null(accessor.Attachments.GetAttachment("item")));
 		
 		}
 
@@ -104,7 +104,7 @@ namespace Raven.Bundles.Tests.Expiration
 			JsonDocument documentByKey = null;
 			for (int i = 0; i < 50; i++)
 			{
-				ravenDbServer.Database.TransactionalStorage.Batch(accessor =>
+				ravenDbServer.SystemDatabase.TransactionalStorage.Batch(accessor =>
 				{
 					documentByKey = accessor.Documents.DocumentByKey("doc/1", null);
 
@@ -117,7 +117,7 @@ namespace Raven.Bundles.Tests.Expiration
 			Assert.Null(documentByKey);
 
 
-			ravenDbServer.Database.TransactionalStorage.Batch(accessor => Assert.Null(accessor.Documents.DocumentByKey("doc/2", null)));
+			ravenDbServer.SystemDatabase.TransactionalStorage.Batch(accessor => Assert.Null(accessor.Documents.DocumentByKey("doc/2", null)));
 		}
 
 		[Fact]

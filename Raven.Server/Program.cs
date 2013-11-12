@@ -25,7 +25,6 @@ using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
-using Raven.Database.Server.Responders.Admin;
 using Raven.Database.Util;
 
 namespace Raven.Server
@@ -38,7 +37,6 @@ namespace Raven.Server
 		private static void Main(string[] args)
 		{
 			cmdLineArgs = args;
-			HttpEndpointRegistration.RegisterHttpEndpointTarget();
 			if (RunningInInteractiveMode(args))
 			{
 				try
@@ -371,6 +369,10 @@ Configuration options:
 				{
 					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 				}
+                else if (File.Exists(Path.Combine(backupLocation, "Raven.voron")))
+                {
+                    ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;                    
+                }
 				else if (Directory.Exists(Path.Combine(backupLocation, "new")))
 				{
 					ravenConfiguration.DefaultStorageTypeName = typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
@@ -470,7 +472,7 @@ Configuration options:
 				Console.WriteLine("Data directory: {0}", ravenConfiguration.RunInMemory ? "RAM" : ravenConfiguration.DataDirectory);
 				Console.WriteLine("HostName: {0} Port: {1}, Storage: {2}", ravenConfiguration.HostName ?? "<any>",
 					ravenConfiguration.Port,
-					server.Database.TransactionalStorage.FriendlyName);
+					server.SystemDatabase.TransactionalStorage.FriendlyName);
 				Console.WriteLine("Server Url: {0}", ravenConfiguration.ServerUrl);
 
 				if (launchBrowser)
@@ -508,7 +510,7 @@ Configuration options:
 						              Console.WriteLine(
 										  "Starting garbage collection (without LOH compaction), current memory is: {0:#,#.##;;0} MB",
 							              before / 1024d / 1024d);
-						              RavenGC.CollectGarbage(false, () => server.Database.TransactionalStorage.ClearCaches());
+						              RavenGC.CollectGarbage(false, () => server.SystemDatabase.TransactionalStorage.ClearCaches());
 						              var after = Process.GetCurrentProcess().WorkingSet64;
 						              Console.WriteLine(
 							              "Done garbage collection, current memory is: {0:#,#.##;;0} MB, saved: {1:#,#.##;;0} MB",
@@ -523,7 +525,7 @@ Configuration options:
 						              Console.WriteLine(
 							              "Starting garbage collection (with LOH compaction), current memory is: {0:#,#.##;;0} MB",
 							              before / 1024d / 1024d);
-									  RavenGC.CollectGarbage(true, () => server.Database.TransactionalStorage.ClearCaches());
+									  RavenGC.CollectGarbage(true, () => server.SystemDatabase.TransactionalStorage.ClearCaches());
 						              var after = Process.GetCurrentProcess().WorkingSet64;
 						              Console.WriteLine(
 							              "Done garbage collection, current memory is: {0:#,#.##;;0} MB, saved: {1:#,#.##;;0} MB",

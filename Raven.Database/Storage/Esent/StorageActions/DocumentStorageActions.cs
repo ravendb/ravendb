@@ -128,6 +128,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public IEnumerable<AttachmentInformation> GetAttachmentsStartingWith(string idPrefix, int start, int pageSize)
 		{
+			if (pageSize <= 0)
+				return Enumerable.Empty<AttachmentInformation>();
+
 			Api.JetSetCurrentIndex(session, Files, "by_name");
 			Api.MakeKey(session, Files, idPrefix, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekGE) == false)
@@ -157,6 +160,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 		public IEnumerable<AttachmentInformation> GetAttachmentsAfter(Etag etag, int take, long maxTotalSize)
 		{
+			if (take == 0 || maxTotalSize == 0)
+				return Enumerable.Empty<AttachmentInformation>();
+
 			Api.JetSetCurrentIndex(session, Files, "by_etag");
 			Api.MakeKey(session, Files, etag.TransformToValueForEsentSorting(), MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, Files, SeekGrbit.SeekGT) == false)

@@ -75,7 +75,7 @@ namespace Raven.Client.Indexes
 			databaseCommands.PutTransformer(TransformerName, transformerDefinition);
 
 			UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
-				commands.DirectPutTransformer(TransformerName, url, transformerDefinition));
+				commands.PutTransformer(TransformerName, transformerDefinition));
 		}
 #endif
 

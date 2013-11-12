@@ -21,8 +21,8 @@ namespace Raven.Tests.Document {
           session.SaveChanges();
         }
 
-        var postsCollectioEtag = store.DocumentDatabase.GetLastEtagForCollection("Posts");
-        var commentsCollectionEtag = store.DocumentDatabase.GetLastEtagForCollection("Comments");
+        var postsCollectioEtag = store.DocumentDatabase.LastCollectionEtags.GetLastEtagForCollection("Posts");
+        var commentsCollectionEtag = store.DocumentDatabase.LastCollectionEtags.GetLastEtagForCollection("Comments");
 
         var postEtag = store.DatabaseCommands.Head("posts/1").Etag;
         var commentETag = store.DatabaseCommands.Head("comments/1").Etag;

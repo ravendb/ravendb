@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Indexing;
 using Raven.Json.Linq;
 
 namespace Raven.Abstractions.Data
@@ -50,6 +51,8 @@ namespace Raven.Abstractions.Data
 		/// </summary>
 		/// <value>The total size.</value>
 		public Reference<int> TotalSize { get; private set; }
+
+		public Dictionary<string, SortOptions> SortHints { get; set; } 
 
         /// <summary>
         /// Additional query inputs
@@ -169,6 +172,11 @@ namespace Raven.Abstractions.Data
 		public bool DisableCaching { get; set; }
 
 		/// <summary>
+		/// Allow to skip duplicate checking during queries
+		/// </summary>
+		public bool SkipDuplicateChecking { get; set; }
+
+		/// <summary>
 		/// Whatever a query result should contains an explanation about how docs scored against query
 		/// </summary>
 		public bool ExplainScores { get; set; }
@@ -176,10 +184,6 @@ namespace Raven.Abstractions.Data
 		/// <summary>
 		/// Gets the index query URL.
 		/// </summary>
-		/// <param name="operationUrl">The operation URL.</param>
-		/// <param name="index">The index.</param>
-		/// <param name="operationName">Name of the operation.</param>
-		/// <returns></returns>
 		public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true)
 		{
 			if (operationUrl.EndsWith("/"))

@@ -10,6 +10,8 @@ using Raven.Abstractions.Util;
 
 namespace Raven.Client.Extensions
 {
+	using System.Runtime.ExceptionServices;
+
 	public static class Time
 	{
 		public static Task Delay(TimeSpan timeOut)
@@ -31,7 +33,41 @@ namespace Raven.Client.Extensions
 
 	public static class TaskExtensions2
 	{
-		
+#if !SILVERLIGHT
+		/// <summary>
+		/// Waits on a task and if it throws, it unwrapped the inner exception from the AggregateException
+		/// await keyword uses same mechanism.
+		/// </summary>
+		/// <param name="task"></param>
+		internal static void WaitUnwrap(this Task task)
+		{
+			try
+			{
+				task.Wait();
+			}
+			catch (AggregateException ex)
+			{
+				var exception = ex.ExtractSingleInnerException();
+				ExceptionDispatchInfo.Capture(exception).Throw();
+			}
+		}
+
+		public static T ResultUnwrap<T>(this Task<T> task)
+		{
+			T result = default(T);
+			try
+			{
+				result = task.Result;
+			}
+			catch (AggregateException ex)
+			{
+				var exception = ex.ExtractSingleInnerException();
+				ExceptionDispatchInfo.Capture(exception).Throw();
+			}
+			return result;
+		}
+#endif
+
 		public static Task<object> WithNullResult(this Task task)
 		{
 			return task.WithResult((object)null);

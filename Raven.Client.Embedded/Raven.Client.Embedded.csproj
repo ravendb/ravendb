@@ -39,6 +39,8 @@
     <DocumentationFile>bin\Release\Raven.Client.Embedded.xml</DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
     <DocumentationFile>bin\Release\Raven.Client.Embedded.XML</DocumentationFile>
+    <DocumentationFile>..\build\Raven.Client.Embedded.XML</DocumentationFile>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>

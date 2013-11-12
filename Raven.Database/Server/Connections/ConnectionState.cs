@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
@@ -27,13 +25,13 @@ namespace Raven.Database.Server.Connections
 		private readonly ConcurrentSet<string> matchingBulkInserts =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
-		private EventsTransport eventsTransport;
+		private IEventsTransport eventsTransport;
 
 		private int watchAllDocuments;
 		private int watchAllIndexes;
 		private int watchAllReplicationConflicts;
 
-		public ConnectionState(EventsTransport eventsTransport)
+		public ConnectionState(IEventsTransport eventsTransport)
 		{
 			this.eventsTransport = eventsTransport;
 		}
@@ -244,7 +242,7 @@ namespace Raven.Database.Server.Connections
 			Interlocked.Decrement(ref watchAllReplicationConflicts);
 		}
 
-		public void Reconnect(EventsTransport transport)
+		public void Reconnect(IEventsTransport transport)
 		{
 			eventsTransport = transport;
 		}

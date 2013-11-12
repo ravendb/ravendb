@@ -554,12 +554,6 @@ task CreateNugetPackages -depends Compile {
 	Copy-Item $base_dir\NuGet\RavenDB.Bundles.UniqueConstraints.nuspec $nuget_dir\RavenDB.Bundles.UniqueConstraints\RavenDB.Bundles.UniqueConstraints.nuspec
 	@("Raven.Bundles.UniqueConstraints.???") |% { Copy-Item "$base_dir\Bundles\Raven.Bundles.UniqueConstraints.$_\bin\Release\$_" $nuget_dir\RavenDB.Bundles.UniqueConstraints\lib\net45 }
 	
-	New-Item $nuget_dir\RavenDB.AspNetHost\content -Type directory | Out-Null
-	New-Item $nuget_dir\RavenDB.AspNetHost\lib\net45 -Type directory | Out-Null
-	@("Raven.Web.???") |% { Copy-Item "$base_dir\Raven.Web.$_\bin\$_" $nuget_dir\RavenDB.AspNetHost\lib\net45 }
-	Copy-Item $base_dir\NuGet\RavenDB.AspNetHost.nuspec $nuget_dir\RavenDB.AspNetHost\RavenDB.AspNetHost.nuspec
-	Copy-Item $base_dir\DefaultConfigs\NuGet.AspNetHost.Web.config $nuget_dir\RavenDB.AspNetHost\content\Web.config.transform
-	
 	New-Item $nuget_dir\RavenDB.Tests.Helpers\lib\net45 -Type directory | Out-Null
 	Copy-Item $base_dir\NuGet\RavenDB.Tests.Helpers.nuspec $nuget_dir\RavenDB.Tests.Helpers\RavenDB.Tests.Helpers.nuspec
 	@("Raven.Tests.Helpers.???", "Raven.Server.???") |% { Copy-Item "$base_dir\Raven.Tests.Helpers.$_\bin\Release\$_" $nuget_dir\RavenDB.Tests.Helpers\lib\net45 }

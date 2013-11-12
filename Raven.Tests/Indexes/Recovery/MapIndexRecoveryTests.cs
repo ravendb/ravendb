@@ -40,7 +40,7 @@ namespace Raven.Tests.Indexes.Recovery
             string commitPointsDirectory;
             using (var server = GetNewServer(runInMemory: false))
 			{
-				CommitPointAfterEachCommit(server.Database.Configuration);
+				CommitPointAfterEachCommit(server.SystemDatabase.Configuration);
 
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
@@ -67,9 +67,9 @@ namespace Raven.Tests.Indexes.Recovery
 						WaitForIndexing(store);
 					}
 
-                    Index indexInstance = server.Database.IndexStorage.GetIndexInstance(index.IndexName);
+                    Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                    commitPointsDirectory = Path.Combine(server.Database.Configuration.IndexStoragePath,
+                    commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                                          indexInstance.IndexId + "\\CommitPoints");
 				}
 
@@ -98,9 +98,9 @@ namespace Raven.Tests.Indexes.Recovery
 
 			using (var server = GetNewServer(runInMemory: false))
 			{
-				CommitPointAfterEachCommit(server.Database.Configuration);
+				CommitPointAfterEachCommit(server.SystemDatabase.Configuration);
 
-				var maxNumberOfStoredCommitPoints = server.Database.Configuration.MaxNumberOfStoredCommitPoints;
+				var maxNumberOfStoredCommitPoints = server.SystemDatabase.Configuration.MaxNumberOfStoredCommitPoints;
 
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
@@ -120,9 +120,9 @@ namespace Raven.Tests.Indexes.Recovery
 							WaitForIndexing(store);
 						}
 
-                        Index indexInstance = server.Database.IndexStorage.GetIndexInstance(index.IndexName);
+                        Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                       var  commitPointsDirectory = Path.Combine(server.Database.Configuration.IndexStoragePath,
+                       var  commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                                              indexInstance.IndexId + "\\CommitPoints");
 
 						var commitPoints = Directory.GetDirectories(commitPointsDirectory);
@@ -143,7 +143,7 @@ namespace Raven.Tests.Indexes.Recovery
 
 			using (var server = GetNewServer(runInMemory: false, dataDirectory: dataDir))
 			{
-				CommitPointAfterFirstCommitOnly(server.Database.Configuration);
+				CommitPointAfterFirstCommitOnly(server.SystemDatabase.Configuration);
 
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
@@ -171,12 +171,12 @@ namespace Raven.Tests.Indexes.Recovery
 					}
 				}
 
-                Index indexInstance = server.Database.IndexStorage.GetIndexInstance(index.IndexName);
+                Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                commitPointsDirectory = Path.Combine(server.Database.Configuration.IndexStoragePath,
+                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                                      indexInstance.IndexId + "\\CommitPoints");
 
-                indexFullPath = Path.Combine(server.Database.Configuration.IndexStoragePath,
+                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                          indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
 			}
 
@@ -211,7 +211,7 @@ namespace Raven.Tests.Indexes.Recovery
 
 			using (var server = GetNewServer(runInMemory: false, dataDirectory: dataDir))
 			{
-				CommitPointAfterFirstCommitOnly(server.Database.Configuration);
+				CommitPointAfterFirstCommitOnly(server.SystemDatabase.Configuration);
 
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
@@ -248,12 +248,12 @@ namespace Raven.Tests.Indexes.Recovery
 					}
 				}
 
-                Index indexInstance = server.Database.IndexStorage.GetIndexInstance(index.IndexName);
+                Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                commitPointsDirectory = Path.Combine(server.Database.Configuration.IndexStoragePath,
+                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                                      indexInstance.IndexId + "\\CommitPoints");
 
-                indexFullPath = Path.Combine(server.Database.Configuration.IndexStoragePath,
+                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                          indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
 			}
 
@@ -285,7 +285,7 @@ namespace Raven.Tests.Indexes.Recovery
 
 			using (var server = GetNewServer(runInMemory: false, dataDirectory: dataDir))
 			{
-				CommitPointAfterEachCommit(server.Database.Configuration);
+				CommitPointAfterEachCommit(server.SystemDatabase.Configuration);
 			  
 				using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
 				{
@@ -321,12 +321,12 @@ namespace Raven.Tests.Indexes.Recovery
 						WaitForIndexing(store);
 					}
 				}
-                Index indexInstance = server.Database.IndexStorage.GetIndexInstance(index.IndexName);
+                Index indexInstance = server.SystemDatabase.IndexStorage.GetIndexInstance(index.IndexName);
 
-                commitPointsDirectory = Path.Combine(server.Database.Configuration.IndexStoragePath,
+                commitPointsDirectory = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                                      indexInstance.IndexId + "\\CommitPoints");
 
-                indexFullPath = Path.Combine(server.Database.Configuration.IndexStoragePath,
+                indexFullPath = Path.Combine(server.SystemDatabase.Configuration.IndexStoragePath,
                                          indexInstance.IndexId.ToString(CultureInfo.InvariantCulture));
 
 			}

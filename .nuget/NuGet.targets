@@ -23,8 +23,7 @@
             <PackageSource Include="https://nuget.org/api/v2/" />
             <PackageSource Include="http://www.myget.org/F/ravendb/" />
             <PackageSource Include="http://www.myget.org/F/ravendbvnext/" />
-            <PackageSource Include="http://www.myget.org/F/nancyfx" />
-            <PackageSource Include="http://www.myget.org/F/nancyasync" />
+            <PackageSource Include="http://www.myget.org/f/aspnetwebstacknightly/" />
     </ItemGroup>
 
     <PropertyGroup Condition=" '$(OS)' == 'Windows_NT'">

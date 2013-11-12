@@ -36,7 +36,7 @@ namespace Raven.Tests.Notifications
 		{
 			using (var server = GetNewServer(enableAuthentication:true))
 			{
-				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "test",
 					Secret = "test",
@@ -82,7 +82,7 @@ namespace Raven.Tests.Notifications
 		{
 			using (var server = GetNewServer(enableAuthentication:true))
 			{
-				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "test",
 					Secret = "test",
@@ -117,7 +117,7 @@ namespace Raven.Tests.Notifications
 		{
 			using (var server = GetNewServer(enableAuthentication:true))
 			{
-				server.Database.Put("Raven/Databases/OAuthTest", null, RavenJObject.FromObject(new DatabaseDocument
+				server.SystemDatabase.Put("Raven/Databases/OAuthTest", null, RavenJObject.FromObject(new DatabaseDocument
 				{
 					Disabled = false,
 					Id = "Raven/Databases/OAuthTest",
@@ -127,7 +127,7 @@ namespace Raven.Tests.Notifications
 					}
 				}), new RavenJObject(), null);
 
-				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "test",
 					Secret = "test",
@@ -174,7 +174,7 @@ namespace Raven.Tests.Notifications
 		{
 			using (var server = GetNewServer(enableAuthentication:true))
 			{
-				server.Database.Put("Raven/Databases/OAuthTest1", null, RavenJObject.FromObject(new DatabaseDocument
+				server.SystemDatabase.Put("Raven/Databases/OAuthTest1", null, RavenJObject.FromObject(new DatabaseDocument
 				{
 					Disabled = false,
 					Id = "Raven/Databases/OAuthTest1",
@@ -184,7 +184,7 @@ namespace Raven.Tests.Notifications
 					}
 				}), new RavenJObject(), null);
 
-				server.Database.Put("Raven/Databases/OAuthTest2", null, RavenJObject.FromObject(new DatabaseDocument
+				server.SystemDatabase.Put("Raven/Databases/OAuthTest2", null, RavenJObject.FromObject(new DatabaseDocument
 				{
 					Disabled = false,
 					Id = "Raven/Databases/OAuthTest2",
@@ -194,7 +194,7 @@ namespace Raven.Tests.Notifications
 					}
 				}), new RavenJObject(), null);
 
-				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "test",
 					Secret = "test",
@@ -230,7 +230,7 @@ namespace Raven.Tests.Notifications
 		{
 			using (var server = GetNewServer(enableAuthentication:true))
 			{
-				server.Database.Put("Raven/Databases/OAuthTest", null, RavenJObject.FromObject(new DatabaseDocument
+				server.SystemDatabase.Put("Raven/Databases/OAuthTest", null, RavenJObject.FromObject(new DatabaseDocument
 				{
 					Disabled = false,
 					Id = "Raven/Databases/OAuthTest",
@@ -240,7 +240,7 @@ namespace Raven.Tests.Notifications
 					}
 				}), new RavenJObject(), null);
 
-				server.Database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
+				server.SystemDatabase.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 				{
 					Name = "test",
 					Secret = "test",

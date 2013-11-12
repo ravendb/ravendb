@@ -9,6 +9,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
+using System.Runtime.InteropServices;
+using System.Text;
+using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Extensions
 {
@@ -27,6 +30,90 @@ namespace Raven.Abstractions.Extensions
 					return;
 				other.Write(buffer, 0, read);
 			}
+		}
+
+        public static void Write(this Stream stream, long value)
+        {
+            var buffer = BitConverter.GetBytes(value);
+            stream.Write(buffer, 0, buffer.Length);
+        }
+
+        public static void Write(this Stream stream, int value)
+        {
+            var buffer = BitConverter.GetBytes(value);
+            stream.Write(buffer, 0, buffer.Length);
+        }
+
+        public static long ReadInt64(this Stream stream)
+        {
+            var int64Size = Marshal.SizeOf(typeof(long));
+            var buffer = new byte[int64Size];
+            stream.Read(buffer, 0, int64Size);
+
+            return BitConverter.ToInt64(buffer, 0);
+        }
+
+
+		public static int ReadInt32(this Stream stream)
+		{
+		    var int32Size = Marshal.SizeOf(typeof (int));
+            var buffer = new byte[int32Size];
+            stream.Read(buffer, 0, int32Size);
+
+			return BitConverter.ToInt32(buffer, 0);
+		}
+
+        #if !SILVERLIGHT
+        public static string ReadString(this Stream stream)
+	    {
+            return ReadString(stream, Encoding.UTF8);
+	    }
+
+	    public static string ReadString(this Stream stream,Encoding encoding)
+		{
+			var stringLength = stream.ReadInt32();
+			var buffer = new byte[stringLength];
+			stream.Read(buffer, 0, stringLength);
+
+			return encoding.GetString(buffer);
+		}
+
+	    public static string ReadStringWithoutPrefix(this Stream stream)
+	    {
+            return ReadStringWithoutPrefix(stream, Encoding.UTF8);
+	    }
+
+	    public static string ReadStringWithoutPrefix(this Stream stream, Encoding encoding)
+	    {
+	        var buffer = stream.ReadData();
+
+	        return encoding.GetString(buffer);
+	    }
+        #endif
+
+	    public static void Write(this Stream stream,string value)
+	    {
+            Write(stream, value, Encoding.UTF8);
+	    }
+
+	    public static void Write(this Stream stream,string value,Encoding encoding)
+		{
+            var buffer = encoding.GetBytes(value);
+            stream.Write(buffer.Length);
+            stream.Write(buffer, 0, buffer.Length);
+        }
+
+		public static void Write(this Stream stream, Etag etag)
+		{
+			var buffer = etag.ToByteArray();
+			stream.Write(buffer, 0, 16);
+		}
+
+		public static Etag ReadEtag(this Stream stream)
+		{
+			var buffer = new byte[16]; //etag size is 16 bytes
+			stream.Read(buffer, 0, 16);
+			return Etag.Parse(buffer);
 		}
 
 		/// <summary>

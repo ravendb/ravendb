@@ -34,8 +34,8 @@ namespace Raven.Storage.Managed
 			MapReduce = mappedResultsStorageAction;
 			Queue = new QueueStorageActions(storage, generator);
 			Tasks = new TasksStorageActions(storage, generator);
-			Staleness = new StalenessStorageActions(storage);
 			Lists = new ListsStorageActions(storage, generator);
+			Staleness = new StalenessStorageActions(storage, Lists);
 		}
 
 		public IListsStorageActions Lists { get; private set; }
@@ -112,8 +112,13 @@ namespace Raven.Storage.Managed
 				handler();
 		}
 
+		public event Action OnDispose;
+
 		public void Dispose()
 		{
+			var onDispose = OnDispose;
+			if (onDispose != null)
+				onDispose();
 			Indexing.Dispose();
 		}
 	}

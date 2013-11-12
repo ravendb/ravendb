@@ -44,7 +44,7 @@ namespace Raven.Bundles.Tests.Authorization
 				Port = 8079,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 			});
-			store = new DocumentStore { Url = server.Database.Configuration.ServerUrl };
+			store = new DocumentStore {Url = server.SystemDatabase.Configuration.ServerUrl };
 			store.Initialize();
 			foreach (DictionaryEntry de in HttpRuntime.Cache)
 			{
