@@ -10,8 +10,7 @@ namespace Voron.Impl
 		byte* AcquirePagePointer(long pageNumber);
         Page Read(long pageNumber);
 		void AllocateMorePages(Transaction tx, long newLength);
-	    void Flush(long startPage, long count);
-
+	 
 		Page TempPage { get; }
 
 		bool Disposed { get; }

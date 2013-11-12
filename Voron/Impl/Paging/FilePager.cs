@@ -59,11 +59,6 @@ namespace Voron.Impl
 			throw new InvalidOperationException("File pager does not offer writing directly to a page");
 		}
 
-		public override void Flush(long start, long count)
-		{
-			// nothing to do here - this is needed for memory mapped files only
-		}
-
 		public override void AllocateMorePages(Transaction tx, long newLength)
 		{
 			if (newLength < _fileStream.Length)

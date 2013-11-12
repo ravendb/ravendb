@@ -98,13 +98,6 @@ namespace Voron.Impl
 			NativeMethods.memcpy(PagerState.Base + position, page.Base, toWrite);
 		}
 
-		public override void Flush(long startPage, long count)
-		{
-			long numberOfBytesToFlush = count * PageSize;
-			long start = startPage * PageSize;
-			FlushViewOfFile(PagerState.Base + start, new IntPtr(numberOfBytesToFlush));
-		}
-
 		public override void Dispose()
 		{
 			base.Dispose();

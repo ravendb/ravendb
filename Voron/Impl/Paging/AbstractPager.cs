@@ -61,9 +61,8 @@ namespace Voron.Impl
 		}
 
 		public abstract byte* AcquirePagePointer(long pageNumber);
-
-		public abstract void Flush(long startPage, long count);
-		public abstract void Sync();
+		
+        public abstract void Sync();
 
 		public virtual PagerState TransactionBegan()
 		{

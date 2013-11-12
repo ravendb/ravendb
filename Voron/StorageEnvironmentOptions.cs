@@ -39,6 +39,8 @@ namespace Voron
 
         public abstract IVirtualPager DataPager { get; }
 
+        public abstract IVirtualPager ScratchPager { get; }
+
 	    public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
 
 	    public int IdleFlushTimeout { get; set; }
@@ -86,6 +88,7 @@ namespace Voron
         {
             private readonly string _basePath;
             private readonly Lazy<IVirtualPager> _dataPager;
+            private readonly Lazy<IVirtualPager> _scratchPager;
 
             private readonly ConcurrentDictionary<string, Lazy<IVirtualPager>> _journals =
                 new ConcurrentDictionary<string, Lazy<IVirtualPager>>(StringComparer.OrdinalIgnoreCase);
@@ -94,6 +97,7 @@ namespace Voron
             {
                 _basePath = Path.GetFullPath(basePath);
                 _dataPager = new Lazy<IVirtualPager>(CreateDataPager);
+                _scratchPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(Path.Combine(_basePath, "scratch.tmp")));
             }
 
             private IVirtualPager CreateDataPager()
@@ -111,6 +115,11 @@ namespace Voron
                 {
                     return _dataPager.Value;
                 }
+            }
+
+            public override IVirtualPager ScratchPager
+            {
+                get { return _scratchPager.Value; }
             }
 
             public override IVirtualPager CreateJournalPager(long number)
@@ -159,17 +168,25 @@ namespace Voron
         {
             private readonly PureMemoryPager _dataPager;
 
+            private readonly PureMemoryPager _scratchPager;
             private Dictionary<string, IVirtualPager> _logs =
                 new Dictionary<string, IVirtualPager>(StringComparer.OrdinalIgnoreCase);
+
 
             public PureMemoryStorageEnvironmentOptions()
             {
                 _dataPager = new PureMemoryPager();
+                _scratchPager = new PureMemoryPager();
             }
 
             public override IVirtualPager DataPager
             {
                 get { return _dataPager; }
+            }
+
+            public override IVirtualPager ScratchPager
+            {
+                get { return _scratchPager; }
             }
 
             public override IVirtualPager CreateJournalPager(long number)

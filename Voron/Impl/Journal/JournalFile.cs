@@ -143,7 +143,13 @@ namespace Voron.Impl.Journal
 
 			_currentTxHeader = null;
 
-			Sync();
+		    var start = _lastSyncedPage + 1;
+		    var count = _writePage - start;
+
+
+		    _lastSyncedPage += count;
+
+		    throw new NotImplementedException();
 		}
 
 		public void TransactionRollback(Transaction tx)
@@ -181,18 +187,7 @@ namespace Voron.Impl.Journal
 
 		public bool HasIntegrityIssues { get; private set; }
 
-		private void Sync()
-		{
-			var start = _lastSyncedPage + 1;
-			var count = _writePage - start;
-
-			_pager.Flush(start, count);
-			_pager.Sync();
-
-			_lastSyncedPage += count;
-		}
-
-		public Page ReadPage(Transaction tx, long pageNumber)
+	    public Page ReadPage(Transaction tx, long pageNumber)
 		{
 			long logPageNumber;
 

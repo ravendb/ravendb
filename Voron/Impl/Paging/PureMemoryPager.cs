@@ -64,11 +64,6 @@ namespace Voron.Impl
 			// nothing to do here
 		}
 
-		public override void Flush(long startPage, long count)
-		{
-			// nothing to do here
-		}
-
 		public override byte* AcquirePagePointer(long pageNumber)
 		{
 			return _base + (pageNumber * PageSize);
