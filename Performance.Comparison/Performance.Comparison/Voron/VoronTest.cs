@@ -65,9 +65,21 @@ namespace Performance.Comparison.Voron
             return Read(string.Format("[Voron] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
+        public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
+        {
+            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+
+            return ReadParallel(string.Format("[Voron] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker, numberOfThreads);
+        }
+
         public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker)
         {
             return Read(string.Format("[Voron] random read ({0} items)", Constants.ReadItems), randomIds, perfTracker);
+        }
+
+        public override PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads)
+        {
+            return ReadParallel(string.Format("[Voron] parallel random read ({0} items)", Constants.ReadItems), randomIds, perfTracker, numberOfThreads);
         }
 
         private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker)
@@ -127,28 +139,9 @@ namespace Performance.Comparison.Voron
             {
                 env.FlushLogToDataFile();
 
-                var ms = new byte[4096];
                 var sw = Stopwatch.StartNew();
 
-                var processed = 0;
-
-                using (var tx = env.NewTransaction(TransactionFlags.Read))
-                {
-                    foreach (var id in ids)
-                    {
-
-                        var key = id.ToString("0000000000000000");
-                        using (var stream = tx.State.Root.Read(tx, key).Stream)
-                        {
-                            while (stream.Read(ms, 0, ms.Length) != 0)
-                            {
-                            }
-                        }
-                        perfTracker.Increment();
-
-                        processed++;
-                    }
-                }
+                ReadInternal(ids, perfTracker, env);
 
                 sw.Stop();
 
@@ -157,8 +150,65 @@ namespace Performance.Comparison.Voron
                     Operation = operation,
                     Time = DateTime.Now,
                     Duration = sw.ElapsedMilliseconds,
-                    ProcessedItems = processed
+                    ProcessedItems = ids.Count()
                 };
+            }
+        }
+
+        private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker, int numberOfThreads)
+        {
+            var options = StorageEnvironmentOptions.ForPath(dataPath);
+            options.ManualFlushing = true;
+
+            var countdownEvent = new CountdownEvent(numberOfThreads);
+
+            using (var env = new StorageEnvironment(options))
+            {
+                env.FlushLogToDataFile();
+
+                var sw = Stopwatch.StartNew();
+
+                for (int i = 0; i < numberOfThreads; i++)
+                {
+                    ThreadPool.QueueUserWorkItem(
+                        state =>
+                            {
+                                ReadInternal(ids, perfTracker, env);
+
+                                countdownEvent.Signal();
+                            });
+                }
+
+                countdownEvent.Wait();
+                sw.Stop();
+
+                return new PerformanceRecord
+                {
+                    Operation = operation,
+                    Time = DateTime.Now,
+                    Duration = sw.ElapsedMilliseconds,
+                    ProcessedItems = ids.Count() * numberOfThreads
+                };
+            }
+        }
+
+        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, StorageEnvironment env)
+        {
+            var ms = new byte[4096];
+
+            using (var tx = env.NewTransaction(TransactionFlags.Read))
+            {
+                foreach (var id in ids)
+                {
+                    var key = id.ToString("0000000000000000");
+                    using (var stream = tx.State.Root.Read(tx, key).Stream)
+                    {
+                        while (stream.Read(ms, 0, ms.Length) != 0)
+                        {
+                        }
+                    }
+                    perfTracker.Increment();
+                }
             }
         }
     }

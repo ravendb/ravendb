@@ -24,7 +24,11 @@
 
         public abstract PerformanceRecord ReadSequential(PerfTracker perfTracker);
 
+        public abstract PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads);
+
         public abstract PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker);
+
+        public abstract PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads);
 
         protected byte[] GetValueToWrite(byte[] currentValue, int newSize)
         {

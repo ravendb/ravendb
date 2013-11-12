@@ -14,6 +14,8 @@ using System.Linq;
 
 namespace Performance.Comparison.SQLCE
 {
+    using System.Threading;
+
     public class SqlCeTest : StoragePerformanceTestBase
     {
         private readonly string connectionString;
@@ -72,9 +74,21 @@ namespace Performance.Comparison.SQLCE
             return Read(string.Format("[SQL CE] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
+        public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
+        {
+            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+
+            return ReadParallel(string.Format("[SQL CE] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker, numberOfThreads);
+        }
+
         public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker)
         {
             return Read(string.Format("[SQL CE] random read ({0} items)", Constants.ReadItems), randomIds, perfTracker);
+        }
+
+        public override PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads)
+        {
+            return ReadParallel(string.Format("[SQL CE] parallel random read ({0} items)", Constants.ReadItems), randomIds, perfTracker, numberOfThreads);
         }
 
         private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker)
@@ -136,19 +150,61 @@ namespace Performance.Comparison.SQLCE
 
         private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
         {
+            var sw = Stopwatch.StartNew();
+
+            ReadInternal(ids, perfTracker, connectionString);
+
+            sw.Stop();
+
+            return new PerformanceRecord
+            {
+                Operation = operation,
+                Time = DateTime.Now,
+                Duration = sw.ElapsedMilliseconds,
+                ProcessedItems = ids.Count(),
+            };
+        }
+
+        private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker, int numberOfThreads)
+        {
+            var countdownEvent = new CountdownEvent(numberOfThreads);
+            var sw = Stopwatch.StartNew();
+            
+            for (int i = 0; i < numberOfThreads; i++)
+            {
+                ThreadPool.QueueUserWorkItem(
+                    state =>
+                        {
+                            ReadInternal(ids, perfTracker, connectionString);
+
+                            countdownEvent.Signal();
+                        });
+            }
+
+            countdownEvent.Wait();
+            sw.Stop();
+
+            return new PerformanceRecord
+            {
+                Operation = operation,
+                Time = DateTime.Now,
+                Duration = sw.ElapsedMilliseconds,
+                ProcessedItems = ids.Count() * numberOfThreads,
+            };
+        }
+
+        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, string connectionString)
+        {
             var buffer = new byte[4096];
 
             using (var connection = new SqlCeConnection(connectionString))
             {
                 connection.Open();
 
-                var sw = Stopwatch.StartNew();
-                var processed = 0;
                 using (var tx = connection.BeginTransaction())
                 {
                     foreach (var id in ids)
                     {
-
                         using (var command = new SqlCeCommand("SELECT Value FROM Items WHERE ID = " + id, connection))
                         {
                             using (var reader = command.ExecuteReader())
@@ -166,20 +222,8 @@ namespace Performance.Comparison.SQLCE
                                 }
                             }
                         }
-
-                        processed++;
                     }
                 }
-
-                sw.Stop();
-
-                return new PerformanceRecord
-                {
-                    Operation = operation,
-                    Time = DateTime.Now,
-                    Duration = sw.ElapsedMilliseconds,
-                    ProcessedItems = processed,
-                };
             }
         }
     }
