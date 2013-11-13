@@ -130,7 +130,8 @@
 
         public override List<PerformanceRecord> WriteParallelSequential(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
         {
-            throw new NotImplementedException();
+            return WriteParallel(string.Format("[Esent] parallel sequential write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
         }
 
         public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data, PerfTracker perfTracker)
@@ -141,7 +142,8 @@
 
         public override List<PerformanceRecord> WriteParallelRandom(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
         {
-            throw new NotImplementedException();
+            return WriteParallel(string.Format("[Esent] parallel random write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
         }
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
@@ -170,59 +172,83 @@
 
         private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker)
         {
-            byte[] valueToWrite = null;
-            var records = new List<PerformanceRecord>();
-
             using (var instance = CreateInstance())
             {
-                var sw = new Stopwatch();
-
                 var enumerator = data.GetEnumerator();
+                return WriteInternal(operation, enumerator, itemsPerTransaction, numberOfTransactions, perfTracker, instance);
+            }
+        }
 
-                Table table;
-                JET_COLUMNID primaryColumnId;
-                JET_COLUMNID secondaryColumnId;
-                using (var session = OpenSession(instance, out table, out primaryColumnId, out secondaryColumnId))
+        private List<PerformanceRecord> WriteParallel(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            using (var instance = CreateInstance())
+            {
+                return ExecuteWriteWithParallel(
+                operation,
+                data,
+                numberOfTransactions,
+                itemsPerTransaction,
+                numberOfThreads,
+                perfTracker,
+                (op, enumerator, itemCount, transactionCount, perfTrcker) => WriteInternal(op, enumerator, itemCount, transactionCount, perfTrcker, instance),
+                out elapsedMilliseconds);
+            }
+        }
+
+        private List<PerformanceRecord> WriteInternal(
+            string operation,
+            IEnumerator<TestData> enumerator,
+            long itemsPerTransaction,
+            long numberOfTransactions,
+            PerfTracker perfTracker,
+            Instance instance)
+        {
+            byte[] valueToWrite = null;
+            var records = new List<PerformanceRecord>();
+            var sw = new Stopwatch();
+
+            Table table;
+            JET_COLUMNID primaryColumnId;
+            JET_COLUMNID secondaryColumnId;
+            using (var session = OpenSession(instance, out table, out primaryColumnId, out secondaryColumnId))
+            {
+                for (var transactions = 0; transactions < numberOfTransactions; transactions++)
                 {
-                    for (var transactions = 0; transactions < numberOfTransactions; transactions++)
+                    sw.Restart();
+
+                    using (var tx = new Transaction(session))
                     {
-                        sw.Restart();
-
-                        using (var tx = new Transaction(session))
+                        for (var i = 0; i < itemsPerTransaction; i++)
                         {
-                            for (var i = 0; i < itemsPerTransaction; i++)
-                            {
-                                enumerator.MoveNext();
+                            enumerator.MoveNext();
 
-                                valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
-                                Api.JetPrepareUpdate(session, table, JET_prep.Insert);
-                                Api.SetColumn(session, table, primaryColumnId, enumerator.Current.Id);
-                                Api.SetColumn(session, table, secondaryColumnId, valueToWrite);
-                                Api.JetUpdate(session, table);
-                                perfTracker.Increment();
-
-                            }
-
-                            tx.Commit(CommitTransactionGrbit.None);
+                            valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
+                            Api.JetPrepareUpdate(session, table, JET_prep.Insert);
+                            Api.SetColumn(session, table, primaryColumnId, enumerator.Current.Id);
+                            Api.SetColumn(session, table, secondaryColumnId, valueToWrite);
+                            Api.JetUpdate(session, table);
+                            perfTracker.Increment();
                         }
 
-                        sw.Stop();
-
-                        records.Add(
-                            new PerformanceRecord
-                                {
-                                    Operation = operation,
-                                    Time = DateTime.Now,
-                                    Duration = sw.ElapsedMilliseconds,
-                                    ProcessedItems = itemsPerTransaction,
-                                });
+                        tx.Commit(CommitTransactionGrbit.None);
                     }
 
                     sw.Stop();
+
+                    records.Add(
+                        new PerformanceRecord
+                            {
+                                Operation = operation,
+                                Time = DateTime.Now,
+                                Duration = sw.ElapsedMilliseconds,
+                                ProcessedItems = itemsPerTransaction,
+                            });
                 }
 
-                return records;
+                sw.Stop();
             }
+
+            return records;
         }
 
         private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
