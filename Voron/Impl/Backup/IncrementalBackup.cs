@@ -111,7 +111,7 @@ namespace Voron.Impl.Backup
 						
 						Debug.Assert(lastBackedUpPage != -1);
 
-                        env.Journal.UpdateAfterIncrementalBackup(lastBackedUpPage, lastBackedUpPage);
+                        env.Journal.UpdateAfterIncrementalBackup(lastBackedUpFile, lastBackedUpPage);
 					}
 				}
 				catch (Exception)
