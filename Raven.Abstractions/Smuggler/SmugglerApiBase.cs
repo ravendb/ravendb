@@ -356,7 +356,7 @@ namespace Raven.Abstractions.Smuggler
 		    {
 		        FromFile = options.FromFile,
 		        Filters = options.Filters,
-		        OperateOnTypes = options.OperateOnTypes & ~ItemType.Indexes
+		        OperateOnTypes = options.OperateOnTypes & ~(ItemType.Indexes | ItemType.Transformers)
 		    };
 
 			for (var i = 0; i < files.Length - 1; i++)
