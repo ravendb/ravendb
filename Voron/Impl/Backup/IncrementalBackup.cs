@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.IO.Packaging;
 using System.Linq;
 using Voron.Impl.Journal;
 using Voron.Trees;
@@ -19,7 +18,7 @@ namespace Voron.Impl.Backup
 {
     public unsafe class IncrementalBackup
     {
-        public long ToFile(StorageEnvironment env, string backupPath, CompressionOption compression = CompressionOption.Normal)
+		public long ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal)
         {
             if (env.Options.IncrementalBackupEnabled == false)
                 throw new InvalidOperationException("Incremental backup is disabled for this storage");
@@ -52,7 +51,8 @@ namespace Voron.Impl.Backup
 
                 try
                 {
-                    using (var package = Package.Open(backupPath, FileMode.Create))
+					using(var file = new FileStream(backupPath, FileMode.Create))
+                    using (var package = new ZipArchive(file, ZipArchiveMode.Create))
                     {
                         long lastBackedUpPage = -1;
                         long lastBackedUpFile = -1;
@@ -85,15 +85,16 @@ namespace Voron.Impl.Backup
                             if (startBackupAt >= journalFile.Pager.NumberOfAllocatedPages) // nothing to do here
                                 continue;
 
-                            var part = package.CreatePart(new Uri("/" + StorageEnvironmentOptions.JournalName(journalNum), UriKind.Relative),
-                                                          System.Net.Mime.MediaTypeNames.Application.Octet,
-                                                          compression);
+                            var part = package.CreateEntry(StorageEnvironmentOptions.JournalName(journalNum), compression);
                             Debug.Assert(part != null);
 
                             if (journalFile.Number == lastWrittenLogFile)
                                 pagesToCopy -= (journalFile.Pager.NumberOfAllocatedPages - lastWrittenLogPage);
 
-                            copier.ToStream(journalFile.Pager.Read(startBackupAt).Base, pagesToCopy * journalFile.Pager.PageSize, part.GetStream());
+                            using(var stream = part.Open())
+	                        {
+		                        copier.ToStream(journalFile.Pager.Read(startBackupAt).Base, pagesToCopy * journalFile.Pager.PageSize, stream);
+	                        }
 
                             lastBackedUpFile = journalFile.Number;
                             if (journalFile.Number == backupInfo.LastCreatedJournal)
@@ -151,9 +152,9 @@ namespace Voron.Impl.Backup
 
                 List<string> journalNames;
 
-                using (var package = Package.Open(backupPath, FileMode.Open))
+				using (var package = ZipFile.Open(backupPath, ZipArchiveMode.Read))
                 {
-                    journalNames = package.GetParts().Select(x => x.Uri.OriginalString.Trim('/')).ToList();
+                    journalNames = package.Entries.Select(x => x.Name).ToList();
                 }
 
                 var tempDir = Directory.CreateDirectory(Path.GetTempPath() + Guid.NewGuid()).FullName;
