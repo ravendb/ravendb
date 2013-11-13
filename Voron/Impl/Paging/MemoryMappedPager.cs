@@ -2,23 +2,26 @@
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 using Voron.Trees;
 
 namespace Voron.Impl
 {
 	public unsafe class MemoryMapPager : AbstractPager
 	{
-		private readonly FlushMode _flushMode;
 		private readonly FileStream _fileStream;
-		private FileInfo _fileInfo;
+		private readonly FileInfo _fileInfo;
 
 		[DllImport("kernel32.dll", SetLastError = true)]
 		[return: MarshalAs(UnmanagedType.Bool)]
 		extern static bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
 
-		public MemoryMapPager(string file, FlushMode flushMode = FlushMode.Full)
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool FlushFileBuffers(SafeFileHandle hFile);
+
+		public MemoryMapPager(string file)
 		{
-			_flushMode = flushMode;
 			_fileInfo = new FileInfo(file);
 			var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
 			_fileStream = _fileInfo.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
@@ -82,31 +85,24 @@ namespace Voron.Impl
 
 		public override void Sync()
 		{
-			if (_flushMode == FlushMode.Full)
-				_fileStream.Flush(true);
+             FlushFileBuffers(_fileStream.SafeFileHandle);
 		}
 
 		public override void Write(Page page, long? pageNumber)
 		{
 		    var startPage = pageNumber ?? page.PageNumber;
-		    var position = startPage * PageSize;
 
-			var toWrite = page.IsOverflow ? (page.OverflowSize + Constants.PageHeaderSize) : PageSize;
+			var toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
 
-			NativeMethods.memcpy(PagerState.Base + position, page.Base, toWrite);
+			WriteDirect(page, startPage, toWrite);
 		}
 
-		public override void Flush(long startPage, long count)
-		{
-			if(_flushMode == FlushMode.None)
-				return;
+	    public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
+	    {
+            NativeMethods.memcpy(PagerState.Base + pagePosition * PageSize, start.Base, pagesToWrite * PageSize);
+	    }
 
-			long numberOfBytesToFlush = count * PageSize;
-			long start = startPage * PageSize;
-			FlushViewOfFile(PagerState.Base + start, new IntPtr(numberOfBytesToFlush));
-		}
-
-		public override void Dispose()
+	    public override void Dispose()
 		{
 			base.Dispose();
 			if (PagerState != null)

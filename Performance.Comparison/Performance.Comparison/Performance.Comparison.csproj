@@ -75,6 +75,7 @@
     <Compile Include="IStoragePerformanceTest.cs" />
     <Compile Include="LMDB\LmdbTest.cs" />
     <Compile Include="PerformanceRecord.cs" />
+    <Compile Include="PerfTracker.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SQLCE\SqlCeTest.cs" />
