@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;
 using Raven.Client.Document;
@@ -69,6 +70,95 @@ namespace Raven.Tests.Smuggler
                     }
                 }
             }
+        }
+
+        [Fact]
+        public async Task ShouldSupportIncremental()
+        {
+            using (var server1 = GetNewServer(port: 8079))
+            using (var store1 = NewRemoteDocumentStore(ravenDbServer: server1, databaseName: "Database1"))
+            {
+                using (var session = store1.OpenAsyncSession("Database1"))
+                {
+                    await session.StoreAsync(new User {Name = "Oren Eini"});
+                    await session.StoreAsync(new User {Name = "Fitzchak Yitzchaki"});
+                    await session.SaveChangesAsync();
+                }
+                await store1.AsyncDatabaseCommands.PutAttachmentAsync("ayende", null, new MemoryStream(new byte[] {3}), new RavenJObject());
+                await store1.AsyncDatabaseCommands.PutAttachmentAsync("fitzchak", null, new MemoryStream(new byte[] {2}), new RavenJObject());
+
+                using (var server2 = GetNewServer(port: 8078))
+                {
+                    await SmugglerOperation.Between(new SmugglerBetweenOptions
+                    {
+                        From = new RavenConnectionStringOptions
+                        {
+                            Url = "http://localhost:8079",
+                            DefaultDatabase = "Database1",
+                        },
+                        To = new RavenConnectionStringOptions
+                        {
+                            Url = "http://localhost:8078",
+                            DefaultDatabase = "Database2",
+                        },
+                        Incremental = true,
+                    });
+
+                    using (var session = store1.OpenAsyncSession("Database1"))
+                    {
+                        var oren = await session.LoadAsync<User>("users/1");
+                        oren.Name += " Changed";
+                        await session.StoreAsync(new User {Name = "Daniel Dar"});
+                        await session.SaveChangesAsync();
+                    }
+                    await store1.AsyncDatabaseCommands.PutAttachmentAsync("ayende", null, new MemoryStream(new byte[] {4}), new RavenJObject());
+                    await store1.AsyncDatabaseCommands.PutAttachmentAsync("daniel", null, new MemoryStream(new byte[] {5}), new RavenJObject());
+
+                    using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
+                    {
+                        using (var session2 = store2.OpenAsyncSession("Database2"))
+                        {
+                            var oren = await session2.LoadAsync<User>("users/2");
+                            oren.Name += " Not Changed";
+                            await session2.SaveChangesAsync();
+                        }
+                        await store2.AsyncDatabaseCommands.PutAttachmentAsync("fitzchak", null, new MemoryStream(new byte[] { 6 }), new RavenJObject());
+
+                        await SmugglerOperation.Between(new SmugglerBetweenOptions
+                        {
+                            From = new RavenConnectionStringOptions
+                            {
+                                Url = "http://localhost:8079",
+                                DefaultDatabase = "Database1",
+                            },
+                            To = new RavenConnectionStringOptions
+                            {
+                                Url = "http://localhost:8078",
+                                DefaultDatabase = "Database2",
+                            },
+                            Incremental = true,
+                        });
+
+                        using (var session2 = store2.OpenAsyncSession("Database2"))
+                        {
+                            Assert.Equal(3, await session2.Query<User>().CountAsync());
+                            Assert.Equal("Oren Eini Changed", (await session2.LoadAsync<User>("users/1")).Name);
+                            Assert.Equal("Fitzchak Yitzchaki Not Changed", (await session2.LoadAsync<User>("users/2")).Name); // Test that this value won't be overwritten by the export server
+                        }
+
+                        Assert.Equal(3, (await store2.AsyncDatabaseCommands.GetAttachmentsAsync(Etag.Empty, 25)).Length);
+                        await AssertAttachmentContent(store2, "ayende", new byte[] {4});
+                        await AssertAttachmentContent(store2, "fitzchak", new byte[] {6}); // Test that this value won't be overwritten by the export server
+                    }
+                }
+            }
+        }
+
+        private async Task AssertAttachmentContent(IDocumentStore store2, string attachmentKey, byte[] expectedData)
+        {
+            var attachment = await store2.AsyncDatabaseCommands.GetAttachmentAsync(attachmentKey);
+            var data = await attachment.Data().ReadDataAsync();
+            Assert.Equal(expectedData, data);
         }
 
         protected override void ModifyStore(DocumentStore documentStore)
