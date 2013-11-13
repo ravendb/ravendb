@@ -58,7 +58,8 @@ namespace Performance.Comparison.SQLite
 
         public override List<PerformanceRecord> WriteParallelSequential(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
         {
-            throw new NotImplementedException();
+            return WriteParallel(string.Format("[SQLite] parallel sequential write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
         }
 
         public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data, PerfTracker perfTracker)
@@ -69,7 +70,8 @@ namespace Performance.Comparison.SQLite
 
         public override List<PerformanceRecord> WriteParallelRandom(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
         {
-            throw new NotImplementedException();
+            return WriteParallel(string.Format("[SQLite] parallel random write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
         }
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
@@ -98,23 +100,57 @@ namespace Performance.Comparison.SQLite
 
         private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker)
         {
-            byte[] valueToWrite = null;
-
             NewDatabase();
 
-            var random = new Random();
-            var value = new byte[data.Max(x => x.ValueSize)];
-            random.NextBytes(value);
+            var enumerator = data.GetEnumerator();
+            return WriteInternal(operation, enumerator, itemsPerTransaction, numberOfTransactions, perfTracker);
+        }
 
-            var records = new List<PerformanceRecord>();
+        private List<PerformanceRecord> WriteParallel(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            NewDatabase();
 
+            var countdownEvent = new CountdownEvent(numberOfThreads);
+
+            var parallelData = SplitData(data, numberOfTransactions, itemsPerTransaction, numberOfThreads);
+
+            var records = new List<PerformanceRecord>[numberOfThreads];
+            var sw = Stopwatch.StartNew();
+
+            for (int i = 0; i < numberOfThreads; i++)
+            {
+                ThreadPool.QueueUserWorkItem(
+                    state =>
+                        {
+                            var index = (int)state;
+                            var pData = parallelData[index];
+
+                            records[index] = WriteInternal(operation, pData.Enumerator, pData.ItemsPerTransaction, pData.NumberOfTransactions, perfTracker);
+
+                            countdownEvent.Signal();
+                        },
+                    i);
+            }
+
+            countdownEvent.Wait();
+            sw.Stop();
+
+            elapsedMilliseconds = sw.ElapsedMilliseconds;
+
+            return records
+                .SelectMany(x => x)
+                .ToList();
+        }
+
+        private List<PerformanceRecord> WriteInternal(string operation, IEnumerator<TestData> enumerator, long itemsPerTransaction, long numberOfTransactions, PerfTracker perfTracker)
+        {
             var sw = new Stopwatch();
-
+            byte[] valueToWrite = null;
+            var records = new List<PerformanceRecord>();
             using (var connection = new SQLiteConnection(connectionString))
             {
                 connection.Open();
 
-                var enumerator = data.GetEnumerator();
                 sw.Restart();
                 for (var transactions = 0; transactions < numberOfTransactions; transactions++)
                 {
@@ -140,15 +176,16 @@ namespace Performance.Comparison.SQLite
 
                         tx.Commit();
                     }
+
                     sw.Stop();
 
                     records.Add(new PerformanceRecord
-                    {
-                        Operation = operation,
-                        Time = DateTime.Now,
-                        Duration = sw.ElapsedMilliseconds,
-                        ProcessedItems = itemsPerTransaction
-                    });
+                            {
+                                Operation = operation,
+                                Time = DateTime.Now,
+                                Duration = sw.ElapsedMilliseconds,
+                                ProcessedItems = itemsPerTransaction
+                            });
                 }
 
                 sw.Stop();
