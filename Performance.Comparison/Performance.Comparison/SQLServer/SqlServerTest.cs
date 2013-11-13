@@ -105,36 +105,15 @@ namespace Performance.Comparison.SQLServer
         {
             NewDatabase();
 
-            var countdownEvent = new CountdownEvent(numberOfThreads);
-
-            var parallelData = SplitData(data, numberOfTransactions, itemsPerTransaction, numberOfThreads);
-
-            var records = new List<PerformanceRecord>[numberOfThreads];
-            var sw = Stopwatch.StartNew();
-
-            for (int i = 0; i < numberOfThreads; i++)
-            {
-                ThreadPool.QueueUserWorkItem(
-                    state =>
-                        {
-                            var index = (int)state;
-                            var pData = parallelData[index];
-
-                            records[index] = WriteInternal(operation, pData.Enumerator, pData.ItemsPerTransaction, pData.NumberOfTransactions, perfTracker);
-
-                            countdownEvent.Signal();
-                        },
-                    i);
-            }
-
-            countdownEvent.Wait();
-            sw.Stop();
-
-            elapsedMilliseconds = sw.ElapsedMilliseconds;
-
-            return records
-                    .SelectMany(x => x)
-                    .ToList();
+            return ExecuteWriteWithParallel(
+                operation,
+                data,
+                numberOfTransactions,
+                itemsPerTransaction,
+                numberOfThreads,
+                perfTracker,
+                WriteInternal,
+                out elapsedMilliseconds);
         }
 
         private List<PerformanceRecord> WriteInternal(string operation, IEnumerator<TestData> enumerator, long itemsPerTransaction, long numberOfTransactions, PerfTracker perfTracker)

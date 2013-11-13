@@ -106,38 +106,17 @@ namespace Performance.Comparison.Voron
         {
             NewStorage();
 
-            var countdownEvent = new CountdownEvent(numberOfThreads);
-
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(dataPath)))
             {
-                var parallelData = SplitData(data, numberOfTransactions, itemsPerTransaction, numberOfThreads);
-
-                var records = new List<PerformanceRecord>[numberOfThreads];
-                var sw = Stopwatch.StartNew();
-
-                for (int i = 0; i < numberOfThreads; i++)
-                {
-                    ThreadPool.QueueUserWorkItem(
-                        state =>
-                            {
-                                var index = (int)state;
-                                var pData = parallelData[index];
-
-                                records[index] = WriteInternalBatch(operation, pData.ItemsPerTransaction, pData.NumberOfTransactions, perfTracker, env, pData.Enumerator);
-
-                                countdownEvent.Signal();
-                            },
-                        i);
-                }
-
-                countdownEvent.Wait();
-                sw.Stop();
-
-                elapsedMilliseconds = sw.ElapsedMilliseconds;
-
-                return records
-                    .SelectMany(x => x)
-                    .ToList();
+                return ExecuteWriteWithParallel(
+                operation,
+                data,
+                numberOfTransactions,
+                itemsPerTransaction,
+                numberOfThreads,
+                perfTracker,
+                (op, enumerator, itemCount, transactionCount, perfTrcker) => WriteInternalBatch(op, itemCount, transactionCount, perfTrcker, env, enumerator),
+                out elapsedMilliseconds);
             }
         }
 

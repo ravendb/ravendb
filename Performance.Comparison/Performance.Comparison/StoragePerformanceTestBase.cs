@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Threading;
 
     public abstract class StoragePerformanceTestBase : IStoragePerformanceTest
     {
@@ -49,7 +50,41 @@
             return currentValue;
         }
 
-        protected IList<ParallelTestData> SplitData(IEnumerable<TestData> data, int currentNumberOfTransactions, int currentNumberOfItemsPerTransaction, int numberOfThreads)
+        protected List<PerformanceRecord> ExecuteWriteWithParallel(string operation, IEnumerable<TestData> data, int numberOfTransactions, int itemsPerTransaction, int numberOfThreads, PerfTracker perfTracker, Func<string, IEnumerator<TestData>, long, long, PerfTracker, List<PerformanceRecord>> writeFunction, out long elapsedMilliseconds)
+        {
+            var countdownEvent = new CountdownEvent(numberOfThreads);
+
+            var parallelData = SplitData(data, numberOfTransactions, itemsPerTransaction, numberOfThreads);
+
+            var records = new List<PerformanceRecord>[numberOfThreads];
+            var sw = Stopwatch.StartNew();
+
+            for (int i = 0; i < numberOfThreads; i++)
+            {
+                ThreadPool.QueueUserWorkItem(
+                    state =>
+                    {
+                        var index = (int)state;
+                        var pData = parallelData[index];
+
+                        records[index] = writeFunction(operation, pData.Enumerator, pData.ItemsPerTransaction, pData.NumberOfTransactions, perfTracker);
+
+                        countdownEvent.Signal();
+                    },
+                    i);
+            }
+
+            countdownEvent.Wait();
+            sw.Stop();
+
+            elapsedMilliseconds = sw.ElapsedMilliseconds;
+
+            return records
+                .SelectMany(x => x)
+                .ToList();
+        }
+
+        private IList<ParallelTestData> SplitData(IEnumerable<TestData> data, int currentNumberOfTransactions, int currentNumberOfItemsPerTransaction, int numberOfThreads)
         {
             var count = data.Count();
             Debug.Assert(count == currentNumberOfItemsPerTransaction * currentNumberOfTransactions);
