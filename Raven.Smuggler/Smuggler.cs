@@ -19,7 +19,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Smuggler
 {
-    public static class SmugglerOp
+    public static class SmugglerOperation
     {
         const int RetriesCount = 5;
 

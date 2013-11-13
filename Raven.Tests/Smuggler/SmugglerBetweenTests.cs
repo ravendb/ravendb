@@ -38,7 +38,7 @@ namespace Raven.Tests.Smuggler
 
                 using (var server2 = GetNewServer(port: 8078))
                 {
-                    await SmugglerOp.Between(new SmugglerBetweenOptions
+                    await SmugglerOperation.Between(new SmugglerBetweenOptions
                     {
                         From = new RavenConnectionStringOptions
                         {
