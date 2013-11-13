@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <chrono>
 #include <ctime>
+#include <thread>
 
 extern "C"
 {
@@ -184,7 +185,7 @@ vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransact
   return records;
 };
 
-vector<PerformanceRecord> Read(vector<TestData> dataItems, int itemsPerTransaction, int numberOfTransactions) {
+vector<PerformanceRecord> Read(vector<TestData> dataItems) {
   vector<PerformanceRecord> records;
   
   int rc;
@@ -232,17 +233,36 @@ vector<PerformanceRecord> Read(vector<TestData> dataItems, int itemsPerTransacti
   
   PerformanceRecord r;
   r.Duration = secs * 1000; // in miliseconds
-  r.ProcessedItems = numberOfTransactions * itemsPerTransaction;
+  r.ProcessedItems = dataItems.size();
   r.Time = chrono::system_clock::to_time_t(end);
   
   records.push_back(r);
   
   mdb_env_close(env);
   
-  cout << "Read " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (numberOfTransactions * itemsPerTransaction)/secs << " ops/s" << endl;
+  cout << "Read " << dataItems.size() << " items in " << secs << " sec, " << dataItems.size()/secs << " ops/s" << endl;
   
   return records;
 };
+
+void ReadParallel(vector<TestData> dataItems, int numberOfThreads, int itemsPerTransaction, int numberOfTransactions) {
+  vector<PerformanceRecord> records;
+  
+  MDB_env *env = StorageEnvironment(false);
+  vector<thread> threads(numberOfThreads);
+  
+  int part = dataItems.size() / numberOfThreads;
+  
+  for(int i=0; i < numberOfThreads;i++){
+  
+    vector<TestData>::const_iterator start = dataItems.begin() + (i * part);
+    vector<TestData>::const_iterator end = dataItems.begin() + (i * part) + part;
+    vector<TestData> itemsToRead(start, end);
+    
+    threads.at(i) = thread(Read, itemsToRead);
+  }
+  
+}
 
 int main(int argc,char * argv[])
 {
@@ -261,22 +281,22 @@ int main(int argc,char * argv[])
 
   vector<PerformanceRecord> records = Write(sequentialIds, itemsPerTransaction, writeTransactions);
   WritePerfData("WriteSeq", records);
-  records = Read(sequentialIds, itemsPerTransaction, writeTransactions);
+  records = Read(sequentialIds);
   WritePerfData("ReadSeq", records);
   
   records = Write(randomIds, itemsPerTransaction, writeTransactions);
   WritePerfData("WriteRandom", records);
-  records = Read(randomIds, itemsPerTransaction, writeTransactions);
+  records = Read(randomIds);
   WritePerfData("ReadRandom", records);
 
   records = Write(sequentialIdsLarge, itemsPerTransaction, writeTransactions);
   WritePerfData("WriteLargeSeq", records);
-  records = Read(sequentialIdsLarge, itemsPerTransaction, writeTransactions);
+  records = Read(sequentialIdsLarge);
   WritePerfData("ReadLargeSeq", records);
 
   records = Write(randomIdsLarge, itemsPerTransaction, writeTransactions);
   WritePerfData("WriteLargeRandom", records);;
-  records = Read(randomIdsLarge, itemsPerTransaction, writeTransactions);
+  records = Read(randomIdsLarge);
   WritePerfData("ReadLargeRandom", records);
 
   return 0;
