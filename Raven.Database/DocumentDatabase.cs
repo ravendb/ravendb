@@ -210,6 +210,7 @@ namespace Raven.Database
 				{
 					sequentialUuidGenerator = new SequentialUuidGenerator();
 					TransactionalStorage.Initialize(sequentialUuidGenerator, DocumentCodecs);
+					lastCollectionEtags = new LastCollectionEtags(TransactionalStorage);
 				}
 				catch (Exception)
 				{
@@ -244,8 +245,8 @@ namespace Raven.Database
 
 					InitializeTriggersExceptIndexCodecs();
 					SecondStageInitialization();
-
 					ExecuteStartupTasks();
+					lastCollectionEtags.Initialize();
 				}
 				catch (Exception)
 				{
@@ -508,6 +509,12 @@ namespace Raven.Database
 
 			exceptionAggregator.Execute(() =>
 			{
+				if (lastCollectionEtags != null)
+					lastCollectionEtags.Flush();
+			});
+
+			exceptionAggregator.Execute(() =>
+			{
 				AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
 				AppDomain.CurrentDomain.ProcessExit -= DomainUnloadOrProcessExit;
 				disposed = true;
@@ -703,6 +710,7 @@ namespace Raven.Database
 				TransportState.OnIdle();
 				IndexStorage.RunIdleOperations();
 				ClearCompletedPendingTasks();
+				lastCollectionEtags.Flush();
 			}
 			finally
 			{
@@ -835,7 +843,7 @@ namespace Raven.Database
 							SkipDeleteFromIndex = addDocumentResult.Updated == false
 						}, documents =>
 						{
-							SetPerCollectionEtags(documents);
+							lastCollectionEtags.UpdatePerCollectionEtags(documents);	
 							etagSynchronizer.UpdateSynchronizationState(documents);
 							prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, null).AfterStorageCommitBeforeWorkNotifications(documents);
 						});
@@ -878,28 +886,6 @@ namespace Raven.Database
 					ETag = newEtag
 				};
 			}
-		}
-
-		private void SetPerCollectionEtags(JsonDocument[] documents)
-		{
-			var collections = documents.GroupBy(x => x.Metadata[Constants.RavenEntityName])
-					 .Where(x => x.Key != null)
-					 .Select(x => new { Etag = x.Max(y => y.Etag), CollectionName = x.Key.ToString() })
-					 .ToArray();
-
-			TransactionalStorage.Batch(accessor =>
-			{
-				foreach (var collection in collections)
-					SetLastEtagForCollection(accessor, collection.CollectionName, collection.Etag);
-			});
-		}
-
-		private void SetLastEtagForCollection(IStorageActionsAccessor actions, string collectionName, Etag etag)
-		{
-			actions.Lists.Set("Raven/Collection/Etag", collectionName, RavenJObject.FromObject(new
-			{
-				Etag = etag.ToByteArray()
-			}), UuidType.Documents);
 		}
 
 		public Etag GetLastEtagForCollection(string collectionName)
