@@ -287,7 +287,8 @@ namespace Voron.Impl
 
             _txHeader->TxMarker |= TransactionMarker.Commit;
 
-            _journal.WriteToJournal(this, _allocatedPagesInTransaction + _overflowPagesInTransaction + PagesTakenByHeader);
+            if (_allocatedPagesInTransaction + _overflowPagesInTransaction > 0) // nothing changed in this transaction
+                _journal.WriteToJournal(this, _allocatedPagesInTransaction + _overflowPagesInTransaction + PagesTakenByHeader);
 
             _env.SetStateAfterTransactionCommit(State);
             Committed = true;

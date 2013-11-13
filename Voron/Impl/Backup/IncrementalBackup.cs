@@ -37,8 +37,6 @@ namespace Voron.Impl.Backup
 			{
 				backupInfo = env.Journal.GetIncrementalBackupInfo();
 
-				txw.Rollback(); // will move back the current journal write position moved by current tx (this tx won't be committed anyways)
-
 				if (env.Journal.CurrentFile != null)
 				{
 					lastWrittenLogFile = env.Journal.CurrentFile.Number;
@@ -57,6 +55,7 @@ namespace Voron.Impl.Backup
 					using (var package = Package.Open(backupPath, FileMode.Create))
 					{
 						long lastBackedUpPage = -1;
+					    long lastBackedUpFile = -1;
 
 						var firstJournalToBackup = backupInfo.LastBackedUpJournal;
 
@@ -75,26 +74,36 @@ namespace Voron.Impl.Backup
 
 							usedJournals.Add(journalFile);
 
+                            var start = 0L;
+                            var pagesToCopy = journalFile.Pager.NumberOfAllocatedPages;
+                            if (journalFile.Number == backupInfo.LastBackedUpJournal)
+                            {
+                                start = backupInfo.LastBackedUpJournalPage + 1;
+                                pagesToCopy -= start;
+                            }
+
+                            if (start >= journalFile.Pager.NumberOfAllocatedPages) // nothing to do here
+                                continue;
+
 							var part = package.CreatePart(new Uri("/" + StorageEnvironmentOptions.LogName(journalNum), UriKind.Relative),
 							                              System.Net.Mime.MediaTypeNames.Application.Octet,
 														  compression);
-							var start = 0L;
-							var pagesToCopy = journalFile.Pager.NumberOfAllocatedPages;
-
-							if (journalFile.Number == backupInfo.LastBackedUpJournal)
-							{
-								start = backupInfo.LastBackedUpJournalPage + 1;
-								pagesToCopy -= start;
-							}
 
 							if (journalFile.Number == lastWrittenLogFile)
 								pagesToCopy -= (journalFile.Pager.NumberOfAllocatedPages - lastWrittenLogPage - 1);
 
 							copier.ToStream(journalFile.Pager.Read(start).Base, pagesToCopy*journalFile.Pager.PageSize, part.GetStream());
 
+						    lastBackedUpFile = journalFile.Number;
 							if (journalFile.Number == backupInfo.LastCreatedJournal)
 							{
-								lastBackedUpPage = start + pagesToCopy - 1;
+								lastBackedUpPage = start + pagesToCopy;
+                                // we used all of this file, so the next backup should start in the next file
+							    if (lastBackedUpPage == journalFile.Pager.NumberOfAllocatedPages)
+							    {
+							        lastBackedUpPage = 0;
+							        lastBackedUpFile++;
+							    }
 							}
 
 							numberOfBackedUpPages += pagesToCopy;
@@ -102,7 +111,7 @@ namespace Voron.Impl.Backup
 						
 						Debug.Assert(lastBackedUpPage != -1);
 
-						env.Journal.UpdateAfterIncrementalBackup(backupInfo.LastCreatedJournal, lastBackedUpPage);
+                        env.Journal.UpdateAfterIncrementalBackup(lastBackedUpPage, lastBackedUpPage);
 					}
 				}
 				catch (Exception)

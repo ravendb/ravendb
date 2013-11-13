@@ -58,7 +58,7 @@ namespace Voron.Impl.Journal
 				_currentJournalFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentJournalFileSize * 2);
 			}
 			var actualLogSize = _currentJournalFileSize;
-			var minRequiredsize = (numberOfPages + 1) * logPager.PageSize; // number of pages + tx header page
+			var minRequiredsize = numberOfPages * logPager.PageSize;
 			if (_currentJournalFileSize < minRequiredsize)
 			{
 				actualLogSize = minRequiredsize;
@@ -138,20 +138,39 @@ namespace Voron.Impl.Journal
 
 				lastTxHeader = log.RecoverAndValidate(startRead, lastTxHeader);
 
+                log.AddRef(); // creator reference - write ahead log
+                Files = Files.Add(log);
+
                 if (log.RequireHeaderUpdate) //this should prevent further loading of transactions
                 {
                     requireHeaderUpdate = true;
                     break;
                 }
 
+			    if (lastTxHeader == null) // a fully empty log file?
+			    {
+                    log.Dispose(); 
+			        continue;
+			    }
+
 				Debug.Assert(lastTxHeader->TxMarker != TransactionMarker.None);
 
-				log.AddRef(); // creator reference - write ahead log
-				Files = Files.Add(log);
 			}
 
-			if (requireHeaderUpdate)
-				logInfo.CurrentJournal = Files.Count - 1;
+		    if (requireHeaderUpdate)
+		    {
+		        logInfo.CurrentJournal = Files.Count - 1;
+
+                // we want to check that we cleanup newer log files, since everything from
+                // the current file is considered corrupted
+                var badJournalFiles = logInfo.CurrentJournal;
+                while (true)
+                {
+                    badJournalFiles++;
+                    if (_env.Options.TryDeletePager(badJournalFiles) == false)
+                        break;
+                }
+		    }
 
 			_logIndex = logInfo.CurrentJournal;
 			_dataFlushCounter = logInfo.DataFlushCounter + 1;
@@ -430,9 +449,6 @@ namespace Voron.Impl.Journal
 						_waj._locker.ExitReadLock();
 					}
 
-					if (_jrnls.Count == 0)
-						return;
-
 					var pagesToWrite = ReadTransactionsToFlush(_oldestActiveTransaction, _jrnls);
 
 					if (pagesToWrite.Count == 0)
@@ -456,7 +472,11 @@ namespace Voron.Impl.Journal
 						_waj._dataPager.Write(page);
 					}
 
-					var journalFiles = _jrnls.RemoveAll(x => x.Number >= _lastSyncedLog);
+					var journalFiles = _jrnls.FindAll(x => x.Number < _lastSyncedLog ||  // an old journal file
+                            (x.Number == _lastSyncedLog &&               // or the last log file...
+                            _lastSyncedPage == x.WritePagePosition &&   // if we synced everything in it...
+                            x.AvailablePages == 0                       )// and we have no space to write there any longer
+                            );
 
 					// we want to hold the write lock for as little time as possible, therefor
 					// what we do is take the lock, write the appropriate metadata, then exit the lock
@@ -467,7 +487,9 @@ namespace Voron.Impl.Journal
 					{
 						UpdateFileHeaderAfterDataFileSync(tx);
 
-						_waj.Files = _waj.Files.RemoveAll(x => x.Number < _lastSyncedLog);
+					    var lastJournalFileToRemove = journalFiles.LastOrDefault();
+                        if(lastJournalFileToRemove != null)
+					        _waj.Files = _waj.Files.RemoveAll(x => x.Number <= lastJournalFileToRemove.Number);
 
 						_waj.UpdateLogInfo();
 

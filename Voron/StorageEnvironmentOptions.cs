@@ -126,7 +126,7 @@ namespace Voron
             {
 	            var name = LogName(number);
 				var path = Path.Combine(_basePath, name);
-                var orAdd = _journals.GetOrAdd(name, _ => new Lazy<IVirtualPager>(() => new MemoryMapPager(path)));
+                var orAdd = _journals.GetOrAdd(name, _ => new Lazy<IVirtualPager>(() => new FilePager(path)));
 
 				if (orAdd.Value.Disposed)
 				{

@@ -1,5 +1,7 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
+using System.Linq.Expressions;
 using Voron.Impl;
 using Xunit;
 
@@ -246,11 +248,26 @@ namespace Voron.Tests.Bugs
 
 		}
 
-		private unsafe void CorruptPage(long journal, long page, int pos)
+		private void CorruptPage(long journal, long page, int pos)
 		{
-			var journalPager = _options.CreateJournalPager(journal);
-			var writable = journalPager.GetWritable(page);
-			*(writable.Base + pos) = 42;
+			var journalPager = (FilePager)_options.CreateJournalPager(journal);
+		    var fileStream = journalPager.FileStream;
+		    fileStream.Position = page*journalPager.PageSize;
+
+		    var buffer = new byte[journalPager.PageSize];
+
+		    var remaining = buffer.Length;
+		    var start = 0;
+		    while (remaining > 0)
+		    {
+		        var read = fileStream.Read(buffer, start, remaining);
+		        start += read;
+		        remaining -= read;
+		    }
+
+		    buffer[pos] = 42;
+		    fileStream.Position = page*journalPager.PageSize;
+		    fileStream.Write(buffer,0,buffer.Length);
 		}
 	}
 }
