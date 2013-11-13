@@ -47,11 +47,11 @@ namespace Raven.Client.Connection
 		internal readonly string Url;
 		internal readonly string Method;
 
-		private WebRequestHandler handler;
+		private readonly WebRequestHandler handler;
 		internal volatile HttpClient httpClient;
 		internal volatile HttpWebRequest webRequest;
 
-		private NameValueCollection headers = new NameValueCollection();
+		private readonly NameValueCollection headers = new NameValueCollection();
 
 		// temporary create a strong reference to the cached data for this request
 		// avoid the potential for clearing the cache from a cached item
