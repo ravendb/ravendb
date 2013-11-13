@@ -115,18 +115,18 @@ namespace Performance.Comparison.Voron
                 itemsPerTransaction,
                 numberOfThreads,
                 perfTracker,
-                (op, enumerator, itemCount, transactionCount, perfTrcker) => WriteInternalBatch(op, itemCount, transactionCount, perfTrcker, env, enumerator),
+                (op, enumerator, itemCount, transactionCount, perfTrcker) => WriteInternalBatch(op, enumerator, itemCount, transactionCount, perfTrcker, env),
                 out elapsedMilliseconds);
             }
         }
 
         private List<PerformanceRecord> WriteInternalBatch(
             string operation,
+            IEnumerator<TestData> enumerator,
             long itemsPerBatch,
             long numberOfBatches,
             PerfTracker perfTracker,
-            StorageEnvironment env,
-            IEnumerator<TestData> enumerator)
+            StorageEnvironment env)
         {
             var sw = new Stopwatch();
             byte[] valueToWrite = null;

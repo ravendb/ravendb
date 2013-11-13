@@ -59,7 +59,8 @@
 
         public override List<PerformanceRecord> WriteParallelSequential(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
         {
-            throw new NotImplementedException();
+            return WriteParallel(string.Format("[LMDB] parallel sequential write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
         }
 
         public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data, PerfTracker perfTracker)
@@ -70,7 +71,8 @@
 
         public override List<PerformanceRecord> WriteParallelRandom(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
         {
-            throw new NotImplementedException();
+            return WriteParallel(string.Format("[LMDB] parallel random write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
         }
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
@@ -99,48 +101,73 @@
 
         private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker)
         {
-            byte[] valueToWrite = null;
-            var records = new List<PerformanceRecord>();
-
             using (var env = NewEnvironment())
             {
-                var sw = new Stopwatch();
-
                 var enumerator = data.GetEnumerator();
+                return WriteInternal(operation, enumerator, itemsPerTransaction, numberOfTransactions, perfTracker, env);
+            }
+        }
 
-                for (var transactions = 0; transactions < numberOfTransactions; transactions++)
+        private List<PerformanceRecord> WriteParallel(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            using (var env = NewEnvironment())
+            {
+                return ExecuteWriteWithParallel(
+                operation,
+                data,
+                numberOfTransactions,
+                itemsPerTransaction,
+                numberOfThreads,
+                perfTracker,
+                (op, enumerator, itemCount, transactionCount, perfTrcker) => WriteInternal(op, enumerator, itemCount, transactionCount, perfTrcker, env),
+                out elapsedMilliseconds);
+            }
+        }
+
+        private List<PerformanceRecord> WriteInternal(
+            string operation,
+            IEnumerator<TestData> enumerator,
+            long itemsPerTransaction,
+            long numberOfTransactions,
+            PerfTracker perfTracker,
+            LightningEnvironment env)
+        {
+            byte[] valueToWrite = null;
+            var records = new List<PerformanceRecord>();
+            var sw = new Stopwatch();
+
+            for (var transactions = 0; transactions < numberOfTransactions; transactions++)
+            {
+                sw.Restart();
+
+                using (var tx = env.BeginTransaction())
+                using (var db = tx.OpenDatabase())
                 {
-                    sw.Restart();
-
-                    using (var tx = env.BeginTransaction())
-                    using (var db = tx.OpenDatabase())
+                    for (var i = 0; i < itemsPerTransaction; i++)
                     {
-                        for (var i = 0; i < itemsPerTransaction; i++)
-                        {
-                            enumerator.MoveNext();
+                        enumerator.MoveNext();
 
-                            valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
+                        valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
 
-                            tx.Put(db, Encoding.UTF8.GetBytes(enumerator.Current.Id.ToString("0000000000000000")), valueToWrite);
-                            perfTracker.Increment();
-                        }
-
-                        tx.Commit();
+                        tx.Put(db, Encoding.UTF8.GetBytes(enumerator.Current.Id.ToString("0000000000000000")), valueToWrite);
+                        perfTracker.Increment();
                     }
 
-                    sw.Stop();
-
-                    records.Add(new PerformanceRecord
-                    {
-                        Operation = operation,
-                        Time = DateTime.Now,
-                        Duration = sw.ElapsedMilliseconds,
-                        ProcessedItems = itemsPerTransaction
-                    });
+                    tx.Commit();
                 }
 
                 sw.Stop();
+
+                records.Add(new PerformanceRecord
+                                {
+                                    Operation = operation, 
+                                    Time = DateTime.Now, 
+                                    Duration = sw.ElapsedMilliseconds, 
+                                    ProcessedItems = itemsPerTransaction
+                                });
             }
+
+            sw.Stop();
 
             return records;
         }

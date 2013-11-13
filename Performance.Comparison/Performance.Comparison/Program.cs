@@ -33,10 +33,10 @@
         
             var performanceTests = new List<IStoragePerformanceTest>()
 				{
-                    new SqlServerTest(buffer),
+                    //new SqlServerTest(buffer),
                     //new SqlLiteTest(path, buffer),
                     //new SqlCeTest(path, buffer),
-                    //new LmdbTest(path, buffer),
+                    new LmdbTest(path, buffer),
                     //new EsentTest(path, buffer),
                     //new VoronTest(path, buffer)
 				};
