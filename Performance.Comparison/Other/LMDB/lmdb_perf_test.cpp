@@ -17,6 +17,7 @@ extern "C"
 }
 
 using namespace std;
+using namespace chrono;
 
 class TestData {
 public:
@@ -94,31 +95,41 @@ void WritePerfData(string name, vector<PerformanceRecord> data) {
   file.close();
 };
 
+MDB_env* StorageEnvironment(bool deleteOldData){
+ 
+  if(deleteOldData)
+  {
+    system("exec rm -r ./lmdb_test");
+    system("exec mkdir ./lmdb_test");
+  }
+  
+  MDB_env *env;
+  
+  mdb_env_create(&env);
+  mdb_env_set_mapsize(env, 1024*1024*1024*(long)10);
+  mdb_env_open(env, "./lmdb_test", MDB_WRITEMAP, 0664);
+  
+  return env;
+}
+
 vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransaction, int numberOfTransactions) {
   vector<PerformanceRecord> records;
   
   int rc;
-  MDB_env *env;
+
   MDB_val key, data;
 
   MDB_stat mst;
   MDB_cursor *cursor;
   char sval[87 * 1024];
 
-  system("exec rm -r ./lmdb_test");
-  system("exec mkdir ./lmdb_test");
+  MDB_env *env = StorageEnvironment(true);
   
-  rc = mdb_env_create(&env);
-  rc = mdb_env_set_mapsize(env, 1024*1024*1024*(long)10);
-  rc = mdb_env_open(env, "./lmdb_test", MDB_WRITEMAP, 0664);
-
-  time_t t;
-  
-  chrono::time_point<chrono::system_clock> start, end;
-  start = chrono::system_clock::now();
+  time_point<system_clock> start, end;
+  start = system_clock::now();
   
   for(int transactions = 0; transactions < numberOfTransactions; transactions++) {
-    chrono::time_point<chrono::system_clock> sw = chrono::system_clock::now();
+    time_point<system_clock> sw = system_clock::now();
     
     MDB_txn *txn;
     MDB_dbi dbi;
@@ -146,22 +157,22 @@ vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransact
     rc = mdb_txn_commit(txn);
     mdb_close(env, dbi);
     
-    time(&t);
-    
     PerformanceRecord r;
     
-    chrono::duration<double> timeInSeconds  = chrono::system_clock::now() - sw;
+    time_point<system_clock> now = system_clock::now();
+    
+    duration<double> timeInSeconds  = now - sw;
     
     r.Duration = timeInSeconds.count() * 1000; // in miliseconds
     r.ProcessedItems = itemsPerTransaction;
-    r.Time = t;
+    r.Time = chrono::system_clock::to_time_t(now);
     
     records.push_back(r);
   }
   
-  end = chrono::system_clock::now();
+  end = system_clock::now();
   
-  chrono::duration<double> elapsed_seconds = end - start;
+  duration<double> elapsed_seconds = end - start;
   
   double secs = elapsed_seconds.count();
   
@@ -177,21 +188,16 @@ vector<PerformanceRecord> Read(vector<TestData> dataItems, int itemsPerTransacti
   vector<PerformanceRecord> records;
   
   int rc;
-  MDB_env *env;
   MDB_val key, data;
 
   MDB_stat mst;
   MDB_cursor *cursor;
   char sval[87 * 1024];
 
-  rc = mdb_env_create(&env);
-  rc = mdb_env_set_mapsize(env, 1024*1024*1024*(long)10);
-  rc = mdb_env_open(env, "./lmdb_test", MDB_WRITEMAP, 0664);
+  MDB_env *env = StorageEnvironment(false);
 
-  time_t t;
-  
-  chrono::time_point<chrono::system_clock> start, end;
-  start = chrono::system_clock::now();
+  time_point<system_clock> start, end;
+  start = system_clock::now();
   
   MDB_txn *txn;
   MDB_dbi dbi;
@@ -218,18 +224,16 @@ vector<PerformanceRecord> Read(vector<TestData> dataItems, int itemsPerTransacti
   rc = mdb_txn_commit(txn);
   mdb_close(env, dbi);
   
-  time(&t);
-    
-  end = chrono::system_clock::now();
+  end = system_clock::now();
   
-  chrono::duration<double> elapsed_seconds = end - start;
+  duration<double> elapsed_seconds = end - start;
   
   double secs = elapsed_seconds.count();
   
   PerformanceRecord r;
   r.Duration = secs * 1000; // in miliseconds
   r.ProcessedItems = numberOfTransactions * itemsPerTransaction;
-  r.Time = t;
+  r.Time = chrono::system_clock::to_time_t(end);
   
   records.push_back(r);
   
