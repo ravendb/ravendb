@@ -1,6 +1,4 @@
-﻿using System.Linq;
-using System.Windows.Input;
-using Raven.Studio.Commands;
+﻿using Raven.Abstractions.Smuggler;
 using Raven.Studio.Infrastructure;
 
 namespace Raven.Studio.Features.Tasks
@@ -9,7 +7,8 @@ namespace Raven.Studio.Features.Tasks
 	{
 		public ImportTaskSectionModel()
 		{
-			Name = "Import Database";
+            Options = new Observable<SmugglerOptionsBase> { Value = new SmugglerImportOptions() };
+            Name = "Import Database";
             IconResource = "Image_Import_Tiny";
 			Description = "Import data to the current database.\nImporting will overwrite any existing indexes.";
 		}

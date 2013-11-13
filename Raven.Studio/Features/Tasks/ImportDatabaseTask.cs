@@ -104,14 +104,14 @@ namespace Raven.Studio.Features.Tasks
                 }
 
                 var smuggler = new SmugglerApi(DatabaseCommands, message => Report(message));
-                await smuggler.ImportData(new SmugglerOptions
+                await smuggler.ImportData(new SmugglerImportOptions
                 {
                     BatchSize = batchSize,
                     Filters = filterSettings,
                     TransformScript = transformScript,
                     ShouldExcludeExpired = shouldExcludeExpired,
                     OperateOnTypes = operateOnTypes,
-                    BackupStream = stream,
+                    FromStream = stream,
                 });
             }
 

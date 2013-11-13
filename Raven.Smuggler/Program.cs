@@ -20,89 +20,96 @@ namespace Raven.Smuggler
 	public class Program
 	{
 		private readonly RavenConnectionStringOptions connectionStringOptions;
-		private readonly SmugglerOptions options;
+		private SmugglerOptionsBase options;
 		private readonly OptionSet optionSet;
 		bool waitForIndexing;
 
-		private Program()
-		{
-			connectionStringOptions = new RavenConnectionStringOptions();
-			options = new SmugglerOptions();
+	    private Program()
+	    {
+	        connectionStringOptions = new RavenConnectionStringOptions();
 
-			optionSet = new OptionSet
-			            	{
-			            		{
-			            			"operate-on-types:", "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
-			            			                     "Default is all items." + Environment.NewLine +
-			            			                     "Usage example: Indexes,Documents,Attachments", value =>
-			            			                                                                     	{
-			            			                                                                     		try
-			            			                                                                     		{
-			            			                                                                     			options.OperateOnTypes = options.ItemTypeParser(value);
-			            			                                                                     		}
-			            			                                                                     		catch (Exception e)
-			            			                                                                     		{
-			            			                                                                     			PrintUsageAndExit(e);
-			            			                                                                     		}
-			            			                                                                     	}
-			            			},
-			            		{
-			            			"metadata-filter:{=}", "Filter documents by a metadata property." + Environment.NewLine +
-			            			                       "Usage example: Raven-Entity-Name=Posts", (key, val) => options.Filters.Add(new FilterSetting
-			            			                       {
-				            			                       Path = "@metadata." + key,
-															   ShouldMatch = true,
-															   Values = new List<string>{val}
-			            			                       })
-			            			},
-								{
-			            			"negative-metadata-filter:{=}", "Filter documents NOT matching a metadata property." + Environment.NewLine +
-			            			                       "Usage example: Raven-Entity-Name=Posts", (key, val) => options.Filters.Add(new FilterSetting
-			            			                       {
-				            			                       Path = "@metadata." + key,
-															   ShouldMatch = false,
-															   Values = new List<string>{val}
-			            			                       })
-			            			},
-			            		{
-			            			"filter:{=}", "Filter documents by a document property" + Environment.NewLine +
-			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters.Add(new FilterSetting
-			            			              {
-													  Path = key,
-													  ShouldMatch = true,
-													  Values = new List<string>{val}
-			            			              })
-			            			},
-								{
-			            			"negative-filter:{=}", "Filter documents NOT matching a document property" + Environment.NewLine +
-			            			              "Usage example: Property-Name=Value", (key, val) => options.Filters.Add(new FilterSetting
-			            			              {
-													  Path = key,
-													  ShouldMatch = false,
-													  Values = new List<string>{val}
-			            			              })
-			            			},
-			            		{
-			            			"transform:", "Transform documents using a given script (import only)", script => options.TransformScript = script
-			            		},
-								{
-			            			"transform-file:", "Transform documents using a given script file (import only)", script => options.TransformScript = File.ReadAllText(script)
-			            		},
-								{"timeout:", "The timeout to use for requests, in seconds", s => options.Timeout = TimeSpan.FromSeconds(int.Parse(s)) },
-								{"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s) },
-			            		{"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
-			            		{"u|user|username:", "The username to use when the database requires the client to authenticate.", value => Credentials.UserName = value},
-			            		{"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => Credentials.Password = value},
-			            		{"domain:", "The domain to use when the database requires the client to authenticate.", value => Credentials.Domain = value},
-			            		{"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
-								{"incremental", "States usage of incremental operations", _ => options.Incremental = true },
-								{"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _=> waitForIndexing=true},
-                                {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true },
-			            		{"h|?|help", v => PrintUsageAndExit(0)},
-			            	};
-		}
+	        optionSet = new OptionSet
+	        {
+	            {
+	                "operate-on-types:", "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
+	                                     "Default is all items." + Environment.NewLine +
+	                                     "Usage example: Indexes,Documents,Attachments",
+	                value =>
+	                {
+	                    try
+	                    {
+	                        if (string.IsNullOrWhiteSpace(value) == false)
+	                        {
+                                options.OperateOnTypes = (ItemType)Enum.Parse(typeof(ItemType), value, ignoreCase: true);
+	                        }
+	                    }
+	                    catch (Exception e)
+	                    {
+	                        PrintUsageAndExit(e);
+	                    }
+	                }
+	            },
+	            {
+	                "metadata-filter:{=}", "Filter documents by a metadata property." + Environment.NewLine +
+	                                       "Usage example: Raven-Entity-Name=Posts",
+	                (key, val) => options.Filters.Add(new FilterSetting
+	                {
+	                    Path = "@metadata." + key,
+	                    ShouldMatch = true,
+	                    Values = new List<string> {val}
+	                })
+	            },
+	            {
+	                "negative-metadata-filter:{=}", "Filter documents NOT matching a metadata property." + Environment.NewLine +
+	                                                "Usage example: Raven-Entity-Name=Posts",
+	                (key, val) => options.Filters.Add(new FilterSetting
+	                {
+	                    Path = "@metadata." + key,
+	                    ShouldMatch = false,
+	                    Values = new List<string> {val}
+	                })
+	            },
+	            {
+	                "filter:{=}", "Filter documents by a document property" + Environment.NewLine +
+	                              "Usage example: Property-Name=Value",
+	                (key, val) => options.Filters.Add(new FilterSetting
+	                {
+	                    Path = key,
+	                    ShouldMatch = true,
+	                    Values = new List<string> {val}
+	                })
+	            },
+	            {
+	                "negative-filter:{=}", "Filter documents NOT matching a document property" + Environment.NewLine +
+	                                       "Usage example: Property-Name=Value",
+	                (key, val) => options.Filters.Add(new FilterSetting
+	                {
+	                    Path = key,
+	                    ShouldMatch = false,
+	                    Values = new List<string> {val}
+	                })
+	            },
+	            {
+	                "transform:", "Transform documents using a given script (import only)", script => options.TransformScript = script
+	            },
+	            {
+	                "transform-file:", "Transform documents using a given script file (import only)", script => options.TransformScript = File.ReadAllText(script)
+	            },
+	            {"timeout:", "The timeout to use for requests, in seconds", s => options.Timeout = TimeSpan.FromSeconds(int.Parse(s))},
+	            {"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s)},
+	            {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
+	            {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => Credentials.UserName = value},
+	            {"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => Credentials.Password = value},
+	            {"domain:", "The domain to use when the database requires the client to authenticate.", value => Credentials.Domain = value},
+	            {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
+	            {"incremental", "States usage of incremental operations", _ => options.Incremental = true},
+	            {"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _ => waitForIndexing = true},
+	            {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true},
+	            {"h|?|help", v => PrintUsageAndExit(0)},
+	        };
+	    }
 
-		private NetworkCredential Credentials
+	    private NetworkCredential Credentials
 		{
 			get { return (NetworkCredential)(connectionStringOptions.Credentials ?? (connectionStringOptions.Credentials = new NetworkCredential())); }
 		}
@@ -119,27 +126,50 @@ namespace Raven.Smuggler
 			if (args.Length < 3)
 				PrintUsageAndExit(-1);
 
-			var action = SmugglerAction.Export;
-			if (string.Equals(args[0], "in", StringComparison.OrdinalIgnoreCase))
-				action = SmugglerAction.Import;
+            var url = args[1];
+            if (url == null)
+            {
+                PrintUsageAndExit(-1);
+                return;
+            }
+            connectionStringOptions.Url = url;
+
+            var backupPath = args[2];
+            if (backupPath == null)
+                PrintUsageAndExit(-1);
+
+            if (backupPath != null && Directory.Exists(backupPath))
+            {
+                options.Incremental = true;
+            }
+
+			SmugglerAction action;
+		    if (string.Equals(args[0], "in", StringComparison.OrdinalIgnoreCase))
+		    {
+		        action = SmugglerAction.Import;
+                options = new SmugglerImportOptions
+                {
+                    FromFile = backupPath,
+                };
+		    }
 			else if (string.Equals(args[0], "out", StringComparison.OrdinalIgnoreCase))
-				action = SmugglerAction.Export;
-            else if (string.Equals(args[0], "between", StringComparison.OrdinalIgnoreCase))
-                action = SmugglerAction.Between;
-			else
-				PrintUsageAndExit(-1);
-
-			var url = args[1];
-			if (url == null)
 			{
-				PrintUsageAndExit(-1);
-				return;
+			    action = SmugglerAction.Export;
+                options = new SmugglerExportOptions
+                {
+                    ToFile = backupPath,
+                };
 			}
-			connectionStringOptions.Url = url;
-
-			options.BackupPath = args[2];
-			if (options.BackupPath == null)
-				PrintUsageAndExit(-1);
+            else if (string.Equals(args[0], "between", StringComparison.OrdinalIgnoreCase))
+            {
+                action = SmugglerAction.Between;
+                options = new SmugglerBetweenOptions();
+            }
+            else
+            {
+                PrintUsageAndExit(-1);
+                return;
+            }
 
 			try
 			{
@@ -150,11 +180,6 @@ namespace Raven.Smuggler
 				PrintUsageAndExit(e);
 			}
 
-			if (options.BackupPath != null && Directory.Exists(options.BackupPath))
-			{
-				options.Incremental = true;
-			}
-
 			var smugglerApi = new SmugglerApi(connectionStringOptions);
 
 			try
@@ -162,12 +187,12 @@ namespace Raven.Smuggler
 				switch (action)
 				{
 					case SmugglerAction.Import:
-						smugglerApi.ImportData(options).Wait();
+						smugglerApi.ImportData((SmugglerImportOptions)options).Wait();
 						if (waitForIndexing)
 							smugglerApi.WaitForIndexing(options).Wait();
 						break;
 					case SmugglerAction.Export:
-						smugglerApi.ExportData(options).Wait();
+                        smugglerApi.ExportData((SmugglerExportOptions)options).Wait();
 						break;
                     case SmugglerAction.Between:
 				        throw new NotImplementedException();

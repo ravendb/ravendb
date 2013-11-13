@@ -20,17 +20,17 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanImportFromDumpFile()
 		{
-			var options = new SmugglerOptions { BackupPath = Path.GetTempFileName() };
+		    var file = Path.GetTempFileName();
 			using (var store = NewDocumentStoreWithData())
 			{
 				var dumper = new DataDumper(store.DocumentDatabase);
-				dumper.ExportData(options);
+				dumper.ExportData(new SmugglerExportOptions{ToFile = file});
 			}
 
 			using (var store = NewDocumentStore())
 			{
 				var dumper = new DataDumper(store.DocumentDatabase);
-				dumper.ImportData(options).Wait();
+				dumper.ImportData(new SmugglerImportOptions{FromFile = file}).Wait();
 
 				using (var session = store.OpenSession())
 				{
@@ -48,12 +48,12 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void ImportReplacesAnExistingDatabase()
 		{
-			var options = new SmugglerOptions { BackupPath = Path.GetTempFileName() };
+		    var file = Path.GetTempFileName();
 
 			using (var store = NewDocumentStoreWithData())
 			{
 				var dumper = new DataDumper(store.DocumentDatabase);
-				dumper.ExportData(options);
+				dumper.ExportData(new SmugglerExportOptions{ToFile = file});
 
 				using (var session = store.OpenSession())
 				{
@@ -73,7 +73,7 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 				}
 
-				new DataDumper(store.DocumentDatabase).ImportData(options).Wait();
+				new DataDumper(store.DocumentDatabase).ImportData(new SmugglerImportOptions{FromFile = file}).Wait();
 				using (var session = store.OpenSession())
 				{
 					// Original attachment has been restored.

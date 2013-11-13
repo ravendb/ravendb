@@ -11,6 +11,7 @@ namespace Raven.Studio.Features.Tasks
 	{
 		public ExportTaskSectionModel()
 		{
+            Options = new Observable<SmugglerOptionsBase> { Value = new SmugglerExportOptions() };
 			Name = "Export Database";
 		    IconResource = "Image_Export_Tiny";
 			Description = "Export your database to a dump file.";

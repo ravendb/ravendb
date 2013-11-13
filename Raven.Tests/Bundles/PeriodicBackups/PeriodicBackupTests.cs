@@ -51,9 +51,9 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 
 			using (var store = NewDocumentStore())
 			{
-				var smugglerOptions = new SmugglerOptions
+				var smugglerOptions = new SmugglerImportOptions
 				{
-					BackupPath = backupPath,
+				    FromFile = backupPath,
                     Incremental = true,
 				};
 				var dataDumper = new DataDumper(store.DocumentDatabase);
@@ -109,9 +109,9 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 			using (var store = NewDocumentStore())
 			{
 			    var dataDumper = new DataDumper(store.DocumentDatabase);
-				dataDumper.ImportData(new SmugglerOptions
+				dataDumper.ImportData(new SmugglerImportOptions
 				{
-				    BackupPath = backupPath,
+				    FromFile = backupPath,
                     Incremental = true,
 				}).Wait();
 

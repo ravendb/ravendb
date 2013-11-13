@@ -138,43 +138,47 @@ namespace Raven.Abstractions.Smuggler
 				timeout = value;
 		    }
 	    }
-    }
 
-    public class SmugglerOptions : SmugglerOptionsBase
-	{
-		public SmugglerOptions()
-		{
-		}
-
-		/// <summary>
-		/// The path to write to when doing an export, or where to read from when doing an import.
-		/// </summary>
-		public string BackupPath { get; set; }
-
-        /// <summary>
-        /// The stream to write to when doing an export, or where to read from when doing an import.
-        /// </summary>
-        public Stream BackupStream { get; set; }
-        
         public bool Incremental { get; set; }
 
         public string TransformScript { get; set; }
-
-		public ItemType ItemTypeParser(string items)
-		{
-			if (String.IsNullOrWhiteSpace(items))
-			{
-				return ItemType.Documents | ItemType.Indexes | ItemType.Attachments;
-			}
-			return (ItemType)Enum.Parse(typeof(ItemType), items, ignoreCase: true);
-		}
-	}
+    }
 
     public class SmugglerBetweenOptions : SmugglerOptionsBase
     {
         public RavenConnectionStringOptions From { get; set; }
 
         public RavenConnectionStringOptions To { get; set; }
+    }
+
+    public class SmugglerExportOptions : SmugglerOptionsBase
+    {
+        public RavenConnectionStringOptions From { get; set; }
+
+        /// <summary>
+        /// The path to write the export.
+        /// </summary>
+        public string ToFile { get; set; }
+
+        /// <summary>
+        /// The stream to write the export.
+        /// </summary>
+        public Stream ToStream { get; set; }
+    }
+
+    public class SmugglerImportOptions : SmugglerOptionsBase
+    {
+        public RavenConnectionStringOptions To { get; set; }
+
+        /// <summary>
+        /// The path to read from of the import data.
+        /// </summary>
+        public string FromFile { get; set; }
+
+        /// <summary>
+        /// The stream to read from of the import data.
+        /// </summary>
+        public Stream FromStream { get; set; }
     }
 
 	[Flags]
@@ -185,7 +189,7 @@ namespace Raven.Abstractions.Smuggler
 		Attachments = 0x4,
 		Transformers = 0x8,
 
-        RemoveAnalyzers = 0x8000
+        RemoveAnalyzers = 0x8000,
 	}
 
 	public class FilterSetting

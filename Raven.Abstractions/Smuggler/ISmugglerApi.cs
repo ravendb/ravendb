@@ -5,8 +5,8 @@ namespace Raven.Abstractions.Smuggler
 {
 	public interface ISmugglerApi
 	{
-        Task<ExportDataResult> ExportData(SmugglerOptions options, PeriodicBackupStatus backupStatus);
+        Task<ExportDataResult> ExportData(SmugglerExportOptions options, PeriodicBackupStatus backupStatus);
 
-		Task ImportData(SmugglerOptions options);
+		Task ImportData(SmugglerImportOptions options);
 	}
 }

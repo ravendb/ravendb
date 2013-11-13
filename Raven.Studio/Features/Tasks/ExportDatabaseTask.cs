@@ -109,14 +109,14 @@ namespace Raven.Studio.Features.Tasks
                 var smuggler = new SmugglerApi(DatabaseCommands, message => Report(message));
 
                 var forwardtoUiBoundStream = new ForwardtoUIBoundStream(stream);
-                var taskGeneration = new Task<Task>(() => smuggler.ExportData(new SmugglerOptions
+                var taskGeneration = new Task<Task>(() => smuggler.ExportData(new SmugglerExportOptions
                 {
                     BatchSize = batchSize,
                     Filters = filterSettings,
                     TransformScript = transformScript,
                     ShouldExcludeExpired = shouldExcludeExpired,
                     OperateOnTypes = operateOnTypes,
-                    BackupStream = forwardtoUiBoundStream,
+                    ToStream = forwardtoUiBoundStream,
                     Incremental = false,
                 }));
 

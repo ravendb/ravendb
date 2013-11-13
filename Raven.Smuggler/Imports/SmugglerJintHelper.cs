@@ -18,7 +18,7 @@ namespace Raven.Smuggler.Imports
 		private static JintEngine jint;
 		private static Dictionary<string, JTokenType> propertiesTypeByName;
 		
-		public static void Initialize(SmugglerOptions options)
+		public static void Initialize(SmugglerOptionsBase options)
 		{
 			if (options != null && !string.IsNullOrEmpty(options.TransformScript))
 			{

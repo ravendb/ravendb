@@ -18,7 +18,7 @@ namespace Raven.Tests.MailingList
         [Fact]
         public void DateTimePreserved()
         {
-            var options = new SmugglerOptions {BackupPath = Path.GetTempFileName()};
+            var file = Path.GetTempFileName();
 
             try
             {
@@ -34,13 +34,13 @@ namespace Raven.Tests.MailingList
                         session.SaveChanges();
                     }
                     var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = documentStore.Url});
-                    smugglerApi.ExportData(options).Wait(TimeSpan.FromSeconds(15));
+                    smugglerApi.ExportData(new SmugglerExportOptions{ToFile = file}).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var documentStore = NewRemoteDocumentStore())
                 {
                     var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = documentStore.Url});
-                    smugglerApi.ImportData(options).Wait(TimeSpan.FromSeconds(15));
+                    smugglerApi.ImportData(new SmugglerImportOptions{FromFile = file}).Wait(TimeSpan.FromSeconds(15));
                     
                     using (var session = documentStore.OpenSession())
                     {
@@ -51,9 +51,9 @@ namespace Raven.Tests.MailingList
             }
             finally
             {
-                if (File.Exists(options.BackupPath))
+                if (File.Exists(file))
                 {
-                    File.Delete(options.BackupPath);
+                    File.Delete(file);
                 }
             }
         }

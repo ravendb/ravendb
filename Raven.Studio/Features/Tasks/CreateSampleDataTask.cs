@@ -48,11 +48,11 @@ namespace Raven.Studio.Features.Tasks
                 Report("Reading documents");
 
                 var smuggler = new SmugglerApi(DatabaseCommands, s => Report(s));
-                await smuggler.ImportData(new SmugglerOptions
+                await smuggler.ImportData(new SmugglerImportOptions
                 {
                     OperateOnTypes = ItemType.Documents | ItemType.Indexes | ItemType.Transformers,
                     ShouldExcludeExpired = false,
-                    BackupStream = sampleData,
+                    FromStream = sampleData,
                 });
             }
 

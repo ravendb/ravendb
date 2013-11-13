@@ -45,10 +45,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanExportImportTransformers()
 		{
-			var options = new SmugglerOptions
-			{
-				BackupPath = Path.GetTempFileName()
-			};
+		    var file = Path.GetTempFileName();
 
 			try
 			{
@@ -61,7 +58,7 @@ namespace Raven.Tests.Issues
 						Url = documentStore.Url
 					});
 
-					smugglerApi.ExportData(options).Wait(TimeSpan.FromSeconds(15));
+					smugglerApi.ExportData(new SmugglerExportOptions{ToFile = file}).Wait(TimeSpan.FromSeconds(15));
 				}
 
 				using (var documentStore = NewRemoteDocumentStore())
@@ -71,7 +68,7 @@ namespace Raven.Tests.Issues
 						Url = documentStore.Url
 					});
 
-					smugglerApi.ImportData(options).Wait(TimeSpan.FromSeconds(15));
+					smugglerApi.ImportData(new SmugglerImportOptions{FromFile = file}).Wait(TimeSpan.FromSeconds(15));
 
 					var transformers = documentStore.DatabaseCommands.GetTransformers(0, 128);
 
@@ -82,9 +79,9 @@ namespace Raven.Tests.Issues
 			}
 			finally
 			{
-				if (File.Exists(options.BackupPath))
+				if (File.Exists(file))
 				{
-					File.Delete(options.BackupPath);
+					File.Delete(file);
 				}
 			}
 		}
