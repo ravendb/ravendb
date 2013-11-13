@@ -112,7 +112,7 @@ namespace Performance.Comparison.Voron
             {
                 var parallelData = SplitData(data, numberOfTransactions, itemsPerTransaction, numberOfThreads);
 
-                var records = new List<PerformanceRecord>();
+                var records = new List<PerformanceRecord>[numberOfThreads];
                 var sw = Stopwatch.StartNew();
 
                 for (int i = 0; i < numberOfThreads; i++)
@@ -120,9 +120,10 @@ namespace Performance.Comparison.Voron
                     ThreadPool.QueueUserWorkItem(
                         state =>
                             {
-                                var pData = parallelData[(int)state];
+                                var index = (int)state;
+                                var pData = parallelData[index];
 
-                                records.AddRange(WriteInternalBatch(operation, pData.ItemsPerTransaction, pData.NumberOfTransactions, perfTracker, env, pData.Enumerator));
+                                records[index] = WriteInternalBatch(operation, pData.ItemsPerTransaction, pData.NumberOfTransactions, perfTracker, env, pData.Enumerator);
 
                                 countdownEvent.Signal();
                             },
@@ -134,11 +135,13 @@ namespace Performance.Comparison.Voron
 
                 elapsedMilliseconds = sw.ElapsedMilliseconds;
 
-                return records;
+                return records
+                    .SelectMany(x => x)
+                    .ToList();
             }
         }
 
-        private IEnumerable<PerformanceRecord> WriteInternalBatch(
+        private List<PerformanceRecord> WriteInternalBatch(
             string operation,
             long itemsPerBatch,
             long numberOfBatches,
