@@ -10,8 +10,8 @@ namespace Raven.Database.Server.Controllers
 	public class StaticController : RavenApiController
 	{
 		[HttpGet]
-		[Route("static")]
-		[Route("database/{databaseName}/static")]
+		[Route("static/")]
+		[Route("database/{databaseName}/static/")]
 		public HttpResponseMessage StaticGet()
 		{
 			var array = Database.GetAttachments(GetStart(),
@@ -28,6 +28,9 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/static/{*id}")]
 		public HttpResponseMessage StaticGet(string id)
 		{
+            if (id == null)
+		        return StaticGet();
+
 			var filename = id;
 			var result = GetEmptyMessage();
 			Database.TransactionalStorage.Batch(_ => // have to keep the session open for reading of the attachment stream
