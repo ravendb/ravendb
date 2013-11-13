@@ -119,9 +119,8 @@ namespace Raven.Client.Connection
 			webRequest.ContentType = "application/json; charset=utf-8";
 			httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "utf-8" });
 			headers.Add("Raven-Client-Version", ClientVersion);
-			requestParams.UpdateHeaders(headers);
-
 			WriteMetadata(requestParams.Metadata);
+			requestParams.UpdateHeaders(headers);
 			requestParams.UpdateHeaders(webRequest);
 		}
 
@@ -132,10 +131,10 @@ namespace Raven.Client.Connection
 			disabledAuthRetries = true;
 		}
 
-		public void RemoveAuthorizationHeader()
+		/*public void RemoveAuthorizationHeader()
 		{
 			webRequest.Headers.Remove("Authorization");
-		}
+		}*/
 
 		public Task ExecuteRequestAsync()
 		{
@@ -190,7 +189,7 @@ namespace Raven.Client.Connection
 						{
 							sp.Stop();
 						}
-						var result = await this.CheckForErrorsAndReturnCachedResultIfAnyAsync();
+						var result = await CheckForErrorsAndReturnCachedResultIfAnyAsync();
 						if (result != null)
 							return result;
 					}
@@ -378,7 +377,7 @@ namespace Raven.Client.Connection
 			ReadResponseJson();
 		}
 
-		public byte[] ReadResponseBytes()
+		/*public byte[] ReadResponseBytes()
 		{
 			if (writeCalled == false)
 				webRequest.ContentLength = 0;
@@ -388,7 +387,7 @@ namespace Raven.Client.Connection
 				ResponseHeaders = new NameValueCollection(webResponse.Headers);
 				return stream.ReadData();
 			}
-		}
+		}*/
 
 		/// <summary>
 		/// Reads the response string.
@@ -512,7 +511,7 @@ namespace Raven.Client.Connection
 			{
 				Credentials = handler.Credentials,
 			});
-			// HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
+			//HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
 			result(newHttpClient);
 			httpClient = newHttpClient;
 			isRequestSentToServer = false;
@@ -805,14 +804,14 @@ namespace Raven.Client.Connection
 		///</summary>
 		public bool SkipServerCheck { get; set; }
 
-		/// <summary>
+		/*/// <summary>
 		/// The underlying request content type
 		/// </summary>
 		public string ContentType
 		{
 			get { return webRequest.ContentType; }
 			set { webRequest.ContentType = value; }
-		}
+		}*/
 
 		public TimeSpan Timeout
 		{
@@ -913,7 +912,7 @@ namespace Raven.Client.Connection
 			HttpRequestHelper.WriteDataToRequest(webRequest, data, factory.DisableRequestCompression);
 		}
 
-		public void Write(Stream streamToWrite)
+	/*	public void Write(Stream streamToWrite)
 		{
 			writeCalled = true;
 			postedStream = streamToWrite;
@@ -927,7 +926,7 @@ namespace Raven.Client.Connection
 				commpressedData.Flush();
 				stream.Flush();
 			}
-		}
+		}*/
 
 		public async Task<IObservable<string>> ServerPullAsync()
 		{
@@ -987,10 +986,13 @@ namespace Raven.Client.Connection
 		{
 			postedStream = streamToWrite;
 			writeCalled = true;
-			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
+			var request = new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
 				Content = new CompressedStreamContent(streamToWrite)
-			});
+			};
+			request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+			CopyHeadersToHttpRequestMessage(request);
+			Response = await httpClient.SendAsync(request);
 
 			if (Response.IsSuccessStatusCode == false)
 				throw new ErrorResponseException(Response);
@@ -1001,10 +1003,13 @@ namespace Raven.Client.Connection
 		public async Task WriteAsync(string data)
 		{
 			writeCalled = true;
-			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
+			var request = new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
 				Content = new CompressedStringContent(data, factory.DisableRequestCompression),
-			});
+			};
+			request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+			CopyHeadersToHttpRequestMessage(request);
+			Response = await httpClient.SendAsync(request);
 
 			if (Response.IsSuccessStatusCode == false)
 				throw new ErrorResponseException(Response);
@@ -1019,7 +1024,7 @@ namespace Raven.Client.Connection
 			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
 		}
 
-		public WebResponse RawExecuteRequest()
+		/*public WebResponse RawExecuteRequest()
 		{
 			try
 			{
@@ -1047,7 +1052,7 @@ namespace Raven.Client.Connection
 				}
 				throw new InvalidOperationException(sb.ToString(), we);
 			}
-		}
+		}*/
 
 		public async Task<WebResponse> RawExecuteRequestAsync()
 		{
