@@ -52,9 +52,9 @@ namespace Raven.Client.Document.Async
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, int start = 0, int pageSize = 25, string exclude = null)
+		public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null)
 		{
-			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, start, pageSize, exclude: exclude)
+			return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude)
 										.ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList());
 		}
 
@@ -340,8 +340,8 @@ namespace Raven.Client.Document.Async
 				tcs.TrySetResult((T)entity);
 				return tcs.Task;
 			}
-			if (IsDeleted(id))
-				return new CompletedTask<T>(null);
+		    if (IsDeleted(id))
+		        return new CompletedTask<T>(null);
 
 			IncrementRequestCount();
 			var loadOperation = new LoadOperation(this, AsyncDatabaseCommands.DisableAllCaching, id);
@@ -444,29 +444,29 @@ namespace Raven.Client.Document.Async
 				return arrayOfArrays;
 			}
 
-			var getResponse = (await this.AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs));
-			var items = new List<T>();
-			foreach (var result in getResponse.Results)
-			{
-				if (result == null)
-				{
-					items.Add(default(T));
-					continue;
-				}
-				var transformedResults = result.Value<RavenJArray>("$values").ToArray()
-					  .Select(JsonExtensions.ToJObject)
-					  .Select(x =>
-					  {
-						  this.HandleInternalMetadata(x);
-						  return this.ConvertToEntity<T>(null, x, new RavenJObject());
-					  })
-					  .Cast<T>();
+		    var getResponse = (await this.AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs));
+		    var items = new List<T>();
+		    foreach (var result in getResponse.Results)
+		    {
+                if (result == null)
+                {
+                    items.Add(default(T));
+                    continue;
+                }
+		        var transformedResults = result.Value<RavenJArray>("$values").ToArray()
+		              .Select(JsonExtensions.ToJObject)
+		              .Select(x =>
+		              {
+		                  this.HandleInternalMetadata(x);
+		                  return this.ConvertToEntity<T>(null, x, new RavenJObject());
+		              })
+		              .Cast<T>();
 
 
-				items.AddRange(transformedResults);
+                items.AddRange(transformedResults);
 
-			}
-
+		    }
+				
 			if (items.Count > ids.Length)
 			{
 				throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",

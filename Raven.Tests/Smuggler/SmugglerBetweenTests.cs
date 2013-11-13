@@ -25,7 +25,7 @@ namespace Raven.Tests.Smuggler
             using (var server1 = GetNewServer(port: 8079))
             using (var store1 = NewRemoteDocumentStore(ravenDbServer: server1, databaseName: "Database1"))
             {
-                await new UsersIndex().ExecuteAsync(store1);
+				await new UsersIndex().ExecuteAsync(store1.AsyncDatabaseCommands, new DocumentConvention());
                 await new UsersTransformer().ExecuteAsync(store1);
                 using (var session = store1.OpenAsyncSession("Database1"))
                 {

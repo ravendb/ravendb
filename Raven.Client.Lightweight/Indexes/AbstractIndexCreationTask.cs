@@ -188,14 +188,6 @@ namespace Raven.Client.Indexes
 			store.ExecuteIndex(this);
 		}
 
-        /// <summary>
-        /// Executes the index creation against the specified document store.
-        /// </summary>
-        public Task ExecuteAsync(IDocumentStore store)
-        {
-            return store.ExecuteIndexAsync(this);
-        }
-
 		/// <summary>
 		/// Executes the index creation against the specified document database using the specified conventions
 		/// </summary>
@@ -209,7 +201,7 @@ namespace Raven.Client.Indexes
 			databaseCommands.PutIndex(IndexName, indexDefinition, true);
 
 			UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
-				commands.DirectPutIndex(IndexName, url, true, indexDefinition));
+				commands.DirectPutIndex(IndexName, indexDefinition, true, url));
 		}
 
 #endif

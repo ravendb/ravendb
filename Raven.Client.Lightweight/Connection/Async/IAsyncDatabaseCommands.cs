@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -14,19 +15,20 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
+using Raven.Client.Changes;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
 #elif NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
-using Raven.Client.Changes;
-using Raven.Client.Document;
 using Raven.Database.Data;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection.Async
 {
+
 	/// <summary>
 	/// An async database command operations
 	/// </summary>
@@ -36,7 +38,7 @@ namespace Raven.Client.Connection.Async
 		/// Gets the operations headers.
 		/// </summary>
 		/// <value>The operations headers.</value>
-		IDictionary<string, string> OperationsHeaders { get; }
+		NameValueCollection OperationsHeaders { get; set; }
 
 		/// <summary>
 		/// Admin operations performed against system database, like create/delete database
@@ -47,7 +49,7 @@ namespace Raven.Client.Connection.Async
 		/// Admin operations for current database
 		/// </summary>
 		IAsyncAdminDatabaseCommands Admin { get; }
-
+		
 		IAsyncInfoDatabaseCommands Info { get; }
 
 		/// <summary>
@@ -72,17 +74,6 @@ namespace Raven.Client.Connection.Async
 		/// </remarks>
 		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false);
 
-        /// <summary>
-        /// Begins an async get operation for documents
-        /// </summary>
-        /// <param name="fromEtag">The ETag of the first document to start with</param>
-        /// <param name="pageSize">Size of the page.</param>
-        /// <param name="metadataOnly">Load just the document metadata</param>
-        /// <remarks>
-        /// This is primarily useful for administration of a database
-        /// </remarks>
-        Task<JsonDocument[]> GetDocumentsAsync(Etag fromEtag, int pageSize, bool metadataOnly = false);
-
 		/// <summary>
 		/// Begins the async query.
 		/// </summary>
@@ -90,7 +81,8 @@ namespace Raven.Client.Connection.Async
 		/// <param name="query">The query.</param>
 		/// <param name="includes">The include paths</param>
 		/// <param name="metadataOnly">Load just the document metadata</param>
-		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false);
+		/// <param name="indexEntriesOnly"></param>
+		Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false);
 
 		/// <summary>
 		/// Begins the async batch operation
@@ -162,20 +154,12 @@ namespace Raven.Client.Connection.Async
 		Task DeleteIndexAsync(string name);
 
 		/// <summary>
-		/// Perform a set based deletes using the specified index, not allowing the operation
-		/// if the index is stale
-		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToDelete">The query to delete.</param>
-		Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete);
-
-		/// <summary>
 		/// Perform a set based deletes using the specified index
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale);
+		Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale = false);
 
 		/// <summary>
 		/// Deletes the transformer definition for the specified name asynchronously
@@ -281,12 +265,6 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0);
 
-        /// <summary>
-        /// Gets the attachments asynchronously
-        /// </summary>
-        /// <returns></returns>
-        Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int batchSize);
-
 		/// <summary>
 		/// Puts the attachment with the specified key asynchronously
 		/// </summary>
@@ -302,6 +280,12 @@ namespace Raven.Client.Connection.Async
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
 		Task<Attachment> GetAttachmentAsync(string key);
+
+		/// <summary>
+		/// Gets the attachments asynchronously
+		/// </summary>
+		/// <returns></returns>
+		Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int batchSize);
 
 		/// <summary>
 		/// Deletes the attachment with the specified key asynchronously
@@ -329,22 +313,13 @@ namespace Raven.Client.Connection.Async
 		Task<GetResponse[]> MultiGetAsync(GetRequest[] requests);
 
 		/// <summary>
-		/// Perform a set based update using the specified index, not allowing the operation
-		/// if the index is stale
-		/// </summary>
-		/// <param name="indexName">Name of the index.</param>
-		/// <param name="queryToUpdate">The query to update.</param>
-		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch);
-
-		/// <summary>
 		/// Perform a set based update using the specified index
 		/// </summary>
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
+		Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale = false);
 
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
@@ -354,7 +329,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null);
+		Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null );
 
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
@@ -384,12 +359,12 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Get documents with id of a specific prefix
 		/// </summary>
-		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false, string exclude = null);
+		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null);
 
 		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
-		void ForceReadFromMaster();
+		IDisposable ForceReadFromMaster();
 
 		/// <summary>
 		/// Retrieves the document metadata for the specified document key.
@@ -408,7 +383,7 @@ namespace Raven.Client.Connection.Async
 		/// Streams the documents by etag OR starts with the prefix and match the matches
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
-		Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue);
+		Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null);
 
 #if SILVERLIGHT
 		/// <summary>
@@ -417,6 +392,73 @@ namespace Raven.Client.Connection.Async
 		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
 #endif
 
+		Task DeleteAsync(string key, Etag etag);
+
+		/// <summary>
+		/// Get the full URL for the given document key
+		/// </summary>
+		string UrlFor(string documentKey);
+
+		HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method, bool disableRequestCompression = false);
+
+		/// <summary>
+		/// Updates just the attachment with the specified key's metadata
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="etag">The etag.</param>
+		/// <param name="metadata">The metadata.</param>
+		Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata);
+
+		/// <summary>
+		/// Gets the attachments starting with the specified prefix
+		/// </summary>
+		Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize);
+
+		/// <summary>
+		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		Task<Attachment> HeadAttachmentAsync(string key);
+
+		/// <summary>
+		/// Commits the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		Task CommitAsync(string txId);
+
+		/// <summary>
+		/// Rollbacks the specified tx id.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		Task RollbackAsync(string txId);
+
+		/// <summary>
+		/// Prepares the transaction on the server.
+		/// </summary>
+		/// <param name="txId">The tx id.</param>
+		Task PrepareTransactionAsync(string txId);
+
+		/// <summary>
+		/// Perform a set based update using the specified index.
+		/// </summary>
+		/// <param name="indexName">Name of the index.</param>
+		/// <param name="queryToUpdate">The query to update.</param>
+		/// <param name="patchRequests">The patch requests.</param>
+		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
+		Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale = false);
+
+		/// <summary>
+		/// Return a list of documents that based on the MoreLikeThisQuery.
+		/// </summary>
+		/// <param name="query">The more like this query parameters</param>
+		/// <returns></returns>
+		Task<MultiLoadResult> MoreLikeThisAsync(MoreLikeThisQuery query);
+
+		/// <summary>
+		/// Generate the next identity value from the server
+		/// </summary>
+		Task<long> NextIdentityForAsync(string name);
 	}
 
 	public interface IAsyncGlobalAdminDatabaseCommands
@@ -442,7 +484,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		Task CompactDatabaseAsync(string databaseName);
 	}
-
+	
 	public interface IAsyncAdminDatabaseCommands
 	{
 		/// <summary>
