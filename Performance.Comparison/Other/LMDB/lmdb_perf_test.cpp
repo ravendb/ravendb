@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <chrono>
 #include <ctime>
+#include <thread>
 
 extern "C"
 {
@@ -17,6 +18,7 @@ extern "C"
 }
 
 using namespace std;
+using namespace chrono;
 
 class TestData {
 public:
@@ -94,31 +96,41 @@ void WritePerfData(string name, vector<PerformanceRecord> data) {
   file.close();
 };
 
+MDB_env* StorageEnvironment(bool deleteOldData){
+ 
+  if(deleteOldData)
+  {
+    system("exec rm -r ./lmdb_test");
+    system("exec mkdir ./lmdb_test");
+  }
+  
+  MDB_env *env;
+  
+  mdb_env_create(&env);
+  mdb_env_set_mapsize(env, 1024*1024*1024*(long)10);
+  mdb_env_open(env, "./lmdb_test", MDB_WRITEMAP, 0664);
+  
+  return env;
+}
+
 vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransaction, int numberOfTransactions) {
   vector<PerformanceRecord> records;
   
   int rc;
-  MDB_env *env;
+
   MDB_val key, data;
 
   MDB_stat mst;
   MDB_cursor *cursor;
   char sval[87 * 1024];
 
-  system("exec rm -r ./lmdb_test");
-  system("exec mkdir ./lmdb_test");
+  MDB_env *env = StorageEnvironment(true);
   
-  rc = mdb_env_create(&env);
-  rc = mdb_env_set_mapsize(env, 1024*1024*1024*(long)10);
-  rc = mdb_env_open(env, "./lmdb_test", MDB_WRITEMAP, 0664);
-
-  time_t t;
-  
-  chrono::time_point<chrono::system_clock> start, end;
-  start = chrono::system_clock::now();
+  time_point<system_clock> start, end;
+  start = system_clock::now();
   
   for(int transactions = 0; transactions < numberOfTransactions; transactions++) {
-    chrono::time_point<chrono::system_clock> sw = chrono::system_clock::now();
+    time_point<system_clock> sw = system_clock::now();
     
     MDB_txn *txn;
     MDB_dbi dbi;
@@ -146,22 +158,22 @@ vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransact
     rc = mdb_txn_commit(txn);
     mdb_close(env, dbi);
     
-    time(&t);
-    
     PerformanceRecord r;
     
-    chrono::duration<double> timeInSeconds  = chrono::system_clock::now() - sw;
+    time_point<system_clock> now = system_clock::now();
+    
+    duration<double> timeInSeconds  = now - sw;
     
     r.Duration = timeInSeconds.count() * 1000; // in miliseconds
     r.ProcessedItems = itemsPerTransaction;
-    r.Time = t;
+    r.Time = chrono::system_clock::to_time_t(now);
     
     records.push_back(r);
   }
   
-  end = chrono::system_clock::now();
+  end = system_clock::now();
   
-  chrono::duration<double> elapsed_seconds = end - start;
+  duration<double> elapsed_seconds = end - start;
   
   double secs = elapsed_seconds.count();
   
@@ -173,25 +185,20 @@ vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransact
   return records;
 };
 
-vector<PerformanceRecord> Read(vector<TestData> dataItems, int itemsPerTransaction, int numberOfTransactions) {
+vector<PerformanceRecord> Read(vector<TestData> dataItems) {
   vector<PerformanceRecord> records;
   
   int rc;
-  MDB_env *env;
   MDB_val key, data;
 
   MDB_stat mst;
   MDB_cursor *cursor;
   char sval[87 * 1024];
 
-  rc = mdb_env_create(&env);
-  rc = mdb_env_set_mapsize(env, 1024*1024*1024*(long)10);
-  rc = mdb_env_open(env, "./lmdb_test", MDB_WRITEMAP, 0664);
+  MDB_env *env = StorageEnvironment(false);
 
-  time_t t;
-  
-  chrono::time_point<chrono::system_clock> start, end;
-  start = chrono::system_clock::now();
+  time_point<system_clock> start, end;
+  start = system_clock::now();
   
   MDB_txn *txn;
   MDB_dbi dbi;
@@ -218,27 +225,44 @@ vector<PerformanceRecord> Read(vector<TestData> dataItems, int itemsPerTransacti
   rc = mdb_txn_commit(txn);
   mdb_close(env, dbi);
   
-  time(&t);
-    
-  end = chrono::system_clock::now();
+  end = system_clock::now();
   
-  chrono::duration<double> elapsed_seconds = end - start;
+  duration<double> elapsed_seconds = end - start;
   
   double secs = elapsed_seconds.count();
   
   PerformanceRecord r;
   r.Duration = secs * 1000; // in miliseconds
-  r.ProcessedItems = numberOfTransactions * itemsPerTransaction;
-  r.Time = t;
+  r.ProcessedItems = dataItems.size();
+  r.Time = chrono::system_clock::to_time_t(end);
   
   records.push_back(r);
   
   mdb_env_close(env);
   
-  cout << "Read " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (numberOfTransactions * itemsPerTransaction)/secs << " ops/s" << endl;
+  cout << "Read " << dataItems.size() << " items in " << secs << " sec, " << dataItems.size()/secs << " ops/s" << endl;
   
   return records;
 };
+
+void ReadParallel(vector<TestData> dataItems, int numberOfThreads, int itemsPerTransaction, int numberOfTransactions) {
+  vector<PerformanceRecord> records;
+  
+  MDB_env *env = StorageEnvironment(false);
+  vector<thread> threads(numberOfThreads);
+  
+  int part = dataItems.size() / numberOfThreads;
+  
+  for(int i=0; i < numberOfThreads;i++){
+  
+    vector<TestData>::const_iterator start = dataItems.begin() + (i * part);
+    vector<TestData>::const_iterator end = dataItems.begin() + (i * part) + part;
+    vector<TestData> itemsToRead(start, end);
+    
+    threads.at(i) = thread(Read, itemsToRead);
+  }
+  
+}
 
 int main(int argc,char * argv[])
 {
@@ -257,22 +281,22 @@ int main(int argc,char * argv[])
 
   vector<PerformanceRecord> records = Write(sequentialIds, itemsPerTransaction, writeTransactions);
   WritePerfData("WriteSeq", records);
-  records = Read(sequentialIds, itemsPerTransaction, writeTransactions);
+  records = Read(sequentialIds);
   WritePerfData("ReadSeq", records);
   
   records = Write(randomIds, itemsPerTransaction, writeTransactions);
   WritePerfData("WriteRandom", records);
-  records = Read(randomIds, itemsPerTransaction, writeTransactions);
+  records = Read(randomIds);
   WritePerfData("ReadRandom", records);
 
   records = Write(sequentialIdsLarge, itemsPerTransaction, writeTransactions);
   WritePerfData("WriteLargeSeq", records);
-  records = Read(sequentialIdsLarge, itemsPerTransaction, writeTransactions);
+  records = Read(sequentialIdsLarge);
   WritePerfData("ReadLargeSeq", records);
 
   records = Write(randomIdsLarge, itemsPerTransaction, writeTransactions);
   WritePerfData("WriteLargeRandom", records);;
-  records = Read(randomIdsLarge, itemsPerTransaction, writeTransactions);
+  records = Read(randomIdsLarge);
   WritePerfData("ReadLargeRandom", records);
 
   return 0;
