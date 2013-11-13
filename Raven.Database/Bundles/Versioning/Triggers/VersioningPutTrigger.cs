@@ -37,7 +37,14 @@ namespace Raven.Bundles.Versioning.Triggers
 		public override void OnPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
 			VersioningConfiguration versioningConfiguration;
-			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
+
+		    if (metadata.ContainsKey("Version-This-Save"))
+		    {
+		        metadata.__ExternalState["Version-This-Save"] = metadata["Version-This-Save"];
+		        metadata.Remove("Version-This-Save");
+		    }
+
+		    if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
 				return;
 
 			var revision = GetNextRevisionNumber(key);
@@ -158,7 +165,8 @@ namespace Raven.Bundles.Versioning.Triggers
 				return false;
 
 			versioningConfiguration = Database.GetDocumentVersioningConfiguration(metadata);
-			if (versioningConfiguration == null || versioningConfiguration.Exclude)
+			if (versioningConfiguration == null || versioningConfiguration.Exclude 
+                || (versioningConfiguration.ExcludeUnlessExplicit && !metadata.__ExternalState.ContainsKey("Version-This-Save")))
 				return false;
 			return true;
 		}

@@ -161,6 +161,46 @@ namespace Raven.Tests.Bundles.Versioning
 			}
 		}
 
+
+		[Fact]
+		public void Will_create_revision_if_explicitly_requested()
+		{
+			var product = new Product() {Description = "A fine document db", Quantity = 5};
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(product);
+				var metadata = session.Advanced.GetMetadataFor(product);
+				metadata["Version-This-Save"] = true;
+				session.SaveChanges();
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				product = session.Load<Product>(product.Id);
+				var metadata = session.Advanced.GetMetadataFor(product);
+				Assert.Null(metadata["Version-This-Save"]);
+				Assert.Equal("Current", metadata.Value<string>("Raven-Document-Revision-Status"));
+			}
+		}
+
+		[Fact]
+		public void Will_not_create_revision_if_not_explicitly_requested()
+		{
+			var product = new Product() { Description = "A fine document db", Quantity = 5 };
+			using (var session = documentStore.OpenSession())
+			{
+				session.Store(product);
+				session.SaveChanges();
+			}
+
+			using (var session = documentStore.OpenSession())
+			{
+				product = session.Load<Product>(product.Id);
+				var metadata = session.Advanced.GetMetadataFor(product);
+				Assert.Null(metadata["Raven-Document-Revision-Status"]);
+			}
+		}
+
 		[Fact]
 		public void Will_delete_old_revisions()
 		{
@@ -475,6 +515,17 @@ namespace Raven.Tests.Bundles.Versioning
 		{
 			public string Id { get; set; }
 			public string Name { get; set; }
+		}
+
+		#endregion
+
+		#region Nested type: Product
+
+		public class Product
+		{
+			public string Id { get; set; }
+			public string Description { get; set; }
+			public int Quantity { get; set; }
 		}
 
 		#endregion
