@@ -126,7 +126,7 @@ namespace Voron.Tests.Bugs
 				tx.Commit();
 			}
 
-			Assert.Equal(currentJournalInfo.CurrentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
+			Assert.Equal(currentJournalInfo.CurrentJournal +1, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
 		}
 
 		[Fact]

@@ -61,7 +61,7 @@ namespace Voron.Tryout
 		//			x.Read(array, 0, 4096);
 
 		//			var sp = Stopwatch.StartNew();
-		//			s.Write(array, 0, 4096);
+		//			s.WriteDirect(array, 0, 4096);
 
 		//			s.Flush();
 

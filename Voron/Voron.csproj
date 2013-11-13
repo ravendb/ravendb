@@ -60,7 +60,6 @@
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />
     <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
     <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
-    <Compile Include="Impl\FlushMode.cs" />
     <Compile Include="Impl\FreeSpace\StreamBitArray.cs" />
     <Compile Include="Impl\FreeSpace\FreeSpaceHandling.cs" />
     <Compile Include="Impl\FreeSpace\IFreeSpaceHandling.cs" />

@@ -8,24 +8,27 @@
     {
         private readonly byte[] _buffer;
 
-        private readonly Process _process;
 
         protected StoragePerformanceTestBase(byte[] buffer)
         {
             _buffer = buffer;
-            _process = Process.GetCurrentProcess();
             GC.Collect();
         }
 
         public abstract string StorageName { get; }
+        public virtual bool CanHandleBigData { get { return true; }}
 
-        public abstract List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data);
+        public abstract List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data, PerfTracker perfTracker);
 
-        public abstract List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data);
+        public abstract List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data, PerfTracker perfTracker);
 
-        public abstract PerformanceRecord ReadSequential();
+        public abstract PerformanceRecord ReadSequential(PerfTracker perfTracker);
 
-        public abstract PerformanceRecord ReadRandom(IEnumerable<int> randomIds);
+        public abstract PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads);
+
+        public abstract PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker);
+
+        public abstract PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads);
 
         protected byte[] GetValueToWrite(byte[] currentValue, int newSize)
         {
@@ -41,11 +44,5 @@
             return currentValue;
         }
 
-        protected long GetMemory()
-        {
-            _process.Refresh();
-
-            return _process.PrivateMemorySize64;
-        }
     }
 }
