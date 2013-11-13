@@ -56,10 +56,20 @@ namespace Performance.Comparison.SQLite
                          Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
         }
 
+        public override List<PerformanceRecord> WriteParallelSequential(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            throw new NotImplementedException();
+        }
+
         public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data, PerfTracker perfTracker)
         {
             return Write(string.Format("[SQLite] random write ({0} items)", Constants.ItemsPerTransaction), data,
                          Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
+        }
+
+        public override List<PerformanceRecord> WriteParallelRandom(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            throw new NotImplementedException();
         }
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)

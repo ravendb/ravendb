@@ -33,12 +33,12 @@
         
             var performanceTests = new List<IStoragePerformanceTest>()
 				{
-                    new SqlServerTest(buffer),
-                    new SqlLiteTest(path, buffer),
-                    new SqlCeTest(path, buffer),
-                    new LmdbTest(path, buffer),
-                    new EsentTest(path, buffer),
-                    new VoronTest(path, FlushMode.Full, buffer)
+                    //new SqlServerTest(buffer),
+                    //new SqlLiteTest(path, buffer),
+                    //new SqlCeTest(path, buffer),
+                    //new LmdbTest(path, buffer),
+                    //new EsentTest(path, buffer),
+                    new VoronTest(path, buffer)
 				};
 
             var perfTracker = new PerfTracker();
@@ -50,9 +50,25 @@
 
                 var writeSeq = test.WriteSequential(sequentialIds, perfTracker);
                 var items = writeSeq.Sum(x => x.ProcessedItems);
-                double totalDuration = writeSeq.Sum(x => x.Duration);
+                var totalDuration = writeSeq.Sum(x => x.Duration);
                 //WritePerfData("WriteSeq", test, writeSeq);
                 OutputResults("Write Seq", items, totalDuration, perfTracker);
+
+                writeSeq = test.WriteParallelSequential(sequentialIds, perfTracker, 2, out totalDuration);
+                items = writeSeq.Sum(x => x.ProcessedItems);
+                OutputResults("Write Seq [2]", items, totalDuration, perfTracker);
+
+                writeSeq = test.WriteParallelSequential(sequentialIds, perfTracker, 4, out totalDuration);
+                items = writeSeq.Sum(x => x.ProcessedItems);
+                OutputResults("Write Seq [4]", items, totalDuration, perfTracker);
+
+                writeSeq = test.WriteParallelSequential(sequentialIds, perfTracker, 8, out totalDuration);
+                items = writeSeq.Sum(x => x.ProcessedItems);
+                OutputResults("Write Seq [8]", items, totalDuration, perfTracker);
+
+                writeSeq = test.WriteParallelSequential(sequentialIds, perfTracker, 16, out totalDuration);
+                items = writeSeq.Sum(x => x.ProcessedItems);
+                OutputResults("Write Seq [16]", items, totalDuration, perfTracker);
 
                 var readSeq = test.ReadSequential(perfTracker);
                 items = readSeq.ProcessedItems;
@@ -63,31 +79,43 @@
                 readSeq = test.ReadParallelSequential(perfTracker, 2);
                 items = readSeq.ProcessedItems;
                 totalDuration = readSeq.Duration;
-                //WritePerfData("ReadSeq", test, readSeq);
                 OutputResults("Read Seq [2]", items, totalDuration, perfTracker);
 
                 readSeq = test.ReadParallelSequential(perfTracker, 4);
                 items = readSeq.ProcessedItems;
                 totalDuration = readSeq.Duration;
-                //WritePerfData("ReadSeq", test, readSeq);
                 OutputResults("Read Seq [4]", items, totalDuration, perfTracker);
 
                 readSeq = test.ReadParallelSequential(perfTracker, 8);
                 items = readSeq.ProcessedItems;
                 totalDuration = readSeq.Duration;
-                //WritePerfData("ReadSeq", test, readSeq);
                 OutputResults("Read Seq [8]", items, totalDuration, perfTracker);
 
                 readSeq = test.ReadParallelSequential(perfTracker, 16);
                 items = readSeq.ProcessedItems;
                 totalDuration = readSeq.Duration;
-                //WritePerfData("ReadSeq", test, readSeq);
                 OutputResults("Read Seq [16]", items, totalDuration, perfTracker);
 
                 var writeRandom = test.WriteRandom(randomIds, perfTracker);
                 items = writeRandom.Sum(x => x.ProcessedItems);
                 totalDuration = writeRandom.Sum(x => x.Duration);
                 OutputResults("Write rnd", items, totalDuration, perfTracker);
+
+                writeRandom = test.WriteParallelRandom(randomIds, perfTracker, 2, out totalDuration);
+                items = writeRandom.Sum(x => x.ProcessedItems);
+                OutputResults("Write rnd [2]", items, totalDuration, perfTracker);
+
+                writeRandom = test.WriteParallelRandom(randomIds, perfTracker, 4, out totalDuration);
+                items = writeRandom.Sum(x => x.ProcessedItems);
+                OutputResults("Write rnd [4]", items, totalDuration, perfTracker);
+
+                writeRandom = test.WriteParallelRandom(randomIds, perfTracker, 8, out totalDuration);
+                items = writeRandom.Sum(x => x.ProcessedItems);
+                OutputResults("Write rnd [8]", items, totalDuration, perfTracker);
+
+                writeRandom = test.WriteParallelRandom(randomIds, perfTracker, 16, out totalDuration);
+                items = writeRandom.Sum(x => x.ProcessedItems);
+                OutputResults("Write rnd [16]", items, totalDuration, perfTracker);
 
                 var readRandom = test.ReadRandom(randomIds.Select(x => x.Id), perfTracker);
                 items = readRandom.ProcessedItems;

@@ -17,14 +17,12 @@ namespace Performance.Comparison.Voron
 {
     public class VoronTest : StoragePerformanceTestBase
     {
-        private readonly FlushMode flushMode;
         private const string dataDir = "voron-perf-test";
         private readonly string dataPath;
 
-        public VoronTest(string path, FlushMode flushMode, byte[] buffer)
+        public VoronTest(string path, byte[] buffer)
             : base(buffer)
         {
-            this.flushMode = flushMode;
             dataPath = Path.Combine(path, dataDir);
         }
 
@@ -51,11 +49,22 @@ namespace Performance.Comparison.Voron
                          Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
         }
 
+        public override List<PerformanceRecord> WriteParallelSequential(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            return WriteParallel(string.Format("[Voron] parallel sequential write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
+        }
 
         public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data, PerfTracker perfTracker)
         {
             return Write(string.Format("[Voron] random write ({0} items)", Constants.ItemsPerTransaction), data,
                          Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
+        }
+
+        public override List<PerformanceRecord> WriteParallelRandom(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            return WriteParallel(string.Format("[Voron] parallel random write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
         }
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
@@ -84,47 +93,132 @@ namespace Performance.Comparison.Voron
 
         private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker)
         {
-            byte[] valueToWrite = null;
-
             NewStorage();
 
-            var records = new List<PerformanceRecord>();
-
-            var sw = new Stopwatch();
-
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(dataPath, flushMode)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(dataPath)))
             {
                 var enumerator = data.GetEnumerator();
-                sw.Restart();
-                for (var transactions = 0; transactions < numberOfTransactions; transactions++)
+                return WriteInternal(operation, itemsPerTransaction, numberOfTransactions, perfTracker, env, enumerator);
+            }
+        }
+
+        private List<PerformanceRecord> WriteParallel(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            NewStorage();
+
+            var countdownEvent = new CountdownEvent(numberOfThreads);
+
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(dataPath)))
+            {
+                var parallelData = SplitData(data, numberOfTransactions, itemsPerTransaction, numberOfThreads);
+
+                var records = new List<PerformanceRecord>();
+                var sw = Stopwatch.StartNew();
+
+                for (int i = 0; i < numberOfThreads; i++)
                 {
-                    sw.Restart();
-                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    ThreadPool.QueueUserWorkItem(
+                        state =>
+                            {
+                                var pData = parallelData[(int)state];
+
+                                records.AddRange(WriteInternalBatch(operation, pData.ItemsPerTransaction, pData.NumberOfTransactions, perfTracker, env, pData.Enumerator));
+
+                                countdownEvent.Signal();
+                            },
+                        i);
+                }
+
+                countdownEvent.Wait();
+                sw.Stop();
+
+                elapsedMilliseconds = sw.ElapsedMilliseconds;
+
+                return records;
+            }
+        }
+
+        private IEnumerable<PerformanceRecord> WriteInternalBatch(
+            string operation,
+            long itemsPerBatch,
+            long numberOfBatches,
+            PerfTracker perfTracker,
+            StorageEnvironment env,
+            IEnumerator<TestData> enumerator)
+        {
+            var sw = new Stopwatch();
+            byte[] valueToWrite = null;
+            var records = new List<PerformanceRecord>();
+            for (var b = 0; b < numberOfBatches; b++)
+            {
+                sw.Restart();
+                using (var batch = new WriteBatch())
+                {
+                    for (var i = 0; i < itemsPerBatch; i++)
                     {
-                        for (var i = 0; i < itemsPerTransaction; i++)
-                        {
-                            enumerator.MoveNext();
+                        enumerator.MoveNext();
 
-                            valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
+                        valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
 
-                            tx.State.Root.Add(tx, enumerator.Current.Id.ToString("0000000000000000"), new MemoryStream(valueToWrite));
-                            perfTracker.Increment();
-                        }
-
-                        tx.Commit();
+                        batch.Add(enumerator.Current.Id.ToString("0000000000000000"), new MemoryStream(valueToWrite), "Root");
                     }
-                    sw.Stop();
 
-                    records.Add(new PerformanceRecord
-                    {
-                        Operation = operation,
-                        Time = DateTime.Now,
-                        Duration = sw.ElapsedMilliseconds,
-                        ProcessedItems = itemsPerTransaction
-                    });
+                    env.Writer.Write(batch);
+                    perfTracker.IncrementBy(itemsPerBatch);
                 }
 
                 sw.Stop();
+
+                records.Add(new PerformanceRecord
+                {
+                    Operation = operation,
+                    Time = DateTime.Now,
+                    Duration = sw.ElapsedMilliseconds,
+                    ProcessedItems = itemsPerBatch
+                });
+            }
+
+            return records;
+        }
+
+        private List<PerformanceRecord> WriteInternal(
+            string operation,
+            int itemsPerTransaction,
+            int numberOfTransactions,
+            PerfTracker perfTracker,
+            StorageEnvironment env,
+            IEnumerator<TestData> enumerator)
+        {
+            var sw = new Stopwatch();
+            byte[] valueToWrite = null;
+            var records = new List<PerformanceRecord>();
+            for (var transactions = 0; transactions < numberOfTransactions; transactions++)
+            {
+                sw.Restart();
+                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    for (var i = 0; i < itemsPerTransaction; i++)
+                    {
+                        enumerator.MoveNext();
+
+                        valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
+
+                        tx.State.Root.Add(tx, enumerator.Current.Id.ToString("0000000000000000"), new MemoryStream(valueToWrite));
+                        perfTracker.Increment();
+                    }
+
+                    tx.Commit();
+                }
+
+                sw.Stop();
+
+                records.Add(new PerformanceRecord
+                        {
+                            Operation = operation,
+                            Time = DateTime.Now,
+                            Duration = sw.ElapsedMilliseconds,
+                            ProcessedItems = itemsPerTransaction
+                        });
             }
 
             return records;
@@ -172,11 +266,11 @@ namespace Performance.Comparison.Voron
                 {
                     ThreadPool.QueueUserWorkItem(
                         state =>
-                            {
-                                ReadInternal(ids, perfTracker, env);
+                        {
+                            ReadInternal(ids, perfTracker, env);
 
-                                countdownEvent.Signal();
-                            });
+                            countdownEvent.Signal();
+                        });
                 }
 
                 countdownEvent.Wait();

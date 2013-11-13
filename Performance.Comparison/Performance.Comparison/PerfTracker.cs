@@ -55,6 +55,13 @@ namespace Performance.Comparison
             _counter.Increment();
         }
 
+        public void IncrementBy(long value)
+        {
+            if (_counter == null)
+                return;
+            _counter.IncrementBy(value);
+        }
+
         private static void RecreateCategory()
         {
             if (PerformanceCounterCategory.Exists("Voron Perf Test"))
