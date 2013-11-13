@@ -250,24 +250,28 @@ namespace Voron.Tests.Bugs
 
 		private void CorruptPage(long journal, long page, int pos)
 		{
-			var journalPager = (FilePager)_options.CreateJournalPager(journal);
-		    var fileStream = journalPager.FileStream;
-		    fileStream.Position = page*journalPager.PageSize;
-
-		    var buffer = new byte[journalPager.PageSize];
-
-		    var remaining = buffer.Length;
-		    var start = 0;
-		    while (remaining > 0)
+		    using (var journalPager = (FilePager) _options.CreateJournalPager(journal))
 		    {
-		        var read = fileStream.Read(buffer, start, remaining);
-		        start += read;
-		        remaining -= read;
-		    }
+		        var fileStream = journalPager.FileStream;
+		        fileStream.Position = page*journalPager.PageSize;
 
-		    buffer[pos] = 42;
-		    fileStream.Position = page*journalPager.PageSize;
-		    fileStream.Write(buffer,0,buffer.Length);
+		        var buffer = new byte[journalPager.PageSize];
+
+		        var remaining = buffer.Length;
+		        var start = 0;
+		        while (remaining > 0)
+		        {
+		            var read = fileStream.Read(buffer, start, remaining);
+		            if (read == 0)
+		                break;
+		            start += read;
+		            remaining -= read;
+		        }
+
+		        buffer[pos] = 42;
+		        fileStream.Position = page*journalPager.PageSize;
+		        fileStream.Write(buffer, 0, buffer.Length);
+		    }
 		}
 	}
 }

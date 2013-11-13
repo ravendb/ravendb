@@ -85,7 +85,7 @@ namespace Voron.Impl.Backup
                             if (start >= journalFile.Pager.NumberOfAllocatedPages) // nothing to do here
                                 continue;
 
-							var part = package.CreatePart(new Uri("/" + StorageEnvironmentOptions.LogName(journalNum), UriKind.Relative),
+							var part = package.CreatePart(new Uri("/" + StorageEnvironmentOptions.JournalName(journalNum), UriKind.Relative),
 							                              System.Net.Mime.MediaTypeNames.Application.Octet,
 														  compression);
 

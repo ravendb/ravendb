@@ -119,7 +119,7 @@ namespace Voron.Impl.Journal
 				while (true)
 				{
 					unusedfiles--;
-					if (_env.Options.TryDeletePager(unusedfiles) == false)
+					if (_env.Options.TryDeleteJournalPager(unusedfiles) == false)
 						break;
 				}
 				
@@ -167,7 +167,7 @@ namespace Voron.Impl.Journal
                 while (true)
                 {
                     badJournalFiles++;
-                    if (_env.Options.TryDeletePager(badJournalFiles) == false)
+                    if (_env.Options.TryDeleteJournalPager(badJournalFiles) == false)
                         break;
                 }
 		    }
@@ -472,13 +472,9 @@ namespace Voron.Impl.Journal
 						_waj._dataPager.Write(page);
 					}
 
-					var journalFiles = _jrnls.FindAll(x => x.Number < _lastSyncedLog ||  // an old journal file
-                            (x.Number == _lastSyncedLog &&               // or the last log file...
-                            _lastSyncedPage == x.WritePagePosition &&   // if we synced everything in it...
-                            x.AvailablePages == 0                       )// and we have no space to write there any longer
-                            );
+				    var unusedJournalFiles = GetUnusedJournalFiles();
 
-					// we want to hold the write lock for as little time as possible, therefor
+				    // we want to hold the write lock for as little time as possible, therefor
 					// what we do is take the lock, write the appropriate metadata, then exit the lock
 					// the actual fsync (expensive) is happening outside the lock, and when can then 
 					// decide to clear the old logs if we want to.
@@ -487,7 +483,7 @@ namespace Voron.Impl.Journal
 					{
 						UpdateFileHeaderAfterDataFileSync(tx);
 
-					    var lastJournalFileToRemove = journalFiles.LastOrDefault();
+					    var lastJournalFileToRemove = unusedJournalFiles.LastOrDefault();
                         if(lastJournalFileToRemove != null)
 					        _waj.Files = _waj.Files.RemoveAll(x => x.Number <= lastJournalFileToRemove.Number);
 
@@ -500,7 +496,7 @@ namespace Voron.Impl.Journal
 
 						_waj._locker.ExitWriteLock();
 
-						foreach (var journalFile in journalFiles)
+						foreach (var journalFile in unusedJournalFiles)
 						{
 							if (_waj._env.Options.IncrementalBackupEnabled == false)
 								journalFile.DeleteOnClose();
@@ -516,7 +512,7 @@ namespace Voron.Impl.Journal
 						if (_waj._locker.IsWriteLockHeld)
 							_waj._locker.ExitWriteLock();
 
-						foreach (var fullLog in journalFiles)
+						foreach (var fullLog in unusedJournalFiles)
 						{
 							fullLog.Release();
 						}
@@ -528,7 +524,25 @@ namespace Voron.Impl.Journal
 				}
 			}
 
-			private Dictionary<long, JournalFile> ReadTransactionsToFlush(long oldestActiveTransaction, ImmutableList<JournalFile> jrnls)
+		    private List<JournalFile> GetUnusedJournalFiles()
+		    {
+		        var unusedJournalFiles = new List<JournalFile>();
+		        foreach (var j in _jrnls)
+		        {
+		            if (j.Number > _lastSyncedLog) // after the last log we synced, nothing to do here
+		                continue;
+		            if (j.Number == _lastSyncedLog) // we are in the last log we synced
+		            {
+		                // if we didn't get to end, or if there are more pages to be used here, ignore it
+		                if (_lastSyncedPage != (j.WritePagePosition-1) || j.AvailablePages != 0)
+		                    continue;
+		            }
+		            unusedJournalFiles.Add(j);
+		        }
+		        return unusedJournalFiles;
+		    }
+
+		    private Dictionary<long, JournalFile> ReadTransactionsToFlush(long oldestActiveTransaction, ImmutableList<JournalFile> jrnls)
 			{
 				var pagesToWrite = new Dictionary<long, JournalFile>();
 
