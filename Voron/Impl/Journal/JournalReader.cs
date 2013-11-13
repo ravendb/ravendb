@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using Voron.Util;
@@ -14,7 +15,7 @@ namespace Voron.Impl.Journal
 		private long _readingPage;
 		private readonly long _startPage;
 		private readonly TransactionHeader* _previous;
-		private readonly Dictionary<long, long> _transactionPageTranslation = new Dictionary<long, long>();
+		private ImmutableDictionary<long, long> _transactionPageTranslation = ImmutableDictionary<long, long>.Empty;
 
 		public bool RequireHeaderUpdate { get; private set; }
 
@@ -48,6 +49,8 @@ namespace Voron.Impl.Journal
 			if (_readingPage >= _pager.NumberOfAllocatedPages)
 				return false;
 
+			var transactionTable = _transactionPageTranslation;
+
 			TransactionHeader* current;
 			if (!TryReadAndValidateHeader(out current)) return false;
 
@@ -69,7 +72,7 @@ namespace Voron.Impl.Journal
 
 				var page = _pager.Read(_readingPage);
 
-				_transactionPageTranslation[page.PageNumber] = _readingPage;
+				transactionTable = transactionTable.SetItem(page.PageNumber, _readingPage);
 
 				if (page.IsOverflow)
 				{
@@ -104,7 +107,7 @@ namespace Voron.Impl.Journal
 
 			//update CurrentTransactionHeader _only_ if the CRC check is passed
 			LastTransactionHeader = current;
-			
+			_transactionPageTranslation = transactionTable;
 			return true;
 		}
 
@@ -124,7 +127,7 @@ namespace Voron.Impl.Journal
 			}
 		}
 
-		public Dictionary<long, long> TransactionPageTranslation
+		public ImmutableDictionary<long, long> TransactionPageTranslation
 		{
 			get { return _transactionPageTranslation; }
 		}
