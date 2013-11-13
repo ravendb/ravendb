@@ -1398,14 +1398,21 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		private static void AddTransactionInformation(RavenJObject metadata)
+		private void AddTransactionInformation(RavenJObject metadata)
 		{
 #if !SILVERLIGHT && !NETFX_CORE
-			if (Transaction.Current == null)
+			/*if (Transaction.Current == null)
 				return;
 
 			string txInfo = string.Format("{0}, {1}", Transaction.Current.TransactionInformation.DistributedIdentifier,
-										  TransactionManager.DefaultTimeout);
+										  TransactionManager.DefaultTimeout);*/
+			if (convention.EnlistInDistributedTransactions == false)
+				return;
+
+			var transactionInformation = RavenTransactionAccessor.GetTransactionInformation();
+			if (transactionInformation == null)
+				return;
+			string txInfo = string.Format("{0}, {1}", transactionInformation.Id, transactionInformation.Timeout);
 			metadata["Raven-Transaction-Information"] = new RavenJValue(txInfo);
 #endif
 		}
