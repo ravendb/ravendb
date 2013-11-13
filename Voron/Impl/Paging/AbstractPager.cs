@@ -61,9 +61,8 @@ namespace Voron.Impl
 		}
 
 		public abstract byte* AcquirePagePointer(long pageNumber);
-
-		public abstract void Flush(long startPage, long count);
-		public abstract void Sync();
+		
+        public abstract void Sync();
 
 		public virtual PagerState TransactionBegan()
 		{
@@ -72,14 +71,14 @@ namespace Voron.Impl
 			return state;
 		}
 
-		public void EnsureContinuous(Transaction tx, long requestedPageNumber, int pageCount)
+		public void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages)
 		{
-			if (requestedPageNumber + pageCount <= NumberOfAllocatedPages)
+			if (requestedPageNumber + numberOfPages <= NumberOfAllocatedPages)
 				return;
 
 			// this ensure that if we want to get a range that is more than the current expansion
 			// we will increase as much as needed in one shot
-			var minRequested = (requestedPageNumber + pageCount) * PageSize;
+			var minRequested = (requestedPageNumber + numberOfPages) * PageSize;
 			var allocationSize = Math.Max(NumberOfAllocatedPages * PageSize, PageSize);
 			while (minRequested > allocationSize)
 			{
@@ -150,7 +149,6 @@ namespace Voron.Impl
 			}
 			_lastIncrease = now;
 			// At any rate, we won't do an increase by over 25% of current size, to prevent huge empty spaces
-			// and the first size we allocate is 256 pages (1MB)
 			// 
 			// The reasoning behind this is that we want to make sure that we increase in size very slowly at first
 			// because users tend to be sensitive to a lot of "wasted" space. 
@@ -158,10 +156,26 @@ namespace Voron.Impl
 			// the file size increases, we will reserve more & more from the OS.
 			// This also plays avoids "I added 300 records and the file size is 64MB" problems that occur when we are too
 			// eager to reserve space
-			current = Math.Max(current, 256 * PageSize);
 			var actualIncrease = Math.Min(_increaseSize, current / 4);
 
-			return current + actualIncrease;
+            // we then want to get the next power of two number, to get pretty file size
+            return NearestPowerOfTwo(current + actualIncrease);
 		}
+
+
+	    public static long NearestPowerOfTwo(long v)
+	    {
+	        v--;
+	        v |= v >> 1;
+	        v |= v >> 2;
+	        v |= v >> 4;
+	        v |= v >> 8;
+	        v |= v >> 16;
+	        v++;
+	        return v;
+
+	    }
+
+	    public abstract void WriteDirect(Page start, long pagePosition, int pagesToWrite);
 	}
 }

@@ -29,23 +29,23 @@ namespace Voron.Benchmark
 #endif
             _randomNumbers = InitRandomNumbers(Transactions * ItemsPerTransaction);
 
-            Time("fill seq none", sw => FillSeqOneTransaction(sw, FlushMode.None));
-            Time("fill seq buff", sw => FillSeqOneTransaction(sw, FlushMode.Buffers));
-            Time("fill seq sync", sw => FillSeqOneTransaction(sw, FlushMode.Full));
+            Time("fill seq none", sw => FillSeqOneTransaction(sw));
+            Time("fill seq buff", sw => FillSeqOneTransaction(sw));
+            Time("fill seq sync", sw => FillSeqOneTransaction(sw));
+            
+            Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw));
+            Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw));
+            Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw));
 
-            Time("fill seq none separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.None));
-            Time("fill seq buff separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Buffers));
-            Time("fill seq sync separate tx", sw => FillSeqMultipleTransaction(sw, FlushMode.Full));
+            Time("fill rnd none", sw => FillRandomOneTransaction(sw));
+            Time("fill rnd buff", sw => FillRandomOneTransaction(sw));
+            Time("fill rnd sync", sw => FillRandomOneTransaction(sw));
 
-            Time("fill rnd none", sw => FillRandomOneTransaction(sw, FlushMode.None));
-            Time("fill rnd buff", sw => FillRandomOneTransaction(sw, FlushMode.Buffers));
-            Time("fill rnd sync", sw => FillRandomOneTransaction(sw, FlushMode.Full));
+            Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw));
+            Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw));
+            Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw));
 
-            Time("fill rnd none separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.None));
-            Time("fill rnd buff separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Buffers));
-            Time("fill rnd sync separate tx", sw => FillRandomMultipleTransaction(sw, FlushMode.Full));
-
-            Time("Data for tests", sw => FillSeqOneTransaction(sw, FlushMode.None));
+            Time("Data for tests", sw => FillSeqOneTransaction(sw));
 
             Time("read seq", ReadOneTransaction, delete: false);
             Time("read parallel 1", sw => ReadOneTransaction_Parallel(sw, 1), delete: false);
@@ -120,9 +120,9 @@ namespace Voron.Benchmark
 			Directory.Delete(dir, true);
 		}
 
-        private static void FillRandomOneTransaction(Stopwatch sw, FlushMode flushMode)
+        private static void FillRandomOneTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path, flushMode)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -150,9 +150,9 @@ namespace Voron.Benchmark
         }
 
 
-        private static void FillSeqOneTransaction(Stopwatch sw, FlushMode flushMode)
+        private static void FillSeqOneTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path, flushMode)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -180,9 +180,9 @@ namespace Voron.Benchmark
             }
         }
 
-        private static void FillRandomMultipleTransaction(Stopwatch sw, FlushMode flushMode)
+        private static void FillRandomMultipleTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path, flushMode)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -213,9 +213,9 @@ namespace Voron.Benchmark
             }
         }
 
-        private static void FillSeqMultipleTransaction(Stopwatch sw, FlushMode flushMode)
+        private static void FillSeqMultipleTransaction(Stopwatch sw)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path, flushMode)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);
@@ -349,7 +349,7 @@ namespace Voron.Benchmark
 
         private static void ReadAndWriteOneTransaction(Stopwatch sw, int concurrency)
         {
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path, FlushMode.None)))
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(Path)))
             {
                 var value = new byte[100];
                 new Random().NextBytes(value);

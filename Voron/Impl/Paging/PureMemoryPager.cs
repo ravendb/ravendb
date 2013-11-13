@@ -45,14 +45,19 @@ namespace Voron.Impl
 
 	    public override void Write(Page page, long? pageNumber)
 	    {
-			var toWrite = page.IsOverflow ? (page.OverflowSize + Constants.PageHeaderSize): PageSize;
+			var toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize): 1;
 	        var requestedPageNumber = pageNumber ?? page.PageNumber;
-	        EnsureContinuous(null, requestedPageNumber,toWrite / PageSize);
             
-			NativeMethods.memcpy(AcquirePagePointer(requestedPageNumber), page.Base, toWrite);
+            WriteDirect(page, requestedPageNumber, toWrite);
 	    }
 
-		public override void Dispose()
+	    public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
+	    {
+            EnsureContinuous(null, pagePosition, pagesToWrite);
+            NativeMethods.memcpy(AcquirePagePointer(pagePosition), start.Base, pagesToWrite * PageSize);
+	    }
+
+	    public override void Dispose()
 		{
 			base.Dispose();
 			PagerState.Release();
@@ -64,25 +69,9 @@ namespace Voron.Impl
 			// nothing to do here
 		}
 
-		public override void Flush(long startPage, long count)
-		{
-			// nothing to do here
-		}
-
 		public override byte* AcquirePagePointer(long pageNumber)
 		{
 			return _base + (pageNumber * PageSize);
-		}
-
-		private PagerState CreateNewPagerState(byte* newBase, IntPtr newPtr)
-		{
-			var newPager = new PagerState
-			{
-				Base = newBase,
-				Ptr = newPtr
-			};
-			newPager.AddRef(); // one for the pager
-			return newPager;
 		}
 
 		public override void AllocateMorePages(Transaction tx, long newLength)
