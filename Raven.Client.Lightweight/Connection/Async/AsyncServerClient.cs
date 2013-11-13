@@ -1364,10 +1364,9 @@ namespace Raven.Client.Connection.Async
 	                .AddOperationHeaders(OperationsHeaders));
 
                 request.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-				
+
                 var json = (RavenJArray)await request.ReadResponseJsonAsync();
-                return json.Select( x => JsonConvert.DeserializeObject<AttachmentInformation>(((RavenJObject)x)["definition"].ToString(), new JsonToJsonConverter()))
-                            .ToArray();
+                return convention.CreateSerializer().Deserialize<AttachmentInformation[]>(new RavenJTokenReader(json));
 	        });
 	    }
 
@@ -1427,6 +1426,7 @@ namespace Raven.Client.Connection.Async
 					var memoryStream = new MemoryStream(result);
 					return new Attachment
 					{
+                        Key = key,
 						Data = () => memoryStream,
 						Size = result.Length,
 						Etag = request.Response.GetEtagHeader(),
