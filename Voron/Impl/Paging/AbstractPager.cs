@@ -177,5 +177,7 @@ namespace Voron.Impl
 	    }
 
 	    public abstract void WriteDirect(Page start, long pagePosition, int pagesToWrite);
+
+	    public override abstract string ToString();
 	}
 }

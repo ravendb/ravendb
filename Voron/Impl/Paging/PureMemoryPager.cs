@@ -51,6 +51,11 @@ namespace Voron.Impl
             WriteDirect(page, requestedPageNumber, toWrite);
 	    }
 
+	    public override string ToString()
+	    {
+	        return "memory";
+	    }
+
 	    public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
 	    {
             EnsureContinuous(null, pagePosition, pagesToWrite);

@@ -130,8 +130,17 @@ namespace Voron.Impl
             WriteDirect(page, number, toWrite);
         }
 
+        public override string ToString()
+        {
+            return _fileInfo.Name;
+        }
+
         public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
         {
+            if (_fileInfo.Extension == ".voron" && pagePosition > 1)
+            {
+                
+            }
             var position = pagePosition * PageSize;
             var toWrite = (uint)(pagesToWrite * PageSize);
 

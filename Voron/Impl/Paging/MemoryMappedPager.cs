@@ -97,6 +97,11 @@ namespace Voron.Impl
 			WriteDirect(page, startPage, toWrite);
 		}
 
+	    public override unsafe string ToString()
+	    {
+	        return _fileInfo.Name;
+	    }
+
 	    public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
 	    {
             NativeMethods.memcpy(PagerState.Base + pagePosition * PageSize, start.Base, pagesToWrite * PageSize);
