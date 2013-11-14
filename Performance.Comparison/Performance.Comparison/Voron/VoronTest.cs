@@ -109,13 +109,11 @@ namespace Performance.Comparison.Voron
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(dataPath)))
             {
                 return ExecuteWriteWithParallel(
-                operation,
                 data,
                 numberOfTransactions,
                 itemsPerTransaction,
                 numberOfThreads,
-                perfTracker,
-                (op, enumerator, itemCount, transactionCount, perfTrcker) => WriteInternalBatch(op, enumerator, itemCount, transactionCount, perfTrcker, env),
+                (enumerator, itmsPerTransaction, nmbrOfTransactions) => WriteInternalBatch(operation, enumerator, itmsPerTransaction, nmbrOfTransactions, perfTracker, env),
                 out elapsedMilliseconds);
             }
         }
@@ -236,35 +234,11 @@ namespace Performance.Comparison.Voron
             var options = StorageEnvironmentOptions.ForPath(dataPath);
             options.ManualFlushing = true;
 
-            var countdownEvent = new CountdownEvent(numberOfThreads);
-
             using (var env = new StorageEnvironment(options))
             {
                 env.FlushLogToDataFile();
 
-                var sw = Stopwatch.StartNew();
-
-                for (int i = 0; i < numberOfThreads; i++)
-                {
-                    ThreadPool.QueueUserWorkItem(
-                        state =>
-                        {
-                            ReadInternal(ids, perfTracker, env);
-
-                            countdownEvent.Signal();
-                        });
-                }
-
-                countdownEvent.Wait();
-                sw.Stop();
-
-                return new PerformanceRecord
-                {
-                    Operation = operation,
-                    Time = DateTime.Now,
-                    Duration = sw.ElapsedMilliseconds,
-                    ProcessedItems = ids.Count() * numberOfThreads
-                };
+                return ExecuteReadWithParallel(operation, ids, numberOfThreads, () => ReadInternal(ids, perfTracker, env));
             }
         }
 

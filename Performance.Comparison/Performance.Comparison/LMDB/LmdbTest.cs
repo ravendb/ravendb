@@ -113,13 +113,11 @@
             using (var env = NewEnvironment())
             {
                 return ExecuteWriteWithParallel(
-                operation,
                 data,
                 numberOfTransactions,
                 itemsPerTransaction,
                 numberOfThreads,
-                perfTracker,
-                (op, enumerator, itemCount, transactionCount, perfTrcker) => WriteInternal(op, enumerator, itemCount, transactionCount, perfTrcker, env),
+                (enumerator, itmsPerTransaction, nmbrOfTransactions) => WriteInternal(operation, enumerator, itmsPerTransaction, nmbrOfTransactions, perfTracker, env),
                 out elapsedMilliseconds);
             }
         }
@@ -194,33 +192,9 @@
 
         private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker, int numberOfThreads)
         {
-            var countdownEvent = new CountdownEvent(numberOfThreads);
-
             using (var env = NewEnvironment(delete: false))
             {
-                var sw = Stopwatch.StartNew();
-
-                for (int i = 0; i < numberOfThreads; i++)
-                {
-                    ThreadPool.QueueUserWorkItem(
-                        state =>
-                            {
-                                ReadInternal(ids, perfTracker, env);
-
-                                countdownEvent.Signal();
-                            });
-                }
-
-                countdownEvent.Wait();
-                sw.Stop();
-
-                return new PerformanceRecord
-                {
-                    Operation = operation,
-                    Time = DateTime.Now,
-                    Duration = sw.ElapsedMilliseconds,
-                    ProcessedItems = ids.Count() * numberOfThreads
-                };
+                return ExecuteReadWithParallel(operation, ids, numberOfThreads, () => ReadInternal(ids, perfTracker, env));
             }
         }
 

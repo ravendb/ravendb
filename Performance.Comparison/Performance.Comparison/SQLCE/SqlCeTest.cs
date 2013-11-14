@@ -116,13 +116,11 @@ namespace Performance.Comparison.SQLCE
             NewDatabase();
 
             return ExecuteWriteWithParallel(
-                operation,
                 data,
                 numberOfTransactions,
                 itemsPerTransaction,
                 numberOfThreads,
-                perfTracker,
-                WriteInternal,
+                (enumerator, itmsPerTransaction, nmbrOfTransactions) => WriteInternal(operation, enumerator, itmsPerTransaction, nmbrOfTransactions, perfTracker),
                 out elapsedMilliseconds);
         }
 
@@ -196,30 +194,7 @@ namespace Performance.Comparison.SQLCE
 
         private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker, int numberOfThreads)
         {
-            var countdownEvent = new CountdownEvent(numberOfThreads);
-            var sw = Stopwatch.StartNew();
-            
-            for (int i = 0; i < numberOfThreads; i++)
-            {
-                ThreadPool.QueueUserWorkItem(
-                    state =>
-                        {
-                            ReadInternal(ids, perfTracker, connectionString);
-
-                            countdownEvent.Signal();
-                        });
-            }
-
-            countdownEvent.Wait();
-            sw.Stop();
-
-            return new PerformanceRecord
-            {
-                Operation = operation,
-                Time = DateTime.Now,
-                Duration = sw.ElapsedMilliseconds,
-                ProcessedItems = ids.Count() * numberOfThreads,
-            };
+            return ExecuteReadWithParallel(operation, ids, numberOfThreads, () => ReadInternal(ids, perfTracker, connectionString));
         }
 
         private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, string connectionString)

@@ -50,7 +50,7 @@
             return currentValue;
         }
 
-        protected List<PerformanceRecord> ExecuteWriteWithParallel(string operation, IEnumerable<TestData> data, int numberOfTransactions, int itemsPerTransaction, int numberOfThreads, PerfTracker perfTracker, Func<string, IEnumerator<TestData>, long, long, PerfTracker, List<PerformanceRecord>> writeFunction, out long elapsedMilliseconds)
+        protected List<PerformanceRecord> ExecuteWriteWithParallel(IEnumerable<TestData> data, int numberOfTransactions, int itemsPerTransaction, int numberOfThreads, Func<IEnumerator<TestData>, long, long, List<PerformanceRecord>> writeFunction, out long elapsedMilliseconds)
         {
             var countdownEvent = new CountdownEvent(numberOfThreads);
 
@@ -67,7 +67,7 @@
                         var index = (int)state;
                         var pData = parallelData[index];
 
-                        records[index] = writeFunction(operation, pData.Enumerator, pData.ItemsPerTransaction, pData.NumberOfTransactions, perfTracker);
+                        records[index] = writeFunction(pData.Enumerator, pData.ItemsPerTransaction, pData.NumberOfTransactions);
 
                         countdownEvent.Signal();
                     },
@@ -82,6 +82,35 @@
             return records
                 .SelectMany(x => x)
                 .ToList();
+        }
+
+        protected PerformanceRecord ExecuteReadWithParallel(string operation, IEnumerable<int> ids, int numberOfThreads, Action readAction)
+        {
+            var countdownEvent = new CountdownEvent(numberOfThreads);
+
+            var sw = Stopwatch.StartNew();
+
+            for (int i = 0; i < numberOfThreads; i++)
+            {
+                ThreadPool.QueueUserWorkItem(
+                    state =>
+                    {
+                        readAction();
+
+                        countdownEvent.Signal();
+                    });
+            }
+
+            countdownEvent.Wait();
+            sw.Stop();
+
+            return new PerformanceRecord
+            {
+                Operation = operation,
+                Time = DateTime.Now,
+                Duration = sw.ElapsedMilliseconds,
+                ProcessedItems = ids.Count() * numberOfThreads
+            };
         }
 
         private IList<ParallelTestData> SplitData(IEnumerable<TestData> data, int currentNumberOfTransactions, int currentNumberOfItemsPerTransaction, int numberOfThreads)
