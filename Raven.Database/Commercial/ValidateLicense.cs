@@ -117,13 +117,15 @@ namespace Raven.Database.Commercial
 				try
 				{
 					var xmlDocument = new XmlDocument();
-					xmlDocument.LoadXml(licensePath);
-					var sig = xmlDocument.SelectSingleNode("/license/Signature");
-					if (sig != null && sig.ParentNode != null)
-						sig.ParentNode.RemoveChild(sig);
-					var stringBuilder = new StringBuilder();
-					xmlDocument.WriteTo(XmlWriter.Create(stringBuilder));
-					licenseText = stringBuilder.ToString();
+					xmlDocument.Load(licensePath);
+					var ns = new XmlNamespaceManager(xmlDocument.NameTable);
+					ns.AddNamespace("sig", "http://www.w3.org/2000/09/xmldsig#");
+					var sig = xmlDocument.SelectSingleNode("/license/sig:Signature",ns);
+					if (sig != null)
+					{
+						sig.RemoveAll();
+					}
+					licenseText = xmlDocument.InnerXml;
 				}
 				catch (Exception)
 				{
