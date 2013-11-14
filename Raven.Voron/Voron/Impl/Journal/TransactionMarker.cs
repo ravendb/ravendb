@@ -12,8 +12,6 @@ namespace Voron.Impl.Journal
 	public enum TransactionMarker : byte
 	{
 		None = 0x0,
-		Start = 0x1,
-		Split = 0x2,
 		Commit = 0x4,
 	}
 }

@@ -47,7 +47,7 @@
 				CreatedNew = true;
 			}
 
-		    Options = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(storageFilePath, FlushMode.Full);
+		    Options = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(storageFilePath);
 		}
 
 		public void Dispose()

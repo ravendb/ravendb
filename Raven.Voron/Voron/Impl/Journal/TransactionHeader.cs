@@ -16,33 +16,30 @@ namespace Voron.Impl.Journal
 		public ulong HeaderMarker;
 
 		[FieldOffset(8)]
-		public long PageNumberInLogFile;
-
-		[FieldOffset(16)]
 		public long TransactionId;
 
-		[FieldOffset(24)]
+		[FieldOffset(16)]
 		public long NextPageNumber;
 
-		[FieldOffset(32)]
+		[FieldOffset(24)]
 		public long LastPageNumber;
 
-		[FieldOffset(40)]
+		[FieldOffset(32)]
 		public int PageCount;
 
-		[FieldOffset(44)]
+		[FieldOffset(36)]
 		public int OverflowPageCount;
 
-		[FieldOffset(48)]
+		[FieldOffset(40)]
 		public uint Crc;
 
-	    [FieldOffset(52)]
+	    [FieldOffset(44)]
 		public TreeRootHeader Root;
 
-        [FieldOffset(114)]
+        [FieldOffset(106)]
         public TreeRootHeader FreeSpace;
 
-        [FieldOffset(176)]
+        [FieldOffset(168)]
         public TransactionMarker TxMarker;
 	}
 }

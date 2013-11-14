@@ -48,7 +48,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable">
-      <HintPath>..\..\packages\Microsoft.Bcl.Immutable.1.0.27\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.27\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
@@ -66,7 +66,6 @@
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />
     <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
     <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
-    <Compile Include="Impl\FlushMode.cs" />
     <Compile Include="Impl\FreeSpace\StreamBitArray.cs" />
     <Compile Include="Impl\FreeSpace\FreeSpaceHandling.cs" />
     <Compile Include="Impl\FreeSpace\IFreeSpaceHandling.cs" />

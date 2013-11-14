@@ -101,7 +101,12 @@ namespace Raven.Database.Indexing
 				if (booleanQuery.Clauses.Count == 0)
 					return booleanQuery;
 			
-				var mergeGroups = booleanQuery.Clauses.Select(x=>x.Query).OfType<IRavenLuceneMethodQuery>().GroupBy(x => x.Field).ToArray();
+				//merge only clauses that have "OR" operator between them
+				var mergeGroups = booleanQuery.Clauses.Where(clause => clause.Occur == Occur.SHOULD)
+													  .Select(x=>x.Query)													  
+													  .OfType<IRavenLuceneMethodQuery>()
+													  .GroupBy(x => x.Field)
+													  .ToArray();
 				if (mergeGroups.Length == 0)
 					return booleanQuery;
 
