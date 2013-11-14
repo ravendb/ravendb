@@ -25,7 +25,7 @@
             var buffer = new byte[87 * 1024];
             random.NextBytes(buffer);
 
-            var path = @"C:\temp\";
+            var path = @"s:\temp\";
 
             var sequentialIds = InitSequentialNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 128, maxValueSize: 128);
             var randomIds = InitRandomNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 128, maxValueSize: 128);
@@ -36,10 +36,10 @@
         
             var performanceTests = new List<IStoragePerformanceTest>()
 				{
-                    new SqlServerTest(buffer),
-                    new SqlLiteTest(path, buffer),
-                    new SqlCeTest(path, buffer),
-                    new LmdbTest(path, buffer),
+                    //new SqlServerTest(buffer),
+                    //new SqlLiteTest(path, buffer),
+                    //new SqlCeTest(path, buffer),
+                    //new LmdbTest(path, buffer),
                     new EsentTest(path, buffer),
                     new VoronTest(path, buffer)
 				};

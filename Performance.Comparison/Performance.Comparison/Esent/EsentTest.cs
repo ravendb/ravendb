@@ -225,14 +225,13 @@
                             Api.SetColumn(session, table, primaryColumnId, enumerator.Current.Id);
                             Api.SetColumn(session, table, secondaryColumnId, valueToWrite);
                             Api.JetUpdate(session, table);
-                            perfTracker.Increment();
                         }
 
                         tx.Commit(CommitTransactionGrbit.None);
                     }
 
                     sw.Stop();
-
+                    perfTracker.Record(sw.ElapsedMilliseconds);
                     records.Add(
                         new PerformanceRecord
                             {
@@ -284,18 +283,18 @@
             JET_COLUMNID secondaryColumnId;
             using (var session = OpenSession(instance, out table, out primaryColumnId, out secondaryColumnId))
             {
+                var sw = Stopwatch.StartNew();
                 Api.JetSetCurrentIndex(session, table, "by_key");
-
                 foreach (var id in ids)
                 {
                     Api.MakeKey(session, table, id, MakeKeyGrbit.NewKey);
                     Api.JetSeek(session, table, SeekGrbit.SeekEQ);
 
                     var value = Api.RetrieveColumn(session, table, secondaryColumnId);
-                    perfTracker.Increment();
 
                     Debug.Assert(value != null);
                 }
+                perfTracker.Record(sw.ElapsedMilliseconds);
             }
         }
     }

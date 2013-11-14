@@ -144,10 +144,10 @@ namespace Performance.Comparison.Voron
                     }
 
                     env.Writer.Write(batch);
-                    perfTracker.IncrementBy(itemsPerBatch);
                 }
 
                 sw.Stop();
+                perfTracker.Record(sw.ElapsedMilliseconds);
 
                 records.Add(new PerformanceRecord
                 {
@@ -184,10 +184,10 @@ namespace Performance.Comparison.Voron
                         valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
 
                         tx.State.Root.Add(tx, enumerator.Current.Id.ToString("0000000000000000"), new MemoryStream(valueToWrite));
-                        perfTracker.Increment();
                     }
 
                     tx.Commit();
+                    perfTracker.Record(sw.ElapsedMilliseconds);
                 }
 
                 sw.Stop();
@@ -248,6 +248,7 @@ namespace Performance.Comparison.Voron
 
             using (var tx = env.NewTransaction(TransactionFlags.Read))
             {
+                var sw = Stopwatch.StartNew();
                 foreach (var id in ids)
                 {
                     var key = id.ToString("0000000000000000");
@@ -257,8 +258,8 @@ namespace Performance.Comparison.Voron
                         {
                         }
                     }
-                    perfTracker.Increment();
                 }
+                perfTracker.Record(sw.ElapsedMilliseconds);
             }
         }
     }
