@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using Voron.Util;
@@ -14,7 +15,7 @@ namespace Voron.Impl.Journal
 		private long _readingPage;
 		private readonly long _startPage;
 		private readonly TransactionHeader* _previous;
-		private readonly Dictionary<long, long> _transactionPageTranslation = new Dictionary<long, long>();
+		private ImmutableDictionary<long, long> _transactionPageTranslation = ImmutableDictionary<long, long>.Empty;
 
 		public bool RequireHeaderUpdate { get; private set; }
 
@@ -37,6 +38,7 @@ namespace Voron.Impl.Journal
 			_readingPage = startPage;
 			_startPage = startPage;
 			_previous = previous;
+			_writePage = startPage;
 			LastTransactionHeader = previous;
 
 		}
@@ -47,6 +49,8 @@ namespace Voron.Impl.Journal
 		{
 			if (_readingPage >= _pager.NumberOfAllocatedPages)
 				return false;
+
+			var transactionTable = _transactionPageTranslation;
 
 			TransactionHeader* current;
 			if (!TryReadAndValidateHeader(out current)) return false;
@@ -69,7 +73,7 @@ namespace Voron.Impl.Journal
 
 				var page = _pager.Read(_readingPage);
 
-				_transactionPageTranslation[page.PageNumber] = _readingPage;
+				transactionTable = transactionTable.SetItem(page.PageNumber, _readingPage);
 
 				if (page.IsOverflow)
 				{
@@ -104,7 +108,7 @@ namespace Voron.Impl.Journal
 
 			//update CurrentTransactionHeader _only_ if the CRC check is passed
 			LastTransactionHeader = current;
-			
+			_transactionPageTranslation = transactionTable;
 			return true;
 		}
 
@@ -124,7 +128,7 @@ namespace Voron.Impl.Journal
 			}
 		}
 
-		public Dictionary<long, long> TransactionPageTranslation
+		public ImmutableDictionary<long, long> TransactionPageTranslation
 		{
 			get { return _transactionPageTranslation; }
 		}
@@ -135,8 +139,15 @@ namespace Voron.Impl.Journal
 
 			if (current->HeaderMarker != Constants.TransactionHeaderMarker)
 			{
-			    RequireHeaderUpdate = true;
-				return false; // not a transaction page
+                // not a transaction page, 
+
+                // if the header marker is zero, we are probably in the area at the end of the log file, and have no additional log records
+                // to read from it. This can happen if the next transaction was too big to fit in the current log file. We stop reading
+                // this log file and move to the next one. 
+
+			    RequireHeaderUpdate = current->HeaderMarker != 0;
+
+                return false;
 			}
 
 			ValidateHeader(current, LastTransactionHeader);

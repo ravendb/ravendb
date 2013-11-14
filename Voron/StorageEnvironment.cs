@@ -332,7 +332,7 @@ namespace Voron
 
 			if (tx.Flags != (TransactionFlags.ReadWrite))
 				return;
-			if (tx.Committed)
+			if (tx.Committed && tx.FlushedToJournal)
 			{
 				_transactionsCounter = txId;
 			}
@@ -424,6 +424,14 @@ namespace Voron
 				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 			var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
 			journalApplicator.ApplyLogsToDataFile();
+		}
+
+		public void AssertFlushingNotFailed()
+		{
+			if (_flushingTask == null || _flushingTask.IsFaulted == false)
+				return;
+
+			_flushingTask.Wait();// force re-throw of error
 		}
 	}
 }

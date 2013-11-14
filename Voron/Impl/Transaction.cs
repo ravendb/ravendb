@@ -71,8 +71,9 @@ namespace Voron.Impl
         }
 
         public IEnumerable<KeyValuePair<long, long>> PageTranslations { get { return _scratchPagesTable; } }
+	    public bool FlushedToJournal { get; private set; }
 
-        public Transaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling)
+	    public Transaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling)
         {
             _dataPager = env.Options.DataPager;
             _env = env;
@@ -140,6 +141,8 @@ namespace Voron.Impl
 
         public Page ModifyPage(long p, Cursor c)
         {
+	        _env.AssertFlushingNotFailed();
+
             Page page;
             if (_dirtyPages.Contains(p))
             {
@@ -287,7 +290,11 @@ namespace Voron.Impl
 
             _txHeader->TxMarker |= TransactionMarker.Commit;
 
-            _journal.WriteToJournal(this, _allocatedPagesInTransaction + _overflowPagesInTransaction + PagesTakenByHeader);
+	        if (_allocatedPagesInTransaction + _overflowPagesInTransaction > 0) // nothing changed in this transaction
+	        {
+		        _journal.WriteToJournal(this, _allocatedPagesInTransaction + _overflowPagesInTransaction + PagesTakenByHeader);
+		        FlushedToJournal = true;
+	        }
 
             _env.SetStateAfterTransactionCommit(State);
             Committed = true;

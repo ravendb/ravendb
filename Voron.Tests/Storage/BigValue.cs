@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Voron.Impl;
 using Xunit;
 using Xunit.Extensions;
 
@@ -61,7 +62,7 @@ namespace Voron.Tests.Storage
 
 				var memoryStream = new MemoryStream();
 				readResult.Stream.CopyTo(memoryStream);
-				Assert.Equal(buffer, memoryStream.ToArray());
+				CompareBuffers(buffer, memoryStream);
 				tx.Commit();
 			}
 
@@ -75,7 +76,7 @@ namespace Voron.Tests.Storage
 
 				var memoryStream = new MemoryStream();
 				readResult.Stream.CopyTo(memoryStream);
-				Assert.Equal(buffer, memoryStream.ToArray());
+				CompareBuffers(buffer, memoryStream);
 				tx.Commit();
 			}
 
@@ -88,7 +89,7 @@ namespace Voron.Tests.Storage
 
 				var memoryStream = new MemoryStream();
 				readResult.Stream.CopyTo(memoryStream);
-				Assert.Equal(buffer, memoryStream.ToArray());
+				CompareBuffers(buffer, memoryStream);
 				tx.Commit();
 			}
 
@@ -104,9 +105,16 @@ namespace Voron.Tests.Storage
 
 				var memoryStream = new MemoryStream();
 				readResult.Stream.CopyTo(memoryStream);
-				Assert.Equal(buffer, memoryStream.ToArray());
+				CompareBuffers(buffer, memoryStream);
 				tx.Commit();
 			}
+		}
+
+		private static unsafe void CompareBuffers(byte[] buffer, MemoryStream memoryStream)
+		{
+			fixed(byte* b = buffer)
+			fixed (byte* c = memoryStream.GetBuffer())
+				Assert.Equal(0, NativeMethods.memcmp(b, c, buffer.Length));
 		}
 
 		[Fact]
