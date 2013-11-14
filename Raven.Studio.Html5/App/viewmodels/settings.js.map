@@ -1,0 +1,1 @@
+{"version":3,"file":"settings.js","sourceRoot":"","sources":["settings.ts"],"names":["settings","settings.constructor","settings.activate","settings.canDeactivate"],"mappings":"AAAA;IAAA;QAAAA;YAEIC,KAAAA,WAAWA,GAAGA,UAAUA,CAACA;;AAO5BD,QANGA,8BAAAA;QAEAE,CAACA;QACDF,mCAAAA;YACIG,OAAOA,IAAIA,CAACA;QAChBA,CAACA;QACLH;AAACA,IAADA,CAACA,IAAA;IATD,4BASC;GAAA"}

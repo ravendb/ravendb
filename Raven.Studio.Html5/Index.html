@@ -1,0 +1,59 @@
+﻿<!DOCTYPE html>
+<html>
+    <head>
+        <title>Raven.Studio</title>
+        
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+        <meta name="format-detection" content="telephone=no"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        
+        <link rel="shortcut icon" href="favicon.ico" />
+        <link rel="apple-touch-icon" href="~/Content/images/logo.png"/>
+        
+        <link rel="stylesheet" href="Content/ie10mobile.css" />
+        <link rel="stylesheet" href="Content/bootstrap/bootstrap.min.css" />
+        <link rel="stylesheet" href="Content/font-awesome.min.css" />
+        <link rel="stylesheet" href="Content/durandal.css" />
+        <link rel="stylesheet" href="Content/nprogress.css" />
+        <link rel="stylesheet" href="Content/app.css" />
+        
+        <script type="text/javascript">
+            if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
+                var msViewportStyle = document.createElement("style");
+                var mq = "@@-ms-viewport{width:auto!important}";
+                msViewportStyle.appendChild(document.createTextNode(mq));
+                document.getElementsByTagName("head")[0].appendChild(msViewportStyle);
+            }
+        </script>
+    </head>
+    <body>
+        <div id="applicationHost">
+            <div class="splash">
+                <div class="message">
+                    <img src="Content/images/logo.png" />
+                </div>
+                <!--<i class="icon-spinner icon-2x icon-spin active"></i>-->
+            </div>
+        </div>
+
+        <script type="text/javascript" src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+        <script type="text/javascript" src="Scripts/nprogress.js"></script>
+        <script type="text/javascript">
+            // Must pull down jQuery and nprogress before we show the progress indicator.
+            NProgress.start();
+        </script>
+        <script type="text/javascript" src="Scripts/jquery.appear-0.3.3.js"></script>
+        <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/knockout/2.3.0/knockout-min.js"></script>
+        <script type="text/javascript" src="Scripts/knockout-delegatedEvents.min.js"></script>
+		<script type="text/javascript" src="Scripts/knockout-postbox.min.js"></script>
+        <script type="text/javascript" src="Scripts/extensions.js"></script>
+        <script type="text/javascript" src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+        <script type="text/javascript" src="Scripts/bootstrap-contextmenu-2.1.js"></script>
+        <script type="text/javascript" src="Scripts/jwerty-0.3.js"></script>
+        <script type="text/javascript" src="Scripts/require.js" data-main="App/main"></script>
+        
+    </body>
+</html>

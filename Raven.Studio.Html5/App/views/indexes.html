@@ -1,0 +1,79 @@
+﻿<ul class="breadcrumb">
+    <li>
+        <h3>
+            <i class="icon-bolt"></i>
+            <a href="#indexes">
+                Indexes
+            </a>
+        </h3>
+    </li>
+</ul>
+
+
+
+<div class="btn-toolbar" role="toolbar">
+    <div class="btn-group">
+        <button type="button" class="btn btn-primary" data-bind="click: navigateToNewIndex"><i class="icon-plus"></i> New Index</button>
+        <button type="button" class="btn btn-primary" data-bind="click: navigateToQuery"><i class="icon-search"></i> Query</button>
+        <button type="button" class="btn btn-primary">Recent Queries</button>
+    </div>
+    <div class="btn-group">
+        <button type="button" class="btn btn-primary" data-bind="click: collapseAll" title="Collapse all index groups"><i class="icon-collapse-alt"></i></button>
+        <button type="button" class="btn btn-primary" data-bind="click: expandAll" title="Expand all index groups"><i class="icon-expand-alt"></i></button>
+    </div>
+    <div class="btn-group">
+        <!-- Single button -->
+        <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown">
+            Delete <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu" role="menu">
+            <li><a href="#">Delete Idle Indexes</a></li>
+            <li><a href="#">Delete Disabled Indexes</a></li>
+            <li><a href="#">Delete Abandoned Indexes</a></li>
+            <li class="divider"></li>
+            <li><a href="#">Delete All Indexes</a></li>
+        </ul>
+    </div>
+    
+    <!--<div class="input-group">
+        <span class="input-group-addon"><i class="icon-filter"></i></span>
+        <input type="text" class="form-control" placeholder="Filter indexes">
+    </div>-->
+</div>
+
+<div class="indexes-container" data-bind="foreach: indexGroups">
+    <div class="panel-group" data-bind="attr: { id: 'indexGroup' + name }">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" data-bind="attr: { 'data-parent': '#indexGroup' + name, href: '#indexGroupCollapse' + name }">
+                        <i class="icon-collapse-alt"></i>
+                        <i class="icon-expand-alt"></i>
+                        <span data-bind="text: name"></span>
+                    </a>
+                </h4>
+            </div>
+            <div data-bind="attr: { id: '#indexGroupCollapse' + name }" class="panel-collapse collapse in">
+                <div class="panel-body">
+                    <div class="well">
+                        <i class="icon-bolt"></i>
+                        <a href="#">Show/Real/Index/Here</a>
+                        <span>(742)</span>
+                        <span>(abandoned)</span>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Change index lock">
+                                <i class="icon-lock"></i> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" role="menu">
+                                <li><a href="#"><i class="icon-unlock"></i> Unlock Index</a></li>
+                                <li><a href="#"><i class="icon-lock"></i> Locked (Ignore)</a></li>
+                                <li><a href="#"><i class="icon-bug"></i> Locked (Error)</a></li>
+                            </ul>
+                        </div>
+                        <button class="btn btn-default" title="Edit Index"><i class="icon-edit-sign"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
