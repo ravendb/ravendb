@@ -6,6 +6,7 @@ using System.Text;
 using System.Xml;
 using Voron.Debugging;
 using Voron.Impl;
+using Voron.Tests.Storage;
 
 namespace Voron.Tryout
 {
@@ -29,47 +30,11 @@ namespace Voron.Tryout
 			//	"Kristin Krebsbach","Livia Lecroy","Jeraldine Jetton","Jeanmarie Jan",
 			//	"Carmelo Coll","Shizue Sugg","Irena Imai","Tam Troxel","Berenice Burkart"
 			//};
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+
+			using (var x = new BigValues())
 			{
-				using (Transaction tx = env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					var rand = new Random(123);
-					for (int i = 0; i < 3000; i++)
-					{
-						tx.State.Root.Add(tx, "users/" + i.ToString("0000"), new MemoryStream(new byte[500]));
-					}
-
-					tx.Commit();
-				}
-
-				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-
-					DebugStuff.RenderAndShow(tx, tx.State.Root.State.RootPageNumber,3);
-				}
-				
+				x.CanReuseLargeSpace(4);
 			}
-
-		//	using (var x = File.OpenRead(@"C:\Work\Voron\Voron.Tryout\bin\Debug\test2\0000000000000000000.journal"))
-		//	{
-		//		var memoryStream = new MemoryStream();
-
-		//		using (var s = new DeflateStream(memoryStream, CompressionLevel.Optimal, true))
-		//		{
-		//			x.Position = 4096 * 4;
-		//			var array = new byte[4096];
-		//			x.Read(array, 0, 4096);
-
-		//			var sp = Stopwatch.StartNew();
-		//			s.WriteDirect(array, 0, 4096);
-
-		//			s.Flush();
-
-		//			Console.WriteLine(sp.ElapsedMilliseconds);
-		//		}
-
-		//		Console.WriteLine(memoryStream.Length);
-		//	}
 		}
 	}
 }
