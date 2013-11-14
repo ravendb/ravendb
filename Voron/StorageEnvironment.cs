@@ -332,7 +332,7 @@ namespace Voron
 
 			if (tx.Flags != (TransactionFlags.ReadWrite))
 				return;
-			if (tx.Committed)
+			if (tx.Committed && tx.FlushedToJournal)
 			{
 				_transactionsCounter = txId;
 			}
