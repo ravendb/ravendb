@@ -175,9 +175,15 @@ namespace Performance.Comparison.SQLite
         {
             var sw = Stopwatch.StartNew();
 
-            ReadInternal(ids, perfTracker, connectionString);
+            using (var connection = new SQLiteConnection(connectionString))
+            {
+                sw.Restart();
 
-            sw.Stop();
+                connection.Open();
+                ReadInternal(ids, perfTracker, connection);
+
+                sw.Stop();
+            }
 
             return new PerformanceRecord
                 {
@@ -190,37 +196,35 @@ namespace Performance.Comparison.SQLite
 
         private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker, int numberOfThreads)
         {
-            return ExecuteReadWithParallel(operation, ids, numberOfThreads, () => ReadInternal(ids, perfTracker, connectionString));
-        }
-
-        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, string connectionString)
-        {
-            var buffer = new byte[4096];
-
             using (var connection = new SQLiteConnection(connectionString))
             {
                 connection.Open();
 
-                using (var tx = connection.BeginTransaction())
-                {
-                    foreach (var id in ids)
-                    {
-                        using (var command = new SQLiteCommand("SELECT Value FROM Items WHERE ID = " + id, connection))
-                        {
-                            using (var reader = command.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    long bytesRead;
-                                    long fieldOffset = 0;
+                return ExecuteReadWithParallel(operation, ids, numberOfThreads, () => ReadInternal(ids, perfTracker, connection));
+            }
+        }
 
-                                    while ((bytesRead = reader.GetBytes(0, fieldOffset, buffer, 0, buffer.Length)) > 0)
-                                    {
-                                        fieldOffset += bytesRead;
-                                    }
-                                    perfTracker.Increment();
-                                }
+        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, SQLiteConnection connection)
+        {
+            var buffer = new byte[4096];
+
+            using (var tx = connection.BeginTransaction())
+            {
+                foreach (var id in ids)
+                {
+                    using (var command = new SQLiteCommand("SELECT Value FROM Items WHERE ID = " + id, connection))
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            long bytesRead;
+                            long fieldOffset = 0;
+
+                            while ((bytesRead = reader.GetBytes(0, fieldOffset, buffer, 0, buffer.Length)) > 0)
+                            {
+                                fieldOffset += bytesRead;
                             }
+                            perfTracker.Increment();
                         }
                     }
                 }
