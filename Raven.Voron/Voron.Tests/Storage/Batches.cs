@@ -29,9 +29,9 @@
             {
                 writeBatch.Add("foo2", StreamFor("foo2"), "tree",1);
 
-                var foor1Version = snapshot.ReadVersion("tree", "foo1", writeBatch);
-                var foo2Version = snapshot.ReadVersion("tree", "foo2", writeBatch);
-                var foo2VersionThatShouldBe0 = snapshot.ReadVersion("tree", "foo2");
+                var foor1Version = snapshot.ReadVersion("tree", "foo1", writeBatch) ?? 0;
+                var foo2Version = snapshot.ReadVersion("tree", "foo2", writeBatch) ?? 0;
+                var foo2VersionThatShouldBe0 = snapshot.ReadVersion("tree", "foo2") ?? ushort.MaxValue;
 
                 Assert.Equal(1,foor1Version);
                 Assert.Equal(2,foo2Version); //is not committed yet
@@ -56,9 +56,9 @@
             {
                 writeBatch.Add("foo2", StreamFor("foo2"), "tree");
 
-                var foor1Version = snapshot.ReadVersion("tree", "foo1", writeBatch);
-                var foo2Version = snapshot.ReadVersion("tree", "foo2", writeBatch);
-                var foo2VersionThatShouldBe0 = snapshot.ReadVersion("tree", "foo2");
+                var foor1Version = snapshot.ReadVersion("tree", "foo1", writeBatch) ?? 0;
+				var foo2Version = snapshot.ReadVersion("tree", "foo2", writeBatch) ?? 0;
+				var foo2VersionThatShouldBe0 = snapshot.ReadVersion("tree", "foo2") ?? 0;
 
                 Assert.Equal(1, foor1Version);
                 Assert.Equal(0, foo2Version); //added to write batch without version number, so 0 is version number that is fetched
@@ -138,8 +138,8 @@
             {
                 writeBatch.Delete("foo1", "tree");
 
-                var foo1Version = snapshot.ReadVersion("tree", "foo1", writeBatch);
-                var foo1VersionThatShouldBe1 = snapshot.ReadVersion("tree", "foo1");
+				var foo1Version = snapshot.ReadVersion("tree", "foo1", writeBatch) ?? 0;
+				var foo1VersionThatShouldBe1 = snapshot.ReadVersion("tree", "foo1") ?? 0;
 
                 Assert.Equal(0,foo1Version);
                 Assert.Equal(1,foo1VersionThatShouldBe1);
@@ -198,8 +198,8 @@
             {
                 writeBatch.Add("foo1",StreamFor("updated foo1 2"), "tree",2);
 
-                var foo1Version = snapshot.ReadVersion("tree", "foo1", writeBatch);
-                var foo1VersionThatShouldBe2 = snapshot.ReadVersion("tree", "foo1");
+				var foo1Version = snapshot.ReadVersion("tree", "foo1", writeBatch) ?? 0;
+				var foo1VersionThatShouldBe2 = snapshot.ReadVersion("tree", "foo1") ?? 0;
 
                 Assert.Equal(3, foo1Version);
                 Assert.Equal(2, foo1VersionThatShouldBe2);
@@ -230,8 +230,8 @@
             {
                 writeBatch.Add("foo1", StreamFor("updated foo1 2"), "tree");
 
-                var foo1Version = snapshot.ReadVersion("tree", "foo1", writeBatch);
-                var foo1VersionThatShouldBe2 = snapshot.ReadVersion("tree", "foo1");
+				var foo1Version = snapshot.ReadVersion("tree", "foo1", writeBatch) ?? 0;
+				var foo1VersionThatShouldBe2 = snapshot.ReadVersion("tree", "foo1") ?? 0;
 
                 Assert.Equal(0, foo1Version); //written to write batch without version number, so 0 is returned as version
                 Assert.Equal(2, foo1VersionThatShouldBe2);
