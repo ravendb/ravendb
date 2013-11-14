@@ -88,7 +88,7 @@ namespace Voron.Impl.Journal
 
 		public bool RequireHeaderUpdate { get; private set; }
 
-	    public Page ReadPage(long pageNumber)
+		public Page ReadPage(long pageNumber)
 		{
 			long logPageNumber;
 
@@ -140,7 +140,7 @@ namespace Voron.Impl.Journal
 			var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
 			logFileReader.RecoverAndValidate();
 			RequireHeaderUpdate = logFileReader.RequireHeaderUpdate;
-			
+
 			_pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
 			_writePage = logFileReader.WritePage;
 			LastTransactionHeader = logFileReader.LastTransactionHeader;
@@ -148,7 +148,7 @@ namespace Voron.Impl.Journal
 			return logFileReader.LastTransactionHeader;
 		}
 
-		public TransactionHeader* RecoverAndValidateConditionally(long startRead, TransactionHeader* lastTxHeader,Func<TransactionHeader,bool> stopConditionFunc)
+		public TransactionHeader* RecoverAndValidateConditionally(long startRead, TransactionHeader* lastTxHeader, Func<TransactionHeader, bool> stopConditionFunc)
 		{
 			var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
 			logFileReader.RecoverAndValidateConditionally(stopConditionFunc);
@@ -172,13 +172,18 @@ namespace Voron.Impl.Journal
 			_disposed = true;
 		}
 
-	    public void Write(Transaction tx, int numberOfPages)
-	    {
-	        _pager.WriteDirect(tx.GetFirstScratchPage(), _writePage ,numberOfPages);
-	        _pageTranslationTable = _pageTranslationTable.SetItems(
-                tx.PageTranslations.Select(kvp => new KeyValuePair<long,long>(kvp.Key, kvp.Value + _writePage))
-	            );
-	        _writePage += numberOfPages;
-	    }
+		public void Write(Transaction tx, int numberOfPages)
+		{
+			_pager.WriteDirect(tx.GetFirstScratchPage(), _writePage, numberOfPages);
+			_pageTranslationTable = _pageTranslationTable.SetItems(
+				tx.PageTranslations.Select(kvp => new KeyValuePair<long, long>(kvp.Key, kvp.Value + _writePage))
+				);
+			_writePage += numberOfPages;
+		}
+
+		public void ForgetPagesEarlierThan(long lastSyncedPage)
+		{
+			_pageTranslationTable = _pageTranslationTable.RemoveRange(_pageTranslationTable.Keys.Where(x => x <= lastSyncedPage));
+		}
 	}
 }
