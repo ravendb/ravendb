@@ -65,6 +65,10 @@ namespace Raven.Database.Util
             {
                 log.WarnException("Could not setup performance counters properly. Perf counters will not be used", e);
             }
+            catch (Exception e)
+            {
+                log.WarnException("Could not setup performance counters properly. Perf counters will not be used.", e);
+            }
         }
 
         private void InstallCounters(string name)
