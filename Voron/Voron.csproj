@@ -46,8 +46,8 @@
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
-    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Debugging\EnvironmentStats.cs" />
@@ -60,7 +60,6 @@
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />
     <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
     <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
-    <Compile Include="Impl\FlushMode.cs" />
     <Compile Include="Impl\FreeSpace\StreamBitArray.cs" />
     <Compile Include="Impl\FreeSpace\FreeSpaceHandling.cs" />
     <Compile Include="Impl\FreeSpace\IFreeSpaceHandling.cs" />

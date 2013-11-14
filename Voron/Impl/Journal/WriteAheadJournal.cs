@@ -26,7 +26,6 @@ namespace Voron.Impl.Journal
 		
 		private long _currentJournalFileSize;
 		private DateTime _lastFile;
-		private readonly IList<JournalFile> _splitJournalFiles;
 
 		private long _logIndex = -1;
 		private FileHeader* _fileHeader;
@@ -44,7 +43,6 @@ namespace Voron.Impl.Journal
 			_env = env;
 			_dataPager = _env.Options.DataPager;
 			_fileHeader = GetEmptyFileHeader();
-			_splitJournalFiles = new List<JournalFile>();
 			_currentJournalFileSize = env.Options.InitialLogFileSize;
 		}
 
@@ -60,7 +58,7 @@ namespace Voron.Impl.Journal
 				_currentJournalFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentJournalFileSize * 2);
 			}
 			var actualLogSize = _currentJournalFileSize;
-			var minRequiredsize = (numberOfPages + 1) * logPager.PageSize; // number of pages + tx header page
+			var minRequiredsize = numberOfPages * logPager.PageSize;
 			if (_currentJournalFileSize < minRequiredsize)
 			{
 				actualLogSize = minRequiredsize;
@@ -96,11 +94,11 @@ namespace Voron.Impl.Journal
 			return log;
 		}
 
-		public void RecoverDatabase(FileHeader* fileHeader, out TransactionHeader* lastTxHeader,out bool hadIntegrityIssues)
+		public void RecoverDatabase(FileHeader* fileHeader, out TransactionHeader* lastTxHeader,out bool requireHeaderUpdate)
 		{
 			// note, we don't need to do any concurrency here, happens as a single threaded
 			// fashion on db startup
-			hadIntegrityIssues = false;
+			requireHeaderUpdate = false;
 
 			_fileHeader = CopyFileHeader(fileHeader);
 			var logInfo = _fileHeader->Journal;
@@ -121,13 +119,12 @@ namespace Voron.Impl.Journal
 				while (true)
 				{
 					unusedfiles--;
-					if (_env.Options.TryDeletePager(unusedfiles) == false)
+					if (_env.Options.TryDeleteJournalPager(unusedfiles) == false)
 						break;
 				}
 				
 			}
 
-			var transactionMarkers = new Stack<Tuple<long, TransactionMarker>>();
 			for (var logNumber = oldestLogFileStillInUse; logNumber <= logInfo.CurrentJournal; logNumber++)
 			{
 				var pager = _env.Options.CreateJournalPager(logNumber);
@@ -141,27 +138,35 @@ namespace Voron.Impl.Journal
 
 				lastTxHeader = log.RecoverAndValidate(startRead, lastTxHeader);
 
-				Debug.Assert(lastTxHeader->TxMarker != TransactionMarker.None);
+                log.AddRef(); // creator reference - write ahead log
+                Files = Files.Add(log);
 
-				if (lastTxHeader != null)
-					transactionMarkers.Push(Tuple.Create(logNumber, lastTxHeader->TxMarker));
+                if (log.RequireHeaderUpdate) //this should prevent further loading of transactions
+                {
+                    requireHeaderUpdate = true;
+                    break;
+                }
 
-				log.AddRef(); // creator reference - write ahead log
-				Files = Files.Add(log);
-
-				if (log.HasIntegrityIssues) //this should prevent further loading of transactions
-				{
-					//if part of multi-log transaction, go back to the file in which the multi-log transaction started
-					FindAndApplyLastUncorruptedTransaction(ref lastTxHeader, transactionMarkers);
-					
-					hadIntegrityIssues = true;
-					break;
-				}
-
+			    if (lastTxHeader == null && log.AvailablePages == 0) // an empty log file, or one which was completely used
+			    {
+                    log.Dispose();
+			    }
 			}
 
-			if (hadIntegrityIssues)
-				logInfo.CurrentJournal = Files.Count - 1;
+		    if (requireHeaderUpdate)
+		    {
+		        logInfo.CurrentJournal = Files.Count - 1;
+
+                // we want to check that we cleanup newer log files, since everything from
+                // the current file is considered corrupted
+                var badJournalFiles = logInfo.CurrentJournal;
+                while (true)
+                {
+                    badJournalFiles++;
+                    if (_env.Options.TryDeleteJournalPager(badJournalFiles) == false)
+                        break;
+                }
+		    }
 
 			_logIndex = logInfo.CurrentJournal;
 			_dataFlushCounter = logInfo.DataFlushCounter + 1;
@@ -175,68 +180,20 @@ namespace Voron.Impl.Journal
 					CurrentFile = lastFile;
 			}
 
-			if (hadIntegrityIssues)
+			if (requireHeaderUpdate)
 			{
 				UpdateLogInfo();
 				WriteFileHeader();
 			}
 		}
 
-		//should be inlined if possible --> introduced method here only to make code more comprehensible
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private void FindAndApplyLastUncorruptedTransaction(ref TransactionHeader* lastTxHeader, Stack<Tuple<long, TransactionMarker>> transactionMarkers)
-		{
-			if (lastTxHeader->TxMarker.HasFlag(TransactionMarker.Split) && !lastTxHeader->TxMarker.HasFlag(TransactionMarker.Start))
-			{
-				Tuple<long, TransactionMarker> txMarkerTuple;
-				do
-				{
-					txMarkerTuple = transactionMarkers.Pop();
-				} while (txMarkerTuple.Item2.HasFlag(TransactionMarker.Split) && !txMarkerTuple.Item2.HasFlag(TransactionMarker.Start) && transactionMarkers.Count > 0); 
-
-				//precaution
-				if (txMarkerTuple.Item2.HasFlag(TransactionMarker.Split) && !txMarkerTuple.Item2.HasFlag(TransactionMarker.Start))
-					throw new InvalidDataException("Unable to recover database - found integrity issues, and could not find multi-log transaction start to roll-back to. ");
-
-				var filesToRelease = Files.GetRange((int) txMarkerTuple.Item1 + 1, Files.Count - (int) txMarkerTuple.Item1 - 1).ToList();
-				var lastCorruptedTxTransactionId = lastTxHeader->TransactionId;
-				filesToRelease.ForEach(file => file.Release());
-				
-				Files = Files.GetRange(0, (int) txMarkerTuple.Item1 + 1);
-				if (!Files.IsEmpty)
-				{
-					if (Files.Count > 1)
-					{
-						var lastFileIndex = Files.IndexOf(Files.Last());
-						var journalFiles = Files.ToList();
-						var previousTxHeader = journalFiles[lastFileIndex - 1].LastTransactionHeader;
-						var lastJournalFile = journalFiles.Last();
-						lastJournalFile.RecoverAndValidateConditionally(0, previousTxHeader,
-							txHeader => txHeader.TransactionId < lastCorruptedTxTransactionId);
-
-						Files.SetItem(lastFileIndex, lastJournalFile);
-					}
-					else
-						Files.Last().RecoverAndValidateConditionally(0, null,txHeader => txHeader.TransactionId < lastCorruptedTxTransactionId);
-				}
-
-				lastTxHeader = Files.IsEmpty == false ? Files.Last().LastTransactionHeader : null;
-			}
-		}
-
 		private void RecoverCurrentJournalSize(IVirtualPager pager)
 		{
-			var journalSize = pager.NumberOfAllocatedPages * pager.PageSize;
+			var journalSize = AbstractPager.NearestPowerOfTwo(pager.NumberOfAllocatedPages * pager.PageSize);
 			if (journalSize >= _env.Options.MaxLogFileSize) // can't set for more than the max log file size
 				return;
 
-			// we want to ignore big single value log files (a log file with a single 2 MB value is considered rare), so we don't
-			// want to jump the size just for a single value, so we ignore values that aren't multiples of the 
-			// initial size (our base)
-			if (journalSize%_env.Options.InitialLogFileSize != 0)
-				return;
-
-			_currentJournalFileSize = journalSize;
+		    _currentJournalFileSize = journalSize;
 		}
 
 		public void UpdateLogInfo()
@@ -271,83 +228,6 @@ namespace Voron.Impl.Journal
 			}
 		}
 
-		public void TransactionBegin(Transaction tx)
-		{
-			if (CurrentFile == null)
-				CurrentFile = NextFile(tx);
-
-			CurrentFile.TransactionBegin(tx);
-		}
-
-		public void TransactionCommit(Transaction tx)
-		{
-			if (_splitJournalFiles.Count > 0)
-			{
-				foreach (var journalFile in _splitJournalFiles)
-					journalFile.TransactionCommit(tx);
-
-				_splitJournalFiles.Clear();
-			}
-
-			CurrentFile.TransactionCommit(tx);
-
-			if (CurrentFile.AvailablePages < 2) // it must have at least one page for the next transaction header and one page for data
-			{
-				CurrentFile = null; // it will force new log file creation when next transaction will start
-			}
-		}
-
-		public void TransactionRollback(Transaction tx)
-		{
-			if (_splitJournalFiles.Count > 0) // transaction split into multiple journals
-			{
-				CurrentFile = _splitJournalFiles[0];
-
-				List<JournalFile> filesToRelease = null;
-				JournalFile relevantFile;
-
-				_locker.EnterReadLock();
-				try
-				{
-					relevantFile = Files.FirstOrDefault(file => file.Number == CurrentFile.Number);
-					Debug.Assert(relevantFile != null);
-
-					filesToRelease = Files.GetRange(Files.IndexOf(relevantFile) + 1, Files.Count - Files.IndexOf(relevantFile) - 1)
-					                      .ToList();
-				}
-				finally
-				{
-					_locker.ExitReadLock();
-
-					if (filesToRelease != null) 
-						filesToRelease.ForEach(file => file.Release());
-				}
-
-				_locker.EnterWriteLock();
-				try
-				{
-					Files = Files.GetRange(0, Files.IndexOf(relevantFile) + 1);
-
-					_logIndex -= _splitJournalFiles.Count;
-					_splitJournalFiles.Clear();
-					UpdateLogInfo();
-					WriteFileHeader();
-				}
-				finally
-				{
-					_locker.ExitWriteLock();
-				}
-
-				lock (_fileHeaderProtector)
-				{
-					_dataPager.Sync(); // sync updated file header
-				}
-			}
-
-			CurrentFile.TransactionRollback(tx);
-		}
-
-
 		public Page ReadPage(Transaction tx, long pageNumber)
 		{
 			// read transactions have to read from log snapshots
@@ -370,7 +250,7 @@ namespace Voron.Impl.Journal
 				// write transactions can read directly from logs
 				for (var i = Files.Count - 1; i >= 0; i--)
 				{
-					var page = Files[i].ReadPage(tx, pageNumber);
+					var page = Files[i].ReadPage(pageNumber);
 					if (page != null)
 						return page;
 				}
@@ -383,33 +263,13 @@ namespace Voron.Impl.Journal
 			return null;
 		}
 
-		public Page Allocate(Transaction tx, long startPage, int numberOfPages)
-		{
-			if (CurrentFile.AvailablePages < numberOfPages)
-			{
-				// here we need to mark that transaction is split in both log files
-				// it will have the following transaction markers in the headers
-				// log_1: [Start|Split|Commit] log_2: [Split|Commit]
-
-				CurrentFile.TransactionSplit(tx);
-				_splitJournalFiles.Add(CurrentFile);
-
-				CurrentFile = NextFile(tx, numberOfPages);
-
-				CurrentFile.TransactionSplit(tx);
-			}
-
-			return CurrentFile.Allocate(startPage, numberOfPages);
-		}
-
-
 		public void Dispose()
 		{
 			if (_inMemoryHeader != IntPtr.Zero)
 			{
 				Marshal.FreeHGlobal(_inMemoryHeader);
 				_inMemoryHeader = IntPtr.Zero;
-			}
+			}	
 
 			if (_env.Options.OwnsPagers)
 			{
@@ -574,6 +434,8 @@ namespace Voron.Impl.Journal
 					try
 					{
 						_jrnls = _waj.Files;
+                        if(_jrnls.Count == 0)
+                            return; // nothing to do
 						_lastSyncedLog = _waj._fileHeader->Journal.LastSyncedJournal;
 						_lastSyncedPage = _waj._fileHeader->Journal.LastSyncedJournalPage;
 						Debug.Assert(_jrnls.First().Number >= _lastSyncedLog);
@@ -583,9 +445,6 @@ namespace Voron.Impl.Journal
 						_waj._locker.ExitReadLock();
 					}
 
-					if (_jrnls.Count == 0)
-						return;
-
 					var pagesToWrite = ReadTransactionsToFlush(_oldestActiveTransaction, _jrnls);
 
 					if (pagesToWrite.Count == 0)
@@ -594,7 +453,7 @@ namespace Voron.Impl.Journal
 					Debug.Assert(_lastTransactionHeader != null);
 
 					var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-												  .Select(x => x.Value.ReadPage(null, x.Key))
+												  .Select(x => x.Value.ReadPage(x.Key))
 												  .ToList();
 
 					var last = sortedPages.Last();
@@ -609,9 +468,9 @@ namespace Voron.Impl.Journal
 						_waj._dataPager.Write(page);
 					}
 
-					var journalFiles = _jrnls.RemoveAll(x => x.Number >= _lastSyncedLog);
+				    var unusedJournalFiles = GetUnusedJournalFiles();
 
-					// we want to hold the write lock for as little time as possible, therefor
+				    // we want to hold the write lock for as little time as possible, therefor
 					// what we do is take the lock, write the appropriate metadata, then exit the lock
 					// the actual fsync (expensive) is happening outside the lock, and when can then 
 					// decide to clear the old logs if we want to.
@@ -620,18 +479,22 @@ namespace Voron.Impl.Journal
 					{
 						UpdateFileHeaderAfterDataFileSync(tx);
 
-						_waj.Files = _waj.Files.RemoveAll(x => x.Number < _lastSyncedLog);
+					    var lastJournalFileToRemove = unusedJournalFiles.LastOrDefault();
+                        if(lastJournalFileToRemove != null)
+					        _waj.Files = _waj.Files.RemoveAll(x => x.Number <= lastJournalFileToRemove.Number);
 
 						_waj.UpdateLogInfo();
 
 						_waj.WriteFileHeader();
 
 						if (_waj.Files.Count == 0)
+						{
 							_waj.CurrentFile = null;
-
+						}
+						
 						_waj._locker.ExitWriteLock();
 
-						foreach (var journalFile in journalFiles)
+						foreach (var journalFile in unusedJournalFiles)
 						{
 							if (_waj._env.Options.IncrementalBackupEnabled == false)
 								journalFile.DeleteOnClose();
@@ -647,7 +510,7 @@ namespace Voron.Impl.Journal
 						if (_waj._locker.IsWriteLockHeld)
 							_waj._locker.ExitWriteLock();
 
-						foreach (var fullLog in journalFiles)
+						foreach (var fullLog in unusedJournalFiles)
 						{
 							fullLog.Release();
 						}
@@ -659,7 +522,25 @@ namespace Voron.Impl.Journal
 				}
 			}
 
-			private Dictionary<long, JournalFile> ReadTransactionsToFlush(long oldestActiveTransaction, ImmutableList<JournalFile> jrnls)
+		    private List<JournalFile> GetUnusedJournalFiles()
+		    {
+		        var unusedJournalFiles = new List<JournalFile>();
+		        foreach (var j in _jrnls)
+		        {
+		            if (j.Number > _lastSyncedLog) // after the last log we synced, nothing to do here
+		                continue;
+		            if (j.Number == _lastSyncedLog) // we are in the last log we synced
+		            {
+		                // if we didn't get to end, or if there are more pages to be used here, ignore it
+		                if (_lastSyncedPage != (j.WritePagePosition-1) || j.AvailablePages != 0)
+		                    continue;
+		            }
+		            unusedJournalFiles.Add(j);
+		        }
+		        return unusedJournalFiles;
+		    }
+
+		    private Dictionary<long, JournalFile> ReadTransactionsToFlush(long oldestActiveTransaction, ImmutableList<JournalFile> jrnls)
 			{
 				var pagesToWrite = new Dictionary<long, JournalFile>();
 
@@ -720,7 +601,7 @@ namespace Voron.Impl.Journal
 				_waj._fileHeader->Journal.DataFlushCounter = _waj._dataFlushCounter;
 
 				tx.State.Root.State.CopyTo(&_waj._fileHeader->Root);
-				tx.State.FreeSpaceRoot.State.CopyTo(&_waj._fileHeader->Root);
+				tx.State.FreeSpaceRoot.State.CopyTo(&_waj._fileHeader->FreeSpace);
 			}
 		}
 
@@ -738,5 +619,18 @@ namespace Voron.Impl.Journal
 				_locker.ExitWriteLock();
 			}
 		}
+
+	    public void WriteToJournal(Transaction tx, int pageCount)
+	    {
+	        if (CurrentFile == null || CurrentFile.AvailablePages < pageCount)
+	        {
+	            CurrentFile = NextFile(tx, pageCount);
+            }
+	        CurrentFile.Write(tx, pageCount);
+	        if (CurrentFile.AvailablePages == 0)
+	        {
+	            CurrentFile = null;
+	        }
+	    }
 	}
 }
