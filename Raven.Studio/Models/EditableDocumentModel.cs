@@ -773,7 +773,7 @@ namespace Raven.Studio.Models
 			if (string.IsNullOrEmpty(Key) || string.IsNullOrEmpty(Separator))
 				return;
 
-			var childrenTask = DatabaseCommands.StartsWithAsync(Key + Separator, 0, 15)
+			var childrenTask = DatabaseCommands.StartsWithAsync(Key + Separator, null, 0, 15)
 			                                   .ContinueOnSuccess(items => items == null ? new string[0] : items.Select(i => i.Key));
 
 			// find parent Ids

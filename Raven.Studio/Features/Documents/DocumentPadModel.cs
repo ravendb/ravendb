@@ -228,7 +228,8 @@ namespace Raven.Studio.Features.Documents
                 try
                 {
                     var results =
-						await ApplicationModel.Database.Value.AsyncDatabaseCommands.StartsWithAsync(enteredText, 0, 25, metadataOnly: true);
+                        await ApplicationModel.Database.Value.AsyncDatabaseCommands.StartsWithAsync(enteredText, null, 0, 25,
+                                                                                                    metadataOnly: true);
                     return results.Select(d => d.Key).Cast<object>().ToList();
                 }
                 catch

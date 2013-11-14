@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Connection.Async;
@@ -14,7 +14,9 @@ using Raven.Client.WinRT.Connection;
 
 namespace Raven.Client.Connection
 {
-	public static class RavenUrlExtensions
+    using System.Collections.Specialized;
+
+    public static class RavenUrlExtensions
 	{
 		public static string Indexes(this string url, string index)
 		{
@@ -75,13 +77,13 @@ namespace Raven.Client.Connection
 		public static string Doc(this string url, string key)
 		{
 
-			return url + "/docs/"
+			return url + "/docs/" 
 #if SILVERLIGHT 
 				+ HttpUtility.UrlEncode(key)
 #else
- + key
+				+ key
 #endif
-;
+				;
 		}
 
 		public static string Docs(this string url, int start, int pageSize)
@@ -101,7 +103,7 @@ namespace Raven.Client.Connection
 
 		public static string NoCache(this string url)
 		{
-#if !SILVERLIGHT
+#if !SILVERLIGHT 
 			return url;
 #else
 			return (url.Contains("?"))
@@ -120,12 +122,14 @@ namespace Raven.Client.Connection
 			return requestor.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, "GET", credentials, convention));
 		}
 
-		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, DocumentConvention convention, IDictionary<string, string> operationsHeaders, string method)
+		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor,
+                                                    ICredentials credentials, DocumentConvention convention,
+                                                    NameValueCollection operationsHeaders, string method)
 		{
 			var httpJsonRequest = requestor.jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(requestor, url, method, credentials, convention)
 					.AddOperationHeaders(operationsHeaders));
-
+			
 			return httpJsonRequest;
 		}
 	}

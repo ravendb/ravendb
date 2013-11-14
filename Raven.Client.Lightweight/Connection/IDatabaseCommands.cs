@@ -76,17 +76,6 @@ namespace Raven.Client.Connection
 		/// </remarks>
 		JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false);
 
-        /// <summary>
-        /// Get documents from server
-        /// </summary>
-        /// <param name="fromEtag">The ETag of the first document to start with</param>
-        /// <param name="pageSize">Size of the page.</param>
-        /// <param name="metadataOnly">Load just the document metadata</param>
-        /// <remarks>
-        /// This is primarily useful for administration of a database
-        /// </remarks>
-        JsonDocument[] GetDocuments(Etag fromEtag, int pageSize, bool metadataOnly = false);
-
 		/// <summary>
 		/// Puts the document in the database with the specified key
 		/// </summary>
