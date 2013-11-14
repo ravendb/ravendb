@@ -124,13 +124,13 @@ namespace Voron
 
             public override IVirtualPager CreateJournalPager(long number)
             {
-	            var name = LogName(number);
+	            var name = JournalName(number);
 				var path = Path.Combine(_basePath, name);
-                var orAdd = _journals.GetOrAdd(name, _ => new Lazy<IVirtualPager>(() => new MemoryMapPager(path)));
+                var orAdd = _journals.GetOrAdd(name, _ => new Lazy<IVirtualPager>(() => new FilePager(path)));
 
 				if (orAdd.Value.Disposed)
 				{
-					var newPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(path));
+                    var newPager = new Lazy<IVirtualPager>(() => new FilePager(path));
 					if (_journals.TryUpdate(name, newPager, orAdd) == false)
 						throw new InvalidOperationException("Could not update journal pager");
 					orAdd = newPager;
@@ -155,9 +155,14 @@ namespace Voron
                 }
             }
 
-	        public override bool TryDeletePager(long number)
+	        public override bool TryDeleteJournalPager(long number)
 	        {
-		        var name = LogName(number);
+		        var name = JournalName(number);
+
+	            Lazy<IVirtualPager> lazy;
+	            if(_journals.TryRemove(name, out lazy) && lazy.IsValueCreated)
+                    lazy.Value.Dispose();
+
 		        var file = Path.Combine(_basePath, name);
 		        if (File.Exists(file) == false)
 			        return false;
@@ -193,7 +198,7 @@ namespace Voron
 
             public override IVirtualPager CreateJournalPager(long number)
             {
-	            var name = LogName(number);
+	            var name = JournalName(number);
                 IVirtualPager value;
                 if (_logs.TryGetValue(name, out value))
                     return value;
@@ -215,9 +220,9 @@ namespace Voron
                 }
             }
 
-	        public override bool TryDeletePager(long number)
+	        public override bool TryDeleteJournalPager(long number)
 	        {
-		        var name = LogName(number);
+		        var name = JournalName(number);
 		        IVirtualPager value;
 		        if (_logs.TryGetValue(name, out value) == false)
 			        return false;
@@ -227,14 +232,14 @@ namespace Voron
 	        }
         }
 
-	    public static string LogName(long number)
+	    public static string JournalName(long number)
 		{
 			return string.Format("{0:D19}.journal", number);
 		}
 
         public abstract void Dispose();
 
-	    public abstract bool TryDeletePager(long number);
+	    public abstract bool TryDeleteJournalPager(long number);
     }
 
 }

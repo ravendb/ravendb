@@ -74,6 +74,7 @@
     <Compile Include="Esent\EsentTest.cs" />
     <Compile Include="IStoragePerformanceTest.cs" />
     <Compile Include="LMDB\LmdbTest.cs" />
+    <Compile Include="ParallelTestData.cs" />
     <Compile Include="PerformanceRecord.cs" />
     <Compile Include="PerfTracker.cs" />
     <Compile Include="Program.cs" />

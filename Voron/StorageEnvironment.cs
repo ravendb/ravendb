@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Debugging;
@@ -49,11 +47,6 @@ namespace Voron
 
 		public unsafe StorageEnvironment(StorageEnvironmentOptions options)
 		{
-			if(options == null)
-				throw new ArgumentNullException("options");
-
-			Debug.Assert(options.DataPager != null);
-
 			try
 			{
 				_options = options;
@@ -339,7 +332,7 @@ namespace Voron
 
 			if (tx.Flags != (TransactionFlags.ReadWrite))
 				return;
-			if (tx.Committed)
+			if (tx.Committed && tx.FlushedToJournal)
 			{
 				_transactionsCounter = txId;
 			}
@@ -431,6 +424,14 @@ namespace Voron
 				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 			var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
 			journalApplicator.ApplyLogsToDataFile();
+		}
+
+		public void AssertFlushingNotFailed()
+		{
+			if (_flushingTask == null || _flushingTask.IsFaulted == false)
+				return;
+
+			_flushingTask.Wait();// force re-throw of error
 		}
 	}
 }
