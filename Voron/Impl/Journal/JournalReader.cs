@@ -45,7 +45,7 @@ namespace Voron.Impl.Journal
 
 		public TransactionHeader* LastTransactionHeader { get; private set; }
 
-		public bool ReadOneTransaction(Func<TransactionHeader, bool> stopReadingCondition = null, bool checkCrc = true)
+		public bool ReadOneTransaction(Func<long, bool> stopReadingCondition = null, bool checkCrc = true)
 		{
 			if (_readingPage >= _pager.NumberOfAllocatedPages)
 				return false;
@@ -55,7 +55,7 @@ namespace Voron.Impl.Journal
 			TransactionHeader* current;
 			if (!TryReadAndValidateHeader(out current)) return false;
 
-			if (stopReadingCondition != null && !stopReadingCondition(*current))
+			if (stopReadingCondition != null && !stopReadingCondition(current->TransactionId))
 			{
 				_readingPage--; // if the read tx header does not fulfill our condition we have to move back the read index to allow read it again later if needed
 				EncounteredStopCondition = true;
@@ -110,15 +110,6 @@ namespace Voron.Impl.Journal
 			LastTransactionHeader = current;
 			_transactionPageTranslation = transactionTable;
 			return true;
-		}
-
-		public void RecoverAndValidateConditionally(Func<TransactionHeader, bool> stopConditionFunc)
-		{
-			_readingPage = _startPage;
-			LastTransactionHeader = _previous;
-			while (ReadOneTransaction(stopConditionFunc, checkCrc: false))
-			{
-			}			
 		}
 
 		public void RecoverAndValidate()
@@ -181,5 +172,10 @@ namespace Voron.Impl.Journal
 		        throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) +
 		                                       ", got:" + current->TransactionId);
 		}
+
+	    public override string ToString()
+	    {
+	        return _pager.ToString();
+	    }
 	}
 }

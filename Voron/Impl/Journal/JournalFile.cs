@@ -148,20 +148,6 @@ namespace Voron.Impl.Journal
 			return logFileReader.LastTransactionHeader;
 		}
 
-		public TransactionHeader* RecoverAndValidateConditionally(long startRead, TransactionHeader* lastTxHeader, Func<TransactionHeader, bool> stopConditionFunc)
-		{
-			var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
-			logFileReader.RecoverAndValidateConditionally(stopConditionFunc);
-			RequireHeaderUpdate = logFileReader.RequireHeaderUpdate;
-
-			_pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
-			_writePage = logFileReader.WritePage;
-			LastTransactionHeader = logFileReader.LastTransactionHeader;
-
-			return logFileReader.LastTransactionHeader;
-		}
-
-
 		public void DisposeWithoutClosingPager()
 		{
 			if (_disposed)
@@ -185,5 +171,6 @@ namespace Voron.Impl.Journal
 		{
 			_pageTranslationTable = _pageTranslationTable.RemoveRange(_pageTranslationTable.Keys.Where(x => x <= lastSyncedPage));
 		}
+
 	}
 }

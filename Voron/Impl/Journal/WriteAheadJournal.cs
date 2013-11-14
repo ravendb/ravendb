@@ -447,6 +447,8 @@ namespace Voron.Impl.Journal
 
 					var pagesToWrite = ReadTransactionsToFlush(_oldestActiveTransaction, _jrnls);
 
+                    return;
+
 					if (pagesToWrite.Count == 0)
 						return;
 
@@ -540,7 +542,7 @@ namespace Voron.Impl.Journal
 		        return unusedJournalFiles;
 		    }
 
-		    private Dictionary<long, JournalFile> ReadTransactionsToFlush(long oldestActiveTransaction, ImmutableList<JournalFile> jrnls)
+		    private Dictionary<long, JournalFile> ReadTransactionsToFlush(long oldestActiveTransaction, IEnumerable<JournalFile> jrnls)
 			{
 				var pagesToWrite = new Dictionary<long, JournalFile>();
 
@@ -551,11 +553,9 @@ namespace Voron.Impl.Journal
 					var journalReader = new JournalReader(file.Pager, startPage, _lastTransactionHeader);
 
 					// we need to ensure that we aren't overwriting pages that are currently being seen by existing transactions
-					Func<TransactionHeader, bool> readUntil =
-						header => oldestActiveTransaction == 0 || // it means there is no active transaction
-									header.TransactionId < oldestActiveTransaction; // only transactions older than currently the oldest active one
 
-					while (journalReader.ReadOneTransaction(readUntil))
+				    while (journalReader.ReadOneTransaction((txId => oldestActiveTransaction == 0 || // it means there is no active transaction
+					                                                 txId < oldestActiveTransaction))) // or older than the oldest one
 					{
 						_lastTransactionHeader = journalReader.LastTransactionHeader;
 						_lastSyncedLog = file.Number;
