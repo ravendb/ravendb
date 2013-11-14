@@ -13,7 +13,7 @@ prefix	= /usr/local
 
 
 all:
-	$(CXX) $(FLAGS) lmdb_perf_test.cpp  $(LIBS) -o lmdb_perf_test
+	$(CXX) $(FLAGS) lmdb_perf_test.cpp  $(LIBS) -o lmdb_perf_test -std=c++11 -std=gnu++11
 	
 clean:
 	rm -rf *.[ao] *.so *.csv *~ lmdb_perf_test lmdb_test
