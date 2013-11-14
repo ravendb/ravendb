@@ -6,6 +6,7 @@ using System.Text;
 using System.Xml;
 using Voron.Debugging;
 using Voron.Impl;
+using Voron.Tests.Bugs;
 using Voron.Tests.Storage;
 
 namespace Voron.Tryout
@@ -31,9 +32,9 @@ namespace Voron.Tryout
 			//	"Carmelo Coll","Shizue Sugg","Irena Imai","Tam Troxel","Berenice Burkart"
 			//};
 
-			using (var x = new BigValues())
+			using (var x = new PageSplitter())
 			{
-				x.CanReuseLargeSpace(4);
+				x.PageSplitterShouldCalculateSeparatorKeyCorrectly();
 			}
 		}
 	}
