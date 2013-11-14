@@ -19,6 +19,8 @@
     {
         private const bool EnableCsvOutput = true;
 
+        private static StreamWriter writer;
+
         static void Main()
         {
             var random = new Random();
@@ -26,6 +28,8 @@
             random.NextBytes(buffer);
 
             var path = @"s:\temp\";
+
+            writer = new StreamWriter("output.txt",false) {AutoFlush = true};
 
             var sequentialIds = InitSequentialNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 128, maxValueSize: 128);
             var randomIds = InitRandomNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 128, maxValueSize: 128);
@@ -40,7 +44,7 @@
                     //new SqlLiteTest(path, buffer),
                     //new SqlCeTest(path, buffer),
                     //new LmdbTest(path, buffer),
-                    new EsentTest(path, buffer),
+                    //new EsentTest(path, buffer),
                     new VoronTest(path, buffer)
 				};
 
@@ -195,8 +199,9 @@
        
         private static void OutputResults(string name, long itemsCount, double duration, PerfTracker perfTracker)
         {
-            Console.WriteLine("{0}:\t{1,10:#,#;;0} items in {2,10:#,#;;0} sec, {3,10:#,#} ops/s.", name, itemsCount / 1000, duration, itemsCount / (duration / 1000));
-            Console.WriteLine(string.Join(", ", from f in perfTracker.Checkout() select f.ToString("##,###.00")));
+            Console.WriteLine("{0}:\t{1,10:#,#;;0} items in {2,10:#,#;;0} sec, {3,10:#,#} ops/s.", name, itemsCount, duration, itemsCount / (duration / 1000));
+            writer.WriteLine("{0}:\t{1,10:#,#;;0} items in {2,10:#,#;;0} sec, {3,10:#,#} ops/s.", name, itemsCount, duration, itemsCount / (duration / 1000));
+            writer.WriteLine(string.Join(", ", from f in perfTracker.Checkout() select f.ToString("##,###.00")));
         }
 
         private static void WritePerfData(string name, IStoragePerformanceTest test, IEnumerable<PerformanceRecord> writeSeq)
