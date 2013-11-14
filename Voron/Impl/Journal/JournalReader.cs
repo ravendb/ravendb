@@ -38,6 +38,7 @@ namespace Voron.Impl.Journal
 			_readingPage = startPage;
 			_startPage = startPage;
 			_previous = previous;
+			_writePage = startPage;
 			LastTransactionHeader = previous;
 
 		}
