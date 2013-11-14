@@ -491,11 +491,7 @@ namespace Voron.Impl.Journal
 						{
 							_waj.CurrentFile = null;
 						}
-						else if(_lastSyncedLog == _waj.CurrentFile.Number)
-						{
-							_waj.CurrentFile.ForgetPagesEarlierThan(_lastSyncedPage);
-						}
-
+						
 						_waj._locker.ExitWriteLock();
 
 						foreach (var journalFile in unusedJournalFiles)
