@@ -105,7 +105,7 @@ namespace Voron.Tests.Storage
 
 				var memoryStream = new MemoryStream();
 				readResult.Stream.CopyTo(memoryStream);
-				Assert.Equal(buffer, memoryStream.ToArray());
+				CompareBuffers(buffer, memoryStream);
 				tx.Commit();
 			}
 		}

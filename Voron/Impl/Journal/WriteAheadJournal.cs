@@ -605,7 +605,7 @@ namespace Voron.Impl.Journal
 				_waj._fileHeader->Journal.DataFlushCounter = _waj._dataFlushCounter;
 
 				tx.State.Root.State.CopyTo(&_waj._fileHeader->Root);
-				tx.State.FreeSpaceRoot.State.CopyTo(&_waj._fileHeader->Root);
+				tx.State.FreeSpaceRoot.State.CopyTo(&_waj._fileHeader->FreeSpace);
 			}
 		}
 
