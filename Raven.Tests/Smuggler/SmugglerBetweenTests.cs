@@ -38,7 +38,7 @@ namespace Raven.Tests.Smuggler
 
                 using (var server2 = GetNewServer(port: 8078))
                 {
-                    await SmugglerOp.Between(new SmugglerBetweenOptions
+                    await SmugglerOperation.Between(new SmugglerBetweenOptions
                     {
                         From = new RavenConnectionStringOptions
                         {
@@ -61,6 +61,11 @@ namespace Raven.Tests.Smuggler
                         {
                             Assert.Equal(2, await session2.Query<User>().CountAsync());
                         }
+
+                        var attachments = await store2.AsyncDatabaseCommands.GetAttachmentsAsync(Etag.Empty, 25);
+                        Assert.Equal(2, attachments.Length);
+                        Assert.Equal("ayende", attachments[0].Key);
+                        Assert.Equal("fitzchak", attachments[1].Key);
                     }
                 }
             }

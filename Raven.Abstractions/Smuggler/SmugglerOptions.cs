@@ -18,8 +18,9 @@ namespace Raven.Abstractions.Smuggler
     public abstract class SmugglerOptionsBase
     {
         private int batchSize;
+	    private TimeSpan timeout;
 
-        public SmugglerOptionsBase()
+	    public SmugglerOptionsBase()
         {
             Filters = new List<FilterSetting>();
             BatchSize = 1024;
@@ -119,10 +120,24 @@ namespace Raven.Abstractions.Smuggler
             return dateTime >= SystemTime.UtcNow;
         }
 
-        /// <summary>
-        /// The timeout for requests
-        /// </summary>
-        public TimeSpan Timeout { get; set; }
+	    /// <summary>
+	    /// The timeout for requests
+	    /// </summary>
+	    public TimeSpan Timeout
+	    {
+		    get
+		    {
+				return timeout;
+		    }
+		    set
+		    {
+			    if (value < TimeSpan.FromSeconds(5))
+			    {
+				    throw new InvalidOperationException("Timout value cannot be less then 5 seconds.");
+			    }
+				timeout = value;
+		    }
+	    }
     }
 
     public class SmugglerOptions : SmugglerOptionsBase

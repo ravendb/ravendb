@@ -9,7 +9,9 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class StaticController : RavenApiController
 	{
-		[HttpGet][Route("static")]
+		[HttpGet]
+		[Route("static/")]
+		[Route("database/{databaseName}/static/")]
 		public HttpResponseMessage StaticGet()
 		{
 			var array = Database.GetAttachments(GetStart(),
@@ -21,9 +23,14 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(array);
 		}
 
-		[HttpGet][Route("static/{*id}")]
+		[HttpGet]
+		[Route("static/{*id}")]
+		[Route("databases/{databaseName}/static/{*id}")]
 		public HttpResponseMessage StaticGet(string id)
 		{
+            if (id == null)
+		        return StaticGet();
+
 			var filename = id;
 			var result = GetEmptyMessage();
 			Database.TransactionalStorage.Batch(_ => // have to keep the session open for reading of the attachment stream
@@ -59,7 +66,9 @@ namespace Raven.Database.Server.Controllers
 			return result;
 		}
 
-		[HttpHead][Route("static/{*id}")]
+		[HttpHead]
+		[Route("static/{*id}")]
+		[Route("databases/{databaseName}/static/{*id}")]
 		public HttpResponseMessage StaticHead(string id)
 		{
 			var filename = id;
@@ -86,7 +95,9 @@ namespace Raven.Database.Server.Controllers
 			return result;
 		}
 
-		[HttpPut][Route("static/{*id}")]
+		[HttpPut]
+		[Route("static/{*id}")]
+		[Route("databases/{databaseName}/static/{*id}")]
 		public async Task<HttpResponseMessage> StaticPut(string id)
 		{
 			var filename = id;
@@ -99,7 +110,9 @@ namespace Raven.Database.Server.Controllers
 			return msg;
 		}
 
-		[HttpPost][Route("static/{*id}")]
+		[HttpPost]
+		[Route("static/{*id}")]
+		[Route("databases/{databaseName}/static/{*id}")]
 		public HttpResponseMessage StaticPost(string id)
 		{
 			var filename = id;
@@ -110,7 +123,9 @@ namespace Raven.Database.Server.Controllers
 			return msg;
 		}
 
-		[HttpDelete][Route("static/{*id}")]
+		[HttpDelete]
+		[Route("static/{*id}")]
+		[Route("databases/{databaseName}/static/{*id}")]
 		public HttpResponseMessage StaticDelete(string id)
 		{
 			var filename = id;

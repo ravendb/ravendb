@@ -128,7 +128,7 @@ namespace Raven.Tests.Helpers
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
-				Url = GetServerUrl(fiddler),
+				Url = GetServerUrl(fiddler, ravenDbServer.SystemDatabase.ServerUrl),
 				DefaultDatabase = databaseName,
 			};
 			stores.Add(store);
@@ -137,14 +137,14 @@ namespace Raven.Tests.Helpers
 			return store.Initialize();
 		}
 
-		private static string GetServerUrl(bool fiddler)
+		private static string GetServerUrl(bool fiddler, string serverUrl)
 		{
 			if (fiddler)
 			{
-				if (Process.GetProcessesByName("fiddler").Any())
-					return "http://localhost.fiddler:8079";
+			    if (Process.GetProcessesByName("fiddler").Any())
+			        return serverUrl.Replace("localhost", "localhost.fiddler");
 			}
-			return "http://localhost:8079";
+            return serverUrl;
 		}
 
 		public static string GetDefaultStorageType(string requestedStorage = null)
