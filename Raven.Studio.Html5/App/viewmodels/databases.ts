@@ -2,6 +2,7 @@ import app = require("durandal/app");
 import sys = require("durandal/system");
 import router = require("plugins/router");
 
+import appUrl = require("common/appUrl");
 import raven = require("common/raven");
 import database = require("models/database");
 import createDatabase = require("viewmodels/createDatabase");
@@ -24,6 +25,10 @@ class databases {
     navigateToDocuments(db: database) {
         db.activate();
         router.navigate("#documents?db=" + encodeURIComponent(db.name));
+    }
+
+    getDocumentsUrl(db: database) {
+        return appUrl.forDocuments(null, db);
     }
 
     databasesLoaded(results: Array<database>) {
