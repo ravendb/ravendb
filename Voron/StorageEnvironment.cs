@@ -425,5 +425,13 @@ namespace Voron
 			var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
 			journalApplicator.ApplyLogsToDataFile();
 		}
+
+		public void AssertFlushingNotFailed()
+		{
+			if (_flushingTask == null || _flushingTask.IsFaulted == false)
+				return;
+
+			_flushingTask.Wait();// force re-throw of error
+		}
 	}
 }

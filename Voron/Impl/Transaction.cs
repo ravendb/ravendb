@@ -141,6 +141,8 @@ namespace Voron.Impl
 
         public Page ModifyPage(long p, Cursor c)
         {
+	        _env.AssertFlushingNotFailed();
+
             Page page;
             if (_dirtyPages.Contains(p))
             {
