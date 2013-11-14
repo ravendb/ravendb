@@ -1,8 +1,9 @@
-define(["require", "exports", "durandal/app", "plugins/router", "common/raven", "models/database", "viewmodels/createDatabase"], function(require, exports, __app__, __router__, __raven__, __database__, __createDatabase__) {
+define(["require", "exports", "durandal/app", "plugins/router", "common/appUrl", "common/raven", "models/database", "viewmodels/createDatabase"], function(require, exports, __app__, __router__, __appUrl__, __raven__, __database__, __createDatabase__) {
     var app = __app__;
     
     var router = __router__;
 
+    var appUrl = __appUrl__;
     var raven = __raven__;
     var database = __database__;
     var createDatabase = __createDatabase__;
@@ -22,6 +23,10 @@ define(["require", "exports", "durandal/app", "plugins/router", "common/raven", 
         databases.prototype.navigateToDocuments = function (db) {
             db.activate();
             router.navigate("#documents?db=" + encodeURIComponent(db.name));
+        };
+
+        databases.prototype.getDocumentsUrl = function (db) {
+            return appUrl.forDocuments(null, db);
         };
 
         databases.prototype.databasesLoaded = function (results) {
