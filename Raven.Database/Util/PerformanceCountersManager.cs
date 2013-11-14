@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Security;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
 
@@ -24,7 +25,8 @@ namespace Raven.Database.Util
         public const string CategoryName = "RavenDB 2.0";
 
        // REVIEW: Is this long enough to determine if it *would* hang forever?
-        private static readonly TimeSpan PerformanceCounterWaitTimeout = TimeSpan.FromSeconds(2);
+        private static readonly TimeSpan PerformanceCounterWaitTimeout = TimeSpan.FromSeconds(3);
+        private static bool corruptedCounters;
 
         public PerformanceCountersManager()
         {
@@ -60,10 +62,6 @@ namespace Raven.Database.Util
             catch (SecurityException e)
             {
                 log.WarnException("Could not setup performance counters properly because of access permissions, perf counters will not be used", e);
-            }
-            catch (OperationCanceledException e)
-            {
-                log.WarnException("Could not setup performance counters properly. Perf counters will not be used", e);
             }
             catch (Exception e)
             {
@@ -226,17 +224,24 @@ namespace Raven.Database.Util
 
         private static bool PerformanceCounterExistsSlow()
         {
-            // Fire this off on an separate thread
-            var task = Task.Factory.StartNew(() => PerformanceCounterExists());
+            if (corruptedCounters)
+                throw new OperationCanceledException();
 
-            if (!task.Wait(PerformanceCounterWaitTimeout))
+            // Fire this off on an separate thread
+            bool result = false;
+            var thread = new Thread(() => result = PerformanceCounterExists());
+            thread.Start();
+
+            if (!thread.Join(PerformanceCounterWaitTimeout))
             {
+                corruptedCounters = true;
                 log.Warn("We could not check if the performance counter category '{0}' exist or not, because it took more then 2 minutes. We will not use the performace counter feature.", CategoryName);
+                thread.Abort();
                 // If it timed out then throw
                 throw new OperationCanceledException();
             }
 
-            return task.Result;
+            return result;
         }
 
         private static bool PerformanceCounterExists()
