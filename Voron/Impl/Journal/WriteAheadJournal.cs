@@ -147,14 +147,10 @@ namespace Voron.Impl.Journal
                     break;
                 }
 
-			    if (lastTxHeader == null) // a fully empty log file?
+			    if (lastTxHeader == null && log.AvailablePages == 0) // an empty log file, or one which was completely used
 			    {
-                    log.Dispose(); 
-			        continue;
+                    log.Dispose();
 			    }
-
-				Debug.Assert(lastTxHeader->TxMarker != TransactionMarker.None);
-
 			}
 
 		    if (requireHeaderUpdate)
@@ -492,7 +488,13 @@ namespace Voron.Impl.Journal
 						_waj.WriteFileHeader();
 
 						if (_waj.Files.Count == 0)
+						{
 							_waj.CurrentFile = null;
+						}
+						else if(_lastSyncedLog == _waj.CurrentFile.Number)
+						{
+							_waj.CurrentFile.ForgetPagesEarlierThan(_lastSyncedPage);
+						}
 
 						_waj._locker.ExitWriteLock();
 
