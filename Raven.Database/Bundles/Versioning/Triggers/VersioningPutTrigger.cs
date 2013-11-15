@@ -24,9 +24,9 @@ namespace Raven.Bundles.Versioning.Triggers
 			if (jsonDocument == null)
 				return VetoResult.Allowed;
 
-            if (Database.ChangesToRevisionsAllowed() == false && 
-                jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical" &&
-                Database.IsVersioningActive(metadata))
+			if (Database.ChangesToRevisionsAllowed() == false && 
+				jsonDocument.Metadata.Value<string>(VersioningUtil.RavenDocumentRevisionStatus) == "Historical" &&
+				Database.IsVersioningActive(metadata))
 			{
 				return VetoResult.Deny("Modifying a historical revision is not allowed");
 			}
@@ -38,13 +38,13 @@ namespace Raven.Bundles.Versioning.Triggers
 		{
 			VersioningConfiguration versioningConfiguration;
 
-		    if (metadata.ContainsKey("Version-This-Save"))
-		    {
-		        metadata.__ExternalState["Version-This-Save"] = metadata["Version-This-Save"];
-		        metadata.Remove("Version-This-Save");
-		    }
+			if (metadata.ContainsKey(Constants.RavenCreateVersion))
+			{
+				metadata.__ExternalState[Constants.RavenCreateVersion] = metadata[Constants.RavenCreateVersion];
+				metadata.Remove(Constants.RavenCreateVersion);
+			}
 
-		    if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
+			if (TryGetVersioningConfiguration(key, metadata, out versioningConfiguration) == false)
 				return;
 
 			var revision = GetNextRevisionNumber(key);
@@ -165,8 +165,8 @@ namespace Raven.Bundles.Versioning.Triggers
 				return false;
 
 			versioningConfiguration = Database.GetDocumentVersioningConfiguration(metadata);
-			if (versioningConfiguration == null || versioningConfiguration.Exclude 
-                || (versioningConfiguration.ExcludeUnlessExplicit && !metadata.__ExternalState.ContainsKey("Version-This-Save")))
+			if (versioningConfiguration == null || versioningConfiguration.Exclude
+				|| (versioningConfiguration.ExcludeUnlessExplicit && !metadata.__ExternalState.ContainsKey(Constants.RavenCreateVersion)))
 				return false;
 			return true;
 		}

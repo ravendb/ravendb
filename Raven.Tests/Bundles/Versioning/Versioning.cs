@@ -169,8 +169,7 @@ namespace Raven.Tests.Bundles.Versioning
 			using (var session = documentStore.OpenSession())
 			{
 				session.Store(product);
-				var metadata = session.Advanced.GetMetadataFor(product);
-				metadata["Version-This-Save"] = true;
+				session.Advanced.ExplicitlyVersion(product);
 				session.SaveChanges();
 			}
 
@@ -178,7 +177,7 @@ namespace Raven.Tests.Bundles.Versioning
 			{
 				product = session.Load<Product>(product.Id);
 				var metadata = session.Advanced.GetMetadataFor(product);
-				Assert.Null(metadata["Version-This-Save"]);
+				Assert.Null(metadata[Constants.RavenCreateVersion]);
 				Assert.Equal("Current", metadata.Value<string>("Raven-Document-Revision-Status"));
 			}
 		}
