@@ -73,6 +73,12 @@ namespace Raven.Tests.Bundles.Versioning
 				s.Store(new Raven.Bundles.Versioning.Data.VersioningConfiguration
 				{
 					Exclude = false,
+					Id = "Raven/Versioning/Products",
+					ExcludeUnlessExplicit = true,
+				});
+				s.Store(new Raven.Bundles.Versioning.Data.VersioningConfiguration
+				{
+					Exclude = false,
 					Id = "Raven/Versioning/DefaultConfiguration",
 					MaxRevisions = 5
 				});

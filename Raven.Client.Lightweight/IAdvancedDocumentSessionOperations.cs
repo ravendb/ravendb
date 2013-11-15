@@ -147,5 +147,11 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name="commands">The commands to be executed</param>
 		void Defer(params ICommandData[] commands);
+
+		/// <summary>
+		/// Version this entity when it is saved.  Use when Versioning bundle configured to ExcludeUnlessExplicit.
+		/// </summary>
+		/// <param name="entity">The entity.</param>
+		void ExplicitlyVersion(object entity);
 	}
 }
