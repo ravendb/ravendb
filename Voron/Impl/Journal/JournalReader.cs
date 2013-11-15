@@ -13,8 +13,6 @@ namespace Voron.Impl.Journal
 		private long _lastSyncedPage;
 		private long _writePage;
 		private long _readingPage;
-		private readonly long _startPage;
-		private readonly TransactionHeader* _previous;
 		private ImmutableDictionary<long, long> _transactionPageTranslation = ImmutableDictionary<long, long>.Empty;
 
 		public bool RequireHeaderUpdate { get; private set; }
@@ -36,8 +34,6 @@ namespace Voron.Impl.Journal
 			RequireHeaderUpdate = false;
 			_pager = pager;
 			_readingPage = startPage;
-			_startPage = startPage;
-			_previous = previous;
 			_writePage = startPage;
 			LastTransactionHeader = previous;
 
@@ -177,5 +173,10 @@ namespace Voron.Impl.Journal
 	    {
 	        return _pager.ToString();
 	    }
+
+		public void ClearTransactionPageTranslation()
+		{
+			_transactionPageTranslation = ImmutableDictionary<long, long>.Empty;
+		}
 	}
 }
