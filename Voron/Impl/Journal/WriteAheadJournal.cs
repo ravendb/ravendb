@@ -8,12 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
-using Voron.Impl.Backup;
 using Voron.Impl.FileHeaders;
 using Voron.Trees;
 
@@ -28,22 +24,19 @@ namespace Voron.Impl.Journal
 		private DateTime _lastFile;
 
 		private long _logIndex = -1;
-		private FileHeader* _fileHeader;
-		private IntPtr _inMemoryHeader;
-		private long _dataFlushCounter;
 
 		internal ImmutableList<JournalFile> Files = ImmutableList<JournalFile>.Empty;
 		internal JournalFile CurrentFile;
 
 		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
-		private readonly object _fileHeaderProtector = new object();
+		private HeaderAccessor _headerAccessor;
 
 		public WriteAheadJournal(StorageEnvironment env)
 		{
 			_env = env;
 			_dataPager = _env.Options.DataPager;
-			_fileHeader = GetEmptyFileHeader();
 			_currentJournalFileSize = env.Options.InitialLogFileSize;
+			_headerAccessor = env.HeaderAccessor;
 		}
 
 		private JournalFile NextFile(Transaction tx, int numberOfPages = 1)
@@ -79,29 +72,22 @@ namespace Voron.Impl.Journal
 				Files = Files.Add(log);
 
 				UpdateLogInfo();
-				WriteFileHeader();
 			}
 			finally
 			{
 				_locker.ExitWriteLock();
 			}
 
-			lock (_fileHeaderProtector)
-			{
-				_dataPager.Sync(); // we have to flush the new log information to disk, may be expensive, so we do it outside the lock
-			}
-
 			return log;
 		}
 
-		public void RecoverDatabase(FileHeader* fileHeader, out TransactionHeader* lastTxHeader,out bool requireHeaderUpdate)
+		public void RecoverDatabase(out TransactionHeader* lastTxHeader,out bool requireHeaderUpdate)
 		{
 			// note, we don't need to do any concurrency here, happens as a single threaded
 			// fashion on db startup
 			requireHeaderUpdate = false;
 
-			_fileHeader = CopyFileHeader(fileHeader);
-			var logInfo = _fileHeader->Journal;
+			var logInfo = _headerAccessor.Get()->Journal;
 
 			lastTxHeader = null;
 
@@ -155,7 +141,12 @@ namespace Voron.Impl.Journal
 
 		    if (requireHeaderUpdate)
 		    {
-		        logInfo.CurrentJournal = Files.Count - 1;
+				_headerAccessor.Modify(header =>
+					{
+						header->Journal.CurrentJournal = Files.Count - 1;
+					});
+
+				logInfo = _headerAccessor.Get()->Journal;
 
                 // we want to check that we cleanup newer log files, since everything from
                 // the current file is considered corrupted
@@ -169,8 +160,6 @@ namespace Voron.Impl.Journal
 		    }
 
 			_logIndex = logInfo.CurrentJournal;
-			_dataFlushCounter = logInfo.DataFlushCounter + 1;
-
 
 			if (Files.IsEmpty == false)
 			{
@@ -183,7 +172,6 @@ namespace Voron.Impl.Journal
 			if (requireHeaderUpdate)
 			{
 				UpdateLogInfo();
-				WriteFileHeader();
 			}
 		}
 
@@ -198,34 +186,12 @@ namespace Voron.Impl.Journal
 
 		public void UpdateLogInfo()
 		{
-			_fileHeader->Journal.CurrentJournal = Files.Count > 0 ? _logIndex : -1;
-			_fileHeader->Journal.JournalFilesCount = Files.Count;
-			_fileHeader->Journal.DataFlushCounter = _dataFlushCounter;
-
-			_fileHeader->IncrementalBackup.LastCreatedJournal = _logIndex;
-		}
-
-		internal void WriteFileHeader(long? pageToWriteHeader = null)
-		{
-			lock (_fileHeaderProtector)
-			{
-				var fileHeaderPage = _dataPager.TempPage;
-
-				long page = pageToWriteHeader ?? _dataFlushCounter & 1;
-
-				var header = (FileHeader*)(fileHeaderPage.Base);
-				header->MagicMarker = Constants.MagicMarker;
-				header->Version = Constants.CurrentVersion;
-				header->TransactionId = _fileHeader->TransactionId;
-				header->LastPageNumber = _fileHeader->LastPageNumber;
-
-				header->Root = _fileHeader->Root;
-				header->FreeSpace = _fileHeader->FreeSpace;
-				header->Journal = _fileHeader->Journal;
-				header->IncrementalBackup = _fileHeader->IncrementalBackup;
-
-				_dataPager.Write(fileHeaderPage, page);
-			}
+			_headerAccessor.Modify(header =>
+				{
+					header->Journal.CurrentJournal = Files.Count > 0 ? _logIndex : -1;
+					header->Journal.JournalFilesCount = Files.Count;
+					header->IncrementalBackup.LastCreatedJournal = _logIndex;
+				});
 		}
 
 		public Page ReadPage(Transaction tx, long pageNumber)
@@ -265,12 +231,6 @@ namespace Voron.Impl.Journal
 
 		public void Dispose()
 		{
-			if (_inMemoryHeader != IntPtr.Zero)
-			{
-				Marshal.FreeHGlobal(_inMemoryHeader);
-				_inMemoryHeader = IntPtr.Zero;
-			}	
-
 			if (_env.Options.OwnsPagers)
 			{
 				foreach (var logFile in Files)
@@ -290,94 +250,15 @@ namespace Voron.Impl.Journal
 			Files.Clear();
 		}
 
-		private FileHeader* GetEmptyFileHeader()
-		{
-			if (_inMemoryHeader == IntPtr.Zero)
-				_inMemoryHeader = Marshal.AllocHGlobal(_dataPager.PageSize);
-
-			NativeMethods.memset((byte*)_inMemoryHeader.ToPointer(), 0, _dataPager.PageSize);
-
-			var header = (FileHeader*)_inMemoryHeader;
-
-			header->MagicMarker = Constants.MagicMarker;
-			header->Version = Constants.CurrentVersion;
-			header->TransactionId = 0;
-			header->LastPageNumber = 1;
-			header->FreeSpace.RootPageNumber = -1;
-			header->Root.RootPageNumber = -1;
-			header->Journal.DataFlushCounter = -1;
-			header->Journal.CurrentJournal = -1;
-			header->Journal.JournalFilesCount = 0;
-			header->Journal.LastSyncedJournal = -1;
-			header->Journal.LastSyncedJournalPage = -1;
-			header->IncrementalBackup.LastBackedUpJournal = -1;
-			header->IncrementalBackup.LastBackedUpJournalPage = -1;
-			header->IncrementalBackup.LastCreatedJournal = -1;
-
-			return header;
-		}
-
-		private FileHeader* CopyFileHeader(FileHeader* fileHeader)
-		{
-			Debug.Assert(_inMemoryHeader != IntPtr.Zero);
-
-			NativeMethods.memcpy((byte*)_inMemoryHeader, (byte*)fileHeader, sizeof(FileHeader));
-
-			return (FileHeader*)_inMemoryHeader;
-		}
-
 		public JournalInfo GetCurrentJournalInfo()
 		{
-			_locker.EnterReadLock();
-			try
-			{
-				return _fileHeader->Journal;
-			}
-			finally
-			{
-				_locker.ExitReadLock();
-			}
-		}
-
-		public IncrementalBackupInfo GetIncrementalBackupInfo()
-		{
-			_locker.EnterReadLock();
-			try
-			{
-				return _fileHeader->IncrementalBackup;
-			}
-			finally
-			{
-				_locker.ExitReadLock();
-			}
-		}
-
-		public void UpdateAfterIncrementalBackup(long lastBackedUpJournalFile, long lastBackedUpJournalFilePage)
-		{
-			_locker.EnterWriteLock();
-			try
-			{
-				_fileHeader->IncrementalBackup.LastBackedUpJournal = lastBackedUpJournalFile;
-				_fileHeader->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpJournalFilePage;
-
-				WriteFileHeader();
-			}
-			finally
-			{
-				_locker.ExitWriteLock();
-			}
-
-			lock (_fileHeaderProtector)
-			{
-				_dataPager.Sync(); // we have to flush the new backup information to disk
-			}
+			return _headerAccessor.Get()->Journal;
 		}
 
 		public List<LogSnapshot> GetSnapshots()
 		{
 			return Files.Select(x => x.GetSnapshot()).ToList();
 		}
-
 
 		public long SizeOfUnflushedTransactionsInJournalFile()
 		{
@@ -390,8 +271,10 @@ namespace Voron.Impl.Journal
 
 				using (var tx = _env.NewTransaction(TransactionFlags.Read))
 				{
-					var lastSyncedLog = _fileHeader->Journal.LastSyncedJournal;
-					var lastSyncedLogPage = _fileHeader->Journal.LastSyncedJournalPage;
+					var journalInfo = _headerAccessor.Get()->Journal;
+
+					var lastSyncedLog = journalInfo.LastSyncedJournal;
+					var lastSyncedLogPage = journalInfo.LastSyncedJournalPage;
 
 					var sum = Files.Sum(file =>
 					{
@@ -436,8 +319,10 @@ namespace Voron.Impl.Journal
 						_jrnls = _waj.Files;
                         if(_jrnls.Count == 0)
                             return; // nothing to do
-						_lastSyncedLog = _waj._fileHeader->Journal.LastSyncedJournal;
-						_lastSyncedPage = _waj._fileHeader->Journal.LastSyncedJournalPage;
+						var journalInfo = _waj._headerAccessor.Get()->Journal;
+
+						_lastSyncedLog = journalInfo.LastSyncedJournal;
+						_lastSyncedPage = journalInfo.LastSyncedJournalPage;
 						Debug.Assert(_jrnls.First().Number >= _lastSyncedLog);
 					}
 					finally
@@ -446,8 +331,6 @@ namespace Voron.Impl.Journal
 					}
 
 					var pagesToWrite = ReadTransactionsToFlush(_oldestActiveTransaction, _jrnls);
-
-                    return;
 
 					if (pagesToWrite.Count == 0)
 						return;
@@ -487,8 +370,6 @@ namespace Voron.Impl.Journal
 
 						_waj.UpdateLogInfo();
 
-						_waj.WriteFileHeader();
-
 						if (_waj.Files.Count == 0)
 						{
 							_waj.CurrentFile = null;
@@ -501,11 +382,6 @@ namespace Voron.Impl.Journal
 							if (_waj._env.Options.IncrementalBackupEnabled == false)
 								journalFile.DeleteOnClose();
 						}
-
-						lock (_waj._fileHeaderProtector)
-						{
-							_waj._dataPager.Sync();
-						}
 					}
 					finally
 					{
@@ -517,8 +393,6 @@ namespace Voron.Impl.Journal
 							fullLog.Release();
 						}
 					}
-
-					_waj._dataFlushCounter++;
 
 					tx.Commit();
 				}
@@ -593,15 +467,17 @@ namespace Voron.Impl.Journal
 
 			public void UpdateFileHeaderAfterDataFileSync(Transaction tx)
 			{
-				_waj._fileHeader->TransactionId = _lastTransactionHeader->TransactionId;
-				_waj._fileHeader->LastPageNumber = _lastTransactionHeader->LastPageNumber;
+				_waj._headerAccessor.Modify(header =>
+					{
+						header->TransactionId = _lastTransactionHeader->TransactionId;
+						header->LastPageNumber = _lastTransactionHeader->LastPageNumber;
+						
+						header->Journal.LastSyncedJournal = _lastSyncedLog;
+						header->Journal.LastSyncedJournalPage = _lastSyncedPage == 0 ? -1 : _lastSyncedPage;
 
-				_waj._fileHeader->Journal.LastSyncedJournal = _lastSyncedLog;
-				_waj._fileHeader->Journal.LastSyncedJournalPage = _lastSyncedPage == 0 ? -1 : _lastSyncedPage;
-				_waj._fileHeader->Journal.DataFlushCounter = _waj._dataFlushCounter;
-
-				tx.State.Root.State.CopyTo(&_waj._fileHeader->Root);
-				tx.State.FreeSpaceRoot.State.CopyTo(&_waj._fileHeader->FreeSpace);
+						tx.State.Root.State.CopyTo(&header->Root);
+						tx.State.FreeSpaceRoot.State.CopyTo(&header->FreeSpace);
+					});
 			}
 		}
 

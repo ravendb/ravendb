@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
@@ -17,6 +18,7 @@ namespace Voron.Impl.Backup
 	{
 		public void ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal)
 		{
+			throw new NotImplementedException("Need to backup header.one and header.two as well");
 			var dataPager = env.Options.DataPager;
 			var copier = new DataCopier(dataPager.PageSize * 16);
 			Transaction txr = null;

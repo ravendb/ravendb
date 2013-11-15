@@ -41,6 +41,8 @@ namespace Voron
 
         public abstract IVirtualPager ScratchPager { get; }
 
+		public abstract Tuple<IVirtualPager, IVirtualPager> HeaderPagers { get; }
+
 	    public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
 
 	    public int IdleFlushTimeout { get; set; }
@@ -89,6 +91,7 @@ namespace Voron
             private readonly string _basePath;
             private readonly Lazy<IVirtualPager> _dataPager;
             private readonly Lazy<IVirtualPager> _scratchPager;
+			private readonly Tuple<IVirtualPager, IVirtualPager> _headerPagers;
 
             private readonly ConcurrentDictionary<string, Lazy<IVirtualPager>> _journals =
                 new ConcurrentDictionary<string, Lazy<IVirtualPager>>(StringComparer.OrdinalIgnoreCase);
@@ -96,18 +99,21 @@ namespace Voron
             public DirectoryStorageEnvironmentOptions(string basePath)
             {
                 _basePath = Path.GetFullPath(basePath);
-                _dataPager = new Lazy<IVirtualPager>(CreateDataPager);
+				_dataPager = new Lazy<IVirtualPager>(() => new FilePager(Path.Combine(_basePath, "db.voron")));
                 _scratchPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(Path.Combine(_basePath, "scratch.tmp")));
+	            _headerPagers =
+		            new Tuple<IVirtualPager, IVirtualPager>(CreateHeaderPager("header.one"), CreateHeaderPager("header.two"));
             }
 
-            private IVirtualPager CreateDataPager()
-            {
-                if (Directory.Exists(_basePath) == false)
-                {
-                    Directory.CreateDirectory(_basePath);
-                }
-                return new FilePager(Path.Combine(_basePath, "db.voron"));
-            }
+			private IVirtualPager CreateHeaderPager(string headerName)
+			{
+				if (Directory.Exists(_basePath) == false)
+				{
+					Directory.CreateDirectory(_basePath);
+				}
+
+				return new MemoryMapPager(Path.Combine(_basePath, headerName));
+			}
 
             public override IVirtualPager DataPager
             {
@@ -121,6 +127,11 @@ namespace Voron
             {
                 get { return _scratchPager.Value; }
             }
+
+			public override Tuple<IVirtualPager, IVirtualPager> HeaderPagers
+			{
+				get { return _headerPagers; }
+			}
 
             public override IVirtualPager CreateJournalPager(long number)
             {
@@ -153,6 +164,9 @@ namespace Voron
                     if (journal.Value.IsValueCreated)
                         journal.Value.Value.Dispose();
                 }
+
+				_headerPagers.Item1.Dispose();
+				_headerPagers.Item2.Dispose();
             }
 
 	        public override bool TryDeleteJournalPager(long number)
@@ -178,12 +192,15 @@ namespace Voron
             private readonly PureMemoryPager _scratchPager;
             private Dictionary<string, IVirtualPager> _logs =
                 new Dictionary<string, IVirtualPager>(StringComparer.OrdinalIgnoreCase);
+			private readonly Tuple<IVirtualPager, IVirtualPager> _headerPagers;
 
 
             public PureMemoryStorageEnvironmentOptions()
             {
                 _dataPager = new PureMemoryPager();
                 _scratchPager = new PureMemoryPager();
+
+	            _headerPagers = new Tuple<IVirtualPager, IVirtualPager>(new PureMemoryPager(), new PureMemoryPager());
             }
 
             public override IVirtualPager DataPager
@@ -195,6 +212,11 @@ namespace Voron
             {
                 get { return _scratchPager; }
             }
+
+			public override Tuple<IVirtualPager, IVirtualPager> HeaderPagers
+			{
+				get { return _headerPagers; }
+			}
 
             public override IVirtualPager CreateJournalPager(long number)
             {
@@ -218,6 +240,9 @@ namespace Voron
                 {
                     virtualPager.Value.Dispose();
                 }
+
+				_headerPagers.Item1.Dispose();
+				_headerPagers.Item2.Dispose();
             }
 
 	        public override bool TryDeleteJournalPager(long number)
