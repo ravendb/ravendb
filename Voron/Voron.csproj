@@ -67,7 +67,7 @@
     <Compile Include="Impl\Journal\JournalFile.cs" />
     <Compile Include="Impl\Journal\JournalReader.cs" />
     <Compile Include="Impl\Journal\JournalInfo.cs" />
-    <Compile Include="Impl\Journal\LogSnapshot.cs" />
+    <Compile Include="Impl\Journal\JournalSnapshot.cs" />
     <Compile Include="Impl\Journal\TransactionHeader.cs" />
     <Compile Include="Impl\Journal\TransactionMarker.cs" />
     <Compile Include="Impl\Journal\WriteAheadJournal.cs" />

@@ -26,7 +26,7 @@ namespace Voron.Impl
 
         private readonly Dictionary<long, long> _scratchPagesTable = new Dictionary<long, long>();
 
-        internal readonly List<LogSnapshot> LogSnapshots = new List<LogSnapshot>();
+		internal readonly List<JournalSnapshot> LogSnapshots = new List<JournalSnapshot>();
         private readonly List<Action> _releaseLogActions = new List<Action>();
 
         private List<string> _deletedTrees;
@@ -410,7 +410,7 @@ namespace Voron.Impl
         }
 
 
-        private void AddLogSnapshot(LogSnapshot snapshot)
+		private void AddLogSnapshot(JournalSnapshot snapshot)
         {
             if (LogSnapshots.Any(x => x.File.Number == snapshot.File.Number))
                 throw new InvalidOperationException("Cannot add a snapshot of log file with number " + snapshot.File.Number +

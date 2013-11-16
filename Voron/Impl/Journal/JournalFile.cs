@@ -22,6 +22,8 @@ namespace Voron.Impl.Journal
 		private long _writePage;
 		private bool _disposed;
 
+		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
+
 		public JournalFile(IVirtualPager pager, long logNumber)
 		{
 			Number = logNumber;
@@ -126,13 +128,25 @@ namespace Voron.Impl.Journal
 
 		}
 
-		public LogSnapshot GetSnapshot()
+		public JournalSnapshot GetSnapshot()
 		{
-			return new LogSnapshot
+			_locker.EnterReadLock();
+			try
 			{
-				File = this,
-				PageTranslations = _pageTranslationTable
-			};
+				return new JournalSnapshot
+				{
+					File = this,
+					PageTranslationTable = _pageTranslationTable,
+					Number = Number,
+					Pager = Pager,
+					WritePagePosition = WritePagePosition
+				};
+			}
+			finally
+			{
+				_locker.ExitReadLock();	
+			}
+			
 		}
 
 		public TransactionHeader* RecoverAndValidate(long startRead, TransactionHeader* lastTxHeader)
@@ -161,15 +175,18 @@ namespace Voron.Impl.Journal
 		public void Write(Transaction tx, int numberOfPages)
 		{
 			_pager.WriteDirect(tx.GetFirstScratchPage(), _writePage, numberOfPages);
-			_pageTranslationTable = _pageTranslationTable.SetItems(
-				tx.PageTranslations.Select(kvp => new KeyValuePair<long, long>(kvp.Key, kvp.Value + _writePage))
-				);
-			_writePage += numberOfPages;
-		}
-
-		public void ForgetPagesEarlierThan(long lastSyncedPage)
-		{
-			_pageTranslationTable = _pageTranslationTable.RemoveRange(_pageTranslationTable.Keys.Where(x => x <= lastSyncedPage));
+			_locker.EnterWriteLock();
+			try
+			{
+				_pageTranslationTable = _pageTranslationTable.SetItems(
+					tx.PageTranslations.Select(kvp => new KeyValuePair<long, long>(kvp.Key, kvp.Value + _writePage))
+					);
+				_writePage += numberOfPages;
+			}
+			finally
+			{
+				_locker.ExitWriteLock();
+			}
 		}
 
 	}
