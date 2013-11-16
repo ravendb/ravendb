@@ -84,8 +84,7 @@ vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int it
 }
 
 vector<PerformanceRecord> Write(vector<TestData> data, int itemsPerTransaction, int numberOfTransactions) {
-  vector<PerformanceRecord> records;
-  
+
   leveldb::Options o;
   o.error_if_exists = false;
   o.create_if_missing = true;
@@ -98,7 +97,7 @@ vector<PerformanceRecord> Write(vector<TestData> data, int itemsPerTransaction, 
   time_point<system_clock> start, end;
   start = system_clock::now();
   
-  WriteInternal(data.begin(), itemsPerTransaction, numberOfTransactions, db);
+  vector<PerformanceRecord> records = WriteInternal(data.begin(), itemsPerTransaction, numberOfTransactions, db);
   
   end = system_clock::now();
   
@@ -108,7 +107,7 @@ vector<PerformanceRecord> Write(vector<TestData> data, int itemsPerTransaction, 
   
   db->~DB();
   
-  cout << "Write " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (numberOfTransactions * itemsPerTransaction)/secs << " ops/s" << endl;
+  cout << "Write " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction)/secs) << " ops/s" << endl;
   
   return records;
 };
@@ -182,7 +181,7 @@ vector<PerformanceRecord> WriteParallel(vector<TestData> data, int itemsPerTrans
   
   db->~DB();
   
-  cout << "Write Parallel [" << numberOfThreads << "] " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (numberOfTransactions * itemsPerTransaction)/secs << " ops/s" << endl;
+  cout << "Write Parallel [" << numberOfThreads << "] " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction)/secs) << " ops/s" << endl;
   
   return records;
 };
@@ -234,7 +233,7 @@ vector<PerformanceRecord> Read(vector<TestData> data, int itemsPerTransaction, i
   
   db->~DB();
   
-  cout << "Read " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (numberOfTransactions * itemsPerTransaction)/secs << " ops/s" << endl;
+  cout << "Read " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction)/secs) << " ops/s" << endl;
   
   return records;
 };
@@ -277,7 +276,7 @@ vector<PerformanceRecord> ReadParallel(vector<TestData> data, int itemsPerTransa
   
   db->~DB();
   
-  cout << "Read Parallel [" << numberOfThreads << "] " << numberOfTransactions * itemsPerTransaction * numberOfThreads << " items in " << secs << " sec, " << (numberOfTransactions * itemsPerTransaction * numberOfThreads)/secs << " ops/s" << endl;
+  cout << "Read Parallel [" << numberOfThreads << "] " << numberOfTransactions * itemsPerTransaction * numberOfThreads << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction * numberOfThreads)/secs) << " ops/s" << endl;
   
   return records;
 };

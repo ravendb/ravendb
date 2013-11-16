@@ -34,7 +34,7 @@ namespace Voron.Impl.Backup
 
             using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                backupInfo = env.Journal.GetIncrementalBackupInfo();
+				backupInfo = env.HeaderAccessor.Get()->IncrementalBackup;
 
                 if (env.Journal.CurrentFile != null)
                 {
@@ -113,7 +113,11 @@ namespace Voron.Impl.Backup
 
                         Debug.Assert(lastBackedUpPage != -1);
 
-                        env.Journal.UpdateAfterIncrementalBackup(lastBackedUpFile, lastBackedUpPage);
+						env.HeaderAccessor.Modify(header =>
+							{
+								header->IncrementalBackup.LastBackedUpJournal = lastBackedUpFile;
+								header->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpPage;
+							});
                     }
                 }
                 catch (Exception)

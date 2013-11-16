@@ -2,6 +2,10 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <sstream>
+#include <iostream>
+#include <fstream>
+#include <iomanip>
 #include <time.h>
 #include <stdio.h>
 #include <algorithm>
@@ -11,6 +15,8 @@
 #include <chrono>
 #include <ctime>
 #include <thread>
+#include <future>
+#include <iterator>
 
 extern "C"
 {
@@ -26,12 +32,45 @@ public:
   int ValueSize;
 };
 
+class ParallelTestData {
+public:
+  int SkipCount;
+  int NumberOfTransactions;
+  int ItemsPerTransaction;
+};
+
 class PerformanceRecord {
 public:
   long ProcessedItems;
   long Duration;
   time_t Time; 
 };
+
+vector<ParallelTestData> SplitData(vector<TestData> data, int currentItemsPerTransaction, int currentNumberOfTransactions, int numberOfThreads) {
+
+  vector<ParallelTestData> results;
+  
+  int numberOfTransactionsPerThread = currentNumberOfTransactions / numberOfThreads;
+  
+  for(int i = 0; i < numberOfThreads; i++) {
+     int actualNumberOfTransactionsPerThread = 0;
+    
+     if(i < numberOfThreads - 1) {
+      actualNumberOfTransactionsPerThread = numberOfTransactionsPerThread;
+     } else {
+      actualNumberOfTransactionsPerThread = currentNumberOfTransactions - (i * numberOfTransactionsPerThread);
+     }
+    
+      ParallelTestData item;
+      item.SkipCount = (i * currentItemsPerTransaction * numberOfTransactionsPerThread);
+      item.ItemsPerTransaction = currentItemsPerTransaction;
+      item.NumberOfTransactions = actualNumberOfTransactionsPerThread;
+      
+      results.push_back(item);
+  }
+  
+  return results;
+}
 
 vector<TestData> InitValue(set<int> ids, int minValueSize, int maxValueSize) {
   vector<TestData> data;
@@ -85,7 +124,10 @@ string GetTime(time_t t) {
 void WritePerfData(string name, vector<PerformanceRecord> data) {
   ofstream file;
   string fileName = name + "_LMDB.csv";
+  
   file.open((char*)fileName.c_str());
+  
+  file << "Items,Time,Duration\n";
   
   for(int i = 0; i < data.size(); i++) {
     PerformanceRecord r = data.at(i);
@@ -113,7 +155,7 @@ MDB_env* StorageEnvironment(bool deleteOldData){
   return env;
 }
 
-vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransaction, int numberOfTransactions) {
+vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int itemsPerTransaction, int numberOfTransactions, MDB_env* env) {
   vector<PerformanceRecord> records;
   
   int rc;
@@ -123,11 +165,6 @@ vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransact
   MDB_stat mst;
   MDB_cursor *cursor;
   char sval[87 * 1024];
-
-  MDB_env *env = StorageEnvironment(true);
-  
-  time_point<system_clock> start, end;
-  start = system_clock::now();
   
   for(int transactions = 0; transactions < numberOfTransactions; transactions++) {
     time_point<system_clock> sw = system_clock::now();
@@ -139,12 +176,12 @@ vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransact
     rc = mdb_open(txn, NULL, 0, &dbi);
     
     for(int i = 0; i < itemsPerTransaction; i++) {
-      TestData item = dataItems.at(transactions * itemsPerTransaction + i);
+      TestData *item = &*begin;
       
       key.mv_size = sizeof(int);
-      key.mv_data = &item.Id;
+      key.mv_data = &item->Id;
   
-      data.mv_size = item.ValueSize;
+      data.mv_size = item->ValueSize;
       data.mv_data = sval;
        
       rc = mdb_put(txn, dbi, &key, &data, 0);
@@ -153,6 +190,8 @@ vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransact
 	cout << "Unable to PUT: " << rc << endl;
 	throw exception();
       }
+      
+      *begin++;
     }
     
     rc = mdb_txn_commit(txn);
@@ -171,6 +210,18 @@ vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransact
     records.push_back(r);
   }
   
+  return records;
+}
+
+vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransaction, int numberOfTransactions) {
+
+  MDB_env *env = StorageEnvironment(true);
+  
+  time_point<system_clock> start, end;
+  start = system_clock::now();
+  
+  vector<PerformanceRecord> records = WriteInternal(dataItems.begin(),itemsPerTransaction,numberOfTransactions, env);
+  
   end = system_clock::now();
   
   duration<double> elapsed_seconds = end - start;
@@ -179,35 +230,62 @@ vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransact
   
   mdb_env_close(env);
   
-  cout << "Wrote " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (numberOfTransactions * itemsPerTransaction)/secs << " ops/s" << endl;
+  cout << "Wrote " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction)/secs) << " ops/s" << endl;
   
 
   return records;
 };
 
-vector<PerformanceRecord> Read(vector<TestData> dataItems) {
+vector<PerformanceRecord> WriteParallel(vector<TestData> data, int itemsPerTransaction, int numberOfTransactions, int numberOfThreads) {
   vector<PerformanceRecord> records;
   
-  int rc;
-  MDB_val key, data;
-
-  MDB_stat mst;
-  MDB_cursor *cursor;
-  char sval[87 * 1024];
-
-  MDB_env *env = StorageEnvironment(false);
-
+  MDB_env *env = StorageEnvironment(true);
+  
+  vector<ParallelTestData> testData = SplitData(data, itemsPerTransaction, numberOfTransactions, numberOfThreads);
+  
   time_point<system_clock> start, end;
   start = system_clock::now();
   
+  vector<future<vector<PerformanceRecord>>> results(numberOfThreads);
+  
+  for(int i = 0; i < numberOfThreads; i++) {
+    ParallelTestData d = testData.at(i);
+    
+    vector<TestData>::iterator it = data.begin();
+    advance(it, d.SkipCount);
+    
+    results.at(i) = async(&WriteInternal, it, d.ItemsPerTransaction, d.NumberOfTransactions, env);
+  }
+  
+  for(int i = 0; i < numberOfThreads; i++) {
+    vector<PerformanceRecord> r = results.at(i).get();
+    for(int j = 0; j < r.size(); j++) {
+      records.push_back(r.at(j));
+    }
+  }
+  
+  end = system_clock::now();
+  
+  duration<double> elapsed_seconds = end - start;
+  
+  double secs = elapsed_seconds.count();
+  
+  cout << "Write Parallel [" << numberOfThreads << "] " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction)/secs) << " ops/s" << endl;
+  
+  return records;
+};
+
+void ReadInternal(vector<TestData> testData, int itemsPerTransaction, int numberOfTransactions, MDB_env* env) {
+  int rc;
+  MDB_val key, data;
   MDB_txn *txn;
   MDB_dbi dbi;
 
   rc = mdb_txn_begin(env, NULL, 0, &txn);
   rc = mdb_open(txn, NULL, 0, &dbi);
     
-  for(int i = 0; i < dataItems.size(); i++) {
-    TestData item = dataItems.at(i);
+  for(int i = 0; i < testData.size(); i++) {
+    TestData item = testData.at(i);
     
     key.mv_size = sizeof(int);
     key.mv_data = &item.Id;
@@ -224,6 +302,24 @@ vector<PerformanceRecord> Read(vector<TestData> dataItems) {
     
   rc = mdb_txn_commit(txn);
   mdb_close(env, dbi);
+}
+
+vector<PerformanceRecord> Read(vector<TestData> testData, int itemsPerTransaction, int numberOfTransactions) {
+  vector<PerformanceRecord> records;
+  
+  int rc;
+  MDB_val key, data;
+
+  MDB_stat mst;
+  MDB_cursor *cursor;
+  char sval[87 * 1024];
+
+  MDB_env *env = StorageEnvironment(false);
+
+  time_point<system_clock> start, end;
+  start = system_clock::now();
+  
+  ReadInternal(testData, itemsPerTransaction, numberOfTransactions, env);
   
   end = system_clock::now();
   
@@ -233,71 +329,116 @@ vector<PerformanceRecord> Read(vector<TestData> dataItems) {
   
   PerformanceRecord r;
   r.Duration = secs * 1000; // in miliseconds
-  r.ProcessedItems = dataItems.size();
+  r.ProcessedItems = testData.size();
   r.Time = chrono::system_clock::to_time_t(end);
   
   records.push_back(r);
   
   mdb_env_close(env);
   
-  cout << "Read " << dataItems.size() << " items in " << secs << " sec, " << dataItems.size()/secs << " ops/s" << endl;
+  cout << "Read " << testData.size() << " items in " << secs << " sec, " << (long)(testData.size()/secs) << " ops/s" << endl;
   
   return records;
 };
 
-void ReadParallel(vector<TestData> dataItems, int numberOfThreads, int itemsPerTransaction, int numberOfTransactions) {
+vector<PerformanceRecord> ReadParallel(vector<TestData> testData, int itemsPerTransaction, int numberOfTransactions, int numberOfThreads) {
   vector<PerformanceRecord> records;
-  
+
+  MDB_stat mst;
+  MDB_cursor *cursor;
+  char sval[87 * 1024];
+
   MDB_env *env = StorageEnvironment(false);
+  
+  time_point<system_clock> start, end;
+  start = system_clock::now();
+  
   vector<thread> threads(numberOfThreads);
   
-  int part = dataItems.size() / numberOfThreads;
-  
-  for(int i=0; i < numberOfThreads;i++){
-  
-    vector<TestData>::const_iterator start = dataItems.begin() + (i * part);
-    vector<TestData>::const_iterator end = dataItems.begin() + (i * part) + part;
-    vector<TestData> itemsToRead(start, end);
-    
-    threads.at(i) = thread(Read, itemsToRead);
+  for(int i = 0; i < numberOfThreads; i++) {
+    threads.at(i) = thread(ReadInternal, testData, itemsPerTransaction, numberOfTransactions, env);
   }
   
-}
+  for(int i = 0; i < numberOfThreads; i++) {
+    threads.at(i).join();
+  }
+  
+  end = system_clock::now();
+  
+  duration<double> elapsed_seconds = end - start;
+  
+  double secs = elapsed_seconds.count();
+  
+  PerformanceRecord r;
+  r.Duration = elapsed_seconds.count() * 1000; // in milliseconds
+  r.ProcessedItems = numberOfTransactions * itemsPerTransaction * numberOfThreads;
+  r.Time = chrono::system_clock::to_time_t(end);
+  
+  records.push_back(r);
+  
+  cout << "Read Parallel [" << numberOfThreads << "] " << numberOfTransactions * itemsPerTransaction * numberOfThreads << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction * numberOfThreads)/secs) << " ops/s" << endl;
+  
+  return records;
+};
 
 int main(int argc,char * argv[])
 {
-  
   srand(time(NULL));
-
-  int writeTransactions = 1 * 1000;
+  
+  int writeTransactions = 10 * 10;
   int itemsPerTransaction = 100;
   int readItems = writeTransactions * itemsPerTransaction;
-
+  
   vector<TestData> sequentialIds = InitSequentialNumbers(readItems, 128, 128);
   vector<TestData> randomIds = InitRandomNumbers(readItems, 128, 128);
-
+  
   vector<TestData> sequentialIdsLarge = InitSequentialNumbers(readItems, 512, 87 * 1024);
   vector<TestData> randomIdsLarge = InitRandomNumbers(readItems, 512, 87 * 1024);
-
+  
   vector<PerformanceRecord> records = Write(sequentialIds, itemsPerTransaction, writeTransactions);
   WritePerfData("WriteSeq", records);
-  records = Read(sequentialIds);
+  
+  records = WriteParallel(sequentialIds, itemsPerTransaction, writeTransactions, 2);
+  WritePerfData("WriteSeq_Parallel_2", records);
+  
+  records = WriteParallel(sequentialIds, itemsPerTransaction, writeTransactions, 4);
+  WritePerfData("WriteSeq_Parallel_4", records);
+  
+  records = WriteParallel(sequentialIds, itemsPerTransaction, writeTransactions, 8);
+  WritePerfData("WriteSeq_Parallel_8", records);
+  
+  records = WriteParallel(sequentialIds, itemsPerTransaction, writeTransactions, 16);
+  WritePerfData("WriteSeq_Parallel_16", records);
+  
+  records = Read(sequentialIds, itemsPerTransaction, writeTransactions);
   WritePerfData("ReadSeq", records);
+  
+  records = ReadParallel(sequentialIds, itemsPerTransaction, writeTransactions, 2);
+  WritePerfData("ReadSeq_Parallel_2", records);
+  
+  records = ReadParallel(sequentialIds, itemsPerTransaction, writeTransactions, 4);
+  WritePerfData("ReadSeq_Parallel_4", records);
+  
+  records = ReadParallel(sequentialIds, itemsPerTransaction, writeTransactions, 8);
+  WritePerfData("ReadSeq_Parallel_8", records);
+  
+  records = ReadParallel(sequentialIds, itemsPerTransaction, writeTransactions, 16);
+  WritePerfData("ReadSeq_Parallel_16", records);
   
   records = Write(randomIds, itemsPerTransaction, writeTransactions);
   WritePerfData("WriteRandom", records);
-  records = Read(randomIds);
+  records = Read(randomIds, itemsPerTransaction, writeTransactions);
   WritePerfData("ReadRandom", records);
-
+  
   records = Write(sequentialIdsLarge, itemsPerTransaction, writeTransactions);
   WritePerfData("WriteLargeSeq", records);
-  records = Read(sequentialIdsLarge);
+  records = Read(sequentialIdsLarge, itemsPerTransaction, writeTransactions);
   WritePerfData("ReadLargeSeq", records);
-
+  
   records = Write(randomIdsLarge, itemsPerTransaction, writeTransactions);
   WritePerfData("WriteLargeRandom", records);;
-  records = Read(randomIdsLarge);
+  records = Read(randomIdsLarge, itemsPerTransaction, writeTransactions);
   WritePerfData("ReadLargeRandom", records);
-
-  return 0;
+ 
+ return 0;
 }

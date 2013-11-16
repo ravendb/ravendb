@@ -60,9 +60,10 @@ namespace Voron.Tests.Bugs
 		public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
 		{
 			var ids = ReadIds("data.txt");
-            StopDatabase();
-            _options.Dispose();
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath("test.data")))
+            //StopDatabase();
+            //_options.Dispose();
+			//using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath("test.data")))
+			var env = Env;
 			{
 				var rand = new Random();
 				var testBuffer = new byte[79];

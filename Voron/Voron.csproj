@@ -58,6 +58,7 @@
     <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />
+    <Compile Include="Impl\FileHeaders\HeaderAccessor.cs" />
     <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
     <Compile Include="Impl\FileHeaders\TreeRootHeader.cs" />
     <Compile Include="Impl\FreeSpace\StreamBitArray.cs" />

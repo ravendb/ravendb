@@ -32,6 +32,8 @@ namespace Voron.Impl
 		public int PageMinSpace { get; private set; }
 		public bool DeleteOnClose { get; set; }
 
+		public long AllocatedSize { get; protected set; }
+
 		public int PageSize
 		{
 			get { return 4096; }
