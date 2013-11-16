@@ -27,13 +27,11 @@ namespace Voron.Impl
 			_fileStream = _fileInfo.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
 			if (noData)
 			{
-				AllocatedSize = 0;
 				NumberOfAllocatedPages = 0;
 			}
 			else
 			{
-				AllocatedSize = _fileInfo.Length;
-				NumberOfAllocatedPages = AllocatedSize / PageSize;
+				NumberOfAllocatedPages = _fileInfo.Length / PageSize;
 				PagerState.Release();
 				PagerState = CreateNewPagerState();
 			}
@@ -59,8 +57,7 @@ namespace Voron.Impl
 			}
 
 			PagerState = newPager;
-			AllocatedSize = newLength;
-			NumberOfAllocatedPages = AllocatedSize / PageSize;
+			NumberOfAllocatedPages = newLength / PageSize;
 		}
 
 		private PagerState CreateNewPagerState()

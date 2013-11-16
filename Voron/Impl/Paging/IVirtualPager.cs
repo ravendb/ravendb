@@ -16,7 +16,6 @@ namespace Voron.Impl
 		bool Disposed { get; }
 
 		long NumberOfAllocatedPages { get; }
-		long AllocatedSize { get; }
 		int PageSize { get; }
 		int MaxNodeSize { get; }
 		int PageMaxSpace { get; }

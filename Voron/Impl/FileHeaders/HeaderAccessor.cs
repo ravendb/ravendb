@@ -5,80 +5,109 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace Voron.Impl.FileHeaders
 {
 	public unsafe delegate void ModifyHeaderAction(FileHeader* ptr);
 
+	public unsafe delegate T GetDataFromHeaderAction<T>(FileHeader* ptr);
+	
 	public unsafe class HeaderAccessor : IDisposable
 	{
-		private readonly IVirtualPager[] _pagers;
+		private readonly StorageEnvironment _env;
+
 		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 		private long _revision = -1;
 
+		private readonly FileHeader* _theHeader;
+		private IntPtr _headerPtr;
+
+		private static string[] _headerFileNames = new[]
+		{
+			"headers.one",
+			"headers.two"
+		};
+
 		public HeaderAccessor(StorageEnvironment env)
 		{
-			_pagers = new IVirtualPager[2]
-				{
-					env.Options.HeaderPagers.Item1,
-					env.Options.HeaderPagers.Item2
-				};
+			this._env = env;
+			
+			_headerPtr = Marshal.AllocHGlobal(sizeof(FileHeader));
+			_theHeader = (FileHeader*)_headerPtr.ToPointer();
 		}
 
 		public bool Initialize()
 		{
-			Debug.Assert(_pagers[0].AllocatedSize == _pagers[1].AllocatedSize);
-
-			var @new = _pagers[0].AllocatedSize == 0 && _pagers[1].AllocatedSize == 0;
-
-			foreach (var pager in _pagers)
+			var headers = stackalloc FileHeader[2];
+			var f1 = headers;
+			var f2 = headers + sizeof(FileHeader);
+			if (_env.Options.ReadHeader(_headerFileNames[0], f1) == false &&
+				_env.Options.ReadHeader(_headerFileNames[1], f2) == false)
 			{
-				if (@new)
-					pager.AllocateMorePages(null, sizeof(FileHeader));
+				// new 
+				FillInEmptyHeader(f1);
+				_env.Options.WriteHeader(_headerFileNames[0], f1);
+				_env.Options.WriteHeader(_headerFileNames[1], f2);
 
-				var header = (FileHeader*)pager.PagerState.Base;
-
-				if (@new)
-				{
-					FillInEmptyHeader(header);
-					pager.Sync();
-				}
-				else
-				{
-					if (header->MagicMarker != Constants.MagicMarker)
-						throw new InvalidDataException(
-							"The header page did not start with the magic marker, probably not a db file");
-					if (header->Version != Constants.CurrentVersion)
-						throw new InvalidDataException("This is a db file for version " + header->Version +
-													   ", which is not compatible with the current version " +
-													   Constants.CurrentVersion);
-					// TODO arek
-					//if (header->LastPageNumber >= _dataPager.NumberOfAllocatedPages)
-					//	throw new InvalidDataException("The last page number is beyond the number of allocated pages");
-					if (header->TransactionId < 0)
-						throw new InvalidDataException("The transaction number cannot be negative");
-
-					if (header->HeaderRevision > _revision)
-						_revision = header->HeaderRevision;
-				}
-
-				pager.PagerState.AddRef();
+				return true; // new
 			}
 
-			return @new;
+			if (f1->MagicMarker != Constants.MagicMarker && f2->MagicMarker != Constants.MagicMarker)
+				throw new InvalidDataException("None of the header files start with the magic marker, probably not db files");
+
+			// if one of the files is corrupted, but the other isn't, restore to the valid file
+			if (f1->MagicMarker != Constants.MagicMarker)
+			{
+				*f1 = *f2;
+			}
+			if (f2->MagicMarker != Constants.MagicMarker)
+			{
+				*f2 = *f1;
+			}
+
+			if (f1->Version != Constants.CurrentVersion)
+				throw new InvalidDataException("This is a db file for version " + f1->Version + ", which is not compatible with the current version " + Constants.CurrentVersion);
+
+			if (f1->TransactionId < 0)
+				throw new InvalidDataException("The transaction number cannot be negative");
+
+
+			if (f1->HeaderRevision > f2->HeaderRevision)
+			{
+				*_theHeader = *f1;
+			}
+			else
+			{
+				*_theHeader = *f2;
+			}
+			_revision = _theHeader->HeaderRevision;
+			return false;
 		}
 
-		public FileHeader* Get()
+
+		public FileHeader CopyHeader()
 		{
 			_locker.EnterReadLock();
 			try
 			{
-				var header = (FileHeader*) _pagers[_revision & 1].PagerState.Base;
+				return *_theHeader;
+			}
+			finally
+			{
+				_locker.ExitReadLock();
+			}
+		}
 
-				return header;
+
+		public T Get<T>(GetDataFromHeaderAction<T> action)
+		{
+			_locker.EnterReadLock();
+			try
+			{
+				return action(_theHeader);
 			}
 			finally
 			{
@@ -91,21 +120,16 @@ namespace Voron.Impl.FileHeaders
 			_locker.EnterWriteLock();
 			try
 			{
-				var lastModified = _pagers[_revision & 1].PagerState.Base;
+
+				modifyAction(_theHeader);
 
 				_revision++;
+				_theHeader->HeaderRevision = _revision;
 
-				var pager = _pagers[_revision & 1];
-				var headerPtr =  pager.PagerState.Base;
-				var header = (FileHeader*) headerPtr;
+				var file = _headerFileNames[_revision & 1];
 
-				NativeMethods.memcpy(headerPtr, lastModified, sizeof(FileHeader));
+				_env.Options.WriteHeader(file, _theHeader);
 
-				modifyAction(header);
-
-				header->HeaderRevision = _revision;
-
-				pager.Sync();
 			}
 			finally
 			{
@@ -133,9 +157,10 @@ namespace Voron.Impl.FileHeaders
 
 		public void Dispose()
 		{
-			foreach (var pager in _pagers)
+			if (_headerPtr != IntPtr.Zero)
 			{
-				pager.PagerState.Release();
+				Marshal.FreeHGlobal(_headerPtr);
+				_headerPtr = IntPtr.Zero;
 			}
 		}
 	}

@@ -14,8 +14,7 @@ namespace Voron.Impl
 		{
 			_ptr = Marshal.AllocHGlobal(data.Length);
 			_base = (byte*)_ptr.ToPointer();
-			AllocatedSize = data.Length;
-			NumberOfAllocatedPages = AllocatedSize / PageSize;
+			NumberOfAllocatedPages = data.Length / PageSize;
 			PagerState.Release();
 			PagerState = new PagerState
 			{
@@ -33,7 +32,6 @@ namespace Voron.Impl
 		{
 			_ptr = Marshal.AllocHGlobal(MinIncreaseSize);
 			_base = (byte*)_ptr.ToPointer();
-			AllocatedSize = 0;
 			NumberOfAllocatedPages = 0;
 			PagerState.Release();
 			PagerState = new PagerState
@@ -82,15 +80,14 @@ namespace Voron.Impl
 
 		public override void AllocateMorePages(Transaction tx, long newLength)
 		{
-			if (newLength < AllocatedSize)
+			var oldSize = NumberOfAllocatedPages * PageSize;
+			if (newLength < oldSize)
 				throw new ArgumentException("Cannot set the legnth to less than the current length");
-		    if (newLength == AllocatedSize)
+			if (newLength == oldSize)
 		        return; // nothing to do
 
-			var oldSize = AllocatedSize;
-			AllocatedSize = newLength;
-			NumberOfAllocatedPages = AllocatedSize / PageSize;
-			var newPtr = Marshal.AllocHGlobal(new IntPtr(AllocatedSize));
+			NumberOfAllocatedPages = newLength / PageSize;
+			var newPtr = Marshal.AllocHGlobal(new IntPtr(newLength));
 			var newBase = (byte*)newPtr.ToPointer();
 			NativeMethods.memcpy(newBase, _base, new IntPtr(oldSize));
 			_base = newBase;

@@ -14,9 +14,18 @@ namespace Voron.Impl
 	public static unsafe class NativeFileMethods
 	{
 		[DllImport("kernel32.dll", SetLastError = true)]
-		public static extern bool WriteFile(IntPtr hFile, byte* lpBuffer, uint nNumberOfBytesToWrite,
-		                                    out uint lpNumberOfBytesWritten, [In] ref NativeOverlapped lpOverlapped);
+		public static extern bool WriteFile(SafeFileHandle hFile, byte* lpBuffer, int nNumberOfBytesToWrite,
+		                                    out int lpNumberOfBytesWritten, NativeOverlapped* lpOverlapped);
 
+
+		[DllImport(@"kernel32.dll", SetLastError = true)]
+		public static extern bool ReadFile(
+			SafeFileHandle hFile,
+			byte* pBuffer,
+			int numBytesToRead,
+			out int pNumberOfBytesRead,
+			NativeOverlapped* lpOverlapped
+			);
 
 		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
 		public static extern SafeFileHandle CreateFile(string lpFileName,
@@ -36,7 +45,7 @@ namespace Voron.Impl
 		                                         [Out] out int lpDistanceToMoveHigh, [In] NativeFileMoveMethod dwMoveMethod);
 
 		[DllImport("kernel32.dll")]
-		public static extern bool FlushFileBuffers(IntPtr hFile);
+		public static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
 		public static void SetFileLength(IntPtr fileHandle, long length)
 		{

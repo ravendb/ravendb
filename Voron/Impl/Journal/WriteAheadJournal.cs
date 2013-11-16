@@ -87,7 +87,7 @@ namespace Voron.Impl.Journal
 			// fashion on db startup
 			requireHeaderUpdate = false;
 
-			var logInfo = _headerAccessor.Get()->Journal;
+			var logInfo = _headerAccessor.Get(ptr => ptr->Journal);
 
 			lastTxHeader = null;
 
@@ -146,7 +146,7 @@ namespace Voron.Impl.Journal
 						header->Journal.CurrentJournal = Files.Count - 1;
 					});
 
-				logInfo = _headerAccessor.Get()->Journal;
+				logInfo = _headerAccessor.Get(ptr => ptr->Journal);
 
                 // we want to check that we cleanup newer log files, since everything from
                 // the current file is considered corrupted
@@ -252,10 +252,10 @@ namespace Voron.Impl.Journal
 
 		public JournalInfo GetCurrentJournalInfo()
 		{
-			return _headerAccessor.Get()->Journal;
+			return _headerAccessor.Get(ptr => ptr->Journal);
 		}
 
-		public List<LogSnapshot> GetSnapshots()
+		public List<JournalSnapshot> GetSnapshots()
 		{
 			return Files.Select(x => x.GetSnapshot()).ToList();
 		}
@@ -271,7 +271,7 @@ namespace Voron.Impl.Journal
 
 				using (var tx = _env.NewTransaction(TransactionFlags.Read))
 				{
-					var journalInfo = _headerAccessor.Get()->Journal;
+					var journalInfo = _headerAccessor.Get(ptr => ptr->Journal);
 
 					var lastSyncedLog = journalInfo.LastSyncedJournal;
 					var lastSyncedLogPage = journalInfo.LastSyncedJournalPage;
@@ -319,7 +319,7 @@ namespace Voron.Impl.Journal
 						_jrnls = _waj.Files;
                         if(_jrnls.Count == 0)
                             return; // nothing to do
-						var journalInfo = _waj._headerAccessor.Get()->Journal;
+						var journalInfo = _waj._headerAccessor.Get(ptr => ptr->Journal);
 
 						_lastSyncedLog = journalInfo.LastSyncedJournal;
 						_lastSyncedPage = journalInfo.LastSyncedJournalPage;

@@ -81,7 +81,6 @@ namespace Voron
 
 		private unsafe void LoadExistingDatabase()
 		{
-			
 			TransactionHeader* header;
 			bool hadIntegrityIssues;
 			_journal.RecoverDatabase(out header,out hadIntegrityIssues);
@@ -94,19 +93,19 @@ namespace Voron
 			}
 
 
-			var entry = _headerAccessor.Get();
-			var nextPageNumber = (header == null ? entry->LastPageNumber : header->LastPageNumber) + 1;
+			var entry = _headerAccessor.CopyHeader();
+			var nextPageNumber = (header == null ? entry.LastPageNumber : header->LastPageNumber) + 1;
 			State = new StorageEnvironmentState(null, null, nextPageNumber)
 			{
 				NextPageNumber = nextPageNumber
 			};
 
-			_transactionsCounter = (header == null ? entry->TransactionId : header->TransactionId);
+			_transactionsCounter = (header == null ? entry.TransactionId : header->TransactionId);
 
 			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var root = Tree.Open(tx, _sliceComparer, header == null ? &entry->Root : &header->Root);
-				var freeSpace = Tree.Open(tx, _sliceComparer, header == null ? &entry->FreeSpace : &header->FreeSpace);
+				var root = Tree.Open(tx, _sliceComparer, header == null ? &entry.Root : &header->Root);
+				var freeSpace = Tree.Open(tx, _sliceComparer, header == null ? &entry.FreeSpace : &header->FreeSpace);
 
 				tx.UpdateRootsIfNeeded(root, freeSpace);
 				tx.Commit();

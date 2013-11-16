@@ -34,7 +34,7 @@ namespace Voron.Impl.Backup
 
             using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
             {
-				backupInfo = env.HeaderAccessor.Get()->IncrementalBackup;
+				backupInfo = env.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
 
                 if (env.Journal.CurrentFile != null)
                 {

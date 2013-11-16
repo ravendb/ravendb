@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Microsoft.Win32.SafeHandles;
 using Voron.Trees;
 
 namespace Voron.Impl
@@ -13,39 +14,36 @@ namespace Voron.Impl
     public unsafe class FilePager : AbstractPager
     {
         private readonly FileStream _fileStream;
-        private readonly IntPtr _fileHandle;
         private readonly FileInfo _fileInfo;
+	    private SafeFileHandle _safeFileHandle;
 
-        public FilePager(string file)
+	    public FilePager(string file)
         {
             _fileInfo = new FileInfo(file);
 
             var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
 
-            var safeHandle = NativeFileMethods.CreateFile(file,
-                                                          NativeFileAccess.GenericRead | NativeFileAccess.GenericWrite,
-                                                          NativeFileShare.Read, IntPtr.Zero,
-                                                          NativeFileCreationDisposition.OpenAlways,
-                                                          NativeFileAttributes.Write_Through | NativeFileAttributes.NoBuffering,
-                                                          IntPtr.Zero);
+            _safeFileHandle = NativeFileMethods.CreateFile(file,
+	            NativeFileAccess.GenericRead | NativeFileAccess.GenericWrite,
+	            NativeFileShare.Read, IntPtr.Zero,
+	            NativeFileCreationDisposition.OpenAlways,
+	            NativeFileAttributes.Write_Through | NativeFileAttributes.NoBuffering,
+	            IntPtr.Zero);
 
-            if (safeHandle.IsInvalid)
+            if (_safeFileHandle.IsInvalid)
             {
                 throw new Win32Exception();
             }
 
-            _fileHandle = safeHandle.DangerousGetHandle();
-            _fileStream = new FileStream(safeHandle, FileAccess.ReadWrite);
+            _fileStream = new FileStream(_safeFileHandle, FileAccess.ReadWrite);
 
             if (noData)
             {
-	            AllocatedSize = 0;
                 NumberOfAllocatedPages = 0;
             }
             else
             {
-	            AllocatedSize = _fileInfo.Length;
-				NumberOfAllocatedPages = AllocatedSize / PageSize;
+				NumberOfAllocatedPages = _fileInfo.Length / PageSize;
 	            PagerState.Release();
                 PagerState = CreateNewPagerState();
             }
@@ -84,8 +82,7 @@ namespace Voron.Impl
             }
 
             PagerState = newPager;
-	        AllocatedSize = newLength;
-            NumberOfAllocatedPages = AllocatedSize / PageSize;
+            NumberOfAllocatedPages = newLength / PageSize;
         }
 
         private PagerState CreateNewPagerState()
@@ -145,25 +142,34 @@ namespace Voron.Impl
                 
             }
             var position = pagePosition * PageSize;
-            var toWrite = (uint)(pagesToWrite * PageSize);
+            var toWrite = pagesToWrite * PageSize;
 
-            var nativeOverlapped = new NativeOverlapped()
+            var overlapped = new Overlapped()
             {
                 OffsetLow = (int)(position & 0xffffffff),
                 OffsetHigh = (int)(position >> 32),
             };
 
-            var startWrite = start.Base;
-            while (toWrite != 0)
-            {
-                uint written;
-                if (NativeFileMethods.WriteFile(_fileHandle, startWrite, toWrite, out written, ref nativeOverlapped) == false)
-                {
-                    throw new Win32Exception();
-                }
-                toWrite -= written;
-                startWrite += written;
-            }
+	        var nativeOverlapped = overlapped.Pack(null, null);
+	        try
+	        {
+				var startWrite = start.Base;
+				while (toWrite != 0)
+				{
+					int written;
+					if (NativeFileMethods.WriteFile(_safeFileHandle, startWrite, toWrite, out written, nativeOverlapped) == false)
+					{
+						throw new Win32Exception();
+					}
+					toWrite -= written;
+					startWrite += written;
+				}
+	        }
+	        finally
+	        {
+		        Overlapped.Unpack(nativeOverlapped);
+				Overlapped.Free(nativeOverlapped);
+	        }
         }
 
         public override void Dispose()

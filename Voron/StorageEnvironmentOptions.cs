@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
+using System.IO.MemoryMappedFiles;
+using System.Runtime.InteropServices;
 using Voron.Impl;
+using Voron.Impl.FileHeaders;
 using Voron.Util;
 
 namespace Voron
@@ -40,8 +44,6 @@ namespace Voron
         public abstract IVirtualPager DataPager { get; }
 
         public abstract IVirtualPager ScratchPager { get; }
-
-		public abstract Tuple<IVirtualPager, IVirtualPager> HeaderPagers { get; }
 
 	    public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
 
@@ -91,29 +93,21 @@ namespace Voron
             private readonly string _basePath;
             private readonly Lazy<IVirtualPager> _dataPager;
             private readonly Lazy<IVirtualPager> _scratchPager;
-			private readonly Tuple<IVirtualPager, IVirtualPager> _headerPagers;
 
             private readonly ConcurrentDictionary<string, Lazy<IVirtualPager>> _journals =
                 new ConcurrentDictionary<string, Lazy<IVirtualPager>>(StringComparer.OrdinalIgnoreCase);
+
+
+			private readonly Dictionary<string, Lazy<IVirtualPager>> _headers =
+				new Dictionary<string, Lazy<IVirtualPager>>(StringComparer.OrdinalIgnoreCase);
+
 
             public DirectoryStorageEnvironmentOptions(string basePath)
             {
                 _basePath = Path.GetFullPath(basePath);
 				_dataPager = new Lazy<IVirtualPager>(() => new FilePager(Path.Combine(_basePath, "db.voron")));
                 _scratchPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(Path.Combine(_basePath, "scratch.tmp")));
-	            _headerPagers =
-		            new Tuple<IVirtualPager, IVirtualPager>(CreateHeaderPager("header.one"), CreateHeaderPager("header.two"));
             }
-
-			private IVirtualPager CreateHeaderPager(string headerName)
-			{
-				if (Directory.Exists(_basePath) == false)
-				{
-					Directory.CreateDirectory(_basePath);
-				}
-
-				return new MemoryMapPager(Path.Combine(_basePath, headerName));
-			}
 
             public override IVirtualPager DataPager
             {
@@ -127,11 +121,6 @@ namespace Voron
             {
                 get { return _scratchPager.Value; }
             }
-
-			public override Tuple<IVirtualPager, IVirtualPager> HeaderPagers
-			{
-				get { return _headerPagers; }
-			}
 
             public override IVirtualPager CreateJournalPager(long number)
             {
@@ -164,9 +153,6 @@ namespace Voron
                     if (journal.Value.IsValueCreated)
                         journal.Value.Value.Dispose();
                 }
-
-				_headerPagers.Item1.Dispose();
-				_headerPagers.Item2.Dispose();
             }
 
 	        public override bool TryDeleteJournalPager(long number)
@@ -183,6 +169,48 @@ namespace Voron
 		        File.Delete(file);
 		        return true;
 	        }
+
+	        public unsafe override bool ReadHeader(string filename, FileHeader* header)
+	        {
+		        var path = Path.Combine(_basePath, filename);
+		        if (File.Exists(path) == false)
+		        {
+			        return false;
+		        }
+		        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+		        {
+			        var ptr = (byte*) header;
+			        int remaining = sizeof (FileHeader);
+			        while (remaining > 0)
+			        {
+						int read;
+						if (NativeFileMethods.ReadFile(fs.SafeFileHandle, ptr, remaining, out read, null) == false)
+							throw new Win32Exception();
+				        ptr += read;
+				        remaining -= read;
+			        }
+			        return true;
+		        }
+	        }
+
+	        public override unsafe void WriteHeader(string filename, FileHeader* header)
+	        {
+				var path = Path.Combine(_basePath, filename);
+				using (var fs = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.Read))
+				{
+					var ptr = (byte*)header;
+					int remaining = sizeof(FileHeader);
+					while (remaining > 0)
+					{
+						int read;
+						if (NativeFileMethods.WriteFile(fs.SafeFileHandle, ptr, remaining, out read, null) == false)
+							throw new Win32Exception();
+						ptr += read;
+						remaining -= read;
+					}
+					NativeFileMethods.FlushFileBuffers(fs.SafeFileHandle);
+				}
+	        }
         }
 
         public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
@@ -192,15 +220,15 @@ namespace Voron
             private readonly PureMemoryPager _scratchPager;
             private Dictionary<string, IVirtualPager> _logs =
                 new Dictionary<string, IVirtualPager>(StringComparer.OrdinalIgnoreCase);
-			private readonly Tuple<IVirtualPager, IVirtualPager> _headerPagers;
+
+	        private Dictionary<string, IntPtr> _headers =
+		        new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
 
 
             public PureMemoryStorageEnvironmentOptions()
             {
                 _dataPager = new PureMemoryPager();
                 _scratchPager = new PureMemoryPager();
-
-	            _headerPagers = new Tuple<IVirtualPager, IVirtualPager>(new PureMemoryPager(), new PureMemoryPager());
             }
 
             public override IVirtualPager DataPager
@@ -212,11 +240,6 @@ namespace Voron
             {
                 get { return _scratchPager; }
             }
-
-			public override Tuple<IVirtualPager, IVirtualPager> HeaderPagers
-			{
-				get { return _headerPagers; }
-			}
 
             public override IVirtualPager CreateJournalPager(long number)
             {
@@ -241,8 +264,10 @@ namespace Voron
                     virtualPager.Value.Dispose();
                 }
 
-				_headerPagers.Item1.Dispose();
-				_headerPagers.Item2.Dispose();
+	            foreach (var headerSpace in _headers)
+	            {
+		            Marshal.FreeHGlobal(headerSpace.Value);
+	            }
             }
 
 	        public override bool TryDeleteJournalPager(long number)
@@ -255,6 +280,28 @@ namespace Voron
 				value.Dispose();
 		        return true;
 	        }
+
+	        public unsafe override bool ReadHeader(string filename, FileHeader* header)
+	        {
+		        IntPtr ptr;
+		        if (_headers.TryGetValue(filename, out ptr) == false)
+		        {
+			        return false;
+		        }
+		        *header = *((FileHeader*) ptr.ToPointer());
+		        return true;
+	        }
+
+	        public override unsafe void WriteHeader(string filename, FileHeader* header)
+	        {
+				IntPtr ptr;
+				if (_headers.TryGetValue(filename, out ptr) == false)
+				{
+					ptr = Marshal.AllocHGlobal(sizeof(FileHeader));
+					_headers[filename] = ptr;
+				}
+		        NativeMethods.memcpy((byte*) ptr.ToPointer(), (byte*) header, sizeof (FileHeader));
+	        }
         }
 
 	    public static string JournalName(long number)
@@ -265,6 +312,11 @@ namespace Voron
         public abstract void Dispose();
 
 	    public abstract bool TryDeleteJournalPager(long number);
+
+	    public unsafe abstract bool ReadHeader(string filename, FileHeader* header);
+
+	    public unsafe abstract void WriteHeader(string filename, FileHeader* header);
+
     }
 
 }

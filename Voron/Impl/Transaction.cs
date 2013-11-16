@@ -85,7 +85,7 @@ namespace Voron.Impl
             if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
             {
                 _state = env.State;
-                _journal.GetSnapshots().ForEach(AddLogSnapshot);
+                _journal.GetSnapshots().ForEach(AddJournalSnapshot);
                 return;
             }
 
@@ -410,7 +410,7 @@ namespace Voron.Impl
         }
 
 
-		private void AddLogSnapshot(JournalSnapshot snapshot)
+		private void AddJournalSnapshot(JournalSnapshot snapshot)
         {
             if (LogSnapshots.Any(x => x.File.Number == snapshot.File.Number))
                 throw new InvalidOperationException("Cannot add a snapshot of log file with number " + snapshot.File.Number +
