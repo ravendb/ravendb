@@ -29,6 +29,7 @@ namespace Raven.Client.Document.SessionOperations
 				// With a single Id
 				var arrayOfArrays = multiLoadResult
 					.Results
+                    .Where(EnsureNotReadVetoed)
 					.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
 					.Select(values =>
 					{
@@ -70,6 +71,8 @@ namespace Raven.Client.Document.SessionOperations
 					continue;
 				}
 
+			    EnsureNotReadVetoed(result);
+
 				var values = result.Value<RavenJArray>("$values").ToArray();
 				foreach (var value in values)
 				{
@@ -79,6 +82,15 @@ namespace Raven.Client.Document.SessionOperations
 				}
 			}
 		}
+
+	    private bool EnsureNotReadVetoed(RavenJObject result)
+	    {
+            var metadata = result.Value<RavenJObject>(Constants.Metadata);
+            if (metadata != null)
+                documentSession.EnsureNotReadVetoed(metadata); // this will throw on read veto
+
+	        return true;
+	    }
 	}
 }
 #endif
