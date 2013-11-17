@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Voron.Impl.Journal;
 using Voron.Trees;
 using Voron.Util;
@@ -194,7 +195,7 @@ namespace Voron.Impl.Backup
 
                         foreach (var translation in reader.TransactionPageTranslation)
                         {
-                            var pageInJournal = translation.Value;
+                            var pageInJournal = translation.Value.JournalPos;
                             pagesToWrite[translation.Key] = () => pager.Read(pageInJournal);
                         }
                     }
@@ -228,7 +229,8 @@ namespace Voron.Impl.Backup
 
                     txw.Commit();
 
-                    env.Journal.Clear();
+
+                    throw new ExternalException("env.Journal.Clear() was here and need to be restored");
                 }
                 finally
                 {

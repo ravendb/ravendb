@@ -116,8 +116,6 @@
 			if (value == null) throw new ArgumentNullException("value");
 			if (value.Size == 0)
 				throw new ArgumentException("Cannot add empty value");
-			if (value.Size > int.MaxValue)
-				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 		}
 
 		public void MultiDelete(Slice key, Slice value, string treeName, ushort? version = null)

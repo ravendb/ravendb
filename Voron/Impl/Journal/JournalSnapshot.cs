@@ -7,5 +7,6 @@ namespace Voron.Impl.Journal
 	{
 		public long Number;
         public ImmutableDictionary<long, JournalFile.PagePosition> PageTranslationTable;
+	    public long AvailablePages;
 	}
 }

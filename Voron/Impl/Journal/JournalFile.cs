@@ -5,8 +5,10 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Trees;
@@ -18,6 +20,9 @@ namespace Voron.Impl.Journal
         private readonly IJournalWriter _journalWriter;
         private long _writePage;
         private bool _disposed;
+        private int _refs;
+        private ImmutableDictionary<long, PagePosition> _pageTranslationTable;
+        private ImmutableList<PagePosition> _unusedPages = ImmutableList<PagePosition>.Empty;
 
         private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 
@@ -25,6 +30,7 @@ namespace Voron.Impl.Journal
         {
             public long ScratchPos;
             public long JournalPos;
+            public long TransactionId;
         }
 
         public JournalFile(IJournalWriter journalWriter, long journalNumber)
@@ -73,8 +79,6 @@ namespace Voron.Impl.Journal
             get { return _journalWriter.NumberOfAllocatedPages - _writePage; }
         }
 
-        private int _refs;
-        private ImmutableDictionary<long, PagePosition> _pageTranslationTable;
 
         public ImmutableDictionary<long, PagePosition> PageTranslationTable
         {
@@ -98,23 +102,6 @@ namespace Voron.Impl.Journal
         {
             DisposeWithoutClosingPager();
             _journalWriter.Dispose();
-            if (DeleteOnClose)
-            {
-                Console.WriteLine("TODO: Delete me");
-            }
-        }
-
-        public Reader GetReader()
-        {
-            _locker.EnterReadLock();
-            try
-            {
-                return new Reader(_journalWriter.CreatePager(), _writePage);
-            }
-            finally
-            {
-                _locker.ExitReadLock();
-            }
         }
 
         public JournalSnapshot GetSnapshot()
@@ -125,16 +112,15 @@ namespace Voron.Impl.Journal
                 return new JournalSnapshot
                 {
                     Number = Number,
-                    PageTranslationTable = _pageTranslationTable
+                    AvailablePages = AvailablePages,
+                    PageTranslationTable = _pageTranslationTable,
                 };
             }
             finally
             {
                 _locker.ExitReadLock();
             }
-
         }
-
 
         public void DisposeWithoutClosingPager()
         {
@@ -144,6 +130,11 @@ namespace Voron.Impl.Journal
             GC.SuppressFinalize(this);
 
             _disposed = true;
+        }
+
+        public void ReadTransaction(long pos, TransactionHeader* txHeader)
+        {
+            _journalWriter.Read(pos, (byte*) txHeader, sizeof (TransactionHeader));
         }
 
         public Task Write(Transaction tx, int numberOfPages)
@@ -157,6 +148,7 @@ namespace Voron.Impl.Journal
             try
             {
                 var ptt = _pageTranslationTable;
+                var unused = _unusedPages;
                 writePagePos = _writePage;
 
                 for (int index = 0; index < txPages.Count; index++)
@@ -168,22 +160,29 @@ namespace Voron.Impl.Journal
                     }
                     else
                     {
-                        ptt = ptt.SetItem(((PageHeader*)txPage.Pointer)->PageNumber, new PagePosition
+                        var pageNumber = ((PageHeader*) txPage.Pointer)->PageNumber;
+                        PagePosition value;
+                        if (ptt.TryGetValue(pageNumber, out value))
+                        {
+                            unused = unused.Add(value);
+                        }
+                        ptt = ptt.SetItem(pageNumber, new PagePosition
                         {
                             ScratchPos = txPage.PositionInScratchBuffer,
-                            JournalPos = writePagePos + index
+                            JournalPos = writePagePos + index,
+                            TransactionId = tx.Id
                         });
                         for (int i = 0; i < txPage.NumberOfPages; i++)
                         {
-                            pages[pagesCounter++] = txPage.Pointer + (i * AbstractPager.PageSize);
+                            pages[pagesCounter++] = txPage.Pointer + (i*AbstractPager.PageSize);
                         }
                     }
                 }
                 Debug.Assert(pagesCounter == numberOfPages);
 
-
                 _writePage += numberOfPages;
                 _pageTranslationTable = ptt;
+                _unusedPages = unused;
             }
             finally
             {
@@ -199,51 +198,27 @@ namespace Voron.Impl.Journal
             _pageTranslationTable = pageTranslationTable;
         }
 
-        public class Reader : IDisposable
+        public IEnumerable<long> UnusedScratchPages
         {
-            private readonly IVirtualPager _pager;
-            private readonly long _lastWritePos;
-            private ImmutableDictionary<long, long> _pageTranslationTable = ImmutableDictionary<long, long>.Empty;
-
-            public bool RequireHeaderUpdate { get; private set; }
-
-            public Reader(IVirtualPager pager, long lastWritePos)
-            {
-                _pager = pager;
-                _lastWritePos = lastWritePos;
-            }
-
-            public Page ReadPage(long pageNumber)
-            {
-                long logPageNumber;
-
-                if (_pageTranslationTable.TryGetValue(pageNumber, out logPageNumber))
-                    return _pager.Read(logPageNumber);
-
-                return null;
-            }
-
-
-            public void DeleteOnClose()
-            {
-                _pager.DeleteOnClose = true;
-            }
-
-            public long LastWritePos
-            {
-                get { return _lastWritePos; }
-            }
-
-            public IVirtualPager Pager { get { return _pager; } }
-
-            public TransactionHeader* LastTransactionHeader;
-
-            public void Dispose()
-            {
-                _pager.Dispose();
-            }
+            get { return _unusedPages.Select(x => x.ScratchPos); }
         }
 
-        public bool DeleteOnClose { get; set; }
+        public bool DeleteOnClose;
+
+        public void FreeScratchPagesOlderThan(StorageEnvironment env, long oldestActiveTransaction)
+        {
+            var unusedAndFree = _unusedPages.FindAll(position => position.TransactionId < oldestActiveTransaction);
+            _unusedPages = _unusedPages.RemoveRange(unusedAndFree);
+            foreach (var unusedScratchPage in unusedAndFree)
+            {
+                env.ScratchBufferPool.Free(unusedScratchPage.ScratchPos);
+            }
+            var unusedPages = _pageTranslationTable.Where(x => x.Value.TransactionId < oldestActiveTransaction).ToList();
+            _pageTranslationTable = _pageTranslationTable.RemoveRange(unusedPages.Select(x => x.Key));
+            foreach (var unusedScratchPage in unusedPages)
+            {
+                env.ScratchBufferPool.Free(unusedScratchPage.Value.ScratchPos);
+            }
+        }
     }
 }

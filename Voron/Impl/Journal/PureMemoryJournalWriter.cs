@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,7 +42,25 @@ namespace Voron.Impl.Journal
 			}		
 		}
 
-		public void Dispose()
+	    public void Read(long pageNumber, byte* buffer, int count)
+	    {
+	        long pos = 0;
+	        foreach (var current in _buffers)
+	        {
+	            if (pos != pageNumber)
+	            {
+	                pos += current.Size/AbstractPager.PageSize;
+                    
+	                continue;
+	            }
+
+	            NativeMethods.memcpy(buffer, current.Pointer, count);
+	            return;
+	        }
+	        throw new EndOfStreamException("Tried to read past end of journal");
+	    }
+
+	    public void Dispose()
 		{
 			foreach (var buffer in _buffers)
 			{

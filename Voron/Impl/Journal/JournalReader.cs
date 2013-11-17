@@ -13,7 +13,7 @@ namespace Voron.Impl.Journal
 		private long _lastSyncedPage;
 		private long _nextWritePage;
 		private long _readingPage;
-		private ImmutableDictionary<long, long> _transactionPageTranslation = ImmutableDictionary<long, long>.Empty;
+        private ImmutableDictionary<long, JournalFile.PagePosition> _transactionPageTranslation = ImmutableDictionary<long, JournalFile.PagePosition>.Empty;
 
 		public bool RequireHeaderUpdate { get; private set; }
 
@@ -71,7 +71,11 @@ namespace Voron.Impl.Journal
 
 				var page = _pager.Read(_readingPage);
 
-				transactionTable = transactionTable.SetItem(page.PageNumber, _readingPage);
+				transactionTable = transactionTable.SetItem(page.PageNumber, new JournalFile.PagePosition
+				{
+                    JournalPos = _readingPage,
+                    TransactionId = current->TransactionId
+				});
 
 				if (page.IsOverflow)
 				{
@@ -110,14 +114,14 @@ namespace Voron.Impl.Journal
 			return true;
 		}
 
-		public void RecoverAndValidate()
+	    public void RecoverAndValidate()
 		{
 			while (ReadOneTransaction())
 			{
 			}
 		}
 
-		public ImmutableDictionary<long, long> TransactionPageTranslation
+		public ImmutableDictionary<long, JournalFile.PagePosition> TransactionPageTranslation
 		{
 			get { return _transactionPageTranslation; }
 		}
@@ -178,7 +182,7 @@ namespace Voron.Impl.Journal
 
 		public void ClearTransactionPageTranslation()
 		{
-			_transactionPageTranslation = ImmutableDictionary<long, long>.Empty;
+			_transactionPageTranslation = ImmutableDictionary<long, JournalFile.PagePosition>.Empty;
 		}
 	}
 }

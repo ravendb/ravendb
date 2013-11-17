@@ -80,7 +80,29 @@ namespace Voron.Impl.Journal
 			return new MemoryMapPager(filename);
 		}
 
-		public Task WriteAsync(long position, byte* ptr, int length)
+	    public void Read(long pageNumber, byte* buffer, int count)
+	    {
+	        var position = pageNumber*AbstractPager.PageSize;
+	        var overlapped = new Overlapped((int) (position & 0xffffffff), (int) (position >> 32), IntPtr.Zero, null);
+	        var nativeOverlapped = overlapped.Pack(null, null);
+	        try
+	        {
+	            while (count >0)
+	            {
+                    int read;
+                    if (NativeFileMethods.ReadFile(_handle, buffer, count, out read, nativeOverlapped) == false)
+                        throw new Win32Exception();
+	                count -= read;
+	                buffer += read;
+	            }
+	        }
+	        finally
+	        {
+	            Overlapped.Free(nativeOverlapped);
+	        }
+	    }
+
+	    public Task WriteAsync(long position, byte* ptr, int length)
 		{
 			if (Disposed)
 				throw new ObjectDisposedException("Win32JournalWriter");

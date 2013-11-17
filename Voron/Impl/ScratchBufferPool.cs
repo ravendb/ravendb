@@ -18,6 +18,7 @@ namespace Voron.Impl
 	{
 		private readonly IVirtualPager _scratchPager;
 		private readonly Dictionary<long, LinkedList<long>> _freePagesBySize = new Dictionary<long, LinkedList<long>>();
+        private readonly Dictionary<long, PageFromScratchBuffer> _allocatedPages = new Dictionary<long, PageFromScratchBuffer>();
 		private long _lastUsedPage;
 
 		public ScratchBufferPool(StorageEnvironment env)
@@ -34,13 +35,15 @@ namespace Voron.Impl
 			{
 				var position = list.First.Value;
 				list.RemoveFirst();
-				return new PageFromScratchBuffer
-				{
-					Pointer = _scratchPager.PagerState.Base + position,
-					PositionInScratchBuffer = position,
-					Size = size,
-					NumberOfPages = numberOfPages
-				};
+			    var pageFromScratchBuffer = new PageFromScratchBuffer
+			    {
+			        Pointer = _scratchPager.PagerState.Base + position,
+			        PositionInScratchBuffer = position,
+			        Size = size,
+			        NumberOfPages = numberOfPages
+			    };
+                _allocatedPages.Add(position, pageFromScratchBuffer);
+			    return pageFromScratchBuffer;
 			}
 			// we don't have free pages to give out, need to allocate some
 			_scratchPager.EnsureContinuous(tx, _lastUsedPage, numberOfPages);
@@ -52,21 +55,25 @@ namespace Voron.Impl
 				Size = size,
 				NumberOfPages = numberOfPages
 			};
-
+            _allocatedPages.Add(_lastUsedPage, result);
 			_lastUsedPage += numberOfPages;
 
 			return result;
 		}
 
-		public void Free(PageFromScratchBuffer page)
+		public void Free(long page)
 		{
+		    PageFromScratchBuffer value;
+		    if (_allocatedPages.TryGetValue(page, out value) == false)
+		        throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
+		    _allocatedPages.Remove(page);
 			LinkedList<long> list;
-			if (_freePagesBySize.TryGetValue(page.Size, out list) == false)
+            if (_freePagesBySize.TryGetValue(value.Size, out list) == false)
 			{
 				list = new LinkedList<long>();
-				_freePagesBySize[page.Size] = list;
+                _freePagesBySize[value.Size] = list;
 			}
-			list.AddFirst(page.PositionInScratchBuffer);
+            list.AddFirst(value.PositionInScratchBuffer);
 		}
 
 		public void Dispose()
