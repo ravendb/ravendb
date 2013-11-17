@@ -586,14 +586,7 @@ namespace Raven.Client.Connection.Async
 			request.AddReplicationStatusHeaders(url, opUrl, replicationInformer, convention.FailoverBehavior,
 				HandleReplicationStatusChanges);
 
-			try
-			{
-				await request.WriteAsync(document.ToString());
-			}
-			catch (Exception e)
-			{
-				throw new InvalidOperationException("Unable to write to server", e);
-			}
+			await request.WriteAsync(document.ToString());
 
 			ErrorResponseException responseException;
 			try

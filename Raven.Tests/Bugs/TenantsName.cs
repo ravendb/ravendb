@@ -1,4 +1,5 @@
 using System;
+using Raven.Abstractions.Connection;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
 using Raven.Database.Config;
@@ -26,8 +27,8 @@ namespace Raven.Tests.Bugs
 				Assert.Equal("Database name can only contain only A-Z, a-z, \"_\", \".\" or \"-\" but was: " + tenantName, exception.Message);
 
 				var databaseCommands = documentStore.DatabaseCommands.ForDatabase(tenantName);
-				exception = Assert.Throws<InvalidOperationException>(() => databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject()));
-				Assert.Equal("Could not find a database named: " + tenantName, exception.Message);
+				var exception2 = Assert.Throws<ErrorResponseException>(() => databaseCommands.Put("posts/", null, new RavenJObject(), new RavenJObject()));
+				Assert.Equal("Could not find a database named: " + tenantName, exception2.Message);
 			}
 		}
 	}

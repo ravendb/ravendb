@@ -1012,7 +1012,12 @@ namespace Raven.Client.Connection
 			Response = await httpClient.SendAsync(request);
 
 			if (Response.IsSuccessStatusCode == false)
-				throw new ErrorResponseException(Response);
+			{
+				var msg = await Response.Content.ReadAsStringAsync();
+				var token = RavenJToken.Parse(msg);
+				var error = token.SelectToken("Error");
+				throw new ErrorResponseException(Response, error.ToString());
+			}
 
 			SetResponseHeaders(Response);
 		}
