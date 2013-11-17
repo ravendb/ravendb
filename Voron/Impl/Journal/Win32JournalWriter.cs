@@ -70,8 +70,8 @@ namespace Voron.Impl.Journal
 			}
 			array[pages.Length].Buffer = null;// null terminating
 
-			WriteFileGather(_handle, array, (uint)pages.Length * 4096, IntPtr.Zero, nativeOverlapped);
-			return HandleResponse(false, nativeOverlapped, tcs, allocHGlobal);
+		    WriteFileGather(_handle, array, (uint) pages.Length*4096, IntPtr.Zero, nativeOverlapped);
+			return HandleResponse(nativeOverlapped, tcs, allocHGlobal);
 		}
 
 		public long NumberOfAllocatedPages { get; private set; }
@@ -104,35 +104,17 @@ namespace Voron.Impl.Journal
 	        }
 	    }
 
-	    public Task WriteAsync(long position, byte* ptr, int length)
+		private static Task HandleResponse(NativeOverlapped* nativeOverlapped, TaskCompletionSource<object> tcs, IntPtr memoryToFree)
 		{
-			if (Disposed)
-				throw new ObjectDisposedException("Win32JournalWriter");
-
-			var tcs = new TaskCompletionSource<object>();
-
-			var nativeOverlapped = CreateNativeOverlapped(position, tcs, IntPtr.Zero, null);
-
-			int written;
-			var result = NativeFileMethods.WriteFile(_handle, ptr, length, out written, nativeOverlapped);
-
-			return HandleResponse(result, nativeOverlapped, tcs, IntPtr.Zero);
-		}
-
-		private static Task HandleResponse(bool completedSyncronously, NativeOverlapped* nativeOverlapped, TaskCompletionSource<object> tcs, IntPtr memoryToFree)
-		{
-			if (completedSyncronously)
-			{
-				Overlapped.Free(nativeOverlapped);
-				if (memoryToFree != IntPtr.Zero)
-					Marshal.FreeHGlobal(memoryToFree);
-				tcs.SetResult(null);
-				return tcs.Task;
-			}
-
 			var lastWin32Error = Marshal.GetLastWin32Error();
-			if (lastWin32Error == ErrorIOPending || lastWin32Error == ErrorSuccess)
-				return tcs.Task;
+			switch (lastWin32Error)
+			{
+                case ErrorSuccess:
+			        tcs.SetResult(null);
+			        return tcs.Task;
+			    case ErrorIOPending:
+			        return tcs.Task;
+			}
 
 			Overlapped.Free(nativeOverlapped);
 			if (memoryToFree != IntPtr.Zero)
