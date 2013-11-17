@@ -27,7 +27,7 @@ namespace Voron.Impl
 	            NativeFileAccess.GenericRead | NativeFileAccess.GenericWrite,
 	            NativeFileShare.Read, IntPtr.Zero,
 	            NativeFileCreationDisposition.OpenAlways,
-	            NativeFileAttributes.Write_Through | NativeFileAttributes.NoBuffering,
+	            NativeFileAttributes.Write_Through | NativeFileAttributes.NoBuffering ,
 	            IntPtr.Zero);
 
             if (_safeFileHandle.IsInvalid)

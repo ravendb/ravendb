@@ -38,16 +38,16 @@ namespace Voron.Impl
 		public static extern bool CloseHandle(IntPtr hObject);
 
 		[DllImport("kernel32.dll", SetLastError = true)]
-		private static extern bool SetEndOfFile(IntPtr hFile);
+		private static extern bool SetEndOfFile(SafeFileHandle hFile);
 
 		[DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern uint SetFilePointer([In] IntPtr hFile, [In] int lDistanceToMove,
+		private static extern uint SetFilePointer([In] SafeFileHandle hFile, [In] int lDistanceToMove,
 		                                         [Out] out int lpDistanceToMoveHigh, [In] NativeFileMoveMethod dwMoveMethod);
 
 		[DllImport("kernel32.dll")]
 		public static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
-		public static void SetFileLength(IntPtr fileHandle, long length)
+		public static void SetFileLength(SafeFileHandle fileHandle, long length)
 		{
 			var lo = (int)(length & 0xffffffff);
 			var hi = (int)(length >> 32);

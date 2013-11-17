@@ -36,6 +36,7 @@ namespace Voron
 		private readonly HeaderAccessor _headerAccessor;
 
 		private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+		private ScratchBufferPool _scratchBufferPool;
 
 		public TransactionMergingWriter Writer { get; private set; }
 
@@ -57,6 +58,8 @@ namespace Voron
 				_headerAccessor = new HeaderAccessor(this);
 				var isNew = _headerAccessor.Initialize();
 
+				_scratchBufferPool = new ScratchBufferPool(this);
+
 				_journal = new WriteAheadJournal(this);
 
 				if (isNew)
@@ -77,6 +80,11 @@ namespace Voron
 				Dispose();
 				throw;
 			}
+		}
+
+		public ScratchBufferPool ScratchBufferPool
+		{
+			get { return _scratchBufferPool; }
 		}
 
 		private unsafe void LoadExistingDatabase()
@@ -146,11 +154,6 @@ namespace Voron
 		public long OldestTransaction
 		{
 			get { return _activeTransactions.Keys.OrderBy(x => x).FirstOrDefault(); }
-		}
-
-		public int PageSize
-		{
-			get { return _dataPager.PageSize; }
 		}
 
 		public IEnumerable<Tree> Trees

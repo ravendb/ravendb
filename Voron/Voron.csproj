@@ -65,19 +65,24 @@
     <Compile Include="Impl\FreeSpace\FreeSpaceHandling.cs" />
     <Compile Include="Impl\FreeSpace\IFreeSpaceHandling.cs" />
     <Compile Include="Impl\FreeSpace\NoFreeSpaceHandling.cs" />
+    <Compile Include="Impl\Journal\IJournalWriter.cs" />
     <Compile Include="Impl\Journal\JournalFile.cs" />
     <Compile Include="Impl\Journal\JournalReader.cs" />
     <Compile Include="Impl\Journal\JournalInfo.cs" />
     <Compile Include="Impl\Journal\JournalSnapshot.cs" />
+    <Compile Include="Impl\Journal\PureMemoryJournalWriter.cs" />
     <Compile Include="Impl\Journal\TransactionHeader.cs" />
     <Compile Include="Impl\Journal\TransactionMarker.cs" />
+    <Compile Include="Impl\Journal\Win32JournalWriter.cs" />
     <Compile Include="Impl\Journal\WriteAheadJournal.cs" />
     <Compile Include="Impl\PagerState.cs" />
     <Compile Include="Impl\Paging\AbstractPager.cs" />
+    <Compile Include="Impl\Paging\Broken.cs" />
     <Compile Include="Impl\Paging\FilePager.cs" />
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
     <Compile Include="Impl\Paging\MemoryMappedPager.cs" />
     <Compile Include="Impl\Paging\PureMemoryPager.cs" />
+    <Compile Include="Impl\ScratchBufferPool.cs" />
     <Compile Include="Impl\SliceEqualityComparer.cs" />
     <Compile Include="Impl\SnapshotReader.cs" />
     <Compile Include="Impl\TransactionMergingWriter.cs" />
@@ -124,6 +129,7 @@
     <Compile Include="Util\Conversion\LittleEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\EndianBitConverter.cs" />
     <Compile Include="Util\TreeExtensions.cs" />
+    <Compile Include="Util\Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -3,10 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.Journal;
+using Voron.Impl.Paging;
 using Voron.Util;
 
 namespace Voron
@@ -43,13 +44,11 @@ namespace Voron
 
         public abstract IVirtualPager DataPager { get; }
 
-        public abstract IVirtualPager ScratchPager { get; }
-
 	    public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
 
 	    public int IdleFlushTimeout { get; set; }
 
-	    public abstract IVirtualPager CreateJournalPager(long number);
+	    public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
 
         protected bool Disposed;
         private long _initialLogFileSize;
@@ -92,21 +91,14 @@ namespace Voron
         {
             private readonly string _basePath;
             private readonly Lazy<IVirtualPager> _dataPager;
-            private readonly Lazy<IVirtualPager> _scratchPager;
 
-            private readonly ConcurrentDictionary<string, Lazy<IVirtualPager>> _journals =
-                new ConcurrentDictionary<string, Lazy<IVirtualPager>>(StringComparer.OrdinalIgnoreCase);
-
-
-			private readonly Dictionary<string, Lazy<IVirtualPager>> _headers =
-				new Dictionary<string, Lazy<IVirtualPager>>(StringComparer.OrdinalIgnoreCase);
-
+            private readonly ConcurrentDictionary<string, Lazy<IJournalWriter>> _journals =
+				new ConcurrentDictionary<string, Lazy<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
             public DirectoryStorageEnvironmentOptions(string basePath)
             {
                 _basePath = Path.GetFullPath(basePath);
 				_dataPager = new Lazy<IVirtualPager>(() => new FilePager(Path.Combine(_basePath, "db.voron")));
-                _scratchPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(Path.Combine(_basePath, "scratch.tmp")));
             }
 
             public override IVirtualPager DataPager
@@ -117,26 +109,12 @@ namespace Voron
                 }
             }
 
-            public override IVirtualPager ScratchPager
+            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
             {
-                get { return _scratchPager.Value; }
-            }
-
-            public override IVirtualPager CreateJournalPager(long number)
-            {
-	            var name = JournalName(number);
+	            var name = JournalName(journalNumber);
 				var path = Path.Combine(_basePath, name);
-                var orAdd = _journals.GetOrAdd(name, _ => new Lazy<IVirtualPager>(() => new FilePager(path)));
-
-				if (orAdd.Value.Disposed)
-				{
-                    var newPager = new Lazy<IVirtualPager>(() => new FilePager(path));
-					if (_journals.TryUpdate(name, newPager, orAdd) == false)
-						throw new InvalidOperationException("Could not update journal pager");
-					orAdd = newPager;
-				}
-
-                return orAdd.Value;
+                var result = _journals.GetOrAdd(name, _ => new Lazy<IJournalWriter>(() => new Win32FileJournalWriter(path, journalSize)));
+                return result.Value;
             }
 
             public override void Dispose()
@@ -146,8 +124,6 @@ namespace Voron
                 Disposed = true;
                 if (_dataPager.IsValueCreated)
                     _dataPager.Value.Dispose();
-                if(_scratchPager.IsValueCreated)
-                    _scratchPager.Value.Dispose();
                 foreach (var journal in _journals)
                 {
                     if (journal.Value.IsValueCreated)
@@ -155,11 +131,11 @@ namespace Voron
                 }
             }
 
-	        public override bool TryDeleteJournalPager(long number)
+	        public override bool TryDeleteJournal(long number)
 	        {
 		        var name = JournalName(number);
 
-	            Lazy<IVirtualPager> lazy;
+	            Lazy<IJournalWriter> lazy;
 	            if(_journals.TryRemove(name, out lazy) && lazy.IsValueCreated)
                     lazy.Value.Dispose();
 
@@ -211,15 +187,28 @@ namespace Voron
 					NativeFileMethods.FlushFileBuffers(fs.SafeFileHandle);
 				}
 	        }
+
+	        public override IVirtualPager CreateScratchPager()
+	        {
+		        return new MemoryMapPager(Path.Combine(_basePath, "scratch.buffers"), FileOptions.DeleteOnClose | (FileOptions)NativeFileAttributes.Temporary);
+	        }
+
+	        public override IVirtualPager OpenJournalPager(long journalNumber)
+	        {
+				var name = JournalName(journalNumber);
+				var path = Path.Combine(_basePath, name);
+		        if (File.Exists(path) == false)
+			        throw new InvalidOperationException("No such journal " + path);
+				return new MemoryMapPager(path);
+	        }
         }
 
         public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
             private readonly PureMemoryPager _dataPager;
 
-            private readonly PureMemoryPager _scratchPager;
-            private Dictionary<string, IVirtualPager> _logs =
-                new Dictionary<string, IVirtualPager>(StringComparer.OrdinalIgnoreCase);
+			private Dictionary<string, IJournalWriter> _logs =
+				new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
 
 	        private Dictionary<string, IntPtr> _headers =
 		        new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
@@ -228,7 +217,6 @@ namespace Voron
             public PureMemoryStorageEnvironmentOptions()
             {
                 _dataPager = new PureMemoryPager();
-                _scratchPager = new PureMemoryPager();
             }
 
             public override IVirtualPager DataPager
@@ -236,18 +224,13 @@ namespace Voron
                 get { return _dataPager; }
             }
 
-            public override IVirtualPager ScratchPager
+            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
             {
-                get { return _scratchPager; }
-            }
-
-            public override IVirtualPager CreateJournalPager(long number)
-            {
-	            var name = JournalName(number);
-                IVirtualPager value;
+	            var name = JournalName(journalNumber);
+				IJournalWriter value;
                 if (_logs.TryGetValue(name, out value))
                     return value;
-                value = new PureMemoryPager();
+                value = new PureMemoryJournalWriter(journalSize);
                 _logs[name] = value;
                 return value;
             }
@@ -257,7 +240,6 @@ namespace Voron
                 if (Disposed)
                     return;
                 Disposed = true;
-                _scratchPager.Dispose();
                 _dataPager.Dispose();
                 foreach (var virtualPager in _logs)
                 {
@@ -270,10 +252,10 @@ namespace Voron
 	            }
             }
 
-	        public override bool TryDeleteJournalPager(long number)
+	        public override bool TryDeleteJournal(long number)
 	        {
 		        var name = JournalName(number);
-		        IVirtualPager value;
+		        IJournalWriter value;
 		        if (_logs.TryGetValue(name, out value) == false)
 			        return false;
 		        _logs.Remove(name);
@@ -302,6 +284,20 @@ namespace Voron
 				}
 		        NativeMethods.memcpy((byte*) ptr.ToPointer(), (byte*) header, sizeof (FileHeader));
 	        }
+
+	        public override IVirtualPager CreateScratchPager()
+	        {
+		        return new PureMemoryPager();
+	        }
+
+	        public override IVirtualPager OpenJournalPager(long journalNumber)
+	        {
+				var name = JournalName(journalNumber);
+				IJournalWriter value;
+		        if (_logs.TryGetValue(name, out value))
+			        return value.CreatePager();
+		        throw new InvalidOperationException("No such journal " + journalNumber);
+	        }
         }
 
 	    public static string JournalName(long number)
@@ -311,12 +307,14 @@ namespace Voron
 
         public abstract void Dispose();
 
-	    public abstract bool TryDeleteJournalPager(long number);
+	    public abstract bool TryDeleteJournal(long number);
 
 	    public unsafe abstract bool ReadHeader(string filename, FileHeader* header);
 
 	    public unsafe abstract void WriteHeader(string filename, FileHeader* header);
 
-    }
+	    public abstract IVirtualPager CreateScratchPager();
 
+	    public abstract IVirtualPager OpenJournalPager(long journalNumber);
+    }
 }

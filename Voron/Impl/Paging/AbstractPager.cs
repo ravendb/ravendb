@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Voron.Trees;
+using Voron.Util;
 
 namespace Voron.Impl
 {
@@ -20,22 +21,19 @@ namespace Voron.Impl
 			_increaseSize = MinIncreaseSize;
 			MaxNodeSize = 1024;
 			Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
-			PageMaxSpace = PageSize - Constants.PageHeaderSize;
 			PageMinSpace = (int)(PageMaxSpace * 0.33);
 			PagerState = new PagerState();
 			_tempPage = Marshal.AllocHGlobal(PageSize);
 			PagerState.AddRef();
 		}
 
-		public int PageMaxSpace { get; private set; }
 		public int MaxNodeSize { get; private set; }
 		public int PageMinSpace { get; private set; }
 		public bool DeleteOnClose { get; set; }
 
-		public int PageSize
-		{
-			get { return 4096; }
-		}
+		public const int PageSize = 4096;
+		public static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
+
 
 		public long NumberOfAllocatedPages { get; protected set; }
 
@@ -46,7 +44,7 @@ namespace Voron.Impl
 				throw new InvalidOperationException("Cannot increase size of the pager");
 			}
 
-			return new Page(AcquirePagePointer(pageNumber), PageMaxSpace);
+			return new Page(AcquirePagePointer(pageNumber));
 		}
 
 		public virtual Page GetWritable(long pageNumber)
@@ -57,7 +55,7 @@ namespace Voron.Impl
 													" because number of allocated pages is " + NumberOfAllocatedPages);
 			}
 
-			return new Page(AcquirePagePointer(pageNumber), PageMaxSpace);
+			return new Page(AcquirePagePointer(pageNumber));
 		}
 
 		public abstract byte* AcquirePagePointer(long pageNumber);
@@ -121,7 +119,7 @@ namespace Voron.Impl
 		{
 			get
 			{
-				return new Page((byte*)_tempPage.ToPointer(), PageMaxSpace)
+				return new Page((byte*)_tempPage.ToPointer())
 				{
 					Upper = (ushort)PageSize,
 					Lower = (ushort)Constants.PageHeaderSize,
@@ -159,22 +157,8 @@ namespace Voron.Impl
 			var actualIncrease = Math.Min(_increaseSize, current / 4);
 
             // we then want to get the next power of two number, to get pretty file size
-            return NearestPowerOfTwo(current + actualIncrease);
+            return Utils.NearestPowerOfTwo(current + actualIncrease);
 		}
-
-
-	    public static long NearestPowerOfTwo(long v)
-	    {
-	        v--;
-	        v |= v >> 1;
-	        v |= v >> 2;
-	        v |= v >> 4;
-	        v |= v >> 8;
-	        v |= v >> 16;
-	        v++;
-	        return v;
-
-	    }
 
 	    public abstract void WriteDirect(Page start, long pagePosition, int pagesToWrite);
 

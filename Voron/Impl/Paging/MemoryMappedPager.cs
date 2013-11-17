@@ -12,19 +12,15 @@ namespace Voron.Impl
 		private readonly FileStream _fileStream;
 		private readonly FileInfo _fileInfo;
 
-		[DllImport("kernel32.dll", SetLastError = true)]
-		[return: MarshalAs(UnmanagedType.Bool)]
-		extern static bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
-
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
-		public MemoryMapPager(string file)
+		public MemoryMapPager(string file, FileOptions options = FileOptions.None)
 		{
 			_fileInfo = new FileInfo(file);
 			var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
-			_fileStream = _fileInfo.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+			_fileStream = new FileStream(_fileInfo.FullName,FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read,4096, options);
 			if (noData)
 			{
 				NumberOfAllocatedPages = 0;
@@ -97,7 +93,7 @@ namespace Voron.Impl
 			WriteDirect(page, startPage, toWrite);
 		}
 
-	    public override unsafe string ToString()
+	    public override string ToString()
 	    {
 	        return _fileInfo.Name;
 	    }

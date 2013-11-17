@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
+using Voron.Impl;
 using Xunit;
 
 namespace Voron.Tests.Journal
@@ -14,7 +15,7 @@ namespace Voron.Tests.Journal
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
 			options.ManualFlushing = true;
-			options.MaxLogFileSize = 3 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 3 * AbstractPager.PageSize;
 		}
 
 		[Fact]
