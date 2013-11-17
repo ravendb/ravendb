@@ -7,23 +7,23 @@ namespace Voron.Impl.Paging
 {
 	public class FragmentedPureMemoryPager : AbstractPager
 	{
-		private readonly PureMemoryJournalWriter.Buffer[] buffers;
+		private readonly PureMemoryJournalWriter.Buffer[] _buffers;
 
 		internal FragmentedPureMemoryPager(PureMemoryJournalWriter.Buffer[] buffers)
 		{
-			this.buffers = buffers;
-			NumberOfAllocatedPages = buffers.Sum(x => x.Size);
+			this._buffers = buffers;
+			NumberOfAllocatedPages = buffers.Sum(x => x.SizeInPages);
 		}
 
 		public override unsafe byte* AcquirePagePointer(long pageNumber)
 		{
 			long page = 0;
-			foreach (var buffer in buffers)
+			foreach (var buffer in _buffers)
 			{
-				if (page == pageNumber)
-					return buffer.Pointer;
+			    if (page + buffer.SizeInPages > pageNumber)
+			        return buffer.Pointer + ((pageNumber - page)*PageSize);
 
-				page += buffer.Size;
+				page += buffer.SizeInPages;
 			}
 			throw new InvalidOperationException("Could not find a matchin page number: " + pageNumber);
 		}

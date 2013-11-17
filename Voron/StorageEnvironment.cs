@@ -251,6 +251,9 @@ namespace Voron
 			{
 				_headerAccessor.Dispose();
 
+			    if (_scratchBufferPool != null)
+			        _scratchBufferPool.Dispose();
+
 				if (_options.OwnsPagers)
 					_options.Dispose();
 

@@ -13,7 +13,7 @@ namespace Voron.Impl.Journal
 		internal class Buffer
 		{
 			public byte* Pointer;
-			public long Size;
+			public long SizeInPages;
 			public IntPtr Handle;
 		}
 
@@ -50,7 +50,7 @@ namespace Voron.Impl.Journal
 	        {
 	            if (pos != pageNumber)
 	            {
-	                pos += current.Size/AbstractPager.PageSize;
+	                pos += current.SizeInPages;
                     
 	                continue;
 	            }
@@ -74,11 +74,11 @@ namespace Voron.Impl.Journal
 			_locker.EnterWriteLock();
 			try
 			{
-				if (position != _lastPos + 1)
+				if (position != _lastPos)
 					throw new InvalidOperationException("Journal writes must be to the next location in the journal");
 
 				var size = pages.Length * AbstractPager.PageSize;
-				_lastPos += size;
+			    _lastPos += pages.Length;
 
 				var handle = Marshal.AllocHGlobal(size);
 
@@ -86,7 +86,7 @@ namespace Voron.Impl.Journal
 				{
 					Handle = handle,
 					Pointer = (byte*)handle.ToPointer(),
-					Size = size
+					SizeInPages = pages.Length
 				};
 				_buffers.Add(buffer);
 

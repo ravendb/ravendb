@@ -77,7 +77,7 @@
     <Compile Include="Impl\Journal\WriteAheadJournal.cs" />
     <Compile Include="Impl\PagerState.cs" />
     <Compile Include="Impl\Paging\AbstractPager.cs" />
-    <Compile Include="Impl\Paging\Broken.cs" />
+    <Compile Include="Impl\Paging\FragmentedPureMemoryPager.cs" />
     <Compile Include="Impl\Paging\FilePager.cs" />
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
     <Compile Include="Impl\Paging\MemoryMappedPager.cs" />

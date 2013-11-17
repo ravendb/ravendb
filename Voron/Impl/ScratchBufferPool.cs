@@ -50,7 +50,7 @@ namespace Voron.Impl
 
 			var result = new PageFromScratchBuffer
 			{
-				Pointer = _scratchPager.PagerState.Base,
+				Pointer = _scratchPager.PagerState.Base + (_lastUsedPage * AbstractPager.PageSize),
 				PositionInScratchBuffer = _lastUsedPage,
 				Size = size,
 				NumberOfPages = numberOfPages

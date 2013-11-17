@@ -42,17 +42,19 @@ namespace Voron.Impl.FileHeaders
 		public bool Initialize()
 		{
 			var headers = stackalloc FileHeader[2];
-			var f1 = headers;
-			var f2 = headers + sizeof(FileHeader);
+			var f1 = &headers[0];
+			var f2 = &headers[1];
 			if (_env.Options.ReadHeader(_headerFileNames[0], f1) == false &&
 				_env.Options.ReadHeader(_headerFileNames[1], f2) == false)
 			{
 				// new 
 				FillInEmptyHeader(f1);
+                FillInEmptyHeader(f2);
 				_env.Options.WriteHeader(_headerFileNames[0], f1);
 				_env.Options.WriteHeader(_headerFileNames[1], f2);
 
-				return true; // new
+                NativeMethods.memcpy((byte*)_theHeader, (byte*)f1, sizeof(FileHeader));
+                return true; // new
 			}
 
 			if (f1->MagicMarker != Constants.MagicMarker && f2->MagicMarker != Constants.MagicMarker)
@@ -77,11 +79,11 @@ namespace Voron.Impl.FileHeaders
 
 			if (f1->HeaderRevision > f2->HeaderRevision)
 			{
-				*_theHeader = *f1;
+			    NativeMethods.memcpy((byte*) _theHeader, (byte*) f1, sizeof (FileHeader));
 			}
 			else
 			{
-				*_theHeader = *f2;
+                NativeMethods.memcpy((byte*)_theHeader, (byte*)f2, sizeof(FileHeader));
 			}
 			_revision = _theHeader->HeaderRevision;
 			return false;

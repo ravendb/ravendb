@@ -21,7 +21,7 @@ namespace Voron.Impl.Journal
         private long _writePage;
         private bool _disposed;
         private int _refs;
-        private ImmutableDictionary<long, PagePosition> _pageTranslationTable;
+        private ImmutableDictionary<long, PagePosition> _pageTranslationTable= ImmutableDictionary<long, PagePosition>.Empty;
         private ImmutableList<PagePosition> _unusedPages = ImmutableList<PagePosition>.Empty;
 
         private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();

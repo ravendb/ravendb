@@ -98,6 +98,10 @@ namespace Voron
             public DirectoryStorageEnvironmentOptions(string basePath)
             {
                 _basePath = Path.GetFullPath(basePath);
+                if (Directory.Exists(_basePath) == false)
+                {
+                    Directory.CreateDirectory(_basePath);
+                }
 				_dataPager = new Lazy<IVirtualPager>(() => new FilePager(Path.Combine(_basePath, "db.voron")));
             }
 
@@ -190,7 +194,7 @@ namespace Voron
 
 	        public override IVirtualPager CreateScratchPager()
 	        {
-		        return new MemoryMapPager(Path.Combine(_basePath, "scratch.buffers"), FileOptions.DeleteOnClose | (FileOptions)NativeFileAttributes.Temporary);
+                return new MemoryMapPager(Path.Combine(_basePath, "scratch.buffers"), (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
 	        }
 
 	        public override IVirtualPager OpenJournalPager(long journalNumber)
@@ -270,7 +274,7 @@ namespace Voron
 		        {
 			        return false;
 		        }
-		        *header = *((FileHeader*) ptr.ToPointer());
+		        *header = *((FileHeader*) ptr);
 		        return true;
 	        }
 
@@ -282,7 +286,7 @@ namespace Voron
 					ptr = Marshal.AllocHGlobal(sizeof(FileHeader));
 					_headers[filename] = ptr;
 				}
-		        NativeMethods.memcpy((byte*) ptr.ToPointer(), (byte*) header, sizeof (FileHeader));
+		        NativeMethods.memcpy((byte*) ptr, (byte*) header, sizeof (FileHeader));
 	        }
 
 	        public override IVirtualPager CreateScratchPager()

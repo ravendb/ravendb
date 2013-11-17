@@ -203,7 +203,6 @@ namespace Voron.Impl
 	        var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
 			_transactionPages.Add(pageFromScratchBuffer);
 
-	        var positionInScratch = _lastAllocatedPageInScratch;
             _lastAllocatedPageInScratch += numberOfPages;
 	        var page = new Page(pageFromScratchBuffer.Pointer);
 
@@ -285,8 +284,13 @@ namespace Voron.Impl
             _state.FreeSpaceRoot.State.CopyTo(&_txHeader->FreeSpace);
 
 
-	        uint crc = _transactionPages.Aggregate<PageFromScratchBuffer, uint>(0, 
-				(current, scratchBuffer) => Crc.Extend(current, scratchBuffer.Pointer, 0, scratchBuffer.NumberOfPages*AbstractPager.PageSize));
+	        uint crc = 0;
+
+            for (int i = 1; i < _transactionPages.Count; i++)
+            {
+                crc = Crc.Extend(crc, _transactionPages[i].Pointer, 0,
+                    _transactionPages[i].NumberOfPages*AbstractPager.PageSize);
+            }
 
 	        _txHeader->Crc = crc;
 
