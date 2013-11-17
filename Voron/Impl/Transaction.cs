@@ -20,7 +20,6 @@ namespace Voron.Impl
         private readonly long _id;
 
         private readonly WriteAheadJournal _journal;
-        private long _lastAllocatedPageInScratch = 1;
         private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
         private readonly HashSet<long> _dirtyPages = new HashSet<long>();
         private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
@@ -55,7 +54,7 @@ namespace Voron.Impl
         private int _allocatedPagesInTransaction;
         private int _overflowPagesInTransaction;
         private TransactionHeader* _txHeader;
-		private List<PageFromScratchBuffer> _transactionPages = new List<PageFromScratchBuffer>();
+		private readonly List<PageFromScratchBuffer> _transactionPages = new List<PageFromScratchBuffer>();
 
         public Page TempPage
         {
@@ -91,7 +90,14 @@ namespace Voron.Impl
                 return;
             }
 
+			
             _state = env.State.Clone();
+
+		    var pager = env.ScratchBufferPool.PagerState;
+		  
+		    pager.AddRef();
+
+			_releaseLogActions.Add(pager.Release);
 
             _journal.Files.ForEach(SetLogReference);
 
@@ -203,12 +209,12 @@ namespace Voron.Impl
 	        var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
 			_transactionPages.Add(pageFromScratchBuffer);
 
-            _lastAllocatedPageInScratch += numberOfPages;
-	        var page = new Page(pageFromScratchBuffer.Pointer);
+	        var page = new Page(pageFromScratchBuffer.Pointer)
+	        {
+		        PageNumber = pageNumber.Value
+	        };
 
-            page.PageNumber = pageNumber.Value;
-
-            _allocatedPagesInTransaction ++;
+	        _allocatedPagesInTransaction ++;
             if (numberOfPages > 1)
             {
                 _overflowPagesInTransaction += (numberOfPages - 1);

@@ -27,6 +27,8 @@ namespace Voron.Impl
 			_scratchPager.AllocateMorePages(null, env.Options.InitialLogFileSize);
 		}
 
+		public PagerState PagerState { get { return _scratchPager.PagerState; }}
+
 		public PageFromScratchBuffer Allocate(Transaction tx, int numberOfPages)
 		{
 			var size = Utils.NearestPowerOfTwo(numberOfPages);
