@@ -18,7 +18,12 @@ namespace Voron.Tests
 
 		public StorageEnvironment Env
 		{
-			get { return _storageEnvironment; }
+		    get
+		    {
+                if(_storageEnvironment == null)
+                    _storageEnvironment = new StorageEnvironment(_options);
+		        return _storageEnvironment;
+		    }
 		}
 
 		protected StorageTest()
@@ -26,7 +31,6 @@ namespace Voron.Tests
 			DeleteDirectory("test.data");
 			_options = StorageEnvironmentOptions.ForPath("test.data");
 			Configure(_options);
-			_storageEnvironment = new StorageEnvironment(_options);
 		}
 
 		protected void RestartDatabase()
@@ -88,7 +92,8 @@ namespace Voron.Tests
 
 		public virtual void Dispose()
 		{
-			_storageEnvironment.Dispose();
+		    if (_storageEnvironment != null)
+		        _storageEnvironment.Dispose();
 			_options.Dispose();
 			DeleteDirectory("test.data");
 

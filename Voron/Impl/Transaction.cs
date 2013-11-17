@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security;
+using System.Threading.Tasks;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
@@ -13,7 +15,7 @@ namespace Voron.Impl
     public unsafe class Transaction : IDisposable
     {
         private const int PagesTakenByHeader = 1;
-        private readonly IVirtualPager _dataPager, _scratchPager;
+        private readonly IVirtualPager _dataPager;
         private readonly StorageEnvironment _env;
         private readonly long _id;
 
@@ -24,9 +26,9 @@ namespace Voron.Impl
         private readonly HashSet<PagerState> _pagerStates = new HashSet<PagerState>();
         private readonly IFreeSpaceHandling _freeSpaceHandling;
 
-        private readonly Dictionary<long, long> _scratchPagesTable = new Dictionary<long, long>();
+		private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>();
 
-        internal readonly List<LogSnapshot> LogSnapshots = new List<LogSnapshot>();
+		internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
         private readonly List<Action> _releaseLogActions = new List<Action>();
 
         private List<string> _deletedTrees;
@@ -53,6 +55,7 @@ namespace Voron.Impl
         private int _allocatedPagesInTransaction;
         private int _overflowPagesInTransaction;
         private TransactionHeader* _txHeader;
+		private List<PageFromScratchBuffer> _transactionPages = new List<PageFromScratchBuffer>();
 
         public Page TempPage
         {
@@ -70,7 +73,6 @@ namespace Voron.Impl
             get { return _state; }
         }
 
-        public IEnumerable<KeyValuePair<long, long>> PageTranslations { get { return _scratchPagesTable; } }
 	    public bool FlushedToJournal { get; private set; }
 
 	    public Transaction(StorageEnvironment env, long id, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling)
@@ -85,13 +87,9 @@ namespace Voron.Impl
             if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
             {
                 _state = env.State;
-                _journal.GetSnapshots().ForEach(AddLogSnapshot);
+                _journal.GetSnapshots().ForEach(AddJournalSnapshot);
                 return;
             }
-
-            _scratchPager = env.Options.ScratchPager;
-            _scratchPager.PagerState.AddRef();
-            _pagerStates.Add(_scratchPager.PagerState);
 
             _state = env.State.Clone();
 
@@ -104,10 +102,10 @@ namespace Voron.Impl
 
         private void InitTransactionHeader()
         {
-            _scratchPager.EnsureContinuous(this, 0, (int) _env.Options.InitialLogFileSize / _scratchPager.PageSize);
-            var ptr = _scratchPager.GetWritable(0).Base;
-            NativeMethods.memset(ptr, 0, _scratchPager.PageSize);
-            _txHeader = (TransactionHeader*)ptr;
+	        var ptr = _env.ScratchBufferPool.Allocate(this, 1);
+			_transactionPages.Add(ptr);
+			NativeMethods.memset(ptr.Pointer, 0, AbstractPager.PageSize);
+			_txHeader = (TransactionHeader*)ptr.Pointer;
             _txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 
             _txHeader->TransactionId = _id;
@@ -156,7 +154,7 @@ namespace Voron.Impl
 
             var newPage = AllocatePage(1, p); // allocate new page in a log file but with the same number
 
-            NativeMethods.memcpy(newPage.Base, page.Base, _dataPager.PageSize);
+            NativeMethods.memcpy(newPage.Base, page.Base, AbstractPager.PageSize);
             newPage.LastSearchPosition = page.LastSearchPosition;
             newPage.LastMatch = page.LastMatch;
 
@@ -169,19 +167,21 @@ namespace Voron.Impl
             if (page != null)
                 return page;
 
-            long value;
+            PageFromScratchBuffer value;
             if (_scratchPagesTable.TryGetValue(p, out value))
             {
-                return _scratchPager.Read(value);
+                return new Page(value.Pointer);
             }
             return _journal.ReadPage(this, p) ?? _dataPager.Read(p);
         }
 
         public Page GetReadOnlyPage(long n)
         {
-            long value;
-            if (_scratchPagesTable.TryGetValue(n, out value))
-                return _scratchPager.Read(value);
+			PageFromScratchBuffer value;
+			if (_scratchPagesTable.TryGetValue(n, out value))
+			{
+				return new Page(value.Pointer);
+			}
 
             return _journal.ReadPage(this, n) ?? _dataPager.Read(n);
         }
@@ -200,11 +200,11 @@ namespace Voron.Impl
 
             Debug.Assert(pageNumber < State.NextPageNumber);
 
-            _scratchPager.EnsureContinuous(this, _lastAllocatedPageInScratch, numberOfPages);
+	        var pageFromScratchBuffer = _env.ScratchBufferPool.Allocate(this, numberOfPages);
+			_transactionPages.Add(pageFromScratchBuffer);
 
-            var positionInScratch = _lastAllocatedPageInScratch;
             _lastAllocatedPageInScratch += numberOfPages;
-            var page = _scratchPager.GetWritable(positionInScratch);
+	        var page = new Page(pageFromScratchBuffer.Pointer);
 
             page.PageNumber = pageNumber.Value;
 
@@ -214,10 +214,10 @@ namespace Voron.Impl
                 _overflowPagesInTransaction += (numberOfPages - 1);
             }
 
-            _scratchPagesTable[pageNumber.Value] = positionInScratch; 
+            _scratchPagesTable[pageNumber.Value] = pageFromScratchBuffer; 
 
             page.Lower = (ushort)Constants.PageHeaderSize;
-            page.Upper = (ushort)_dataPager.PageSize;
+            page.Upper = AbstractPager.PageSize;
             page.Dirty = true;
 
             _dirtyPages.Add(page.PageNumber);
@@ -241,10 +241,10 @@ namespace Voron.Impl
             return node->DataSize;
         }
 
-        public void Commit()
+        public Task Commit()
         {
             if (Flags != (TransactionFlags.ReadWrite) || RolledBack)
-                return; // nothing to do
+                return Task.FromResult(1); // nothing to do
 
             FlushAllMultiValues();
 
@@ -283,22 +283,35 @@ namespace Voron.Impl
             _state.Root.State.CopyTo(&_txHeader->Root);
             _state.FreeSpaceRoot.State.CopyTo(&_txHeader->FreeSpace);
 
-            var crcOffset = PagesTakenByHeader * _scratchPager.PageSize;
-            var crcCount = (_allocatedPagesInTransaction + _overflowPagesInTransaction) * _scratchPager.PageSize;
 
-            _txHeader->Crc = Crc.Value(_scratchPager.PagerState.Base, crcOffset, crcCount);
+	        uint crc = 0;
+
+            for (int i = 1; i < _transactionPages.Count; i++)
+            {
+                crc = Crc.Extend(crc, _transactionPages[i].Pointer, 0,
+                    _transactionPages[i].NumberOfPages*AbstractPager.PageSize);
+            }
+
+	        _txHeader->Crc = crc;
 
             _txHeader->TxMarker |= TransactionMarker.Commit;
 
+	        Task task;
 	        if (_allocatedPagesInTransaction + _overflowPagesInTransaction > 0) // nothing changed in this transaction
 	        {
-		        _journal.WriteToJournal(this, _allocatedPagesInTransaction + _overflowPagesInTransaction + PagesTakenByHeader);
+				task = _journal.WriteToJournal(this, _allocatedPagesInTransaction + _overflowPagesInTransaction + PagesTakenByHeader);
 		        FlushedToJournal = true;
+	        }
+			else
+	        {
+		        task = Task.FromResult(1);
 	        }
 
             _env.SetStateAfterTransactionCommit(State);
             Committed = true;
             AfterCommit(_id);
+
+	        return task;
         }
 
 
@@ -410,14 +423,13 @@ namespace Voron.Impl
         }
 
 
-        private void AddLogSnapshot(LogSnapshot snapshot)
+		private void AddJournalSnapshot(JournalSnapshot snapshot)
         {
-            if (LogSnapshots.Any(x => x.File.Number == snapshot.File.Number))
-                throw new InvalidOperationException("Cannot add a snapshot of log file with number " + snapshot.File.Number +
+            if (JournalSnapshots.Any(x => x.Number == snapshot.Number))
+                throw new InvalidOperationException("Cannot add a snapshot of log file with number " + snapshot.Number +
                                                     " to the transaction, because it already exists in a snapshot collection");
 
-            LogSnapshots.Add(snapshot);
-            SetLogReference(snapshot.File);
+            JournalSnapshots.Add(snapshot);
         }
 
         public void SetLogReference(JournalFile journal)
@@ -426,9 +438,9 @@ namespace Voron.Impl
             _releaseLogActions.Add(journal.Release);
         }
 
-        public Page GetFirstScratchPage()
-        {
-            return _scratchPager.Read(0);
-        }
+	    public List<PageFromScratchBuffer> GetTransactionPages()
+	    {
+		    return _transactionPages;
+	    }
     }
 }

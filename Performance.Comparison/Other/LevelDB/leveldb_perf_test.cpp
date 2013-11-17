@@ -2,10 +2,6 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
-#include <sstream>
-#include <iostream>
-#include <fstream>
-#include <iomanip>
 #include <time.h>
 #include <stdio.h>
 #include <algorithm>
@@ -17,11 +13,9 @@
 #include <thread>
 #include <future>
 #include <iterator>
-
-extern "C"
-{
-  #include "lmdb.h"
-}
+#include "leveldb/db.h"
+#include "leveldb/env.h"
+#include "leveldb/write_batch.h"
 
 using namespace std;
 using namespace chrono;
@@ -44,6 +38,78 @@ public:
   long ProcessedItems;
   long Duration;
   time_t Time; 
+};
+
+vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int itemsPerTransaction, int numberOfTransactions, leveldb::DB* db) {
+  vector<PerformanceRecord> records;
+  
+  leveldb::WriteOptions wo;
+  wo.sync = true;
+  
+  for(int transactions = 0; transactions < numberOfTransactions; transactions++) {
+    time_point<system_clock> sw = system_clock::now();
+    leveldb::WriteBatch wb;
+    
+    for(int i = 0; i < itemsPerTransaction; i++) {
+      
+      TestData *item = &*begin;
+      
+      stringstream sKey;
+      sKey << setw(16) << setfill('0') << item->Id;
+      string key = sKey.str();
+      
+      stringstream sValue;
+      sValue << setw(item->ValueSize) << setfill('1') << 1;
+      string value = sValue.str();
+      
+      wb.Put(key, value);
+      
+      *begin++;
+    }
+    
+    db->Write(wo, &wb);
+    
+    time_point<system_clock> now = system_clock::now();
+    duration<double> timeInSeconds = now - sw;
+    
+    PerformanceRecord r;
+    r.Duration = timeInSeconds.count() * 1000; // in milliseconds
+    r.ProcessedItems = itemsPerTransaction;
+    r.Time = chrono::system_clock::to_time_t(now);
+    
+    records.push_back(r);
+  }
+  
+  return records;
+}
+
+vector<PerformanceRecord> Write(vector<TestData> data, int itemsPerTransaction, int numberOfTransactions) {
+
+  leveldb::Options o;
+  o.error_if_exists = false;
+  o.create_if_missing = true;
+  
+  leveldb::DestroyDB("./testDB", o);
+  
+  leveldb::DB* db;
+  leveldb::Status s = leveldb::DB::Open(o, "./testDB", &db);
+  
+  time_point<system_clock> start, end;
+  start = system_clock::now();
+  
+  vector<PerformanceRecord> records = WriteInternal(data.begin(), itemsPerTransaction, numberOfTransactions, db);
+  
+  end = system_clock::now();
+  
+  duration<double> elapsed_seconds = end - start;
+  
+  double secs = elapsed_seconds.count();
+  
+  db->~DB();
+  
+  cout << "Write " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction)/secs) << " ops/s" << endl;
+  
+  return records;
 };
 
 vector<ParallelTestData> SplitData(vector<TestData> data, int currentItemsPerTransaction, int currentNumberOfTransactions, int numberOfThreads) {
@@ -71,6 +137,149 @@ vector<ParallelTestData> SplitData(vector<TestData> data, int currentItemsPerTra
   
   return results;
 }
+
+vector<PerformanceRecord> WriteParallel(vector<TestData> data, int itemsPerTransaction, int numberOfTransactions, int numberOfThreads) {
+  vector<PerformanceRecord> records;
+  
+  leveldb::Options o;
+  o.error_if_exists = false;
+  o.create_if_missing = true;
+  
+  leveldb::DestroyDB("./testDB", o);
+  
+  leveldb::DB* db;
+  leveldb::Status s = leveldb::DB::Open(o, "./testDB", &db);
+  
+  vector<ParallelTestData> testData = SplitData(data, itemsPerTransaction, numberOfTransactions, numberOfThreads);
+  
+  time_point<system_clock> start, end;
+  start = system_clock::now();
+  
+  vector<future<vector<PerformanceRecord>>> results(numberOfThreads);
+  
+  for(int i = 0; i < numberOfThreads; i++) {
+    ParallelTestData d = testData.at(i);
+    
+    vector<TestData>::iterator it = data.begin();
+    advance(it, d.SkipCount);
+    
+    results.at(i) = async(&WriteInternal, it, d.ItemsPerTransaction, d.NumberOfTransactions, db);
+  }
+  
+  for(int i = 0; i < numberOfThreads; i++) {
+    vector<PerformanceRecord> r = results.at(i).get();
+    for(int j = 0; j < r.size(); j++) {
+      records.push_back(r.at(j));
+    }
+  }
+  
+  end = system_clock::now();
+  
+  duration<double> elapsed_seconds = end - start;
+  
+  double secs = elapsed_seconds.count();
+  
+  db->~DB();
+  
+  cout << "Write Parallel [" << numberOfThreads << "] " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction)/secs) << " ops/s" << endl;
+  
+  return records;
+};
+
+void ReadInternal(vector<TestData> data, int itemsPerTransaction, int numberOfTransactions, leveldb::DB* db) {
+  leveldb::ReadOptions ro;
+  
+  for(int transactions = 0; transactions < numberOfTransactions; transactions++) {
+    for(int i = 0; i < itemsPerTransaction; i++) {
+      TestData item = data.at(transactions * itemsPerTransaction + i);
+      
+      stringstream sKey;
+      sKey << setw(16) << setfill('0') << item.Id;
+      string key = sKey.str();
+      
+      string result;
+      db->Get(ro, key, &result);
+    }
+  }
+}
+
+vector<PerformanceRecord> Read(vector<TestData> data, int itemsPerTransaction, int numberOfTransactions) {
+  vector<PerformanceRecord> records;
+  
+  leveldb::Options o;
+  o.error_if_exists = false;
+  o.create_if_missing = false;
+  
+  leveldb::DB* db;
+  leveldb::Status s = leveldb::DB::Open(o, "./testDB", &db);
+  
+  time_point<system_clock> start, end;
+  start = system_clock::now();
+  
+  ReadInternal(data, itemsPerTransaction, numberOfTransactions, db);
+  
+  end = system_clock::now();
+  
+  duration<double> elapsed_seconds = end - start;
+  
+  double secs = elapsed_seconds.count();
+  
+  PerformanceRecord r;
+  r.Duration = elapsed_seconds.count() * 1000; // in milliseconds
+  r.ProcessedItems = numberOfTransactions * itemsPerTransaction;
+  r.Time = chrono::system_clock::to_time_t(end);
+  
+  records.push_back(r);
+  
+  db->~DB();
+  
+  cout << "Read " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction)/secs) << " ops/s" << endl;
+  
+  return records;
+};
+
+vector<PerformanceRecord> ReadParallel(vector<TestData> data, int itemsPerTransaction, int numberOfTransactions, int numberOfThreads) {
+  vector<PerformanceRecord> records;
+  
+  leveldb::Options o;
+  o.error_if_exists = false;
+  o.create_if_missing = false;
+  
+  leveldb::DB* db;
+  leveldb::Status s = leveldb::DB::Open(o, "./testDB", &db);
+  
+  time_point<system_clock> start, end;
+  start = system_clock::now();
+  
+  vector<thread> threads(numberOfThreads);
+  
+  for(int i = 0; i < numberOfThreads; i++) {
+    threads.at(i) = thread(ReadInternal, data, itemsPerTransaction, numberOfTransactions, db);
+  }
+  
+  for(int i = 0; i < numberOfThreads; i++) {
+    threads.at(i).join();
+  }
+  
+  end = system_clock::now();
+  
+  duration<double> elapsed_seconds = end - start;
+  
+  double secs = elapsed_seconds.count();
+  
+  PerformanceRecord r;
+  r.Duration = elapsed_seconds.count() * 1000; // in milliseconds
+  r.ProcessedItems = numberOfTransactions * itemsPerTransaction * numberOfThreads;
+  r.Time = chrono::system_clock::to_time_t(end);
+  
+  records.push_back(r);
+  
+  db->~DB();
+  
+  cout << "Read Parallel [" << numberOfThreads << "] " << numberOfTransactions * itemsPerTransaction * numberOfThreads << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction * numberOfThreads)/secs) << " ops/s" << endl;
+  
+  return records;
+};
 
 vector<TestData> InitValue(set<int> ids, int minValueSize, int maxValueSize) {
   vector<TestData> data;
@@ -123,7 +332,7 @@ string GetTime(time_t t) {
 
 void WritePerfData(string name, vector<PerformanceRecord> data) {
   ofstream file;
-  string fileName = name + "_LMDB.csv";
+  string fileName = name + "_LEVELDB.csv";
   
   file.open((char*)fileName.c_str());
   
@@ -138,254 +347,11 @@ void WritePerfData(string name, vector<PerformanceRecord> data) {
   file.close();
 };
 
-MDB_env* StorageEnvironment(bool deleteOldData){
- 
-  if(deleteOldData)
-  {
-    system("exec rm -r ./lmdb_test");
-    system("exec mkdir ./lmdb_test");
-  }
-  
-  MDB_env *env;
-  
-  mdb_env_create(&env);
-  mdb_env_set_mapsize(env, 1024*1024*1024*(long)10);
-  mdb_env_open(env, "./lmdb_test", MDB_WRITEMAP, 0664);
-  
-  return env;
-}
+int main(int argc, char** argv) {
 
-vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int itemsPerTransaction, int numberOfTransactions, MDB_env* env) {
-  vector<PerformanceRecord> records;
-  
-  int rc;
-
-  MDB_val key, data;
-
-  MDB_stat mst;
-  MDB_cursor *cursor;
-  char sval[87 * 1024];
-  
-  for(int transactions = 0; transactions < numberOfTransactions; transactions++) {
-    time_point<system_clock> sw = system_clock::now();
-    
-    MDB_txn *txn;
-    MDB_dbi dbi;
-
-    rc = mdb_txn_begin(env, NULL, 0, &txn);
-    rc = mdb_open(txn, NULL, 0, &dbi);
-    
-    for(int i = 0; i < itemsPerTransaction; i++) {
-      TestData *item = &*begin;
-      
-      key.mv_size = sizeof(int);
-      key.mv_data = &item->Id;
-  
-      data.mv_size = item->ValueSize;
-      data.mv_data = sval;
-       
-      rc = mdb_put(txn, dbi, &key, &data, 0);
-      
-      if(rc != 0){
-	cout << "Unable to PUT: " << rc << endl;
-	throw exception();
-      }
-      
-      *begin++;
-    }
-    
-    rc = mdb_txn_commit(txn);
-    mdb_close(env, dbi);
-    
-    PerformanceRecord r;
-    
-    time_point<system_clock> now = system_clock::now();
-    
-    duration<double> timeInSeconds  = now - sw;
-    
-    r.Duration = timeInSeconds.count() * 1000; // in miliseconds
-    r.ProcessedItems = itemsPerTransaction;
-    r.Time = chrono::system_clock::to_time_t(now);
-    
-    records.push_back(r);
-  }
-  
-  return records;
-}
-
-vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransaction, int numberOfTransactions) {
-
-  MDB_env *env = StorageEnvironment(true);
-  
-  time_point<system_clock> start, end;
-  start = system_clock::now();
-  
-  vector<PerformanceRecord> records = WriteInternal(dataItems.begin(),itemsPerTransaction,numberOfTransactions, env);
-  
-  end = system_clock::now();
-  
-  duration<double> elapsed_seconds = end - start;
-  
-  double secs = elapsed_seconds.count();
-  
-  mdb_env_close(env);
-  
-  cout << "Wrote " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction)/secs) << " ops/s" << endl;
-  
-
-  return records;
-};
-
-vector<PerformanceRecord> WriteParallel(vector<TestData> data, int itemsPerTransaction, int numberOfTransactions, int numberOfThreads) {
-  vector<PerformanceRecord> records;
-  
-  MDB_env *env = StorageEnvironment(true);
-  
-  vector<ParallelTestData> testData = SplitData(data, itemsPerTransaction, numberOfTransactions, numberOfThreads);
-  
-  time_point<system_clock> start, end;
-  start = system_clock::now();
-  
-  vector<future<vector<PerformanceRecord>>> results(numberOfThreads);
-  
-  for(int i = 0; i < numberOfThreads; i++) {
-    ParallelTestData d = testData.at(i);
-    
-    vector<TestData>::iterator it = data.begin();
-    advance(it, d.SkipCount);
-    
-    results.at(i) = async(&WriteInternal, it, d.ItemsPerTransaction, d.NumberOfTransactions, env);
-  }
-  
-  for(int i = 0; i < numberOfThreads; i++) {
-    vector<PerformanceRecord> r = results.at(i).get();
-    for(int j = 0; j < r.size(); j++) {
-      records.push_back(r.at(j));
-    }
-  }
-  
-  end = system_clock::now();
-  
-  duration<double> elapsed_seconds = end - start;
-  
-  double secs = elapsed_seconds.count();
-  
-  cout << "Write Parallel [" << numberOfThreads << "] " << numberOfTransactions * itemsPerTransaction << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction)/secs) << " ops/s" << endl;
-  
-  return records;
-};
-
-void ReadInternal(vector<TestData> testData, int itemsPerTransaction, int numberOfTransactions, MDB_env* env) {
-  int rc;
-  MDB_val key, data;
-  MDB_txn *txn;
-  MDB_dbi dbi;
-
-  rc = mdb_txn_begin(env, NULL, 0, &txn);
-  rc = mdb_open(txn, NULL, 0, &dbi);
-    
-  for(int i = 0; i < testData.size(); i++) {
-    TestData item = testData.at(i);
-    
-    key.mv_size = sizeof(int);
-    key.mv_data = &item.Id;
-    
-    rc = mdb_get(txn, dbi, &key, &data);
-    
-    if(rc != 0)
-    {
-      cout << "GET exception: " << rc << endl;
-      
-      throw exception();
-    }
-  }
-    
-  rc = mdb_txn_commit(txn);
-  mdb_close(env, dbi);
-}
-
-vector<PerformanceRecord> Read(vector<TestData> testData, int itemsPerTransaction, int numberOfTransactions) {
-  vector<PerformanceRecord> records;
-  
-  int rc;
-  MDB_val key, data;
-
-  MDB_stat mst;
-  MDB_cursor *cursor;
-  char sval[87 * 1024];
-
-  MDB_env *env = StorageEnvironment(false);
-
-  time_point<system_clock> start, end;
-  start = system_clock::now();
-  
-  ReadInternal(testData, itemsPerTransaction, numberOfTransactions, env);
-  
-  end = system_clock::now();
-  
-  duration<double> elapsed_seconds = end - start;
-  
-  double secs = elapsed_seconds.count();
-  
-  PerformanceRecord r;
-  r.Duration = secs * 1000; // in miliseconds
-  r.ProcessedItems = testData.size();
-  r.Time = chrono::system_clock::to_time_t(end);
-  
-  records.push_back(r);
-  
-  mdb_env_close(env);
-  
-  cout << "Read " << testData.size() << " items in " << secs << " sec, " << (long)(testData.size()/secs) << " ops/s" << endl;
-  
-  return records;
-};
-
-vector<PerformanceRecord> ReadParallel(vector<TestData> testData, int itemsPerTransaction, int numberOfTransactions, int numberOfThreads) {
-  vector<PerformanceRecord> records;
-
-  MDB_stat mst;
-  MDB_cursor *cursor;
-  char sval[87 * 1024];
-
-  MDB_env *env = StorageEnvironment(false);
-  
-  time_point<system_clock> start, end;
-  start = system_clock::now();
-  
-  vector<thread> threads(numberOfThreads);
-  
-  for(int i = 0; i < numberOfThreads; i++) {
-    threads.at(i) = thread(ReadInternal, testData, itemsPerTransaction, numberOfTransactions, env);
-  }
-  
-  for(int i = 0; i < numberOfThreads; i++) {
-    threads.at(i).join();
-  }
-  
-  end = system_clock::now();
-  
-  duration<double> elapsed_seconds = end - start;
-  
-  double secs = elapsed_seconds.count();
-  
-  PerformanceRecord r;
-  r.Duration = elapsed_seconds.count() * 1000; // in milliseconds
-  r.ProcessedItems = numberOfTransactions * itemsPerTransaction * numberOfThreads;
-  r.Time = chrono::system_clock::to_time_t(end);
-  
-  records.push_back(r);
-  
-  cout << "Read Parallel [" << numberOfThreads << "] " << numberOfTransactions * itemsPerTransaction * numberOfThreads << " items in " << secs << " sec, " << (long)((numberOfTransactions * itemsPerTransaction * numberOfThreads)/secs) << " ops/s" << endl;
-  
-  return records;
-};
-
-int main(int argc,char * argv[])
-{
   srand(time(NULL));
   
-  int writeTransactions = 10 * 10;
+  int writeTransactions = 10 * 100;
   int itemsPerTransaction = 100;
   int readItems = writeTransactions * itemsPerTransaction;
   

@@ -11,19 +11,17 @@ namespace Voron.Impl.Journal
 	{
 		private readonly IVirtualPager _pager;
 		private long _lastSyncedPage;
-		private long _writePage;
+		private long _nextWritePage;
 		private long _readingPage;
-		private readonly long _startPage;
-		private readonly TransactionHeader* _previous;
-		private ImmutableDictionary<long, long> _transactionPageTranslation = ImmutableDictionary<long, long>.Empty;
+        private ImmutableDictionary<long, JournalFile.PagePosition> _transactionPageTranslation = ImmutableDictionary<long, JournalFile.PagePosition>.Empty;
 
 		public bool RequireHeaderUpdate { get; private set; }
 
 		public bool EncounteredStopCondition { get; private set; }
 
-		public long WritePage
+		public long NextWritePage
 		{
-			get { return _writePage; }
+			get { return _nextWritePage; }
 		}
 
 		public long LastSyncedPage
@@ -36,16 +34,16 @@ namespace Voron.Impl.Journal
 			RequireHeaderUpdate = false;
 			_pager = pager;
 			_readingPage = startPage;
-			_startPage = startPage;
-			_previous = previous;
-			_writePage = startPage;
+			_nextWritePage = startPage;
 			LastTransactionHeader = previous;
 
 		}
 
 		public TransactionHeader* LastTransactionHeader { get; private set; }
 
-		public bool ReadOneTransaction(Func<TransactionHeader, bool> stopReadingCondition = null, bool checkCrc = true)
+		public delegate bool FilterTransactions(long txId, long pageNumber);
+
+		public bool ReadOneTransaction(FilterTransactions stopReadingCondition = null, bool checkCrc = true)
 		{
 			if (_readingPage >= _pager.NumberOfAllocatedPages)
 				return false;
@@ -55,7 +53,7 @@ namespace Voron.Impl.Journal
 			TransactionHeader* current;
 			if (!TryReadAndValidateHeader(out current)) return false;
 
-			if (stopReadingCondition != null && !stopReadingCondition(*current))
+			if (stopReadingCondition != null && !stopReadingCondition(current->TransactionId, _readingPage))
 			{
 				_readingPage--; // if the read tx header does not fulfill our condition we have to move back the read index to allow read it again later if needed
 				EncounteredStopCondition = true;
@@ -63,7 +61,7 @@ namespace Voron.Impl.Journal
 			}
 
 			uint crc = 0;
-			var writePageBeforeCrcCheck = _writePage;
+			var writePageBeforeCrcCheck = _nextWritePage;
 			var lastSyncedPageBeforeCrcCheck = _lastSyncedPage;
 			var readingPageBeforeCrcCheck = _readingPage;
 
@@ -73,7 +71,11 @@ namespace Voron.Impl.Journal
 
 				var page = _pager.Read(_readingPage);
 
-				transactionTable = transactionTable.SetItem(page.PageNumber, _readingPage);
+				transactionTable = transactionTable.SetItem(page.PageNumber, new JournalFile.PagePosition
+				{
+                    JournalPos = _readingPage,
+                    TransactionId = current->TransactionId
+				});
 
 				if (page.IsOverflow)
 				{
@@ -81,17 +83,17 @@ namespace Voron.Impl.Journal
 					_readingPage += numOfPages;
 
 					if(checkCrc)
-						crc = Crc.Extend(crc, page.Base, 0, numOfPages * _pager.PageSize);
+						crc = Crc.Extend(crc, page.Base, 0, numOfPages * AbstractPager.PageSize);
 				}
 				else
 				{
 					_readingPage++;
 					if (checkCrc)
-						crc = Crc.Extend(crc, page.Base, 0, _pager.PageSize);
+						crc = Crc.Extend(crc, page.Base, 0, AbstractPager.PageSize);
 				}
 
 				_lastSyncedPage = _readingPage - 1;
-				_writePage = _lastSyncedPage + 1;
+				_nextWritePage = _lastSyncedPage + 1;
 			}
 
 			if (checkCrc && crc != current->Crc)
@@ -99,7 +101,7 @@ namespace Voron.Impl.Journal
 				RequireHeaderUpdate = true;
 
 				//undo changes to those variables if CRC doesn't match
-				_writePage = writePageBeforeCrcCheck;
+				_nextWritePage = writePageBeforeCrcCheck;
 				_lastSyncedPage = lastSyncedPageBeforeCrcCheck;
 				_readingPage = readingPageBeforeCrcCheck;
 
@@ -112,23 +114,14 @@ namespace Voron.Impl.Journal
 			return true;
 		}
 
-		public void RecoverAndValidateConditionally(Func<TransactionHeader, bool> stopConditionFunc)
-		{
-			_readingPage = _startPage;
-			LastTransactionHeader = _previous;
-			while (ReadOneTransaction(stopConditionFunc, checkCrc: false))
-			{
-			}			
-		}
-
-		public void RecoverAndValidate()
+	    public void RecoverAndValidate()
 		{
 			while (ReadOneTransaction())
 			{
 			}
 		}
 
-		public ImmutableDictionary<long, long> TransactionPageTranslation
+		public ImmutableDictionary<long, JournalFile.PagePosition> TransactionPageTranslation
 		{
 			get { return _transactionPageTranslation; }
 		}
@@ -180,6 +173,16 @@ namespace Voron.Impl.Journal
 		        current->TransactionId - previous->TransactionId != 1)
 		        throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) +
 		                                       ", got:" + current->TransactionId);
+		}
+
+	    public override string ToString()
+	    {
+	        return _pager.ToString();
+	    }
+
+		public void ClearTransactionPageTranslation()
+		{
+			_transactionPageTranslation = ImmutableDictionary<long, JournalFile.PagePosition>.Empty;
 		}
 	}
 }

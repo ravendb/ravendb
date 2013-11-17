@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
@@ -9,23 +10,27 @@ namespace Voron.Impl
 {
 	public unsafe class MemoryMapPager : AbstractPager
 	{
-		private readonly FileStream _fileStream;
 		private readonly FileInfo _fileInfo;
+	    private readonly SafeFileHandle _handle;
+	    private long _length;
+	    private FileStream _fileStream;
 
-		[DllImport("kernel32.dll", SetLastError = true)]
-		[return: MarshalAs(UnmanagedType.Bool)]
-		extern static bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
+	    [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
-		public MemoryMapPager(string file)
+        public MemoryMapPager(string file, NativeFileAttributes options = NativeFileAttributes.Normal)
 		{
 			_fileInfo = new FileInfo(file);
 			var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
-			_fileStream = _fileInfo.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
-			if (noData)
+            _handle = NativeFileMethods.CreateFile(file, NativeFileAccess.GenericAll, NativeFileShare.Read, IntPtr.Zero,
+                NativeFileCreationDisposition.OpenAlways, options, IntPtr.Zero);
+            if (_handle.IsInvalid)
+                throw new Win32Exception();
+
+            _fileStream = new FileStream(_handle, FileAccess.ReadWrite);
+
+            if (noData)
 			{
 				NumberOfAllocatedPages = 0;
 			}
@@ -39,14 +44,15 @@ namespace Voron.Impl
 
 		public override void AllocateMorePages(Transaction tx, long newLength)
 		{
-			if (newLength < _fileStream.Length)
+            if (newLength < _length)
 				throw new ArgumentException("Cannot set the legnth to less than the current length");
 
-			if (newLength == _fileStream.Length)
+            if (newLength == _length)
 				return;
 
 			// need to allocate memory again
-			_fileStream.SetLength(newLength);
+			NativeFileMethods.SetFileLength(_handle, newLength);
+		    _length = newLength;
 			PagerState.Release(); // when the last transaction using this is over, will dispose it
 			PagerState newPager = CreateNewPagerState();
 
@@ -57,12 +63,12 @@ namespace Voron.Impl
 			}
 
 			PagerState = newPager;
-			NumberOfAllocatedPages = newPager.Accessor.Capacity / PageSize;
+			NumberOfAllocatedPages = newLength / PageSize;
 		}
 
 		private PagerState CreateNewPagerState()
 		{
-			var mmf = MemoryMappedFile.CreateFromFile(_fileStream, Guid.NewGuid().ToString(), _fileStream.Length,
+            var mmf = MemoryMappedFile.CreateFromFile(_fileStream, Guid.NewGuid().ToString(), _fileStream.Length,
 													  MemoryMappedFileAccess.ReadWrite, null, HandleInheritability.None, true);
 			var accessor = mmf.CreateViewAccessor();
 			byte* p = null;
@@ -85,7 +91,7 @@ namespace Voron.Impl
 
 		public override void Sync()
 		{
-             FlushFileBuffers(_fileStream.SafeFileHandle);
+             FlushFileBuffers(_handle);
 		}
 
 		public override void Write(Page page, long? pageNumber)
@@ -96,6 +102,11 @@ namespace Voron.Impl
 
 			WriteDirect(page, startPage, toWrite);
 		}
+
+	    public override string ToString()
+	    {
+	        return _fileInfo.Name;
+	    }
 
 	    public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
 	    {
@@ -110,7 +121,8 @@ namespace Voron.Impl
 				PagerState.Release();
 				PagerState = null;
 			}
-			_fileStream.Dispose();
+            _fileStream.Dispose();
+			_handle.Close();
 			if(DeleteOnClose)
 				_fileInfo.Delete();
 		}

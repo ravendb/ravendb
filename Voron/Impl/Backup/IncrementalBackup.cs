@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Voron.Impl.Journal;
 using Voron.Trees;
 using Voron.Util;
@@ -20,125 +21,130 @@ namespace Voron.Impl.Backup
     {
 		public long ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal)
         {
-            if (env.Options.IncrementalBackupEnabled == false)
-                throw new InvalidOperationException("Incremental backup is disabled for this storage");
+			throw new NotImplementedException("");
+			//if (env.Options.IncrementalBackupEnabled == false)
+			//	throw new InvalidOperationException("Incremental backup is disabled for this storage");
 
-            long numberOfBackedUpPages = 0;
+			//long numberOfBackedUpPages = 0;
 
-            var copier = new DataCopier(env.PageSize * 16);
-            var backupSuccess = true;
+			//var copier = new DataCopier(AbstractPager.PageSize * 16);
+			//var backupSuccess = true;
 
-            IncrementalBackupInfo backupInfo;
-            long lastWrittenLogPage = -1;
-            long lastWrittenLogFile = -1;
+			//IncrementalBackupInfo backupInfo;
+			//long lastWrittenLogPage = -1;
+			//long lastWrittenLogFile = -1;
 
-            using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
-            {
-                backupInfo = env.Journal.GetIncrementalBackupInfo();
+			//using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+			//{
+			//	backupInfo = env.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
 
-                if (env.Journal.CurrentFile != null)
-                {
-                    lastWrittenLogFile = env.Journal.CurrentFile.Number;
-                    lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition;
-                }
+			//	if (env.Journal.CurrentFile != null)
+			//	{
+			//		lastWrittenLogFile = env.Journal.CurrentFile.Number;
+			//		lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition;
+			//	}
 
-                // txw.Commit(); intentionally not committing
-            }
+			//	// txw.Commit(); intentionally not committing
+			//}
 
-            using (env.NewTransaction(TransactionFlags.Read))
-            {
-                var usedJournals = new List<JournalFile>();
+			//using (env.NewTransaction(TransactionFlags.Read))
+			//{
+			//	var usedJournals = new List<JournalFile>();
 
-                try
-                {
-					using(var file = new FileStream(backupPath, FileMode.Create))
-                    using (var package = new ZipArchive(file, ZipArchiveMode.Create))
-                    {
-                        long lastBackedUpPage = -1;
-                        long lastBackedUpFile = -1;
+			//	try
+			//	{
+			//		using(var file = new FileStream(backupPath, FileMode.Create))
+			//		using (var package = new ZipArchive(file, ZipArchiveMode.Create))
+			//		{
+			//			long lastBackedUpPage = -1;
+			//			long lastBackedUpFile = -1;
 
-                        var firstJournalToBackup = backupInfo.LastBackedUpJournal;
+			//			var firstJournalToBackup = backupInfo.LastBackedUpJournal;
 
-                        if (firstJournalToBackup == -1)
-                            firstJournalToBackup = 0; // first time that we do incremental backup
+			//			if (firstJournalToBackup == -1)
+			//				firstJournalToBackup = 0; // first time that we do incremental backup
 
-                        for (var journalNum = firstJournalToBackup; journalNum <= backupInfo.LastCreatedJournal; journalNum++)
-                        {
-                            var journalFile = env.Journal.Files.Find(x => x.Number == journalNum); // first check journal files currently being in use
-                            if (journalFile == null)
-                            {
-                                journalFile = new JournalFile(env.Options.CreateJournalPager(journalNum), journalNum);
-                            }
+			//			for (var journalNum = firstJournalToBackup; journalNum <= backupInfo.LastCreatedJournal; journalNum++)
+			//			{
+			//				var journalFile = env.Journal.Files.Find(x => x.Number == journalNum); // first check journal files currently being in use
+			//				if (journalFile == null)
+			//				{
+			//					journalFile = new JournalFile(env.Options.CreateJournalPager(journalNum), journalNum);
+			//				}
 
-                            journalFile.AddRef();
+			//				journalFile.AddRef();
 
-                            usedJournals.Add(journalFile);
+			//				usedJournals.Add(journalFile);
 
-                            var startBackupAt = 0L;
-                            var pagesToCopy = journalFile.Pager.NumberOfAllocatedPages;
-                            if (journalFile.Number == backupInfo.LastBackedUpJournal)
-                            {
-                                startBackupAt = backupInfo.LastBackedUpJournalPage + 1;
-                                pagesToCopy -= startBackupAt;
-                            }
+			//				var startBackupAt = 0L;
+			//				var pagesToCopy = journalFile.JournalWriter.NumberOfAllocatedPages;
+			//				if (journalFile.Number == backupInfo.LastBackedUpJournal)
+			//				{
+			//					startBackupAt = backupInfo.LastBackedUpJournalPage + 1;
+			//					pagesToCopy -= startBackupAt;
+			//				}
 
-                            if (startBackupAt >= journalFile.Pager.NumberOfAllocatedPages) // nothing to do here
-                                continue;
+			//				if (startBackupAt >= journalFile.JournalWriter.NumberOfAllocatedPages) // nothing to do here
+			//					continue;
 
-                            var part = package.CreateEntry(StorageEnvironmentOptions.JournalName(journalNum), compression);
-                            Debug.Assert(part != null);
+			//				var part = package.CreateEntry(StorageEnvironmentOptions.JournalName(journalNum), compression);
+			//				Debug.Assert(part != null);
 
-                            if (journalFile.Number == lastWrittenLogFile)
-                                pagesToCopy -= (journalFile.Pager.NumberOfAllocatedPages - lastWrittenLogPage);
+			//				if (journalFile.Number == lastWrittenLogFile)
+			//					pagesToCopy -= (journalFile.JournalWriter.NumberOfAllocatedPages - lastWrittenLogPage);
 
-                            using(var stream = part.Open())
-	                        {
-		                        copier.ToStream(journalFile.Pager.Read(startBackupAt).Base, pagesToCopy * journalFile.Pager.PageSize, stream);
-	                        }
+			//				using(var stream = part.Open())
+			//				{
+			//					copier.ToStream(journalFile.JournalWriter.Read(startBackupAt).Base, pagesToCopy * AbstractPager.PageSize, stream);
+			//				}
 
-                            lastBackedUpFile = journalFile.Number;
-                            if (journalFile.Number == backupInfo.LastCreatedJournal)
-                            {
-                                lastBackedUpPage = startBackupAt + pagesToCopy - 1;
-                                // we used all of this file, so the next backup should start in the next file
-                                if (lastBackedUpPage == journalFile.Pager.NumberOfAllocatedPages)
-                                {
-                                    lastBackedUpPage = 0;
-                                    lastBackedUpFile++;
-                                }
-                            }
+			//				lastBackedUpFile = journalFile.Number;
+			//				if (journalFile.Number == backupInfo.LastCreatedJournal)
+			//				{
+			//					lastBackedUpPage = startBackupAt + pagesToCopy - 1;
+			//					// we used all of this file, so the next backup should start in the next file
+			//					if (lastBackedUpPage == journalFile.JournalWriter.NumberOfAllocatedPages)
+			//					{
+			//						lastBackedUpPage = 0;
+			//						lastBackedUpFile++;
+			//					}
+			//				}
 
-                            numberOfBackedUpPages += pagesToCopy;
-                        }
+			//				numberOfBackedUpPages += pagesToCopy;
+			//			}
 
-                        Debug.Assert(lastBackedUpPage != -1);
+			//			Debug.Assert(lastBackedUpPage != -1);
 
-                        env.Journal.UpdateAfterIncrementalBackup(lastBackedUpFile, lastBackedUpPage);
-                    }
-                }
-                catch (Exception)
-                {
-                    backupSuccess = false;
-                    throw;
-                }
-                finally
-                {
-                    foreach (var file in usedJournals)
-                    {
-                        if (backupSuccess) // if backup succeeded we can remove journals
-                        {
-                            if (file.Number != lastWrittenLogFile) // prevent deletion of the current journal
-                            {
-                                file.DeleteOnClose();
-                            }
-                        }
+			//			env.HeaderAccessor.Modify(header =>
+			//				{
+			//					header->IncrementalBackup.LastBackedUpJournal = lastBackedUpFile;
+			//					header->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpPage;
+			//				});
+			//		}
+			//	}
+			//	catch (Exception)
+			//	{
+			//		backupSuccess = false;
+			//		throw;
+			//	}
+			//	finally
+			//	{
+			//		foreach (var file in usedJournals)
+			//		{
+			//			if (backupSuccess) // if backup succeeded we can remove journals
+			//			{
+			//				if (file.Number != lastWrittenLogFile) // prevent deletion of the current journal
+			//				{
+			//					file.DeleteOnClose();
+			//				}
+			//			}
 
-                        file.Release();
-                    }
-                }
+			//			file.Release();
+			//		}
+			//	}
 
-                return numberOfBackedUpPages;
-            }
+			//	return numberOfBackedUpPages;
+			//}
         }
 
         public void Restore(StorageEnvironment env, string backupPath)
@@ -189,7 +195,7 @@ namespace Voron.Impl.Backup
 
                         foreach (var translation in reader.TransactionPageTranslation)
                         {
-                            var pageInJournal = translation.Value;
+                            var pageInJournal = translation.Value.JournalPos;
                             pagesToWrite[translation.Key] = () => pager.Read(pageInJournal);
                         }
                     }
@@ -223,7 +229,8 @@ namespace Voron.Impl.Backup
 
                     txw.Commit();
 
-                    env.Journal.Clear();
+
+                    throw new ExternalException("env.Journal.Clear() was here and need to be restored");
                 }
                 finally
                 {

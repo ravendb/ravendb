@@ -33,8 +33,10 @@ namespace Voron
 		private long _transactionsCounter;
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
 		private readonly Task _flushingTask;
+		private readonly HeaderAccessor _headerAccessor;
 
 		private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+		private ScratchBufferPool _scratchBufferPool;
 
 		public TransactionMergingWriter Writer { get; private set; }
 
@@ -53,9 +55,14 @@ namespace Voron
 				_dataPager = options.DataPager;
 				_freeSpaceHandling = new FreeSpaceHandling(this);
 				_sliceComparer = NativeMethods.memcmp;
+				_headerAccessor = new HeaderAccessor(this);
+				var isNew = _headerAccessor.Initialize();
+
+				_scratchBufferPool = new ScratchBufferPool(this);
+
 				_journal = new WriteAheadJournal(this);
 
-				if (_dataPager.NumberOfAllocatedPages == 0)
+				if (isNew)
 					CreateNewDatabase();
 				else // existing db, let us load it
 					LoadExistingDatabase();
@@ -75,13 +82,16 @@ namespace Voron
 			}
 		}
 
+		public ScratchBufferPool ScratchBufferPool
+		{
+			get { return _scratchBufferPool; }
+		}
+
 		private unsafe void LoadExistingDatabase()
 		{
-			// the first two pages are allocated for double buffering tx commits
-			var entry = FindLatestFileHeaderEntry();
 			TransactionHeader* header;
 			bool hadIntegrityIssues;
-			_journal.RecoverDatabase(entry, out header,out hadIntegrityIssues);
+			_journal.RecoverDatabase(out header,out hadIntegrityIssues);
 			if (_journal.Files.IsEmpty && hadIntegrityIssues)
 			{
 				_journal.Dispose();
@@ -91,18 +101,19 @@ namespace Voron
 			}
 
 
-			var nextPageNumber = (header == null ? entry->LastPageNumber : header->LastPageNumber) + 1;
+			var entry = _headerAccessor.CopyHeader();
+			var nextPageNumber = (header == null ? entry.LastPageNumber : header->LastPageNumber) + 1;
 			State = new StorageEnvironmentState(null, null, nextPageNumber)
 			{
 				NextPageNumber = nextPageNumber
 			};
 
-			_transactionsCounter = (header == null ? entry->TransactionId : header->TransactionId);
+			_transactionsCounter = (header == null ? entry.TransactionId : header->TransactionId);
 
 			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var root = Tree.Open(tx, _sliceComparer, header == null ? &entry->Root : &header->Root);
-				var freeSpace = Tree.Open(tx, _sliceComparer, header == null ? &entry->FreeSpace : &header->FreeSpace);
+				var root = Tree.Open(tx, _sliceComparer, header == null ? &entry.Root : &header->Root);
+				var freeSpace = Tree.Open(tx, _sliceComparer, header == null ? &entry.FreeSpace : &header->FreeSpace);
 
 				tx.UpdateRootsIfNeeded(root, freeSpace);
 				tx.Commit();
@@ -111,14 +122,7 @@ namespace Voron
 
 		private unsafe void CreateNewDatabase()
 		{
-			_dataPager.EnsureContinuous(null, 0, 2); // for file headers
-
-			_journal.WriteFileHeader(0);
-			_journal.WriteFileHeader(1);
-
-			_dataPager.Sync();
-
-			const int initialNextPageNumber = 2;
+			const int initialNextPageNumber = 0;
 			State = new StorageEnvironmentState(null, null, initialNextPageNumber);
 			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
 			{
@@ -142,14 +146,14 @@ namespace Voron
 			get { return _sliceComparer; }
 		}
 
+		public HeaderAccessor HeaderAccessor
+		{
+			get { return _headerAccessor; }
+		}
+
 		public long OldestTransaction
 		{
 			get { return _activeTransactions.Keys.OrderBy(x => x).FirstOrDefault(); }
-		}
-
-		public int PageSize
-		{
-			get { return _dataPager.PageSize; }
 		}
 
 		public IEnumerable<Tree> Trees
@@ -245,45 +249,17 @@ namespace Voron
 			}
 			finally
 			{
+				_headerAccessor.Dispose();
+
+			    if (_scratchBufferPool != null)
+			        _scratchBufferPool.Dispose();
+
 				if (_options.OwnsPagers)
 					_options.Dispose();
 
 				if (_journal != null)
 					_journal.Dispose();
 			}
-		}
-
-		private unsafe FileHeader* FindLatestFileHeaderEntry()
-		{
-			Page fst = _dataPager.Read(0);
-			Page snd = _dataPager.Read(1);
-
-			FileHeader* e1 = GetFileHeaderFrom(fst);
-			FileHeader* e2 = GetFileHeaderFrom(snd);
-
-			FileHeader* entry = e1;
-			if (e2->Journal.DataFlushCounter > e1->Journal.DataFlushCounter)
-			{
-				entry = e2;
-			}
-			return entry;
-		}
-
-		private unsafe FileHeader* GetFileHeaderFrom(Page p)
-		{
-			var fileHeader = ((FileHeader*)p.Base);
-			if (fileHeader->MagicMarker != Constants.MagicMarker)
-				throw new InvalidDataException(
-					"The header page did not start with the magic marker, probably not a db file");
-			if (fileHeader->Version != Constants.CurrentVersion)
-				throw new InvalidDataException("This is a db file for version " + fileHeader->Version +
-											   ", which is not compatible with the current version " +
-											   Constants.CurrentVersion);
-			if (fileHeader->LastPageNumber >= _dataPager.NumberOfAllocatedPages)
-				throw new InvalidDataException("The last page number is beyond the number of allocated pages");
-			if (fileHeader->TransactionId < 0)
-				throw new InvalidDataException("The transaction number cannot be negative");
-			return fileHeader;
 		}
 
 		public Transaction NewTransaction(TransactionFlags flags)
@@ -424,6 +400,7 @@ namespace Voron
 				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 			var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
 			journalApplicator.ApplyLogsToDataFile();
+			Console.WriteLine("Flushed journals");
 		}
 
 		public void AssertFlushingNotFailed()

@@ -12,18 +12,15 @@ namespace Voron.Impl.Journal
 	public struct JournalInfo
 	{
 		[FieldOffset(0)]
-		public long DataFlushCounter;
-
-		[FieldOffset(8)]
 		public long CurrentJournal;
 
-		[FieldOffset(16)]
+		[FieldOffset(8)]
 		public int JournalFilesCount;
 
-		[FieldOffset(24)]
+		[FieldOffset(12)]
 		public long LastSyncedJournal;
 
-		[FieldOffset(32)]
+		[FieldOffset(20)]
 		public long LastSyncedJournalPage;
 	}
 }
