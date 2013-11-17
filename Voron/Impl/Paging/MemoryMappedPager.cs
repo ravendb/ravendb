@@ -25,10 +25,13 @@ namespace Voron.Impl
 			var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
             _handle = NativeFileMethods.CreateFile(file, NativeFileAccess.GenericAll, NativeFileShare.Read, IntPtr.Zero,
                 NativeFileCreationDisposition.OpenAlways, options, IntPtr.Zero);
-            if (_handle.IsInvalid)
-                throw new Win32Exception();
+	        if (_handle.IsInvalid)
+	        {
+		        var lastWin32ErrorCode = Marshal.GetLastWin32Error();
+		        throw new IOException("Failed to open file storage of MemoryMapPager",new Win32Exception(lastWin32ErrorCode));
+	        }
 
-            _fileStream = new FileStream(_handle, FileAccess.ReadWrite);
+	        _fileStream = new FileStream(_handle, FileAccess.ReadWrite);
 
             if (noData)
 			{
