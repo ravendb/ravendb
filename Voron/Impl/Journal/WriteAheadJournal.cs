@@ -63,7 +63,7 @@ namespace Voron.Impl.Journal
 
 			var journalPager = _env.Options.CreateJournalWriter(_journalIndex, actualLogSize);
 
-			var journal = new JournalFile(_env.Options, journalPager, _journalIndex);
+			var journal = new JournalFile(journalPager, _journalIndex);
 			journal.AddRef(); // one reference added by a creator - write ahead log
 			tx.SetLogReference(journal); // and the next one for the current transaction
 
@@ -129,8 +129,8 @@ namespace Voron.Impl.Journal
 					journalReader.RecoverAndValidate();
 
 					// after reading all the pages from the journal file, we need to move them to the scratch buffers.
-					var ptt = ImmutableDictionary<long, long>.Empty;
-					foreach (var kvp in journalReader.TransactionPageTranslation)
+					var ptt = ImmutableDictionary<long, JournalFile.PagePosition>.Empty;
+                    foreach (var kvp in journalReader.TransactionPageTranslation)
 					{
 						var page = pager.Read(kvp.Value);
 						var numOfPages = page.IsOverflow ? pager.GetNumberOfOverflowPages(page.OverflowSize) : 1;
@@ -138,13 +138,17 @@ namespace Voron.Impl.Journal
 
 						NativeMethods.memcpy(scratchBuffer.Pointer, page.Base, numOfPages * AbstractPager.PageSize);
 
-						ptt = ptt.SetItem(kvp.Key, scratchBuffer.PositionInScratchBuffer);
+						ptt = ptt.SetItem(kvp.Key, new JournalFile.PagePosition
+						{
+                            ScratchPos = scratchBuffer.PositionInScratchBuffer,
+                            JournalPos = kvp.Value
+						});
 					}
 
 					// we setup the journal file so we can flush from it to the data file
 					var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * AbstractPager.PageSize);
-					var jrnlFile = new JournalFile(_env.Options, jrnlWriter, journalNumber);
-					jrnlFile.InitFrom(journalReader, ptt);
+					var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
+				    jrnlFile.InitFrom(journalReader, ptt);
 					jrnlFile.AddRef(); // creator reference - write ahead log
 					Files = Files.Add(jrnlFile);
 
@@ -221,9 +225,9 @@ namespace Voron.Impl.Journal
 				// read log snapshots from the back to get the most recent version of a page
 				for (var i = tx.JournalSnapshots.Count - 1; i >= 0; i--)
 				{
-					long value;
+					JournalFile.PagePosition value;
 					if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(pageNumber, out value))
-						return _env.ScratchBufferPool.ReadPage(value);
+						return _env.ScratchBufferPool.ReadPage(value.ScratchPos);
 				}
 
 				return null;
@@ -235,9 +239,9 @@ namespace Voron.Impl.Journal
 				// write transactions can read directly from logs
 				for (var i = Files.Count - 1; i >= 0; i--)
 				{
-					long value;
+					JournalFile.PagePosition value;
 					if (Files[i].PageTranslationTable.TryGetValue(pageNumber, out value))
-						return _env.ScratchBufferPool.ReadPage(value);
+						return _env.ScratchBufferPool.ReadPage(value.ScratchPos);
 				}
 			}
 			finally

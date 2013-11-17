@@ -6,6 +6,6 @@ namespace Voron.Impl.Journal
 	public class JournalSnapshot
 	{
 		public long Number;
-		public ImmutableDictionary<long, long> PageTranslationTable;
+        public ImmutableDictionary<long, JournalFile.PagePosition> PageTranslationTable;
 	}
 }

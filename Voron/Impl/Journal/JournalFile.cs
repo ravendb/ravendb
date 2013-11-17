@@ -13,228 +13,237 @@ using Voron.Trees;
 
 namespace Voron.Impl.Journal
 {
-	public unsafe class JournalFile : IDisposable
-	{
-		private readonly StorageEnvironmentOptions _options;
-		private readonly IJournalWriter _journalWriter;
-		private long _writePage;
-		private bool _disposed;
+    public unsafe class JournalFile : IDisposable
+    {
+        private readonly IJournalWriter _journalWriter;
+        private long _writePage;
+        private bool _disposed;
 
-		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 
-		public JournalFile(StorageEnvironmentOptions options, IJournalWriter journalWriter, long journalNumber)
-		{
-			Number = journalNumber;
-			this._options = options;
-			_journalWriter = journalWriter;
-			_writePage = 0;
-		}
+        public class PagePosition
+        {
+            public long ScratchPos;
+            public long JournalPos;
+        }
 
-		public override string ToString()
-		{
-			return string.Format("Number: {0}", Number);
-		}
+        public JournalFile(IJournalWriter journalWriter, long journalNumber)
+        {
+            Number = journalNumber;
+            _journalWriter = journalWriter;
+            _writePage = 0;
+        }
 
-		public JournalFile(StorageEnvironmentOptions options,IJournalWriter journalWriter, long journalNumber, long lastSyncedPage)
-			: this(options, journalWriter, journalNumber)
-		{
-			_writePage = lastSyncedPage + 1;
-		}
+        public override string ToString()
+        {
+            return string.Format("Number: {0}", Number);
+        }
 
-#if DEBUG
-		private readonly StackTrace _st = new StackTrace(true);
-#endif
-
-		~JournalFile()
-		{
-			Dispose();
+        public JournalFile(IJournalWriter journalWriter, long journalNumber, long lastSyncedPage)
+            : this(journalWriter, journalNumber)
+        {
+            _writePage = lastSyncedPage + 1;
+        }
 
 #if DEBUG
-			Trace.WriteLine(
-				"Disposing a journal file from finalizer! It should be diposed by using JournalFile.Release() instead!. Log file number: " +
-				Number + ". Number of references: " + _refs + " " + _st);
+        private readonly StackTrace _st = new StackTrace(true);
 #endif
-		}
 
-		internal long WritePagePosition
-		{
-			get { return _writePage; }
-		}
+        ~JournalFile()
+        {
+            Dispose();
 
-		public long Number { get; private set; }
+#if DEBUG
+            Trace.WriteLine(
+                "Disposing a journal file from finalizer! It should be diposed by using JournalFile.Release() instead!. Log file number: " +
+                Number + ". Number of references: " + _refs + " " + _st);
+#endif
+        }
 
+        internal long WritePagePosition
+        {
+            get { return _writePage; }
+        }
 
-		public long AvailablePages
-		{
-			get { return _journalWriter.NumberOfAllocatedPages - _writePage; }
-		}
-
-		private int _refs;
-		private ImmutableDictionary<long, long> _pageTranslationTable;
-
-		public ImmutableDictionary<long, long> PageTranslationTable
-		{
-			get { return _pageTranslationTable; }
-		}
-
-		public void Release()
-		{
-			if (Interlocked.Decrement(ref _refs) != 0)
-				return;
-
-			Dispose();
-		}
-
-		public void AddRef()
-		{
-			Interlocked.Increment(ref _refs);
-		}
-
-		public void Dispose()
-		{
-			DisposeWithoutClosingPager();
-			_journalWriter.Dispose();
-			if (DeleteOnClose)
-			{
-				Console.WriteLine("TODO: Delete me");
-			}
-		}
-
-		public Reader GetReader()
-		{
-			_locker.EnterReadLock();
-			try
-			{
-				return new Reader(_journalWriter.CreatePager(), _writePage);
-			}
-			finally
-			{
-				_locker.ExitReadLock();
-			}
-		}
-
-		public JournalSnapshot GetSnapshot()
-		{
-			_locker.EnterReadLock();
-			try
-			{
-				return new JournalSnapshot
-				{
-					Number = Number,
-					PageTranslationTable = _pageTranslationTable
-				};
-			}
-			finally
-			{
-				_locker.ExitReadLock();
-			}
-
-		}
+        public long Number { get; private set; }
 
 
-		public void DisposeWithoutClosingPager()
-		{
-			if (_disposed)
-				return;
+        public long AvailablePages
+        {
+            get { return _journalWriter.NumberOfAllocatedPages - _writePage; }
+        }
 
-			GC.SuppressFinalize(this);
+        private int _refs;
+        private ImmutableDictionary<long, PagePosition> _pageTranslationTable;
 
-			_disposed = true;
-		}
+        public ImmutableDictionary<long, PagePosition> PageTranslationTable
+        {
+            get { return _pageTranslationTable; }
+        }
 
-		public Task Write(Transaction tx, int numberOfPages)
-		{
-			var pages = new byte*[numberOfPages];
-			int pagesCounter = 0;
-			var txPages = tx.GetTransactionPages();
+        public void Release()
+        {
+            if (Interlocked.Decrement(ref _refs) != 0)
+                return;
 
-			var ptt = _pageTranslationTable;
+            Dispose();
+        }
 
-			for (int index = 0; index < txPages.Count; index++)
-			{
-				var txPage = txPages[index];
-				if (index == 0) // this is the transaction header page
-				{
-					pages[pagesCounter++] = txPage.Pointer;
-				}
-				else
-				{
-					ptt = ptt.SetItem(((PageHeader*)txPage.Pointer)->PageNumber, txPage.PositionInScratchBuffer);
-					for (int i = 0; i < txPage.NumberOfPages; i++)
-					{
-						pages[pagesCounter++] = txPage.Pointer + (i * AbstractPager.PageSize);
-					}
-				}
-			}
-			Debug.Assert(pagesCounter == numberOfPages);
+        public void AddRef()
+        {
+            Interlocked.Increment(ref _refs);
+        }
 
-			long writePagePos;
-			_locker.EnterWriteLock();
-			try
-			{
-				writePagePos = _writePage;
-				_writePage += numberOfPages;
-				_pageTranslationTable = ptt;
-			}
-			finally
-			{
-				_locker.ExitWriteLock();
-			}
+        public void Dispose()
+        {
+            DisposeWithoutClosingPager();
+            _journalWriter.Dispose();
+            if (DeleteOnClose)
+            {
+                Console.WriteLine("TODO: Delete me");
+            }
+        }
 
-			return _journalWriter.WriteGatherAsync(writePagePos, pages);
-		}
+        public Reader GetReader()
+        {
+            _locker.EnterReadLock();
+            try
+            {
+                return new Reader(_journalWriter.CreatePager(), _writePage);
+            }
+            finally
+            {
+                _locker.ExitReadLock();
+            }
+        }
 
-		public void InitFrom(JournalReader journalReader, ImmutableDictionary<long, long> ptt)
-		{
-			_writePage = journalReader.NextWritePage;
-			_pageTranslationTable = ptt;
-		}
+        public JournalSnapshot GetSnapshot()
+        {
+            _locker.EnterReadLock();
+            try
+            {
+                return new JournalSnapshot
+                {
+                    Number = Number,
+                    PageTranslationTable = _pageTranslationTable
+                };
+            }
+            finally
+            {
+                _locker.ExitReadLock();
+            }
 
-		public class Reader : IDisposable
-		{
-			private readonly IVirtualPager _pager;
-			private readonly long _lastWritePos;
-			private ImmutableDictionary<long, long> _pageTranslationTable = ImmutableDictionary<long, long>.Empty;
-
-			public bool RequireHeaderUpdate { get; private set; }
-
-			public Reader(IVirtualPager pager, long lastWritePos)
-			{
-				_pager = pager;
-				_lastWritePos = lastWritePos;
-			}
-
-			public Page ReadPage(long pageNumber)
-			{
-				long logPageNumber;
-
-				if (_pageTranslationTable.TryGetValue(pageNumber, out logPageNumber))
-					return _pager.Read(logPageNumber);
-
-				return null;
-			}
+        }
 
 
-			public void DeleteOnClose()
-			{
-				_pager.DeleteOnClose = true;
-			}
+        public void DisposeWithoutClosingPager()
+        {
+            if (_disposed)
+                return;
 
-			public long LastWritePos
-			{
-				get { return _lastWritePos; }
-			}
+            GC.SuppressFinalize(this);
 
-			public IVirtualPager Pager { get { return _pager; } }
+            _disposed = true;
+        }
 
-			public TransactionHeader* LastTransactionHeader;
+        public Task Write(Transaction tx, int numberOfPages)
+        {
+            var pages = new byte*[numberOfPages];
+            int pagesCounter = 0;
+            var txPages = tx.GetTransactionPages();
 
-			public void Dispose()
-			{
-				_pager.Dispose();
-			}
-		}
+            long writePagePos;
+            _locker.EnterWriteLock();
+            try
+            {
+                var ptt = _pageTranslationTable;
+                writePagePos = _writePage;
 
-		public bool DeleteOnClose { get; set; }
-	}
+                for (int index = 0; index < txPages.Count; index++)
+                {
+                    var txPage = txPages[index];
+                    if (index == 0) // this is the transaction header page
+                    {
+                        pages[pagesCounter++] = txPage.Pointer;
+                    }
+                    else
+                    {
+                        ptt = ptt.SetItem(((PageHeader*)txPage.Pointer)->PageNumber, new PagePosition
+                        {
+                            ScratchPos = txPage.PositionInScratchBuffer,
+                            JournalPos = writePagePos + index
+                        });
+                        for (int i = 0; i < txPage.NumberOfPages; i++)
+                        {
+                            pages[pagesCounter++] = txPage.Pointer + (i * AbstractPager.PageSize);
+                        }
+                    }
+                }
+                Debug.Assert(pagesCounter == numberOfPages);
+
+
+                _writePage += numberOfPages;
+                _pageTranslationTable = ptt;
+            }
+            finally
+            {
+                _locker.ExitWriteLock();
+            }
+
+            return _journalWriter.WriteGatherAsync(writePagePos, pages);
+        }
+
+        public void InitFrom(JournalReader journalReader, ImmutableDictionary<long, PagePosition> pageTranslationTable)
+        {
+            _writePage = journalReader.NextWritePage;
+            _pageTranslationTable = pageTranslationTable;
+        }
+
+        public class Reader : IDisposable
+        {
+            private readonly IVirtualPager _pager;
+            private readonly long _lastWritePos;
+            private ImmutableDictionary<long, long> _pageTranslationTable = ImmutableDictionary<long, long>.Empty;
+
+            public bool RequireHeaderUpdate { get; private set; }
+
+            public Reader(IVirtualPager pager, long lastWritePos)
+            {
+                _pager = pager;
+                _lastWritePos = lastWritePos;
+            }
+
+            public Page ReadPage(long pageNumber)
+            {
+                long logPageNumber;
+
+                if (_pageTranslationTable.TryGetValue(pageNumber, out logPageNumber))
+                    return _pager.Read(logPageNumber);
+
+                return null;
+            }
+
+
+            public void DeleteOnClose()
+            {
+                _pager.DeleteOnClose = true;
+            }
+
+            public long LastWritePos
+            {
+                get { return _lastWritePos; }
+            }
+
+            public IVirtualPager Pager { get { return _pager; } }
+
+            public TransactionHeader* LastTransactionHeader;
+
+            public void Dispose()
+            {
+                _pager.Dispose();
+            }
+        }
+
+        public bool DeleteOnClose { get; set; }
+    }
 }
