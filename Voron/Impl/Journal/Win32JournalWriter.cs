@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,7 +10,7 @@ namespace Voron.Impl.Journal
 {
 	public unsafe class Win32FileJournalWriter: IJournalWriter
 	{
-		private readonly string filename;
+		private readonly string _filename;
 		private readonly SafeFileHandle _handle;
 
 		[DllImport("kernel32.dll")]
@@ -32,7 +33,7 @@ namespace Voron.Impl.Journal
 
 		public Win32FileJournalWriter(string filename, long journalSize)
 		{
-			this.filename = filename;
+			this._filename = filename;
 			_handle = NativeFileMethods.CreateFile(filename,
 				NativeFileAccess.GenericWrite | NativeFileAccess.GenericWrite, NativeFileShare.None, IntPtr.Zero,
 				NativeFileCreationDisposition.OpenAlways,
@@ -74,10 +75,11 @@ namespace Voron.Impl.Journal
 		}
 
 		public long NumberOfAllocatedPages { get; private set; }
-		
-		public IVirtualPager CreatePager()
+	    public bool DeleteOnClose { get; set; }
+
+	    public IVirtualPager CreatePager()
 		{
-			return new MemoryMapPager(filename);
+			return new MemoryMapPager(_filename);
 		}
 
 	    public void Read(long pageNumber, byte* buffer, int count)
@@ -173,6 +175,10 @@ namespace Voron.Impl.Journal
 			Disposed = true;
 			GC.SuppressFinalize(this);
 			_handle.Close();
+		    if (DeleteOnClose)
+		    {
+		        File.Delete(_filename);
+		    }
 		}
 
 		public bool Disposed { get; private set; }

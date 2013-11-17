@@ -7,7 +7,8 @@ namespace Voron.Impl.Journal
 	{
 		Task WriteGatherAsync(long position, byte*[] pages);
 		long NumberOfAllocatedPages { get;  }
-		IVirtualPager CreatePager();
+	    bool DeleteOnClose { get; set; }
+	    IVirtualPager CreatePager();
 	    void Read(long pageNumber, byte* buffer, int count);
 	}
 }

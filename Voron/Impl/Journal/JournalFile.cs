@@ -203,7 +203,7 @@ namespace Voron.Impl.Journal
             get { return _unusedPages.Select(x => x.ScratchPos); }
         }
 
-        public bool DeleteOnClose;
+        public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
 
         public void FreeScratchPagesOlderThan(StorageEnvironment env, long oldestActiveTransaction)
         {

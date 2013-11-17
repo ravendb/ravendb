@@ -28,8 +28,9 @@ namespace Voron.Impl.Journal
 		}
 
 		public long NumberOfAllocatedPages { get; private set; }
-		
-		public IVirtualPager CreatePager()
+	    public bool DeleteOnClose { get; set; }
+
+	    public IVirtualPager CreatePager()
 		{
 			_locker.EnterReadLock();
 			try
