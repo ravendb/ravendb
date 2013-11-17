@@ -25,25 +25,26 @@ namespace Raven.Client.Document.SessionOperations
 		{
 			if (typeof (T).IsArray)
 			{
-				// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
-				// With a single Id
-				var arrayOfArrays = multiLoadResult
-					.Results
-                    .Where(EnsureNotReadVetoed)
-					.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
-					.Select(values =>
-					{
-						var elementType = typeof (T).GetElementType();
-						var array = values.Select(y =>
-						{
-							return documentSession.ProjectionToInstance(y, elementType);
-						}).ToArray();
-						var newArray = Array.CreateInstance(elementType, array.Length);
-						Array.Copy(array, newArray, array.Length);
-						return newArray;
-					})
-					.Cast<T>()
-					.ToArray();
+			    var arrayOfArrays = multiLoadResult.Results
+			                                       .Select(x =>
+			                                       {
+			                                           if (x == null)
+			                                               return null;
+
+			                                           var values = x.Value<RavenJArray>("$values").Cast<RavenJObject>();
+
+			                                           var elementType = typeof (T).GetElementType();
+			                                           var array = values.Select(value =>
+			                                           {
+                                                           EnsureNotReadVetoed(value);
+			                                               return documentSession.ProjectionToInstance(value, elementType);
+			                                           }).ToArray();
+			                                           var newArray = Array.CreateInstance(elementType, array.Length);
+			                                           Array.Copy(array, newArray, array.Length);
+			                                           return newArray;
+			                                       })
+			                                       .Cast<T>()
+			                                       .ToArray();
 
 				return arrayOfArrays;
 			}
