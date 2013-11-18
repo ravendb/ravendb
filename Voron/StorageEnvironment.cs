@@ -400,7 +400,6 @@ namespace Voron
 				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 			var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
 			journalApplicator.ApplyLogsToDataFile();
-			Console.WriteLine("Flushed journals");
 		}
 
 		public void AssertFlushingNotFailed()

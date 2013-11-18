@@ -110,7 +110,7 @@ namespace Voron.Impl.Journal
 			switch (lastWin32Error)
 			{
                 case ErrorSuccess:
-			        tcs.SetResult(null);
+			        tcs.TrySetResult(null);
 			        return tcs.Task;
 			    case ErrorIOPending:
 			        return tcs.Task;
