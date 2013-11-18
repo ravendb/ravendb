@@ -34,7 +34,7 @@ namespace Voron.Tryout
 
 			var x = new MultiAdds();
 			{
-				x.SplitterIssue();
+				x.SplitterIssue2();
 			}
 		}
 	}

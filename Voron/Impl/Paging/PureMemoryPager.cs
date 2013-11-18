@@ -96,7 +96,7 @@ namespace Voron.Impl.Paging
 
 			foreach (var buffer in _buffers)
 			{
-				if (buffer.Size >= size)
+				if (buffer.Size > size)
 				{
 					return buffer.Base + (size);
 				}
@@ -135,7 +135,7 @@ namespace Voron.Impl.Paging
 				newPager.AddRef(); // one for the current transaction
 				tx.AddPagerState(newPager);
 			}
-
+			PagerState.Release();
 			PagerState = newPager;
 		}
 	}
