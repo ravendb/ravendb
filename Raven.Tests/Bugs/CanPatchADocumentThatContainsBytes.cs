@@ -36,11 +36,9 @@ namespace Raven.Tests.Bugs
                 new PrimarySkills().Execute(store);
                 WaitForIndexing(store);
 
-                WaitForUserToContinueTheTest(store);
-
                 using (var session = store.OpenSession())
                 {
-                    store.DatabaseCommands.UpdateByIndex("PrimarySkills", new IndexQuery {Query = session.Query<PrimarySkills.Result, PrimarySkills>().ToString()}, new ScriptedPatchRequest
+                    store.DatabaseCommands.UpdateByIndex("PrimarySkills", new IndexQuery {Query = session.Query<PrimarySkills.Result, PrimarySkills>().Where(result => result.SkillId == 1).ToString()}, new ScriptedPatchRequest
                     {
                         Script = @"
 for (var i = 0; i < this.Skills.$values.length; i++) {
