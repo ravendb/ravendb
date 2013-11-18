@@ -150,13 +150,13 @@ namespace Voron.Impl
             Page page;
             if (_dirtyPages.Contains(p))
             {
-                page = GetTableForModification(p, c);
+                page = GetPageForModification(p, c);
                 page.Dirty = true;
 
                 return page;
             }
 
-            page = GetTableForModification(p, c);
+            page = GetPageForModification(p, c);
 
             var newPage = AllocatePage(1, p); // allocate new page in a log file but with the same number
 
@@ -167,7 +167,7 @@ namespace Voron.Impl
             return newPage;
         }
 
-        private Page GetTableForModification(long p, Cursor c)
+        private Page GetPageForModification(long p, Cursor c)
         {
             var page = c.GetPage(p);
             if (page != null)
