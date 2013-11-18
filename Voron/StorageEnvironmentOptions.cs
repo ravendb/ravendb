@@ -102,7 +102,7 @@ namespace Voron
                 {
                     Directory.CreateDirectory(_basePath);
                 }
-				_dataPager = new Lazy<IVirtualPager>(() => new FilePager(Path.Combine(_basePath, "db.voron")));
+				_dataPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(Path.Combine(_basePath, "db.voron")));
             }
 
             public override IVirtualPager DataPager
