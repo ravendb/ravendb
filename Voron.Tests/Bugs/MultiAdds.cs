@@ -98,6 +98,81 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
+		[Fact]
+		public void SplitterIssue2()
+		{
+			const int DocumentCount = 10;
+
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+			{
+				var rand = new Random();
+				var testBuffer = new byte[168];
+				rand.NextBytes(testBuffer);
+
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					env.CreateTree(tx, "multi");
+					tx.Commit();
+				}
+
+				var batch = new WriteBatch();
+
+				batch.MultiAdd("0", "1", "multi");
+				batch.MultiAdd("1", "1", "multi");
+				batch.MultiAdd("2", "1", "multi");
+				batch.MultiAdd("3", "1", "multi");
+				batch.MultiAdd("4", "1", "multi");
+				batch.MultiAdd("5", "1", "multi");
+
+				env.Writer.Write(batch);
+
+				using (var tx = env.NewTransaction(TransactionFlags.Read))
+				{
+					var tree = tx.GetTree("multi");
+					using (var iterator = tree.MultiRead(tx, "0"))
+					{
+						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+
+						var count = 0;
+						do
+						{
+							count++;
+						} while (iterator.MoveNext());
+
+						Assert.Equal(1, count);
+					}
+				}
+
+				batch = new WriteBatch();
+
+				batch.MultiAdd("0", "2", "multi");
+				batch.MultiAdd("1", "2", "multi");
+				batch.MultiAdd("2", "2", "multi");
+				batch.MultiAdd("3", "2", "multi");
+				batch.MultiAdd("4", "2", "multi");
+				batch.MultiAdd("5", "2", "multi");
+
+				env.Writer.Write(batch);
+
+				using (var tx = env.NewTransaction(TransactionFlags.Read))
+				{
+					var tree = tx.GetTree("multi");
+					using (var iterator = tree.MultiRead(tx, "0"))
+					{
+						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+
+						var count = 0;
+						do
+						{
+							count++;
+						} while (iterator.MoveNext());
+
+						Assert.Equal(2, count);
+					}
+				}
+			}
+		}
+
 		private void ValidateRecords(StorageEnvironment env, IEnumerable<Tree> trees, int documentCount, int i)
 		{
 			using (var tx = env.NewTransaction(TransactionFlags.Read))
@@ -122,7 +197,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		private void ValidateMultiRecords(StorageEnvironment env, IList<string> trees, int documentCount, int i)
+		private void ValidateMultiRecords(StorageEnvironment env, IEnumerable<string> trees, int documentCount, int i)
 		{
 			using (var tx = env.NewTransaction(TransactionFlags.Read))
 			{

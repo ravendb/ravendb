@@ -179,7 +179,7 @@ namespace Voron.Trees
 					tree.DirectAdd(tx, value, 0);
 					tx.AddMultiValueTree(this, key, tree);
 
-					DirectAdd(tx, key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
+					//DirectAdd(tx, key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
 				}
 			}
 		}

@@ -343,10 +343,10 @@ namespace Voron.Impl
                 var key = multiValueTree.Key.Item2;
                 var childTree = multiValueTree.Value;
 
-                var trh = (TreeRootHeader*)parentTree.DirectAdd(this, key, sizeof(TreeRootHeader));
+                var trh = (TreeRootHeader*)parentTree.DirectAdd(this, key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
                 childTree.State.CopyTo(trh);
 
-                parentTree.SetAsMultiValueTreeRef(this, key);
+                //parentTree.SetAsMultiValueTreeRef(this, key);
             }
         }
 
