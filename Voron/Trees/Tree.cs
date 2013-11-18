@@ -179,18 +179,7 @@ namespace Voron.Trees
 					tree.DirectAdd(tx, value, 0);
 					tx.AddMultiValueTree(this, key, tree);
 
-					var treeState = tree.State;
-
-					var header = (TreeRootHeader*) DirectAdd(tx, key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
-					
-					header->BranchPages = treeState.BranchPages;
-					header->Depth = treeState.Depth;
-					header->EntriesCount = treeState.EntriesCount;
-					header->Flags = treeState.Flags;
-					header->LeafPages = treeState.LeafPages;
-					header->OverflowPages = treeState.OverflowPages;
-					header->PageCount = treeState.PageCount;
-					header->RootPageNumber = treeState.RootPageNumber;
+					DirectAdd(tx, key, sizeof(TreeRootHeader), NodeFlags.MultiValuePageRef);
 				}
 			}
 		}
