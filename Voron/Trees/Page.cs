@@ -376,6 +376,21 @@ namespace Voron.Trees
             get { return new Slice(GetNode(i)).ToString(); }
         }
 
+	    public string DebugView()
+	    {
+		    var sb = new StringBuilder();
+		    for (int i = 0; i < NumberOfEntries; i++)
+		    {
+			    sb.Append(i)
+				    .Append(": ")
+				    .Append(new Slice((NodeHeader*)( _base + KeysOffsets[i])))
+				    .Append(" - ")
+				    .Append(KeysOffsets[i])
+				    .AppendLine();
+		    }
+		    return sb.ToString();
+	    }
+
         [Conditional("VALIDATE")]
         public void DebugValidate(Transaction tx, SliceComparer comparer, long root)
         {
