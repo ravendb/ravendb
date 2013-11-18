@@ -344,10 +344,6 @@ namespace Voron.Trees
 		public Page FindPageFor(Transaction tx, Slice key, Cursor cursor)
 		{
 			var p = tx.GetReadOnlyPage(State.RootPageNumber);
-		    if (State.RootPageNumber == 2 && p.PageNumber == 0)
-		    {
-		        
-		    }
 			cursor.Push(p);
 			while (p.Flags == (PageFlags.Branch))
 			{

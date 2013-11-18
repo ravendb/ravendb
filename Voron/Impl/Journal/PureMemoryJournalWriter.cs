@@ -67,6 +67,7 @@ namespace Voron.Impl.Journal
 			{
 				Marshal.FreeHGlobal(buffer.Handle);
 			}
+			_buffers.Clear();
 		}
 
 		public Task WriteGatherAsync(long position, byte*[] pages)
@@ -78,7 +79,7 @@ namespace Voron.Impl.Journal
 					throw new InvalidOperationException("Journal writes must be to the next location in the journal");
 
 				var size = pages.Length * AbstractPager.PageSize;
-			    _lastPos += pages.Length;
+			    _lastPos += size;
 
 				var handle = Marshal.AllocHGlobal(size);
 
