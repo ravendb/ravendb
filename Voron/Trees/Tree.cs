@@ -216,7 +216,12 @@ namespace Voron.Trees
 						{
 							case NodeFlags.Data:
 							case NodeFlags.MultiValuePageRef:
+							{
+								if (node->Version == ushort.MaxValue)
+									node->Version = 0;
+								node->Version++;
 								return (byte*)node + Constants.NodeHeaderSize + key.Size;
+							}
 							case NodeFlags.PageRef:
 								break;
 							default:
