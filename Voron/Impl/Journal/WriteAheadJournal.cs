@@ -325,6 +325,7 @@ namespace Voron.Impl.Journal
 				{
 					if (journalFile.PageTranslationTable.Count == 0)
 						continue;
+
 					_lastSyncedJournal = Math.Max(journalFile.Number, _lastSyncedJournal);
 					_lastSyncedPage = 0;
 					foreach (var pagePosition in journalFile.PageTranslationTable)
@@ -339,6 +340,7 @@ namespace Voron.Impl.Journal
 							continue;
 						}
 						_lastSyncedPage = Math.Max(_lastSyncedPage, pagePosition.Value.JournalPos);
+						pagesToWrite = pagesToWrite.SetItem(pagePosition.Key, pagePosition.Value.ScratchPos);
 					}
 				}
 
