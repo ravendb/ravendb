@@ -363,7 +363,7 @@ namespace Voron.Impl.Journal
 				{
 					_waj._dataPager.Write(page);
 				}
-
+				_waj._dataPager.Sync();
 				var unusedJournalFiles = GetUnusedJournalFiles();
 
 				using (var txw = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
