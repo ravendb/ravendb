@@ -153,7 +153,7 @@ namespace Voron.Tests.Bugs
 			var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
             
 			StopDatabase();
-
+			
             CorruptPage(lastJournal, page: 3, pos: 3);
 
 			StartDatabase();
@@ -256,7 +256,13 @@ namespace Voron.Tests.Bugs
 
 		private void CorruptPage(long journal, long page, int pos)
 		{
-		    using (var fileStream = new FileStream(StorageEnvironmentOptions.JournalName(journal), FileMode.Open, FileAccess.ReadWrite))
+			_options.Dispose();
+			_options = StorageEnvironmentOptions.ForPath("test.data");
+			using (var fileStream = new FileStream(
+				Path.Combine("test.data", StorageEnvironmentOptions.JournalName(journal)), 
+				FileMode.Open,
+				FileAccess.ReadWrite, 
+				FileShare.ReadWrite | FileShare.Delete))
 		    {
 		        fileStream.Position = page*AbstractPager.PageSize;
 
