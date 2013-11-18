@@ -46,7 +46,7 @@ namespace Raven.Database.Tasks
                     foreach (var index in context.IndexStorage.Indexes)
                     {
                         var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(index, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
-                    set.Add(key);
+                        set.Add(key);
                     }
                     try
                     {

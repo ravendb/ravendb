@@ -1533,7 +1533,6 @@ namespace Raven.Database.Indexing
                     task.Keys.Add(doc);
                 }
             }
-            set.Clear();
             if (task.Keys.Count == 0)
                 return;
             actions.Tasks.AddTask(task, SystemTime.UtcNow);
