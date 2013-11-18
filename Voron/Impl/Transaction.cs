@@ -396,7 +396,7 @@ namespace Voron.Impl
 			return new Cursor();
 		}
 
-		public unsafe void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
+		public void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
 		{
 			if (_multiValueTrees == null)
 				_multiValueTrees = new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer(_env.SliceComparer));
