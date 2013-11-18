@@ -38,6 +38,21 @@ define(["require", "exports", "models/database", "common/raven", "common/pagedLi
             return "#documents?" + collectionPart + databasePart;
         };
 
+        appUrl.forServer = /**
+        * Gets the server URL.
+        */
+        function () {
+            if (window.location.protocol === "file:") {
+                if (window.location.search.indexOf("fiddler")) {
+                    return "http://localhost.fiddler:8080";
+                } else {
+                    return "http://localhost:8080";
+                }
+            }
+
+            return window.location.protocol + "//" + window.location.host;
+        };
+
         appUrl.forCurrentDatabase = /**
         * Gets an object containing computed URLs that update when the current database updates.
         */

@@ -9,20 +9,41 @@
     </li>
 </ul>
 
-
+<div class="alert-danger">
+    TODO: finish implementing this page.
+    <ul>
+        <li>Load real data from the server.</li>
+        <li>Make 'New Index' button launch the index editor page. (Doesn't exist yet.)</li>
+        <li>Edit index should launch index editor page.</li>
+        <li>The index group should be collapsible. Why isn't this working?</li>
+        <li>The 'lock' drop down is clipped. Fix this z-order issue.</li>
+        <li>Make 'Save Changes' button work</li>
+        <li>Recent queries button should populate from the server</li>
+        <li>Delete needs to be implemented</li>
+        <li>Expand / collapse needs to be implemented</li>
+        <li>Make search work</li>
+        <li>Make API key-&gt;Databases be interactive (right now, each database cell is static text).</li>
+    </ul>
+</div>
 
 <div class="btn-toolbar" role="toolbar">
     <div class="btn-group">
         <button type="button" class="btn btn-primary" data-bind="click: navigateToNewIndex"><i class="icon-plus"></i> New Index</button>
         <button type="button" class="btn btn-primary" data-bind="click: navigateToQuery"><i class="icon-search"></i> Query</button>
-        <button type="button" class="btn btn-primary">Recent Queries</button>
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+                Recent Queries <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+                <li><a href="#">TODO: populate this list</a></li>
+            </ul>
+        </div>
     </div>
     <div class="btn-group">
         <button type="button" class="btn btn-primary" data-bind="click: collapseAll" title="Collapse all index groups"><i class="icon-collapse-alt"></i></button>
         <button type="button" class="btn btn-primary" data-bind="click: expandAll" title="Expand all index groups"><i class="icon-expand-alt"></i></button>
     </div>
     <div class="btn-group">
-        <!-- Single button -->
         <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown">
             Delete <span class="caret"></span>
         </button>
@@ -34,11 +55,6 @@
             <li><a href="#">Delete All Indexes</a></li>
         </ul>
     </div>
-    
-    <!--<div class="input-group">
-        <span class="input-group-addon"><i class="icon-filter"></i></span>
-        <input type="text" class="form-control" placeholder="Filter indexes">
-    </div>-->
 </div>
 
 <div class="indexes-container" data-bind="foreach: indexGroups">

@@ -46,7 +46,6 @@ body {
 }
 .databases-container {
   margin-top: 10px;
-  padding: 10px;
 }
 .databases-container .database {
   cursor: pointer;
@@ -79,7 +78,6 @@ body {
 }
 .indexes-container {
   margin-top: 10px;
-  padding: 10px;
 }
 .indexes-container .panel-group {
   margin-bottom: 30px;
@@ -92,6 +90,14 @@ body {
 }
 .indexes-container a.collapsed .icon-expand-alt {
   display: inline;
+}
+.settings-container {
+  margin-top: 10px;
+}
+.settings-container .api-key-card {
+  display: inline-block;
+  width: 500px;
+  margin-right: 20px;
 }
 .collection-style-0 {
   background-color: #00c700;

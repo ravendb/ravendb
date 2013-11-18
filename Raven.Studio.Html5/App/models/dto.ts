@@ -47,3 +47,19 @@ interface documentStatistics {
     StaleIndexes: Array<any>;
     Triggers: Array<any>;
 }
+
+interface apiKeyDto {
+    name: string;
+    secret: string;
+    fullApiKey: string;
+    connectionString: string;
+    directLink: string;
+    enabled: boolean;
+    databases: Array<apiKeyDatabaseDto>;
+}
+
+interface apiKeyDatabaseDto {
+    name: string;
+    admin: boolean;
+    readOnly: boolean;
+}

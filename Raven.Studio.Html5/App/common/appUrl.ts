@@ -37,7 +37,23 @@ class appUrl {
 		var databasePart = appUrl.getEncodedDbPart(db);
 		var collectionPart = collection ? "&collection=" + encodeURIComponent(collection) : "";
 		return "#documents?" + collectionPart + databasePart;
-	}
+    }
+
+    /**
+    * Gets the server URL.
+    */
+    static forServer() {
+        // Ported this code from old Silverlight Studio. Do we really need this?
+        if (window.location.protocol === "file:") {
+            if (window.location.search.indexOf("fiddler")) {
+                return "http://localhost.fiddler:8080";
+            } else {
+                return "http://localhost:8080";
+            }
+        }
+
+        return window.location.protocol + "//" + window.location.host;
+    }
 
 	/**
 	* Gets an object containing computed URLs that update when the current database updates.

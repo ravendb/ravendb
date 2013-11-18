@@ -252,7 +252,7 @@ define(["require", "exports", "models/database", "models/collection", "models/co
 
             return $.ajax(options);
         };
-        raven.ravenClientVersion = '2.5.0.0';
+        raven.ravenClientVersion = '3.0.0.0';
         raven.activeDatabase = ko.observable().subscribeTo("ActivateDatabase");
         return raven;
     })();
