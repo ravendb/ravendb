@@ -32,9 +32,9 @@ namespace Voron.Tryout
 			//	"Carmelo Coll","Shizue Sugg","Irena Imai","Tam Troxel","Berenice Burkart"
 			//};
 
-			using (var x = new BigValues())
+			var x = new MultiAdds();
 			{
-				x.CanReuseLargeSpace(3);
+				x.SplitterIssue();
 			}
 		}
 	}

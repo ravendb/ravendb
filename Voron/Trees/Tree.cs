@@ -593,6 +593,7 @@ namespace Voron.Trees
 
 		    var childTreeHeader =
 		        (TreeRootHeader*) ((byte*) item + item->KeySize + Constants.NodeHeaderSize);
+			Debug.Assert(childTreeHeader->RootPageNumber < tx.State.NextPageNumber);
             tree = childTreeHeader != null ?
 				Open(tx, _cmp, childTreeHeader) :
 				Create(tx, _cmp);
