@@ -43,9 +43,13 @@ namespace Voron.Impl
             {
                 Accessor.SafeMemoryMappedViewHandle.ReleasePointer();
                 Accessor.Dispose();
+	            Accessor = null;
             }
-            if (File != null)
-                File.Dispose();
+		    if (File != null)
+		    {
+			    File.Dispose();
+			    File = null;
+		    }
         }
 
 #if DEBUG
