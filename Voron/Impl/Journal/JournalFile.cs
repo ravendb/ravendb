@@ -154,13 +154,14 @@ namespace Voron.Impl.Journal
                 for (int index = 0; index < txPages.Count; index++)
                 {
                     var txPage = txPages[index];
+	                var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
                     if (index == 0) // this is the transaction header page
                     {
-                        pages[pagesCounter++] = txPage.Pointer;
+						pages[pagesCounter++] = scratchPage.Base;
                     }
                     else
                     {
-                        var pageNumber = ((PageHeader*) txPage.Pointer)->PageNumber;
+						var pageNumber = ((PageHeader*)scratchPage.Base)->PageNumber;
                         PagePosition value;
                         if (ptt.TryGetValue(pageNumber, out value))
                         {
@@ -174,7 +175,7 @@ namespace Voron.Impl.Journal
                         });
                         for (int i = 0; i < txPage.NumberOfPages; i++)
                         {
-                            pages[pagesCounter++] = txPage.Pointer + (i*AbstractPager.PageSize);
+							pages[pagesCounter++] = scratchPage.Base + (i * AbstractPager.PageSize);
                         }
                     }
                 }

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Voron.Impl.Paging;
 
 namespace Voron.Impl
 {
@@ -25,11 +27,9 @@ namespace Voron.Impl
 
         public MemoryMappedFile File;
 
-        public byte* Base;
+	    public byte* MapBase { get; set; }
 
-        public IntPtr Ptr;
-
-        public void Release()
+	    public void Release()
         {
             if (Interlocked.Decrement(ref _refs) != 0)
                 return;
@@ -39,7 +39,6 @@ namespace Voron.Impl
             Instances.TryRemove(this, out value);
 #endif
 
-            Base = null;
             if (Accessor != null)
             {
                 Accessor.SafeMemoryMappedViewHandle.ReleasePointer();
@@ -47,9 +46,6 @@ namespace Voron.Impl
             }
             if (File != null)
                 File.Dispose();
-
-            if(Ptr != IntPtr.Zero)
-                Marshal.FreeHGlobal(Ptr);
         }
 
 #if DEBUG

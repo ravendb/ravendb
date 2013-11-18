@@ -101,14 +101,10 @@ namespace Voron.Tests.Bugs
 		[Fact]
 		public void SplitterIssue2()
 		{
-			const int DocumentCount = 10;
-
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+			var storageEnvironmentOptions = StorageEnvironmentOptions.GetInMemory();
+			storageEnvironmentOptions.ManualFlushing = true;
+			using (var env = new StorageEnvironment(storageEnvironmentOptions))
 			{
-				var rand = new Random();
-				var testBuffer = new byte[168];
-				rand.NextBytes(testBuffer);
-
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					env.CreateTree(tx, "multi");

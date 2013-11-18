@@ -204,6 +204,22 @@ namespace Voron.Trees
 				ushort nodeVersion = 0;
 				if (page.LastMatch == 0) // this is an update operation
 				{
+					var node = page.GetNode(page.LastSearchPosition);
+					if (node->DataSize == len) // optimization, we don't need to do any additional work
+					{
+						CheckConcurrency(key, version, node->Version, TreeActionType.Add);
+
+						switch (nodeType)
+						{
+							case NodeFlags.Data:
+							case NodeFlags.MultiValuePageRef:
+								return (byte*)node + Constants.NodeHeaderSize + key.Size;
+							case NodeFlags.PageRef:
+								break;
+							default:
+								throw new ArgumentOutOfRangeException();
+						}
+					}
 					RemoveLeafNode(tx, cursor, page, out nodeVersion);
 				}
 				else // new item should be recorded

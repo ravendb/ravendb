@@ -1,44 +1,54 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using Voron.Trees;
 
-namespace Voron.Impl
+namespace Voron.Impl.Paging
 {
 	public unsafe class PureMemoryPager : AbstractPager
 	{
-		private IntPtr _ptr;
-		private byte* _base;
+		private ImmutableList<Buffer> _buffers = ImmutableList<Buffer>.Empty;
+
+		public class Buffer
+		{
+			public byte* Base;
+			public long Size;
+			public IntPtr Handle;
+		}
 
 		public PureMemoryPager(byte[] data)
 		{
-			_ptr = Marshal.AllocHGlobal(data.Length);
-			_base = (byte*)_ptr.ToPointer();
+			var ptr = Marshal.AllocHGlobal(data.Length);
+			var buffer = new Buffer
+			{
+				Handle = ptr,
+				Base = (byte*)ptr.ToPointer(),
+				Size = data.Length
+			};
+			_buffers = _buffers.Add(buffer);
 			NumberOfAllocatedPages = data.Length / PageSize;
 			PagerState.Release();
-			PagerState = new PagerState
-			{
-				Ptr = _ptr,
-                Base = _base
-			};
+			PagerState = new PagerState();
 			PagerState.AddRef();
 			fixed (byte* origin = data)
 			{
-				NativeMethods.memcpy(_base, origin, data.Length);
+				NativeMethods.memcpy(buffer.Base, origin, data.Length);
 			}
 		}
 
 		public PureMemoryPager()
 		{
-			_ptr = Marshal.AllocHGlobal(MinIncreaseSize);
-			_base = (byte*)_ptr.ToPointer();
+			var ptr = Marshal.AllocHGlobal(MinIncreaseSize);
+			var buffer = new Buffer
+			{
+				Handle = ptr,
+				Base = (byte*)ptr.ToPointer(),
+				Size = MinIncreaseSize
+			};
+			_buffers.Add(buffer);
 			NumberOfAllocatedPages = 0;
 			PagerState.Release();
-			PagerState = new PagerState
-				{
-					Ptr = _ptr,
-					Base = _base
-				};
+			PagerState = new PagerState();
 			PagerState.AddRef();
 		}
 
@@ -65,7 +75,14 @@ namespace Voron.Impl
 		{
 			base.Dispose();
 			PagerState.Release();
-			_base = null;
+		    foreach (var buffer in _buffers)
+		    {
+			    if (buffer.Handle == IntPtr.Zero)
+				    continue;
+				Marshal.FreeHGlobal(new IntPtr(buffer.Base));
+			    buffer.Handle = IntPtr.Zero;
+		    }
+		    _buffers = _buffers.Clear();
 		}
 
 		public override void Sync()
@@ -75,7 +92,18 @@ namespace Voron.Impl
 
 		public override byte* AcquirePagePointer(long pageNumber)
 		{
-			return _base + (pageNumber * PageSize);
+			long size = pageNumber*PageSize;
+
+			foreach (var buffer in _buffers)
+			{
+				if (buffer.Size >= size)
+				{
+					return buffer.Base + (size);
+				}
+				size -= buffer.Size;
+			}
+
+			throw new ArgumentException("Page number beyond the end of allocated pages");
 		}
 
 		public override void AllocateMorePages(Transaction tx, long newLength)
@@ -86,15 +114,20 @@ namespace Voron.Impl
 			if (newLength == oldSize)
 		        return; // nothing to do
 
-			NumberOfAllocatedPages = newLength / PageSize;
-			var newPtr = Marshal.AllocHGlobal(new IntPtr(newLength));
-			var newBase = (byte*)newPtr.ToPointer();
-			NativeMethods.memcpy(newBase, _base, new IntPtr(oldSize));
-			_base = newBase;
-			_ptr = newPtr;
+			var increaseSize = (newLength - oldSize);
+			NumberOfAllocatedPages += increaseSize / PageSize;
+			var newPtr = Marshal.AllocHGlobal(new IntPtr(increaseSize));
 
+			var buffer = new Buffer
+			{
+				Handle = newPtr,
+				Base = (byte*) newPtr.ToPointer(),
+				Size = increaseSize
+			};
 
-			var newPager = new PagerState { Ptr = newPtr, Base = _base };
+			_buffers = _buffers.Add(buffer);
+
+			var newPager = new PagerState { };
 			newPager.AddRef(); // one for the pager
 
 			if (tx != null) // we only pass null during startup, and we don't need it there

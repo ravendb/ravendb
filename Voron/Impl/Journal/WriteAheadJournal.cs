@@ -124,8 +124,8 @@ namespace Voron.Impl.Journal
 						var page = pager.Read(kvp.Value.JournalPos);
 						var numOfPages = page.IsOverflow ? pager.GetNumberOfOverflowPages(page.OverflowSize) : 1;
 						var scratchBuffer = _env.ScratchBufferPool.Allocate(null, numOfPages);
-
-						NativeMethods.memcpy(scratchBuffer.Pointer, page.Base, numOfPages * AbstractPager.PageSize);
+						var scratchPage = _env.ScratchBufferPool.ReadPage(scratchBuffer.PositionInScratchBuffer);
+						NativeMethods.memcpy(scratchPage.Base, page.Base, numOfPages * AbstractPager.PageSize);
 
 						ptt = ptt.SetItem(kvp.Key, new JournalFile.PagePosition
 						{

@@ -53,7 +53,7 @@ namespace Voron.Impl
 
         public override byte* AcquirePagePointer(long pageNumber)
         {
-            return PagerState.Base + (pageNumber * PageSize);
+            return PagerState.MapBase + (pageNumber * PageSize);
         }
 
         public override Page GetWritable(long pageNumber)
@@ -107,7 +107,7 @@ namespace Voron.Impl
                  {
                      Accessor = accessor,
                      File = mmf,
-                     Base = p
+                     MapBase = p
                  };
             newPager.AddRef(); // one for the pager
             return newPager;

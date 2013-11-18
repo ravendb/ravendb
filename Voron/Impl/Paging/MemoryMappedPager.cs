@@ -84,7 +84,7 @@ namespace Voron.Impl
 			{
 				Accessor = accessor,
 				File = mmf,
-				Base = p
+				MapBase = p
 			};
 			newPager.AddRef(); // one for the pager
 			return newPager;
@@ -92,7 +92,7 @@ namespace Voron.Impl
 
 		public override byte* AcquirePagePointer(long pageNumber)
 		{
-			return PagerState.Base + (pageNumber * PageSize);
+			return PagerState.MapBase + (pageNumber * PageSize);
 		}
 
 		public override void Sync()
@@ -116,7 +116,7 @@ namespace Voron.Impl
 
 	    public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
 	    {
-            NativeMethods.memcpy(PagerState.Base + pagePosition * PageSize, start.Base, pagesToWrite * PageSize);
+            NativeMethods.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, pagesToWrite * PageSize);
 	    }
 
 	    public override void Dispose()
