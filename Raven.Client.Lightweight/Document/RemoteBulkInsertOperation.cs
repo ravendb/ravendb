@@ -1,4 +1,8 @@
-﻿#if !NETFX_CORE
+﻿using System.Net;
+
+using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Json;
+#if !NETFX_CORE
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -241,15 +245,30 @@ namespace Raven.Client.Document
 
         private async Task<bool> IsOperationCompleted(long operationId)
         {
-            var status = await GetOperationStatus(operationId);
+            try
+            {
+                var status = await GetOperationStatus(operationId);
 
-            if (status == null)
-                return true;
+                if (status == null) return true;
 
-            if (status.Value<bool>("Completed"))
-                return true;
+                if (status.Value<bool>("Completed")) 
+                    return true;
 
-            return false;
+                return false;
+            }
+            catch (WebException e)
+            {
+                var response = e.Response as HttpWebResponse;
+                if (response == null) throw;
+
+                if (response.StatusCode != HttpStatusCode.Conflict)
+                    throw;
+
+                var conflicts = new StreamReader(response.GetResponseStreamWithHttpDecompression());
+                var conflictsDocument = RavenJObject.Load(new RavenJsonTextReader(conflicts));
+
+                throw new ConcurrencyException(conflictsDocument.Value<string>("Error"));
+            }
         }
 
         private Task<RavenJToken> GetOperationStatus(long operationId)

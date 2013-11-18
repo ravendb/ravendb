@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Document;
@@ -115,7 +116,16 @@ namespace Raven.Client.Embedded
 		public void Dispose()
 		{
 			queue.Add(null);
-			doBulkInsert.Wait();
+
+		    try
+		    {
+                doBulkInsert.Wait();
+		    }
+		    catch (AggregateException e)
+		    {
+		        throw e.ExtractSingleInnerException();
+		    }
+			
 			var onReport = Report;
 			if (onReport != null)
 				onReport("Done with bulk insert");
