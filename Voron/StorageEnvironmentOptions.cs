@@ -203,7 +203,7 @@ namespace Voron
 				var path = Path.Combine(_basePath, name);
 		        if (File.Exists(path) == false)
 			        throw new InvalidOperationException("No such journal " + path);
-				return new MemoryMapPager(path);
+				return new MemoryMapPager(path, access: NativeFileAccess.GenericRead);
 	        }
         }
 

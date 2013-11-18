@@ -35,7 +35,7 @@ namespace Voron.Impl.Journal
 		{
 			this._filename = filename;
 			_handle = NativeFileMethods.CreateFile(filename,
-				NativeFileAccess.GenericWrite | NativeFileAccess.GenericWrite, NativeFileShare.None, IntPtr.Zero,
+				NativeFileAccess.GenericWrite | NativeFileAccess.GenericWrite, NativeFileShare.Read, IntPtr.Zero,
 				NativeFileCreationDisposition.OpenAlways,
 				NativeFileAttributes.Write_Through | NativeFileAttributes.NoBuffering | NativeFileAttributes.Overlapped, IntPtr.Zero);
 

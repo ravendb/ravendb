@@ -10,6 +10,7 @@ namespace Voron.Impl
 {
 	public unsafe class MemoryMapPager : AbstractPager
 	{
+		private readonly NativeFileAccess access;
 		private readonly FileInfo _fileInfo;
 	    private readonly SafeFileHandle _handle;
 	    private long _length;
@@ -19,11 +20,14 @@ namespace Voron.Impl
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
-        public MemoryMapPager(string file, NativeFileAttributes options = NativeFileAttributes.Normal)
+        public MemoryMapPager(string file, 
+			NativeFileAttributes options = NativeFileAttributes.Normal,
+			NativeFileAccess access = NativeFileAccess.GenericAll)
 		{
-			_fileInfo = new FileInfo(file);
+	        this.access = access;
+	        _fileInfo = new FileInfo(file);
 			var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
-            _handle = NativeFileMethods.CreateFile(file, NativeFileAccess.GenericAll, NativeFileShare.Read, IntPtr.Zero,
+			_handle = NativeFileMethods.CreateFile(file, access, NativeFileShare.Read | NativeFileShare.Write | NativeFileShare.Delete, IntPtr.Zero,
                 NativeFileCreationDisposition.OpenAlways, options, IntPtr.Zero);
             if (_handle.IsInvalid)
                 throw new Win32Exception();
@@ -68,9 +72,11 @@ namespace Voron.Impl
 
 		private PagerState CreateNewPagerState()
 		{
-            var mmf = MemoryMappedFile.CreateFromFile(_fileStream, Guid.NewGuid().ToString(), _fileStream.Length,
-													  MemoryMappedFileAccess.ReadWrite, null, HandleInheritability.None, true);
-			var accessor = mmf.CreateViewAccessor();
+			var memoryMappedFileAccess = access == NativeFileAccess.GenericRead ? MemoryMappedFileAccess.Read : MemoryMappedFileAccess.ReadWrite;
+			var mmf = MemoryMappedFile.CreateFromFile(_fileStream, Guid.NewGuid().ToString(), _fileStream.Length,
+				memoryMappedFileAccess,
+				null, HandleInheritability.None, true);
+			var accessor = mmf.CreateViewAccessor(0, _fileStream.Length, memoryMappedFileAccess);
 			byte* p = null;
 			accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
 
