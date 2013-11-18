@@ -2136,8 +2136,16 @@ namespace Raven.Client.Indexes
                     break;
                 case ExpressionType.Convert:
                 case ExpressionType.ConvertChecked:
-                    Out("(");
-                    ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
+                    if (node.Method != null && node.Method.Name == "Parse" && node.Method.DeclaringType == typeof(DateTime))
+                    {
+                        Out(node.Method.DeclaringType.Name);
+                        Out(".Parse(");
+                    }
+                    else
+                    {
+                        Out("(");
+                        ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
+                    }
                     break;
                 case ExpressionType.ArrayLength:
                     // we don't want to do nothing for those
