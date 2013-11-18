@@ -189,7 +189,7 @@ namespace Voron.Impl.Journal
                 _locker.ExitWriteLock();
             }
 
-            return _journalWriter.WriteGatherAsync(writePagePos, pages);
+            return _journalWriter.WriteGatherAsync(writePagePos * AbstractPager.PageSize, pages);
         }
 
         public void InitFrom(JournalReader journalReader, ImmutableDictionary<long, PagePosition> pageTranslationTable)
