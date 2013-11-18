@@ -12,6 +12,7 @@ namespace Voron.Impl.Journal
 	{
 		private readonly string _filename;
 		private readonly SafeFileHandle _handle;
+		private SafeFileHandle _readHandle;
 
 		[DllImport("kernel32.dll")]
 		static extern bool WriteFileGather(
@@ -33,9 +34,9 @@ namespace Voron.Impl.Journal
 
 		public Win32FileJournalWriter(string filename, long journalSize)
 		{
-			this._filename = filename;
+			_filename = filename;
 			_handle = NativeFileMethods.CreateFile(filename,
-				NativeFileAccess.GenericWrite | NativeFileAccess.GenericWrite, NativeFileShare.Read, IntPtr.Zero,
+				NativeFileAccess.GenericWrite, NativeFileShare.Read, IntPtr.Zero,
 				NativeFileCreationDisposition.OpenAlways,
 				NativeFileAttributes.Write_Through | NativeFileAttributes.NoBuffering | NativeFileAttributes.Overlapped, IntPtr.Zero);
 
@@ -53,6 +54,7 @@ namespace Voron.Impl.Journal
 		private const int ErrorIOPending = 997;
 		private const int ErrorSuccess = 0;
 		private const int ErrorOperationAborted = 995;
+		private const int ErrorHandleEof = 38;
 
 		public Task WriteGatherAsync(long position, byte*[] pages)
 		{
@@ -82,8 +84,19 @@ namespace Voron.Impl.Journal
 			return new MemoryMapPager(_filename);
 		}
 
-	    public void Read(long pageNumber, byte* buffer, int count)
+	    public bool Read(long pageNumber, byte* buffer, int count)
 	    {
+		    if (_readHandle == null)
+		    {
+			    _readHandle = NativeFileMethods.CreateFile(_filename,
+				    NativeFileAccess.GenericRead, 
+					NativeFileShare.Write | NativeFileShare.Read | NativeFileShare.Delete, 
+					IntPtr.Zero,
+				    NativeFileCreationDisposition.OpenExisting, 
+					NativeFileAttributes.Normal, 
+					IntPtr.Zero);
+		    }
+			
 	        var position = pageNumber*AbstractPager.PageSize;
 	        var overlapped = new Overlapped((int) (position & 0xffffffff), (int) (position >> 32), IntPtr.Zero, null);
 	        var nativeOverlapped = overlapped.Pack(null, null);
@@ -92,11 +105,16 @@ namespace Voron.Impl.Journal
 	            while (count >0)
 	            {
                     int read;
-                    if (NativeFileMethods.ReadFile(_handle, buffer, count, out read, nativeOverlapped) == false)
-                        throw new Win32Exception();
+		            if (NativeFileMethods.ReadFile(_readHandle, buffer, count, out read, nativeOverlapped) == false)
+		            {
+			            if (Marshal.GetLastWin32Error() == ErrorHandleEof)
+				            return false;
+			            throw new Win32Exception();
+		            }
 	                count -= read;
 	                buffer += read;
 	            }
+		        return true;
 	        }
 	        finally
 	        {
@@ -156,6 +174,8 @@ namespace Voron.Impl.Journal
 		{
 			Disposed = true;
 			GC.SuppressFinalize(this);
+			if (_readHandle != null)
+				_readHandle.Close();
 			_handle.Close();
 		    if (DeleteOnClose)
 		    {

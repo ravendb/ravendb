@@ -433,7 +433,8 @@ namespace Voron.Impl.Journal
 				var txPos = 0;
 				while (true)
 				{
-					file.ReadTransaction(txPos, txHeader);
+					if (file.ReadTransaction(txPos, txHeader) == false)
+						break;
 					if (txHeader->TransactionId + 1 == _oldestActiveTransaction)
 						break;
 					txPos += txHeader->PageCount + txHeader->OverflowPageCount + 1;

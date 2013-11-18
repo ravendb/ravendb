@@ -132,9 +132,9 @@ namespace Voron.Impl.Journal
             _disposed = true;
         }
 
-        public void ReadTransaction(long pos, TransactionHeader* txHeader)
+        public bool ReadTransaction(long pos, TransactionHeader* txHeader)
         {
-            _journalWriter.Read(pos, (byte*) txHeader, sizeof (TransactionHeader));
+            return _journalWriter.Read(pos, (byte*) txHeader, sizeof (TransactionHeader));
         }
 
         public Task Write(Transaction tx, int numberOfPages)

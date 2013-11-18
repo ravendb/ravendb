@@ -43,7 +43,7 @@ namespace Voron.Impl.Journal
 			}		
 		}
 
-	    public void Read(long pageNumber, byte* buffer, int count)
+	    public bool Read(long pageNumber, byte* buffer, int count)
 	    {
 	        long pos = 0;
 	        foreach (var current in _buffers)
@@ -56,9 +56,9 @@ namespace Voron.Impl.Journal
 	            }
 
 	            NativeMethods.memcpy(buffer, current.Pointer, count);
-	            return;
+		        return true;
 	        }
-	        throw new EndOfStreamException("Tried to read past end of journal");
+		    return false;
 	    }
 
 	    public void Dispose()
