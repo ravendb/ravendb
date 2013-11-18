@@ -47,6 +47,12 @@ namespace Voron.Tests.Storage
 			if (restartCount >= 2)
 				RestartDatabase();
 
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var readResult = tx.State.Root.Read(tx, new Slice(BitConverter.GetBytes(1203)));
+				Assert.Null(readResult);
+			}
+
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				buffer = new byte[1024 * 1024 * 3 + 1238];

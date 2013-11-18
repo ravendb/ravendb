@@ -20,7 +20,7 @@ namespace Voron.Impl.FileHeaders
 		private readonly StorageEnvironment _env;
 
 		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
-		private long _revision = -1;
+		private long _revision;
 
 		private readonly FileHeader* _theHeader;
 		private IntPtr _headerPtr;
@@ -44,8 +44,9 @@ namespace Voron.Impl.FileHeaders
 			var headers = stackalloc FileHeader[2];
 			var f1 = &headers[0];
 			var f2 = &headers[1];
-			if (_env.Options.ReadHeader(_headerFileNames[0], f1) == false &&
-				_env.Options.ReadHeader(_headerFileNames[1], f2) == false)
+			var hasHeader1 = _env.Options.ReadHeader(_headerFileNames[0], f1);
+			var hasHeader2 = _env.Options.ReadHeader(_headerFileNames[1], f2);
+			if (hasHeader1 == false && hasHeader2 == false)
 			{
 				// new 
 				FillInEmptyHeader(f1);

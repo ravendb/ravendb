@@ -43,7 +43,7 @@ namespace Voron.Impl.Journal
 			}		
 		}
 
-	    public void Read(long pageNumber, byte* buffer, int count)
+	    public bool Read(long pageNumber, byte* buffer, int count)
 	    {
 	        long pos = 0;
 	        foreach (var current in _buffers)
@@ -56,9 +56,9 @@ namespace Voron.Impl.Journal
 	            }
 
 	            NativeMethods.memcpy(buffer, current.Pointer, count);
-	            return;
+		        return true;
 	        }
-	        throw new EndOfStreamException("Tried to read past end of journal");
+		    return false;
 	    }
 
 	    public void Dispose()
@@ -67,6 +67,7 @@ namespace Voron.Impl.Journal
 			{
 				Marshal.FreeHGlobal(buffer.Handle);
 			}
+			_buffers.Clear();
 		}
 
 		public Task WriteGatherAsync(long position, byte*[] pages)
@@ -78,7 +79,7 @@ namespace Voron.Impl.Journal
 					throw new InvalidOperationException("Journal writes must be to the next location in the journal");
 
 				var size = pages.Length * AbstractPager.PageSize;
-			    _lastPos += pages.Length;
+			    _lastPos += size;
 
 				var handle = Marshal.AllocHGlobal(size);
 

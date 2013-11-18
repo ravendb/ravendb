@@ -89,31 +89,31 @@ namespace Voron
 
 		private unsafe void LoadExistingDatabase()
 		{
-			TransactionHeader* header;
-			bool hadIntegrityIssues;
-			_journal.RecoverDatabase(out header,out hadIntegrityIssues);
+			var header = stackalloc TransactionHeader[1];
+			bool hadIntegrityIssues  = _journal.RecoverDatabase(header);
 			if (_journal.Files.IsEmpty && hadIntegrityIssues)
 			{
-				_journal.Dispose();
-				_journal = new WriteAheadJournal(this);
-				CreateNewDatabase();				
-				return;
+				throw new InvalidDataException("Unrecoverable database");
+				//_journal.Dispose();
+				//_journal = new WriteAheadJournal(this);
+				//CreateNewDatabase();				
+				//return;
 			}
 
 
 			var entry = _headerAccessor.CopyHeader();
-			var nextPageNumber = (header == null ? entry.LastPageNumber : header->LastPageNumber) + 1;
+			var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
 			State = new StorageEnvironmentState(null, null, nextPageNumber)
 			{
 				NextPageNumber = nextPageNumber
 			};
 
-			_transactionsCounter = (header == null ? entry.TransactionId : header->TransactionId);
+			_transactionsCounter = (header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
 
 			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
 			{
-				var root = Tree.Open(tx, _sliceComparer, header == null ? &entry.Root : &header->Root);
-				var freeSpace = Tree.Open(tx, _sliceComparer, header == null ? &entry.FreeSpace : &header->FreeSpace);
+				var root = Tree.Open(tx, _sliceComparer, header->TransactionId == 0 ? &entry.Root : &header->Root);
+				var freeSpace = Tree.Open(tx, _sliceComparer, header->TransactionId == 0 ? &entry.FreeSpace : &header->FreeSpace);
 
 				tx.UpdateRootsIfNeeded(root, freeSpace);
 				tx.Commit();
@@ -400,7 +400,6 @@ namespace Voron
 				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 			var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
 			journalApplicator.ApplyLogsToDataFile();
-			Console.WriteLine("Flushed journals");
 		}
 
 		public void AssertFlushingNotFailed()

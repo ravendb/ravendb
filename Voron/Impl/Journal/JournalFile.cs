@@ -132,9 +132,9 @@ namespace Voron.Impl.Journal
             _disposed = true;
         }
 
-        public void ReadTransaction(long pos, TransactionHeader* txHeader)
+        public bool ReadTransaction(long pos, TransactionHeader* txHeader)
         {
-            _journalWriter.Read(pos, (byte*) txHeader, sizeof (TransactionHeader));
+            return _journalWriter.Read(pos, (byte*) txHeader, sizeof (TransactionHeader));
         }
 
         public Task Write(Transaction tx, int numberOfPages)
@@ -189,7 +189,7 @@ namespace Voron.Impl.Journal
                 _locker.ExitWriteLock();
             }
 
-            return _journalWriter.WriteGatherAsync(writePagePos, pages);
+            return _journalWriter.WriteGatherAsync(writePagePos * AbstractPager.PageSize, pages);
         }
 
         public void InitFrom(JournalReader journalReader, ImmutableDictionary<long, PagePosition> pageTranslationTable)

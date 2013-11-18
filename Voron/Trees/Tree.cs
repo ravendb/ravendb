@@ -344,10 +344,6 @@ namespace Voron.Trees
 		public Page FindPageFor(Transaction tx, Slice key, Cursor cursor)
 		{
 			var p = tx.GetReadOnlyPage(State.RootPageNumber);
-		    if (State.RootPageNumber == 2 && p.PageNumber == 0)
-		    {
-		        
-		    }
 			cursor.Push(p);
 			while (p.Flags == (PageFlags.Branch))
 			{
@@ -597,6 +593,7 @@ namespace Voron.Trees
 
 		    var childTreeHeader =
 		        (TreeRootHeader*) ((byte*) item + item->KeySize + Constants.NodeHeaderSize);
+			Debug.Assert(childTreeHeader->RootPageNumber < tx.State.NextPageNumber);
             tree = childTreeHeader != null ?
 				Open(tx, _cmp, childTreeHeader) :
 				Create(tx, _cmp);

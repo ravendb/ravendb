@@ -122,7 +122,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		private void ValidateMultiRecords(StorageEnvironment env, IEnumerable<string> trees, int documentCount, int i)
+		private void ValidateMultiRecords(StorageEnvironment env, IList<string> trees, int documentCount, int i)
 		{
 			using (var tx = env.NewTransaction(TransactionFlags.Read))
 			{
