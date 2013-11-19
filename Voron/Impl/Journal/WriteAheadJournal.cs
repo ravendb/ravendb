@@ -287,6 +287,16 @@ namespace Voron.Impl.Journal
 			}
 		}
 
+		public void Clear(Transaction tx)
+		{
+			if(tx.Flags != TransactionFlags.ReadWrite)
+				throw new InvalidOperationException("Clearing of write ahead journal should be called only from a write transaction");
+			
+			Files.ForEach(x => x.Release());
+			Files = Files.Clear();
+			CurrentFile = null;
+		}
+
 		public class JournalApplicator
 		{
 			private readonly WriteAheadJournal _waj;
@@ -302,9 +312,11 @@ namespace Voron.Impl.Journal
 			}
 
 
-			public void ApplyLogsToDataFile()
+			public void ApplyLogsToDataFile(Transaction transaction = null)
 			{
-				using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
+				var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
+
+				using (var tx = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					_jrnls = _waj.Files.Select(x => x.GetSnapshot()).ToList();
 					if (_jrnls.Count == 0)
@@ -316,7 +328,8 @@ namespace Voron.Impl.Journal
 					_lastSyncedPage = journalInfo.LastSyncedJournalPage;
 					Debug.Assert(_jrnls.First().Number >= _lastSyncedJournal);
 
-					tx.Commit();
+					if(tx != null)
+						tx.Commit();
 				}
 
 
@@ -366,7 +379,7 @@ namespace Voron.Impl.Journal
 				_waj._dataPager.Sync();
 				var unusedJournalFiles = GetUnusedJournalFiles();
 
-				using (var txw = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
+				using (var txw = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					var journalFile = _waj.Files.First(x => x.Number == _lastSyncedJournal);
 					UpdateFileHeaderAfterDataFileSync(journalFile);
@@ -389,7 +402,8 @@ namespace Voron.Impl.Journal
 						fullLog.Release();
 					}
 
-					txw.Commit();
+					if(txw != null)
+						txw.Commit();
 				}
 
 			}

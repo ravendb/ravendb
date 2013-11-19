@@ -394,12 +394,12 @@ namespace Voron
 			}
 		}
 
-		public void FlushLogToDataFile()
+		public void FlushLogToDataFile(Transaction tx = null)
 		{
 			if (_options.ManualFlushing == false)
 				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 			var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
-			journalApplicator.ApplyLogsToDataFile();
+			journalApplicator.ApplyLogsToDataFile(tx);
 		}
 
 		public void AssertFlushingNotFailed()
