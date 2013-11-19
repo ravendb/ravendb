@@ -25,7 +25,7 @@ namespace Voron.Impl.FileHeaders
 		private readonly FileHeader* _theHeader;
 		private IntPtr _headerPtr;
 
-		private static string[] _headerFileNames = new[]
+		internal static string[] HeaderFileNames = new[]
 		{
 			"headers.one",
 			"headers.two"
@@ -44,15 +44,15 @@ namespace Voron.Impl.FileHeaders
 			var headers = stackalloc FileHeader[2];
 			var f1 = &headers[0];
 			var f2 = &headers[1];
-			var hasHeader1 = _env.Options.ReadHeader(_headerFileNames[0], f1);
-			var hasHeader2 = _env.Options.ReadHeader(_headerFileNames[1], f2);
+			var hasHeader1 = _env.Options.ReadHeader(HeaderFileNames[0], f1);
+			var hasHeader2 = _env.Options.ReadHeader(HeaderFileNames[1], f2);
 			if (hasHeader1 == false && hasHeader2 == false)
 			{
 				// new 
 				FillInEmptyHeader(f1);
                 FillInEmptyHeader(f2);
-				_env.Options.WriteHeader(_headerFileNames[0], f1);
-				_env.Options.WriteHeader(_headerFileNames[1], f2);
+				_env.Options.WriteHeader(HeaderFileNames[0], f1);
+				_env.Options.WriteHeader(HeaderFileNames[1], f2);
 
                 NativeMethods.memcpy((byte*)_theHeader, (byte*)f1, sizeof(FileHeader));
                 return true; // new
@@ -129,7 +129,7 @@ namespace Voron.Impl.FileHeaders
 				_revision++;
 				_theHeader->HeaderRevision = _revision;
 
-				var file = _headerFileNames[_revision & 1];
+				var file = HeaderFileNames[_revision & 1];
 
 				_env.Options.WriteHeader(file, _theHeader);
 

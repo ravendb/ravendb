@@ -79,6 +79,10 @@ namespace Voron.Impl.Journal
             get { return _journalWriter.NumberOfAllocatedPages - _writePage; }
         }
 
+	    internal IJournalWriter JournalWriter
+	    {
+			get { return _journalWriter; }
+	    }
 
         public ImmutableDictionary<long, PagePosition> PageTranslationTable
         {
