@@ -24,7 +24,7 @@ namespace Voron.Impl.Journal
 
 		public PureMemoryJournalWriter(long journalSize)
 		{
-			NumberOfAllocatedPages = journalSize;
+			NumberOfAllocatedPages = journalSize/AbstractPager.PageSize;
 		}
 
 		public long NumberOfAllocatedPages { get; private set; }
