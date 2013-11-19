@@ -249,7 +249,8 @@ namespace Voron
 			}
 			finally
 			{
-				_headerAccessor.Dispose();
+                if (_headerAccessor != null)
+				    _headerAccessor.Dispose();
 
 			    if (_scratchBufferPool != null)
 			        _scratchBufferPool.Dispose();
