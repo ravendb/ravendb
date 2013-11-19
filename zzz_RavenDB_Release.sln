@@ -1,5 +1,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{3617B75B-4CD6-4420-86B9-CACDC3C00D47}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Bundles", "Bundles", "{F2B14D1C-4B20-4DA0-9CE6-C169773B0493}"
@@ -126,6 +128,11 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Setup.CustomActions", "Raven.Setup.CustomActions\Raven.Setup.CustomActions.csproj", "{C36D71A5-F8F3-45A5-A632-80854926E55E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Smuggler.g.45", "Raven.Smuggler\Raven.Smuggler.g.45.csproj", "{C3B90695-3077-43C8-97DC-F6914981CA59}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{3BE614B3-26A4-4598-9A81-DDAE9CB71E55}"
+	ProjectSection(SolutionItems) = preProject
+		.nuget\packages.config = .nuget\packages.config
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

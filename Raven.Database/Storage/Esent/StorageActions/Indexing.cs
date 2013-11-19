@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -155,7 +156,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public void DeleteIndex(string name)
+		public void DeleteIndex(string name, CancellationToken token)
 		{
 			Api.JetSetCurrentIndex(session, IndexesStats, "by_key");
 			Api.MakeKey(session, IndexesStats, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -195,6 +196,7 @@ namespace Raven.Storage.Esent.StorageActions
 				var columnids = Api.GetColumnDictionary(session, op.Table);
 				do
 				{
+					token.ThrowIfCancellationRequested();
 					var indexNameFromDb = Api.RetrieveColumnAsString(session, op.Table, columnids["view"]);
 					if (string.Equals(name, indexNameFromDb, StringComparison.OrdinalIgnoreCase) == false)
 						break;

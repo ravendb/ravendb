@@ -296,10 +296,14 @@ namespace Rhino.Licensing
 						result = ValidateLicense();
 				}
 
+				if (result && IsOemLicense()) 
+					return true;
+
 				if (result)
 					ValidateUsingNetworkTime();
 				else
 					throw new LicenseExpiredException("Expiration Date : " + ExpirationDate);
+
 				return true;
 			}
 			catch (RhinoLicensingException)
@@ -318,7 +322,7 @@ namespace Rhino.Licensing
 				return true;
 
 			if (currentlyValidatingLicense)
-				return SystemTime.UtcNow < ExpirationDate;
+				return IsOemLicense() || SystemTime.UtcNow < ExpirationDate;
 
 			if (SubscriptionEndpoint == null)
 				throw new InvalidOperationException("Subscription endpoints are not supported for this license validator");
@@ -333,6 +337,12 @@ namespace Rhino.Licensing
 			}
 
 			return ValidateWithoutUsingSubscriptionLeasing();
+		}
+
+		public bool IsOemLicense()
+		{
+			string oem;
+			return LicenseAttributes.TryGetValue("OEM", out oem) && "true".Equals(oem, StringComparison.OrdinalIgnoreCase);
 		}
 
 		private bool ValidateWithoutUsingSubscriptionLeasing()

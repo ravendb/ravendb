@@ -38,7 +38,7 @@ namespace Raven.Database.Indexing
 		{
 			autoTuner = new IndexBatchSizeAutoTuner(context);
 			etagSynchronizer = synchronizer.GetSynchronizer(EtagSynchronizerType.Indexer);
-			prefetchingBehavior = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer);
+			prefetchingBehavior = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, autoTuner);
 		}
 
 		protected override bool IsIndexStale(IndexStats indexesStat, Etag synchronizationEtag, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
@@ -81,7 +81,8 @@ namespace Raven.Database.Indexing
 
 		protected override Task GetApplicableTask(IStorageActionsAccessor actions)
 		{
-			return actions.Tasks.GetMergedTask<RemoveFromIndexTask>();
+		    return (Task)actions.Tasks.GetMergedTask<RemoveFromIndexTask>() ??
+		           actions.Tasks.GetMergedTask<TouchMissingReferenceDocumentTask>();
 		}
 
 		protected override void FlushAllIndexes()
@@ -108,9 +109,13 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag startEtag)
+        protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag synchronizationEtag)
 		{
 			indexesToWorkOn = context.Configuration.IndexingScheduler.FilterMapIndexes(indexesToWorkOn);
+
+            var lastIndexedGuidForAllIndexes =
+                   indexesToWorkOn.Min(x => new ComparableByteArray(x.LastIndexedEtag.ToByteArray())).ToEtag();
+            var startEtag = CalculateSynchronizationEtag(synchronizationEtag, lastIndexedGuidForAllIndexes);
 
 			context.CancellationToken.ThrowIfCancellationRequested();
 
@@ -165,7 +170,7 @@ namespace Raven.Database.Indexing
 			var lastModified = lastByEtag.LastModified.Value;
 			var lastEtag = lastByEtag.Etag;
 
-			context.IndexedPerSecIncreaseBy(jsonDocs.Count);
+			context.PerformanceCounters.IndexedPerSecond.IncrementBy(jsonDocs.Count);
 			var result = FilterIndexes(indexesToWorkOn, jsonDocs, lastEtag).ToList();
 
 			ExecuteAllInterleaved(result, index => HandleIndexingFor(index, lastEtag, lastModified));
@@ -523,33 +528,5 @@ namespace Raven.Database.Indexing
 			indexingCompletedEvent = new ManualResetEventSlim(false);
 			base.Init();
 		}
-
-        protected override ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress
-        {
-            get
-            {
-                Log.Debug("[Document Reindexing] IndexingExecuter::DocumentKeysAddedWhileIndexingInProgress (get), Count = {0}, Last Caller : {1}", context.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex.Count, new StackTrace().GetFrames().Last());
-                return context.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex;
-            }
-            set
-            {
-                context.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex = value;
-                if(value != null)
-                    Log.Debug("[Document Reindexing] IndexingExecuter::DocumentKeysAddedWhileIndexingInProgress (set), Count = {0}, Last Caller : {1}", value.Count, new StackTrace().GetFrames().Last());
-                else
-                    Log.Debug("[Document Reindexing] IndexingExecuter::DocumentKeysAddedWhileIndexingInProgress (set) --> null value");
-
-            }
-        }
-
-        protected override ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing
-        {
-            get
-            {
-                Log.Debug("[Document Reindexing] IndexingExecuter::ReferencingDocumentsByChildKeysWhichMightNeedReindexing (get), Count = {0}, Last Caller : {1}", context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex.Count, new StackTrace().GetFrames().Last());
-                return context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex;
-            }
-
-        }
     }
 }

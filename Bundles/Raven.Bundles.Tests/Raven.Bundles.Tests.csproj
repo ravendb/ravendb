@@ -53,12 +53,13 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="xunit, Version=1.9.1.1600, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+    <Reference Include="xunit, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\xunit.1.9.1\lib\net20\xunit.dll</HintPath>
+      <HintPath>..\..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
     </Reference>
-    <Reference Include="xunit.extensions">
-      <HintPath>..\..\packages\xunit.extensions.1.9.1\lib\net20\xunit.extensions.dll</HintPath>
+    <Reference Include="xunit.extensions, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\xunit.extensions.1.9.2\lib\net20\xunit.extensions.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -76,6 +77,7 @@
     <Compile Include="Authorization\Bugs\Kwal.cs" />
     <Compile Include="Authorization\Bugs\LoadingSavedInfo.cs" />
     <Compile Include="Authorization\Bugs\Matthew.cs" />
+    <Compile Include="Authorization\Bugs\Preston.cs" />
     <Compile Include="Authorization\Bugs\WhenUsingMultiTenancy.cs" />
     <Compile Include="Authorization\Bugs\WithChangingOfUser.cs" />
     <Compile Include="Authorization\CanAskAuthQuestions.cs" />
@@ -167,7 +169,9 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\..\Tools\StyleCop\StyleCop.Targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />

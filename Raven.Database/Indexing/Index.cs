@@ -13,7 +13,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -34,9 +33,12 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Server.Responders;
 using Raven.Database.Storage;
+using Raven.Database.Tasks;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
 using Document = Lucene.Net.Documents.Document;
+using Task = System.Threading.Tasks.Task;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -818,9 +820,45 @@ namespace Raven.Database.Indexing
 				logIndexing.Debug("Indexing on {0} result in index {1} gave document: {2}", key, name,
 								sb.ToString());
 			}
-
-
 		}
+
+	    public static void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQuery indexQuery, AbstractViewGenerator viewGenerator)
+        {
+            if (string.IsNullOrWhiteSpace(indexQuery.Query))
+                return;
+            HashSet<string> hashSet = SimpleQueryParser.GetFields(indexQuery);
+            foreach (string field in hashSet)
+            {
+                string f = field;
+                if (f.EndsWith("_Range"))
+                {
+                    f = f.Substring(0, f.Length - "_Range".Length);
+                }
+                if (viewGenerator.ContainsField(f) == false &&
+                    viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
+                    throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
+            }
+
+            if (indexQuery.SortedFields == null)
+                return;
+
+            foreach (SortedField field in indexQuery.SortedFields)
+            {
+                string f = field.Field;
+                if (f == Constants.TemporaryScoreValue)
+                    continue;
+                if (f.EndsWith("_Range"))
+                {
+                    f = f.Substring(0, f.Length - "_Range".Length);
+                }
+                if (f.StartsWith(Constants.RandomFieldName))
+                    continue;
+                if (viewGenerator.ContainsField(f) == false && f != Constants.DistanceFieldName
+                    && viewGenerator.ContainsField("_") == false)// the catch all field name means that we have dynamic fields names
+                    throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
+            }
+        }
+
 
 
 		#region Nested type: IndexQueryOperation
@@ -856,7 +894,7 @@ namespace Raven.Database.Indexing
 				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
 				{
-					AssertQueryDoesNotContainFieldsThatAreNotIndexed();
+					AssertQueryDoesNotContainFieldsThatAreNotIndexed(indexQuery, parent.viewGenerator);
 					IndexSearcher indexSearcher;
 					RavenJObject[] termsDocs;
 					using (parent.GetSearcherAndTermsDocs(out indexSearcher, out termsDocs))
@@ -885,7 +923,7 @@ namespace Raven.Database.Indexing
 				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
 				{
-					AssertQueryDoesNotContainFieldsThatAreNotIndexed();
+					AssertQueryDoesNotContainFieldsThatAreNotIndexed(indexQuery, parent.viewGenerator);
 					IndexSearcher indexSearcher;
 					using (parent.GetSearcher(out indexSearcher))
 					{
@@ -1026,7 +1064,7 @@ namespace Raven.Database.Indexing
 			{
 				using (IndexStorage.EnsureInvariantCulture())
 				{
-					AssertQueryDoesNotContainFieldsThatAreNotIndexed();
+					AssertQueryDoesNotContainFieldsThatAreNotIndexed(indexQuery, parent.viewGenerator);
 					IndexSearcher indexSearcher;
 					using (parent.GetSearcher(out indexSearcher))
 					{
@@ -1136,43 +1174,6 @@ namespace Raven.Database.Indexing
 					Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
 					var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
 					alreadyReturned.Add(indexQueryResult.Projection);
-				}
-			}
-
-			private void AssertQueryDoesNotContainFieldsThatAreNotIndexed()
-			{
-				if (string.IsNullOrWhiteSpace(indexQuery.Query))
-					return;
-				HashSet<string> hashSet = SimpleQueryParser.GetFields(indexQuery);
-				foreach (string field in hashSet)
-				{
-					string f = field;
-					if (f.EndsWith("_Range"))
-					{
-						f = f.Substring(0, f.Length - "_Range".Length);
-					}
-					if (parent.viewGenerator.ContainsField(f) == false &&
-						parent.viewGenerator.ContainsField("_") == false) // the catch all field name means that we have dynamic fields names
-						throw new ArgumentException("The field '" + f + "' is not indexed, cannot query on fields that are not indexed");
-				}
-
-				if (indexQuery.SortedFields == null)
-					return;
-
-				foreach (SortedField field in indexQuery.SortedFields)
-				{
-					string f = field.Field;
-					if (f == Constants.TemporaryScoreValue)
-						continue;
-					if (f.EndsWith("_Range"))
-					{
-						f = f.Substring(0, f.Length - "_Range".Length);
-					}
-					if (f.StartsWith(Constants.RandomFieldName))
-						continue;
-					if (parent.viewGenerator.ContainsField(f) == false && f != Constants.DistanceFieldName
-						&& parent.viewGenerator.ContainsField("_") == false)// the catch all field name means that we have dynamic fields names
-						throw new ArgumentException("The field '" + f + "' is not indexed, cannot sort on fields that are not indexed");
 				}
 			}
 
@@ -1500,6 +1501,42 @@ namespace Raven.Database.Indexing
 				return new DynamicNullObject();
 			return new DynamicJsonObject(jsonDocument.ToJson());
 		}
+
+        protected void UpdateDocumentReferences(IStorageActionsAccessor actions, 
+            ConcurrentQueue<IDictionary<string, HashSet<string>>> allReferencedDocs, 
+            ConcurrentQueue<HashSet<string>> missingReferencedDocs)
+        {
+            IDictionary<string, HashSet<string>> result;
+            while (allReferencedDocs.TryDequeue(out result))
+            {
+                foreach (var referencedDocument in result)
+                {
+                    actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
+                    actions.General.MaybePulseTransaction();
+                }
+            }
+            var task = new TouchMissingReferenceDocumentTask
+            {
+                Index = name, // so we will get IsStale properly
+                Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            };
+
+            var set = context.DoNotTouchAgainIfMissingReferences.GetOrAdd(name, _ => new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase));
+            HashSet<string> docs;
+            while (missingReferencedDocs.TryDequeue(out docs))
+            {
+                
+                foreach (var doc in docs)
+                {
+                    if (set.TryRemove(doc))
+                        continue;
+                    task.Keys.Add(doc);
+                }
+            }
+            if (task.Keys.Count == 0)
+                return;
+            actions.Tasks.AddTask(task, SystemTime.UtcNow);
+        }
 
 		public void ForceWriteToDisk()
 		{

@@ -173,6 +173,8 @@ namespace Raven.Database
 
             using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
             {
+                log.Debug("Start loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
+
                 if (configuration.IsTenantDatabase == false)
                 {
                     validateLicense = new ValidateLicense();
@@ -245,6 +247,7 @@ namespace Raven.Database
                     SecondStageInitialization();
 
                     ExecuteStartupTasks();
+                    log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
                 }
                 catch (Exception)
                 {
@@ -359,7 +362,7 @@ namespace Raven.Database
                     CurrentNumberOfItemsToIndexInSingleBatch = workContext.CurrentNumberOfItemsToIndexInSingleBatch,
                     CurrentNumberOfItemsToReduceInSingleBatch = workContext.CurrentNumberOfItemsToReduceInSingleBatch,
                     ActualIndexingBatchSize = workContext.LastActualIndexingBatchSize.ToArray(),
-                    InMemoryIndexingQueueSize = prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).InMemoryIndexingQueueSize,
+                    InMemoryIndexingQueueSize = prefetcher.GetInMemoryIndexingQueueSize(PrefetchingUser.Indexer),
                     Prefetches = workContext.FutureBatchStats.OrderBy(x => x.Timestamp).ToArray(),
                     CountOfIndexes = IndexStorage.Indexes.Length,
                     DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(workContext.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
@@ -461,6 +464,9 @@ namespace Raven.Database
         {
             if (disposed)
                 return;
+
+            log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+
             var onDisposing = Disposing;
             if (onDisposing != null)
             {
@@ -563,6 +569,8 @@ namespace Raven.Database
                 exceptionAggregator.Execute(workContext.Dispose);
 
             exceptionAggregator.ThrowIfNeeded();
+
+            log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
         }
 
         public void StopBackgroundWorkers()
@@ -761,7 +769,7 @@ namespace Raven.Database
 
         public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
         {
-            workContext.DocsPerSecIncreaseBy(1);
+            workContext.PerformanceCounters.DocsPerSecond.Increment();
             key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
             RemoveReservedProperties(document);
             RemoveMetadataReservedProperties(metadata);
@@ -806,7 +814,7 @@ namespace Raven.Database
                         }, documents =>
                         {
                             etagSynchronizer.UpdateSynchronizationState(documents);
-							prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer).AfterStorageCommitBeforeWorkNotifications(documents);
+	                        prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
                         });
 
 						if (addDocumentResult.Updated)
@@ -826,7 +834,6 @@ namespace Raven.Database
                                 }, metadata);
                             });
 
-                        ScheduleDocumentsForReindexIfNeeded(key);
                         workContext.ShouldNotifyAboutWork(() => "PUT " + key);
                     }
                     else
@@ -859,7 +866,15 @@ namespace Raven.Database
             {
                 Etag preTouchEtag;
                 Etag afterTouchEtag;
-                actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+                try
+                {
+                    actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+                }
+                catch (ConcurrencyException)
+                {
+                    continue;
+                }
+
                 if (preTouchEtag == null || afterTouchEtag == null)
                     continue;
 
@@ -1072,37 +1087,12 @@ namespace Raven.Database
                         deleted = doc != null;
                     }
 
-                    ScheduleDocumentsForReindexIfNeeded(key);
                     workContext.ShouldNotifyAboutWork(() => "DEL " + key);
                 });
 
                 metadata = metadataVar;
                 return deleted;
             }
-        }
-
-        private void ScheduleDocumentsForReindexIfNeeded(string key)
-        {
-            log.Debug("[Document Reindexing] DocumentDatabase::ScheduleDocumentsForReindexIfNeeded() started (key = {0})",key);
-
-            bool wasKeyEnqueued = false;
-            var queue = workContext.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex;
-            if (queue != null)
-            {
-                log.Debug("[Document Reindexing] workContext.DocumentKeysAddedWhileIndexingInProgress_SimpleIndex is not null, key enqueued (key = {0})", key);
-                wasKeyEnqueued = true;
-                queue.Enqueue(key);
-            }
-
-            queue = workContext.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex;
-            if (queue != null)
-            {
-                log.Debug("[Document Reindexing] workContext.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex is not null, key enqueued (key = {0})", key);
-                wasKeyEnqueued = true;
-                queue.Enqueue(key);
-            }
-
-            if (!wasKeyEnqueued) log.Debug("[Document Reindexing] DocumentDatabase::ScheduleDocumentsForReindexIfNeeded() finished without key enqueue (key = {0})", key);
         }
 
         public bool HasTransaction(string txId)
@@ -1221,6 +1211,7 @@ namespace Raven.Database
             // before the rest of the world is notified about this.
             IndexDefinitionStorage.CreateAndPersistIndex(definition);
             IndexStorage.CreateIndexImplementation(definition);
+			InvokeSuggestionIndexing(fixedName, definition);
 
             TransactionalStorage.Batch(actions =>
             {
@@ -1233,7 +1224,6 @@ namespace Raven.Database
             // index, then we add it to the storage in a way that make it public
 			IndexDefinitionStorage.AddIndex(fixedName, definition);
 
-			InvokeSuggestionIndexing(fixedName, definition);
 
 			workContext.ClearErrorsFor(fixedName);
 
@@ -1526,7 +1516,7 @@ namespace Raven.Database
                     {
                         TransactionalStorage.Batch(action =>
                         {
-							action.Indexing.DeleteIndex(fixedName);
+							action.Indexing.DeleteIndex(fixedName, workContext.CancellationToken);
 
                             workContext.ShouldNotifyAboutWork(() => "DELETE INDEX " + name);
                         });
@@ -1544,6 +1534,8 @@ namespace Raven.Database
                         Thread.Sleep(100);
                     }
                 }
+                ConcurrentSet<string> _;
+                workContext.DoNotTouchAgainIfMissingReferences.TryRemove(name, out _);
                 workContext.ClearErrorsFor(name);
             }
         }
@@ -2428,8 +2420,6 @@ namespace Raven.Database
 							RemoveReservedProperties(doc.DataAsJson);
 							RemoveMetadataReservedProperties(doc.Metadata);                                                       
 
-                            ScheduleDocumentsForReindexIfNeeded(doc.Key);
-
 							if (options.CheckReferencesInIndexes)
 								keys.Add(doc.Key);
 							documents++;
@@ -2561,6 +2551,12 @@ namespace Raven.Database
                     var document = Get(key, transactionInformation);
                     if (document == null)
                         return;
+
+                    if (document.Metadata.ContainsKey("Raven-Read-Veto"))
+                    {
+                        result = document;
+                        return;
+                    }
 
                     var storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
                     if (storedTransformer == null)

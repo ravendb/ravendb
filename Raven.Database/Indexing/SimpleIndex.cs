@@ -88,6 +88,7 @@ namespace Raven.Database.Indexing
                         .ToList();
 
                     var allReferencedDocs = new ConcurrentQueue<IDictionary<string, HashSet<string>>>();
+                    var missingReferencedDocs = new ConcurrentQueue<HashSet<string>>();
 
                     BackgroundTaskExecuter.Instance.ExecuteAllBuffered(context, documentsWrapped, (partition) =>
                     {
@@ -96,7 +97,12 @@ namespace Raven.Database.Indexing
                         var documentIdField = new Field(Constants.DocumentIdFieldName, "dummy", Field.Store.YES,
                                                         Field.Index.NOT_ANALYZED_NO_NORMS);
 
-                        using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, allReferencedDocs.Enqueue))
+                        using (CurrentIndexingScope.Current = new CurrentIndexingScope(LoadDocument, (references,
+                                                                                                      missing) =>
+                        {
+                            allReferencedDocs.Enqueue(references);
+                            missingReferencedDocs.Enqueue(missing);
+                        } ))
                         {
                             foreach (var doc in RobustEnumerationIndex(partition, viewGenerator.MapDefinitions, stats))
                             {
@@ -136,21 +142,7 @@ namespace Raven.Database.Indexing
                             }
                         }
                     });
-
-                    var dic = context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_SimpleIndex;
-                    IDictionary<string, HashSet<string>> result;
-                    while (allReferencedDocs.TryDequeue(out result))
-                    {
-                        foreach (var referencedDocument in result)
-                        {
-                            actions.Indexing.UpdateDocumentReferences(name, referencedDocument.Key, referencedDocument.Value);
-                            foreach (var childDocumentKey in referencedDocument.Value)
-                            {
-                                dic.GetOrAdd(childDocumentKey, k => new ConcurrentBag<string>()).Add(referencedDocument.Key);
-                            }
-                        }
-                    }
-
+                    UpdateDocumentReferences(actions, allReferencedDocs, missingReferencedDocs);
                 }
                 catch (Exception e)
                 {

@@ -3,15 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Linq;
+using Raven.Client;
+using Xunit;
+
 namespace Raven.Tests.Issues
 {
-	using System.Linq;
-
-	using Raven.Client;
-	using Raven.Client.Linq;
-
-	using Xunit;
-
 	public class RavenDB_726 : RavenTest
 	{
 		[Fact]
@@ -19,20 +16,20 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewDocumentStore())
 			{
-				using (var s = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					s.Store(new User { Name = "Test User" });
-					s.SaveChanges();
+					session.Store(new User { Name = "Test User" });
+					session.SaveChanges();
 				}
 
-				using (var s = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					var query =
-						s.Query<User>()
-						 .Customize(c => c.WaitForNonStaleResults())
-						 .Select(x => new Projection { UserName = x.Name });
+				    var user = session.Query<User>()
+				                 .Customize(c => c.WaitForNonStaleResults())
+				                 .Select(x => new Projection {UserName = x.Name})
+				                 .First();
 
-					Assert.Equal("Test User", query.First().UserName);
+					Assert.Equal("Test User", user.UserName);
 				}
 			}
 		}

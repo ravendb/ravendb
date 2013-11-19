@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
+using Raven.Database.Linq;
 
 namespace Raven.Database.Queries
 {
@@ -27,6 +28,9 @@ namespace Raven.Database.Queries
             var results = new FacetResults();
             var defaultFacets = new Dictionary<string, Facet>();
             var rangeFacets = new Dictionary<string, List<ParsedRange>>();
+
+            var viewGenerator = database.IndexDefinitionStorage.GetViewGenerator(index);
+            Index.AssertQueryDoesNotContainFieldsThatAreNotIndexed(indexQuery, viewGenerator);
 
             foreach (var facet in facets)
             {

@@ -30,7 +30,7 @@ namespace Raven.Tests.Patching
 	this.Id = 'Something new'; 
 	this.Value++; 
 	this.newValue = ""err!!"";
-	this.Comments.Map(function(comment) {   
+	this.Comments = this.Comments.Map(function(comment) {   
 		return (comment == ""one"") ? comment + "" test"" : comment;
 	});";
 
@@ -126,7 +126,7 @@ this.Parts = this.Email.split('@');";
 		{
 			const string email = "somebody@somewhere.com";
 			var doc = RavenJObject.Parse("{\"Contact\":null}");
-			const string script = "this.Emails = _(3).times(function(i) { return contact.Email + i; });";
+			const string script = "this.Emails = _.times(3, function(i) { return contact.Email + i; });";
 			var patch = new ScriptedPatchRequest()
 			{
 				Script = script,
@@ -454,11 +454,9 @@ PutDocument(
 
 				store.DatabaseCommands.Patch("Items/1", new ScriptedPatchRequest
 				{
-                    Script = @"_(this.Comments).forEach(function(comment){PutDocument(
-						'Comments/', 
-						    { 'Comment':comment }
-                        );
-					});",
+                    Script = @"_.forEach(this.Comments, function(comment){
+                                PutDocument('Comments/', { 'Comment':comment });
+					        })",
 				});
 
 				var resultDoc = store.DatabaseCommands.GetDocuments(0, 10);

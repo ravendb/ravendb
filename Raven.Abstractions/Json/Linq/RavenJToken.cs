@@ -138,7 +138,7 @@ namespace Raven.Json.Linq
 			}
 		}
 
-		/// <summary>
+        /// <summary>
 		/// Writes this token to a <see cref="JsonWriter"/>.
 		/// </summary>
 		/// <param name="writer">A <see cref="JsonWriter"/> into which this method will write.</param>
@@ -486,6 +486,11 @@ namespace Raven.Json.Linq
 		{
 			throw new NotSupportedException();
 		}
+
+        public virtual T Value<T>()
+        {
+            return this.Convert<T>();
+        }
 
 		/// <summary>
 		/// Returns a collection of the child values of this token, in document order.

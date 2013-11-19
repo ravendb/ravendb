@@ -56,6 +56,7 @@ namespace Raven.Client.Connection
                 // projection, it seems.
                 return new JsonDocument
                 {
+                    Key = string.Empty,
                     DataAsJson = doc,
                     LastModified = SystemTime.UtcNow,
                 };
@@ -137,7 +138,7 @@ namespace Raven.Client.Connection
 			{
 				IsStale = Convert.ToBoolean(json["IsStale"].ToString()),
 				IndexTimestamp = json.Value<DateTime>("IndexTimestamp"),
-				IndexEtag = etag,
+                IndexEtag = Etag.Parse(json.Value<string>("IndexEtag")),
 				Results = ((RavenJArray)json["Results"]).Cast<RavenJObject>().ToList(),
 				Includes = ((RavenJArray)json["Includes"]).Cast<RavenJObject>().ToList(),
 				TotalResults = Convert.ToInt32(json["TotalResults"].ToString()),

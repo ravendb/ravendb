@@ -21,7 +21,7 @@ namespace Raven.Tests.Bugs
 			public string Description { get; set; }
 			public string WodType { get; set; }
 			public string BenchmarkType { get; set; }
-			public double Score { get; set; }
+			public double? Score { get; set; }
 			public List<string> ExerciseList { get; set; }
 		}
 
@@ -84,7 +84,7 @@ namespace Raven.Tests.Bugs
 					                   wod.WodType,
 					                   wod.BenchmarkType,
 					                   wod.ExerciseList,
-					                   Score = MetadataFor(wod).Value<double>("Temp-Index-Score")
+					                   Score = MetadataFor(wod).Value<double?>("Temp-Index-Score")
 				                   };
 
 				Index(m => m.ExerciseList, FieldIndexing.Default);

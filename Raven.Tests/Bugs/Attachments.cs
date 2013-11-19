@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -41,6 +42,40 @@ namespace Raven.Tests.Bugs
 				using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
 				{
 					attachment = documentStore.DatabaseCommands.HeadAttachment("test");
+				}
+			}
+
+			Assert.Null(attachment);
+		}
+
+		[Fact]
+		public async Task CanHeadExistingAttachmentAsync()
+		{
+			Attachment attachment;
+
+			using (var server = GetNewServer())
+			{
+				using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
+				{
+					documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
+					attachment = await documentStore.AsyncDatabaseCommands.HeadAttachmentAsync("test");
+				}
+			}
+
+			Assert.NotNull(attachment);
+			Assert.Throws<InvalidOperationException>(() => attachment.Data());
+		}
+
+		[Fact]
+		public async Task CanHeadNonExistingAttachmentAsync()
+		{
+			Attachment attachment;
+
+			using (var server = GetNewServer())
+			{
+				using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
+				{
+					attachment = await documentStore.AsyncDatabaseCommands.HeadAttachmentAsync("test");
 				}
 			}
 

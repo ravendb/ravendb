@@ -18,6 +18,11 @@ namespace Raven.Abstractions.Smuggler
 	{
 		public string TransformScript { get; set; }
 
+        /// <summary>
+        /// Maximum number of steps that transform script can have
+        /// </summary>
+        public int MaxStepsForTransformScript { get; set; }
+
 		public SmugglerOptions()
 		{
 			Filters = new List<FilterSetting>();
@@ -26,6 +31,7 @@ namespace Raven.Abstractions.Smuggler
 			BatchSize = 1024;
 			ShouldExcludeExpired = false;
 			LastAttachmentEtag = LastDocsEtag = Etag.Empty;
+		    MaxStepsForTransformScript = 10*1000;
 		}
 
 		/// <summary>
@@ -135,5 +141,10 @@ namespace Raven.Abstractions.Smuggler
 		public string Path { get; set; }
 		public List<string> Values { get; set; }
 		public bool ShouldMatch { get; set; }
+
+		public FilterSetting()
+		{
+			Values = new List<string>();
+		}
 	}
 }

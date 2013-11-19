@@ -14,6 +14,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
 #endif
 using Raven.Imports.Newtonsoft.Json.Bson;
@@ -65,15 +66,12 @@ namespace Raven.Client.Document
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 #endif
         {
-            var synchronizationContext = SynchronizationContext.Current;
-            try
+            using (NoSynchronizationContext.Scope())
             {
-                SynchronizationContext.SetSynchronizationContext(null);
-
                 OperationId = Guid.NewGuid();
                 operationClient = client;
                 operationChanges = changes;
-                queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize * 3) / 2));
+                queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize*3)/2));
 
                 operationTask = StartBulkInsertAsync(options);
 #if !MONO
@@ -81,13 +79,9 @@ namespace Raven.Client.Document
 #endif
             }
 
-#if !MONO
-            finally
-            {
-                SynchronizationContext.SetSynchronizationContext(synchronizationContext);
-            }
-
         }
+
+#if !MONO
 
         private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
         {
@@ -103,10 +97,10 @@ namespace Raven.Client.Document
             var expect100Continue = operationClient.Expect100Continue();
 #endif
             var operationUrl = CreateOperationUrl(options);
-            var token = await GetToken(operationUrl);
+            var token = await GetToken();
             try
             {
-                token = await ValidateThatWeCanUseAuthenticateTokens(operationUrl, token);
+                token = await ValidateThatWeCanUseAuthenticateTokens(token);
             }
             catch (Exception e)
             {
@@ -140,38 +134,38 @@ namespace Raven.Client.Document
             return cancellationTokenSource.Token;
         }
 
-        private async Task<string> GetToken(string operationUrl)
+        private async Task<string> GetToken()
         {
             // this will force the HTTP layer to authenticate, meaning that our next request won't have to
-            var jsonToken = await GetAuthToken(operationUrl);
+            var jsonToken = await GetAuthToken();
 
             return jsonToken.Value<string>("Token");
         }
 
-        private Task<RavenJToken> GetAuthToken(string operationUrl)
+        private Task<RavenJToken> GetAuthToken()
         {
 #if !SILVERLIGHT
-            var request = operationClient.CreateRequest("POST", operationUrl + "&op=generate-single-use-auth-token",
+			var request = operationClient.CreateRequest("GET", "/singleAuthToken",
                                                         disableRequestCompression: true);
 
             return new CompletedTask<RavenJToken>(request.ReadResponseJson());
 #else
-			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST",
+			var request = operationClient.CreateRequest("/singleAuthToken", "GET",
 														disableRequestCompression: true);
 			request.webRequest.ContentLength = 0;
 
 			return request.ReadResponseJsonAsync();
 #endif
-        }
+		}
 
-        private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string operationUrl, string token)
+        private async Task<string> ValidateThatWeCanUseAuthenticateTokens(string token)
         {
 #if !SILVERLIGHT
-            var request = operationClient.CreateRequest("POST", operationUrl + "&op=generate-single-use-auth-token", disableRequestCompression: true);
+			var request = operationClient.CreateRequest("GET", "/singleAuthToken", disableRequestCompression: true);
 #else
-			var request = operationClient.CreateRequest(operationUrl + "&op=generate-single-use-auth-token", "POST", disableRequestCompression: true);
+			var request = operationClient.CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
 #endif
-            request.DisableAuthentication();
+			request.DisableAuthentication();
             request.webRequest.ContentLength = 0;
             request.AddOperationHeader("Single-Use-Auth-Token", token);
             var result = await request.ReadResponseJsonAsync();
@@ -283,7 +277,8 @@ namespace Raven.Client.Document
                 return;
             disposed = true;
             queue.Add(null);
-            await operationTask;
+            // The first await call in this method MUST call ConfigureAwait(false) in order to avoid DEADLOCK when this code is called by synchronize code, like Dispose().
+            await operationTask.ConfigureAwait(false);
 
             operationTask.AssertNotFailed();
 
@@ -308,6 +303,7 @@ namespace Raven.Client.Document
             }
 
             ReportInternal("Done writing to server");
+
         }
 
         public void Dispose()
@@ -315,8 +311,11 @@ namespace Raven.Client.Document
             if (disposed)
                 return;
 
-            var disposeAsync = DisposeAsync().ConfigureAwait(false);
-            disposeAsync.GetAwaiter().GetResult();
+            using (NoSynchronizationContext.Scope())
+            {
+                var disposeAsync = DisposeAsync().ConfigureAwait(false);
+                disposeAsync.GetAwaiter().GetResult();
+            }
         }
 
         private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)

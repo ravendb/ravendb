@@ -62,7 +62,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void TransformWithConversionListenerForShardedStore()
 		{
-			shardedDocumentStore.ExecuteTransformer(new TransformWithConversionListener.EtagTransfomer());
+			shardedDocumentStore.ExecuteTransformer(new TransformWithConversionListener.EtagTransformer());
 			shardedDocumentStore.RegisterListener(new TransformWithConversionListener.DocumentConversionListener());
 
 			string id;
@@ -79,7 +79,7 @@ namespace Raven.Tests.Issues
 
 			using (var session = shardedDocumentStore.OpenSession())
 			{
-				var transformedItem = session.Load<TransformWithConversionListener.EtagTransfomer, TransformWithConversionListener.TransformedItem>(id);
+				var transformedItem = session.Load<TransformWithConversionListener.EtagTransformer, TransformWithConversionListener.TransformedItem>(id);
 				Assert.True(transformedItem.Transformed);
 				Assert.True(transformedItem.Converted);
 			}
@@ -88,7 +88,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public async Task TransformWithConversionListenerForShardedStoreAsync()
 		{
-			shardedDocumentStore.ExecuteTransformer(new TransformWithConversionListener.EtagTransfomer());
+			shardedDocumentStore.ExecuteTransformer(new TransformWithConversionListener.EtagTransformer());
 			shardedDocumentStore.RegisterListener(new TransformWithConversionListener.DocumentConversionListener());
 
 			string id;
@@ -105,7 +105,7 @@ namespace Raven.Tests.Issues
 
 			using (var session = shardedDocumentStore.OpenAsyncSession())
 			{
-				var transformedItem = await session.LoadAsync<TransformWithConversionListener.EtagTransfomer, TransformWithConversionListener.TransformedItem>(id);
+				var transformedItem = await session.LoadAsync<TransformWithConversionListener.EtagTransformer, TransformWithConversionListener.TransformedItem>(id);
 				Assert.True(transformedItem.Transformed);
 				Assert.True(transformedItem.Converted);
 			}

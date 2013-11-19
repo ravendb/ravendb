@@ -146,6 +146,8 @@ namespace Raven.Database.Bundles.SqlReplication
 				{
 					cmd.Transaction = tx;
 
+					database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
+
 					var sb = new StringBuilder("INSERT INTO ")
 						.Append(commandBuilder.QuoteIdentifier(tableName))
 						.Append(" (")
@@ -203,6 +205,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			using (var cmd = connection.CreateCommand())
 			{
 				cmd.Transaction = tx;
+				database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
 				for (int i = 0; i < identifiers.Count; i += maxParams)
 				{
 					cmd.Parameters.Clear();

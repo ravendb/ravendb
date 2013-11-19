@@ -88,6 +88,21 @@ namespace Raven.Client.Silverlight.Connection
 			disabledAuthRetries = true;
 		}
 
+		public void RemoveAuthorizationHeader()
+		{
+			var headersWithoutAuthorization = new WebHeaderCollection();
+
+			foreach (var header in webRequest.Headers.AllKeys)
+			{
+				if(header == "Authorization")
+					continue;
+
+				headersWithoutAuthorization[header] = webRequest.Headers[header];
+			}
+
+			webRequest.Headers = headersWithoutAuthorization;
+		}
+
 		private HttpJsonRequestFactory factory;
 
 		private static Task noopWaitForTask = new CompletedTask();
@@ -105,6 +120,7 @@ namespace Raven.Client.Silverlight.Connection
 
 		internal HttpJsonRequest(CreateHttpJsonRequestParams requestParams, HttpJsonRequestFactory factory)
 		{
+			_credentials = requestParams.Credentials;
 			this.url = requestParams.Url;
 			this.conventions = requestParams.Convention;
 			this.factory = factory;
@@ -139,6 +155,8 @@ namespace Raven.Client.Silverlight.Connection
 		}
 
 		private bool requestSendToServer;
+
+		private readonly OperationCredentials _credentials;
 
 		/// <summary>
 		/// Begins the read response string.
@@ -203,7 +221,7 @@ namespace Raven.Client.Silverlight.Connection
 			if (conventions.HandleForbiddenResponseAsync == null)
 				return;
 
-			conventions.HandleForbiddenResponseAsync(forbiddenResponse);
+			conventions.HandleForbiddenResponseAsync(forbiddenResponse, _credentials);
 		}
 
 		public Task HandleUnauthorizedResponseAsync(HttpWebResponse unauthorizedResponse)
@@ -211,7 +229,7 @@ namespace Raven.Client.Silverlight.Connection
 			if (conventions.HandleUnauthorizedResponseAsync == null)
 				return null;
 
-			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse);
+			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse, _credentials);
 
 			if (unauthorizedResponseAsync == null)
 				return null;

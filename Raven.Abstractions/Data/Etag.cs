@@ -235,6 +235,29 @@ namespace Raven.Abstractions.Data
 			return Parse(s);
 		}
 
+		public static implicit operator Etag(Guid g)
+		{
+			return GuidToEtag(g);
+		}
+
+		public static implicit operator Guid?(Etag e)
+		{
+			if (e == null)
+				return null;
+			return EtagToGuid(e);
+		}
+
+		public static implicit operator Etag(Guid? g)
+		{
+			if (g == null)
+				return null;
+			return GuidToEtag(g.Value);
+		}
+
+		public static implicit operator Guid(Etag e)
+		{
+			return EtagToGuid(e);
+		}
 
 		public Etag HashWith(Etag other)
 		{
@@ -262,6 +285,30 @@ namespace Raven.Abstractions.Data
 				? first
 				: second;
 		}
+
+		private static Guid EtagToGuid(Etag etag)
+		{
+			var bytes = etag.ToByteArray();
+			if (BitConverter.IsLittleEndian)
+			{
+				Array.Reverse(bytes, 0, 4);
+				Array.Reverse(bytes, 4, 2);
+				Array.Reverse(bytes, 6, 2);
+			}
+			return new Guid(bytes);
+		}
+
+		private static Etag GuidToEtag(Guid guid)
+		{
+			var bytes = guid.ToByteArray();
+			if (BitConverter.IsLittleEndian)
+			{
+				Array.Reverse(bytes, 0, 4);
+				Array.Reverse(bytes, 4, 2);
+				Array.Reverse(bytes, 6, 2);
+			}
+			return Etag.Parse(bytes);
+		}
 	}
 
 	public class EtagJsonConverter : JsonConverter
@@ -288,84 +335,4 @@ namespace Raven.Abstractions.Data
 			return objectType == typeof (Etag);
 		}
 	}
-
-	//public class Etag : IComparable, IComparable<Etag>
-	//{
-	//    public Etag()
-	//    {
-
-	//    }
-	//    public Etag(string s)
-	//    {
-	//        Value = s;
-	//    }
-
-	//    public Etag(Guid guid)
-	//    {
-	//        Value = guid.ToString();
-	//    }
-
-	//    public Etag(Guid? guid)
-	//    {
-	//        if (guid != null)
-	//            Value = guid.ToString();
-	//    }
-
-	//    public string Value { get; private set; }
-
-	//    //public static implicit operator string(Etag etag)
-	//    //{
-	//    //    return etag.Value;
-	//    //}
-
-	//    //public override string ToString()
-	//    //{
-	//    //    return Value;
-	//    //}
-
-	//    //public static implicit operator Guid(Etag etag)
-	//    //{
-	//    //    return new Guid(etag.Value);
-	//    //}
-	//    //public static implicit operator Guid?(Etag etag)
-	//    //{
-	//    //    if (string.IsNullOrWhiteSpace(etag.Value))
-	//    //        return null;
-	//    //    return new Guid(etag.Value);
-	//    //}
-
-	//    //public static implicit operator Etag(Guid guid)
-	//    //{
-	//    //    return new Etag(guid);
-	//    //}
-
-	//    //public static implicit operator Etag(Guid? guid)
-	//    //{
-	//    //    return new Etag(guid);
-	//    //}
-
-	//    //public static implicit operator Etag(string s)
-	//    //{
-	//    //    return new Etag(s);
-	//    //}
-	//    public int CompareTo(object obj)
-	//    {
-	//        var etag = obj as string;
-	//        if (etag == null)
-	//            return 1;
-	//        return Value.CompareTo(etag);
-	//    }
-
-	//    public int CompareTo(Etag other)
-	//    {
-	//        if (other == null)
-	//            return 1;
-	//        return Value.CompareTo(other.Value);
-	//    }
-
-	//    public byte[] ToByteArray()
-	//    {
-	//        return Encoding.UTF8.GetBytes(Value);
-	//    }
-	//}
 }

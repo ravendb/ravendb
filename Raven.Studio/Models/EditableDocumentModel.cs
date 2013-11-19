@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Text;
@@ -13,6 +14,7 @@ using ActiproSoftware.Text.Parsing;
 using ActiproSoftware.Text.Parsing.LLParser;
 using ActiproSoftware.Windows.Controls.SyntaxEditor.Outlining;
 using Microsoft.Expression.Interactivity.Core;
+using Raven.Abstractions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Client.Exceptions;
@@ -99,7 +101,7 @@ namespace Raven.Studio.Models
 			metaDataSection = new DocumentSection{ Name = "Metadata", Document = new EditorDocument { Language = JsonLanguage, TabSize = 2 } };
 			DocumentSections = new List<DocumentSection> { dataSection, metaDataSection };
 			EnableExpiration = new Observable<bool>();
-			ExpireAt = new Observable<DateTime>();
+			ExpireAt = new Observable<DateTime?>();
 			ExpireAt.PropertyChanged += (sender, args) => TimeChanged = true;
 			CurrentSection = dataSection;
 
@@ -251,7 +253,7 @@ namespace Raven.Studio.Models
 		}
 
 		public bool TimeChanged { get; set; }
-		public Observable<DateTime> ExpireAt { get; set; }
+		public Observable<DateTime?> ExpireAt { get; set; }
 		private void StoreOutliningMode()
 		{
 			Settings.Instance.DocumentOutliningMode = SelectedOutliningMode.Name;
@@ -383,16 +385,22 @@ namespace Raven.Studio.Models
 				            result.Document.Key = Uri.UnescapeDataString(result.Document.Key);
 				            LocalId = result.Document.Key;
 				            SetCurrentDocumentKey(result.Document.Key);
+
+				            HasExpiration = Database.Value.HasExpirationBundle;
 				            var expiration = result.Document.Metadata["Raven-Expiration-Date"];
 				            if (expiration != null)
 				            {
-				                ExpireAt.Value = DateTime.Parse(expiration.ToString());
+				                // The expiration date is always interpreted as UTC.
+				                ExpireAt.Value = DateTime.SpecifyKind(expiration.Value<DateTime>(), DateTimeKind.Utc);
 				                EnableExpiration.Value = true;
+
+				                // If there's an expiration date, show it even if the bundle is not enabled.
 				                HasExpiration = true;
 				            }
 				            else
 				            {
-				                HasExpiration = false;
+				                ExpireAt.Value = null;
+				                EnableExpiration.Value = false;
 				            }
 				        }
 
@@ -1187,15 +1195,11 @@ namespace Raven.Studio.Models
 						{
 							metadata[Constants.RavenEntityName] = char.ToUpper(entityName[0]) + entityName.Substring(1);
 						}
-						else
-						{
-							metadata[Constants.RavenEntityName] = parentModel.ExpireAt.Value;
-						}
 					}
 
-					if (parentModel.EnableExpiration.Value)
+					if (parentModel.EnableExpiration.Value && parentModel.ExpireAt.Value.HasValue)
 					{
-						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.Value.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+						metadata["Raven-Expiration-Date"] = parentModel.ExpireAt.Value.Value.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture) + "Z";
 					}
 					else if (metadata.ContainsKey("Raven-Expiration-Date"))
 					{

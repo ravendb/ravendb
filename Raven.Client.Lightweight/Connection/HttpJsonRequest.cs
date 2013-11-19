@@ -19,6 +19,7 @@ using System.IO.Compression;
 #if NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -65,6 +66,8 @@ namespace Raven.Client.Connection
 
 		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
 
+		private readonly OperationCredentials _credentials;
+
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
@@ -75,6 +78,7 @@ namespace Raven.Client.Connection
 			CreateHttpJsonRequestParams requestParams,
 			HttpJsonRequestFactory factory)
 		{
+			_credentials = requestParams.Credentials;
 			Url = requestParams.Url;
 			this.factory = factory;
 			owner = requestParams.Owner;
@@ -82,7 +86,7 @@ namespace Raven.Client.Connection
 			Method = requestParams.Method;
 			webRequest = (HttpWebRequest)WebRequest.Create(requestParams.Url);
 			webRequest.UseDefaultCredentials = true;
-			webRequest.Credentials = requestParams.Credentials;
+			webRequest.Credentials = requestParams.Credentials.Credentials;
 			webRequest.Method = requestParams.Method;
 			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
 			{
@@ -103,6 +107,11 @@ namespace Raven.Client.Connection
 			webRequest.Credentials = null;
 			webRequest.UseDefaultCredentials = false;
 			disabledAuthRetries = true;
+		}
+
+		public void RemoveAuthorizationHeader()
+		{
+			webRequest.Headers.Remove("Authorization");
 		}
 
 		public Task ExecuteRequestAsync()
@@ -258,7 +267,7 @@ namespace Raven.Client.Connection
 			if (conventions.HandleUnauthorizedResponse == null)
 				return false;
 
-			var handleUnauthorizedResponse = conventions.HandleUnauthorizedResponse(unauthorizedResponse);
+			var handleUnauthorizedResponse = conventions.HandleUnauthorizedResponse(unauthorizedResponse, _credentials);
 			if (handleUnauthorizedResponse == null)
 				return false;
 
@@ -279,7 +288,7 @@ namespace Raven.Client.Connection
 			if (conventions.HandleUnauthorizedResponseAsync == null)
 				return false;
 
-			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse);
+			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse, _credentials);
 			if (unauthorizedResponseAsync == null)
 				return false;
 
@@ -292,7 +301,7 @@ namespace Raven.Client.Connection
 			if (conventions.HandleForbiddenResponseAsync == null)
 				return;
 
-			var forbiddenResponseAsync = conventions.HandleForbiddenResponseAsync(forbiddenResponse);
+			var forbiddenResponseAsync = conventions.HandleForbiddenResponseAsync(forbiddenResponse, _credentials);
 			if (forbiddenResponseAsync == null)
 				return;
 
@@ -672,7 +681,7 @@ namespace Raven.Client.Connection
 							break;
 						case "If-Modified-Since":
 							DateTime tmp;
-							DateTime.TryParse(value, out tmp);
+							DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out tmp);
 							webRequest.IfModifiedSince = tmp;
 							break;
 						case "Accept":
@@ -726,12 +735,15 @@ namespace Raven.Client.Connection
 		{
 			using (var dataStream = webRequest.EndGetRequestStream(result))
 			using (var compressed = new GZipStream(dataStream, CompressionMode.Compress))
-			using (var writer = new StreamWriter(compressed, Encoding.UTF8))
+            using (var writer = factory.DisableRequestCompression == false ?
+                    new StreamWriter(compressed, Encoding.UTF8) :
+                    new StreamWriter(dataStream, Encoding.UTF8))
 			{
 				writer.Write(postedData);
 				writer.Flush();
 #if !MONO
-				compressed.Flush();
+                if (factory.DisableRequestCompression == false)
+                    compressed.Flush();
 #endif
 				dataStream.Flush();
 			}
@@ -867,9 +879,9 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public Task WriteAsync(string serializeObject)
+		public Task WriteAsync(string data)
 		{
-			return Task.Factory.FromAsync(BeginWrite, EndWrite, serializeObject, null);
+			return Task.Factory.FromAsync(BeginWrite, EndWrite, data, null);
 		}
 
 		public Task<Stream> GetRawRequestStream()

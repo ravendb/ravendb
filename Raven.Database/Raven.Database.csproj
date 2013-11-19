@@ -207,6 +207,7 @@
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
     <Compile Include="Impl\DTC\MuninInFlightTransactionalState.cs" />
+    <Compile Include="Indexing\IndependentBatchSizeAutoTuner.cs" />
     <Compile Include="Indexing\IndexReaderWarmersWrapper.cs" />
     <Compile Include="Linq\AttachmentForIndexing.cs" />
     <Compile Include="Plugins\AbstractIndexReaderWarmer.cs" />
@@ -214,10 +215,13 @@
     <Compile Include="Prefetching\Prefetcher.cs" />
     <Compile Include="Prefetching\PrefetchingUser.cs" />
     <Compile Include="Server\Responders\Admin\AdminDetailedSizeBreakdown.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugDocumentsCount.cs" />
     <Compile Include="Server\Responders\Debugging\DebugIndexFields.cs" />
     <Compile Include="Server\Responders\Debugging\DebugLists.cs" />
     <Compile Include="Server\Responders\Debugging\DebugQueries.cs" />
+    <Compile Include="Server\Responders\Debugging\DebugTasks.cs" />
     <Compile Include="Server\Responders\Debugging\ExecutingQueryInfo.cs" />
+    <Compile Include="Server\Responders\SingleAuthToken.cs" />
     <Compile Include="Server\Responders\TransactionPrepare.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
@@ -827,10 +831,17 @@
     <Compile Include="Tasks\RemoveFromIndexTask.cs" />
     <Compile Include="Tasks\Task.cs" />
     <Compile Include="Indexing\IndexStorage.cs" />
+    <Compile Include="Tasks\TaskMetadata.cs" />
+    <Compile Include="Tasks\TouchMissingReferenceDocumentTask.cs" />
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
+    <Compile Include="Util\IPerformanceCounter.cs" />
+    <Compile Include="Util\NoOpPerformanceCounter.cs" />
     <Compile Include="Util\OutputTicker.cs" />
+    <Compile Include="Util\PerformanceCounterAttribute.cs" />
+    <Compile Include="Util\PerformanceCountersManager.cs" />
     <Compile Include="Util\PerformanceCountersUtils.cs" />
+    <Compile Include="Util\PerformanceCounterWrapper.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\SequentialUuidGenerator.cs" />
     <Compile Include="Util\Streams\BufferPool.cs" />
@@ -856,7 +867,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Json\Map.js" />
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
     <EmbeddedResource Include="Json\lodash.js" />

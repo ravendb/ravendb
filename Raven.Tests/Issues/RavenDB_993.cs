@@ -20,6 +20,8 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
+	using Raven.Abstractions.Connection;
+
 	public class RavenDB_993 : ReplicationBase
 	{
 		private RavenDbServer server1;
@@ -72,7 +74,7 @@ namespace Raven.Tests.Issues
 
 			var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
 			                                                                                db1Url + "/admin/replicationInfo",
-																							"POST", CredentialCache.DefaultCredentials, store1.Conventions));
+																							"POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
 			request.Write(replicationDocument.DataAsJson.ToString(Formatting.None));
 			var result = request.ReadResponseJson() as RavenJArray;
@@ -128,7 +130,7 @@ namespace Raven.Tests.Issues
 
 			var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
 																							db1Url + "/admin/replicationInfo",
-																							"POST", CredentialCache.DefaultCredentials, store1.Conventions));
+																							"POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
 			request.Write(replicationDocument.DataAsJson.ToString(Formatting.None));
 			var result = request.ReadResponseJson() as RavenJArray;
@@ -167,7 +169,7 @@ namespace Raven.Tests.Issues
 
 			var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
 																							db1Url + "/admin/replicationInfo",
-																							"POST", CredentialCache.DefaultCredentials, store1.Conventions));
+																							"POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
 			request.Write(replicationDocument.DataAsJson.ToString(Formatting.None));
 			var result = request.ReadResponseJson() as RavenJArray;
@@ -204,7 +206,7 @@ namespace Raven.Tests.Issues
 
 			var request = store1.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
 																							db1Url + "/admin/replicationInfo",
-																							"POST", CredentialCache.DefaultCredentials, store1.Conventions));
+																							"POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
 
 

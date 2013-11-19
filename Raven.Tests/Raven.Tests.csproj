@@ -146,9 +146,6 @@
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.configuration" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
     <Reference Include="System.Net" />
     <Reference Include="System.Reactive.Core">
       <HintPath>..\packages\Rx-Core.2.1.30214.0\lib\Net40\System.Reactive.Core.dll</HintPath>
@@ -174,13 +171,13 @@
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="xunit, Version=1.9.1.1600, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+    <Reference Include="xunit, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\xunit.1.9.1\lib\net20\xunit.dll</HintPath>
+      <HintPath>..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
     </Reference>
-    <Reference Include="xunit.extensions, Version=1.9.1.1600, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+    <Reference Include="xunit.extensions, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\xunit.extensions.1.9.1\lib\net20\xunit.extensions.dll</HintPath>
+      <HintPath>..\packages\xunit.extensions.1.9.2\lib\net20\xunit.extensions.dll</HintPath>
     </Reference>
     <Reference Include="xunit.runner.msbuild">
       <HintPath>..\packages\xunit.1.9.1\lib\net20\xunit.runner.msbuild.dll</HintPath>
@@ -220,6 +217,23 @@
     <Compile Include="Bugs\CanUseReduceResultInOutput.cs" />
     <Compile Include="Bugs\CaseSensitiveDeletes.cs" />
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
+    <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
+    <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
+    <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
+    <Compile Include="Bugs\LoDash.cs" />
+    <Compile Include="Bugs\Errors\QueryIssues.cs" />
+    <Compile Include="Bugs\Facets\FacetErrors.cs" />
+    <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
+    <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
+    <Compile Include="Issues\RavenDB_1470.cs" />
+    <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
+    <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
+    <Compile Include="Issues\RavenDB_1435.cs" />
+    <Compile Include="LicenseValidatorTest.cs" />
+    <Compile Include="Linq\GroupByAndDocumentId.cs" />
+    <Compile Include="Linq\In.cs" />
+    <Compile Include="Bugs\WhenQueringAsync.cs" />
+    <Compile Include="Bugs\PatchShouldNotConvertFloatToInteger.cs" />
     <Compile Include="Bugs\MultiGetDoesNotUrlDecodeTwice.cs" />
     <Compile Include="Bugs\MultiMap\MultiMapWithNullableEnum.cs" />
     <Compile Include="Bugs\MultiMap\MultiMapWithNullableEnumAndCoalescingOperator.cs" />
@@ -615,6 +629,9 @@
     <Compile Include="Issues\RavenDB_1288.cs" />
     <Compile Include="Issues\RavenDB_1345.cs" />
     <Compile Include="Issues\RavenDB_1346.cs" />
+    <Compile Include="Issues\RavenDB_1359 .cs" />
+    <Compile Include="Issues\RavenDB_1377.cs" />
+    <Compile Include="Issues\RavenDB_1472.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB953.cs" />
     <Compile Include="Issues\RavenDB955.cs" />
@@ -696,6 +713,7 @@
     <Compile Include="Issues\RavenDB_556.cs" />
     <Compile Include="Issues\RavenDB_579.cs" />
     <Compile Include="Linq\OfTypeSupport.cs" />
+    <Compile Include="Linq\SelectDictionaryItem.cs" />
     <Compile Include="Linq\SelectManyShouldWork.cs" />
     <Compile Include="Linq\WhereStringEquals.cs" />
     <Compile Include="MailingList\Accounts.cs" />
@@ -721,10 +739,13 @@
     <Compile Include="MailingList\ChangeTrackingDoesntWorkForDecimalsWithSmallChanges.cs" />
     <Compile Include="MailingList\Chirea.cs" />
     <Compile Include="MailingList\CoalescingOperatorWithStringARray.cs" />
+    <Compile Include="MailingList\ComplexIndexMerge.cs" />
     <Compile Include="MailingList\CompoundOrQueryWithOrderByDescending .cs" />
     <Compile Include="MailingList\ConcurrencyTests.cs" />
+    <Compile Include="MailingList\ConcurrencyTests2.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
+    <Compile Include="MailingList\DifferentKeysWithTheSameFirst127CharactersAreDifferent.cs" />
     <Compile Include="MailingList\DistinctWithPaging.cs" />
     <Compile Include="MailingList\DynamicFieldNoAnalysisStillAnalyzesTest.cs" />
     <Compile Include="MailingList\DynamicObjectTests.cs" />
@@ -766,7 +787,10 @@
     <Compile Include="MailingList\jbartruf.cs" />
     <Compile Include="MailingList\JsonComarision.cs" />
     <Compile Include="MailingList\Kushnir.cs" />
+    <Compile Include="MailingList\LazilyLoadByIdsWithTransformer.cs" />
+    <Compile Include="MailingList\LazyEncoding.cs" />
     <Compile Include="MailingList\LazyLoadFromSessionCache.cs" />
+    <Compile Include="MailingList\LazyTests.cs" />
     <Compile Include="MailingList\Lindblom.cs" />
     <Compile Include="MailingList\linmouhong2.cs" />
     <Compile Include="MailingList\linmouhong3.cs" />
@@ -784,6 +808,7 @@
     <Compile Include="MailingList\nberardi.cs" />
     <Compile Include="MailingList\Nemitoff.cs" />
     <Compile Include="MailingList\NullableGuidIndexTest.cs" />
+    <Compile Include="MailingList\NullableInIndex.cs" />
     <Compile Include="MailingList\Nullables.cs" />
     <Compile Include="MailingList\Maxime.cs" />
     <Compile Include="MailingList\Maxime2.cs" />
@@ -795,6 +820,7 @@
     <Compile Include="MailingList\PlusInId.cs" />
     <Compile Include="MailingList\ProjectingIdFromNestedClass.cs" />
     <Compile Include="MailingList\ProjectionShouldNotLoadDocument.cs" />
+    <Compile Include="MailingList\QueryExplanation.cs" />
     <Compile Include="MailingList\QueryIn.cs" />
     <Compile Include="MailingList\QueryingOn_A_Prefix.cs" />
     <Compile Include="MailingList\QueryingOnValueWithMultipleMinusAnalyzed .cs" />
@@ -812,6 +838,7 @@
     <Compile Include="MailingList\LateBoundValue.cs" />
     <Compile Include="MailingList\RavenDB_Stream_SelectFields_Test.cs" />
     <Compile Include="MailingList\RavenDeserializationBug.cs" />
+    <Compile Include="MailingList\RavenDynamicTests.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
     <Compile Include="MailingList\RenamedProperty.cs" />
     <Compile Include="MailingList\ResultTransformerMetaData .cs" />
@@ -822,6 +849,7 @@
     <Compile Include="MailingList\SnapshotBug.cs" />
     <Compile Include="MailingList\SortingOnMapReduce.cs" />
     <Compile Include="MailingList\SortTest.cs" />
+    <Compile Include="MailingList\SpatialQueryWithTransformTests.cs" />
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\StrangeNames.cs" />
     <Compile Include="MailingList\Strange_select_behaviour_in_query_tests.cs" />
@@ -832,8 +860,11 @@
     <Compile Include="MailingList\tcoonfield.cs" />
     <Compile Include="MailingList\TermVectorsInMultiMapIndexes.cs" />
     <Compile Include="MailingList\TertiaryOperator.cs" />
+    <Compile Include="MailingList\TestRavenIncludes.cs" />
     <Compile Include="MailingList\ThorTimeRange\Repro.cs" />
     <Compile Include="MailingList\TransfomerLoadCaching.cs" />
+    <Compile Include="MailingList\TransformerDictionaryOrderTests.cs" />
+    <Compile Include="MailingList\TransformerQueryInputTests.cs" />
     <Compile Include="MailingList\TransformersAndEtags.cs" />
     <Compile Include="MailingList\TransformWithConversionListener.cs" />
     <Compile Include="MailingList\TransformWithLoad.cs" />
@@ -846,6 +877,8 @@
     <Compile Include="MailingList\UrlInIdsRepro.cs" />
     <Compile Include="MailingList\Vitaliy.cs" />
     <Compile Include="MailingList\Wayne.cs" />
+    <Compile Include="MailingList\When_trying_to_load_a_non_existing_document.cs" />
+    <Compile Include="MailingList\WhereClauseTest.cs" />
     <Compile Include="MailingList\WhereInTests.cs" />
     <Compile Include="MailingList\WhereStringEqualsInCollection.cs" />
     <Compile Include="MailingList\WildCardQuery.cs" />
@@ -865,6 +898,8 @@
     <Compile Include="ResultsTransformer\StonglyTypedResultsTransformer.cs" />
     <Compile Include="Querying\HighlightesTests.cs" />
     <Compile Include="Security\OAuth\ReplicateWithOAuth.cs" />
+    <Compile Include="Security\OAuth\ReplicationWithOAuthMultipleKeys.cs" />
+    <Compile Include="Security\ReplicationWithMixedSecurity.cs" />
     <Compile Include="Spatial\BoundingBoxIndexTests.cs" />
     <Compile Include="Spatial\CartesianTests.cs" />
     <Compile Include="Spatial\Clustering.cs" />
@@ -1096,12 +1131,9 @@
     <Compile Include="Json\RavenJObjects.cs" />
     <Compile Include="Json\JsonUri.cs" />
     <Compile Include="Linq\Any.cs" />
-    <Compile Include="Linq\CommitInfo.cs" />
     <Compile Include="Linq\DynamicQueriesWithStaticIndexes.cs" />
     <Compile Include="Linq\OrderBy.cs" />
     <Compile Include="Linq\RavenDB14.cs" />
-    <Compile Include="Linq\SampleDynamicCompilationExtension.cs" />
-    <Compile Include="Linq\SampleGeoLocation.cs" />
     <Compile Include="Linq\User.cs" />
     <Compile Include="Linq\WhereClause.cs" />
     <Compile Include="MailingList\AddMapForAllTest.cs" />
@@ -1507,8 +1539,9 @@
   <ItemGroup>
     <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
-    <Folder Include="Bugs\Facets\" />
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />

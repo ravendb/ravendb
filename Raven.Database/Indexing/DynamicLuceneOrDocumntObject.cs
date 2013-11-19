@@ -39,25 +39,49 @@ namespace Raven.Database.Indexing
 
         public override object GetValue(string name)
         {
-            if (parentDoc == null)
-                return base.GetValue(name);
-
-            if (name == Constants.Metadata)
-                return parentDoc[name];
             var result = base.GetValue(name);
+           
+            if (name == Constants.Metadata)
+            {
+                if (parentDoc == null)
+                {
+                    if (TryLoadParentDoc() == false)
+                        return new DynamicNullObject();
+                }
+                var metadata = parentDoc[name].Inner as RavenJObject;
+                var indexMetadata = result as IDynamicJsonObject;
+                if (metadata == null || indexMetadata == null)
+                    return parentDoc[name];
+
+                foreach (var item in indexMetadata.Inner)
+                {
+                    metadata[item.Key] = item.Value;
+                }
+                return metadata;
+            }
+
             if (result is DynamicNullObject == false)
                 return result;
 
             if (parentDoc != null)
                 return parentDoc[name];
 
-            object documentId = GetDocumentId() as string;
-            if (documentId == null)
+            if (TryLoadParentDoc() == false) 
                 return result;
-
-            parentDoc = retriever.Load(documentId);
 
             return parentDoc[name];
         }
+
+	    private bool TryLoadParentDoc()
+	    {
+	        object documentId = GetDocumentId() as string;
+	        if (documentId == null)
+	        {
+	            return false;
+	        }
+
+	        parentDoc = retriever.Load(documentId);
+	        return true;
+	    }
     }
 }

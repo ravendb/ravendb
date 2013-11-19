@@ -172,7 +172,7 @@ namespace Raven.Database.Indexing
 							.ToArray();
 						var reduceKeys = new HashSet<string>(persistedResults.Select(x => x.ReduceKey),
 															 StringComparer.InvariantCultureIgnoreCase);
-						context.ReducedPerSecIncreaseBy(results.Length);
+                        context.PerformanceCounters.ReducedPerSecond.IncrementBy(results.Length);
 
 						context.CancellationToken.ThrowIfCancellationRequested();
 						var reduceTimeWatcher = Stopwatch.StartNew();
@@ -292,7 +292,7 @@ namespace Raven.Database.Indexing
 						.Where(x => x.Data != null)
 						.GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
 						.ToArray();
-			context.ReducedPerSecIncreaseBy(results.Length);
+            context.PerformanceCounters.ReducedPerSecond.IncrementBy(results.Length);
 
 			context.TransactionalStorage.Batch(actions =>
 				context.IndexStorage.Reduce(index.IndexName, viewGenerator, results, 2, context, actions, reduceKeys, state.Sum(x=>x.Item2.Count))
@@ -350,7 +350,7 @@ namespace Raven.Database.Indexing
 			};
 		}
 
-		protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag startEtag)
+        protected override void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn, Etag synchronizationEtag)
 		{
 			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, indexesToWorkOn,
 				HandleReduceForIndex);
@@ -361,25 +361,5 @@ namespace Raven.Database.Indexing
 			var indexDefinition = context.IndexDefinitionStorage.GetIndexDefinition(indexesStat.Name);
 			return indexDefinition != null && indexDefinition.IsMapReduce;
 		}
-
-        protected override System.Collections.Concurrent.ConcurrentQueue<string> DocumentKeysAddedWhileIndexingInProgress
-        {
-            get
-            {
-                return context.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex;
-            }
-            set
-            {
-                context.DocumentKeysAddedWhileIndexingInProgress_ReduceIndex = value;
-            }
-        }
-
-        protected override ConcurrentDictionary<string, ConcurrentBag<string>> ReferencingDocumentsByChildKeysWhichMightNeedReindexing
-        {
-            get
-            {
-                return context.ReferencingDocumentsByChildKeysWhichMightNeedReindexing_ReduceIndex;
-            }
-        }
 	}
 }

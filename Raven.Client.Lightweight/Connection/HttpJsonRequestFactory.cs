@@ -72,7 +72,11 @@ namespace Raven.Client.Connection
 				request.CachedRequestDetails = cachedRequestDetails.CachedRequest;
 				request.SkipServerCheck = cachedRequestDetails.SkipServerCheck;
 			}
-			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs {Request = request.webRequest});
+
+			if (RequestTimeout != null)
+				request.Timeout = RequestTimeout.Value;
+
+			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs {Request = request.webRequest, Credentials = createHttpJsonRequestParams.Credentials});
 			return request;
 		}
 
@@ -172,6 +176,14 @@ namespace Raven.Client.Connection
 			set { aggressiveCacheDuration.Value = value; }
 		}
 
+		///<summary>
+		/// Session timeout - Thread Local
+		///</summary>
+		public TimeSpan? RequestTimeout {
+			get { return requestTimeout.Value; }
+			set { requestTimeout.Value = value; }
+		}
+
 		/// <summary>
 		/// Disable the HTTP caching
 		/// </summary>
@@ -191,7 +203,7 @@ namespace Raven.Client.Connection
 		public bool EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers { get; set; }
 
 		private readonly ThreadLocal<TimeSpan?> aggressiveCacheDuration = new ThreadLocal<TimeSpan?>(() => null);
-
+		private readonly ThreadLocal<TimeSpan?> requestTimeout = new ThreadLocal<TimeSpan?>(() => null);
 		private readonly ThreadLocal<bool> disableHttpCaching = new ThreadLocal<bool>(() => false);
 
 		private volatile bool disposed;
@@ -243,10 +255,11 @@ namespace Raven.Client.Connection
 		{
 			if (disposed)
 				return;
-		    disposed = true;
+			disposed = true;
 			cache.Dispose();
 			aggressiveCacheDuration.Dispose();
 			disableHttpCaching.Dispose();
+			requestTimeout.Dispose();
 		}
 
 		internal void UpdateCacheTime(HttpJsonRequest httpJsonRequest)

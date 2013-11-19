@@ -243,8 +243,8 @@ namespace Raven.Database.Server
 							TotalDatabaseSize = totalDatabaseSize,
 							TotalDatabaseHumaneSize = DatabaseSize.Humane(totalDatabaseSize),
 							CountOfDocuments = documentDatabase.Database.Statistics.CountOfDocuments,
-							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.RequestsPerSecond, 2),
-							ConcurrentRequests = documentDatabase.Database.WorkContext.ConcurrentRequests,
+							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.PerformanceCounters.RequestsPerSecond.NextValue(), 2),
+							ConcurrentRequests = (int)documentDatabase.Database.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
 							DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 						}
 				};
@@ -486,8 +486,11 @@ namespace Raven.Database.Server
 
 		protected void CleanupDatabase(string db, bool skipIfActive)
 		{
-			using (ResourcesStoresCache.WithAllLocks())
+			using (var locker = ResourcesStoresCache.TryWithAllLocks())
 			{
+			    if (locker == null)
+			        return;
+
 				DateTime time;
 				Task<DocumentDatabase> databaseTask;
 				if (ResourcesStoresCache.TryGetValue(db, out databaseTask) == false)
@@ -803,7 +806,7 @@ namespace Raven.Database.Server
 			}
 			finally
 			{
-				CurrentDatabase.WorkContext.DecrementConcurrentRequestsCounter();
+				CurrentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Decrement();
 				ResetThreadLocalState();
 				if (onResponseEnd != null)
 					onResponseEnd();
@@ -867,8 +870,8 @@ namespace Raven.Database.Server
 		protected void OnDispatchingRequest(IHttpContext ctx)
 		{
 			ctx.Response.AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion);
-			CurrentDatabase.WorkContext.IncrementRequestsPerSecCounter();
-			CurrentDatabase.WorkContext.IncrementConcurrentRequestsCounter();
+			CurrentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.Increment();
+			CurrentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Increment();
 		}
 
 		public DocumentDatabase CurrentDatabase

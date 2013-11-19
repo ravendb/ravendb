@@ -30,9 +30,9 @@ namespace Raven.Tests.MailingList
             public bool Converted { get; set; }
         }
 
-        public class EtagTransfomer : AbstractTransformerCreationTask<Item>
+		public class EtagTransformer : AbstractTransformerCreationTask<Item>
         {
-            public EtagTransfomer()
+            public EtagTransformer()
             {
                 TransformResults = items =>
                                    from item in items
@@ -61,7 +61,7 @@ namespace Raven.Tests.MailingList
         {
             using (var store = (DocumentStore)NewRemoteDocumentStore())
             {
-                new EtagTransfomer().Execute(store);
+				new EtagTransformer().Execute(store);
 
                 store.RegisterListener(new DocumentConversionListener());
 
@@ -73,7 +73,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var transformedItem = session.Load<EtagTransfomer, TransformedItem>("items/1");
+					var transformedItem = session.Load<EtagTransformer, TransformedItem>("items/1");
                     Assert.True(transformedItem.Transformed);
                     Assert.True(transformedItem.Converted);
                 }
@@ -86,7 +86,7 @@ namespace Raven.Tests.MailingList
         {
             using (var store = (DocumentStore)NewRemoteDocumentStore())
             {
-                new EtagTransfomer().ExecuteAsync(store.AsyncDatabaseCommands, store.Conventions).Wait();
+				new EtagTransformer().ExecuteAsync(store.AsyncDatabaseCommands, store.Conventions).Wait();
 
                 store.RegisterListener(new DocumentConversionListener());
 
@@ -98,7 +98,7 @@ namespace Raven.Tests.MailingList
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var transformedItem = session.LoadAsync<EtagTransfomer, TransformedItem>("items/1").Result;
+					var transformedItem = session.LoadAsync<EtagTransformer, TransformedItem>("items/1").Result;
                     Assert.True(transformedItem.Transformed);
                     Assert.True(transformedItem.Converted);
                 }
