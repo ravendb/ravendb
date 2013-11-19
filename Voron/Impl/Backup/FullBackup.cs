@@ -95,7 +95,7 @@ namespace Voron.Impl.Backup
 
 							using (var stream = journalPart.Open())
 							{
-								copier.ToStream(journalFile, pagesToCopy, stream);
+								copier.ToStream(journalFile, 0, pagesToCopy, stream);
 							}
 						}
 					}

@@ -102,7 +102,7 @@ namespace Voron.Impl.Backup
 
 							using (var stream = part.Open())
 							{
-								copier.ToStream(journalFile, pagesToCopy, stream);
+								copier.ToStream(journalFile, startBackupAt, pagesToCopy, stream);
 							}
 
 							lastBackedUpFile = journalFile.Number;
@@ -110,9 +110,9 @@ namespace Voron.Impl.Backup
 							{
 								lastBackedUpPage = startBackupAt + pagesToCopy - 1;
 								// we used all of this file, so the next backup should start in the next file
-								if (lastBackedUpPage == journalFile.JournalWriter.NumberOfAllocatedPages)
+								if (lastBackedUpPage == (journalFile.JournalWriter.NumberOfAllocatedPages - 1))
 								{
-									lastBackedUpPage = 0;
+									lastBackedUpPage = -1;
 									lastBackedUpFile++;
 								}
 							}
@@ -120,7 +120,7 @@ namespace Voron.Impl.Backup
 							numberOfBackedUpPages += pagesToCopy;
 						}
 
-						Debug.Assert(lastBackedUpPage != -1);
+						//Debug.Assert(lastBackedUpPage != -1);
 
 						env.HeaderAccessor.Modify(header =>
 							{

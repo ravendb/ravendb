@@ -33,10 +33,10 @@ namespace Voron.Util
 			}
 		}
 
-		public void ToStream(JournalFile journal, long pagesToCopy, Stream output)
+		public void ToStream(JournalFile journal, long startPage, long pagesToCopy, Stream output)
 		{
 			var maxNumOfPagesToCopyAtOnce = _buffer.Length/AbstractPager.PageSize;
-			var page = 0L;
+			var page = startPage;
 
 			fixed (byte* ptr = _buffer)
 			{

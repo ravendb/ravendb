@@ -28,7 +28,8 @@ namespace Voron.Impl.Journal
 		}
 
 		public long NumberOfAllocatedPages { get; private set; }
-	    public bool DeleteOnClose { get; set; }
+		public bool Disposed { get; private set; }
+		public bool DeleteOnClose { get; set; }
 
 	    public IVirtualPager CreatePager()
 		{
@@ -62,7 +63,8 @@ namespace Voron.Impl.Journal
 	    }
 
 	    public void Dispose()
-		{
+	    {
+		    Disposed = true;
 			foreach (var buffer in _buffers)
 			{
 				Marshal.FreeHGlobal(buffer.Handle);

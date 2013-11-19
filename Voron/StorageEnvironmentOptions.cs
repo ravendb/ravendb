@@ -123,6 +123,15 @@ namespace Voron
 				var name = JournalName(journalNumber);
 				var path = Path.Combine(_basePath, name);
 				var result = _journals.GetOrAdd(name, _ => new Lazy<IJournalWriter>(() => new Win32FileJournalWriter(path, journalSize)));
+
+				if (result.Value.Disposed)
+				{
+					var newWriter = new Lazy<IJournalWriter>(() =>  new Win32FileJournalWriter(path, journalSize));
+					if (_journals.TryUpdate(name, newWriter, result) == false)
+						throw new InvalidOperationException("Could not update journal pager");
+					result = newWriter;
+				}
+
 				return result.Value;
 			}
 
