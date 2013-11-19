@@ -255,7 +255,10 @@ namespace Performance.Comparison.FoundationDB
             Stopwatch sw = Stopwatch.StartNew();
             foreach (int id in ids)
             {
-                await db.GetAsync(db.Pack(Slice.FromFixed32(id)));
+                using (var tx = db.BeginTransaction())
+                {
+                    await tx.GetAsync(db.Pack(Slice.FromFixed32(id)));
+                }
             }
             perfTracker.Record(sw.ElapsedMilliseconds);
         }
