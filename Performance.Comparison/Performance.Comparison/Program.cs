@@ -1,4 +1,6 @@
-﻿namespace Performance.Comparison
+﻿using Performance.Comparison.FoundationDB;
+
+namespace Performance.Comparison
 {
     using System;
     using System.Collections.Generic;
@@ -45,6 +47,7 @@
                     //new SqlCeTest(path, buffer),
                     //new LmdbTest(path, buffer),
                     //new EsentTest(path, buffer),
+                    //new FdbTest(buffer),
                     new VoronTest(path, buffer)
 				};
 
