@@ -186,7 +186,7 @@ namespace Performance.Comparison.Voron
                         tx.State.Root.Add(tx, enumerator.Current.Id.ToString("0000000000000000"), new MemoryStream(valueToWrite));
                     }
 
-                    tx.Commit();
+                    tx.Commit().Wait();
                     perfTracker.Record(sw.ElapsedMilliseconds);
                 }
 
