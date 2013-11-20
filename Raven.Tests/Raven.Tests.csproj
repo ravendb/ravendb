@@ -219,6 +219,7 @@
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
+    <Compile Include="Bugs\NullableDateTimeOffsetFromDateTimeParse.cs" />
     <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
     <Compile Include="Bugs\LoDash.cs" />
     <Compile Include="Bugs\Errors\QueryIssues.cs" />
