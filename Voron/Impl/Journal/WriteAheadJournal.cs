@@ -142,7 +142,10 @@ namespace Voron.Impl.Journal
 					jrnlFile.AddRef(); // creator reference - write ahead log
 					Files = Files.Add(jrnlFile);
 
-					*txHeader = *journalReader.LastTransactionHeader;
+					var lastReadHeaderPtr = journalReader.LastTransactionHeader;
+
+					if (lastReadHeaderPtr != null)
+						*txHeader = *lastReadHeaderPtr;
 
 					if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
 					{
@@ -452,28 +455,35 @@ namespace Voron.Impl.Journal
 
 			public void UpdateFileHeaderAfterDataFileSync(JournalFile file)
 			{
-				var txHeader = stackalloc TransactionHeader[1];
-				txHeader->TransactionId = 0;
+				var txHeaders = stackalloc TransactionHeader[2];
+				var readTxHeader = &txHeaders[0];
+				var lastReadTxHeader = txHeaders[1];
+
 				var txPos = 0;
 				while (true)
 				{
-					if (file.ReadTransaction(txPos, txHeader) == false)
+					if (file.ReadTransaction(txPos, readTxHeader) == false)
 						break;
-					if (txHeader->TransactionId + 1 == _oldestActiveTransaction)
+					if(readTxHeader->HeaderMarker != Constants.TransactionHeaderMarker)
 						break;
-					txPos += txHeader->PageCount + txHeader->OverflowPageCount + 1;
+					if (readTxHeader->TransactionId + 1 == _oldestActiveTransaction)
+						break;
+
+					lastReadTxHeader = *readTxHeader;
+
+					txPos += readTxHeader->PageCount + readTxHeader->OverflowPageCount + 1;
 				}
 
 				_waj._headerAccessor.Modify(header =>
 					{
-						header->TransactionId = txHeader->TransactionId;
-						header->LastPageNumber = txHeader->LastPageNumber;
+						header->TransactionId = lastReadTxHeader.TransactionId;
+						header->LastPageNumber = lastReadTxHeader.LastPageNumber;
 
 						header->Journal.LastSyncedJournal = _lastSyncedJournal;
 						header->Journal.LastSyncedJournalPage = _lastSyncedPage == 0 ? -1 : _lastSyncedPage;
 
-						header->Root = txHeader->Root;
-						header->FreeSpace = txHeader->FreeSpace;
+						header->Root = lastReadTxHeader.Root;
+						header->FreeSpace = lastReadTxHeader.FreeSpace;
 					});
 			}
 		}
