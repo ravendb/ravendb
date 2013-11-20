@@ -142,7 +142,10 @@ namespace Voron.Impl.Journal
 					jrnlFile.AddRef(); // creator reference - write ahead log
 					Files = Files.Add(jrnlFile);
 
-					*txHeader = *journalReader.LastTransactionHeader;
+					var lastReadHeaderPtr = journalReader.LastTransactionHeader;
+
+					if (lastReadHeaderPtr != null)
+						*txHeader = *lastReadHeaderPtr;
 
 					if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
 					{
@@ -314,98 +317,108 @@ namespace Voron.Impl.Journal
 
 			public void ApplyLogsToDataFile(Transaction transaction = null)
 			{
-				var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
+                var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
 
-				using (var tx = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					_jrnls = _waj.Files.Select(x => x.GetSnapshot()).ToList();
-					if (_jrnls.Count == 0)
-						return; // nothing to do
+                using (var tx = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    _jrnls = _waj.Files.Select(x => x.GetSnapshot()).ToList();
+                    if (_jrnls.Count == 0)
+                        return; // nothing to do
 
-					var journalInfo = _waj._headerAccessor.Get(ptr => ptr->Journal);
+                    var journalInfo = _waj._headerAccessor.Get(ptr => ptr->Journal);
 
-					_lastSyncedJournal = journalInfo.LastSyncedJournal;
-					_lastSyncedPage = journalInfo.LastSyncedJournalPage;
-					Debug.Assert(_jrnls.First().Number >= _lastSyncedJournal);
+                    _lastSyncedJournal = journalInfo.LastSyncedJournal;
+                    _lastSyncedPage = journalInfo.LastSyncedJournalPage;
+                    Debug.Assert(_jrnls.First().Number >= _lastSyncedJournal);
 
-					if(tx != null)
-						tx.Commit();
-				}
+                    if (tx != null)
+                        tx.Commit();
+                }
 
 
-				var pagesToWrite = ImmutableDictionary<long, long>.Empty;
-				foreach (var journalFile in _jrnls)
-				{
-					if (journalFile.PageTranslationTable.Count == 0)
-						continue;
+                var pagesToWrite = ImmutableDictionary<long, long>.Empty;
+                foreach (var journalFile in _jrnls)
+                {
+                    if (journalFile.PageTranslationTable.Count == 0)
+                        continue;
 
-					_lastSyncedJournal = Math.Max(journalFile.Number, _lastSyncedJournal);
-					_lastSyncedPage = 0;
-					foreach (var pagePosition in journalFile.PageTranslationTable)
-					{
-						if (_oldestActiveTransaction != 0 &&
-							pagePosition.Value.TransactionId >= _oldestActiveTransaction)
-						{
-							// we cannot write this yet, there is a read transaction that might be looking at this
-							// however, we _aren't_ going to be writing this to the data file, since that would be a 
-							// waste, we would just overwrite that value in the next flush anyway
-							pagesToWrite = pagesToWrite.Remove(pagePosition.Key);
-							continue;
-						}
-						_lastSyncedPage = Math.Max(_lastSyncedPage, pagePosition.Value.JournalPos);
-						pagesToWrite = pagesToWrite.SetItem(pagePosition.Key, pagePosition.Value.ScratchPos);
-					}
-				}
+                    _lastSyncedJournal = Math.Max(journalFile.Number, _lastSyncedJournal);
+                    _lastSyncedPage = 0;
+                    foreach (var pagePosition in journalFile.PageTranslationTable)
+                    {
+                        if (_oldestActiveTransaction != 0 &&
+                            pagePosition.Value.TransactionId >= _oldestActiveTransaction)
+                        {
+                            // we cannot write this yet, there is a read transaction that might be looking at this
+                            // however, we _aren't_ going to be writing this to the data file, since that would be a 
+                            // waste, we would just overwrite that value in the next flush anyway
+                            pagesToWrite = pagesToWrite.Remove(pagePosition.Key);
+                            continue;
+                        }
+                        _lastSyncedPage = Math.Max(_lastSyncedPage, pagePosition.Value.JournalPos);
+                        pagesToWrite = pagesToWrite.SetItem(pagePosition.Key, pagePosition.Value.ScratchPos);
+                    }
+                }
 
-				if (pagesToWrite.Count == 0)
-					return;
+                if (pagesToWrite.Count == 0)
+                    return;
 
-				var scratchBufferPool = _waj._env.ScratchBufferPool;
-				var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-											  .Select(x => scratchBufferPool.ReadPage(x.Value))
-											  .ToList();
+                var scratchBufferPool = _waj._env.ScratchBufferPool;
+                var sortedPages = pagesToWrite.OrderBy(x => x.Key)
+                                                .Select(x => scratchBufferPool.ReadPage(x.Value))
+                                                .ToList();
 
-				var last = sortedPages.Last();
+                var last = sortedPages.Last();
 
-				var lastPage = last.IsOverflow == false ? 1 :
-					_waj._env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
+                var lastPage = last.IsOverflow == false ? 1 :
+                    _waj._env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
 
-				_waj._dataPager.EnsureContinuous(null, last.PageNumber, lastPage);
+                if (alreadyInWriteTx)
+                    _waj._dataPager.EnsureContinuous(transaction, last.PageNumber, lastPage);
+                else
+                {
+                    using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        _waj._dataPager.EnsureContinuous(tx, last.PageNumber, lastPage);
 
-				foreach (var page in sortedPages)
-				{
-					_waj._dataPager.Write(page);
-				}
-				_waj._dataPager.Sync();
-				var unusedJournalFiles = GetUnusedJournalFiles();
+                        tx.Commit();
+                    } 
+                }        
 
-				using (var txw = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					var journalFile = _waj.Files.First(x => x.Number == _lastSyncedJournal);
-					UpdateFileHeaderAfterDataFileSync(journalFile);
+			    foreach (var page in sortedPages)
+			    {
+			        _waj._dataPager.Write(page);
+			    }
 
-					var lastJournalFileToRemove = unusedJournalFiles.LastOrDefault();
-					if (lastJournalFileToRemove != null)
-						_waj.Files = _waj.Files.RemoveAll(x => x.Number <= lastJournalFileToRemove.Number);
+                _waj._dataPager.Sync();
+                var unusedJournalFiles = GetUnusedJournalFiles();
 
-					_waj.UpdateLogInfo();
+                using (var txw = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    var journalFile = _waj.Files.First(x => x.Number == _lastSyncedJournal);
+                    UpdateFileHeaderAfterDataFileSync(journalFile);
 
-					if (_waj.Files.Count == 0)
-					{
-						_waj.CurrentFile = null;
-					}
+                    var lastJournalFileToRemove = unusedJournalFiles.LastOrDefault();
+                    if (lastJournalFileToRemove != null)
+                        _waj.Files = _waj.Files.RemoveAll(x => x.Number <= lastJournalFileToRemove.Number);
 
-					FreeScratchPages(unusedJournalFiles);
+                    _waj.UpdateLogInfo();
 
-					foreach (var fullLog in unusedJournalFiles)
-					{
-						fullLog.Release();
-					}
+                    if (_waj.Files.Count == 0)
+                    {
+                        _waj.CurrentFile = null;
+                    }
 
-					if(txw != null)
-						txw.Commit();
-				}
+                    FreeScratchPages(unusedJournalFiles);
 
+                    foreach (var fullLog in unusedJournalFiles)
+                    {
+                        fullLog.Release();
+                    }
+
+                    if (txw != null)
+                        txw.Commit();
+                }
 			}
 
 			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles)
@@ -442,28 +455,35 @@ namespace Voron.Impl.Journal
 
 			public void UpdateFileHeaderAfterDataFileSync(JournalFile file)
 			{
-				var txHeader = stackalloc TransactionHeader[1];
-				txHeader->TransactionId = 0;
+				var txHeaders = stackalloc TransactionHeader[2];
+				var readTxHeader = &txHeaders[0];
+				var lastReadTxHeader = txHeaders[1];
+
 				var txPos = 0;
 				while (true)
 				{
-					if (file.ReadTransaction(txPos, txHeader) == false)
+					if (file.ReadTransaction(txPos, readTxHeader) == false)
 						break;
-					if (txHeader->TransactionId + 1 == _oldestActiveTransaction)
+					if(readTxHeader->HeaderMarker != Constants.TransactionHeaderMarker)
 						break;
-					txPos += txHeader->PageCount + txHeader->OverflowPageCount + 1;
+					if (readTxHeader->TransactionId + 1 == _oldestActiveTransaction)
+						break;
+
+					lastReadTxHeader = *readTxHeader;
+
+					txPos += readTxHeader->PageCount + readTxHeader->OverflowPageCount + 1;
 				}
 
 				_waj._headerAccessor.Modify(header =>
 					{
-						header->TransactionId = txHeader->TransactionId;
-						header->LastPageNumber = txHeader->LastPageNumber;
+						header->TransactionId = lastReadTxHeader.TransactionId;
+						header->LastPageNumber = lastReadTxHeader.LastPageNumber;
 
 						header->Journal.LastSyncedJournal = _lastSyncedJournal;
 						header->Journal.LastSyncedJournalPage = _lastSyncedPage == 0 ? -1 : _lastSyncedPage;
 
-						header->Root = txHeader->Root;
-						header->FreeSpace = txHeader->FreeSpace;
+						header->Root = lastReadTxHeader.Root;
+						header->FreeSpace = lastReadTxHeader.FreeSpace;
 					});
 			}
 		}
