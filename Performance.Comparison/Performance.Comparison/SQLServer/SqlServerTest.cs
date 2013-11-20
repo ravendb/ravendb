@@ -22,7 +22,7 @@ namespace Performance.Comparison.SQLServer
         public SqlServerTest(byte[] buffer)
             : base(buffer)
         {
-            connectionString = @"Data Source=localhost\LOCAL2012;Initial Catalog=VoronTests;Integrated Security=true";
+            connectionString = @"Data Source=localhost\sqlexpress;Initial Catalog=VoronTests;Integrated Security=true";
         }
 
         public override string StorageName { get { return "SQL Server"; } }
