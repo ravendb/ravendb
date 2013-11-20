@@ -271,8 +271,8 @@ namespace Voron
 				long txId = _transactionsCounter;
 				if (flags == (TransactionFlags.ReadWrite))
 				{
-					txId = _transactionsCounter + 1;
 					_txWriter.Wait();
+				    txId = _transactionsCounter + 1;
 					txLockTaken = true;
 				}
 				var tx = new Transaction(this, txId, flags, _freeSpaceHandling);
