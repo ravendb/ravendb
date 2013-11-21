@@ -41,7 +41,8 @@ namespace Voron.Impl
 		{
 			if (pageNumber + 1 > NumberOfAllocatedPages)
 			{
-				throw new InvalidOperationException("Cannot increase size of the pager");
+				throw new InvalidOperationException("Cannot get page number " + pageNumber +
+													" because number of allocated pages is " + NumberOfAllocatedPages);
 			}
 
 			return new Page(AcquirePagePointer(pageNumber));
