@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Indexes;
@@ -38,7 +39,7 @@ namespace Raven.Tests.Bugs
                 });
                 
                 // Test that the indexing can complete, without being in an infinite indexing run due to touches to documents increasing the etag.
-                WaitForIndexing(store);
+                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
             }
         }
 
