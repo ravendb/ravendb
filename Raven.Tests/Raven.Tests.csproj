@@ -799,6 +799,7 @@
     <Compile Include="MailingList\LoadAllStartingWith.cs" />
     <Compile Include="MailingList\LoadWithIncludeTests.cs" />
     <Compile Include="MailingList\LongIds.cs" />
+    <Compile Include="MailingList\LuceneQueryHighlightTest.cs" />
     <Compile Include="MailingList\LuceneSearchSample.cs" />
     <Compile Include="MailingList\LuceneSortDouble.cs" />
     <Compile Include="MailingList\MapLongTests.cs" />
