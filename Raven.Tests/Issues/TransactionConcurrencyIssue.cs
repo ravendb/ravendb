@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -9,6 +10,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Tests.Bugs;
+using Raven.Tests.Bugs.MultiTenancy;
 using Raven.Tests.Helpers;
 using Xunit;
 
@@ -17,16 +19,25 @@ namespace Raven.Tests.Issues
 	public class TransactionConcurrencyIssue : RavenTestBase
 	{
 		private int concurrencyExceptionCount;
+		private int concurrentUpdatesCount;
+
+		private ConcurrentDictionary<string, ConcurrentBag<string>> concurrentUpdateLog;
 
 		[Fact]
 		public void ConsistencyTest()
 		{
-			var testConfig = new TestConfig(5, 50);
+			concurrentUpdateLog = new ConcurrentDictionary<string, ConcurrentBag<string>>();
+			var testConfig = new TestConfig(2, 55);
+			concurrentUpdatesCount = 0;
 			TestDoc[] documents;
+			var expectedVersionLog = String.Empty;
 
-			using(var documentStore = NewRemoteDocumentStore(fiddler:true,runInMemory:false))
+			for (int i = 1; i <= testConfig.NumberOfUpdatesPerDocument; i++)
+				expectedVersionLog += (i + ";");
+
+			using(var documentStore = NewRemoteDocumentStore(requestedStorage:"esent",runInMemory:false))
 			{
-				string[] documentIds = RunParallelUpdates(testConfig, documentStore);
+				var documentIds = RunParallelUpdates(testConfig, documentStore);
 
 				documents = LoadAllDocuments(documentIds, documentStore);
 
@@ -35,9 +46,28 @@ namespace Raven.Tests.Issues
 			}
 
 			Assert.Equal(documents.Length, testConfig.NumberOfDocuments);
+			Assert.Equal(testConfig.NumberOfDocuments * testConfig.NumberOfUpdatesPerDocument, concurrentUpdatesCount);
+
+
+			expectedVersionLog = String.Empty;
+			foreach (var docKvp in concurrentUpdateLog)
+			{
+				var docVersionLogSteps = docKvp.Value.OrderBy(row => row.Length).ToList();
+
+				//validate that steps for each document were submitted only once
+				for (int i = 1; i <= testConfig.NumberOfUpdatesPerDocument; i++)
+				{
+					expectedVersionLog += (i + ";");
+					Assert.True(docVersionLogSteps.Count(versionLog => versionLog.Equals(expectedVersionLog)) == 1); //must occur exactly once
+				}
+			}
+
+			foreach (var document in documents)
+				Assert.Equal(document.VersionLog, expectedVersionLog);
+
 			Assert.True(documents.All(d => d.Version == testConfig.NumberOfUpdatesPerDocument));
 		}
-
+		
 		private TestDoc[] LoadAllDocuments(IEnumerable<string> documentIds, IDocumentStore store)
 		{
 			using (IDocumentSession session = store.OpenSession())
@@ -52,10 +82,10 @@ namespace Raven.Tests.Issues
 			}
 		}
 
-		private string[] RunParallelUpdates(TestConfig testConfig, IDocumentStore store)
+		private IEnumerable<string> RunParallelUpdates(TestConfig testConfig, IDocumentStore store)
 		{
-			string[] documentIds = CreateTestDocuments(testConfig.NumberOfDocuments, store);
-
+			var documentIds = CreateTestDocuments(testConfig.NumberOfDocuments, store);
+			WaitForIndexing(store);
 			Parallel.For(0, testConfig.NumberOfUpdatesPerDocument, i => UpdateAllDocumentsInParallel(documentIds, store));
 
 			return documentIds;
@@ -72,24 +102,38 @@ namespace Raven.Tests.Issues
 		private void UpdateDocument(string docId, IDocumentStore store)
 		{
 			while (true)
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					session.Advanced.UseOptimisticConcurrency = true;
-					
 					try
 					{
-						using (var tx = new TransactionScope())
+						string currentVersionLog;
+						using (var tx = new TransactionScope(TransactionScopeOption.RequiresNew))
 						{
-							session.Load<TestDoc>(docId).Version++;
+							var currentDoc = session.Load<TestDoc>(docId);
+							currentDoc.Version++;
+
+							currentDoc.VersionLog += (currentDoc.Version + ";");
+							currentVersionLog = currentDoc.VersionLog;
+
 							session.SaveChanges();
 
 							tx.Complete();
 						}
 
+						Interlocked.Increment(ref concurrentUpdatesCount);
+						
+						//record only successfull tx results
+						concurrentUpdateLog.AddOrUpdate(docId, new ConcurrentBag<string>(new[] { currentVersionLog }),
+							(id, versionLogCollection) =>
+							{
+								versionLogCollection.Add(currentVersionLog);
+								return versionLogCollection;
+							});
 						return;
 					}
 					catch (ConcurrencyException)
-					{
+					{						
 						Interlocked.Increment(ref concurrencyExceptionCount);
 					}
 				}
@@ -143,7 +187,14 @@ namespace Raven.Tests.Issues
 		private class TestDoc
 		{
 			public string Id { get; set; }
+			public string VersionLog { get; set; }
 			public int Version { get; set; }
+
+			public TestDoc()
+			{
+				Version = 0;
+				VersionLog = String.Empty;
+			}
 		}
 
 		#endregion
