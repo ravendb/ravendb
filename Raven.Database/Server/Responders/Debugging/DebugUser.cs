@@ -67,7 +67,7 @@ namespace Raven.Database.Server.Responders.Debugging
 
 				var windowsUserWithDatabase = new UserInfo
 				{
-					Remark = "Using windows auth",
+					Remark = "Using windows auth with database access",
 					User = principalWithDatabaseAccess.Identity.Name,
 					IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode) ||
 					                IsLocalGlobalAdmin(databases),
