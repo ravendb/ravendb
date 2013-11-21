@@ -321,7 +321,7 @@ namespace Voron.Impl.Journal
 
                 using (var tx = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    _jrnls = _waj.Files.Select(x => x.GetSnapshot()).ToList();
+                    _jrnls = _waj.Files.Select(x => x.GetSnapshot()).OrderBy(x => x.Number).ToList();
                     if (_jrnls.Count == 0)
                         return; // nothing to do
 
@@ -337,13 +337,18 @@ namespace Voron.Impl.Journal
 
 
                 var pagesToWrite = ImmutableDictionary<long, long>.Empty;
-                foreach (var journalFile in _jrnls)
+
+				long lastProcessedJournal = -1;
+				long lastProcessedJournalPage = -1;
+				var previousJournalMaxTransactionId = -1L;
+
+                foreach (var journalFile in _jrnls.Where(x => x.Number >= _lastSyncedJournal))
                 {
                     if (journalFile.PageTranslationTable.Count == 0)
                         continue;
 
-                    _lastSyncedJournal = Math.Max(journalFile.Number, _lastSyncedJournal);
-                    _lastSyncedPage = 0;
+	                var currentJournalMaxTransactionId = -1L;
+
                     foreach (var pagePosition in journalFile.PageTranslationTable)
                     {
                         if (_oldestActiveTransaction != 0 &&
@@ -355,13 +360,33 @@ namespace Voron.Impl.Journal
                             pagesToWrite = pagesToWrite.Remove(pagePosition.Key);
                             continue;
                         }
-                        _lastSyncedPage = Math.Max(_lastSyncedPage, pagePosition.Value.JournalPos);
+
+						if(journalFile.Number == _lastSyncedJournal && pagePosition.Value.JournalPos <= _lastSyncedPage)
+							continue;
+
+	                    currentJournalMaxTransactionId = Math.Max(currentJournalMaxTransactionId, pagePosition.Value.TransactionId);
+
+	                    if (currentJournalMaxTransactionId < previousJournalMaxTransactionId)
+		                    throw new InvalidOperationException(
+			                    "Journal applicator read beyond the oldest active transaction in the next journal file. " +
+			                    "This should never happen. Current journal max tx id: " + currentJournalMaxTransactionId +
+			                    ", previous journal max ix id: " + previousJournalMaxTransactionId +
+			                    ", oldest active transaction: " + _oldestActiveTransaction);
+
+	                    lastProcessedJournal = journalFile.Number;
+						lastProcessedJournalPage = Math.Max(lastProcessedJournal, pagePosition.Value.JournalPos);
+
                         pagesToWrite = pagesToWrite.SetItem(pagePosition.Key, pagePosition.Value.ScratchPos);
                     }
+
+	                previousJournalMaxTransactionId = currentJournalMaxTransactionId;
                 }
 
                 if (pagesToWrite.Count == 0)
                     return;
+
+				_lastSyncedJournal = lastProcessedJournal;
+				_lastSyncedPage = lastProcessedJournalPage;
 
                 var scratchBufferPool = _waj._env.ScratchBufferPool;
                 var sortedPages = pagesToWrite.OrderBy(x => x.Key)
@@ -474,13 +499,16 @@ namespace Voron.Impl.Journal
 					txPos += readTxHeader->PageCount + readTxHeader->OverflowPageCount + 1;
 				}
 
+				Debug.Assert(_lastSyncedJournal != -1);
+				Debug.Assert(_lastSyncedPage != -1);
+
 				_waj._headerAccessor.Modify(header =>
 					{
 						header->TransactionId = lastReadTxHeader.TransactionId;
 						header->LastPageNumber = lastReadTxHeader.LastPageNumber;
 
 						header->Journal.LastSyncedJournal = _lastSyncedJournal;
-						header->Journal.LastSyncedJournalPage = _lastSyncedPage == 0 ? -1 : _lastSyncedPage;
+						header->Journal.LastSyncedJournalPage = _lastSyncedPage;
 
 						header->Root = lastReadTxHeader.Root;
 						header->FreeSpace = lastReadTxHeader.FreeSpace;
