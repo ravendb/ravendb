@@ -2010,6 +2010,8 @@ namespace Raven.Database
 											docFromPatch.Metadata, transactionInformation);
 									}
 								}
+								shouldRetry = false;
+								result.PatchResult = PatchResult.Patched;
 							}
 							catch (ConcurrencyException)
 							{
@@ -2025,7 +2027,6 @@ namespace Raven.Database
 								}
 								throw;
 							}
-							result.PatchResult = PatchResult.Patched;
 						}
 					}
 					if (shouldRetry == false)
