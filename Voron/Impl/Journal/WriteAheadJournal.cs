@@ -438,7 +438,7 @@ namespace Voron.Impl.Journal
 			private List<JournalFile> GetUnusedJournalFiles()
 			{
 				var unusedJournalFiles = new List<JournalFile>();
-				foreach (var j in _waj.Files)
+				foreach (var j in _jrnls)
 				{
 					if (j.Number > _lastSyncedJournal) // after the last log we synced, nothing to do here
 						continue;
@@ -448,7 +448,7 @@ namespace Voron.Impl.Journal
 						if (j.AvailablePages != 0)
 							continue;
 					}
-					unusedJournalFiles.Add(j);
+					unusedJournalFiles.Add(_waj.Files.First(x => x.Number == j.Number));
 				}
 				return unusedJournalFiles;
 			}
