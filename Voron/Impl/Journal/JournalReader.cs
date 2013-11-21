@@ -179,10 +179,5 @@ namespace Voron.Impl.Journal
 	    {
 	        return _pager.ToString();
 	    }
-
-		public void ClearTransactionPageTranslation()
-		{
-			_transactionPageTranslation = ImmutableDictionary<long, JournalFile.PagePosition>.Empty;
-		}
 	}
 }
