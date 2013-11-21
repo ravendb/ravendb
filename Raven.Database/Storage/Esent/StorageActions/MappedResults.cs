@@ -166,7 +166,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var result = new ScheduledReductionInfo();
 			
 			var currentEtagBinary = Guid.Empty.ToByteArray();
-			foreach (OptimizedDeleter reader in itemsToDelete)
+			foreach (OptimizedDeleter reader in itemsToDelete.Where(x => x != null))
 			{
 				foreach (var sortedBookmark in reader.GetSortedBookmarks())
 				{
