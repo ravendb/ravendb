@@ -29,10 +29,11 @@ namespace Voron.Impl.Journal
 		private long _journalIndex = -1;
 		private readonly SemaphoreSlim _writeSemaphore = new SemaphoreSlim(1, 1);
 
+		private readonly SemaphoreSlim _flushingSemaphore = new SemaphoreSlim(1, 1);
 		internal ImmutableList<JournalFile> Files = ImmutableList<JournalFile>.Empty;
 		internal JournalFile CurrentFile;
 
-		private HeaderAccessor _headerAccessor;
+		private readonly HeaderAccessor _headerAccessor;
 
 		public WriteAheadJournal(StorageEnvironment env)
 		{
@@ -300,7 +301,7 @@ namespace Voron.Impl.Journal
 			CurrentFile = null;
 		}
 
-		public class JournalApplicator
+		public class JournalApplicator : IDisposable
 		{
 			private readonly WriteAheadJournal _waj;
 			private readonly long _oldestActiveTransaction;
@@ -312,6 +313,7 @@ namespace Voron.Impl.Journal
 			{
 				_waj = waj;
 				_oldestActiveTransaction = oldestActiveTransaction;
+				_waj._flushingSemaphore.WaitAsync();
 			}
 
 
@@ -485,6 +487,11 @@ namespace Voron.Impl.Journal
 						header->Root = lastReadTxHeader.Root;
 						header->FreeSpace = lastReadTxHeader.FreeSpace;
 					});
+			}
+
+			public void Dispose()
+			{
+				_waj._flushingSemaphore.Release();
 			}
 		}
 

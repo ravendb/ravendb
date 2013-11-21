@@ -389,8 +389,8 @@ namespace Voron
 					// we either reached our the max size we allow in the journal file before flush flushing (and therefor require a flush)
 					// we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
 					// while there isn't any other activity going on.
-					var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
-					journalApplicator.ApplyLogsToDataFile();
+					using (var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction))
+						journalApplicator.ApplyLogsToDataFile();
 				}
 			}
 		}
@@ -399,8 +399,8 @@ namespace Voron
 		{
 			if (_options.ManualFlushing == false)
 				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
-			var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
-			journalApplicator.ApplyLogsToDataFile(tx);
+			using (var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction))
+				journalApplicator.ApplyLogsToDataFile(tx);
 		}
 
 		public void AssertFlushingNotFailed()
