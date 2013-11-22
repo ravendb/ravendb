@@ -68,5 +68,54 @@ namespace Voron.Tests.Bugs
 				}
 			}
 		}
+
+		[Fact]
+		public void UnknownIssue_FoundDuringInvestigationOfAnotherOne_IfYouFixThisThenGiveItABetterName()
+		{
+			var value1 = new byte[4000];
+
+			new Random().NextBytes(value1);
+
+			Assert.Equal(2 * AbstractPager.PageSize, Env.Options.MaxLogFileSize);
+
+			Env.FlushLogToDataFile();
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				tx.State.Root.Add(tx, "foo/0", new MemoryStream(value1));
+				tx.State.Root.Add(tx, "foo/1", new MemoryStream(value1));
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				tx.State.Root.Add(tx, "foo/0", new MemoryStream(value1));
+
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				tx.State.Root.Add(tx, "foo/4", new MemoryStream(value1));
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				Env.FlushLogToDataFile();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var readResult = tx.State.Root.Read(tx, "foo/0");
+
+				Assert.NotNull(readResult);
+				Assert.Equal(value1.Length, readResult.Stream.Length);
+
+				var memoryStream = new MemoryStream();
+				readResult.Stream.CopyTo(memoryStream);
+			}
+		}
 	}
 }
