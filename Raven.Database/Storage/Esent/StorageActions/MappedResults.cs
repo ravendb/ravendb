@@ -157,7 +157,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete)
+		public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete)
 		{
 			if (itemsToDelete == null)
 				return null;
@@ -226,7 +226,6 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(Session, ScheduledReductions));
 		}
 
-        private readonly static object ItemsToDeleteLock = new object();
 
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
 		{
@@ -253,21 +252,11 @@ namespace Raven.Storage.Esent.StorageActions
 				OptimizedDeleter reader;
 				if (getItemsToReduceParams.ItemsToDelete.Count == 0)
 				{
-				    lock (ItemsToDeleteLock) // not threadsafe
-				    {
-                        if (getItemsToReduceParams.ItemsToDelete.Count == 0) //just to be sure - nothing happend here before the lock
-                        {
-                            getItemsToReduceParams.ItemsToDelete.Add(reader = new OptimizedDeleter());
-                        }
-                        else
-                        {
-                            reader = (OptimizedDeleter)getItemsToReduceParams.ItemsToDelete[0];
-                        }
-				    }
+					getItemsToReduceParams.ItemsToDelete.Add(reader = new OptimizedDeleter());
 				}
 				else
 				{
-					reader = (OptimizedDeleter)getItemsToReduceParams.ItemsToDelete[0];
+					reader = (OptimizedDeleter)getItemsToReduceParams.ItemsToDelete.First();
 				}
 				do
 				{
