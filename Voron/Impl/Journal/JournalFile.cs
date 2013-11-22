@@ -151,43 +151,44 @@ namespace Voron.Impl.Journal
             _locker.EnterWriteLock();
             try
             {
-                var ptt = _pageTranslationTable;
-                var unused = _unusedPages;
-                writePagePos = _writePage;
+				var ptt = _pageTranslationTable;
+				var unused = new List<PagePosition>();
+				writePagePos = _writePage;
 
-                for (int index = 0; index < txPages.Count; index++)
-                {
-                    var txPage = txPages[index];
-	                var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
-                    if (index == 0) // this is the transaction header page
-                    {
+				for (int index = 0; index < txPages.Count; index++)
+				{
+					var txPage = txPages[index];
+					var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
+					if (index == 0) // this is the transaction header page
+					{
 						pages[pagesCounter++] = scratchPage.Base;
-                    }
-                    else
-                    {
+					}
+					else
+					{
 						var pageNumber = ((PageHeader*)scratchPage.Base)->PageNumber;
-                        PagePosition value;
-                        if (ptt.TryGetValue(pageNumber, out value))
-                        {
-                            unused = unused.Add(value);
-                        }
-                        ptt = ptt.SetItem(pageNumber, new PagePosition
-                        {
-                            ScratchPos = txPage.PositionInScratchBuffer,
-                            JournalPos = writePagePos + index,
-                            TransactionId = tx.Id
-                        });
-                        for (int i = 0; i < txPage.NumberOfPages; i++)
-                        {
+						PagePosition value;
+						if (ptt.TryGetValue(pageNumber, out value))
+						{
+							unused.Add(value);
+						}
+						ptt = ptt.SetItem(pageNumber, new PagePosition
+						{
+							ScratchPos = txPage.PositionInScratchBuffer,
+							JournalPos = writePagePos + index,
+							TransactionId = tx.Id
+						});
+						for (int i = 0; i < txPage.NumberOfPages; i++)
+						{
 							pages[pagesCounter++] = scratchPage.Base + (i * AbstractPager.PageSize);
-                        }
-                    }
-                }
-                Debug.Assert(pagesCounter == numberOfPages);
+						}
+					}
+				}
 
-                _writePage += numberOfPages;
-                _pageTranslationTable = ptt;
-                _unusedPages = unused;
+				Debug.Assert(pagesCounter == numberOfPages);
+
+				_writePage += numberOfPages;
+				_pageTranslationTable = _pageTranslationTable.SetItems(ptt);
+				_unusedPages = _unusedPages.AddRange(unused);
             }
             finally
             {
