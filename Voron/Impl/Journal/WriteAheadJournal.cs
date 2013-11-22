@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Impl.FileHeaders;
@@ -32,7 +31,7 @@ namespace Voron.Impl.Journal
 		internal ImmutableList<JournalFile> Files = ImmutableList<JournalFile>.Empty;
 		internal JournalFile CurrentFile;
 
-		private HeaderAccessor _headerAccessor;
+		private readonly HeaderAccessor _headerAccessor;
 
 		public WriteAheadJournal(StorageEnvironment env)
 		{
@@ -42,10 +41,9 @@ namespace Voron.Impl.Journal
 			_headerAccessor = env.HeaderAccessor;
 		}
 
-		private JournalFile NextFile(Transaction tx, int numberOfPages = 1)
+		private JournalFile NextFile(int numberOfPages = 1)
 		{
 			_journalIndex++;
-
 
 			var now = DateTime.UtcNow;
 			if ((now - _lastFile).TotalSeconds < 90)
@@ -53,10 +51,10 @@ namespace Voron.Impl.Journal
 				_currentJournalFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentJournalFileSize * 2);
 			}
 			var actualLogSize = _currentJournalFileSize;
-			var minRequiredsize = numberOfPages * AbstractPager.PageSize;
-			if (_currentJournalFileSize < minRequiredsize)
+			var minRequiredSize = numberOfPages * AbstractPager.PageSize;
+			if (_currentJournalFileSize < minRequiredSize)
 			{
-				actualLogSize = minRequiredsize;
+				actualLogSize = minRequiredSize;
 			}
 			_lastFile = now;
 
@@ -64,8 +62,6 @@ namespace Voron.Impl.Journal
 
 			var journal = new JournalFile(journalPager, _journalIndex);
 			journal.AddRef(); // one reference added by a creator - write ahead log
-			tx.SetLogReference(journal); // and the next one for the current transaction
-
 
 			Files = Files.Add(journal);
 
@@ -526,7 +522,7 @@ namespace Voron.Impl.Journal
 			{
 				if (CurrentFile == null || CurrentFile.AvailablePages < pageCount)
 				{
-					CurrentFile = NextFile(tx, pageCount);
+					CurrentFile = NextFile(pageCount);
 				}
 				var task = CurrentFile.Write(tx, pageCount)
 					.ContinueWith(result =>
