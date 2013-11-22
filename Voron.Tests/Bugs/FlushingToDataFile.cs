@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="ConcurrentReadingAndFlushing.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="FlushingToDataFile.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -20,11 +20,13 @@ namespace Voron.Tests.Bugs
 		}
 
 		[Fact]
-		public unsafe void ConcurrentReadingAndFlushing()
+		public unsafe void ReadTransactionShouldNotReadFromJournalSnapshotIfJournalWasFlushedInTheMeanwhile()
 		{
 			var value1 = new byte[4000];
 
 			new Random().NextBytes(value1);
+
+			Assert.Equal(2 * AbstractPager.PageSize, Env.Options.MaxLogFileSize);
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
@@ -42,7 +44,7 @@ namespace Voron.Tests.Bugs
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				Env.FlushLogToDataFile();
+				Env.FlushLogToDataFile(); // force flushing during read transaction
 
 				using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{

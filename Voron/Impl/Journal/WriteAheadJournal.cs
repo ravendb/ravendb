@@ -32,6 +32,7 @@ namespace Voron.Impl.Journal
 		internal JournalFile CurrentFile;
 
 		private readonly HeaderAccessor _headerAccessor;
+		private long _lastFlushedTransaction = -1;
 
 		public WriteAheadJournal(StorageEnvironment env)
 		{
@@ -209,7 +210,7 @@ namespace Voron.Impl.Journal
 
 		public Page ReadPage(Transaction tx, long pageNumber)
 		{
-			// read transactions have to read from log snapshots
+			// read transactions have to read from journal snapshots
 			if (tx.Flags == TransactionFlags.Read)
 			{
 				// read log snapshots from the back to get the most recent version of a page
@@ -217,18 +218,37 @@ namespace Voron.Impl.Journal
 				{
 					JournalFile.PagePosition value;
 					if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(pageNumber, out value))
-						return _env.ScratchBufferPool.ReadPage(value.ScratchPos);
+					{
+						if (value.TransactionId <= _lastFlushedTransaction)
+						{
+							// requested page is already in the data file, don't read from the scratch space 
+							// because it was freed and might be overwritten there
+							return null;
+						}
+
+						var page = _env.ScratchBufferPool.ReadPage(value.ScratchPos);
+
+						Debug.Assert(page.PageNumber == pageNumber);
+
+						return page;
+					}
 				}
 
 				return null;
 			}
 
-			// write transactions can read directly from logs
+			// write transactions can read directly from journals
 			for (var i = Files.Count - 1; i >= 0; i--)
 			{
 				JournalFile.PagePosition value;
 				if (Files[i].PageTranslationTable.TryGetValue(pageNumber, out value))
-					return _env.ScratchBufferPool.ReadPage(value.ScratchPos);
+				{
+					var page = _env.ScratchBufferPool.ReadPage(value.ScratchPos);
+
+					Debug.Assert(page.PageNumber == pageNumber);
+
+					return page;
+				}
 			}
 
 			return null;
@@ -336,7 +356,9 @@ namespace Voron.Impl.Journal
 
 				long lastProcessedJournal = -1;
 				long lastProcessedJournalPage = -1;
-				var previousJournalMaxTransactionId = -1L;
+				long previousJournalMaxTransactionId = -1;
+
+				long lastFlushedTransactionId = -1;
 
                 foreach (var journalFile in _jrnls.Where(x => x.Number >= _lastSyncedJournal))
                 {
@@ -373,6 +395,8 @@ namespace Voron.Impl.Journal
 						lastProcessedJournalPage = Math.Max(lastProcessedJournal, pagePosition.Value.JournalPos);
 
                         pagesToWrite = pagesToWrite.SetItem(pagePosition.Key, pagePosition.Value.ScratchPos);
+
+						lastFlushedTransactionId = currentJournalMaxTransactionId;
                     }
 
 	                previousJournalMaxTransactionId = currentJournalMaxTransactionId;
@@ -429,6 +453,10 @@ namespace Voron.Impl.Journal
                     {
                         _waj.CurrentFile = null;
                     }
+
+					Debug.Assert(lastFlushedTransactionId != -1);
+
+	                _waj._lastFlushedTransaction = lastFlushedTransactionId;
 
                     FreeScratchPages(unusedJournalFiles);
 
