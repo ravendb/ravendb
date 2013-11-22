@@ -18,6 +18,8 @@ namespace Voron
 {
 	public class StorageEnvironment : IDisposable
 	{
+        private readonly object _locker = new object();
+
 		private readonly StorageEnvironmentOptions _options;
 
 		private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
@@ -351,21 +353,6 @@ namespace Voron
 			State = state;
 		}
 
-		private void OnTransactionCommit()
-		{
-			if (_options.ManualFlushing)
-				return;
-
-			if (_flushingTask.IsFaulted)
-				_flushingTask.Wait(); // throw the error, important to expose this to the callers
-			if (_flushingTask.IsCompleted || _flushingTask.IsCanceled)
-				throw new InvalidOperationException(
-					"The flushing task is cancelled or completed, this should never be the case while transactions are running");
-
-			// force this to run as a separate task, to avoid holding up the transaction thread
-			Task.Run(() => _flushWriter.Set());
-		}
-
 		private async Task FlushWritesToDataFileAsync()
 		{
 			while (_cancellationTokenSource.IsCancellationRequested == false)
@@ -390,7 +377,9 @@ namespace Voron
 					// we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
 					// while there isn't any other activity going on.
 					var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
-					journalApplicator.ApplyLogsToDataFile();
+
+                    lock(_locker)
+					    journalApplicator.ApplyLogsToDataFile();
 				}
 			}
 		}
@@ -400,7 +389,9 @@ namespace Voron
 			if (_options.ManualFlushing == false)
 				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 			var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
-			journalApplicator.ApplyLogsToDataFile(tx);
+
+            lock(_locker)
+			    journalApplicator.ApplyLogsToDataFile(tx);
 		}
 
 		public void AssertFlushingNotFailed()
