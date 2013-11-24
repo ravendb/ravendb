@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Tests.Indexes;
+using Raven.Tests.Issues;
 using Raven.Tests.MultiGet;
 using Raven.Tests.Notifications;
 using Raven.Tests.Track;
@@ -15,9 +16,9 @@ namespace Raven.Tryouts
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-                using (var x = new MultiGetProfiling())
+				using (var x = new TransactionConcurrencyIssue())
 				{
-					x.CanProfileFullyAggressivelyCached();
+					x.ConsistencyTest();
 				}
 			}
 			
