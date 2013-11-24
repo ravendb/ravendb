@@ -633,6 +633,7 @@
     <Compile Include="Issues\RavenDB_1359 .cs" />
     <Compile Include="Issues\RavenDB_1377.cs" />
     <Compile Include="Issues\RavenDB_1472.cs" />
+    <Compile Include="Issues\RavenDB_1489.cs" />
     <Compile Include="Issues\RavenDB_406.cs" />
     <Compile Include="Issues\RavenDB953.cs" />
     <Compile Include="Issues\RavenDB955.cs" />
@@ -654,6 +655,7 @@
     <Compile Include="Issues\RavenDB_993.cs" />
     <Compile Include="Issues\RavenDB_1280.cs" />
     <Compile Include="Issues\SlowIndex.cs" />
+    <Compile Include="Issues\RavenDB_1493.cs" />
     <Compile Include="Json\SupportForJsonPropertyAttribute.cs" />
     <Compile Include="LicenseProviderPluginTest.cs" />
     <Compile Include="Linq\OfTypeSupport2.cs" />
