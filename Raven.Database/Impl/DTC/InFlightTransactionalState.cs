@@ -135,7 +135,7 @@ namespace Raven.Database.Impl.DTC
         public virtual void Rollback(string id)
 		{
 			TransactionState value;
-			if (transactionStates.TryGetValue(id, out value) == false)
+			if (transactionStates.TryRemove(id, out value) == false)
 				return;
 			lock (value)
 			{
@@ -144,9 +144,8 @@ namespace Raven.Database.Impl.DTC
 					ChangedDoc guid;
 					changedInTransaction.TryRemove(change.Key, out guid);
 				}
+				value.changes.Clear();
 			}
-
-			transactionStates.TryRemove(id, out value);
 		}
 
         protected readonly ThreadLocal<string> currentlyCommittingTransaction = new ThreadLocal<string>();
