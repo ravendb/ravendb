@@ -274,8 +274,6 @@ namespace Voron.Impl.Journal
 			}
 
 			Files.Clear();
-
-		    _writeSemaphore.Wait();
 		}
 
 		public JournalInfo GetCurrentJournalInfo()
