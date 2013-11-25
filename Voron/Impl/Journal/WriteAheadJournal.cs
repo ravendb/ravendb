@@ -99,7 +99,8 @@ namespace Voron.Impl.Journal
 
 			}
 
-			for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
+		    long journalNumber;
+			for (journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
 			{
 				using (var pager = _env.Options.OpenJournalPager(journalNumber))
 				{
@@ -155,9 +156,9 @@ namespace Voron.Impl.Journal
 			if (requireHeaderUpdate)
 			{
 				_headerAccessor.Modify(header =>
-					{
-						header->Journal.CurrentJournal = Files.Count - 1;
-					});
+				    {
+				        header->Journal.CurrentJournal = journalNumber;
+				    });
 
 				logInfo = _headerAccessor.Get(ptr => ptr->Journal);
 
@@ -273,6 +274,8 @@ namespace Voron.Impl.Journal
 			}
 
 			Files.Clear();
+
+		    _writeSemaphore.Wait();
 		}
 
 		public JournalInfo GetCurrentJournalInfo()
