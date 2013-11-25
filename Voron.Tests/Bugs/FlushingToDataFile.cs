@@ -70,7 +70,7 @@ namespace Voron.Tests.Bugs
 		}
 
 		[Fact]
-		public void UnknownIssue_FoundDuringInvestigationOfAnotherOne_IfYouFixThisThenGiveItABetterName()
+		public void FlushingOperationShouldHaveOwnScratchPagerStateReference()
 		{
 			var value1 = new byte[4000];
 

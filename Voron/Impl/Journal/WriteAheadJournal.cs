@@ -409,34 +409,45 @@ namespace Voron.Impl.Journal
 				_lastSyncedJournal = lastProcessedJournal;
 				_lastSyncedPage = lastProcessedJournalPage;
 
-                var scratchBufferPool = _waj._env.ScratchBufferPool;
-                var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-                                                .Select(x => scratchBufferPool.ReadPage(x.Value))
-                                                .ToList();
+				var scratchBufferPool = _waj._env.ScratchBufferPool;
+				var scratchPagerState = scratchBufferPool.PagerState;
+				scratchPagerState.AddRef();
 
-                var last = sortedPages.Last();
+				try
+				{
+					var sortedPages = pagesToWrite.OrderBy(x => x.Key)
+													.Select(x => scratchBufferPool.ReadPage(x.Value))
+													.ToList();
 
-                var lastPage = last.IsOverflow == false ? 1 :
-                    _waj._env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
+					var last = sortedPages.Last();
 
-                if (alreadyInWriteTx)
-                    _waj._dataPager.EnsureContinuous(transaction, last.PageNumber, lastPage);
-                else
-                {
-                    using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
-                    {
-                        _waj._dataPager.EnsureContinuous(tx, last.PageNumber, lastPage);
+					var lastPage = last.IsOverflow == false ? 1 :
+						_waj._env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
 
-                        tx.Commit();
-                    } 
-                }        
+					if (alreadyInWriteTx)
+						_waj._dataPager.EnsureContinuous(transaction, last.PageNumber, lastPage);
+					else
+					{
+						using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
+						{
+							_waj._dataPager.EnsureContinuous(tx, last.PageNumber, lastPage);
 
-			    foreach (var page in sortedPages)
-			    {
-			        _waj._dataPager.Write(page);
-			    }
+							tx.Commit();
+						} 
+					}        
 
-                _waj._dataPager.Sync();
+					foreach (var page in sortedPages)
+					{
+						_waj._dataPager.Write(page);
+					}
+
+					_waj._dataPager.Sync();
+				}
+				finally 
+				{
+					scratchPagerState.Release();
+				}
+
                 var unusedJournalFiles = GetUnusedJournalFiles();
 
                 using (var txw = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite))
