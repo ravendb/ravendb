@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Impl.FileHeaders;
@@ -34,6 +33,7 @@ namespace Voron.Impl.Journal
 		internal JournalFile CurrentFile;
 
 		private readonly HeaderAccessor _headerAccessor;
+		private long _lastFlushedTransaction = -1;
 
 		public WriteAheadJournal(StorageEnvironment env)
 		{
@@ -43,10 +43,9 @@ namespace Voron.Impl.Journal
 			_headerAccessor = env.HeaderAccessor;
 		}
 
-		private JournalFile NextFile(Transaction tx, int numberOfPages = 1)
+		private JournalFile NextFile(int numberOfPages = 1)
 		{
 			_journalIndex++;
-
 
 			var now = DateTime.UtcNow;
 			if ((now - _lastFile).TotalSeconds < 90)
@@ -54,10 +53,10 @@ namespace Voron.Impl.Journal
 				_currentJournalFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentJournalFileSize * 2);
 			}
 			var actualLogSize = _currentJournalFileSize;
-			var minRequiredsize = numberOfPages * AbstractPager.PageSize;
-			if (_currentJournalFileSize < minRequiredsize)
+			var minRequiredSize = numberOfPages * AbstractPager.PageSize;
+			if (_currentJournalFileSize < minRequiredSize)
 			{
-				actualLogSize = minRequiredsize;
+				actualLogSize = minRequiredSize;
 			}
 			_lastFile = now;
 
@@ -65,8 +64,6 @@ namespace Voron.Impl.Journal
 
 			var journal = new JournalFile(journalPager, _journalIndex);
 			journal.AddRef(); // one reference added by a creator - write ahead log
-			tx.SetLogReference(journal); // and the next one for the current transaction
-
 
 			Files = Files.Add(journal);
 
@@ -103,7 +100,8 @@ namespace Voron.Impl.Journal
 
 			}
 
-			for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
+		    long journalNumber;
+			for (journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
 			{
 				using (var pager = _env.Options.OpenJournalPager(journalNumber))
 				{
@@ -160,7 +158,7 @@ namespace Voron.Impl.Journal
 			{
 				_headerAccessor.Modify(header =>
 					{
-						header->Journal.CurrentJournal = Files.Count - 1;
+				        header->Journal.CurrentJournal = journalNumber;
 					});
 
 				logInfo = _headerAccessor.Get(ptr => ptr->Journal);
@@ -214,7 +212,7 @@ namespace Voron.Impl.Journal
 
 		public Page ReadPage(Transaction tx, long pageNumber)
 		{
-			// read transactions have to read from log snapshots
+			// read transactions have to read from journal snapshots
 			if (tx.Flags == TransactionFlags.Read)
 			{
 				// read log snapshots from the back to get the most recent version of a page
@@ -222,18 +220,37 @@ namespace Voron.Impl.Journal
 				{
 					JournalFile.PagePosition value;
 					if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(pageNumber, out value))
-						return _env.ScratchBufferPool.ReadPage(value.ScratchPos);
+					{
+						if (value.TransactionId <= _lastFlushedTransaction)
+						{
+							// requested page is already in the data file, don't read from the scratch space 
+							// because it was freed and might be overwritten there
+							return null;
+				}
+
+						var page = _env.ScratchBufferPool.ReadPage(value.ScratchPos);
+
+						Debug.Assert(page.PageNumber == pageNumber);
+
+						return page;
+					}
 				}
 
 				return null;
 			}
 
-			// write transactions can read directly from logs
+			// write transactions can read directly from journals
 			for (var i = Files.Count - 1; i >= 0; i--)
 			{
 				JournalFile.PagePosition value;
 				if (Files[i].PageTranslationTable.TryGetValue(pageNumber, out value))
-					return _env.ScratchBufferPool.ReadPage(value.ScratchPos);
+				{
+					var page = _env.ScratchBufferPool.ReadPage(value.ScratchPos);
+
+					Debug.Assert(page.PageNumber == pageNumber);
+
+					return page;
+			}
 			}
 
 			return null;
@@ -342,7 +359,9 @@ namespace Voron.Impl.Journal
 
 				long lastProcessedJournal = -1;
 				long lastProcessedJournalPage = -1;
-				var previousJournalMaxTransactionId = -1L;
+				long previousJournalMaxTransactionId = -1;
+
+				long lastFlushedTransactionId = -1;
 
                 foreach (var journalFile in _jrnls.Where(x => x.Number >= _lastSyncedJournal))
                 {
@@ -379,6 +398,8 @@ namespace Voron.Impl.Journal
 						lastProcessedJournalPage = Math.Max(lastProcessedJournal, pagePosition.Value.JournalPos);
 
                         pagesToWrite = pagesToWrite.SetItem(pagePosition.Key, pagePosition.Value.ScratchPos);
+
+						lastFlushedTransactionId = currentJournalMaxTransactionId;
                     }
 
 	                previousJournalMaxTransactionId = currentJournalMaxTransactionId;
@@ -391,6 +412,11 @@ namespace Voron.Impl.Journal
 				_lastSyncedPage = lastProcessedJournalPage;
 
                 var scratchBufferPool = _waj._env.ScratchBufferPool;
+				var scratchPagerState = scratchBufferPool.PagerState;
+				scratchPagerState.AddRef();
+
+				try
+				{
                 var sortedPages = pagesToWrite.OrderBy(x => x.Key)
                                                 .Select(x => scratchBufferPool.ReadPage(x.Value))
                                                 .ToList();
@@ -418,6 +444,12 @@ namespace Voron.Impl.Journal
 			    }
 
                 _waj._dataPager.Sync();
+				}
+				finally 
+				{
+					scratchPagerState.Release();
+				}
+
                 var unusedJournalFiles = GetUnusedJournalFiles();
 
                 using (var txw = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite))
@@ -435,6 +467,10 @@ namespace Voron.Impl.Journal
                     {
                         _waj.CurrentFile = null;
                     }
+
+					Debug.Assert(lastFlushedTransactionId != -1);
+
+	                _waj._lastFlushedTransaction = lastFlushedTransactionId;
 
                     FreeScratchPages(unusedJournalFiles);
 
@@ -471,9 +507,9 @@ namespace Voron.Impl.Journal
 						continue;
 					if (j.Number == _lastSyncedJournal) // we are in the last log we synced
 					{
-						// if we didn't get to end, or if there are more pages to be used here, ignore it
-						if (j.AvailablePages != 0)
-							continue;
+                        if (j.AvailablePages != 0 || //　if there are more pages to be used here or 
+                        j.PageTranslationTable.Max(x => x.Value.JournalPos) != _lastSyncedPage) // we didn't synchronize whole journal
+                            continue; // do not mark it as unused
 					}
 					unusedJournalFiles.Add(_waj.Files.First(x => x.Number == j.Number));
 				}
@@ -533,7 +569,7 @@ namespace Voron.Impl.Journal
 			{
 				if (CurrentFile == null || CurrentFile.AvailablePages < pageCount)
 				{
-					CurrentFile = NextFile(tx, pageCount);
+					CurrentFile = NextFile(pageCount);
 				}
 				var task = CurrentFile.Write(tx, pageCount)
 					.ContinueWith(result =>

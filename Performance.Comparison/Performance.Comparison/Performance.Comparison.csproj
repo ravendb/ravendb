@@ -37,6 +37,9 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Esent.Collections">
       <HintPath>..\packages\ManagedEsent.1.8.3.2\lib\net40\Esent.Collections.dll</HintPath>
@@ -95,6 +98,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="app.manifest" />
     <None Include="fdb.cluster" />
     <None Include="packages.config" />
   </ItemGroup>

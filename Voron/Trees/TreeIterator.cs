@@ -105,11 +105,6 @@ namespace Voron.Trees
 						var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
 						_currentPage = _tx.GetReadOnlyPage(node->PageNumber);
 
-						if (_currentPage.PageNumber > 10000)
-						{
-							// we just read from the journal snapshot (actually from scratch pager) while we should read from the data file
-						}
-
 						_currentPage.LastSearchPosition = 0;
 					}
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);

@@ -28,7 +28,6 @@ namespace Voron.Impl
 		private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>();
 
 		internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
-		private readonly List<Action> _releaseLogActions = new List<Action>();
 
 		private List<string> _deletedTrees;
 
@@ -90,16 +89,11 @@ namespace Voron.Impl
 				return;
 			}
 
-
 			_state = env.State.Clone();
 
-			var pager = env.ScratchBufferPool.PagerState;
-
-			pager.AddRef();
-
-			_releaseLogActions.Add(pager.Release);
-
-			_journal.Files.ForEach(SetLogReference);
+			var scratchPagerState = env.ScratchBufferPool.PagerState;
+			scratchPagerState.AddRef();
+			_pagerStates.Add(scratchPagerState);
 
 			InitTransactionHeader();
 
@@ -360,11 +354,6 @@ namespace Voron.Impl
 			{
 				pagerState.Release();
 			}
-
-			foreach (var releaseLog in _releaseLogActions)
-			{
-				releaseLog();
-			}
 		}
 
 
@@ -436,12 +425,6 @@ namespace Voron.Impl
 													" to the transaction, because it already exists in a snapshot collection");
 
 			JournalSnapshots.Add(snapshot);
-		}
-
-		public void SetLogReference(JournalFile journal)
-		{
-			journal.AddRef();
-			_releaseLogActions.Add(journal.Release);
 		}
 
 		public List<PageFromScratchBuffer> GetTransactionPages()

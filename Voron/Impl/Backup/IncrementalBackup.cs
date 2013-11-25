@@ -213,7 +213,7 @@ namespace Voron.Impl.Backup
 
                     var last = sortedPages.Last();
 
-                    env.Options.DataPager.EnsureContinuous(null, last.PageNumber,
+                    env.Options.DataPager.EnsureContinuous(txw, last.PageNumber,
                                                     last.IsOverflow
                                                         ? env.Options.DataPager.GetNumberOfOverflowPages(
                                                             last.OverflowSize)
