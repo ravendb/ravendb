@@ -491,12 +491,12 @@ namespace Voron.Impl.Journal
 				{
 					if (j.Number > _lastSyncedJournal) // after the last log we synced, nothing to do here
 						continue;
-					if (j.Number == _lastSyncedJournal) // we are in the last log we synced
-					{
-						// if we didn't get to end, or if there are more pages to be used here, ignore it
-						if (j.AvailablePages != 0)
-							continue;
-					}
+                    if (j.Number == _lastSyncedJournal) // we are in the last log we synced
+                    {
+                        if (j.AvailablePages != 0 || //　if there are more pages to be used here or 
+                        j.PageTranslationTable.Max(x => x.Value.JournalPos) != _lastSyncedPage) // we didn't synchronize whole journal
+                            continue; // do not mark it as unused
+                    }
 					unusedJournalFiles.Add(_waj.Files.First(x => x.Number == j.Number));
 				}
 				return unusedJournalFiles;

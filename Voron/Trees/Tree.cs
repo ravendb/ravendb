@@ -398,13 +398,15 @@ namespace Voron.Trees
 
 				var node = p.GetNode(nodePos);
 				p = tx.GetReadOnlyPage(node->PageNumber);
+                Debug.Assert(node->PageNumber == p.PageNumber, string.Format("Requested Page: #{0}. Got Page: #{1}", node->PageNumber, p.PageNumber));
+
 				cursor.Push(p);
 			}
 
-			if (p.IsLeaf == false)
-				throw new DataException("Index points to a non leaf page");
+		    if (p.IsLeaf == false)
+		        throw new DataException("Index points to a non leaf page");
 
-			p.NodePositionFor(key, _cmp); // will set the LastSearchPosition
+		    p.NodePositionFor(key, _cmp); // will set the LastSearchPosition
 
 			return p;
 		}
