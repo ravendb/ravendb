@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Globalization;
     using System.IO;
     using System.Linq;
 
@@ -21,7 +20,7 @@
                 Directory.Delete("tests", true);
 
             var options = StorageEnvironmentOptions.ForPath("tests");
-            options.ManualFlushing = false;
+            options.ManualFlushing = true;
 
             using (var env = new StorageEnvironment(options))
             {
@@ -38,9 +37,10 @@
 
                         tx.Commit().Wait();
                     }
-                }
 
-                //env.FlushLogToDataFile();
+                    if (transactions == 50)
+                        env.FlushLogToDataFile();
+                }
 
                 ValidateRecords(env, new List<string> { "Root" }, sequentialLargeIds.Select(x => x.Key.ToString("0000000000000000")).ToList());
             }
@@ -50,8 +50,6 @@
 
             using (var env = new StorageEnvironment(options))
             {
-                env.FlushLogToDataFile();
-
                 ValidateRecords(env, new List<string> { "Root" }, sequentialLargeIds.Select(x => x.Key.ToString("0000000000000000")).ToList());
             }
         }
@@ -72,7 +70,7 @@
                         do
                         {
                             keys.Add(iterator.CurrentKey.ToString());
-                            Assert.True(ids.Contains(iterator.CurrentKey.ToString()));
+                            Assert.True(ids.Contains(iterator.CurrentKey.ToString()), "Unknown key: " + iterator.CurrentKey);
                             Assert.NotNull(snapshot.Read(tree, iterator.CurrentKey));
 
                             count++;

@@ -369,13 +369,12 @@ namespace Voron.Impl.Journal
 
 				long lastFlushedTransactionId = -1;
 
-                foreach (var journalFile in _jrnls.Where(x => x.Number >= _lastSyncedJournal))
+			    foreach (var journalFile in _jrnls.Where(x => x.Number >= _lastSyncedJournal))
                 {
                     if (journalFile.PageTranslationTable.Count == 0)
                         continue;
 
 	                var currentJournalMaxTransactionId = -1L;
-                    lastProcessedJournalPage = -1;
 
                     foreach (var pagePosition in journalFile.PageTranslationTable)
                     {
@@ -401,8 +400,11 @@ namespace Voron.Impl.Journal
 			                    ", previous journal max ix id: " + previousJournalMaxTransactionId +
 			                    ", oldest active transaction: " + _oldestActiveTransaction);
 
+                        if (lastProcessedJournal != journalFile.Number) 
+                            lastProcessedJournalPage = -1;
+
 	                    lastProcessedJournal = journalFile.Number;
-						lastProcessedJournalPage = Math.Max(lastProcessedJournalPage, pagePosition.Value.JournalPos);
+                        lastProcessedJournalPage = Math.Max(lastProcessedJournalPage, pagePosition.Value.JournalPos);
 
                         pagesToWrite = pagesToWrite.SetItem(pagePosition.Key, pagePosition.Value.ScratchPos);
 
@@ -424,33 +426,35 @@ namespace Voron.Impl.Journal
 
 				try
 				{
-                var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-                                                .Select(x => scratchBufferPool.ReadPage(x.Value))
-                                                .ToList();
+                    var sortedPages = pagesToWrite.OrderBy(x => x.Key)
+                                                    .Select(x => scratchBufferPool.ReadPage(x.Value))
+                                                    .ToList();
 
-                var last = sortedPages.Last();
+                    var last = sortedPages.Last();
 
-                var lastPage = last.IsOverflow == false ? 1 :
-                    _waj._env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
+                    var lastPage = last.IsOverflow == false ? 1 :
+                        _waj._env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
 
-                if (alreadyInWriteTx)
-                    _waj._dataPager.EnsureContinuous(transaction, last.PageNumber, lastPage);
-                else
-                {
-                    using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
+				    _lastSyncedPage += lastPage - 1;
+
+                    if (alreadyInWriteTx)
+                        _waj._dataPager.EnsureContinuous(transaction, last.PageNumber, lastPage);
+                    else
                     {
-                        _waj._dataPager.EnsureContinuous(tx, last.PageNumber, lastPage);
+                        using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
+                        {
+                            _waj._dataPager.EnsureContinuous(tx, last.PageNumber, lastPage);
 
-                        tx.Commit();
-                    } 
-                }        
+                            tx.Commit();
+                        } 
+                    }        
 
-			    foreach (var page in sortedPages)
-			    {
-			        _waj._dataPager.Write(page);
-			    }
+			        foreach (var page in sortedPages)
+			        {
+			            _waj._dataPager.Write(page);
+			        }
 
-                _waj._dataPager.Sync();
+                    _waj._dataPager.Sync();
 				}
 				finally 
 				{

@@ -156,6 +156,9 @@ namespace Voron.Impl.Journal
 				var unused = new List<PagePosition>();
 				writePagePos = _writePage;
 
+                PageFromScratchBuffer previousPage = null;
+                var numberOfOverflows = 0;
+
 				for (int index = 0; index < txPages.Count; index++)
 				{
 					var txPage = txPages[index];
@@ -172,16 +175,22 @@ namespace Voron.Impl.Journal
 						{
 							unused.Add(value);
 						}
+
+					    numberOfOverflows += previousPage != null ? previousPage.NumberOfPages - 1 : 0;
+
 						ptt = ptt.SetItem(pageNumber, new PagePosition
 						{
 							ScratchPos = txPage.PositionInScratchBuffer,
-							JournalPos = writePagePos + index,
+                            JournalPos = writePagePos + index + numberOfOverflows,
 							TransactionId = tx.Id
 						});
+
 						for (int i = 0; i < txPage.NumberOfPages; i++)
 						{
 							pages[pagesCounter++] = scratchPage.Base + (i * AbstractPager.PageSize);
 						}
+
+					    previousPage = txPage;
 					}
 				}
 
