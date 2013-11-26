@@ -90,6 +90,11 @@ namespace Voron.Impl.Paging
 			// nothing to do here
 		}
 
+		public override string Source
+		{
+			get { return "PureMemoryPager"; }
+		}
+
 		public override byte* AcquirePagePointer(long pageNumber)
 		{
 			long size = pageNumber*PageSize;

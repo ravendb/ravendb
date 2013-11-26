@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
 

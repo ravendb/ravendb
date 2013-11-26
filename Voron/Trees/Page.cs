@@ -5,6 +5,7 @@ using System.Text;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.Paging;
 
 namespace Voron.Trees
 {
@@ -13,14 +14,17 @@ namespace Voron.Trees
         private readonly byte* _base;
         private readonly PageHeader* _header;
 
+	    public readonly string Source;
+
         public int LastMatch;
         public int LastSearchPosition;
         public bool Dirty;
 
-        public Page(byte* b)
+        public Page(byte* b, string source)
         {
             _base = b;
             _header = (PageHeader*)b;
+	        Source = source;
         }
 
         public long PageNumber { get { return _header->PageNumber; } set { _header->PageNumber = value; } }

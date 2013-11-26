@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using Voron.Impl.Paging;
 using Voron.Util;
 
 namespace Voron.Impl.Journal

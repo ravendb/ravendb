@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Voron.Trees;
 using Voron.Util;
 
-namespace Voron.Impl
+namespace Voron.Impl.Paging
 {
 	public unsafe abstract class AbstractPager : IVirtualPager
 	{
@@ -45,8 +44,10 @@ namespace Voron.Impl
 													" because number of allocated pages is " + NumberOfAllocatedPages);
 			}
 
-			return new Page(AcquirePagePointer(pageNumber));
+			return new Page(AcquirePagePointer(pageNumber), Source);
 		}
+
+		public abstract string Source { get; }
 
 		public virtual Page GetWritable(long pageNumber)
 		{
@@ -56,7 +57,7 @@ namespace Voron.Impl
 													" because number of allocated pages is " + NumberOfAllocatedPages);
 			}
 
-			return new Page(AcquirePagePointer(pageNumber));
+			return new Page(AcquirePagePointer(pageNumber), Source);
 		}
 
 		public abstract byte* AcquirePagePointer(long pageNumber);
@@ -120,7 +121,7 @@ namespace Voron.Impl
 		{
 			get
 			{
-				return new Page((byte*)_tempPage.ToPointer())
+				return new Page((byte*)_tempPage.ToPointer(), Source)
 				{
 					Upper = (ushort)PageSize,
 					Lower = (ushort)Constants.PageHeaderSize,

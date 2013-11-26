@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using Voron.Trees;
 
 namespace Voron.Debugging

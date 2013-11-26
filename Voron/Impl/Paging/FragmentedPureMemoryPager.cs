@@ -15,6 +15,11 @@ namespace Voron.Impl.Paging
 			NumberOfAllocatedPages = buffers.Sum(x => x.SizeInPages);
 		}
 
+		public override unsafe string Source
+		{
+			get { return "FragmentedPureMemoryPager"; }
+		}
+
 		public override unsafe byte* AcquirePagePointer(long pageNumber)
 		{
 			long page = 0;

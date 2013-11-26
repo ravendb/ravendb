@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using Voron.Trees;
 
-namespace Voron.Impl
+namespace Voron.Impl.Paging
 {
 	public unsafe class MemoryMapPager : AbstractPager
 	{
@@ -88,6 +88,11 @@ namespace Voron.Impl
 			};
 			newPager.AddRef(); // one for the pager
 			return newPager;
+		}
+
+		public override string Source
+		{
+			get { return "MemMap: " + _fileInfo.Name; }
 		}
 
 		public override byte* AcquirePagePointer(long pageNumber)

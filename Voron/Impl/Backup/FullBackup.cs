@@ -11,6 +11,7 @@ using System.IO;
 using System.IO.Compression;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
+using Voron.Impl.Paging;
 using Voron.Util;
 
 namespace Voron.Impl.Backup

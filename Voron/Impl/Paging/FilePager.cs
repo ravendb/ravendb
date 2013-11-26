@@ -7,6 +7,7 @@ using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
+using Voron.Impl.Paging;
 using Voron.Trees;
 
 namespace Voron.Impl
@@ -56,7 +57,12 @@ namespace Voron.Impl
             return PagerState.MapBase + (pageNumber * PageSize);
         }
 
-        public override Page GetWritable(long pageNumber)
+	    public override string Source
+	    {
+		    get { return "File: " + _fileInfo.Name; }
+	    }
+
+	    public override Page GetWritable(long pageNumber)
         {
             throw new InvalidOperationException("File pager does not offer writing directly to a page");
         }

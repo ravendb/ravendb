@@ -29,7 +29,7 @@ namespace Performance.Comparison
             var buffer = new byte[87 * 1024];
             random.NextBytes(buffer);
 
-            var path = @"s:\temp\";
+            var path = @"c:\work\temp\";
 
             writer = new StreamWriter("output.txt",false) {AutoFlush = true};
 

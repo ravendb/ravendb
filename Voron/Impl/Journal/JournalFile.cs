@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Voron.Impl.Paging;
 using Voron.Trees;
 
 namespace Voron.Impl.Journal

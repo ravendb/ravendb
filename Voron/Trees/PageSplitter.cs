@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Voron.Impl;
+using Voron.Impl.Paging;
 
 namespace Voron.Trees
 {

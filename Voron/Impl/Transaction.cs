@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
+using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
 
