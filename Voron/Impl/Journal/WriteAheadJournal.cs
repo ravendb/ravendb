@@ -375,6 +375,7 @@ namespace Voron.Impl.Journal
                         continue;
 
 	                var currentJournalMaxTransactionId = -1L;
+                    lastProcessedJournalPage = -1;
 
                     foreach (var pagePosition in journalFile.PageTranslationTable)
                     {
