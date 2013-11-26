@@ -56,7 +56,7 @@ namespace Voron.Impl
 				NumberOfPages = numberOfPages
 			};
             _allocatedPages.Add(_lastUsedPage, result);
-			_lastUsedPage += numberOfPages;
+			_lastUsedPage += size;
 
 			return result;
 		}
