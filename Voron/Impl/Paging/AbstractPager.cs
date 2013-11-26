@@ -13,8 +13,18 @@ namespace Voron.Impl.Paging
 		private long _increaseSize;
 		private DateTime _lastIncrease;
 		private IntPtr _tempPage;
-		public PagerState PagerState { get; protected set; }
 
+		public PagerState PagerState
+		{
+			get { return _pagerState; }
+			set
+			{
+				_source = GetSourceName();
+				_pagerState = value;
+			}
+		}
+
+		private string _source;
 		protected AbstractPager()
 		{
 			_increaseSize = MinIncreaseSize;
@@ -32,6 +42,7 @@ namespace Voron.Impl.Paging
 
 		public const int PageSize = 4096;
 		public static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
+		private PagerState _pagerState;
 
 
 		public long NumberOfAllocatedPages { get; protected set; }
@@ -44,10 +55,10 @@ namespace Voron.Impl.Paging
 													" because number of allocated pages is " + NumberOfAllocatedPages);
 			}
 
-			return new Page(AcquirePagePointer(pageNumber), Source);
+			return new Page(AcquirePagePointer(pageNumber), _source);
 		}
 
-		public abstract string Source { get; }
+		protected abstract string GetSourceName();
 
 		public virtual Page GetWritable(long pageNumber)
 		{
@@ -56,8 +67,8 @@ namespace Voron.Impl.Paging
 				throw new InvalidOperationException("Cannot get page number " + pageNumber +
 													" because number of allocated pages is " + NumberOfAllocatedPages);
 			}
-
-			return new Page(AcquirePagePointer(pageNumber), Source);
+			
+			return new Page(AcquirePagePointer(pageNumber), _source);
 		}
 
 		public abstract byte* AcquirePagePointer(long pageNumber);
@@ -121,7 +132,7 @@ namespace Voron.Impl.Paging
 		{
 			get
 			{
-				return new Page((byte*)_tempPage.ToPointer(), Source)
+				return new Page((byte*)_tempPage.ToPointer(), _source)
 				{
 					Upper = (ushort)PageSize,
 					Lower = (ushort)Constants.PageHeaderSize,

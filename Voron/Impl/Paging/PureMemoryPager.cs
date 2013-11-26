@@ -90,9 +90,9 @@ namespace Voron.Impl.Paging
 			// nothing to do here
 		}
 
-		public override string Source
+		protected override unsafe string GetSourceName()
 		{
-			get { return "PureMemoryPager"; }
+			return "PureMemoryPager";
 		}
 
 		public override byte* AcquirePagePointer(long pageNumber)

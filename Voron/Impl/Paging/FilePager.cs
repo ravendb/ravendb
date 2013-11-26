@@ -57,9 +57,11 @@ namespace Voron.Impl
             return PagerState.MapBase + (pageNumber * PageSize);
         }
 
-	    public override string Source
+	    protected override unsafe string GetSourceName()
 	    {
-		    get { return "File: " + _fileInfo.Name; }
+		    if (_fileInfo == null)
+			    return "Unknown";
+		    return "File: " + _fileInfo.Name;
 	    }
 
 	    public override Page GetWritable(long pageNumber)

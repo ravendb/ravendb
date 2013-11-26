@@ -90,9 +90,11 @@ namespace Voron.Impl.Paging
 			return newPager;
 		}
 
-		public override string Source
+		protected override unsafe string GetSourceName()
 		{
-			get { return "MemMap: " + _fileInfo.Name; }
+			if (_fileInfo == null)
+				return "Unknown";
+			return "MemMap: " + _fileInfo.Name;
 		}
 
 		public override byte* AcquirePagePointer(long pageNumber)
