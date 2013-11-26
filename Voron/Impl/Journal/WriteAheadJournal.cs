@@ -258,6 +258,9 @@ namespace Voron.Impl.Journal
 
 		public void Dispose()
 		{
+			// we cannot dispose the journal until we are done with all of the pending writes
+			_writeSemaphore.Wait();
+
 			if (_env.Options.OwnsPagers)
 			{
 				foreach (var logFile in Files)
@@ -275,6 +278,8 @@ namespace Voron.Impl.Journal
 			}
 
 			Files.Clear();
+
+			_writeSemaphore.Dispose();
 		}
 
 		public JournalInfo GetCurrentJournalInfo()
