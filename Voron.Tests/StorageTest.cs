@@ -120,10 +120,24 @@ namespace Voron.Tests
 			TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
 
 			var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
-			var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
+			var p = Process.Start(FindGraphviz() + @"\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
 			p.WaitForExit();
 			Process.Start(output);
 		}
+
+	    private string FindGraphviz()
+	    {
+            var path = @"C:\Program Files (x86)\Graphviz2.";
+	        for (var i = 0; i < 100; i++)
+	        {
+	            var p = path + i.ToString("00");
+
+	            if (Directory.Exists(p)) 
+                    return p;
+	        }
+
+            throw new InvalidOperationException("No Graphviz found.");
+	    }
 
 		protected unsafe Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
 		{
