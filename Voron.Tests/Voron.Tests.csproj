@@ -65,6 +65,7 @@
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\FlushingToDataFile.cs" />
     <Compile Include="Bugs\IndexPointToNonLeafPageTests.cs" />
+    <Compile Include="Bugs\LargeValues.cs" />
     <Compile Include="Bugs\MultiAdds.cs" />
     <Compile Include="Bugs\RecoveryMultipleJournals.cs" />
     <Compile Include="Bugs\RecoveryWithManualFlush.cs" />
@@ -118,7 +119,7 @@
     <Content Include="Bugs\Data\data2.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Bugs\Data\non-leaf-page-seq-id.txt">
+    <Content Include="Bugs\Data\non-leaf-page-seq-id-large-values-2.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
