@@ -252,12 +252,20 @@ namespace Performance.Comparison.Voron
                 foreach (var id in ids)
                 {
                     var key = id.ToString("0000000000000000");
-                    using (var stream = tx.State.Root.Read(tx, key).Stream)
-                    {
-                        while (stream.Read(ms, 0, ms.Length) != 0)
-                        {
-                        }
-                    }
+	                using (var readResult = tx.State.Root.Read(tx, key))
+	                {
+		                if (readResult == null)
+		                {
+			                Console.WriteLine("WTF?");
+		                }
+						using (var stream = readResult.Stream)
+						{
+							while (stream.Read(ms, 0, ms.Length) != 0)
+							{
+							}
+						}
+	                }
+	             
                 }
                 perfTracker.Record(sw.ElapsedMilliseconds);
             }
