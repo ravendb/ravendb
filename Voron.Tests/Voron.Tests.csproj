@@ -122,6 +122,9 @@
     <Content Include="Bugs\Data\non-leaf-page-seq-id-large-values-2.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Bugs\Data\non-leaf-page-seq-id-large-values.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
