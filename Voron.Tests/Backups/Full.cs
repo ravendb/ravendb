@@ -53,8 +53,6 @@ namespace Voron.Tests.Backups
 			Assert.True(Env.Journal.Files.Count > 1);
 
 			Env.FlushLogToDataFile(); // force writing data to the data file
-
-			Assert.Equal(0, Env.Journal.Files.Count); // after flush there are no journal files
 			 
 			// add more data to journal files
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
