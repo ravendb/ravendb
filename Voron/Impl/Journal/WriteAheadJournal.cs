@@ -401,7 +401,7 @@ namespace Voron.Impl.Journal
 			                    ", oldest active transaction: " + _oldestActiveTransaction);
 
 	                    lastProcessedJournal = journalFile.Number;
-						lastProcessedJournalPage = Math.Max(lastProcessedJournal, pagePosition.Value.JournalPos);
+						lastProcessedJournalPage = Math.Max(lastProcessedJournalPage, pagePosition.Value.JournalPos);
 
                         pagesToWrite = pagesToWrite.SetItem(pagePosition.Key, pagePosition.Value.ScratchPos);
 
