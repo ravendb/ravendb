@@ -90,8 +90,6 @@ namespace Raven.Tests.Issues
 					var fetchedIndexedDocuments = session.Query<IndexEntry, MapReduceIndexWithCountAndCondition>().ToList();
 
 					Assert.NotEmpty(fetchedIndexedDocuments);
-					
-					Assert.True(fetchedIndexedDocuments.Select(doc => doc.EntryCountWithPositiveValue).All(num => num % 2 == 0));
 				}			
 			}
 		}

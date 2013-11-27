@@ -781,7 +781,6 @@
     <Compile Include="MailingList\IdComesBackLowerCase.cs" />
     <Compile Include="MailingList\IncludeShouldPassOnTypeInfoWhenAvailable.cs" />
     <Compile Include="MailingList\IndexTest2.cs" />
-    <Compile Include="MailingList\IndexTests.cs" />
     <Compile Include="MailingList\IndexWithEnumNullableFailingUnitTest.cs" />
     <Compile Include="MailingList\InIssues.cs" />
     <Compile Include="MailingList\InQueries.cs" />
