@@ -321,9 +321,12 @@ namespace Voron.Impl
 			if (Committed || RolledBack || Flags != (TransactionFlags.ReadWrite))
 				return;
 
+			foreach (var pageFromScratch in _transactionPages)
+			{
+				_env.ScratchBufferPool.Free(pageFromScratch.PositionInScratchBuffer);
+			}
+
 			RolledBack = true;
-			// there is nothing we need to do here
-			// all the writes happened at the scratch location
 		}
 
 
