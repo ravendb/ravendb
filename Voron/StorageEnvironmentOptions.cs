@@ -50,6 +50,8 @@ namespace Voron
 
 		public int IdleFlushTimeout { get; set; }
 
+		public long? MaxStorageSize { get; set; }
+
 		public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
 
 		protected bool Disposed;

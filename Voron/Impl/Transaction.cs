@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
+using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
@@ -199,6 +200,20 @@ namespace Voron.Impl
 					State.NextPageNumber += numberOfPages;
 				}
 			}
+
+			if (_env.Options.MaxStorageSize.HasValue) // check against quota
+			{
+				var maxAvailablePageNumber = _env.Options.MaxStorageSize / AbstractPager.PageSize;
+
+				if(pageNumber.Value > maxAvailablePageNumber)
+					throw new QuotaException(
+						string.Format(
+							"The maximum storage size quota ({0} bytes) has been reached. " +
+							"Currently configured storage quota is allowing to allocate the following maximum page number {1}, while the requested page number is {2}. " +
+							"To increase the quota, use the MaxStorageSize property on the storage environment options.",
+							_env.Options.MaxStorageSize, maxAvailablePageNumber, pageNumber.Value));
+			}
+
 
 			Debug.Assert(pageNumber < State.NextPageNumber);
 
