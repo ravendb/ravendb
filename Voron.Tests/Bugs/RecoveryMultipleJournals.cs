@@ -259,6 +259,9 @@ namespace Voron.Tests.Bugs
 		{
 			_options.Dispose();
 			_options = StorageEnvironmentOptions.ForPath("test.data");
+
+			_options.OnRecoveryError = (sender, args) => { }; // add empty handler to allow partially recover the storage environment
+
 			using (var fileStream = new FileStream(
 				Path.Combine("test.data", StorageEnvironmentOptions.JournalName(journal)), 
 				FileMode.Open,
