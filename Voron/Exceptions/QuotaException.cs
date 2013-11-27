@@ -10,19 +10,10 @@ namespace Voron.Exceptions
 {
 	public class QuotaException : Exception
 	{
-		public enum Caller
-		{
-			None = 1,
-			Pager,
-			WriteAheadJournal
-		}
-
-		public QuotaException(string message, Caller caller)
+		public QuotaException(string message)
 			: base(message)
 		{
-			CallerInstance = caller;
 		}
-
-		public Caller CallerInstance { get; set; }
 	}
 }
+

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Voron.Debugging;
 using Voron.Impl;
+using Voron.Impl.Backup;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;

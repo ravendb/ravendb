@@ -32,12 +32,12 @@ namespace Voron.Impl.Journal
 		public bool Disposed { get; private set; }
 		public bool DeleteOnClose { get; set; }
 
-	    public IVirtualPager CreatePager(IStorageQuotaOptions quotaOptions)
+	    public IVirtualPager CreatePager()
 		{
 			_locker.EnterReadLock();
 			try
 			{
-				return new FragmentedPureMemoryPager(_buffers, quotaOptions);
+				return new FragmentedPureMemoryPager(_buffers);
 			}
 			finally
 			{
