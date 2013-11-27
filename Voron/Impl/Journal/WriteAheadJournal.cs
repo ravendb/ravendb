@@ -444,21 +444,7 @@ namespace Voron.Impl.Journal
 
 				    _lastSyncedPage += lastPage - 1;
 
-#if DEBUG
-                    var txHeaders = stackalloc TransactionHeader[1];
-                    var readTxHeader = &txHeaders[0];
-                    var jrnl = _waj.Files.First(x => x.Number == _lastSyncedJournal);
-                    var read = jrnl.ReadTransaction(_lastSyncedPage + 1, readTxHeader);
-
-                    if (readTxHeader->HeaderMarker != 0 && (read == false || readTxHeader->HeaderMarker != Constants.TransactionHeaderMarker))
-                    {
-                        throw new InvalidOperationException(
-                            "Reading transaction for calculated page in journal failed. "
-                            + "Journal #" + lastProcessedJournal + ". "
-                            + "Page #" + _lastSyncedPage + 1 + ". "
-                            + "This means that page calculation is wrong and should be fixed otherwise data will be lost during database recovery from this journal.");
-                    }
-#endif
+					DebugValidateWrittenTransaction(lastProcessedJournal);
 
                     if (alreadyInWriteTx)
                         _waj._dataPager.EnsureContinuous(transaction, last.PageNumber, lastPage);
@@ -516,6 +502,24 @@ namespace Voron.Impl.Journal
                     if (txw != null)
                         txw.Commit();
                 }
+			}
+
+			[Conditional("DEBUG")]
+			private void DebugValidateWrittenTransaction(long lastProcessedJournal)
+			{
+				var txHeaders = stackalloc TransactionHeader[1];
+				var readTxHeader = &txHeaders[0];
+				var jrnl = _waj.Files.First(x => x.Number == _lastSyncedJournal);
+				var read = jrnl.ReadTransaction(_lastSyncedPage + 1, readTxHeader);
+
+				if (readTxHeader->HeaderMarker != 0 && (read == false || readTxHeader->HeaderMarker != Constants.TransactionHeaderMarker))
+				{
+					throw new InvalidOperationException(
+						"Reading transaction for calculated page in journal failed. "
+						+ "Journal #" + lastProcessedJournal + ". "
+						+ "Page #" + _lastSyncedPage + 1 + ". "
+						+ "This means that page calculation is wrong and should be fixed otherwise data will be lost during database recovery from this journal.");
+				}
 			}
 
 			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles)
