@@ -257,10 +257,13 @@ namespace Voron.Impl.Journal
 			return null;
 		}
 
+		private bool _writeSemaphoreDisposed;
+
 		public void Dispose()
 		{
 			// we cannot dispose the journal until we are done with all of the pending writes
-			_writeSemaphore.Wait();
+			if(_writeSemaphoreDisposed == false)
+				_writeSemaphore.Wait();
 
 			if (_env.Options.OwnsPagers)
 			{
@@ -281,6 +284,7 @@ namespace Voron.Impl.Journal
 			Files.Clear();
 
 			_writeSemaphore.Dispose();
+			_writeSemaphoreDisposed = true;
 		}
 
 		public JournalInfo GetCurrentJournalInfo()
