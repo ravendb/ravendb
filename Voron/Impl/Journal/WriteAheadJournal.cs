@@ -275,8 +275,14 @@ namespace Voron.Impl.Journal
 			return null;
 		}
 
+		private bool disposed;
+
 		public void Dispose()
 		{
+			if (disposed)
+				return;
+			disposed = true;
+
 			// we cannot dispose the journal until we are done with all of the pending writes
 			_writeSemaphore.Wait();
 

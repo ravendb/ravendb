@@ -22,7 +22,19 @@ namespace Voron
 
 	public unsafe abstract class StorageEnvironmentOptions : IStorageQuotaOptions, IDisposable
 	{
-	    public EventHandler OnRecoveryError;
+		public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
+
+		public void InvokeRecoveryError(object sender, string message)
+		{
+			var handler = OnRecoveryError;
+			if (handler == null)
+			{
+				throw new InvalidDataException(message + Environment.NewLine +
+					 "An exception has been thrown because there isn't a listener to the OnRecoveryError event on the storage options.");
+			}
+
+			handler(this, new RecoveryErrorEventArgs(message));
+		}
 
 		public long MaxLogFileSize
 		{
@@ -46,7 +58,7 @@ namespace Voron
 			}
 		}
 
-		protected long HeaderFilesSize = 2*sizeof (FileHeader);
+		protected long HeaderFilesSize = 2 * sizeof(FileHeader);
 
 		public bool OwnsPagers { get; set; }
 
@@ -156,12 +168,12 @@ namespace Voron
 			public override long GetCurrentStorageSize()
 			{
 				long size = HeaderFilesSize + // headers
-					_scratchPager.NumberOfAllocatedPages*AbstractPager.PageSize + // scratch file
-					_journals.Values.Sum(x => x.NumberOfAllocatedPages*AbstractPager.PageSize); // journals
+					_scratchPager.NumberOfAllocatedPages * AbstractPager.PageSize + // scratch file
+					_journals.Values.Sum(x => x.NumberOfAllocatedPages * AbstractPager.PageSize); // journals
 
 				if (_dataPager.IsValueCreated)
 				{
-					size += _dataPager.Value.NumberOfAllocatedPages*AbstractPager.PageSize;
+					size += _dataPager.Value.NumberOfAllocatedPages * AbstractPager.PageSize;
 				}
 
 				//TODO arek - what if incremental backup is enabled, should we take into account unused journals too
@@ -291,9 +303,9 @@ namespace Voron
 			public override long GetCurrentStorageSize()
 			{
 				long size = HeaderFilesSize + // headers
-				            _scratchPager.NumberOfAllocatedPages*AbstractPager.PageSize + // scratch file
-				            _journals.Values.Sum(x => x.NumberOfAllocatedPages*AbstractPager.PageSize) + // journals
-				            _dataPager.NumberOfAllocatedPages*AbstractPager.PageSize;
+							_scratchPager.NumberOfAllocatedPages * AbstractPager.PageSize + // scratch file
+							_journals.Values.Sum(x => x.NumberOfAllocatedPages * AbstractPager.PageSize) + // journals
+							_dataPager.NumberOfAllocatedPages * AbstractPager.PageSize;
 
 				//TODO arek - what if incremental backup is enabled, should we take into account unused journals too
 

@@ -13,6 +13,7 @@ namespace Voron.Tests.Bugs
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
 			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
+			options.OnRecoveryError += (sender, args) => { }; // just shut it up
 		}
 
 		[Fact]
@@ -259,6 +260,7 @@ namespace Voron.Tests.Bugs
 		{
 			_options.Dispose();
 			_options = StorageEnvironmentOptions.ForPath("test.data");
+			Configure(_options);
 			using (var fileStream = new FileStream(
 				Path.Combine("test.data", StorageEnvironmentOptions.JournalName(journal)), 
 				FileMode.Open,
