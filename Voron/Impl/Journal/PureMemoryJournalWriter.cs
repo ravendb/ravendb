@@ -47,7 +47,7 @@ namespace Voron.Impl.Journal
 	    public bool Read(long pageNumber, byte* buffer, int count)
 	    {
 	        long pos = 0;
-	        foreach (var current in _buffers)
+	        foreach (var current in _buffers.ToArray())
 	        {
 	            if (pos != pageNumber)
 	            {
