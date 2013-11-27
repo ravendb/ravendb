@@ -91,15 +91,16 @@ namespace Voron
 		{
 			var header = stackalloc TransactionHeader[1];
 			bool hadIntegrityIssues  = _journal.RecoverDatabase(header);
-			if (_journal.Files.IsEmpty && hadIntegrityIssues)
-			{
-				throw new InvalidDataException("Unrecoverable database");
-				//_journal.Dispose();
-				//_journal = new WriteAheadJournal(this);
-				//CreateNewDatabase();				
-				//return;
-			}
 
+            if (hadIntegrityIssues)
+            {
+                var message = _journal.Files.IsEmpty ? "Unrecoverable database" : "Database recovered partially. Some data was lost.";
+
+                if (_options.OnRecoveryError == null || _journal.Files.IsEmpty)
+                    throw new InvalidDataException(message);
+
+                _options.OnRecoveryError(this, new RecoveryErrorEventArgs(message));
+            }
 
 			var entry = _headerAccessor.CopyHeader();
 			var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;

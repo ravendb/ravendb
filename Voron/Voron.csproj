@@ -89,6 +89,7 @@
     <Compile Include="Impl\TreeAndSliceComparer.cs" />
     <Compile Include="Impl\WriteBatch.cs" />
     <Compile Include="ReadResult.cs" />
+    <Compile Include="RecoveryErrorEventArgs.cs" />
     <Compile Include="StorageEnvironmentOptions.cs" />
     <Compile Include="Impl\StorageEnvironmentState.cs" />
     <Compile Include="TransactionFlags.cs" />

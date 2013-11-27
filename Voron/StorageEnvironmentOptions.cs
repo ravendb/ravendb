@@ -14,6 +14,8 @@ namespace Voron
 {
 	public abstract class StorageEnvironmentOptions : IDisposable
 	{
+	    public EventHandler OnRecoveryError;
+
 		public long MaxLogFileSize
 		{
 			get { return _maxLogFileSize; }
