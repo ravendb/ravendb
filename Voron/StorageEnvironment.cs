@@ -342,7 +342,6 @@ namespace Voron
 					FreePages = _freeSpaceHandling.GetFreePageCount(),
 					FreePagesOverhead = State.FreeSpaceRoot.State.PageCount,
 					RootPages = State.Root.State.PageCount,
-					HeaderPages = 2,
 					UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber
 				};
 		}
