@@ -16,7 +16,7 @@ namespace Voron.Impl.Paging
 			public IntPtr Handle;
 		}
 
-		public PureMemoryPager(byte[] data)
+		public PureMemoryPager(byte[] data, IStorageQuotaOptions quotaOptions) : base(quotaOptions)
 		{
 			var ptr = Marshal.AllocHGlobal(data.Length);
 			var buffer = new Buffer
@@ -36,7 +36,7 @@ namespace Voron.Impl.Paging
 			}
 		}
 
-		public PureMemoryPager()
+		public PureMemoryPager(IStorageQuotaOptions quotaOptions) : base(quotaOptions)
 		{
 			var ptr = Marshal.AllocHGlobal(MinIncreaseSize);
 			var buffer = new Buffer

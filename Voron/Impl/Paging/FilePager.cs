@@ -18,8 +18,8 @@ namespace Voron.Impl
         private readonly FileInfo _fileInfo;
 	    private SafeFileHandle _safeFileHandle;
 
-	    public FilePager(string file)
-        {
+	    public FilePager(string file, IStorageQuotaOptions quotaOptions) : base(quotaOptions)
+	    {
             _fileInfo = new FileInfo(file);
 
             var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;

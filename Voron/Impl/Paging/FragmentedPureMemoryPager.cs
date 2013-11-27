@@ -9,7 +9,7 @@ namespace Voron.Impl.Paging
 	{
 		private readonly PureMemoryJournalWriter.Buffer[] _buffers;
 
-		internal FragmentedPureMemoryPager(PureMemoryJournalWriter.Buffer[] buffers)
+		internal FragmentedPureMemoryPager(PureMemoryJournalWriter.Buffer[] buffers, IStorageQuotaOptions quotaOptions) : base(quotaOptions)
 		{
 			this._buffers = buffers;
 			NumberOfAllocatedPages = buffers.Sum(x => x.SizeInPages);

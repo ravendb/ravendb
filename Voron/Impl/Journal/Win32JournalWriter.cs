@@ -80,9 +80,9 @@ namespace Voron.Impl.Journal
 		public long NumberOfAllocatedPages { get; private set; }
 	    public bool DeleteOnClose { get; set; }
 
-	    public IVirtualPager CreatePager()
+		public IVirtualPager CreatePager(IStorageQuotaOptions quotaOptions)
 		{
-			return new MemoryMapPager(_filename);
+			return new MemoryMapPager(_filename, quotaOptions);
 		}
 
 	    public bool Read(long pageNumber, byte* buffer, int count)
