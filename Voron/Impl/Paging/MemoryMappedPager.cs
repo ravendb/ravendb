@@ -20,9 +20,10 @@ namespace Voron.Impl.Paging
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
-        public MemoryMapPager(string file, 
+        public MemoryMapPager(string file, IStorageQuotaOptions quotaOptions,
 			NativeFileAttributes options = NativeFileAttributes.Normal,
 			NativeFileAccess access = NativeFileAccess.GenericAll)
+			: base(quotaOptions)
 		{
 	        this.access = access;
 	        _fileInfo = new FileInfo(file);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Voron.Exceptions;
 using Voron.Trees;
 using Voron.Util;
 
@@ -10,6 +11,7 @@ namespace Voron.Impl.Paging
 	{
 		protected int MinIncreaseSize { get { return 16 * PageSize; } }
 
+		private readonly IStorageQuotaOptions _quotaOptions;
 		private long _increaseSize;
 		private DateTime _lastIncrease;
 		private IntPtr _tempPage;
@@ -25,8 +27,9 @@ namespace Voron.Impl.Paging
 		}
 
 		private string _source;
-		protected AbstractPager()
+		protected AbstractPager(IStorageQuotaOptions quotaOptions)
 		{
+			_quotaOptions = quotaOptions;
 			_increaseSize = MinIncreaseSize;
 			MaxNodeSize = 1024;
 			Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
@@ -90,10 +93,28 @@ namespace Voron.Impl.Paging
 			// this ensure that if we want to get a range that is more than the current expansion
 			// we will increase as much as needed in one shot
 			var minRequested = (requestedPageNumber + numberOfPages) * PageSize;
-			var allocationSize = Math.Max(NumberOfAllocatedPages * PageSize, PageSize);
+			var currentPagerSize = NumberOfAllocatedPages*PageSize;
+			var allocationSize = Math.Max(currentPagerSize, PageSize);
 			while (minRequested > allocationSize)
 			{
 				allocationSize = GetNewLength(allocationSize);
+			}
+
+			if (_quotaOptions.MaxStorageSize.HasValue)
+			{
+				var toExtend = allocationSize - currentPagerSize;
+
+				var currentStorageSize = _quotaOptions.GetCurrentStorageSize();
+
+				if (currentStorageSize + toExtend > _quotaOptions.MaxStorageSize)
+				{
+					throw new QuotaException(
+						string.Format(
+							"The maximum storage size quota ({0} bytes) has been reached. Cannot allocate more pages for the following pager {1}. " +
+							"Current storage size is {2} bytes, it wanted to allocate additional {3} bytes. " +
+							"To increase the quota, use the MaxStorageSize property on the storage environment options.",
+							_quotaOptions.MaxStorageSize, _source, currentStorageSize, toExtend), QuotaException.Caller.Pager);
+				}
 			}
 
 			AllocateMorePages(tx, allocationSize);

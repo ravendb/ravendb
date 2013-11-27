@@ -52,6 +52,7 @@
   <ItemGroup>
     <Compile Include="Debugging\EnvironmentStats.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
+    <Compile Include="Exceptions\QuotaException.cs" />
     <Compile Include="Impl\Backup\FullBackup.cs" />
     <Compile Include="Impl\Backup\IncrementalBackupInfo.cs" />
     <Compile Include="Impl\Constants.cs" />

@@ -184,7 +184,7 @@ namespace Voron.Impl.Backup
 
                     foreach (var journalName in journalNames)
                     {
-                        var pager = new MemoryMapPager(Path.Combine(tempDir, journalName));
+                        var pager = new MemoryMapPager(Path.Combine(tempDir, journalName), env.Options);
                         toDispose.Add(pager);
 
                         long number;
