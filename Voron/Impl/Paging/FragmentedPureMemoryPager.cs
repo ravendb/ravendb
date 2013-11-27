@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Immutable;
 using System.Linq;
 using Voron.Impl.Journal;
 using Voron.Trees;
@@ -7,9 +8,10 @@ namespace Voron.Impl.Paging
 {
 	public class FragmentedPureMemoryPager : AbstractPager
 	{
-		private readonly PureMemoryJournalWriter.Buffer[] _buffers;
+		private readonly ImmutableList<PureMemoryJournalWriter.Buffer> _buffers;
 
-		internal FragmentedPureMemoryPager(PureMemoryJournalWriter.Buffer[] buffers, IStorageQuotaOptions quotaOptions) : base(quotaOptions)
+		internal FragmentedPureMemoryPager(ImmutableList<PureMemoryJournalWriter.Buffer> buffers, IStorageQuotaOptions quotaOptions)
+			: base(quotaOptions)
 		{
 			this._buffers = buffers;
 			NumberOfAllocatedPages = buffers.Sum(x => x.SizeInPages);
