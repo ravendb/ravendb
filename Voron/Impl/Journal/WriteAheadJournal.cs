@@ -11,7 +11,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Trees;
@@ -60,23 +59,6 @@ namespace Voron.Impl.Journal
 			{
 				actualLogSize = minRequiredSize;
 			}
-
-			if (_env.Options.MaxStorageSize.HasValue)
-			{
-				var currentStorageSize = _env.Options.GetCurrentStorageSize();
-
-				if (currentStorageSize + actualLogSize > _env.Options.MaxStorageSize)
-				{
-					throw new QuotaException(
-						string.Format(
-							"The maximum storage size quota ({0} bytes) has been reached. Cannot create a journal file {1}. " +
-							"Current storage size is {2} bytes, it wanted to create a journal of size {3} bytes. " +
-							"To increase the quota, use the MaxStorageSize property on the storage environment options.",
-							_env.Options.MaxStorageSize, StorageEnvironmentOptions.JournalName(_journalIndex), currentStorageSize,
-							actualLogSize), QuotaException.Caller.WriteAheadJournal);
-				}
-			}
-
 			_lastFile = now;
 
 			var journalPager = _env.Options.CreateJournalWriter(_journalIndex, actualLogSize);

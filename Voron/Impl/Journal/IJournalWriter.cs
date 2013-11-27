@@ -9,7 +9,7 @@ namespace Voron.Impl.Journal
 		long NumberOfAllocatedPages { get;  }
 		bool Disposed { get; }
 	    bool DeleteOnClose { get; set; }
-		IVirtualPager CreatePager(IStorageQuotaOptions quotaOptions);
+	    IVirtualPager CreatePager();
 	    bool Read(long pageNumber, byte* buffer, int count);
 	}
 }

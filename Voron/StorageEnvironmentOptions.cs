@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
@@ -13,14 +12,7 @@ using Voron.Util;
 
 namespace Voron
 {
-	public interface IStorageQuotaOptions
-	{
-		long? MaxStorageSize { get; set; }
-
-		long GetCurrentStorageSize();
-	}
-
-	public unsafe abstract class StorageEnvironmentOptions : IStorageQuotaOptions, IDisposable
+	public abstract class StorageEnvironmentOptions : IDisposable
 	{
 	    public EventHandler OnRecoveryError;
 
@@ -46,8 +38,6 @@ namespace Voron
 			}
 		}
 
-		protected long HeaderFilesSize = 2*sizeof (FileHeader);
-
 		public bool OwnsPagers { get; set; }
 
 		public bool ManualFlushing { get; set; }
@@ -60,11 +50,7 @@ namespace Voron
 
 		public int IdleFlushTimeout { get; set; }
 
-		public long? MaxStorageSize { get; set; }
-
 		public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
-
-		public abstract long GetCurrentStorageSize();
 
 		protected bool Disposed;
 		private long _initialLogFileSize;
@@ -82,7 +68,6 @@ namespace Voron
 
 			OwnsPagers = true;
 			IncrementalBackupEnabled = false;
-			MaxStorageSize = null; // no quota
 		}
 
 		public static StorageEnvironmentOptions GetInMemory()
@@ -108,10 +93,9 @@ namespace Voron
 		{
 			private readonly string _basePath;
 			private readonly Lazy<IVirtualPager> _dataPager;
-			private IVirtualPager _scratchPager;
 
-			private readonly ConcurrentDictionary<string, IJournalWriter> _journals =
-				new ConcurrentDictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
+			private readonly ConcurrentDictionary<string, Lazy<IJournalWriter>> _journals =
+				new ConcurrentDictionary<string, Lazy<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
 			public DirectoryStorageEnvironmentOptions(string basePath)
 			{
@@ -120,7 +104,7 @@ namespace Voron
 				{
 					Directory.CreateDirectory(_basePath);
 				}
-				_dataPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(Path.Combine(_basePath, "db.voron"), this));
+				_dataPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(Path.Combine(_basePath, "db.voron")));
 			}
 
 			public override IVirtualPager DataPager
@@ -140,33 +124,17 @@ namespace Voron
 			{
 				var name = JournalName(journalNumber);
 				var path = Path.Combine(_basePath, name);
-				var result = _journals.GetOrAdd(name, _ => new Win32FileJournalWriter(path, journalSize));
+				var result = _journals.GetOrAdd(name, _ => new Lazy<IJournalWriter>(() => new Win32FileJournalWriter(path, journalSize)));
 
-				if (result.Disposed)
+				if (result.Value.Disposed)
 				{
-					var newWriter = new Win32FileJournalWriter(path, journalSize);
+					var newWriter = new Lazy<IJournalWriter>(() =>  new Win32FileJournalWriter(path, journalSize));
 					if (_journals.TryUpdate(name, newWriter, result) == false)
 						throw new InvalidOperationException("Could not update journal pager");
 					result = newWriter;
 				}
 
-				return result;
-			}
-
-			public override long GetCurrentStorageSize()
-			{
-				long size = HeaderFilesSize + // headers
-					_scratchPager.NumberOfAllocatedPages*AbstractPager.PageSize + // scratch file
-					_journals.Values.Sum(x => x.NumberOfAllocatedPages*AbstractPager.PageSize); // journals
-
-				if (_dataPager.IsValueCreated)
-				{
-					size += _dataPager.Value.NumberOfAllocatedPages*AbstractPager.PageSize;
-				}
-
-				//TODO arek - what if incremental backup is enabled, should we take into account unused journals too
-
-				return size;
+				return result.Value;
 			}
 
 			public override void Dispose()
@@ -178,7 +146,8 @@ namespace Voron
 					_dataPager.Value.Dispose();
 				foreach (var journal in _journals)
 				{
-					journal.Value.Dispose();
+					if (journal.Value.IsValueCreated)
+						journal.Value.Value.Dispose();
 				}
 			}
 
@@ -186,9 +155,9 @@ namespace Voron
 			{
 				var name = JournalName(number);
 
-				IJournalWriter journal;
-				if (_journals.TryRemove(name, out journal))
-					journal.Dispose();
+				Lazy<IJournalWriter> lazy;
+				if (_journals.TryRemove(name, out lazy) && lazy.IsValueCreated)
+					lazy.Value.Dispose();
 
 				var file = Path.Combine(_basePath, name);
 				if (File.Exists(file) == false)
@@ -241,8 +210,7 @@ namespace Voron
 
 			public override IVirtualPager CreateScratchPager()
 			{
-				_scratchPager = new MemoryMapPager(Path.Combine(_basePath, "scratch.buffers"), this, (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
-				return _scratchPager;
+				return new MemoryMapPager(Path.Combine(_basePath, "scratch.buffers"), (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
@@ -251,16 +219,15 @@ namespace Voron
 				var path = Path.Combine(_basePath, name);
 				if (File.Exists(path) == false)
 					throw new InvalidOperationException("No such journal " + path);
-				return new MemoryMapPager(path, this, access: NativeFileAccess.GenericRead);
+				return new MemoryMapPager(path, access: NativeFileAccess.GenericRead);
 			}
 		}
 
 		public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
 		{
 			private readonly PureMemoryPager _dataPager;
-			private PureMemoryPager _scratchPager;
 
-			private Dictionary<string, IJournalWriter> _journals =
+			private Dictionary<string, IJournalWriter> _logs =
 				new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
 
 			private Dictionary<string, IntPtr> _headers =
@@ -269,7 +236,7 @@ namespace Voron
 
 			public PureMemoryStorageEnvironmentOptions()
 			{
-				_dataPager = new PureMemoryPager(this);
+				_dataPager = new PureMemoryPager();
 			}
 
 			public override IVirtualPager DataPager
@@ -281,23 +248,11 @@ namespace Voron
 			{
 				var name = JournalName(journalNumber);
 				IJournalWriter value;
-				if (_journals.TryGetValue(name, out value))
+				if (_logs.TryGetValue(name, out value))
 					return value;
 				value = new PureMemoryJournalWriter(journalSize);
-				_journals[name] = value;
+				_logs[name] = value;
 				return value;
-			}
-
-			public override long GetCurrentStorageSize()
-			{
-				long size = HeaderFilesSize + // headers
-				            _scratchPager.NumberOfAllocatedPages*AbstractPager.PageSize + // scratch file
-				            _journals.Values.Sum(x => x.NumberOfAllocatedPages*AbstractPager.PageSize) + // journals
-				            _dataPager.NumberOfAllocatedPages*AbstractPager.PageSize;
-
-				//TODO arek - what if incremental backup is enabled, should we take into account unused journals too
-
-				return size;
 			}
 
 			public override void Dispose()
@@ -306,7 +261,7 @@ namespace Voron
 					return;
 				Disposed = true;
 				_dataPager.Dispose();
-				foreach (var virtualPager in _journals)
+				foreach (var virtualPager in _logs)
 				{
 					virtualPager.Value.Dispose();
 				}
@@ -321,9 +276,9 @@ namespace Voron
 			{
 				var name = JournalName(number);
 				IJournalWriter value;
-				if (_journals.TryGetValue(name, out value) == false)
+				if (_logs.TryGetValue(name, out value) == false)
 					return false;
-				_journals.Remove(name);
+				_logs.Remove(name);
 				value.Dispose();
 				return true;
 			}
@@ -352,16 +307,15 @@ namespace Voron
 
 			public override IVirtualPager CreateScratchPager()
 			{
-				_scratchPager = new PureMemoryPager(this);
-				return _scratchPager;
+				return new PureMemoryPager();
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
 			{
 				var name = JournalName(journalNumber);
 				IJournalWriter value;
-				if (_journals.TryGetValue(name, out value))
-					return value.CreatePager(this);
+				if (_logs.TryGetValue(name, out value))
+					return value.CreatePager();
 				throw new InvalidOperationException("No such journal " + journalNumber);
 			}
 		}

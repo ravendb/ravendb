@@ -91,7 +91,6 @@
     <Compile Include="Storage\FreeScratchPages.cs" />
     <Compile Include="Storage\MultiTransactions.cs" />
     <Compile Include="Storage\Pagers.cs" />
-    <Compile Include="Storage\Quotas.cs" />
     <Compile Include="Storage\Restarts.cs" />
     <Compile Include="Storage\Snapshots.cs" />
     <Compile Include="Storage\SplittingVeryBig.cs" />

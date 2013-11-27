@@ -9,25 +9,16 @@ namespace Voron.Tests.Storage
     public class Pagers
     {
 #if DEBUG
-	    class MockStorageQuota : IStorageQuotaOptions
-	    {
-		    public long? MaxStorageSize { get; set; }
-		    public long GetCurrentStorageSize()
-		    {
-			    return -1;
-		    }
-	    }
-
         [Fact]
         public void PureMemoryPagerReleasesPagerState()
         {
-            PagerReleasesPagerState(() => new PureMemoryPager(new MockStorageQuota()));
+            PagerReleasesPagerState(() => new PureMemoryPager());
         }
 
         [Fact]
         public void MemoryMapPagerReleasesPagerState()
         {
-			PagerReleasesPagerState(() => new MemoryMapPager("db.voron", new MockStorageQuota()));
+            PagerReleasesPagerState(() => new MemoryMapPager("db.voron"));
             File.Delete("db.voron");
         }
 
@@ -35,7 +26,7 @@ namespace Voron.Tests.Storage
         [Fact]
         public void FilePagerReleasesPagerState()
         {
-			PagerReleasesPagerState(() => new FilePager("db.voron", new MockStorageQuota()));
+            PagerReleasesPagerState(() => new FilePager("db.voron"));
             File.Delete("db.voron");
         }
 
