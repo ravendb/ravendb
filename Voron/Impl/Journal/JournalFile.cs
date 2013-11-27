@@ -197,7 +197,7 @@ namespace Voron.Impl.Journal
 				Debug.Assert(pagesCounter == numberOfPages);
 
 				_writePage += numberOfPages;
-				_pageTranslationTable = _pageTranslationTable.SetItems(ptt);
+                _pageTranslationTable = ptt;
 				_unusedPages = _unusedPages.AddRange(unused);
             }
             finally
@@ -218,14 +218,28 @@ namespace Voron.Impl.Journal
 
         public void FreeScratchPagesOlderThan(StorageEnvironment env, long oldestActiveTransaction)
         {
-            var unusedAndFree = _unusedPages.FindAll(position => position.TransactionId < oldestActiveTransaction);
-            _unusedPages = _unusedPages.RemoveRange(unusedAndFree);
+            ImmutableList<PagePosition> unusedAndFree;
+            List<KeyValuePair<long, PagePosition>> unusedPages;
+
+            _locker.EnterWriteLock();
+            try
+            {
+                unusedAndFree = _unusedPages.FindAll(position => position.TransactionId < oldestActiveTransaction);
+                _unusedPages = _unusedPages.RemoveRange(unusedAndFree);
+
+                unusedPages = _pageTranslationTable.Where(x => x.Value.TransactionId < oldestActiveTransaction).ToList();
+                _pageTranslationTable = _pageTranslationTable.RemoveRange(unusedPages.Select(x => x.Key));
+            }
+            finally
+            {
+                _locker.ExitWriteLock();
+            }
+
             foreach (var unusedScratchPage in unusedAndFree)
             {
                 env.ScratchBufferPool.Free(unusedScratchPage.ScratchPos);
             }
-            var unusedPages = _pageTranslationTable.Where(x => x.Value.TransactionId < oldestActiveTransaction).ToList();
-            _pageTranslationTable = _pageTranslationTable.RemoveRange(unusedPages.Select(x => x.Key));
+
             foreach (var unusedScratchPage in unusedPages)
             {
                 env.ScratchBufferPool.Free(unusedScratchPage.Value.ScratchPos);
