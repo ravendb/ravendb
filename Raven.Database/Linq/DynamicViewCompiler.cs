@@ -313,7 +313,7 @@ Additional fields	: {4}", indexDefinition.Maps.First(),
 		            var lambdaExpression = GetLambdaExpression(invocation);
 		            groupByParameter = lambdaExpression.Parameters.First().Name;
 		            groupBySource = lambdaExpression.Body;
-		            groupByIdentifier = null;
+					groupByIdentifier = groupByParameter;
 		        }
 
 		        var mapFields = captureSelectNewFieldNamesVisitor.FieldNames.ToList();
