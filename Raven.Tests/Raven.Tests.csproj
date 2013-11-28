@@ -845,6 +845,7 @@
     <Compile Include="MailingList\RavenDeserializationBug.cs" />
     <Compile Include="MailingList\RavenDynamicTests.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
+    <Compile Include="MailingList\ReduceAndTransform2.cs" />
     <Compile Include="MailingList\RenamedProperty.cs" />
     <Compile Include="MailingList\ResultTransformerMetaData .cs" />
     <Compile Include="MailingList\Rudolph.cs" />

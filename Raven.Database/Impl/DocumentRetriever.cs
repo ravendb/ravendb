@@ -170,7 +170,7 @@ namespace Raven.Database.Impl
 		            }
 		        }
 		    }
-		    else if (fieldsToFetch.FetchAllStoredFields)
+			else if (fieldsToFetch.FetchAllStoredFields && string.IsNullOrEmpty(queryResult.Key) == false)
 		    {
                 // duplicate document, filter it out
                 if (loadedIds.Add(queryResult.Key) == false)
