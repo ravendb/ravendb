@@ -78,7 +78,9 @@ namespace Voron.Impl
                 return;
 
             // need to allocate memory again
-            _fileStream.SetLength(newLength);
+			NativeFileMethods.SetFileLength(_safeFileHandle, newLength);
+
+			Debug.Assert(_fileStream.Length == newLength);
 
             PagerState.Release(); // when the last transaction using this is over, will dispose it
             PagerState newPager = CreateNewPagerState();

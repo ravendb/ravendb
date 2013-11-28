@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
@@ -56,6 +57,9 @@ namespace Voron.Impl.Paging
 
 			// need to allocate memory again
 			NativeFileMethods.SetFileLength(_handle, newLength);
+
+			Debug.Assert(_fileStream.Length == newLength);
+
 		    _length = newLength;
 			PagerState.Release(); // when the last transaction using this is over, will dispose it
 			PagerState newPager = CreateNewPagerState();
