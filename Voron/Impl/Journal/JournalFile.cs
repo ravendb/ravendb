@@ -217,10 +217,11 @@ namespace Voron.Impl.Journal
             return _journalWriter.WriteGatherAsync(writePagePos * AbstractPager.PageSize, pages);
         }
 
-        public void InitFrom(JournalReader journalReader, ImmutableDictionary<long, PagePosition> pageTranslationTable)
+        public void InitFrom(JournalReader journalReader, ImmutableDictionary<long, PagePosition> pageTranslationTable, ImmutableDictionary<long, long> transactionEndPositions)
         {
             _writePage = journalReader.NextWritePage;
             _pageTranslationTable = pageTranslationTable;
+            _transactionEndPositions = transactionEndPositions;
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }

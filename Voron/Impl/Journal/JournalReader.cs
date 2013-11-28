@@ -15,6 +15,7 @@ namespace Voron.Impl.Journal
 		private long _nextWritePage;
 		private long _readingPage;
         private ImmutableDictionary<long, JournalFile.PagePosition> _transactionPageTranslation = ImmutableDictionary<long, JournalFile.PagePosition>.Empty;
+        private ImmutableDictionary<long, long> _transactionEndPositions = ImmutableDictionary<long, long>.Empty;
 
 		public bool RequireHeaderUpdate { get; private set; }
 
@@ -112,6 +113,7 @@ namespace Voron.Impl.Journal
 			//update CurrentTransactionHeader _only_ if the CRC check is passed
 			LastTransactionHeader = current;
 			_transactionPageTranslation = transactionTable;
+		    _transactionEndPositions = _transactionEndPositions.Add(current->TransactionId, _readingPage - 1);
 			return true;
 		}
 
@@ -126,6 +128,11 @@ namespace Voron.Impl.Journal
 		{
 			get { return _transactionPageTranslation; }
 		}
+
+        public ImmutableDictionary<long, long> TransactionEndPositions
+        {
+            get { return _transactionEndPositions; }
+        }
 
 		private bool TryReadAndValidateHeader(out TransactionHeader* current)
 		{

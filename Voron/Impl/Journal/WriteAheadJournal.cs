@@ -135,10 +135,12 @@ namespace Voron.Impl.Journal
 						});
 					}
 
+                    
+
 					// we setup the journal file so we can flush from it to the data file
 					var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * AbstractPager.PageSize);
 					var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
-					jrnlFile.InitFrom(journalReader, ptt);
+					jrnlFile.InitFrom(journalReader, ptt, journalReader.TransactionEndPositions);
 					jrnlFile.AddRef(); // creator reference - write ahead log
 					Files = Files.Add(jrnlFile);
 

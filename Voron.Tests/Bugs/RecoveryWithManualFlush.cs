@@ -69,6 +69,49 @@ namespace Voron.Tests.Bugs
             }
         }
 
+        [Fact]
+        public void ShouldRecoverTransactionEndPositionsTableAfterRestart()
+        {
+            using (var tx1 = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                tx1.State.Root.Add(tx1, "item/1", new MemoryStream(new byte[4000]));
+                tx1.State.Root.Add(tx1, "item/2", new MemoryStream(new byte[4000]));
+
+                tx1.Commit();
+            }
+
+            using (var tx2 = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                tx2.State.Root.Add(tx2, "item/2", new MemoryStream(new byte[3999]));
+
+                tx2.Commit();
+            }
+
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                Env.FlushLogToDataFile();
+            }
+
+            StopDatabase();
+
+            StartDatabase();
+
+            Env.FlushLogToDataFile();
+
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                var readResult = tx.State.Root.Read(tx, "item/1");
+
+                Assert.NotNull(readResult);
+                Assert.Equal(4000, readResult.Stream.Length);
+
+                readResult = tx.State.Root.Read(tx, "item/2");
+
+                Assert.NotNull(readResult);
+                Assert.Equal(3999, readResult.Stream.Length);
+            }
+        }
+
 		[Fact]
 		public void StorageRecoveryAfterFlushingToDataFile()
 		{
