@@ -97,6 +97,7 @@ namespace Performance.Comparison.Voron
 
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(dataPath)))
             {
+	            env.Options.ManualFlushing = true;
                 var enumerator = data.GetEnumerator();
                 return WriteInternal(operation, itemsPerTransaction, numberOfTransactions, perfTracker, env, enumerator);
             }
@@ -186,7 +187,7 @@ namespace Performance.Comparison.Voron
                         tx.State.Root.Add(tx, enumerator.Current.Id.ToString("0000000000000000"), new MemoryStream(valueToWrite));
                     }
 
-                    tx.Commit().Wait();
+                    tx.Commit();
                     perfTracker.Record(sw.ElapsedMilliseconds);
                 }
 
