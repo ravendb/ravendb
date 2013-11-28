@@ -367,11 +367,9 @@ namespace Voron.Impl.Journal
                         tx.Commit();
                 }
 
-
                 var pagesToWrite = ImmutableDictionary<long, long>.Empty;
 
 				long lastProcessedJournal = -1;
-				long lastProcessedJournalPage = -1;
 				long previousJournalMaxTransactionId = -1;
 
 				long lastFlushedTransactionId = -1;
@@ -407,12 +405,8 @@ namespace Voron.Impl.Journal
 			                    ", previous journal max ix id: " + previousJournalMaxTransactionId +
 			                    ", oldest active transaction: " + _oldestActiveTransaction);
 
-                        if (lastProcessedJournal != journalFile.Number) 
-                            lastProcessedJournalPage = -1;
 
 	                    lastProcessedJournal = journalFile.Number;
-                        lastProcessedJournalPage = Math.Max(lastProcessedJournalPage, pagePosition.Value.JournalPos);
-
                         pagesToWrite = pagesToWrite.SetItem(pagePosition.Key, pagePosition.Value.ScratchPos);
 
 						lastFlushedTransactionId = currentJournalMaxTransactionId;
@@ -425,7 +419,7 @@ namespace Voron.Impl.Journal
                     return;
 
 				_lastSyncedJournal = lastProcessedJournal;
-				_lastSyncedPage = lastProcessedJournalPage;
+				_lastSyncedPage = _jrnls.First(x => x.Number == _lastSyncedJournal).TransactionEndPositions[lastFlushedTransactionId];
 
                 var scratchBufferPool = _waj._env.ScratchBufferPool;
 				var scratchPagerState = scratchBufferPool.PagerState;
@@ -439,20 +433,18 @@ namespace Voron.Impl.Journal
 
                     var last = sortedPages.Last();
 
-                    var lastPage = last.IsOverflow == false ? 1 :
+                    var numberOfPagesInLastPage = last.IsOverflow == false ? 1 :
                         _waj._env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
 
-				    _lastSyncedPage += lastPage - 1;
-
-					DebugValidateWrittenTransaction(lastProcessedJournal);
+					DebugValidateWrittenTransaction(lastFlushedTransactionId);
 
                     if (alreadyInWriteTx)
-                        _waj._dataPager.EnsureContinuous(transaction, last.PageNumber, lastPage);
+                        _waj._dataPager.EnsureContinuous(transaction, last.PageNumber, numberOfPagesInLastPage);
                     else
                     {
                         using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
                         {
-                            _waj._dataPager.EnsureContinuous(tx, last.PageNumber, lastPage);
+                            _waj._dataPager.EnsureContinuous(tx, last.PageNumber, numberOfPagesInLastPage);
 
                             tx.Commit();
                         } 
@@ -505,21 +497,37 @@ namespace Voron.Impl.Journal
 			}
 
 			[Conditional("DEBUG")]
-			private void DebugValidateWrittenTransaction(long lastProcessedJournal)
+			private void DebugValidateWrittenTransaction(long lastFlushedTransactionId)
 			{
-				var txHeaders = stackalloc TransactionHeader[1];
-				var readTxHeader = &txHeaders[0];
-				var jrnl = _waj.Files.First(x => x.Number == _lastSyncedJournal);
-				var read = jrnl.ReadTransaction(_lastSyncedPage + 1, readTxHeader);
+                var txHeaders = stackalloc TransactionHeader[1];
+                var readTxHeader = &txHeaders[0];
+                _waj._writeSemaphore.Wait();
+                try
+                {
+                    var jrnl = _waj.Files.First(x => x.Number == _lastSyncedJournal);
+                    var read = jrnl.ReadTransaction(_lastSyncedPage + 1, readTxHeader);
 
-				if (readTxHeader->HeaderMarker != 0 && (read == false || readTxHeader->HeaderMarker != Constants.TransactionHeaderMarker))
-				{
-					throw new InvalidOperationException(
-						"Reading transaction for calculated page in journal failed. "
-						+ "Journal #" + lastProcessedJournal + ". "
-						+ "Page #" + _lastSyncedPage + 1 + ". "
-						+ "This means that page calculation is wrong and should be fixed otherwise data will be lost during database recovery from this journal.");
-				}
+                    if (readTxHeader->HeaderMarker != 0 && (read == false || readTxHeader->HeaderMarker != Constants.TransactionHeaderMarker || readTxHeader->TransactionId != lastFlushedTransactionId + 1))
+                    {
+                        var start = 0;
+                        var positions = new Dictionary<long, TransactionHeader>();
+                        while (jrnl.ReadTransaction(start, readTxHeader))
+                        {
+                            positions.Add(start, *readTxHeader);
+                            start += readTxHeader->PageCount + readTxHeader->OverflowPageCount + 1;
+                        }
+
+                        throw new InvalidOperationException(
+                            "Reading transaction for calculated page in journal failed. "
+                            + "Journal #" + _lastSyncedJournal + ". "
+                            + "Page #" + (_lastSyncedPage + 1) + ". "
+                            + "This means that page calculation is wrong and should be fixed otherwise data will be lost during database recovery from this journal.");
+                    }
+                }
+                finally
+                {
+                    _waj._writeSemaphore.Release();
+                }
 			}
 
 			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles)

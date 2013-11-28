@@ -22,7 +22,8 @@ namespace Voron.Impl.Journal
         private long _writePage;
         private bool _disposed;
         private int _refs;
-        private ImmutableDictionary<long, PagePosition> _pageTranslationTable= ImmutableDictionary<long, PagePosition>.Empty;
+        private ImmutableDictionary<long, PagePosition> _pageTranslationTable = ImmutableDictionary<long, PagePosition>.Empty;
+        private ImmutableDictionary<long, long> _transactionEndPositions = ImmutableDictionary<long, long>.Empty; 
         private ImmutableList<PagePosition> _unusedPages = ImmutableList<PagePosition>.Empty;
 
         private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
@@ -119,6 +120,7 @@ namespace Voron.Impl.Journal
                     Number = Number,
                     AvailablePages = AvailablePages,
                     PageTranslationTable = _pageTranslationTable,
+                    TransactionEndPositions = _transactionEndPositions
                 };
             }
             finally
@@ -152,6 +154,7 @@ namespace Voron.Impl.Journal
             _locker.EnterWriteLock();
             try
             {
+                var journalPos = -1L;
 				var ptt = _pageTranslationTable;
 				var unused = new List<PagePosition>();
 				writePagePos = _writePage;
@@ -177,11 +180,12 @@ namespace Voron.Impl.Journal
 						}
 
 					    numberOfOverflows += previousPage != null ? previousPage.NumberOfPages - 1 : 0;
+					    journalPos = writePagePos + index + numberOfOverflows;
 
 						ptt = ptt.SetItem(pageNumber, new PagePosition
 						{
 							ScratchPos = txPage.PositionInScratchBuffer,
-                            JournalPos = writePagePos + index + numberOfOverflows,
+                            JournalPos = journalPos,
 							TransactionId = tx.Id
 						});
 
@@ -195,10 +199,15 @@ namespace Voron.Impl.Journal
 				}
 
 				Debug.Assert(pagesCounter == numberOfPages);
+                Debug.Assert(journalPos != -1);
+
+                var lastPagePosition = journalPos 
+                    + (previousPage != null ? previousPage.NumberOfPages - 1 : 0); // for overflows
 
 				_writePage += numberOfPages;
                 _pageTranslationTable = ptt;
 				_unusedPages = _unusedPages.AddRange(unused);
+                _transactionEndPositions = _transactionEndPositions.Add(tx.Id, lastPagePosition);
             }
             finally
             {
