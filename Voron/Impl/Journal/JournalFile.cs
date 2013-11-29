@@ -147,63 +147,62 @@ namespace Voron.Impl.Journal
         public Task Write(Transaction tx, int numberOfPages)
         {
             var pages = new byte*[numberOfPages];
-            int pagesCounter = 0;
+            var pagesCounter = 0;
             var txPages = tx.GetTransactionPages();
 
-            long writePagePos;
+            var journalPos = -1L;
+            var ptt = new Dictionary<long, PagePosition>();
+			var unused = new List<PagePosition>();
+			var writePagePos = _writePage;
+
+            PageFromScratchBuffer previousPage = null;
+            var numberOfOverflows = 0;
+
+			for (int index = 0; index < txPages.Count; index++)
+			{
+				var txPage = txPages[index];
+				var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
+				if (index == 0) // this is the transaction header page
+				{
+					pages[pagesCounter++] = scratchPage.Base;
+				}
+				else
+				{
+					var pageNumber = ((PageHeader*)scratchPage.Base)->PageNumber;
+					PagePosition value;
+					if (_pageTranslationTable.TryGetValue(pageNumber, out value))
+					{
+						unused.Add(value);
+					}
+
+					numberOfOverflows += previousPage != null ? previousPage.NumberOfPages - 1 : 0;
+					journalPos = writePagePos + index + numberOfOverflows;
+
+					ptt[pageNumber] = new PagePosition
+					{
+						ScratchPos = txPage.PositionInScratchBuffer,
+                        JournalPos = journalPos,
+						TransactionId = tx.Id
+					};
+
+					for (int i = 0; i < txPage.NumberOfPages; i++)
+					{
+						pages[pagesCounter++] = scratchPage.Base + (i * AbstractPager.PageSize);
+					}
+
+					previousPage = txPage;
+				}
+			}
+
+			Debug.Assert(pagesCounter == numberOfPages);
+            Debug.Assert(journalPos != -1);
+
+            var lastPagePosition = journalPos 
+                + (previousPage != null ? previousPage.NumberOfPages - 1 : 0); // for overflows
+
             _locker.EnterWriteLock();
             try
             {
-                var journalPos = -1L;
-				var ptt = new Dictionary<long, PagePosition>();
-				var unused = new List<PagePosition>();
-				writePagePos = _writePage;
-
-                PageFromScratchBuffer previousPage = null;
-                var numberOfOverflows = 0;
-
-				for (int index = 0; index < txPages.Count; index++)
-				{
-					var txPage = txPages[index];
-					var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
-					if (index == 0) // this is the transaction header page
-					{
-						pages[pagesCounter++] = scratchPage.Base;
-					}
-					else
-					{
-						var pageNumber = ((PageHeader*)scratchPage.Base)->PageNumber;
-						PagePosition value;
-						if (ptt.TryGetValue(pageNumber, out value))
-						{
-							unused.Add(value);
-						}
-
-					    numberOfOverflows += previousPage != null ? previousPage.NumberOfPages - 1 : 0;
-					    journalPos = writePagePos + index + numberOfOverflows;
-
-						ptt[pageNumber] = new PagePosition
-						{
-							ScratchPos = txPage.PositionInScratchBuffer,
-                            JournalPos = journalPos,
-							TransactionId = tx.Id
-						};
-
-						for (int i = 0; i < txPage.NumberOfPages; i++)
-						{
-							pages[pagesCounter++] = scratchPage.Base + (i * AbstractPager.PageSize);
-						}
-
-					    previousPage = txPage;
-					}
-				}
-
-				Debug.Assert(pagesCounter == numberOfPages);
-                Debug.Assert(journalPos != -1);
-
-                var lastPagePosition = journalPos 
-                    + (previousPage != null ? previousPage.NumberOfPages - 1 : 0); // for overflows
-
 				_writePage += numberOfPages;
 				_pageTranslationTable = _pageTranslationTable.SetItems(ptt);
 				_unusedPages = _unusedPages.AddRange(unused);
