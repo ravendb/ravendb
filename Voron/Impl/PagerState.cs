@@ -5,6 +5,8 @@ using System.Threading;
 
 namespace Voron.Impl
 {
+    using System.Threading.Tasks;
+
     public unsafe class PagerState
     {
 #if DEBUG
@@ -37,9 +39,13 @@ namespace Voron.Impl
 
             if (Accessor != null)
             {
-                Accessor.SafeMemoryMappedViewHandle.ReleasePointer();
-                Accessor.Dispose();
-	            Accessor = null;
+                Task.Run(
+                    () =>
+                    {
+                        Accessor.SafeMemoryMappedViewHandle.ReleasePointer();
+                        Accessor.Dispose();
+                        Accessor = null;
+                    });
             }
 		    if (File != null)
 		    {
