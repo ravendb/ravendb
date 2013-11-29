@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
+using Voron.Impl.Paging;
 
 namespace Voron.Impl
 {
@@ -9,15 +10,17 @@ namespace Voron.Impl
 
     public unsafe class PagerState
     {
-        private readonly bool _asyncRelease;
+	    private readonly AbstractPager _pager;
+	    private readonly bool _asyncRelease;
 
 #if DEBUG
         public static ConcurrentDictionary<PagerState, StackTrace> Instances = new ConcurrentDictionary<PagerState, StackTrace>();
 #endif
 
-        public PagerState(bool asyncRelease)
+        public PagerState(AbstractPager pager, bool asyncRelease)
         {
-            _asyncRelease = asyncRelease;
+	        _pager = pager;
+	        _asyncRelease = asyncRelease;
 
 #if DEBUG
             Instances[this] = new StackTrace(true);
@@ -46,7 +49,7 @@ namespace Voron.Impl
 
             if (_asyncRelease)
             {
-                Task.Run(() => ReleaseInternal());
+	            _pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
                 return;
             }
 

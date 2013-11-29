@@ -114,7 +114,7 @@ namespace Voron.Impl
             byte* p = null;
             accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
 
-            var newPager = new PagerState(AsyncPagerRelease)
+            var newPager = new PagerState(this, AsyncPagerRelease)
                  {
                      Accessor = accessor,
                      File = mmf,

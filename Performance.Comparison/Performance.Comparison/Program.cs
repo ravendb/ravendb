@@ -48,7 +48,7 @@ namespace Performance.Comparison
                     //new LmdbTest(path, buffer),
 					//new EsentTest(path, buffer),
                     //new FdbTest(buffer),
-                    new VoronTest(path, buffer)
+					new VoronTest(path, buffer)
 				};
 
             var perfTracker = new PerfTracker();

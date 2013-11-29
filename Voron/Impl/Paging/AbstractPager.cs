@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Voron.Trees;
 using Voron.Util;
 
@@ -34,7 +36,7 @@ namespace Voron.Impl.Paging
 			MaxNodeSize = 1024;
 			Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
 			PageMinSpace = (int)(PageMaxSpace * 0.33);
-            PagerState = new PagerState(AsyncPagerRelease);
+            PagerState = new PagerState(this, AsyncPagerRelease);
 			_tempPage = Marshal.AllocHGlobal(PageSize);
 			PagerState.AddRef();
 		}
@@ -46,6 +48,7 @@ namespace Voron.Impl.Paging
 		public const int PageSize = 4096;
 		public static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
 		private PagerState _pagerState;
+		private ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
 
 
 		public long NumberOfAllocatedPages { get; protected set; }
@@ -131,6 +134,8 @@ namespace Voron.Impl.Paging
 				_tempPage = IntPtr.Zero;
 			}
 
+			Task.WaitAll(_tasks.ToArray());
+
 			Disposed = true;
 		}
 
@@ -184,5 +189,10 @@ namespace Voron.Impl.Paging
 	    public abstract void WriteDirect(Page start, long pagePosition, int pagesToWrite);
 
 	    public override abstract string ToString();
+
+		public void RegisterDisposal(Task run)
+		{
+			_tasks.Add(run);
+		}
 	}
 }
