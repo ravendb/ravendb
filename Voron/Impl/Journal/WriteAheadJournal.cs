@@ -355,28 +355,20 @@ namespace Voron.Impl.Journal
 				_waj._flushingSemaphore.WaitAsync();
 			}
 
-
 			public void ApplyLogsToDataFile(Transaction transaction = null)
 			{
                 var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
 
 				var journalFiles = _waj._files;
-				//TODO: See how we can get the current values (even if slighly out of date) without doing the lock
-				using (var tx = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite))
-                {
-                    _jrnls = journalFiles.Select(x => x.GetSnapshot()).OrderBy(x => x.Number).ToList();
-                    if (_jrnls.Count == 0)
-                        return; // nothing to do
+                _jrnls = journalFiles.Select(x => x.GetSnapshot()).OrderBy(x => x.Number).ToList();
+                if (_jrnls.Count == 0)
+                    return; // nothing to do
 
-                    var journalInfo = _waj._headerAccessor.Get(ptr => ptr->Journal);
+                var journalInfo = _waj._headerAccessor.Get(ptr => ptr->Journal);
 
-                    _lastSyncedJournal = journalInfo.LastSyncedJournal;
-                    _lastSyncedPage = journalInfo.LastSyncedJournalPage;
-                    Debug.Assert(_jrnls.First().Number >= _lastSyncedJournal);
-
-                    if (tx != null)
-                        tx.Commit();
-                }
+                _lastSyncedJournal = journalInfo.LastSyncedJournal;
+                _lastSyncedPage = journalInfo.LastSyncedJournalPage;
+                Debug.Assert(_jrnls.First().Number >= _lastSyncedJournal);
 
 				var pagesToWrite = new Dictionary<long, long>();
 
