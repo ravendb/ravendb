@@ -102,6 +102,18 @@ namespace Voron.Tests.Bugs
 				tx.Commit();
 			}
 
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var readResult = tx.State.Root.Read(tx, "foo/0");
+
+				Assert.NotNull(readResult);
+				Assert.Equal(value1.Length, readResult.Stream.Length);
+
+				var memoryStream = new MemoryStream();
+				readResult.Stream.CopyTo(memoryStream);
+			}
+
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
 				Env.FlushLogToDataFile();

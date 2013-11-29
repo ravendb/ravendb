@@ -361,6 +361,7 @@ namespace Voron.Impl.Journal
                 var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
 
 				var journalFiles = _waj._files;
+				//TODO: See how we can get the current values (even if slighly out of date) without doing the lock
 				using (var tx = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite))
                 {
                     _jrnls = journalFiles.Select(x => x.GetSnapshot()).OrderBy(x => x.Number).ToList();
@@ -448,6 +449,8 @@ namespace Voron.Impl.Journal
 
 					DebugValidateWrittenTransaction(lastFlushedTransactionId);
 
+					// TODO: Check if we need to extend the range, only then actually do the write tx lock
+					// right now we are taking the lock on every flush, and most of the time is isn't needed
                     if (alreadyInWriteTx)
                         _waj._dataPager.EnsureContinuous(transaction, last.PageNumber, numberOfPagesInLastPage);
                     else
