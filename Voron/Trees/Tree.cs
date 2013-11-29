@@ -205,29 +205,29 @@ namespace Voron.Trees
                 cursor.Update(cursor.Pages.First, page);
 
 				ushort nodeVersion = 0;
+				bool? shouldGoToOverflowPage = null;
 				if (page.LastMatch == 0) // this is an update operation
 				{
 					var node = page.GetNode(page.LastSearchPosition);
-					if (node->DataSize == len) // optimization, we don't need to do any additional work
-					{
-						CheckConcurrency(key, version, node->Version, TreeActionType.Add);
 
-						switch (nodeType)
-						{
-							case NodeFlags.Data:
-							case NodeFlags.MultiValuePageRef:
-							{
-								if (node->Version == ushort.MaxValue)
-									node->Version = 0;
-								node->Version++;
-								return (byte*)node + Constants.NodeHeaderSize + key.Size;
-							}
-							case NodeFlags.PageRef:
-								break;
-							default:
-								throw new ArgumentOutOfRangeException();
-						}
+					Debug.Assert(node->KeySize == key.Size && new Slice(node).Equals(key));
+
+					shouldGoToOverflowPage = tx.DataPager.ShouldGoToOverflowPage(len);
+
+					byte* pos;
+					if (shouldGoToOverflowPage == false)
+					{
+						// optimization for Data and MultiValuePageRef - try to overwrite existing node space
+						if (TryOverwriteDataOrMultiValuePageRefNode(node, key, len, nodeType, version, out pos))
+							return pos;
 					}
+					else
+					{
+						// optimization for PageRef - try to overwrite existing overflows
+						if (TryOverwriteOverflowPages(tx, State, node, key, len, version, out pos))
+							return pos;
+					}
+
 					RemoveLeafNode(tx, cursor, page, out nodeVersion);
 				}
 				else // new item should be recorded
@@ -240,7 +240,7 @@ namespace Voron.Trees
 				var lastSearchPosition = page.LastSearchPosition; // searching for overflow pages might change this
 				byte* overFlowPos = null;
 				var pageNumber = -1L;
-				if (tx.DataPager.ShouldGoToOverflowPage(len))
+				if (shouldGoToOverflowPage ?? tx.DataPager.ShouldGoToOverflowPage(len))
 				{
 					pageNumber = WriteToOverflowPages(tx, State, len, out overFlowPos);
 					len = -1;
@@ -643,6 +643,82 @@ namespace Voron.Trees
 		public Tree Clone()
 		{
 			return new Tree(_cmp, _state.Clone()){ Name = Name};
+		}
+
+		private static bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, Slice key, int len,
+															NodeFlags requestedNodeType, ushort? version,
+															out byte* pos)
+		{
+			switch (requestedNodeType)
+			{
+				case NodeFlags.Data:
+				case NodeFlags.MultiValuePageRef:
+					{
+						if (updatedNode->DataSize == len &&
+							(updatedNode->Flags == NodeFlags.Data || updatedNode->Flags == NodeFlags.MultiValuePageRef))
+						{
+							CheckConcurrency(key, version, updatedNode->Version, TreeActionType.Add);
+
+							if (updatedNode->Version == ushort.MaxValue)
+								updatedNode->Version = 0;
+							updatedNode->Version++;
+
+							updatedNode->Flags = requestedNodeType;
+
+							{
+								pos = (byte*)updatedNode + Constants.NodeHeaderSize + key.Size;
+								return true;
+							}
+						}
+						break;
+					}
+				case NodeFlags.PageRef:
+					throw new InvalidOperationException("We never add PageRef explicitly");
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+			pos = null;
+			return false;
+		}
+
+		private static bool TryOverwriteOverflowPages(Transaction tx, TreeMutableState treeState, NodeHeader* updatedNode,
+													  Slice key, int len, ushort? version, out byte* pos)
+		{
+			if (updatedNode->Flags == NodeFlags.PageRef &&
+				tx.Id <= tx.Environment.OldestTransaction) // ensure MVCC - do not overwrite if there is some older active transaction that might read those overflows
+			{
+				var overflowPage = tx.GetReadOnlyPage(updatedNode->PageNumber);
+
+				if (len <= overflowPage.OverflowSize)
+				{
+					CheckConcurrency(key, version, updatedNode->Version, TreeActionType.Add);
+
+					if (updatedNode->Version == ushort.MaxValue)
+						updatedNode->Version = 0;
+					updatedNode->Version++;
+
+					var availableOverflows = tx.DataPager.GetNumberOfOverflowPages(overflowPage.OverflowSize);
+
+					var requestedOverflows = tx.DataPager.GetNumberOfOverflowPages(len);
+
+					var overflowsToFree = availableOverflows - requestedOverflows;
+
+					for (int i = 0; i < overflowsToFree; i++)
+					{
+						tx.FreePage(overflowPage.PageNumber + requestedOverflows + i);
+					}
+
+					treeState.OverflowPages -= overflowsToFree;
+					treeState.PageCount -= overflowsToFree;
+
+					overflowPage.OverflowSize = len;
+
+					pos = overflowPage.Base + Constants.PageHeaderSize;
+					return true;
+				}
+			}
+			pos = null;
+			return false;
 		}
 	}
 }
