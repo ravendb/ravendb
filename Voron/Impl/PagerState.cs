@@ -13,14 +13,16 @@ namespace Voron.Impl
 
 #if DEBUG
         public static ConcurrentDictionary<PagerState, StackTrace> Instances = new ConcurrentDictionary<PagerState, StackTrace>();
+#endif
 
         public PagerState(bool asyncRelease)
         {
             _asyncRelease = asyncRelease;
-            Instances[this] = new StackTrace(true);
-        }
 
+#if DEBUG
+            Instances[this] = new StackTrace(true);
 #endif
+        }
 
         private int _refs;
 
@@ -28,11 +30,11 @@ namespace Voron.Impl
 
         public MemoryMappedFile File;
 
-	    public byte* MapBase { get; set; }
+        public byte* MapBase { get; set; }
 
         public bool Released;
 
-	    public void Release()
+        public void Release()
         {
             if (Interlocked.Decrement(ref _refs) != 0)
                 return;
@@ -43,10 +45,10 @@ namespace Voron.Impl
 #endif
 
             if (_asyncRelease)
-	        {
-	            Task.Run(() => ReleaseInternal());
-	            return;
-	        }
+            {
+                Task.Run(() => ReleaseInternal());
+                return;
+            }
 
             ReleaseInternal();
         }
