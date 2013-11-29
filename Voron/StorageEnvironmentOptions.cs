@@ -224,7 +224,11 @@ namespace Voron
 
 			public override IVirtualPager CreateScratchPager()
 			{
-				return new MemoryMapPager(Path.Combine(_basePath, "scratch.buffers"), true, (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
+			    var scratchFile = Path.Combine(_basePath, "scratch.buffers");
+			    if (File.Exists(scratchFile)) 
+                    File.Delete(scratchFile);
+
+                return new MemoryMapPager(scratchFile, true, (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
