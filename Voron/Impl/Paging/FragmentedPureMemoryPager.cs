@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using Voron.Impl.Journal;
 using Voron.Trees;
+using Voron.Util;
 
 namespace Voron.Impl.Paging
 {
 	public class FragmentedPureMemoryPager : AbstractPager
 	{
-		private readonly List<PureMemoryJournalWriter.Buffer> _buffers;
+		private readonly SafeList<PureMemoryJournalWriter.Buffer> _buffers;
 
 
-		internal FragmentedPureMemoryPager(List<PureMemoryJournalWriter.Buffer> buffers)
+		internal FragmentedPureMemoryPager(SafeList<PureMemoryJournalWriter.Buffer> buffers)
 		{
 			_buffers = buffers;
 			NumberOfAllocatedPages = buffers.Sum(x => x.SizeInPages);

@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Impl.Paging;
+using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
@@ -16,7 +17,7 @@ namespace Voron.Impl.Journal
 			public IntPtr Handle;
 		}
 
-		private List<Buffer> _buffers = new List<Buffer>();
+		private SafeList<Buffer> _buffers = SafeList<Buffer>.Empty;
 		private long _lastPos;
 
 		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
@@ -68,7 +69,7 @@ namespace Voron.Impl.Journal
 			{
 				Marshal.FreeHGlobal(buffer.Handle);
 			}
-			_buffers = new List<Buffer>();
+			_buffers = SafeList<Buffer>.Empty;
 		}
 
 		public Task WriteGatherAsync(long position, byte*[] pages)
@@ -90,10 +91,7 @@ namespace Voron.Impl.Journal
 					Pointer = (byte*)handle.ToPointer(),
 					SizeInPages = pages.Length
 				};
-				_buffers = new List<Buffer>(_buffers)
-				{
-					buffer
-				};
+				_buffers = _buffers.Add(buffer);
 
 				for (int index = 0; index < pages.Length; index++)
 				{
