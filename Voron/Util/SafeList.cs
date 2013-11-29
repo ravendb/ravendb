@@ -72,5 +72,26 @@ namespace Voron.Util
 		{
 			return _inner.Find(predicate);
 		}
+
+		public SafeList<T> RemoveAllAndGetDiscards(Predicate<T> filter, out List<T> discards)
+		{
+			var list = new List<T>();
+
+			discards = list;
+
+			return new SafeList<T>
+			{
+				_inner = new List<T>(_inner.Where(x =>
+				{
+					if (filter(x) == false)
+					{
+						list.Add(x);
+						return false;
+					}
+					return true;
+				}))
+			};
+
+		}
 	}
 }

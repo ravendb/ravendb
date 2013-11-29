@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -121,7 +120,7 @@ namespace Voron.Impl.Journal
 					journalReader.RecoverAndValidate();
 
 					// after reading all the pages from the journal file, we need to move them to the scratch buffers.
-					var ptt = ImmutableDictionary<long, JournalFile.PagePosition>.Empty;
+					var ptt = new Dictionary<long, JournalFile.PagePosition>();
 					foreach (var kvp in journalReader.TransactionPageTranslation)
 					{
 						var page = pager.Read(kvp.Value.JournalPos);
@@ -130,19 +129,19 @@ namespace Voron.Impl.Journal
 						var scratchPage = _env.ScratchBufferPool.ReadPage(scratchBuffer.PositionInScratchBuffer);
 						NativeMethods.memcpy(scratchPage.Base, page.Base, numOfPages * AbstractPager.PageSize);
 
-						ptt = ptt.SetItem(kvp.Key, new JournalFile.PagePosition
+						ptt[kvp.Key] = new JournalFile.PagePosition
 						{
 							ScratchPos = scratchBuffer.PositionInScratchBuffer,
 							JournalPos = kvp.Value.JournalPos,
 							TransactionId = kvp.Value.TransactionId
-						});
+						};
 					}
 
 
 					// we setup the journal file so we can flush from it to the data file
 					var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * AbstractPager.PageSize);
 					var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
-					jrnlFile.InitFrom(journalReader, ptt, journalReader.TransactionEndPositions);
+					jrnlFile.InitFrom(journalReader, SafeDictionary<long, JournalFile.PagePosition>.From(ptt), journalReader.TransactionEndPositions);
 					jrnlFile.AddRef(); // creator reference - write ahead log
 
 					journalFiles.Add(jrnlFile);
@@ -378,7 +377,7 @@ namespace Voron.Impl.Journal
                         tx.Commit();
                 }
 
-                var pagesToWrite = ImmutableDictionary<long, long>.Empty;
+				var pagesToWrite = new Dictionary<long, long>();
 
 				long lastProcessedJournal = -1;
 				long previousJournalMaxTransactionId = -1;
@@ -400,7 +399,7 @@ namespace Voron.Impl.Journal
                             // we cannot write this yet, there is a read transaction that might be looking at this
                             // however, we _aren't_ going to be writing this to the data file, since that would be a 
                             // waste, we would just overwrite that value in the next flush anyway
-                            pagesToWrite = pagesToWrite.Remove(pagePosition.Key);
+                            pagesToWrite.Remove(pagePosition.Key);
                             continue;
                         }
 
@@ -418,7 +417,7 @@ namespace Voron.Impl.Journal
 
 
 	                    lastProcessedJournal = journalFile.Number;
-                        pagesToWrite = pagesToWrite.SetItem(pagePosition.Key, pagePosition.Value.ScratchPos);
+                        pagesToWrite[pagePosition.Key] =  pagePosition.Value.ScratchPos;
 
 						lastFlushedTransactionId = currentJournalMaxTransactionId;
                     }
