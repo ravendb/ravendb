@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,7 +16,7 @@ namespace Voron.Impl.Journal
 			public IntPtr Handle;
 		}
 
-		private ImmutableList<Buffer> _buffers = ImmutableList<Buffer>.Empty;
+		private List<Buffer> _buffers = new List<Buffer>();
 		private long _lastPos;
 
 		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
@@ -70,7 +68,7 @@ namespace Voron.Impl.Journal
 			{
 				Marshal.FreeHGlobal(buffer.Handle);
 			}
-			_buffers = _buffers.Clear();
+			_buffers = new List<Buffer>();
 		}
 
 		public Task WriteGatherAsync(long position, byte*[] pages)
@@ -92,7 +90,10 @@ namespace Voron.Impl.Journal
 					Pointer = (byte*)handle.ToPointer(),
 					SizeInPages = pages.Length
 				};
-				_buffers = _buffers.Add(buffer);
+				_buffers = new List<Buffer>(_buffers)
+				{
+					buffer
+				};
 
 				for (int index = 0; index < pages.Length; index++)
 				{
