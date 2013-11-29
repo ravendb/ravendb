@@ -82,6 +82,11 @@ namespace Voron.Impl.Paging
 			return state;
 		}
 
+		public bool WillRequireExtension(long requestedPageNumber, int numberOfPages)
+		{
+			return requestedPageNumber + numberOfPages > NumberOfAllocatedPages;
+		}
+
 		public void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages)
 		{
 			if (requestedPageNumber + numberOfPages <= NumberOfAllocatedPages)

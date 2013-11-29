@@ -449,19 +449,7 @@ namespace Voron.Impl.Journal
 
 					DebugValidateWrittenTransaction(lastFlushedTransactionId);
 
-					// TODO: Check if we need to extend the range, only then actually do the write tx lock
-					// right now we are taking the lock on every flush, and most of the time is isn't needed
-                    if (alreadyInWriteTx)
-                        _waj._dataPager.EnsureContinuous(transaction, last.PageNumber, numberOfPagesInLastPage);
-                    else
-                    {
-                        using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
-                        {
-                            _waj._dataPager.EnsureContinuous(tx, last.PageNumber, numberOfPagesInLastPage);
-
-                            tx.Commit();
-                        } 
-                    }        
+					EnsureDataPagerSpacing(transaction, last, numberOfPagesInLastPage, alreadyInWriteTx);
 
 			        foreach (var page in sortedPages)
 			        {
@@ -507,6 +495,27 @@ namespace Voron.Impl.Journal
                     if (txw != null)
                         txw.Commit();
                 }
+			}
+
+			private void EnsureDataPagerSpacing(Transaction transaction, Page last, int numberOfPagesInLastPage,
+				bool alreadyInWriteTx)
+			{
+				if (_waj._dataPager.WillRequireExtension(last.PageNumber, numberOfPagesInLastPage))
+				{
+					if (alreadyInWriteTx)
+					{
+						_waj._dataPager.EnsureContinuous(transaction, last.PageNumber, numberOfPagesInLastPage);
+					}
+					else
+					{
+						using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
+						{
+							_waj._dataPager.EnsureContinuous(tx, last.PageNumber, numberOfPagesInLastPage);
+
+							tx.Commit();
+						}
+					}
+				}
 			}
 
 			[Conditional("DEBUG")]
