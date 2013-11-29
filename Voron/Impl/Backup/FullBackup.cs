@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
@@ -30,7 +31,7 @@ namespace Voron.Impl.Backup
 				{
 					long allocatedPages;
 
-					ImmutableList<JournalFile> files; // thread safety copy
+					List<JournalFile> files; // thread safety copy
 					long lastWrittenLogPage = -1;
 					long lastWrittenLogFile = -1;
 					using (var txw = env.NewTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
