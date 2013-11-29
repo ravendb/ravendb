@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using Voron.Impl;
 using Voron.Trees;
 
@@ -66,11 +64,10 @@ namespace Voron.Debugging
 				}
 			}
 
-			Func<long, ImmutableHashSet<long>> relevantPageReferences =
-				branchPageNumber => existingTreeReferences
+			Func<long, HashSet<long>> relevantPageReferences =
+				branchPageNumber => new HashSet<long>(existingTreeReferences
 					.Where(kvp => kvp.Key != branchPageNumber)
-					.SelectMany(kvp => kvp.Value)
-					.ToImmutableHashSet();
+					.SelectMany(kvp => kvp.Value));
 
 			// ReSharper disable once LoopCanBeConvertedToQuery
 			foreach (var branchReferences in existingTreeReferences)

@@ -1,6 +1,4 @@
-﻿using System.Collections.Immutable;
-using Voron.Trees;
-using Voron.Util;
+﻿using Voron.Util;
 
 namespace Voron.Impl.Journal
 {

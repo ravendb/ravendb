@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using Voron.Impl.Journal;
+using Voron.Trees;
 
 namespace Voron.Util
 {
 	public class SafeDictionary<TKey,TValue> : IEnumerable<KeyValuePair<TKey,TValue>>
 	{
 		private Dictionary<TKey, TValue> _inner = new Dictionary<TKey, TValue>();
+		private IEqualityComparer<TKey> _comparer = EqualityComparer<TKey>.Default;
 
 		private SafeDictionary()
 		{
@@ -32,7 +32,7 @@ namespace Voron.Util
 
 		public SafeDictionary<TKey, TValue> SetItems(Dictionary<TKey, TValue> items)
 		{
-			var newValues = new Dictionary<TKey, TValue>(_inner);
+			var newValues = new Dictionary<TKey, TValue>(_inner, _comparer);
 
 			foreach (var value in items)
 			{
@@ -41,7 +41,8 @@ namespace Voron.Util
 
 			return new SafeDictionary<TKey, TValue>
 			{
-				_inner = newValues
+				_inner = newValues,
+				_comparer = _comparer
 			};
 		}
 
@@ -49,10 +50,11 @@ namespace Voron.Util
 		{
 			return new SafeDictionary<TKey, TValue>
 			{
-				_inner = new Dictionary<TKey, TValue>(_inner)
+				_inner = new Dictionary<TKey, TValue>(_inner, _comparer)
 				{
 					{key,value}
-				}
+				},
+				_comparer = _comparer
 			};
 		}
 
@@ -68,22 +70,45 @@ namespace Voron.Util
 
 		public SafeDictionary<TKey, TValue> RemoveRange(IEnumerable<TKey> range)
 		{
-			var items = new Dictionary<TKey, TValue>();
+			var items = new Dictionary<TKey, TValue>(_inner, _comparer);
 			foreach (var key in range)
 			{
 				items.Remove(key);
 			}
 			return new SafeDictionary<TKey, TValue>
 			{
-				_inner = items
+				_inner = items,
+				_comparer = _comparer
 			};
 		}
 
 		public int Count {get { return _inner.Count; }}
 
+		public IEnumerable<TValue> Values { get { return _inner.Values; }}
+
 		public TValue this[TKey key]
 		{
 			get { return _inner[key]; }
+		}
+
+		public SafeDictionary<TKey, TValue> WithComparers(IEqualityComparer<TKey> equalityComparer)
+		{
+			return new SafeDictionary<TKey, TValue>
+			{
+				_comparer = equalityComparer,
+				_inner = _inner
+			};
+		}
+
+		public SafeDictionary<TKey, TValue> Remove(TKey key)
+		{
+			var items = new Dictionary<TKey, TValue>(_inner, _comparer);
+			items.Remove(key);
+			return new SafeDictionary<TKey, TValue>
+			{
+				_comparer = _comparer,
+				_inner = _inner
+			};
 		}
 	}
 }

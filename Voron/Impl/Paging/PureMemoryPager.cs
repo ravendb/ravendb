@@ -1,13 +1,13 @@
 ﻿using System;
-using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using Voron.Trees;
+using Voron.Util;
 
 namespace Voron.Impl.Paging
 {
 	public unsafe class PureMemoryPager : AbstractPager
 	{
-		private ImmutableList<Buffer> _buffers = ImmutableList<Buffer>.Empty;
+		private SafeList<Buffer> _buffers = SafeList<Buffer>.Empty;
 
 		public class Buffer
 		{
@@ -82,7 +82,7 @@ namespace Voron.Impl.Paging
 				Marshal.FreeHGlobal(new IntPtr(buffer.Base));
 			    buffer.Handle = IntPtr.Zero;
 		    }
-		    _buffers = _buffers.Clear();
+		    _buffers = SafeList<Buffer>.Empty;
 		}
 
 		public override void Sync()
@@ -90,7 +90,7 @@ namespace Voron.Impl.Paging
 			// nothing to do here
 		}
 
-		protected override unsafe string GetSourceName()
+		protected override string GetSourceName()
 		{
 			return "PureMemoryPager";
 		}
