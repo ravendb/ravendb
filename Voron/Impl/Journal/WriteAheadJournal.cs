@@ -159,9 +159,9 @@ namespace Voron.Impl.Journal
 					}
 				}
 
-				_files = _files.AddRange(journalFiles);
 
 			}
+			_files = _files.AddRange(journalFiles);
 
 			if (requireHeaderUpdate)
 			{
