@@ -16,7 +16,8 @@ namespace Voron.Impl.Paging
 			public IntPtr Handle;
 		}
 
-		public PureMemoryPager(byte[] data)
+		public PureMemoryPager(byte[] data) 
+            : base(false)
 		{
 			var ptr = Marshal.AllocHGlobal(data.Length);
 			var buffer = new Buffer
@@ -28,7 +29,7 @@ namespace Voron.Impl.Paging
 			_buffers = _buffers.Add(buffer);
 			NumberOfAllocatedPages = data.Length / PageSize;
 			PagerState.Release();
-			PagerState = new PagerState();
+			PagerState = new PagerState(AsyncPagerRelease);
 			PagerState.AddRef();
 			fixed (byte* origin = data)
 			{
@@ -36,7 +37,8 @@ namespace Voron.Impl.Paging
 			}
 		}
 
-		public PureMemoryPager()
+		public PureMemoryPager() 
+            : base(false)
 		{
 			var ptr = Marshal.AllocHGlobal(MinIncreaseSize);
 			var buffer = new Buffer
@@ -48,7 +50,7 @@ namespace Voron.Impl.Paging
 			_buffers.Add(buffer);
 			NumberOfAllocatedPages = 0;
 			PagerState.Release();
-			PagerState = new PagerState();
+			PagerState = new PagerState(AsyncPagerRelease);
 			PagerState.AddRef();
 		}
 
@@ -132,7 +134,7 @@ namespace Voron.Impl.Paging
 
 			_buffers = _buffers.Add(buffer);
 
-			var newPager = new PagerState { };
+		    var newPager = new PagerState(AsyncPagerRelease);
 			newPager.AddRef(); // one for the pager
 
 			if (tx != null) // we only pass null during startup, and we don't need it there

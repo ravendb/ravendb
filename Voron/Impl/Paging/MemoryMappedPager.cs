@@ -11,7 +11,7 @@ namespace Voron.Impl.Paging
 {
 	public unsafe class MemoryMapPager : AbstractPager
 	{
-		private readonly NativeFileAccess access;
+	    private readonly NativeFileAccess access;
 		private readonly FileInfo _fileInfo;
 	    private readonly SafeFileHandle _handle;
 	    private long _length;
@@ -21,11 +21,13 @@ namespace Voron.Impl.Paging
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
-        public MemoryMapPager(string file, 
+        public MemoryMapPager(string file,
+            bool asyncPagerRelease,
 			NativeFileAttributes options = NativeFileAttributes.Normal,
 			NativeFileAccess access = NativeFileAccess.GenericAll)
+            : base(asyncPagerRelease)
 		{
-	        this.access = access;
+            this.access = access;
 	        _fileInfo = new FileInfo(file);
 			var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
 			_handle = NativeFileMethods.CreateFile(file, access, NativeFileShare.Read | NativeFileShare.Write | NativeFileShare.Delete, IntPtr.Zero,
@@ -84,7 +86,7 @@ namespace Voron.Impl.Paging
 			byte* p = null;
 			accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
 
-			var newPager = new PagerState
+			var newPager = new PagerState(AsyncPagerRelease)
 			{
 				Accessor = accessor,
 				File = mmf,

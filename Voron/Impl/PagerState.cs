@@ -9,11 +9,14 @@ namespace Voron.Impl
 
     public unsafe class PagerState
     {
+        private readonly bool _asyncRelease;
+
 #if DEBUG
         public static ConcurrentDictionary<PagerState, StackTrace> Instances = new ConcurrentDictionary<PagerState, StackTrace>();
 
-        public PagerState()
+        public PagerState(bool asyncRelease)
         {
+            _asyncRelease = asyncRelease;
             Instances[this] = new StackTrace(true);
         }
 
@@ -27,6 +30,8 @@ namespace Voron.Impl
 
 	    public byte* MapBase { get; set; }
 
+        public bool Released;
+
 	    public void Release()
         {
             if (Interlocked.Decrement(ref _refs) != 0)
@@ -37,21 +42,31 @@ namespace Voron.Impl
             Instances.TryRemove(this, out value);
 #endif
 
+            if (_asyncRelease)
+	        {
+	            Task.Run(() => ReleaseInternal());
+	            return;
+	        }
+
+            ReleaseInternal();
+        }
+
+        private void ReleaseInternal()
+        {
             if (Accessor != null)
             {
-                Task.Run(
-                    () =>
-                    {
-                        Accessor.SafeMemoryMappedViewHandle.ReleasePointer();
-                        Accessor.Dispose();
-                        Accessor = null;
-                    });
+                Accessor.SafeMemoryMappedViewHandle.ReleasePointer();
+                Accessor.Dispose();
+                Accessor = null;
             }
-		    if (File != null)
-		    {
-			    File.Dispose();
-			    File = null;
-		    }
+
+            if (File != null)
+            {
+                File.Dispose();
+                File = null;
+            }
+
+            Released = true;
         }
 
 #if DEBUG

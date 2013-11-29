@@ -8,7 +8,9 @@ namespace Voron.Impl.Paging
 {
 	public unsafe abstract class AbstractPager : IVirtualPager
 	{
-		protected int MinIncreaseSize { get { return 16 * PageSize; } }
+        protected bool AsyncPagerRelease { get; private set; }
+
+	    protected int MinIncreaseSize { get { return 16 * PageSize; } }
 
 		private long _increaseSize;
 		private DateTime _lastIncrease;
@@ -25,13 +27,14 @@ namespace Voron.Impl.Paging
 		}
 
 		private string _source;
-		protected AbstractPager()
+		protected AbstractPager(bool asyncPagerRelease)
 		{
-			_increaseSize = MinIncreaseSize;
+            AsyncPagerRelease = asyncPagerRelease;
+		    _increaseSize = MinIncreaseSize;
 			MaxNodeSize = 1024;
 			Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
 			PageMinSpace = (int)(PageMaxSpace * 0.33);
-			PagerState = new PagerState();
+            PagerState = new PagerState(AsyncPagerRelease);
 			_tempPage = Marshal.AllocHGlobal(PageSize);
 			PagerState.AddRef();
 		}
