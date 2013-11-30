@@ -9,9 +9,9 @@
 
 	public class WriteBatch : IDisposable
 	{
-		private readonly ConcurrentDictionary<string, List<BatchOperation>> _operations;
+		private readonly Dictionary<string, List<BatchOperation>> _operations;
 
-		private readonly ConcurrentDictionary<string, ConcurrentDictionary<Slice, BatchOperation>> _lastOperations;
+		private readonly Dictionary<string, Dictionary<Slice, BatchOperation>> _lastOperations;
 
 		private readonly SliceEqualityComparer _sliceEqualityComparer;
 
@@ -72,8 +72,8 @@
 
 		public WriteBatch()
 		{
-			_operations = new ConcurrentDictionary<string, List<BatchOperation>>();
-			_lastOperations = new ConcurrentDictionary<string, ConcurrentDictionary<Slice, BatchOperation>>();
+			_operations = new Dictionary<string, List<BatchOperation>>();
+			_lastOperations = new Dictionary<string, Dictionary<Slice, BatchOperation>>();
 			_sliceEqualityComparer = new SliceEqualityComparer();
 		}
 
@@ -133,30 +133,19 @@
 			if (treeName == null)
 				treeName = Constants.RootTreeName;
 
-			_operations.AddOrUpdate(
-				treeName,
-				new List<BatchOperation> { operation },
-				(s, list) =>
-				{
-					list.Add(operation);
-					return list;
-				});
+			List<BatchOperation> list;
+			if (_operations.TryGetValue(treeName, out list) == false)
+			{
+				_operations[treeName] = list = new List<BatchOperation>();
+			}
+			list.Add(operation);
 
-			_lastOperations.AddOrUpdate(
-				treeName,
-				s =>
-				{
-					var dict = new ConcurrentDictionary<Slice, BatchOperation>(_sliceEqualityComparer);
-					dict.AddOrUpdate(operation.Key, operation, (_, __) => operation);
-
-					return dict;
-				},
-				(s, dict) =>
-				{
-					dict.AddOrUpdate(operation.Key, operation, (_, __) => operation);
-
-					return dict;
-				});
+			Dictionary<Slice, BatchOperation> lastOpsForTree;
+			if (_lastOperations.TryGetValue(treeName, out lastOpsForTree) == false)
+			{
+				_lastOperations[treeName] = lastOpsForTree = new Dictionary<Slice, BatchOperation>(_sliceEqualityComparer);	
+			}
+			lastOpsForTree[operation.Key] = operation;
 		}
 
 		public class BatchOperation
