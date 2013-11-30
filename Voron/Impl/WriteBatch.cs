@@ -1,28 +1,23 @@
 ﻿namespace Voron.Impl
 {
 	using System;
-	using System.Collections.Concurrent;
 	using System.Collections.Generic;
-	using System.Collections.ObjectModel;
 	using System.IO;
 	using System.Linq;
 
 	public class WriteBatch : IDisposable
 	{
-		private readonly Dictionary<string, List<BatchOperation>> _operations;
-
 		private readonly Dictionary<string, Dictionary<Slice, BatchOperation>> _lastOperations;
 
 		private readonly SliceEqualityComparer _sliceEqualityComparer;
 
-		public ReadOnlyCollection<BatchOperation> Operations
+		public List<BatchOperation> Operations
 		{
 			get
 			{
-				return _operations
-					.SelectMany(x => x.Value)
-					.ToList()
-					.AsReadOnly();
+				return _lastOperations
+					.SelectMany(x => x.Value.Values.OrderBy(op => op.Key, _sliceEqualityComparer))
+					.ToList();
 			}
 		}
 
@@ -30,7 +25,7 @@
 		{
 			get
 			{
-				return () => _operations.Sum(operation => operation.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
+				return () => _lastOperations.Sum(operation => operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
 			}
 		}
 
@@ -42,10 +37,9 @@
 			if (treeName == null)
 				treeName = Constants.RootTreeName;
 
-			if (_operations.ContainsKey(treeName) == false)
+			Dictionary<Slice, BatchOperation> operations;
+			if (_lastOperations.TryGetValue(treeName, out operations) == false)
 				return false;
-
-			var operations = _lastOperations[treeName];
 
 			BatchOperation operation;
 			if (operations.TryGetValue(key, out operation))
@@ -72,7 +66,6 @@
 
 		public WriteBatch()
 		{
-			_operations = new Dictionary<string, List<BatchOperation>>();
 			_lastOperations = new Dictionary<string, Dictionary<Slice, BatchOperation>>();
 			_sliceEqualityComparer = new SliceEqualityComparer();
 		}
@@ -133,17 +126,17 @@
 			if (treeName == null)
 				treeName = Constants.RootTreeName;
 
-			List<BatchOperation> list;
-			if (_operations.TryGetValue(treeName, out list) == false)
-			{
-				_operations[treeName] = list = new List<BatchOperation>();
-			}
-			list.Add(operation);
-
 			Dictionary<Slice, BatchOperation> lastOpsForTree;
 			if (_lastOperations.TryGetValue(treeName, out lastOpsForTree) == false)
 			{
-				_lastOperations[treeName] = lastOpsForTree = new Dictionary<Slice, BatchOperation>(_sliceEqualityComparer);	
+				_lastOperations[treeName] = lastOpsForTree = new Dictionary<Slice, BatchOperation>(_sliceEqualityComparer);
+			}
+			BatchOperation old;
+			if (lastOpsForTree.TryGetValue(operation.Key, out old))
+			{
+				var disposable = old.Value as IDisposable;
+				if (disposable != null)
+					disposable.Dispose();
 			}
 			lastOpsForTree[operation.Key] = operation;
 		}
@@ -205,23 +198,26 @@
 
 		public enum BatchOperationType
 		{
-			Add,
-			Delete,
-			MultiAdd,
-			MultiDelete,
-			None
+			None = 0,
+			Add = 1,
+			Delete = 2,
+			MultiAdd = 3,
+			MultiDelete = 4,
 		}
 
 		public void Dispose()
 		{
-			foreach (var operation in _operations)
+			foreach (var operation in _lastOperations)
 			{
-				var disposable = operation.Value as IDisposable;
-				if (disposable != null)
-					disposable.Dispose();
+				foreach (var val in operation.Value)
+				{
+					var disposable = val.Value.Value as IDisposable;
+					if (disposable != null)
+						disposable.Dispose();
+				}
+
 			}
 
-			_operations.Clear();
 			_lastOperations.Clear();
 		}
 	}
