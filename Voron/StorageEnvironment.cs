@@ -156,7 +156,7 @@ namespace Voron
 
 		public IEnumerable<Tree> Trees
 		{
-			get { return State.Trees.Values; }
+			get { return State.Trees.Select(x=>x.Value); }
 		}
 
 		public long NextPageNumber

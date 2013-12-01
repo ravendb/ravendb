@@ -12,8 +12,8 @@ namespace Voron.Impl.Journal
 		private long _lastSyncedPage;
 		private long _nextWritePage;
 		private long _readingPage;
-		private SafeDictionary<long, JournalFile.PagePosition> _transactionPageTranslation = SafeDictionary<long, JournalFile.PagePosition>.Empty;
-		private SafeDictionary<long, long> _transactionEndPositions = SafeDictionary<long, long>.Empty;
+		private LinkedDictionary<long, JournalFile.PagePosition> _transactionPageTranslation = LinkedDictionary<long, JournalFile.PagePosition>.Empty;
+		private LinkedDictionary<long, LongRef> _transactionEndPositions = LinkedDictionary<long, LongRef>.Empty;
 
 		public bool RequireHeaderUpdate { get; private set; }
 
@@ -111,7 +111,7 @@ namespace Voron.Impl.Journal
 			//update CurrentTransactionHeader _only_ if the CRC check is passed
 			LastTransactionHeader = current;
 			_transactionPageTranslation = _transactionPageTranslation.SetItems(transactionTable);
-		    _transactionEndPositions = _transactionEndPositions.Add(current->TransactionId, _readingPage - 1);
+			_transactionEndPositions = _transactionEndPositions.Add(current->TransactionId, new LongRef { Value = _readingPage - 1 });
 			return true;
 		}
 
@@ -122,12 +122,12 @@ namespace Voron.Impl.Journal
 			}
 		}
 
-		public SafeDictionary<long, JournalFile.PagePosition> TransactionPageTranslation
+		public LinkedDictionary<long, JournalFile.PagePosition> TransactionPageTranslation
 		{
 			get { return _transactionPageTranslation; }
 		}
 
-        public SafeDictionary<long, long> TransactionEndPositions
+		public LinkedDictionary<long, LongRef> TransactionEndPositions
         {
             get { return _transactionEndPositions; }
         }
