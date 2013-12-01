@@ -1,23 +1,31 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
-using System.Runtime.InteropServices;
 using System.Threading;
+using Voron.Impl.Paging;
 
 namespace Voron.Impl
 {
+    using System.Threading.Tasks;
+
     public unsafe class PagerState
     {
+	    private readonly AbstractPager _pager;
+	    private readonly bool _asyncRelease;
+
 #if DEBUG
         public static ConcurrentDictionary<PagerState, StackTrace> Instances = new ConcurrentDictionary<PagerState, StackTrace>();
-
-        public PagerState()
-        {
-            Instances[this] = new StackTrace(true);
-        }
-
 #endif
+
+        public PagerState(AbstractPager pager, bool asyncRelease)
+        {
+	        _pager = pager;
+	        _asyncRelease = asyncRelease;
+
+#if DEBUG
+            Instances[this] = new StackTrace(true);
+#endif
+        }
 
         private int _refs;
 
@@ -25,9 +33,9 @@ namespace Voron.Impl
 
         public MemoryMappedFile File;
 
-        public byte* Base;
+        public byte* MapBase { get; set; }
 
-        public IntPtr Ptr;
+        public bool Released;
 
         public void Release()
         {
@@ -39,17 +47,31 @@ namespace Voron.Impl
             Instances.TryRemove(this, out value);
 #endif
 
-            Base = null;
+            if (_asyncRelease)
+            {
+	            _pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
+                return;
+            }
+
+            ReleaseInternal();
+        }
+
+        private void ReleaseInternal()
+        {
             if (Accessor != null)
             {
                 Accessor.SafeMemoryMappedViewHandle.ReleasePointer();
                 Accessor.Dispose();
+                Accessor = null;
             }
-            if (File != null)
-                File.Dispose();
 
-            if(Ptr != IntPtr.Zero)
-                Marshal.FreeHGlobal(Ptr);
+            if (File != null)
+            {
+                File.Dispose();
+                File = null;
+            }
+
+            Released = true;
         }
 
 #if DEBUG

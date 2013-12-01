@@ -16,9 +16,7 @@ namespace Voron.Impl
 		bool Disposed { get; }
 
 		long NumberOfAllocatedPages { get; }
-		int PageSize { get; }
 		int MaxNodeSize { get; }
-		int PageMaxSpace { get; }
 		int PageMinSpace { get; }
 	    bool DeleteOnClose { get; set; }
 
@@ -29,7 +27,7 @@ namespace Voron.Impl
 		bool ShouldGoToOverflowPage(int len);
 
 		int GetNumberOfOverflowPages(int overflowSize);
-
+	    bool WillRequireExtension(long requestedPageNumber, int numberOfPages);
         void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages);
         void Write(Page page, long? pageNumber = null);
 

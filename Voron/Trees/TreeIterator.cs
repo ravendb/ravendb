@@ -104,6 +104,7 @@ namespace Voron.Trees
 						_cursor.Push(_currentPage);
 						var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
 						_currentPage = _tx.GetReadOnlyPage(node->PageNumber);
+
 						_currentPage.LastSearchPosition = 0;
 					}
 					var current = _currentPage.GetNode(_currentPage.LastSearchPosition);

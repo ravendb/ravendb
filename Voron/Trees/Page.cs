@@ -5,6 +5,7 @@ using System.Text;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.Paging;
 
 namespace Voron.Trees
 {
@@ -13,16 +14,17 @@ namespace Voron.Trees
         private readonly byte* _base;
         private readonly PageHeader* _header;
 
+	    public readonly string Source;
+
         public int LastMatch;
         public int LastSearchPosition;
         public bool Dirty;
-        private readonly int _pageMaxSpace;
 
-        public Page(byte* b, int pageMaxSpace)
+        public Page(byte* b, string source)
         {
             _base = b;
-            _pageMaxSpace = pageMaxSpace;
             _header = (PageHeader*)b;
+	        Source = source;
         }
 
         public long PageNumber { get { return _header->PageNumber; } set { _header->PageNumber = value; } }
@@ -214,7 +216,7 @@ namespace Voron.Trees
             {
                 KeysOffsets[i] = KeysOffsets[i - 1];
             }
-            var nodeSize = SizeOf.NodeEntry(_pageMaxSpace, key, len);
+            var nodeSize = SizeOf.NodeEntry(AbstractPager.PageMaxSpace, key, len);
             var node = AllocateNewNode(index, key, nodeSize, previousNodeVersion);
 
             if (key.Options == SliceOptions.Key)
@@ -293,18 +295,13 @@ namespace Voron.Trees
 
         public int SizeUsed
         {
-            get { return _header->Lower + _pageMaxSpace - _header->Upper; }
+			get { return _header->Lower + AbstractPager.PageMaxSpace - _header->Upper; }
         }
 
 
         public byte* Base
         {
             get { return _base; }
-        }
-
-        public int PageMaxSpace
-        {
-            get { return _pageMaxSpace; }
         }
 
         public int LastSearchPositionOrLastEntry
@@ -334,7 +331,7 @@ namespace Voron.Trees
             }
             NativeMethods.memcpy(_base + Constants.PageHeaderSize,
                                  copy._base + Constants.PageHeaderSize,
-                                 tx.Environment.PageSize - Constants.PageHeaderSize);
+								 AbstractPager.PageSize - Constants.PageHeaderSize);
 
             Upper = copy.Upper;
             Lower = copy.Lower;
@@ -375,13 +372,28 @@ namespace Voron.Trees
 
         public int GetRequiredSpace(Slice key, int len)
         {
-            return SizeOf.NodeEntry(_pageMaxSpace, key, len) + Constants.NodeOffsetSize;
+			return SizeOf.NodeEntry(AbstractPager.PageMaxSpace, key, len) + Constants.NodeOffsetSize;
         }
 
         public string this[int i]
         {
             get { return new Slice(GetNode(i)).ToString(); }
         }
+
+	    public string DebugView()
+	    {
+		    var sb = new StringBuilder();
+		    for (int i = 0; i < NumberOfEntries; i++)
+		    {
+			    sb.Append(i)
+				    .Append(": ")
+				    .Append(new Slice((NodeHeader*)( _base + KeysOffsets[i])))
+				    .Append(" - ")
+				    .Append(KeysOffsets[i])
+				    .AppendLine();
+		    }
+		    return sb.ToString();
+	    }
 
         [Conditional("VALIDATE")]
         public void DebugValidate(Transaction tx, SliceComparer comparer, long root)

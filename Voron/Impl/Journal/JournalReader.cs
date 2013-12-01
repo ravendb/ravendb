@@ -1,7 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Voron.Impl.Paging;
 using Voron.Util;
 
 namespace Voron.Impl.Journal
@@ -10,19 +10,18 @@ namespace Voron.Impl.Journal
 	{
 		private readonly IVirtualPager _pager;
 		private long _lastSyncedPage;
-		private long _writePage;
+		private long _nextWritePage;
 		private long _readingPage;
-		private readonly long _startPage;
-		private readonly TransactionHeader* _previous;
-		private readonly Dictionary<long, long> _transactionPageTranslation = new Dictionary<long, long>();
+		private SafeDictionary<long, JournalFile.PagePosition> _transactionPageTranslation = SafeDictionary<long, JournalFile.PagePosition>.Empty;
+		private SafeDictionary<long, long> _transactionEndPositions = SafeDictionary<long, long>.Empty;
 
 		public bool RequireHeaderUpdate { get; private set; }
 
 		public bool EncounteredStopCondition { get; private set; }
 
-		public long WritePage
+		public long NextWritePage
 		{
-			get { return _writePage; }
+			get { return _nextWritePage; }
 		}
 
 		public long LastSyncedPage
@@ -35,23 +34,26 @@ namespace Voron.Impl.Journal
 			RequireHeaderUpdate = false;
 			_pager = pager;
 			_readingPage = startPage;
-			_startPage = startPage;
-			_previous = previous;
+			_nextWritePage = startPage;
 			LastTransactionHeader = previous;
 
 		}
 
 		public TransactionHeader* LastTransactionHeader { get; private set; }
 
-		public bool ReadOneTransaction(Func<TransactionHeader, bool> stopReadingCondition = null, bool checkCrc = true)
+		public delegate bool FilterTransactions(long txId, long pageNumber);
+
+		public bool ReadOneTransaction(FilterTransactions stopReadingCondition = null, bool checkCrc = true)
 		{
 			if (_readingPage >= _pager.NumberOfAllocatedPages)
 				return false;
 
+			var transactionTable = new Dictionary<long, JournalFile.PagePosition>();
+
 			TransactionHeader* current;
 			if (!TryReadAndValidateHeader(out current)) return false;
 
-			if (stopReadingCondition != null && !stopReadingCondition(*current))
+			if (stopReadingCondition != null && !stopReadingCondition(current->TransactionId, _readingPage))
 			{
 				_readingPage--; // if the read tx header does not fulfill our condition we have to move back the read index to allow read it again later if needed
 				EncounteredStopCondition = true;
@@ -59,7 +61,7 @@ namespace Voron.Impl.Journal
 			}
 
 			uint crc = 0;
-			var writePageBeforeCrcCheck = _writePage;
+			var writePageBeforeCrcCheck = _nextWritePage;
 			var lastSyncedPageBeforeCrcCheck = _lastSyncedPage;
 			var readingPageBeforeCrcCheck = _readingPage;
 
@@ -69,7 +71,11 @@ namespace Voron.Impl.Journal
 
 				var page = _pager.Read(_readingPage);
 
-				_transactionPageTranslation[page.PageNumber] = _readingPage;
+				transactionTable[page.PageNumber] = new JournalFile.PagePosition
+				{
+                    JournalPos = _readingPage,
+                    TransactionId = current->TransactionId
+				};
 
 				if (page.IsOverflow)
 				{
@@ -77,17 +83,17 @@ namespace Voron.Impl.Journal
 					_readingPage += numOfPages;
 
 					if(checkCrc)
-						crc = Crc.Extend(crc, page.Base, 0, numOfPages * _pager.PageSize);
+						crc = Crc.Extend(crc, page.Base, 0, numOfPages * AbstractPager.PageSize);
 				}
 				else
 				{
 					_readingPage++;
 					if (checkCrc)
-						crc = Crc.Extend(crc, page.Base, 0, _pager.PageSize);
+						crc = Crc.Extend(crc, page.Base, 0, AbstractPager.PageSize);
 				}
 
 				_lastSyncedPage = _readingPage - 1;
-				_writePage = _lastSyncedPage + 1;
+				_nextWritePage = _lastSyncedPage + 1;
 			}
 
 			if (checkCrc && crc != current->Crc)
@@ -95,7 +101,7 @@ namespace Voron.Impl.Journal
 				RequireHeaderUpdate = true;
 
 				//undo changes to those variables if CRC doesn't match
-				_writePage = writePageBeforeCrcCheck;
+				_nextWritePage = writePageBeforeCrcCheck;
 				_lastSyncedPage = lastSyncedPageBeforeCrcCheck;
 				_readingPage = readingPageBeforeCrcCheck;
 
@@ -104,30 +110,27 @@ namespace Voron.Impl.Journal
 
 			//update CurrentTransactionHeader _only_ if the CRC check is passed
 			LastTransactionHeader = current;
-			
+			_transactionPageTranslation = _transactionPageTranslation.SetItems(transactionTable);
+		    _transactionEndPositions = _transactionEndPositions.Add(current->TransactionId, _readingPage - 1);
 			return true;
 		}
 
-		public void RecoverAndValidateConditionally(Func<TransactionHeader, bool> stopConditionFunc)
-		{
-			_readingPage = _startPage;
-			LastTransactionHeader = _previous;
-			while (ReadOneTransaction(stopConditionFunc, checkCrc: false))
-			{
-			}			
-		}
-
-		public void RecoverAndValidate()
+	    public void RecoverAndValidate()
 		{
 			while (ReadOneTransaction())
 			{
 			}
 		}
 
-		public Dictionary<long, long> TransactionPageTranslation
+		public SafeDictionary<long, JournalFile.PagePosition> TransactionPageTranslation
 		{
 			get { return _transactionPageTranslation; }
 		}
+
+        public SafeDictionary<long, long> TransactionEndPositions
+        {
+            get { return _transactionEndPositions; }
+        }
 
 		private bool TryReadAndValidateHeader(out TransactionHeader* current)
 		{
@@ -135,8 +138,15 @@ namespace Voron.Impl.Journal
 
 			if (current->HeaderMarker != Constants.TransactionHeaderMarker)
 			{
-			    RequireHeaderUpdate = true;
-				return false; // not a transaction page
+                // not a transaction page, 
+
+                // if the header marker is zero, we are probably in the area at the end of the log file, and have no additional log records
+                // to read from it. This can happen if the next transaction was too big to fit in the current log file. We stop reading
+                // this log file and move to the next one. 
+
+			    RequireHeaderUpdate = current->HeaderMarker != 0;
+
+                return false;
 			}
 
 			ValidateHeader(current, LastTransactionHeader);
@@ -170,5 +180,10 @@ namespace Voron.Impl.Journal
 		        throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) +
 		                                       ", got:" + current->TransactionId);
 		}
+
+	    public override string ToString()
+	    {
+	        return _pager.ToString();
+	    }
 	}
 }

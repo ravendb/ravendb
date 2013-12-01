@@ -6,19 +6,21 @@
 
 using System;
 using System.IO;
+using Voron.Impl;
 using Voron.Impl.Backup;
+using Voron.Impl.Paging;
 using Xunit;
 
 namespace Voron.Tests.Backups
 {
 	public class Incremental : StorageTest
 	{
-		private Func<int, string> _incrementalBackupFile = n => string.Format("voron-test.{0}-incremental-backup", n);
+		private Func<int, string> _incrementalBackupFile = n => string.Format("voron-test.{0}-incremental-backup.zip", n);
 		private const string _restoredStoragePath = "incremental-backup-test.data";
 
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
-			options.MaxLogFileSize = 1000 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 1000 * AbstractPager.PageSize;
 			options.IncrementalBackupEnabled = true;
 			options.ManualFlushing = true;
 		}
@@ -153,7 +155,7 @@ namespace Voron.Tests.Backups
 				tx.Commit();
 			}
 
-			var usedPagesInJournal = Env.Journal.CurrentFile.WritePagePosition;
+		    var usedPagesInJournal = Env.Journal.CurrentFile.WritePagePosition;
 
 			var backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupFile(0));
 

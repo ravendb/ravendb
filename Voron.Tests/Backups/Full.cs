@@ -1,7 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.IO.Packaging;
+using Voron.Impl;
 using Voron.Impl.Backup;
+using Voron.Impl.Paging;
 using Xunit;
 
 namespace Voron.Tests.Backups
@@ -13,7 +15,7 @@ namespace Voron.Tests.Backups
 
 	    protected override void Configure(StorageEnvironmentOptions options)
 		{
-			options.MaxLogFileSize = 1000 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 1000 * AbstractPager.PageSize;
 		    options.ManualFlushing = true;
 		}
 
@@ -51,8 +53,6 @@ namespace Voron.Tests.Backups
 			Assert.True(Env.Journal.Files.Count > 1);
 
 			Env.FlushLogToDataFile(); // force writing data to the data file
-
-			Assert.Equal(1, Env.Journal.Files.Count); // after flush only 1 journal file will remain
 			 
 			// add more data to journal files
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

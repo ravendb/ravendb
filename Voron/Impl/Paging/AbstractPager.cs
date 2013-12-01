@@ -1,41 +1,55 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Voron.Trees;
+using Voron.Util;
 
-namespace Voron.Impl
+namespace Voron.Impl.Paging
 {
 	public unsafe abstract class AbstractPager : IVirtualPager
 	{
-		protected int MinIncreaseSize { get { return 16 * PageSize; } }
+        protected bool AsyncPagerRelease { get; private set; }
+
+	    protected int MinIncreaseSize { get { return 16 * PageSize; } }
 
 		private long _increaseSize;
 		private DateTime _lastIncrease;
 		private IntPtr _tempPage;
-		public PagerState PagerState { get; protected set; }
 
-		protected AbstractPager()
+		public PagerState PagerState
 		{
-			_increaseSize = MinIncreaseSize;
+			get { return _pagerState; }
+			set
+			{
+				_source = GetSourceName();
+				_pagerState = value;
+			}
+		}
+
+		private string _source;
+		protected AbstractPager(bool asyncPagerRelease)
+		{
+            AsyncPagerRelease = asyncPagerRelease;
+		    _increaseSize = MinIncreaseSize;
 			MaxNodeSize = 1024;
 			Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
-			PageMaxSpace = PageSize - Constants.PageHeaderSize;
 			PageMinSpace = (int)(PageMaxSpace * 0.33);
-			PagerState = new PagerState();
+            PagerState = new PagerState(this, AsyncPagerRelease);
 			_tempPage = Marshal.AllocHGlobal(PageSize);
 			PagerState.AddRef();
 		}
 
-		public int PageMaxSpace { get; private set; }
 		public int MaxNodeSize { get; private set; }
 		public int PageMinSpace { get; private set; }
 		public bool DeleteOnClose { get; set; }
 
-		public int PageSize
-		{
-			get { return 4096; }
-		}
+		public const int PageSize = 4096;
+		public static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
+		private PagerState _pagerState;
+		private ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
+
 
 		public long NumberOfAllocatedPages { get; protected set; }
 
@@ -43,11 +57,14 @@ namespace Voron.Impl
 		{
 			if (pageNumber + 1 > NumberOfAllocatedPages)
 			{
-				throw new InvalidOperationException("Cannot increase size of the pager");
+				throw new InvalidOperationException("Cannot get page number " + pageNumber +
+													" because number of allocated pages is " + NumberOfAllocatedPages);
 			}
 
-			return new Page(AcquirePagePointer(pageNumber), PageMaxSpace);
+			return new Page(AcquirePagePointer(pageNumber), _source);
 		}
+
+		protected abstract string GetSourceName();
 
 		public virtual Page GetWritable(long pageNumber)
 		{
@@ -56,8 +73,8 @@ namespace Voron.Impl
 				throw new InvalidOperationException("Cannot get page number " + pageNumber +
 													" because number of allocated pages is " + NumberOfAllocatedPages);
 			}
-
-			return new Page(AcquirePagePointer(pageNumber), PageMaxSpace);
+			
+			return new Page(AcquirePagePointer(pageNumber), _source);
 		}
 
 		public abstract byte* AcquirePagePointer(long pageNumber);
@@ -69,6 +86,11 @@ namespace Voron.Impl
 			var state = PagerState;
 			state.AddRef();
 			return state;
+		}
+
+		public bool WillRequireExtension(long requestedPageNumber, int numberOfPages)
+		{
+			return requestedPageNumber + numberOfPages > NumberOfAllocatedPages;
 		}
 
 		public void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages)
@@ -112,6 +134,8 @@ namespace Voron.Impl
 				_tempPage = IntPtr.Zero;
 			}
 
+			Task.WaitAll(_tasks.ToArray());
+
 			Disposed = true;
 		}
 
@@ -121,7 +145,7 @@ namespace Voron.Impl
 		{
 			get
 			{
-				return new Page((byte*)_tempPage.ToPointer(), PageMaxSpace)
+				return new Page((byte*)_tempPage.ToPointer(), _source)
 				{
 					Upper = (ushort)PageSize,
 					Lower = (ushort)Constants.PageHeaderSize,
@@ -159,23 +183,16 @@ namespace Voron.Impl
 			var actualIncrease = Math.Min(_increaseSize, current / 4);
 
             // we then want to get the next power of two number, to get pretty file size
-            return NearestPowerOfTwo(current + actualIncrease);
+            return Utils.NearestPowerOfTwo(current + actualIncrease);
 		}
 
-
-	    public static long NearestPowerOfTwo(long v)
-	    {
-	        v--;
-	        v |= v >> 1;
-	        v |= v >> 2;
-	        v |= v >> 4;
-	        v |= v >> 8;
-	        v |= v >> 16;
-	        v++;
-	        return v;
-
-	    }
-
 	    public abstract void WriteDirect(Page start, long pagePosition, int pagesToWrite);
+
+	    public override abstract string ToString();
+
+		public void RegisterDisposal(Task run)
+		{
+			_tasks.Add(run);
+		}
 	}
 }
