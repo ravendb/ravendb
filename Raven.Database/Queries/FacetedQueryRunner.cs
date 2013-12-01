@@ -303,12 +303,20 @@ namespace Raven.Database.Queries
                     case SortOptions.StringVal:
                         return term.Text;
                     case SortOptions.Int:
+		                if (IsStringNumber(term))
+			                return term.Text;
                         return NumericUtils.PrefixCodedToInt(term.Text).ToString(CultureInfo.InvariantCulture);
                     case SortOptions.Long:
+						if (IsStringNumber(term))
+							return term.Text;
                         return NumericUtils.PrefixCodedToLong(term.Text).ToString(CultureInfo.InvariantCulture);
                     case SortOptions.Double:
+						if (IsStringNumber(term))
+							return term.Text;
                         return NumericUtils.PrefixCodedToDouble(term.Text).ToString(CultureInfo.InvariantCulture);
                     case SortOptions.Float:
+						if (IsStringNumber(term))
+							return term.Text;
                         return NumericUtils.PrefixCodedToFloat(term.Text).ToString(CultureInfo.InvariantCulture);
                     case SortOptions.Byte:
                     case SortOptions.Short:
@@ -317,7 +325,14 @@ namespace Raven.Database.Queries
                 }
             }
 
-            private void CompleteFacetCalculationsStage2()
+	        private bool IsStringNumber(Term term)
+	        {
+				if (term == null || string.IsNullOrEmpty(term.Text))
+			        return false;
+		        return char.IsDigit(term.Text[0]);
+	        }
+
+	        private void CompleteFacetCalculationsStage2()
             {
                 foreach (var facetResult in Results.Results)
                 {

@@ -1443,8 +1443,8 @@ namespace Raven.Database
             if (transformFunc == null)
                 return results.Select(x => x.ToJson());
 
-            var dynamicJsonObjects = results.Select(x => new DynamicLuceneOrParentDocumntObject(docRetriever, x.ToJson())).ToArray();
-            var robustEnumerator = new RobustEnumerator(workContext.CancellationToken, dynamicJsonObjects.Length)
+            var dynamicJsonObjects = results.Select(x => new DynamicLuceneOrParentDocumntObject(docRetriever, x.ToJson()));
+            var robustEnumerator = new RobustEnumerator(workContext.CancellationToken, 100)
             {
                 OnError =
                     (exception, o) =>
@@ -2010,6 +2010,8 @@ namespace Raven.Database
 											docFromPatch.Metadata, transactionInformation);
 									}
 								}
+								shouldRetry = false;
+								result.PatchResult = PatchResult.Patched;
 							}
 							catch (ConcurrencyException)
 							{
@@ -2025,7 +2027,6 @@ namespace Raven.Database
 								}
 								throw;
 							}
-							result.PatchResult = PatchResult.Patched;
 						}
 					}
 					if (shouldRetry == false)

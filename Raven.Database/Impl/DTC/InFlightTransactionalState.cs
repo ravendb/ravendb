@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using System.Transactions;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -16,6 +17,7 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using System.Linq;
+using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Database.Impl.DTC
 {
@@ -135,7 +137,7 @@ namespace Raven.Database.Impl.DTC
         public virtual void Rollback(string id)
 		{
 			TransactionState value;
-			if (transactionStates.TryGetValue(id, out value) == false)
+			if (transactionStates.TryRemove(id, out value) == false)
 				return;
 			lock (value)
 			{
@@ -144,9 +146,8 @@ namespace Raven.Database.Impl.DTC
 					ChangedDoc guid;
 					changedInTransaction.TryRemove(change.Key, out guid);
 				}
+				value.changes.Clear();
 			}
-
-			transactionStates.TryRemove(id, out value);
 		}
 
         protected readonly ThreadLocal<string> currentlyCommittingTransaction = new ThreadLocal<string>();
@@ -219,7 +220,7 @@ namespace Raven.Database.Impl.DTC
 						throw new ConcurrencyException("Document " + key + " is being modified by another transaction: " + existing);
 					});
 
-
+					item.CommittedEtag = committedEtag;
 					state.changes.Add(item);
 
 					return result.currentEtag;
@@ -301,10 +302,11 @@ namespace Raven.Database.Impl.DTC
 					{
 						var doc = new DocumentInTransactionData
 						{
-							Metadata = change.Metadata == null ? null : (RavenJObject)change.Metadata.CreateSnapshot(),
-							Data = change.Data == null ? null : (RavenJObject)change.Data.CreateSnapshot(),
+							Metadata = change.Metadata == null ? null : (RavenJObject) change.Metadata.CreateSnapshot(),
+							Data = change.Data == null ? null : (RavenJObject) change.Data.CreateSnapshot(),
 							Delete = change.Delete,
 							Etag = change.Etag,
+							CommittedEtag = change.CommittedEtag,
 							LastModified = change.LastModified,
 							Key = change.Key
 						};
@@ -313,9 +315,9 @@ namespace Raven.Database.Impl.DTC
 						// doc.Etag - represent the _modified_ document etag, and we already
 						// checked etags on previous PUT/DELETE, so we don't pass it here
 						if (doc.Delete)
-							databaseDelete(doc.Key, null, null);
+							databaseDelete(doc.Key, doc.CommittedEtag, null);
 						else
-							databasePut(doc.Key, null, doc.Data, doc.Metadata, null);
+							databasePut(doc.Key, doc.CommittedEtag, doc.Data, doc.Metadata, null);
 					}
 				}
 				finally

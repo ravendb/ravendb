@@ -10,6 +10,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Task = Raven.Database.Tasks.Task;
 
 namespace Raven.Database.Indexing
@@ -29,7 +30,7 @@ namespace Raven.Database.Indexing
 				return;
 
 			bool operationCanceled = false;
-			var itemsToDelete = new List<object>();
+			var itemsToDelete = new ConcurrentSet<object>();
 
 			IList<ReduceTypePerKey> mappedResultsInfo = null;
 			transactionalStorage.Batch(actions =>
@@ -76,7 +77,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, List<object> itemsToDelete)
+		private void MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete)
 		{
 			var needToMoveToMultiStep = new HashSet<string>();
 			transactionalStorage.Batch(actions =>
@@ -198,7 +199,7 @@ namespace Raven.Database.Indexing
 		}
 
 		private void SingleStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator,
-												List<object> itemsToDelete)
+												ConcurrentSet<object> itemsToDelete)
 		{
 			var needToMoveToSingleStepQueue = new ConcurrentQueue<HashSet<string>>();
 

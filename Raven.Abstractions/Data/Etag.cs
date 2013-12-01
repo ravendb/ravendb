@@ -235,31 +235,29 @@ namespace Raven.Abstractions.Data
 			return Parse(s);
 		}
 
-        public static implicit operator Etag(Guid g)
-        {
-            return Parse(g.ToByteArray());
-        }
+		public static implicit operator Etag(Guid g)
+		{
+			return GuidToEtag(g);
+		}
 
-        public static implicit operator Guid?(Etag e)
-        {
-            if (e == null)
-                return null;
-            return new Guid(e.ToByteArray());
-        }
+		public static implicit operator Guid?(Etag e)
+		{
+			if (e == null)
+				return null;
+			return EtagToGuid(e);
+		}
 
+		public static implicit operator Etag(Guid? g)
+		{
+			if (g == null)
+				return null;
+			return GuidToEtag(g.Value);
+		}
 
-
-        public static implicit operator Etag(Guid? g)
-        {
-            if (g == null)
-                return null;
-            return Parse(g.Value.ToByteArray());
-        }
-
-        public static implicit operator Guid(Etag e)
-        {
-            return new Guid(e.ToByteArray());
-        }
+		public static implicit operator Guid(Etag e)
+		{
+			return EtagToGuid(e);
+		}
 
 		public Etag HashWith(Etag other)
 		{
@@ -286,6 +284,30 @@ namespace Raven.Abstractions.Data
 			return first.CompareTo(second) > 0
 				? first
 				: second;
+		}
+
+		private static Guid EtagToGuid(Etag etag)
+		{
+			var bytes = etag.ToByteArray();
+			if (BitConverter.IsLittleEndian)
+			{
+				Array.Reverse(bytes, 0, 4);
+				Array.Reverse(bytes, 4, 2);
+				Array.Reverse(bytes, 6, 2);
+			}
+			return new Guid(bytes);
+		}
+
+		private static Etag GuidToEtag(Guid guid)
+		{
+			var bytes = guid.ToByteArray();
+			if (BitConverter.IsLittleEndian)
+			{
+				Array.Reverse(bytes, 0, 4);
+				Array.Reverse(bytes, 4, 2);
+				Array.Reverse(bytes, 6, 2);
+			}
+			return Etag.Parse(bytes);
 		}
 	}
 

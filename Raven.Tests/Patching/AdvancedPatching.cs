@@ -30,7 +30,7 @@ namespace Raven.Tests.Patching
 	this.Id = 'Something new'; 
 	this.Value++; 
 	this.newValue = ""err!!"";
-	this.Comments.Map(function(comment) {   
+	this.Comments = this.Comments.Map(function(comment) {   
 		return (comment == ""one"") ? comment + "" test"" : comment;
 	});";
 

@@ -25,24 +25,26 @@ namespace Raven.Client.Document.SessionOperations
 		{
 			if (typeof (T).IsArray)
 			{
-				// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
-				// With a single Id
-				var arrayOfArrays = multiLoadResult
-					.Results
-					.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
-					.Select(values =>
-					{
-						var elementType = typeof (T).GetElementType();
-						var array = values.Select(y =>
-						{
-							return documentSession.ProjectionToInstance(y, elementType);
-						}).ToArray();
-						var newArray = Array.CreateInstance(elementType, array.Length);
-						Array.Copy(array, newArray, array.Length);
-						return newArray;
-					})
-					.Cast<T>()
-					.ToArray();
+			    var arrayOfArrays = multiLoadResult.Results
+			                                       .Select(x =>
+			                                       {
+			                                           if (x == null)
+			                                               return null;
+
+			                                           var values = x.Value<RavenJArray>("$values").Cast<RavenJObject>();
+
+			                                           var elementType = typeof (T).GetElementType();
+			                                           var array = values.Select(value =>
+			                                           {
+                                                           EnsureNotReadVetoed(value);
+			                                               return documentSession.ProjectionToInstance(value, elementType);
+			                                           }).ToArray();
+			                                           var newArray = Array.CreateInstance(elementType, array.Length);
+			                                           Array.Copy(array, newArray, array.Length);
+			                                           return newArray;
+			                                       })
+			                                       .Cast<T>()
+			                                       .ToArray();
 
 				return arrayOfArrays;
 			}
@@ -70,6 +72,8 @@ namespace Raven.Client.Document.SessionOperations
 					continue;
 				}
 
+			    EnsureNotReadVetoed(result);
+
 				var values = result.Value<RavenJArray>("$values").ToArray();
 				foreach (var value in values)
 				{
@@ -79,6 +83,15 @@ namespace Raven.Client.Document.SessionOperations
 				}
 			}
 		}
+
+	    private bool EnsureNotReadVetoed(RavenJObject result)
+	    {
+            var metadata = result.Value<RavenJObject>(Constants.Metadata);
+            if (metadata != null)
+                documentSession.EnsureNotReadVetoed(metadata); // this will throw on read veto
+
+	        return true;
+	    }
 	}
 }
 #endif

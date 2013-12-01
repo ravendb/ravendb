@@ -248,12 +248,12 @@ namespace Raven.Tests.Helpers
 			new RavenDocumentsByEntityName().Execute(documentStore);
 		}
 
-		public static void WaitForIndexing(IDocumentStore store, string db = null)
+		public static void WaitForIndexing(IDocumentStore store, string db = null,TimeSpan? timeout = null)
 		{
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-			Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, TimeSpan.FromSeconds(10)));
+            Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(10)));
 		}
 
 		public static void WaitForIndexing(DocumentDatabase db)

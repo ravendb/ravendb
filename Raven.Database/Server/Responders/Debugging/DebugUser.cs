@@ -46,7 +46,8 @@ namespace Raven.Database.Server.Responders.Debugging
 				{
 					Remark = "Using windows auth",
 					User = windowsPrincipal.Identity.Name,
-					IsAdminGlobal = windowsPrincipal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode)
+					IsAdminGlobal = windowsPrincipal.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode),
+                    IsAdminCurrentDb = windowsPrincipal.IsAdministrator(Database),
 				};
 				context.WriteJson(RavenJObject.FromObject(windowsUser));
 				return;
@@ -66,7 +67,7 @@ namespace Raven.Database.Server.Responders.Debugging
 
 				var windowsUserWithDatabase = new UserInfo
 				{
-					Remark = "Using windows auth",
+					Remark = "Using windows auth with database access",
 					User = principalWithDatabaseAccess.Identity.Name,
 					IsAdminGlobal = principalWithDatabaseAccess.IsAdministrator(server.SystemConfiguration.AnonymousUserAccessMode) ||
 					                IsLocalGlobalAdmin(databases),
@@ -103,11 +104,11 @@ namespace Raven.Database.Server.Responders.Debugging
 				return;
 			}
 
-			var unknown = new UserInfo
-			              {
-				              Remark = "Unknown auth",
-				              Principal = principal
-			              };
+		    var unknown = new UserInfo
+		    {
+		        Remark = "Unknown auth",
+		        Principal = principal
+		    };
 			context.WriteJson(RavenJObject.FromObject(unknown));
 		}
 

@@ -1410,6 +1410,7 @@ namespace Raven.Database.Indexing
 								var fullPath = Path.Combine(path, MonoHttpUtility.UrlEncode(name), fileName);
 								File.Copy(fullPath, Path.Combine(saveToFolder, fileName));
 								allFilesWriter.WriteLine(fileName);
+								neededFilesWriter.WriteLine(fileName);
 							}
 							return new IndexedItemsInfo();
 						});
@@ -1533,7 +1534,6 @@ namespace Raven.Database.Indexing
                     task.Keys.Add(doc);
                 }
             }
-            set.Clear();
             if (task.Keys.Count == 0)
                 return;
             actions.Tasks.AddTask(task, SystemTime.UtcNow);

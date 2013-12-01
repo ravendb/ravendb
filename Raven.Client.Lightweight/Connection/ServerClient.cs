@@ -1526,13 +1526,28 @@ namespace Raven.Client.Connection
 
 		private void DirectPrepareTransaction(string txId, OperationMetadata operationMetadata)
 		{
-			var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/prepare?tx=" + txId, "POST", operationMetadata.Credentials, convention)
-					.AddOperationHeaders(OperationsHeaders))
-					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+			try
+			{
+				var httpJsonRequest = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/transaction/prepare?tx=" + txId, "POST",
+						operationMetadata.Credentials, convention)
+						.AddOperationHeaders(OperationsHeaders))
+					.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
+						HandleReplicationStatusChanges);
 
 
-			httpJsonRequest.ReadResponseJson();
+				httpJsonRequest.ReadResponseJson();
+			}
+			catch (WebException e)
+			{
+// more meaningful inner exception with TransactionAbortedException
+				if (((HttpWebResponse) (e.Response)).StatusCode == HttpStatusCode.Conflict)
+				{
+					throw new ConcurrencyException("Failed to commit transaction - concurrency exception. See inner exception for details",e);
+				}
+
+				throw;
+			}
 		}
 
 		/// <summary>

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Tests.Indexes;
-using Raven.Tests.MultiGet;
+using Raven.Tests.Issues;
 using Raven.Tests.Notifications;
 using Raven.Tests.Track;
 
@@ -11,13 +11,13 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			for (int i = 0; i < 100; i++)
+			for (int i = 0; i < 1000; i++)
 			{
 				Console.WriteLine(i);
-                Environment.SetEnvironmentVariable("run", i.ToString("000"));
-                using (var x = new MultiGetProfiling())
+				Environment.SetEnvironmentVariable("run", i.ToString("000"));
+				using (var x = new RavenDB_1493())
 				{
-					x.CanProfileFullyAggressivelyCached();
+					x.ConsistencyTest();
 				}
 			}
 			

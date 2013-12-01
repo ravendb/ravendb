@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using Raven.Database.Indexing;
 using Raven.Abstractions.Data;
+using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -30,7 +31,7 @@ namespace Raven.Database.Storage
 
 		void ScheduleReductions(string view, int level, ReduceKeyAndBucket reduceKeysAndBuckets);
 		IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams);
-		ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete);
+		ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete);
 		void DeleteScheduledReduction(string indexName, int level, string reduceKey);
 		void PutReducedResult(string name, string reduceKey, int level, int sourceBucket, int bucket, RavenJObject data);
 		void RemoveReduceResults(string indexName, int level, string reduceKey, int sourceBucket);
@@ -45,7 +46,7 @@ namespace Raven.Database.Storage
 	public class GetItemsToReduceParams
 	{
 
-		public GetItemsToReduceParams(string index, IEnumerable<string> reduceKeys, int level, bool loadData, List<object> itemsToDelete)
+		public GetItemsToReduceParams(string index, IEnumerable<string> reduceKeys, int level, bool loadData, ConcurrentSet<object> itemsToDelete)
 		{
 			Index = index;
 			Level = level;
@@ -59,7 +60,7 @@ namespace Raven.Database.Storage
 		public int Level { get; private set; }
 		public bool LoadData { get; private set; }
 		public int Take { get; set; }
-		public List<object> ItemsToDelete { get; private set; }
+		public ConcurrentSet<object> ItemsToDelete { get; private set; }
 		public HashSet<Tuple<string, int>> ItemsAlreadySeen { get; private set; }
 		public HashSet<string> ReduceKeys { get; private set; }
 	}
