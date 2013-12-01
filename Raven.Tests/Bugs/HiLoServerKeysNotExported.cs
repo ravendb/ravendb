@@ -21,7 +21,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class HiLoServerKeysNotExported : RavenTest, IDisposable
+	public class HiLoServerKeysNotExported : RavenTest
 	{
 		private const string DumpFile = "hilo-export.dump";
 

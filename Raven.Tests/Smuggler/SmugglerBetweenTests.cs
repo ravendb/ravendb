@@ -123,6 +123,7 @@ namespace Raven.Tests.Smuggler
                             await session2.SaveChangesAsync();
                         }
                         await store2.AsyncDatabaseCommands.PutAttachmentAsync("fitzchak", null, new MemoryStream(new byte[] { 6 }), new RavenJObject());
+                        WaitForUserToContinueTheTest(store2);
 
                         await SmugglerOperation.Between(new SmugglerBetweenOptions
                         {
@@ -138,6 +139,7 @@ namespace Raven.Tests.Smuggler
                             },
                             Incremental = true,
                         });
+                        WaitForUserToContinueTheTest(store2);
 
                         using (var session2 = store2.OpenAsyncSession("Database2"))
                         {
