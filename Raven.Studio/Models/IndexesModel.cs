@@ -149,7 +149,12 @@ namespace Raven.Studio.Models
 			if (index.ForEntityName == null)
 				return "Others";
 			if (index.ForEntityName.Count == 1)
-				return index.ForEntityName.First();
+			{
+				var first = index.ForEntityName.First();
+				if (first != null)
+					return first;
+			}
+
 			return "Others";
 		}
 
