@@ -37,14 +37,22 @@ namespace Raven.Smuggler
                 var exportStoreSupportedFeatures = await DetectServerSupportedFeatures(exportStore);
                 var importStoreSupportedFeatures = await DetectServerSupportedFeatures(importStore);
 
-				var incremental = new SmugglerExportIncremental();
-                if (options.Incremental)
+				var exportUrl = ((AsyncServerClient)exportStore.AsyncDatabaseCommands).Url;
+
+				var incremental = new ExportIncremental();
+	            if (options.Incremental)
                 {
                     var jsonDocument = await importStore.AsyncDatabaseCommands.GetAsync(SmugglerExportIncremental.RavenDocumentKey);
                     if (jsonDocument != null)
                     {
-                        incremental = jsonDocument.DataAsJson.JsonDeserialization<SmugglerExportIncremental>();
-                        options.StartDocsEtag = incremental.LastDocsEtag ?? Etag.Empty;
+                        var smugglerExportIncremental = jsonDocument.DataAsJson.JsonDeserialization<SmugglerExportIncremental>();
+	                    ExportIncremental value;
+	                    if (smugglerExportIncremental.ExportIncremental.TryGetValue(exportUrl, out value))
+	                    {
+		                    incremental = value;
+	                    }
+
+						options.StartDocsEtag = incremental.LastDocsEtag ?? Etag.Empty;
                         options.StartAttachmentsEtag = incremental.LastAttachmentsEtag ?? Etag.Empty;
                     }
                 }
@@ -68,7 +76,14 @@ namespace Raven.Smuggler
 
                 if (options.Incremental)
                 {
-                    await importStore.AsyncDatabaseCommands.PutAsync(SmugglerExportIncremental.RavenDocumentKey, null, RavenJObject.FromObject(incremental), new RavenJObject());
+	                var smugglerExportIncremental = new SmugglerExportIncremental();
+					var jsonDocument = await importStore.AsyncDatabaseCommands.GetAsync(SmugglerExportIncremental.RavenDocumentKey);
+	                if (jsonDocument != null)
+	                {
+		                smugglerExportIncremental = jsonDocument.DataAsJson.JsonDeserialization<SmugglerExportIncremental>();
+	                }
+					smugglerExportIncremental.ExportIncremental[exportUrl] = incremental;
+					await importStore.AsyncDatabaseCommands.PutAsync(SmugglerExportIncremental.RavenDocumentKey, null, RavenJObject.FromObject(smugglerExportIncremental), new RavenJObject());
                 }
             }
         }

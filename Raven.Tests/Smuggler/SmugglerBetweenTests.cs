@@ -156,7 +156,81 @@ namespace Raven.Tests.Smuggler
             }
         }
 
-        private async Task AssertAttachmentContent(IDocumentStore store2, string attachmentKey, byte[] expectedData)
+	    [Fact]
+	    public async Task ShouldSupportIncrementalFromTwoServers()
+	    {
+		    using (var server1 = GetNewServer(port: 8079))
+		    using (var store1 = NewRemoteDocumentStore(ravenDbServer: server1, databaseName: "Database1"))
+		    {
+			    using (var session = store1.OpenAsyncSession("Database1"))
+			    {
+				    await session.StoreAsync(new User {Name = "Oren Eini"});
+				    await session.StoreAsync(new User {Name = "Fitzchak Yitzchaki"});
+				    await session.SaveChangesAsync();
+			    }
+			    await store1.AsyncDatabaseCommands.PutAttachmentAsync("ayende", null, new MemoryStream(new byte[] {13}), new RavenJObject());
+			    await store1.AsyncDatabaseCommands.PutAttachmentAsync("fitzchak", null, new MemoryStream(new byte[] {12}), new RavenJObject());
+
+			    using (var server2 = GetNewServer(port: 8078))
+			    using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
+			    {
+				    using (var session = store2.OpenAsyncSession("Database2"))
+				    {
+					    await session.StoreAsync(new User {Name = "Oren Eini Server 2"});
+					    await session.SaveChangesAsync();
+				    }
+				    await store2.AsyncDatabaseCommands.PutAttachmentAsync("ayende", null, new MemoryStream(new byte[] {23}), new RavenJObject());
+
+				    using (var server3 = GetNewServer(port: 8077))
+				    {
+					    await SmugglerOperation.Between(new SmugglerBetweenOptions
+					    {
+						    From = new RavenConnectionStringOptions
+						    {
+							    Url = "http://localhost:8079",
+							    DefaultDatabase = "Database1",
+						    },
+						    To = new RavenConnectionStringOptions
+						    {
+							    Url = "http://localhost:8077",
+							    DefaultDatabase = "Database3",
+						    },
+						    Incremental = true,
+					    });
+					    await SmugglerOperation.Between(new SmugglerBetweenOptions
+					    {
+						    From = new RavenConnectionStringOptions
+						    {
+							    Url = "http://localhost:8078",
+							    DefaultDatabase = "Database2",
+						    },
+						    To = new RavenConnectionStringOptions
+						    {
+							    Url = "http://localhost:8077",
+							    DefaultDatabase = "Database3",
+						    },
+						    Incremental = true,
+					    });
+
+					    using (var store3 = NewRemoteDocumentStore(ravenDbServer: server3, databaseName: "Database3"))
+					    {
+						    using (var session3 = store3.OpenAsyncSession("Database3"))
+						    {
+							    Assert.Equal(2, await session3.Query<User>().CountAsync());
+							    Assert.Equal("Oren Eini Server 2", (await session3.LoadAsync<User>("users/1")).Name);
+							    Assert.Equal("Fitzchak Yitzchaki", (await session3.LoadAsync<User>("users/2")).Name); // Test that the value from Database1 is there
+						    }
+
+						    Assert.Equal(2, (await store3.AsyncDatabaseCommands.GetAttachmentsAsync(Etag.Empty, 25)).Length);
+						    await AssertAttachmentContent(store3, "ayende", new byte[] {23});
+						    await AssertAttachmentContent(store3, "fitzchak", new byte[] {12}); // Test that the value from Database1 is there
+					    }
+				    }
+			    }
+		    }
+	    }
+
+	    private async Task AssertAttachmentContent(IDocumentStore store2, string attachmentKey, byte[] expectedData)
         {
             var attachment = await store2.AsyncDatabaseCommands.GetAttachmentAsync(attachmentKey);
             var data = await attachment.Data().ReadDataAsync();
