@@ -555,7 +555,7 @@ namespace Raven.Client.Embedded
 
 				var key = header;
 
-				if(DateTime.Now > new DateTime(2013,11,30))
+				if(DateTime.Now > new DateTime(2014,1,1))
 					throw new Exception("This is an ugly code that was supposed to be fixed by this time");
 				if (sort == SortOptions.Long && key.EndsWith("_Range"))
 				{
