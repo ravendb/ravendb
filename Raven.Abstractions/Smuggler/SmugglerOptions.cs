@@ -149,6 +149,8 @@ namespace Raven.Abstractions.Smuggler
         public RavenConnectionStringOptions From { get; set; }
 
         public RavenConnectionStringOptions To { get; set; }
+
+	    public string IncrementalKey { get; set; }
     }
 
     public class SmugglerExportOptions : SmugglerOptionsBase

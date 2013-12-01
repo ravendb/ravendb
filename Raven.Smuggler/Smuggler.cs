@@ -37,7 +37,10 @@ namespace Raven.Smuggler
                 var exportStoreSupportedFeatures = await DetectServerSupportedFeatures(exportStore);
                 var importStoreSupportedFeatures = await DetectServerSupportedFeatures(importStore);
 
-				var exportUrl = ((AsyncServerClient)exportStore.AsyncDatabaseCommands).Url;
+	            if (string.IsNullOrEmpty(options.IncrementalKey))
+	            {
+		            options.IncrementalKey = ((AsyncServerClient) exportStore.AsyncDatabaseCommands).Url;
+	            }
 
 				var incremental = new ExportIncremental();
 	            if (options.Incremental)
@@ -47,7 +50,7 @@ namespace Raven.Smuggler
                     {
                         var smugglerExportIncremental = jsonDocument.DataAsJson.JsonDeserialization<SmugglerExportIncremental>();
 	                    ExportIncremental value;
-	                    if (smugglerExportIncremental.ExportIncremental.TryGetValue(exportUrl, out value))
+	                    if (smugglerExportIncremental.ExportIncremental.TryGetValue(options.IncrementalKey, out value))
 	                    {
 		                    incremental = value;
 	                    }
@@ -82,7 +85,7 @@ namespace Raven.Smuggler
 	                {
 		                smugglerExportIncremental = jsonDocument.DataAsJson.JsonDeserialization<SmugglerExportIncremental>();
 	                }
-					smugglerExportIncremental.ExportIncremental[exportUrl] = incremental;
+					smugglerExportIncremental.ExportIncremental[options.IncrementalKey] = incremental;
 					await importStore.AsyncDatabaseCommands.PutAsync(SmugglerExportIncremental.RavenDocumentKey, null, RavenJObject.FromObject(smugglerExportIncremental), new RavenJObject());
                 }
             }
