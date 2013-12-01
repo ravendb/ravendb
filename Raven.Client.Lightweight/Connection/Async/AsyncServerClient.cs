@@ -873,7 +873,7 @@ namespace Raven.Client.Connection.Async
             {
                 requestUri += "start=" + start;
             }
-            else
+			else if (fromEtag != null)
             {
                 requestUri += "etag=" + fromEtag;
             }
