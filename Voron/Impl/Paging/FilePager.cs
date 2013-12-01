@@ -49,6 +49,8 @@ namespace Voron.Impl
             }
         }
 
+        public FileStream FileStream { get { return _fileStream; }}
+
         public override byte* AcquirePagePointer(long pageNumber)
         {
             return PagerState.Base + (pageNumber * PageSize);
