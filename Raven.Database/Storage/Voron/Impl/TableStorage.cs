@@ -49,9 +49,9 @@ namespace Raven.Database.Storage.Voron.Impl
 	        {
 	            {"MaxNodeSize", persistanceSource.Options.DataPager.MaxNodeSize},
 	            {"NumberOfAllocatedPages", persistanceSource.Options.DataPager.NumberOfAllocatedPages},
-	            {"PageMaxSpace", persistanceSource.Options.DataPager.PageMaxSpace},
+	         //   {"PageMaxSpace", persistanceSource.Options.DataPager.PageMaxSpace},
 	            {"PageMinSpace", persistanceSource.Options.DataPager.PageMinSpace},
-	            {"PageSize", persistanceSource.Options.DataPager.PageSize},
+	     //       {"PageSize", persistanceSource.Options.DataPager.PageSize},
                 {"Documents", GetEntriesCount(Documents)},
                 {"Indexes", GetEntriesCount(IndexingStats)},
                 {"Attachments", GetEntriesCount(Attachments)},
