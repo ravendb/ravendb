@@ -146,7 +146,6 @@ namespace Performance.Comparison.SQLite
                                 command.Parameters.Add("@value", DbType.Binary, valueToWrite.Length).Value = valueToWrite;
 
                                 var affectedRows = command.ExecuteNonQuery();
-                                perfTracker.Increment();
                                 Debug.Assert(affectedRows == 1);
                             }
                         }
@@ -155,6 +154,7 @@ namespace Performance.Comparison.SQLite
                     }
 
                     sw.Stop();
+                    perfTracker.Record(sw.ElapsedMilliseconds);
 
                     records.Add(new PerformanceRecord
                             {
@@ -210,6 +210,7 @@ namespace Performance.Comparison.SQLite
 
             using (var tx = connection.BeginTransaction())
             {
+                var sw = Stopwatch.StartNew();
                 foreach (var id in ids)
                 {
                     using (var command = new SQLiteCommand("SELECT Value FROM Items WHERE ID = " + id, connection))
@@ -224,10 +225,10 @@ namespace Performance.Comparison.SQLite
                             {
                                 fieldOffset += bytesRead;
                             }
-                            perfTracker.Increment();
                         }
                     }
                 }
+                perfTracker.Record(sw.ElapsedMilliseconds);
             }
         }
     }

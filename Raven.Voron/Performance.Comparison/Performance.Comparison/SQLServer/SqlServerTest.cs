@@ -22,7 +22,7 @@ namespace Performance.Comparison.SQLServer
         public SqlServerTest(byte[] buffer)
             : base(buffer)
         {
-            connectionString = @"Data Source=localhost\LOCAL2012;Initial Catalog=VoronTests;Integrated Security=true";
+            connectionString = @"Data Source=localhost\sqlexpress;Initial Catalog=VoronTests;Integrated Security=true";
         }
 
         public override string StorageName { get { return "SQL Server"; } }
@@ -143,21 +143,21 @@ namespace Performance.Comparison.SQLServer
                                 command.Parameters.Add("@value", SqlDbType.Binary, valueToWrite.Length).Value = valueToWrite;
 
                                 var affectedRows = command.ExecuteNonQuery();
-                                perfTracker.Increment();
                                 Debug.Assert(affectedRows == 1);
                             }
                         }
 
                         tx.Commit();
+                        perfTracker.Record(sw.ElapsedMilliseconds);
                     }
 
                     sw.Stop();
 
                     records.Add(new PerformanceRecord
                                     {
-                                        Operation = operation, 
-                                        Time = DateTime.Now, 
-                                        Duration = sw.ElapsedMilliseconds, 
+                                        Operation = operation,
+                                        Time = DateTime.Now,
+                                        Duration = sw.ElapsedMilliseconds,
                                         ProcessedItems = itemsPerTransaction
                                     });
                 }
@@ -201,6 +201,7 @@ namespace Performance.Comparison.SQLServer
 
                 using (var tx = connection.BeginTransaction())
                 {
+                    var sw = Stopwatch.StartNew();
                     foreach (var id in ids)
                     {
                         using (var command = new SqlCommand("SELECT Value FROM Items WHERE ID = " + id, connection))
@@ -217,11 +218,12 @@ namespace Performance.Comparison.SQLServer
                                     {
                                         fieldOffset += bytesRead;
                                     }
-                                    perfTracker.Increment();
                                 }
                             }
                         }
                     }
+                    perfTracker.Record(sw.ElapsedMilliseconds);
+
                 }
             }
         }
