@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Makefile for liblmdb (Lightning memory-mapped database library).
 
 ########################################################################
@@ -102,4 +101,3 @@ all:
 	
 clean:
 	rm -rf *.[ao] *.so *.csv *~ lmdb_perf_test lmdb_test
->>>>>>> a43236fd38b099093fe6eff78274f768f7603db0

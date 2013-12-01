@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #include <sstream>
 #include <iostream>
 #include <fstream>
@@ -563,5 +562,4 @@ int main(int argc,char * argv[])
   WritePerfData("ReadLargeRandom", records);
 
   return 0;
->>>>>>> a43236fd38b099093fe6eff78274f768f7603db0
 }
