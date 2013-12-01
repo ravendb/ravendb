@@ -80,7 +80,7 @@ namespace Raven.Smuggler
 
             var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
 
-			var get = await store.AsyncDatabaseCommands.GetAsync(doc.Id);
+			var get = await store.AsyncDatabaseCommands.ForSystemDatabase().GetAsync(doc.Id);
 			if (get != null)
 				return;
 
