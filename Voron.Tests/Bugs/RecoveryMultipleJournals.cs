@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq.Expressions;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using Xunit;
 
 namespace Voron.Tests.Bugs
@@ -11,7 +12,8 @@ namespace Voron.Tests.Bugs
 	{
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
-			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
+			options.OnRecoveryError += (sender, args) => { }; // just shut it up
 		}
 
 		[Fact]
@@ -153,7 +155,7 @@ namespace Voron.Tests.Bugs
 			var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
             
 			StopDatabase();
-
+			
             CorruptPage(lastJournal, page: 3, pos: 3);
 
 			StartDatabase();
@@ -256,12 +258,18 @@ namespace Voron.Tests.Bugs
 
 		private void CorruptPage(long journal, long page, int pos)
 		{
-		    using (var journalPager = (FilePager) _options.CreateJournalPager(journal))
+			_options.Dispose();
+			_options = StorageEnvironmentOptions.ForPath("test.data");
+			Configure(_options);
+			using (var fileStream = new FileStream(
+				Path.Combine("test.data", StorageEnvironmentOptions.JournalName(journal)), 
+				FileMode.Open,
+				FileAccess.ReadWrite, 
+				FileShare.ReadWrite | FileShare.Delete))
 		    {
-		        var fileStream = journalPager.FileStream;
-		        fileStream.Position = page*journalPager.PageSize;
+		        fileStream.Position = page*AbstractPager.PageSize;
 
-		        var buffer = new byte[journalPager.PageSize];
+				var buffer = new byte[AbstractPager.PageSize];
 
 		        var remaining = buffer.Length;
 		        var start = 0;
@@ -275,7 +283,7 @@ namespace Voron.Tests.Bugs
 		        }
 
 		        buffer[pos] = 42;
-		        fileStream.Position = page*journalPager.PageSize;
+				fileStream.Position = page * AbstractPager.PageSize;
 		        fileStream.Write(buffer, 0, buffer.Length);
 		    }
 		}

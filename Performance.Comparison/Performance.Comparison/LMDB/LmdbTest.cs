@@ -148,13 +148,13 @@
                         valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
 
                         tx.Put(db, Encoding.UTF8.GetBytes(enumerator.Current.Id.ToString("0000000000000000")), valueToWrite);
-                        perfTracker.Increment();
                     }
 
                     tx.Commit();
                 }
 
                 sw.Stop();
+                perfTracker.Record(sw.ElapsedMilliseconds);
 
                 records.Add(new PerformanceRecord
                                 {
@@ -203,12 +203,13 @@
             using (var tx = env.BeginTransaction())
             using (var db = tx.OpenDatabase())
             {
+                var sw = Stopwatch.StartNew();
                 foreach (var id in ids)
                 {
                     var value = tx.Get(db, Encoding.UTF8.GetBytes(id.ToString("0000000000000000")));
-                    perfTracker.Increment();
                     Debug.Assert(value != null);
                 }
+                Console.WriteLine(sw.ElapsedMilliseconds);
             }
         }
     }

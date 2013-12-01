@@ -14,6 +14,7 @@
         private readonly string _path;
 
         private readonly Configurator _configurator;
+        private string _database;
 
         public override string StorageName
         {
@@ -28,6 +29,7 @@
         {
             _path = Path.Combine(path, "esent");
             _configurator = new Configurator();
+            _database = Path.Combine(_path, "edbtest.db");
         }
 
         ~EsentTest()
@@ -61,10 +63,10 @@
         private Session OpenSession(JET_INSTANCE instance, out Table table, out JET_COLUMNID primaryColumnId, out JET_COLUMNID secondaryColumnId)
         {
             var session = new Session(instance);
-            Api.JetAttachDatabase2(session, "edbtest.db", 0, AttachDatabaseGrbit.None);
+            Api.JetAttachDatabase2(session, _database, 0, AttachDatabaseGrbit.None);
 
             JET_DBID dbid;
-            Api.JetOpenDatabase(session, "edbtest.db", null, out dbid, OpenDatabaseGrbit.None);
+            Api.JetOpenDatabase(session, _database, null, out dbid, OpenDatabaseGrbit.None);
 
             table = OpenSchema(session, dbid, out primaryColumnId, out secondaryColumnId);
 
@@ -86,7 +88,7 @@
             using (var session = new Session(instance))
             {
                 JET_DBID dbid;
-                Api.JetCreateDatabase(session, "edbtest.db", null, out dbid, CreateDatabaseGrbit.OverwriteExisting);
+                Api.JetCreateDatabase(session, _database, null, out dbid, CreateDatabaseGrbit.OverwriteExisting);
 
                 using (var tx = new Transaction(session))
                 {
@@ -225,14 +227,13 @@
                             Api.SetColumn(session, table, primaryColumnId, enumerator.Current.Id);
                             Api.SetColumn(session, table, secondaryColumnId, valueToWrite);
                             Api.JetUpdate(session, table);
-                            perfTracker.Increment();
                         }
 
                         tx.Commit(CommitTransactionGrbit.None);
                     }
 
                     sw.Stop();
-
+                    perfTracker.Record(sw.ElapsedMilliseconds);
                     records.Add(
                         new PerformanceRecord
                             {
@@ -284,18 +285,18 @@
             JET_COLUMNID secondaryColumnId;
             using (var session = OpenSession(instance, out table, out primaryColumnId, out secondaryColumnId))
             {
+                var sw = Stopwatch.StartNew();
                 Api.JetSetCurrentIndex(session, table, "by_key");
-
                 foreach (var id in ids)
                 {
                     Api.MakeKey(session, table, id, MakeKeyGrbit.NewKey);
                     Api.JetSeek(session, table, SeekGrbit.SeekEQ);
 
                     var value = Api.RetrieveColumn(session, table, secondaryColumnId);
-                    perfTracker.Increment();
 
                     Debug.Assert(value != null);
                 }
+                perfTracker.Record(sw.ElapsedMilliseconds);
             }
         }
     }
