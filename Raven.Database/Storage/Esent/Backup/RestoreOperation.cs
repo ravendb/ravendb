@@ -77,6 +77,8 @@ namespace Raven.Storage.Esent.Backup
 			CopyAll(new DirectoryInfo(Path.Combine(backupLocation, "IndexDefinitions")),
 				new DirectoryInfo(Path.Combine(databaseLocation, "IndexDefinitions")));
 
+			CopyIndexDefinitionsFromIncrementalBackups();
+
 			CopyIndexes();
 
 			var dataFilePath = Path.Combine(databaseLocation, "Data");
@@ -183,7 +185,7 @@ namespace Raven.Storage.Esent.Backup
 
 						foreach (var directory in directories)
 						{
-							var possiblePathToFile = Path.Combine(directory, indexName, neededFile);
+							var possiblePathToFile = Path.Combine(directory, "Indexes", indexName, neededFile);
 							if (File.Exists(possiblePathToFile) == false) 
 								continue;
 
@@ -228,6 +230,19 @@ namespace Raven.Storage.Esent.Backup
 					var justFile = Path.GetFileName(file);
 					File.Copy(file, Path.Combine(backupLocation, "new", justFile), true);
 				}
+			}
+		}
+
+		private void CopyIndexDefinitionsFromIncrementalBackups()
+		{
+			var directories = Directory.GetDirectories(backupLocation, "Inc*")
+				.OrderBy(dir => dir)
+				.ToList();
+
+			foreach (var directory in directories)
+			{
+				CopyAll(new DirectoryInfo(Path.Combine(directory, "IndexDefinitions")),
+				new DirectoryInfo(Path.Combine(databaseLocation, "IndexDefinitions")));
 			}
 		}
 
