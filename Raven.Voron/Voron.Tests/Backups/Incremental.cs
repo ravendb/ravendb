@@ -13,7 +13,7 @@ namespace Voron.Tests.Backups
 {
 	public class Incremental : StorageTest
 	{
-		private Func<int, string> _incrementalBackupFile = n => string.Format("voron-test.{0}-incremental-backup", n);
+		private Func<int, string> _incrementalBackupFile = n => string.Format("voron-test.{0}-incremental-backup.zip", n);
 		private const string _restoredStoragePath = "incremental-backup-test.data";
 
 		protected override void Configure(StorageEnvironmentOptions options)
@@ -153,7 +153,7 @@ namespace Voron.Tests.Backups
 				tx.Commit();
 			}
 
-			var usedPagesInJournal = Env.Journal.CurrentFile.WritePagePosition;
+		    var usedPagesInJournal = Env.Journal.CurrentFile.WritePagePosition;
 
 			var backedUpPages = BackupMethods.Incremental.ToFile(Env, _incrementalBackupFile(0));
 

@@ -18,6 +18,7 @@ namespace Voron.Tests.Journal
         [Fact]
         public void AfterFlushingThereIsNothingToFlush()
         {
+            Assert.NotNull(Env.Journal.CurrentFile);
             Env.FlushLogToDataFile();
             Assert.NotNull(Env.Journal.CurrentFile);
             Assert.False(Env.Journal.SizeOfUnflushedTransactionsInJournalFile() == 0);

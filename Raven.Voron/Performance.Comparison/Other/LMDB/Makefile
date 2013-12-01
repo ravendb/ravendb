@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Makefile for liblmdb (Lightning memory-mapped database library).
 
 ########################################################################
@@ -26,10 +27,22 @@ CFLAGS	= $(THREADS) $(OPT) $(W) $(XCFLAGS)
 CPPFLAGS	= $(THREADS) $(OPT) $(WCPP) $(XCFLAGS)
 LDLIBS	=
 SOLIBS	=
+=======
+#Notice: LMDB source should be copiled under indicated path 
+LMDB = $(HOME)/lmdb/mdb-mdb/libraries/liblmdb
+CXX	= g++
+W	= -W -Wall -Wno-unused-parameter -Wno-unused-result -Wno-unused-but-set-variable -Wno-unused-variable -Wno-sign-compare -Wl,-rpath -Wl,$(LMDB)
+THREADS = -pthread
+OPT = -O2 -g
+FLAGS	= $(THREADS) $(OPT) $(W) $(XCFLAGS)
+CPPFLAGS	= $(THREADS) $(OPT) $(WCPP) $(XCFLAGS)
+LIBS	= -L$(LMDB) -llmdb -I$(LMDB)
+>>>>>>> a43236fd38b099093fe6eff78274f768f7603db0
 prefix	= /usr/local
 
 ########################################################################
 
+<<<<<<< HEAD
 IHDRS	= lmdb.h
 ILIBS	= liblmdb.a liblmdb.so
 IPROGS	= mdb_stat mdb_copy
@@ -82,3 +95,11 @@ lmdb_perf_test: lmdb_perf_test.cpp liblmdb.a
 
 %.o:	%.c lmdb.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $<
+=======
+
+all:
+	$(CXX) $(FLAGS) lmdb_perf_test.cpp  $(LIBS) -o lmdb_perf_test
+	
+clean:
+	rm -rf *.[ao] *.so *.csv *~ lmdb_perf_test lmdb_test
+>>>>>>> a43236fd38b099093fe6eff78274f768f7603db0
