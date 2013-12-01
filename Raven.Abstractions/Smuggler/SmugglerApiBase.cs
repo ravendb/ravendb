@@ -79,7 +79,8 @@ namespace Raven.Abstractions.Smuggler
 
 				if (backupStatus == null)
                     ReadLastEtagsFromFile(result);
-				if (backupStatus != null) ReadLastEtagsFromClass(options, backupStatus);
+				if (backupStatus != null)
+                    ReadLastEtagsFromClass(options, backupStatus);
 
 				result.FilePath = Path.Combine(result.FilePath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
 				if (File.Exists(result.FilePath))
