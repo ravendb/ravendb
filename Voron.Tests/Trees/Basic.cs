@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Voron.Impl;
+using Voron.Impl.Paging;
 using Xunit;
 
 namespace Voron.Tests.Trees
@@ -85,7 +87,7 @@ namespace Voron.Tests.Trees
                 }
 
                 tx.Commit();
-                if (tx.DataPager.PageSize != 4096)
+				if (AbstractPager.PageSize != 4096)
                     return;
                 Assert.Equal(4, tx.State.Root.State.PageCount);
                 Assert.Equal(3, tx.State.Root.State.LeafPages);

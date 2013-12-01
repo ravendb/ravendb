@@ -166,9 +166,9 @@
 			// Allow the group to grow up to a maximum size, but if the
 			// original write is small, limit the growth so we do not slow
 			// down the small write too much.
-			long maxSize = 1024 * 1024; // 1 MB by default
+		    long maxSize = 16*1024*1024; // 16 MB by default
 			if (mine.Size < 128 * 1024)
-				maxSize = mine.Size + (128 * 1024);
+				maxSize = mine.Size + (1024 * 1024);
 
 			var list = new List<OutstandingWrite>();
 			var indexOfMine = -1;

@@ -6,6 +6,8 @@ using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Microsoft.Win32.SafeHandles;
+using Voron.Impl.Paging;
 using Voron.Trees;
 
 namespace Voron.Impl
@@ -13,29 +15,29 @@ namespace Voron.Impl
     public unsafe class FilePager : AbstractPager
     {
         private readonly FileStream _fileStream;
-        private readonly IntPtr _fileHandle;
         private readonly FileInfo _fileInfo;
+	    private SafeFileHandle _safeFileHandle;
 
-        public FilePager(string file)
+	    public FilePager(string file)
+            : base(false)
         {
             _fileInfo = new FileInfo(file);
 
             var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
 
-            var safeHandle = NativeFileMethods.CreateFile(file,
-                                                          NativeFileAccess.GenericRead | NativeFileAccess.GenericWrite,
-                                                          NativeFileShare.Read, IntPtr.Zero,
-                                                          NativeFileCreationDisposition.OpenAlways,
-                                                          NativeFileAttributes.Write_Through | NativeFileAttributes.NoBuffering,
-                                                          IntPtr.Zero);
+            _safeFileHandle = NativeFileMethods.CreateFile(file,
+	            NativeFileAccess.GenericRead | NativeFileAccess.GenericWrite,
+	            NativeFileShare.Read, IntPtr.Zero,
+	            NativeFileCreationDisposition.OpenAlways,
+	            NativeFileAttributes.Write_Through | NativeFileAttributes.NoBuffering ,
+	            IntPtr.Zero);
 
-            if (safeHandle.IsInvalid)
+            if (_safeFileHandle.IsInvalid)
             {
                 throw new Win32Exception();
             }
 
-            _fileHandle = safeHandle.DangerousGetHandle();
-            _fileStream = new FileStream(safeHandle, FileAccess.ReadWrite);
+            _fileStream = new FileStream(_safeFileHandle, FileAccess.ReadWrite);
 
             if (noData)
             {
@@ -43,8 +45,8 @@ namespace Voron.Impl
             }
             else
             {
-                NumberOfAllocatedPages = _fileInfo.Length / PageSize;
-                PagerState.Release();
+				NumberOfAllocatedPages = _fileInfo.Length / PageSize;
+	            PagerState.Release();
                 PagerState = CreateNewPagerState();
             }
         }
@@ -53,10 +55,17 @@ namespace Voron.Impl
 
         public override byte* AcquirePagePointer(long pageNumber)
         {
-            return PagerState.Base + (pageNumber * PageSize);
+            return PagerState.MapBase + (pageNumber * PageSize);
         }
 
-        public override Page GetWritable(long pageNumber)
+	    protected override unsafe string GetSourceName()
+	    {
+		    if (_fileInfo == null)
+			    return "Unknown";
+		    return "File: " + _fileInfo.Name;
+	    }
+
+	    public override Page GetWritable(long pageNumber)
         {
             throw new InvalidOperationException("File pager does not offer writing directly to a page");
         }
@@ -70,7 +79,9 @@ namespace Voron.Impl
                 return;
 
             // need to allocate memory again
-            _fileStream.SetLength(newLength);
+			NativeFileMethods.SetFileLength(_safeFileHandle, newLength);
+
+			Debug.Assert(_fileStream.Length == newLength);
 
             PagerState.Release(); // when the last transaction using this is over, will dispose it
             PagerState newPager = CreateNewPagerState();
@@ -82,7 +93,7 @@ namespace Voron.Impl
             }
 
             PagerState = newPager;
-            NumberOfAllocatedPages = newPager.Accessor.Capacity / PageSize;
+            NumberOfAllocatedPages = newLength / PageSize;
         }
 
         private PagerState CreateNewPagerState()
@@ -103,11 +114,11 @@ namespace Voron.Impl
             byte* p = null;
             accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
 
-            var newPager = new PagerState
+            var newPager = new PagerState(this, AsyncPagerRelease)
                  {
                      Accessor = accessor,
                      File = mmf,
-                     Base = p
+                     MapBase = p
                  };
             newPager.AddRef(); // one for the pager
             return newPager;
@@ -130,28 +141,46 @@ namespace Voron.Impl
             WriteDirect(page, number, toWrite);
         }
 
+        public override string ToString()
+        {
+            return _fileInfo.Name;
+        }
+
         public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
         {
+            if (_fileInfo.Extension == ".voron" && pagePosition > 1)
+            {
+                
+            }
             var position = pagePosition * PageSize;
-            var toWrite = (uint)(pagesToWrite * PageSize);
+            var toWrite = pagesToWrite * PageSize;
 
-            var nativeOverlapped = new NativeOverlapped()
+            var overlapped = new Overlapped()
             {
                 OffsetLow = (int)(position & 0xffffffff),
                 OffsetHigh = (int)(position >> 32),
             };
 
-            var startWrite = start.Base;
-            while (toWrite != 0)
-            {
-                uint written;
-                if (NativeFileMethods.WriteFile(_fileHandle, startWrite, toWrite, out written, ref nativeOverlapped) == false)
-                {
-                    throw new Win32Exception();
-                }
-                toWrite -= written;
-                startWrite += written;
-            }
+	        var nativeOverlapped = overlapped.Pack(null, null);
+	        try
+	        {
+				var startWrite = start.Base;
+				while (toWrite != 0)
+				{
+					int written;
+					if (NativeFileMethods.WriteFile(_safeFileHandle, startWrite, toWrite, out written, nativeOverlapped) == false)
+					{
+						throw new Win32Exception();
+					}
+					toWrite -= written;
+					startWrite += written;
+				}
+	        }
+	        finally
+	        {
+		        Overlapped.Unpack(nativeOverlapped);
+				Overlapped.Free(nativeOverlapped);
+	        }
         }
 
         public override void Dispose()

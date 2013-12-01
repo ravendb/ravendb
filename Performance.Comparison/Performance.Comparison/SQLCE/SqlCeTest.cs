@@ -151,7 +151,6 @@ namespace Performance.Comparison.SQLCE
                                 command.Parameters.Add("@value", SqlDbType.Binary, valueToWrite.Length).Value = valueToWrite;
 
                                 var affectedRows = command.ExecuteNonQuery();
-                                perfTracker.Increment();
                                 Debug.Assert(affectedRows == 1);
                             }
                         }
@@ -159,6 +158,7 @@ namespace Performance.Comparison.SQLCE
                         tx.Commit();
                     }
                     sw.Stop();
+                    perfTracker.Record(sw.ElapsedMilliseconds);
 
                     records.Add(new PerformanceRecord
                             {
@@ -197,7 +197,7 @@ namespace Performance.Comparison.SQLCE
             return ExecuteReadWithParallel(operation, ids, numberOfThreads, () => ReadInternal(ids, perfTracker, connectionString));
         }
 
-        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, string connectionString)
+        private  void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, string connectionString)
         {
             var buffer = new byte[4096];
 
@@ -207,6 +207,7 @@ namespace Performance.Comparison.SQLCE
 
                 using (var tx = connection.BeginTransaction())
                 {
+                    var sw = Stopwatch.StartNew();
                     foreach (var id in ids)
                     {
                         using (var command = new SqlCeCommand("SELECT Value FROM Items WHERE ID = " + id, connection))
@@ -222,11 +223,11 @@ namespace Performance.Comparison.SQLCE
                                     {
                                         fieldOffset += bytesRead;
                                     }
-                                    perfTracker.Increment();
                                 }
                             }
                         }
                     }
+                    perfTracker.Record(sw.ElapsedMilliseconds);
                 }
             }
         }

@@ -1,4 +1,6 @@
-﻿namespace Performance.Comparison
+﻿using Performance.Comparison.FoundationDB;
+
+namespace Performance.Comparison
 {
     using System;
     using System.Collections.Generic;
@@ -15,17 +17,21 @@
     using Performance.Comparison.SQLServer;
     using Performance.Comparison.Voron;
 
-    class Program
+	class Program
     {
         private const bool EnableCsvOutput = true;
 
-        static void Main()
+        private static StreamWriter writer;
+
+        static  void Main()
         {
             var random = new Random();
             var buffer = new byte[87 * 1024];
             random.NextBytes(buffer);
 
-            var path = @"C:\temp\";
+            var path = @"c:\work\temp\";
+
+            writer = new StreamWriter("output.txt",false) {AutoFlush = true};
 
             var sequentialIds = InitSequentialNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 128, maxValueSize: 128);
             var randomIds = InitRandomNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 128, maxValueSize: 128);
@@ -36,12 +42,13 @@
         
             var performanceTests = new List<IStoragePerformanceTest>()
 				{
-                    new SqlServerTest(buffer),
-                    new SqlLiteTest(path, buffer),
-                    new SqlCeTest(path, buffer),
-                    new LmdbTest(path, buffer),
-                    new EsentTest(path, buffer),
-                    new VoronTest(path, buffer)
+                    //new SqlServerTest(buffer),
+                    //new SqlLiteTest(path, buffer),
+                    //new SqlCeTest(path, buffer),
+                    //new LmdbTest(path, buffer),
+					//new EsentTest(path, buffer),
+                    //new FdbTest(buffer),
+					new VoronTest(path, buffer)
 				};
 
             var perfTracker = new PerfTracker();
@@ -57,26 +64,26 @@
                 OutputResults("Write Seq", items, totalDuration, perfTracker);
                 WritePerfData("WriteSeq", test, performanceRecords);
 
-                performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 2, out totalDuration);
-                items = performanceRecords.Sum(x => x.ProcessedItems);
-                OutputResults("Write Seq [2]", items, totalDuration, perfTracker);
-                WritePerfData("WriteSeq_Parallel_2", test, performanceRecords);
+				performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 2, out totalDuration);
+				items = performanceRecords.Sum(x => x.ProcessedItems);
+				OutputResults("Write Seq [2]", items, totalDuration, perfTracker);
+				WritePerfData("WriteSeq_Parallel_2", test, performanceRecords);
 
-                performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 4, out totalDuration);
-                items = performanceRecords.Sum(x => x.ProcessedItems);
-                OutputResults("Write Seq [4]", items, totalDuration, perfTracker);
-                WritePerfData("WriteSeq_Parallel_4", test, performanceRecords);
+				performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 4, out totalDuration);
+				items = performanceRecords.Sum(x => x.ProcessedItems);
+				OutputResults("Write Seq [4]", items, totalDuration, perfTracker);
+				WritePerfData("WriteSeq_Parallel_4", test, performanceRecords);
 
-                performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 8, out totalDuration);
-                items = performanceRecords.Sum(x => x.ProcessedItems);
-                OutputResults("Write Seq [8]", items, totalDuration, perfTracker);
-                WritePerfData("WriteSeq_Parallel_8", test, performanceRecords);
+				performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 8, out totalDuration);
+				items = performanceRecords.Sum(x => x.ProcessedItems);
+				OutputResults("Write Seq [8]", items, totalDuration, perfTracker);
+				WritePerfData("WriteSeq_Parallel_8", test, performanceRecords);
 
-                performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 16, out totalDuration);
-                items = performanceRecords.Sum(x => x.ProcessedItems);
-                OutputResults("Write Seq [16]", items, totalDuration, perfTracker);
-                WritePerfData("WriteSeq_Parallel_16", test, performanceRecords);
-
+				performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 16, out totalDuration);
+				items = performanceRecords.Sum(x => x.ProcessedItems);
+				OutputResults("Write Seq [16]", items, totalDuration, perfTracker);
+				WritePerfData("WriteSeq_Parallel_16", test, performanceRecords);
+				
                 var performanceRecord = test.ReadSequential(perfTracker);
                 items = performanceRecord.ProcessedItems;
                 totalDuration = performanceRecord.Duration;
@@ -163,7 +170,7 @@
                 OutputResults("Read Rnd [16]", items, totalDuration, perfTracker);
                 WritePerfData("ReadRnd_Parallel_16", test, new List<PerformanceRecord> { performanceRecord });
 
-                if (test.CanHandleBigData==false)
+				//if (test.CanHandleBigData==false)
                     continue;
 
                 performanceRecords = test.WriteSequential(sequentialIdsLarge, perfTracker);
@@ -195,8 +202,9 @@
        
         private static void OutputResults(string name, long itemsCount, double duration, PerfTracker perfTracker)
         {
-            Console.WriteLine("{0}:\t{1,10:#,#;;0} items in {2,10:#,#;;0} sec, {3,10:#,#} ops/s.", name, itemsCount / 1000, duration, itemsCount / (duration / 1000));
-            Console.WriteLine(string.Join(", ", from f in perfTracker.Checkout() select f.ToString("##,###.00")));
+            Console.WriteLine("{0}:\t{1,10:#,#;;0} items in {2,10:#,#;;0} sec, {3,10:#,#} ops/s.", name, itemsCount, duration, itemsCount / (duration / 1000));
+            writer.WriteLine("{0}:\t{1,10:#,#;;0} items in {2,10:#,#;;0} sec, {3,10:#,#} ops/s.", name, itemsCount, duration, itemsCount / (duration / 1000));
+            writer.WriteLine(string.Join(", ", from f in perfTracker.Checkout() select f.ToString("##,###.00")));
         }
 
         private static void WritePerfData(string name, IStoragePerformanceTest test, IEnumerable<PerformanceRecord> writeSeq)
