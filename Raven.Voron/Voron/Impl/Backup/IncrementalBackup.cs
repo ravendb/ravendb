@@ -9,24 +9,24 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.IO.Packaging;
 using System.Linq;
 using Voron.Impl.Journal;
+using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
 
 namespace Voron.Impl.Backup
 {
-	public unsafe class IncrementalBackup
-	{
-		public long ToFile(StorageEnvironment env, string backupPath, CompressionOption compression = CompressionOption.Normal)
-		{
+    public unsafe class IncrementalBackup
+    {
+		public long ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal)
+        {
 			if (env.Options.IncrementalBackupEnabled == false)
 				throw new InvalidOperationException("Incremental backup is disabled for this storage");
 
 			long numberOfBackedUpPages = 0;
 
-			var copier = new DataCopier(env.PageSize*16);
+			var copier = new DataCopier(AbstractPager.PageSize * 16);
 			var backupSuccess = true;
 
 			IncrementalBackupInfo backupInfo;
@@ -35,14 +35,12 @@ namespace Voron.Impl.Backup
 
 			using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				backupInfo = env.Journal.GetIncrementalBackupInfo();
-
-				txw.Rollback(); // will move back the current journal write position moved by current tx (this tx won't be committed anyways)
+				backupInfo = env.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
 
 				if (env.Journal.CurrentFile != null)
 				{
 					lastWrittenLogFile = env.Journal.CurrentFile.Number;
-					lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition - 1;
+					lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition;
 				}
 
 				// txw.Commit(); intentionally not committing
@@ -54,9 +52,11 @@ namespace Voron.Impl.Backup
 
 				try
 				{
-					using (var package = Package.Open(backupPath, FileMode.Create))
+					using (var file = new FileStream(backupPath, FileMode.Create))
+					using (var package = new ZipArchive(file, ZipArchiveMode.Create))
 					{
 						long lastBackedUpPage = -1;
+						long lastBackedUpFile = -1;
 
 						var firstJournalToBackup = backupInfo.LastBackedUpJournal;
 
@@ -68,41 +68,66 @@ namespace Voron.Impl.Backup
 							var journalFile = env.Journal.Files.Find(x => x.Number == journalNum); // first check journal files currently being in use
 							if (journalFile == null)
 							{
-								journalFile = new JournalFile(env.Options.CreateJournalPager(journalNum), journalNum);
+								long journalSize;
+								using (var pager = env.Options.OpenJournalPager(journalNum))
+								{
+									journalSize = Utils.NearestPowerOfTwo(pager.NumberOfAllocatedPages * AbstractPager.PageSize);
+									if (journalSize >= env.Options.MaxLogFileSize) // can't set for more than the max log file size
+										throw new InvalidOperationException("Recovered journal size is " + journalSize +
+										                                    ", while the maximum journal size can be " + env.Options.MaxLogFileSize);
+								}
+
+								journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
 							}
 
 							journalFile.AddRef();
 
 							usedJournals.Add(journalFile);
 
-							var part = package.CreatePart(new Uri("/" + StorageEnvironmentOptions.LogName(journalNum), UriKind.Relative),
-							                              System.Net.Mime.MediaTypeNames.Application.Octet,
-														  compression);
-							var start = 0L;
-							var pagesToCopy = journalFile.Pager.NumberOfAllocatedPages;
-
+							var startBackupAt = 0L;
+							var pagesToCopy = journalFile.JournalWriter.NumberOfAllocatedPages;
 							if (journalFile.Number == backupInfo.LastBackedUpJournal)
 							{
-								start = backupInfo.LastBackedUpJournalPage + 1;
-								pagesToCopy -= start;
+								startBackupAt = backupInfo.LastBackedUpJournalPage + 1;
+								pagesToCopy -= startBackupAt;
 							}
 
+							if (startBackupAt >= journalFile.JournalWriter.NumberOfAllocatedPages) // nothing to do here
+								continue;
+
+							var part = package.CreateEntry(StorageEnvironmentOptions.JournalName(journalNum), compression);
+							Debug.Assert(part != null);
+
 							if (journalFile.Number == lastWrittenLogFile)
-								pagesToCopy -= (journalFile.Pager.NumberOfAllocatedPages - lastWrittenLogPage - 1);
+								pagesToCopy -= (journalFile.JournalWriter.NumberOfAllocatedPages - lastWrittenLogPage);
 
-							copier.ToStream(journalFile.Pager.Read(start).Base, pagesToCopy*journalFile.Pager.PageSize, part.GetStream());
+							using (var stream = part.Open())
+							{
+								copier.ToStream(journalFile, startBackupAt, pagesToCopy, stream);
+							}
 
+							lastBackedUpFile = journalFile.Number;
 							if (journalFile.Number == backupInfo.LastCreatedJournal)
 							{
-								lastBackedUpPage = start + pagesToCopy - 1;
+								lastBackedUpPage = startBackupAt + pagesToCopy - 1;
+								// we used all of this file, so the next backup should start in the next file
+								if (lastBackedUpPage == (journalFile.JournalWriter.NumberOfAllocatedPages - 1))
+								{
+									lastBackedUpPage = -1;
+									lastBackedUpFile++;
+								}
 							}
 
 							numberOfBackedUpPages += pagesToCopy;
 						}
-						
-						Debug.Assert(lastBackedUpPage != -1);
 
-						env.Journal.UpdateAfterIncrementalBackup(backupInfo.LastCreatedJournal, lastBackedUpPage);
+						//Debug.Assert(lastBackedUpPage != -1);
+
+						env.HeaderAccessor.Modify(header =>
+							{
+								header->IncrementalBackup.LastBackedUpJournal = lastBackedUpFile;
+								header->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpPage;
+							});
 					}
 				}
 				catch (Exception)
@@ -118,7 +143,7 @@ namespace Voron.Impl.Backup
 						{
 							if (file.Number != lastWrittenLogFile) // prevent deletion of the current journal
 							{
-								file.DeleteOnClose();
+								file.DeleteOnClose = true;
 							}
 						}
 
@@ -128,101 +153,99 @@ namespace Voron.Impl.Backup
 
 				return numberOfBackedUpPages;
 			}
-		}
+        }
 
-		public void Restore(StorageEnvironment env, string backupPath)
-		{
+        public void Restore(StorageEnvironment env, string backupPath)
+        {
 			using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				using (env.Options.AllowManualFlushing())
 				{
-					env.FlushLogToDataFile();
+					env.FlushLogToDataFile(txw);
 				}
 
-				List<string> journalNames;
+                List<string> journalNames;
 
-				using (var package = Package.Open(backupPath, FileMode.Open))
-				{
-					journalNames = package.GetParts().Select(x => x.Uri.OriginalString.Trim('/')).ToList();
-				}
+				using (var package = ZipFile.Open(backupPath, ZipArchiveMode.Read))
+                {
+                    journalNames = package.Entries.Select(x => x.Name).ToList();
+                }
 
-				var tempDir = Directory.CreateDirectory(Path.GetTempPath() + Guid.NewGuid()).FullName;
-				var toDispose = new List<IDisposable>();
+                var tempDir = Directory.CreateDirectory(Path.GetTempPath() + Guid.NewGuid()).FullName;
+                var toDispose = new List<IDisposable>();
 
-				try
-				{
-					ZipFile.ExtractToDirectory(backupPath, tempDir);
+                try
+                {
+                    ZipFile.ExtractToDirectory(backupPath, tempDir);
 
-					TransactionHeader* lastTxHeader = null;
+                    TransactionHeader* lastTxHeader = null;
 
-					var pagesToWrite = new Dictionary<long, Func<Page>>();
+                    var pagesToWrite = new Dictionary<long, Func<Page>>();
 
-					foreach (var journalName in journalNames)
-					{
-						var pager = new MemoryMapPager(Path.Combine(tempDir, journalName));
-						toDispose.Add(pager);
+                    foreach (var journalName in journalNames)
+                    {
+                        var pager = new MemoryMapPager(Path.Combine(tempDir, journalName), false);
+                        toDispose.Add(pager);
 
-						long number;
+                        long number;
 
-						if (long.TryParse(journalName.Replace(".journal", string.Empty), out number) == false)
-						{
-							throw new InvalidOperationException("Cannot parse journal file number");
-						}
+                        if (long.TryParse(journalName.Replace(".journal", string.Empty), out number) == false)
+                        {
+                            throw new InvalidOperationException("Cannot parse journal file number");
+                        }
 
-						var reader = new JournalReader(pager, 0, lastTxHeader);
+                        var reader = new JournalReader(pager, 0, lastTxHeader);
 
-						while (reader.ReadOneTransaction())
-						{
-							lastTxHeader = reader.LastTransactionHeader;
-						}
+                        while (reader.ReadOneTransaction())
+                        {
+                            lastTxHeader = reader.LastTransactionHeader;
+                        }
 
-						foreach (var translation in reader.TransactionPageTranslation)
-						{
-							var pageInJournal = translation.Value;
-							pagesToWrite[translation.Key] = () => pager.Read(pageInJournal);
-						}
-					}
+                        foreach (var translation in reader.TransactionPageTranslation)
+                        {
+                            var pageInJournal = translation.Value.JournalPos;
+                            pagesToWrite[translation.Key] = () => pager.Read(pageInJournal);
+                        }
+                    }
 
-					var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-												  .Select(x => x.Value())
-												  .ToList();
+                    var sortedPages = pagesToWrite.OrderBy(x => x.Key)
+                                                  .Select(x => x.Value())
+                                                  .ToList();
 
-					var last = sortedPages.Last();
+                    var last = sortedPages.Last();
 
-					env.Options.DataPager.EnsureContinuous(null, last.PageNumber,
-													last.IsOverflow
-														? env.Options.DataPager.GetNumberOfOverflowPages(
-															last.OverflowSize)
-														: 1);
+                    env.Options.DataPager.EnsureContinuous(txw, last.PageNumber,
+                                                    last.IsOverflow
+                                                        ? env.Options.DataPager.GetNumberOfOverflowPages(
+                                                            last.OverflowSize)
+                                                        : 1);
 
-					foreach (var page in sortedPages)
-					{
-						env.Options.DataPager.Write(page);
-					}
+                    foreach (var page in sortedPages)
+                    {
+                        env.Options.DataPager.Write(page);
+                    }
 
-					env.Options.DataPager.Sync();
+                    env.Options.DataPager.Sync();
 
-					txw.State.Root = Tree.Open(txw, env._sliceComparer, &lastTxHeader->Root);
-					txw.State.FreeSpaceRoot = Tree.Open(txw, env._sliceComparer, &lastTxHeader->FreeSpace);
+                    txw.State.Root = Tree.Open(txw, env._sliceComparer, &lastTxHeader->Root);
+                    txw.State.FreeSpaceRoot = Tree.Open(txw, env._sliceComparer, &lastTxHeader->FreeSpace);
 
-					txw.State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
-					txw.State.Root.Name = Constants.RootTreeName;
+                    txw.State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
+                    txw.State.Root.Name = Constants.RootTreeName;
 
-					txw.State.NextPageNumber = lastTxHeader->LastPageNumber + 1;
+                    txw.State.NextPageNumber = lastTxHeader->LastPageNumber + 1;
+
+					env.Journal.Clear(txw);
 
 					txw.Commit();
+                }
+                finally
+                {
+                    toDispose.ForEach(x => x.Dispose());
 
-					env.Journal.Clear();
-				}
-				finally
-				{
-					toDispose.ForEach(x => x.Dispose());
-
-					Directory.Delete(tempDir, true);
-				}
-
-				// txw.Commit(); no need to commit that
-			}
-		}
-	}
+                    Directory.Delete(tempDir, true);
+                }
+            }
+        }
+    }
 }

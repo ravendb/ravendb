@@ -36,6 +36,10 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Esent.Collections">
@@ -43,6 +47,12 @@
     </Reference>
     <Reference Include="Esent.Interop">
       <HintPath>..\packages\ManagedEsent.1.8.3.2\lib\net40\Esent.Interop.dll</HintPath>
+    </Reference>
+    <Reference Include="FoundationDB.Client">
+      <HintPath>..\libs\FoundationDB.Client.dll</HintPath>
+    </Reference>
+    <Reference Include="FoundationDB.Layers.Common">
+      <HintPath>..\libs\FoundationDB.Layers.Common.dll</HintPath>
     </Reference>
     <Reference Include="LightningDB, Version=0.0.0.0, Culture=neutral, processorArchitecture=AMD64">
       <SpecificVersion>False</SpecificVersion>
@@ -72,8 +82,10 @@
     <Compile Include="Constants.cs" />
     <Compile Include="Esent\Configurator.cs" />
     <Compile Include="Esent\EsentTest.cs" />
+    <Compile Include="FoundationDB\FdbTest.cs" />
     <Compile Include="IStoragePerformanceTest.cs" />
     <Compile Include="LMDB\LmdbTest.cs" />
+    <Compile Include="ParallelTestData.cs" />
     <Compile Include="PerformanceRecord.cs" />
     <Compile Include="PerfTracker.cs" />
     <Compile Include="Program.cs" />
@@ -87,6 +99,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="app.manifest" />
+    <None Include="fdb.cluster" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -103,6 +117,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>
