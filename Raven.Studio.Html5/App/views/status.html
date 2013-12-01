@@ -1,0 +1,14 @@
+﻿<div>
+    <div class="row">
+		<div class="col-md-2">
+			<ul class="nav nav-list nav-pills nav-stacked" data-bind="foreach: router.navigationModel">
+				<li data-bind="css: { active: isActive }">
+					<a data-bind="attr: { href: hash }, text: title"></a>
+				</li>
+			</ul>
+		</div>
+		<div class="col-md-10">
+			<!--ko router: { transition:'entrance', cacheViews:true }--><!--/ko-->
+		</div>
+    </div>
+</div>

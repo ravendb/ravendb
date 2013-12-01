@@ -1,8 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
-MinimumVisualStudioVersion = 10.0.40219.1
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Database", "Raven.Database\Raven.Database.csproj", "{212823CD-25E1-41AC-92D1-D6DF4D53FC85}"
 	ProjectSection(ProjectDependencies) = postProject
 		{6828A6A5-B925-4716-8D08-2B26353C54C2} = {6828A6A5-B925-4716-8D08-2B26353C54C2}
@@ -55,6 +53,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Voron", "Raven.Voron\Voron\Voron.csproj", "{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Voron.Tests", "Raven.Voron\Voron.Tests\Voron.Tests.csproj", "{3C2CD044-CF12-48D1-9C43-64A9058C165E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Studio.Html5", "Raven.Studio.Html5\Raven.Studio.Html5.csproj", "{D020BECD-AADD-44FC-96C7-BD58354413DF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1894,6 +1894,104 @@ Global
 		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.winphone_Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.winphone_Release|x64.ActiveCfg = Release|Any CPU
 		{3C2CD044-CF12-48D1-9C43-64A9058C165E}.winphone_Release|x86.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Debug|ARM.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Debug|x64.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Debug|x86.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Release|Any CPU.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Release|ARM.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Release|x64.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_2_0_Release|x86.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Debug|ARM.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Debug|x64.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Debug|x86.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Release|Any CPU.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Release|ARM.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Release|x64.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_3_5_Release|x86.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Debug|ARM.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Debug|x64.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Debug|x86.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Release|Any CPU.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Release|ARM.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Release|x64.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_0_Release|x86.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Debug|ARM.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Debug|x64.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Debug|x86.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Release|Any CPU.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Release|ARM.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Release|x64.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.net_4_5_Release|x86.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Release|ARM.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Release|x64.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.Release|x86.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Debug|ARM.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Debug|x64.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Debug|x86.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Release|Any CPU.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Release|ARM.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Release|x64.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.silverlight_Release|x86.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Debug|ARM.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Debug|x64.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Debug|x86.ActiveCfg = Debug|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Release|Any CPU.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Release|ARM.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Release|x64.ActiveCfg = Release|Any CPU
+		{D020BECD-AADD-44FC-96C7-BD58354413DF}.winphone_Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

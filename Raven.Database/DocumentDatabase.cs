@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
+using System.DirectoryServices.AccountManagement;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -1986,36 +1987,56 @@ namespace Raven.Database
 			if (idPrefix == null)
 				throw new ArgumentNullException("idPrefix");
 			idPrefix = idPrefix.Trim();
-			TransactionalStorage.Batch(actions =>
-			{
-				bool returnedDocs = false;
-				while (true)
-				{
-					int docCount = 0;
-					var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
-					var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
-					foreach (var doc in documents)
-					{
-						docCount++;
-						string keyTest = doc.Key.Substring(idPrefix.Length);
-						if (!WildcardMatcher.Matches(matches, keyTest) || WildcardMatcher.MatchesExclusion(exclude, keyTest))
-							continue;
-						DocumentRetriever.EnsureIdInMetadata(doc);
-						var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
-						JsonDocument document = nonAuthoritativeInformationBehavior != null ? nonAuthoritativeInformationBehavior(doc) : doc;
-						document = documentRetriever
-							.ExecuteReadTriggers(doc, null, ReadOperation.Load);
-						if (document == null)
-							continue;
 
-						addDoc(document.ToJson());
-						returnedDocs = true;
-					}
-					if (returnedDocs || docCount == 0)
-						break;
-					start += docCount;
-				}
-			});
+		    var canPerformRapidPagination = string.IsNullOrEmpty(matches) && string.IsNullOrEmpty(exclude);
+
+		    TransactionalStorage.Batch(
+		        actions =>
+		        {
+		            var docsToSkip = canPerformRapidPagination ? 0 : start;
+		            var addedDocs = 0;
+		            var matchedDocs = 0;
+		            int docCount;
+		            start = canPerformRapidPagination ? start : 0;
+
+		            do
+		            {
+		                docCount = 0;
+		                var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
+		                var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
+
+		                foreach (var doc in docs)
+		                {
+		                    docCount++;
+		                    var keyTest = doc.Key.Substring(idPrefix.Length);
+
+		                    if (!WildcardMatcher.Matches(matches, keyTest) || WildcardMatcher.MatchesExclusion(exclude, keyTest)) 
+                                continue;
+
+		                    DocumentRetriever.EnsureIdInMetadata(doc);
+		                    var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+
+		                    var document = nonAuthoritativeInformationBehavior != null ? nonAuthoritativeInformationBehavior(doc) : doc;
+		                    document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
+		                    if (document == null) 
+                                continue;
+
+		                    matchedDocs++;
+
+		                    if (matchedDocs <= docsToSkip) 
+                                continue;
+
+		                    addDoc(document.ToJson());
+		                    addedDocs++;
+
+		                    if (addedDocs >= pageSize) 
+                                break;
+		                }
+
+		                start += pageSize;
+		            }
+		            while (docCount > 0 && addedDocs < pageSize);
+		        });
 		}
 
 		public RavenJArray GetDocuments(int start, int pageSize, Etag etag)
@@ -2178,11 +2199,11 @@ namespace Raven.Database
 		}
 
 		private PatchResultData ApplyPatchInternal(string docId, Etag etag,
-												   TransactionInformation transactionInformation,
-												   Func<RavenJObject, int, RavenJObject> patcher,
-												   Func<RavenJObject> patcherIfMissing,
-												   Func<IList<JsonDocument>> getDocsCreatedInPatch,
-												   bool debugMode)
+									   TransactionInformation transactionInformation,
+									   Func<RavenJObject, int, RavenJObject> patcher,
+									   Func<RavenJObject> patcherIfMissing,
+									   Func<IList<JsonDocument>> getDocsCreatedInPatch,
+									   bool debugMode)
 		{
 			if (docId == null) throw new ArgumentNullException("docId");
 			docId = docId.Trim();
@@ -2192,73 +2213,73 @@ namespace Raven.Database
 			};
 
 			bool shouldRetry = false;
-			int[] retries = { 128 };
+			int retries = 128;
 			Random rand = null;
 			do
 			{
-				TransactionalStorage.Batch(actions =>
-				{
-					var doc = actions.Documents.DocumentByKey(docId, transactionInformation);
-					if (etag != null && doc != null && doc.Etag != etag)
-					{
-						Debug.Assert(doc.Etag != null);
-						throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
-						{
-							ActualETag = doc.Etag,
-							ExpectedETag = etag,
-						};
-					}
+				var doc = Get(docId, transactionInformation);
 
-					var jsonDoc = (doc != null ? patcher(doc.ToJson(), doc.SerializedSizeOnDisk) : patcherIfMissing());
-					if (jsonDoc == null)
+				if (etag != null && doc != null && doc.Etag != etag)
+				{
+					Debug.Assert(doc.Etag != null);
+					throw new ConcurrencyException("Could not patch document '" + docId + "' because non current etag was used")
 					{
-						result.PatchResult = PatchResult.DocumentDoesNotExists;
+						ActualETag = doc.Etag,
+						ExpectedETag = etag,
+					};
+				}
+
+				var jsonDoc = (doc != null ? patcher(doc.ToJson(), doc.SerializedSizeOnDisk) : patcherIfMissing());
+				if (jsonDoc == null)
+				{
+					result.PatchResult = PatchResult.DocumentDoesNotExists;
+				}
+				else
+				{
+					if (debugMode)
+					{
+						result.Document = jsonDoc;
+						result.PatchResult = PatchResult.Tested;
 					}
 					else
 					{
-						if (debugMode)
+						try
 						{
-							result.Document = jsonDoc;
-							result.PatchResult = PatchResult.Tested;
-						}
-						else
-						{
-							try
-							{
-								Put(doc == null ? docId : doc.Key, (doc == null ? null : doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
+							Put(doc == null ? docId : doc.Key, (doc == null ? null : doc.Etag), jsonDoc, jsonDoc.Value<RavenJObject>(Constants.Metadata), transactionInformation);
 
-								var docsCreatedInPatch = getDocsCreatedInPatch();
-								if (docsCreatedInPatch != null && docsCreatedInPatch.Count > 0)
-								{
-									foreach (var docFromPatch in docsCreatedInPatch)
-									{
-										Put(docFromPatch.Key, docFromPatch.Etag, docFromPatch.DataAsJson,
-											docFromPatch.Metadata, transactionInformation);
-									}
-								}
-							}
-							catch (ConcurrencyException)
+							var docsCreatedInPatch = getDocsCreatedInPatch();
+							if (docsCreatedInPatch != null && docsCreatedInPatch.Count > 0)
 							{
-								if (actions.IsNested)
-									throw;
-								if (retries[0]-- > 0)
+								foreach (var docFromPatch in docsCreatedInPatch)
 								{
-									shouldRetry = true;
-									if (rand == null)
-										rand = new Random();
-									Thread.Sleep(rand.Next(5, Math.Max(retries[0] * 2, 10)));
-									return;
+									Put(docFromPatch.Key, docFromPatch.Etag, docFromPatch.DataAsJson,
+										docFromPatch.Metadata, transactionInformation);
 								}
-								throw;
 							}
-							result.PatchResult = PatchResult.Patched;
 						}
+						catch (ConcurrencyException)
+						{
+							if (retries-- > 0)
+							{
+								shouldRetry = true;
+								if (rand == null)
+									rand = new Random();
+								Thread.Sleep(rand.Next(5, Math.Max(retries * 2, 10)));
+								continue;
+							}
+
+							throw;
+						}
+
+						result.PatchResult = PatchResult.Patched;
 					}
-					if (shouldRetry == false)
-						workContext.ShouldNotifyAboutWork(() => "PATCH " + docId);
-				});
+				}
+
+				if (shouldRetry == false)
+					workContext.ShouldNotifyAboutWork(() => "PATCH " + docId);
 
 			} while (shouldRetry);
+
 			return result;
 		}
 
@@ -2740,9 +2761,13 @@ namespace Raven.Database
 			PendingTaskAndState value;
 			if (pendingTasks.TryGetValue(id, out value))
 			{
-				if (value.Task.IsFaulted || value.Task.IsCanceled)
-					value.Task.Wait(); //throws
-				return value.State;
+			    if (value.Task.IsFaulted || value.Task.IsCanceled)
+			    {
+			        var ex = value.Task.Exception.ExtractSingleInnerException();
+			        throw ex;
+			    }
+
+			    return value.State;
 			}
 			return null;
 		}

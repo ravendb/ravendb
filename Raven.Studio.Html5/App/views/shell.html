@@ -1,0 +1,94 @@
+﻿<div>
+    <div class="navbar navbar-fixed-top navbar-default">
+        <div class="navbar-inner">
+            <ul class="nav navbar-nav" data-bind="foreach: router.navigationModel">
+                <li data-bind="css: { active: isActive }">
+                    <a data-bind="attr: { href: hash }, html: title"></a>
+                </li>
+            </ul>
+            <ul class="nav navbar-nav">
+                <li class="dropdown">
+                    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                        <i class="icon-plus"></i> New <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a href="#" data-bind="click: newDocument">
+                                <i class="icon-file"></i>
+                                <span>Document</span>
+                                <span class="text-muted keyboard-shortcut">Ctrl+Alt+N</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#"><i class="icon-bolt"></i> Index</a>
+                        </li>
+                        <li>
+                            <a href="#"><i class="icon-search"></i> Transformer</a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+            <form class="navbar-form pull-left"> <!--data-bind="submit: search"-->
+                <input type="text" class="form-control col-md-8" placeholder="Go to document">
+            </form>
+            <ul class="nav navbar-nav pull-right">
+                <li>
+                    <a style="padding-right: 0; display: inline-block;" href="#">Databases &gt;</a>
+                </li>
+                <li class="dropdown">
+                    <a class="dropdown-toggle" data-bind="with: activeDatabase" data-toggle="dropdown" href="#" style="padding-left: 5px;">
+                        <span data-bind="text: name"></span> 
+						<b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu" data-bind="foreach: databases">
+                        <li>
+                            <a href="#" data-bind="text: name, click: activate"></a>
+                        </li>
+                    </ul>
+                </li>
+                <li><a href="#" title="edit database settings"><i class="icon-cogs"></i></a></li>
+                <li>
+                    <a class="navbar-brand" href="#">
+                        <i class="icon-home"></i>
+                        <span>RavenDB</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <!--Alerts container-->
+    <div class="studio-alerts" data-bind="with: currentAlert">
+        <div class="alert alert-dismissable fade in" data-bind="attr: { id: id }, css: { 'alert-info': type === 0, 'alert-success': type === 1, 'alert-warning': type === 2, 'alert-danger': type === 3 }">
+            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+            <strong data-bind="visible: type === 3">Oh snap!</strong> 
+            <span data-bind="text: title"></span>
+            <a class="alert-link" href="javascript:void(0)" data-bind="visible: details">Details</a>
+        </div>
+    </div>
+    
+    <div class="page-host" data-bind="router: { transition:'entrance', cacheViews:false }"></div>
+</div>
+
+<footer>
+    <div class="navbar navbar-fixed-bottom navbar-inverse" data-bind="with: activeDatabase">
+        <div class="navbar-inner">
+            <ul class="nav navbar-nav">
+                <li><a class="navbar-brand" href="#/status">Stats</a></li>
+                <!-- ko with: statistics -->
+                <li><a href="#documents" data-bind="text: CountOfDocuments + ' documents'"></a></li>
+                <li><a href="#documents" data-bind="text: CountOfIndexes + ' indexes'"></a></li>
+                <li><a href="#documents" data-bind="text: StaleIndexes.length + ' stale'"></a></li>
+                <li><a href="#documents" data-bind="text: Errors.length + ' errors'"></a></li>
+                <li><a href="#documents" data-bind="text: Triggers.length + ' triggers'"></a></li>
+                <li><a href="#documents" data-bind="text: ApproximateTaskCount + ' tasks'"></a></li>
+                <!-- /ko -->
+            </ul>
+            <ul class="nav navbar-nav pull-right">
+                <li><a>AGPL - Open Source</a></li>
+                <li><a>Server Build #30</a></li>
+                <li><a>Client Build #30</a></li>
+            </ul>
+        </div>
+    </div>
+</footer>

@@ -1,0 +1,26 @@
+﻿<div class="documents-page">
+    <div class="row">
+        <div class="col-md-2">
+            <br />
+            <ul class="nav nav-pills nav-stacked document-collections affix" data-bind="foreach: collections">
+                <li data-bind="event: { mousedown: $parent.activateCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllCollections">
+                    <a href="javascript:void(0)"> 
+                        <div class="collection-color-strip" data-bind="css: colorClass"></div>
+                        <span data-bind="text: name"></span>
+                        <span class="text-muted" data-bind="text: '(' + documentCount() + ')'"></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="col-md-10">
+            <br />
+            <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: currentCollectionPagedItems, collections: collections, gridSelector: '#documentsGrid', height: 500 }"></div>
+        </div>
+    </div>
+</div>
+
+<div id="collections-context-menu">
+    <ul class="dropdown-menu" role="menu">
+        <li data-bind="click: $root.deleteCollection"><a tabindex="-1" href="#">Delete</a></li>
+    </ul>
+</div>

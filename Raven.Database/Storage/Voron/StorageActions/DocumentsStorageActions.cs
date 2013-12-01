@@ -370,7 +370,7 @@
 
 			if (!checkForUpdates && tableStorage.Documents.Contains(Snapshot, CreateKey(key), writeBatch))
 			{
-				throw new ApplicationException(string.Format("InsertDocument() - checkForUpdates is false and document with key = '{0}' already exists", key));
+				throw new ConcurrencyException(string.Format("InsertDocument() - checkForUpdates is false and document with key = '{0}' already exists", key));
 			}
 
 			return AddDocument(key, null, data, metadata);

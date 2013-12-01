@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
+
 using Raven.Json.Linq;
-using Raven.Tests.Bugs;
+
 using Xunit;
 using Xunit.Extensions;
 
@@ -12,7 +9,190 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_1379 : RavenTest
 	{
-		[Theory]
+	    [Theory]
+	    [InlineData("voron")]
+	    [InlineData("esent")]
+	    public void PagingWithoutFilters(string requestedStorage)
+	    {
+	        using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
+	        {
+	            documentStore.DocumentDatabase.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
+	            documentStore.DocumentDatabase.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
+
+                var fetchedDocuments = documentStore
+                    .DocumentDatabase
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, 0, 4)
+                    .ToList();
+
+                var foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
+                                                   .Select(doc => doc.Value<string>("@id"))
+                                                   .ToList();
+
+                Assert.Equal(4, foundDocKeys.Count);
+                Assert.Contains("FooBar1", foundDocKeys);
+                Assert.Contains("FooBar11", foundDocKeys);
+                Assert.Contains("FooBar111", foundDocKeys);
+                Assert.Contains("FooBar12", foundDocKeys);
+
+                fetchedDocuments = documentStore
+                    .DocumentDatabase
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, 4, 4)
+                    .ToList();
+
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
+                                               .Select(doc => doc.Value<string>("@id"))
+                                               .ToList();
+
+                Assert.Equal(4, foundDocKeys.Count);
+                Assert.Contains("FooBar21", foundDocKeys);
+                Assert.Contains("FooBar3", foundDocKeys);
+                Assert.Contains("FooBar5", foundDocKeys);
+                Assert.Contains("FooBar6", foundDocKeys);
+
+                fetchedDocuments = documentStore
+                    .DocumentDatabase
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, 8, 4)
+                    .ToList();
+
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
+                                               .Select(doc => doc.Value<string>("@id"))
+                                               .ToList();
+
+                Assert.Equal(1, foundDocKeys.Count);
+                Assert.Contains("FooBar8", foundDocKeys);
+	        }
+	    }
+
+        [Theory]
+        [InlineData("voron")]
+        [InlineData("esent")]
+        public void PagingWithExcludes(string requestedStorage)
+        {
+            using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
+            {
+                documentStore.DocumentDatabase.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
+
+                var fetchedDocuments = documentStore
+                    .DocumentDatabase
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 0, 2)
+                    .ToList();
+
+                var foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
+                                                   .Select(doc => doc.Value<string>("@id"))
+                                                   .ToList();
+
+                Assert.Equal(2, foundDocKeys.Count);
+                Assert.Contains("FooBar21", foundDocKeys);
+                Assert.Contains("FooBar3", foundDocKeys);
+
+                fetchedDocuments = documentStore
+                    .DocumentDatabase
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 2, 2)
+                    .ToList();
+
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
+                                               .Select(doc => doc.Value<string>("@id"))
+                                               .ToList();
+
+                Assert.Equal(2, foundDocKeys.Count);
+                Assert.Contains("FooBar5", foundDocKeys);
+                Assert.Contains("FooBar6", foundDocKeys);
+
+                fetchedDocuments = documentStore
+                    .DocumentDatabase
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 4, 2)
+                    .ToList();
+
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
+                                               .Select(doc => doc.Value<string>("@id"))
+                                               .ToList();
+
+                Assert.Equal(1, foundDocKeys.Count);
+                Assert.Contains("FooBar8", foundDocKeys);
+            }
+        }
+
+        [Theory]
+        [InlineData("voron")]
+        [InlineData("esent")]
+        public void PagingWithMatches(string requestedStorage)
+        {
+            using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
+            {
+                documentStore.DocumentDatabase.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
+
+                var fetchedDocuments = documentStore
+                    .DocumentDatabase
+                    .GetDocumentsWithIdStartingWith("FooBar", "1*", string.Empty, 0, 2)
+                    .ToList();
+
+                var foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
+                                                   .Select(doc => doc.Value<string>("@id"))
+                                                   .ToList();
+
+                Assert.Equal(2, foundDocKeys.Count);
+                Assert.Contains("FooBar1", foundDocKeys);
+                Assert.Contains("FooBar11", foundDocKeys);
+
+                fetchedDocuments = documentStore
+                    .DocumentDatabase
+                    .GetDocumentsWithIdStartingWith("FooBar", "1*", string.Empty, 2, 1)
+                    .ToList();
+
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
+                                               .Select(doc => doc.Value<string>("@id"))
+                                               .ToList();
+
+                Assert.Equal(1, foundDocKeys.Count);
+                Assert.Contains("FooBar111", foundDocKeys);
+
+                fetchedDocuments = documentStore
+                    .DocumentDatabase
+                    .GetDocumentsWithIdStartingWith("FooBar", "1*", string.Empty, 3, 10)
+                    .ToList();
+
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
+                                               .Select(doc => doc.Value<string>("@id"))
+                                               .ToList();
+
+                Assert.Equal(1, foundDocKeys.Count);
+                Assert.Contains("FooBar12", foundDocKeys);
+            }
+        }
+
+	    [Theory]
 		[InlineData("voron")]
 		[InlineData("esent")]
 		public void GetDocumentsWithIdStartingWith_Should_Not_Count_Excluded_Docs(string requestedStorage)
@@ -32,7 +212,7 @@ namespace Raven.Tests.Issues
 				documentStore.DocumentDatabase.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
 				documentStore.DocumentDatabase.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
 
-				var fetchedDocuments = documentStore.DocumentDatabase.GetDocumentsWithIdStartingWith("FooBar", String.Empty, "1*", 0, 4);
+				var fetchedDocuments = documentStore.DocumentDatabase.GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 0, 4);
 
 				var documentsList = fetchedDocuments.ToList();
 				var foundDocKeys = documentsList.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -65,7 +245,7 @@ namespace Raven.Tests.Issues
 				documentStore.DocumentDatabase.Put("FooBarHH", null, new RavenJObject(), new RavenJObject(), null);
 				documentStore.DocumentDatabase.Put("FooBarKK", null, new RavenJObject(), new RavenJObject(), null);
 
-				var fetchedDocuments = documentStore.DocumentDatabase.GetDocumentsWithIdStartingWith("FooBar", String.Empty, "*A", 2, 4);
+				var fetchedDocuments = documentStore.DocumentDatabase.GetDocumentsWithIdStartingWith("FooBar", string.Empty, "*A", 2, 4);
 
 				var documentsList = fetchedDocuments.ToList();
 				var foundDocKeys = documentsList.Select(doc => doc.Value<RavenJObject>("@metadata"))

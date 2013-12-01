@@ -1,0 +1,39 @@
+﻿<div class="ko-grid" data-toggle="context" data-target="#gridContextMenu" tabindex="-1">
+    <div data-bind="foreach: columns" class="ko-grid-column-container">
+        <!-- ko if: $index() === 0 -->
+        <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }">
+            <img src="content/images/unchecked.png" />
+        </div>
+        <!-- /ko -->
+        <!-- ko if: $index() > 0 -->
+        <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }, text: name, attr: { title: name }"></div>
+        <!-- /ko -->
+    </div>
+    <div class="ko-grid-viewport-container" data-bind="style: { height: viewportHeight() + 'px' }">
+        <div class="ko-grid-viewport" data-bind="foreach: recycleRows, style: { height: virtualHeight() + 'px' }">
+            <div class="ko-grid-row" data-bind="foreach: $parent.columns, visible: isInUse, style: { height: $parent.rowHeight + 'px', top: top() + 'px' }, css: { even: rowIndex() % 2 === 0, checked: isChecked }">
+                <div class="ko-grid-cell" data-bind="style: { width: width() + 'px' }, attr: { title: $parent.cellMap[name] }">
+                    <!-- ko if: $index() === 0 -->
+                    <img data-bind="click: function(sender, e) { $parents[1].toggleRowChecked($parent, e.shiftKey) }, attr: { src: $parent.isChecked() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
+                    <!-- /ko -->
+                    <!-- ko if: $index() === 1 -->
+                    <span class="collection-color-strip" data-bind="css: $parent.collectionClass"></span>
+                    <a href="#" data-bind="attr: { href: $parent.editUrl }"><span data-bind="text: $parent.cellMap[name]"></span></a>
+                    <!-- /ko -->
+                    <!-- ko if: $index() > 1 -->
+                    <span data-bind="text: $parent.cellMap[name]"></span>
+                    <!-- /ko -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="gridContextMenu">
+    <ul class="dropdown-menu" role="menu">
+        <li><a tabindex="-1" href="javascript:void(0)" data-bind="click: copySelectedDocs, text: selectedIndices().length === 1 ? 'Copy Document' : 'Copy Documents'"></a></li>
+        <li><a tabindex="-1" href="javascript:void(0)" data-bind="click: copySelectedDocIds, text: selectedIndices().length === 1 ? 'Copy ID' : 'Copy IDs'"></a></li>
+        <li class="divider"></li>
+        <li><a tabindex="-1" href="javascript:void(0)" data-bind="click: deleteSelectedDocs">Delete</a></li>
+    </ul>
+</div>

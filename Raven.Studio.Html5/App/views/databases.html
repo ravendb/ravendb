@@ -1,0 +1,25 @@
+﻿<ul class="breadcrumb">
+    <li>
+        <h3>
+            <!--<i class="icon-sign-blank"></i>-->
+            <a href="#databases">
+                Databases
+            </a>
+        </h3>
+    </li>
+</ul>
+
+<div class="btn-toolbar">
+    <div class="btn-group">
+        <button type="button" class="btn btn-primary" data-bind="click: newDatabase"><i class="icon-plus"></i> New Database</button>
+    </div>
+</div>
+
+<div class="databases-container" data-bind="foreach: databases">
+    <div class="database" data-bind="click: function () { $root.selectDatabase($data); return true; }, css: { selected: isSelected }">
+        <a data-bind="text: name, attr: { href: $root.getDocumentsUrl($data) }"></a>
+        <br />
+        <span class="text-muted" data-bind="style: { visibility: statistics() ? 'visible':'hidden' }, text: docCount() + ' documents'"></span>
+    </div>
+</div>
+

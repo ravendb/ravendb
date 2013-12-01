@@ -1,0 +1,15 @@
+﻿<div class="messageBox">
+    <div class="modal-header">
+        <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">Sure?</h4>
+    </div>
+    <div class="modal-body" data-bind="with: collection">
+        <span>You're deleting </span>
+        <strong data-bind="text: name"></strong>
+        <strong data-bind="visible: documentCount() > 1, text: '(' + documentCount() + ' docs)'"></strong>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-bind="click: cancel">Nevermind</button>
+        <button type="button" class="btn btn-primary" data-bind="click: deleteCollection">Yep, delete</button>
+    </div>
+</div>
