@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-﻿using System;
+﻿﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -147,5 +146,4 @@ namespace Performance.Comparison
         }
 
     }
->>>>>>> a43236fd38b099093fe6eff78274f768f7603db0
 }
