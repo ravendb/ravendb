@@ -8,7 +8,7 @@ class deleteDocumentsCommand extends commandBase {
 
     execute(): JQueryPromise<any> {
         var deleteTask = this.ravenDb.deleteDocuments(this.docIds);
-
+        
         var docCount = this.docIds.length;
         var alertInfoTitle = docCount > 1 ? "Deleting " + docCount + "docs..." : "Deleting " + this.docIds[0];
         this.reportInfo(alertInfoTitle);

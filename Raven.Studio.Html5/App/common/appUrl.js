@@ -31,6 +31,11 @@ define(["require", "exports", "models/database", "common/raven", "common/pagedLi
             return "#status?" + appUrl.getEncodedDbPart(db);
         };
 
+        appUrl.forSettings = function (db) {
+            if (typeof db === "undefined") { db = raven.activeDatabase(); }
+            return "#settings? " + appUrl.getEncodedDbPart(db);
+        };
+
         appUrl.forDocuments = function (collection, db) {
             if (typeof db === "undefined") { db = raven.activeDatabase(); }
             var databasePart = appUrl.getEncodedDbPart(db);
@@ -69,6 +74,9 @@ define(["require", "exports", "models/database", "common/raven", "common/pagedLi
             }),
             status: ko.computed(function () {
                 return appUrl.forStatus();
+            }),
+            settings: ko.computed(function () {
+                return appUrl.forSettings();
             })
         };
         return appUrl;

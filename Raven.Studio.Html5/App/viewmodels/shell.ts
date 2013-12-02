@@ -24,6 +24,8 @@ class shell {
 	currentAlert = ko.observable<alertArgs>();
     queuedAlerts = ko.observableArray<alertArgs>();
     databasesLoadedTask: JQueryPromise<any>;
+    buildVersion = ko.observable<buildVersionDto>();
+    licenseStatus = ko.observable<licenseStatusDto>();
 
 	constructor() {
 		this.ravenDb = new raven();
@@ -51,14 +53,14 @@ class shell {
         NProgress.set(.8);
 
 		router.map([
-			{ route: ['', 'databases'],	title: 'Databases',		moduleId: 'viewmodels/databases',		nav: false },
-            { route: 'documents',		title: 'Documents',		moduleId: 'viewmodels/documents',		nav: true,	hash: appUrl.forCurrentDatabase().documents },
-			{ route: 'indexes',			title: 'Indexes',		moduleId: 'viewmodels/indexes',			nav: true },
-			{ route: 'query',			title: 'Query',			moduleId: 'viewmodels/query',			nav: true },
-			{ route: 'tasks',			title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true },
-			{ route: 'settings',		title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true },
-            { route: 'status*details',	title: 'Status',		moduleId: 'viewmodels/status',			nav: true,	hash: appUrl.forCurrentDatabase().status },
-			{ route: 'edit',			title: 'Edit Document', moduleId: 'viewmodels/editDocument',	nav: false }
+			{ route: ['', 'databases'],	    title: 'Databases',		moduleId: 'viewmodels/databases',		nav: false },
+            { route: 'documents',		    title: 'Documents',		moduleId: 'viewmodels/documents',		nav: true,	hash: appUrl.forCurrentDatabase().documents },
+			{ route: 'indexes',			    title: 'Indexes',		moduleId: 'viewmodels/indexes',			nav: true },
+			{ route: 'query',			    title: 'Query',			moduleId: 'viewmodels/query',			nav: true },
+			{ route: 'tasks',			    title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true },
+			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true, hash: appUrl.forCurrentDatabase().settings },
+            { route: 'status*details',	    title: 'Status',		moduleId: 'viewmodels/status',			nav: true,	hash: appUrl.forCurrentDatabase().status },
+			{ route: 'edit',			    title: 'Edit Document', moduleId: 'viewmodels/editDocument',	nav: false }
         ]).buildNavigationModel();
 
         router.isNavigating.subscribe(isNavigating => {
@@ -84,16 +86,20 @@ class shell {
 			.fail(result => this.handleRavenConnectionFailure(result))
 			.done(results => {
 				this.databasesLoaded(results);
-				router.activate();
+                router.activate();
+                this.fetchBuildVersion();
+                this.fetchLicenseStatus();
 			});
 	}
 
-	handleRavenConnectionFailure(result) {
+    handleRavenConnectionFailure(result) {
+        NProgress.done();
 		sys.log("Unable to connect to Raven.", result);
-		var tryAgain = 'Try again';
+        var tryAgain = 'Try again';
 		var messageBoxResultPromise = app.showMessage("Couldn't connect to Raven. Details in the browser console.", ":-(", [tryAgain]);
 		messageBoxResultPromise.done(messageBoxResult => {
-			if (messageBoxResult === tryAgain) {
+            if (messageBoxResult === tryAgain) {
+                NProgress.start();
 				this.connectToRavenServer();
 			}
 		});
@@ -144,6 +150,18 @@ class shell {
                 .databaseStats(db.name)
                 .done(result => db.statistics(result));
         }
+    }
+
+    fetchBuildVersion() {
+        this.ravenDb
+            .buildVersion()
+            .done(result => this.buildVersion(result));
+    }
+
+    fetchLicenseStatus() {
+        this.ravenDb
+            .licenseStatus()
+            .done(result => this.licenseStatus(result));
     }
 }
 

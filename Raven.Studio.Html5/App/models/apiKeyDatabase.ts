@@ -1,12 +1,12 @@
 class apiKeyDatabase {
-    name = ko.observable<string>();
+    tenantId = ko.observable<string>();
     admin = ko.observable<boolean>();
     readOnly = ko.observable<boolean>();
 
     constructor(dto: apiKeyDatabaseDto) {
-        this.name(dto.name);
-        this.admin(dto.admin);
-        this.readOnly(dto.readOnly);
+        this.tenantId(dto.TenantId);
+        this.admin(dto.Admin);
+        this.readOnly(dto.ReadOnly);
     }
 }
 

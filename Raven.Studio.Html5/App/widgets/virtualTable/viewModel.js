@@ -9,8 +9,8 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
     var collection = __collection__;
     var database = __database__;
     var pagedResultSet = __pagedResultSet__;
-    var deleteDocuments = __deleteDocuments__;
-    var copyDocuments = __copyDocuments__;
+    var deleteDocuments = "viewmodels/deleteDocuments";
+    var copyDocuments = "viewmodels/copyDocuments";
     var app = __app__;
     var row = __row__;
     var column = __column__;

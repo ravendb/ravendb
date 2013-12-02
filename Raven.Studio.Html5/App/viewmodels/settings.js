@@ -1,44 +1,35 @@
-define(["require", "exports", "common/raven", "models/apiKey"], function(require, exports, __raven__, __apiKey__) {
+define(["require", "exports", "plugins/router", "common/raven"], function(require, exports, __durandalRouter__, __raven__) {
+    var durandalRouter = __durandalRouter__;
     var raven = __raven__;
-    var apiKey = __apiKey__;
 
     var settings = (function () {
         function settings() {
+            var _this = this;
+            this.displayName = "status";
+            this.router = null;
             this.activeDatabase = raven.activeDatabase;
-            this.isShowingApiKeys = ko.observable(true);
-            this.apiKeys = ko.observableArray();
-            // Some temporary dummy data as placeholder until we're ready to fetch from server.
-            var dummyApiKeyDto = {
-                name: "dummy API key",
-                enabled: true,
-                secret: "6JIAgXI6tzP",
-                fullApiKey: "dummyfoo/6JIAgXI6tzP",
-                connectionString: "Url = http://localhost:8080/; ApiKey = dummyfoo/6JIAgXI6tzP; Database = ",
-                directLink: "http://localhost:8080/raven/studio.html#/home?api-key=dummyfoo/6JIAgXI6tzP",
-                databases: [
-                    { name: "dummy", admin: true, readOnly: false },
-                    { name: "foobar", admin: false, readOnly: true }
-                ]
-            };
-            this.apiKeys.push(new apiKey(dummyApiKeyDto, this.activeDatabase().name));
+            this.isOnSystemDatabase = ko.computed(function () {
+                return _this.activeDatabase() && _this.activeDatabase().isSystem;
+            });
+            this.isOnUserDatabase = ko.computed(function () {
+                return _this.activeDatabase() && !_this.isOnSystemDatabase();
+            });
+
+            this.router = durandalRouter.createChildRouter().map([
+                { route: 'settings/apiKeys', moduleId: 'viewModels/apiKeys', title: 'API Keys', type: 'intro', nav: this.isOnSystemDatabase },
+                { route: 'settings/windowsAuth', moduleId: 'viewModels/windowsAuth', title: 'Windows Authentication', type: 'intro', nav: this.isOnSystemDatabase },
+                { route: 'settings/databaseSettings', moduleId: 'viewModels/databaseSettings', title: 'Database Settings', type: 'intro', nav: this.isOnUserDatabase },
+                { route: 'settings/periodicBackup', moduleId: 'viewModels/periodicBackup', title: 'Periodic Backup', type: 'intro', nav: this.isOnUserDatabase }
+            ]).buildNavigationModel();
         }
-        settings.prototype.saveChanges = function () {
-        };
-
-        settings.prototype.showApiKeys = function () {
-            this.isShowingApiKeys(true);
-        };
-
-        settings.prototype.showWindowsAuth = function () {
-            this.isShowingApiKeys(false);
-        };
-
-        settings.prototype.createNewApiKey = function () {
-            this.apiKeys.unshift(apiKey.empty(this.activeDatabase().name));
-        };
-
-        settings.prototype.removeApiKey = function (key) {
-            this.apiKeys.remove(key);
+        settings.prototype.activate = function (args) {
+            //if (this.activeDatabase()) {
+            //    if (this.activeDatabase().isSystem) {
+            //        this.router.navigate("settings/apiKeys");
+            //    } else {
+            //        this.router.navigate("settings/databaseSettings");
+            //    }
+            //}
         };
         return settings;
     })();

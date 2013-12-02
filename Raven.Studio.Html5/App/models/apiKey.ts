@@ -5,35 +5,50 @@ class apiKey {
 
     name = ko.observable<string>();
     secret = ko.observable<string>();
-    fullApiKey = ko.observable<string>();
-    connectionString = ko.observable<string>();
-    directLink = ko.observable<string>();
+    fullApiKey: KnockoutComputed<string>;
+    connectionString: KnockoutComputed<string>;
+    directLink: KnockoutComputed<string>;
     enabled = ko.observable<boolean>();
     databases = ko.observableArray<apiKeyDatabase>();
 
-    constructor(dto: apiKeyDto, private databaseName: string) {
-        this.name(dto.name);
-        this.secret(dto.secret);
-        this.connectionString(dto.connectionString);
-        this.directLink(dto.directLink);
-        this.enabled(dto.enabled);
-        this.databases(dto.databases.map(d => new apiKeyDatabase(d)));
-        this.fullApiKey(dto.fullApiKey);
+    constructor(dto: apiKeyDto) {
+        this.name(dto.Name);
+        this.secret(dto.Secret);
+        this.enabled(dto.Enabled);
+        this.databases(dto.Databases.map(d => new apiKeyDatabase(d)));
 
-        this.name.subscribe(newName => this.onNameOrSecretChanged(newName, this.secret()));
-        this.secret.subscribe(newSecret => this.onNameOrSecretChanged(this.name(), newSecret));
+        this.fullApiKey = ko.computed(() => {
+            if (!this.name() || !this.secret()) {
+                return "Requires name and secret";
+            }
+
+            return this.name() + "/" + this.secret();
+        });
+
+        this.connectionString = ko.computed(() => {
+            if (!this.fullApiKey()) {
+                return "Requires name and secret";
+            }
+
+            return "Url = " + appUrl.forServer() + "; ApiKey = " + this.fullApiKey() + "; Database = "
+        });
+
+        this.directLink = ko.computed(() => {
+            if (!this.fullApiKey()) {
+                return "Requires name and secret";
+            }
+
+            return appUrl.forServer() + "/raven/studio.html#/home?api-key=" + this.fullApiKey();
+        });
     }
 
-    static empty(databaseName: string): apiKey {
+    static empty(): apiKey {
         return new apiKey({
-            connectionString: "",
-            databases: [],
-            directLink: "",
-            enabled: false,
-            fullApiKey: "",
-            name: "[new api key]",
-            secret: ""
-        }, databaseName);
+            Databases: [],
+            Enabled: false,
+            Name: "[new api key]",
+            Secret: ""
+        });
     }
 
     enable() {
@@ -56,20 +71,6 @@ class apiKey {
         var randomLength = Math.max(minimumLength, Math.random() * maxLength);
         var randomSecret = apiKey.randomString(randomLength, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
         this.secret(randomSecret);
-    }
-
-    onNameOrSecretChanged(name: string, secret: string) {
-        if (!name || !secret) {
-            var errorText = "Requires name and secret";
-            this.fullApiKey(errorText);
-            this.connectionString(errorText);
-            this.directLink(errorText);
-        } else {
-            var serverUrl = appUrl.forServer();
-            this.fullApiKey(name + "/" + secret);
-            this.connectionString("Url = " + serverUrl + "; ApiKey = " + this.fullApiKey() + "; Database = " + this.databaseName);
-            this.directLink(serverUrl + "/raven/studio.html#/home?api-key=" + this.fullApiKey());
-        }
     }
 
     private static randomString(length: number, chars: string) {

@@ -182,6 +182,14 @@ define(["require", "exports", "models/database", "models/collection", "models/co
             return id;
         };
 
+        raven.prototype.buildVersion = function () {
+            return this.fetch("/build/version", null);
+        };
+
+        raven.prototype.licenseStatus = function () {
+            return this.fetch("/license/status", null);
+        };
+
         raven.prototype.docsById = function (idOrPartialId, start, pageSize, metadataOnly, resultsSelector) {
             var url = "/docs/";
             var args = {

@@ -9,7 +9,7 @@ define(["require", "exports", "durandal/app", "durandal/system", "plugins/router
     var documentMetadata = __documentMetadata__;
     var saveDocumentCommand = __saveDocumentCommand__;
     var raven = __raven__;
-    var deleteDocuments = __deleteDocuments__;
+    var deleteDocuments = "viewmodels/deleteDocuments";
     var pagedList = __pagedList__;
     var appUrl = __appUrl__;
 

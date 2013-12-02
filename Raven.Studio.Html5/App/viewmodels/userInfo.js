@@ -1,4 +1,4 @@
-define(["require", "exports", "plugins/router", "models/collection", "models/database", "models/document", "viewmodels/deleteCollection", "common/raven", "common/pagedList"], function(require, exports, __router__, __collection__, __database__, __document__, __deleteCollection__, __raven__, __pagedList__) {
+define(["require", "exports", "plugins/router", "models/collection", "models/database", "models/document", "common/raven", "common/pagedList"], function(require, exports, __router__, __collection__, __database__, __document__, __raven__, __pagedList__) {
     
     
     
@@ -7,7 +7,7 @@ define(["require", "exports", "plugins/router", "models/collection", "models/dat
     var collection = __collection__;
     var database = __database__;
     var document = __document__;
-    var deleteCollection = __deleteCollection__;
+    
     var raven = __raven__;
     var pagedList = __pagedList__;
 

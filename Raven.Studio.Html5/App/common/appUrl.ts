@@ -8,7 +8,8 @@ class appUrl {
 	// Stores some computed values that update whenever the current database updates.
 	private static currentDbComputeds: computedAppUrls = {
 		documents: ko.computed(() => appUrl.forDocuments()),
-		status: ko.computed(() => appUrl.forStatus())
+        status: ko.computed(() => appUrl.forStatus()),
+        settings: ko.computed(() => appUrl.forSettings())
 	};
 	
     /**
@@ -31,7 +32,11 @@ class appUrl {
 	*/
 	static forStatus(db: database = raven.activeDatabase()): string {
 		return "#status?" + appUrl.getEncodedDbPart(db);
-	}
+    }
+
+    static forSettings(db: database = raven.activeDatabase()): string {
+        return "#settings? " + appUrl.getEncodedDbPart(db);
+    }
 
 	static forDocuments(collection?: string, db: database = raven.activeDatabase()): string {
 		var databasePart = appUrl.getEncodedDbPart(db);

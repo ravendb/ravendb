@@ -1,48 +1,38 @@
+import durandalRouter = require("plugins/router");
 import raven = require("common/raven");
-import apiKey = require("models/apiKey");
 
 class settings {
 
+    displayName = "status";
+    router = null;
     activeDatabase = raven.activeDatabase;
-    isShowingApiKeys = ko.observable(true);
-    apiKeys = ko.observableArray<apiKey>();
+    isOnSystemDatabase: KnockoutComputed<boolean>;
+    isOnUserDatabase: KnockoutComputed<boolean>;
 
     constructor() {
 
-        // Some temporary dummy data as placeholder until we're ready to fetch from server.
-        var dummyApiKeyDto = {
-            name: "dummyAPIkey",
-            enabled: true,
-            secret: "6JIAgXI6tzP",
-            fullApiKey: "dummyAPIkey/6JIAgXI6tzP",
-            connectionString: "Url = http://localhost:8080/; ApiKey = dummyAPIkey/6JIAgXI6tzP; Database = ",
-            directLink: "http://localhost:8080/raven/studio.html#/home?api-key=dummyAPIkey/6JIAgXI6tzP",
-            databases: [
-                { name: "dummy", admin: true, readOnly: false },
-                { name: "foobar", admin: false, readOnly: true }
-            ]
-        };
-        this.apiKeys.push(new apiKey(dummyApiKeyDto, this.activeDatabase().name));
+        this.isOnSystemDatabase = ko.computed(() => this.activeDatabase() && this.activeDatabase().isSystem);
+        this.isOnUserDatabase = ko.computed(() => this.activeDatabase() && !this.isOnSystemDatabase());
+
+        this.router = durandalRouter.createChildRouter()
+            .map([
+                { route: 'settings/apiKeys', moduleId: 'viewModels/apiKeys', title: 'API Keys', type: 'intro', nav: this.isOnSystemDatabase },
+                { route: 'settings/windowsAuth', moduleId: 'viewModels/windowsAuth', title: 'Windows Authentication', type: 'intro', nav: this.isOnSystemDatabase },
+                { route: 'settings/databaseSettings', moduleId: 'viewModels/databaseSettings', title: 'Database Settings', type: 'intro', nav: this.isOnUserDatabase },
+                { route: 'settings/periodicBackup', moduleId: 'viewModels/periodicBackup', title: 'Periodic Backup', type: 'intro', nav: this.isOnUserDatabase }
+            ])
+            .buildNavigationModel();
     }
 
-    saveChanges() {
-    }
-
-    showApiKeys() {
-        this.isShowingApiKeys(true);
-    }
-
-    showWindowsAuth() {
-        this.isShowingApiKeys(false);
-    }
-
-    createNewApiKey() {
-        this.apiKeys.unshift(apiKey.empty(this.activeDatabase().name));
-    }
-
-    removeApiKey(key: apiKey) {
-        this.apiKeys.remove(key);
+    activate(args) {
+        //if (this.activeDatabase()) {
+        //    if (this.activeDatabase().isSystem) {
+        //        this.router.navigate("settings/apiKeys");
+        //    } else {
+        //        this.router.navigate("settings/databaseSettings");
+        //    }
+        //}
     }
 }
 
-export = settings;
+export = settings;    

@@ -7,7 +7,7 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
     var collection = __collection__;
     var database = __database__;
     var document = __document__;
-    var deleteCollection = __deleteCollection__;
+    var deleteCollection = "viewmodels/deleteCollection";
     var raven = __raven__;
     var pagedList = __pagedList__;
 

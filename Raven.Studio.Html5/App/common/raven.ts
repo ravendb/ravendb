@@ -158,6 +158,15 @@ class raven {
         return id;
     }
 
+
+    public buildVersion(): JQueryPromise<buildVersionDto> {
+        return this.fetch("/build/version", null);
+    }
+
+    public licenseStatus(): JQueryPromise<licenseStatusDto> {
+        return this.fetch("/license/status", null);
+    }
+
     private docsById<T>(idOrPartialId: string, start: number, pageSize: number, metadataOnly: boolean, resultsSelector): JQueryPromise<T> {
 
         var url = "/docs/";

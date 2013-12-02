@@ -6,7 +6,7 @@ define(["require", "exports", "durandal/app", "plugins/router", "common/appUrl",
     var appUrl = __appUrl__;
     var raven = __raven__;
     var database = __database__;
-    var createDatabase = __createDatabase__;
+    var createDatabase = "viewmodels/createDatabase";
 
     var databases = (function () {
         function databases() {

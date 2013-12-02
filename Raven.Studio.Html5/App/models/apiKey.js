@@ -3,43 +3,50 @@ define(["require", "exports", "models/apiKeyDatabase", "common/appUrl"], functio
     var appUrl = __appUrl__;
 
     var apiKey = (function () {
-        function apiKey(dto, databaseName) {
+        function apiKey(dto) {
             var _this = this;
-            this.databaseName = databaseName;
             this.name = ko.observable();
             this.secret = ko.observable();
-            this.fullApiKey = ko.observable();
-            this.connectionString = ko.observable();
-            this.directLink = ko.observable();
             this.enabled = ko.observable();
             this.databases = ko.observableArray();
-            this.name(dto.name);
-            this.secret(dto.secret);
-            this.connectionString(dto.connectionString);
-            this.directLink(dto.directLink);
-            this.enabled(dto.enabled);
-            this.databases(dto.databases.map(function (d) {
+            this.name(dto.Name);
+            this.secret(dto.Secret);
+            this.enabled(dto.Enabled);
+            this.databases(dto.Databases.map(function (d) {
                 return new apiKeyDatabase(d);
             }));
-            this.fullApiKey(dto.fullApiKey);
 
-            this.name.subscribe(function (newName) {
-                return _this.onNameOrSecretChanged(newName, _this.secret());
+            this.fullApiKey = ko.computed(function () {
+                if (!_this.name() || !_this.secret()) {
+                    return "Requires name and secret";
+                }
+
+                return _this.name() + "/" + _this.secret();
             });
-            this.secret.subscribe(function (newSecret) {
-                return _this.onNameOrSecretChanged(_this.name(), newSecret);
+
+            this.connectionString = ko.computed(function () {
+                if (!_this.fullApiKey()) {
+                    return "Requires name and secret";
+                }
+
+                return "Url = " + appUrl.forServer() + "; ApiKey = " + _this.fullApiKey() + "; Database = ";
+            });
+
+            this.directLink = ko.computed(function () {
+                if (!_this.fullApiKey()) {
+                    return "Requires name and secret";
+                }
+
+                return appUrl.forServer() + "/raven/studio.html#/home?api-key=" + _this.fullApiKey();
             });
         }
-        apiKey.empty = function (databaseName) {
+        apiKey.empty = function () {
             return new apiKey({
-                connectionString: "",
-                databases: [],
-                directLink: "",
-                enabled: false,
-                fullApiKey: "",
-                name: "[new api key]",
-                secret: ""
-            }, databaseName);
+                Databases: [],
+                Enabled: false,
+                Name: "[new api key]",
+                Secret: ""
+            });
         };
 
         apiKey.prototype.enable = function () {
@@ -61,20 +68,6 @@ define(["require", "exports", "models/apiKeyDatabase", "common/appUrl"], functio
             var randomLength = Math.max(minimumLength, Math.random() * maxLength);
             var randomSecret = apiKey.randomString(randomLength, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
             this.secret(randomSecret);
-        };
-
-        apiKey.prototype.onNameOrSecretChanged = function (name, secret) {
-            if (!name || !secret) {
-                var errorText = "Requires name and secret";
-                this.fullApiKey(errorText);
-                this.connectionString(errorText);
-                this.directLink(errorText);
-            } else {
-                var serverUrl = appUrl.forServer();
-                this.fullApiKey(name + "/" + secret);
-                this.connectionString("Url = " + serverUrl + "; ApiKey = " + this.fullApiKey() + "; Database = " + this.databaseName);
-                this.directLink(serverUrl + "/raven/studio.html#/home?api-key=" + this.fullApiKey());
-            }
         };
 
         apiKey.randomString = function (length, chars) {

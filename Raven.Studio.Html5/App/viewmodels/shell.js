@@ -1,6 +1,6 @@
 /// <reference path="../../Scripts/typings/nprogress/nprogress.d.ts" />
 /// <reference path="../../Scripts/typings/bootstrap/bootstrap.d.ts" />
-define(["require", "exports", "plugins/router", "durandal/app", "durandal/system", "models/database", "common/raven", "models/document", "common/appUrl", "models/collection", "viewmodels/deleteDocuments", "common/dialogResult", "common/alertArgs", "common/alertType", "common/pagedList"], function(require, exports, __router__, __app__, __sys__, __database__, __raven__, __document__, __appUrl__, __collection__, __deleteDocuments__, __dialogResult__, __alertArgs__, __alertType__, __pagedList__) {
+define(["require", "exports", "plugins/router", "durandal/app", "durandal/system", "models/database", "common/raven", "models/document", "common/appUrl", "models/collection", "common/dialogResult", "common/alertArgs", "common/alertType", "common/pagedList"], function(require, exports, __router__, __app__, __sys__, __database__, __raven__, __document__, __appUrl__, __collection__, __dialogResult__, __alertArgs__, __alertType__, __pagedList__) {
     var router = __router__;
     var app = __app__;
     var sys = __sys__;
@@ -10,7 +10,7 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
     var document = __document__;
     var appUrl = __appUrl__;
     var collection = __collection__;
-    var deleteDocuments = __deleteDocuments__;
+    
     var dialogResult = __dialogResult__;
     var alertArgs = __alertArgs__;
     var alertType = __alertType__;
@@ -24,6 +24,8 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
             this.activeDatabase = ko.observable().subscribeTo("ActivateDatabase");
             this.currentAlert = ko.observable();
             this.queuedAlerts = ko.observableArray();
+            this.buildVersion = ko.observable();
+            this.licenseStatus = ko.observable();
             this.ravenDb = new raven();
             ko.postbox.subscribe("EditDocument", function (args) {
                 return _this.launchDocEditor(args.doc.getId(), args.docsList);
@@ -60,7 +62,7 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
                 { route: 'indexes', title: 'Indexes', moduleId: 'viewmodels/indexes', nav: true },
                 { route: 'query', title: 'Query', moduleId: 'viewmodels/query', nav: true },
                 { route: 'tasks', title: 'Tasks', moduleId: 'viewmodels/tasks', nav: true },
-                { route: 'settings', title: 'Settings', moduleId: 'viewmodels/settings', nav: true },
+                { route: 'settings*details', title: 'Settings', moduleId: 'viewmodels/settings', nav: true, hash: appUrl.forCurrentDatabase().settings },
                 { route: 'status*details', title: 'Status', moduleId: 'viewmodels/status', nav: true, hash: appUrl.forCurrentDatabase().status },
                 { route: 'edit', title: 'Edit Document', moduleId: 'viewmodels/editDocument', nav: false }
             ]).buildNavigationModel();
@@ -92,16 +94,20 @@ else
             }).done(function (results) {
                 _this.databasesLoaded(results);
                 router.activate();
+                _this.fetchBuildVersion();
+                _this.fetchLicenseStatus();
             });
         };
 
         shell.prototype.handleRavenConnectionFailure = function (result) {
             var _this = this;
+            NProgress.done();
             sys.log("Unable to connect to Raven.", result);
             var tryAgain = 'Try again';
             var messageBoxResultPromise = app.showMessage("Couldn't connect to Raven. Details in the browser console.", ":-(", [tryAgain]);
             messageBoxResultPromise.done(function (messageBoxResult) {
                 if (messageBoxResult === tryAgain) {
+                    NProgress.start();
                     _this.connectToRavenServer();
                 }
             });
@@ -163,6 +169,20 @@ else
                     return db.statistics(result);
                 });
             }
+        };
+
+        shell.prototype.fetchBuildVersion = function () {
+            var _this = this;
+            this.ravenDb.buildVersion().done(function (result) {
+                return _this.buildVersion(result);
+            });
+        };
+
+        shell.prototype.fetchLicenseStatus = function () {
+            var _this = this;
+            this.ravenDb.licenseStatus().done(function (result) {
+                return _this.licenseStatus(result);
+            });
         };
         return shell;
     })();

@@ -1,12 +1,12 @@
 define(["require", "exports"], function(require, exports) {
     var apiKeyDatabase = (function () {
         function apiKeyDatabase(dto) {
-            this.name = ko.observable();
+            this.tenantId = ko.observable();
             this.admin = ko.observable();
             this.readOnly = ko.observable();
-            this.name(dto.name);
-            this.admin(dto.admin);
-            this.readOnly(dto.readOnly);
+            this.tenantId(dto.TenantId);
+            this.admin(dto.Admin);
+            this.readOnly(dto.ReadOnly);
         }
         return apiKeyDatabase;
     })();

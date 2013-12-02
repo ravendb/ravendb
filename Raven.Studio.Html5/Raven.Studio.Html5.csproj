@@ -130,36 +130,45 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="App\commands\getApiKeysCommand.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
     <TypeScriptCompile Include="App\models\apiKeyDatabase.ts" />
-    <TypeScriptCompile Include="App\viewmodels\editDocument.ts" />
-    <TypeScriptCompile Include="App\viewmodels\shell.ts" />
-    <TypeScriptCompile Include="App\viewmodels\createDatabase.ts" />
+    <TypeScriptCompile Include="App\viewModels\apiKeys.ts" />
+    <TypeScriptCompile Include="App\viewModels\databaseSettings.ts" />
+    <TypeScriptCompile Include="App\viewModels\editDocument.ts" />
+    <TypeScriptCompile Include="App\viewModels\periodicBackup.ts" />
+    <TypeScriptCompile Include="App\viewModels\shell.ts" />
+    <TypeScriptCompile Include="App\viewModels\createDatabase.ts" />
     <TypeScriptCompile Include="App\commands\createDatabaseCommand.ts" />
     <Content Include="App\commands\createDatabaseCommand.js">
       <DependentUpon>createDatabaseCommand.ts</DependentUpon>
     </Content>
-    <TypeScriptCompile Include="App\viewmodels\copyDocuments.ts" />
+    <TypeScriptCompile Include="App\viewModels\copyDocuments.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
     <Content Include="App\common\nav.js">
       <DependentUpon>appUrl.ts</DependentUpon>
     </Content>
-    <Content Include="App\viewmodels\copyDocuments.js">
+    <Content Include="App\viewModels\copyDocuments.js">
       <DependentUpon>copyDocuments.ts</DependentUpon>
     </Content>
-    <Content Include="App\viewmodels\createDatabase.js">
+    <Content Include="App\viewModels\createDatabase.js">
       <DependentUpon>createDatabase.ts</DependentUpon>
     </Content>
-    <TypeScriptCompile Include="App\viewmodels\userInfo.ts" />
-    <TypeScriptCompile Include="App\viewmodels\statistics.ts" />
+    <TypeScriptCompile Include="App\viewModels\userInfo.ts" />
+    <TypeScriptCompile Include="App\viewModels\statistics.ts" />
+    <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\copyDocuments.html" />
     <Content Include="App\views\createDatabase.html" />
+    <Content Include="App\views\databaseSettings.html" />
     <Content Include="App\views\dialog.html" />
+    <Content Include="App\views\periodicBackup.html" />
     <Content Include="App\views\settings.html" />
     <Content Include="App\views\userInfo.html" />
+    <TypeScriptCompile Include="App\viewModels\windowsAuth.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\row.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
+    <Content Include="App\views\windowsAuth.html" />
     <Content Include="App\widgets\virtualTable\column.js">
       <DependentUpon>column.ts</DependentUpon>
     </Content>
@@ -1014,22 +1023,19 @@
     <TypeScriptCompile Include="App\models\collection.ts" />
     <TypeScriptCompile Include="App\models\collectionInfo.ts" />
     <TypeScriptCompile Include="App\models\database.ts" />
-    <TypeScriptCompile Include="App\viewmodels\indexes.ts" />
-    <TypeScriptCompile Include="App\viewmodels\query.ts" />
-    <TypeScriptCompile Include="App\viewmodels\settings.ts" />
-    <TypeScriptCompile Include="App\viewmodels\status.ts" />
-    <TypeScriptCompile Include="App\viewmodels\tasks.ts" />
+    <TypeScriptCompile Include="App\viewModels\indexes.ts" />
+    <TypeScriptCompile Include="App\viewModels\query.ts" />
+    <TypeScriptCompile Include="App\viewModels\settings.ts" />
+    <TypeScriptCompile Include="App\viewModels\status.ts" />
+    <TypeScriptCompile Include="App\viewModels\tasks.ts" />
     <TypeScriptCompile Include="App\models\documentMetadata.ts" />
     <TypeScriptCompile Include="App\models\document.ts" />
-    <TypeScriptCompile Include="App\viewmodels\documents.ts" />
-    <TypeScriptCompile Include="App\viewmodels\deleteDocuments.ts" />
-    <TypeScriptCompile Include="App\viewmodels\deleteCollection.ts" />
-    <TypeScriptCompile Include="App\viewmodels\databases.ts" />
-    <Content Include="App\viewmodels\databases.js">
+    <TypeScriptCompile Include="App\viewModels\documents.ts" />
+    <TypeScriptCompile Include="App\viewModels\deleteDocuments.ts" />
+    <TypeScriptCompile Include="App\viewModels\deleteCollection.ts" />
+    <TypeScriptCompile Include="App\viewModels\databases.ts" />
+    <Content Include="App\viewModels\databases.js">
       <DependentUpon>databases.ts</DependentUpon>
-    </Content>
-    <Content Include="App\viewmodels\deleteCollection.js">
-      <DependentUpon>deleteCollection.ts</DependentUpon>
     </Content>
     <Content Include="App\views\databases.html" />
     <Content Include="App\views\deleteCollection.html" />
