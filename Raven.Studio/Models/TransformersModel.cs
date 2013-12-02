@@ -19,6 +19,7 @@ namespace Raven.Studio.Models
 		public ObservableCollection<TransformerDefinition> Transformers { get; set; }
 		private string currentDatabase;
 		private string currentSearch;
+		public Observable<bool> UseGrouping { get; set; }
 
 		public ICommand DeleteTransformer
 		{
@@ -66,6 +67,7 @@ namespace Raven.Studio.Models
 														   "/transformers";
 			ApplicationModel.Database.PropertyChanged += (sender, args) => TimerTickedAsync();
 			SearchText = new Observable<string>();
+			UseGrouping = new Observable<bool> { Value = true };
 			SearchText.PropertyChanged += (sender, args) => TimerTickedAsync();
 
 		}
@@ -117,6 +119,9 @@ namespace Raven.Studio.Models
 
 		private string DetermineName(TransformerDefinition transformer)
 		{
+			if (UseGrouping.Value == false)
+				return "Transformers";
+
 			var name = transformer.Name;
 			if (name.Contains("/") == false)
 				return "No Group";
@@ -180,6 +185,18 @@ namespace Raven.Studio.Models
 		}
 
 		public Observable<string> SearchText { get; set; }
+		public ICommand ToggleGrouping
+		{
+			get
+			{
+				return new ActionCommand(() =>
+				{
+					UseGrouping.Value = !UseGrouping.Value;
+					GroupedTransformers.Clear();
+					TimerTickedAsync();
+				});
+			}
+		}
 
 		public ICommand DeleteGroupTransformers
 		{
