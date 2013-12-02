@@ -106,14 +106,6 @@ namespace Raven.Smuggler
 			}
 		}
 
-		public override async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options, Stream stream)
-		{
-			using (store = CreateStore())
-			{
-				return await base.ExportData(exportOptions, options, null);
-			}
-		}
-
 		protected override Task PutDocument(RavenJObject document)
 		{
 			if (document != null)

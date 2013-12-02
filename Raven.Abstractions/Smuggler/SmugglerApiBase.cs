@@ -52,12 +52,7 @@ namespace Raven.Abstractions.Smuggler
 		protected bool EnsuredDatabaseExists;
 	    private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
-		public virtual Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options)
-		{
-			return ExportData(exportOptions, options, null);
-		}
-
-		public virtual async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options, Stream stream)
+		public virtual async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options)
 	    {
 	        SetSmugglerOptions(options);
 
@@ -102,10 +97,10 @@ namespace Raven.Abstractions.Smuggler
 #endif
 			await DetectServerSupportedFeatures();
 
-			bool ownedStream = stream == null;
+			bool ownedStream = exportOptions.ToStream == null;
+			var stream = exportOptions.ToStream ?? File.Create(result.FilePath);
 		    try
 			{
-				stream = stream ?? exportOptions.ToStream ?? File.Create(result.FilePath);
 			    using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
 #if SILVERLIGHT
                     CompressionLevel.BestCompression,
