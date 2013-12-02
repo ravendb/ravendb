@@ -42,7 +42,7 @@ namespace Raven.Tests.Issues
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(test, new[] { "a", "b" }, 0, true, new List<object>()){Take = 2}).ToList();
+					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(test, new[] { "a", "b" }, 0, true, new ConcurrentSet<object>()) { Take = 2 }).ToList();
 					Assert.Equal(2, results.Count);
 					Assert.Equal(results[0].Bucket, results[1].Bucket);
 				});
@@ -72,7 +72,7 @@ namespace Raven.Tests.Issues
 
 				storage.Batch(accessor =>
 				{
-					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(test, new[] { "a", "b" }, 0, true, new List<object>()){Take = 3}).ToList();
+					var results = accessor.MapReduce.GetItemsToReduce(new GetItemsToReduceParams(test, new[] { "a", "b" }, 0, true, new ConcurrentSet<object>()) { Take = 3 }).ToList();
 					Assert.Equal(4, results.Count);
 				});
 			}

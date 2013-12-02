@@ -46,7 +46,7 @@ namespace Raven.Database.Storage
 	public class GetItemsToReduceParams
 	{
 
-		public GetItemsToReduceParams(int index, IEnumerable<string> reduceKeys, int level, bool loadData, List<object> itemsToDelete)
+		public GetItemsToReduceParams(int index, IEnumerable<string> reduceKeys, int level, bool loadData, ConcurrentSet<object> itemsToDelete)
 		{
 			Index = index;
 			Level = level;

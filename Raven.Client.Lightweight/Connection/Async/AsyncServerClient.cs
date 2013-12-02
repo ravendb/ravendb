@@ -1405,52 +1405,64 @@ namespace Raven.Client.Connection.Async
 		{
 			EnsureIsNotNullOrEmpty(key, "key");
 
-			return ExecuteWithReplication("GET", async operationMetadata =>
-			{
-				var metadata = new RavenJObject();
-				AddTransactionInformation(metadata);
-				var request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-																							 (operationMetadata.Url + "/static/" + key).NoCache(),
-																							 "GET", metadata, credentials, convention)
-					.AddOperationHeaders(OperationsHeaders));
-
-				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
-													HandleReplicationStatusChanges);
-				ErrorResponseException responseException;
-				try
-				{
-					var result = await request.ReadResponseBytesAsync();
-					var memoryStream = new MemoryStream(result);
-					return new Attachment
-					{
-                        Key = key,
-						Data = () => memoryStream,
-						Size = result.Length,
-						Etag = request.Response.GetEtagHeader(),
-						Metadata = request.ResponseHeaders.FilterHeadersAttachment()
-					};
-				}
-				catch (ErrorResponseException e)
-				{
-					if (e.StatusCode == HttpStatusCode.NotFound)
-						return null;
-					if (e.StatusCode != HttpStatusCode.Conflict)
-						throw;
-					responseException = e;
-				}
-				var conflictsDoc =
-					RavenJObject.Load(new BsonReader(await responseException.Response.GetResponseStreamWithHttpDecompression()));
-				var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
-
-				throw new ConflictException(
-					"Conflict detected on " + key + ", conflict must be resolved before the attachment will be accessible", true)
-				{
-					ConflictedVersionIds = conflictIds,
-					Etag = responseException.Response.GetEtagHeader()
-				};
-			});
+			return ExecuteWithReplication("GET", operationMetadata => DirectGetAttachmentAsync(key, operationMetadata, "GET"));
 		}
+
+		public Task<Attachment> HeadAttachmentAsync(string key)
+		{
+			EnsureIsNotNullOrEmpty(key, "key");
+
+			return ExecuteWithReplication("HEAD", operationMetadata => DirectGetAttachmentAsync(key, operationMetadata, "HEAD"));
+		}
+
+		private async Task<Attachment> DirectGetAttachmentAsync(string key, OperationMetadata operationMetadata, string method)
+		{
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+																						 (operationMetadata.Url + "/static/" +
+																						  key).NoCache(), method, metadata,
+																						 operationMetadata.Credentials,
+																						 convention)
+															 .AddOperationHeaders(OperationsHeaders));
+
+			request.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
+												HandleReplicationStatusChanges);
+
+			ErrorResponseException responseException;
+			try
+			{
+				var result = await request.ReadResponseBytesAsync();
+				var memoryStream = new MemoryStream(result);
+				return new Attachment
+				{
+					Key = key,
+					Data = () => memoryStream,
+					Size = result.Length,
+					Etag = request.Response.GetEtagHeader(),
+					Metadata = request.ResponseHeaders.FilterHeadersAttachment()
+				};
+			}
+			catch (ErrorResponseException e)
+			{
+				if (e.StatusCode == HttpStatusCode.NotFound)
+					return null;
+				if (e.StatusCode != HttpStatusCode.Conflict)
+					throw;
+				responseException = e;
+			}
+			var conflictsDoc =
+				RavenJObject.Load(new BsonReader(await responseException.Response.GetResponseStreamWithHttpDecompression()));
+			var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
+
+			throw new ConflictException(
+				"Conflict detected on " + key + ", conflict must be resolved before the attachment will be accessible", true)
+			{
+				ConflictedVersionIds = conflictIds,
+				Etag = responseException.Response.GetEtagHeader()
+			};
+		}
+
 
 		/// <summary>
 		/// Deletes the attachment with the specified key asynchronously

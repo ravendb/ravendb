@@ -117,7 +117,7 @@ namespace Raven.Client.Silverlight.Connection
 		internal HttpJsonRequest(CreateHttpJsonRequestParams requestParams, HttpJsonRequestFactory factory)
 		{
 			_credentials = requestParams.Credentials;
-			this.url = requestParams.Url;
+			Url = requestParams.Url;
 			this.conventions = requestParams.Convention;
 			this.factory = factory;
 
@@ -204,7 +204,7 @@ namespace Raven.Client.Silverlight.Connection
 			if (conventions.HandleUnauthorizedResponseAsync == null)
 				return false;
 
-			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse);
+			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse, _credentials);
 			if (unauthorizedResponseAsync == null)
 				return false;
 
@@ -217,7 +217,7 @@ namespace Raven.Client.Silverlight.Connection
 			if (conventions.HandleForbiddenResponseAsync == null)
 				return;
 
-			var forbiddenResponseAsync = conventions.HandleForbiddenResponseAsync(forbiddenResponse);
+			var forbiddenResponseAsync = conventions.HandleForbiddenResponseAsync(forbiddenResponse, _credentials);
 			if (forbiddenResponseAsync == null)
 				return;
 
