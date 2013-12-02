@@ -19,7 +19,6 @@ namespace Voron.Impl
 	    private SafeFileHandle _safeFileHandle;
 
 	    public FilePager(string file)
-            : base(false)
         {
             _fileInfo = new FileInfo(file);
 
@@ -114,7 +113,7 @@ namespace Voron.Impl
             byte* p = null;
             accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
 
-            var newPager = new PagerState(this, AsyncPagerRelease)
+            var newPager = new PagerState(this)
                  {
                      Accessor = accessor,
                      File = mmf,
@@ -186,11 +185,7 @@ namespace Voron.Impl
         public override void Dispose()
         {
             base.Dispose();
-            if (PagerState != null)
-            {
-                PagerState.Release();
-                PagerState = null;
-            }
+      
             _fileStream.Dispose();
 
             if (DeleteOnClose)

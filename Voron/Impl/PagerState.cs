@@ -1,27 +1,24 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.IO.MemoryMappedFiles;
-using System.Threading;
-using Voron.Impl.Paging;
-
-namespace Voron.Impl
+﻿namespace Voron.Impl
 {
+    using System.Collections.Concurrent;
+    using System.Diagnostics;
+    using System.IO.MemoryMappedFiles;
+    using System.Threading;
     using System.Threading.Tasks;
+
+    using Voron.Impl.Paging;
 
     public unsafe class PagerState
     {
 	    private readonly AbstractPager _pager;
-	    private readonly bool _asyncRelease;
 
 #if DEBUG
         public static ConcurrentDictionary<PagerState, StackTrace> Instances = new ConcurrentDictionary<PagerState, StackTrace>();
 #endif
 
-        public PagerState(AbstractPager pager, bool asyncRelease)
+        public PagerState(AbstractPager pager)
         {
 	        _pager = pager;
-	        _asyncRelease = asyncRelease;
-
 #if DEBUG
             Instances[this] = new StackTrace(true);
 #endif
@@ -47,13 +44,7 @@ namespace Voron.Impl
             Instances.TryRemove(this, out value);
 #endif
 
-            if (_asyncRelease)
-            {
-	            _pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
-                return;
-            }
-
-            ReleaseInternal();
+	        _pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
         }
 
         private void ReleaseInternal()
