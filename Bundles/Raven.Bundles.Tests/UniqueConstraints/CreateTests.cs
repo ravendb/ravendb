@@ -28,7 +28,7 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 				var userMetadata = session.Advanced.GetMetadataFor(loadedUser);
 				var constraintsMeta = userMetadata.Value<RavenJArray>("Ensure-Unique-Constraints");
 				Assert.NotNull(constraintsMeta);
-				Assert.Equal(1, constraintsMeta.Length);
+				Assert.Equal(2, constraintsMeta.Length);
 			}
 		}
 
@@ -109,5 +109,28 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 					}
 				});
 		}
+
+	    [Fact]
+	    public void Will_veto_on_same_constraint_array()
+	    {
+	        var user = new User {Email = "foo@bar.com", TaskIds = new[] {"TaskA", "TaskB"}};
+            var sameTaskUser = new User { Email = "foo2@bar.com", TaskIds = new[] { "TaskA", "TaskC" } };
+
+            using (var session = DocumentStore.OpenSession())
+            {
+                session.Store(user);
+                session.SaveChanges();
+            }
+
+            Assert.Throws<OperationVetoedException>(
+                () =>
+                {
+                    using (var session = DocumentStore.OpenSession())
+                    {
+                        session.Store(sameTaskUser);
+                        session.SaveChanges();
+                    }
+                });
+	    }
 	}
 }

@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Threading;
+using Raven.Database.Util;
 
 namespace Raven.Tests.Issues
 {

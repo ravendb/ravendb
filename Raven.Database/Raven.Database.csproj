@@ -961,8 +961,13 @@
     <Compile Include="Util\ActiveEnumerable.cs" />
     <Compile Include="Util\CompositeDisposable.cs" />
     <Compile Include="Util\DatabaseMemoryTarget.cs" />
+    <Compile Include="Util\IPerformanceCounter.cs" />
+    <Compile Include="Util\NoOpPerformanceCounter.cs" />
     <Compile Include="Util\OutputTicker.cs" />
+    <Compile Include="Util\PerformanceCounterAttribute.cs" />
+    <Compile Include="Util\PerformanceCountersManager.cs" />
     <Compile Include="Util\PerformanceCountersUtils.cs" />
+    <Compile Include="Util\PerformanceCounterWrapper.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\SequentialUuidGenerator.cs" />
     <Compile Include="Util\Streams\BufferPool.cs" />

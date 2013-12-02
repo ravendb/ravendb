@@ -123,25 +123,30 @@ namespace Lucene.Net.Search.Vectorhighlight
 
 	    private String MakeFragment(WeightedFragInfo fragInfo, String src, int s)
 	    {
-            StringBuilder fragment = new StringBuilder();
-            int srcIndex = 0;
-            foreach (SubInfo subInfo in fragInfo.subInfos)
-            {
-                foreach (Toffs to in subInfo.termsOffsets)
-                {
-	                var headerIndex = to.startOffset - s;
-                    fragment.Append(src.Substring(srcIndex, headerIndex - srcIndex))
-						.Append(GetPreTag(subInfo.seqnum))
-						.Append(src.Substring(headerIndex, to.endOffset - to.startOffset))
-						.Append(GetPostTag(subInfo.seqnum));
-                    srcIndex = to.endOffset - s;
-                }
-            }
-            fragment.Append(src.Substring(srcIndex));
-            return fragment.ToString();
-        }
+		    StringBuilder fragment = new StringBuilder();
+		    int srcIndex = 0;
+		    var items = from subInfo in fragInfo.subInfos
+			    from to in subInfo.termsOffsets
+			    orderby to.startOffset
+			    select new
+			    {
+				    to,
+				    subInfo
+			    };
+			foreach (var item in items)
+		    {
+			    var headerIndex = item.to.startOffset - s;
+			    fragment.Append(src.Substring(srcIndex, headerIndex - srcIndex))
+					.Append(GetPreTag(item.subInfo.seqnum))
+					.Append(src.Substring(headerIndex, item.to.endOffset - item.to.startOffset))
+					.Append(GetPostTag(item.subInfo.seqnum));
+				srcIndex = item.to.endOffset - s;
+		    }
+		    fragment.Append(src.Substring(srcIndex));
+		    return fragment.ToString();
+	    }
 
-        /*
+	    /*
         [Obsolete]
         protected String MakeFragment(StringBuilder buffer, int[] index, String[] values, WeightedFragInfo fragInfo)
         {

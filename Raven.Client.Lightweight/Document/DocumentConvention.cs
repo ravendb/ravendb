@@ -34,6 +34,8 @@ using Raven.Client.WinRT.MissingFromWinRT;
 
 namespace Raven.Client.Document
 {
+	using Raven.Abstractions.Connection;
+
 	/// <summary>
 	/// The set of conventions used by the <see cref="DocumentStore"/> which allow the users to customize
 	/// the way the Raven client API behaves
@@ -593,7 +595,7 @@ namespace Raven.Client.Document
 		/// <summary>
 		/// Handles unauthenticated responses, usually by authenticating against the oauth server
 		/// </summary>
-		public Func<HttpWebResponse, Action<HttpWebRequest>> HandleUnauthorizedResponse { get; set; }
+		public Func<HttpWebResponse, OperationCredentials, Action<HttpWebRequest>> HandleUnauthorizedResponse { get; set; }
 
 		/// <summary>
 		/// Handles forbidden responses

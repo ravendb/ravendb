@@ -95,7 +95,10 @@ namespace Raven.Smuggler
 	            {
 	                "transform-file:", "Transform documents using a given script file (import only)", script => options.TransformScript = File.ReadAllText(script)
 	            },
-	            {"timeout:", "The timeout to use for requests, in seconds", s => options.Timeout = TimeSpan.FromSeconds(int.Parse(s))},
+                                {
+			            			"max-steps-for-transform-script:", "Maximum number of steps that transform script can have (import only)", s => options.MaxStepsForTransformScript = int.Parse(s)
+			            		},
+								{"timeout:", "The timeout to use for requests", s => options.Timeout = int.Parse(s) },
 	            {"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s)},
 	            {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
 	            {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => Credentials.UserName = value},

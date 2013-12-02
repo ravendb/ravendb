@@ -137,10 +137,18 @@ namespace Raven.Database.Indexing
 		/// <returns></returns>
 		protected override Query GetRangeQuery(string field, string lower, string upper, bool inclusive)
 		{
+			bool minInclusive = inclusive;
+			bool maxInclusive = inclusive;
 			if (lower == "NULL" || lower == "*")
+			{
 				lower = null;
+				minInclusive = true;
+			}
 			if (upper == "NULL" || upper == "*")
+			{
 				upper = null;
+				maxInclusive = true;
+			}
 
 			if ( (lower == null || !NumericRangeValue.IsMatch(lower)) && (upper == null || !NumericRangeValue.IsMatch(upper)))
 			{
@@ -163,19 +171,19 @@ namespace Raven.Database.Indexing
 			{
 				case TypeCode.Int32:
 				{
-					return NumericRangeQuery.NewIntRange(field, (int)(from ?? Int32.MinValue), (int)(to ?? Int32.MaxValue), inclusive, inclusive);
+					return NumericRangeQuery.NewIntRange(field, (int)(from ?? Int32.MinValue), (int)(to ?? Int32.MaxValue), minInclusive, maxInclusive);
 				}
 				case TypeCode.Int64:
 				{
-					return NumericRangeQuery.NewLongRange(field, (long)(from ?? Int64.MinValue), (long)(to ?? Int64.MaxValue), inclusive, inclusive);
+					return NumericRangeQuery.NewLongRange(field, (long)(from ?? Int64.MinValue), (long)(to ?? Int64.MaxValue), minInclusive, maxInclusive);
 				}
 				case TypeCode.Double:
 				{
-					return NumericRangeQuery.NewDoubleRange(field, (double)(from ?? Double.MinValue), (double)(to ?? Double.MaxValue), inclusive, inclusive);
+					return NumericRangeQuery.NewDoubleRange(field, (double)(from ?? Double.MinValue), (double)(to ?? Double.MaxValue), minInclusive, maxInclusive);
 				}
 				case TypeCode.Single:
 				{
-					return NumericRangeQuery.NewFloatRange(field, (float)(from ?? Single.MinValue), (float)(to ?? Single.MaxValue), inclusive, inclusive);
+					return NumericRangeQuery.NewFloatRange(field, (float)(from ?? Single.MinValue), (float)(to ?? Single.MaxValue), minInclusive, maxInclusive);
 				}
 				default:
 				{

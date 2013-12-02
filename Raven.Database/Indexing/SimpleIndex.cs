@@ -153,7 +153,6 @@ namespace Raven.Database.Indexing
                         }
                     });
                     UpdateDocumentReferences(actions, allReferencedDocs, missingReferencedDocs);
-
                 }
                 catch (Exception e)
                 {

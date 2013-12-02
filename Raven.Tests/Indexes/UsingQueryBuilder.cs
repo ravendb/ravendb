@@ -110,7 +110,7 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("Age_Range:{0x00000003 TO NULL}", new RavenPerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
 
-			Assert.Equal("Age_Range:{3 TO 2147483647}", query.ToString());
+			Assert.Equal("Age_Range:{3 TO 2147483647]", query.ToString());
 			Assert.True(query is NumericRangeQuery<int>);
 		}
 
@@ -146,7 +146,7 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("Price_Range:{NULL TO Fx1.0}", new RavenPerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
 
-			Assert.Equal("Price_Range:{-3" + CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator + "402823E+38 TO 1}", query.ToString());
+			Assert.Equal("Price_Range:[-3" + CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator + "402823E+38 TO 1}", query.ToString());
 			Assert.True(query is NumericRangeQuery<float>);
 		}
 
@@ -180,7 +180,7 @@ namespace Raven.Tests.Indexes
 		{
 			var query = QueryBuilder.BuildQuery("(Name:\"Simple Phrase\" AND Name:SingleTerm) OR (Age_Range:{0x00000003 TO NULL} AND Birthday:20100515000000000)", new RavenPerFieldAnalyzerWrapper(new StandardAnalyzer(Version.LUCENE_29)));
 
-			Assert.Equal("(+Name:\"simple phrase\" +Name:singleterm) (+Age_Range:{3 TO 2147483647} +Birthday:20100515000000000)", query.ToString());
+			Assert.Equal("(+Name:\"simple phrase\" +Name:singleterm) (+Age_Range:{3 TO 2147483647] +Birthday:20100515000000000)", query.ToString());
 		}
 
 		[Fact]

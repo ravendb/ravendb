@@ -70,15 +70,40 @@ namespace Raven.Abstractions.Data
 				}
 			}
 
-			return new Facet
+		    if (mode == FacetMode.Ranges)
+		    {
+		        var type = GetExpressionType(other.Name);
+		        if (type == typeof (int) ||
+		            type == typeof (long) ||
+		            type == typeof (double) ||
+		            type == typeof (short) ||
+		            type == typeof (float) ||
+		            type == typeof (decimal))
+		            name += "_Range";
+		    }
+
+		    return new Facet
 			{
-				Name = mode == FacetMode.Default ? name : name + "_Range",
+				Name = name,
 				Mode = mode,
 				Ranges = ranges
 			};
 		}
 
-		public static string Parse(Expression<Func<T, bool>> expr)
+	    private static Type GetExpressionType(Expression expr)
+	    {
+            switch (expr.NodeType)
+	        {
+                case ExpressionType.Lambda:
+	                return GetExpressionType(((LambdaExpression) expr).Body);
+                case ExpressionType.Convert:
+                    return GetExpressionType(((UnaryExpression)expr).Operand);
+                default:
+	                return expr.Type;
+	        }
+	    }
+
+	    public static string Parse(Expression<Func<T, bool>> expr)
 		{
 			Expression body = expr.Body;
 
@@ -159,11 +184,10 @@ namespace Raven.Abstractions.Data
 				}
 			}
 
-			//i.e. new DateTime(10, 4, 2001)
-			if (operation.Right is NewExpression)
+			//i.e. new DateTime(10, 4, 2001) || dateTimeVar.AddDays(2) || val +100
+			if (operation.Right is NewExpression || operation.Right is MethodCallExpression || operation.Right is BinaryExpression)
 			{
-				var right = (NewExpression)operation.Right;
-				var invoke = Expression.Lambda(right).Compile();
+                var invoke = Expression.Lambda(operation.Right).Compile();
 				var result = invoke.DynamicInvoke();
 				return result;
 			}
@@ -210,8 +234,8 @@ namespace Raven.Abstractions.Data
 			{
 				//The nullable stuff here it a bit weird, but it helps with trying to cast Value types
 				case "System.DateTime":
-					return RavenQuery.Escape(((DateTime)value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
-				case "System.Int32":
+                    return RavenQuery.Escape(((DateTime)value).ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+                case "System.Int32":
 					return NumberUtil.NumberToString(((int)value));
 				case "System.Int64":
 					return NumberUtil.NumberToString((long)value);

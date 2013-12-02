@@ -96,11 +96,11 @@ namespace Raven.Database.Indexing
                                 {
                                     totalDocCountIncludedDeletes -= 1;
                                     if (read.Contains(termDocs.Doc))
-                                        break;
+										continue;
                                     if (reader.IsDeleted(termDocs.Doc))
-                                        break;
+										continue;
                                     if (docIds.Contains(termDocs.Doc) == false)
-                                        break;
+										continue;
 
 									if (shouldReset.Add(Tuple.Create(field, termDocs.Doc)))
 									{

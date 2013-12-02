@@ -41,6 +41,7 @@ namespace Raven.Database.Server.Responders.Admin
 				if (jsonDocument != null)
 				{
 					backupRequest.DatabaseDocument = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
+					server.Unprotect(backupRequest.DatabaseDocument);
 				}
 			}
 			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);

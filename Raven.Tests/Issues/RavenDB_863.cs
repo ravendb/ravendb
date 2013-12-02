@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Database.Indexing;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 using Xunit;
 using Xunit.Extensions;

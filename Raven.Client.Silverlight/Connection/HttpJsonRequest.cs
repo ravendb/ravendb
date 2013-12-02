@@ -116,9 +116,9 @@ namespace Raven.Client.Silverlight.Connection
 
 		internal HttpJsonRequest(CreateHttpJsonRequestParams requestParams, HttpJsonRequestFactory factory)
 		{
-			Url = requestParams.Url;
-			Method = requestParams.Method;
-			conventions = requestParams.Convention;
+			_credentials = requestParams.Credentials;
+			this.url = requestParams.Url;
+			this.conventions = requestParams.Convention;
 			this.factory = factory;
 
 			noopWaitForTask = new CompletedTask();
@@ -153,6 +153,8 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			return ReadResponseStringAsync();
 		}
+
+		private readonly OperationCredentials _credentials;
 
 		/// <summary>
 		/// Begins the read response string.

@@ -40,6 +40,7 @@
 			<Settings:PeriodicBackupSettingsSectionView/>
 		</DataTemplate>
 		<DataTemplate DataType="Settings:NoSettingsSectionModel">
+			<TextBlock Text="You can't see any settings this is because you are not a global admin on the system, in order to be a global admin you must have admin access to both * and the system database"/>
 		</DataTemplate>
 	</UserControl.Resources>
 

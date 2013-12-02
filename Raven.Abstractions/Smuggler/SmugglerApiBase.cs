@@ -258,8 +258,8 @@ namespace Raven.Abstractions.Smuggler
 
 					while (await documents.MoveNextAsync())
 					{
-					
 						var document = documents.Current;
+						lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 
 						if (!options.MatchFilters(document))
 							continue;
@@ -275,13 +275,14 @@ namespace Raven.Abstractions.Smuggler
 							lastReport = SystemTime.UtcNow;
 						}
 
-						lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 						if (sw.ElapsedMilliseconds > 100)
 							errorsCount++;
 						sw.Start();
 					}
 				}
 
+				// The server can filter all the results. In this case, we need to try to go over with the next batch.
+				// Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
 				var databaseStatistics = await GetStats();
 				var lastEtagComparable = new ComparableByteArray(lastEtag);
 				if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)

@@ -58,7 +58,13 @@ namespace Raven.Abstractions.OAuth
 			}
 		}
 
+<<<<<<< HEAD
 		public abstract Action<HttpWebRequest> DoOAuthRequest(string oauthSource);
 #endif
+=======
+#if !SILVERLIGHT && !NETFX_CORE
+		public abstract Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey);
+		#endif
+>>>>>>> d7c956d89bdbd24b5008ffcc2a2923b42b90bf07
 	}
 }

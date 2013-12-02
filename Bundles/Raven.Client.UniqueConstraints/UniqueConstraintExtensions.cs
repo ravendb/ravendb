@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -61,9 +62,10 @@ namespace Raven.Client.UniqueConstraints
 			                     let propertyValue = property.GetValue(entity, null)
                                  let att = (UniqueConstraintAttribute)Attribute.GetCustomAttribute(property, typeof(UniqueConstraintAttribute))
 			                     where propertyValue != null
-			                     select
+                                 from item in typeof(IEnumerable).IsAssignableFrom(property.PropertyType) && property.PropertyType != typeof(string) ? ((IEnumerable)propertyValue).Cast<object>().Where(i => i != null) : new []{propertyValue}
+			                     select 
 				                     "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() +
-				                     "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(propertyValue.ToString(),att.CaseInsensitive);
+				                     "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(item.ToString(),att.CaseInsensitive);
 
 			var constraintDocs = session.Include<ConstraintDocument>(x => x.RelatedId).Load(constraintsIds.ToArray());
 

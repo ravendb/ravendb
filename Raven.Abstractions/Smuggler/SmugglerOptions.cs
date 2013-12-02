@@ -28,6 +28,7 @@ namespace Raven.Abstractions.Smuggler
             Timeout = TimeSpan.FromSeconds(30);
             ShouldExcludeExpired = false;
             StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
+		    MaxStepsForTransformScript = 10*1000;
         }
 
         /// <summary>
@@ -142,6 +143,11 @@ namespace Raven.Abstractions.Smuggler
         public bool Incremental { get; set; }
 
         public string TransformScript { get; set; }
+
+        /// <summary>
+        /// Maximum number of steps that transform script can have
+        /// </summary>
+        public int MaxStepsForTransformScript { get; set; }
     }
 
     public class SmugglerBetweenOptions : SmugglerOptionsBase

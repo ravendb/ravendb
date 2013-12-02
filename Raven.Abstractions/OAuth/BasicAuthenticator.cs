@@ -81,7 +81,7 @@ namespace Raven.Abstractions.OAuth
 
 		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource)
 		{
-			var authRequest = PrepareOAuthRequest(oauthSource);
+			var authRequest = PrepareOAuthRequest(oauthSource, apiKey);
 			using (var response = authRequest.GetResponse())
 			{
 				using (var stream = response.GetResponseStreamWithHttpDecompression())

@@ -18,5 +18,7 @@ namespace Raven.Database.Storage
 
 		IEnumerable<TaskMetadata> GetPendingTasksForDebug();
 		T GetMergedTask<T>() where T : DatabaseTask;
+
+		IEnumerable<TaskMetadata> GetPendingTasksForDebug();
 	}
 }

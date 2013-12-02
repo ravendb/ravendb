@@ -69,22 +69,23 @@ namespace Raven.Studio.Models
 
 		private void UpdateAlerts()
 		{
-			Server.Value.DocumentStore.OpenAsyncSession(Server.Value.SelectedDatabase.Value.Name).LoadAsync<AlertsDocument>(Constants.RavenAlerts).ContinueOnSuccessInTheUIThread(
-				alertsDoc =>
-				{
-					Alerts.Clear();
-					if (alertsDoc != null)
-					{
-						foreach (var alert in alertsDoc.Alerts)
-						{
-							Alerts.Add(alert);
-						}
-					}
+		    Server.Value.DocumentStore.OpenAsyncSession(Server.Value.SelectedDatabase.Value.Name)
+		          .LoadAsync<AlertsDocument>(Constants.RavenAlerts)
+		          .ContinueOnSuccessInTheUIThread(alertsDoc =>
+		          {
+		              Alerts.Clear();
+		              if (alertsDoc != null)
+		              {
+		                  foreach (var alert in alertsDoc.Alerts)
+		                  {
+		                      Alerts.Add(alert);
+		                  }
+		              }
 
-					OnPropertyChanged(() => Alerts);
-					OnPropertyChanged(() => UnOnserverdAlerts);
-					OnPropertyChanged(() => AlertsTitle);
-				});
+		              OnPropertyChanged(() => Alerts);
+		              OnPropertyChanged(() => UnOnserverdAlerts);
+		              OnPropertyChanged(() => AlertsTitle);
+		          });
 		}
 
 		public int UnOnserverdAlerts { get { return Alerts.Count(alert => alert.Observed == false); } }
