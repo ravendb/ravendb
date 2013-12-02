@@ -96,6 +96,7 @@
     <Compile Include="UniqueConstraints\Bugs\Concurrency.cs" />
     <Compile Include="UniqueConstraints\Bugs\JimBolla.cs" />
     <Compile Include="UniqueConstraints\Bugs\Lars.cs" />
+    <Compile Include="UniqueConstraints\Bugs\MultiTenancy.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy2.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy3.cs" />

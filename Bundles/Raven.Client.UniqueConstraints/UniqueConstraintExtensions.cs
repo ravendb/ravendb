@@ -54,7 +54,7 @@ namespace Raven.Client.UniqueConstraints
 
 	    public static UniqueConstraintCheckResult<T> CheckForUniqueConstraints<T>(this IDocumentSession session, T entity)
 		{
-			var properties = UniqueConstraintsTypeDictionary.GetProperties(typeof (T));
+			var properties = session.Advanced.DocumentStore.GetUniquePropertiesForType(typeof(T));
 			T[] loadedDocs = null;
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof (T));
 
@@ -105,7 +105,7 @@ namespace Raven.Client.UniqueConstraints
 
 		public static Task<UniqueConstraintCheckResult<T>> CheckForUniqueConstraintsAsync<T>(this IAsyncDocumentSession session, T entity)
 		{
-			var properties = UniqueConstraintsTypeDictionary.GetProperties(typeof (T));
+			var properties = session.Advanced.DocumentStore.GetUniquePropertiesForType(typeof(T));
 
 			if (properties != null)
 			{
@@ -143,6 +143,18 @@ namespace Raven.Client.UniqueConstraints
 			}
 
 			return new CompletedTask<UniqueConstraintCheckResult<T>>(new UniqueConstraintCheckResult<T>(entity, properties, null));
+		}
+
+
+		internal static PropertyInfo[] GetUniquePropertiesForType(this IDocumentStore store, Type type)
+		{
+			UniqueConstraintsTypeDictionary dictionary = UniqueConstraintsTypeDictionary.FindDictionary(store);
+			if (dictionary != null)
+			{
+				return dictionary.GetProperties(type);
+			}
+
+			return null;
 		}
 	}
 

@@ -10,6 +10,18 @@
 
 	public class UniqueConstraintsStoreListener : IDocumentStoreListener
 	{
+		public UniqueConstraintsStoreListener()
+			: this(new UniqueConstraintsTypeDictionary()) { }
+
+		public UniqueConstraintsStoreListener(UniqueConstraintsTypeDictionary dictionary)
+		{
+			if (dictionary == null) { throw new ArgumentNullException("dictionary"); }
+
+			this.UniqueConstraintsTypeDictionary = dictionary;
+		}
+
+		public UniqueConstraintsTypeDictionary UniqueConstraintsTypeDictionary { get; private set; }
+
 		public bool BeforeStore(string key, object entityInstance, RavenJObject metadata, RavenJObject original)
 		{
 			if (metadata[Constants.EnsureUniqueConstraints] != null)
