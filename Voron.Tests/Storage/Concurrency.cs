@@ -241,5 +241,33 @@
 			e = Assert.Throws<ConcurrencyException>(() => Env.Writer.Write(batch3));
 			Assert.Equal("Cannot delete 'key/1'. Version mismatch. Expected: 2. Actual: 1.", e.Message);
 		}
+
+        [Fact]
+        public void BatchConcurrencyExceptionShouldNotBeThrown()
+        {
+            var batch1 = new WriteBatch();
+            batch1.Add("key/1", StreamFor("123"), Constants.RootTreeName, 0);
+
+            Env.Writer.Write(batch1);
+
+            using (var snapshot = Env.CreateSnapshot())
+            {
+                var version = snapshot.ReadVersion(Constants.RootTreeName, "key/1", batch1);
+                Assert.Equal(1, version);
+
+                batch1 = new WriteBatch();
+                batch1.Add("key/1", StreamFor("123"), Constants.RootTreeName, version);
+
+                version = snapshot.ReadVersion(Constants.RootTreeName, "key/1", batch1);
+                Assert.Equal(2, version);
+
+                batch1.Add("key/1", StreamFor("123"), Constants.RootTreeName, version);
+                version = snapshot.ReadVersion(Constants.RootTreeName, "key/1", batch1);
+
+                Assert.Equal(3, version);
+
+                Env.Writer.Write(batch1);
+            }
+        }
 	}
 }
