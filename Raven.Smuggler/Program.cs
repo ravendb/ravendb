@@ -19,15 +19,14 @@ namespace Raven.Smuggler
 
 	public class Program
 	{
-		private readonly RavenConnectionStringOptions connectionStringOptions;
-		private SmugglerOptions options = new SmugglerOptions();
+		private readonly RavenConnectionStringOptions connectionStringOptions = new RavenConnectionStringOptions {Credentials = new NetworkCredential()};
+		private readonly RavenConnectionStringOptions connectionStringOptions2 = new RavenConnectionStringOptions {Credentials = new NetworkCredential()};
+		private readonly SmugglerOptions options = new SmugglerOptions();
 		private readonly OptionSet optionSet;
 		bool waitForIndexing;
 
 	    private Program()
 	    {
-	        connectionStringOptions = new RavenConnectionStringOptions();
-
 		    optionSet = new OptionSet
 		    {
 			    {
@@ -101,21 +100,21 @@ namespace Raven.Smuggler
 			    {"timeout:", "The timeout to use for requests", s => options.Timeout = TimeSpan.FromMilliseconds(int.Parse(s))},
 			    {"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s)},
 			    {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
-			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => Credentials.UserName = value},
-			    {"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => Credentials.Password = value},
-			    {"domain:", "The domain to use when the database requires the client to authenticate.", value => Credentials.Domain = value},
+			    {"d2|database2:", "The database to export to. If no specified, the operations will be on the default database. This parameter is used only in the between operation.", value => connectionStringOptions2.DefaultDatabase = value},
+			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).UserName = value},
+			    {"u2|user2|username2:", "The username to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).UserName = value},
+			    {"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).Password = value},
+			    {"p2|pass2|password2:", "The password to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).Password = value},
+			    {"domain:", "The domain to use when the database requires the client to authenticate.", value => ((NetworkCredential) connectionStringOptions.Credentials).Domain = value},
+			    {"domain2:", "The domain to use when the database requires the client to authenticate. This parameter is used only in the between operation.", value => ((NetworkCredential) connectionStringOptions2.Credentials).Domain = value},
 			    {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
+			    {"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => connectionStringOptions2.ApiKey = value},
 			    {"incremental", "States usage of incremental operations", _ => options.Incremental = true},
 			    {"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _ => waitForIndexing = true},
 			    {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true},
 			    {"h|?|help", v => PrintUsageAndExit(0)},
 		    };
 	    }
-
-	    private NetworkCredential Credentials
-		{
-			get { return (NetworkCredential)(connectionStringOptions.Credentials ?? (connectionStringOptions.Credentials = new NetworkCredential())); }
-		}
 
 		static void Main(string[] args)
 		{
@@ -141,11 +140,6 @@ namespace Raven.Smuggler
             if (backupPath == null)
                 PrintUsageAndExit(-1);
 
-            if (backupPath != null && Directory.Exists(backupPath))
-            {
-                options.Incremental = true;
-            }
-
 			SmugglerAction action;
 		    if (string.Equals(args[0], "in", StringComparison.OrdinalIgnoreCase))
 		    {
@@ -164,6 +158,11 @@ namespace Raven.Smuggler
                 PrintUsageAndExit(-1);
                 return;
             }
+
+			if (action != SmugglerAction.Between && Directory.Exists(backupPath))
+			{
+				options.Incremental = true;
+			}
 
 			try
 			{
@@ -189,8 +188,9 @@ namespace Raven.Smuggler
                         smugglerApi.ExportData(new SmugglerExportOptions {ToFile = backupPath}, options).Wait();
 						break;
                     case SmugglerAction.Between:
-				        throw new NotImplementedException();
-                        break;
+						connectionStringOptions2.Url = backupPath;
+						SmugglerOperation.Between(new SmugglerBetweenOptions {From = connectionStringOptions, To = connectionStringOptions2}, options).Wait();
+						break;
 				}
 			}
 			catch (AggregateException ex)
@@ -202,7 +202,7 @@ namespace Raven.Smuggler
 
 					if (e.Status == WebExceptionStatus.ConnectFailure)
 					{
-						Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url);
+						Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url + (action == SmugglerAction.Between ? " => " + connectionStringOptions2.Url : ""));
 						var socketException = e.InnerException as SocketException;
 						if (socketException != null)
 						{
