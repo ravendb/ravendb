@@ -64,7 +64,7 @@ namespace Raven.Smuggler
 			ConnectionStringOptions = connectionStringOptions;
 		}
 
-        public override async Task ImportData(SmugglerImportOptions options, Stream stream)
+		public override async Task ImportData(SmugglerImportOptions options, Stream stream)
 		{
             SetSmugglerOptions(options);
 
@@ -98,7 +98,7 @@ namespace Raven.Smuggler
 			}
 		}
 
-		public override async Task<ExportDataResult> ExportData(SmugglerExportOptions options, PeriodicBackupStatus backupStatus = null)
+		public override async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options, PeriodicBackupStatus backupStatus = null)
 		{
 			using (store = CreateStore())
 			{

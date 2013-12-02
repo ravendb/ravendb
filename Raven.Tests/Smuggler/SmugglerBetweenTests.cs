@@ -39,19 +39,11 @@ namespace Raven.Tests.Smuggler
 
                 using (var server2 = GetNewServer(port: 8078))
                 {
-                    await SmugglerOperation.Between(new SmugglerBetweenOptions
-                    {
-                        From = new RavenConnectionStringOptions
-                        {
-                            Url = "http://localhost:8079",
-                            DefaultDatabase = "Database1",
-                        },
-                        To = new RavenConnectionStringOptions
-                        {
-                            Url = "http://localhost:8078",
-                            DefaultDatabase = "Database2",
-                        },
-                    });
+	                await SmugglerOperation.Between(new SmugglerBetweenOptions
+	                {
+		                From = new RavenConnectionStringOptions {Url = "http://localhost:8079", DefaultDatabase = "Database1"},
+		                To = new RavenConnectionStringOptions {Url = "http://localhost:8078", DefaultDatabase = "Database2"}
+	                }, new SmugglerOptionsBase());
 
                     using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
                     {
@@ -89,20 +81,14 @@ namespace Raven.Tests.Smuggler
 
                 using (var server2 = GetNewServer(port: 8078))
                 {
-                    await SmugglerOperation.Between(new SmugglerBetweenOptions
-                    {
-                        From = new RavenConnectionStringOptions
-                        {
-                            Url = "http://localhost:8079",
-                            DefaultDatabase = "Database1",
-                        },
-                        To = new RavenConnectionStringOptions
-                        {
-                            Url = "http://localhost:8078",
-                            DefaultDatabase = "Database2",
-                        },
-                        Incremental = true,
-                    });
+					await SmugglerOperation.Between(new SmugglerBetweenOptions
+					{
+						From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
+						To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
+					}, new SmugglerOptionsBase
+					{
+						Incremental = true,
+					});
 
                     using (var session = store1.OpenAsyncSession("Database1"))
                     {
@@ -123,23 +109,15 @@ namespace Raven.Tests.Smuggler
                             await session2.SaveChangesAsync();
                         }
                         await store2.AsyncDatabaseCommands.PutAttachmentAsync("fitzchak", null, new MemoryStream(new byte[] { 6 }), new RavenJObject());
-                        WaitForUserToContinueTheTest(store2);
 
-                        await SmugglerOperation.Between(new SmugglerBetweenOptions
-                        {
-                            From = new RavenConnectionStringOptions
-                            {
-                                Url = "http://localhost:8079",
-                                DefaultDatabase = "Database1",
-                            },
-                            To = new RavenConnectionStringOptions
-                            {
-                                Url = "http://localhost:8078",
-                                DefaultDatabase = "Database2",
-                            },
-                            Incremental = true,
-                        });
-                        WaitForUserToContinueTheTest(store2);
+						await SmugglerOperation.Between(new SmugglerBetweenOptions
+						{
+							From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
+							To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
+						}, new SmugglerOptionsBase
+						{
+							Incremental = true,
+						});
 
                         using (var session2 = store2.OpenAsyncSession("Database2"))
                         {
@@ -183,35 +161,24 @@ namespace Raven.Tests.Smuggler
 
 				    using (var server3 = GetNewServer(port: 8077))
 				    {
-					    await SmugglerOperation.Between(new SmugglerBetweenOptions
-					    {
-						    From = new RavenConnectionStringOptions
-						    {
-							    Url = "http://localhost:8079",
-							    DefaultDatabase = "Database1",
-						    },
-						    To = new RavenConnectionStringOptions
-						    {
-							    Url = "http://localhost:8077",
-							    DefaultDatabase = "Database3",
-						    },
-						    Incremental = true,
-					    });
-					    await SmugglerOperation.Between(new SmugglerBetweenOptions
-					    {
-						    From = new RavenConnectionStringOptions
-						    {
-							    Url = "http://localhost:8078",
-							    DefaultDatabase = "Database2",
-						    },
-						    To = new RavenConnectionStringOptions
-						    {
-							    Url = "http://localhost:8077",
-							    DefaultDatabase = "Database3",
-						    },
-						    Incremental = true,
-					    });
+						await SmugglerOperation.Between(new SmugglerBetweenOptions
+						{
+							From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
+							To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }
+						}, new SmugglerOptionsBase
+						{
+							Incremental = true,
+						});
 
+						await SmugglerOperation.Between(new SmugglerBetweenOptions
+						{
+							From = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" },
+							To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }
+						}, new SmugglerOptionsBase
+						{
+							Incremental = true,
+						});
+					  
 					    using (var store3 = NewRemoteDocumentStore(ravenDbServer: server3, databaseName: "Database3"))
 					    {
 						    using (var session3 = store3.OpenAsyncSession("Database3"))

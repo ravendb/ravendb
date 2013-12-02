@@ -24,22 +24,22 @@ namespace Raven.Smuggler
     {
         const int RetriesCount = 5;
 
-        public static async Task Between(SmugglerBetweenOptions options)
+		public static async Task Between(SmugglerBetweenOptions betweenOptions, SmugglerOptionsBase options)
         {
-            SetDatabaseNameIfEmpty(options.From);
-            SetDatabaseNameIfEmpty(options.To);
+			SetDatabaseNameIfEmpty(betweenOptions.From);
+			SetDatabaseNameIfEmpty(betweenOptions.To);
 
-            using (var exportStore = CreateStore(options.From))
-            using (var importStore = CreateStore(options.To))
+			using (var exportStore = CreateStore(betweenOptions.From))
+			using (var importStore = CreateStore(betweenOptions.To))
             {
-                await EnsureDatabaseExists(importStore, options.To.DefaultDatabase);
+				await EnsureDatabaseExists(importStore, betweenOptions.To.DefaultDatabase);
 
                 var exportStoreSupportedFeatures = await DetectServerSupportedFeatures(exportStore);
                 var importStoreSupportedFeatures = await DetectServerSupportedFeatures(importStore);
 
-	            if (string.IsNullOrEmpty(options.IncrementalKey))
+	            if (string.IsNullOrEmpty(betweenOptions.IncrementalKey))
 	            {
-		            options.IncrementalKey = ((AsyncServerClient) exportStore.AsyncDatabaseCommands).Url;
+					betweenOptions.IncrementalKey = ((AsyncServerClient)exportStore.AsyncDatabaseCommands).Url;
 	            }
 
 				var incremental = new ExportIncremental();
@@ -50,7 +50,7 @@ namespace Raven.Smuggler
                     {
                         var smugglerExportIncremental = jsonDocument.DataAsJson.JsonDeserialization<SmugglerExportIncremental>();
 	                    ExportIncremental value;
-	                    if (smugglerExportIncremental.ExportIncremental.TryGetValue(options.IncrementalKey, out value))
+						if (smugglerExportIncremental.ExportIncremental.TryGetValue(betweenOptions.IncrementalKey, out value))
 	                    {
 		                    incremental = value;
 	                    }
@@ -85,7 +85,7 @@ namespace Raven.Smuggler
 	                {
 		                smugglerExportIncremental = jsonDocument.DataAsJson.JsonDeserialization<SmugglerExportIncremental>();
 	                }
-					smugglerExportIncremental.ExportIncremental[options.IncrementalKey] = incremental;
+					smugglerExportIncremental.ExportIncremental[betweenOptions.IncrementalKey] = incremental;
 					await importStore.AsyncDatabaseCommands.PutAsync(SmugglerExportIncremental.RavenDocumentKey, null, RavenJObject.FromObject(smugglerExportIncremental), new RavenJObject());
                 }
             }

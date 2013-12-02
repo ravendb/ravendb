@@ -20,7 +20,7 @@ namespace Raven.Smuggler
 	public class Program
 	{
 		private readonly RavenConnectionStringOptions connectionStringOptions;
-		private SmugglerOptionsBase options;
+		private SmugglerOptionsBase options = new SmugglerOptionsBase();
 		private readonly OptionSet optionSet;
 		bool waitForIndexing;
 
@@ -150,23 +150,14 @@ namespace Raven.Smuggler
 		    if (string.Equals(args[0], "in", StringComparison.OrdinalIgnoreCase))
 		    {
 		        action = SmugglerAction.Import;
-                options = new SmugglerImportOptions
-                {
-                    FromFile = backupPath,
-                };
 		    }
 			else if (string.Equals(args[0], "out", StringComparison.OrdinalIgnoreCase))
 			{
 			    action = SmugglerAction.Export;
-                options = new SmugglerExportOptions
-                {
-                    ToFile = backupPath,
-                };
 			}
             else if (string.Equals(args[0], "between", StringComparison.OrdinalIgnoreCase))
             {
                 action = SmugglerAction.Between;
-                options = new SmugglerBetweenOptions();
             }
             else
             {
@@ -190,12 +181,12 @@ namespace Raven.Smuggler
 				switch (action)
 				{
 					case SmugglerAction.Import:
-						smugglerApi.ImportData((SmugglerImportOptions)options).Wait();
+						smugglerApi.ImportData(new SmugglerImportOptions {FromFile = backupPath}, options).Wait();
 						if (waitForIndexing)
 							smugglerApi.WaitForIndexing(options).Wait();
 						break;
 					case SmugglerAction.Export:
-                        smugglerApi.ExportData((SmugglerExportOptions)options).Wait();
+                        smugglerApi.ExportData(new SmugglerExportOptions {ToFile = backupPath}, options).Wait();
 						break;
                     case SmugglerAction.Between:
 				        throw new NotImplementedException();

@@ -320,17 +320,17 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		public virtual async Task ImportData(SmugglerImportOptions options)
+		public virtual async Task ImportData(SmugglerImportOptions importOptions, SmugglerOptionsBase options)
 		{
             if (options.Incremental == false)
             {
-                Stream stream = options.FromStream;
+				Stream stream = importOptions.FromStream;
                 bool ownStream = false;
                 try
                 {
                     if (stream == null)
                     {
-                        stream = File.OpenRead(options.FromFile);
+						stream = File.OpenRead(importOptions.FromFile);
                         ownStream = true;
                     }
                     await ImportData(options, stream);

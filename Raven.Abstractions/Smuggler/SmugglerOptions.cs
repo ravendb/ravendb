@@ -15,7 +15,7 @@ using System.Linq;
 
 namespace Raven.Abstractions.Smuggler
 {
-    public abstract class SmugglerOptionsBase
+    public class SmugglerOptionsBase
     {
         private int batchSize;
 	    private TimeSpan timeout;
@@ -150,16 +150,19 @@ namespace Raven.Abstractions.Smuggler
         public int MaxStepsForTransformScript { get; set; }
     }
 
-    public class SmugglerBetweenOptions : SmugglerOptionsBase
+    public class SmugglerBetweenOptions
     {
         public RavenConnectionStringOptions From { get; set; }
 
         public RavenConnectionStringOptions To { get; set; }
 
-	    public string IncrementalKey { get; set; }
+		/// <summary>
+		/// You can give a key to the incremental last etag, in order to make incremental imports from a few export sources.
+		/// </summary>
+		public string IncrementalKey { get; set; }
     }
 
-    public class SmugglerExportOptions : SmugglerOptionsBase
+    public class SmugglerExportOptions
     {
         public RavenConnectionStringOptions From { get; set; }
 
@@ -174,7 +177,7 @@ namespace Raven.Abstractions.Smuggler
         public Stream ToStream { get; set; }
     }
 
-    public class SmugglerImportOptions : SmugglerOptionsBase
+    public class SmugglerImportOptions
     {
         public RavenConnectionStringOptions To { get; set; }
 
