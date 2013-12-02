@@ -606,13 +606,13 @@ namespace Raven.Client.Document
 		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
 		/// in async manner
 		/// </summary>
-		public Func<HttpResponseMessage, Task<Action<HttpClient>>> HandleUnauthorizedResponseAsync { get; set; }
+		public Func<HttpResponseMessage, OperationCredentials, Task<Action<HttpClient>>> HandleUnauthorizedResponseAsync { get; set; }
 
 		/// <summary>
 		/// Begins handling of forbidden responses
 		/// in async manner
 		/// </summary>
-		public Func<HttpResponseMessage, Task<Action<HttpClient>>> HandleForbiddenResponseAsync { get; set; }
+		public Func<HttpResponseMessage, OperationCredentials, Task<Action<HttpClient>>> HandleForbiddenResponseAsync { get; set; }
 
 		/// <summary>
 		/// When RavenDB needs to convert between a string id to a value type like int or guid, it calls

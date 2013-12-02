@@ -48,12 +48,12 @@ namespace Raven.Client.Connection
 
 		public void StopIndexing()
 		{
-			innerServerClient.ExecuteWithReplication("POST", operationUrl => adminRequest.StopIndexing(operationUrl).ExecuteRequest());
+			innerServerClient.ExecuteWithReplication("POST", operationMetadata => adminRequest.StopIndexing(operationMetadata.Url).ExecuteRequest());
 		}
 
 		public void StartIndexing()
 		{
-			innerServerClient.ExecuteWithReplication("POST", operationUrl => adminRequest.StartIndexing(operationUrl).ExecuteRequest());
+			innerServerClient.ExecuteWithReplication("POST", operationMetadata => adminRequest.StartIndexing(operationMetadata.Url).ExecuteRequest());
 		}
 
 		public void StartBackup(string backupLocation, DatabaseDocument databaseDocument)
@@ -76,9 +76,9 @@ namespace Raven.Client.Connection
 
 		public string GetIndexingStatus()
 		{
-			return innerServerClient.ExecuteWithReplication("GET", operationUrl =>
+			return innerServerClient.ExecuteWithReplication("GET", operationMetadata =>
 			{
-				var result = adminRequest.IndexingStatus(operationUrl).ReadResponseJson();
+				var result = adminRequest.IndexingStatus(operationMetadata.Url).ReadResponseJson();
 
 				return result.Value<string>("IndexingStatus");
 			});

@@ -67,28 +67,24 @@ namespace Raven.Client.Document
         private int total;
 
 #if !SILVERLIGHT
-        public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, IDatabaseChanges changes)
+	    public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, IDatabaseChanges changes)
 #else
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 #endif
-        {
-            using (NoSynchronizationContext.Scope())
-            {
-                OperationId = Guid.NewGuid();
-                operationClient = client;
-                operationChanges = changes;
-                queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize * 3) / 2));
+	    {
+		    using (NoSynchronizationContext.Scope())
+		    {
+			    OperationId = Guid.NewGuid();
+			    operationClient = client;
+			    operationChanges = changes;
+			    queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize*3)/2));
 
-                operationTask = StartBulkInsertAsync(options);
+			    operationTask = StartBulkInsertAsync(options);
 #if !MONO
-                SubscribeToBulkInsertNotifications(changes);
+			    SubscribeToBulkInsertNotifications(changes);
 #endif
-            }
-            finally
-            {
-                SynchronizationContext.SetSynchronizationContext(synchronizationContext);
-            }
-#if !MONO
+		    }
+	    }
 
 #if !MONO
         private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)

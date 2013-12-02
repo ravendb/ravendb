@@ -21,12 +21,12 @@ namespace Raven.Abstractions.OAuth
 	{
 		private readonly bool enableBasicAuthenticationOverUnsecuredHttp;
 
-		public BasicAuthenticator(string apiKey, bool enableBasicAuthenticationOverUnsecuredHttp) : base(apiKey)
+		public BasicAuthenticator(bool enableBasicAuthenticationOverUnsecuredHttp)
 		{
 			this.enableBasicAuthenticationOverUnsecuredHttp = enableBasicAuthenticationOverUnsecuredHttp;
 		}
 
-		public async Task<Action<HttpClient>> HandleOAuthResponseAsync(string oauthSource)
+		public async Task<Action<HttpClient>> HandleOAuthResponseAsync(string oauthSource, string apiKey)
 		{
 			var httpClient = new HttpClient(new HttpClientHandler());
 			httpClient.DefaultRequestHeaders.TryAddWithoutValidation("grant_type", "client_credentials");
@@ -37,8 +37,8 @@ namespace Raven.Abstractions.OAuth
 			httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
 #endif
 
-			if (string.IsNullOrEmpty(ApiKey) == false)
-				httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Api-Key", ApiKey);
+			if (string.IsNullOrEmpty(apiKey) == false)
+				httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Api-Key", apiKey);
 
 			if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false && enableBasicAuthenticationOverUnsecuredHttp == false)
 				throw new InvalidOperationException(BasicOAuthOverHttpError);
@@ -63,15 +63,15 @@ namespace Raven.Abstractions.OAuth
 		
 
 #if !SILVERLIGHT && !NETFX_CORE
-		private HttpWebRequest PrepareOAuthRequest(string oauthSource)
+		private HttpWebRequest PrepareOAuthRequest(string oauthSource, string apiKey)
 		{
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
 			authRequest.Headers["Accept-Encoding"] = "deflate,gzip";
 			authRequest.Headers["grant_type"] = "client_credentials";
 			authRequest.Accept = "application/json;charset=UTF-8";
 
-			if (String.IsNullOrEmpty(ApiKey) == false)
-				SetHeader(authRequest.Headers, "Api-Key", ApiKey);
+			if (String.IsNullOrEmpty(apiKey) == false)
+				SetHeader(authRequest.Headers, "Api-Key", apiKey);
 
 			if (oauthSource.StartsWith("https", StringComparison.OrdinalIgnoreCase) == false && enableBasicAuthenticationOverUnsecuredHttp == false)
 				throw new InvalidOperationException(BasicOAuthOverHttpError);
@@ -79,7 +79,7 @@ namespace Raven.Abstractions.OAuth
 			return authRequest;
 		}
 
-		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource)
+		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey)
 		{
 			var authRequest = PrepareOAuthRequest(oauthSource, apiKey);
 			using (var response = authRequest.GetResponse())

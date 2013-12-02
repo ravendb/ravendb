@@ -1,22 +1,14 @@
 using System;
-using Raven.Abstractions.Connection;
-#if !SILVERLIGHT && !NETFX_CORE
 using System.Net;
-#endif
 using System.Net.Http;
 using System.Net.Http.Headers;
+using Raven.Abstractions.Connection;
 
 namespace Raven.Abstractions.OAuth
 {
 	public abstract class AbstractAuthenticator
 	{
-		protected readonly string ApiKey;
-		protected string CurrentOauthToken { get; set; }
-
-		protected AbstractAuthenticator(string apiKey)
-		{
-			ApiKey = apiKey;
-		}
+		protected string CurrentOauthToken;
 
 		public virtual void ConfigureRequest(object sender, WebRequestEventArgs e)
 		{
@@ -24,9 +16,9 @@ namespace Raven.Abstractions.OAuth
 				return;
 
 #if NETFX_CORE || SILVERLIGHT
-			SetAuthorization(e.Client);
+			e.Client.DefaultRequestHeaders.Add("Authorization", CurrentOauthToken);
 #else
-			SetHeader(e.Request.Headers, "Authorization", "Bearer " + CurrentOauthToken);
+			SetHeader(e.Request.Headers, "Authorization", CurrentOauthToken);
 #endif
 		}
 
@@ -58,13 +50,7 @@ namespace Raven.Abstractions.OAuth
 			}
 		}
 
-<<<<<<< HEAD
-		public abstract Action<HttpWebRequest> DoOAuthRequest(string oauthSource);
-#endif
-=======
-#if !SILVERLIGHT && !NETFX_CORE
 		public abstract Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey);
-		#endif
->>>>>>> d7c956d89bdbd24b5008ffcc2a2923b42b90bf07
+#endif
 	}
 }

@@ -28,88 +28,88 @@ namespace Raven.Smuggler
 	    {
 	        connectionStringOptions = new RavenConnectionStringOptions();
 
-	        optionSet = new OptionSet
-	        {
-	            {
-	                "operate-on-types:", "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
-	                                     "Default is all items." + Environment.NewLine +
-	                                     "Usage example: Indexes,Documents,Attachments",
-	                value =>
-	                {
-	                    try
-	                    {
-	                        if (string.IsNullOrWhiteSpace(value) == false)
-	                        {
-                                options.OperateOnTypes = (ItemType)Enum.Parse(typeof(ItemType), value, ignoreCase: true);
-	                        }
-	                    }
-	                    catch (Exception e)
-	                    {
-	                        PrintUsageAndExit(e);
-	                    }
-	                }
-	            },
-	            {
-	                "metadata-filter:{=}", "Filter documents by a metadata property." + Environment.NewLine +
-	                                       "Usage example: Raven-Entity-Name=Posts",
-	                (key, val) => options.Filters.Add(new FilterSetting
-	                {
-	                    Path = "@metadata." + key,
-	                    ShouldMatch = true,
-	                    Values = new List<string> {val}
-	                })
-	            },
-	            {
-	                "negative-metadata-filter:{=}", "Filter documents NOT matching a metadata property." + Environment.NewLine +
-	                                                "Usage example: Raven-Entity-Name=Posts",
-	                (key, val) => options.Filters.Add(new FilterSetting
-	                {
-	                    Path = "@metadata." + key,
-	                    ShouldMatch = false,
-	                    Values = new List<string> {val}
-	                })
-	            },
-	            {
-	                "filter:{=}", "Filter documents by a document property" + Environment.NewLine +
-	                              "Usage example: Property-Name=Value",
-	                (key, val) => options.Filters.Add(new FilterSetting
-	                {
-	                    Path = key,
-	                    ShouldMatch = true,
-	                    Values = new List<string> {val}
-	                })
-	            },
-	            {
-	                "negative-filter:{=}", "Filter documents NOT matching a document property" + Environment.NewLine +
-	                                       "Usage example: Property-Name=Value",
-	                (key, val) => options.Filters.Add(new FilterSetting
-	                {
-	                    Path = key,
-	                    ShouldMatch = false,
-	                    Values = new List<string> {val}
-	                })
-	            },
-	            {
-	                "transform:", "Transform documents using a given script (import only)", script => options.TransformScript = script
-	            },
-	            {
-	                "transform-file:", "Transform documents using a given script file (import only)", script => options.TransformScript = File.ReadAllText(script)
-	            },
-                                {
-			            			"max-steps-for-transform-script:", "Maximum number of steps that transform script can have (import only)", s => options.MaxStepsForTransformScript = int.Parse(s)
-			            		},
-								{"timeout:", "The timeout to use for requests", s => options.Timeout = int.Parse(s) },
-	            {"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s)},
-	            {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
-	            {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => Credentials.UserName = value},
-	            {"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => Credentials.Password = value},
-	            {"domain:", "The domain to use when the database requires the client to authenticate.", value => Credentials.Domain = value},
-	            {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
-	            {"incremental", "States usage of incremental operations", _ => options.Incremental = true},
-	            {"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _ => waitForIndexing = true},
-	            {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true},
-	            {"h|?|help", v => PrintUsageAndExit(0)},
-	        };
+		    optionSet = new OptionSet
+		    {
+			    {
+				    "operate-on-types:", "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
+				                         "Default is all items." + Environment.NewLine +
+				                         "Usage example: Indexes,Documents,Attachments",
+				    value =>
+				    {
+					    try
+					    {
+						    if (string.IsNullOrWhiteSpace(value) == false)
+						    {
+							    options.OperateOnTypes = (ItemType) Enum.Parse(typeof (ItemType), value, ignoreCase: true);
+						    }
+					    }
+					    catch (Exception e)
+					    {
+						    PrintUsageAndExit(e);
+					    }
+				    }
+			    },
+			    {
+				    "metadata-filter:{=}", "Filter documents by a metadata property." + Environment.NewLine +
+				                           "Usage example: Raven-Entity-Name=Posts",
+				    (key, val) => options.Filters.Add(new FilterSetting
+				    {
+					    Path = "@metadata." + key,
+					    ShouldMatch = true,
+					    Values = new List<string> {val}
+				    })
+			    },
+			    {
+				    "negative-metadata-filter:{=}", "Filter documents NOT matching a metadata property." + Environment.NewLine +
+				                                    "Usage example: Raven-Entity-Name=Posts",
+				    (key, val) => options.Filters.Add(new FilterSetting
+				    {
+					    Path = "@metadata." + key,
+					    ShouldMatch = false,
+					    Values = new List<string> {val}
+				    })
+			    },
+			    {
+				    "filter:{=}", "Filter documents by a document property" + Environment.NewLine +
+				                  "Usage example: Property-Name=Value",
+				    (key, val) => options.Filters.Add(new FilterSetting
+				    {
+					    Path = key,
+					    ShouldMatch = true,
+					    Values = new List<string> {val}
+				    })
+			    },
+			    {
+				    "negative-filter:{=}", "Filter documents NOT matching a document property" + Environment.NewLine +
+				                           "Usage example: Property-Name=Value",
+				    (key, val) => options.Filters.Add(new FilterSetting
+				    {
+					    Path = key,
+					    ShouldMatch = false,
+					    Values = new List<string> {val}
+				    })
+			    },
+			    {
+				    "transform:", "Transform documents using a given script (import only)", script => options.TransformScript = script
+			    },
+			    {
+				    "transform-file:", "Transform documents using a given script file (import only)", script => options.TransformScript = File.ReadAllText(script)
+			    },
+			    {
+				    "max-steps-for-transform-script:", "Maximum number of steps that transform script can have (import only)", s => options.MaxStepsForTransformScript = int.Parse(s)
+			    },
+			    {"timeout:", "The timeout to use for requests", s => options.Timeout = int.Parse(s)},
+			    {"batch-size:", "The batch size for requests", s => options.BatchSize = int.Parse(s)},
+			    {"d|database:", "The database to operate on. If no specified, the operations will be on the default database.", value => connectionStringOptions.DefaultDatabase = value},
+			    {"u|user|username:", "The username to use when the database requires the client to authenticate.", value => Credentials.UserName = value},
+			    {"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => Credentials.Password = value},
+			    {"domain:", "The domain to use when the database requires the client to authenticate.", value => Credentials.Domain = value},
+			    {"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
+			    {"incremental", "States usage of incremental operations", _ => options.Incremental = true},
+			    {"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _ => waitForIndexing = true},
+			    {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true},
+			    {"h|?|help", v => PrintUsageAndExit(0)},
+		    };
 	    }
 
 	    private NetworkCredential Credentials

@@ -97,7 +97,7 @@ namespace Raven.Client.Connection
 			handler = new WebRequestHandler
 			{
 				UseDefaultCredentials = true,
-				Credentials = requestParams.Credentials,
+				Credentials = requestParams.Credentials.Credentials,
 			};
 			httpClient = new HttpClient(handler);
 

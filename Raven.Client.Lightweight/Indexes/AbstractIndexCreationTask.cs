@@ -227,8 +227,8 @@ namespace Raven.Client.Indexes
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
 			return asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true)
-				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, url) =>
-					client.DirectPutIndexAsync(IndexName, indexDefinition, true, url)))
+				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, operationMetadata) =>
+					client.DirectPutIndexAsync(IndexName, indexDefinition, true, operationMetadata)))
 				.Unwrap();
 		}
 	}
