@@ -55,7 +55,7 @@ namespace Raven.Tests.Bugs
 
 			using (var server = GetNewServer())
 			{
-				using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
+				using (var documentStore = new DocumentStore { Url = server.SystemDatabase.Configuration.ServerUrl }.Initialize())
 				{
 					documentStore.DatabaseCommands.PutAttachment("test", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
 					attachment = await documentStore.AsyncDatabaseCommands.HeadAttachmentAsync("test");
@@ -73,7 +73,7 @@ namespace Raven.Tests.Bugs
 
 			using (var server = GetNewServer())
 			{
-				using (var documentStore = new DocumentStore { Url = server.Database.Configuration.ServerUrl }.Initialize())
+				using (var documentStore = new DocumentStore { Url = server.SystemDatabase.Configuration.ServerUrl }.Initialize())
 				{
 					attachment = await documentStore.AsyncDatabaseCommands.HeadAttachmentAsync("test");
 				}

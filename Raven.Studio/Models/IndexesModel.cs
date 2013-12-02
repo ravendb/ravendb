@@ -121,11 +121,11 @@ namespace Raven.Studio.Models
 			Indexes.Clear();
 			if(string.IsNullOrWhiteSpace(SearchText.Value))
 				Indexes.AddRange(statistics.Indexes.Where(stats => stats != null)
-					.Select(stats => new IndexItem { Name = stats.Name, GroupName = GetIndexGroup(stats), IndexStats = stats }));
+					.Select(stats => new IndexItem { Name = stats.PublicName, GroupName = GetIndexGroup(stats), IndexStats = stats }));
 			else
 				Indexes.AddRange(statistics.Indexes
-					.Where(stats => stats != null && stats.Name.IndexOf(SearchText.Value, StringComparison.InvariantCultureIgnoreCase) != -1)
-					.Select(stats => new IndexItem { Name = stats.Name, GroupName = GetIndexGroup(stats), IndexStats = stats }));
+					.Where(stats => stats != null && stats.PublicName.IndexOf(SearchText.Value, StringComparison.InvariantCultureIgnoreCase) != -1)
+					.Select(stats => new IndexItem { Name = stats.PublicName, GroupName = GetIndexGroup(stats), IndexStats = stats }));
 			
 			CleanGroupIndexes();
 			foreach (var indexItem in Indexes)
