@@ -20,7 +20,7 @@ namespace Raven.Smuggler
 	public class Program
 	{
 		private readonly RavenConnectionStringOptions connectionStringOptions;
-		private SmugglerOptionsBase options = new SmugglerOptionsBase();
+		private SmugglerOptions options = new SmugglerOptions();
 		private readonly OptionSet optionSet;
 		bool waitForIndexing;
 

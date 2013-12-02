@@ -59,7 +59,7 @@ namespace Raven.Tests.Issues
 	            await smugglerApi.ExportData(new SmugglerExportOptions
 	            {
 	                ToFile = file,
-	                },new SmugglerOptionsBase{
+	                },new SmugglerOptions{
 				TransformScript = @"function(doc) { 
 						var id = doc['@metadata']['@id']; 
 						if(id === 'foos/1')
@@ -78,7 +78,7 @@ namespace Raven.Tests.Issues
 	            await smugglerApi.ImportData(new SmugglerImportOptions
 	            {
 	                FromFile = file,
-	                },new SmugglerOptionsBase{TransformScript = @"function(doc) { 
+	                },new SmugglerOptions{TransformScript = @"function(doc) { 
 						var id = doc['@metadata']['@id']; 
 						if(id === 'foos/1')
 							return null;
@@ -120,7 +120,7 @@ namespace Raven.Tests.Issues
 	            await smugglerApi.ExportData(new SmugglerExportOptions
 	            {
 	                ToFile = file,
-				}, new SmugglerOptionsBase
+				}, new SmugglerOptions
 				{
 					TransformScript = @"function(doc) { 
 						doc['Name'] = 'Changed';
@@ -138,7 +138,7 @@ namespace Raven.Tests.Issues
 	            await smugglerApi.ImportData(new SmugglerImportOptions
 	            {
 	                FromFile = file,
-				}, new SmugglerOptionsBase
+				}, new SmugglerOptions
 				{
 					TransformScript = @"function(doc) { 
 						doc['Name'] = 'Changed';

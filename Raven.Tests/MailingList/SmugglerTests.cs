@@ -34,13 +34,13 @@ namespace Raven.Tests.MailingList
                         session.SaveChanges();
                     }
                     var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = documentStore.Url});
-					smugglerApi.ExportData(new SmugglerExportOptions { ToFile = file }, new SmugglerOptionsBase()).Wait(TimeSpan.FromSeconds(15));
+					smugglerApi.ExportData(new SmugglerExportOptions { ToFile = file }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var documentStore = NewRemoteDocumentStore())
                 {
                     var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions {Url = documentStore.Url});
-                    smugglerApi.ImportData(new SmugglerImportOptions{FromFile = file}, new SmugglerOptionsBase()).Wait(TimeSpan.FromSeconds(15));
+                    smugglerApi.ImportData(new SmugglerImportOptions{FromFile = file}, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
                     
                     using (var session = documentStore.OpenSession())
                     {

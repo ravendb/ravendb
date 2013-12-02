@@ -15,12 +15,12 @@ using System.Linq;
 
 namespace Raven.Abstractions.Smuggler
 {
-    public class SmugglerOptionsBase
+    public class SmugglerOptions
     {
         private int batchSize;
 	    private TimeSpan timeout;
 
-	    public SmugglerOptionsBase()
+	    public SmugglerOptions()
         {
             Filters = new List<FilterSetting>();
             BatchSize = 1024;

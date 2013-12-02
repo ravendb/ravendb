@@ -54,7 +54,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 				dataDumper.ImportData(new SmugglerImportOptions
 				{
 					FromFile = backupPath,
-				}, new SmugglerOptionsBase
+				}, new SmugglerOptions
 				{
 					Incremental = true,
 				}).Wait();
@@ -112,7 +112,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 				dataDumper.ImportData(new SmugglerImportOptions
 				{
 				    FromFile = backupPath,
-				}, new SmugglerOptionsBase
+				}, new SmugglerOptions
 				{
 					Incremental = true,
 				}).Wait();

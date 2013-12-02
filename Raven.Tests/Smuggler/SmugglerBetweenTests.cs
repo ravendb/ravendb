@@ -43,7 +43,7 @@ namespace Raven.Tests.Smuggler
 	                {
 		                From = new RavenConnectionStringOptions {Url = "http://localhost:8079", DefaultDatabase = "Database1"},
 		                To = new RavenConnectionStringOptions {Url = "http://localhost:8078", DefaultDatabase = "Database2"}
-	                }, new SmugglerOptionsBase());
+	                }, new SmugglerOptions());
 
                     using (var store2 = NewRemoteDocumentStore(ravenDbServer: server2, databaseName: "Database2"))
                     {
@@ -85,7 +85,7 @@ namespace Raven.Tests.Smuggler
 					{
 						From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
 						To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
-					}, new SmugglerOptionsBase
+					}, new SmugglerOptions
 					{
 						Incremental = true,
 					});
@@ -114,7 +114,7 @@ namespace Raven.Tests.Smuggler
 						{
 							From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
 							To = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" }
-						}, new SmugglerOptionsBase
+						}, new SmugglerOptions
 						{
 							Incremental = true,
 						});
@@ -165,7 +165,7 @@ namespace Raven.Tests.Smuggler
 						{
 							From = new RavenConnectionStringOptions { Url = "http://localhost:8079", DefaultDatabase = "Database1" },
 							To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }
-						}, new SmugglerOptionsBase
+						}, new SmugglerOptions
 						{
 							Incremental = true,
 						});
@@ -174,7 +174,7 @@ namespace Raven.Tests.Smuggler
 						{
 							From = new RavenConnectionStringOptions { Url = "http://localhost:8078", DefaultDatabase = "Database2" },
 							To = new RavenConnectionStringOptions { Url = "http://localhost:8077", DefaultDatabase = "Database3" }
-						}, new SmugglerOptionsBase
+						}, new SmugglerOptions
 						{
 							Incremental = true,
 						});

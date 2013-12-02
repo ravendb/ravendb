@@ -29,7 +29,7 @@ namespace Raven.Abstractions.Smuggler
 	{
 		private readonly Stopwatch stopwatch = Stopwatch.StartNew();
 
-        public SmugglerOptionsBase SmugglerOptions { get; set; }
+        public SmugglerOptions SmugglerOptions { get; set; }
 
 		protected abstract Task<RavenJArray> GetIndexes(int totalCount);
 		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag);
@@ -52,7 +52,7 @@ namespace Raven.Abstractions.Smuggler
 		protected bool EnsuredDatabaseExists;
 	    private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
-		public virtual async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options)
+		public virtual async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptions options)
 	    {
 	        SetSmugglerOptions(options);
 
@@ -162,7 +162,7 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-	    protected void SetSmugglerOptions(SmugglerOptionsBase options)
+	    protected void SetSmugglerOptions(SmugglerOptions options)
 	    {
             if (options == null)
                 throw new ArgumentNullException("options");
@@ -231,7 +231,7 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		private async Task<Etag> ExportDocuments(SmugglerOptionsBase options, JsonTextWriter jsonWriter, Etag lastEtag)
+		private async Task<Etag> ExportDocuments(SmugglerOptions options, JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			var totalCount = 0;
 			var lastReport = SystemTime.UtcNow;
@@ -287,7 +287,7 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		public async Task WaitForIndexing(SmugglerOptionsBase options)
+		public async Task WaitForIndexing(SmugglerOptions options)
 		{
 			var justIndexingWait = Stopwatch.StartNew();
 			int tries = 0;
@@ -309,7 +309,7 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		public virtual async Task ImportData(SmugglerImportOptions importOptions, SmugglerOptionsBase options)
+		public virtual async Task ImportData(SmugglerImportOptions importOptions, SmugglerOptions options)
 		{
             if (options.Incremental == false)
             {
@@ -343,7 +343,7 @@ namespace Raven.Abstractions.Smuggler
 			if (files.Length == 0)
 				return;
 
-		    var optionsWithoutIndexes = new SmugglerOptionsBase
+		    var optionsWithoutIndexes = new SmugglerOptions
 		    {
 		        Filters = options.Filters,
 		        OperateOnTypes = options.OperateOnTypes & ~(ItemType.Indexes | ItemType.Transformers)
@@ -373,7 +373,7 @@ namespace Raven.Abstractions.Smuggler
 
 		protected abstract Task EnsureDatabaseExists();
 
-		public async virtual Task ImportData(SmugglerImportOptions importOptions, SmugglerOptionsBase options, Stream stream)
+		public async virtual Task ImportData(SmugglerImportOptions importOptions, SmugglerOptions options, Stream stream)
 		{
             SetSmugglerOptions(options);
 
@@ -440,7 +440,7 @@ namespace Raven.Abstractions.Smuggler
 			ShowProgress("Imported {0:#,#;;0} documents and {1:#,#;;0} attachments in {2:#,#;;0} ms", documentCount, attachmentCount, sw.ElapsedMilliseconds);
 		}
 
-		private async Task<int> ImportTransformers(JsonTextReader jsonReader, SmugglerOptionsBase options)
+		private async Task<int> ImportTransformers(JsonTextReader jsonReader, SmugglerOptions options)
 		{
 			var count = 0;
 
@@ -472,7 +472,7 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
-		private async Task<int> ImportAttachments(JsonTextReader jsonReader, SmugglerOptionsBase options)
+		private async Task<int> ImportAttachments(JsonTextReader jsonReader, SmugglerOptions options)
 		{
 			var count = 0;
 
@@ -558,7 +558,7 @@ namespace Raven.Abstractions.Smuggler
             }
         }
 
-		private async Task<int> ImportDocuments(JsonTextReader jsonReader, SmugglerOptionsBase options)
+		private async Task<int> ImportDocuments(JsonTextReader jsonReader, SmugglerOptions options)
 		{
 			var count = 0;
 
@@ -609,7 +609,7 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
-		private async Task<int> ImportIndexes(JsonReader jsonReader, SmugglerOptionsBase options)
+		private async Task<int> ImportIndexes(JsonReader jsonReader, SmugglerOptions options)
 		{
 			var count = 0;
 

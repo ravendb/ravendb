@@ -24,7 +24,7 @@ namespace Raven.Studio.Features.Tasks
 
 		public SmugglerTaskSectionModel()
 		{
-			Options = new Observable<SmugglerOptionsBase>();
+			Options = new Observable<SmugglerOptions>();
 			Filters = new ObservableCollection<InternalFilterSetting>();
 			IncludeDocuments = new Observable<bool> {Value = true};
 			IncludeIndexes = new Observable<bool> {Value = true};
@@ -47,7 +47,7 @@ namespace Raven.Studio.Features.Tasks
 			});
 		}
 
-		public Observable<SmugglerOptionsBase> Options { get; set; }
+		public Observable<SmugglerOptions> Options { get; set; }
 		public ObservableCollection<InternalFilterSetting> Filters { get; set; }
 		public Observable<bool> IncludeDocuments { get; set; }
 		public Observable<bool> IncludeIndexes { get; set; }

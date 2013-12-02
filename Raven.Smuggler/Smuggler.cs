@@ -24,7 +24,7 @@ namespace Raven.Smuggler
     {
         const int RetriesCount = 5;
 
-		public static async Task Between(SmugglerBetweenOptions betweenOptions, SmugglerOptionsBase options)
+		public static async Task Between(SmugglerBetweenOptions betweenOptions, SmugglerOptions options)
         {
 			SetDatabaseNameIfEmpty(betweenOptions.From);
 			SetDatabaseNameIfEmpty(betweenOptions.To);
@@ -138,7 +138,7 @@ namespace Raven.Smuggler
             }
         }
 
-        private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptionsBase options, ServerSupportedFeatures exportStoreSupportedFeatures)
+        private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptions options, ServerSupportedFeatures exportStoreSupportedFeatures)
         {
             string lastEtag = options.StartDocsEtag;
             var totalCount = 0;
@@ -266,7 +266,7 @@ namespace Raven.Smuggler
             }
         }
 
-        private async static Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptionsBase options)
+        private async static Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptions options)
         {
             Etag lastEtag = options.StartAttachmentsEtag;
             int totalCount = 0;

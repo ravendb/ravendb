@@ -146,7 +146,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							var backupPath = localBackupConfigs.LocalFolderName ??
 							                 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicBackup-Temp");
 
-							var exportResult = await new DataDumper(documentDatabase).ExportData(new SmugglerExportOptions {ToFile = backupPath}, new SmugglerOptionsBase
+							var exportResult = await new DataDumper(documentDatabase).ExportData(new SmugglerExportOptions {ToFile = backupPath}, new SmugglerOptions
 							{
 								StartDocsEtag = localBackupStatus.LastDocsEtag,
 								StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag,
