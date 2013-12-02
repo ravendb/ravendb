@@ -98,19 +98,19 @@ namespace Raven.Smuggler
 			}
 		}
 
-		public override async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options, PeriodicBackupStatus backupStatus = null)
+		public override async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options)
 		{
 			using (store = CreateStore())
 			{
-				return await base.ExportData(exportOptions, options, backupStatus);
+				return await base.ExportData(exportOptions, options);
 			}
 		}
 
-		public override async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options, Stream stream, PeriodicBackupStatus lastEtag)
+		public override async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options, Stream stream)
 		{
 			using (store = CreateStore())
 			{
-				return await base.ExportData(exportOptions, options, null, lastEtag);
+				return await base.ExportData(exportOptions, options, null);
 			}
 		}
 

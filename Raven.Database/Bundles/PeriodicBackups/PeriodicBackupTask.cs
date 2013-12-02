@@ -150,7 +150,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							{
 								StartDocsEtag = localBackupStatus.LastDocsEtag,
 								StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag,
-							}, backupStatus);
+							});
 
 							// No-op if nothing has changed
                             if (exportResult.LastDocsEtag == localBackupStatus.LastDocsEtag &&

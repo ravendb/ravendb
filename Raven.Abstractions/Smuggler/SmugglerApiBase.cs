@@ -52,12 +52,12 @@ namespace Raven.Abstractions.Smuggler
 		protected bool EnsuredDatabaseExists;
 	    private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
-		public virtual Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options, PeriodicBackupStatus backupStatus = null)
+		public virtual Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options)
 		{
-			return ExportData(exportOptions, options, null, backupStatus);
+			return ExportData(exportOptions, options, null);
 		}
 
-		public virtual async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options, Stream stream, PeriodicBackupStatus backupStatus)
+		public virtual async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options, Stream stream)
 	    {
 	        SetSmugglerOptions(options);
 
@@ -77,10 +77,10 @@ namespace Raven.Abstractions.Smuggler
                         Directory.CreateDirectory(result.FilePath);
 				}
 
-				if (backupStatus == null)
-                    ReadLastEtagsFromFile(result);
-				if (backupStatus != null)
-                    ReadLastEtagsFromClass(options, backupStatus);
+				if (options.StartDocsEtag != Etag.Empty && options.StartAttachmentsEtag != Etag.Empty)
+				{
+					ReadLastEtagsFromFile(result);
+				}
 
 				result.FilePath = Path.Combine(result.FilePath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + ".ravendb-incremental-dump");
 				if (File.Exists(result.FilePath))
@@ -174,12 +174,6 @@ namespace Raven.Abstractions.Smuggler
 
 	        SmugglerOptions = options;
 	    }
-
-	    private void ReadLastEtagsFromClass(SmugglerOptionsBase options, PeriodicBackupStatus backupStatus)
-		{
-			options.StartAttachmentsEtag = backupStatus.LastAttachmentsEtag;
-			options.StartDocsEtag = backupStatus.LastDocsEtag;
-		}
 
         public static void ReadLastEtagsFromFile(ExportDataResult result)
 		{
