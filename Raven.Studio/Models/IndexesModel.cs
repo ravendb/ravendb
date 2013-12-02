@@ -24,6 +24,8 @@ namespace Raven.Studio.Models
 		private string currentDatabase;
 		private string currentSearch;
 
+		public Observable<bool> UseGrouping { get; set; }
+
 		public IndexesModel()
 		{
 			ModelUrl = "/indexes";
@@ -32,6 +34,7 @@ namespace Raven.Studio.Models
 																	   "/indexes";
 			Indexes = new ObservableCollection<IndexItem>();
 			GroupedIndexes = new ObservableCollection<Group>();
+			UseGrouping = new Observable<bool> {Value = true};
 			SearchText = new Observable<string>();
 			SearchText.PropertyChanged += (sender, args) => TimerTickedAsync();
 		}
@@ -100,6 +103,18 @@ namespace Raven.Studio.Models
 		}
 
 		public Observable<string> SearchText { get; set; }
+		public ICommand ToggleGrouping
+		{
+			get
+			{
+				return new ActionCommand(() =>
+				{
+					UseGrouping.Value = !UseGrouping.Value;
+					GroupedIndexes.Clear();
+					TimerTickedAsync();
+				});
+			}
+		}
 
 		private void UpdateGroupedIndexList(DatabaseStatistics statistics)
 		{
@@ -146,6 +161,8 @@ namespace Raven.Studio.Models
 
 		private string GetIndexGroup(IndexStats index)
 		{
+			if (UseGrouping.Value == false)
+				return "Indexes";
 			if (index.ForEntityName == null)
 				return "Others";
 			if (index.ForEntityName.Count == 1)
