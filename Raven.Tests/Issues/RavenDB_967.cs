@@ -58,7 +58,7 @@ namespace Raven.Tests.Issues
 						Url = documentStore.Url
 					});
 
-					smugglerApi.ExportData(new SmugglerExportOptions{ToFile = file}).Wait(TimeSpan.FromSeconds(15));
+					smugglerApi.ExportData(new SmugglerExportOptions{ToFile = file}, new SmugglerOptionsBase()).Wait(TimeSpan.FromSeconds(15));
 				}
 
 				using (var documentStore = NewRemoteDocumentStore())
@@ -68,7 +68,7 @@ namespace Raven.Tests.Issues
 						Url = documentStore.Url
 					});
 
-					smugglerApi.ImportData(new SmugglerImportOptions{FromFile = file}).Wait(TimeSpan.FromSeconds(15));
+					smugglerApi.ImportData(new SmugglerImportOptions{FromFile = file}, new SmugglerOptionsBase()).Wait(TimeSpan.FromSeconds(15));
 
 					var transformers = documentStore.DatabaseCommands.GetTransformers(0, 128);
 

@@ -17,7 +17,7 @@ namespace Raven.Tests.Patching
 	        {
 	            using (var stream = typeof (TroyMapReduceImport).Assembly.GetManifestResourceStream("Raven.Tests.Patching.failingdump11.ravendump"))
 	            {
-	                new DataDumper(store.DocumentDatabase).ImportData(new SmugglerImportOptions {FromStream = stream}).Wait(TimeSpan.FromSeconds(15));
+	                new DataDumper(store.DocumentDatabase).ImportData(new SmugglerImportOptions {FromStream = stream}, new SmugglerOptionsBase()).Wait(TimeSpan.FromSeconds(15));
 	            }
 
 	            using (var session = store.OpenSession())

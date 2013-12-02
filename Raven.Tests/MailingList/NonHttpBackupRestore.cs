@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;
 using Raven.Client.Embedded;
@@ -18,19 +19,19 @@ namespace Raven.Tests.MailingList
 	public class NonHttpBackupRestore : RavenTest
 	{
 		[Fact]
-		public void CanImportFromDumpFile()
+		public async Task CanImportFromDumpFile()
 		{
 		    var file = Path.GetTempFileName();
 			using (var store = NewDocumentStoreWithData())
 			{
 				var dumper = new DataDumper(store.DocumentDatabase);
-				dumper.ExportData(new SmugglerExportOptions{ToFile = file});
+				await dumper.ExportData(new SmugglerExportOptions{ToFile = file}, new SmugglerOptionsBase());
 			}
 
 			using (var store = NewDocumentStore())
 			{
 				var dumper = new DataDumper(store.DocumentDatabase);
-				dumper.ImportData(new SmugglerImportOptions{FromFile = file}).Wait();
+				await dumper.ImportData(new SmugglerImportOptions { FromFile = file }, new SmugglerOptionsBase());
 
 				using (var session = store.OpenSession())
 				{
@@ -46,14 +47,14 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void ImportReplacesAnExistingDatabase()
+		public async Task ImportReplacesAnExistingDatabase()
 		{
 		    var file = Path.GetTempFileName();
 
 			using (var store = NewDocumentStoreWithData())
 			{
 				var dumper = new DataDumper(store.DocumentDatabase);
-				dumper.ExportData(new SmugglerExportOptions{ToFile = file});
+				await dumper.ExportData(new SmugglerExportOptions{ToFile = file}, new SmugglerOptionsBase());
 
 				using (var session = store.OpenSession())
 				{
@@ -73,7 +74,7 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 				}
 
-				new DataDumper(store.DocumentDatabase).ImportData(new SmugglerImportOptions{FromFile = file}).Wait();
+				new DataDumper(store.DocumentDatabase).ImportData(new SmugglerImportOptions{FromFile = file}, new SmugglerOptionsBase()).Wait();
 				using (var session = store.OpenSession())
 				{
 					// Original attachment has been restored.
