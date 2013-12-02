@@ -7,7 +7,6 @@ namespace Raven.Studio.Features.Tasks
 	{
 		public ImportTaskSectionModel()
 		{
-            Options = new Observable<SmugglerOptionsBase> { Value = new SmugglerImportOptions() };
             Name = "Import Database";
             IconResource = "Image_Import_Tiny";
 			Description = "Import data to the current database.\nImporting will overwrite any existing indexes.";

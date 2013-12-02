@@ -52,18 +52,18 @@ namespace Raven.Abstractions.Smuggler
 		protected bool EnsuredDatabaseExists;
 	    private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
-        public virtual Task<ExportDataResult> ExportData(SmugglerExportOptions options, PeriodicBackupStatus backupStatus = null)
+		public virtual Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options, PeriodicBackupStatus backupStatus = null)
 		{
-			return ExportData(options, null, backupStatus);
+			return ExportData(exportOptions, options, null, backupStatus);
 		}
 
-	    public virtual async Task<ExportDataResult> ExportData(SmugglerExportOptions options, Stream stream, PeriodicBackupStatus backupStatus)
+		public virtual async Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptionsBase options, Stream stream, PeriodicBackupStatus backupStatus)
 	    {
 	        SetSmugglerOptions(options);
 
             var result = new ExportDataResult
             {
-                FilePath = options.ToFile
+				FilePath = exportOptions.ToFile
             };
 
 #if !SILVERLIGHT
@@ -105,7 +105,7 @@ namespace Raven.Abstractions.Smuggler
 			bool ownedStream = stream == null;
 		    try
 			{
-                stream = stream ?? options.ToStream ?? File.Create(result.FilePath);
+				stream = stream ?? exportOptions.ToStream ?? File.Create(result.FilePath);
 			    using (var gZipStream = new GZipStream(stream, CompressionMode.Compress,
 #if SILVERLIGHT
                     CompressionLevel.BestCompression,
@@ -242,7 +242,7 @@ namespace Raven.Abstractions.Smuggler
 			}
 		}
 
-		private async Task<Etag> ExportDocuments(SmugglerExportOptions options, JsonTextWriter jsonWriter, Etag lastEtag)
+		private async Task<Etag> ExportDocuments(SmugglerOptionsBase options, JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			var totalCount = 0;
 			var lastReport = SystemTime.UtcNow;
@@ -333,7 +333,7 @@ namespace Raven.Abstractions.Smuggler
 						stream = File.OpenRead(importOptions.FromFile);
                         ownStream = true;
                     }
-                    await ImportData(options, stream);
+					await ImportData(importOptions, options, stream);
                 }
                 finally
                 {
@@ -346,7 +346,7 @@ namespace Raven.Abstractions.Smuggler
 #if SILVERLIGHT
 		    throw new NotSupportedException("Silverlight doesn't support importing an incremental dump files.");
 #else
-            var files = Directory.GetFiles(Path.GetFullPath(options.FromFile))
+			var files = Directory.GetFiles(Path.GetFullPath(importOptions.FromFile))
 				.Where(file => ".ravendb-incremental-dump".Equals(Path.GetExtension(file), StringComparison.CurrentCultureIgnoreCase))
 				.OrderBy(File.GetLastWriteTimeUtc)
 				.ToArray();
@@ -354,24 +354,23 @@ namespace Raven.Abstractions.Smuggler
 			if (files.Length == 0)
 				return;
 
-		    var optionsWithoutIndexes = new SmugglerImportOptions
+		    var optionsWithoutIndexes = new SmugglerOptionsBase
 		    {
-		        FromFile = options.FromFile,
 		        Filters = options.Filters,
 		        OperateOnTypes = options.OperateOnTypes & ~(ItemType.Indexes | ItemType.Transformers)
 		    };
 
 			for (var i = 0; i < files.Length - 1; i++)
 			{
-				using (var fileStream = File.OpenRead(Path.Combine(options.FromFile, files[i])))
+				using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files[i])))
 				{
-                    await ImportData(optionsWithoutIndexes, fileStream);
+					await ImportData(importOptions, optionsWithoutIndexes, fileStream);
 				}
 			}
 
-			using (var fileStream = File.OpenRead(Path.Combine(options.FromFile, files.Last())))
+			using (var fileStream = File.OpenRead(Path.Combine(importOptions.FromFile, files.Last())))
 			{
-                await ImportData(options, fileStream);
+                await ImportData(importOptions, options, fileStream);
 			}
 #endif
 		}
@@ -385,7 +384,7 @@ namespace Raven.Abstractions.Smuggler
 
 		protected abstract Task EnsureDatabaseExists();
 
-        public async virtual Task ImportData(SmugglerImportOptions options, Stream stream)
+		public async virtual Task ImportData(SmugglerImportOptions importOptions, SmugglerOptionsBase options, Stream stream)
 		{
             SetSmugglerOptions(options);
 
@@ -621,7 +620,7 @@ namespace Raven.Abstractions.Smuggler
 			return count;
 		}
 
-		private async Task<int> ImportIndexes(JsonReader jsonReader, SmugglerImportOptions options)
+		private async Task<int> ImportIndexes(JsonReader jsonReader, SmugglerOptionsBase options)
 		{
 			var count = 0;
 
