@@ -576,7 +576,7 @@ namespace Raven.Client.Connection.Async
 				key = Uri.EscapeDataString(key);
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
-					new CreateHttpJsonRequestParams(this, operationMetadata + "/docs/" + key, method, metadata, credentials, convention)
+					new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/docs/" + key, method, metadata, credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
 
 
@@ -795,7 +795,7 @@ namespace Raven.Client.Connection.Async
 		private async Task<MultiLoadResult> DirectGetAsync(OperationMetadata operationMetadata, string[] keys, string[] includes, string transformer,
 														   Dictionary<string, RavenJToken> queryInputs, bool metadataOnly)
 		{
-			var path = operationMetadata + "/queries/?";
+			var path = operationMetadata.Url + "/queries/?";
 			if (metadataOnly)
 				path += "metadata-only=true&";
 			if (includes != null && includes.Length > 0)
