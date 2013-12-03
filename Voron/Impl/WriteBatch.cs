@@ -29,9 +29,10 @@
 			}
 		}
 
-		internal bool TryGetValue(string treeName, Slice key, out ReadResult result, out BatchOperationType operationType)
+		internal bool TryGetValue(string treeName, Slice key, out Stream value, out ushort? version, out BatchOperationType operationType)
 		{
-			result = null;
+		    value = null;
+		    version = null;
 			operationType = BatchOperationType.None;
 
 			if (treeName == null)
@@ -45,6 +46,7 @@
 			if (operations.TryGetValue(key, out operation))
 			{
 				operationType = operation.Type;
+			    version = operation.Version;
 
 				if (operation.Type == BatchOperationType.Delete)
 					return true;
@@ -52,7 +54,7 @@
 				if (operation.Type == BatchOperationType.MultiDelete)
 					return true;
 
-				result = new ReadResult(operation.Value as Stream, operation.Version ?? 0);
+			    value = operation.Value as Stream;
 
 				if (operation.Type == BatchOperationType.Add)
 					return true;
