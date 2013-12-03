@@ -257,14 +257,8 @@
 
                 batch1 = new WriteBatch();
                 batch1.Add("key/1", StreamFor("123"), Constants.RootTreeName, version);
-
                 version = snapshot.ReadVersion(Constants.RootTreeName, "key/1", batch1);
-                Assert.Equal(2, version);
-
                 batch1.Add("key/1", StreamFor("123"), Constants.RootTreeName, version);
-                version = snapshot.ReadVersion(Constants.RootTreeName, "key/1", batch1);
-
-                Assert.Equal(3, version);
 
                 Env.Writer.Write(batch1);
             }

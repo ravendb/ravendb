@@ -134,6 +134,7 @@
 			BatchOperation old;
 			if (lastOpsForTree.TryGetValue(operation.Key, out old))
 			{
+				operation.SetVersionFrom(old);
 				var disposable = old.Value as IDisposable;
 				if (disposable != null)
 					disposable.Dispose();
@@ -189,6 +190,13 @@
 			public BatchOperationType Type { get; private set; }
 
 			public ushort? Version { get; private set; }
+
+			public void SetVersionFrom(BatchOperation other)
+			{
+				if (other.Version != null && 
+					other.Version + 1 == Version)
+					Version = other.Version;
+			}
 
 			public void Reset()
 			{
