@@ -8,10 +8,10 @@ namespace Voron
 {
     public class StorageEnvironmentState
     {
-        private SafeDictionary<string, Tree> _trees =
-			SafeDictionary<string, Tree>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase);
+        private LinkedDictionary<string, Tree> _trees =
+			LinkedDictionary<string, Tree>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase);
 
-		public SafeDictionary<string, Tree> Trees
+		public LinkedDictionary<string, Tree> Trees
         {
             get { return _trees; }
         }
@@ -34,9 +34,9 @@ namespace Voron
         {
             return new StorageEnvironmentState()
                 {
-                    _trees = SafeDictionary<string, Tree>.Empty
+                    _trees = LinkedDictionary<string, Tree>.Empty
                         .WithComparers(StringComparer.OrdinalIgnoreCase)
-                        .SetItems(_trees.ToDictionary(x=>x.Key, x=>x.Value.Clone())),
+						.SetItems(_trees.ToDictionary(x => x.Key, x => x.Value.Clone(), StringComparer.OrdinalIgnoreCase)),
                     Root = Root != null ? Root.Clone() : null,
                     FreeSpaceRoot = FreeSpaceRoot != null ? FreeSpaceRoot.Clone() : null,
                     NextPageNumber = NextPageNumber

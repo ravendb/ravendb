@@ -22,8 +22,8 @@ namespace Voron.Impl.Journal
         private long _writePage;
         private bool _disposed;
         private int _refs;
-		private SafeDictionary<long, PagePosition> _pageTranslationTable = SafeDictionary<long, PagePosition>.Empty;
-		private SafeDictionary<long, long> _transactionEndPositions = SafeDictionary<long, long>.Empty;
+		private LinkedDictionary<long, PagePosition> _pageTranslationTable = LinkedDictionary<long, PagePosition>.Empty;
+		private LinkedDictionary<long, LongRef> _transactionEndPositions = LinkedDictionary<long, LongRef>.Empty;
 		private SafeList<PagePosition> _unusedPages = SafeList<PagePosition>.Empty;
 
         private readonly object _locker = new object();
@@ -86,7 +86,7 @@ namespace Voron.Impl.Journal
 			get { return _journalWriter; }
 	    }
 
-        public SafeDictionary<long, PagePosition> PageTranslationTable
+		public LinkedDictionary<long, PagePosition> PageTranslationTable
         {
             get { return _pageTranslationTable; }
         }
@@ -192,10 +192,14 @@ namespace Voron.Impl.Journal
             var lastPagePosition = journalPos 
                 + (previousPage != null ? previousPage.NumberOfPages - 1 : 0); // for overflows
 
+	        if (counter++ > 900000)
+	        {
+		        Console.WriteLine(1);
+	        }
             lock (_locker)
             {
                 _writePage += numberOfPages;
-                _transactionEndPositions = _transactionEndPositions.Add(tx.Id, lastPagePosition);
+				_transactionEndPositions = _transactionEndPositions.Add(tx.Id, new LongRef { Value = lastPagePosition });
                 _pageTranslationTable = _pageTranslationTable.SetItems(ptt);
                 _unusedPages = _unusedPages.AddRange(unused);
             }
@@ -203,7 +207,8 @@ namespace Voron.Impl.Journal
             return _journalWriter.WriteGatherAsync(writePagePos * AbstractPager.PageSize, pages);
         }
 
-        public void InitFrom(JournalReader journalReader, SafeDictionary<long, PagePosition> pageTranslationTable, SafeDictionary<long, long> transactionEndPositions)
+	    public static int counter;
+		public void InitFrom(JournalReader journalReader, LinkedDictionary<long, PagePosition> pageTranslationTable, LinkedDictionary<long, LongRef> transactionEndPositions)
         {
             _writePage = journalReader.NextWritePage;
             _pageTranslationTable = pageTranslationTable;

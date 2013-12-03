@@ -129,9 +129,9 @@ namespace Voron.Impl
 				_state.Root.State.InWriteTransaction = true;
 			if (_state.FreeSpaceRoot != null)
 				_state.FreeSpaceRoot.State.InWriteTransaction = true;
-			foreach (var tree in _state.Trees.Values)
+			foreach (var tree in _state.Trees)
 			{
-				tree.State.InWriteTransaction = true;
+				tree.Value.State.InWriteTransaction = true;
 			}
 		}
 
@@ -386,7 +386,7 @@ namespace Voron.Impl
 		internal void UpdateRootsIfNeeded(Tree root, Tree freeSpace)
 		{
 			//can only happen during initial transaction that creates Root and FreeSpaceRoot trees
-			if (State.Root == null && State.FreeSpaceRoot == null && State.Trees.Count == 0)
+			if (State.Root == null && State.FreeSpaceRoot == null && State.Trees.IsEmpty)
 			{
 				State.Root = root;
 				State.FreeSpaceRoot = freeSpace;
