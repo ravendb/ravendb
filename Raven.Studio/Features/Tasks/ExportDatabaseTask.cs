@@ -109,16 +109,15 @@ namespace Raven.Studio.Features.Tasks
                 var smuggler = new SmugglerApi(DatabaseCommands, message => Report(message));
 
                 var forwardtoUiBoundStream = new ForwardtoUIBoundStream(stream);
-                var taskGeneration = new Task<Task>(() => smuggler.ExportData(new SmugglerOptions
-                {
-                    BatchSize = batchSize,
-                    Filters = filterSettings,
-                    TransformScript = transformScript,
-                    ShouldExcludeExpired = shouldExcludeExpired,
-                    OperateOnTypes = operateOnTypes,
-                    BackupStream = forwardtoUiBoundStream,
-                    Incremental = false,
-                }));
+	            var taskGeneration = new Task<Task>(() => smuggler.ExportData(new SmugglerExportOptions {ToStream = forwardtoUiBoundStream}, new SmugglerOptions
+	            {
+		            BatchSize = batchSize,
+		            Filters = filterSettings,
+		            TransformScript = transformScript,
+		            ShouldExcludeExpired = shouldExcludeExpired,
+		            OperateOnTypes = operateOnTypes,
+		            Incremental = false,
+	            }));
 
                 ThreadPool.QueueUserWorkItem(state => taskGeneration.Start());
 

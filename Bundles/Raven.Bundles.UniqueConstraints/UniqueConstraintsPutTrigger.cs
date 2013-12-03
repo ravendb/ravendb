@@ -29,19 +29,18 @@ namespace Raven.Bundles.UniqueConstraints
 			foreach (var property in properties)
 			{
 			    var constraint = Util.GetConstraint(property);
-				var prop = document[constraint.PropName];
-				if (prop == null || prop.Type == JTokenType.Null)
-					continue;
+                var prop = document[constraint.PropName];
+
+			    string[] uniqueValues;
+			    if (!Util.TryGetUniqueValues(prop, out uniqueValues))
+			        continue;
 
                 var prefix = "UniqueConstraints/" + entityName + constraint.PropName + "/";
 
-				var array = prop as RavenJArray;
-				var relatedKeys = array != null ? array.Select(p => p.Value<string>()) : new[] {prop.Value<string>()};
-
-				foreach (var relatedKey in relatedKeys)
+				foreach (var uniqueValue in uniqueValues)
 				{
 					Database.Put(
-                        prefix + Util.EscapeUniqueValue(relatedKey, constraint.CaseInsensitive),
+                        prefix + Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive),
 						null,
 						RavenJObject.FromObject(new {RelatedId = key}),
 						new RavenJObject { { Constants.IsConstraintDocument, true } },
@@ -78,16 +77,14 @@ namespace Raven.Bundles.UniqueConstraints
 
                 var prefix = "UniqueConstraints/" + entityName + constraint.PropName+ "/";
                 var prop = document[constraint.PropName];
+                
+			    string[] uniqueValues;
+			    if (!Util.TryGetUniqueValues(prop, out uniqueValues))
+                    continue;
 
-				if (prop == null || prop.Type == JTokenType.Null)
-					continue;
-
-				var array = prop as RavenJArray;
-				var checkKeys = array != null ? array.Select(p => p.Value<string>()) : new[] { prop.Value<string>() };
-
-				foreach (var checkKey in checkKeys)
+				foreach (var uniqueValue in uniqueValues)
 				{
-                    var checkDoc = Database.Get(prefix + Util.EscapeUniqueValue(checkKey, constraint.CaseInsensitive), transactionInformation);
+                    var checkDoc = Database.Get(prefix + Util.EscapeUniqueValue(uniqueValue, constraint.CaseInsensitive), transactionInformation);
 
 					if (checkDoc == null)
 						continue;
@@ -128,28 +125,37 @@ namespace Raven.Bundles.UniqueConstraints
 			{
 				return;
 			}
-
-			var oldJson = oldDoc.DataAsJson;
-
+            
 			foreach (var property in metadata.Value<RavenJArray>(Constants.EnsureUniqueConstraints))
 			{
 			    var constraint = Util.GetConstraint(property);
 
-                var oldValue = oldJson.Value<string>(constraint.PropName);
-                if (oldValue == null || oldValue.Equals(document.Value<string>(constraint.PropName))) continue;
+                var newProp = document[constraint.PropName];
 
                 // Handle Updates in the constraint since it changed
 			    var prefix = "UniqueConstraints/" + entityName + constraint.PropName + "/";
-                var prop = oldDoc.DataAsJson[constraint.PropName];
-				if (prop == null || prop.Type == JTokenType.Null)
-					continue;
-				var array = prop as RavenJArray;
+                
+                var oldProp = oldDoc.DataAsJson[constraint.PropName];
 
-				var deleteKeys = array != null ? array.Select(p => p.Value<string>()) : new[] { prop.Value<string>() };
+                string[] oldUniqueValues;
+                if (!Util.TryGetUniqueValues(oldProp, out oldUniqueValues))
+                    continue;
 
-			    foreach (var deleteKey in deleteKeys)
+			    string[] newUniqueValues;
+			    if (Util.TryGetUniqueValues(newProp, out newUniqueValues))
 			    {
-                    Database.Delete(prefix + Util.EscapeUniqueValue(deleteKey, constraint.CaseInsensitive), null, transactionInformation);
+                    var join = (from oldValue in oldUniqueValues
+                             join newValue in newUniqueValues
+                                 on oldValue equals newValue
+                             select oldValue);
+
+                    if (join.Count() == oldUniqueValues.Count())
+                        continue;        
+			    }
+				
+			    foreach (var oldUniqueValue in oldUniqueValues)
+			    {
+                    Database.Delete(prefix + Util.EscapeUniqueValue(oldUniqueValue, constraint.CaseInsensitive), null, transactionInformation);
 			    }
 
 			}

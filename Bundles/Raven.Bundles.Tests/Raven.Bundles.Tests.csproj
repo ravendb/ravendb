@@ -77,6 +77,7 @@
     <Compile Include="Authorization\Bugs\Kwal.cs" />
     <Compile Include="Authorization\Bugs\LoadingSavedInfo.cs" />
     <Compile Include="Authorization\Bugs\Matthew.cs" />
+    <Compile Include="Authorization\Bugs\Preston.cs" />
     <Compile Include="Authorization\Bugs\WhenUsingMultiTenancy.cs" />
     <Compile Include="Authorization\Bugs\WithChangingOfUser.cs" />
     <Compile Include="Authorization\CanAskAuthQuestions.cs" />
@@ -168,7 +169,9 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\..\Tools\StyleCop\StyleCop.Targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.Composition.Hosting;
+﻿using System.Collections.Generic;
+using System.ComponentModel.Composition.Hosting;
 
 namespace Raven.Bundles.Tests.UniqueConstraints
 {
@@ -44,7 +45,16 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 		public string Email { get; set; }
 
 		public string Name { get; set; }
+
+        [UniqueConstraint]
+        public string[] TaskIds { get; set; }
 	}
+
+    public class Foo
+    {
+        [UniqueConstraint]
+        public List<string> UniqueStrings { get; set; } 
+    }
 
     public class GenericNamedValue<T>
     {

@@ -643,7 +643,7 @@ more responsive application.
             }
         }
 
-        private static void EnsureNotReadVetoed(RavenJObject metadata)
+		internal void EnsureNotReadVetoed(RavenJObject metadata)
         {
             var readVeto = metadata["Raven-Read-Veto"] as RavenJObject;
             if (readVeto == null)

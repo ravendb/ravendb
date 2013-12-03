@@ -126,58 +126,60 @@ namespace Raven.Database.Impl
 
 			JsonDocument doc = null;
 
-			if (fieldsToFetch.IsProjection)
-			{
-				if (indexDefinition.IsMapReduce == false)
-				{
-					bool hasStoredFields = false;
-					FieldStorage value;
-					if (indexDefinition.Stores.TryGetValue(Constants.AllFields, out value))
-					{
-						hasStoredFields = value != FieldStorage.No;
-					}
-					foreach (var fieldToFetch in fieldsToFetch.Fields)
-					{
-						if (indexDefinition.Stores.TryGetValue(fieldToFetch, out value) == false &&
-							value != FieldStorage.No)
-							continue;
-						hasStoredFields = true;
-					}
-					if (hasStoredFields == false)
-					{
-						// duplicate document, filter it out
-						if (loadedIds.Add(queryResult.Key) == false)
-							return null;
-					}
-				}
+		    if (fieldsToFetch.IsProjection)
+		    {
+		        if (indexDefinition.IsMapReduce == false)
+		        {
+		            bool hasStoredFields = false;
+		            FieldStorage value;
+		            if (indexDefinition.Stores.TryGetValue(Constants.AllFields, out value))
+		            {
+		                hasStoredFields = value != FieldStorage.No;
+		            }
+		            foreach (var fieldToFetch in fieldsToFetch.Fields)
+		            {
+		                if (indexDefinition.Stores.TryGetValue(fieldToFetch, out value) == false && value != FieldStorage.No) continue;
+		                hasStoredFields = true;
+		            }
+		            if (hasStoredFields == false)
+		            {
+		                // duplicate document, filter it out
+		                if (loadedIds.Add(queryResult.Key) == false) return null;
+		            }
+		        }
 
-				// We have to load the document if user explicitly asked for the id, since 
-				// we normalize the casing for the document id on the index, and we need to return
-				// the id to the user with the same casing they gave us.
-				var fetchingId = fieldsToFetch.HasField(Constants.DocumentIdFieldName);
-				var fieldsToFetchFromDocument = fieldsToFetch.Fields
-					.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null)
-					.ToArray();
-				if (fieldsToFetchFromDocument.Length > 0 || fetchingId)
-				{
-					doc = GetDocumentWithCaching(queryResult.Key);
-					if (doc != null)
-					{
-						if (fetchingId)
-						{
-							queryResult.Projection[Constants.DocumentIdFieldName] = doc.Key;
-						}
+		        // We have to load the document if user explicitly asked for the id, since 
+		        // we normalize the casing for the document id on the index, and we need to return
+		        // the id to the user with the same casing they gave us.
+		        var fetchingId = fieldsToFetch.HasField(Constants.DocumentIdFieldName);
+		        var fieldsToFetchFromDocument = fieldsToFetch.Fields.Where(fieldToFetch => queryResult.Projection[fieldToFetch] == null).ToArray();
+		        if (fieldsToFetchFromDocument.Length > 0 || fetchingId)
+		        {
+		            doc = GetDocumentWithCaching(queryResult.Key);
+		            if (doc != null)
+		            {
+		                if (fetchingId)
+		                {
+		                    queryResult.Projection[Constants.DocumentIdFieldName] = doc.Key;
+		                }
 
-						var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
-						foreach (var property in result)
-						{
-							if (property.Value == null || property.Value.Type == JTokenType.Null)
-								continue;
-							queryResult.Projection[property.Key] = property.Value;
-						}
-					}
-				}
-			}
+		                var result = doc.DataAsJson.SelectTokenWithRavenSyntax(fieldsToFetchFromDocument.ToArray());
+		                foreach (var property in result)
+		                {
+		                    if (property.Value == null || property.Value.Type == JTokenType.Null) continue;
+		                    queryResult.Projection[property.Key] = property.Value;
+		                }
+		            }
+		        }
+		    }
+			else if (fieldsToFetch.FetchAllStoredFields && string.IsNullOrEmpty(queryResult.Key) == false)
+		    {
+                // duplicate document, filter it out
+                if (loadedIds.Add(queryResult.Key) == false)
+                    return null;
+
+                doc = GetDocumentWithCaching(queryResult.Key);
+		    }
 
 			var metadata = GetMetadata(doc);
 			metadata.Remove("@id");

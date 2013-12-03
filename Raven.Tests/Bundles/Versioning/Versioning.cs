@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.Bundles.Versioning;
+using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Smuggler;
 using Xunit;
@@ -415,11 +416,11 @@ namespace Raven.Tests.Bundles.Versioning
 				session.SaveChanges();
 			}
 
-			var options = new SmugglerOptions { BackupPath = Path.GetTempFileName() };
-			try
+            var file = Path.GetTempFileName();
+		    try
 			{
 				var exportSmuggler = new SmugglerApi(new RavenConnectionStringOptions { Url = documentStore.Url });
-			    exportSmuggler.ExportData(options).Wait();
+				exportSmuggler.ExportData(new SmugglerExportOptions { ToFile = file }, new SmugglerOptions()).Wait();
 
 				using (CreateRavenDbServer(port: 8078))
 				using (var documentStore2 = CreateDocumentStore(port: 8078))
@@ -429,7 +430,7 @@ namespace Raven.Tests.Bundles.Versioning
 						Url = documentStore2.Url,
 						Credentials = documentStore2.Credentials,
 					});
-					importSmuggler.ImportData(options).Wait();
+				    importSmuggler.ImportData(new SmugglerImportOptions { FromFile = file }, new SmugglerOptions()).Wait();
 
 					using (var session = documentStore2.OpenSession())
 					{
@@ -449,9 +450,9 @@ namespace Raven.Tests.Bundles.Versioning
 			}
 			finally
 			{
-				if (File.Exists(options.BackupPath))
+                if (File.Exists(file))
 				{
-					File.Delete(options.BackupPath);
+                    File.Delete(file);
 				}
 			}
 		}

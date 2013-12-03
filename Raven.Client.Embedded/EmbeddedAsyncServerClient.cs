@@ -231,6 +231,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<Attachment>(databaseCommands.GetAttachment(key));
 		}
 
+		public Task<Attachment> HeadAttachmentAsync(string key)
+		{
+			return new CompletedTask<Attachment>(databaseCommands.HeadAttachment(key));			
+		}
+
 		public Task DeleteAttachmentAsync(string key, Etag etag)
 		{
 			databaseCommands.DeleteAttachment(key, etag);

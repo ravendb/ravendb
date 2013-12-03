@@ -19,6 +19,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
 #endif
 using Raven.Imports.Newtonsoft.Json.Bson;
@@ -66,31 +67,24 @@ namespace Raven.Client.Document
         private int total;
 
 #if !SILVERLIGHT
-        public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, IDatabaseChanges changes)
+	    public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, IDatabaseChanges changes)
 #else
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
 #endif
-        {
-            var synchronizationContext = SynchronizationContext.Current;
-            try
-            {
-                SynchronizationContext.SetSynchronizationContext(null);
+	    {
+		    using (NoSynchronizationContext.Scope())
+		    {
+			    OperationId = Guid.NewGuid();
+			    operationClient = client;
+			    operationChanges = changes;
+			    queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize*3)/2));
 
-                OperationId = Guid.NewGuid();
-                operationClient = client;
-                operationChanges = changes;
-                queue = new BlockingCollection<RavenJObject>(Math.Max(128, (options.BatchSize * 3) / 2));
-
-                operationTask = StartBulkInsertAsync(options);
+			    operationTask = StartBulkInsertAsync(options);
 #if !MONO
-                SubscribeToBulkInsertNotifications(changes);
+			    SubscribeToBulkInsertNotifications(changes);
 #endif
-            }
-            finally
-            {
-                SynchronizationContext.SetSynchronizationContext(synchronizationContext);
-            }
-        }
+		    }
+	    }
 
 #if !MONO
         private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
@@ -288,7 +282,8 @@ namespace Raven.Client.Document
                 return;
             disposed = true;
             queue.Add(null);
-            await operationTask;
+            // The first await call in this method MUST call ConfigureAwait(false) in order to avoid DEADLOCK when this code is called by synchronize code, like Dispose().
+            await operationTask.ConfigureAwait(false);
 
             operationTask.AssertNotFailed();
 
@@ -313,6 +308,7 @@ namespace Raven.Client.Document
             }
 
             ReportInternal("Done writing to server");
+
         }
 
         public void Dispose()
@@ -320,8 +316,11 @@ namespace Raven.Client.Document
             if (disposed)
                 return;
 
+            using (NoSynchronizationContext.Scope())
+            {
             var disposeAsync = DisposeAsync().ConfigureAwait(false);
             disposeAsync.GetAwaiter().GetResult();
+        }
         }
 
         private void FlushBatch(Stream requestStream, ICollection<RavenJObject> localBatch)

@@ -11,6 +11,7 @@ using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Raven.Database.Util;
 
 namespace Raven.Database.Indexing
 {
@@ -29,7 +30,7 @@ namespace Raven.Database.Indexing
 				return;
 
 			bool operationCanceled = false;
-			var itemsToDelete = new List<object>();
+			var itemsToDelete = new ConcurrentSet<object>();
 
 			IList<ReduceTypePerKey> mappedResultsInfo = null;
 			transactionalStorage.Batch(actions =>
@@ -76,7 +77,7 @@ namespace Raven.Database.Indexing
 			}
 		}
 
-		private void MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, List<object> itemsToDelete)
+		private void MultiStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator, ConcurrentSet<object> itemsToDelete)
 		{
 			var needToMoveToMultiStep = new HashSet<string>();
 			transactionalStorage.Batch(actions =>
@@ -172,7 +173,7 @@ namespace Raven.Database.Indexing
 							.ToArray();
 						var reduceKeys = new HashSet<string>(persistedResults.Select(x => x.ReduceKey),
 															 StringComparer.InvariantCultureIgnoreCase);
-						context.ReducedPerSecIncreaseBy(results.Length);
+                        context.PerformanceCounters.ReducedPerSecond.IncrementBy(results.Length);
 
 						context.CancellationToken.ThrowIfCancellationRequested();
 						var reduceTimeWatcher = Stopwatch.StartNew();
@@ -198,7 +199,7 @@ namespace Raven.Database.Indexing
 		}
 
 		private void SingleStepReduce(IndexToWorkOn index, string[] keysToReduce, AbstractViewGenerator viewGenerator,
-												List<object> itemsToDelete)
+												ConcurrentSet<object> itemsToDelete)
 		{
 			var needToMoveToSingleStepQueue = new ConcurrentQueue<HashSet<string>>();
 
@@ -292,7 +293,7 @@ namespace Raven.Database.Indexing
 						.Where(x => x.Data != null)
 						.GroupBy(x => x.Bucket, x => JsonToExpando.Convert(x.Data))
 						.ToArray();
-			context.ReducedPerSecIncreaseBy(results.Length);
+            context.PerformanceCounters.ReducedPerSecond.IncrementBy(results.Length);
 
 			context.TransactionalStorage.Batch(actions =>
 				context.IndexStorage.Reduce(index.IndexId, viewGenerator, results, 2, context, actions, reduceKeys, state.Sum(x=>x.Item2.Count))

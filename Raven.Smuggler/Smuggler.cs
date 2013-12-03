@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
@@ -23,18 +24,41 @@ namespace Raven.Smuggler
     {
         const int RetriesCount = 5;
 
-        public static async Task Between(SmugglerBetweenOptions options)
+		public static async Task Between(SmugglerBetweenOptions betweenOptions, SmugglerOptions options)
         {
-            SetDatabaseNameIfEmpty(options.From);
-            SetDatabaseNameIfEmpty(options.To);
+			SetDatabaseNameIfEmpty(betweenOptions.From);
+			SetDatabaseNameIfEmpty(betweenOptions.To);
 
-            using (var exportStore = CreateStore(options.From))
-            using (var importStore = CreateStore(options.To))
+			using (var exportStore = CreateStore(betweenOptions.From))
+			using (var importStore = CreateStore(betweenOptions.To))
             {
-                await EnsureDatabaseExists(importStore, options.To.DefaultDatabase);
+				await EnsureDatabaseExists(importStore, betweenOptions.To.DefaultDatabase);
 
                 var exportStoreSupportedFeatures = await DetectServerSupportedFeatures(exportStore);
                 var importStoreSupportedFeatures = await DetectServerSupportedFeatures(importStore);
+
+	            if (string.IsNullOrEmpty(betweenOptions.IncrementalKey))
+	            {
+					betweenOptions.IncrementalKey = ((AsyncServerClient)exportStore.AsyncDatabaseCommands).Url;
+	            }
+
+				var incremental = new ExportIncremental();
+	            if (options.Incremental)
+                {
+                    var jsonDocument = await importStore.AsyncDatabaseCommands.GetAsync(SmugglerExportIncremental.RavenDocumentKey);
+                    if (jsonDocument != null)
+                    {
+                        var smugglerExportIncremental = jsonDocument.DataAsJson.JsonDeserialization<SmugglerExportIncremental>();
+	                    ExportIncremental value;
+						if (smugglerExportIncremental.ExportIncremental.TryGetValue(betweenOptions.IncrementalKey, out value))
+	                    {
+		                    incremental = value;
+	                    }
+
+						options.StartDocsEtag = incremental.LastDocsEtag ?? Etag.Empty;
+                        options.StartAttachmentsEtag = incremental.LastAttachmentsEtag ?? Etag.Empty;
+                    }
+                }
 
                 if (options.OperateOnTypes.HasFlag(ItemType.Indexes))
                 {
@@ -46,11 +70,23 @@ namespace Raven.Smuggler
                 }
                 if (options.OperateOnTypes.HasFlag(ItemType.Documents))
                 {
-                    await ExportDocuments(exportStore, importStore, options, exportStoreSupportedFeatures);
+                    incremental.LastDocsEtag = await ExportDocuments(exportStore, importStore, options, exportStoreSupportedFeatures);
                 }
                 if (options.OperateOnTypes.HasFlag(ItemType.Attachments))
                 {
-                    await ExportAttachments(exportStore, importStore, options);
+                    incremental.LastAttachmentsEtag = await ExportAttachments(exportStore, importStore, options);
+                }
+
+                if (options.Incremental)
+                {
+	                var smugglerExportIncremental = new SmugglerExportIncremental();
+					var jsonDocument = await importStore.AsyncDatabaseCommands.GetAsync(SmugglerExportIncremental.RavenDocumentKey);
+	                if (jsonDocument != null)
+	                {
+		                smugglerExportIncremental = jsonDocument.DataAsJson.JsonDeserialization<SmugglerExportIncremental>();
+	                }
+					smugglerExportIncremental.ExportIncremental[betweenOptions.IncrementalKey] = incremental;
+					await importStore.AsyncDatabaseCommands.PutAsync(SmugglerExportIncremental.RavenDocumentKey, null, RavenJObject.FromObject(smugglerExportIncremental), new RavenJObject());
                 }
             }
         }
@@ -62,7 +98,7 @@ namespace Raven.Smuggler
 
             var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
 
-			var get = await store.AsyncDatabaseCommands.GetAsync(doc.Id);
+			var get = await store.AsyncDatabaseCommands.ForSystemDatabase().GetAsync(doc.Id);
 			if (get != null)
 				return;
 
@@ -102,7 +138,7 @@ namespace Raven.Smuggler
             }
         }
 
-        private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptionsBase options, ServerSupportedFeatures exportStoreSupportedFeatures)
+        private static async Task<Etag> ExportDocuments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptions options, ServerSupportedFeatures exportStoreSupportedFeatures)
         {
             string lastEtag = options.StartDocsEtag;
             var totalCount = 0;
@@ -230,7 +266,7 @@ namespace Raven.Smuggler
             }
         }
 
-        private async static Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptionsBase options)
+        private async static Task<Etag> ExportAttachments(DocumentStore exportStore, DocumentStore importStore, SmugglerOptions options)
         {
             Etag lastEtag = options.StartAttachmentsEtag;
             int totalCount = 0;

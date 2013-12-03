@@ -74,6 +74,8 @@ namespace Raven.Client.Connection
 
 		public Action<string, string, string> HandleReplicationStatusChanges = delegate { };
 
+		private readonly OperationCredentials _credentials;
+
 		/// <summary>
 		/// Gets or sets the response headers.
 		/// </summary>
@@ -84,6 +86,7 @@ namespace Raven.Client.Connection
 			CreateHttpJsonRequestParams requestParams,
 			HttpJsonRequestFactory factory)
 		{
+			_credentials = requestParams.Credentials;
 			Url = requestParams.Url;
 			Method = requestParams.Method;
 
@@ -94,13 +97,13 @@ namespace Raven.Client.Connection
 			handler = new WebRequestHandler
 			{
 				UseDefaultCredentials = true,
-				Credentials = requestParams.Credentials,
+				Credentials = requestParams.Credentials.Credentials,
 			};
 			httpClient = new HttpClient(handler);
 
 			webRequest = (HttpWebRequest)WebRequest.Create(requestParams.Url);
 			webRequest.UseDefaultCredentials = true;
-			webRequest.Credentials = requestParams.Credentials;
+			webRequest.Credentials = requestParams.Credentials.Credentials;
 			webRequest.Method = requestParams.Method;
 
 			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
@@ -464,7 +467,7 @@ namespace Raven.Client.Connection
 			if (conventions.HandleUnauthorizedResponse == null)
 				return false;
 
-			var handleUnauthorizedResponse = conventions.HandleUnauthorizedResponse(unauthorizedResponse);
+			var handleUnauthorizedResponse = conventions.HandleUnauthorizedResponse(unauthorizedResponse, _credentials);
 			if (handleUnauthorizedResponse == null)
 				return false;
 
@@ -485,7 +488,7 @@ namespace Raven.Client.Connection
 			if (conventions.HandleUnauthorizedResponseAsync == null)
 				return false;
 
-			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse);
+			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse, _credentials);
 			if (unauthorizedResponseAsync == null)
 				return false;
 
@@ -498,7 +501,7 @@ namespace Raven.Client.Connection
 			if (conventions.HandleForbiddenResponseAsync == null)
 				return;
 
-			var forbiddenResponseAsync = conventions.HandleForbiddenResponseAsync(forbiddenResponse);
+			var forbiddenResponseAsync = conventions.HandleForbiddenResponseAsync(forbiddenResponse, _credentials);
 			if (forbiddenResponseAsync == null)
 				return;
 

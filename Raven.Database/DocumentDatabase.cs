@@ -175,6 +175,8 @@ namespace Raven.Database
 			InitializeEncryption(configuration);
 			using (LogManager.OpenMappedContext("database", configuration.DatabaseName ?? Constants.SystemDatabase))
 			{
+                log.Debug("Start loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
+
 				if (configuration.IsTenantDatabase == false)
 				{
 					validateLicense = new ValidateLicense();
@@ -248,6 +250,7 @@ namespace Raven.Database
 					SecondStageInitialization();
 					ExecuteStartupTasks();
 					lastCollectionEtags.Initialize();
+					log.Debug("Finish loading the following database: {0}", configuration.DatabaseName ?? Constants.SystemDatabase);
 				}
 				catch (Exception)
 				{
@@ -493,6 +496,9 @@ namespace Raven.Database
 		{
 			if (disposed)
 				return;
+
+            log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+
 			var onDisposing = Disposing;
 			if (onDisposing != null)
 			{
@@ -601,6 +607,8 @@ namespace Raven.Database
 				exceptionAggregator.Execute(workContext.Dispose);
 
 			exceptionAggregator.ThrowIfNeeded();
+
+            log.Debug("Finished shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
 		}
 
 		public void StopBackgroundWorkers()
@@ -800,7 +808,7 @@ namespace Raven.Database
 
 		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
 		{
-			workContext.DocsPerSecIncreaseBy(1);
+            workContext.PerformanceCounters.DocsPerSecond.Increment();
 			key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
 			RemoveReservedProperties(document);
 			RemoveMetadataReservedProperties(metadata);
@@ -846,7 +854,7 @@ namespace Raven.Database
 						{
 							lastCollectionEtags.UpdatePerCollectionEtags(documents);	
 							etagSynchronizer.UpdateSynchronizationState(documents);
-							prefetcher.GetPrefetchingBehavior(PrefetchingUser.Indexer, null).AfterStorageCommitBeforeWorkNotifications(documents);
+	                        prefetcher.AfterStorageCommitBeforeWorkNotifications(PrefetchingUser.Indexer, documents);
 						});
 
 						if (addDocumentResult.Updated)
@@ -1651,8 +1659,8 @@ namespace Raven.Database
 			if (transformFunc == null)
 				return results.Select(x => x.ToJson());
 
-			var dynamicJsonObjects = results.Select(x => new DynamicLuceneOrParentDocumntObject(docRetriever, x.ToJson())).ToArray();
-			var robustEnumerator = new RobustEnumerator(workContext.CancellationToken, dynamicJsonObjects.Length)
+            var dynamicJsonObjects = results.Select(x => new DynamicLuceneOrParentDocumntObject(docRetriever, x.ToJson()));
+            var robustEnumerator = new RobustEnumerator(workContext.CancellationToken, 100)
 			{
 				OnError =
 					(exception, o) =>
@@ -2256,6 +2264,8 @@ namespace Raven.Database
 										docFromPatch.Metadata, transactionInformation);
 								}
 							}
+								shouldRetry = false;
+								result.PatchResult = PatchResult.Patched;
 						}
 						catch (ConcurrencyException)
 						{
@@ -2270,8 +2280,6 @@ namespace Raven.Database
 
 							throw;
 						}
-
-						result.PatchResult = PatchResult.Patched;
 					}
 				}
 
@@ -2805,6 +2813,12 @@ namespace Raven.Database
 					var document = Get(key, transactionInformation);
 					if (document == null)
 						return;
+
+                    if (document.Metadata.ContainsKey("Raven-Read-Veto"))
+                    {
+                        result = document;
+                        return;
+                    }
 
 					var storedTransformer = IndexDefinitionStorage.GetTransformer(transformer);
 					if (storedTransformer == null)

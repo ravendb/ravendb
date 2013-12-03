@@ -262,12 +262,12 @@ namespace Raven.Tests.Helpers
 			new RavenDocumentsByEntityName().Execute(documentStore.DatabaseCommands, documentStore.Conventions);
 		}
 
-		public static void WaitForIndexing(IDocumentStore store, string db = null)
+		public static void WaitForIndexing(IDocumentStore store, string db = null,TimeSpan? timeout = null)
 		{
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-			Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, TimeSpan.FromMinutes(1)));
+            Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(10)));
 		}
 
 		public static void WaitForIndexing(DocumentDatabase db)
@@ -353,46 +353,30 @@ namespace Raven.Tests.Helpers
 			Assert.True(done);
 		}
 
-		public static void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore, bool debug = true)
+		public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true)
 		{
 			if (debug && Debugger.IsAttached == false)
 				return;
 
-			documentStore.SetStudioConfigToAllowSingleDb();
+		    var embeddableDocumentStore = documentStore as EmbeddableDocumentStore;
+		    HttpServer server = null;
+            string url = documentStore.Url;
+		    if (embeddableDocumentStore != null)
+		    {
+                embeddableDocumentStore.SetStudioConfigToAllowSingleDb();
+                embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
+                server = new HttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.DocumentDatabase);
+                server.StartListening();
+                url = embeddableDocumentStore.Configuration.ServerUrl;
+		    }
 
-			documentStore.DatabaseCommands.Put("Pls Delete Me", null,
+		    documentStore.DatabaseCommands.Put("Pls Delete Me", null,
+		        RavenJObject.FromObject(new {StackTrace = new StackTrace(true)}),
+		        new RavenJObject());
 
-											   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }),
-											   new RavenJObject());
-
-			documentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
-			using (var server = new HttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
+			using (server)
 			{
-				server.StartListening();
-				Process.Start(documentStore.Configuration.ServerUrl); // start the server
-
-				do
-				{
-					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && (debug == false || Debugger.IsAttached));
-			}
-		}
-
-		protected void WaitForUserToContinueTheTest(bool debug = true)
-		{
-			if (debug && Debugger.IsAttached == false)
-				return;
-
-			using (var documentStore = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			})
-			{
-				documentStore.Initialize();
-				documentStore.DatabaseCommands.Put("Pls Delete Me", null,
-												   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }), new RavenJObject());
-
-				Process.Start(documentStore.Url); // start the server
+				Process.Start(url); // start the server
 
 				do
 				{

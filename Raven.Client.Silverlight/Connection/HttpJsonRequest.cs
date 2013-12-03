@@ -116,9 +116,9 @@ namespace Raven.Client.Silverlight.Connection
 
 		internal HttpJsonRequest(CreateHttpJsonRequestParams requestParams, HttpJsonRequestFactory factory)
 		{
+			_credentials = requestParams.Credentials;
 			Url = requestParams.Url;
-			Method = requestParams.Method;
-			conventions = requestParams.Convention;
+			this.conventions = requestParams.Convention;
 			this.factory = factory;
 
 			noopWaitForTask = new CompletedTask();
@@ -155,6 +155,8 @@ namespace Raven.Client.Silverlight.Connection
 		}
 
 		private bool requestSendToServer;
+
+		private readonly OperationCredentials _credentials;
 
 		/// <summary>
 		/// Begins the read response string.
@@ -206,13 +208,15 @@ namespace Raven.Client.Silverlight.Connection
 			if (conventions.HandleUnauthorizedResponseAsync == null)
 				return;
 
-			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse);
+			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse, _credentials);
 			if (unauthorizedResponseAsync == null)
 				return;
 
-			var result = await unauthorizedResponseAsync;
-			// await RecreateWebRequest(result);
-			throw new NotImplementedException();
+			var forbiddenResponseAsync = conventions.HandleForbiddenResponseAsync(forbiddenResponse, _credentials);
+			if (forbiddenResponseAsync == null)
+				return;
+
+			await forbiddenResponseAsync;
 		}
 
 		public async Task<byte[]> ReadResponseBytesAsync()

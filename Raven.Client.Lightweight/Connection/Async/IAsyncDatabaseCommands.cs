@@ -288,6 +288,13 @@ namespace Raven.Client.Connection.Async
 		Task<AttachmentInformation[]> GetAttachmentsAsync(Etag startEtag, int batchSize);
 
 		/// <summary>
+		/// Retrieves the attachment metadata with the specified key, not the actual attachmet
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <returns></returns>
+		Task<Attachment> HeadAttachmentAsync(string key);
+
+		/// <summary>
 		/// Deletes the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>

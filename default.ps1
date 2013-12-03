@@ -288,6 +288,7 @@ task CopySmuggler {
 task CopyBackup {
 	Copy-Item $base_dir\Raven.Backup\bin\Release\Raven.Abstractions.??? $buildartifacts_dir\Output\Backup
 	Copy-Item $base_dir\Raven.Backup\bin\Release\Raven.Backup.??? $buildartifacts_dir\Output\Backup
+	Copy-Item $build_dir\Raven.Client.Lightweight.??? $build_dir\Output\Backup
 }
 
 task CopyClient {
