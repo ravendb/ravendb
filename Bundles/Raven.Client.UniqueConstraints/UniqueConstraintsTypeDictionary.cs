@@ -10,19 +10,21 @@ namespace Raven.Client.UniqueConstraints
 
 	public class UniqueConstraintsTypeDictionary
 	{
-		public readonly ConcurrentDictionary<Type, PropertyInfo[]> PropertiesCache = new ConcurrentDictionary<Type, PropertyInfo[]>();
+		public readonly ConcurrentDictionary<Type, ConstraintInfo[]> PropertiesCache = new ConcurrentDictionary<Type, ConstraintInfo[]>();
 
-		public PropertyInfo[] GetProperties(Type t)
+		public ConstraintInfo[] GetProperties(Type t)
 		{
-			if (t == null) { return new PropertyInfo[0]; }
+			if (t == null) { return new ConstraintInfo[0]; }
 
 			return PropertiesCache.GetOrAdd(t, GetUniqueProperties);
 		}
 
-		protected virtual PropertyInfo[] GetUniqueProperties(Type type)
+		protected virtual ConstraintInfo[] GetUniqueProperties(Type type)
 		{
+			var attrType = typeof(UniqueConstraintAttribute);
 			return type.GetProperties()
-				.Where(p => Attribute.IsDefined(p, typeof(UniqueConstraintAttribute)))
+				.Where(p => Attribute.IsDefined(p, attrType))
+				.Select(pi => new ReflectedConstraintInfo(pi, (UniqueConstraintAttribute)Attribute.GetCustomAttribute(pi, attrType)))
 				.ToArray();
 		}
 

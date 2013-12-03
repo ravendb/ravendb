@@ -36,10 +36,7 @@
 			if (properties != null)
 			{
                 metadata.Add(Constants.EnsureUniqueConstraints, new RavenJArray(properties.Select(x =>
-                    {
-                        var att = ((UniqueConstraintAttribute) Attribute.GetCustomAttribute(x, typeof (UniqueConstraintAttribute)));
-                        return RavenJObject.FromObject(new { x.Name, att.CaseInsensitive });
-                    })));
+                    RavenJObject.FromObject(x.Configuration))));
 			}
 
 			return true;

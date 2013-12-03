@@ -23,11 +23,15 @@ namespace Raven.Client.UniqueConstraints
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
 			var body = GetMemberExpression(keySelector);
 		    var propertyName = body.Member.Name;
-            var att = (UniqueConstraintAttribute)Attribute.GetCustomAttribute(body.Member, typeof(UniqueConstraintAttribute));
+			var constraintInfo = session.Advanced.DocumentStore.GetUniquePropertiesForType(typeof(T)).SingleOrDefault(ci => ci.Configuration.Name == propertyName);
 
+			if (constraintInfo == null)
+			{
+				return default(T);
+			}
 
 			var uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" +
-                           Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value, att.CaseInsensitive);
+                           Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive);
 			var constraintDoc = session.Include("RelatedId").Load<RavenJObject>(uniqueId);
 			if (constraintDoc == null)
 				return default(T);
@@ -59,13 +63,12 @@ namespace Raven.Client.UniqueConstraints
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof (T));
 
 			var constraintsIds = from property in properties
-			                     let propertyValue = property.GetValue(entity, null)
-                                 let att = (UniqueConstraintAttribute)Attribute.GetCustomAttribute(property, typeof(UniqueConstraintAttribute))
+			                     let propertyValue = property.GetValue(entity)
 			                     where propertyValue != null
-                                 from item in typeof(IEnumerable).IsAssignableFrom(property.PropertyType) && property.PropertyType != typeof(string) ? ((IEnumerable)propertyValue).Cast<object>().Where(i => i != null) : new []{propertyValue}
+								 from item in typeof(IEnumerable).IsAssignableFrom(propertyValue.GetType()) && propertyValue.GetType() != typeof(string) ? ((IEnumerable)propertyValue).Cast<object>().Where(i => i != null) : new[] { propertyValue }
 			                     select 
-				                     "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() +
-				                     "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(item.ToString(),att.CaseInsensitive);
+				                     "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Configuration.Name.ToLowerInvariant() +
+				                     "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(item.ToString(),property.Configuration.CaseInsensitive);
 
 			var constraintDocs = session.Include<ConstraintDocument>(x => x.RelatedId).Load(constraintsIds.ToArray());
 
@@ -112,10 +115,9 @@ namespace Raven.Client.UniqueConstraints
 				var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof (T));
 
 				var constraintsIds = from property in properties
-				                     let propertyValue = property.GetValue(entity, null)
-                                     let att = (UniqueConstraintAttribute)Attribute.GetCustomAttribute(property, typeof(UniqueConstraintAttribute))
+				                     let propertyValue = property.GetValue(entity)
 				                     where propertyValue != null
-				                     select "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Name.ToLowerInvariant() + "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(propertyValue.ToString(), att.CaseInsensitive);
+				                     select "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + property.Configuration.Name.ToLowerInvariant() + "/" + Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(propertyValue.ToString(), property.Configuration.CaseInsensitive);
 
 				return session.Include<ConstraintDocument>(x => x.RelatedId).LoadAsync(constraintsIds.ToArray())
 				              .ContinueWith(task =>
@@ -146,7 +148,7 @@ namespace Raven.Client.UniqueConstraints
 		}
 
 
-		internal static PropertyInfo[] GetUniquePropertiesForType(this IDocumentStore store, Type type)
+		internal static ConstraintInfo[] GetUniquePropertiesForType(this IDocumentStore store, Type type)
 		{
 			UniqueConstraintsTypeDictionary dictionary = UniqueConstraintsTypeDictionary.FindDictionary(store);
 			if (dictionary != null)
@@ -161,21 +163,21 @@ namespace Raven.Client.UniqueConstraints
 
 	public class UniqueConstraintCheckResult<T>
 	{
-		private readonly Dictionary<PropertyInfo, object> propertyDocuments;
+		private readonly Dictionary<string, object> propertyDocuments;
 
 		private readonly T[] loadedDocs;
 
 		private readonly T checkedDocument;
 
-		public UniqueConstraintCheckResult(T document, PropertyInfo[] properties, T[] loadedDocs)
+		public UniqueConstraintCheckResult(T document, ConstraintInfo[] properties, T[] loadedDocs)
 		{
-			propertyDocuments = new Dictionary<PropertyInfo, object>(properties.Length);
+			propertyDocuments = new Dictionary<string, object>(properties.Length);
 			checkedDocument = document;
 			this.loadedDocs = loadedDocs;
 
 			foreach (var propertyInfo in properties)
 			{
-				var checkProperty = propertyInfo.GetValue(checkedDocument, null);
+				var checkProperty = propertyInfo.GetValue(checkedDocument);
 				if (checkProperty == null)
 					continue;
 				var foundDocument = default(T);
@@ -184,14 +186,13 @@ namespace Raven.Client.UniqueConstraints
 				{
 					foundDocument = loadedDocs.FirstOrDefault(x =>
 					{
-						var docProperty = propertyInfo.GetValue(x, null);
+						var docProperty = propertyInfo.GetValue(x);
 						if (docProperty == null)
 							return false;
 						return docProperty.ToString().Equals(checkProperty.ToString(), StringComparison.InvariantCultureIgnoreCase);
-						;
 					});
 				}
-				propertyDocuments.Add(propertyInfo, foundDocument);
+				propertyDocuments.Add(propertyInfo.Configuration.Name, foundDocument);
 			}
 		}
 
@@ -210,7 +211,7 @@ namespace Raven.Client.UniqueConstraints
 			var body = (MemberExpression) keySelector.Body;
 			var prop = (PropertyInfo) body.Member;
 			object doc;
-			propertyDocuments.TryGetValue(prop, out doc);
+			propertyDocuments.TryGetValue(prop.Name, out doc);
 			return (T) doc;
 		}
 	}
