@@ -203,7 +203,7 @@ namespace Raven.Client.Indexes
 			databaseCommands.PutIndex(IndexName, indexDefinition, true);
 
 			UpdateIndexInReplication(databaseCommands, documentConvention, (commands, url) =>
-				commands.DirectPutIndex(IndexName, indexDefinition, true, url));
+				commands.DirectPutIndex(IndexName, url, true, indexDefinition));
 		}
 
 #endif

@@ -110,27 +110,28 @@ namespace Raven.Client.Connection
 
 		internal void ExecuteWithReplication(string method, Action<string> operation)
 		{
-			asyncServerClient.ExecuteWithReplication(method, operationUrl =>
+			asyncServerClient.ExecuteWithReplication(method, operationMetadata =>
 			{
-				operation(operationUrl);
+				operation(operationMetadata.Url);
 				return null;
 			}).WaitUnwrap();
 		}
 
 		internal T ExecuteWithReplication<T>(string method, Func<string, T> operation)
 		{
-			return asyncServerClient.ExecuteWithReplication(method, s => Task.FromResult(operation(s))).ResultUnwrap();
+			return asyncServerClient.ExecuteWithReplication(method, operationMetadata => Task.FromResult(operation(operationMetadata.Url))).ResultUnwrap();
 		}
 
 		/// <summary>
 		/// Perform a direct get for a document with the specified key on the specified server URL.
 		/// </summary>
-		/// <param name="serverUrl">The server URL.</param>
+		/// <param name="operationMetadata">The metadata that contains URL and credentials to perform operation</param>
 		/// <param name="key">The key.</param>
 		/// <returns></returns>
-		public JsonDocument DirectGet(string serverUrl, string key, string transformer = null)
+		public JsonDocument DirectGet(OperationMetadata operationMetadata, string key, string transformer = null)
 		{
-			return asyncServerClient.DirectGetAsync(serverUrl, key, transformer).ResultUnwrap();
+			//TODO: add transformer
+			return asyncServerClient.DirectGetAsync(operationMetadata, key).ResultUnwrap();
 		}
 
 		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
@@ -287,7 +288,7 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public string PutIndex(string name, IndexDefinition definition)
 		{
-			return asyncServerClient.PutIndexAsync(name, definition).ResultUnwrap();
+			return asyncServerClient.PutIndexAsync(name, definition, false).ResultUnwrap();
 		}
 
 		public string PutTransformer(string name, TransformerDefinition transformerDef)
@@ -334,9 +335,9 @@ namespace Raven.Client.Connection
 			return asyncServerClient.PutIndexAsync(name, indexDef, overwrite).ResultUnwrap();
 		}
 
-		public string DirectPutIndex(string name, IndexDefinition indexDefinition, bool overwrite, string url)
+		public string DirectPutIndex(string name, OperationMetadata operationMetadata, bool overwrite, IndexDefinition definition)
 		{
-			return asyncServerClient.DirectPutIndexAsync(name, indexDefinition, overwrite, url).Result;
+			return asyncServerClient.DirectPutIndexAsync(name, definition, overwrite, operationMetadata).Result;
 		}
 
 		/// <summary>

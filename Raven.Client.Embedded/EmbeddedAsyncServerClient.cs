@@ -381,11 +381,6 @@ namespace Raven.Client.Embedded
 	        throw new NotImplementedException();
 	    }
 
-	    public Task<Attachment> HeadAttachmentAsync(string key)
-	    {
-	        throw new NotImplementedException();
-	    }
-
 	    public Task CommitAsync(string txId)
 	    {
 	        throw new NotImplementedException();

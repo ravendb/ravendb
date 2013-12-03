@@ -134,10 +134,10 @@ namespace Raven.Client.Connection
 			disabledAuthRetries = true;
 		}
 
-		/*public void RemoveAuthorizationHeader()
+		public void RemoveAuthorizationHeader()
 		{
 			webRequest.Headers.Remove("Authorization");
-		}*/
+		}
 
 		public Task ExecuteRequestAsync()
 		{

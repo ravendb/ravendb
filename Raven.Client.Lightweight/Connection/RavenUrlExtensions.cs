@@ -123,12 +123,14 @@ namespace Raven.Client.Connection
 			return requestor.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, "GET", credentials, convention));
 		}
 
-		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, OperationCredentials credentials, DocumentConvention convention, IDictionary<string, string> operationsHeaders, string method)
+		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor,
+												 OperationCredentials credentials, DocumentConvention convention,
+												 NameValueCollection operationsHeaders, string method)
 		{
 			var httpJsonRequest = requestor.jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(requestor, url, method, credentials, convention)
-					.AddOperationHeaders(operationsHeaders));
-			
+					new CreateHttpJsonRequestParams(requestor, url, method, credentials, convention)
+							.AddOperationHeaders(operationsHeaders));
+
 			return httpJsonRequest;
 		}
 	}

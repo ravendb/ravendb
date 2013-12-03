@@ -674,9 +674,9 @@ namespace Raven.Client.Document
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
 				return new ServerClient(new AsyncServerClient(
-                    databaseUrl, Conventions, Credentials, jsonRequestFactory,
-                    currentSessionId, GetReplicationInformerForDatabase, null,
-                    listeners.ConflictListeners));
+					databaseUrl, Conventions, ApiKey, Credentials, jsonRequestFactory,
+					currentSessionId, GetReplicationInformerForDatabase, null,
+					listeners.ConflictListeners));
 			};
 #endif
 

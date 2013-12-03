@@ -212,11 +212,9 @@ namespace Raven.Client.Silverlight.Connection
 			if (unauthorizedResponseAsync == null)
 				return;
 
-			var forbiddenResponseAsync = conventions.HandleForbiddenResponseAsync(forbiddenResponse, _credentials);
-			if (forbiddenResponseAsync == null)
-				return;
-
-			await forbiddenResponseAsync;
+			var result = await unauthorizedResponseAsync;
+			// await RecreateWebRequest(result);
+			throw new NotImplementedException();
 		}
 
 		public async Task<byte[]> ReadResponseBytesAsync()
