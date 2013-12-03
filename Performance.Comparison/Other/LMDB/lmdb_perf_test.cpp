@@ -46,6 +46,9 @@ public:
   time_t Time; 
 };
 
+#define RND 0
+#define SEQ 1
+
 vector<ParallelTestData> SplitData(vector<TestData> data, int currentItemsPerTransaction, int currentNumberOfTransactions, int numberOfThreads) {
 
   vector<ParallelTestData> results;
@@ -154,16 +157,16 @@ MDB_env* StorageEnvironment(bool deleteOldData, MDB_dbi *pdbi){
 
   MDB_txn *txn;
   mdb_txn_begin(env, NULL, 0, &txn);
-  mdb_open(txn, NULL, 0, pdbi);
+  mdb_open(txn, NULL, MDB_INTEGERKEY, pdbi);
   mdb_txn_commit(txn);
   
   return env;
 }
 
-vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int itemsPerTransaction, int numberOfTransactions, MDB_env* env, MDB_dbi dbi) {
+vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int itemsPerTransaction, int numberOfTransactions, int seqrand, MDB_env* env, MDB_dbi dbi) {
   vector<PerformanceRecord> records;
   
-  int rc;
+  int rc, flag = 0;
 
   MDB_val key, data;
 
@@ -171,12 +174,16 @@ vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int it
   MDB_cursor *cursor;
   char sval[87 * 1024];
   
+  if (seqrand == SEQ)
+  	flag = MDB_APPEND;
+
   for(int transactions = 0; transactions < numberOfTransactions; transactions++) {
     time_point<system_clock> sw = system_clock::now();
     
     MDB_txn *txn;
 
     rc = mdb_txn_begin(env, NULL, 0, &txn);
+	rc = mdb_cursor_open(txn, dbi, &cursor);
     
     for(int i = 0; i < itemsPerTransaction; i++) {
       TestData *item = &*begin;
@@ -187,7 +194,7 @@ vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int it
       data.mv_size = item->ValueSize;
       data.mv_data = sval;
        
-      rc = mdb_put(txn, dbi, &key, &data, 0);
+      rc = mdb_cursor_put(cursor, &key, &data, flag);
       
       if(rc != 0){
 	cout << "Unable to PUT: " << rc << endl;
@@ -215,7 +222,7 @@ vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int it
   return records;
 }
 
-vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransaction, int numberOfTransactions) {
+vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransaction, int numberOfTransactions, int seqrand) {
 
   MDB_dbi dbi;
   MDB_env *env = StorageEnvironment(true, &dbi);
@@ -223,7 +230,7 @@ vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransact
   time_point<system_clock> start, end;
   start = system_clock::now();
   
-  vector<PerformanceRecord> records = WriteInternal(dataItems.begin(),itemsPerTransaction,numberOfTransactions, env, dbi);
+  vector<PerformanceRecord> records = WriteInternal(dataItems.begin(),itemsPerTransaction,numberOfTransactions, seqrand, env, dbi);
   
   end = system_clock::now();
   
@@ -239,7 +246,7 @@ vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransact
   return records;
 };
 
-vector<PerformanceRecord> WriteParallel(vector<TestData> data, int itemsPerTransaction, int numberOfTransactions, int numberOfThreads) {
+vector<PerformanceRecord> WriteParallel(vector<TestData> data, int itemsPerTransaction, int numberOfTransactions, int seqrand, int numberOfThreads) {
   vector<PerformanceRecord> records;
   
   MDB_dbi dbi;
@@ -258,7 +265,7 @@ vector<PerformanceRecord> WriteParallel(vector<TestData> data, int itemsPerTrans
     vector<TestData>::iterator it = data.begin();
     advance(it, d.SkipCount);
     
-    results.at(i) = async(&WriteInternal, it, d.ItemsPerTransaction, d.NumberOfTransactions, env, dbi);
+    results.at(i) = async(&WriteInternal, it, d.ItemsPerTransaction, d.NumberOfTransactions, seqrand, env, dbi);
   }
   
   for(int i = 0; i < numberOfThreads; i++) {
@@ -398,19 +405,19 @@ int main(int argc,char * argv[])
   vector<TestData> sequentialIdsLarge = InitSequentialNumbers(readItems, 512, 87 * 1024);
   vector<TestData> randomIdsLarge = InitRandomNumbers(readItems, 512, 87 * 1024);
   
-  vector<PerformanceRecord> records = Write(sequentialIds, itemsPerTransaction, writeTransactions);
+  vector<PerformanceRecord> records = Write(sequentialIds, itemsPerTransaction, writeTransactions, SEQ);
   WritePerfData("WriteSeq", records);
   
-  records = WriteParallel(sequentialIds, itemsPerTransaction, writeTransactions, 2);
+  records = WriteParallel(sequentialIds, itemsPerTransaction, writeTransactions, SEQ, 2);
   WritePerfData("WriteSeq_Parallel_2", records);
   
-  records = WriteParallel(sequentialIds, itemsPerTransaction, writeTransactions, 4);
+  records = WriteParallel(sequentialIds, itemsPerTransaction, writeTransactions, SEQ, 4);
   WritePerfData("WriteSeq_Parallel_4", records);
   
-  records = WriteParallel(sequentialIds, itemsPerTransaction, writeTransactions, 8);
+  records = WriteParallel(sequentialIds, itemsPerTransaction, writeTransactions, SEQ, 8);
   WritePerfData("WriteSeq_Parallel_8", records);
   
-  records = WriteParallel(sequentialIds, itemsPerTransaction, writeTransactions, 16);
+  records = WriteParallel(sequentialIds, itemsPerTransaction, writeTransactions, SEQ, 16);
   WritePerfData("WriteSeq_Parallel_16", records);
   
   records = Read(sequentialIds, itemsPerTransaction, writeTransactions);
@@ -428,17 +435,17 @@ int main(int argc,char * argv[])
   records = ReadParallel(sequentialIds, itemsPerTransaction, writeTransactions, 16);
   WritePerfData("ReadSeq_Parallel_16", records);
   
-  records = Write(randomIds, itemsPerTransaction, writeTransactions);
+  records = Write(randomIds, itemsPerTransaction, writeTransactions, RND);
   WritePerfData("WriteRandom", records);
   records = Read(randomIds, itemsPerTransaction, writeTransactions);
   WritePerfData("ReadRandom", records);
   
-  records = Write(sequentialIdsLarge, itemsPerTransaction, writeTransactions);
+  records = Write(sequentialIdsLarge, itemsPerTransaction, writeTransactions, SEQ);
   WritePerfData("WriteLargeSeq", records);
   records = Read(sequentialIdsLarge, itemsPerTransaction, writeTransactions);
   WritePerfData("ReadLargeSeq", records);
   
-  records = Write(randomIdsLarge, itemsPerTransaction, writeTransactions);
+  records = Write(randomIdsLarge, itemsPerTransaction, writeTransactions, RND);
   WritePerfData("WriteLargeRandom", records);;
   records = Read(randomIdsLarge, itemsPerTransaction, writeTransactions);
   WritePerfData("ReadLargeRandom", records);
