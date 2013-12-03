@@ -1760,36 +1760,56 @@ namespace Raven.Database
             if (idPrefix == null)
                 throw new ArgumentNullException("idPrefix");
             idPrefix = idPrefix.Trim();
-            TransactionalStorage.Batch(actions =>
-            {
-                bool returnedDocs = false;
-                while (true)
-                {
-                    int docCount = 0;
-                    var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
-                    var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
-                    foreach (var doc in documents)
-                    {
-                        docCount++;
-                        string keyTest = doc.Key.Substring(idPrefix.Length);
-                        if (!WildcardMatcher.Matches(matches, keyTest) || WildcardMatcher.MatchesExclusion(exclude, keyTest))
-                            continue;
-                        DocumentRetriever.EnsureIdInMetadata(doc);
-                        var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
-                        JsonDocument document = nonAuthoritativeInformationBehavior != null ? nonAuthoritativeInformationBehavior(doc) : doc;
-                        document = documentRetriever
-                            .ExecuteReadTriggers(doc, null, ReadOperation.Load);
-                        if (document == null)
-                            continue;
 
-                        addDoc(document.ToJson());
-                        returnedDocs = true;
+            var canPerformRapidPagination = string.IsNullOrEmpty(matches) && string.IsNullOrEmpty(exclude);
+
+            TransactionalStorage.Batch(
+                actions =>
+                {
+                    var docsToSkip = canPerformRapidPagination ? 0 : start;
+                    var addedDocs = 0;
+                    var matchedDocs = 0;
+                    int docCount;
+                    start = canPerformRapidPagination ? start : 0;
+
+                    do
+                    {
+                        docCount = 0;
+                        var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
+                        var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
+
+                        foreach (var doc in docs)
+                        {
+                            docCount++;
+                            var keyTest = doc.Key.Substring(idPrefix.Length);
+
+                            if (!WildcardMatcher.Matches(matches, keyTest) || WildcardMatcher.MatchesExclusion(exclude, keyTest))
+                                continue;
+
+                            DocumentRetriever.EnsureIdInMetadata(doc);
+                            var nonAuthoritativeInformationBehavior = inFlightTransactionalState.GetNonAuthoritativeInformationBehavior<JsonDocument>(null, doc.Key);
+
+                            var document = nonAuthoritativeInformationBehavior != null ? nonAuthoritativeInformationBehavior(doc) : doc;
+                            document = documentRetriever.ExecuteReadTriggers(document, null, ReadOperation.Load);
+                            if (document == null)
+                                continue;
+
+                            matchedDocs++;
+
+                            if (matchedDocs <= docsToSkip)
+                                continue;
+
+                            addDoc(document.ToJson());
+                            addedDocs++;
+
+                            if (addedDocs >= pageSize)
+                                break;
+                        }
+
+                        start += pageSize;
                     }
-                    if (returnedDocs || docCount == 0)
-                        break;
-                    start += docCount;
-                }
-            });
+                    while (docCount > 0 && addedDocs < pageSize);
+                });
         }
 
         public RavenJArray GetDocuments(int start, int pageSize, Etag etag)
