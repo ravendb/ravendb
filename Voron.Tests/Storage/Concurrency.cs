@@ -263,5 +263,27 @@
                 Env.Writer.Write(batch1);
             }
         }
+
+        [Fact]
+        public void BatchConcurrencyExceptionShouldNotBeThrown2()
+        {
+            var batch1 = new WriteBatch();
+            batch1.Add("key/1", StreamFor("123"), Constants.RootTreeName, 0);
+
+            Env.Writer.Write(batch1);
+
+            using (var snapshot = Env.CreateSnapshot())
+            {
+                var version = snapshot.ReadVersion(Constants.RootTreeName, "key/1", batch1);
+                Assert.Equal(1, version);
+
+                batch1 = new WriteBatch();
+                batch1.Delete("key/1", Constants.RootTreeName);
+                version = snapshot.ReadVersion(Constants.RootTreeName, "key/1", batch1);
+                batch1.Add("key/1", StreamFor("123"), Constants.RootTreeName, version);
+
+                Env.Writer.Write(batch1);
+            }
+        }
 	}
 }

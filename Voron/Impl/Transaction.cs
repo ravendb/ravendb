@@ -57,11 +57,6 @@ namespace Voron.Impl
 		private TransactionHeader* _txHeader;
 		private readonly List<PageFromScratchBuffer> _transactionPages = new List<PageFromScratchBuffer>();
 
-		public Page TempPage
-		{
-			get { return _dataPager.TempPage; }
-		}
-
 		public bool Committed { get; private set; }
 
 		public bool RolledBack { get; private set; }
