@@ -380,6 +380,18 @@ namespace Voron.Trees
             get { return new Slice(GetNode(i)).ToString(); }
         }
 
+		public Slice GetNodeKey(int nodeNumber)
+		{
+			var node = GetNode(nodeNumber);
+			var keySize = node->KeySize;
+			var key = new byte[keySize];
+
+			fixed (byte* ptr = key)
+				NativeMethods.memcpy(ptr, (byte*)node + Constants.NodeHeaderSize, keySize);
+
+			return new Slice(key);
+		}
+
 	    public string DebugView()
 	    {
 		    var sb = new StringBuilder();

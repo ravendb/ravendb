@@ -15,6 +15,14 @@ namespace Voron.Trees
 
 	public unsafe class Tree
 	{
+		private class FoundPage
+		{
+			public long Number;
+			public Slice FirstKey;
+			public Slice LastKey;
+			public List<long> CursorPath;
+		}
+
 		private TreeMutableState _state = new TreeMutableState();
 		public string Name { get; set; }
 
@@ -37,6 +45,7 @@ namespace Voron.Trees
 			_state = state;
 		}
 
+		private FoundPage _lastFoundPage = null; 
 
 		public static Tree Open(Transaction tx, SliceComparer cmp, TreeRootHeader* header)
 		{
@@ -197,7 +206,6 @@ namespace Voron.Trees
 
 			using (var cursor = tx.NewCursor(this))
 			{
-
 				var foundPage = FindPageFor(tx, key, cursor);
 
 			    var page = tx.ModifyPage(foundPage.PageNumber, cursor);
@@ -228,7 +236,7 @@ namespace Voron.Trees
 							return pos;
 					}
 
-					RemoveLeafNode(tx, cursor, page, out nodeVersion);
+					RemoveLeafNode(tx, page, out nodeVersion);
 				}
 				else // new item should be recorded
 				{
@@ -250,6 +258,7 @@ namespace Voron.Trees
 				byte* dataPos;
 				if (page.HasSpaceFor(key, len) == false)
 				{
+					_lastFoundPage = null;
 					var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
 					dataPos = pageSplitter.Execute();
 
@@ -311,7 +320,7 @@ namespace Voron.Trees
 			return overflowPageStart.PageNumber;
 		}
 
-		private void RemoveLeafNode(Transaction tx, Cursor cursor, Page page, out ushort nodeVersion)
+		private void RemoveLeafNode(Transaction tx, Page page, out ushort nodeVersion)
 		{
 			var node = page.GetNode(page.LastSearchPosition);
 			nodeVersion = node->Version;
@@ -365,8 +374,17 @@ namespace Voron.Trees
 
 		public Page FindPageFor(Transaction tx, Slice key, Cursor cursor)
 		{
-			var p = tx.GetReadOnlyPage(State.RootPageNumber);
+			Page p;
+
+			if (TryUseLastFoundPage(tx, key, cursor, out p))
+				return p;
+
+			p = tx.GetReadOnlyPage(State.RootPageNumber);
 			cursor.Push(p);
+
+			bool? rightmostPage = null;
+			bool? leftmostPage = null;
+
 			while (p.Flags == (PageFlags.Branch))
 			{
 				int nodePos;
@@ -388,12 +406,27 @@ namespace Voron.Trees
 							nodePos--;
 							p.LastSearchPosition--;
 						}
+
+						if (p.Flags == PageFlags.Branch)
+						{
+							if (nodePos == 0)
+								leftmostPage = leftmostPage.HasValue ? leftmostPage & true : true;
+							else
+								leftmostPage = false;
+
+							rightmostPage = false;
+						}
 					}
 					else
 					{
 						nodePos = (ushort)(p.LastSearchPosition - 1);
-					}
 
+						if (p.Flags == PageFlags.Branch)
+						{
+							rightmostPage = rightmostPage.HasValue ? rightmostPage & true : true;
+							leftmostPage = false;
+						}
+					}
 				}
 
 				var node = p.GetNode(nodePos);
@@ -408,7 +441,75 @@ namespace Voron.Trees
 
 		    p.NodePositionFor(key, _cmp); // will set the LastSearchPosition
 
+			if(p.NumberOfEntries > 0)
+				_lastFoundPage = new FoundPage
+					{
+						Number = p.PageNumber,
+						FirstKey = leftmostPage == true ? Slice.BeforeAllKeys : p.GetNodeKey(0),
+						LastKey = rightmostPage == true? Slice.AfterAllKeys : p.GetNodeKey(p.NumberOfEntries - 1),
+						CursorPath = cursor.Pages.Select(x => x.PageNumber).Reverse().ToList()
+					};
+
 			return p;
+		}
+
+		private bool TryUseLastFoundPage(Transaction tx, Slice key, Cursor c, out Page page)
+		{
+			page = null;
+			if (_lastFoundPage != null)
+			{
+				var first = _lastFoundPage.FirstKey;
+				var last = _lastFoundPage.LastKey;
+
+				if (key.Options == SliceOptions.BeforeAllKeys && first.Options != SliceOptions.BeforeAllKeys)
+					return false;
+
+				if (key.Options == SliceOptions.AfterAllKeys && last.Options != SliceOptions.AfterAllKeys)
+					return false;
+
+				if (key.Options == SliceOptions.Key &&
+					(first.Options != SliceOptions.BeforeAllKeys && key.Compare(first, _cmp) < 0) ||
+					(last.Options != SliceOptions.AfterAllKeys && key.Compare(last, _cmp) > 0))
+					return false;
+
+				page = tx.GetReadOnlyPage(_lastFoundPage.Number);
+
+				if (page.IsLeaf == false)
+					throw new DataException("Index points to a non leaf page");
+
+				page.NodePositionFor(key, _cmp); // will set the LastSearchPosition
+
+				foreach (var p in _lastFoundPage.CursorPath)
+				{
+					if (p == _lastFoundPage.Number)
+						c.Push(page);
+					else
+					{
+						var cursorPage = tx.GetReadOnlyPage(p);
+						if (key.Options == SliceOptions.BeforeAllKeys)
+						{
+							cursorPage.LastSearchPosition = 0;
+						}
+						else if (key.Options == SliceOptions.AfterAllKeys)
+						{
+							cursorPage.LastSearchPosition = (ushort)(cursorPage.NumberOfEntries - 1);
+						}
+						else if (cursorPage.Search(key, _cmp) != null)
+						{
+							if (cursorPage.LastMatch != 0)
+							{
+								cursorPage.LastSearchPosition--;
+							}
+						}
+
+						c.Push(cursorPage);
+					}
+				}
+
+				return true;
+			}
+
+			return false;
 		}
 
 		internal static Page NewPage(Transaction tx, PageFlags flags, int num)
@@ -437,7 +538,7 @@ namespace Voron.Trees
 
 				State.EntriesCount--;
 				ushort nodeVersion;
-				RemoveLeafNode(tx, cursor, page, out nodeVersion);
+				RemoveLeafNode(tx, page, out nodeVersion);
 
 				CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
 
@@ -445,7 +546,8 @@ namespace Voron.Trees
 				var changedPage = page;
 				while (changedPage != null)
 				{
-					changedPage = treeRebalancer.Execute(cursor, changedPage);
+					_lastFoundPage = null;
+					changedPage = treeRebalancer.Execute(cursor, changedPage);	
 				}
 
 				page.DebugValidate(tx, _cmp, State.RootPageNumber);
