@@ -118,6 +118,7 @@
     <Compile Include="Trees\TreeMutableState.cs" />
     <Compile Include="Trees\TreeRebalancer.cs" />
     <Compile Include="Util\AsyncManualResetEvent.cs" />
+    <Compile Include="Util\ConditionVariableFactory.cs" />
     <Compile Include="Util\Conversion\Endianness.cs" />
     <Compile Include="Util\Crc.cs" />
     <Compile Include="Util\DisposableAction.cs" />
@@ -127,7 +128,8 @@
     <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\LittleEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\EndianBitConverter.cs" />
-    <Compile Include="Util\SafeDictionary.cs" />
+    <Compile Include="Util\LinkedDictionary.cs" />
+    <Compile Include="Util\Refence.cs" />
     <Compile Include="Util\SafeList.cs" />
     <Compile Include="Util\TreeExtensions.cs" />
     <Compile Include="Util\Utils.cs" />

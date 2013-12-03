@@ -22,10 +22,8 @@ namespace Voron.Impl.Paging
         static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
         public MemoryMapPager(string file,
-            bool asyncPagerRelease,
 			NativeFileAttributes options = NativeFileAttributes.Normal,
 			NativeFileAccess access = NativeFileAccess.GenericAll)
-            : base(asyncPagerRelease)
 		{
             this.access = access;
 	        _fileInfo = new FileInfo(file);
@@ -86,7 +84,7 @@ namespace Voron.Impl.Paging
 			byte* p = null;
 			accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
 
-			var newPager = new PagerState(this, AsyncPagerRelease)
+			var newPager = new PagerState(this)
 			{
 				Accessor = accessor,
 				File = mmf,
@@ -135,11 +133,7 @@ namespace Voron.Impl.Paging
 	    public override void Dispose()
 		{
 			base.Dispose();
-			if (PagerState != null)
-			{
-				PagerState.Release();
-				PagerState = null;
-			}
+			
             _fileStream.Dispose();
 			_handle.Close();
 			if(DeleteOnClose)

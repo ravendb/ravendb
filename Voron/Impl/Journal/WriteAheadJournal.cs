@@ -141,7 +141,7 @@ namespace Voron.Impl.Journal
 					// we setup the journal file so we can flush from it to the data file
 					var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * AbstractPager.PageSize);
 					var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
-					jrnlFile.InitFrom(journalReader, SafeDictionary<long, JournalFile.PagePosition>.From(ptt), journalReader.TransactionEndPositions);
+					jrnlFile.InitFrom(journalReader, LinkedDictionary<long, JournalFile.PagePosition>.From(ptt), journalReader.TransactionEndPositions);
 					jrnlFile.AddRef(); // creator reference - write ahead log
 
 					journalFiles.Add(jrnlFile);
@@ -379,7 +379,7 @@ namespace Voron.Impl.Journal
 
 			    foreach (var journalFile in _jrnls.Where(x => x.Number >= _lastSyncedJournal))
                 {
-                    if (journalFile.PageTranslationTable.Count == 0)
+                    if (journalFile.PageTranslationTable.IsEmpty)
                         continue;
 
 	                var currentJournalMaxTransactionId = -1L;
@@ -422,7 +422,15 @@ namespace Voron.Impl.Journal
                     return;
 
 				_lastSyncedJournal = lastProcessedJournal;
-				_lastSyncedPage = _jrnls.First(x => x.Number == _lastSyncedJournal).TransactionEndPositions[lastFlushedTransactionId];
+				var transactionEndPositions = _jrnls.First(x => x.Number == _lastSyncedJournal).TransactionEndPositions;
+
+				LongRef val;
+				if (transactionEndPositions.TryGetValue(lastFlushedTransactionId, out val) == false)
+				{
+					throw new InvalidOperationException("Could not find transaction end position for " + lastFlushedTransactionId);
+				}
+
+				_lastSyncedPage = val.Value;
 
                 var scratchBufferPool = _waj._env.ScratchBufferPool;
 				var scratchPagerState = scratchBufferPool.PagerState;

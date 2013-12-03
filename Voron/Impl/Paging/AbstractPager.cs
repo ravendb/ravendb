@@ -8,10 +8,8 @@ using Voron.Util;
 
 namespace Voron.Impl.Paging
 {
-	public unsafe abstract class AbstractPager : IVirtualPager
+    public unsafe abstract class AbstractPager : IVirtualPager
 	{
-        protected bool AsyncPagerRelease { get; private set; }
-
 	    protected int MinIncreaseSize { get { return 16 * PageSize; } }
 
 		private long _increaseSize;
@@ -29,14 +27,13 @@ namespace Voron.Impl.Paging
 		}
 
 		private string _source;
-		protected AbstractPager(bool asyncPagerRelease)
+		protected AbstractPager()
 		{
-            AsyncPagerRelease = asyncPagerRelease;
 		    _increaseSize = MinIncreaseSize;
 			MaxNodeSize = 1024;
 			Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
 			PageMinSpace = (int)(PageMaxSpace * 0.33);
-            PagerState = new PagerState(this, AsyncPagerRelease);
+            PagerState = new PagerState(this);
 			_tempPage = Marshal.AllocHGlobal(PageSize);
 			PagerState.AddRef();
 		}
@@ -49,7 +46,6 @@ namespace Voron.Impl.Paging
 		public static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
 		private PagerState _pagerState;
 		private ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
-
 
 		public long NumberOfAllocatedPages { get; protected set; }
 
@@ -128,6 +124,12 @@ namespace Voron.Impl.Paging
 
 		public virtual void Dispose()
 		{
+            if (PagerState != null)
+            {
+                PagerState.Release();
+                PagerState = null;
+            }
+
 			if (_tempPage != IntPtr.Zero)
 			{
 				Marshal.FreeHGlobal(_tempPage);

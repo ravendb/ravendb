@@ -1,4 +1,6 @@
-﻿namespace Voron.Impl
+﻿using Voron.Util;
+
+namespace Voron.Impl
 {
 	using System;
 	using System.Collections.Concurrent;
@@ -7,39 +9,39 @@
 	using System.IO;
 	using System.Linq;
 	using System.Threading;
-	using System.Threading.Tasks;
-
 	using Extensions;
 
-	public class TransactionMergingWriter
+	public class TransactionMergingWriter : IDisposable
 	{
 		private readonly StorageEnvironment _env;
 
 		private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites;
 
-		internal readonly SemaphoreSlim _semaphore;
+		private readonly ConditionVariableFactory _conditionVariableFactory = new ConditionVariableFactory();
 
 		internal TransactionMergingWriter(StorageEnvironment env)
 		{
 			_env = env;
 			_pendingWrites = new ConcurrentQueue<OutstandingWrite>();
-			_semaphore = new SemaphoreSlim(1, 1);
 		}
 
-		public async Task WriteAsync(WriteBatch batch)
+		public IDisposable PretendWriteStarted(int count)
 		{
-			if (batch.Operations.Count == 0)
-				return;
+			_pendingWrites.Enqueue(new OutstandingWrite(new WriteBatch()));
 
-			using (batch)
+			return new DisposableAction(() =>
 			{
-				var mine = new OutstandingWrite(batch);
-				_pendingWrites.Enqueue(mine);
-
-				await _semaphore.WaitAsync();
-
-				HandleActualWrites(mine);
-			}
+				OutstandingWrite write;
+				_pendingWrites.TryDequeue(out write);
+				SpinWait.SpinUntil(() => _pendingWrites.Count == count);
+				while (_pendingWrites.Count == count)
+				{
+					foreach (var outstandingWrite in _pendingWrites)
+					{
+						outstandingWrite.ConditionVariable.Wake();
+					}
+				}
+			});
 		}
 
 		public void Write(WriteBatch batch)
@@ -47,14 +49,25 @@
 			if (batch.Operations.Count == 0)
 				return;
 
-			using (batch)
+			using (var mine = new OutstandingWrite(batch)
 			{
-				var mine = new OutstandingWrite(batch);
+				ConditionVariable = _conditionVariableFactory.Create()
+			})
+			{
 				_pendingWrites.Enqueue(mine);
 
-				_semaphore.Wait();
+				using (_conditionVariableFactory.EnterCriticalSection())
+				{
+					while (mine.Done() == false && _pendingWrites.Peek() != mine)
+					{
+						mine.ConditionVariable.Wait(-1);
+					}
 
-				HandleActualWrites(mine);
+					if (mine.Done())
+						return;
+
+					HandleActualWrites(mine);
+				}
 			}
 		}
 
@@ -63,8 +76,6 @@
 			List<OutstandingWrite> writes = null;
 			try
 			{
-				if (mine.Done())
-					return;
 
 				writes = BuildBatchGroup(mine);
 
@@ -88,8 +99,6 @@
 			finally
 			{
 				Finalize(writes);
-
-				_semaphore.Release();
 			}
 
 			Debug.Assert(mine.Status != OutstandingWriteStatus.Pending);
@@ -114,7 +123,7 @@
 		{
 			foreach (var g in operations.GroupBy(x => x.TreeName))
 			{
-				var tree = tx.State.GetTree(g.Key,tx);
+				var tree = tx.State.GetTree(g.Key, tx);
 				foreach (var operation in g)
 				{
 					operation.Reset();
@@ -166,7 +175,7 @@
 			// Allow the group to grow up to a maximum size, but if the
 			// original write is small, limit the growth so we do not slow
 			// down the small write too much.
-		    long maxSize = 16*1024*1024; // 16 MB by default
+			long maxSize = 16 * 1024 * 1024; // 16 MB by default
 			if (mine.Size < 128 * 1024)
 				maxSize = mine.Size + (1024 * 1024);
 
@@ -198,7 +207,7 @@
 			return list;
 		}
 
-		private class OutstandingWrite
+		private class OutstandingWrite : IDisposable
 		{
 			private Exception exception;
 
@@ -214,17 +223,20 @@
 			public long Size { get; private set; }
 
 			public OutstandingWriteStatus Status { get; private set; }
+			public ConditionVariableFactory.ConditionVariable ConditionVariable { get; set; }
 
 			public void SetSuccess()
 			{
 				Status = OutstandingWriteStatus.Success;
 				exception = null;
+				ConditionVariable.Wake();
 			}
 
 			public void SetError(Exception e)
 			{
 				Status = OutstandingWriteStatus.Error;
 				exception = e;
+				ConditionVariable.Wake();
 			}
 
 			public bool Done()
@@ -237,6 +249,13 @@
 
 				throw exception;
 			}
+
+			public void Dispose()
+			{
+				Batch.Dispose();
+				if (ConditionVariable != null)
+					ConditionVariable.Dispose();
+			}
 		}
 
 		private enum OutstandingWriteStatus
@@ -244,6 +263,12 @@
 			Pending,
 			Success,
 			Error
+		}
+
+
+		public void Dispose()
+		{
+			_conditionVariableFactory.Dispose();
 		}
 	}
 }

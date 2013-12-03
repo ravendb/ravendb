@@ -1,28 +1,23 @@
 ﻿namespace Voron.Impl
 {
 	using System;
-	using System.Collections.Concurrent;
 	using System.Collections.Generic;
-	using System.Collections.ObjectModel;
 	using System.IO;
 	using System.Linq;
 
 	public class WriteBatch : IDisposable
 	{
-		private readonly ConcurrentDictionary<string, List<BatchOperation>> _operations;
-
-		private readonly ConcurrentDictionary<string, ConcurrentDictionary<Slice, BatchOperation>> _lastOperations;
+		private readonly Dictionary<string, Dictionary<Slice, BatchOperation>> _lastOperations;
 
 		private readonly SliceEqualityComparer _sliceEqualityComparer;
 
-		public ReadOnlyCollection<BatchOperation> Operations
+		public List<BatchOperation> Operations
 		{
 			get
 			{
-				return _operations
-					.SelectMany(x => x.Value)
-					.ToList()
-					.AsReadOnly();
+				return _lastOperations
+					.SelectMany(x => x.Value.Values.OrderBy(op => op.Key, _sliceEqualityComparer))
+					.ToList();
 			}
 		}
 
@@ -30,27 +25,28 @@
 		{
 			get
 			{
-				return () => _operations.Sum(operation => operation.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
+				return () => _lastOperations.Sum(operation => operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
 			}
 		}
 
-		internal bool TryGetValue(string treeName, Slice key, out ReadResult result, out BatchOperationType operationType)
+		internal bool TryGetValue(string treeName, Slice key, out Stream value, out ushort? version, out BatchOperationType operationType)
 		{
-			result = null;
+		    value = null;
+		    version = null;
 			operationType = BatchOperationType.None;
 
 			if (treeName == null)
 				treeName = Constants.RootTreeName;
 
-			if (_operations.ContainsKey(treeName) == false)
+			Dictionary<Slice, BatchOperation> operations;
+			if (_lastOperations.TryGetValue(treeName, out operations) == false)
 				return false;
-
-			var operations = _lastOperations[treeName];
 
 			BatchOperation operation;
 			if (operations.TryGetValue(key, out operation))
 			{
 				operationType = operation.Type;
+			    version = operation.Version;
 
 				if (operation.Type == BatchOperationType.Delete)
 					return true;
@@ -58,7 +54,7 @@
 				if (operation.Type == BatchOperationType.MultiDelete)
 					return true;
 
-				result = new ReadResult(operation.Value as Stream, operation.Version ?? 0);
+			    value = operation.Value as Stream;
 
 				if (operation.Type == BatchOperationType.Add)
 					return true;
@@ -72,8 +68,7 @@
 
 		public WriteBatch()
 		{
-			_operations = new ConcurrentDictionary<string, List<BatchOperation>>();
-			_lastOperations = new ConcurrentDictionary<string, ConcurrentDictionary<Slice, BatchOperation>>();
+			_lastOperations = new Dictionary<string, Dictionary<Slice, BatchOperation>>();
 			_sliceEqualityComparer = new SliceEqualityComparer();
 		}
 
@@ -133,30 +128,20 @@
 			if (treeName == null)
 				treeName = Constants.RootTreeName;
 
-			_operations.AddOrUpdate(
-				treeName,
-				new List<BatchOperation> { operation },
-				(s, list) =>
-				{
-					list.Add(operation);
-					return list;
-				});
-
-			_lastOperations.AddOrUpdate(
-				treeName,
-				s =>
-				{
-					var dict = new ConcurrentDictionary<Slice, BatchOperation>(_sliceEqualityComparer);
-					dict.AddOrUpdate(operation.Key, operation, (_, __) => operation);
-
-					return dict;
-				},
-				(s, dict) =>
-				{
-					dict.AddOrUpdate(operation.Key, operation, (_, __) => operation);
-
-					return dict;
-				});
+			Dictionary<Slice, BatchOperation> lastOpsForTree;
+			if (_lastOperations.TryGetValue(treeName, out lastOpsForTree) == false)
+			{
+				_lastOperations[treeName] = lastOpsForTree = new Dictionary<Slice, BatchOperation>(_sliceEqualityComparer);
+			}
+			BatchOperation old;
+			if (lastOpsForTree.TryGetValue(operation.Key, out old))
+			{
+				operation.SetVersionFrom(old);
+				var disposable = old.Value as IDisposable;
+				if (disposable != null)
+					disposable.Dispose();
+			}
+			lastOpsForTree[operation.Key] = operation;
 		}
 
 		public class BatchOperation
@@ -208,6 +193,13 @@
 
 			public ushort? Version { get; private set; }
 
+			public void SetVersionFrom(BatchOperation other)
+			{
+				if (other.Version != null && 
+					other.Version + 1 == Version)
+					Version = other.Version;
+			}
+
 			public void Reset()
 			{
 				reset();
@@ -216,23 +208,26 @@
 
 		public enum BatchOperationType
 		{
-			Add,
-			Delete,
-			MultiAdd,
-			MultiDelete,
-			None
+			None = 0,
+			Add = 1,
+			Delete = 2,
+			MultiAdd = 3,
+			MultiDelete = 4,
 		}
 
 		public void Dispose()
 		{
-			foreach (var operation in _operations)
+			foreach (var operation in _lastOperations)
 			{
-				var disposable = operation.Value as IDisposable;
-				if (disposable != null)
-					disposable.Dispose();
+				foreach (var val in operation.Value)
+				{
+					var disposable = val.Value.Value as IDisposable;
+					if (disposable != null)
+						disposable.Dispose();
+				}
+
 			}
 
-			_operations.Clear();
 			_lastOperations.Clear();
 		}
 	}
