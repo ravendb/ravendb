@@ -85,7 +85,7 @@ namespace Voron.Trees
 				}
 				if (_cursor.PageCount == 0)
 					break;
-				_currentPage = _cursor.Pop();
+				_currentPage = _cursor.PopAndGet();
 			}
 			_currentPage = null;
 			return false;
@@ -115,7 +115,7 @@ namespace Voron.Trees
 				}
 				if (_cursor.PageCount == 0)
 					break;
-				_currentPage = _cursor.Pop();
+				_currentPage = _cursor.PopAndGet();
 			}
 			_currentPage = null;
 			return false;

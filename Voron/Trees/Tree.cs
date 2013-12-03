@@ -447,7 +447,7 @@ namespace Voron.Trees
 						Number = p.PageNumber,
 						FirstKey = leftmostPage == true ? Slice.BeforeAllKeys : p.GetNodeKey(0),
 						LastKey = rightmostPage == true? Slice.AfterAllKeys : p.GetNodeKey(p.NumberOfEntries - 1),
-						CursorPath = cursor.Pages.Select(x => x.PageNumber).Reverse().ToList()
+						CursorPath = cursor.Pages.Select(x => x.Number).Reverse().ToList()
 					};
 
 			return p;
@@ -485,24 +485,33 @@ namespace Voron.Trees
 						c.Push(page);
 					else
 					{
-						var cursorPage = tx.GetReadOnlyPage(p);
-						if (key.Options == SliceOptions.BeforeAllKeys)
-						{
-							cursorPage.LastSearchPosition = 0;
-						}
-						else if (key.Options == SliceOptions.AfterAllKeys)
-						{
-							cursorPage.LastSearchPosition = (ushort)(cursorPage.NumberOfEntries - 1);
-						}
-						else if (cursorPage.Search(key, _cmp) != null)
-						{
-							if (cursorPage.LastMatch != 0)
+						var lazyCursorPage = new Lazy<Page>(() =>
 							{
-								cursorPage.LastSearchPosition--;
-							}
-						}
+								var cursorPage = tx.GetReadOnlyPage(p);
+								if (key.Options == SliceOptions.BeforeAllKeys)
+								{
+									cursorPage.LastSearchPosition = 0;
+								}
+								else if (key.Options == SliceOptions.AfterAllKeys)
+								{
+									cursorPage.LastSearchPosition = (ushort) (cursorPage.NumberOfEntries - 1);
+								}
+								else if (cursorPage.Search(key, _cmp) != null)
+								{
+									if (cursorPage.LastMatch != 0)
+									{
+										cursorPage.LastSearchPosition--;
+									}
+								}
 
-						c.Push(cursorPage);
+								return cursorPage;
+							});
+
+						c.Push(new Cursor.LazyCursorPage
+							{
+								Number = p,
+								Page = lazyCursorPage
+							});
 					}
 				}
 
