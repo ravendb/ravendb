@@ -245,7 +245,13 @@ namespace Voron
                         case TaskStatus.Canceled:
                             break;
                         default:
-                            _flushingTask.Wait();
+                            try
+                            {
+                                _flushingTask.Wait();
+                            }
+                            catch (TaskCanceledException)
+                            {
+                            }
                             break;
                     }
                 }
