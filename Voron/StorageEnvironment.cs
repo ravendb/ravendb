@@ -258,6 +258,9 @@ namespace Voron
 
 				if (_journal != null)
 					_journal.Dispose();
+
+				if (Writer != null)
+					Writer.Dispose();
 			}
 		}
 
