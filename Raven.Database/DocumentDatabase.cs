@@ -1761,16 +1761,15 @@ namespace Raven.Database
                 throw new ArgumentNullException("idPrefix");
             idPrefix = idPrefix.Trim();
 
-            var canPerformRapidPagination = string.IsNullOrEmpty(matches) && string.IsNullOrEmpty(exclude);
 
             TransactionalStorage.Batch(
                 actions =>
                 {
-                    var docsToSkip = canPerformRapidPagination ? 0 : start;
+                    var docsToSkip = 0;
                     var addedDocs = 0;
                     var matchedDocs = 0;
                     int docCount;
-                    start = canPerformRapidPagination ? start : 0;
+                    start = 0;
 
                     do
                     {
