@@ -31,7 +31,7 @@ namespace Voron.Trees
 	        _nodeVersion = nodeVersion;
             _cursor = cursor;
             _treeState = treeState;
-			_page = tx.ModifyPage(_cursor.Pages.First.Value.PageNumber, _cursor);
+			_page = tx.ModifyPage(_cursor.Pages.First.Value.Number, _cursor);
 			_cursor.Pop();
         }
 
@@ -56,7 +56,7 @@ namespace Voron.Trees
             else
             {
                 // we already popped the page, so the current one on the stack is what the parent of the page
-	            _parentPage = _tx.ModifyPage(_cursor.CurrentPage.PageNumber, _cursor);
+	            _parentPage = _tx.ModifyPage(_cursor.CurrentPage, _cursor);
 				_cursor.Update(_cursor.Pages.First, _parentPage);
             }
 

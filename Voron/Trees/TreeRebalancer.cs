@@ -26,7 +26,7 @@ namespace Voron.Trees
                 return null;
             }
 			
-			var parentPage = _tx.ModifyPage(cursor.ParentPage.PageNumber, cursor);
+			var parentPage = _tx.ModifyPage(cursor.ParentPage, cursor);
 			cursor.Update(cursor.Pages.First.Next, parentPage);
 
             if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent

@@ -5,44 +5,50 @@ namespace Voron.Trees
 {
     public class Cursor : IDisposable
     {
-        public LinkedList<Page> Pages = new LinkedList<Page>();
-        private readonly Dictionary<long, Page> _pagesByNum = new Dictionary<long, Page>(); 
+	    public class LazyCursorPage
+	    {
+		    public long Number;
+		    public Lazy<Page> Page;
+	    }
 
-        public void Update(LinkedListNode<Page> node, Page newVal)
+		public LinkedList<LazyCursorPage> Pages = new LinkedList<LazyCursorPage>();
+		private readonly Dictionary<long, Lazy<Page>> _pagesByNum = new Dictionary<long, Lazy<Page>>();
+
+		public void Update(LinkedListNode<LazyCursorPage> node, Page newVal)
         {
-            if (node.Value.PageNumber == newVal.PageNumber)
+            if (node.Value.Number == newVal.PageNumber)
             {
-                _pagesByNum[node.Value.PageNumber] = newVal;
-                node.Value = newVal;
+                _pagesByNum[node.Value.Number] = new Lazy<Page>(() => newVal);
+                node.Value.Page = new Lazy<Page>(() => newVal);
                 return;
             }
-            _pagesByNum[node.Value.PageNumber] = newVal;
-            _pagesByNum.Add(newVal.PageNumber, newVal);
-            node.Value = newVal;
+            _pagesByNum[node.Value.Number] = new Lazy<Page>(() => newVal);
+            _pagesByNum.Add(newVal.PageNumber, new Lazy<Page>(() => newVal));
+            node.Value.Page = new Lazy<Page>(() => newVal);
         }
 
-        public Page ParentPage
+        public long ParentPage
         {
             get
             {
-                LinkedListNode<Page> linkedListNode = Pages.First;
+				LinkedListNode<LazyCursorPage> linkedListNode = Pages.First;
                 if (linkedListNode == null)
                     throw new InvalidOperationException("No pages in cursor");
                 linkedListNode = linkedListNode.Next;
                 if (linkedListNode == null)
                     throw new InvalidOperationException("No parent page in cursor");
-                return linkedListNode.Value;
+                return linkedListNode.Value.Number;
             }
         }
 
-        public Page CurrentPage
+        public long CurrentPage
         {
             get
             {
-                LinkedListNode<Page> linkedListNode = Pages.First;
+				LinkedListNode<LazyCursorPage> linkedListNode = Pages.First;
                 if (linkedListNode == null)
                     throw new InvalidOperationException("No pages in cursor");
-                return linkedListNode.Value;
+                return linkedListNode.Value.Number;
             }
         }
 
@@ -53,27 +59,51 @@ namespace Voron.Trees
 
         public void Push(Page p)
         {
-            Pages.AddFirst(p);
-            _pagesByNum.Add(p.PageNumber, p);
+            Pages.AddFirst(new LazyCursorPage
+	            {
+		            Number = p.PageNumber,
+					Page = new Lazy<Page>(() => p)
+	            });
+
+            _pagesByNum.Add(p.PageNumber, new Lazy<Page>(() => p));
         }
 
-        public Page Pop()
+		public void Push(LazyCursorPage p)
+		{
+			Pages.AddFirst(p);
+			_pagesByNum.Add(p.Number, p.Page);
+		}
+
+        public void Pop()
         {
             if (Pages.Count == 0)
             {
                 throw new InvalidOperationException("No page to pop");
             }
-            Page p = Pages.First.Value;
+            LazyCursorPage p = Pages.First.Value;
             Pages.RemoveFirst();
-            _pagesByNum.Remove(p.PageNumber);
-            return p;
+            _pagesByNum.Remove(p.Number);
         }
+
+		public Page PopAndGet()
+		{
+			if (Pages.Count == 0)
+			{
+				throw new InvalidOperationException("No page to pop");
+			}
+			LazyCursorPage p = Pages.First.Value;
+			Pages.RemoveFirst();
+			_pagesByNum.Remove(p.Number);
+			return p.Page.Value;
+		}
 
 	    public Page GetPage(long p)
 	    {
-	        Page page;
-	        if (_pagesByNum.TryGetValue(p, out page))
-	            return page;
+	        Lazy<Page> lazyPage;
+	        if (_pagesByNum.TryGetValue(p, out lazyPage))
+	        {
+		        return lazyPage.Value;
+	        }
 	        return null;
 	    }
 
