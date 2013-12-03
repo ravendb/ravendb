@@ -123,7 +123,7 @@
 		}
 
 		[Fact]
-		public void ReadVersion_Items_From_Both_WriteBatch_And_Snapshot_Deleted_Key_Returns_Version0()
+		public void WhenLastBatchOperationVersionIsNullThenVersionComesFromStorage()
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
@@ -141,9 +141,16 @@
 				var foo1Version = snapshot.ReadVersion("tree", "foo1", writeBatch);
 				var foo1VersionThatShouldBe1 = snapshot.ReadVersion("tree", "foo1");
 
-				Assert.Equal(0, foo1Version);
+				Assert.Equal(1, foo1Version);
 				Assert.Equal(1, foo1VersionThatShouldBe1);
 
+                writeBatch.Add("foo1",  StreamFor("123"), "tree");
+
+                foo1Version = snapshot.ReadVersion("tree", "foo1", writeBatch);
+                foo1VersionThatShouldBe1 = snapshot.ReadVersion("tree", "foo1");
+
+                Assert.Equal(1, foo1Version);
+                Assert.Equal(1, foo1VersionThatShouldBe1);
 			}
 		}
 
@@ -202,38 +209,6 @@
 				var foo1VersionThatShouldBe2 = snapshot.ReadVersion("tree", "foo1");
 
 				Assert.Equal(3, foo1Version);
-				Assert.Equal(2, foo1VersionThatShouldBe2);
-
-			}
-		}
-
-		[Fact]
-		public void ReadVersion_The_Same_Item_Both_WriteBatch_And_Snapshot_WriteBatch_Takes_Precedence_WithoutVersionNumber_In_WriteBatch()
-		{
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				Env.CreateTree(tx, "tree");
-				tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
-
-				tx.Commit();
-			}
-
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				tx.GetTree("tree").Add(tx, "foo1", StreamFor("updated foo1"));
-
-				tx.Commit();
-			}
-
-			using (var writeBatch = new WriteBatch())
-			using (var snapshot = Env.CreateSnapshot())
-			{
-				writeBatch.Add("foo1", StreamFor("updated foo1 2"), "tree");
-
-				var foo1Version = snapshot.ReadVersion("tree", "foo1", writeBatch);
-				var foo1VersionThatShouldBe2 = snapshot.ReadVersion("tree", "foo1");
-
-				Assert.Equal(0, foo1Version); //written to write batch without version number, so 0 is returned as version
 				Assert.Equal(2, foo1VersionThatShouldBe2);
 
 			}
