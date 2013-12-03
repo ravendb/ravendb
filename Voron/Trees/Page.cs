@@ -323,7 +323,7 @@ namespace Voron.Trees
             // when truncating, we copy the values to a tmp page
             // this has the effect of compacting the page data and avoiding
             // internal page fragmentation
-            var copy = tx.TempPage;
+            var copy = tx.Environment.TemporaryPage.TempPage;
             copy.Flags = Flags;
             for (int j = 0; j < i; j++)
             {

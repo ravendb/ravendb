@@ -29,7 +29,7 @@ namespace Performance.Comparison
 			var buffer = new byte[87 * 1024];
 			random.NextBytes(buffer);
 
-			var path = @"c:\work\temp\";
+			var path = @"d:\temp\";
 
 			writer = new StreamWriter("output.txt", false) { AutoFlush = true };
 
@@ -46,7 +46,7 @@ namespace Performance.Comparison
                     //new SqlLiteTest(path, buffer),
                     //new SqlCeTest(path, buffer),
                     //new LmdbTest(path, buffer),
-					//new EsentTest(path, buffer),
+                    //new EsentTest(path, buffer),
                     //new FdbTest(buffer),
 					new VoronTest(path, buffer)
 				};

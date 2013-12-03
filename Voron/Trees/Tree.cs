@@ -5,9 +5,11 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.Paging;
 
 namespace Voron.Trees
 {
@@ -75,23 +77,28 @@ namespace Voron.Trees
 
 		public void Add(Transaction tx, Slice key, Stream value, ushort? version = null)
 		{
-             
-            if (value == null) throw new ArgumentNullException("value");
-			if (value.Length > int.MaxValue)
-				throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
+		    if (value == null) throw new ArgumentNullException("value");
+		    if (value.Length > int.MaxValue)
+		        throw new ArgumentException("Cannot add a value that is over 2GB in size", "value");
 
-            State.IsModified = true;
-            
-            var pos = DirectAdd(tx, key, (int)value.Length, version: version);
+		    State.IsModified = true;
 
-			using (var ums = new UnmanagedMemoryStream(pos, value.Length, value.Length, FileAccess.ReadWrite))
-			{
-				value.CopyTo(ums);
-			}
+		    var pos = DirectAdd(tx, key, (int) value.Length, version: version);
 		    
+		    var temporaryPage = tx.Environment.TemporaryPage;
+		    var tempPageBuffer = temporaryPage.TempPageBuffer;
+		    var tempPagePointer = temporaryPage.TempPagePointer;
+            while (true)
+		    {
+		        var read = value.Read(tempPageBuffer, 0, AbstractPager.PageSize);
+		        if (read == 0)
+		            break;
+		        NativeMethods.memcpy(pos , tempPagePointer, read);
+                pos += read;
+		    }
 		}
 
-		public void MultiDelete(Transaction tx, Slice key, Slice value, ushort? version = null)
+	    public void MultiDelete(Transaction tx, Slice key, Slice value, ushort? version = null)
 		{
             State.IsModified = true;
 
