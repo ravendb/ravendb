@@ -136,6 +136,7 @@
     <Compile Include="Util\Conversion\EndianBitConverter.cs" />
     <Compile Include="Util\LinkedDictionary.cs" />
     <Compile Include="Util\Refence.cs" />
+    <Compile Include="Util\SafeDictionary.cs" />
     <Compile Include="Util\SafeList.cs" />
     <Compile Include="Util\TreeExtensions.cs" />
     <Compile Include="Util\Utils.cs" />

@@ -18,7 +18,7 @@ namespace Voron.Tests.Storage
         [Fact]
         public void MemoryMapPagerReleasesPagerState()
         {
-            PagerReleasesPagerState(() => new MemoryMapPager("db.voron"));
+            PagerReleasesPagerState(() => new MemoryMapPager("db.voron", false));
             File.Delete("db.voron");
         }
 
