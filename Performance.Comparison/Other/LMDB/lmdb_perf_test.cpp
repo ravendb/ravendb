@@ -138,7 +138,7 @@ void WritePerfData(string name, vector<PerformanceRecord> data) {
   file.close();
 };
 
-MDB_env* StorageEnvironment(bool deleteOldData){
+MDB_env* StorageEnvironment(bool deleteOldData, MDB_dbi *pdbi){
  
   if(deleteOldData)
   {
@@ -151,11 +151,16 @@ MDB_env* StorageEnvironment(bool deleteOldData){
   mdb_env_create(&env);
   mdb_env_set_mapsize(env, 1024*1024*1024*(long)10);
   mdb_env_open(env, "./lmdb_test", MDB_WRITEMAP, 0664);
+
+  MDB_txn *txn;
+  mdb_txn_begin(env, NULL, 0, &txn);
+  mdb_open(txn, NULL, 0, pdbi);
+  mdb_txn_commit(txn);
   
   return env;
 }
 
-vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int itemsPerTransaction, int numberOfTransactions, MDB_env* env) {
+vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int itemsPerTransaction, int numberOfTransactions, MDB_env* env, MDB_dbi dbi) {
   vector<PerformanceRecord> records;
   
   int rc;
@@ -170,10 +175,8 @@ vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int it
     time_point<system_clock> sw = system_clock::now();
     
     MDB_txn *txn;
-    MDB_dbi dbi;
 
     rc = mdb_txn_begin(env, NULL, 0, &txn);
-    rc = mdb_open(txn, NULL, 0, &dbi);
     
     for(int i = 0; i < itemsPerTransaction; i++) {
       TestData *item = &*begin;
@@ -195,7 +198,6 @@ vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int it
     }
     
     rc = mdb_txn_commit(txn);
-    mdb_close(env, dbi);
     
     PerformanceRecord r;
     
@@ -215,12 +217,13 @@ vector<PerformanceRecord> WriteInternal(vector<TestData>::iterator begin, int it
 
 vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransaction, int numberOfTransactions) {
 
-  MDB_env *env = StorageEnvironment(true);
+  MDB_dbi dbi;
+  MDB_env *env = StorageEnvironment(true, &dbi);
   
   time_point<system_clock> start, end;
   start = system_clock::now();
   
-  vector<PerformanceRecord> records = WriteInternal(dataItems.begin(),itemsPerTransaction,numberOfTransactions, env);
+  vector<PerformanceRecord> records = WriteInternal(dataItems.begin(),itemsPerTransaction,numberOfTransactions, env, dbi);
   
   end = system_clock::now();
   
@@ -239,7 +242,8 @@ vector<PerformanceRecord> Write(vector<TestData> dataItems, int itemsPerTransact
 vector<PerformanceRecord> WriteParallel(vector<TestData> data, int itemsPerTransaction, int numberOfTransactions, int numberOfThreads) {
   vector<PerformanceRecord> records;
   
-  MDB_env *env = StorageEnvironment(true);
+  MDB_dbi dbi;
+  MDB_env *env = StorageEnvironment(true, &dbi);
   
   vector<ParallelTestData> testData = SplitData(data, itemsPerTransaction, numberOfTransactions, numberOfThreads);
   
@@ -254,7 +258,7 @@ vector<PerformanceRecord> WriteParallel(vector<TestData> data, int itemsPerTrans
     vector<TestData>::iterator it = data.begin();
     advance(it, d.SkipCount);
     
-    results.at(i) = async(&WriteInternal, it, d.ItemsPerTransaction, d.NumberOfTransactions, env);
+    results.at(i) = async(&WriteInternal, it, d.ItemsPerTransaction, d.NumberOfTransactions, env, dbi);
   }
   
   for(int i = 0; i < numberOfThreads; i++) {
@@ -275,14 +279,12 @@ vector<PerformanceRecord> WriteParallel(vector<TestData> data, int itemsPerTrans
   return records;
 };
 
-void ReadInternal(vector<TestData> testData, int itemsPerTransaction, int numberOfTransactions, MDB_env* env) {
+void ReadInternal(vector<TestData> testData, int itemsPerTransaction, int numberOfTransactions, MDB_env* env, MDB_dbi dbi) {
   int rc;
   MDB_val key, data;
   MDB_txn *txn;
-  MDB_dbi dbi;
 
-  rc = mdb_txn_begin(env, NULL, 0, &txn);
-  rc = mdb_open(txn, NULL, 0, &dbi);
+  rc = mdb_txn_begin(env, NULL, MDB_RDONLY, &txn);
     
   for(int i = 0; i < testData.size(); i++) {
     TestData item = testData.at(i);
@@ -301,7 +303,6 @@ void ReadInternal(vector<TestData> testData, int itemsPerTransaction, int number
   }
     
   rc = mdb_txn_commit(txn);
-  mdb_close(env, dbi);
 }
 
 vector<PerformanceRecord> Read(vector<TestData> testData, int itemsPerTransaction, int numberOfTransactions) {
@@ -314,12 +315,13 @@ vector<PerformanceRecord> Read(vector<TestData> testData, int itemsPerTransactio
   MDB_cursor *cursor;
   char sval[87 * 1024];
 
-  MDB_env *env = StorageEnvironment(false);
+  MDB_dbi dbi;
+  MDB_env *env = StorageEnvironment(false, &dbi);
 
   time_point<system_clock> start, end;
   start = system_clock::now();
   
-  ReadInternal(testData, itemsPerTransaction, numberOfTransactions, env);
+  ReadInternal(testData, itemsPerTransaction, numberOfTransactions, env, dbi);
   
   end = system_clock::now();
   
@@ -348,7 +350,8 @@ vector<PerformanceRecord> ReadParallel(vector<TestData> testData, int itemsPerTr
   MDB_cursor *cursor;
   char sval[87 * 1024];
 
-  MDB_env *env = StorageEnvironment(false);
+  MDB_dbi dbi;
+  MDB_env *env = StorageEnvironment(false, &dbi);
   
   time_point<system_clock> start, end;
   start = system_clock::now();
@@ -356,7 +359,7 @@ vector<PerformanceRecord> ReadParallel(vector<TestData> testData, int itemsPerTr
   vector<thread> threads(numberOfThreads);
   
   for(int i = 0; i < numberOfThreads; i++) {
-    threads.at(i) = thread(ReadInternal, testData, itemsPerTransaction, numberOfTransactions, env);
+    threads.at(i) = thread(ReadInternal, testData, itemsPerTransaction, numberOfTransactions, env, dbi);
   }
   
   for(int i = 0; i < numberOfThreads; i++) {
