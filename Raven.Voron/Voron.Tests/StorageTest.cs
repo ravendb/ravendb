@@ -20,8 +20,14 @@ namespace Voron.Tests
 		{
 		    get
 		    {
-                if(_storageEnvironment == null)
-                    _storageEnvironment = new StorageEnvironment(_options);
+			    if (_storageEnvironment == null)
+			    {
+				    lock (this)
+				    {
+					    if (_storageEnvironment == null)
+						    _storageEnvironment = new StorageEnvironment(_options);
+				    }
+			    }
 		        return _storageEnvironment;
 		    }
 		}
