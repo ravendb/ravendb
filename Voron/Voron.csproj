@@ -119,7 +119,6 @@
     <Compile Include="Trees\TreeMutableState.cs" />
     <Compile Include="Trees\TreeRebalancer.cs" />
     <Compile Include="Util\AsyncManualResetEvent.cs" />
-    <Compile Include="Util\ConditionVariableFactory.cs" />
     <Compile Include="Util\Conversion\Endianness.cs" />
     <Compile Include="Util\Crc.cs" />
     <Compile Include="Util\DisposableAction.cs" />

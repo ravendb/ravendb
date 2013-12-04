@@ -1,4 +1,5 @@
-﻿using Voron.Util;
+﻿using System.Threading.Tasks;
+using Voron.Util;
 
 namespace Voron.Impl
 {
@@ -16,32 +17,24 @@ namespace Voron.Impl
 		private readonly StorageEnvironment _env;
 
 		private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites;
+	    private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly AsyncManualResetEvent _hasWritesEvent = new AsyncManualResetEvent();
+        private readonly AsyncManualResetEvent _stopWrites = new AsyncManualResetEvent();
 
-		private readonly ConditionVariableFactory _conditionVariableFactory = new ConditionVariableFactory();
+	    private Task _backgroundTask;
 
 		internal TransactionMergingWriter(StorageEnvironment env)
 		{
 			_env = env;
 			_pendingWrites = new ConcurrentQueue<OutstandingWrite>();
+            _stopWrites.Set();
 		}
 
-		public IDisposable PretendWriteStarted(int count)
+		public IDisposable StopWrites()
 		{
-			_pendingWrites.Enqueue(new OutstandingWrite(new WriteBatch()));
+			_stopWrites.Reset();
 
-			return new DisposableAction(() =>
-			{
-				OutstandingWrite write;
-				_pendingWrites.TryDequeue(out write);
-				SpinWait.SpinUntil(() => _pendingWrites.Count == count);
-				while (_pendingWrites.Count == count)
-				{
-					foreach (var outstandingWrite in _pendingWrites)
-					{
-						outstandingWrite.ConditionVariable.Wake();
-					}
-				}
-			});
+			return new DisposableAction(() => _stopWrites.Set());
 		}
 
 		public void Write(WriteBatch batch)
@@ -49,29 +42,48 @@ namespace Voron.Impl
 			if (batch.Operations.Count == 0)
 				return;
 
-			using (var mine = new OutstandingWrite(batch)
-			{
-				ConditionVariable = _conditionVariableFactory.Create()
-			})
+		    EnsureValidBackgroundTaskState();
+
+		    using (var mine = new OutstandingWrite(batch))
 			{
 				_pendingWrites.Enqueue(mine);
+                _hasWritesEvent.Set();
 
-				using (_conditionVariableFactory.EnterCriticalSection())
-				{
-					while (mine.Done() == false && _pendingWrites.Peek() != mine)
-					{
-						mine.ConditionVariable.Wait(-1);
-					}
-
-					if (mine.Done())
-						return;
-
-					HandleActualWrites(mine);
-				}
+			    mine.Wait();
 			}
 		}
 
-		private void HandleActualWrites(OutstandingWrite mine)
+	    private void EnsureValidBackgroundTaskState()
+	    {
+	        if (_backgroundTask == null)
+	        {
+                _backgroundTask = Task.Run(() => BackgroundWriter(), _cancellationTokenSource.Token);
+	        }
+	        if (_backgroundTask.IsCanceled || _backgroundTask.IsFaulted)
+	            _backgroundTask.Wait(); // would throw
+	        if (_backgroundTask.IsCompleted)
+	            throw new InvalidOperationException("The write background task has already completed!");
+	    }
+
+	    private async Task BackgroundWriter()
+	    {
+	        var cancellationToken = _cancellationTokenSource.Token;
+	        while (cancellationToken.IsCancellationRequested == false)
+	        {
+                await _stopWrites.WaitAsync();
+                _hasWritesEvent.Reset();
+
+	            OutstandingWrite write;
+                while (_pendingWrites.TryPeek(out write))
+	            {
+	                HandleActualWrites(write);
+	            }
+
+	            await _hasWritesEvent.WaitAsync();
+	        }
+	    }
+
+	    private void HandleActualWrites(OutstandingWrite mine)
 		{
 			List<OutstandingWrite> writes = null;
 			try
@@ -86,8 +98,8 @@ namespace Voron.Impl
 					tx.Commit();
 				}
 
-				foreach (var write in writes)
-					write.SetSuccess();
+			    foreach (var write in writes)
+			        write.TaskCompletionSource.TrySetResult(null);
 			}
 			catch (Exception)
 			{
@@ -100,9 +112,6 @@ namespace Voron.Impl
 			{
 				Finalize(writes);
 			}
-
-			Debug.Assert(mine.Status != OutstandingWriteStatus.Pending);
-			mine.Done();
 		}
 
 		private void Finalize(IEnumerable<OutstandingWrite> writes)
@@ -160,12 +169,12 @@ namespace Voron.Impl
 						HandleOperations(tx, write.Batch.Operations);
 						tx.Commit();
 
-						write.SetSuccess();
+					    write.TaskCompletionSource.TrySetResult(null);
 					}
 				}
 				catch (Exception e)
 				{
-					write.SetError(e);
+				    write.TaskCompletionSource.TrySetException(e);
 				}
 			}
 		}
@@ -210,65 +219,38 @@ namespace Voron.Impl
 		private class OutstandingWrite : IDisposable
 		{
 			private Exception exception;
+            public TaskCompletionSource<object> TaskCompletionSource { get; private set; }
 
-			public OutstandingWrite(WriteBatch batch)
+		    public OutstandingWrite(WriteBatch batch)
 			{
 				Batch = batch;
 				Size = batch.Size();
-				Status = OutstandingWriteStatus.Pending;
+		        TaskCompletionSource = new TaskCompletionSource<object>();
 			}
 
 			public WriteBatch Batch { get; private set; }
 
 			public long Size { get; private set; }
 
-			public OutstandingWriteStatus Status { get; private set; }
-			public ConditionVariableFactory.ConditionVariable ConditionVariable { get; set; }
-
-			public void SetSuccess()
-			{
-				Status = OutstandingWriteStatus.Success;
-				exception = null;
-				ConditionVariable.Wake();
-			}
-
-			public void SetError(Exception e)
-			{
-				Status = OutstandingWriteStatus.Error;
-				exception = e;
-				ConditionVariable.Wake();
-			}
-
-			public bool Done()
-			{
-				if (Status == OutstandingWriteStatus.Success)
-					return true;
-
-				if (Status == OutstandingWriteStatus.Pending)
-					return false;
-
-				throw exception;
-			}
-
 			public void Dispose()
 			{
 				Batch.Dispose();
-				if (ConditionVariable != null)
-					ConditionVariable.Dispose();
 			}
-		}
 
-		private enum OutstandingWriteStatus
-		{
-			Pending,
-			Success,
-			Error
+		    public void Wait()
+		    {
+		        TaskCompletionSource.Task.Wait();
+		    }
 		}
-
 
 		public void Dispose()
 		{
-			_conditionVariableFactory.Dispose();
+		    _cancellationTokenSource.Cancel();
+            _hasWritesEvent.Set();
+            _stopWrites.Set();
+		    if (_backgroundTask == null)
+		        return;
+		    _backgroundTask.Wait();
 		}
 	}
 }

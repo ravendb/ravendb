@@ -147,7 +147,7 @@ namespace Voron.Tests
 
 		protected unsafe Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
 		{
-			DeferedCusor lazy;
+			Lazy<Cursor> lazy;
 			var p = tx.State.Root.FindPageFor(tx, key, out lazy);
 			var node = p.Search(key, Env.SliceComparer);
 
