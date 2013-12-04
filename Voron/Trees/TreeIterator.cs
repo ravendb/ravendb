@@ -30,7 +30,7 @@ namespace Voron.Trees
 
 		public bool Seek(Slice key)
 		{
-			Lazy<Cursor> lazy;
+			DeferedCusor lazy;
 			_currentPage = _tree.FindPageFor(_tx, key, out lazy);
 			_cursor = lazy.Value;
 			_cursor.Pop();
