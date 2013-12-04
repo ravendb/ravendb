@@ -455,28 +455,23 @@ namespace Voron.Impl
 
 		public IEnumerable<FoundPage> GetRecentlyFoundPages(Tree tree)
 		{
-			if (_recentlyFoundPages.ContainsKey(tree))
-				return _recentlyFoundPages[tree];
+			LinkedList<FoundPage> list;
+			if (_recentlyFoundPages.TryGetValue(tree, out list))
+				return list;
 			
 			return Enumerable.Empty<FoundPage>();
 		}
 
 		public void AddRecentlyFoundPage(Tree tree, FoundPage foundPage)
 		{
-			LinkedList<FoundPage> recentFoundTreePages;
+			LinkedList<FoundPage> list;
+			if (_recentlyFoundPages.TryGetValue(tree, out list) == false)
+				_recentlyFoundPages[tree] = list = new LinkedList<FoundPage>();
 
-			if (_recentlyFoundPages.ContainsKey(tree))
-				recentFoundTreePages = _recentlyFoundPages[tree];
-			else
-			{
-				recentFoundTreePages = new LinkedList<FoundPage>();
-				_recentlyFoundPages[tree] = recentFoundTreePages;
-			}
+			list.AddFirst(foundPage);
 
-			recentFoundTreePages.AddFirst(foundPage);
-
-			if (recentFoundTreePages.Count > NumberOfRecentlyFoundPagesPerTree)
-				recentFoundTreePages.RemoveLast();
+			if (list.Count > NumberOfRecentlyFoundPagesPerTree)
+				list.RemoveLast();
 		}
 
 		public void InvalidateRecentlyFoundPages(Tree tree)
