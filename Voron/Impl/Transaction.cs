@@ -135,20 +135,20 @@ namespace Voron.Impl
 			return State.GetTree(treeName, this);
 		}
 
-		public Page ModifyPage(long p, Cursor c)
+		public Page ModifyPage(long p)
 		{
 			_env.AssertFlushingNotFailed();
 
 			Page page;
 			if (_dirtyPages.Contains(p))
 			{
-				page = GetPageForModification(p, c);
+				page = GetPageForModification(p);
 				page.Dirty = true;
 
 				return page;
 			}
 
-			page = GetPageForModification(p, c);
+			page = GetPageForModification(p);
 
 			var newPage = AllocatePage(1, p); // allocate new page in a log file but with the same number
 
@@ -159,12 +159,8 @@ namespace Voron.Impl
 			return newPage;
 		}
 
-		private Page GetPageForModification(long p, Cursor c)
+		private Page GetPageForModification(long p)
 		{
-			var page = c.GetPage(p);
-			if (page != null)
-				return page;
-
 			PageFromScratchBuffer value;
 			if (_scratchPagesTable.TryGetValue(p, out value))
 			{
