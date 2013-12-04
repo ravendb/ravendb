@@ -170,8 +170,8 @@ namespace Performance.Comparison
 				OutputResults("Read Rnd [16]", items, totalDuration, perfTracker);
 				WritePerfData("ReadRnd_Parallel_16", test, new List<PerformanceRecord> { performanceRecord });
 
-				//if (test.CanHandleBigData==false)
-				continue;
+				if (test.CanHandleBigData == false)
+					continue;
 
 				performanceRecords = test.WriteSequential(sequentialIdsLarge, perfTracker);
 				items = performanceRecords.Sum(x => x.ProcessedItems);
