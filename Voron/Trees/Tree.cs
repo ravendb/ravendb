@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
@@ -15,7 +16,7 @@ namespace Voron.Trees
 {
 	using Voron.Exceptions;
 
-	public unsafe class Tree
+	public unsafe class Tree : IDisposable
 	{
 		private class FoundPage
 		{
@@ -47,7 +48,7 @@ namespace Voron.Trees
 			_state = state;
 		}
 
-		private FoundPage _lastFoundPage = null; 
+		private readonly ThreadLocal<FoundPage> _lastFoundPage = new ThreadLocal<FoundPage>();
 
 		public static Tree Open(Transaction tx, SliceComparer cmp, TreeRootHeader* header)
 		{
@@ -258,7 +259,7 @@ namespace Voron.Trees
 			byte* dataPos;
 			if (page.HasSpaceFor(key, len) == false)
 			{
-				_lastFoundPage = null;
+				_lastFoundPage.Value = null;
 				var cursor = lazy.Value;
 				cursor.Update(cursor.Pages.First, page);
 				var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
@@ -442,7 +443,7 @@ namespace Voron.Trees
 		    p.NodePositionFor(key, _cmp); // will set the LastSearchPosition
 
 			if(p.NumberOfEntries > 0)
-				_lastFoundPage = new FoundPage
+				_lastFoundPage.Value = new FoundPage
 					{
 						Number = p.PageNumber,
 						FirstKey = leftmostPage == true ? Slice.BeforeAllKeys : p.GetNodeKey(0),
@@ -458,10 +459,12 @@ namespace Voron.Trees
 		{
 			page = null;
 			cursor = null;
-			if (_lastFoundPage != null)
+			var lastPage = _lastFoundPage.Value;
+
+			if (lastPage != null)
 			{
-				var first = _lastFoundPage.FirstKey;
-				var last = _lastFoundPage.LastKey;
+				var first = lastPage.FirstKey;
+				var last = lastPage.LastKey;
 
 				if (key.Options == SliceOptions.BeforeAllKeys && first.Options != SliceOptions.BeforeAllKeys)
 					return false;
@@ -474,7 +477,7 @@ namespace Voron.Trees
 					(last.Options != SliceOptions.AfterAllKeys && key.Compare(last, _cmp) > 0)))
 					return false;
 
-				var lastFoundPageNumber = _lastFoundPage.Number;
+				var lastFoundPageNumber = lastPage.Number;
 				page = tx.GetReadOnlyPage(lastFoundPageNumber);
 
 				if (page.IsLeaf == false)
@@ -482,7 +485,7 @@ namespace Voron.Trees
 
 				page.NodePositionFor(key, _cmp); // will set the LastSearchPosition
 
-				var cursorPath = _lastFoundPage.CursorPath;
+				var cursorPath = lastPage.CursorPath;
 				var pageCopy = page;
 				cursor = new Lazy<Cursor>(() =>
 				{
@@ -556,7 +559,7 @@ namespace Voron.Trees
 			var changedPage = page;
 			while (changedPage != null)
 			{
-				_lastFoundPage = null;
+				_lastFoundPage.Value = null;
 				changedPage = treeRebalancer.Execute(lazy.Value, changedPage);
 			}
 
@@ -708,6 +711,11 @@ namespace Voron.Trees
 		public override string ToString()
 		{
 			return Name + " " + State.EntriesCount;
+		}
+
+		public void Dispose()
+		{
+			_lastFoundPage.Dispose();
 		}
 
 		private Tree OpenOrCreateMultiValueTree(Transaction tx, Slice key, NodeHeader* item)
