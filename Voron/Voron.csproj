@@ -96,7 +96,6 @@
     <Compile Include="Trees\Cursor.cs" />
     <Compile Include="Debugging\DebugStuff.cs" />
     <Compile Include="Impl\NativeMethods.cs" />
-    <Compile Include="Trees\Defered.cs" />
     <Compile Include="Trees\EmptyIterator.cs" />
     <Compile Include="Trees\IIterator.cs" />
     <Compile Include="Trees\SingleEntryIterator.cs" />

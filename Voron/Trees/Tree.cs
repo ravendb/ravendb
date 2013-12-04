@@ -110,7 +110,7 @@ namespace Voron.Trees
 	    public void MultiDelete(Transaction tx, Slice key, Slice value, ushort? version = null)
 	    {
 		    State.IsModified = true;
-			DeferedCusor lazy;
+			Lazy<Cursor> lazy;
 		    var page = FindPageFor(tx, key, out lazy);
 		    if (page == null || page.LastMatch != 0)
 		    {
@@ -159,7 +159,7 @@ namespace Voron.Trees
 				throw new ArgumentException("Cannot add empty value to child tree");
 
 			State.IsModified = true;
-			DeferedCusor lazy;
+			Lazy<Cursor> lazy;
 			var page = FindPageFor(tx, key, out lazy);
 
 			if (page == null || page.LastMatch != 0)
@@ -207,7 +207,7 @@ namespace Voron.Trees
 				throw new ArgumentException(
 					"Key size is too big, must be at most " + tx.DataPager.MaxNodeSize + " bytes, but was " + key.Size, "key");
 
-			DeferedCusor lazy;
+			Lazy<Cursor> lazy;
 			var foundPage = FindPageFor(tx, key, out lazy);
 
 			var page = tx.ModifyPage(foundPage.PageNumber, foundPage);
@@ -260,6 +260,7 @@ namespace Voron.Trees
 			{
 				_lastFoundPage = null;
 				var cursor = lazy.Value;
+				cursor.Update(cursor.Pages.First, page);
 				var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
 				dataPos = pageSplitter.Execute();
 
@@ -290,7 +291,7 @@ namespace Voron.Trees
 
 		public bool SetAsMultiValueTreeRef(Transaction tx, Slice key)
 		{
-			DeferedCusor lazy;
+			Lazy<Cursor> lazy;
 			var foundPage = FindPageFor(tx, key, out lazy);
 			var page = tx.ModifyPage(foundPage.PageNumber, foundPage);
 
@@ -370,7 +371,7 @@ namespace Voron.Trees
 			}
 		}
 
-		public Page FindPageFor(Transaction tx, Slice key, out DeferedCusor cursor)
+		public Page FindPageFor(Transaction tx, Slice key, out Lazy<Cursor> cursor)
 		{
 			Page p;
 
@@ -449,11 +450,11 @@ namespace Voron.Trees
 						CursorPath = c.Pages.Select(x => x.PageNumber).Reverse().ToList()
 					};
 
-			cursor = new DeferedCusor(c);
+			cursor = new Lazy<Cursor>(()=>c);
 			return p;
 		}
 
-		private bool TryUseLastFoundPage(Transaction tx, Slice key, out DeferedCusor cursor, out Page page)
+		private bool TryUseLastFoundPage(Transaction tx, Slice key, out Lazy<Cursor> cursor, out Page page)
 		{
 			page = null;
 			cursor = null;
@@ -469,8 +470,8 @@ namespace Voron.Trees
 					return false;
 
 				if (key.Options == SliceOptions.Key &&
-					(first.Options != SliceOptions.BeforeAllKeys && key.Compare(first, _cmp) < 0) ||
-					(last.Options != SliceOptions.AfterAllKeys && key.Compare(last, _cmp) > 0))
+					((first.Options != SliceOptions.BeforeAllKeys && key.Compare(first, _cmp) < 0) ||
+					(last.Options != SliceOptions.AfterAllKeys && key.Compare(last, _cmp) > 0)))
 					return false;
 
 				var lastFoundPageNumber = _lastFoundPage.Number;
@@ -483,7 +484,7 @@ namespace Voron.Trees
 
 				var cursorPath = _lastFoundPage.CursorPath;
 				var pageCopy = page;
-				cursor = new DeferedCusor(() =>
+				cursor = new Lazy<Cursor>(() =>
 				{
 					var c = new Cursor();
 					foreach (var p in cursorPath)
@@ -536,7 +537,7 @@ namespace Voron.Trees
 				throw new ArgumentException("Cannot delete a value in a read only transaction");
 
 			State.IsModified = true;
-			DeferedCusor lazy;
+			Lazy<Cursor> lazy;
 			var page = FindPageFor(tx, key, out lazy);
 
 			page.NodePositionFor(key, _cmp);
@@ -569,7 +570,7 @@ namespace Voron.Trees
 
 		public ReadResult Read(Transaction tx, Slice key)
 		{
-			DeferedCusor lazy;
+			Lazy<Cursor> lazy;
 			var p = FindPageFor(tx, key, out lazy);
 			var node = p.Search(key, _cmp);
 
@@ -585,7 +586,7 @@ namespace Voron.Trees
 
 		public int GetDataSize(Transaction tx, Slice key)
 		{
-			DeferedCusor lazy;
+			Lazy<Cursor> lazy;
 			var p = FindPageFor(tx, key, out lazy);
 			var node = p.Search(key, _cmp);
 
@@ -597,7 +598,7 @@ namespace Voron.Trees
 
 		public ushort ReadVersion(Transaction tx, Slice key)
 		{
-			DeferedCusor lazy;
+			Lazy<Cursor> lazy;
 			var p = FindPageFor(tx, key, out lazy);
 			var node = p.Search(key, _cmp);
 
@@ -609,7 +610,7 @@ namespace Voron.Trees
 
 		public IIterator MultiRead(Transaction tx, Slice key)
 		{
-			DeferedCusor lazy;
+			Lazy<Cursor> lazy;
 			var page = FindPageFor(tx, key, out lazy);
 
 			if (page == null || page.LastMatch != 0)
@@ -637,7 +638,7 @@ namespace Voron.Trees
 
 		internal byte* DirectRead(Transaction tx, Slice key)
 		{
-			DeferedCusor lazy;
+			Lazy<Cursor> lazy;
 			var p = FindPageFor(tx, key, out lazy);
 			var node = p.Search(key, _cmp);
 
