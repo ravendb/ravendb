@@ -75,7 +75,6 @@ namespace Performance.Comparison
                 OutputResults("Write Seq [4]", items, totalDuration, perfTracker);
                 WritePerfData("WriteSeq_Parallel_4", test, performanceRecords);
 
-			    return;
 
                 performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 8, out totalDuration);
                 items = performanceRecords.Sum(x => x.ProcessedItems);
@@ -86,6 +85,7 @@ namespace Performance.Comparison
                 items = performanceRecords.Sum(x => x.ProcessedItems);
                 OutputResults("Write Seq [16]", items, totalDuration, perfTracker);
                 WritePerfData("WriteSeq_Parallel_16", test, performanceRecords);
+
 
                 var performanceRecord = test.ReadSequential(perfTracker);
                 items = performanceRecord.ProcessedItems;
