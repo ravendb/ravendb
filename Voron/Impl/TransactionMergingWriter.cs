@@ -21,13 +21,15 @@ namespace Voron.Impl
         private readonly AsyncManualResetEvent _hasWritesEvent = new AsyncManualResetEvent();
         private readonly AsyncManualResetEvent _stopWrites = new AsyncManualResetEvent();
 
-	    private Task _backgroundTask;
+        private Lazy<Task> _backgroundTask;
 
 		internal TransactionMergingWriter(StorageEnvironment env)
 		{
 			_env = env;
 			_pendingWrites = new ConcurrentQueue<OutstandingWrite>();
             _stopWrites.Set();
+
+		    _backgroundTask = new Lazy<Task>(() => Task.Run(() => BackgroundWriter(), _cancellationTokenSource.Token));
 		}
 
 		public IDisposable StopWrites()
@@ -55,13 +57,10 @@ namespace Voron.Impl
 
 	    private void EnsureValidBackgroundTaskState()
 	    {
-	        if (_backgroundTask == null)
-	        {
-                _backgroundTask = Task.Run(() => BackgroundWriter(), _cancellationTokenSource.Token);
-	        }
-	        if (_backgroundTask.IsCanceled || _backgroundTask.IsFaulted)
-	            _backgroundTask.Wait(); // would throw
-	        if (_backgroundTask.IsCompleted)
+	        var backgroundTask = _backgroundTask.Value;
+	        if (backgroundTask.IsCanceled || backgroundTask.IsFaulted)
+	            backgroundTask.Wait(); // would throw
+	        if (backgroundTask.IsCompleted)
 	            throw new InvalidOperationException("The write background task has already completed!");
 	    }
 
@@ -90,7 +89,6 @@ namespace Voron.Impl
 			{
 
 				writes = BuildBatchGroup(mine);
-
 				using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations));
@@ -101,12 +99,17 @@ namespace Voron.Impl
 			    foreach (var write in writes)
 			        write.TaskCompletionSource.TrySetResult(null);
 			}
-			catch (Exception)
+			catch (Exception e)
 			{
-				if (writes == null || writes.Count <= 1)
-					throw;
+			    if (writes == null || writes.Count == 0)
+			        throw;
 
-				SplitWrites(writes);
+			    if (writes.Count == 1)
+			    {
+			        writes[0].TaskCompletionSource.TrySetException(e);
+			    }
+
+			    SplitWrites(writes);
 			}
 			finally
 			{
@@ -116,19 +119,20 @@ namespace Voron.Impl
 
 		private void Finalize(IEnumerable<OutstandingWrite> writes)
 		{
-			if (writes != null)
-			{
-				foreach (var write in writes)
-				{
-					Debug.Assert(_pendingWrites.Peek() == write);
+		    if (writes == null) 
+                return;
+            Debug.Assert(_pendingWrites.Count > 0);
+		    foreach (var write in writes)
+		    {
+		        Debug.Assert(_pendingWrites.Peek() == write);
+                Debug.Assert(write.TaskCompletionSource.Task.IsCompleted || write.TaskCompletionSource.Task.IsFaulted);
 
-					OutstandingWrite pendingWrite;
-					_pendingWrites.TryDequeue(out pendingWrite);
-				}
-			}
+		        OutstandingWrite pendingWrite;
+		        _pendingWrites.TryDequeue(out pendingWrite);
+		    }
 		}
 
-		private void HandleOperations(Transaction tx, IEnumerable<WriteBatch.BatchOperation> operations)
+	    private void HandleOperations(Transaction tx, IEnumerable<WriteBatch.BatchOperation> operations)
 		{
 			foreach (var g in operations.GroupBy(x => x.TreeName))
 			{
@@ -248,9 +252,17 @@ namespace Voron.Impl
 		    _cancellationTokenSource.Cancel();
             _hasWritesEvent.Set();
             _stopWrites.Set();
-		    if (_backgroundTask == null)
+		    if (_backgroundTask.IsValueCreated == false)
 		        return;
-		    _backgroundTask.Wait();
+		    try
+		    {
+		        _backgroundTask.Value.Wait();
+		    }
+		    catch (Exception e)
+		    {
+		        Console.WriteLine(e);
+		        Debugger.Launch();
+		    }
 		}
 	}
 }

@@ -259,6 +259,9 @@ namespace Voron
             }
             finally
             {
+                if (Writer != null)
+                    Writer.Dispose();
+
                 if (_headerAccessor != null)
                     _headerAccessor.Dispose();
 
@@ -270,9 +273,6 @@ namespace Voron
 
                 if (_journal != null)
                     _journal.Dispose();
-
-                if (Writer != null)
-                    Writer.Dispose();
 
                 if (TemporaryPage != null)
                     TemporaryPage.Dispose();
