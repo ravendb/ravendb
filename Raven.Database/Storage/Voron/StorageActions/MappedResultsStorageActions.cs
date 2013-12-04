@@ -424,11 +424,6 @@
 			}
 		}
 
-		public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete)
-		{
-			throw new NotImplementedException();
-		}
-
 		private IEnumerable<MappedResultInfo> GetResultsForBucket(int view, int level, string reduceKey, int bucket, bool loadData)
 		{
 			switch (level)
@@ -524,7 +519,7 @@
 			}
 		}
 
-		public ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete)
+		public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete)
 		{
 			if (itemsToDelete == null)
 				return null;
