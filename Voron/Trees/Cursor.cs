@@ -21,7 +21,7 @@ namespace Voron.Trees
             node.Value = newVal;
         }
 
-        public long ParentPage
+        public Page ParentPage
         {
             get
             {
@@ -31,18 +31,18 @@ namespace Voron.Trees
                 linkedListNode = linkedListNode.Next;
                 if (linkedListNode == null)
                     throw new InvalidOperationException("No parent page in cursor");
-                return linkedListNode.Value.PageNumber;
+                return linkedListNode.Value;
             }
         }
 
-        public long CurrentPage
+        public Page CurrentPage
         {
             get
             {
                 LinkedListNode<Page> linkedListNode = Pages.First;
                 if (linkedListNode == null)
                     throw new InvalidOperationException("No pages in cursor");
-                return linkedListNode.Value.PageNumber;
+                return linkedListNode.Value;
             }
         }
 

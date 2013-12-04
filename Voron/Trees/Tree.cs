@@ -117,7 +117,7 @@ namespace Voron.Trees
 			    return; //nothing to delete - key not found
 		    }
 
-		    page = tx.ModifyPage(page.PageNumber);
+			page = tx.ModifyPage(page.PageNumber, page);
 
 		    var item = page.GetNode(page.LastSearchPosition);
 
@@ -169,7 +169,7 @@ namespace Voron.Trees
 				return;
 			}
 
-			page = tx.ModifyPage(page.PageNumber);
+			page = tx.ModifyPage(page.PageNumber, page);
 
 			var item = page.GetNode(page.LastSearchPosition);
 
@@ -210,7 +210,7 @@ namespace Voron.Trees
 			Lazy<Cursor> lazy;
 			var foundPage = FindPageFor(tx, key, out lazy);
 
-			var page = tx.ModifyPage(foundPage.PageNumber);
+			var page = tx.ModifyPage(foundPage.PageNumber, foundPage);
 
 			ushort nodeVersion = 0;
 			bool? shouldGoToOverflowPage = null;
@@ -291,7 +291,7 @@ namespace Voron.Trees
 		{
 			Lazy<Cursor> lazy;
 			var foundPage = FindPageFor(tx, key, out lazy);
-			var page = tx.ModifyPage(foundPage.PageNumber);
+			var page = tx.ModifyPage(foundPage.PageNumber, foundPage);
 
 			if (page.LastMatch != 0)
 				return false; // not there
@@ -542,7 +542,7 @@ namespace Voron.Trees
 			if (page.LastMatch != 0)
 				return; // not an exact match, can't delete
 
-			page = tx.ModifyPage(page.PageNumber);
+			page = tx.ModifyPage(page.PageNumber, page);
 
 			State.EntriesCount--;
 			ushort nodeVersion;

@@ -135,22 +135,21 @@ namespace Voron.Impl
 			return State.GetTree(treeName, this);
 		}
 
-		public Page ModifyPage(long p)
+		public Page ModifyPage(long num, Page page)
 		{
 			_env.AssertFlushingNotFailed();
 
-			Page page;
-			if (_dirtyPages.Contains(p))
+			if (_dirtyPages.Contains(num))
 			{
-				page = GetPageForModification(p);
+				page = GetPageForModification(num, page);
 				page.Dirty = true;
 
 				return page;
 			}
 
-			page = GetPageForModification(p);
+			page = GetPageForModification(num, page);
 
-			var newPage = AllocatePage(1, p); // allocate new page in a log file but with the same number
+			var newPage = AllocatePage(1, num); // allocate new page in a log file but with the same number
 
 			NativeMethods.memcpy(newPage.Base, page.Base, AbstractPager.PageSize);
 			newPage.LastSearchPosition = page.LastSearchPosition;
@@ -159,8 +158,11 @@ namespace Voron.Impl
 			return newPage;
 		}
 
-		private Page GetPageForModification(long p)
+		private Page GetPageForModification(long p, Page page)
 		{
+			if (page != null)
+				return page;
+
 			PageFromScratchBuffer value;
 			if (_scratchPagesTable.TryGetValue(p, out value))
 			{
