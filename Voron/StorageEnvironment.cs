@@ -196,8 +196,6 @@ namespace Voron
             tx.State.Root.Delete(tx, name);
 
             tx.DeletedTree(name);
-
-	        tree.Dispose();
         }
 
         public unsafe Tree CreateTree(Transaction tx, string name)
@@ -284,11 +282,6 @@ namespace Voron
 
                 if (errors.Count != 0)
                     throw new AggregateException(errors);
-
-                foreach (var tree in Trees)
-                {
-                    tree.Dispose();
-                }
             }
         }
 

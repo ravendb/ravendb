@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Security;
 using System.Threading.Tasks;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
@@ -16,6 +15,15 @@ namespace Voron.Impl
 {
 	public unsafe class Transaction : IDisposable
 	{
+		public class FoundPage
+		{
+			public long Number;
+			public Slice FirstKey;
+			public Slice LastKey;
+			public List<long> CursorPath;
+		}
+
+		private const int NumberOfRecentlyFoundPagesPerTree = 16;
 		private const int PagesTakenByHeader = 1;
 		private readonly IVirtualPager _dataPager;
 		private readonly StorageEnvironment _env;
@@ -28,6 +36,7 @@ namespace Voron.Impl
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
 
 		private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>();
+		private readonly IDictionary<Tree, LinkedList<FoundPage>> _recentlyFoundPages = new Dictionary<Tree, LinkedList<FoundPage>>();
 
 		internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
@@ -442,6 +451,38 @@ namespace Voron.Impl
 		public List<PageFromScratchBuffer> GetTransactionPages()
 		{
 			return _transactionPages;
+		}
+
+		public IEnumerable<FoundPage> GetRecentlyFoundPages(Tree tree)
+		{
+			if (_recentlyFoundPages.ContainsKey(tree))
+				return _recentlyFoundPages[tree];
+			
+			return Enumerable.Empty<FoundPage>();
+		}
+
+		public void AddRecentlyFoundPage(Tree tree, FoundPage foundPage)
+		{
+			LinkedList<FoundPage> recentFoundTreePages;
+
+			if (_recentlyFoundPages.ContainsKey(tree))
+				recentFoundTreePages = _recentlyFoundPages[tree];
+			else
+			{
+				recentFoundTreePages = new LinkedList<FoundPage>();
+				_recentlyFoundPages[tree] = recentFoundTreePages;
+			}
+
+			recentFoundTreePages.AddFirst(foundPage);
+
+			if (recentFoundTreePages.Count > NumberOfRecentlyFoundPagesPerTree)
+				recentFoundTreePages.RemoveLast();
+		}
+
+		public void InvalidateRecentlyFoundPages(Tree tree)
+		{
+			if (_recentlyFoundPages.ContainsKey(tree))
+				_recentlyFoundPages[tree].Clear();
 		}
 	}
 }
