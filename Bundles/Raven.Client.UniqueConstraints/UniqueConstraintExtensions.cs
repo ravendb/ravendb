@@ -17,17 +17,44 @@ namespace Raven.Client.UniqueConstraints
 			public string RelatedId { get; set; }
 		}
 
+
 		public static T LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, object value)
 		{
-			return LoadByUniqueConstraint(session, keySelector, new object[] { value }).FirstOrDefault();
+			var propertyName = GetPropropertyNameForKeySelector<T>(keySelector);
+
+			return LoadByUniqueConstraintInternal<T>(session, propertyName, new object[] { value }).FirstOrDefault();
 		}
+
 
 		public static T[] LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, params object[] values)
 		{
+			var propertyName = GetPropropertyNameForKeySelector<T>(keySelector);
+
+			return LoadByUniqueConstraintInternal<T>(session, propertyName, values);
+		}
+
+
+		public static T LoadByUniqueConstraint<T>(this IDocumentSession session, string keyName, object value)
+		{
+			return LoadByUniqueConstraintInternal<T>(session, keyName, new object[] { value }).FirstOrDefault();
+		}
+
+
+		public static T[] LoadByUniqueConstraint<T>(this IDocumentSession session, string keyName, params object[] values)
+		{
+			return LoadByUniqueConstraintInternal<T>(session, keyName, values);
+		}
+
+
+		private static T[] LoadByUniqueConstraintInternal<T>(this IDocumentSession session, string propertyName, params object[] values)
+		{
 			if (values == null) throw new ArgumentNullException("value", "The unique value cannot be null");
+			if (string.IsNullOrWhiteSpace(propertyName)) { throw (propertyName == null) ? new ArgumentNullException("propertyName") : new ArgumentException("propertyName cannot be empty.", "propertyName"); }
+
+			if (values.Length == 0) { return new T[0]; }
+
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
-			var body = GetMemberExpression(keySelector);
-		    var propertyName = body.Member.Name;
+			
 			var constraintInfo = session.Advanced.DocumentStore.GetUniquePropertiesForType(typeof(T)).SingleOrDefault(ci => ci.Configuration.Name == propertyName);
 
 			if (constraintInfo != null)
@@ -49,6 +76,16 @@ namespace Raven.Client.UniqueConstraints
 
 			return values.Select(v => default(T)).ToArray();
 		}
+
+
+
+		private static string GetPropropertyNameForKeySelector<T>(Expression<Func<T, object>> keySelector)
+		{
+			var body = GetMemberExpression(keySelector);
+			var propertyName = body.Member.Name;
+			return propertyName;
+		}
+
 
 	    private static MemberExpression GetMemberExpression<T>(Expression<Func<T, object>> keySelector)
 	    {

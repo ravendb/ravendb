@@ -116,5 +116,25 @@ namespace Raven.Bundles.Tests.UniqueConstraints
 				Assert.Equal(user3.Email, results[2].Email);
 			}
 		}
+
+		[Fact]
+		public void Will_load_existing_doc_by_constraint_with_property_name()
+		{
+			var user = new User { Id = "users/1", Email = "foo@bar.com", Name = "James" };
+
+			using (var session = DocumentStore.OpenSession())
+			{
+				session.Store(user);
+				session.SaveChanges();
+			}
+
+			using (var session = DocumentStore.OpenSession())
+			{
+				var loadedUser = session.LoadByUniqueConstraint<User>("Email", "foo@bar.com");
+
+				Assert.NotNull(loadedUser);
+				Assert.Equal(user.Id, loadedUser.Id);
+			}
+		}
     }
 }
