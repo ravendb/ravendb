@@ -259,23 +259,29 @@ namespace Voron
             }
             finally
             {
-                if (Writer != null)
-                    Writer.Dispose();
+                var errors = new List<Exception>();
+                foreach (var disposable in new IDisposable[]
+                {
+                    Writer, 
+                    _headerAccessor, 
+                    _scratchBufferPool,
+                    _options.OwnsPagers ? _options : null,
+                    _journal, TemporaryPage
+                })
+                {
+                    try
+                    {
+                        if(disposable != null)
+                            disposable.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        errors.Add(e);
+                    }
+                }
 
-                if (_headerAccessor != null)
-                    _headerAccessor.Dispose();
-
-                if (_scratchBufferPool != null)
-                    _scratchBufferPool.Dispose();
-
-                if (_options.OwnsPagers)
-                    _options.Dispose();
-
-                if (_journal != null)
-                    _journal.Dispose();
-
-                if (TemporaryPage != null)
-                    TemporaryPage.Dispose();
+                if(errors.Count != 0)
+                    throw new AggregateException(errors);
             }
         }
 
