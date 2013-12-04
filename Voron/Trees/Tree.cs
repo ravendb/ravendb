@@ -48,7 +48,7 @@ namespace Voron.Trees
 			_state = state;
 		}
 
-		private readonly ThreadLocal<FoundPage> _lastFoundPage = new ThreadLocal<FoundPage>();
+		private ThreadLocal<FoundPage> _lastFoundPage = new ThreadLocal<FoundPage>();
 
 		public static Tree Open(Transaction tx, SliceComparer cmp, TreeRootHeader* header)
 		{
@@ -259,7 +259,10 @@ namespace Voron.Trees
 			byte* dataPos;
 			if (page.HasSpaceFor(key, len) == false)
 			{
-				_lastFoundPage.Value = null;
+				var old = _lastFoundPage;
+				_lastFoundPage = new ThreadLocal<FoundPage>();
+				old.Dispose();
+
 				var cursor = lazy.Value;
 				cursor.Update(cursor.Pages.First, page);
 				var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
@@ -559,7 +562,10 @@ namespace Voron.Trees
 			var changedPage = page;
 			while (changedPage != null)
 			{
-				_lastFoundPage.Value = null;
+				var old = _lastFoundPage;
+				_lastFoundPage = new ThreadLocal<FoundPage>();
+				old.Dispose();
+
 				changedPage = treeRebalancer.Execute(lazy.Value, changedPage);
 			}
 
