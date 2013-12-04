@@ -290,8 +290,10 @@ void ReadInternal(vector<TestData> testData, int itemsPerTransaction, int number
   int rc;
   MDB_val key, data;
   MDB_txn *txn;
+  MDB_cursor *cursor;
 
   rc = mdb_txn_begin(env, NULL, MDB_RDONLY, &txn);
+  rc = mdb_cursor_open(txn, dbi, &cursor);
     
   for(int i = 0; i < testData.size(); i++) {
     TestData item = testData.at(i);
@@ -299,7 +301,7 @@ void ReadInternal(vector<TestData> testData, int itemsPerTransaction, int number
     key.mv_size = sizeof(int);
     key.mv_data = &item.Id;
     
-    rc = mdb_get(txn, dbi, &key, &data);
+    rc = mdb_cursor_get(cursor, &key, &data, MDB_SET);
     
     if(rc != 0)
     {
