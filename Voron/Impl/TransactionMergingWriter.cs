@@ -279,10 +279,14 @@ namespace Voron.Impl
 		    {
 		        _backgroundTask.Value.Wait();
 		    }
-		    catch (Exception e)
+		    catch (TaskCanceledException)
 		    {
-		        Console.WriteLine(e);
-		        Debugger.Launch();
+		    }
+		    catch (AggregateException e)
+		    {
+		        if (e.InnerException is TaskCanceledException)
+		            return;
+		        throw;
 		    }
 		}
 	}
