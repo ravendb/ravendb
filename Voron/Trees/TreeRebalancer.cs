@@ -31,10 +31,6 @@ namespace Voron.Trees
 
             if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
             {
-				if (page.PageNumber == 2053 && parentPage.PageNumber == 726)
-				{
-					DebugStuff.DumpHumanReadable(_tx, _tree.State.RootPageNumber, "before-2053-removal-");
-				}
 				// need to delete the implicit left page, shift right 
                 if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2)
                 {
@@ -50,12 +46,6 @@ namespace Voron.Trees
 				
 				_tx.FreePage(page.PageNumber);
                 cursor.Pop();
-
-				if (page.PageNumber == 2053 && parentPage.PageNumber == 726)
-				{
-					DebugStuff.DumpHumanReadable(_tx, _tree.State.RootPageNumber, "after-2053-removal-");
-				}
-
 
                 return parentPage;
             }
@@ -77,10 +67,6 @@ namespace Voron.Trees
                 // neighbor is over the min size and has enough key, can move just one key to  the current page
 	            if (page.IsBranch)
 	            {
-		            if (page.PageNumber == 916 && sibling.PageNumber == 1866)
-		            {
-			            DebugStuff.DumpHumanReadable(_tx,_tree.State.RootPageNumber,"before-exception-");
-		            }
 		            MoveBranchNode(parentPage, sibling, page);
 	            }
 	            else
