@@ -18,10 +18,12 @@ namespace Voron.Impl
 
 		private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites;
 	    private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-        private readonly AsyncManualResetEvent _hasWritesEvent = new AsyncManualResetEvent();
-        private readonly AsyncManualResetEvent _stopWrites = new AsyncManualResetEvent();
+        private readonly ManualResetEventSlim _hasWritesEvent = new ManualResetEventSlim();
+        private readonly ManualResetEventSlim _stopWrites = new ManualResetEventSlim();
 
-        private Lazy<Task> _backgroundTask;
+        private readonly ConcurrentQueue<ManualResetEventSlim> _eventsBuffer = new ConcurrentQueue<ManualResetEventSlim>();
+
+        private readonly Lazy<Task> _backgroundTask;
 
 		internal TransactionMergingWriter(StorageEnvironment env)
 		{
@@ -41,12 +43,12 @@ namespace Voron.Impl
 
 		public void Write(WriteBatch batch)
 		{
-			if (batch.Operations.Count == 0)
+			if (batch.IsEmpty)
 				return;
 
 		    EnsureValidBackgroundTaskState();
 
-		    using (var mine = new OutstandingWrite(batch))
+		    using (var mine = new OutstandingWrite(batch, this))
 			{
 				_pendingWrites.Enqueue(mine);
                 _hasWritesEvent.Set();
@@ -64,12 +66,12 @@ namespace Voron.Impl
 	            throw new InvalidOperationException("The write background task has already completed!");
 	    }
 
-	    private async Task BackgroundWriter()
+	    private void BackgroundWriter()
 	    {
 	        var cancellationToken = _cancellationTokenSource.Token;
 	        while (cancellationToken.IsCancellationRequested == false)
 	        {
-                await _stopWrites.WaitAsync();
+                _stopWrites.Wait(cancellationToken);
                 _hasWritesEvent.Reset();
 
 	            OutstandingWrite write;
@@ -78,7 +80,7 @@ namespace Voron.Impl
 	                HandleActualWrites(write);
 	            }
 
-	            await _hasWritesEvent.WaitAsync();
+	            _hasWritesEvent.Wait(cancellationToken);
 	        }
 	    }
 
@@ -87,17 +89,15 @@ namespace Voron.Impl
 			List<OutstandingWrite> writes = null;
 			try
 			{
+			    writes = BuildBatchGroup(mine);
+			    using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
+			    {
+			        HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations));
 
-				writes = BuildBatchGroup(mine);
-				using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations));
-
-					tx.Commit();
-				}
-
+			        tx.Commit();
+			    }
 			    foreach (var write in writes)
-			        write.TaskCompletionSource.TrySetResult(null);
+			        write.Completed();
 			}
 			catch (Exception e)
 			{
@@ -106,7 +106,7 @@ namespace Voron.Impl
 
 			    if (writes.Count == 1)
 			    {
-			        writes[0].TaskCompletionSource.TrySetException(e);
+			        writes[0].Errorred(e);
 			    }
 
 			    SplitWrites(writes);
@@ -125,7 +125,6 @@ namespace Voron.Impl
 		    foreach (var write in writes)
 		    {
 		        Debug.Assert(_pendingWrites.Peek() == write);
-                Debug.Assert(write.TaskCompletionSource.Task.IsCompleted || write.TaskCompletionSource.Task.IsFaulted);
 
 		        OutstandingWrite pendingWrite;
 		        _pendingWrites.TryDequeue(out pendingWrite);
@@ -173,12 +172,12 @@ namespace Voron.Impl
 						HandleOperations(tx, write.Batch.Operations);
 						tx.Commit();
 
-					    write.TaskCompletionSource.TrySetResult(null);
+					    write.Completed();
 					}
 				}
 				catch (Exception e)
 				{
-				    write.TaskCompletionSource.TrySetException(e);
+				    write.Errorred(e);
 				}
 			}
 		}
@@ -222,14 +221,19 @@ namespace Voron.Impl
 
 		private class OutstandingWrite : IDisposable
 		{
-			private Exception exception;
-            public TaskCompletionSource<object> TaskCompletionSource { get; private set; }
+		    private readonly TransactionMergingWriter _transactionMergingWriter;
+		    private Exception _exception;
+		    private readonly ManualResetEventSlim _completed;
 
-		    public OutstandingWrite(WriteBatch batch)
+		    public OutstandingWrite(WriteBatch batch, TransactionMergingWriter transactionMergingWriter)
 			{
-				Batch = batch;
+		        _transactionMergingWriter = transactionMergingWriter;
+		        Batch = batch;
 				Size = batch.Size();
-		        TaskCompletionSource = new TaskCompletionSource<object>();
+
+		        if(transactionMergingWriter._eventsBuffer.TryDequeue(out _completed) == false)
+                    _completed = new ManualResetEventSlim();
+                _completed.Reset();
 			}
 
 			public WriteBatch Batch { get; private set; }
@@ -239,11 +243,28 @@ namespace Voron.Impl
 			public void Dispose()
 			{
 				Batch.Dispose();
+
+                _transactionMergingWriter._eventsBuffer.Enqueue(_completed);
 			}
+
+		    public void Errorred(Exception e)
+		    {
+		        _exception = e;
+                _completed.Set();
+		    }
+
+		    public void Completed()
+		    {
+		        _completed.Set();
+		    }
 
 		    public void Wait()
 		    {
-		        TaskCompletionSource.Task.Wait();
+		        _completed.Wait();
+		        if (_exception != null)
+		        {
+                    throw new AggregateException("Error when executing write", _exception);
+		        }
 		    }
 		}
 
