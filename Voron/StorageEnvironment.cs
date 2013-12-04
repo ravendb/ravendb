@@ -196,6 +196,8 @@ namespace Voron
             tx.State.Root.Delete(tx, name);
 
             tx.DeletedTree(name);
+
+	        tree.Dispose();
         }
 
         public unsafe Tree CreateTree(Transaction tx, string name)
@@ -255,15 +257,15 @@ namespace Voron
                             break;
                     }
                 }
-              
+
             }
             finally
             {
                 var errors = new List<Exception>();
                 foreach (var disposable in new IDisposable[]
                 {
-                    Writer, 
-                    _headerAccessor, 
+                    Writer,
+                    _headerAccessor,
                     _scratchBufferPool,
                     _options.OwnsPagers ? _options : null,
                     _journal, TemporaryPage
@@ -271,7 +273,7 @@ namespace Voron
                 {
                     try
                     {
-                        if(disposable != null)
+                        if (disposable != null)
                             disposable.Dispose();
                     }
                     catch (Exception e)
@@ -280,8 +282,13 @@ namespace Voron
                     }
                 }
 
-                if(errors.Count != 0)
+                if (errors.Count != 0)
                     throw new AggregateException(errors);
+
+                foreach (var tree in Trees)
+                {
+                    tree.Dispose();
+                }
             }
         }
 
