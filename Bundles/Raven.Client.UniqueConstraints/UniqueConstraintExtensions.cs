@@ -19,25 +19,35 @@ namespace Raven.Client.UniqueConstraints
 
 		public static T LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, object value)
 		{
-			if (value == null) throw new ArgumentNullException("value", "The unique value cannot be null");
+			return LoadByUniqueConstraint(session, keySelector, new object[] { value }).FirstOrDefault();
+		}
+
+		public static T[] LoadByUniqueConstraint<T>(this IDocumentSession session, Expression<Func<T, object>> keySelector, params object[] values)
+		{
+			if (values == null) throw new ArgumentNullException("value", "The unique value cannot be null");
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
 			var body = GetMemberExpression(keySelector);
 		    var propertyName = body.Member.Name;
 			var constraintInfo = session.Advanced.DocumentStore.GetUniquePropertiesForType(typeof(T)).SingleOrDefault(ci => ci.Configuration.Name == propertyName);
 
-			if (constraintInfo == null)
+			if (constraintInfo != null)
 			{
-				return default(T);
+				var uniqueIds =
+					(from value in values
+					 where value != null
+					 select "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" +
+								Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive))
+					.ToArray();
+				var constraintDocs = session.Include("RelatedId").Load<RavenJObject>(uniqueIds);
+				if (constraintDocs != null)
+				{
+					string nullId = Guid.NewGuid().ToString(); // simple way to maintain parallel results array - this ID should never exist in the DB
+					var ids = constraintDocs.Select(d => d == null ? nullId : d.Value<string>("RelatedId")).ToArray();
+					return session.Load<T>(ids);
+				}
 			}
 
-			var uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" +
-                           Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value, constraintInfo.Configuration.CaseInsensitive);
-			var constraintDoc = session.Include("RelatedId").Load<RavenJObject>(uniqueId);
-			if (constraintDoc == null)
-				return default(T);
-
-			var id = constraintDoc.Value<string>("RelatedId");
-			return string.IsNullOrEmpty(id) ? default(T) : session.Load<T>(id);
+			return values.Select(v => default(T)).ToArray();
 		}
 
 	    private static MemberExpression GetMemberExpression<T>(Expression<Func<T, object>> keySelector)
