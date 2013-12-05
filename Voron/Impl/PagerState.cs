@@ -1,23 +1,28 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.IO.MemoryMappedFiles;
-using System.Runtime.InteropServices;
-using System.Threading;
-
-namespace Voron.Impl
+﻿namespace Voron.Impl
 {
+    using System.Collections.Concurrent;
+    using System.Diagnostics;
+    using System.IO.MemoryMappedFiles;
+    using System.Threading;
+    using System.Threading.Tasks;
+
+    using Voron.Impl.Paging;
+
     public unsafe class PagerState
     {
+	    private readonly AbstractPager _pager;
+
 #if DEBUG
         public static ConcurrentDictionary<PagerState, StackTrace> Instances = new ConcurrentDictionary<PagerState, StackTrace>();
-
-        public PagerState()
-        {
-            Instances[this] = new StackTrace(true);
-        }
-
 #endif
+
+        public PagerState(AbstractPager pager)
+        {
+	        _pager = pager;
+#if DEBUG
+            Instances[this] = new StackTrace(true);
+#endif
+        }
 
         private int _refs;
 
@@ -25,9 +30,9 @@ namespace Voron.Impl
 
         public MemoryMappedFile File;
 
-        public byte* Base;
+        public byte* MapBase { get; set; }
 
-        public IntPtr Ptr;
+        public bool Released;
 
         public void Release()
         {
@@ -39,17 +44,25 @@ namespace Voron.Impl
             Instances.TryRemove(this, out value);
 #endif
 
-            Base = null;
+	        _pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
+        }
+
+        private void ReleaseInternal()
+        {
             if (Accessor != null)
             {
                 Accessor.SafeMemoryMappedViewHandle.ReleasePointer();
                 Accessor.Dispose();
+                Accessor = null;
             }
-            if (File != null)
-                File.Dispose();
 
-            if(Ptr != IntPtr.Zero)
-                Marshal.FreeHGlobal(Ptr);
+            if (File != null)
+            {
+                File.Dispose();
+                File = null;
+            }
+
+            Released = true;
         }
 
 #if DEBUG

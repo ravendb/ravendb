@@ -10,3 +10,5 @@ packages/
 /Voron.Tests/*.user
 
 /Performance.Comparison/Performance.Comparison.v12.suo
+
+/Performance.Comparison/*.suo

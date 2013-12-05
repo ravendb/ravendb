@@ -1,4 +1,5 @@
 ﻿using Voron.Impl;
+using Voron.Impl.Paging;
 
 namespace Voron.Tests.Storage
 {

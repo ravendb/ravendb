@@ -63,8 +63,12 @@
     <Compile Include="Backups\Full.cs" />
     <Compile Include="Backups\Incremental.cs" />
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
+    <Compile Include="Bugs\FlushingToDataFile.cs" />
+    <Compile Include="Bugs\IndexPointToNonLeafPageTests.cs" />
+    <Compile Include="Bugs\LargeValues.cs" />
     <Compile Include="Bugs\MultiAdds.cs" />
     <Compile Include="Bugs\RecoveryMultipleJournals.cs" />
+    <Compile Include="Bugs\RecoveryWithManualFlush.cs" />
     <Compile Include="Bugs\Snapshots.cs" />
     <Compile Include="Bugs\Deletes.cs" />
     <Compile Include="Bugs\EmptyTree.cs" />
@@ -84,8 +88,10 @@
     <Compile Include="Storage\Batches.cs" />
     <Compile Include="Storage\BigValue.cs" />
     <Compile Include="Storage\Concurrency.cs" />
+    <Compile Include="Storage\FreeScratchPages.cs" />
     <Compile Include="Storage\MultiTransactions.cs" />
     <Compile Include="Storage\Pagers.cs" />
+    <Compile Include="Storage\Quotas.cs" />
     <Compile Include="Storage\Restarts.cs" />
     <Compile Include="Storage\Snapshots.cs" />
     <Compile Include="Storage\SplittingVeryBig.cs" />
@@ -113,6 +119,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Bugs\Data\data2.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Bugs\Data\non-leaf-page-seq-id-large-values-2.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Bugs\Data\non-leaf-page-seq-id-large-values.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

@@ -39,7 +39,6 @@ namespace Voron.Impl
 				list.RemoveFirst();
 			    var pageFromScratchBuffer = new PageFromScratchBuffer
 			    {
-			        Pointer = _scratchPager.PagerState.Base + position,
 			        PositionInScratchBuffer = position,
 			        Size = size,
 			        NumberOfPages = numberOfPages
@@ -52,13 +51,12 @@ namespace Voron.Impl
 
 			var result = new PageFromScratchBuffer
 			{
-				Pointer = _scratchPager.PagerState.Base + (_lastUsedPage * AbstractPager.PageSize),
 				PositionInScratchBuffer = _lastUsedPage,
 				Size = size,
 				NumberOfPages = numberOfPages
 			};
             _allocatedPages.Add(_lastUsedPage, result);
-			_lastUsedPage += numberOfPages;
+			_lastUsedPage += size;
 
 			return result;
 		}
@@ -83,17 +81,38 @@ namespace Voron.Impl
 			_scratchPager.Dispose();
 		}
 
-		public Page ReadPage(long value)
+		public Page ReadPage(long p)
 		{
-			return _scratchPager.Read(value);
+			return _scratchPager.Read(p);
 		}
 	}
 
-	public unsafe class PageFromScratchBuffer
+	public class PageFromScratchBuffer
 	{
-		public byte* Pointer;
 		public long PositionInScratchBuffer;
 		public long Size;
 		public int NumberOfPages;
+
+		public override bool Equals(object obj)
+		{
+			if (ReferenceEquals(null, obj)) return false;
+			if (ReferenceEquals(this, obj)) return true;
+			if (obj.GetType() != this.GetType()) return false;
+
+			var other = (PageFromScratchBuffer) obj;
+
+			return PositionInScratchBuffer == other.PositionInScratchBuffer && Size == other.Size && NumberOfPages == other.NumberOfPages;
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked
+			{
+				var hashCode = PositionInScratchBuffer.GetHashCode();
+				hashCode = (hashCode * 397) ^ Size.GetHashCode();
+				hashCode = (hashCode * 397) ^ NumberOfPages;
+				return hashCode;
+			}
+		}
 	}
 }

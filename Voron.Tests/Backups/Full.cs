@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Packaging;
 using Voron.Impl;
 using Voron.Impl.Backup;
+using Voron.Impl.Paging;
 using Xunit;
 
 namespace Voron.Tests.Backups
@@ -52,8 +53,6 @@ namespace Voron.Tests.Backups
 			Assert.True(Env.Journal.Files.Count > 1);
 
 			Env.FlushLogToDataFile(); // force writing data to the data file
-
-			Assert.Equal(0, Env.Journal.Files.Count); // after flush there are no journal files
 			 
 			// add more data to journal files
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

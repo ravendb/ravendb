@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Impl.Paging;
+using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
@@ -17,25 +17,26 @@ namespace Voron.Impl.Journal
 			public IntPtr Handle;
 		}
 
-		private readonly List<Buffer> _buffers = new List<Buffer>();
+		private SafeList<Buffer> _buffers = SafeList<Buffer>.Empty;
 		private long _lastPos;
 
 		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 
 		public PureMemoryJournalWriter(long journalSize)
 		{
-			NumberOfAllocatedPages = journalSize;
+			NumberOfAllocatedPages = journalSize/AbstractPager.PageSize;
 		}
 
 		public long NumberOfAllocatedPages { get; private set; }
-	    public bool DeleteOnClose { get; set; }
+		public bool Disposed { get; private set; }
+		public bool DeleteOnClose { get; set; }
 
 	    public IVirtualPager CreatePager()
 		{
 			_locker.EnterReadLock();
 			try
 			{
-				return new FragmentedPureMemoryPager(_buffers.ToArray());
+				return new FragmentedPureMemoryPager(_buffers);
 			}
 			finally
 			{
@@ -62,12 +63,13 @@ namespace Voron.Impl.Journal
 	    }
 
 	    public void Dispose()
-		{
+	    {
+		    Disposed = true;
 			foreach (var buffer in _buffers)
 			{
 				Marshal.FreeHGlobal(buffer.Handle);
 			}
-			_buffers.Clear();
+			_buffers = SafeList<Buffer>.Empty;
 		}
 
 		public Task WriteGatherAsync(long position, byte*[] pages)
@@ -89,7 +91,7 @@ namespace Voron.Impl.Journal
 					Pointer = (byte*)handle.ToPointer(),
 					SizeInPages = pages.Length
 				};
-				_buffers.Add(buffer);
+				_buffers = _buffers.Add(buffer);
 
 				for (int index = 0; index < pages.Length; index++)
 				{

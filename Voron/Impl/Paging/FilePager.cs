@@ -7,6 +7,7 @@ using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
+using Voron.Impl.Paging;
 using Voron.Trees;
 
 namespace Voron.Impl
@@ -53,10 +54,17 @@ namespace Voron.Impl
 
         public override byte* AcquirePagePointer(long pageNumber)
         {
-            return PagerState.Base + (pageNumber * PageSize);
+            return PagerState.MapBase + (pageNumber * PageSize);
         }
 
-        public override Page GetWritable(long pageNumber)
+	    protected override unsafe string GetSourceName()
+	    {
+		    if (_fileInfo == null)
+			    return "Unknown";
+		    return "File: " + _fileInfo.Name;
+	    }
+
+	    public override Page GetWritable(long pageNumber)
         {
             throw new InvalidOperationException("File pager does not offer writing directly to a page");
         }
@@ -70,7 +78,9 @@ namespace Voron.Impl
                 return;
 
             // need to allocate memory again
-            _fileStream.SetLength(newLength);
+			NativeFileMethods.SetFileLength(_safeFileHandle, newLength);
+
+			Debug.Assert(_fileStream.Length == newLength);
 
             PagerState.Release(); // when the last transaction using this is over, will dispose it
             PagerState newPager = CreateNewPagerState();
@@ -103,11 +113,11 @@ namespace Voron.Impl
             byte* p = null;
             accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
 
-            var newPager = new PagerState
+            var newPager = new PagerState(this)
                  {
                      Accessor = accessor,
                      File = mmf,
-                     Base = p
+                     MapBase = p
                  };
             newPager.AddRef(); // one for the pager
             return newPager;
@@ -175,11 +185,7 @@ namespace Voron.Impl
         public override void Dispose()
         {
             base.Dispose();
-            if (PagerState != null)
-            {
-                PagerState.Release();
-                PagerState = null;
-            }
+      
             _fileStream.Dispose();
 
             if (DeleteOnClose)

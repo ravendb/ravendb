@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -66,11 +65,10 @@ namespace Voron.Debugging
 				}
 			}
 
-			Func<long, ImmutableHashSet<long>> relevantPageReferences =
-				branchPageNumber => existingTreeReferences
+			Func<long, HashSet<long>> relevantPageReferences =
+				branchPageNumber => new HashSet<long>(existingTreeReferences
 					.Where(kvp => kvp.Key != branchPageNumber)
-					.SelectMany(kvp => kvp.Value)
-					.ToImmutableHashSet();
+					.SelectMany(kvp => kvp.Value));
 
 			// ReSharper disable once LoopCanBeConvertedToQuery
 			foreach (var branchReferences in existingTreeReferences)
@@ -104,11 +102,11 @@ namespace Voron.Debugging
 			var path = Path.Combine(Environment.CurrentDirectory, "output.dot");
 			TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(startPageNumber), showNodesEvery);
 
-			//var output = Path.Combine(Environment.CurrentDirectory, "output." + format);
-			//var p = Process.Start(@"C:\Program Files (x86)\Graphviz2.32\bin\dot.exe", "-T" + format + " " + path + " -o " + output);
-			//p.WaitForExit();
-			//Process.Start(output);
-			//Thread.Sleep(500);
+			var output = Path.Combine(Environment.CurrentDirectory, "output." + format);
+			var p = Process.Start(@"C:\Program Files (x86)\Graphviz2.30\bin\dot.exe", "-T" + format + " " + path + " -o " + output);
+			p.WaitForExit();
+			Process.Start(output);
+			Thread.Sleep(500);
 		} 
 	}
 }

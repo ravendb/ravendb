@@ -41,9 +41,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable">
-      <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.27\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
-    </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.IO.Compression" />
@@ -52,6 +49,7 @@
   <ItemGroup>
     <Compile Include="Debugging\EnvironmentStats.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
+    <Compile Include="Exceptions\QuotaException.cs" />
     <Compile Include="Impl\Backup\FullBackup.cs" />
     <Compile Include="Impl\Backup\IncrementalBackupInfo.cs" />
     <Compile Include="Impl\Constants.cs" />
@@ -82,6 +80,7 @@
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
     <Compile Include="Impl\Paging\MemoryMappedPager.cs" />
     <Compile Include="Impl\Paging\PureMemoryPager.cs" />
+    <Compile Include="Impl\Paging\TemporaryPage.cs" />
     <Compile Include="Impl\ScratchBufferPool.cs" />
     <Compile Include="Impl\SliceEqualityComparer.cs" />
     <Compile Include="Impl\SnapshotReader.cs" />
@@ -89,6 +88,7 @@
     <Compile Include="Impl\TreeAndSliceComparer.cs" />
     <Compile Include="Impl\WriteBatch.cs" />
     <Compile Include="ReadResult.cs" />
+    <Compile Include="RecoveryErrorEventArgs.cs" />
     <Compile Include="StorageEnvironmentOptions.cs" />
     <Compile Include="Impl\StorageEnvironmentState.cs" />
     <Compile Include="TransactionFlags.cs" />
@@ -128,11 +128,11 @@
     <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\LittleEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\EndianBitConverter.cs" />
+    <Compile Include="Util\LinkedDictionary.cs" />
+    <Compile Include="Util\Refence.cs" />
+    <Compile Include="Util\SafeList.cs" />
     <Compile Include="Util\TreeExtensions.cs" />
     <Compile Include="Util\Utils.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Util\Conversion\readme.txt" />

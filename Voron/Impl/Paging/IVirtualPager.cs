@@ -10,9 +10,7 @@ namespace Voron.Impl
 		byte* AcquirePagePointer(long pageNumber);
         Page Read(long pageNumber);
 		void AllocateMorePages(Transaction tx, long newLength);
-	 
-		Page TempPage { get; }
-
+	
 		bool Disposed { get; }
 
 		long NumberOfAllocatedPages { get; }
@@ -27,7 +25,7 @@ namespace Voron.Impl
 		bool ShouldGoToOverflowPage(int len);
 
 		int GetNumberOfOverflowPages(int overflowSize);
-
+	    bool WillRequireExtension(long requestedPageNumber, int numberOfPages);
         void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages);
         void Write(Page page, long? pageNumber = null);
 

@@ -1,18 +1,26 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Voron.Impl.Journal;
 using Voron.Trees;
+using Voron.Util;
 
 namespace Voron.Impl.Paging
 {
 	public class FragmentedPureMemoryPager : AbstractPager
 	{
-		private readonly PureMemoryJournalWriter.Buffer[] _buffers;
+		private readonly SafeList<PureMemoryJournalWriter.Buffer> _buffers;
 
-		internal FragmentedPureMemoryPager(PureMemoryJournalWriter.Buffer[] buffers)
+
+		internal FragmentedPureMemoryPager(SafeList<PureMemoryJournalWriter.Buffer> buffers)
 		{
-			this._buffers = buffers;
+			_buffers = buffers;
 			NumberOfAllocatedPages = buffers.Sum(x => x.SizeInPages);
+		}
+
+		protected override string GetSourceName()
+		{
+			return "FragmentedPureMemoryPager";
 		}
 
 		public override unsafe byte* AcquirePagePointer(long pageNumber)
@@ -28,27 +36,27 @@ namespace Voron.Impl.Paging
 			throw new InvalidOperationException("Could not find a matchin page number: " + pageNumber);
 		}
 
-		public override unsafe void AllocateMorePages(Transaction tx, long newLength)
+		public override void AllocateMorePages(Transaction tx, long newLength)
 		{
 			throw new NotSupportedException();
 		}
 
-		public override unsafe void Sync()
+		public override void Sync()
 		{
 			throw new NotSupportedException();
 		}
 
-		public override unsafe void Write(Page page, long? pageNumber)
+		public override void Write(Page page, long? pageNumber)
 		{
 			throw new NotSupportedException();
 		}
 
-		public override unsafe void WriteDirect(Page start, long pagePosition, int pagesToWrite)
+		public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
 		{
 			throw new NotSupportedException();
 		}
 
-		public override unsafe string ToString()
+		public override string ToString()
 		{
 			return "memory";
 		}

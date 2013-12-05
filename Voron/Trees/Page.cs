@@ -5,6 +5,7 @@ using System.Text;
 using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
+using Voron.Impl.Paging;
 
 namespace Voron.Trees
 {
@@ -13,14 +14,17 @@ namespace Voron.Trees
         private readonly byte* _base;
         private readonly PageHeader* _header;
 
+	    public readonly string Source;
+
         public int LastMatch;
         public int LastSearchPosition;
         public bool Dirty;
 
-        public Page(byte* b)
+        public Page(byte* b, string source)
         {
             _base = b;
             _header = (PageHeader*)b;
+	        Source = source;
         }
 
         public long PageNumber { get { return _header->PageNumber; } set { _header->PageNumber = value; } }
@@ -319,7 +323,7 @@ namespace Voron.Trees
             // when truncating, we copy the values to a tmp page
             // this has the effect of compacting the page data and avoiding
             // internal page fragmentation
-            var copy = tx.TempPage;
+            var copy = tx.Environment.TemporaryPage.TempPage;
             copy.Flags = Flags;
             for (int j = 0; j < i; j++)
             {
@@ -375,6 +379,33 @@ namespace Voron.Trees
         {
             get { return new Slice(GetNode(i)).ToString(); }
         }
+
+		public Slice GetNodeKey(int nodeNumber)
+		{
+			var node = GetNode(nodeNumber);
+			var keySize = node->KeySize;
+			var key = new byte[keySize];
+
+			fixed (byte* ptr = key)
+				NativeMethods.memcpy(ptr, (byte*)node + Constants.NodeHeaderSize, keySize);
+
+			return new Slice(key);
+		}
+
+	    public string DebugView()
+	    {
+		    var sb = new StringBuilder();
+		    for (int i = 0; i < NumberOfEntries; i++)
+		    {
+			    sb.Append(i)
+				    .Append(": ")
+				    .Append(new Slice((NodeHeader*)( _base + KeysOffsets[i])))
+				    .Append(" - ")
+				    .Append(KeysOffsets[i])
+				    .AppendLine();
+		    }
+		    return sb.ToString();
+	    }
 
         [Conditional("VALIDATE")]
         public void DebugValidate(Transaction tx, SliceComparer comparer, long root)

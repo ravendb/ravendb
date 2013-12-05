@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using Voron.Impl;
 using Voron.Impl.Backup;
+using Voron.Impl.Paging;
 using Xunit;
 
 namespace Voron.Tests.Backups

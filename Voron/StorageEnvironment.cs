@@ -11,403 +11,411 @@ using Voron.Impl.Backup;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
+using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
 
 namespace Voron
 {
-	public class StorageEnvironment : IDisposable
-	{
-		private readonly StorageEnvironmentOptions _options;
+    public class StorageEnvironment : IDisposable
+    {
+        private readonly StorageEnvironmentOptions _options;
 
-		private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
-			new ConcurrentDictionary<long, Transaction>();
+        private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
+            new ConcurrentDictionary<long, Transaction>();
 
-		private readonly IVirtualPager _dataPager;
-		internal readonly SliceComparer _sliceComparer;
+        private readonly IVirtualPager _dataPager;
+        internal readonly SliceComparer _sliceComparer;
 
-		private WriteAheadJournal _journal;
-		private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
-		private readonly AsyncManualResetEvent _flushWriter = new AsyncManualResetEvent();
+        private WriteAheadJournal _journal;
+        private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
+        private readonly AsyncManualResetEvent _flushWriter = new AsyncManualResetEvent();
 
-		private long _transactionsCounter;
-		private readonly IFreeSpaceHandling _freeSpaceHandling;
-		private readonly Task _flushingTask;
-		private readonly HeaderAccessor _headerAccessor;
+        private long _transactionsCounter;
+        private readonly IFreeSpaceHandling _freeSpaceHandling;
+        private readonly Task _flushingTask;
+        private readonly HeaderAccessor _headerAccessor;
 
-		private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-		private ScratchBufferPool _scratchBufferPool;
+        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private ScratchBufferPool _scratchBufferPool;
 
-		public TransactionMergingWriter Writer { get; private set; }
-
-		public StorageEnvironmentState State { get; private set; }
-
-		public SnapshotReader CreateSnapshot()
-		{
-			return new SnapshotReader(NewTransaction(TransactionFlags.Read));
-		}
-
-		public unsafe StorageEnvironment(StorageEnvironmentOptions options)
-		{
-			try
-			{
-				_options = options;
-				_dataPager = options.DataPager;
-				_freeSpaceHandling = new FreeSpaceHandling(this);
-				_sliceComparer = NativeMethods.memcmp;
-				_headerAccessor = new HeaderAccessor(this);
-				var isNew = _headerAccessor.Initialize();
-
-				_scratchBufferPool = new ScratchBufferPool(this);
-
-				_journal = new WriteAheadJournal(this);
-
-				if (isNew)
-					CreateNewDatabase();
-				else // existing db, let us load it
-					LoadExistingDatabase();
-
-				State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
-				State.Root.Name = Constants.RootTreeName;
-
-				Writer = new TransactionMergingWriter(this);
-
-				if (_options.ManualFlushing == false)
-					_flushingTask = FlushWritesToDataFileAsync();
-			}
-			catch (Exception)
-			{
-				Dispose();
-				throw;
-			}
-		}
-
-		public ScratchBufferPool ScratchBufferPool
-		{
-			get { return _scratchBufferPool; }
-		}
-
-		private unsafe void LoadExistingDatabase()
-		{
-			var header = stackalloc TransactionHeader[1];
-			bool hadIntegrityIssues  = _journal.RecoverDatabase(header);
-			if (_journal.Files.IsEmpty && hadIntegrityIssues)
-			{
-				throw new InvalidDataException("Unrecoverable database");
-				//_journal.Dispose();
-				//_journal = new WriteAheadJournal(this);
-				//CreateNewDatabase();				
-				//return;
-			}
+        public TemporaryPage TemporaryPage { get; private set; }
 
 
-			var entry = _headerAccessor.CopyHeader();
-			var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
-			State = new StorageEnvironmentState(null, null, nextPageNumber)
-			{
-				NextPageNumber = nextPageNumber
-			};
+        public TransactionMergingWriter Writer { get; private set; }
 
-			_transactionsCounter = (header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
+        public StorageEnvironmentState State { get; private set; }
 
-			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var root = Tree.Open(tx, _sliceComparer, header->TransactionId == 0 ? &entry.Root : &header->Root);
-				var freeSpace = Tree.Open(tx, _sliceComparer, header->TransactionId == 0 ? &entry.FreeSpace : &header->FreeSpace);
+        public SnapshotReader CreateSnapshot()
+        {
+            return new SnapshotReader(NewTransaction(TransactionFlags.Read));
+        }
 
-				tx.UpdateRootsIfNeeded(root, freeSpace);
-				tx.Commit();
-			}
-		}
+        public unsafe StorageEnvironment(StorageEnvironmentOptions options)
+        {
+            try
+            {
+                TemporaryPage = new TemporaryPage();
+                _options = options;
+                _dataPager = options.DataPager;
+                _freeSpaceHandling = new FreeSpaceHandling(this);
+                _sliceComparer = NativeMethods.memcmp;
+                _headerAccessor = new HeaderAccessor(this);
+                var isNew = _headerAccessor.Initialize();
 
-		private unsafe void CreateNewDatabase()
-		{
-			const int initialNextPageNumber = 0;
-			State = new StorageEnvironmentState(null, null, initialNextPageNumber);
-			using (var tx = NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var root = Tree.Create(tx, _sliceComparer);
-				var freeSpace = Tree.Create(tx, _sliceComparer);
+                _scratchBufferPool = new ScratchBufferPool(this);
 
-				// important to first create the two trees, then set them on the env
-				tx.UpdateRootsIfNeeded(root, freeSpace);
+                _journal = new WriteAheadJournal(this);
 
-				tx.Commit();
-			}
-		}
+                if (isNew)
+                    CreateNewDatabase();
+                else // existing db, let us load it
+                    LoadExistingDatabase();
 
-		public IFreeSpaceHandling FreeSpaceHandling
-		{
-			get { return _freeSpaceHandling; }
-		}
+                State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
+                State.Root.Name = Constants.RootTreeName;
 
-		public unsafe SliceComparer SliceComparer
-		{
-			get { return _sliceComparer; }
-		}
+                Writer = new TransactionMergingWriter(this);
 
-		public HeaderAccessor HeaderAccessor
-		{
-			get { return _headerAccessor; }
-		}
+                if (_options.ManualFlushing == false)
+                    _flushingTask = FlushWritesToDataFileAsync();
+            }
+            catch (Exception)
+            {
+                Dispose();
+                throw;
+            }
+        }
 
-		public long OldestTransaction
-		{
-			get { return _activeTransactions.Keys.OrderBy(x => x).FirstOrDefault(); }
-		}
+        public ScratchBufferPool ScratchBufferPool
+        {
+            get { return _scratchBufferPool; }
+        }
 
-		public IEnumerable<Tree> Trees
-		{
-			get { return State.Trees.Values; }
-		}
+        private unsafe void LoadExistingDatabase()
+        {
+            var header = stackalloc TransactionHeader[1];
+            bool hadIntegrityIssues = _journal.RecoverDatabase(header);
 
-		public long NextPageNumber
-		{
-			get { return State.NextPageNumber; }
-		}
+            if (hadIntegrityIssues)
+            {
+                var message = _journal.Files.Count == 0 ? "Unrecoverable database" : "Database recovered partially. Some data was lost.";
 
-		public StorageEnvironmentOptions Options
-		{
-			get { return _options; }
-		}
+                _options.InvokeRecoveryError(this, message);
+            }
 
-		public WriteAheadJournal Journal
-		{
-			get { return _journal; }
-		}
+            var entry = _headerAccessor.CopyHeader();
+            var nextPageNumber = (header->TransactionId == 0 ? entry.LastPageNumber : header->LastPageNumber) + 1;
+            State = new StorageEnvironmentState(null, null, nextPageNumber)
+            {
+                NextPageNumber = nextPageNumber
+            };
 
-		public void DeleteTree(Transaction tx, string name)
-		{
-			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
-				throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");
+            _transactionsCounter = (header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
 
-			Tree tree;
-			if (tx.State.Trees.TryGetValue(name, out tree) == false)
-				return;
+            using (var tx = NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var root = Tree.Open(tx, _sliceComparer, header->TransactionId == 0 ? &entry.Root : &header->Root);
+                var freeSpace = Tree.Open(tx, _sliceComparer, header->TransactionId == 0 ? &entry.FreeSpace : &header->FreeSpace);
 
-			foreach (var page in tree.AllPages(tx))
-			{
-				tx.FreePage(page);
-			}
+                tx.UpdateRootsIfNeeded(root, freeSpace);
+                tx.Commit();
+            }
+        }
 
-			tx.State.Root.Delete(tx, name);
+        private unsafe void CreateNewDatabase()
+        {
+            const int initialNextPageNumber = 0;
+            State = new StorageEnvironmentState(null, null, initialNextPageNumber);
+            using (var tx = NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var root = Tree.Create(tx, _sliceComparer);
+                var freeSpace = Tree.Create(tx, _sliceComparer);
 
-			tx.DeletedTree(name);
-		}
+                // important to first create the two trees, then set them on the env
+                tx.UpdateRootsIfNeeded(root, freeSpace);
 
-		public unsafe Tree CreateTree(Transaction tx, string name)
-		{
-			if (tx.Flags == (TransactionFlags.ReadWrite) == false)
-				throw new ArgumentException("Cannot create a new tree with a read only transaction");
+                tx.Commit();
+            }
+        }
 
-			Tree tree;
-			if (tx.State.Trees.TryGetValue(name, out tree))
-				return tree;
+        public IFreeSpaceHandling FreeSpaceHandling
+        {
+            get { return _freeSpaceHandling; }
+        }
 
-			Slice key = name;
+        public unsafe SliceComparer SliceComparer
+        {
+            get { return _sliceComparer; }
+        }
 
-			// we are in a write transaction, no need to handle locks
-			var header = (TreeRootHeader*)tx.State.Root.DirectRead(tx, key);
-			if (header != null)
-			{
-				tree = Tree.Open(tx, _sliceComparer, header);
-				tree.Name = name;
-				tx.State.AddTree(name, tree);
-				return tree;
-			}
+        public HeaderAccessor HeaderAccessor
+        {
+            get { return _headerAccessor; }
+        }
 
-			tree = Tree.Create(tx, _sliceComparer);
-			tree.Name = name;
-			var space = tx.State.Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
+        public long OldestTransaction
+        {
+            get { return _activeTransactions.Keys.OrderBy(x => x).FirstOrDefault(); }
+        }
 
-			tree.State.CopyTo((TreeRootHeader*)space);
-			tree.State.IsModified = true;
-			tx.State.AddTree(name, tree);
+        public IEnumerable<Tree> Trees
+        {
+            get { return State.Trees.Select(x => x.Value); }
+        }
 
-			return tree;
-		}
+        public long NextPageNumber
+        {
+            get { return State.NextPageNumber; }
+        }
 
-		public void Dispose()
-		{
-			_cancellationTokenSource.Cancel();
-			_flushWriter.Set();
+        public StorageEnvironmentOptions Options
+        {
+            get { return _options; }
+        }
 
-			try
-			{
-				if (_flushingTask != null)
-				{
-					switch (_flushingTask.Status)
-					{
-						case TaskStatus.RanToCompletion:
-						case TaskStatus.Canceled:
-							break;
-						default:
-							_flushingTask.Wait();
-							break;
-					}
-				}
-			}
-			finally
-			{
-				_headerAccessor.Dispose();
+        public WriteAheadJournal Journal
+        {
+            get { return _journal; }
+        }
 
-			    if (_scratchBufferPool != null)
-			        _scratchBufferPool.Dispose();
+        public void DeleteTree(Transaction tx, string name)
+        {
+            if (tx.Flags == (TransactionFlags.ReadWrite) == false)
+                throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");
 
-				if (_options.OwnsPagers)
-					_options.Dispose();
+            Tree tree;
+            if (tx.State.Trees.TryGetValue(name, out tree) == false)
+                return;
 
-				if (_journal != null)
-					_journal.Dispose();
-			}
-		}
+            foreach (var page in tree.AllPages(tx))
+            {
+                tx.FreePage(page);
+            }
 
-		public Transaction NewTransaction(TransactionFlags flags)
-		{
-			bool txLockTaken = false;
-			try
-			{
-				long txId = _transactionsCounter;
-				if (flags == (TransactionFlags.ReadWrite))
-				{
-					txId = _transactionsCounter + 1;
-					_txWriter.Wait();
-					txLockTaken = true;
-				}
-				var tx = new Transaction(this, txId, flags, _freeSpaceHandling);
-				_activeTransactions.TryAdd(txId, tx);
-				var state = _dataPager.TransactionBegan();
-				tx.AddPagerState(state);
+            tx.State.Root.Delete(tx, name);
 
-				if (flags == TransactionFlags.ReadWrite)
-				{
-					tx.AfterCommit = TransactionAfterCommit;
-				}
+            tx.DeletedTree(name);
+        }
 
-				return tx;
-			}
-			catch (Exception)
-			{
-				if (txLockTaken)
-					_txWriter.Release();
-				throw;
-			}
-		}
+        public unsafe Tree CreateTree(Transaction tx, string name)
+        {
+            if (tx.Flags == (TransactionFlags.ReadWrite) == false)
+                throw new ArgumentException("Cannot create a new tree with a read only transaction");
 
-		private void TransactionAfterCommit(long txId)
-		{
-			Transaction tx;
-			_activeTransactions.TryGetValue(txId, out tx);
-		}
+            Tree tree;
+            if (tx.State.Trees.TryGetValue(name, out tree))
+                return tree;
 
-		internal void TransactionCompleted(long txId)
-		{
-			Transaction tx;
-			if (_activeTransactions.TryRemove(txId, out tx) == false)
-				return;
+            Slice key = name;
 
-			if (tx.Flags != (TransactionFlags.ReadWrite))
-				return;
-			if (tx.Committed && tx.FlushedToJournal)
-			{
-				_transactionsCounter = txId;
-			}
-			_txWriter.Release();
+            // we are in a write transaction, no need to handle locks
+            var header = (TreeRootHeader*)tx.State.Root.DirectRead(tx, key);
+            if (header != null)
+            {
+                tree = Tree.Open(tx, _sliceComparer, header);
+                tree.Name = name;
+                tx.State.AddTree(name, tree);
+                return tree;
+            }
 
-		}
+            tree = Tree.Create(tx, _sliceComparer);
+            tree.Name = name;
+            var space = tx.State.Root.DirectAdd(tx, key, sizeof(TreeRootHeader));
 
-		public Dictionary<string, List<long>> AllPages(Transaction tx)
-		{
-			var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
+            tree.State.CopyTo((TreeRootHeader*)space);
+            tree.State.IsModified = true;
+            tx.State.AddTree(name, tree);
+
+            return tree;
+        }
+
+        public void Dispose()
+        {
+            _cancellationTokenSource.Cancel();
+            _flushWriter.Set();
+
+            try
+            {
+                if (_flushingTask != null)
+                {
+                    switch (_flushingTask.Status)
+                    {
+                        case TaskStatus.RanToCompletion:
+                        case TaskStatus.Canceled:
+                            break;
+                        default:
+                            try
+                            {
+                                _flushingTask.Wait();
+                            }
+                            catch (TaskCanceledException)
+                            {
+                            }
+                            break;
+                    }
+                }
+
+            }
+            finally
+            {
+                var errors = new List<Exception>();
+                foreach (var disposable in new IDisposable[]
+                {
+                    Writer,
+                    _headerAccessor,
+                    _scratchBufferPool,
+                    _options.OwnsPagers ? _options : null,
+                    _journal, TemporaryPage
+                })
+                {
+                    try
+                    {
+                        if (disposable != null)
+                            disposable.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        errors.Add(e);
+                    }
+                }
+
+                if (errors.Count != 0)
+                    throw new AggregateException(errors);
+            }
+        }
+
+        public Transaction NewTransaction(TransactionFlags flags)
+        {
+            bool txLockTaken = false;
+            try
+            {
+                long txId = _transactionsCounter;
+                if (flags == (TransactionFlags.ReadWrite))
+                {
+                    _txWriter.Wait();
+                    txId = _transactionsCounter + 1;
+                    txLockTaken = true;
+                }
+                var tx = new Transaction(this, txId, flags, _freeSpaceHandling);
+                _activeTransactions.TryAdd(txId, tx);
+                var state = _dataPager.TransactionBegan();
+                tx.AddPagerState(state);
+
+                if (flags == TransactionFlags.ReadWrite)
+                {
+                    tx.AfterCommit = TransactionAfterCommit;
+                }
+
+                return tx;
+            }
+            catch (Exception)
+            {
+                if (txLockTaken)
+                    _txWriter.Release();
+                throw;
+            }
+        }
+
+        private void TransactionAfterCommit(long txId)
+        {
+            Transaction tx;
+            _activeTransactions.TryGetValue(txId, out tx);
+        }
+
+        internal void TransactionCompleted(long txId)
+        {
+            Transaction tx;
+            if (_activeTransactions.TryRemove(txId, out tx) == false)
+                return;
+
+            if (tx.Flags != (TransactionFlags.ReadWrite))
+                return;
+            if (tx.Committed && tx.FlushedToJournal)
+            {
+                _transactionsCounter = txId;
+            }
+            _txWriter.Release();
+
+        }
+
+        public Dictionary<string, List<long>> AllPages(Transaction tx)
+        {
+            var results = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase)
 				{
 					{"Root", State.Root.AllPages(tx)},
 					{"Free Space Overhead", State.FreeSpaceRoot.AllPages(tx)},
 					{"Free Pages", _freeSpaceHandling.AllPages(tx)}
 				};
 
-			foreach (var tree in State.Trees)
-			{
-				results.Add(tree.Key, tree.Value.AllPages(tx));
-			}
+            foreach (var tree in State.Trees)
+            {
+                results.Add(tree.Key, tree.Value.AllPages(tx));
+            }
 
-			return results;
-		}
+            return results;
+        }
 
-		public EnvironmentStats Stats()
-		{
-			return new EnvironmentStats
-				{
-					FreePages = _freeSpaceHandling.GetFreePageCount(),
-					FreePagesOverhead = State.FreeSpaceRoot.State.PageCount,
-					RootPages = State.Root.State.PageCount,
-					HeaderPages = 2,
-					UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber
-				};
-		}
+        public EnvironmentStats Stats()
+        {
+            return new EnvironmentStats
+                {
+                    FreePages = _freeSpaceHandling.GetFreePageCount(),
+                    FreePagesOverhead = State.FreeSpaceRoot.State.PageCount,
+                    RootPages = State.Root.State.PageCount,
+                    UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber
+                };
+        }
 
-		public void SetStateAfterTransactionCommit(StorageEnvironmentState state)
-		{
-			State = state;
-		}
+        public void SetStateAfterTransactionCommit(StorageEnvironmentState state)
+        {
+            State = state;
+        }
 
-		private void OnTransactionCommit()
-		{
-			if (_options.ManualFlushing)
-				return;
+        private async Task FlushWritesToDataFileAsync()
+        {
+            while (_cancellationTokenSource.IsCancellationRequested == false)
+            {
+                _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-			if (_flushingTask.IsFaulted)
-				_flushingTask.Wait(); // throw the error, important to expose this to the callers
-			if (_flushingTask.IsCompleted || _flushingTask.IsCanceled)
-				throw new InvalidOperationException(
-					"The flushing task is cancelled or completed, this should never be the case while transactions are running");
+                var hasWrites = await _flushWriter.WaitAsync(_options.IdleFlushTimeout);
 
-			// force this to run as a separate task, to avoid holding up the transaction thread
-			Task.Run(() => _flushWriter.Set());
-		}
+                _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-		private async Task FlushWritesToDataFileAsync()
-		{
-			while (_cancellationTokenSource.IsCancellationRequested == false)
-			{
-				_cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                var sizeOfUnflushedTransactionsInJournalFile = _journal.SizeOfUnflushedTransactionsInJournalFile();
+                if (hasWrites)
+                    _flushWriter.Reset();
 
-				var hasWrites = await _flushWriter.WaitAsync(_options.IdleFlushTimeout);
+                if (sizeOfUnflushedTransactionsInJournalFile == 0)
+                    continue;
 
-				_cancellationTokenSource.Token.ThrowIfCancellationRequested();
-				
-				var sizeOfUnflushedTransactionsInJournalFile = _journal.SizeOfUnflushedTransactionsInJournalFile();
-				if(hasWrites)
-					_flushWriter.Reset();
+                if (hasWrites == false ||
+                    sizeOfUnflushedTransactionsInJournalFile >= _options.MaxNumberOfPagesInJournalBeforeFlush)
+                {
+                    // we either reached our the max size we allow in the journal file before flush flushing (and therefor require a flush)
+                    // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
+                    // while there isn't any other activity going on.
 
-				if (sizeOfUnflushedTransactionsInJournalFile == 0)
-					continue;
-			
-				if (hasWrites == false ||
-					sizeOfUnflushedTransactionsInJournalFile >= _options.MaxNumberOfPagesInJournalBeforeFlush)
-				{
-					// we either reached our the max size we allow in the journal file before flush flushing (and therefor require a flush)
-					// we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
-					// while there isn't any other activity going on.
-					var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
-					journalApplicator.ApplyLogsToDataFile();
-				}
-			}
-		}
+                    using (var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction))
+                        journalApplicator.ApplyLogsToDataFile();
+                }
+            }
+        }
 
-		public void FlushLogToDataFile()
-		{
-			if (_options.ManualFlushing == false)
-				throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
-			var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction);
-			journalApplicator.ApplyLogsToDataFile();
-		}
+        public void FlushLogToDataFile(Transaction tx = null)
+        {
+            if (_options.ManualFlushing == false)
+                throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
+            using (var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction))
+                journalApplicator.ApplyLogsToDataFile(tx);
+        }
 
-		public void AssertFlushingNotFailed()
-		{
-			if (_flushingTask == null || _flushingTask.IsFaulted == false)
-				return;
+        public void AssertFlushingNotFailed()
+        {
+            if (_flushingTask == null || _flushingTask.IsFaulted == false)
+                return;
 
-			_flushingTask.Wait();// force re-throw of error
-		}
-	}
+            _flushingTask.Wait();// force re-throw of error
+        }
+    }
 }

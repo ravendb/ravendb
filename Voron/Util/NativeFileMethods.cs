@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
@@ -41,7 +42,7 @@ namespace Voron.Impl
 		private static extern bool SetEndOfFile(SafeFileHandle hFile);
 
 		[DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern uint SetFilePointer([In] SafeFileHandle hFile, [In] int lDistanceToMove,
+		private static extern int SetFilePointer([In] SafeFileHandle hFile, [In] int lDistanceToMove,
 		                                         [Out] out int lpDistanceToMoveHigh, [In] NativeFileMoveMethod dwMoveMethod);
 
 		[DllImport("kernel32.dll")]
@@ -52,8 +53,14 @@ namespace Voron.Impl
 			var lo = (int)(length & 0xffffffff);
 			var hi = (int)(length >> 32);
 
-			SetFilePointer(fileHandle, lo, out hi, NativeFileMoveMethod.Begin);
-			SetEndOfFile(fileHandle);
+			if (SetFilePointer(fileHandle, lo, out hi, NativeFileMoveMethod.Begin) == -1)
+			{
+				if (Marshal.GetLastWin32Error() != 0)
+					throw new Win32Exception();
+			}
+
+			if (SetEndOfFile(fileHandle) == false)
+				throw new Win32Exception();
 		}
 	}
 
