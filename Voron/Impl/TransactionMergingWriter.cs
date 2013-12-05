@@ -121,7 +121,7 @@ namespace Voron.Impl
 	    private void HandleWriteFailure(List<OutstandingWrite> writes, Exception e)
 	    {
 	        if (writes == null || writes.Count == 0)
-	            throw;
+	            throw new InvalidOperationException("Couldn't get items to write", e);
 
 	        if (writes.Count == 1)
 	        {
