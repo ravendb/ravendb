@@ -35,12 +35,16 @@ namespace Voron.Impl.Journal
 		private readonly HeaderAccessor _headerAccessor;
 		private long _lastFlushedTransaction = -1;
 
+		private IVirtualPager _compressionPager;
+
 		public WriteAheadJournal(StorageEnvironment env)
 		{
 			_env = env;
 			_dataPager = _env.Options.DataPager;
 			_currentJournalFileSize = env.Options.InitialLogFileSize;
 			_headerAccessor = env.HeaderAccessor;
+
+			_compressionPager = _env.Options.CreateScratchPager("compression.buffers");
 		}
 
 		public SafeList<JournalFile> Files { get { return _files; }}
@@ -277,6 +281,8 @@ namespace Voron.Impl.Journal
 			// we cannot dispose the journal until we are done with all of the pending writes
 
 			_writeSemaphore.Wait();
+
+			_compressionPager.Dispose();
 
 			if (_env.Options.OwnsPagers)
 			{
@@ -639,7 +645,7 @@ namespace Voron.Impl.Journal
 				{
 					CurrentFile = NextFile(pageCount);
 				}
-				var task = CurrentFile.Write(tx, pageCount)
+				var task = CurrentFile.Write(tx, pageCount, _compressionPager)
 					.ContinueWith(result =>
 					{
 						_writeSemaphore.Release(); // release semaphore on write completion

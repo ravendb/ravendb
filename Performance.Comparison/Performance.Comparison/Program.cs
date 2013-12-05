@@ -30,7 +30,7 @@ namespace Performance.Comparison
             var buffer = new byte[87 * 1024];
             random.NextBytes(buffer);
 
-            var path = @"d:\temp\";
+            var path = @"c:\work\temp\";
 
             writer = new StreamWriter("output.txt", false) { AutoFlush = true };
 
@@ -47,7 +47,7 @@ namespace Performance.Comparison
                     //new SqlLiteTest(path, buffer),
                     //new SqlCeTest(path, buffer),
                     //new LmdbTest(path, buffer),
-                    new EsentTest(path, buffer),
+					//new EsentTest(path, buffer),
                     //new FdbTest(buffer),
 					new VoronTest(path, buffer)
 				};
@@ -63,11 +63,11 @@ namespace Performance.Comparison
                 long totalDuration;
                 long items;
 
-                //performanceRecords = test.WriteSequential(sequentialIds, perfTracker);
-                //items = performanceRecords.Sum(x => x.ProcessedItems);
-                //totalDuration = performanceRecords.Sum(x => x.Duration);
-                //OutputResults("Write Seq", items, totalDuration, perfTracker);
-                //WritePerfData("WriteSeq", test, performanceRecords);
+				//performanceRecords = test.WriteSequential(sequentialIds, perfTracker);
+				//items = performanceRecords.Sum(x => x.ProcessedItems);
+				//totalDuration = performanceRecords.Sum(x => x.Duration);
+				//OutputResults("Write Seq", items, totalDuration, perfTracker);
+				//WritePerfData("WriteSeq", test, performanceRecords);
 
                 //performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 2, out totalDuration);
                 //items = performanceRecords.Sum(x => x.ProcessedItems);
