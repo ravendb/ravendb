@@ -58,7 +58,7 @@ namespace Raven.Client.Silverlight.Connection
 		public HttpJsonRequest CreateHttpJsonRequest(CreateHttpJsonRequestParams createHttpJsonRequestParams)
 		{
 			var request = new HttpJsonRequest(createHttpJsonRequestParams, this);
-			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs { Client = request.httpClient, JsonRequest = request });
+			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs { Client = request.httpClient, JsonRequest = request, Credentials = createHttpJsonRequestParams.Credentials });
 			return request;
 		}
 

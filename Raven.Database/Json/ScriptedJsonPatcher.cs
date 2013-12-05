@@ -5,19 +5,17 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
+using Jint;
 using Jint.Native;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Json;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
-using System.Reflection;
-using System.IO;
-using Jint;
-using Raven.Abstractions.Data;
-using Environment = System.Environment;
 
 namespace Raven.Database.Json
 {
@@ -217,8 +215,19 @@ namespace Raven.Database.Json
 						return new RavenJValue((long)integer);
 					return new RavenJValue(num);
 				case JsInstance.TYPE_STRING:
+			    case JsInstance.CLASS_STRING:
+			    {
+			        const string ravenDataByteArrayToBase64 = "raven-data:byte[];base64,";
+			        var value = v.Value as string;
+			        if (value != null && value.StartsWith(ravenDataByteArrayToBase64))
+			        {
+			            value = value.Remove(0, ravenDataByteArrayToBase64.Length);
+			            var byteArray = Convert.FromBase64String(value);
+			            return new RavenJValue(byteArray);
+			        }
+                    return new RavenJValue(v.Value);
+			    }
 				case JsInstance.TYPE_BOOLEAN:
-				case JsInstance.CLASS_STRING:
 				case JsInstance.CLASS_BOOLEAN:
 					return new RavenJValue(v.Value);
 				case JsInstance.CLASS_NULL:
@@ -297,6 +306,10 @@ namespace Raven.Database.Json
 				case JTokenType.String:
 					var strVal = ((RavenJValue)value);
 					return global.StringClass.New((string)strVal.Value);
+                case JTokenType.Bytes:
+			        var byteValue = (RavenJValue)value;
+			        var base64 = Convert.ToBase64String((byte[])byteValue.Value);
+                    return global.StringClass.New("raven-data:byte[];base64," + base64);
 				default:
 					throw new NotSupportedException(value.Type.ToString());
 			}
@@ -326,7 +339,11 @@ function ExecutePatchScript(docInner){{
 
 			var jintEngine = new JintEngine()
 				.AllowClr(false)
+#if DEBUG
+				.SetDebugMode(true)
+#else
 				.SetDebugMode(false)
+#endif
 				.SetMaxRecursions(50)
 				.SetMaxSteps(maxSteps);
 

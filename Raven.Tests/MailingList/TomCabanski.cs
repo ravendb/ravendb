@@ -18,7 +18,7 @@ namespace Raven.Tests.MailingList
 			{
 				store.DatabaseCommands.PutIndex("test", new IndexDefinition
 				{
-					Map = "from doc in docs select new { doc.Age }"
+					Map = "from doc in docs select new { doc.Age, doc.IsActive, doc.BookVendor }"
 				});
 
 				using (var s = store.OpenSession())

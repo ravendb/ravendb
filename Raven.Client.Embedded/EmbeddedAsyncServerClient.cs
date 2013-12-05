@@ -231,6 +231,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<Attachment>(databaseCommands.GetAttachment(key));
 		}
 
+		public Task<Attachment> HeadAttachmentAsync(string key)
+		{
+			return new CompletedTask<Attachment>(databaseCommands.HeadAttachment(key));			
+		}
+
 		public Task DeleteAttachmentAsync(string key, Etag etag)
 		{
 			databaseCommands.DeleteAttachment(key, etag);
@@ -372,11 +377,6 @@ namespace Raven.Client.Embedded
 	    }
 
 	    public Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize)
-	    {
-	        throw new NotImplementedException();
-	    }
-
-	    public Task<Attachment> HeadAttachmentAsync(string key)
 	    {
 	        throw new NotImplementedException();
 	    }

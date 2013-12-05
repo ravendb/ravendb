@@ -15,8 +15,9 @@ using Raven.Client.WinRT.Connection;
 namespace Raven.Client.Connection
 {
     using System.Collections.Specialized;
+	using Raven.Abstractions.Connection;
 
-    public static class RavenUrlExtensions
+	public static class RavenUrlExtensions
 	{
 		public static string Indexes(this string url, string index)
 		{
@@ -117,19 +118,19 @@ namespace Raven.Client.Connection
 			return new Uri(url);
 		}
 
-		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, ICredentials credentials, Document.DocumentConvention convention)
+		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor, OperationCredentials credentials, Document.DocumentConvention convention)
 		{
 			return requestor.jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(requestor, url, "GET", credentials, convention));
 		}
 
 		public static HttpJsonRequest ToJsonRequest(this string url, AsyncServerClient requestor,
-                                                    ICredentials credentials, DocumentConvention convention,
-                                                    NameValueCollection operationsHeaders, string method)
+												 OperationCredentials credentials, DocumentConvention convention,
+												 NameValueCollection operationsHeaders, string method)
 		{
 			var httpJsonRequest = requestor.jsonRequestFactory.CreateHttpJsonRequest(
-				new CreateHttpJsonRequestParams(requestor, url, method, credentials, convention)
-					.AddOperationHeaders(operationsHeaders));
-			
+					new CreateHttpJsonRequestParams(requestor, url, method, credentials, convention)
+							.AddOperationHeaders(operationsHeaders));
+
 			return httpJsonRequest;
 		}
 	}

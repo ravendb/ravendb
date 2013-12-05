@@ -19,24 +19,31 @@
 
 		public ReadResult Read(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
+		    Tree tree = null;
+
 			if (writeBatch != null)
 			{
 				WriteBatch.BatchOperationType operationType;
-				ReadResult result;
-				if (writeBatch.TryGetValue(treeName, key, out result, out operationType))
-				{
+			    Stream stream;
+			    ushort? version;
+			    if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
+			    {
+			        if (!version.HasValue) 
+                        tree = GetTree(treeName);
+
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
-							//when the returned ReadResult is disposed - prevent from stream currently in WriteBatch to be disposed as well
-							return new ReadResult(CloneStream(result.Stream), (ushort)(result.Version + 1));
+							return new ReadResult(CloneStream(stream), version.HasValue ? (ushort)(version.Value + 1) : tree.ReadVersion(Transaction, key));
 						case WriteBatch.BatchOperationType.Delete:
 							return null;
 					}
 				}
 			}
 
-			var tree = GetTree(treeName);
+		    if (tree == null) 
+                tree = GetTree(treeName);
+
 			return tree.Read(Transaction, key);
 		}
 
@@ -46,45 +53,25 @@
 			return tree.GetDataSize(Transaction, key);
 		}
 
-		//similar to read version, but ReadVersion returns 0 for items that are in WriteBatch
 		public bool Contains(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
-			if (writeBatch != null)
-			{
-				WriteBatch.BatchOperationType operationType;
-				ReadResult result;
-				if (writeBatch.TryGetValue(treeName, key, out result, out operationType))
-				{
-					switch (operationType)
-					{
-						case WriteBatch.BatchOperationType.Add:
-							//when the returned ReadResult is disposed - prevent from stream currently in WriteBatch to be disposed as well
-							return true;
-						case WriteBatch.BatchOperationType.Delete:
-							return false;
-					}
-				}
-			}
-
-			var tree = GetTree(treeName);
-			return tree.ReadVersion(Transaction, key) > 0;
-
+			return ReadVersion(treeName, key, writeBatch) > 0;
 		}
 
-		public ushort? ReadVersion(string treeName, Slice key, WriteBatch writeBatch = null)
+		public ushort ReadVersion(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
 			if (writeBatch != null)
 			{
 				WriteBatch.BatchOperationType operationType;
-				ReadResult result;
-				if (writeBatch.TryGetValue(treeName, key, out result, out operationType))
+			    Stream stream;
+			    ushort? version;
+			    if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType) && version.HasValue)
 				{
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
-							return (result.Version == 0) ? (ushort)0 : (ushort)(result.Version + 1);
 						case WriteBatch.BatchOperationType.Delete:
-							return 0;
+					        return (ushort)(version.Value + 1);
 					}
 				}
 			}

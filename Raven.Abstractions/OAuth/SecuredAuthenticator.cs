@@ -21,10 +21,6 @@ namespace Raven.Abstractions.OAuth
 {
 	public class SecuredAuthenticator : AbstractAuthenticator
 	{
-		public SecuredAuthenticator(string apiKey) : base(apiKey)
-		{
-		}
-
 		public override void ConfigureRequest(object sender, WebRequestEventArgs e)
 		{
 			if (CurrentOauthToken != null)
@@ -32,7 +28,8 @@ namespace Raven.Abstractions.OAuth
 				base.ConfigureRequest(sender, e);
 				return;
 			}
-			if (ApiKey != null)
+
+			if (e.Credentials != null && e.Credentials.ApiKey != null)
 			{
 #if NETFX_CORE || SILVERLIGHT
 				e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
@@ -42,7 +39,7 @@ namespace Raven.Abstractions.OAuth
 			}
 		}
 
-		private Tuple<HttpWebRequest, string> PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge)
+		private Tuple<HttpWebRequest, string> PrepareOAuthRequest(string oauthSource, string serverRSAExponent, string serverRSAModulus, string challenge, string apiKey)
 		{
 #if !SILVERLIGHT
 			var authRequest = (HttpWebRequest)WebRequest.Create(oauthSource);
@@ -58,7 +55,7 @@ namespace Raven.Abstractions.OAuth
 				var exponent = OAuthHelper.ParseBytes(serverRSAExponent);
 				var modulus = OAuthHelper.ParseBytes(serverRSAModulus);
 
-				var apiKeyParts = ApiKey.Split(new[] { '/' }, StringSplitOptions.None);
+				var apiKeyParts = apiKey.Split(new[] { '/' }, StringSplitOptions.None);
 
 				if (apiKeyParts.Length > 2)
 				{
@@ -97,7 +94,7 @@ namespace Raven.Abstractions.OAuth
 
 
 #if !SILVERLIGHT && !NETFX_CORE
-		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource)
+		public override Action<HttpWebRequest> DoOAuthRequest(string oauthSource, string apiKey)
 		{
 			string serverRSAExponent = null;
 			string serverRSAModulus = null;
@@ -112,7 +109,7 @@ namespace Raven.Abstractions.OAuth
 			while (true)
 			{
 				tries++;
-				var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRSAExponent, serverRSAModulus, challenge);
+				var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRSAExponent, serverRSAModulus, challenge, apiKey);
 				var authRequest = authRequestTuple.Item1;
 				if (authRequestTuple.Item2 != null)
 				{
@@ -163,12 +160,12 @@ namespace Raven.Abstractions.OAuth
 		}
 #endif
 
-		public Task<Action<HttpClient>> DoOAuthRequestAsync(string baseUrl, string oauthSource)
+		public Task<Action<HttpClient>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string apiKey)
 		{
-			return DoOAuthRequestAsync(baseUrl, oauthSource, null, null, null, 0);
+			return DoOAuthRequestAsync(baseUrl, oauthSource, null, null, null, apiKey, 0);
 		}
 
-		private async Task<Action<HttpClient>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, int tries)
+		private async Task<Action<HttpClient>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, string apiKey, int tries)
 		{
 			if (oauthSource == null)
 				throw new ArgumentNullException("oauthSource");
@@ -183,7 +180,7 @@ namespace Raven.Abstractions.OAuth
 				var exponent = OAuthHelper.ParseBytes(serverRsaExponent);
 				var modulus = OAuthHelper.ParseBytes(serverRsaModulus);
 
-				var apiKeyParts = ApiKey.Split(new[] {'/'}, StringSplitOptions.None);
+				var apiKeyParts = apiKey.Split(new[] {'/'}, StringSplitOptions.None);
 				if (apiKeyParts.Length > 2)
 				{
 					apiKeyParts[1] = string.Join("/", apiKeyParts.Skip(1));
@@ -257,6 +254,7 @@ namespace Raven.Abstractions.OAuth
 						challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent),
 						challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus),
 						challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge),
+						apiKey,
 						tries + 1);
 			}
 		}

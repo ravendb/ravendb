@@ -10,6 +10,8 @@ using System.Linq;
 
 namespace Raven.Tests.Bundles.Replication.Issues
 {
+	using Raven.Abstractions.Connection;
+
 	public abstract class RavenDB677 : ReplicationBase
 	{
 		 [Fact]
@@ -28,7 +30,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			                                                                   servers[0].SystemDatabase.ServerUrl +
 																			   "admin/replication/purge-tombstones?docEtag=" + last,
 			                                                                   "POST",
-			                                                                   CredentialCache.DefaultCredentials,
+																			   new OperationCredentials(null, CredentialCache.DefaultCredentials),
 			                                                                   store1.Conventions);
 			 store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();
 
@@ -58,7 +60,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 																			   servers[0].SystemDatabase.ServerUrl +
 																			   "admin/replication/purge-tombstones?docEtag=" + last,
 																			   "POST",
-																			   CredentialCache.DefaultCredentials,
+																			   new OperationCredentials(null, CredentialCache.DefaultCredentials),
 																			   store1.Conventions);
 			 store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();
 

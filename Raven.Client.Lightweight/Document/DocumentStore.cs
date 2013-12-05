@@ -38,6 +38,8 @@ using Raven.Client.Document.DTC;
 
 namespace Raven.Client.Document
 {
+	using Raven.Abstractions.Connection;
+
 	/// <summary>
 	/// Manages access to RavenDB and open sessions to work with RavenDB.
 	/// </summary>
@@ -497,45 +499,45 @@ namespace Raven.Client.Document
 			if (Conventions.HandleUnauthorizedResponse != null)
 				return; // already setup by the user
 
-			if (String.IsNullOrEmpty(ApiKey) == false)
+			if (string.IsNullOrEmpty(ApiKey) == false)
 			{
 				Credentials = null;
 			}
 
-			var basicAuthenticator = new BasicAuthenticator(ApiKey, jsonRequestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers);
-			var securedAuthenticator = new SecuredAuthenticator(ApiKey);
+			var basicAuthenticator = new BasicAuthenticator(jsonRequestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers);
+			var securedAuthenticator = new SecuredAuthenticator();
 
 			jsonRequestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
 			jsonRequestFactory.ConfigureRequest += securedAuthenticator.ConfigureRequest;
 
 #if !SILVERLIGHT && !NETFX_CORE
 
-			Conventions.HandleUnauthorizedResponse = response =>
+			Conventions.HandleUnauthorizedResponse = (response, credentials) =>
 			{
 				var oauthSource = response.Headers["OAuth-Source"];
 
 				if (string.IsNullOrEmpty(oauthSource) == false &&
 					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
 				{
-					return basicAuthenticator.DoOAuthRequest(oauthSource);
+					return basicAuthenticator.DoOAuthRequest(oauthSource, credentials.ApiKey);
 				}
 
-				if (ApiKey == null)
+				if (credentials.ApiKey == null)
 				{
-					AssertUnauthorizedCredentialSupportWindowsAuth(response);
+					AssertUnauthorizedCredentialSupportWindowsAuth(response, credentials.Credentials);
 
 					return null;
 				}
 				if (string.IsNullOrEmpty(oauthSource))
 					oauthSource = Url + "/OAuth/API-Key";
 
-				return securedAuthenticator.DoOAuthRequest(oauthSource);
+				return securedAuthenticator.DoOAuthRequest(oauthSource, credentials.ApiKey);
 			};
 #endif
 
-			Conventions.HandleForbiddenResponseAsync = forbiddenResponse =>
+			Conventions.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
 			{
-				if (ApiKey == null)
+				if (credentials.ApiKey == null)
 				{
 					AssertForbiddenCredentialSupportWindowsAuth(forbiddenResponse);
 					return null;
@@ -544,38 +546,57 @@ namespace Raven.Client.Document
 				return null;
 			};
 
-			Conventions.HandleUnauthorizedResponseAsync = unauthorizedResponse =>
+			Conventions.HandleUnauthorizedResponseAsync = (unauthorizedResponse, credentials) =>
 			{
 				var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
 
 				if (string.IsNullOrEmpty(oauthSource) == false &&
 					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
 				{
-					return basicAuthenticator.HandleOAuthResponseAsync(oauthSource);
+					return basicAuthenticator.HandleOAuthResponseAsync(oauthSource, credentials.ApiKey);
 				}
 
-				if (ApiKey == null)
+				if (credentials.ApiKey == null)
 				{
-					AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse);
+					AssertUnauthorizedCredentialSupportWindowsAuth(unauthorizedResponse, credentials.Credentials);
 					return null;
 				}
 
 				if (string.IsNullOrEmpty(oauthSource))
 					oauthSource = this.Url + "/OAuth/API-Key";
 
-				return securedAuthenticator.DoOAuthRequestAsync(Url, oauthSource);
+				return securedAuthenticator.DoOAuthRequestAsync(Url, oauthSource, credentials.ApiKey);
 			};
 
 		}
 
-		private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpWebResponse response)
+		private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpWebResponse response, ICredentials credentials)
 		{
-			if (Credentials == null)
+			if (credentials == null)
 				return;
 
 			var authHeaders = response.Headers["WWW-Authenticate"];
 			if (authHeaders == null ||
 				(authHeaders.Contains("NTLM") == false && authHeaders.Contains("Negotiate") == false)
+				)
+			{
+				// we are trying to do windows auth, but we didn't get the windows auth headers
+				throw new SecurityException(
+					"Attempted to connect to a RavenDB Server that requires authentication using Windows credentials," + Environment.NewLine
+					+ " but either wrong credentials where entered or the specified server does not support Windows authentication." +
+					Environment.NewLine +
+					"If you are running inside IIS, make sure to enable Windows authentication.");
+			}
+		}
+
+		private void AssertUnauthorizedCredentialSupportWindowsAuth(HttpResponseMessage response, ICredentials credentials)
+		{
+			if (credentials == null)
+				return;
+
+			var authHeaders = response.Headers.WwwAuthenticate.FirstOrDefault();
+			if (authHeaders == null ||
+				(authHeaders.ToString().Contains("NTLM") == false && authHeaders.ToString().Contains("Negotiate") == false)
 				)
 			{
 				// we are trying to do windows auth, but we didn't get the windows auth headers
@@ -653,9 +674,9 @@ namespace Raven.Client.Document
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
 				return new ServerClient(new AsyncServerClient(
-                    databaseUrl, Conventions, Credentials, jsonRequestFactory,
-                    currentSessionId, GetReplicationInformerForDatabase, null,
-                    listeners.ConflictListeners));
+					databaseUrl, Conventions, ApiKey, Credentials, jsonRequestFactory,
+					currentSessionId, GetReplicationInformerForDatabase, null,
+					listeners.ConflictListeners));
 			};
 #endif
 
@@ -664,7 +685,7 @@ namespace Raven.Client.Document
 			WebRequest.RegisterPrefix("https://", WebRequestCreator.ClientHttp);
 			
 			// required to ensure just a single auth dialog
-			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, (Url + "/docs?pageSize=0").NoCache(), "GET", credentials, Conventions))
+			var task = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, (Url + "/docs?pageSize=0").NoCache(), "GET", new OperationCredentials(ApiKey, Credentials), Conventions))
 				.ExecuteRequestAsync();
 			
 			jsonRequestFactory.ConfigureRequest += (sender, args) =>
@@ -675,7 +696,7 @@ namespace Raven.Client.Document
 
 			asyncDatabaseCommandsGenerator = () =>
 			{
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, Credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, ApiKey, Credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
 
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;
@@ -767,9 +788,10 @@ namespace Raven.Client.Document
 			if (string.IsNullOrEmpty(database) == false)
 				dbUrl = dbUrl + "/databases/" + database;
 
-			using(NoSyncronizationContext.Scope())
+			using(NoSynchronizationContext.Scope())
 			{
 			return new RemoteDatabaseChanges(dbUrl,
+					ApiKey,
 				Credentials,
 				jsonRequestFactory,
 				Conventions,

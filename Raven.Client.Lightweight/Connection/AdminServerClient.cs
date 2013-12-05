@@ -1,13 +1,13 @@
-﻿#if !SILVERLIGHT && !NETFX_CORE
+﻿
+#if !SILVERLIGHT && !NETFX_CORE
 // -----------------------------------------------------------------------
 //  <copyright file="AdminDatabaseCommands.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
 using Raven.Abstractions.Data;
-using Raven.Client.Extensions;
 using Raven.Client.Connection.Async;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
 {

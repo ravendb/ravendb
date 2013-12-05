@@ -15,6 +15,8 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Document
 {
+	using Raven.Abstractions.Connection;
+
 	public class ReplicationBehavior
 	{
 		private readonly DocumentStore documentStore;
@@ -126,7 +128,7 @@ namespace Raven.Client.Document
 				null,
 				destinationUrl.LastReplicatedEtagFor(documentStore.Url),
 				"GET",
-				documentStore.Credentials,
+				new OperationCredentials(documentStore.ApiKey, documentStore.Credentials), 
 				documentStore.Conventions);
 			var httpJsonRequest = documentStore.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 			var json = await httpJsonRequest.ReadResponseJsonAsync();
