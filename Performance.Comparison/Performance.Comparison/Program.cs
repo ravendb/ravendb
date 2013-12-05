@@ -62,11 +62,11 @@ namespace Performance.Comparison
 				long totalDuration;
 				long items;
 
-				performanceRecords = test.WriteSequential(sequentialIds, perfTracker);
-				items = performanceRecords.Sum(x => x.ProcessedItems);
-				totalDuration = performanceRecords.Sum(x => x.Duration);
-				OutputResults("Write Seq", items, totalDuration, perfTracker);
-				WritePerfData("WriteSeq", test, performanceRecords);
+				//performanceRecords = test.WriteSequential(sequentialIds, perfTracker);
+				//items = performanceRecords.Sum(x => x.ProcessedItems);
+				//totalDuration = performanceRecords.Sum(x => x.Duration);
+				//OutputResults("Write Seq", items, totalDuration, perfTracker);
+				//WritePerfData("WriteSeq", test, performanceRecords);
 
 				//performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 2, out totalDuration);
 				//items = performanceRecords.Sum(x => x.ProcessedItems);
@@ -121,11 +121,11 @@ namespace Performance.Comparison
 				//OutputResults("Read Seq [16]", items, totalDuration, perfTracker);
 				//WritePerfData("ReadSeq_Parallel_16", test, new List<PerformanceRecord> { performanceRecord });
 
-				//performanceRecords = test.WriteRandom(randomIds, perfTracker);
-				//items = performanceRecords.Sum(x => x.ProcessedItems);
-				//totalDuration = performanceRecords.Sum(x => x.Duration);
-				//OutputResults("Write Rnd", items, totalDuration, perfTracker);
-				//WritePerfData("WriteRnd", test, performanceRecords);
+				performanceRecords = test.WriteRandom(randomIds, perfTracker);
+				items = performanceRecords.Sum(x => x.ProcessedItems);
+				totalDuration = performanceRecords.Sum(x => x.Duration);
+				OutputResults("Write Rnd", items, totalDuration, perfTracker);
+				WritePerfData("WriteRnd", test, performanceRecords);
 
 				//performanceRecords = test.WriteParallelRandom(randomIds, perfTracker, 2, out totalDuration);
 				//items = performanceRecords.Sum(x => x.ProcessedItems);
@@ -232,9 +232,10 @@ namespace Performance.Comparison
 
 		private static IEnumerable<TestData> InitRandomNumbers(int count, int minValueSize, int maxValueSize)
 		{
-			var random = new Random(1337 ^ 13);
-
-			return InitValue(Enumerable.Range(0, count).Select(_ => random.Next(0, int.MaxValue)), minValueSize, maxValueSize);
+			return InitValue(Enumerable.Range(0, count).Select(i =>
+			{
+				return (count*i%12) + i;
+			}), minValueSize, maxValueSize);
 		}
 
 		private static IEnumerable<TestData> InitSequentialNumbers(int count, int minValueSize, int maxValueSize)
