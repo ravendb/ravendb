@@ -94,22 +94,23 @@ namespace Voron.Impl
 				{
 					HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations));
 
-					tx.Commit();
+				    tx.Commit().ContinueWith(task =>
+				    {
+				        if (task.IsFaulted)
+				        {
+				            HandleWriteFailure(writes, task.Exception);
+				        }
+				        else
+				        {
+                            foreach (var write in writes)
+                                write.Completed();
+				        }
+				    });
 				}
-				foreach (var write in writes)
-					write.Completed();
 			}
 			catch (Exception e)
 			{
-				if (writes == null || writes.Count == 0)
-					throw;
-
-				if (writes.Count == 1)
-				{
-					writes[0].Errorred(e);
-				}
-
-				SplitWrites(writes);
+				HandleWriteFailure(writes, e);
 			}
 			finally
 			{
@@ -117,7 +118,20 @@ namespace Voron.Impl
 			}
 		}
 
-		private void Finalize(IEnumerable<OutstandingWrite> writes)
+	    private void HandleWriteFailure(List<OutstandingWrite> writes, Exception e)
+	    {
+	        if (writes == null || writes.Count == 0)
+	            throw;
+
+	        if (writes.Count == 1)
+	        {
+	            writes[0].Errorred(e);
+	        }
+
+	        SplitWrites(writes);
+	    }
+
+	    private void Finalize(IEnumerable<OutstandingWrite> writes)
 		{
 			if (writes == null)
 				return;
