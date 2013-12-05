@@ -10,11 +10,29 @@ namespace Voron.Impl.Paging
         private GCHandle _tempPageHandle;
         private IntPtr _tempPage;
 
+		public TemporaryPage()
+		{
+			_tempPageHandle = GCHandle.Alloc(_tempPageBuffer, GCHandleType.Pinned);
+			_tempPage = _tempPageHandle.AddrOfPinnedObject();
+		}
+
+		public void Dispose()
+		{
+			if (_tempPageHandle.IsAllocated)
+			{
+				_tempPageHandle.Free();
+			}
+		}
+
         public byte[] TempPageBuffer
         {
             get { return _tempPageBuffer; }
         }
 
+		public byte* TempPagePointer
+		{
+			get { return (byte*)_tempPage.ToPointer(); }
+		}
 
         public Page TempPage
         {
@@ -29,24 +47,5 @@ namespace Voron.Impl.Paging
             }
         }
 
-
-        public byte* TempPagePointer
-        {
-            get { return (byte*)_tempPage.ToPointer(); }
-        }
-
-        public void Dispose()
-        {
-            if (_tempPageHandle.IsAllocated)
-            {
-                _tempPageHandle.Free();
-            }
-        }
-
-        public TemporaryPage()
-        {
-            _tempPageHandle = GCHandle.Alloc(_tempPageBuffer, GCHandleType.Pinned);
-            _tempPage = _tempPageHandle.AddrOfPinnedObject();
-        }
     }
 }
