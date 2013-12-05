@@ -66,7 +66,10 @@ namespace Raven.Database.Server.Controllers
 						if (string.IsNullOrEmpty(startsWith))
 							Database.GetDocuments(start, pageSize, etag, doc => doc.WriteTo(writer));
 						else
-							Database.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, doc => doc.WriteTo(writer));
+						{
+							int nextPageStart = 0;
+							Database.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, ref nextPageStart, doc => doc.WriteTo(writer));
+						}
 					}
 				});
 

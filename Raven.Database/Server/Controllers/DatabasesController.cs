@@ -34,8 +34,9 @@ namespace Raven.Database.Server.Controllers
 			// If admin, show all dbs
 
 			List<string> approvedDatabases = null;
+			int nextPageStart = 0;
 			var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, GetStart(),
-																	GetPageSize(Database.Configuration.MaxPageSize));
+																	GetPageSize(Database.Configuration.MaxPageSize), ref nextPageStart);
 			var data = databases
 				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
 				.ToArray();

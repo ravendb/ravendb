@@ -184,7 +184,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenAsyncSession())
 				{
-					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/").Result;
+					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/", matches: null).Result;
 					Assert.Equal(objects.Count(), names.Length);
 				}
 			}
@@ -220,7 +220,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenAsyncSession())
 				{
-					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/").Result;
+					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/", matches: null).Result;
 					Assert.Equal(objects.Count(), names.Length);
 				}
 			}
@@ -256,7 +256,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenAsyncSession())
 				{
-					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/").Result;
+					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/", matches: null).Result;
 					Assert.Equal(objects.Count(), names.Length);
 				}
 			}
@@ -292,7 +292,7 @@ namespace Raven.Tests.MailingList
 
 				using (var session = store.OpenAsyncSession())
 				{
-					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/").Result;
+					var objects = session.Advanced.LoadStartingWithAsync<object>(keyPrefix: "user/", matches: null).Result;
 					Assert.Equal(objects.Count(), names.Length);
 				}
 			}

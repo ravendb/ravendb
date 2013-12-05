@@ -133,10 +133,11 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
-		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
+		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
 		{
 			EnsureIsNotNullOrEmpty(keyPrefix, "keyPrefix");
-			return ExecuteWithReplication("GET", u => DirectStartsWith(u, keyPrefix, matches, exclude, start, pageSize, metadataOnly));
+
+			return ExecuteWithReplication("GET", u => DirectStartsWith(u, keyPrefix, matches, exclude, start, pageSize, pagingInformation, metadataOnly));
 		}
 
 		/// <summary>
@@ -384,15 +385,25 @@ namespace Raven.Client.Connection
 			return ExecuteWithReplication("PUT", u => DirectPut(metadata, key, etag, document, u));
 		}
 
-		private JsonDocument[] DirectStartsWith(OperationMetadata operationMetadata, string keyPrefix, string matches, string exclude, int start, int pageSize, bool metadataOnly)
+		private JsonDocument[] DirectStartsWith(OperationMetadata operationMetadata, string keyPrefix, string matches, string exclude, int start, int pageSize, RavenPagingInformation pagingInformation, bool metadataOnly)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
+
+			var actualStart = start;
+
+			var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+			if (nextPage)
+				actualStart = pagingInformation.NextPageStart;
+
 			var actualUrl = string.Format("{0}/docs?startsWith={1}&matches={4}&exclude={5}&start={2}&pageSize={3}", operationMetadata.Url,
-										  Uri.EscapeDataString(keyPrefix), start.ToInvariantString(), pageSize.ToInvariantString(),
+										  Uri.EscapeDataString(keyPrefix), actualStart.ToInvariantString(), pageSize.ToInvariantString(),
 										  Uri.EscapeDataString(matches ?? ""), Uri.EscapeDataString(exclude ?? ""));
 			if (metadataOnly)
 				actualUrl += "&metadata-only=true";
+
+			if (nextPage)
+				actualUrl += "&next-page=true";
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, operationMetadata.Credentials, convention)
@@ -404,6 +415,8 @@ namespace Raven.Client.Connection
 			try
 			{
 				responseJson = request.ReadResponseJson();
+				
+				// TODO [ppekrol] fill paging information
 			}
 			catch (WebException e)
 			{

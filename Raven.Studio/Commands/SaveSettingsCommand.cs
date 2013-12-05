@@ -165,7 +165,7 @@ namespace Raven.Studio.Commands
 					else
 					{
 						var hasChanges = new List<string>();
-						var documents = await session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/");
+						var documents = await session.Advanced.LoadStartingWithAsync<SqlReplicationConfig>("Raven/SqlReplication/Configuration/", null);
 
 						sqlReplicationSettings.UpdateIds();
 						if (documents != null)

@@ -195,7 +195,7 @@ namespace Raven.Database.Extensions
 			context.Response.OutputStream.Write(data, 0, data.Length);
 		}
 
-		public static void WriteHeaders(this IHttpContext context, RavenJObject headers, Etag etag)
+		public static void WriteHeaders(this IHttpContext context, RavenJObject headers, Etag etag = null)
 		{
 			foreach (var header in headers)
 			{
@@ -231,7 +231,9 @@ namespace Raven.Database.Extensions
 				context.Response.StatusCode = headers.Value<int>("@Http-Status-Code");
 				context.Response.StatusDescription = headers.Value<string>("@Http-Status-Description");
 			}
-			context.WriteETag(etag);
+
+			if (etag != null)
+				context.WriteETag(etag);
 		}
 
 		private static string GetDateString(RavenJToken token, string format)

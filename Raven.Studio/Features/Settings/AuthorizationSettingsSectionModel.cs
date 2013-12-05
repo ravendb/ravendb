@@ -183,7 +183,7 @@ namespace Raven.Studio.Features.Settings
 		private void HandleSearchUsers()
 		{
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name);
-			session.Advanced.LoadStartingWithAsync<AuthorizationUser>("Authorization/Users/" + SearchUsers).
+			session.Advanced.LoadStartingWithAsync<AuthorizationUser>("Authorization/Users/" + SearchUsers, null).
 				ContinueOnSuccessInTheUIThread(data =>
 				{
 					AuthorizationUsers.Clear();
@@ -252,7 +252,7 @@ namespace Raven.Studio.Features.Settings
 		public override void LoadFor(DatabaseDocument _)
 		{
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name);
-			session.Advanced.LoadStartingWithAsync<AuthorizationUser>("Authorization/Users").
+			session.Advanced.LoadStartingWithAsync<AuthorizationUser>("Authorization/Users", null).
 				ContinueOnSuccessInTheUIThread(data =>
 				{
 					AuthorizationUsers.Clear();
@@ -268,7 +268,7 @@ namespace Raven.Studio.Features.Settings
 					AuthorizationUsers.CollectionChanged += (sender, args) => HasUnsavedChanges = true;
 				});
 
-			session.Advanced.LoadStartingWithAsync<AuthorizationRole>("Authorization/Roles").
+			session.Advanced.LoadStartingWithAsync<AuthorizationRole>("Authorization/Roles", null).
 				ContinueOnSuccessInTheUIThread(data =>
 				{
 					AuthorizationRoles.Clear();
@@ -288,7 +288,7 @@ namespace Raven.Studio.Features.Settings
 		public Task<IList<object>> ProvideSuggestions(string enteredText)
 		{
 			return ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession().Advanced
-				.LoadStartingWithAsync<AuthorizationRole>("Authorization/Roles")
+				.LoadStartingWithAsync<AuthorizationRole>("Authorization/Roles", null)
 				.ContinueOnSuccess(roles => (IList<object>)AuthorizationRoles.Select(role => role.Id).Cast<object>().ToList());
 		}
 	}

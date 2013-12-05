@@ -169,7 +169,7 @@ namespace Raven.Studio.Features.Settings
         {
 	        DatabaseDocument = document;
             var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(ApplicationModel.Current.Server.Value.SelectedDatabase.Value.Name);
-	        session.Advanced.LoadStartingWithAsync<VersioningConfiguration>("Raven/Versioning").
+	        session.Advanced.LoadStartingWithAsync<VersioningConfiguration>("Raven/Versioning", null).
 		        ContinueOnSuccessInTheUIThread(data =>
 		        {
 			        VersioningConfigurations.Clear();

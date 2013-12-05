@@ -382,7 +382,7 @@ namespace Raven.Studio.Models
 			switch (PatchOn)
 			{
 				case PatchOnOptions.Document:
-					return ApplicationModel.Database.Value.AsyncDatabaseCommands.StartsWithAsync(SelectedItem, 0, 25, metadataOnly: true)
+					return ApplicationModel.Database.Value.AsyncDatabaseCommands.StartsWithAsync(SelectedItem, null, 0, 25, metadataOnly: true)
 						.ContinueWith(t => (IList<object>) t.Result.Select(d => d.Key).Cast<object>().ToList());
 
 				case PatchOnOptions.Collection:
@@ -534,7 +534,7 @@ namespace Raven.Studio.Models
 				dbName = null;
 			AskUser.SelectItem("Load", "Choose saved patching to load",
 												() => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(dbName).Advanced.
-				                                             LoadStartingWithAsync<PatchDocument>("Studio/Patch/").ContinueWith(
+				                                             LoadStartingWithAsync<PatchDocument>("Studio/Patch/", null).ContinueWith(
 					                                             task =>
 					                                             {
 						                                             IList<string> objects = task.Result.Select(document => document.Id.Substring("Studio/Patch/".Length)).ToList();

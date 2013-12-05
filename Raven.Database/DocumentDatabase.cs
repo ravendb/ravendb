@@ -1983,34 +1983,34 @@ namespace Raven.Database
 
 		}
 
-		public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize)
+		public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, ref int nextStart)
 		{
 			var list = new RavenJArray();
-			GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, list.Add);
+			GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, ref nextStart, list.Add);
 			return list;
 		}
 
-		public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, Action<RavenJObject> addDoc)
+		public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, ref int nextStart, Action<RavenJObject> addDoc)
 		{
 			if (idPrefix == null)
 				throw new ArgumentNullException("idPrefix");
 			idPrefix = idPrefix.Trim();
 
-		    var canPerformRapidPagination = string.IsNullOrEmpty(matches) && string.IsNullOrEmpty(exclude);
+			var canPerformRapidPagination = nextStart > 0 && start == nextStart;
+			var actualStart = canPerformRapidPagination ? start : 0;
+			var addedDocs = 0;
+			var matchedDocs = 0;
 
-		    TransactionalStorage.Batch(
+			TransactionalStorage.Batch(
 		        actions =>
 		        {
-		            var docsToSkip = canPerformRapidPagination ? 0 : start;
-		            var addedDocs = 0;
-		            var matchedDocs = 0;
-		            int docCount;
-		            start = canPerformRapidPagination ? start : 0;
+					var docsToSkip = canPerformRapidPagination ? 0 : start;
+			        int docCount;
 
 		            do
 		            {
 		                docCount = 0;
-		                var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
+		                var docs = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, actualStart, pageSize);
 		                var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
 
 		                foreach (var doc in docs)
@@ -2041,10 +2041,17 @@ namespace Raven.Database
                                 break;
 		                }
 
-		                start += pageSize;
+		                actualStart += pageSize;
 		            }
 		            while (docCount > 0 && addedDocs < pageSize);
 		        });
+
+			if (addedDocs != pageSize)
+				nextStart = start; // will mark as last page
+			else if (canPerformRapidPagination)
+				nextStart = start + matchedDocs;
+			else
+				nextStart = actualStart;
 		}
 
 		public RavenJArray GetDocuments(int start, int pageSize, Etag etag)
