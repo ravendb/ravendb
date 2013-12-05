@@ -277,21 +277,31 @@ namespace Voron.Impl
 			_cancellationTokenSource.Cancel();
 			_hasWritesEvent.Set();
 			_stopWrites.Set();
-			if (_backgroundTask.IsValueCreated == false)
-				return;
-			try
-			{
-				_backgroundTask.Value.Wait();
-			}
-			catch (TaskCanceledException)
-			{
-			}
-			catch (AggregateException e)
-			{
-				if (e.InnerException is TaskCanceledException)
-					return;
-				throw;
-			}
+			
+		    try
+		    {
+                if (_backgroundTask.IsValueCreated == false)
+                    return;
+		        _backgroundTask.Value.Wait();
+		    }
+		    catch (TaskCanceledException)
+		    {
+		    }
+		    catch (AggregateException e)
+		    {
+		        if (e.InnerException is TaskCanceledException)
+		            return;
+		        throw;
+		    }
+		    finally
+		    {
+		        foreach (var manualResetEventSlim in _eventsBuffer)
+		        {
+		            manualResetEventSlim.Dispose();
+		        }   
+                _hasWritesEvent.Dispose();
+                _stopWrites.Dispose();
+		    }
 		}
 	}
 }
