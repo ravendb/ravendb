@@ -132,6 +132,7 @@ namespace Raven.Client.Silverlight.Connection
 			httpClient.DefaultRequestHeaders.Add("Raven-Client-Version", ClientVersion);
 
 			WriteMetadata(requestParams.Metadata);
+			Method = requestParams.Method;
 			if (requestParams.Method != "GET")
 				httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "utf-8" });
 
