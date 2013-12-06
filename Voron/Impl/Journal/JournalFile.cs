@@ -24,7 +24,6 @@ namespace Voron.Impl.Journal
 		private bool _disposed;
 		private int _refs;
 		private LinkedDictionary<long, PagePosition> _pageTranslationTable = LinkedDictionary<long, PagePosition>.Empty;
-		private LinkedDictionary<long, LongRef> _transactionEndPositions = LinkedDictionary<long, LongRef>.Empty;
 		private SafeList<PagePosition> _unusedPages = SafeList<PagePosition>.Empty;
 
 		private readonly object _locker = new object();
@@ -117,8 +116,7 @@ namespace Voron.Impl.Journal
 			{
 				Number = Number,
 				AvailablePages = AvailablePages,
-				PageTranslationTable = _pageTranslationTable,
-				TransactionEndPositions = _transactionEndPositions
+				PageTranslationTable = _pageTranslationTable
 			};
 		}
 
@@ -139,10 +137,8 @@ namespace Voron.Impl.Journal
 
 		public Task Write(Transaction tx, int numberOfPages, IVirtualPager compressionPager)
         {
-
             var txPages = tx.GetTransactionPages();
 
-            var journalPos = -1L;
             var ptt = new Dictionary<long, PagePosition>();
 			var unused = new List<PagePosition>();
 			var writePagePos = _writePage;
@@ -150,33 +146,20 @@ namespace Voron.Impl.Journal
 
 	        var pages = CompressPages(tx, numberOfPages, compressionPager, txPages);
 
-			var previousPage = UpdatePageTranslationTable(tx, txPages, unused, writePagePos, ptt, ref journalPos);
-
-            Debug.Assert(journalPos != -1);
-
-            var lastPagePosition = journalPos 
-                + (previousPage != null ? previousPage.NumberOfPages - 1 : 0); // for overflows
+			UpdatePageTranslationTable(tx, txPages, unused, ptt);
 
             lock (_locker)
             {
                 _writePage += pages.Length;
-				_transactionEndPositions = _transactionEndPositions.Add(tx.Id, new LongRef { Value = lastPagePosition });
                 _pageTranslationTable = _pageTranslationTable.SetItems(ptt);
                 _unusedPages = _unusedPages.AddRange(unused);
             }
 
-			//if (counter ++ % 50 == 0)
-			//	Console.WriteLine(counter + ": " + numberOfPages + " -> " + pages.Length);
             return _journalWriter.WriteGatherAsync(writePagePos * AbstractPager.PageSize, pages);
         }
 
-		//private static int counter;
-
-		private unsafe PageFromScratchBuffer UpdatePageTranslationTable(Transaction tx, List<PageFromScratchBuffer> txPages, List<PagePosition> unused,
-			long writePagePos, Dictionary<long, PagePosition> ptt, ref long journalPos)
+		private unsafe void UpdatePageTranslationTable(Transaction tx, List<PageFromScratchBuffer> txPages, List<PagePosition> unused, Dictionary<long, PagePosition> ptt)
 		{
-			PageFromScratchBuffer previousPage = null;
-			int numberOfOverflows = 0;
 			for (int index = 1; index < txPages.Count; index++)
 			{
 				var txPage = txPages[index];
@@ -188,19 +171,13 @@ namespace Voron.Impl.Journal
 					unused.Add(value);
 				}
 
-				numberOfOverflows += previousPage != null ? previousPage.NumberOfPages - 1 : 0;
-				journalPos = writePagePos + index + numberOfOverflows;
-
 				ptt[pageNumber] = new PagePosition
 				{
 					ScratchPos = txPage.PositionInScratchBuffer,
-					JournalPos = journalPos,
+					JournalPos = -1, // needed only during recovery and calculated there
 					TransactionId = tx.Id
 				};
-
-				previousPage = txPage;
 			}
-			return previousPage;
 		}
 
 		private static byte*[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager, List<PageFromScratchBuffer> txPages)
@@ -249,11 +226,10 @@ namespace Voron.Impl.Journal
 			return len;
 		}
 
-		public void InitFrom(JournalReader journalReader, LinkedDictionary<long, PagePosition> pageTranslationTable, LinkedDictionary<long, LongRef> transactionEndPositions)
+		public void InitFrom(JournalReader journalReader, LinkedDictionary<long, PagePosition> pageTranslationTable)
 		{
 			_writePage = journalReader.NextWritePage;
 			_pageTranslationTable = pageTranslationTable;
-			_transactionEndPositions = transactionEndPositions;
 		}
 
 		public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }

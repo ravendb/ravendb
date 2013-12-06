@@ -144,7 +144,7 @@ namespace Voron.Impl.Journal
 					// we setup the journal file so we can flush from it to the data file
 					var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * AbstractPager.PageSize);
 					var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
-					jrnlFile.InitFrom(journalReader, LinkedDictionary<long, JournalFile.PagePosition>.From(ptt), journalReader.TransactionEndPositions);
+					jrnlFile.InitFrom(journalReader, LinkedDictionary<long, JournalFile.PagePosition>.From(ptt));
 					jrnlFile.AddRef(); // creator reference - write ahead log
 
 					journalFiles.Add(jrnlFile);
@@ -320,13 +320,13 @@ namespace Voron.Impl.Journal
 			{
 				var journalInfo = _headerAccessor.Get(ptr => ptr->Journal);
 
-				var lastSyncedLog = journalInfo.LastSyncedJournal;
-				var lastSyncedLogPage = journalInfo.LastSyncedJournalPage;
+				var lastSyncedJournal = journalInfo.LastSyncedJournal;
+				var lastSyncedTransactionId = journalInfo.LastSyncedTransactionId; // TODO [ppekrol] need to calculate it differently
 
 				var sum = _files.Sum(file =>
 				{
-					if (file.Number == lastSyncedLog && lastSyncedLog != 0)
-						return lastSyncedLogPage - file.WritePagePosition - 1;
+					if (file.Number == lastSyncedJournal && lastSyncedJournal != 0)
+						return lastSyncedTransactionId - file.WritePagePosition - 1;
 					return file.WritePagePosition == 0 ? 0 : file.WritePagePosition - 1;
 				});
 
@@ -351,7 +351,6 @@ namespace Voron.Impl.Journal
 			private readonly long _oldestActiveTransaction;
 			private long _lastSyncedTransactionId;
 			private long _lastSyncedJournal;
-			private long _lastSyncedPage;
 			private List<JournalSnapshot> _jrnls;
 
 			public JournalApplicator(WriteAheadJournal waj, long oldestActiveTransaction)
@@ -373,7 +372,6 @@ namespace Voron.Impl.Journal
                 var journalInfo = _waj._headerAccessor.Get(ptr => ptr->Journal);
 
                 _lastSyncedJournal = journalInfo.LastSyncedJournal;
-                _lastSyncedPage = journalInfo.LastSyncedJournalPage;
 				_lastSyncedTransactionId = journalInfo.LastSyncedTransactionId;
                 Debug.Assert(_jrnls.First().Number >= _lastSyncedJournal);
 
@@ -403,7 +401,7 @@ namespace Voron.Impl.Journal
                             continue;
                         }
 
-						if(journalFile.Number == _lastSyncedJournal && pagePosition.Value.JournalPos <= _lastSyncedPage)
+						if(journalFile.Number == _lastSyncedJournal && pagePosition.Value.TransactionId <= _lastSyncedTransactionId)
 							continue;
 
 	                    currentJournalMaxTransactionId = Math.Max(currentJournalMaxTransactionId, pagePosition.Value.TransactionId);
@@ -431,16 +429,6 @@ namespace Voron.Impl.Journal
 				_lastSyncedJournal = lastProcessedJournal;
 				_lastSyncedTransactionId = lastFlushedTransactionId;
 
-				var transactionEndPositions = _jrnls.First(x => x.Number == _lastSyncedJournal).TransactionEndPositions;
-
-				LongRef val;
-				if (transactionEndPositions.TryGetValue(_lastSyncedTransactionId, out val) == false)
-				{
-					throw new InvalidOperationException("Could not find transaction end position for " + _lastSyncedTransactionId);
-				}
-
-				_lastSyncedPage = val.Value;
-
                 var scratchBufferPool = _waj._env.ScratchBufferPool;
 				var scratchPagerState = scratchBufferPool.PagerState;
 				scratchPagerState.AddRef();
@@ -456,7 +444,7 @@ namespace Voron.Impl.Journal
                     var numberOfPagesInLastPage = last.IsOverflow == false ? 1 :
                         _waj._env.Options.DataPager.GetNumberOfOverflowPages(last.OverflowSize);
 
-					DebugValidateWrittenTransaction();
+					//DebugValidateWrittenTransaction();
 
 					EnsureDataPagerSpacing(transaction, last, numberOfPagesInLastPage, alreadyInWriteTx);
 
@@ -527,39 +515,39 @@ namespace Voron.Impl.Journal
 				}
 			}
 
-			[Conditional("DEBUG")]
-			private void DebugValidateWrittenTransaction()
-			{
-                var txHeaders = stackalloc TransactionHeader[1];
-                var readTxHeader = &txHeaders[0];
-                _waj._writeSemaphore.Wait();
-                try
-                {
-                    var jrnl = _waj._files.First(x => x.Number == _lastSyncedJournal);
-                    var read = jrnl.ReadTransaction(_lastSyncedPage + 1, readTxHeader);
+			//[Conditional("DEBUG")]
+			//private void DebugValidateWrittenTransaction()
+			//{
+			//	var txHeaders = stackalloc TransactionHeader[1];
+			//	var readTxHeader = &txHeaders[0];
+			//	_waj._writeSemaphore.Wait();
+			//	try
+			//	{
+			//		var jrnl = _waj._files.First(x => x.Number == _lastSyncedJournal);
+			//		var read = jrnl.ReadTransaction(_lastSyncedPage + 1, readTxHeader);
 
-                    if (readTxHeader->HeaderMarker != 0 && (read == false || readTxHeader->HeaderMarker != Constants.TransactionHeaderMarker || readTxHeader->TransactionId != _lastSyncedTransactionId + 1))
-                    {
-                        var start = 0;
-                        var positions = new Dictionary<long, TransactionHeader>();
-                        while (jrnl.ReadTransaction(start, readTxHeader))
-                        {
-                            positions.Add(start, *readTxHeader);
-                            start += readTxHeader->PageCount + readTxHeader->OverflowPageCount + 1;
-                        }
+			//		if (readTxHeader->HeaderMarker != 0 && (read == false || readTxHeader->HeaderMarker != Constants.TransactionHeaderMarker || readTxHeader->TransactionId != _lastSyncedTransactionId + 1))
+			//		{
+			//			var start = 0;
+			//			var positions = new Dictionary<long, TransactionHeader>();
+			//			while (jrnl.ReadTransaction(start, readTxHeader))
+			//			{
+			//				positions.Add(start, *readTxHeader);
+			//				start += readTxHeader->PageCount + readTxHeader->OverflowPageCount + 1;
+			//			}
 
-                        throw new InvalidOperationException(
-                            "Reading transaction for calculated page in journal failed. "
-                            + "Journal #" + _lastSyncedJournal + ". "
-                            + "Page #" + (_lastSyncedPage + 1) + ". "
-                            + "This means that page calculation is wrong and should be fixed otherwise data will be lost during database recovery from this journal.");
-                    }
-                }
-                finally
-                {
-                    _waj._writeSemaphore.Release();
-                }
-			}
+			//			throw new InvalidOperationException(
+			//				"Reading transaction for calculated page in journal failed. "
+			//				+ "Journal #" + _lastSyncedJournal + ". "
+			//				+ "Page #" + (_lastSyncedPage + 1) + ". "
+			//				+ "This means that page calculation is wrong and should be fixed otherwise data will be lost during database recovery from this journal.");
+			//		}
+			//	}
+			//	finally
+			//	{
+			//		_waj._writeSemaphore.Release();
+			//	}
+			//}
 
 			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles)
 			{
@@ -585,7 +573,7 @@ namespace Voron.Impl.Journal
 					if (j.Number == _lastSyncedJournal) // we are in the last log we synced
 					{
                         if (j.AvailablePages != 0 || //　if there are more pages to be used here or 
-                        j.PageTranslationTable.Max(x => x.Value.JournalPos) != _lastSyncedPage) // we didn't synchronize whole journal
+                        j.PageTranslationTable.Max(x => x.Value.TransactionId) != _lastSyncedTransactionId) // we didn't synchronize whole journal
                             continue; // do not mark it as unused
 					}
 					unusedJournalFiles.Add(_waj._files.First(x => x.Number == j.Number));
@@ -615,7 +603,7 @@ namespace Voron.Impl.Journal
 				}
 
 				Debug.Assert(_lastSyncedJournal != -1);
-				Debug.Assert(_lastSyncedPage != -1);
+				Debug.Assert(_lastSyncedTransactionId != -1);
 
 				_waj._headerAccessor.Modify(header =>
 					{
@@ -623,7 +611,6 @@ namespace Voron.Impl.Journal
 						header->LastPageNumber = lastReadTxHeader.LastPageNumber;
 
 						header->Journal.LastSyncedJournal = _lastSyncedJournal;
-						header->Journal.LastSyncedJournalPage = _lastSyncedPage;
 						header->Journal.LastSyncedTransactionId = _lastSyncedTransactionId;
 
 						header->Root = lastReadTxHeader.Root;

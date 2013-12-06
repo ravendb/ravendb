@@ -21,9 +21,6 @@ namespace Voron.Impl.Journal
 		public long LastSyncedJournal;
 
 		[FieldOffset(20)]
-		public long LastSyncedJournalPage;
-
-		[FieldOffset(28)]
 		public long LastSyncedTransactionId;
 	}
 }

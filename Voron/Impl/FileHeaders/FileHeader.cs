@@ -58,7 +58,7 @@ namespace Voron.Impl.FileHeaders
 		/// <summary>
 		/// Information about an incremental backup
 		/// </summary>
-	    [FieldOffset(196)] 
+	    [FieldOffset(188)] 
 		public IncrementalBackupInfo IncrementalBackup;
     }
 }

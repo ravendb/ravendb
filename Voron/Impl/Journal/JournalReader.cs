@@ -20,7 +20,6 @@ namespace Voron.Impl.Journal
 		private int _recoveryPage;
 
 		private LinkedDictionary<long, JournalFile.PagePosition> _transactionPageTranslation = LinkedDictionary<long, JournalFile.PagePosition>.Empty;
-		private LinkedDictionary<long, LongRef> _transactionEndPositions = LinkedDictionary<long, LongRef>.Empty;
 
 		public bool RequireHeaderUpdate { get; private set; }
 
@@ -75,8 +74,13 @@ namespace Voron.Impl.Journal
 			NativeMethods.memset(dataPage.Base, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
 			var compressedSize = Lz4.LZ4_uncompress(_pager.Read(_readingPage).Base, dataPage.Base, current->UncompressedSize);
 
-			if (compressedSize != current->CompressedSize)
-				throw new InvalidDataException("Compression error. Probably file is corrupted.");
+			if (compressedSize != current->CompressedSize) //Compression error. Probably file is corrupted
+			{
+				RequireHeaderUpdate = true;
+
+				return false; 
+			}
+				
 
 			for (var i = 0; i < current->PageCount; i++)
 			{
@@ -127,7 +131,6 @@ namespace Voron.Impl.Journal
 			//update CurrentTransactionHeader _only_ if the CRC check is passed
 			LastTransactionHeader = current;
 			_transactionPageTranslation = _transactionPageTranslation.SetItems(transactionTable);
-			_transactionEndPositions = _transactionEndPositions.Add(current->TransactionId, new LongRef { Value = _readingPage - 1 });
 			return true;
 		}
 
@@ -142,11 +145,6 @@ namespace Voron.Impl.Journal
 		{
 			get { return _transactionPageTranslation; }
 		}
-
-		public LinkedDictionary<long, LongRef> TransactionEndPositions
-        {
-            get { return _transactionEndPositions; }
-        }
 
 		private bool TryReadAndValidateHeader(out TransactionHeader* current)
 		{
