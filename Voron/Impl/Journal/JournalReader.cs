@@ -47,8 +47,8 @@ namespace Voron.Impl.Journal
 
 		public bool ReadOneTransaction(bool checkCrc = true)
 		{
-			//if (_readingPage >= _pager.NumberOfAllocatedPages)
-			//	return false;
+			if (_readingPage >= _pager.NumberOfAllocatedPages)
+				return false;
 
 			var transactionTable = new Dictionary<long, JournalFile.PagePosition>();
 
