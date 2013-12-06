@@ -462,11 +462,5 @@ namespace Voron.Impl
 
 			pages.Add(foundPage);
 		}
-
-		public void InvalidateRecentlyFoundPages(Tree tree)
-		{
-			if (_recentlyFoundPages.ContainsKey(tree))
-				_recentlyFoundPages[tree] = new RecentlyFoundPages();
-		}
 	}
 }

@@ -251,8 +251,9 @@ namespace Voron.Trees
 			{
 				var cursor = lazy.Value;
 				cursor.Update(cursor.Pages.First, page);
-				
-				InvalidateRecentlyFoundPages(tx);
+
+				if(_recentlyFoundPagesByWriteTransactions.Count > 0)
+					_recentlyFoundPagesByWriteTransactions.Clear();
 
 				var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
 				dataPos = pageSplitter.Execute();
@@ -444,19 +445,14 @@ namespace Voron.Trees
 						CursorPath = c.Pages.Select(x => x.PageNumber).Reverse().ToList()
 					};
 
-				AddRecentlyFoundPage(tx, foundPage);
+				if (tx.Flags == TransactionFlags.ReadWrite)
+					_recentlyFoundPagesByWriteTransactions.Add(foundPage);
+				else
+					tx.AddRecentlyFoundPage(this, foundPage);
 			}
 
 			cursor = new Lazy<Cursor>(()=>c);
 			return p;
-		}
-
-		private void AddRecentlyFoundPage(Transaction tx, RecentlyFoundPages.FoundPage foundPage)
-		{
-			if (tx.Flags == TransactionFlags.ReadWrite)
-				_recentlyFoundPagesByWriteTransactions.Add(foundPage);
-			else
-				tx.AddRecentlyFoundPage(this, foundPage);
 		}
 
 		private bool TryUseRecentTransactionPage(Transaction tx, Slice key, out Lazy<Cursor> cursor, out Page page)
@@ -464,7 +460,12 @@ namespace Voron.Trees
 			page = null;
 			cursor = null;
 
-			RecentlyFoundPages recentPages = GetRecentlyFoundPages(tx); 
+			RecentlyFoundPages recentPages;
+
+			if (tx.Flags == TransactionFlags.ReadWrite)
+				recentPages = _recentlyFoundPagesByWriteTransactions;
+			else
+				recentPages = tx.GetRecentlyFoundPages(this);
 
 			if (recentPages == null)
 				return false;
@@ -520,14 +521,6 @@ namespace Voron.Trees
 			return true;
 		}
 
-		private RecentlyFoundPages GetRecentlyFoundPages(Transaction tx)
-		{
-			if (tx.Flags == TransactionFlags.ReadWrite)
-				return _recentlyFoundPagesByWriteTransactions;
-
-			return tx.GetRecentlyFoundPages(this);
-		}
-
 		internal static Page NewPage(Transaction tx, PageFlags flags, int num)
 		{
 			var page = tx.AllocatePage(num);
@@ -561,20 +554,13 @@ namespace Voron.Trees
 			var changedPage = page;
 			while (changedPage != null)
 			{
-				InvalidateRecentlyFoundPages(tx);
+				if(_recentlyFoundPagesByWriteTransactions.Count > 0)
+					_recentlyFoundPagesByWriteTransactions.Clear();
 
 				changedPage = treeRebalancer.Execute(lazy.Value, changedPage);
 			}
 
 			page.DebugValidate(tx, _cmp, State.RootPageNumber);
-		}
-
-		private void InvalidateRecentlyFoundPages(Transaction tx)
-		{
-			if(tx.Flags == TransactionFlags.ReadWrite)
-				_recentlyFoundPagesByWriteTransactions = new RecentlyFoundPages();
-			else
-				tx.InvalidateRecentlyFoundPages(this);
 		}
 
 		public TreeIterator Iterate(Transaction tx, WriteBatch writeBatch = null)
@@ -757,7 +743,7 @@ namespace Voron.Trees
 
 		public Tree Clone()
 		{
-			return new Tree(_cmp, _state.Clone()){ Name = Name};
+			return new Tree(_cmp, _state.Clone()){ Name = Name, _recentlyFoundPagesByWriteTransactions = _recentlyFoundPagesByWriteTransactions };
 		}
 
 		private static bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, Slice key, int len,
