@@ -153,6 +153,7 @@ namespace Voron.Impl.FileHeaders
 			header->Journal.JournalFilesCount = 0;
 			header->Journal.LastSyncedJournal = -1;
 			header->Journal.LastSyncedJournalPage = -1;
+			header->Journal.LastSyncedTransactionId = -1;
 			header->IncrementalBackup.LastBackedUpJournal = -1;
 			header->IncrementalBackup.LastBackedUpJournalPage = -1;
 			header->IncrementalBackup.LastCreatedJournal = -1;

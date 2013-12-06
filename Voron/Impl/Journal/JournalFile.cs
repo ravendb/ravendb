@@ -226,11 +226,20 @@ namespace Voron.Impl.Journal
 			var compressedPages = (len/AbstractPager.PageSize) + (len%AbstractPager.PageSize == 0 ? 0 : 1);
 
 			var pages = new byte*[compressedPages + 1];
-			pages[0] = tx.Environment.ScratchBufferPool.ReadPage(txPages[0].PositionInScratchBuffer).Base;
+
+			var txHeaderBase = tx.Environment.ScratchBufferPool.ReadPage(txPages[0].PositionInScratchBuffer).Base;
+			var txHeader = (TransactionHeader*)txHeaderBase;
+
+			txHeader->Compressed = true;
+			txHeader->CompressedSize = len;
+			txHeader->UncompressedSize = numberOfPages * AbstractPager.PageSize;
+
+			pages[0] = txHeaderBase;
 			for (int index = 0; index < compressedPages; index++)
 			{
-				pages[index + 1] = compressionBuffer.Base + (index*AbstractPager.PageSize);
+				pages[index + 1] = compressionBuffer.Base + (index * AbstractPager.PageSize);
 			}
+
 			return pages;
 		}
 

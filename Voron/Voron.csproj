@@ -42,7 +42,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Lz4Net">
-      <HintPath>..\Performance.Comparison\packages\Lz4.Net.1.0.98\lib\net45\Lz4Net.dll</HintPath>
+      <HintPath>..\packages\Lz4.Net.1.0.98\lib\net45\Lz4Net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

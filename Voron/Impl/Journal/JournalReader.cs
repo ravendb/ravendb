@@ -6,12 +6,19 @@ using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
+	using Lz4Net;
+
 	public unsafe class JournalReader
 	{
 		private readonly IVirtualPager _pager;
+		private readonly IVirtualPager _recoveryPager;
+
+		private readonly long _lastSyncedTransactionId;
 		private long _lastSyncedPage;
 		private long _nextWritePage;
 		private long _readingPage;
+		private int _recoveryPage;
+
 		private LinkedDictionary<long, JournalFile.PagePosition> _transactionPageTranslation = LinkedDictionary<long, JournalFile.PagePosition>.Empty;
 		private LinkedDictionary<long, LongRef> _transactionEndPositions = LinkedDictionary<long, LongRef>.Empty;
 
@@ -24,40 +31,37 @@ namespace Voron.Impl.Journal
 			get { return _nextWritePage; }
 		}
 
-		public long LastSyncedPage
-		{
-			get { return _lastSyncedPage; }
-		}
-
-		public JournalReader(IVirtualPager pager, long startPage, TransactionHeader* previous)
+		public JournalReader(IVirtualPager pager, IVirtualPager recoveryPager, long lastSyncedTransactionId, TransactionHeader* previous)
 		{
 			RequireHeaderUpdate = false;
 			_pager = pager;
-			_readingPage = startPage;
-			_nextWritePage = startPage;
+			_recoveryPager = recoveryPager;
+			_lastSyncedTransactionId = lastSyncedTransactionId;
+			_readingPage = 0;
+			_recoveryPage = 0;
+			_nextWritePage = 0;
 			LastTransactionHeader = previous;
-
 		}
 
 		public TransactionHeader* LastTransactionHeader { get; private set; }
 
-		public delegate bool FilterTransactions(long txId, long pageNumber);
-
-		public bool ReadOneTransaction(FilterTransactions stopReadingCondition = null, bool checkCrc = true)
+		public bool ReadOneTransaction(bool checkCrc = true)
 		{
-			if (_readingPage >= _pager.NumberOfAllocatedPages)
-				return false;
+			//if (_readingPage >= _pager.NumberOfAllocatedPages)
+			//	return false;
 
 			var transactionTable = new Dictionary<long, JournalFile.PagePosition>();
 
 			TransactionHeader* current;
-			if (!TryReadAndValidateHeader(out current)) return false;
-
-			if (stopReadingCondition != null && !stopReadingCondition(current->TransactionId, _readingPage))
-			{
-				_readingPage--; // if the read tx header does not fulfill our condition we have to move back the read index to allow read it again later if needed
-				EncounteredStopCondition = true;
+			if (!TryReadAndValidateHeader(out current)) 
 				return false;
+
+			var compressedPages = (current->CompressedSize / AbstractPager.PageSize) + (current->CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
+
+			if (current->TransactionId <= _lastSyncedTransactionId)
+			{
+				_readingPage += compressedPages;
+				return true; // skipping
 			}
 
 			uint crc = 0;
@@ -65,36 +69,48 @@ namespace Voron.Impl.Journal
 			var lastSyncedPageBeforeCrcCheck = _lastSyncedPage;
 			var readingPageBeforeCrcCheck = _readingPage;
 
+			_recoveryPager.EnsureContinuous(null, _recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
+			var dataPage = _recoveryPager.GetWritable(_recoveryPage);
+
+			NativeMethods.memset(dataPage.Base, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
+			var compressedSize = Lz4.LZ4_uncompress(_pager.Read(_readingPage).Base, dataPage.Base, current->UncompressedSize);
+
+			if (compressedSize != current->CompressedSize)
+				throw new InvalidDataException("Compression error. Probably file is corrupted.");
+
 			for (var i = 0; i < current->PageCount; i++)
 			{
 				Debug.Assert(_pager.Disposed == false);
+				Debug.Assert(_recoveryPager.Disposed == false);
 
-				var page = _pager.Read(_readingPage);
+				var page = _recoveryPager.Read(_recoveryPage);
 
 				transactionTable[page.PageNumber] = new JournalFile.PagePosition
 				{
-                    JournalPos = _readingPage,
+					JournalPos = _recoveryPage,
                     TransactionId = current->TransactionId
 				};
 
 				if (page.IsOverflow)
 				{
-					var numOfPages = _pager.GetNumberOfOverflowPages(page.OverflowSize);
-					_readingPage += numOfPages;
+					var numOfPages = _recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
+					_recoveryPage += numOfPages;
 
 					if(checkCrc)
 						crc = Crc.Extend(crc, page.Base, 0, numOfPages * AbstractPager.PageSize);
 				}
 				else
 				{
-					_readingPage++;
+					_recoveryPage++;
 					if (checkCrc)
 						crc = Crc.Extend(crc, page.Base, 0, AbstractPager.PageSize);
 				}
 
-				_lastSyncedPage = _readingPage - 1;
+				_lastSyncedPage = _recoveryPage - 1;
 				_nextWritePage = _lastSyncedPage + 1;
 			}
+
+			_readingPage += compressedPages;
 
 			if (checkCrc && crc != current->Crc)
 			{
