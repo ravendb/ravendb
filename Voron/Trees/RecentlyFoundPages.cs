@@ -8,11 +8,46 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Voron.Impl;
+using Voron.Util;
 
 namespace Voron.Trees
 {
 	public unsafe class RecentlyFoundPages
 	{
+		private class FoundPagesComparer : IComparer<Slice>
+		{
+			public int Compare(Slice x, Slice y)
+			{
+				int cmp;
+
+				if (x.Options == SliceOptions.AfterAllKeys)
+				{
+					if (y.Options == SliceOptions.AfterAllKeys)
+						cmp = 0;
+					else
+						cmp = 1;
+				}
+				else if (y.Options == SliceOptions.AfterAllKeys)
+				{
+					Debug.Assert(x.Options == SliceOptions.Key);
+					cmp = -1;
+				}
+				else if (y.Options == SliceOptions.BeforeAllKeys)
+				{
+					if (x.Options == SliceOptions.BeforeAllKeys)
+						cmp = 0;
+					else
+						cmp = 1;
+				}
+				else
+				{
+					cmp = x.Compare(y, NativeMethods.memcmp);
+				}
+
+				return cmp;
+			}
+		}
+
 		public class FoundPage
 		{
 			public long Number;
@@ -21,147 +56,59 @@ namespace Voron.Trees
 			public List<long> CursorPath;
 		}
 
-		public class Node
-		{
-			public Slice Key;
-			public FoundPage Value;
-			public Node Left, Right;
-
-			public Node(Slice key, FoundPage value)
-			{
-				Key = key;
-				Value = value;
-			}
-		}
-
-		private const int CacheLimit = 128;
-
-		private Node _root;
-		private readonly LinkedList<Node> _lru = new LinkedList<Node>();
-		private int _count = 0;
+		private const int CacheLimit = 512;
 
 		public int Count
 		{
-			get { return _count; }
+			get { return _list.Count; }
 		}
+
+		private SkipList<Slice, FoundPage> _list = new SkipList<Slice, FoundPage>(_foundPagesComparer);
+		private static FoundPagesComparer _foundPagesComparer = new FoundPagesComparer();
+		private LinkedList<SkipList<Slice, FoundPage>.Node> _lru = new LinkedList<SkipList<Slice, FoundPage>.Node>(); 
 
 		public void Add(FoundPage page)
 		{
-			var key = page.FirstKey;
+			var key = page.LastKey;
 
-			int cmp;
+			SkipList<Slice, FoundPage>.Node node;
 
-			Node current = _root, parent = null;
-			
-			while (current != null)
+			if (_list.Insert(key, page, out node)) // new item added
 			{
-				cmp = Compare(current.Key, key);
+				_lru.AddLast(node);
 
-				if (cmp == 0)
+				if (_list.Count > CacheLimit)
 				{
-					// the key is already in tree - update the value and LRU list
-					current.Value = page;
+					Debug.Assert(_list.Count == _lru.Count);
 
-					_lru.Remove(current);
-					_lru.AddFirst(current);
+					if (_list.Remove(_lru.First.Value.Key) == false)
+						throw new InvalidOperationException("Should never happen");
 
-					return;
-				}
-
-				if (cmp > 0)
-				{
-					parent = current;
-					current = current.Left;
-				}
-				else if (cmp < 0)
-				{
-					parent = current;
-					current = current.Right;
+					_lru.RemoveFirst();
 				}
 			}
-
-			var newNode = new Node(key, page);
-
-			_count++;
-			if (parent == null)
-				_root = newNode;
-			else
+			else // update
 			{
-				cmp = Compare(parent.Key, key);
-
-				if (cmp > 0)
-					parent.Left = newNode;
-				else
-					parent.Right = newNode;
+				if (_lru.First.Value != node)
+				{
+					_lru.Remove(node);
+					_lru.AddFirst(node);
+				}
 			}
-
-			_lru.AddLast(newNode);
-
-			if (_count > CacheLimit)
-			{
-				Debug.Assert(_count == _lru.Count);
-
-				Delete(_lru.First.Value.Key);
-				_lru.RemoveFirst();
-			}
-		}
-
-		private int Compare(Slice x, Slice y)
-		{
-			int cmp;
-
-			if (x.Options == SliceOptions.BeforeAllKeys)
-			{
-				if (y.Options == SliceOptions.BeforeAllKeys)
-					cmp = 0;
-				else
-					cmp = -1;
-			}
-			else if (y.Options == SliceOptions.BeforeAllKeys)
-			{
-				Debug.Assert(x.Options == SliceOptions.Key);
-				cmp = 1;
-			}
-			else if (x.Options == SliceOptions.AfterAllKeys)
-				throw new InvalidOperationException("Should never happen");
-			else
-			{
-				cmp = x.Compare(y, NativeMethods.memcmp);
-			}
-
-			return cmp;
 		}
 
 		public FoundPage Find(Slice key)
 		{
-			if (_root == null)
+			if (_list.Count == 0)
 				return null;
 
-			var current = _root;
-			int cmp = 0;
+			var current = _list.FindGreaterOrEqual(key, null);
 
-			while (true)
-			{
-				cmp = Compare(key, current.Key);
-				if (cmp < 0)
-				{
-					if (current.Left == null)
-						break;
+			if (current == null)
+				return null;
 
-					current = current.Left;
-				}
-				else if (cmp > 0)
-				{
-					if (current.Right == null)
-						break;
-					current = current.Right;
-				}
-				else
-					return current.Value;
-			}
-
-			var first = current.Value.FirstKey;
-			var last = current.Value.LastKey;
+			var first = current.Val.FirstKey;
+			var last = current.Val.LastKey;
 
 			if (key.Options == SliceOptions.BeforeAllKeys && first.Options != SliceOptions.BeforeAllKeys)
 				return null;
@@ -175,118 +122,18 @@ namespace Voron.Trees
 			    last.Options != SliceOptions.AfterAllKeys && key.Compare(last, NativeMethods.memcmp) > 0)
 				return null;
 
-			_lru.Remove(current);
-			_lru.AddLast(current);
-
-			return current.Value;
-		}
-
-		private void Delete(Slice key)
-		{
-			if (_root == null)
-				return;       // no items to remove
-
-			// Now, try to find data in the tree
-			Node current = _root, parent = null;
-			int result = Compare(current.Key, key);
-			while (result != 0)
+			if (_lru.First.Value != current)
 			{
-				if (result > 0)
-				{
-					// current.Value > data, if data exists it's in the left subtree
-					parent = current;
-					current = current.Left;
-				}
-				else if (result < 0)
-				{
-					// current.Value < data, if data exists it's in the right subtree
-					parent = current;
-					current = current.Right;
-				}
-
-				Debug.Assert(current != null);// if current == null, then we didn't find the item to remove - should never happen
-				
-			result = Compare(current.Key, key);
+				_lru.Remove(current);
+				_lru.AddFirst(current);
 			}
 
-			// At this point, we've found the node to remove
-			_count--;
-
-			// We now need to "rethread" the tree
-			// CASE 1: If current has no right child, then current's left child becomes
-			//         the node pointed to by the parent
-			if (current.Right == null)
-			{
-				if (parent == null)
-					_root = current.Left;
-				else
-				{
-					result = Compare(parent.Key, current.Key);
-					if (result > 0)
-						// parent.Value > current.Value, so make current's left child a left child of parent
-						parent.Left = current.Left;
-					else if (result < 0)
-						// parent.Value < current.Value, so make current's left child a right child of parent
-						parent.Right = current.Left;
-				}
-			}
-			// CASE 2: If current's right child has no left child, then current's right child
-			//         replaces current in the tree
-			else if (current.Right.Left == null)
-			{
-				current.Right.Left = current.Left;
-
-				if (parent == null)
-					_root = current.Right;
-				else
-				{
-					result = Compare(parent.Key, current.Key);
-					if (result > 0)
-						// parent.Value > current.Value, so make current's right child a left child of parent
-						parent.Left = current.Right;
-					else if (result < 0)
-						// parent.Value < current.Value, so make current's right child a right child of parent
-						parent.Right = current.Right;
-				}
-			}
-			// CASE 3: If current's right child has a left child, replace current with current's
-			//          right child's left-most descendent
-			else
-			{
-				// We first need to find the right node's left-most child
-				Node leftmost = current.Right.Left, lmParent = current.Right;
-				while (leftmost.Left != null)
-				{
-					lmParent = leftmost;
-					leftmost = leftmost.Left;
-				}
-
-				// the parent's left subtree becomes the leftmost's right subtree
-				lmParent.Left = leftmost.Right;
-
-				// assign leftmost's left and right to current's left and right children
-				leftmost.Left = current.Left;
-				leftmost.Right = current.Right;
-
-				if (parent == null)
-					_root = leftmost;
-				else
-				{
-					result = Compare(parent.Key, current.Key);
-					if (result > 0)
-						// parent.Value > current.Value, so make leftmost a left child of parent
-						parent.Left = leftmost;
-					else if (result < 0)
-						// parent.Value < current.Value, so make leftmost a right child of parent
-						parent.Right = leftmost;
-				}
-			}
+			return current.Val;
 		}
 
 		public void Clear()
 		{
-			_root = null;
-			_count = 0;
+			_list = new SkipList<Slice, FoundPage>(_foundPagesComparer);
 			_lru.Clear();
 		}
 	}

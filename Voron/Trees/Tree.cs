@@ -252,8 +252,10 @@ namespace Voron.Trees
 				var cursor = lazy.Value;
 				cursor.Update(cursor.Pages.First, page);
 
-				if(_recentlyFoundPagesByWriteTransactions.Count > 0)
+				if (_recentlyFoundPagesByWriteTransactions.Count > 0)
+				{
 					_recentlyFoundPagesByWriteTransactions.Clear();
+				}
 
 				var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
 				dataPos = pageSplitter.Execute();
