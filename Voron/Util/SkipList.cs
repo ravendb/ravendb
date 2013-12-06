@@ -86,7 +86,6 @@ namespace Voron.Util
 			var prev = new Node[SkipListMaxHeight];
 			Node x = FindGreaterOrEqual(key, prev);
 
-			// Our data structure does not allow duplicate insertion
 			if (x != null && Equal(key, x.Key))
 			{
 				x.Val = val;
@@ -262,6 +261,19 @@ namespace Voron.Util
 			{
 				next[i] = val;
 			}
+		}
+	}
+
+	public class SkipList<TKey> : SkipList<TKey, TKey>
+	{
+		public SkipList(IComparer<TKey> comparer)
+			: base(comparer)
+		{
+		}
+
+		public bool Insert(TKey key, out Node node)
+		{
+			return Insert(key, key, out node);
 		}
 	}
 }

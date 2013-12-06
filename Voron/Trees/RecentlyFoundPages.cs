@@ -14,34 +14,37 @@ namespace Voron.Trees
 {
 	public unsafe class RecentlyFoundPages
 	{
-		private class FoundPagesComparer : IComparer<Slice>
+		private class FoundPagesComparer : IComparer<FoundPage>
 		{
-			public int Compare(Slice x, Slice y)
+			public int Compare(FoundPage x, FoundPage y)
 			{
+				if (x.Number == y.Number)
+					return 0;
+
 				int cmp;
 
-				if (x.Options == SliceOptions.AfterAllKeys)
+				if (x.LastKey.Options == SliceOptions.AfterAllKeys)
 				{
-					if (y.Options == SliceOptions.AfterAllKeys)
+					if (y.LastKey.Options == SliceOptions.AfterAllKeys)
 						cmp = 0;
 					else
 						cmp = 1;
 				}
-				else if (y.Options == SliceOptions.AfterAllKeys)
+				else if (y.LastKey.Options == SliceOptions.AfterAllKeys)
 				{
-					Debug.Assert(x.Options == SliceOptions.Key);
+					Debug.Assert(x.LastKey.Options == SliceOptions.Key);
 					cmp = -1;
 				}
-				else if (y.Options == SliceOptions.BeforeAllKeys)
+				else if (y.LastKey.Options == SliceOptions.BeforeAllKeys)
 				{
-					if (x.Options == SliceOptions.BeforeAllKeys)
+					if (x.LastKey.Options == SliceOptions.BeforeAllKeys)
 						cmp = 0;
 					else
 						cmp = 1;
 				}
 				else
 				{
-					cmp = x.Compare(y, NativeMethods.memcmp);
+					cmp = x.LastKey.Compare(y.LastKey, NativeMethods.memcmp);
 				}
 
 				return cmp;
@@ -63,17 +66,15 @@ namespace Voron.Trees
 			get { return _list.Count; }
 		}
 
-		private SkipList<Slice, FoundPage> _list = new SkipList<Slice, FoundPage>(_foundPagesComparer);
+		private SkipList<FoundPage> _list = new SkipList<FoundPage>(_foundPagesComparer);
 		private static FoundPagesComparer _foundPagesComparer = new FoundPagesComparer();
-		private LinkedList<SkipList<Slice, FoundPage>.Node> _lru = new LinkedList<SkipList<Slice, FoundPage>.Node>(); 
+		private LinkedList<SkipList<FoundPage>.Node> _lru = new LinkedList<SkipList<FoundPage>.Node>(); 
 
 		public void Add(FoundPage page)
 		{
-			var key = page.LastKey;
+			SkipList<FoundPage>.Node node;
 
-			SkipList<Slice, FoundPage>.Node node;
-
-			if (_list.Insert(key, page, out node)) // new item added
+			if (_list.Insert(page, out node)) // new item added
 			{
 				_lru.AddLast(node);
 
@@ -97,12 +98,16 @@ namespace Voron.Trees
 			}
 		}
 
+		private readonly FoundPage _pageForSearchingByKey = new FoundPage {Number = long.MinValue};
+
 		public FoundPage Find(Slice key)
 		{
 			if (_list.Count == 0)
 				return null;
 
-			var current = _list.FindGreaterOrEqual(key, null);
+			_pageForSearchingByKey.LastKey = key;
+
+			var current = _list.FindGreaterOrEqual(_pageForSearchingByKey, null);
 
 			if (current == null)
 				return null;
@@ -133,7 +138,7 @@ namespace Voron.Trees
 
 		public void Clear()
 		{
-			_list = new SkipList<Slice, FoundPage>(_foundPagesComparer);
+			_list = new SkipList<FoundPage>(_foundPagesComparer);
 			_lru.Clear();
 		}
 	}
