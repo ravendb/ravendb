@@ -17,7 +17,6 @@ namespace Voron.Trees
 	public unsafe class Tree
 	{
 		private TreeMutableState _state = new TreeMutableState();
-		private RecentlyFoundPages _recentlyFoundPagesByWriteTransactions = new RecentlyFoundPages();
 
 		public string Name { get; set; }
 
@@ -252,9 +251,9 @@ namespace Voron.Trees
 				var cursor = lazy.Value;
 				cursor.Update(cursor.Pages.First, page);
 
-				if (_recentlyFoundPagesByWriteTransactions.Count > 0)
+				if (State.RecentlyWrittenPages.Count > 0)
 				{
-					_recentlyFoundPagesByWriteTransactions.Clear();
+					State.RecentlyWrittenPages.Clear();
 				}
 
 				var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
@@ -448,7 +447,7 @@ namespace Voron.Trees
 					};
 
 				if (tx.Flags == TransactionFlags.ReadWrite)
-					_recentlyFoundPagesByWriteTransactions.Add(foundPage);
+					State.RecentlyWrittenPages.Add(foundPage);
 				else
 					tx.AddRecentlyFoundPage(this, foundPage);
 			}
@@ -465,7 +464,7 @@ namespace Voron.Trees
 			RecentlyFoundPages recentPages;
 
 			if (tx.Flags == TransactionFlags.ReadWrite)
-				recentPages = _recentlyFoundPagesByWriteTransactions;
+				recentPages = State.RecentlyWrittenPages;
 			else
 				recentPages = tx.GetRecentlyFoundPages(this);
 
@@ -556,8 +555,8 @@ namespace Voron.Trees
 			var changedPage = page;
 			while (changedPage != null)
 			{
-				if(_recentlyFoundPagesByWriteTransactions.Count > 0)
-					_recentlyFoundPagesByWriteTransactions.Clear();
+				if(State.RecentlyWrittenPages.Count > 0)
+					State.RecentlyWrittenPages.Clear();
 
 				changedPage = treeRebalancer.Execute(lazy.Value, changedPage);
 			}
@@ -745,7 +744,7 @@ namespace Voron.Trees
 
 		public Tree Clone()
 		{
-			return new Tree(_cmp, _state.Clone()){ Name = Name, _recentlyFoundPagesByWriteTransactions = _recentlyFoundPagesByWriteTransactions };
+			return new Tree(_cmp, _state.Clone()){ Name = Name };
 		}
 
 		private static bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, Slice key, int len,

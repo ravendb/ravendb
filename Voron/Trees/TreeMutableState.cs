@@ -18,6 +18,8 @@ namespace Voron.Trees
 
         public bool InWriteTransaction;
 
+		public RecentlyFoundPages RecentlyWrittenPages = new RecentlyFoundPages();
+
         public bool IsModified
         {
             get { return _isModified; }
@@ -52,7 +54,8 @@ namespace Voron.Trees
                     OverflowPages = OverflowPages,
                     PageCount = PageCount,
 					Flags = Flags,
-                    RootPageNumber = RootPageNumber
+                    RootPageNumber = RootPageNumber,
+					RecentlyWrittenPages = RecentlyWrittenPages
                 };
         }
 
