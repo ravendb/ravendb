@@ -74,7 +74,7 @@ namespace Voron.Impl.Journal
 			array[pages.Length].Buffer = null;// null terminating
 
 		    WriteFileGather(_handle, array, (uint) pages.Length*4096, IntPtr.Zero, nativeOverlapped);
-			return HandleResponse(nativeOverlapped, tcs, allocHGlobal);
+		    return HandleResponse(nativeOverlapped, tcs, allocHGlobal);
 		}
 
 		public long NumberOfAllocatedPages { get; private set; }
@@ -129,8 +129,6 @@ namespace Voron.Impl.Journal
 			switch (lastWin32Error)
 			{
                 case ErrorSuccess:
-			        tcs.TrySetResult(null);
-			        return tcs.Task;
 			    case ErrorIOPending:
 			        return tcs.Task;
 			}

@@ -192,10 +192,6 @@ namespace Voron.Impl.Journal
             var lastPagePosition = journalPos 
                 + (previousPage != null ? previousPage.NumberOfPages - 1 : 0); // for overflows
 
-	        if (counter++ > 900000)
-	        {
-		        Console.WriteLine(1);
-	        }
             lock (_locker)
             {
                 _writePage += numberOfPages;
@@ -207,7 +203,6 @@ namespace Voron.Impl.Journal
             return _journalWriter.WriteGatherAsync(writePagePos * AbstractPager.PageSize, pages);
         }
 
-	    public static int counter;
 		public void InitFrom(JournalReader journalReader, LinkedDictionary<long, PagePosition> pageTranslationTable, LinkedDictionary<long, LongRef> transactionEndPositions)
         {
             _writePage = journalReader.NextWritePage;

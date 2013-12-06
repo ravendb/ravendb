@@ -94,22 +94,23 @@ namespace Voron.Impl
 				{
 					HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations));
 
-					tx.Commit();
+				    tx.Commit().ContinueWith(task =>
+				    {
+				        if (task.IsFaulted)
+				        {
+				            HandleWriteFailure(writes, task.Exception);
+				        }
+				        else
+				        {
+                            foreach (var write in writes)
+                                write.Completed();
+				        }
+				    });
 				}
-				foreach (var write in writes)
-					write.Completed();
 			}
 			catch (Exception e)
 			{
-				if (writes == null || writes.Count == 0)
-					throw;
-
-				if (writes.Count == 1)
-				{
-					writes[0].Errorred(e);
-				}
-
-				SplitWrites(writes);
+				HandleWriteFailure(writes, e);
 			}
 			finally
 			{
@@ -117,7 +118,20 @@ namespace Voron.Impl
 			}
 		}
 
-		private void Finalize(IEnumerable<OutstandingWrite> writes)
+	    private void HandleWriteFailure(List<OutstandingWrite> writes, Exception e)
+	    {
+	        if (writes == null || writes.Count == 0)
+	            throw new InvalidOperationException("Couldn't get items to write", e);
+
+	        if (writes.Count == 1)
+	        {
+	            writes[0].Errorred(e);
+	        }
+
+	        SplitWrites(writes);
+	    }
+
+	    private void Finalize(IEnumerable<OutstandingWrite> writes)
 		{
 			if (writes == null)
 				return;
@@ -277,21 +291,31 @@ namespace Voron.Impl
 			_cancellationTokenSource.Cancel();
 			_hasWritesEvent.Set();
 			_stopWrites.Set();
-			if (_backgroundTask.IsValueCreated == false)
-				return;
-			try
-			{
-				_backgroundTask.Value.Wait();
-			}
-			catch (TaskCanceledException)
-			{
-			}
-			catch (AggregateException e)
-			{
-				if (e.InnerException is TaskCanceledException)
-					return;
-				throw;
-			}
+			
+		    try
+		    {
+                if (_backgroundTask.IsValueCreated == false)
+                    return;
+		        _backgroundTask.Value.Wait();
+		    }
+		    catch (TaskCanceledException)
+		    {
+		    }
+		    catch (AggregateException e)
+		    {
+		        if (e.InnerException is TaskCanceledException)
+		            return;
+		        throw;
+		    }
+		    finally
+		    {
+		        foreach (var manualResetEventSlim in _eventsBuffer)
+		        {
+		            manualResetEventSlim.Dispose();
+		        }   
+                _hasWritesEvent.Dispose();
+                _stopWrites.Dispose();
+		    }
 		}
 	}
 }
