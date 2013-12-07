@@ -14,7 +14,7 @@ namespace Voron
 
 			Tree tree;
 
-			if (state.Trees.TryGetValue(treeName, out tree))
+			if (state.Trees.TryGetValue(tx.Id, treeName, out tree))
 				return tree;
 
 			if (treeName.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase))

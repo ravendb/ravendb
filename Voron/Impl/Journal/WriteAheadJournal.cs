@@ -228,7 +228,7 @@ namespace Voron.Impl.Journal
 				for (var i = tx.JournalSnapshots.Count - 1; i >= 0; i--)
 				{
 					JournalFile.PagePosition value;
-					if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(pageNumber, out value))
+					if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx.Id, pageNumber, out value))
 					{
 						if (value.TransactionId <= _lastFlushedTransaction)
 						{
@@ -253,7 +253,7 @@ namespace Voron.Impl.Journal
 			for (var i = files.Count - 1; i >= 0; i--)
 			{
 				JournalFile.PagePosition value;
-				if (files[i].PageTranslationTable.TryGetValue(pageNumber, out value))
+				if (files[i].PageTranslationTable.TryGetValue(tx.Id, pageNumber, out value))
 				{
 					var page = _env.ScratchBufferPool.ReadPage(value.ScratchPos);
 
@@ -425,17 +425,9 @@ namespace Voron.Impl.Journal
                     return;
 
 				_lastSyncedJournal = lastProcessedJournal;
-				var transactionEndPositions = _jrnls.First(x => x.Number == _lastSyncedJournal).TransactionEndPositions;
+				SetLastSyncedPage(lastFlushedTransactionId);
 
-				LongRef val;
-				if (transactionEndPositions.TryGetValue(lastFlushedTransactionId, out val) == false)
-				{
-					throw new InvalidOperationException("Could not find transaction end position for " + lastFlushedTransactionId);
-				}
-
-				_lastSyncedPage = val.Value;
-
-                var scratchBufferPool = _waj._env.ScratchBufferPool;
+				var scratchBufferPool = _waj._env.ScratchBufferPool;
 				var scratchPagerState = scratchBufferPool.PagerState;
 				scratchPagerState.AddRef();
 
@@ -488,7 +480,7 @@ namespace Voron.Impl.Journal
 
 	                _waj._lastFlushedTransaction = lastFlushedTransactionId;
 
-                    FreeScratchPages(unusedJournalFiles);
+					FreeScratchPages(txw ?? transaction, unusedJournalFiles);
 
                     foreach (var fullLog in unusedJournalFiles)
                     {
@@ -498,6 +490,21 @@ namespace Voron.Impl.Journal
                     if (txw != null)
                         txw.Commit();
                 }
+			}
+
+			private void SetLastSyncedPage(long lastFlushedTransactionId)
+			{
+				var transactionEndPositions = _jrnls.First(x => x.Number == _lastSyncedJournal).TransactionEndPositions;
+				for (int i = transactionEndPositions.Count - 1; i >= 0; i--)
+				{
+					var item = transactionEndPositions[i];
+					if (item.Key == lastFlushedTransactionId)
+					{
+						_lastSyncedPage = item.Value;
+						return;
+					}
+				}
+				throw new InvalidOperationException("Could not find transaction end position for " + lastFlushedTransactionId);
 			}
 
 			private void EnsureDataPagerSpacing(Transaction transaction, Page last, int numberOfPagesInLastPage,
@@ -555,17 +562,17 @@ namespace Voron.Impl.Journal
                 }
 			}
 
-			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles)
+			private void FreeScratchPages(Transaction tx, IEnumerable<JournalFile> unusedJournalFiles)
 			{
 				foreach (var jrnl in _waj._files)
 				{
-					jrnl.FreeScratchPagesOlderThan(_waj._env, _oldestActiveTransaction);
+					jrnl.FreeScratchPagesOlderThan(tx, _waj._env, _oldestActiveTransaction);
 				}
 				foreach (var journalFile in unusedJournalFiles)
 				{
 					if (_waj._env.Options.IncrementalBackupEnabled == false)
 						journalFile.DeleteOnClose = true;
-					journalFile.FreeScratchPagesOlderThan(_waj._env, long.MaxValue);
+					journalFile.FreeScratchPagesOlderThan(tx, _waj._env, long.MaxValue);
 				}
 			}
 

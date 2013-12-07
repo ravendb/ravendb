@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Voron.Impl;
 using Voron.Trees;
 using Voron.Util;
 
@@ -30,13 +31,13 @@ namespace Voron
             NextPageNumber = nextPageNumber;
         }
 
-        public StorageEnvironmentState Clone()
+        public StorageEnvironmentState Clone(Transaction transaction)
         {
             return new StorageEnvironmentState()
                 {
                     _trees = LinkedDictionary<string, Tree>.Empty
                         .WithComparers(StringComparer.OrdinalIgnoreCase)
-						.SetItems(_trees.ToDictionary(x => x.Key, x => x.Value.Clone(), StringComparer.OrdinalIgnoreCase)),
+						.SetItems(transaction.Id,_trees.ToDictionary(x => x.Key, x => x.Value.Clone(), StringComparer.OrdinalIgnoreCase)),
                     Root = Root != null ? Root.Clone() : null,
                     FreeSpaceRoot = FreeSpaceRoot != null ? FreeSpaceRoot.Clone() : null,
                     NextPageNumber = NextPageNumber
@@ -48,9 +49,9 @@ namespace Voron
             _trees = _trees.Remove(name);
         }
 
-        public void AddTree(string name, Tree tree)
+        public void AddTree(Transaction tx, string name, Tree tree)
         {
-            _trees = _trees.Add(name, tree);
+            _trees = _trees.Add(tx.Id, name, tree);
         }
     }
 }

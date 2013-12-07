@@ -13,7 +13,7 @@ namespace Voron.Impl.Journal
 		private long _nextWritePage;
 		private long _readingPage;
 		private LinkedDictionary<long, JournalFile.PagePosition> _transactionPageTranslation = LinkedDictionary<long, JournalFile.PagePosition>.Empty;
-		private LinkedDictionary<long, LongRef> _transactionEndPositions = LinkedDictionary<long, LongRef>.Empty;
+		private ImmutableAppendOnlyList<KeyValuePair<long, long>> _transactionEndPositions = ImmutableAppendOnlyList<KeyValuePair<long, long>>.Empty;
 
 		public bool RequireHeaderUpdate { get; private set; }
 
@@ -110,8 +110,8 @@ namespace Voron.Impl.Journal
 
 			//update CurrentTransactionHeader _only_ if the CRC check is passed
 			LastTransactionHeader = current;
-			_transactionPageTranslation = _transactionPageTranslation.SetItems(transactionTable);
-			_transactionEndPositions = _transactionEndPositions.Add(current->TransactionId, new LongRef { Value = _readingPage - 1 });
+			_transactionPageTranslation = _transactionPageTranslation.SetItems(-1, transactionTable);
+			_transactionEndPositions = _transactionEndPositions.Append(new KeyValuePair<long, long>(current->TransactionId, _readingPage - 1));
 			return true;
 		}
 
@@ -127,10 +127,10 @@ namespace Voron.Impl.Journal
 			get { return _transactionPageTranslation; }
 		}
 
-		public LinkedDictionary<long, LongRef> TransactionEndPositions
-        {
-            get { return _transactionEndPositions; }
-        }
+		public ImmutableAppendOnlyList<KeyValuePair<long, long>> TransactionEndPositions
+		{
+			get { return _transactionEndPositions; }
+		}
 
 		private bool TryReadAndValidateHeader(out TransactionHeader* current)
 		{

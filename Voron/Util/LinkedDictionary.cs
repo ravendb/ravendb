@@ -43,7 +43,7 @@ namespace Voron.Util
 			};
 		}
 
-		public bool TryGetValue(TKey key, out TValue value)
+		public bool TryGetValue(long txId, TKey key, out TValue value)
 		{
 			var current = _header;
 			while (current != null)
@@ -143,12 +143,12 @@ namespace Voron.Util
 			};
 		}
 
-		public LinkedDictionary<TKey, TValue> SetItems(Dictionary<TKey, TValue> items)
+		public LinkedDictionary<TKey, TValue> SetItems(long txId, Dictionary<TKey, TValue> items)
 		{
 			return NewNode(new Node { Dictionary = items });
 		}
 
-		public LinkedDictionary<TKey, TValue> Add(TKey key, TValue value)
+		public LinkedDictionary<TKey, TValue> Add(long txId, TKey key, TValue value)
 		{
 			return NewNode(new Node
 			{
@@ -190,7 +190,7 @@ namespace Voron.Util
 			return GetEnumerator();
 		}
 
-		public LinkedDictionary<TKey, TValue> RemoveRange(IEnumerable<TKey> range)
+		public LinkedDictionary<TKey, TValue> RemoveRange(long txId, IEnumerable<TKey> range)
 		{
 			var items = new Dictionary<TKey, TValue>();
 			foreach (var key in range)

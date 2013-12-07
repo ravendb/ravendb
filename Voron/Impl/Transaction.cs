@@ -95,7 +95,7 @@ namespace Voron.Impl
 				return;
 			}
 
-			_state = env.State.Clone();
+			_state = env.State.Clone(this);
 
 			var scratchPagerState = env.ScratchBufferPool.PagerState;
 			scratchPagerState.AddRef();
