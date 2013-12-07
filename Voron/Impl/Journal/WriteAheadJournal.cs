@@ -29,7 +29,7 @@ namespace Voron.Impl.Journal
 		private readonly SemaphoreSlim _writeSemaphore = new SemaphoreSlim(1, 1);
 
 		private readonly SemaphoreSlim _flushingSemaphore = new SemaphoreSlim(1, 1);
-		private SafeList<JournalFile> _files = SafeList<JournalFile>.Empty;
+		private ImmutableAppendOnlyList<JournalFile> _files = ImmutableAppendOnlyList<JournalFile>.Empty;
 		internal JournalFile CurrentFile;
 
 		private readonly HeaderAccessor _headerAccessor;
@@ -43,7 +43,7 @@ namespace Voron.Impl.Journal
 			_headerAccessor = env.HeaderAccessor;
 		}
 
-		public SafeList<JournalFile> Files { get { return _files; }}
+		public ImmutableAppendOnlyList<JournalFile> Files { get { return _files; } }
 
 		private JournalFile NextFile(int numberOfPages = 1)
 		{
@@ -67,7 +67,7 @@ namespace Voron.Impl.Journal
 			var journal = new JournalFile(journalPager, _journalIndex);
 			journal.AddRef(); // one reference added by a creator - write ahead log
 
-			_files = _files.Add(journal);
+			_files = _files.Append(journal);
 
 			UpdateLogInfo();
 
@@ -160,7 +160,7 @@ namespace Voron.Impl.Journal
 
 
 			}
-			_files = _files.AddRange(journalFiles);
+			_files = _files.AppendRange(journalFiles);
 
 			if (requireHeaderUpdate)
 			{
@@ -294,7 +294,7 @@ namespace Voron.Impl.Journal
 
 			}
 
-			_files = SafeList<JournalFile>.Empty;
+			_files = ImmutableAppendOnlyList<JournalFile>.Empty;
 
 			_writeSemaphore.Dispose();
 		}
@@ -335,8 +335,11 @@ namespace Voron.Impl.Journal
 			if(tx.Flags != TransactionFlags.ReadWrite)
 				throw new InvalidOperationException("Clearing of write ahead journal should be called only from a write transaction");
 
-			_files.ForEach(x => x.Release());
-			_files = SafeList<JournalFile>.Empty;
+			foreach (var journalFile in _files)
+			{
+				journalFile.Release();
+			}
+			_files = ImmutableAppendOnlyList<JournalFile>.Empty;
 			CurrentFile = null;
 		}
 
@@ -472,7 +475,7 @@ namespace Voron.Impl.Journal
 
                     var lastJournalFileToRemove = unusedJournalFiles.LastOrDefault();
                     if (lastJournalFileToRemove != null)
-						_waj._files = _waj._files.RemoveAll(x => x.Number <= lastJournalFileToRemove.Number);
+						_waj._files = _waj._files.RemoveUntil(x => x.Number <= lastJournalFileToRemove.Number, new List<JournalFile>());
 
                     _waj.UpdateLogInfo();
 

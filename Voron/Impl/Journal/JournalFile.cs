@@ -24,7 +24,7 @@ namespace Voron.Impl.Journal
         private int _refs;
 		private LinkedDictionary<long, PagePosition> _pageTranslationTable = LinkedDictionary<long, PagePosition>.Empty;
 		private LinkedDictionary<long, LongRef> _transactionEndPositions = LinkedDictionary<long, LongRef>.Empty;
-		private SafeList<PagePosition> _unusedPages = SafeList<PagePosition>.Empty;
+		private List<PagePosition> _unusedPages = new List<PagePosition>();
 
         private readonly object _locker = new object();
 
@@ -197,7 +197,7 @@ namespace Voron.Impl.Journal
                 _writePage += numberOfPages;
 				_transactionEndPositions = _transactionEndPositions.Add(tx.Id, new LongRef { Value = lastPagePosition });
                 _pageTranslationTable = _pageTranslationTable.SetItems(ptt);
-                _unusedPages = _unusedPages.AddRange(unused);
+                _unusedPages.AddRange(unused);
             }
 
             return _journalWriter.WriteGatherAsync(writePagePos * AbstractPager.PageSize, pages);
@@ -219,7 +219,8 @@ namespace Voron.Impl.Journal
 	        List<PagePosition> unusedAndFree;
             lock (_locker)
             {
-                _unusedPages = _unusedPages.RemoveAllAndGetDiscards(position => position.TransactionId < oldestActiveTransaction, out unusedAndFree);
+	            unusedAndFree = _unusedPages.FindAll(position => position.TransactionId < oldestActiveTransaction);
+                _unusedPages.RemoveAll(position => position.TransactionId < oldestActiveTransaction);
 
                 unusedPages = _pageTranslationTable.Where(x => x.Value.TransactionId < oldestActiveTransaction).ToList();
                 _pageTranslationTable = _pageTranslationTable.RemoveRange(unusedPages.Select(x => x.Key));
