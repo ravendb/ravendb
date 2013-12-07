@@ -48,9 +48,9 @@ namespace Voron.Tryout
 				Console.Write("{0,3} ", i);
 				try
 				{
-					using (var s = new Batches())
+					using (var s = new Concurrency())
 					{
-                        s.MergedBatchErrorHandling().Wait();
+						s.BatchConcurrencyExceptionShouldBeThrownWhenVersionMismatch();
 					}
 					Console.WriteLine("Success");
 				}
