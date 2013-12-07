@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,7 +23,7 @@ namespace Voron.Impl.Journal
         private long _writePage;
         private bool _disposed;
         private int _refs;
-		private LinkedDictionary<long, PagePosition> _pageTranslationTable = LinkedDictionary<long, PagePosition>.Empty;
+	    private readonly PageTable _pageTranslationTable = new PageTable();
 		private ImmutableAppendOnlyList<KeyValuePair<long, long>> _transactionEndPositions = ImmutableAppendOnlyList<KeyValuePair<long, long>>.Empty;
 		private readonly List<PagePosition> _unusedPages = new List<PagePosition>();
 
@@ -86,7 +87,7 @@ namespace Voron.Impl.Journal
 			get { return _journalWriter; }
 	    }
 
-		public LinkedDictionary<long, PagePosition> PageTranslationTable
+		public PageTable PageTranslationTable
         {
             get { return _pageTranslationTable; }
         }
@@ -112,12 +113,14 @@ namespace Voron.Impl.Journal
 
         public JournalSnapshot GetSnapshot()
         {
+	        var lastTxId = _pageTranslationTable.GetLastSeenTransaction();
             return new JournalSnapshot
             {
                 Number = Number,
                 AvailablePages = AvailablePages,
                 PageTranslationTable = _pageTranslationTable,
-                TransactionEndPositions = _transactionEndPositions
+                TransactionEndPositions = _transactionEndPositions,
+				LastTransaction = lastTxId
             };
         }
 
@@ -162,7 +165,7 @@ namespace Voron.Impl.Journal
 				{
 					var pageNumber = ((PageHeader*)scratchPage.Base)->PageNumber;
 					PagePosition value;
-					if (_pageTranslationTable.TryGetValue(tx.Id, pageNumber, out value))
+					if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
 					{
 						unused.Add(value);
 					}
@@ -194,20 +197,20 @@ namespace Voron.Impl.Journal
 
             lock (_locker)
             {
-                _writePage += numberOfPages;
+				_pageTranslationTable.SetItems(tx, ptt);
+				_writePage += numberOfPages;
 				_transactionEndPositions = _transactionEndPositions.Append(new KeyValuePair<long, long>(tx.Id, lastPagePosition));
-				_pageTranslationTable = _pageTranslationTable.SetItems(tx.Id, ptt);
                 _unusedPages.AddRange(unused);
             }
 
             return _journalWriter.WriteGatherAsync(writePagePos * AbstractPager.PageSize, pages);
         }
 
-		public void InitFrom(JournalReader journalReader, LinkedDictionary<long, PagePosition> pageTranslationTable,
+		public void InitFrom(JournalReader journalReader, Dictionary<long, PagePosition> pageTranslationTable,
 			ImmutableAppendOnlyList<KeyValuePair<long, long>> transactionEndPositions)
         {
             _writePage = journalReader.NextWritePage;
-            _pageTranslationTable = pageTranslationTable;
+			_pageTranslationTable.SetItemsNoTransaction(pageTranslationTable);
             _transactionEndPositions = transactionEndPositions;
         }
 
@@ -223,8 +226,8 @@ namespace Voron.Impl.Journal
 	            unusedAndFree = _unusedPages.FindAll(position => position.TransactionId < oldestActiveTransaction);
                 _unusedPages.RemoveAll(position => position.TransactionId < oldestActiveTransaction);
 
-                unusedPages = _pageTranslationTable.Where(x => x.Value.TransactionId < oldestActiveTransaction).ToList();
-                _pageTranslationTable = _pageTranslationTable.RemoveRange(tx.Id, unusedPages.Select(x => x.Key));
+                unusedPages = _pageTranslationTable.AllPagesOlderThan(oldestActiveTransaction);
+                _pageTranslationTable.Remove(tx, unusedPages.Select(x => x.Key));
             }
 
             foreach (var unusedScratchPage in unusedAndFree)

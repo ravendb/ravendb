@@ -15,9 +15,9 @@ namespace Voron.Tests.Util
 				.Append(2);
 
 			var removed = new List<long>();
-			list = list.RemoveUntil(x => x <= 1, removed);
+			list = list.RemoveWhile(x => x <= 1, removed);
 			Assert.Equal(1, list.Count);
-			Assert.Equal(1, list.ToList().Count);
+			Assert.Equal(1, list.Count());
 		}
 	}
 }

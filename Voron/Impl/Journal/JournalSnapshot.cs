@@ -6,8 +6,9 @@ namespace Voron.Impl.Journal
 	public class JournalSnapshot
 	{
 		public long Number;
-        public LinkedDictionary<long, JournalFile.PagePosition> PageTranslationTable;
+		public PageTable PageTranslationTable;
 		public ImmutableAppendOnlyList<KeyValuePair<long, long>> TransactionEndPositions;
 	    public long AvailablePages;
+		public long LastTransaction;
 	}
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 
 namespace Voron.Util
 {
@@ -107,7 +108,7 @@ namespace Voron.Util
 			var tail = _head + _count;
 			if (tail == _values.Length)
 			{
-				var newArray = GrowTo((newCount) * 2);
+				var newArray = GrowTo(Math.Max(8, (int)Utils.NearestPowerOfTwo(newCount)));
 				newArray[_count] = item;
 				return new ImmutableAppendOnlyList<T>(newArray, 0, newCount);
 			}
@@ -130,14 +131,16 @@ namespace Voron.Util
 					nToAdd = ((T[])items).Length;
 					copier = CopyArray;
 				}
-				else if (typeof(System.Collections.ICollection).IsAssignableFrom(collectionType))
+				else if (typeof (System.Collections.ICollection).IsAssignableFrom(collectionType))
 				{
-					nToAdd = ((System.Collections.ICollection)items).Count;
-					if (typeof(List<T>).IsAssignableFrom(collectionType))
+					nToAdd = ((System.Collections.ICollection) items).Count;
+					if (typeof (List<T>).IsAssignableFrom(collectionType))
 						copier = CopyList;
 				}
-				else
-					nToAdd = items.Count();
+				else // cannot optimize, have to do this manually
+				{
+					return items.Aggregate(this, (current, item) => current.Append(item));
+				}
 			}
 			if (nToAdd == 0)
 				return this;
@@ -205,7 +208,7 @@ namespace Voron.Util
 		/// Returns a new list from which all first elements that meet the 
 		/// given predicate are removed and stored as output in the given list.
 		/// </summary>
-		public ImmutableAppendOnlyList<T> RemoveUntil(Predicate<T> shouldRemove, List<T> removed)
+		public ImmutableAppendOnlyList<T> RemoveWhile(Predicate<T> shouldRemove, List<T> removed = null)
 		{
 			var newHead = _head;
 			var tail = _head + _count;
@@ -218,7 +221,6 @@ namespace Voron.Util
 
 		private T[] GrowTo(int newLength)
 		{
-			//newLength = Memory.Bits.NextPowerOf2(newLength);
 			var newArray = new T[newLength];
 			Array.Copy(_values, _head, newArray, 0, _count);
 			return newArray;
