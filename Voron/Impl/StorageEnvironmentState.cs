@@ -9,10 +9,9 @@ namespace Voron
 {
     public class StorageEnvironmentState
     {
-        private LinkedDictionary<string, Tree> _trees =
-			LinkedDictionary<string, Tree>.Empty.WithComparers(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<string, Tree> _trees = new Dictionary<string, Tree>(StringComparer.OrdinalIgnoreCase);
 
-		public LinkedDictionary<string, Tree> Trees
+		public Dictionary<string, Tree> Trees
         {
             get { return _trees; }
         }
@@ -31,13 +30,11 @@ namespace Voron
             NextPageNumber = nextPageNumber;
         }
 
-        public StorageEnvironmentState Clone(Transaction transaction)
+        public StorageEnvironmentState Clone()
         {
             return new StorageEnvironmentState()
                 {
-                    _trees = LinkedDictionary<string, Tree>.Empty
-                        .WithComparers(StringComparer.OrdinalIgnoreCase)
-						.SetItems(transaction.Id,_trees.ToDictionary(x => x.Key, x => x.Value.Clone(), StringComparer.OrdinalIgnoreCase)),
+                    _trees = _trees.ToDictionary(x => x.Key, x => x.Value.Clone(), StringComparer.OrdinalIgnoreCase),
                     Root = Root != null ? Root.Clone() : null,
                     FreeSpaceRoot = FreeSpaceRoot != null ? FreeSpaceRoot.Clone() : null,
                     NextPageNumber = NextPageNumber
@@ -46,12 +43,12 @@ namespace Voron
 
         public void RemoveTree(string name)
         {
-            _trees = _trees.Remove(name);
+            _trees.Remove(name);
         }
 
-        public void AddTree(Transaction tx, string name, Tree tree)
+        public void AddTree(string name, Tree tree)
         {
-            _trees = _trees.Add(tx.Id, name, tree);
+            _trees.Add(name, tree);
         }
     }
 }

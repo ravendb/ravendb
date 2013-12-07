@@ -185,7 +185,7 @@ namespace Voron
                 throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");
 
             Tree tree;
-            if (tx.State.Trees.TryGetValue(tx.Id, name, out tree) == false)
+            if (tx.State.Trees.TryGetValue(name, out tree) == false)
                 return;
 
             foreach (var page in tree.AllPages(tx))
@@ -204,7 +204,7 @@ namespace Voron
                 throw new ArgumentException("Cannot create a new tree with a read only transaction");
 
             Tree tree;
-            if (tx.State.Trees.TryGetValue(tx.Id, name, out tree))
+            if (tx.State.Trees.TryGetValue(name, out tree))
                 return tree;
 
             Slice key = name;
@@ -215,7 +215,7 @@ namespace Voron
             {
                 tree = Tree.Open(tx, _sliceComparer, header);
                 tree.Name = name;
-                tx.State.AddTree(tx, name, tree);
+                tx.State.AddTree(name, tree);
                 return tree;
             }
 
@@ -225,7 +225,7 @@ namespace Voron
 
             tree.State.CopyTo((TreeRootHeader*)space);
             tree.State.IsModified = true;
-            tx.State.AddTree(tx, name, tree);
+            tx.State.AddTree(name, tree);
 
             return tree;
         }

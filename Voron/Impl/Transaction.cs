@@ -95,7 +95,7 @@ namespace Voron.Impl
 				return;
 			}
 
-			_state = env.State.Clone(this);
+			_state = env.State.Clone();
 
 			var scratchPagerState = env.ScratchBufferPool.PagerState;
 			scratchPagerState.AddRef();
@@ -388,7 +388,7 @@ namespace Voron.Impl
 		internal void UpdateRootsIfNeeded(Tree root, Tree freeSpace)
 		{
 			//can only happen during initial transaction that creates Root and FreeSpaceRoot trees
-			if (State.Root == null && State.FreeSpaceRoot == null && State.Trees.IsEmpty)
+			if (State.Root == null && State.FreeSpaceRoot == null && State.Trees.Count == 0)
 			{
 				State.Root = root;
 				State.FreeSpaceRoot = freeSpace;
