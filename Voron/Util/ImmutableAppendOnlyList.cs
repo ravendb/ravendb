@@ -9,7 +9,9 @@ namespace Voron.Util
 	/// and that supports relatively efficient "append to the end" and "remove 
 	/// from the front" operations, by sharing the underlying array whenever 
 	/// possible. Implemented as a class so it can be used to "CAS" when making 
-	/// changes in order to allow lockless immutability.
+	/// changes in order to allow lockless immutability. 
+	/// Caution: multithreaded append operations are not safe, also not when
+	/// using CAS.
 	/// </summary>
 	public class ImmutableAppendOnlyList<T> : IReadOnlyList<T>
 	{
@@ -56,7 +58,7 @@ namespace Voron.Util
 		{
 			get
 			{
-				if ((uint)itemIndex > (uint)_count)
+				if ((uint)itemIndex >= (uint)_count)
 					throw new IndexOutOfRangeException("itemIndex");
 				return _values[_head + itemIndex];
 			}
@@ -210,7 +212,7 @@ namespace Voron.Util
 				newHead++;
 			return newHead == _head
 				? this
-				: (newHead == tail ? Empty : RemoveFront(newHead - _head, removed));
+				: RemoveFront(newHead - _head, removed);
 		}
 
 		private T[] GrowTo(int newLength)
