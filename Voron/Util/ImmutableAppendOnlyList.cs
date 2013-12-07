@@ -85,7 +85,8 @@ namespace Voron.Util
 		/// </summary>
 		public IEnumerator<T> GetEnumerator()
 		{
-			for (var i = _head; i < _count; i++)
+			var end = (_head + _count);
+			for (var i = _head; i < end; i++)
 				yield return _values[i];
 		}
 
@@ -197,7 +198,7 @@ namespace Voron.Util
 				removed.AddRange(_values.Skip(_head).Take(remove));
 			return remove == _count
 				? Empty
-				: new ImmutableAppendOnlyList<T>(_values, _head + nToRemove, _count - 1);
+				: new ImmutableAppendOnlyList<T>(_values, _head + nToRemove, _count - nToRemove);
 		}
 
 		/// <summary>
