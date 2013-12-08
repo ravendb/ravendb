@@ -63,13 +63,14 @@ namespace Voron.Impl.Journal
 			var lastSyncedPageBeforeCrcCheck = _lastSyncedPage;
 			var readingPageBeforeCrcCheck = _readingPage;
 
+		    var tempTransactionPageTranslaction = new Dictionary<long, JournalFile.PagePosition>();
 			for (var i = 0; i < current->PageCount; i++)
 			{
 				Debug.Assert(_pager.Disposed == false);
 
 				var page = _pager.Read(_readingPage);
 
-				_transactionPageTranslation[page.PageNumber] = new JournalFile.PagePosition
+                tempTransactionPageTranslaction[page.PageNumber] = new JournalFile.PagePosition
 				{
                     JournalPos = _readingPage,
                     TransactionId = current->TransactionId
@@ -105,6 +106,11 @@ namespace Voron.Impl.Journal
 
 				return false;
 			}
+
+		    foreach (var pagePosition in tempTransactionPageTranslaction)
+		    {
+		        _transactionPageTranslation[pagePosition.Key] = pagePosition.Value;
+		    }
 
 			//update CurrentTransactionHeader _only_ if the CRC check is passed
 			LastTransactionHeader = current;
