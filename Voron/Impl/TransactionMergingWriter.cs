@@ -110,15 +110,20 @@ namespace Voron.Impl
 				        {
 				            HandleWriteFailure(writes, task.Exception);
 				        }
+				        else
+				        {
+                            foreach (var write in writes)
+                                write.Completed();
+				        }
+				    });
+
+				}
 
 				if (ShouldRecordToDebugJournal)
 					_debugJournal.Flush();
 
 				foreach (var write in writes)
 					write.Completed();
-				        }
-				    });
-				}
 			}
 			catch (Exception e)
 			{
@@ -169,31 +174,31 @@ namespace Voron.Impl
 				foreach (var operation in g.OrderBy(x => x.Key, SliceEqualityComparer.Instance))
 				{
 					operation.Reset();
-					Tree.TreeActionType actionType;
+					DebugActionType actionType;
 					switch (operation.Type)
 					{
 						case WriteBatch.BatchOperationType.Add:							
 							tree.Add(tx, operation.Key, operation.Value as Stream, operation.Version);
-							actionType = Tree.TreeActionType.Add;
+							actionType = DebugActionType.Add;
 							break;
 						case WriteBatch.BatchOperationType.Delete:
 							tree.Delete(tx, operation.Key, operation.Version);
-							actionType = Tree.TreeActionType.Delete;
+							actionType = DebugActionType.Delete;
 							break;
 						case WriteBatch.BatchOperationType.MultiAdd:
 							tree.MultiAdd(tx, operation.Key, operation.Value as Slice, operation.Version);
-							actionType = Tree.TreeActionType.MultiAdd;
+							actionType = DebugActionType.MultiAdd;
 							break;
 						case WriteBatch.BatchOperationType.MultiDelete:
 							tree.MultiDelete(tx, operation.Key, operation.Value as Slice, operation.Version);
-							actionType = Tree.TreeActionType.MultiDelete;
+							actionType = DebugActionType.MultiDelete;
 							break;
 						default:
 							throw new ArgumentOutOfRangeException();
 					}
 
 					if (ShouldRecordToDebugJournal)
-						_debugJournal.RecordAction(actionType, operation.Key, g.Key, (actionType != Tree.TreeActionType.Delete) ? operation.Value : String.Empty);
+						_debugJournal.RecordAction(actionType, operation.Key, g.Key, operation.Value);
 
 				}
 			}
