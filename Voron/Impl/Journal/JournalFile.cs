@@ -11,7 +11,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Lz4Net;
 using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
@@ -167,7 +166,7 @@ namespace Voron.Impl.Journal
 			{
 				var txPage = txPages[index];
 				var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
-					var pageNumber = ((PageHeader*)scratchPage.Base)->PageNumber;
+				var pageNumber = ((PageHeader*)scratchPage.Base)->PageNumber;
 					PagePosition value;
 					if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
 					{
@@ -185,11 +184,15 @@ namespace Voron.Impl.Journal
 
 		private static byte*[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager, List<PageFromScratchBuffer> txPages)
 					{
-			compressionPager.EnsureContinuous(tx, 0, (numberOfPages * 2) + 1);
-			var tempBuffer = compressionPager.GetWritable(0);
-			NativeMethods.memset(tempBuffer.Base, 0, ((numberOfPages*2) + 1)*AbstractPager.PageSize);
+			// numberOfPages include the tx header page, which we don't compress
+			// so we ensure we have twice as much as we need, so we have an extra
+			// space in the end if we need it
 
-			var write = tempBuffer.Base;
+			compressionPager.EnsureContinuous(tx, 0, numberOfPages * 2);
+			var tempBuffer = compressionPager.AcquirePagePointer(0);
+			NativeMethods.memset(tempBuffer, 0, (numberOfPages * 2) * AbstractPager.PageSize);
+
+			var write = tempBuffer;
 
 			for (int index = 1; index < txPages.Count; index++)
 			{
@@ -200,7 +203,7 @@ namespace Voron.Impl.Journal
 				write += count;
 				}
 
-			var compressionBuffer = compressionPager.GetWritable(numberOfPages - 1);
+			var compressionBuffer = compressionPager.AcquirePagePointer(numberOfPages - 1);
 
 			var len = DoCompression(numberOfPages, tempBuffer, compressionBuffer);
 			var compressedPages = (len/AbstractPager.PageSize) + (len%AbstractPager.PageSize == 0 ? 0 : 1);
@@ -217,16 +220,19 @@ namespace Voron.Impl.Journal
 			pages[0] = txHeaderBase;
 			for (int index = 0; index < compressedPages; index++)
             {
-				pages[index + 1] = compressionBuffer.Base + (index * AbstractPager.PageSize);
+				pages[index + 1] = compressionBuffer + (index * AbstractPager.PageSize);
             }
 
 			return pages;
         }
 
-        private static int DoCompression(int numberOfPages, Page tempBuffer, Page compressionBuffer)
+		private static int DoCompression(int numberOfPages, byte* tempBuffer, byte* compressionBuffer)
         {
-			var len = Lz4.LZ4_compress(tempBuffer.Base, compressionBuffer.Base, numberOfPages*AbstractPager.PageSize);
-			return len;
+			return LZ4.Decode64(tempBuffer,
+				(numberOfPages - 1) * AbstractPager.PageMaxSpace,
+				compressionBuffer,
+				numberOfPages * AbstractPager.PageSize,
+				true);
 		}
 
         public void InitFrom(JournalReader journalReader, Dictionary<long, PagePosition> pageTranslationTable)
