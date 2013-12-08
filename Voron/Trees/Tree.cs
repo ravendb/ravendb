@@ -546,13 +546,10 @@ namespace Voron.Trees
 
 			CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
 
-			var treeRebalancer = new TreeRebalancer(tx, this, _cmp);
+			var treeRebalancer = new TreeRebalancer(tx, this, State);
 			var changedPage = page;
 			while (changedPage != null)
 			{
-				if(State.RecentlyWrittenPages.Count > 0)
-					State.RecentlyWrittenPages.Clear();
-
 				changedPage = treeRebalancer.Execute(lazy.Value, changedPage);
 			}
 

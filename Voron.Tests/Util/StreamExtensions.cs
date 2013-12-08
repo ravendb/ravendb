@@ -268,7 +268,7 @@ namespace Voron.Tests
                     {
                         d.Dispose();
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                     }
                 }

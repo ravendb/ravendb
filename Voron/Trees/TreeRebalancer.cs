@@ -9,17 +9,18 @@ namespace Voron.Trees
     {
         private readonly Transaction _tx;
 		private readonly Tree _tree;
-        private readonly SliceComparer _cmp;
+        private readonly TreeMutableState _state;
 
-		public TreeRebalancer(Transaction tx, Tree tree, SliceComparer cmp)
+        public TreeRebalancer(Transaction tx, Tree tree, TreeMutableState state)
         {
             _tx = tx;
 			_tree = tree;
-            _cmp = cmp;
+		    _state = state;
         }
 
         public Page Execute(Cursor cursor, Page page)
         {
+            _state.RecentlyWrittenPages.Clear();
             if (cursor.PageCount <= 1) // the root page
             {
                 RebalanceRoot(cursor, page);
