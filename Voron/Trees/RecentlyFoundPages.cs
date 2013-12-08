@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Voron.Impl;
 using Voron.Util;
 
@@ -16,6 +17,7 @@ namespace Voron.Trees
 	{
 		private class FoundPagesComparer : IComparer<FoundPage>
 		{
+            public static readonly FoundPagesComparer Instance = new FoundPagesComparer();
 			public int Compare(FoundPage x, FoundPage y)
 			{
 				if (x.Number == y.Number)
@@ -59,16 +61,20 @@ namespace Voron.Trees
 			public List<long> CursorPath;
 		}
 
-		private const int CacheLimit = 512;
+		private const int CacheLimit = 128;
 
 		public int Count
 		{
 			get { return _list.Count; }
 		}
 
-		private SkipList<FoundPage> _list = new SkipList<FoundPage>(_foundPagesComparer);
-		private static FoundPagesComparer _foundPagesComparer = new FoundPagesComparer();
-		private LinkedList<SkipList<FoundPage>.Node> _lru = new LinkedList<SkipList<FoundPage>.Node>(); 
+		private SkipList<FoundPage> _list = new SkipList<FoundPage>(FoundPagesComparer.Instance);
+        private readonly Dictionary<SkipList<FoundPage>.Node, Reference> _lru = new Dictionary<SkipList<FoundPage, FoundPage>.Node, Reference>();
+
+	    private class Reference
+	    {
+	        public int Usages;
+	    }
 
 		public void Add(FoundPage page)
 		{
@@ -76,29 +82,48 @@ namespace Voron.Trees
 
 			if (_list.Insert(page, out node)) // new item added
 			{
-				_lru.AddLast(node);
+			    _lru[node] = new Reference {Usages = 1};
 
 				if (_list.Count > CacheLimit)
 				{
 					Debug.Assert(_list.Count == _lru.Count);
 
-					if (_list.Remove(_lru.First.Value.Key) == false)
-						throw new InvalidOperationException("Should never happen");
+                    // if full, we'll remove the oldest 25% (to avoid jittering the cache)
+                    // and reduce all usages by half, to make it easy to expire frequently used in the past
+                    // but no longer used now items
 
-					_lru.RemoveFirst();
+				    var toRemove = _lru.OrderBy(x => x.Value.Usages).Take(_lru.Count/4).ToArray();
+				    foreach (var keyValuePair in toRemove)
+				    {
+				        var nodeToRemove = keyValuePair.Key;
+				        _lru.Remove(nodeToRemove);
+				        _list.Remove(nodeToRemove.Key);
+				    }
+
+				    foreach (var reference in _lru)
+				    {
+				        reference.Value.Usages /= 2;
+				    }
 				}
 			}
 			else // update
 			{
-				if (_lru.First.Value != node)
-				{
-					_lru.Remove(node);
-					_lru.AddFirst(node);
-				}
+				UpdateLru(node);
 			}
 		}
 
-		private readonly FoundPage _pageForSearchingByKey = new FoundPage {Number = long.MinValue};
+	    private void UpdateLru(SkipList<FoundPage, FoundPage>.Node node)
+	    {
+	        Reference value;
+	        if (_lru.TryGetValue(node, out value))
+	        {
+	            value.Usages++;
+	            return;
+	        }
+	        _lru[node] = new Reference {Usages = 1};
+	    }
+
+	    private readonly FoundPage _pageForSearchingByKey = new FoundPage {Number = long.MinValue};
 
 		public FoundPage Find(Slice key)
 		{
@@ -127,18 +152,14 @@ namespace Voron.Trees
 			    last.Options != SliceOptions.AfterAllKeys && key.Compare(last, NativeMethods.memcmp) > 0)
 				return null;
 
-			if (_lru.First.Value != current)
-			{
-				_lru.Remove(current);
-				_lru.AddFirst(current);
-			}
+            UpdateLru(current);
 
 			return current.Val;
 		}
 
 		public void Clear()
 		{
-			_list = new SkipList<FoundPage>(_foundPagesComparer);
+			_list = new SkipList<FoundPage>(FoundPagesComparer.Instance);
 			_lru.Clear();
 		}
 	}

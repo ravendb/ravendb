@@ -248,18 +248,15 @@ namespace Voron.Trees
 			byte* dataPos;
 			if (page.HasSpaceFor(key, len) == false)
 			{
-				var cursor = lazy.Value;
-				cursor.Update(cursor.Pages.First, page);
+			    var cursor = lazy.Value;
+			    cursor.Update(cursor.Pages.First, page);
+			    
+                State.RecentlyWrittenPages.Clear();
 
-				if (State.RecentlyWrittenPages.Count > 0)
-				{
-					State.RecentlyWrittenPages.Clear();
-				}
+			    var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
+			    dataPos = pageSplitter.Execute();
 
-				var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
-				dataPos = pageSplitter.Execute();
-
-				DebugValidateTree(tx, State.RootPageNumber);
+			    DebugValidateTree(tx, State.RootPageNumber);
 			}
 			else
 			{
