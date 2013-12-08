@@ -12,6 +12,8 @@ using Xunit;
 
 namespace Raven.Tests.Linq
 {
+	using Xunit.Extensions;
+
 	public class GroupByAndDocumentId : RavenTest
 	{
 		public class Client
@@ -36,34 +38,38 @@ namespace Raven.Tests.Linq
 			NoReport
 		}
 
-		[Fact]
-		public void Test1()
+		[Theory]
+		[PropertyData("Storages")]
+		public void Test1(string requestedStorage)
 		{
-			DoTest<Client_ImportSummaryByDate_1>();
+			DoTest<Client_ImportSummaryByDate_1>(requestedStorage);
 		}
 
-		[Fact]
-		public void Test2()
+		[Theory]
+		[PropertyData("Storages")]
+		public void Test2(string requestedStorage)
 		{
-			DoTest<Client_ImportSummaryByDate_2>();
+			DoTest<Client_ImportSummaryByDate_2>(requestedStorage);
 		}
 
-		[Fact]
-		public void Test3()
+		[Theory]
+		[PropertyData("Storages")]
+		public void Test3(string requestedStorage)
 		{
-			DoTest<Client_ImportSummaryByDate_3>();
+			DoTest<Client_ImportSummaryByDate_3>(requestedStorage);
 		}
 
-		[Fact]
-		public void Test4()
+		[Theory]
+		[PropertyData("Storages")]
+		public void Test4(string requestedStorage)
 		{
-			DoTest<Client_ImportSummaryByDate_4>();
+			DoTest<Client_ImportSummaryByDate_4>(requestedStorage);
 		}
 
-		private void DoTest<TIndex>()
+		private void DoTest<TIndex>(string requestedStorage)
 			where TIndex : AbstractIndexCreationTask, new()
 		{
-			using (var documentStore = NewDocumentStore())
+			using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
 			{
 				documentStore.ExecuteIndex(new TIndex());
 
@@ -154,7 +160,9 @@ namespace Raven.Tests.Linq
 
 				using (var session = documentStore.OpenSession())
 				{
-					var results = session.Query<ImportSummary, TIndex>().ToArray();
+					var results = session.Query<ImportSummary, TIndex>()
+						.OrderBy(x => x.Date)
+						.ToArray();
 
 					Assert.Equal(2, results.Length);
 
@@ -193,7 +201,6 @@ namespace Raven.Tests.Linq
 					                    g.Key.Date,
 					                    Count = g.Sum(x => x.Count)
 				                    };
-
 			}
 		}
 
