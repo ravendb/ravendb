@@ -44,6 +44,12 @@ namespace Voron.Tests.Storage
 				tx.Commit();
 			}
 
+			using (var tx = Env.NewTransaction(TransactionFlags.Read))
+			{
+				var readResult = tx.State.Root.Read(tx, new Slice(BitConverter.GetBytes(1203)));
+				Assert.Null(readResult);
+			}
+
 			if (restartCount >= 2)
 				RestartDatabase();
 

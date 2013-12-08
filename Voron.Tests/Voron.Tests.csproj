@@ -106,6 +106,7 @@
     <Compile Include="Trees\Rebalance.cs" />
     <Compile Include="Trees\Updates.cs" />
     <Compile Include="Util\CrcTests.cs" />
+    <Compile Include="Util\ImmutableAppendOnlyTests.cs" />
     <Compile Include="Util\StreamExtensions.cs" />
   </ItemGroup>
   <ItemGroup>

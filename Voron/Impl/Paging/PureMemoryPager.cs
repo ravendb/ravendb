@@ -7,7 +7,7 @@ namespace Voron.Impl.Paging
 {
 	public unsafe class PureMemoryPager : AbstractPager
 	{
-		private SafeList<Buffer> _buffers = SafeList<Buffer>.Empty;
+		private ImmutableAppendOnlyList<Buffer> _buffers = ImmutableAppendOnlyList<Buffer>.Empty;
 
 		public class Buffer
 		{
@@ -25,7 +25,7 @@ namespace Voron.Impl.Paging
 				Base = (byte*)ptr.ToPointer(),
 				Size = data.Length
 			};
-			_buffers = _buffers.Add(buffer);
+			_buffers = _buffers.Append(buffer);
 			NumberOfAllocatedPages = data.Length / PageSize;
 			PagerState.Release();
 			PagerState = new PagerState(this);
@@ -45,7 +45,7 @@ namespace Voron.Impl.Paging
 				Base = (byte*)ptr.ToPointer(),
 				Size = MinIncreaseSize
 			};
-			_buffers.Add(buffer);
+			_buffers.Append(buffer);
 			NumberOfAllocatedPages = 0;
 			PagerState.Release();
 			PagerState = new PagerState(this);
@@ -82,7 +82,7 @@ namespace Voron.Impl.Paging
 				Marshal.FreeHGlobal(new IntPtr(buffer.Base));
 			    buffer.Handle = IntPtr.Zero;
 		    }
-		    _buffers = SafeList<Buffer>.Empty;
+			_buffers = ImmutableAppendOnlyList<Buffer>.Empty;
 		}
 
 		public override void Sync()
@@ -130,7 +130,7 @@ namespace Voron.Impl.Paging
 				Size = increaseSize
 			};
 
-			_buffers = _buffers.Add(buffer);
+			_buffers = _buffers.Append(buffer);
 
 		    var newPager = new PagerState(this);
 			newPager.AddRef(); // one for the pager

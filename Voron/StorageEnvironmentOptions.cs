@@ -222,9 +222,9 @@ namespace Voron
 				}
 			}
 
-			public override IVirtualPager CreateScratchPager()
+			public override IVirtualPager CreateScratchPager(string name)
 			{
-			    var scratchFile = Path.Combine(_basePath, "scratch.buffers");
+			    var scratchFile = Path.Combine(_basePath, name);
 			    if (File.Exists(scratchFile)) 
                     File.Delete(scratchFile);
 
@@ -323,7 +323,7 @@ namespace Voron
 				NativeMethods.memcpy((byte*)ptr, (byte*)header, sizeof(FileHeader));
 			}
 
-			public override IVirtualPager CreateScratchPager()
+			public override IVirtualPager CreateScratchPager(string name)
 			{
 				return new PureMemoryPager();
 			}
@@ -351,7 +351,7 @@ namespace Voron
 
 		public unsafe abstract void WriteHeader(string filename, FileHeader* header);
 
-		public abstract IVirtualPager CreateScratchPager();
+		public abstract IVirtualPager CreateScratchPager(string name);
 
 		public abstract IVirtualPager OpenJournalPager(long journalNumber);
 	}

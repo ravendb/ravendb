@@ -48,9 +48,9 @@ namespace Voron.Tryout
 				Console.Write("{0,3} ", i);
 				try
 				{
-					using (var s = new Snapshots())
+					using (var s = new Concurrency())
 					{
-						s.SnapshotIssue();
+						s.BatchConcurrencyExceptionShouldBeThrownWhenVersionMismatch();
 					}
 					Console.WriteLine("Success");
 				}

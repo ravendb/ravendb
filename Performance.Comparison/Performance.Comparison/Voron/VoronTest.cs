@@ -98,7 +98,8 @@ namespace Performance.Comparison.Voron
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(dataPath)))
             {
                 var enumerator = data.GetEnumerator();
-                return WriteInternal(operation, itemsPerTransaction, numberOfTransactions, perfTracker, env, enumerator);
+                //return WriteInternal(operation, itemsPerTransaction, numberOfTransactions, perfTracker, env, enumerator);
+                return WriteInternalBatch(operation, enumerator, itemsPerTransaction, numberOfTransactions, perfTracker, env);
             }
         }
 
