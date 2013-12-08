@@ -61,6 +61,15 @@ namespace Voron.Trees
 				_cursor.Update(_cursor.Pages.First, _parentPage);
             }
 
+            if (_page.IsLeaf)
+            {
+                for (int i = 0; i < _parentPage.NumberOfEntries; i++)
+                {
+                    var pg = _tx.GetReadOnlyPage(_parentPage.GetNode(i)->PageNumber);
+                    _treeState.RecentlyWrittenPages.ForgetAbout(pg);                    
+                }
+            }
+
             if (_page.LastSearchPosition >= _page.NumberOfEntries)
             {
                 // when we get a split at the end of the page, we take that as a hint that the user is doing 

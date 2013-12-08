@@ -52,9 +52,10 @@ namespace Voron.Util
 			return (x != null && Equal(key, x.Key));
 		}
 
-		public bool Remove(TKey key)
+		public bool Remove(TKey key, out Node node)
 		{
 			Node current = head;
+            node = null;
 
 			bool found = false;
 			for (var i = MaxHeight - 1; i >= 0; i--)
@@ -65,6 +66,7 @@ namespace Voron.Util
 					if (result == 0)
 					{
 						found = true;
+					    node = current.Next(i);
 						current.SetNext(i, current.Next(i).Next(i));
 
 						break;

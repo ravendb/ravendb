@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -97,7 +98,8 @@ namespace Voron.Trees
 				    {
 				        var nodeToRemove = keyValuePair.Key;
 				        _lru.Remove(nodeToRemove);
-				        _list.Remove(nodeToRemove.Key);
+				        SkipList<FoundPage, FoundPage>.Node _;
+				        _list.Remove(nodeToRemove.Key, out _);
 				    }
 
 				    foreach (var reference in _lru)
@@ -162,5 +164,19 @@ namespace Voron.Trees
 			_list = new SkipList<FoundPage>(FoundPagesComparer.Instance);
 			_lru.Clear();
 		}
+
+	    public void ForgetAbout(Page page)
+	    {
+	        Debug.Assert(page.NumberOfEntries > 0);
+
+	        var find = Find(page.GetNodeKey(0));
+	        if (find == null)
+	            return;
+
+	        SkipList<FoundPage, FoundPage>.Node node;
+	        if (_list.Remove(find, out node))
+	            _lru.Remove(node);
+
+	    }
 	}
 }
