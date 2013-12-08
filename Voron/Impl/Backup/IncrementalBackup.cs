@@ -199,7 +199,7 @@ namespace Voron.Impl.Backup
 
 						var reader = new JournalReader(pager, recoveryPager, 0, lastTxHeader);
 
-                        while (reader.ReadOneTransaction())
+                        while (reader.ReadOneTransaction(env.Options))
                         {
                             lastTxHeader = reader.LastTransactionHeader;
                         }

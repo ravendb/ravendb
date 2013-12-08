@@ -120,7 +120,7 @@ namespace Voron.Impl.Journal
 
 					var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
 					var journalReader = new JournalReader(pager, recoveryPager, lastSyncedTransactionId, transactionHeader);
-					journalReader.RecoverAndValidate();
+					journalReader.RecoverAndValidate(_env.Options);
 
 					// after reading all the pages from the journal file, we need to move them to the scratch buffers.
 					var ptt = new Dictionary<long, JournalFile.PagePosition>();

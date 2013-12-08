@@ -75,10 +75,7 @@ namespace Voron.Util
 {
 	public unsafe class LZ4
 	{
-		private readonly ushort[] _hashTableLt65k = new ushort[HASH64K_TABLESIZE];
-		private readonly uint[] _hashTable = new uint[HASH_TABLESIZE];
-
-		public int Encode64(
+		public static int Encode64(
 				byte* input,
 				byte* output,
 				int inputLength,
@@ -86,13 +83,13 @@ namespace Voron.Util
 		{
 			if (inputLength < LZ4_64KLIMIT)
 			{
-				fixed (ushort* h = _hashTableLt65k)
+				fixed (ushort* h = new ushort[HASH64K_TABLESIZE])
 				{
 					return LZ4_compress64kCtx_64(h, input, output, inputLength, outputLength);
 				}
 			}
 
-			fixed (uint* h = _hashTable)
+			fixed (uint* h = new uint[HASH_TABLESIZE])
 			{
 				return LZ4_compressCtx_64(h, input, output, inputLength, outputLength);
 			}

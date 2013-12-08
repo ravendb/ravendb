@@ -101,7 +101,7 @@ namespace Voron
             {
                 var message = _journal.Files.Count == 0 ? "Unrecoverable database" : "Database recovered partially. Some data was lost.";
 
-                _options.InvokeRecoveryError(this, message);
+                _options.InvokeRecoveryError(this, message, null);
             }
 
             var entry = _headerAccessor.CopyHeader();

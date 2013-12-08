@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Voron.Impl.Paging;
@@ -43,13 +44,13 @@ namespace Voron.Impl.Journal
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
 
-        public bool ReadOneTransaction(bool checkCrc = true)
+        public bool ReadOneTransaction(StorageEnvironmentOptions options,bool checkCrc = true)
         {
             if (_readingPage >= _pager.NumberOfAllocatedPages)
                 return false;
 
             TransactionHeader* current;
-            if (!TryReadAndValidateHeader(out current))
+            if (!TryReadAndValidateHeader(options, out current))
                 return false;
 
             var compressedPages = (current->CompressedSize / AbstractPager.PageSize) + (current->CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
@@ -69,13 +70,16 @@ namespace Voron.Impl.Journal
             var dataPage = _recoveryPager.GetWritable(_recoveryPage);
 
             NativeMethods.memset(dataPage.Base, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
-			var compressedSize = LZ4.Decode64(_pager.AcquirePagePointer(_readingPage), current->CompressedSize, dataPage.Base, current->UncompressedSize, true);
-
-            if (compressedSize != current->CompressedSize) //Compression error. Probably file is corrupted
+            try
             {
+                LZ4.Decode64(_pager.AcquirePagePointer(_readingPage), current->CompressedSize, dataPage.Base, current->UncompressedSize, true);
+            }
+            catch (Exception e)
+            {
+                options.InvokeRecoveryError(this, "Could not de-compress, invalid data", e);
                 RequireHeaderUpdate = true;
 
-				return false;
+                return false;   
             }
 
             var tempTransactionPageTranslaction = new Dictionary<long, JournalFile.PagePosition>();
@@ -117,6 +121,8 @@ namespace Voron.Impl.Journal
             if (checkCrc && crc != current->Crc)
             {
                 RequireHeaderUpdate = true;
+                options.InvokeRecoveryError(this, "Invalid CRC signature for transaction " + current->TransactionId,
+                    null);
 
                 //undo changes to those variables if CRC doesn't match
                 _nextWritePage = writePageBeforeCrcCheck;
@@ -141,9 +147,9 @@ namespace Voron.Impl.Journal
             return true;
         }
 
-		public void RecoverAndValidate()
+        public void RecoverAndValidate(StorageEnvironmentOptions options)
         {
-            while (ReadOneTransaction())
+            while (ReadOneTransaction(options))
             {
             }
         }
@@ -153,7 +159,7 @@ namespace Voron.Impl.Journal
             get { return _transactionPageTranslation; }
         }
 
-        private bool TryReadAndValidateHeader(out TransactionHeader* current)
+        private bool TryReadAndValidateHeader(StorageEnvironmentOptions options,out TransactionHeader* current)
         {
             current = (TransactionHeader*)_pager.Read(_readingPage).Base;
 
@@ -166,6 +172,12 @@ namespace Voron.Impl.Journal
                 // this log file and move to the next one. 
 
 				RequireHeaderUpdate = current->HeaderMarker != 0;
+                if (RequireHeaderUpdate)
+                {
+                    options.InvokeRecoveryError(this,
+                        "Transaction " + current->TransactionId +
+                        " header marker was set to garbage value, file is probably corrupted", null);
+                }
 
                 return false;
             }
@@ -176,6 +188,9 @@ namespace Voron.Impl.Journal
             {
                 // uncommitted transaction, probably
                 RequireHeaderUpdate = true;
+                options.InvokeRecoveryError(this,
+                        "Transaction " + current->TransactionId +
+                        " was not committed", null);
                 return false;
             }
 

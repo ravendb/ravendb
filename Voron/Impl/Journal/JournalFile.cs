@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Impl.Paging;
@@ -23,8 +24,8 @@ namespace Voron.Impl.Journal
         private long _writePage;
         private bool _disposed;
         private int _refs;
-	    private readonly PageTable _pageTranslationTable = new PageTable();
-		private readonly List<PagePosition> _unusedPages = new List<PagePosition>();
+        private readonly PageTable _pageTranslationTable = new PageTable();
+        private readonly List<PagePosition> _unusedPages = new List<PagePosition>();
 
         private readonly object _locker = new object();
 
@@ -81,12 +82,12 @@ namespace Voron.Impl.Journal
             get { return _journalWriter.NumberOfAllocatedPages - _writePage; }
         }
 
-	    internal IJournalWriter JournalWriter
-	    {
-			get { return _journalWriter; }
-	    }
+        internal IJournalWriter JournalWriter
+        {
+            get { return _journalWriter; }
+        }
 
-		public PageTable PageTranslationTable
+        public PageTable PageTranslationTable
         {
             get { return _pageTranslationTable; }
         }
@@ -112,13 +113,13 @@ namespace Voron.Impl.Journal
 
         public JournalSnapshot GetSnapshot()
         {
-	        var lastTxId = _pageTranslationTable.GetLastSeenTransaction();
+            var lastTxId = _pageTranslationTable.GetLastSeenTransaction();
             return new JournalSnapshot
             {
                 Number = Number,
                 AvailablePages = AvailablePages,
                 PageTranslationTable = _pageTranslationTable,
-				LastTransaction = lastTxId
+                LastTransaction = lastTxId
             };
         }
 
@@ -134,24 +135,24 @@ namespace Voron.Impl.Journal
 
         public bool ReadTransaction(long pos, TransactionHeader* txHeader)
         {
-            return _journalWriter.Read(pos, (byte*) txHeader, sizeof (TransactionHeader));
+            return _journalWriter.Read(pos, (byte*)txHeader, sizeof(TransactionHeader));
         }
 
-		public Task Write(Transaction tx, int numberOfPages, IVirtualPager compressionPager)
+        public Task Write(Transaction tx, int numberOfPages, IVirtualPager compressionPager)
         {
             var txPages = tx.GetTransactionPages();
 
             var ptt = new Dictionary<long, PagePosition>();
-			var unused = new List<PagePosition>();
-			var writePagePos = _writePage;
+            var unused = new List<PagePosition>();
+            var writePagePos = _writePage;
 
 
-	        var pages = CompressPages(tx, numberOfPages, compressionPager, txPages);
+            var pages = CompressPages(tx, numberOfPages, compressionPager, txPages);
 
-			UpdatePageTranslationTable(tx, txPages, unused, ptt);
+            UpdatePageTranslationTable(tx, txPages, unused, ptt);
 
             lock (_locker)
-			{
+            {
                 _writePage += pages.Length;
                 _pageTranslationTable.SetItems(tx, ptt);
                 _unusedPages.AddRange(unused);
@@ -160,85 +161,104 @@ namespace Voron.Impl.Journal
             return _journalWriter.WriteGatherAsync(writePagePos * AbstractPager.PageSize, pages);
         }
 
-		private unsafe void UpdatePageTranslationTable(Transaction tx, List<PageFromScratchBuffer> txPages, List<PagePosition> unused, Dictionary<long, PagePosition> ptt)
-		{
-			for (int index = 1; index < txPages.Count; index++)
-			{
-				var txPage = txPages[index];
-				var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
-				var pageNumber = ((PageHeader*)scratchPage.Base)->PageNumber;
-					PagePosition value;
-					if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
-					{
-						unused.Add(value);
-					}
-
-					ptt[pageNumber] = new PagePosition
-					{
-						ScratchPos = txPage.PositionInScratchBuffer,
-					JournalPos = -1, // needed only during recovery and calculated there
-						TransactionId = tx.Id
-					};
-			}
-		}
-
-		private static byte*[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager, List<PageFromScratchBuffer> txPages)
-					{
-			// numberOfPages include the tx header page, which we don't compress
-			// so we ensure we have twice as much as we need, so we have an extra
-			// space in the end if we need it
-
-			compressionPager.EnsureContinuous(tx, 0, numberOfPages * 2);
-			var tempBuffer = compressionPager.AcquirePagePointer(0);
-			NativeMethods.memset(tempBuffer, 0, (numberOfPages * 2) * AbstractPager.PageSize);
-
-			var write = tempBuffer;
-
-			for (int index = 1; index < txPages.Count; index++)
-			{
-				var txPage = txPages[index];
-				var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
-				var count = txPage.NumberOfPages*AbstractPager.PageSize;
-				NativeMethods.memcpy(write, scratchPage.Base, count);
-				write += count;
-				}
-
-			var compressionBuffer = compressionPager.AcquirePagePointer(numberOfPages - 1);
-
-			var len = DoCompression(numberOfPages, tempBuffer, compressionBuffer);
-			var compressedPages = (len/AbstractPager.PageSize) + (len%AbstractPager.PageSize == 0 ? 0 : 1);
-
-			var pages = new byte*[compressedPages + 1];
-
-			var txHeaderBase = tx.Environment.ScratchBufferPool.ReadPage(txPages[0].PositionInScratchBuffer).Base;
-			var txHeader = (TransactionHeader*)txHeaderBase;
-
-			txHeader->Compressed = true;
-			txHeader->CompressedSize = len;
-			txHeader->UncompressedSize = numberOfPages * AbstractPager.PageSize;
-
-			pages[0] = txHeaderBase;
-			for (int index = 0; index < compressedPages; index++)
+        private unsafe void UpdatePageTranslationTable(Transaction tx, List<PageFromScratchBuffer> txPages, List<PagePosition> unused, Dictionary<long, PagePosition> ptt)
+        {
+            for (int index = 1; index < txPages.Count; index++)
             {
-				pages[index + 1] = compressionBuffer + (index * AbstractPager.PageSize);
-            }
+                var txPage = txPages[index];
+                var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
+                var pageNumber = ((PageHeader*)scratchPage.Base)->PageNumber;
+                PagePosition value;
+                if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
+                {
+                    unused.Add(value);
+                }
 
-			return pages;
+                ptt[pageNumber] = new PagePosition
+                {
+                    ScratchPos = txPage.PositionInScratchBuffer,
+                    JournalPos = -1, // needed only during recovery and calculated there
+                    TransactionId = tx.Id
+                };
+            }
         }
 
-		private static int DoCompression(int numberOfPages, byte* tempBuffer, byte* compressionBuffer)
+        private static byte*[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager, List<PageFromScratchBuffer> txPages)
         {
-			return LZ4.Decode64(tempBuffer,
-				(numberOfPages - 1) * AbstractPager.PageMaxSpace,
-				compressionBuffer,
-				numberOfPages * AbstractPager.PageSize,
-				true);
-		}
+            // numberOfPages include the tx header page, which we don't compress
+            compressionPager.EnsureContinuous(tx, 0, (numberOfPages * 2) + 1);
+            var tempBuffer = compressionPager.AcquirePagePointer(0);
+            NativeMethods.memset(tempBuffer, 0, ((numberOfPages * 2) + 1) * AbstractPager.PageSize);
+
+            var write = tempBuffer;
+
+            for (int index = 1; index < txPages.Count; index++)
+            {
+                var txPage = txPages[index];
+                var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
+                var count = txPage.NumberOfPages * AbstractPager.PageSize;
+                NativeMethods.memcpy(write, scratchPage.Base, count);
+                write += count;
+            }
+
+            var compressionBuffer = compressionPager.AcquirePagePointer(numberOfPages - 1);
+
+            var len = DoCompression(numberOfPages, tempBuffer, compressionBuffer);
+            var compressedPages = (len / AbstractPager.PageSize) + (len % AbstractPager.PageSize == 0 ? 0 : 1);
+
+            var pages = new byte*[compressedPages + 1];
+
+            var txHeaderBase = tx.Environment.ScratchBufferPool.ReadPage(txPages[0].PositionInScratchBuffer).Base;
+            var txHeader = (TransactionHeader*)txHeaderBase;
+
+            txHeader->Compressed = true;
+            txHeader->CompressedSize = len;
+            txHeader->UncompressedSize = (numberOfPages - 1) * AbstractPager.PageSize;
+
+            pages[0] = txHeaderBase;
+            for (int index = 0; index < compressedPages; index++)
+            {
+                pages[index + 1] = compressionBuffer + (index * AbstractPager.PageSize);
+            }
+
+            return pages;
+        }
+
+        private static int DoCompression(int numberOfPages, byte* tempBuffer, byte* compressionBuffer)
+        {
+            var doCompression = LZ4.Encode64(
+                tempBuffer,
+                compressionBuffer,
+                (numberOfPages - 1) * AbstractPager.PageSize,
+                (numberOfPages + 2) * AbstractPager.PageSize);
+
+#if DEBUG
+            var mem = Marshal.AllocHGlobal((numberOfPages - 1) * AbstractPager.PageSize);
+            try
+            {
+                var len = LZ4.Decode64(compressionBuffer, doCompression, (byte*)mem.ToPointer(),
+                (numberOfPages - 1) * AbstractPager.PageSize, true);
+
+                var result = NativeMethods.memcmp(tempBuffer, (byte*)mem.ToPointer(),
+                    (numberOfPages - 1) * AbstractPager.PageSize);
+
+                Debug.Assert(len == ((numberOfPages - 1) * AbstractPager.PageSize));
+                Debug.Assert(result == 0);
+
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(mem);
+            }
+#endif
+
+            return doCompression;
+        }
 
         public void InitFrom(JournalReader journalReader, Dictionary<long, PagePosition> pageTranslationTable)
         {
             _writePage = journalReader.NextWritePage;
-			_pageTranslationTable.SetItemsNoTransaction(pageTranslationTable);
+            _pageTranslationTable.SetItemsNoTransaction(pageTranslationTable);
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
@@ -247,10 +267,10 @@ namespace Voron.Impl.Journal
         {
             List<KeyValuePair<long, PagePosition>> unusedPages;
 
-	        List<PagePosition> unusedAndFree;
+            List<PagePosition> unusedAndFree;
             lock (_locker)
             {
-	            unusedAndFree = _unusedPages.FindAll(position => position.TransactionId < oldestActiveTransaction);
+                unusedAndFree = _unusedPages.FindAll(position => position.TransactionId < oldestActiveTransaction);
                 _unusedPages.RemoveAll(position => position.TransactionId < oldestActiveTransaction);
 
                 unusedPages = _pageTranslationTable.AllPagesOlderThan(oldestActiveTransaction);

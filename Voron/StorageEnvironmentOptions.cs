@@ -16,16 +16,16 @@ namespace Voron
 	{
 		public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
 
-		public void InvokeRecoveryError(object sender, string message)
+		public void InvokeRecoveryError(object sender, string message, Exception e)
 		{
 			var handler = OnRecoveryError;
 			if (handler == null)
 			{
 				throw new InvalidDataException(message + Environment.NewLine +
-					 "An exception has been thrown because there isn't a listener to the OnRecoveryError event on the storage options.");
+					 "An exception has been thrown because there isn't a listener to the OnRecoveryError event on the storage options.", e);
 			}
 
-			handler(this, new RecoveryErrorEventArgs(message));
+			handler(this, new RecoveryErrorEventArgs(message, e));
 		}
 
 		public long MaxLogFileSize
