@@ -113,6 +113,9 @@ namespace Voron.Impl
 			_txHeader->PageCount = -1;
 			_txHeader->Crc = 0;
 			_txHeader->TxMarker = TransactionMarker.None;
+			_txHeader->Compressed = false;
+			_txHeader->CompressedSize = 0;
+			_txHeader->UncompressedSize = 0;
 
 			_allocatedPagesInTransaction = 0;
 			_overflowPagesInTransaction = 0;
