@@ -38,8 +38,10 @@ namespace Voron
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private ScratchBufferPool _scratchBufferPool;
+	    private DebugJournal _debugJournal;
 
-        public TemporaryPage TemporaryPage { get; private set; }
+
+	    public TemporaryPage TemporaryPage { get; private set; }
 
 
         public TransactionMergingWriter Writer { get; private set; }
@@ -50,6 +52,18 @@ namespace Voron
         {
             return new SnapshotReader(NewTransaction(TransactionFlags.Read));
         }
+
+#if DEBUG
+	    public StorageEnvironment(StorageEnvironmentOptions options,string debugJournalName)
+			: this(options)
+	    {
+			DebugJournal = new DebugJournal(debugJournalName,this);
+			
+			if(Writer != null)
+				Writer.Dispose();
+			Writer = new TransactionMergingWriter(this, DebugJournal);
+	    }
+#endif
 
         public unsafe StorageEnvironment(StorageEnvironmentOptions options)
         {
@@ -179,7 +193,38 @@ namespace Voron
             get { return _journal; }
         }
 
-        public void DeleteTree(Transaction tx, string name)
+	    public bool IsDebugRecording
+	    {
+		    get
+		    {
+			    if (DebugJournal == null)
+				    return false;
+			    return DebugJournal.IsRecording;
+		    }
+		    set
+		    {
+			    if (DebugJournal != null)
+				    DebugJournal.IsRecording = value;
+		    }
+	    }
+
+	    public DebugJournal DebugJournal
+	    {
+		    get { return _debugJournal; }
+		    set
+		    {
+			    _debugJournal = value;
+
+			    if (Writer != null && value != null)
+			    {
+				    Writer.Dispose();
+				    Writer = new TransactionMergingWriter(this, _debugJournal);
+			    }
+
+		    }
+	    }
+
+	    public void DeleteTree(Transaction tx, string name)
         {
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");
@@ -227,11 +272,17 @@ namespace Voron
             tree.State.IsModified = true;
             tx.State.AddTree(name, tree);
 
+			if(IsDebugRecording)
+				DebugJournal.RecordAction(DebugActionType.CreateTree, Slice.Empty,name,Stream.Null);
+
             return tree;
         }
 
         public void Dispose()
         {
+			if(DebugJournal != null)
+				DebugJournal.Dispose();
+
             _cancellationTokenSource.Cancel();
             _flushWriter.Set();
 
