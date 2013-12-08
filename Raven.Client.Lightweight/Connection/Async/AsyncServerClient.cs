@@ -587,6 +587,10 @@ namespace Raven.Client.Connection.Async
 			{
 				await request.WriteAsync(document.ToString());
 			}
+			catch (ErrorResponseException)
+			{
+				throw;
+			}
 			catch (Exception e)
 			{
 				throw new InvalidOperationException("Unable to write to server", e);
