@@ -1,4 +1,5 @@
-﻿using Voron.Util;
+﻿using System.Threading.Tasks;
+using Voron.Util;
 
 namespace Voron.Impl
 {
@@ -16,58 +17,70 @@ namespace Voron.Impl
 		private readonly StorageEnvironment _env;
 
 		private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites;
+		private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+		private readonly ManualResetEventSlim _hasWritesEvent = new ManualResetEventSlim();
+		private readonly ManualResetEventSlim _stopWrites = new ManualResetEventSlim();
 
-		private readonly ConditionVariableFactory _conditionVariableFactory = new ConditionVariableFactory();
+		private readonly ConcurrentQueue<ManualResetEventSlim> _eventsBuffer = new ConcurrentQueue<ManualResetEventSlim>();
+
+		private readonly Lazy<Task> _backgroundTask;
 
 		internal TransactionMergingWriter(StorageEnvironment env)
 		{
 			_env = env;
 			_pendingWrites = new ConcurrentQueue<OutstandingWrite>();
+			_stopWrites.Set();
+
+			_backgroundTask = new Lazy<Task>(() => Task.Run(() => BackgroundWriter(), _cancellationTokenSource.Token));
 		}
 
-		public IDisposable PretendWriteStarted(int count)
+		public IDisposable StopWrites()
 		{
-			_pendingWrites.Enqueue(new OutstandingWrite(new WriteBatch()));
+			_stopWrites.Reset();
 
-			return new DisposableAction(() =>
-			{
-				OutstandingWrite write;
-				_pendingWrites.TryDequeue(out write);
-				SpinWait.SpinUntil(() => _pendingWrites.Count == count);
-				while (_pendingWrites.Count == count)
-				{
-					foreach (var outstandingWrite in _pendingWrites)
-					{
-						outstandingWrite.ConditionVariable.Wake();
-					}
-				}
-			});
+			return new DisposableAction(() => _stopWrites.Set());
 		}
 
 		public void Write(WriteBatch batch)
 		{
-			if (batch.Operations.Count == 0)
+			if (batch.IsEmpty)
 				return;
 
-			using (var mine = new OutstandingWrite(batch)
-			{
-				ConditionVariable = _conditionVariableFactory.Create()
-			})
+			EnsureValidBackgroundTaskState();
+
+			using (var mine = new OutstandingWrite(batch, this))
 			{
 				_pendingWrites.Enqueue(mine);
+				_hasWritesEvent.Set();
 
-				using (_conditionVariableFactory.EnterCriticalSection())
+				mine.Wait();
+			}
+		}
+
+		private void EnsureValidBackgroundTaskState()
+		{
+			var backgroundTask = _backgroundTask.Value;
+			if (backgroundTask.IsCanceled || backgroundTask.IsFaulted)
+				backgroundTask.Wait(); // would throw
+			if (backgroundTask.IsCompleted)
+				throw new InvalidOperationException("The write background task has already completed!");
+		}
+
+		private void BackgroundWriter()
+		{
+			var cancellationToken = _cancellationTokenSource.Token;
+			while (cancellationToken.IsCancellationRequested == false)
+			{
+				_stopWrites.Wait(cancellationToken);
+				_hasWritesEvent.Reset();
+
+				OutstandingWrite write;
+				while (_pendingWrites.TryPeek(out write))
 				{
-					while (mine.Done() == false && _pendingWrites.Peek() != mine)
-					{
-						mine.ConditionVariable.Wait(-1);
-					}
-
-					if (mine.Done())
-						return;
-
-					HandleActualWrites(mine);
+					HandleActualWrites(write);
 				}
+
+				_hasWritesEvent.Wait(cancellationToken);
 			}
 		}
 
@@ -76,46 +89,59 @@ namespace Voron.Impl
 			List<OutstandingWrite> writes = null;
 			try
 			{
-
 				writes = BuildBatchGroup(mine);
-
 				using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
 				{
 					HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations));
 
-					tx.Commit();
+				    tx.Commit().ContinueWith(task =>
+				    {
+				        if (task.IsFaulted)
+				        {
+				            HandleWriteFailure(writes, task.Exception);
+				        }
+				        else
+				        {
+                            foreach (var write in writes)
+                                write.Completed();
+				        }
+				    });
 				}
-
-				foreach (var write in writes)
-					write.SetSuccess();
 			}
-			catch (Exception)
+			catch (Exception e)
 			{
-				if (writes == null || writes.Count <= 1)
-					throw;
-
-				SplitWrites(writes);
+				HandleWriteFailure(writes, e);
 			}
 			finally
 			{
 				Finalize(writes);
 			}
-
-			Debug.Assert(mine.Status != OutstandingWriteStatus.Pending);
-			mine.Done();
 		}
 
-		private void Finalize(IEnumerable<OutstandingWrite> writes)
-		{
-			if (writes != null)
-			{
-				foreach (var write in writes)
-				{
-					Debug.Assert(_pendingWrites.Peek() == write);
+	    private void HandleWriteFailure(List<OutstandingWrite> writes, Exception e)
+	    {
+	        if (writes == null || writes.Count == 0)
+	            throw new InvalidOperationException("Couldn't get items to write", e);
 
-					OutstandingWrite pendingWrite;
-					_pendingWrites.TryDequeue(out pendingWrite);
-				}
+	        if (writes.Count == 1)
+	        {
+	            writes[0].Errorred(e);
+	        }
+
+	        SplitWrites(writes);
+	    }
+
+	    private void Finalize(IEnumerable<OutstandingWrite> writes)
+		{
+			if (writes == null)
+				return;
+			Debug.Assert(_pendingWrites.Count > 0);
+			foreach (var write in writes)
+			{
+				Debug.Assert(_pendingWrites.Peek() == write);
+
+				OutstandingWrite pendingWrite;
+				_pendingWrites.TryDequeue(out pendingWrite);
 			}
 		}
 
@@ -124,7 +150,11 @@ namespace Voron.Impl
 			foreach (var g in operations.GroupBy(x => x.TreeName))
 			{
 				var tree = tx.State.GetTree(g.Key, tx);
-				foreach (var operation in g)
+				// note that the ordering is done purely for performance reasons
+				// we rely on the fact that there can be only a single operation per key in
+				// each batch, and that we don't make any guarantees regarding ordering between
+				// concurrent merged writes
+				foreach (var operation in g.OrderBy(x => x.Key, SliceEqualityComparer.Instance))
 				{
 					operation.Reset();
 
@@ -160,12 +190,12 @@ namespace Voron.Impl
 						HandleOperations(tx, write.Batch.Operations);
 						tx.Commit();
 
-						write.SetSuccess();
+						write.Completed();
 					}
 				}
 				catch (Exception e)
 				{
-					write.SetError(e);
+					write.Errorred(e);
 				}
 			}
 		}
@@ -209,66 +239,83 @@ namespace Voron.Impl
 
 		private class OutstandingWrite : IDisposable
 		{
-			private Exception exception;
+			private readonly TransactionMergingWriter _transactionMergingWriter;
+			private Exception _exception;
+			private readonly ManualResetEventSlim _completed;
 
-			public OutstandingWrite(WriteBatch batch)
+			public OutstandingWrite(WriteBatch batch, TransactionMergingWriter transactionMergingWriter)
 			{
+				_transactionMergingWriter = transactionMergingWriter;
 				Batch = batch;
 				Size = batch.Size();
-				Status = OutstandingWriteStatus.Pending;
+
+				if (transactionMergingWriter._eventsBuffer.TryDequeue(out _completed) == false)
+					_completed = new ManualResetEventSlim();
+				_completed.Reset();
 			}
 
 			public WriteBatch Batch { get; private set; }
 
 			public long Size { get; private set; }
 
-			public OutstandingWriteStatus Status { get; private set; }
-			public ConditionVariableFactory.ConditionVariable ConditionVariable { get; set; }
-
-			public void SetSuccess()
-			{
-				Status = OutstandingWriteStatus.Success;
-				exception = null;
-				ConditionVariable.Wake();
-			}
-
-			public void SetError(Exception e)
-			{
-				Status = OutstandingWriteStatus.Error;
-				exception = e;
-				ConditionVariable.Wake();
-			}
-
-			public bool Done()
-			{
-				if (Status == OutstandingWriteStatus.Success)
-					return true;
-
-				if (Status == OutstandingWriteStatus.Pending)
-					return false;
-
-				throw exception;
-			}
-
 			public void Dispose()
 			{
 				Batch.Dispose();
-				if (ConditionVariable != null)
-					ConditionVariable.Dispose();
+
+				_transactionMergingWriter._eventsBuffer.Enqueue(_completed);
+			}
+
+			public void Errorred(Exception e)
+			{
+				_exception = e;
+				_completed.Set();
+			}
+
+			public void Completed()
+			{
+				_completed.Set();
+			}
+
+			public void Wait()
+			{
+				_completed.Wait();
+				if (_exception != null)
+				{
+					throw new AggregateException("Error when executing write", _exception);
+				}
 			}
 		}
 
-		private enum OutstandingWriteStatus
-		{
-			Pending,
-			Success,
-			Error
-		}
-
-
 		public void Dispose()
 		{
-			_conditionVariableFactory.Dispose();
+			_cancellationTokenSource.Cancel();
+			_hasWritesEvent.Set();
+			_stopWrites.Set();
+			
+		    try
+		    {
+                if (_backgroundTask.IsValueCreated == false)
+                    return;
+		        _backgroundTask.Value.Wait();
+		    }
+		    catch (TaskCanceledException)
+		    {
+		    }
+		    catch (AggregateException e)
+		    {
+		        if (e.InnerException is TaskCanceledException)
+		            return;
+		        throw;
+		    }
+		    finally
+		    {
+		        foreach (var manualResetEventSlim in _eventsBuffer)
+		        {
+		            manualResetEventSlim.Dispose();
+		        }   
+                _hasWritesEvent.Dispose();
+                _stopWrites.Dispose();
+		    }
 		}
 	}
 }

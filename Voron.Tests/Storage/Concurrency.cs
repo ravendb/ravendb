@@ -1,4 +1,6 @@
-﻿namespace Voron.Tests.Storage
+﻿using System;
+
+namespace Voron.Tests.Storage
 {
 	using System.IO;
 
@@ -217,7 +219,7 @@
 			var batch2 = new WriteBatch();
             batch2.Add("key/1", StreamFor("123"), Constants.RootTreeName, 0);
 
-			var e = Assert.Throws<ConcurrencyException>(() => Env.Writer.Write(batch2));
+			var e = Assert.Throws<AggregateException>(() => Env.Writer.Write(batch2)).InnerException;
 			Assert.Equal("Cannot add 'key/1'. Version mismatch. Expected: 0. Actual: 1.", e.Message);
 		}
 
@@ -232,13 +234,13 @@
 			var batch2 = new WriteBatch();
             batch2.Add("key/1", StreamFor("123"), Constants.RootTreeName, 2);
 
-			var e = Assert.Throws<ConcurrencyException>(() => Env.Writer.Write(batch2));
+			var e = Assert.Throws<AggregateException>(() => Env.Writer.Write(batch2)).InnerException;
 			Assert.Equal("Cannot add 'key/1'. Version mismatch. Expected: 2. Actual: 1.", e.Message);
 
 			var batch3 = new WriteBatch();
             batch3.Delete("key/1", Constants.RootTreeName, 2);
 
-			e = Assert.Throws<ConcurrencyException>(() => Env.Writer.Write(batch3));
+			e = Assert.Throws<AggregateException>(() => Env.Writer.Write(batch3)).InnerException;
 			Assert.Equal("Cannot delete 'key/1'. Version mismatch. Expected: 2. Actual: 1.", e.Message);
 		}
 

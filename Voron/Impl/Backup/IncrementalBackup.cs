@@ -65,7 +65,7 @@ namespace Voron.Impl.Backup
 
 						for (var journalNum = firstJournalToBackup; journalNum <= backupInfo.LastCreatedJournal; journalNum++)
 						{
-							var journalFile = env.Journal.Files.Find(x => x.Number == journalNum); // first check journal files currently being in use
+							var journalFile = env.Journal.Files.FirstOrDefault(x => x.Number == journalNum); // first check journal files currently being in use
 							if (journalFile == null)
 							{
 								long journalSize;
