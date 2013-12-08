@@ -63,11 +63,7 @@ namespace Voron.Trees
 
             if (_page.IsLeaf)
             {
-                for (int i = 0; i < _parentPage.NumberOfEntries; i++)
-                {
-                    var pg = _tx.GetReadOnlyPage(_parentPage.GetNode(i)->PageNumber);
-                    _treeState.RecentlyWrittenPages.ForgetAbout(pg);                    
-                }
+                _treeState.RecentlyWrittenPages.Clear();
             }
 
             if (_page.LastSearchPosition >= _page.NumberOfEntries)

@@ -164,19 +164,5 @@ namespace Voron.Trees
 			_list = new SkipList<FoundPage>(FoundPagesComparer.Instance);
 			_lru.Clear();
 		}
-
-	    public void ForgetAbout(Page page)
-	    {
-	        Debug.Assert(page.NumberOfEntries > 0);
-
-	        var find = Find(page.GetNodeKey(0));
-	        if (find == null)
-	            return;
-
-	        SkipList<FoundPage, FoundPage>.Node node;
-	        if (_list.Remove(find, out node))
-	            _lru.Remove(node);
-
-	    }
 	}
 }
