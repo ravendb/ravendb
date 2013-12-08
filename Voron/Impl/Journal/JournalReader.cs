@@ -6,8 +6,6 @@ using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
-	using Lz4Net;
-
 	public unsafe class JournalReader
 	{
 		private readonly IVirtualPager _pager;
@@ -52,7 +50,7 @@ namespace Voron.Impl.Journal
 			var transactionTable = new Dictionary<long, JournalFile.PagePosition>();
 
 			TransactionHeader* current;
-			if (!TryReadAndValidateHeader(out current)) 
+			if (!TryReadAndValidateHeader(out current))
 				return false;
 
 			var compressedPages = (current->CompressedSize / AbstractPager.PageSize) + (current->CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
@@ -72,15 +70,15 @@ namespace Voron.Impl.Journal
 			var dataPage = _recoveryPager.GetWritable(_recoveryPage);
 
 			NativeMethods.memset(dataPage.Base, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
-			var compressedSize = Lz4.LZ4_uncompress(_pager.Read(_readingPage).Base, dataPage.Base, current->UncompressedSize);
+			var compressedSize = LZ4.Decode64(_pager.AcquirePagePointer(_readingPage), current->CompressedSize, dataPage.Base, current->UncompressedSize, true);
 
 			if (compressedSize != current->CompressedSize) //Compression error. Probably file is corrupted
 			{
 				RequireHeaderUpdate = true;
 
-				return false; 
+				return false;
 			}
-				
+
 
 			for (var i = 0; i < current->PageCount; i++)
 			{
@@ -92,7 +90,7 @@ namespace Voron.Impl.Journal
 				transactionTable[page.PageNumber] = new JournalFile.PagePosition
 				{
 					JournalPos = _recoveryPage,
-                    TransactionId = current->TransactionId
+					TransactionId = current->TransactionId
 				};
 
 				if (page.IsOverflow)
@@ -100,7 +98,7 @@ namespace Voron.Impl.Journal
 					var numOfPages = _recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
 					_recoveryPage += numOfPages;
 
-					if(checkCrc)
+					if (checkCrc)
 						crc = Crc.Extend(crc, page.Base, 0, numOfPages * AbstractPager.PageSize);
 				}
 				else
@@ -134,7 +132,7 @@ namespace Voron.Impl.Journal
 			return true;
 		}
 
-	    public void RecoverAndValidate()
+		public void RecoverAndValidate()
 		{
 			while (ReadOneTransaction())
 			{
@@ -152,23 +150,23 @@ namespace Voron.Impl.Journal
 
 			if (current->HeaderMarker != Constants.TransactionHeaderMarker)
 			{
-                // not a transaction page, 
+				// not a transaction page, 
 
-                // if the header marker is zero, we are probably in the area at the end of the log file, and have no additional log records
-                // to read from it. This can happen if the next transaction was too big to fit in the current log file. We stop reading
-                // this log file and move to the next one. 
+				// if the header marker is zero, we are probably in the area at the end of the log file, and have no additional log records
+				// to read from it. This can happen if the next transaction was too big to fit in the current log file. We stop reading
+				// this log file and move to the next one. 
 
-			    RequireHeaderUpdate = current->HeaderMarker != 0;
+				RequireHeaderUpdate = current->HeaderMarker != 0;
 
-                return false;
+				return false;
 			}
 
 			ValidateHeader(current, LastTransactionHeader);
 
 			if (current->TxMarker.HasFlag(TransactionMarker.Commit) == false)
 			{
-			    // uncommitted transaction, probably
-			    RequireHeaderUpdate = true;
+				// uncommitted transaction, probably
+				RequireHeaderUpdate = true;
 				return false;
 			}
 
@@ -178,26 +176,26 @@ namespace Voron.Impl.Journal
 
 		private void ValidateHeader(TransactionHeader* current, TransactionHeader* previous)
 		{
-		    if (current->TransactionId < 0)
-		        throw new InvalidDataException("Transaction id cannot be less than 0 (Tx: " + current->TransactionId + " )");
-		    if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
-		        throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
-		    if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Crc == 0)
-		        throw new InvalidDataException("Committed and not empty transaction checksum can't be equal to 0");
+			if (current->TransactionId < 0)
+				throw new InvalidDataException("Transaction id cannot be less than 0 (Tx: " + current->TransactionId + " )");
+			if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
+				throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
+			if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Crc == 0)
+				throw new InvalidDataException("Committed and not empty transaction checksum can't be equal to 0");
 
-		    if (previous == null)
-		        return;
-		    
-            if (current->TransactionId != 1 &&
-		        // 1 is a first storage transaction which does not increment transaction counter after commit
-		        current->TransactionId - previous->TransactionId != 1)
-		        throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) +
-		                                       ", got:" + current->TransactionId);
+			if (previous == null)
+				return;
+
+			if (current->TransactionId != 1 &&
+				// 1 is a first storage transaction which does not increment transaction counter after commit
+				current->TransactionId - previous->TransactionId != 1)
+				throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) +
+											   ", got:" + current->TransactionId);
 		}
 
-	    public override string ToString()
-	    {
-	        return _pager.ToString();
-	    }
+		public override string ToString()
+		{
+			return _pager.ToString();
+		}
 	}
 }
