@@ -454,6 +454,11 @@ namespace Voron.Impl
 			return null;
 		}
 
+	    public void ClearRecentFoundPages(Tree tree)
+	    {
+	        _recentlyFoundPages.Remove(tree);
+	    }
+
 		public void AddRecentlyFoundPage(Tree tree, RecentlyFoundPages.FoundPage foundPage)
 		{
 			RecentlyFoundPages pages;

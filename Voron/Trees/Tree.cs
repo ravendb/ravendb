@@ -251,7 +251,7 @@ namespace Voron.Trees
 			    var cursor = lazy.Value;
 			    cursor.Update(cursor.Pages.First, page);
 			    
-			    var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
+			    var pageSplitter = new PageSplitter(tx, this, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
 			    dataPos = pageSplitter.Execute();
 
 			    DebugValidateTree(tx, State.RootPageNumber);
@@ -441,10 +441,7 @@ namespace Voron.Trees
 						CursorPath = c.Pages.Select(x => x.PageNumber).Reverse().ToList()
 					};
 
-				if (tx.Flags == TransactionFlags.ReadWrite)
-					State.RecentlyWrittenPages.Add(foundPage);
-				else
-					tx.AddRecentlyFoundPage(this, foundPage);
+				tx.AddRecentlyFoundPage(this, foundPage);
 			}
 
 			cursor = new Lazy<Cursor>(()=>c);
@@ -456,12 +453,7 @@ namespace Voron.Trees
 			page = null;
 			cursor = null;
 
-			RecentlyFoundPages recentPages;
-
-			if (tx.Flags == TransactionFlags.ReadWrite)
-				recentPages = State.RecentlyWrittenPages;
-			else
-				recentPages = tx.GetRecentlyFoundPages(this);
+			var recentPages = tx.GetRecentlyFoundPages(this);
 
 			if (recentPages == null)
 				return false;
@@ -546,7 +538,7 @@ namespace Voron.Trees
 
 			CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
 
-			var treeRebalancer = new TreeRebalancer(tx, this, State);
+			var treeRebalancer = new TreeRebalancer(tx, this);
 			var changedPage = page;
 			while (changedPage != null)
 			{
