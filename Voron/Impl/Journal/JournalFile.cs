@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Lz4Net;
 using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
@@ -234,10 +233,13 @@ namespace Voron.Impl.Journal
 			return pages;
 		}
 
-		private static unsafe int DoCompression(int numberOfPages, Page tempBuffer, Page compressionBuffer)
+		private static int DoCompression(int numberOfPages, Page tempBuffer, Page compressionBuffer)
 		{
-			var len = Lz4.LZ4_compress(tempBuffer.Base, compressionBuffer.Base, numberOfPages*AbstractPager.PageSize);
-			return len;
+			return LZ4.Decode64(tempBuffer.Base, 
+				numberOfPages*AbstractPager.PageMaxSpace, 
+				compressionBuffer.Base, 
+				(numberOfPages +1)*AbstractPager.PageSize, 
+				true);
 		}
 
 		public void InitFrom(JournalReader journalReader, LinkedDictionary<long, PagePosition> pageTranslationTable, LinkedDictionary<long, LongRef> transactionEndPositions)
