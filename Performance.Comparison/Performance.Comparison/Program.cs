@@ -47,7 +47,7 @@ namespace Performance.Comparison
                     //new SqlLiteTest(path, buffer),
                     //new SqlCeTest(path, buffer),
                     //new LmdbTest(path, buffer),
-                    new EsentTest(path, buffer),
+                    //new EsentTest(path, buffer),
                     //new FdbTest(buffer),
 					new VoronTest(path, buffer)
 				};

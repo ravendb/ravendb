@@ -8,7 +8,7 @@ namespace Performance.Comparison
 	public class Constants
 	{
 		public const int ItemsPerTransaction = 100;
-		public const int WriteTransactions = 100 * 1000;
+		public const int WriteTransactions = 15 * 1000;
 		public const int ReadItems = ItemsPerTransaction * WriteTransactions;
 	}
 }

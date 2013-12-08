@@ -8,6 +8,7 @@ using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
+using Voron.Util;
 
 namespace Voron.Trees
 {
@@ -16,6 +17,7 @@ namespace Voron.Trees
 	public unsafe class Tree
 	{
 		private TreeMutableState _state = new TreeMutableState();
+
 		public string Name { get; set; }
 
 		public TreeMutableState State
@@ -248,8 +250,11 @@ namespace Voron.Trees
 			{
 				var cursor = lazy.Value;
 				cursor.Update(cursor.Pages.First, page);
-				
-				tx.InvalidateRecentlyFoundPages(this);
+
+				if (State.RecentlyWrittenPages.Count > 0)
+				{
+					State.RecentlyWrittenPages.Clear();
+				}
 
 				var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
 				dataPos = pageSplitter.Execute();
@@ -433,13 +438,18 @@ namespace Voron.Trees
 
 			if (p.NumberOfEntries > 0)
 			{
-				tx.AddRecentlyFoundPage(this, new Transaction.FoundPage
+				var foundPage = new RecentlyFoundPages.FoundPage
 					{
 						Number = p.PageNumber,
 						FirstKey = leftmostPage == true ? Slice.BeforeAllKeys : p.GetNodeKey(0),
 						LastKey = rightmostPage == true ? Slice.AfterAllKeys : p.GetNodeKey(p.NumberOfEntries - 1),
 						CursorPath = c.Pages.Select(x => x.PageNumber).Reverse().ToList()
-					});
+					};
+
+				if (tx.Flags == TransactionFlags.ReadWrite)
+					State.RecentlyWrittenPages.Add(foundPage);
+				else
+					tx.AddRecentlyFoundPage(this, foundPage);
 			}
 
 			cursor = new Lazy<Cursor>(()=>c);
@@ -451,69 +461,65 @@ namespace Voron.Trees
 			page = null;
 			cursor = null;
 
-			foreach (var foundPage in tx.GetRecentlyFoundPages(this))
+			RecentlyFoundPages recentPages;
+
+			if (tx.Flags == TransactionFlags.ReadWrite)
+				recentPages = State.RecentlyWrittenPages;
+			else
+				recentPages = tx.GetRecentlyFoundPages(this);
+
+			if (recentPages == null)
+				return false;
+
+			var foundPage = recentPages.Find(key);
+
+			if (foundPage == null)
+				return false;
+
+			var lastFoundPageNumber = foundPage.Number;
+			page = tx.GetReadOnlyPage(lastFoundPageNumber);
+
+			if (page.IsLeaf == false)
+				throw new DataException("Index points to a non leaf page");
+
+			page.NodePositionFor(key, _cmp); // will set the LastSearchPosition
+
+			var cursorPath = foundPage.CursorPath;
+			var pageCopy = page;
+			cursor = new Lazy<Cursor>(() =>
 			{
-				var first = foundPage.FirstKey;
-				var last = foundPage.LastKey;
-
-				if (key.Options == SliceOptions.BeforeAllKeys && first.Options != SliceOptions.BeforeAllKeys)
-					continue;
-
-				if (key.Options == SliceOptions.AfterAllKeys && last.Options != SliceOptions.AfterAllKeys)
-					continue;
-
-				if (key.Options == SliceOptions.Key &&
-					((first.Options != SliceOptions.BeforeAllKeys && key.Compare(first, _cmp) < 0) ||
-					(last.Options != SliceOptions.AfterAllKeys && key.Compare(last, _cmp) > 0)))
-					continue;
-
-				var lastFoundPageNumber = foundPage.Number;
-				page = tx.GetReadOnlyPage(lastFoundPageNumber);
-
-				if (page.IsLeaf == false)
-					throw new DataException("Index points to a non leaf page");
-
-				page.NodePositionFor(key, _cmp); // will set the LastSearchPosition
-
-				var cursorPath = foundPage.CursorPath;
-				var pageCopy = page;
-				cursor = new Lazy<Cursor>(() =>
+				var c = new Cursor();
+				foreach (var p in cursorPath)
 				{
-					var c = new Cursor();
-					foreach (var p in cursorPath)
+					if (p == lastFoundPageNumber)
+						c.Push(pageCopy);
+					else
 					{
-						if (p == lastFoundPageNumber)
-							c.Push(pageCopy);
-						else
+						var cursorPage = tx.GetReadOnlyPage(p);
+						if (key.Options == SliceOptions.BeforeAllKeys)
 						{
-							var cursorPage = tx.GetReadOnlyPage(p);
-							if (key.Options == SliceOptions.BeforeAllKeys)
-							{
-								cursorPage.LastSearchPosition = 0;
-							}
-							else if (key.Options == SliceOptions.AfterAllKeys)
-							{
-								cursorPage.LastSearchPosition = (ushort)(cursorPage.NumberOfEntries - 1);
-							}
-							else if (cursorPage.Search(key, _cmp) != null)
-							{
-								if (cursorPage.LastMatch != 0)
-								{
-									cursorPage.LastSearchPosition--;
-								}
-							}
-
-							c.Push(cursorPage);
+							cursorPage.LastSearchPosition = 0;
 						}
+						else if (key.Options == SliceOptions.AfterAllKeys)
+						{
+							cursorPage.LastSearchPosition = (ushort)(cursorPage.NumberOfEntries - 1);
+						}
+						else if (cursorPage.Search(key, _cmp) != null)
+						{
+							if (cursorPage.LastMatch != 0)
+							{
+								cursorPage.LastSearchPosition--;
+							}
+						}
+
+						c.Push(cursorPage);
 					}
+				}
 
-					return c;
-				});
+				return c;
+			});
 
-				return true;
-			}
-
-			return false;
+			return true;
 		}
 
 		internal static Page NewPage(Transaction tx, PageFlags flags, int num)
@@ -549,7 +555,8 @@ namespace Voron.Trees
 			var changedPage = page;
 			while (changedPage != null)
 			{
-				tx.InvalidateRecentlyFoundPages(this);
+				if(State.RecentlyWrittenPages.Count > 0)
+					State.RecentlyWrittenPages.Clear();
 
 				changedPage = treeRebalancer.Execute(lazy.Value, changedPage);
 			}
@@ -737,7 +744,7 @@ namespace Voron.Trees
 
 		public Tree Clone()
 		{
-			return new Tree(_cmp, _state.Clone()){ Name = Name};
+			return new Tree(_cmp, _state.Clone()){ Name = Name };
 		}
 
 		private static bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, Slice key, int len,
