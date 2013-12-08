@@ -8,7 +8,7 @@ using System.Web.Http;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class HardRouteController : RavenApiController
+	public class HardRouteController : RavenDbApiController
 	{
 		[HttpGet][Route("favicon.ico")]
 		public HttpResponseMessage FaviconGet()

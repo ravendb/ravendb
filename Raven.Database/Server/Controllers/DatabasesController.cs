@@ -11,7 +11,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class DatabasesController : RavenApiController
+	public class DatabasesController : RavenDbApiController
 	{
 		[HttpGet][Route("databases")]
 		public HttpResponseMessage Databases()

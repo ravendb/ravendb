@@ -23,7 +23,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class IndexController : RavenApiController
+	public class IndexController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("indexes")]

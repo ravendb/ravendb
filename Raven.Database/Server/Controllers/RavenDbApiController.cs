@@ -34,7 +34,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public abstract class RavenApiController : ApiController
+	public abstract class RavenDbApiController : ApiController
 	{
 		public string DatabaseName
 		{

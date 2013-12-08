@@ -20,7 +20,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class StreamsController : RavenApiController
+	public class StreamsController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("streams/docs")]

@@ -15,7 +15,7 @@ using Raven.Database.Queries;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class FacetsController : RavenApiController
+	public class FacetsController : RavenDbApiController
 	{
 		[HttpGet][Route("facets/{*id}")]
 		public async Task<HttpResponseMessage> FacetsGet(string id)

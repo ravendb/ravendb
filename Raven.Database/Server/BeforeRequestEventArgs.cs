@@ -17,6 +17,6 @@ namespace Raven.Database.Server
 		public string TenantId { get; set; }
 		public DocumentDatabase Database { get; set; }
 		public bool IgnoreRequest { get; set; }
-		public RavenApiController Controller { get; set; }
+		public RavenDbApiController Controller { get; set; }
 	}
 }

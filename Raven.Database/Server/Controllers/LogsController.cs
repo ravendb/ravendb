@@ -8,7 +8,7 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class LogsController : RavenApiController
+	public class LogsController : RavenDbApiController
 	{
 		[HttpGet][Route("logs")]
 		public HttpResponseMessage LogsGet()

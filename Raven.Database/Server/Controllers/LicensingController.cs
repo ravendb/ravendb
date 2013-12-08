@@ -5,7 +5,7 @@ using Raven.Database.Commercial;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class LicensingController : RavenApiController
+	public class LicensingController : RavenDbApiController
 	{
 		[HttpGet][Route("license/status")]
 		public HttpResponseMessage LicenseStatusGet()

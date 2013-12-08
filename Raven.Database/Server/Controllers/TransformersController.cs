@@ -8,7 +8,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class TransformersController : RavenApiController
+	public class TransformersController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("transformers/{*id}")]

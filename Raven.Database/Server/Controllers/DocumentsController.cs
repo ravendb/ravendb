@@ -13,7 +13,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class DocumentsController : RavenApiController
+	public class DocumentsController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("docs")]

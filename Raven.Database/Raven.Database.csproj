@@ -294,8 +294,8 @@
     <Compile Include="Server\Controllers\OperationsController.cs" />
     <Compile Include="Server\Controllers\PluginController.cs" />
     <Compile Include="Server\Controllers\QueriesController.cs" />
-    <Compile Include="Server\Controllers\RavenApiController.cs" />
-    <Compile Include="Server\Controllers\RavenUiController.cs" />
+    <Compile Include="Server\Controllers\RavenDbApiController.cs" />
+    <Compile Include="Server\Controllers\RavenDbUiController.cs" />
     <Compile Include="Server\Controllers\SilverlightController.cs" />
     <Compile Include="Server\Controllers\SimpleTestController.cs" />
     <Compile Include="Server\Controllers\SingleAuthTokenController.cs" />
@@ -1102,7 +1102,9 @@
       <Name>Voron %28Voron\Voron%29</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Server\RavenFS\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

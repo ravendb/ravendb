@@ -94,7 +94,7 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
-		public ConnectionState For(string id, RavenApiController controller = null)
+		public ConnectionState For(string id, RavenDbApiController controller = null)
 		{
 			return connections.GetOrAdd(id, _ =>
 			{

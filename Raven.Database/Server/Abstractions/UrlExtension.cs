@@ -18,7 +18,7 @@ namespace Raven.Database.Server.Abstractions
 			return GetRequestUrlFromRawUrl(rawUrl, context.Configuration);
 		}
 
-		public static string GetRequestUrl(this RavenApiController controller)
+		public static string GetRequestUrl(this RavenDbApiController controller)
 		{
 			var rawUrl = controller.InnerRequest.RequestUri.AbsoluteUri;
 			return GetRequestUrlFromRawUrl(rawUrl, controller.DatabasesLandlord.SystemConfiguration);

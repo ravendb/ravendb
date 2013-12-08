@@ -5,7 +5,7 @@ using System.Web.Http;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class OperationsController : RavenApiController
+	public class OperationsController : RavenDbApiController
 	{
 		[HttpGet][Route("operation/status")]
 		public HttpResponseMessage OperationStatusGet()

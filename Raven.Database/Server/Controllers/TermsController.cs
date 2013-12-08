@@ -5,7 +5,7 @@ using Raven.Database.Queries;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class TermsController : RavenApiController
+	public class TermsController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("terms/{*id}")]

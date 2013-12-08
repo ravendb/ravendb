@@ -17,7 +17,7 @@ using Raven.Json.Linq;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class DebugController : RavenApiController
+	public class DebugController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("debug/changes")]

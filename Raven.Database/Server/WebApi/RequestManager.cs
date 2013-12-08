@@ -84,7 +84,7 @@ namespace Raven.Database.Server.WebApi
 			}
 		}
 
-		public async Task HandleActualRequest(RavenApiController controller, Func<Task> action)
+		public async Task HandleActualRequest(RavenDbApiController controller, Func<Task> action)
 		{
 			var isReadLockHeld = disposerLock.IsReadLockHeld;
 			if (isReadLockHeld == false)
@@ -128,7 +128,7 @@ namespace Raven.Database.Server.WebApi
 		}
 
 		// Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
-		public void AddAccessControlHeaders(RavenApiController controller, HttpResponseMessage msg)
+		public void AddAccessControlHeaders(RavenDbApiController controller, HttpResponseMessage msg)
 		{
 			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlAllowOrigin))
 				return;
@@ -158,7 +158,7 @@ namespace Raven.Database.Server.WebApi
 			}
 		}
 
-		private bool SetupRequestToProperDatabase(RavenApiController controller)
+		private bool SetupRequestToProperDatabase(RavenDbApiController controller)
 		{
 			var onBeforeRequest = BeforeRequest;
 			var tenantId = controller.DatabaseName;
@@ -299,7 +299,7 @@ namespace Raven.Database.Server.WebApi
 			Interlocked.Decrement(ref physicalRequestsCount);
 		}
 
-		private void FinalizeRequestProcessing(RavenApiController controller, Stopwatch sw, bool ravenUiRequest)
+		private void FinalizeRequestProcessing(RavenDbApiController controller, Stopwatch sw, bool ravenUiRequest)
 		{
 			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
 			try

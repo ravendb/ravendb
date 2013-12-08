@@ -78,7 +78,7 @@ namespace Raven.Database.Server.Security.OAuth
 			return true;
 		}
 
-		public bool TryAuthorize(RavenApiController controller, bool hasApiKey, bool ignoreDbAccess, out HttpResponseMessage msg)
+		public bool TryAuthorize(RavenDbApiController controller, bool hasApiKey, bool ignoreDbAccess, out HttpResponseMessage msg)
 		{
 			var isGetRequest = IsGetRequest(controller.InnerRequest.Method.Method, controller.InnerRequest.RequestUri.AbsolutePath);
 			var allowUnauthenticatedUsers = // we need to auth even if we don't have to, for bundles that want the user 
@@ -187,7 +187,7 @@ namespace Raven.Database.Server.Security.OAuth
 			return token;
 		}
 
-		static string GetToken(RavenApiController controller)
+		static string GetToken(RavenDbApiController controller)
 		{
 			const string bearerPrefix = "Bearer ";
 
@@ -229,7 +229,7 @@ namespace Raven.Database.Server.Security.OAuth
 			ctx.Response.AddHeader("WWW-Authenticate", string.Format("Bearer realm=\"Raven\", error=\"{0}\",error_description=\"{1}\"", error, errorDescription));
 		}
 
-		HttpResponseMessage WriteAuthorizationChallenge(RavenApiController controller, int statusCode, string error, string errorDescription)
+		HttpResponseMessage WriteAuthorizationChallenge(RavenDbApiController controller, int statusCode, string error, string errorDescription)
 		{
 			var msg = controller.GetEmptyMessage();
 			var landlord = controller.DatabasesLandlord;
@@ -278,7 +278,7 @@ namespace Raven.Database.Server.Security.OAuth
 			return new OAuthPrincipal(tokenBody, null);
 		}
 
-		public IPrincipal GetUser(RavenApiController controller, bool hasApiKey)
+		public IPrincipal GetUser(RavenDbApiController controller, bool hasApiKey)
 		{
 			var token = GetToken(controller);
 

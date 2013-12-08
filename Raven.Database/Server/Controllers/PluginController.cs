@@ -7,7 +7,7 @@ using Raven.Database.Plugins;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class PluginController : RavenApiController
+	public class PluginController : RavenDbApiController
 	{
 		[HttpGet][Route("plugins/status")]
 		public HttpResponseMessage PlugingsStatusGet()

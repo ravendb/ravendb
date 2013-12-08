@@ -9,7 +9,7 @@ using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Controllers.Admin
 {
-	public abstract class BaseAdminController : RavenApiController
+	public abstract class BaseAdminController : RavenDbApiController
 	{
 		protected virtual WindowsBuiltInRole[] AdditionalSupportedRoles
 		{

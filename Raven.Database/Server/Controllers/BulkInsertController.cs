@@ -18,7 +18,7 @@ using Raven.Json.Linq;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class BulkInsertController : RavenApiController
+	public class BulkInsertController : RavenDbApiController
 	{
 		[HttpPost]
 		[Route("bulkInsert")]

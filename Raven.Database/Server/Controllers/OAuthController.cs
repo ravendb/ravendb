@@ -13,7 +13,7 @@ using Raven.Database.Server.Security.OAuth;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class OAuthController : RavenApiController
+	public class OAuthController : RavenDbApiController
 	{
 		const string TokenContentType = "application/json; charset=UTF-8";
 		const string TokenGrantType = "client_credentials";

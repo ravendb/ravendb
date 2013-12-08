@@ -26,7 +26,7 @@ namespace Raven.Database.Server.Connections
 		private readonly ConcurrentQueue<object> msgs = new ConcurrentQueue<object>();
 		private readonly AsyncManualResetEvent manualResetEvent = new AsyncManualResetEvent();
 
-		public ChangesPushContent(RavenApiController controller)
+		public ChangesPushContent(RavenDbApiController controller)
 		{
 			Connected = true;
 			Id = controller.GetQueryStringValue("id");

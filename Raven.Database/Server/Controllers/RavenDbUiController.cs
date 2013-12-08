@@ -7,7 +7,7 @@ using System.Web.Http;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class RavenUiController : RavenApiController
+	public class RavenDbUiController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("raven")]
