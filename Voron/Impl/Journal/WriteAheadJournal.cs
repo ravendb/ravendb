@@ -144,7 +144,7 @@ namespace Voron.Impl.Journal
 					// we setup the journal file so we can flush from it to the data file
 					var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * AbstractPager.PageSize);
 					var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
-					jrnlFile.InitFrom(journalReader, ptt, journalReader.TransactionEndPositions);
+					jrnlFile.InitFrom(journalReader, ptt);
 					jrnlFile.AddRef(); // creator reference - write ahead log
 
 					journalFiles.Add(jrnlFile);
@@ -498,21 +498,6 @@ namespace Voron.Impl.Journal
                 }
 			}
 
-			private void SetLastSyncedPage(long lastFlushedTransactionId)
-			{
-				var transactionEndPositions = _jrnls.First(x => x.Number == _lastSyncedJournal).TransactionEndPositions;
-				for (int i = transactionEndPositions.Count - 1; i >= 0; i--)
-				{
-					var item = transactionEndPositions[i];
-					if (item.Key == lastFlushedTransactionId)
-					{
-						_lastSyncedPage = item.Value;
-						return;
-					}
-				}
-				throw new InvalidOperationException("Could not find transaction end position for " + lastFlushedTransactionId);
-			}
-
 			private void EnsureDataPagerSpacing(Transaction transaction, Page last, int numberOfPagesInLastPage,
 				bool alreadyInWriteTx)
 			{
@@ -592,7 +577,7 @@ namespace Voron.Impl.Journal
 					if (j.Number == _lastSyncedJournal) // we are in the last log we synced
 					{
                         if (j.AvailablePages != 0 || //　if there are more pages to be used here or 
-                        j.PageTranslationTable.Max(x => x.Value.TransactionId) != _lastSyncedTransactionId) // we didn't synchronize whole journal
+                        j.PageTranslationTable.MaxTransactionId() != _lastSyncedTransactionId) // we didn't synchronize whole journal
                             continue; // do not mark it as unused
 					}
 					unusedJournalFiles.Add(_waj._files.First(x => x.Number == j.Number));

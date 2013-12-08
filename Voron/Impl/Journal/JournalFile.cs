@@ -25,7 +25,6 @@ namespace Voron.Impl.Journal
         private bool _disposed;
         private int _refs;
 	    private readonly PageTable _pageTranslationTable = new PageTable();
-		private ImmutableAppendOnlyList<KeyValuePair<long, long>> _transactionEndPositions = ImmutableAppendOnlyList<KeyValuePair<long, long>>.Empty;
 		private readonly List<PagePosition> _unusedPages = new List<PagePosition>();
 
         private readonly object _locker = new object();
@@ -120,7 +119,6 @@ namespace Voron.Impl.Journal
                 Number = Number,
                 AvailablePages = AvailablePages,
                 PageTranslationTable = _pageTranslationTable,
-                TransactionEndPositions = _transactionEndPositions,
 				LastTransaction = lastTxId
             };
         }
@@ -156,8 +154,8 @@ namespace Voron.Impl.Journal
             lock (_locker)
 			{
                 _writePage += pages.Length;
-                _pageTranslationTable = _pageTranslationTable.SetItems(ptt);
-                _unusedPages = _unusedPages.AddRange(unused);
+                _pageTranslationTable.SetItems(tx, ptt);
+                _unusedPages.AddRange(unused);
             }
 
             return _journalWriter.WriteGatherAsync(writePagePos * AbstractPager.PageSize, pages);
@@ -225,15 +223,14 @@ namespace Voron.Impl.Journal
 			return pages;
         }
 
-		public void InitFrom(JournalReader journalReader, Dictionary<long, PagePosition> pageTranslationTable,
-			ImmutableAppendOnlyList<KeyValuePair<long, long>> transactionEndPositions)
+        private static int DoCompression(int numberOfPages, Page tempBuffer, Page compressionBuffer)
         {
 			var len = Lz4.LZ4_compress(tempBuffer.Base, compressionBuffer.Base, numberOfPages*AbstractPager.PageSize);
 			return len;
 		}
 
-		public void InitFrom(JournalReader journalReader, LinkedDictionary<long, PagePosition> pageTranslationTable)
-		{
+        public void InitFrom(JournalReader journalReader, Dictionary<long, PagePosition> pageTranslationTable)
+        {
             _writePage = journalReader.NextWritePage;
 			_pageTranslationTable.SetItemsNoTransaction(pageTranslationTable);
         }

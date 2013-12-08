@@ -7,7 +7,6 @@ namespace Voron.Impl.Journal
 	{
 		public long Number;
 		public PageTable PageTranslationTable;
-		public ImmutableAppendOnlyList<KeyValuePair<long, long>> TransactionEndPositions;
 	    public long AvailablePages;
 		public long LastTransaction;
 	}

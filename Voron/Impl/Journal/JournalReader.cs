@@ -6,209 +6,206 @@ using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
-	using Lz4Net;
+    using Lz4Net;
 
-	public unsafe class JournalReader
-	{
-		private readonly IVirtualPager _pager;
-		private readonly IVirtualPager _recoveryPager;
+    public unsafe class JournalReader
+    {
+        private readonly IVirtualPager _pager;
+        private readonly IVirtualPager _recoveryPager;
 
-		private readonly long _lastSyncedTransactionId;
-		private long _lastSyncedPage;
-		private long _nextWritePage;
-		private long _readingPage;
-		
-private readonly Dictionary<long, JournalFile.PagePosition> _transactionPageTranslation = new Dictionary<long, JournalFile.PagePosition>();
-		private ImmutableAppendOnlyList<KeyValuePair<long, long>> _transactionEndPositions = ImmutableAppendOnlyList<KeyValuePair<long, long>>.Empty;
-		private int _recoveryPage;
+        private readonly long _lastSyncedTransactionId;
+        private long _lastSyncedPage;
+        private long _nextWritePage;
+        private long _readingPage;
 
-		private LinkedDictionary<long, JournalFile.PagePosition> _transactionPageTranslation = LinkedDictionary<long, JournalFile.PagePosition>.Empty;
+        private readonly Dictionary<long, JournalFile.PagePosition> _transactionPageTranslation = new Dictionary<long, JournalFile.PagePosition>();
+        private int _recoveryPage;
 
-		public bool RequireHeaderUpdate { get; private set; }
 
-		public bool EncounteredStopCondition { get; private set; }
+        public bool RequireHeaderUpdate { get; private set; }
 
-		public long NextWritePage
-		{
-			get { return _nextWritePage; }
-		}
+        public bool EncounteredStopCondition { get; private set; }
 
-		public JournalReader(IVirtualPager pager, IVirtualPager recoveryPager, long lastSyncedTransactionId, TransactionHeader* previous)
-		{
-			RequireHeaderUpdate = false;
-			_pager = pager;
-			_recoveryPager = recoveryPager;
-			_lastSyncedTransactionId = lastSyncedTransactionId;
-			_readingPage = 0;
-			_recoveryPage = 0;
-			_nextWritePage = 0;
-			LastTransactionHeader = previous;
-		}
+        public long NextWritePage
+        {
+            get { return _nextWritePage; }
+        }
 
-		public TransactionHeader* LastTransactionHeader { get; private set; }
+        public JournalReader(IVirtualPager pager, IVirtualPager recoveryPager, long lastSyncedTransactionId, TransactionHeader* previous)
+        {
+            RequireHeaderUpdate = false;
+            _pager = pager;
+            _recoveryPager = recoveryPager;
+            _lastSyncedTransactionId = lastSyncedTransactionId;
+            _readingPage = 0;
+            _recoveryPage = 0;
+            _nextWritePage = 0;
+            LastTransactionHeader = previous;
+        }
 
-		public bool ReadOneTransaction(bool checkCrc = true)
-		{
-			if (_readingPage >= _pager.NumberOfAllocatedPages)
-				return false;
+        public TransactionHeader* LastTransactionHeader { get; private set; }
 
-			TransactionHeader* current;
-			if (!TryReadAndValidateHeader(out current)) 
-				return false;
+        public bool ReadOneTransaction(bool checkCrc = true)
+        {
+            if (_readingPage >= _pager.NumberOfAllocatedPages)
+                return false;
 
-			var compressedPages = (current->CompressedSize / AbstractPager.PageSize) + (current->CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
+            TransactionHeader* current;
+            if (!TryReadAndValidateHeader(out current))
+                return false;
 
-			if (current->TransactionId <= _lastSyncedTransactionId)
-			{
-				_readingPage += compressedPages;
-				return true; // skipping
-			}
+            var compressedPages = (current->CompressedSize / AbstractPager.PageSize) + (current->CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
 
-			uint crc = 0;
-			var writePageBeforeCrcCheck = _nextWritePage;
-			var lastSyncedPageBeforeCrcCheck = _lastSyncedPage;
-			var readingPageBeforeCrcCheck = _readingPage;
+            if (current->TransactionId <= _lastSyncedTransactionId)
+            {
+                _readingPage += compressedPages;
+                return true; // skipping
+            }
 
-			_recoveryPager.EnsureContinuous(null, _recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
-			var dataPage = _recoveryPager.GetWritable(_recoveryPage);
+            uint crc = 0;
+            var writePageBeforeCrcCheck = _nextWritePage;
+            var lastSyncedPageBeforeCrcCheck = _lastSyncedPage;
+            var readingPageBeforeCrcCheck = _readingPage;
 
-			NativeMethods.memset(dataPage.Base, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
-			var compressedSize = Lz4.LZ4_uncompress(_pager.Read(_readingPage).Base, dataPage.Base, current->UncompressedSize);
+            _recoveryPager.EnsureContinuous(null, _recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
+            var dataPage = _recoveryPager.GetWritable(_recoveryPage);
 
-			if (compressedSize != current->CompressedSize) //Compression error. Probably file is corrupted
-			{
-				RequireHeaderUpdate = true;
+            NativeMethods.memset(dataPage.Base, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
+            var compressedSize = Lz4.LZ4_uncompress(_pager.Read(_readingPage).Base, dataPage.Base, current->UncompressedSize);
 
-				return false; 
-			}
-				
+            if (compressedSize != current->CompressedSize) //Compression error. Probably file is corrupted
+            {
+                RequireHeaderUpdate = true;
 
-			for (var i = 0; i < current->PageCount; i++)
-			{
-				Debug.Assert(_pager.Disposed == false);
-				Debug.Assert(_recoveryPager.Disposed == false);
+                return false;
+            }
 
-				var page = _recoveryPager.Read(_recoveryPage);
+            var tempTransactionPageTranslaction = new Dictionary<long, JournalFile.PagePosition>();
+
+            for (var i = 0; i < current->PageCount; i++)
+            {
+                Debug.Assert(_pager.Disposed == false);
+                Debug.Assert(_recoveryPager.Disposed == false);
+
+                var page = _recoveryPager.Read(_recoveryPage);
 
                 tempTransactionPageTranslaction[page.PageNumber] = new JournalFile.PagePosition
-				{
-					JournalPos = _recoveryPage,
+                {
+                    JournalPos = _recoveryPage,
                     TransactionId = current->TransactionId
-				};
+                };
 
-				if (page.IsOverflow)
-				{
-					var numOfPages = _recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
-					_recoveryPage += numOfPages;
+                if (page.IsOverflow)
+                {
+                    var numOfPages = _recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
+                    _recoveryPage += numOfPages;
 
-					if(checkCrc)
-						crc = Crc.Extend(crc, page.Base, 0, numOfPages * AbstractPager.PageSize);
-				}
-				else
-				{
-					_recoveryPage++;
-					if (checkCrc)
-						crc = Crc.Extend(crc, page.Base, 0, AbstractPager.PageSize);
-				}
+                    if (checkCrc)
+                        crc = Crc.Extend(crc, page.Base, 0, numOfPages * AbstractPager.PageSize);
+                }
+                else
+                {
+                    _recoveryPage++;
+                    if (checkCrc)
+                        crc = Crc.Extend(crc, page.Base, 0, AbstractPager.PageSize);
+                }
 
-				_lastSyncedPage = _recoveryPage - 1;
-				_nextWritePage = _lastSyncedPage + 1;
-			}
+                _lastSyncedPage = _recoveryPage - 1;
+                _nextWritePage = _lastSyncedPage + 1;
+            }
 
-			_readingPage += compressedPages;
+            _readingPage += compressedPages;
 
-			if (checkCrc && crc != current->Crc)
-			{
-				RequireHeaderUpdate = true;
+            if (checkCrc && crc != current->Crc)
+            {
+                RequireHeaderUpdate = true;
 
-				//undo changes to those variables if CRC doesn't match
-				_nextWritePage = writePageBeforeCrcCheck;
-				_lastSyncedPage = lastSyncedPageBeforeCrcCheck;
-				_readingPage = readingPageBeforeCrcCheck;
+                //undo changes to those variables if CRC doesn't match
+                _nextWritePage = writePageBeforeCrcCheck;
+                _lastSyncedPage = lastSyncedPageBeforeCrcCheck;
+                _readingPage = readingPageBeforeCrcCheck;
 
-				return false;
-			}
+                return false;
+            }
 
-		    foreach (var pagePosition in tempTransactionPageTranslaction)
-		    {
-		        _transactionPageTranslation[pagePosition.Key] = pagePosition.Value;
-		    }
+            foreach (var pagePosition in tempTransactionPageTranslaction)
+            {
+                _transactionPageTranslation[pagePosition.Key] = pagePosition.Value;
+            }
 
-			//update CurrentTransactionHeader _only_ if the CRC check is passed
-			LastTransactionHeader = current;
-			_transactionPageTranslation = _transactionPageTranslation.SetItems(transactionTable);
-			return true;
-		}
+            //update CurrentTransactionHeader _only_ if the CRC check is passed
+            LastTransactionHeader = current;
+            foreach (var pagePosition in tempTransactionPageTranslaction)
+            {
+                _transactionPageTranslation[pagePosition.Key] = pagePosition.Value;
+            }
+            return true;
+        }
 
-	    public void RecoverAndValidate()
-		{
-			while (ReadOneTransaction())
-			{
-			}
-		}
+        public void RecoverAndValidate()
+        {
+            while (ReadOneTransaction())
+            {
+            }
+        }
 
-		public Dictionary<long, JournalFile.PagePosition> TransactionPageTranslation
-		{
-			get { return _transactionPageTranslation; }
-		}
+        public Dictionary<long, JournalFile.PagePosition> TransactionPageTranslation
+        {
+            get { return _transactionPageTranslation; }
+        }
 
-		public ImmutableAppendOnlyList<KeyValuePair<long, long>> TransactionEndPositions
-		{
-			get { return _transactionEndPositions; }
-		}
+        private bool TryReadAndValidateHeader(out TransactionHeader* current)
+        {
+            current = (TransactionHeader*)_pager.Read(_readingPage).Base;
 
-		private bool TryReadAndValidateHeader(out TransactionHeader* current)
-		{
-			current = (TransactionHeader*)_pager.Read(_readingPage).Base;
-
-			if (current->HeaderMarker != Constants.TransactionHeaderMarker)
-			{
+            if (current->HeaderMarker != Constants.TransactionHeaderMarker)
+            {
                 // not a transaction page, 
 
                 // if the header marker is zero, we are probably in the area at the end of the log file, and have no additional log records
                 // to read from it. This can happen if the next transaction was too big to fit in the current log file. We stop reading
                 // this log file and move to the next one. 
 
-			    RequireHeaderUpdate = current->HeaderMarker != 0;
+                RequireHeaderUpdate = current->HeaderMarker != 0;
 
                 return false;
-			}
+            }
 
-			ValidateHeader(current, LastTransactionHeader);
+            ValidateHeader(current, LastTransactionHeader);
 
-			if (current->TxMarker.HasFlag(TransactionMarker.Commit) == false)
-			{
-			    // uncommitted transaction, probably
-			    RequireHeaderUpdate = true;
-				return false;
-			}
+            if (current->TxMarker.HasFlag(TransactionMarker.Commit) == false)
+            {
+                // uncommitted transaction, probably
+                RequireHeaderUpdate = true;
+                return false;
+            }
 
-			_readingPage++;
-			return true;
-		}
+            _readingPage++;
+            return true;
+        }
 
-		private void ValidateHeader(TransactionHeader* current, TransactionHeader* previous)
-		{
-		    if (current->TransactionId < 0)
-		        throw new InvalidDataException("Transaction id cannot be less than 0 (Tx: " + current->TransactionId + " )");
-		    if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
-		        throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
-		    if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Crc == 0)
-		        throw new InvalidDataException("Committed and not empty transaction checksum can't be equal to 0");
+        private void ValidateHeader(TransactionHeader* current, TransactionHeader* previous)
+        {
+            if (current->TransactionId < 0)
+                throw new InvalidDataException("Transaction id cannot be less than 0 (Tx: " + current->TransactionId + " )");
+            if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
+                throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
+            if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Crc == 0)
+                throw new InvalidDataException("Committed and not empty transaction checksum can't be equal to 0");
 
-		    if (previous == null)
-		        return;
-		    
+            if (previous == null)
+                return;
+
             if (current->TransactionId != 1 &&
-		        // 1 is a first storage transaction which does not increment transaction counter after commit
-		        current->TransactionId - previous->TransactionId != 1)
-		        throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) +
-		                                       ", got:" + current->TransactionId);
-		}
+                // 1 is a first storage transaction which does not increment transaction counter after commit
+                current->TransactionId - previous->TransactionId != 1)
+                throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) +
+                                               ", got:" + current->TransactionId);
+        }
 
-	    public override string ToString()
-	    {
-	        return _pager.ToString();
-	    }
-	}
+        public override string ToString()
+        {
+            return _pager.ToString();
+        }
+    }
 }
