@@ -186,9 +186,17 @@ namespace Voron.Impl.Journal
         private static byte*[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager, List<PageFromScratchBuffer> txPages)
         {
             // numberOfPages include the tx header page, which we don't compress
-            compressionPager.EnsureContinuous(tx, 0, (numberOfPages * 2) + 1);
+            var dataPagesCount = numberOfPages - 1;
+            var sizeInBytes = dataPagesCount*AbstractPager.PageSize;
+            var outputBuffer = LZ4.MaximumOutputLength(sizeInBytes);
+            var outputBufferInPages = outputBuffer/AbstractPager.PageSize +
+                                      (outputBuffer%AbstractPager.PageSize == 0 ? 0 : 1);
+            var pagesRequired = (dataPagesCount + outputBufferInPages);
+
+            compressionPager.EnsureContinuous(tx, 0, pagesRequired);
             var tempBuffer = compressionPager.AcquirePagePointer(0);
-            NativeMethods.memset(tempBuffer, 0, ((numberOfPages * 2) + 1) * AbstractPager.PageSize);
+            var compressionBuffer = compressionPager.AcquirePagePointer(dataPagesCount);
+            NativeMethods.memset(tempBuffer, 0, pagesRequired * AbstractPager.PageSize);
 
             var write = tempBuffer;
 
@@ -201,9 +209,8 @@ namespace Voron.Impl.Journal
                 write += count;
             }
 
-            var compressionBuffer = compressionPager.AcquirePagePointer(numberOfPages - 1);
 
-            var len = DoCompression(numberOfPages, tempBuffer, compressionBuffer);
+            var len = DoCompression(tempBuffer, compressionBuffer, sizeInBytes, outputBuffer);
             var compressedPages = (len / AbstractPager.PageSize) + (len % AbstractPager.PageSize == 0 ? 0 : 1);
 
             var pages = new byte*[compressedPages + 1];
@@ -213,7 +220,7 @@ namespace Voron.Impl.Journal
 
             txHeader->Compressed = true;
             txHeader->CompressedSize = len;
-            txHeader->UncompressedSize = (numberOfPages - 1) * AbstractPager.PageSize;
+            txHeader->UncompressedSize = sizeInBytes;
 
             pages[0] = txHeaderBase;
             for (int index = 0; index < compressedPages; index++)
@@ -224,25 +231,25 @@ namespace Voron.Impl.Journal
             return pages;
         }
 
-        private static int DoCompression(int numberOfPages, byte* tempBuffer, byte* compressionBuffer)
+        private static int DoCompression(byte* input, byte* output, int inputLength, int outputLength)
         {
             var doCompression = LZ4.Encode64(
-                tempBuffer,
-                compressionBuffer,
-                (numberOfPages - 1) * AbstractPager.PageSize,
-                (numberOfPages + 2) * AbstractPager.PageSize);
+                input,
+                output,
+                inputLength,
+                outputLength);
 
 #if DEBUG
-            var mem = Marshal.AllocHGlobal((numberOfPages - 1) * AbstractPager.PageSize);
+            var mem = Marshal.AllocHGlobal(inputLength);
             try
             {
-                var len = LZ4.Decode64(compressionBuffer, doCompression, (byte*)mem.ToPointer(),
-                (numberOfPages - 1) * AbstractPager.PageSize, true);
+                var len = LZ4.Decode64(output, doCompression, (byte*) mem.ToPointer(),
+                    inputLength, true);
 
-                var result = NativeMethods.memcmp(tempBuffer, (byte*)mem.ToPointer(),
-                    (numberOfPages - 1) * AbstractPager.PageSize);
+                var result = NativeMethods.memcmp(input, (byte*) mem.ToPointer(),
+                    inputLength);
 
-                Debug.Assert(len == ((numberOfPages - 1) * AbstractPager.PageSize));
+                Debug.Assert(len == inputLength);
                 Debug.Assert(result == 0);
 
             }
