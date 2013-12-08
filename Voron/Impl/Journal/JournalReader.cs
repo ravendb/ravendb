@@ -12,8 +12,8 @@ namespace Voron.Impl.Journal
 		private long _lastSyncedPage;
 		private long _nextWritePage;
 		private long _readingPage;
-		private LinkedDictionary<long, JournalFile.PagePosition> _transactionPageTranslation = LinkedDictionary<long, JournalFile.PagePosition>.Empty;
-		private LinkedDictionary<long, LongRef> _transactionEndPositions = LinkedDictionary<long, LongRef>.Empty;
+		private readonly Dictionary<long, JournalFile.PagePosition> _transactionPageTranslation = new Dictionary<long, JournalFile.PagePosition>();
+		private ImmutableAppendOnlyList<KeyValuePair<long, long>> _transactionEndPositions = ImmutableAppendOnlyList<KeyValuePair<long, long>>.Empty;
 
 		public bool RequireHeaderUpdate { get; private set; }
 
@@ -48,8 +48,6 @@ namespace Voron.Impl.Journal
 			if (_readingPage >= _pager.NumberOfAllocatedPages)
 				return false;
 
-			var transactionTable = new Dictionary<long, JournalFile.PagePosition>();
-
 			TransactionHeader* current;
 			if (!TryReadAndValidateHeader(out current)) return false;
 
@@ -65,13 +63,14 @@ namespace Voron.Impl.Journal
 			var lastSyncedPageBeforeCrcCheck = _lastSyncedPage;
 			var readingPageBeforeCrcCheck = _readingPage;
 
+		    var tempTransactionPageTranslaction = new Dictionary<long, JournalFile.PagePosition>();
 			for (var i = 0; i < current->PageCount; i++)
 			{
 				Debug.Assert(_pager.Disposed == false);
 
 				var page = _pager.Read(_readingPage);
 
-				transactionTable[page.PageNumber] = new JournalFile.PagePosition
+                tempTransactionPageTranslaction[page.PageNumber] = new JournalFile.PagePosition
 				{
                     JournalPos = _readingPage,
                     TransactionId = current->TransactionId
@@ -108,10 +107,14 @@ namespace Voron.Impl.Journal
 				return false;
 			}
 
+		    foreach (var pagePosition in tempTransactionPageTranslaction)
+		    {
+		        _transactionPageTranslation[pagePosition.Key] = pagePosition.Value;
+		    }
+
 			//update CurrentTransactionHeader _only_ if the CRC check is passed
 			LastTransactionHeader = current;
-			_transactionPageTranslation = _transactionPageTranslation.SetItems(transactionTable);
-			_transactionEndPositions = _transactionEndPositions.Add(current->TransactionId, new LongRef { Value = _readingPage - 1 });
+			_transactionEndPositions = _transactionEndPositions.Append(new KeyValuePair<long, long>(current->TransactionId, _readingPage - 1));
 			return true;
 		}
 
@@ -122,15 +125,15 @@ namespace Voron.Impl.Journal
 			}
 		}
 
-		public LinkedDictionary<long, JournalFile.PagePosition> TransactionPageTranslation
+		public Dictionary<long, JournalFile.PagePosition> TransactionPageTranslation
 		{
 			get { return _transactionPageTranslation; }
 		}
 
-		public LinkedDictionary<long, LongRef> TransactionEndPositions
-        {
-            get { return _transactionEndPositions; }
-        }
+		public ImmutableAppendOnlyList<KeyValuePair<long, long>> TransactionEndPositions
+		{
+			get { return _transactionEndPositions; }
+		}
 
 		private bool TryReadAndValidateHeader(out TransactionHeader* current)
 		{
