@@ -194,7 +194,10 @@ namespace Voron.Impl.Backup
                             throw new InvalidOperationException("Cannot parse journal file number");
                         }
 
-                        var reader = new JournalReader(pager, 0, lastTxHeader);
+						var recoveryPager = new MemoryMapPager(Path.Combine(tempDir, number + ".recovery"));
+						toDispose.Add(recoveryPager);
+
+						var reader = new JournalReader(pager, recoveryPager, 0, lastTxHeader);
 
                         while (reader.ReadOneTransaction())
                         {
@@ -204,7 +207,7 @@ namespace Voron.Impl.Backup
                         foreach (var translation in reader.TransactionPageTranslation)
                         {
                             var pageInJournal = translation.Value.JournalPos;
-                            pagesToWrite[translation.Key] = () => pager.Read(pageInJournal);
+							pagesToWrite[translation.Key] = () => recoveryPager.Read(pageInJournal);
                         }
                     }
 

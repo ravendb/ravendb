@@ -6,7 +6,6 @@ namespace Voron.Impl.Journal
 	{
 		public long Number;
         public LinkedDictionary<long, JournalFile.PagePosition> PageTranslationTable;
-		public LinkedDictionary<long, LongRef> TransactionEndPositions;
 	    public long AvailablePages;
 	}
 }
