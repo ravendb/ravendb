@@ -39,12 +39,6 @@
   <PropertyGroup>
     <StartupObject />
   </PropertyGroup>
-  <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
-  <PropertyGroup>
-    <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
-  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -86,6 +80,7 @@
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
     <Compile Include="Impl\Paging\MemoryMappedPager.cs" />
     <Compile Include="Impl\Paging\PureMemoryPager.cs" />
+    <Compile Include="Impl\Paging\TemporaryPage.cs" />
     <Compile Include="Impl\ScratchBufferPool.cs" />
     <Compile Include="Impl\SliceEqualityComparer.cs" />
     <Compile Include="Impl\SnapshotReader.cs" />
@@ -124,28 +119,22 @@
     <Compile Include="Trees\TreeMutableState.cs" />
     <Compile Include="Trees\TreeRebalancer.cs" />
     <Compile Include="Util\AsyncManualResetEvent.cs" />
-    <Compile Include="Util\ConditionVariableFactory.cs" />
     <Compile Include="Util\Conversion\Endianness.cs" />
     <Compile Include="Util\Crc.cs" />
     <Compile Include="Util\DisposableAction.cs" />
+    <Compile Include="Util\ImmutableAppendOnlyList.cs" />
     <Compile Include="Util\NativeFileMethods.cs" />
     <Compile Include="Impl\Backup\BackupMethods.cs" />
     <Compile Include="Util\DataCopier.cs" />
     <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\LittleEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\EndianBitConverter.cs" />
-    <Compile Include="Util\LinkedDictionary.cs" />
-    <Compile Include="Util\Refence.cs" />
-    <Compile Include="Util\SafeDictionary.cs" />
-    <Compile Include="Util\SafeList.cs" />
     <Compile Include="Util\TreeExtensions.cs" />
     <Compile Include="Util\Utils.cs" />
+    <Compile Include="Util\PageTable.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Util\Conversion\readme.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="RavenDB.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

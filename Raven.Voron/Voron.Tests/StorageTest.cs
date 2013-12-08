@@ -147,22 +147,20 @@ namespace Voron.Tests
 
 		protected unsafe Tuple<Slice, Slice> ReadKey(Transaction tx, Slice key)
 		{
-			using (var c = tx.NewCursor(tx.State.Root))
-			{
-				var p = tx.State.Root.FindPageFor(tx, key, c);
-				var node = p.Search(key, Env.SliceComparer);
+			Lazy<Cursor> lazy;
+			var p = tx.State.Root.FindPageFor(tx, key, out lazy);
+			var node = p.Search(key, Env.SliceComparer);
 
-				if (node == null)
-					return null;
+			if (node == null)
+				return null;
 
-				var item1 = new Slice(node);
+			var item1 = new Slice(node);
 
-				if (item1.Compare(key, Env.SliceComparer) != 0)
-					return null;
-				return Tuple.Create(item1,
-									new Slice((byte*)node + node->KeySize + Constants.NodeHeaderSize,
-											  (ushort)node->DataSize));
-			}
+			if (item1.Compare(key, Env.SliceComparer) != 0)
+				return null;
+			return Tuple.Create(item1,
+				new Slice((byte*) node + node->KeySize + Constants.NodeHeaderSize,
+					(ushort) node->DataSize));
 		}
 
 		protected IList<string> CreateTrees(StorageEnvironment env, int number, string prefix)

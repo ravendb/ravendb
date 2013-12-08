@@ -42,7 +42,7 @@ namespace Voron.Impl
 		private static extern bool SetEndOfFile(SafeFileHandle hFile);
 
 		[DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern uint SetFilePointer([In] SafeFileHandle hFile, [In] int lDistanceToMove,
+		private static extern int SetFilePointer([In] SafeFileHandle hFile, [In] int lDistanceToMove,
 		                                         [Out] out int lpDistanceToMoveHigh, [In] NativeFileMoveMethod dwMoveMethod);
 
 		[DllImport("kernel32.dll")]

@@ -403,9 +403,9 @@
 				await Task.WhenAll(Task.Run(() => Env.Writer.Write(batch1)), Task.Run(() => Env.Writer.Write(batch2)), Task.Run(() => Env.Writer.Write(batch3)));
 				Assert.True(false);
 			}
-			catch (InvalidOperationException e)
+			catch (AggregateException e)
 			{
-				Assert.Equal("No such tree: tree2", e.Message);
+				Assert.Equal("No such tree: tree2", e.InnerException.Message);
 
 				using (var tx = Env.NewTransaction(TransactionFlags.Read))
 				{
@@ -446,7 +446,7 @@
 				tx.Commit();
 			}
 
-			var disposable = Env.Writer.PretendWriteStarted(3); // forcing to build one batch group from all batches that will be added between this line and _semaphore.Release
+			var disposable = Env.Writer.StopWrites(); // forcing to build one batch group from all batches that will be added between this line and _semaphore.Release
 
 			var tasks = new[]
 			{
@@ -462,9 +462,9 @@
 				await Task.WhenAll(tasks);
 				Assert.True(false);
 			}
-			catch (InvalidOperationException e)
+			catch (AggregateException e)
 			{
-				Assert.Equal("No such tree: tree2", e.Message);
+				Assert.Equal("No such tree: tree2", e.InnerException.Message);
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))

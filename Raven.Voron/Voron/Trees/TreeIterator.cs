@@ -11,7 +11,7 @@ namespace Voron.Trees
 		private readonly Tree _tree;
 		private readonly Transaction _tx;
 		private readonly SliceComparer _cmp;
-		private readonly Cursor _cursor;
+		private Cursor _cursor;
 		private Page _currentPage;
 		private readonly Slice _currentKey = new Slice(SliceOptions.Key);
 
@@ -20,7 +20,6 @@ namespace Voron.Trees
 			_tree = tree;
 			_tx = tx;
 			_cmp = cmp;
-			_cursor = tx.NewCursor(_tree);
 		}
 
 
@@ -31,7 +30,9 @@ namespace Voron.Trees
 
 		public bool Seek(Slice key)
 		{
-			_currentPage = _tree.FindPageFor(_tx, key, _cursor);
+			Lazy<Cursor> lazy;
+			_currentPage = _tree.FindPageFor(_tx, key, out lazy);
+			_cursor = lazy.Value;
 			_cursor.Pop();
 			var node = _currentPage.Search(key, _cmp);
 			if (node == null)
@@ -143,7 +144,6 @@ namespace Voron.Trees
 
 		public void Dispose()
 		{
-			_cursor.Dispose();
 		}
 
 		public Slice RequiredPrefix { get; set; }

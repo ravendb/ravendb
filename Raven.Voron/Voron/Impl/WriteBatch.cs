@@ -11,13 +11,12 @@
 
 		private readonly SliceEqualityComparer _sliceEqualityComparer;
 
-		public List<BatchOperation> Operations
+		public IEnumerable<BatchOperation> Operations
 		{
 			get
 			{
 				return _lastOperations
-					.SelectMany(x => x.Value.Values.OrderBy(op => op.Key, _sliceEqualityComparer))
-					.ToList();
+					.SelectMany(x => x.Value.Values);
 			}
 		}
 
@@ -29,7 +28,9 @@
 			}
 		}
 
-		internal bool TryGetValue(string treeName, Slice key, out Stream value, out ushort? version, out BatchOperationType operationType)
+	    public bool IsEmpty { get { return _lastOperations.Count == 0; } }
+
+	    internal bool TryGetValue(string treeName, Slice key, out Stream value, out ushort? version, out BatchOperationType operationType)
 		{
 		    value = null;
 		    version = null;
