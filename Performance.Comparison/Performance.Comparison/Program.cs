@@ -63,11 +63,11 @@ namespace Performance.Comparison
                 long totalDuration;
                 long items;
 
-                performanceRecords = test.WriteSequential(sequentialIds, perfTracker);
-                items = performanceRecords.Sum(x => x.ProcessedItems);
-                totalDuration = performanceRecords.Sum(x => x.Duration);
-                OutputResults("Write Seq", items, totalDuration, perfTracker);
-                WritePerfData("WriteSeq", test, performanceRecords);
+                //performanceRecords = test.WriteSequential(sequentialIds, perfTracker);
+                //items = performanceRecords.Sum(x => x.ProcessedItems);
+                //totalDuration = performanceRecords.Sum(x => x.Duration);
+                //OutputResults("Write Seq", items, totalDuration, perfTracker);
+                //WritePerfData("WriteSeq", test, performanceRecords);
 
                 //performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 2, out totalDuration);
                 //items = performanceRecords.Sum(x => x.ProcessedItems);

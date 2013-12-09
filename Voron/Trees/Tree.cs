@@ -365,8 +365,11 @@ namespace Voron.Trees
 		{
 			Page p;
 
-			if (TryUseRecentTransactionPage(tx, key, out cursor, out p))
-				return p;
+		    if (TryUseRecentTransactionPage(tx, key, out cursor, out p))
+		    {
+		        p.Search(key, _cmp);
+		        return p;
+		    }
 
 			p = tx.GetReadOnlyPage(State.RootPageNumber);
 			var c = new Cursor();
@@ -429,14 +432,14 @@ namespace Voron.Trees
 		    if (p.IsLeaf == false)
 		        throw new DataException("Index points to a non leaf page");
 
-		    p.NodePositionFor(key, _cmp); // will set the LastSearchPosition
+		    p.Search(key, _cmp); // will set the LastSearchPosition
 
 			if (p.NumberOfEntries > 0)
 			{
 				AddToRecentlyFoundPages(tx, c, p, leftmostPage, rightmostPage);
 			}
 
-			cursor = new Lazy<Cursor>(()=>c);
+		    cursor = new Lazy<Cursor>(() => c);
 			return p;
 		}
 
@@ -568,7 +571,7 @@ namespace Voron.Trees
 		{
 			Lazy<Cursor> lazy;
 			var p = FindPageFor(tx, key, out lazy);
-			var node = p.Search(key, _cmp);
+		    var node = p.GetNode(p.LastSearchPositionOrLastEntry);
 
 			if (node == null)
 				return null;
