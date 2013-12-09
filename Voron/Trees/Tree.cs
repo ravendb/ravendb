@@ -720,7 +720,7 @@ namespace Voron.Trees
 
 		public bool IsMultiValueTree { get; set; }
 
-		private enum TreeActionType
+		public enum TreeActionType
 		{
 			Add,
 			Delete

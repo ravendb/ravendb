@@ -1,4 +1,6 @@
 ﻿using System.Threading.Tasks;
+using Voron.Debugging;
+using Voron.Trees;
 using Voron.Util;
 
 namespace Voron.Impl
@@ -20,17 +22,25 @@ namespace Voron.Impl
 		private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 		private readonly ManualResetEventSlim _hasWritesEvent = new ManualResetEventSlim();
 		private readonly ManualResetEventSlim _stopWrites = new ManualResetEventSlim();
-
+		private readonly DebugJournal _debugJournal;
 		private readonly ConcurrentQueue<ManualResetEventSlim> _eventsBuffer = new ConcurrentQueue<ManualResetEventSlim>();
+
+		private bool ShouldRecordToDebugJournal
+		{
+			get
+			{
+				return _debugJournal != null && _debugJournal.IsRecording;
+			}
+		}
 
 		private readonly Lazy<Task> _backgroundTask;
 
-		internal TransactionMergingWriter(StorageEnvironment env)
+		internal TransactionMergingWriter(StorageEnvironment env,DebugJournal debugJournal = null)
 		{
 			_env = env;
 			_pendingWrites = new ConcurrentQueue<OutstandingWrite>();
 			_stopWrites.Set();
-
+			_debugJournal = debugJournal;
 			_backgroundTask = new Lazy<Task>(() => Task.Run(() => BackgroundWriter(), _cancellationTokenSource.Token));
 		}
 
@@ -106,7 +116,14 @@ namespace Voron.Impl
                                 write.Completed();
 				        }
 				    });
+
 				}
+
+				if (ShouldRecordToDebugJournal)
+					_debugJournal.Flush();
+
+				foreach (var write in writes)
+					write.Completed();
 			}
 			catch (Exception e)
 			{
@@ -157,24 +174,32 @@ namespace Voron.Impl
 				foreach (var operation in g.OrderBy(x => x.Key, SliceEqualityComparer.Instance))
 				{
 					operation.Reset();
-
+					DebugActionType actionType;
 					switch (operation.Type)
 					{
-						case WriteBatch.BatchOperationType.Add:
+						case WriteBatch.BatchOperationType.Add:							
 							tree.Add(tx, operation.Key, operation.Value as Stream, operation.Version);
+							actionType = DebugActionType.Add;
 							break;
 						case WriteBatch.BatchOperationType.Delete:
 							tree.Delete(tx, operation.Key, operation.Version);
+							actionType = DebugActionType.Delete;
 							break;
 						case WriteBatch.BatchOperationType.MultiAdd:
 							tree.MultiAdd(tx, operation.Key, operation.Value as Slice, operation.Version);
+							actionType = DebugActionType.MultiAdd;
 							break;
 						case WriteBatch.BatchOperationType.MultiDelete:
 							tree.MultiDelete(tx, operation.Key, operation.Value as Slice, operation.Version);
+							actionType = DebugActionType.MultiDelete;
 							break;
 						default:
 							throw new ArgumentOutOfRangeException();
 					}
+
+					if (ShouldRecordToDebugJournal)
+						_debugJournal.RecordAction(actionType, operation.Key, g.Key, operation.Value);
+
 				}
 			}
 		}

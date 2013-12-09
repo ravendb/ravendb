@@ -48,6 +48,8 @@
     <Reference Include="System.IO.Compression.FileSystem" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Debugging\DebugActionType.cs" />
+    <Compile Include="Debugging\DebugJournal.cs" />
     <Compile Include="Debugging\EnvironmentStats.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Exceptions\QuotaException.cs" />
@@ -56,6 +58,7 @@
     <Compile Include="Impl\Constants.cs" />
     <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
+    <Compile Include="Util\GenericUtil.cs" />
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />
     <Compile Include="Impl\FileHeaders\HeaderAccessor.cs" />
     <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
