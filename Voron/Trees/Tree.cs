@@ -433,22 +433,33 @@ namespace Voron.Trees
 
 			if (p.NumberOfEntries > 0)
 			{
-				var foundPage = new RecentlyFoundPages.FoundPage
-					{
-						Number = p.PageNumber,
-						FirstKey = leftmostPage == true ? Slice.BeforeAllKeys : p.GetNodeKey(0),
-						LastKey = rightmostPage == true ? Slice.AfterAllKeys : p.GetNodeKey(p.NumberOfEntries - 1),
-						CursorPath = c.Pages.Select(x => x.PageNumber).Reverse().ToList()
-					};
-
-				tx.AddRecentlyFoundPage(this, foundPage);
+				AddToRecentlyFoundPages(tx, c, p, leftmostPage, rightmostPage);
 			}
 
 			cursor = new Lazy<Cursor>(()=>c);
 			return p;
 		}
 
-		private bool TryUseRecentTransactionPage(Transaction tx, Slice key, out Lazy<Cursor> cursor, out Page page)
+	    private void AddToRecentlyFoundPages(Transaction tx, Cursor c, Page p, bool? leftmostPage, bool? rightmostPage)
+	    {
+	        var foundPage = new RecentlyFoundPages.FoundPage(c.Pages.Count)
+	        {
+	            Number = p.PageNumber,
+	            FirstKey = leftmostPage == true ? Slice.BeforeAllKeys : p.GetNodeKey(0),
+	            LastKey = rightmostPage == true ? Slice.AfterAllKeys : p.GetNodeKey(p.NumberOfEntries - 1),
+	        };
+	        var cur = c.Pages.Last;
+	        int pos = foundPage.CursorPath.Length - 1;
+	        while (cur != null)
+	        {
+	            foundPage.CursorPath[pos--] = cur.Value.PageNumber;
+	            cur = cur.Previous;
+	        }
+
+	        tx.AddRecentlyFoundPage(this, foundPage);
+	    }
+
+	    private bool TryUseRecentTransactionPage(Transaction tx, Slice key, out Lazy<Cursor> cursor, out Page page)
 		{
 			page = null;
 			cursor = null;

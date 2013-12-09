@@ -47,7 +47,7 @@ namespace Performance.Comparison
                     //new SqlLiteTest(path, buffer),
                     //new SqlCeTest(path, buffer),
                     //new LmdbTest(path, buffer),
-					//new EsentTest(path, buffer),
+					new EsentTest(path, buffer),
                     //new FdbTest(buffer),
 					new VoronTest(path, buffer)
 				};
@@ -63,11 +63,11 @@ namespace Performance.Comparison
                 long totalDuration;
                 long items;
 
-				//performanceRecords = test.WriteSequential(sequentialIds, perfTracker);
-				//items = performanceRecords.Sum(x => x.ProcessedItems);
-				//totalDuration = performanceRecords.Sum(x => x.Duration);
-				//OutputResults("Write Seq", items, totalDuration, perfTracker);
-				//WritePerfData("WriteSeq", test, performanceRecords);
+                performanceRecords = test.WriteSequential(sequentialIds, perfTracker);
+                items = performanceRecords.Sum(x => x.ProcessedItems);
+                totalDuration = performanceRecords.Sum(x => x.Duration);
+                OutputResults("Write Seq", items, totalDuration, perfTracker);
+                WritePerfData("WriteSeq", test, performanceRecords);
 
                 //performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 2, out totalDuration);
                 //items = performanceRecords.Sum(x => x.ProcessedItems);
@@ -233,7 +233,7 @@ namespace Performance.Comparison
 
         private static IEnumerable<TestData> InitRandomNumbers(int count, int minValueSize, int maxValueSize)
         {
-            var filter = new Filter<int>(count);
+            var filter = new Filter<int>(count, 0.0004f);
             var random = new Random(32);
             return InitValue(Enumerable.Range(0, count).Select(i =>
             {

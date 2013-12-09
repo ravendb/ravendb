@@ -30,7 +30,7 @@ namespace BloomFilter
         /// </summary>
         /// <param name="capacity">The anticipated number of items to be added to the filter. More than this number of items can be added, but the error rate will exceed what is expected.</param>
         /// <param name="errorRate">The accepable false-positive rate (e.g., 0.01F = 1%)</param>
-        public Filter(int capacity, int errorRate) : this(capacity, errorRate, null) { }
+        public Filter(int capacity, float errorRate) : this(capacity, errorRate, null) { }
 
         /// <summary>
         /// Creates a new Bloom filter, specifying an error rate of 1/capacity, using the optimal size for the underlying data structure based on the desired capacity and error rate, as well as the optimal number of hash functions.

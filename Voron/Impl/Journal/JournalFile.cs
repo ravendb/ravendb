@@ -204,7 +204,6 @@ namespace Voron.Impl.Journal
             compressionPager.EnsureContinuous(tx, 0, pagesRequired);
             var tempBuffer = compressionPager.AcquirePagePointer(0);
             var compressionBuffer = compressionPager.AcquirePagePointer(dataPagesCount);
-            NativeMethods.memset(tempBuffer, 0, pagesRequired * AbstractPager.PageSize);
 
             var write = tempBuffer;
 
