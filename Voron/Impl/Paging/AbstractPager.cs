@@ -45,8 +45,7 @@ namespace Voron.Impl.Paging
         public const int PageSize = 4096;
         public static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
         private PagerState _pagerState;
-        private ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
-        private GCHandle _tempPageHandle;
+        private readonly ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
 
         public long NumberOfAllocatedPages { get; protected set; }
 

@@ -51,9 +51,8 @@ namespace Voron.Tests.Bugs
 				{
 					var readResult = tx.GetTree("tree").Read(tx, "a" + i);
 					Assert.NotNull(readResult);
-					using (readResult.Stream)
 					{
-						Assert.Equal(100, readResult.Stream.Length);
+						Assert.Equal(100, readResult.Reader.Length);
 					}
 				}
 				tx.Commit();

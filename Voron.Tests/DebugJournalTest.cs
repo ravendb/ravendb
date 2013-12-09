@@ -78,17 +78,12 @@ namespace Voron.Tests
 
 				using (var snapshot = env.CreateSnapshot())
 				{
-					using (var readResult = snapshot.Read("test-tree", "foo"))
-						Assert.Equal("testing testing 1!",Encoding.UTF8.GetString(readResult.Stream.ReadData()));
-					using (var readResult = snapshot.Read("test-tree", "bar"))
-						Assert.Equal("testing testing 1 2!", Encoding.UTF8.GetString(readResult.Stream.ReadData()));
+				    Assert.Equal("testing testing 1!",snapshot.Read("test-tree", "foo").Reader.ToStringValue());
+				    Assert.Equal("testing testing 1 2!", snapshot.Read("test-tree", "bar").Reader.ToStringValue());
 
-					using (var readResult = snapshot.Read("test-tree2", "foo"))
-						Assert.Equal("testing testing 1!", Encoding.UTF8.GetString(readResult.Stream.ReadData()));
-					using (var readResult = snapshot.Read("test-tree2", "bar"))
-						Assert.Equal("testing testing 1 2!", Encoding.UTF8.GetString(readResult.Stream.ReadData()));
-					using (var readResult = snapshot.Read("test-tree2", "foo-bar"))
-						Assert.Equal("testing testing 1 2 3!", Encoding.UTF8.GetString(readResult.Stream.ReadData()));
+				    Assert.Equal("testing testing 1!", snapshot.Read("test-tree2", "foo").Reader.ToStringValue());
+				    Assert.Equal("testing testing 1 2!", snapshot.Read("test-tree2", "bar").Reader.ToStringValue());
+				    Assert.Equal("testing testing 1 2 3!", snapshot.Read("test-tree2", "foo-bar").Reader.ToStringValue());
 
 
 					Assert.Equal(0,snapshot.ReadVersion("test-tree","foo-bar"));

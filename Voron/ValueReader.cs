@@ -9,6 +9,7 @@ namespace Voron
         private readonly byte* _val;
         private readonly int _len;
         private int _pos;
+        public int Length { get { return _len; } }
 
         public void Reset()
         {
@@ -54,6 +55,31 @@ namespace Voron
             var val = *(long*)(_val + _pos);
             _pos += sizeof(long);
             return val;
+        }
+
+        public string ToStringValue()
+        {
+            return new string((sbyte*)_val, 0, _len);
+        }
+
+        public byte[] ReadBytes(int length)
+        {
+            var size = Math.Min(length, _len - _pos);
+            var buffer = new byte[size];
+            Read(buffer, 0, size);
+            return buffer;
+        }
+
+        public void CopyTo(Stream stream)
+        {
+            var buffer = new byte[4096];
+            while (true)
+            {
+                var read = Read(buffer, 0, buffer.Length);
+                if (read == 0)
+                    return;
+                stream.Write(buffer, 0, read);
+            }
         }
     }
 }

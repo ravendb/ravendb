@@ -15,6 +15,5 @@ namespace Voron
 		public ValueReader Reader { get; private set; }
 
 		public ushort Version { get; private set; }
-		
 	}
 }
