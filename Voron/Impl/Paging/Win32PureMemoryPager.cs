@@ -59,7 +59,7 @@ namespace Voron.Impl.Paging
 
 		public Win32PureMemoryPager()
 		{
-			_reservedSize = Environment.Is64BitProcess ? 1024 * 1024 * 1024UL : 128 * 1024 * 1024UL;
+			_reservedSize = Environment.Is64BitProcess ? 4 * 1024 * 1024 * 1024UL : 128 * 1024 * 1024UL;
 			var dwSize = new UIntPtr(_reservedSize);
 			_baseAddress = VirtualAlloc(null, dwSize, AllocationType.RESERVE, MemoryProtection.NOACCESS);
 			if (_baseAddress == null)
@@ -80,13 +80,13 @@ namespace Voron.Impl.Paging
 		{
 			if (pageNumber >= NumberOfAllocatedPages)
 				throw new InvalidOperationException("Tried to read a page that wasn't committed");
-			return _baseAddress + (pageNumber*PageSize);
+			return _baseAddress + (pageNumber * PageSize);
 		}
 
 		public override void AllocateMorePages(Transaction tx, long newLength)
 		{
-			var totalPages = newLength/PageSize;
-			Debug.Assert(newLength%PageSize == 0);
+			var totalPages = newLength / PageSize;
+			Debug.Assert(newLength % PageSize == 0);
 			AllocatePages(totalPages - NumberOfAllocatedPages);
 		}
 
@@ -100,7 +100,7 @@ namespace Voron.Impl.Paging
 				throw new InvalidOperationException("Tried to allocated pages beyond the reserved space of: " + _reservedSize);
 			}
 
-			var result = VirtualAlloc(lpAddress, new UIntPtr(dwSize), AllocationType.COMMIT,MemoryProtection.READWRITE);
+			var result = VirtualAlloc(lpAddress, new UIntPtr(dwSize), AllocationType.COMMIT, MemoryProtection.READWRITE);
 			if (result == null)
 				throw new Win32Exception();
 
