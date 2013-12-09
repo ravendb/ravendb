@@ -83,7 +83,7 @@
     <Compile Include="Impl\Paging\FilePager.cs" />
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
     <Compile Include="Impl\Paging\MemoryMappedPager.cs" />
-    <Compile Include="Impl\Paging\PureMemoryPager.cs" />
+    <Compile Include="Impl\Paging\Win32PureMemoryPager.cs" />
     <Compile Include="Impl\Paging\TemporaryPage.cs" />
     <Compile Include="Impl\ScratchBufferPool.cs" />
     <Compile Include="Impl\SliceEqualityComparer.cs" />
@@ -142,7 +142,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Util\Conversion\readme.txt" />
-  
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

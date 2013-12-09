@@ -243,7 +243,7 @@ namespace Voron
 
 		public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
 		{
-			private readonly PureMemoryPager _dataPager;
+			private readonly Win32PureMemoryPager _dataPager;
 
 			private Dictionary<string, IJournalWriter> _logs =
 				new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
@@ -254,7 +254,7 @@ namespace Voron
 
 			public PureMemoryStorageEnvironmentOptions()
 			{
-				_dataPager = new PureMemoryPager();
+				_dataPager = new Win32PureMemoryPager();
 			}
 
 			public override IVirtualPager DataPager
@@ -325,7 +325,7 @@ namespace Voron
 
 			public override IVirtualPager CreateScratchPager(string name)
 			{
-				return new PureMemoryPager();
+				return new Win32PureMemoryPager();
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)

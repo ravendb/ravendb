@@ -85,6 +85,11 @@ namespace Voron.Impl
 		{
 			return _scratchPager.Read(p);
 		}
+
+		public byte* AcquirePagePointer(long p)
+		{
+			return _scratchPager.AcquirePagePointer(p);
+		}
 	}
 
 	public class PageFromScratchBuffer

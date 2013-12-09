@@ -63,6 +63,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endregion
 
 using System;
+using System.Runtime.InteropServices;
 using Voron.Impl;
 
 // ReSharper disable InconsistentNaming
@@ -73,9 +74,18 @@ using Voron.Impl;
 
 namespace Voron.Util
 {
-	public unsafe class LZ4
+	public unsafe class LZ4 : IDisposable
 	{
-		public static int Encode64(
+		private readonly ushort* _hashtable64K;
+		private readonly uint* _hashtable;
+
+		public LZ4()
+		{
+			_hashtable64K = (ushort*)Marshal.AllocHGlobal(HASH64K_TABLESIZE*sizeof (ushort)).ToPointer();
+			_hashtable = (uint*)Marshal.AllocHGlobal(HASH_TABLESIZE * sizeof(uint)).ToPointer();
+		}
+
+		public int Encode64(
 				byte* input,
 				byte* output,
 				int inputLength,
@@ -83,16 +93,12 @@ namespace Voron.Util
 		{
 			if (inputLength < LZ4_64KLIMIT)
 			{
-				fixed (ushort* h = new ushort[HASH64K_TABLESIZE])
-				{
-					return LZ4_compress64kCtx_64(h, input, output, inputLength, outputLength);
-				}
+				NativeMethods.memset((byte*) _hashtable64K, 0, HASH64K_TABLESIZE*sizeof (ushort));
+				return LZ4_compress64kCtx_64(_hashtable64K, input, output, inputLength, outputLength);
 			}
 
-			fixed (uint* h = new uint[HASH_TABLESIZE])
-			{
-				return LZ4_compressCtx_64(h, input, output, inputLength, outputLength);
-			}
+			NativeMethods.memset((byte*)_hashtable, 0, HASH_TABLESIZE * sizeof(uint));
+			return LZ4_compressCtx_64(_hashtable, input, output, inputLength, outputLength);
 		}
 
 		public static int Decode64(
@@ -948,6 +954,12 @@ namespace Voron.Util
 		}
 
 		#endregion
+
+		public void Dispose()
+		{
+			Marshal.FreeHGlobal(new IntPtr(_hashtable64K));
+			Marshal.FreeHGlobal(new IntPtr(_hashtable));
+		}
 	}
 }
 
