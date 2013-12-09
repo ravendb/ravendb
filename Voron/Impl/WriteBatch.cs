@@ -29,11 +29,26 @@ namespace Voron.Impl
 		{
 			get
 			{
-				return () => _lastOperations.Sum(operation => operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
+				return () =>
+					{
+						long totalSize = 0;
+
+						if (_lastOperations.Count > 0)
+							totalSize += _lastOperations.Sum(
+								operation =>
+								operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
+
+						if (_multiTreeOperations.Count > 0)
+							totalSize += _multiTreeOperations.Sum(
+								tree =>
+								tree.Value.Sum(
+									multiOp => multiOp.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size)));
+						return totalSize;
+					};
 			}
 		}
 
-	    public bool IsEmpty { get { return _lastOperations.Count == 0; } }
+		public bool IsEmpty { get { return _lastOperations.Count == 0 && _multiTreeOperations.Count == 0; } }
 
 	    internal bool TryGetValue(string treeName, Slice key, out Stream value, out ushort? version, out BatchOperationType operationType)
 		{
