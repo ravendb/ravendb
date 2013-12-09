@@ -148,9 +148,7 @@ namespace Voron.Impl.Journal
             var unused = new List<PagePosition>();
             var writePagePos = _writePage;
 
-
 			var pages = CompressPages(tx, numberOfPages, compressionPager, txPages);
-
 
             UpdatePageTranslationTable(tx, txPages, unused, ptt);
 
@@ -163,6 +161,8 @@ namespace Voron.Impl.Journal
 
             return _journalWriter.WriteGatherAsync(writePagePos * AbstractPager.PageSize, pages);
         }
+
+		
 
 	    private byte*[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager, List<PageFromScratchBuffer> txPages)
         {
@@ -189,7 +189,6 @@ namespace Voron.Impl.Journal
                 write += count;
             }
 
-
             var len = DoCompression(tempBuffer, compressionBuffer, sizeInBytes, outputBuffer);
             var compressedPages = (len / AbstractPager.PageSize) + (len % AbstractPager.PageSize == 0 ? 0 : 1);
 
@@ -202,11 +201,17 @@ namespace Voron.Impl.Journal
             txHeader->CompressedSize = len;
             txHeader->UncompressedSize = sizeInBytes;
 
+		    uint crc = 0;
             pages[0] = txHeaderBase;
             for (int index = 0; index < compressedPages; index++)
             {
-                pages[index + 1] = compressionBuffer + (index * AbstractPager.PageSize);
+	            var ptr = compressionBuffer + (index * AbstractPager.PageSize);
+	            pages[index + 1] = ptr;
+
+				crc = Crc.Extend(crc, ptr, 0, AbstractPager.PageSize);
             }
+
+		    txHeader->Crc = crc;
 
             return pages;
         }

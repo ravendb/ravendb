@@ -194,7 +194,7 @@ namespace Voron.Impl.Backup
                             throw new InvalidOperationException("Cannot parse journal file number");
                         }
 
-						var recoveryPager = new Win32MemoryMapPager(Path.Combine(tempDir, number + ".recovery"));
+						var recoveryPager = new Win32MemoryMapPager(Path.Combine(tempDir, StorageEnvironmentOptions.JournalRecoveryName(number)));
 						toDispose.Add(recoveryPager);
 
 						var reader = new JournalReader(pager, recoveryPager, 0, lastTxHeader);

@@ -112,7 +112,7 @@ namespace Voron.Impl.Journal
 		    long journalNumber;
 			for (journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
 			{
-				using (var recoveryPager = _env.Options.CreateScratchPager(journalNumber + ".recovery"))
+				using (var recoveryPager = _env.Options.CreateScratchPager(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)))
 				using (var pager = _env.Options.OpenJournalPager(journalNumber))
 				{
 					RecoverCurrentJournalSize(pager);

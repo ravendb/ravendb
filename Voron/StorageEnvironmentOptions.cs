@@ -343,6 +343,11 @@ namespace Voron
 			return string.Format("{0:D19}.journal", number);
 		}
 
+		public static string JournalRecoveryName(long number)
+		{
+			return string.Format("{0:D19}.recovery", number);
+		}
+
 		public abstract void Dispose();
 
 		public abstract bool TryDeleteJournal(long number);
