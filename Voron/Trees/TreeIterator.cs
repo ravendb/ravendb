@@ -137,9 +137,9 @@ namespace Voron.Trees
 			return _currentPage != null && this.ValidateCurrentKey(Current, _cmp);
 		}
 
-		public Stream CreateStreamForCurrent()
+		public ValueReader CreateReaderForCurrent()
 		{
-			return NodeHeader.Stream(_tx, Current);
+			return NodeHeader.Reader(_tx, Current);
 		}
 
 		public void Dispose()

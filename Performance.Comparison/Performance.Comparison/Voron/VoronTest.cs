@@ -255,18 +255,10 @@ namespace Performance.Comparison.Voron
                 foreach (var id in ids)
                 {
                     var key = id.ToString("0000000000000000");
-	                using (var readResult = tx.State.Root.Read(tx, key))
-	                {
-		                if (readResult == null)
-		                {
-			                Console.WriteLine("WTF?");
-		                }
-						using (var stream = readResult.Stream)
-						{
-							while (stream.Read(ms, 0, ms.Length) != 0)
-							{
-							}
-						}
+                    var readResult = tx.State.Root.Read(tx, key);
+                    while (readResult.Reader.Read(ms, 0, ms.Length) > 0)
+                    {
+					    	
 	                }
 	             
                 }

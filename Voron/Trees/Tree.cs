@@ -576,7 +576,7 @@ namespace Voron.Trees
 			var item = new Slice(node);
 
 			return item.Compare(key, _cmp) == 0
-				? new ReadResult(NodeHeader.Stream(tx, node), node->Version)
+				? new ReadResult(NodeHeader.Reader(tx, node), node->Version)
 				: null;
 		}
 

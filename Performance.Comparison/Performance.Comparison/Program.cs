@@ -47,7 +47,7 @@ namespace Performance.Comparison
                     //new SqlLiteTest(path, buffer),
                     //new SqlCeTest(path, buffer),
                     //new LmdbTest(path, buffer),
-					new EsentTest(path, buffer),
+                    //new EsentTest(path, buffer),
                     //new FdbTest(buffer),
 					new VoronTest(path, buffer)
 				};
@@ -92,41 +92,41 @@ namespace Performance.Comparison
                 //WritePerfData("WriteSeq_Parallel_16", test, performanceRecords);
 
 
-                //var performanceRecord = test.ReadSequential(perfTracker);
-                //items = performanceRecord.ProcessedItems;
-                //totalDuration = performanceRecord.Duration;
-                //OutputResults("Read Seq", items, totalDuration, perfTracker);
-                //WritePerfData("ReadSeq", test, new List<PerformanceRecord> { performanceRecord });
+                var performanceRecord = test.ReadSequential(perfTracker);
+                items = performanceRecord.ProcessedItems;
+                totalDuration = performanceRecord.Duration;
+                OutputResults("Read Seq", items, totalDuration, perfTracker);
+                WritePerfData("ReadSeq", test, new List<PerformanceRecord> { performanceRecord });
 
-                //performanceRecord = test.ReadParallelSequential(perfTracker, 2);
-                //items = performanceRecord.ProcessedItems;
-                //totalDuration = performanceRecord.Duration;
-                //OutputResults("Read Seq [2]", items, totalDuration, perfTracker);
-                //WritePerfData("ReadSeq_Parallel_2", test, new List<PerformanceRecord> { performanceRecord });
+                performanceRecord = test.ReadParallelSequential(perfTracker, 2);
+                items = performanceRecord.ProcessedItems;
+                totalDuration = performanceRecord.Duration;
+                OutputResults("Read Seq [2]", items, totalDuration, perfTracker);
+                WritePerfData("ReadSeq_Parallel_2", test, new List<PerformanceRecord> { performanceRecord });
 
-                //performanceRecord = test.ReadParallelSequential(perfTracker, 4);
-                //items = performanceRecord.ProcessedItems;
-                //totalDuration = performanceRecord.Duration;
-                //OutputResults("Read Seq [4]", items, totalDuration, perfTracker);
-                //WritePerfData("ReadSeq_Parallel_4", test, new List<PerformanceRecord> { performanceRecord });
+                performanceRecord = test.ReadParallelSequential(perfTracker, 4);
+                items = performanceRecord.ProcessedItems;
+                totalDuration = performanceRecord.Duration;
+                OutputResults("Read Seq [4]", items, totalDuration, perfTracker);
+                WritePerfData("ReadSeq_Parallel_4", test, new List<PerformanceRecord> { performanceRecord });
 
-                //performanceRecord = test.ReadParallelSequential(perfTracker, 8);
-                //items = performanceRecord.ProcessedItems;
-                //totalDuration = performanceRecord.Duration;
-                //OutputResults("Read Seq [8]", items, totalDuration, perfTracker);
-                //WritePerfData("ReadSeq_Parallel_8", test, new List<PerformanceRecord> { performanceRecord });
+                performanceRecord = test.ReadParallelSequential(perfTracker, 8);
+                items = performanceRecord.ProcessedItems;
+                totalDuration = performanceRecord.Duration;
+                OutputResults("Read Seq [8]", items, totalDuration, perfTracker);
+                WritePerfData("ReadSeq_Parallel_8", test, new List<PerformanceRecord> { performanceRecord });
 
-                //performanceRecord = test.ReadParallelSequential(perfTracker, 16);
-                //items = performanceRecord.ProcessedItems;
-                //totalDuration = performanceRecord.Duration;
-                //OutputResults("Read Seq [16]", items, totalDuration, perfTracker);
-                //WritePerfData("ReadSeq_Parallel_16", test, new List<PerformanceRecord> { performanceRecord });
+                performanceRecord = test.ReadParallelSequential(perfTracker, 16);
+                items = performanceRecord.ProcessedItems;
+                totalDuration = performanceRecord.Duration;
+                OutputResults("Read Seq [16]", items, totalDuration, perfTracker);
+                WritePerfData("ReadSeq_Parallel_16", test, new List<PerformanceRecord> { performanceRecord });
 
-                performanceRecords = test.WriteRandom(randomIds, perfTracker);
-                items = performanceRecords.Sum(x => x.ProcessedItems);
-                totalDuration = performanceRecords.Sum(x => x.Duration);
-                OutputResults("Write Rnd", items, totalDuration, perfTracker);
-                WritePerfData("WriteRnd", test, performanceRecords);
+                //performanceRecords = test.WriteRandom(randomIds, perfTracker);
+                //items = performanceRecords.Sum(x => x.ProcessedItems);
+                //totalDuration = performanceRecords.Sum(x => x.Duration);
+                //OutputResults("Write Rnd", items, totalDuration, perfTracker);
+                //WritePerfData("WriteRnd", test, performanceRecords);
 
                 //performanceRecords = test.WriteParallelRandom(randomIds, perfTracker, 2, out totalDuration);
                 //items = performanceRecords.Sum(x => x.ProcessedItems);

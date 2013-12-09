@@ -73,7 +73,7 @@ namespace Voron.Trees
 			throw new NotSupportedException("There is only one entry in single entry iterator");
 		}
 
-		public Stream CreateStreamForCurrent()
+		public ValueReader CreateReaderForCurrent()
 		{
 			throw new NotSupportedException("There is no value for single entry iterator");
 		}

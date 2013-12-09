@@ -47,14 +47,12 @@ namespace Voron.Impl.FreeSpace
             
         }
 
-        public StreamBitArray(Stream stream)
+        public StreamBitArray(ValueReader reader)
         {
-            var br = new BinaryReader(stream);
-
-            SetCount = br.ReadInt32();
+            SetCount = reader.ReadInt32();
             for (var i = 0; i < _inner.Length; i++)
             {
-                _inner[i] = br.ReadInt32();
+                _inner[i] = reader.ReadInt32();
             }
         }
 

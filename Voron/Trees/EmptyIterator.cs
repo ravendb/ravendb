@@ -25,7 +25,7 @@ namespace Voron.Trees
 			throw new InvalidOperationException("No records");
 		}
 
-		public Stream CreateStreamForCurrent()
+		public ValueReader CreateReaderForCurrent()
 		{
 			throw new InvalidOperationException("No current page");
 		}
