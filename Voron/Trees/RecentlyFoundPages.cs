@@ -5,12 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.CodeDom;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using Voron.Impl;
-using Voron.Util;
 
 namespace Voron.Trees
 {
@@ -29,28 +25,37 @@ namespace Voron.Trees
 		    }
 		}
 
-	    private readonly FoundPage[] _cache = new FoundPage[2];
+	    private readonly FoundPage[] _cache;
 
-		
-		public void Add(FoundPage page)
+	    private readonly int _cacheSize;
+
+	    public RecentlyFoundPages(int cacheSize)
+	    {
+            _cache = new FoundPage[cacheSize];
+	        _cacheSize = cacheSize;
+	    }
+
+	    public void Add(FoundPage page)
 		{
-		    if (_cache[0] == null || _cache[0].Number == page.Number)
+            for (int i = 0; i < _cacheSize; i++)
 		    {
-		        _cache[0] = page;
-		        return;
+                if (_cache[i] == null || _cache[i].Number == page.Number)
+                {
+                    _cache[0] = page;
+                    return;
+                }
 		    }
-		    if (_cache[1] == null || _cache[1].Number == page.Number)
-		    {
-		        _cache[1] = page;
-		        return;
-		    }
-		    _cache[1] = _cache[0];
+
+	        for (int i = 1; i < _cacheSize; i++)
+	        {
+	            _cache[i] = _cache[i - 1];
+	        }
 		    _cache[0] = page;
 		}
 
 		public FoundPage Find(Slice key)
 		{
-		    for (int i = 0; i < 2; i++)
+            for (int i = 0; i < _cache.Length; i++)
 		    {
 		        var page = _cache[i];
                 if(page == null)
@@ -77,8 +82,7 @@ namespace Voron.Trees
 
 		public void Clear()
 		{
-		    _cache[0] = null;
-		    _cache[1] = null;
+		    Array.Clear(_cache, 0, _cacheSize);
 		}
 	}
 }

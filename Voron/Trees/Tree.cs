@@ -371,77 +371,84 @@ namespace Voron.Trees
 		        return p;
 		    }
 
-			p = tx.GetReadOnlyPage(State.RootPageNumber);
-			var c = new Cursor();
-			c.Push(p);
-
-			bool? rightmostPage = null;
-			bool? leftmostPage = null;
-
-			while (p.Flags == (PageFlags.Branch))
-			{
-				int nodePos;
-				if (key.Options == SliceOptions.BeforeAllKeys)
-				{
-					p.LastSearchPosition = nodePos = 0;
-				}
-				else if (key.Options == SliceOptions.AfterAllKeys)
-				{
-					p.LastSearchPosition = nodePos = (ushort)(p.NumberOfEntries - 1);
-				}
-				else
-				{
-					if (p.Search(key, _cmp) != null)
-					{
-						nodePos = p.LastSearchPosition;
-						if (p.LastMatch != 0)
-						{
-							nodePos--;
-							p.LastSearchPosition--;
-						}
-
-						if (p.Flags == PageFlags.Branch)
-						{
-							if (nodePos == 0)
-								leftmostPage = leftmostPage.HasValue ? leftmostPage & true : true;
-							else
-								leftmostPage = false;
-
-							rightmostPage = false;
-						}
-					}
-					else
-					{
-						nodePos = (ushort)(p.LastSearchPosition - 1);
-
-						if (p.Flags == PageFlags.Branch)
-						{
-							rightmostPage = rightmostPage.HasValue ? rightmostPage & true : true;
-							leftmostPage = false;
-						}
-					}
-				}
-
-				var node = p.GetNode(nodePos);
-				p = tx.GetReadOnlyPage(node->PageNumber);
-                Debug.Assert(node->PageNumber == p.PageNumber, string.Format("Requested Page: #{0}. Got Page: #{1}", node->PageNumber, p.PageNumber));
-
-				c.Push(p);
-			}
-
-		    if (p.IsLeaf == false)
-		        throw new DataException("Index points to a non leaf page");
-
-		    p.Search(key, _cmp); // will set the LastSearchPosition
-
-			if (p.NumberOfEntries > 0)
-			{
-				AddToRecentlyFoundPages(tx, c, p, leftmostPage, rightmostPage);
-			}
-
-		    cursor = new Lazy<Cursor>(() => c);
-			return p;
+			return SearchForPage(tx, key, ref cursor);
 		}
+
+	    private Page SearchForPage(Transaction tx, Slice key, ref Lazy<Cursor> cursor)
+	    {
+	        Page p;
+	        p = tx.GetReadOnlyPage(State.RootPageNumber);
+	        var c = new Cursor();
+	        c.Push(p);
+
+	        bool? rightmostPage = null;
+	        bool? leftmostPage = null;
+
+	        while (p.Flags == (PageFlags.Branch))
+	        {
+	            int nodePos;
+	            if (key.Options == SliceOptions.BeforeAllKeys)
+	            {
+	                p.LastSearchPosition = nodePos = 0;
+	            }
+	            else if (key.Options == SliceOptions.AfterAllKeys)
+	            {
+	                p.LastSearchPosition = nodePos = (ushort) (p.NumberOfEntries - 1);
+	            }
+	            else
+	            {
+	                if (p.Search(key, _cmp) != null)
+	                {
+	                    nodePos = p.LastSearchPosition;
+	                    if (p.LastMatch != 0)
+	                    {
+	                        nodePos--;
+	                        p.LastSearchPosition--;
+	                    }
+
+	                    if (p.Flags == PageFlags.Branch)
+	                    {
+	                        if (nodePos == 0)
+	                            leftmostPage = leftmostPage.HasValue ? leftmostPage & true : true;
+	                        else
+	                            leftmostPage = false;
+
+	                        rightmostPage = false;
+	                    }
+	                }
+	                else
+	                {
+	                    nodePos = (ushort) (p.LastSearchPosition - 1);
+
+	                    if (p.Flags == PageFlags.Branch)
+	                    {
+	                        rightmostPage = rightmostPage.HasValue ? rightmostPage & true : true;
+	                        leftmostPage = false;
+	                    }
+	                }
+	            }
+
+	            var node = p.GetNode(nodePos);
+	            p = tx.GetReadOnlyPage(node->PageNumber);
+	            Debug.Assert(node->PageNumber == p.PageNumber,
+	                string.Format("Requested Page: #{0}. Got Page: #{1}", node->PageNumber, p.PageNumber));
+
+	            c.Push(p);
+	        }
+
+	        if (p.IsLeaf == false)
+	            throw new DataException("Index points to a non leaf page");
+
+	        p.Search(key, _cmp); // will set the LastSearchPosition
+
+	        if (p.NumberOfEntries > 0)
+	        {
+	            AddToRecentlyFoundPages(tx, c, p, leftmostPage, rightmostPage);
+	        }
+
+	        cursor = new Lazy<Cursor>(() => c);
+	        return p;
+	    }
 
 	    private void AddToRecentlyFoundPages(Transaction tx, Cursor c, Page p, bool? leftmostPage, bool? rightmostPage)
 	    {

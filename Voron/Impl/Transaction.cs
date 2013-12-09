@@ -465,8 +465,8 @@ namespace Voron.Impl
 		public void AddRecentlyFoundPage(Tree tree, RecentlyFoundPages.FoundPage foundPage)
 		{
 			RecentlyFoundPages pages;
-			if (_recentlyFoundPages.TryGetValue(tree, out pages) == false)
-				_recentlyFoundPages[tree] = pages = new RecentlyFoundPages();
+		    if (_recentlyFoundPages.TryGetValue(tree, out pages) == false)
+		        _recentlyFoundPages[tree] = pages = new RecentlyFoundPages(Flags == TransactionFlags.Read ? 8 : 2);
 
 			pages.Add(foundPage);
 		}
