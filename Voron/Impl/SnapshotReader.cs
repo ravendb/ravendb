@@ -34,8 +34,10 @@
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
-					        throw new InvalidOperationException("Feature temporarily removed because it required expensive value copying, and we want to see if there is another way to do this");
-                            //return new ReadResult(null, version.HasValue ? (ushort)(version.Value + 1) : tree.ReadVersion(Transaction, key));
+					    {
+					        var reader = new ValueReader(stream);
+					        return new ReadResult(reader, version.HasValue ? (ushort)(version.Value + 1) : tree.ReadVersion(Transaction, key));
+					    }
 						case WriteBatch.BatchOperationType.Delete:
 							return null;
 					}

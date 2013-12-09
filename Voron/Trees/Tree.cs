@@ -578,16 +578,13 @@ namespace Voron.Trees
 		{
 			Lazy<Cursor> lazy;
 			var p = FindPageFor(tx, key, out lazy);
-		    var node = p.GetNode(p.LastSearchPositionOrLastEntry);
 
-			if (node == null)
-				return null;
+            if (p.LastMatch != 0)
+		        return null;
 
-			var item = new Slice(node);
+		    var node = p.GetNode(p.LastSearchPosition);
 
-			return item.Compare(key, _cmp) == 0
-				? new ReadResult(NodeHeader.Reader(tx, node), node->Version)
-				: null;
+		    return new ReadResult(NodeHeader.Reader(tx, node), node->Version);
 		}
 
 		public int GetDataSize(Transaction tx, Slice key)

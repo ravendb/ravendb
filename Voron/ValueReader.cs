@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 using Voron.Impl;
 
 namespace Voron
@@ -7,6 +8,7 @@ namespace Voron
     public unsafe class ValueReader
     {
         private readonly byte* _val;
+        private readonly byte[] _buffer;
         private readonly int _len;
         private int _pos;
         public int Length { get { return _len; } }
@@ -14,6 +16,24 @@ namespace Voron
         public void Reset()
         {
             _pos = 0;
+        }
+
+        public ValueReader(Stream stream)
+        {
+            var position = stream.Position;
+            _len = (int)(stream.Length - stream.Position);
+            _buffer = new byte[_len];
+
+            int pos = 0;
+            while (true)
+            {
+                var read = stream.Read(_buffer, pos, _buffer.Length - pos);
+                if (read == 0)
+                    break;
+                pos += read;
+            }
+            stream.Position = position;
+
         }
 
         public ValueReader(byte* val, int len)
@@ -32,8 +52,15 @@ namespace Voron
         {
             count = Math.Min(count, _len - _pos);
 
-            NativeMethods.memcpy(buffer, _val + _pos, count);
-
+            if (_val == null)
+            {
+                fixed (byte* b = _buffer)
+                    NativeMethods.memcpy(buffer, b + _pos, count);
+            }
+            else
+            {
+                NativeMethods.memcpy(buffer, _val + _pos, count);
+            }
             _pos += count;
 
             return count;
@@ -43,23 +70,27 @@ namespace Voron
         {
             if (_len - _pos < sizeof(int))
                 throw new EndOfStreamException();
-            var val = *(int*)(_val + _pos);
-            _pos += sizeof(int);
-            return val;
+            var buffer = new byte[sizeof(int)];
+
+            Read(buffer, 0, sizeof (int));
+
+            return BitConverter.ToInt32(buffer, 0);
         }
 
         public long ReadInt64()
         {
             if (_len - _pos < sizeof(long))
                 throw new EndOfStreamException();
-            var val = *(long*)(_val + _pos);
-            _pos += sizeof(long);
-            return val;
+            var buffer = new byte[sizeof(long)];
+
+            Read(buffer, 0, sizeof(long));
+
+            return BitConverter.ToInt64(buffer, 0);
         }
 
         public string ToStringValue()
         {
-            return new string((sbyte*)_val, 0, _len);
+            return Encoding.UTF8.GetString(ReadBytes(_len - _pos));
         }
 
         public byte[] ReadBytes(int length)
