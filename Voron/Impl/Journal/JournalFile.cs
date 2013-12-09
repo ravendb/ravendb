@@ -263,19 +263,12 @@ namespace Voron.Impl.Journal
 
 	    private int DoCompression(byte* input, byte* output, int inputLength, int outputLength)
 	    {
-		    var ptr = Win32NativeMethods.VirtualAlloc(IntPtr.Zero, (UIntPtr)outputLength, Win32NativeMethods.AllocationType.COMMIT,
-			    Win32NativeMethods.MemoryProtection.READWRITE);
-		    NativeMethods.memset(ptr, 255, outputLength);
-
 		    var doCompression = _lz4.Encode64(
                 input,
-                ptr,
+                output, 
                 inputLength,
                 outputLength);
 
-		    NativeMethods.memcpy(output, ptr, outputLength);
-
-		    Win32NativeMethods.VirtualFree(ptr, (UIntPtr) outputLength, Win32NativeMethods.FreeType.MEM_RELEASE);
 #if DEBUG
 			//var mem = Marshal.AllocHGlobal(inputLength);
 			//try

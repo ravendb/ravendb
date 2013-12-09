@@ -1,93 +1,111 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Voron.Trees;
-using Voron.Util;
 
 namespace Voron.Impl.Paging
 {
 	public unsafe class Win32PureMemoryPager : AbstractPager
 	{
-		private ImmutableAppendOnlyList<Buffer> _buffers = ImmutableAppendOnlyList<Buffer>.Empty;
+		private readonly byte* _baseAddress;
+		private readonly ulong _reservedSize;
 
-		public class Buffer
+		// ReSharper disable InconsistentNaming
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		public static extern byte* VirtualAlloc(byte* lpAddress, UIntPtr dwSize,
+		   AllocationType flAllocationType, MemoryProtection flProtect);
+
+		[DllImport("kernel32.dll", SetLastError = true)]
+		public static extern bool VirtualFree(byte* lpAddress, UIntPtr dwSize,
+		   FreeType dwFreeType);
+
+		[Flags]
+		public enum FreeType : uint
 		{
-			public byte* Base;
-			public long Size;
-			public IntPtr Handle;
+			MEM_DECOMMIT = 0x4000,
+			MEM_RELEASE = 0x8000
 		}
 
-		public Win32PureMemoryPager(byte[] data)
+		[Flags]
+		public enum AllocationType : uint
 		{
-			var ptr = Marshal.AllocHGlobal(data.Length);
-			var buffer = new Buffer
-			{
-				Handle = ptr,
-				Base = (byte*)ptr.ToPointer(),
-				Size = data.Length
-			};
-			_buffers = _buffers.Append(buffer);
-			NumberOfAllocatedPages = data.Length / PageSize;
-			PagerState.Release();
-			PagerState = new PagerState(this);
-			PagerState.AddRef();
-			fixed (byte* origin = data)
-			{
-				NativeMethods.memcpy(buffer.Base, origin, data.Length);
-			}
+			COMMIT = 0x1000,
+			RESERVE = 0x2000,
+			RESET = 0x80000,
+			LARGE_PAGES = 0x20000000,
+			PHYSICAL = 0x400000,
+			TOP_DOWN = 0x100000,
+			WRITE_WATCH = 0x200000
 		}
+
+		[Flags]
+		public enum MemoryProtection : uint
+		{
+			EXECUTE = 0x10,
+			EXECUTE_READ = 0x20,
+			EXECUTE_READWRITE = 0x40,
+			EXECUTE_WRITECOPY = 0x80,
+			NOACCESS = 0x01,
+			READONLY = 0x02,
+			READWRITE = 0x04,
+			WRITECOPY = 0x08,
+			GUARD_Modifierflag = 0x100,
+			NOCACHE_Modifierflag = 0x200,
+			WRITECOMBINE_Modifierflag = 0x400
+		}
+		// ReSharper restore InconsistentNaming
 
 		public Win32PureMemoryPager()
 		{
-			var ptr = Marshal.AllocHGlobal(MinIncreaseSize);
-			var buffer = new Buffer
+			_reservedSize = Environment.Is64BitProcess ? 1024 * 1024 * 1024UL : 128 * 1024 * 1024UL;
+			var dwSize = new UIntPtr(_reservedSize);
+			_baseAddress = VirtualAlloc(null, dwSize, AllocationType.RESERVE, MemoryProtection.NOACCESS);
+			if (_baseAddress == null)
+				throw new Win32Exception();
+		}
+
+		public Win32PureMemoryPager(byte[] data)
+			: this()
+		{
+			AllocatePages(data.Length / PageSize + (data.Length % PageSize == 0 ? 0 : 1));
+			fixed (byte* origin = data)
 			{
-				Handle = ptr,
-				Base = (byte*)ptr.ToPointer(),
-				Size = MinIncreaseSize
-			};
-			_buffers.Append(buffer);
-			NumberOfAllocatedPages = 0;
-			PagerState.Release();
-			PagerState = new PagerState(this);
-			PagerState.AddRef();
+				NativeMethods.memcpy(_baseAddress, origin, data.Length);
+			}
 		}
 
-	    public override void Write(Page page, long? pageNumber)
-	    {
-			var toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize): 1;
-	        var requestedPageNumber = pageNumber ?? page.PageNumber;
-            
-            WriteDirect(page, requestedPageNumber, toWrite);
-	    }
-
-	    public override string ToString()
-	    {
-	        return "memory";
-	    }
-
-	    public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
-	    {
-            EnsureContinuous(null, pagePosition, pagesToWrite);
-            NativeMethods.memcpy(AcquirePagePointer(pagePosition), start.Base, pagesToWrite * PageSize);
-	    }
-
-	    public override void Dispose()
+		public override byte* AcquirePagePointer(long pageNumber)
 		{
-			base.Dispose();
-
-		    foreach (var buffer in _buffers)
-		    {
-			    if (buffer.Handle == IntPtr.Zero)
-				    continue;
-				Marshal.FreeHGlobal(new IntPtr(buffer.Base));
-			    buffer.Handle = IntPtr.Zero;
-		    }
-			_buffers = ImmutableAppendOnlyList<Buffer>.Empty;
+			if (pageNumber >= NumberOfAllocatedPages)
+				throw new InvalidOperationException("Tried to read a page that wasn't committed");
+			return _baseAddress + (pageNumber*PageSize);
 		}
 
-		public override void Sync()
+		public override void AllocateMorePages(Transaction tx, long newLength)
 		{
-			// nothing to do here
+			var totalPages = newLength/PageSize;
+			Debug.Assert(newLength%PageSize == 0);
+			AllocatePages(totalPages - NumberOfAllocatedPages);
+		}
+
+		private void AllocatePages(long pagesToAdd)
+		{
+			var dwSize = (ulong)((pagesToAdd + NumberOfAllocatedPages) * PageSize);
+			var lpAddress = _baseAddress + (NumberOfAllocatedPages * PageSize);
+
+			if (lpAddress + dwSize > _baseAddress + _reservedSize)
+			{
+				throw new InvalidOperationException("Tried to allocated pages beyond the reserved space of: " + _reservedSize);
+			}
+
+			var result = VirtualAlloc(lpAddress, new UIntPtr(dwSize), AllocationType.COMMIT,MemoryProtection.READWRITE);
+			if (result == null)
+				throw new Win32Exception();
+
+			NumberOfAllocatedPages += pagesToAdd;
+
 		}
 
 		protected override string GetSourceName()
@@ -95,53 +113,34 @@ namespace Voron.Impl.Paging
 			return "Win32PureMemoryPager";
 		}
 
-		public override byte* AcquirePagePointer(long pageNumber)
+		public override void Sync()
 		{
-			long size = pageNumber*PageSize;
-
-			foreach (var buffer in _buffers)
-			{
-				if (buffer.Size > size)
-				{
-					return buffer.Base + (size);
-				}
-				size -= buffer.Size;
-			}
-
-			throw new ArgumentException("Page number beyond the end of allocated pages");
+			// nothing to do here
 		}
 
-		public override void AllocateMorePages(Transaction tx, long newLength)
+		public override string ToString()
 		{
-			var oldSize = NumberOfAllocatedPages * PageSize;
-			if (newLength < oldSize)
-				throw new ArgumentException("Cannot set the legnth to less than the current length");
-			if (newLength == oldSize)
-		        return; // nothing to do
+			return "memory";
+		}
 
-			var increaseSize = (newLength - oldSize);
-			NumberOfAllocatedPages += increaseSize / PageSize;
-			var newPtr = Marshal.AllocHGlobal(new IntPtr(increaseSize));
+		public override void Write(Page page, long? pageNumber)
+		{
+			var toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
+			var requestedPageNumber = pageNumber ?? page.PageNumber;
 
-			var buffer = new Buffer
-			{
-				Handle = newPtr,
-				Base = (byte*) newPtr.ToPointer(),
-				Size = increaseSize
-			};
+			WriteDirect(page, requestedPageNumber, toWrite);
+		}
 
-			_buffers = _buffers.Append(buffer);
+		public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
+		{
+			EnsureContinuous(null, pagePosition, pagesToWrite);
+			NativeMethods.memcpy(AcquirePagePointer(pagePosition), start.Base, pagesToWrite * PageSize);
+		}
 
-		    var newPager = new PagerState(this);
-			newPager.AddRef(); // one for the pager
-
-			if (tx != null) // we only pass null during startup, and we don't need it there
-			{
-				newPager.AddRef(); // one for the current transaction
-				tx.AddPagerState(newPager);
-			}
-			PagerState.Release();
-			PagerState = newPager;
+		public override void Dispose()
+		{
+			base.Dispose();
+			VirtualFree(_baseAddress, new UIntPtr(_reservedSize), FreeType.MEM_RELEASE);
 		}
 	}
 }
