@@ -12,7 +12,7 @@ namespace Voron.Tests.Storage
         [Fact]
         public void PureMemoryPagerReleasesPagerState()
         {
-            PagerReleasesPagerState(() => new PureMemoryPager());
+            PagerReleasesPagerState(() => new Win32PureMemoryPager());
         }
 
         [Fact]

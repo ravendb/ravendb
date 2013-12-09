@@ -5,7 +5,7 @@ using Voron.Util;
 
 namespace Voron.Impl.Paging
 {
-	public unsafe class PureMemoryPager : AbstractPager
+	public unsafe class Win32PureMemoryPager : AbstractPager
 	{
 		private ImmutableAppendOnlyList<Buffer> _buffers = ImmutableAppendOnlyList<Buffer>.Empty;
 
@@ -16,7 +16,7 @@ namespace Voron.Impl.Paging
 			public IntPtr Handle;
 		}
 
-		public PureMemoryPager(byte[] data)
+		public Win32PureMemoryPager(byte[] data)
 		{
 			var ptr = Marshal.AllocHGlobal(data.Length);
 			var buffer = new Buffer
@@ -36,7 +36,7 @@ namespace Voron.Impl.Paging
 			}
 		}
 
-		public PureMemoryPager()
+		public Win32PureMemoryPager()
 		{
 			var ptr = Marshal.AllocHGlobal(MinIncreaseSize);
 			var buffer = new Buffer
@@ -92,7 +92,7 @@ namespace Voron.Impl.Paging
 
 		protected override string GetSourceName()
 		{
-			return "PureMemoryPager";
+			return "Win32PureMemoryPager";
 		}
 
 		public override byte* AcquirePagePointer(long pageNumber)

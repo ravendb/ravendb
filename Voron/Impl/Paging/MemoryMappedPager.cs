@@ -94,7 +94,7 @@ namespace Voron.Impl.Paging
             return newPager;
         }
 
-        protected override unsafe string GetSourceName()
+        protected override string GetSourceName()
         {
             if (_fileInfo == null)
                 return "Unknown";
