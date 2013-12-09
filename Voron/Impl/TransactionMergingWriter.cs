@@ -142,6 +142,7 @@ namespace Voron.Impl
             if (writes.Count == 1)
             {
                 writes[0].Errorred(e);
+				return;
             }
 
             SplitWrites(writes);
