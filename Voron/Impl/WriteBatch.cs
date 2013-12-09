@@ -10,7 +10,7 @@ namespace Voron.Impl
 	public class WriteBatch : IDisposable
 	{
 		private readonly Dictionary<string, Dictionary<Slice, BatchOperation>> _lastOperations;
-		private readonly Dictionary<string, Dictionary<Slice, ConcurrentBag<BatchOperation>>>  _multiTreeOperations;
+		private readonly Dictionary<string, Dictionary<Slice, List<BatchOperation>>>  _multiTreeOperations;
 
 		private readonly SliceEqualityComparer _sliceEqualityComparer;
 
@@ -45,10 +45,10 @@ namespace Voron.Impl
 				treeName = Constants.RootTreeName;
 
 			//first check if it is a multi-tree operation
-		    Dictionary<Slice, ConcurrentBag<BatchOperation>> treeOperations;
+		    Dictionary<Slice, List<BatchOperation>> treeOperations;
 		    if (_multiTreeOperations.TryGetValue(treeName, out treeOperations))
 		    {
-			    ConcurrentBag<BatchOperation> operationRecords;
+                List<BatchOperation> operationRecords;
 			    if (treeOperations.TryGetValue(key, out operationRecords))
 			    {
 					//since in multi-tree there are many operations for single tree key, then fetching operation type and value is meaningless
@@ -82,7 +82,7 @@ namespace Voron.Impl
 		public WriteBatch()
 		{
 			_lastOperations = new Dictionary<string, Dictionary<Slice, BatchOperation>>();
-			_multiTreeOperations = new Dictionary<string, Dictionary<Slice, ConcurrentBag<BatchOperation>>>();
+            _multiTreeOperations = new Dictionary<string, Dictionary<Slice, List<BatchOperation>>>();
 			_sliceEqualityComparer = new SliceEqualityComparer();
 		}
 
@@ -144,16 +144,16 @@ namespace Voron.Impl
 
 			if (operation.Type == BatchOperationType.MultiAdd || operation.Type == BatchOperationType.MultiDelete)
 			{
-				Dictionary<Slice, ConcurrentBag<BatchOperation>> multiTreeOperationsOfTree;
+                Dictionary<Slice, List<BatchOperation>> multiTreeOperationsOfTree;
 				if (_multiTreeOperations.TryGetValue(treeName, out multiTreeOperationsOfTree) == false)
 				{
 					_multiTreeOperations[treeName] =
-						multiTreeOperationsOfTree = new Dictionary<Slice, ConcurrentBag<BatchOperation>>(_sliceEqualityComparer);
+                        multiTreeOperationsOfTree = new Dictionary<Slice, List<BatchOperation>>(_sliceEqualityComparer);
 				}
 
-				ConcurrentBag<BatchOperation> specificMultiTreeOperations;
+                List<BatchOperation> specificMultiTreeOperations;
 				if (multiTreeOperationsOfTree.TryGetValue(operation.Key, out specificMultiTreeOperations) == false)
-					multiTreeOperationsOfTree[operation.Key] = specificMultiTreeOperations = new ConcurrentBag<BatchOperation>();
+                    multiTreeOperationsOfTree[operation.Key] = specificMultiTreeOperations = new List<BatchOperation>();
 
 				specificMultiTreeOperations.Add(operation);
 			}
