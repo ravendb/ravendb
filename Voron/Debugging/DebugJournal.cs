@@ -11,7 +11,7 @@ using Voron.Trees;
 
 namespace Voron.Debugging
 {
-	public unsafe class DebugJournal : IDisposable
+	public class DebugJournal : IDisposable
 	{
 		public class ActivityEntry
 		{
