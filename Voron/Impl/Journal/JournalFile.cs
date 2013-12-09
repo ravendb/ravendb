@@ -201,17 +201,13 @@ namespace Voron.Impl.Journal
             txHeader->CompressedSize = len;
             txHeader->UncompressedSize = sizeInBytes;
 
-		    uint crc = 0;
             pages[0] = txHeaderBase;
             for (int index = 0; index < compressedPages; index++)
             {
-	            var ptr = compressionBuffer + (index * AbstractPager.PageSize);
-	            pages[index + 1] = ptr;
-
-				crc = Crc.Extend(crc, ptr, 0, AbstractPager.PageSize);
+                pages[index + 1] = compressionBuffer + (index * AbstractPager.PageSize);
             }
 
-		    txHeader->Crc = crc;
+	        txHeader->Crc = Crc.Value(compressionBuffer, 0, compressedPages*AbstractPager.PageSize);
 
             return pages;
         }
