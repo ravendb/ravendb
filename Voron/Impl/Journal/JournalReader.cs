@@ -61,10 +61,18 @@ namespace Voron.Impl.Journal
                 return true; // skipping
             }
 
-            uint crc = 0;
-            var writePageBeforeCrcCheck = _nextWritePage;
-            var lastSyncedPageBeforeCrcCheck = _lastSyncedPage;
-            var readingPageBeforeCrcCheck = _readingPage;
+	        if (checkCrc)
+	        {
+		        uint crc = Crc.Value(_pager.Read(_readingPage).Base, 0, compressedPages * AbstractPager.PageSize);
+
+				if (crc != current->Crc)
+				{
+					RequireHeaderUpdate = true;
+					options.InvokeRecoveryError(this, "Invalid CRC signature for transaction " + current->TransactionId, null);
+
+					return false;
+				}
+	        }
 
             _recoveryPager.EnsureContinuous(null, _recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
             var dataPage = _recoveryPager.GetWritable(_recoveryPage);
@@ -101,15 +109,10 @@ namespace Voron.Impl.Journal
                 {
                     var numOfPages = _recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
                     _recoveryPage += numOfPages;
-
-					if (checkCrc)
-                        crc = Crc.Extend(crc, page.Base, 0, numOfPages * AbstractPager.PageSize);
                 }
                 else
                 {
                     _recoveryPage++;
-                    if (checkCrc)
-                        crc = Crc.Extend(crc, page.Base, 0, AbstractPager.PageSize);
                 }
 
                 _lastSyncedPage = _recoveryPage - 1;
@@ -118,32 +121,18 @@ namespace Voron.Impl.Journal
 
             _readingPage += compressedPages;
 
-            if (checkCrc && crc != current->Crc)
-            {
-                RequireHeaderUpdate = true;
-                options.InvokeRecoveryError(this, "Invalid CRC signature for transaction " + current->TransactionId,
-                    null);
-
-                //undo changes to those variables if CRC doesn't match
-                _nextWritePage = writePageBeforeCrcCheck;
-                _lastSyncedPage = lastSyncedPageBeforeCrcCheck;
-                _readingPage = readingPageBeforeCrcCheck;
-
-                return false;
-            }
-
             foreach (var pagePosition in tempTransactionPageTranslaction)
             {
                 _transactionPageTranslation[pagePosition.Key] = pagePosition.Value;
             }
 
-            //update CurrentTransactionHeader _only_ if the CRC check is passed
             LastTransactionHeader = current;
 			
             foreach (var pagePosition in tempTransactionPageTranslaction)
             {
                 _transactionPageTranslation[pagePosition.Key] = pagePosition.Value;
             }
+
             return true;
         }
 
@@ -206,6 +195,12 @@ namespace Voron.Impl.Journal
 				throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
 			if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Crc == 0)
 				throw new InvalidDataException("Committed and not empty transaction checksum can't be equal to 0");
+			if (current->Compressed)
+			{
+				if (current->CompressedSize <= 0)
+					throw new InvalidDataException("Compression error in transaction.");
+			} else
+				throw new InvalidDataException("Uncompressed transactions are not supported.");
 
 			if (previous == null)
 				return;

@@ -295,18 +295,6 @@ namespace Voron.Impl
 			_state.Root.State.CopyTo(&_txHeader->Root);
 			_state.FreeSpaceRoot.State.CopyTo(&_txHeader->FreeSpace);
 
-
-			uint crc = 0;
-
-			for (int i = 1; i < _transactionPages.Count; i++)
-			{
-				var txPage = _transactionPages[i];
-				crc = Crc.Extend(crc, _env.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer).Base, 0,
-					txPage.NumberOfPages * AbstractPager.PageSize);
-			}
-
-			_txHeader->Crc = crc;
-
 			_txHeader->TxMarker |= TransactionMarker.Commit;
 
 			Task task;
