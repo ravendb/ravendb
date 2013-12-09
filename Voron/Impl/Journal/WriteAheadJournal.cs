@@ -387,7 +387,6 @@ namespace Voron.Impl.Journal
 
 			    foreach (var journalFile in _jrnls.Where(x => x.Number >= _lastSyncedJournal))
                 {
-
 	                var currentJournalMaxTransactionId = -1L;
 
                     foreach (var pagePosition in journalFile.PageTranslationTable.IterateLatestAsOf(journalFile.LastTransaction))
