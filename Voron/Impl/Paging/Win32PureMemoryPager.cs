@@ -10,6 +10,8 @@ namespace Voron.Impl.Paging
 	{
 		private readonly byte* _baseAddress;
 		private readonly ulong _reservedSize;
+        private ulong _rangesCount;
+        
 
 		// ReSharper disable InconsistentNaming
 
@@ -64,6 +66,7 @@ namespace Voron.Impl.Paging
 			_baseAddress = VirtualAlloc(null, dwSize, AllocationType.RESERVE, MemoryProtection.NOACCESS);
 			if (_baseAddress == null)
 				throw new Win32Exception();
+		    _rangesCount = 1;
 		}
 
 		public Win32PureMemoryPager(byte[] data)
@@ -97,7 +100,12 @@ namespace Voron.Impl.Paging
 
 			if (lpAddress + dwSize > _baseAddress + _reservedSize)
 			{
-				throw new InvalidOperationException("Tried to allocated pages beyond the reserved space of: " + _reservedSize);
+                var extResult = VirtualAlloc(_baseAddress + _reservedSize, new UIntPtr(_reservedSize), AllocationType.RESERVE, MemoryProtection.NOACCESS);
+			    if (extResult == null)
+			        throw new InvalidOperationException(
+			            "Tried to allocated pages beyond the reserved space of: " + _reservedSize +
+			            " and could not grow the memory pager", new Win32Exception());
+			    _rangesCount++;
 			}
 
 			var result = VirtualAlloc(lpAddress, new UIntPtr(dwSize), AllocationType.COMMIT, MemoryProtection.READWRITE);
@@ -140,7 +148,10 @@ namespace Voron.Impl.Paging
 		public override void Dispose()
 		{
 			base.Dispose();
-			VirtualFree(_baseAddress, new UIntPtr(_reservedSize), FreeType.MEM_RELEASE);
+		    for (ulong i = 0; i < _rangesCount; i++)
+		    {
+                VirtualFree(_baseAddress +(i * _reservedSize), new UIntPtr(_reservedSize), FreeType.MEM_RELEASE);
+		    }
 		}
 	}
 }
