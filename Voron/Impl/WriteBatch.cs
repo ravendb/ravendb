@@ -18,9 +18,12 @@ namespace Voron.Impl
 		{
 			get
 			{
-				return _lastOperations
-					.SelectMany(x => x.Value.Values)
-					.Concat(_multiTreeOperations.SelectMany(x => x.Value.Values)
+				var allOperations = _lastOperations.SelectMany(x => x.Value.Values);
+
+				if (_multiTreeOperations.Count == 0)
+					return allOperations;
+
+				return allOperations.Concat(_multiTreeOperations.SelectMany(x => x.Value.Values)
 												.SelectMany(x => x));
 			}
 		}
