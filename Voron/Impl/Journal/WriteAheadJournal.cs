@@ -26,6 +26,7 @@ namespace Voron.Impl.Journal
 		private DateTime _lastFile;
 
 		private long _journalIndex = -1;
+        private readonly LZ4 _lz4 = new LZ4();
 		private readonly SemaphoreSlim _writeSemaphore = new SemaphoreSlim(1, 1);
 
 		private readonly SemaphoreSlim _flushingSemaphore = new SemaphoreSlim(1, 1);
@@ -282,7 +283,7 @@ namespace Voron.Impl.Journal
 			_writeSemaphore.Wait();
 
 			_compressionPager.Dispose();
-
+            _lz4.Dispose();
 			if (_env.Options.OwnsPagers)
 			{
 				foreach (var logFile in _files)
@@ -635,11 +636,13 @@ namespace Voron.Impl.Journal
 			_writeSemaphore.Wait();
 			try
 			{
+			    var pages = CompressPages(tx, pageCount, _compressionPager);
+
 				if (CurrentFile == null || CurrentFile.AvailablePages < pageCount)
 				{
 					CurrentFile = NextFile(pageCount);
 				}
-				var task = CurrentFile.Write(tx, pageCount, _compressionPager)
+				var task = CurrentFile.Write(tx, pages)
 					.ContinueWith(result =>
 					{
 						_writeSemaphore.Release(); // release semaphore on write completion
@@ -658,5 +661,87 @@ namespace Voron.Impl.Journal
 				throw;
 			}
 		}
+
+
+        private byte*[] CompressPages(Transaction tx, int numberOfPages, IVirtualPager compressionPager)
+        {
+            // numberOfPages include the tx header page, which we don't compress
+            var dataPagesCount = numberOfPages - 1;
+            var sizeInBytes = dataPagesCount * AbstractPager.PageSize;
+            var outputBuffer = LZ4.MaximumOutputLength(sizeInBytes);
+            var outputBufferInPages = outputBuffer / AbstractPager.PageSize +
+                                      (outputBuffer % AbstractPager.PageSize == 0 ? 0 : 1);
+            var pagesRequired = (dataPagesCount + outputBufferInPages);
+
+            compressionPager.EnsureContinuous(tx, 0, pagesRequired);
+            var tempBuffer = compressionPager.AcquirePagePointer(0);
+            var compressionBuffer = compressionPager.AcquirePagePointer(dataPagesCount);
+
+            var write = tempBuffer;
+            var txPages = tx.GetTransactionPages();
+
+            for (int index = 1; index < txPages.Count; index++)
+            {
+                var txPage = txPages[index];
+                var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPage.PositionInScratchBuffer);
+                var count = txPage.NumberOfPages * AbstractPager.PageSize;
+                NativeMethods.memcpy(write, scratchPage, count);
+                write += count;
+            }
+
+            var len = DoCompression(tempBuffer, compressionBuffer, sizeInBytes, outputBuffer);
+            var compressedPages = (len / AbstractPager.PageSize) + (len % AbstractPager.PageSize == 0 ? 0 : 1);
+
+            var pages = new byte*[compressedPages + 1];
+
+            var txHeaderBase = tx.Environment.ScratchBufferPool.AcquirePagePointer(txPages[0].PositionInScratchBuffer);
+            var txHeader = (TransactionHeader*)txHeaderBase;
+
+            txHeader->Compressed = true;
+            txHeader->CompressedSize = len;
+            txHeader->UncompressedSize = sizeInBytes;
+
+            pages[0] = txHeaderBase;
+            for (int index = 0; index < compressedPages; index++)
+            {
+                pages[index + 1] = compressionBuffer + (index * AbstractPager.PageSize);
+            }
+
+            txHeader->Crc = Crc.Value(compressionBuffer, 0, compressedPages * AbstractPager.PageSize);
+
+            return pages;
+        }
+
+
+        private int DoCompression(byte* input, byte* output, int inputLength, int outputLength)
+        {
+            var doCompression = _lz4.Encode64(
+                input,
+                output,
+                inputLength,
+                outputLength);
+
+#if DEBUG
+            //var mem = Marshal.AllocHGlobal(inputLength);
+            //try
+            //{
+            //	var len = LZ4.Decode64(output, doCompression, (byte*) mem.ToPointer(),
+            //		inputLength, true);
+
+            //	var result = NativeMethods.memcmp(input, (byte*) mem.ToPointer(),
+            //		inputLength);
+
+            //	Debug.Assert(len == inputLength);
+            //	Debug.Assert(result == 0);
+
+            //}
+            //finally
+            //{
+            //	Marshal.FreeHGlobal(mem);
+            //}
+#endif
+
+            return doCompression;
+        }
 	}
 }
