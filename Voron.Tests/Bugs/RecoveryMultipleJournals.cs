@@ -112,11 +112,15 @@ namespace Voron.Tests.Bugs
 
 			var currentJournalInfo = Env.Journal.GetCurrentJournalInfo();
 
+			var random = new Random();
+			var buffer = new byte[1000000];
+			random.NextBytes(buffer);
+
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (var i = 0; i < 1000; i++)
 				{
-					tx.GetTree("tree").Add(tx, "b" + i, new MemoryStream(new byte[100]));
+					tx.GetTree("tree").Add(tx, "b" + i, new MemoryStream(buffer));
 				}
 				//tx.Commit(); - not committing here
 			}
@@ -125,7 +129,7 @@ namespace Voron.Tests.Bugs
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.GetTree("tree").Add(tx, "b", new MemoryStream(new byte[100]));
+				tx.GetTree("tree").Add(tx, "b", new MemoryStream(buffer));
 				tx.Commit();
 			}
 
