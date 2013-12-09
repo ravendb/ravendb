@@ -118,7 +118,7 @@ namespace Voron
 				{
 					Directory.CreateDirectory(_basePath);
 				}
-				_dataPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(Path.Combine(_basePath, "db.voron")));
+				_dataPager = new Lazy<IVirtualPager>(() => new Win32MemoryMapPager(Path.Combine(_basePath, "db.voron")));
 			}
 
 			public override IVirtualPager DataPager
@@ -228,7 +228,7 @@ namespace Voron
 			    if (File.Exists(scratchFile)) 
                     File.Delete(scratchFile);
 
-                return new MemoryMapPager(scratchFile, (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
+                return new Win32MemoryMapPager(scratchFile, (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
@@ -237,7 +237,7 @@ namespace Voron
 				var path = Path.Combine(_basePath, name);
 				if (File.Exists(path) == false)
 					throw new InvalidOperationException("No such journal " + path);
-				return new MemoryMapPager(path, access: NativeFileAccess.GenericRead);
+				return new Win32MemoryMapPager(path, access: NativeFileAccess.GenericRead);
 			}
 		}
 

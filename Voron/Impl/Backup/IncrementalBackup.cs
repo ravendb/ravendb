@@ -184,7 +184,7 @@ namespace Voron.Impl.Backup
 
                     foreach (var journalName in journalNames)
                     {
-                        var pager = new MemoryMapPager(Path.Combine(tempDir, journalName));
+                        var pager = new Win32MemoryMapPager(Path.Combine(tempDir, journalName));
                         toDispose.Add(pager);
 
                         long number;
@@ -194,7 +194,7 @@ namespace Voron.Impl.Backup
                             throw new InvalidOperationException("Cannot parse journal file number");
                         }
 
-						var recoveryPager = new MemoryMapPager(Path.Combine(tempDir, number + ".recovery"));
+						var recoveryPager = new Win32MemoryMapPager(Path.Combine(tempDir, number + ".recovery"));
 						toDispose.Add(recoveryPager);
 
 						var reader = new JournalReader(pager, recoveryPager, 0, lastTxHeader);

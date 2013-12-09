@@ -82,7 +82,7 @@ namespace Voron.Impl.Journal
 
 	    public IVirtualPager CreatePager()
 		{
-			return new MemoryMapPager(_filename);
+			return new Win32MemoryMapPager(_filename);
 		}
 
 	    public bool Read(long pageNumber, byte* buffer, int count)
