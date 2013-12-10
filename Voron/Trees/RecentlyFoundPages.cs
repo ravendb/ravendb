@@ -6,6 +6,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Voron.Impl;
 
 namespace Voron.Trees
@@ -37,6 +38,13 @@ namespace Voron.Trees
 
 	    public void Add(FoundPage page)
 		{
+#if DEBUG
+	        if ((page.FirstKey.Options==SliceOptions.BeforeAllKeys) && (page.LastKey.Options == SliceOptions.AfterAllKeys))
+	        {
+	            Debug.Assert(page.CursorPath.Length == 1);
+	        }
+#endif
+
             for (int i = 0; i < _cacheSize; i++)
 		    {
                 if (_cache[i] == null || _cache[i].Number == page.Number)
@@ -75,6 +83,8 @@ namespace Voron.Trees
                 if (first.Options != SliceOptions.BeforeAllKeys && key.Compare(first, NativeMethods.memcmp) < 0 ||
                     last.Options != SliceOptions.AfterAllKeys && key.Compare(last, NativeMethods.memcmp) > 0)
                     return null;
+
+		        return page;
 		    }
 
 		    return null;

@@ -36,6 +36,11 @@ namespace Voron
 
         }
 
+	    public Stream AsStream()
+	    {
+		    return new UnmanagedMemoryStream(_val, _len, _len, FileAccess.Read);
+	    }
+
         public ValueReader(byte* val, int len)
         {
             _val = val;
@@ -112,5 +117,6 @@ namespace Voron
                 stream.Write(buffer, 0, read);
             }
         }
+
     }
 }

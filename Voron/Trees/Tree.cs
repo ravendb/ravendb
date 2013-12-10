@@ -367,7 +367,6 @@ namespace Voron.Trees
 
 		    if (TryUseRecentTransactionPage(tx, key, out cursor, out p))
 		    {
-		        p.Search(key, _cmp);
 		        return p;
 		    }
 
@@ -381,8 +380,8 @@ namespace Voron.Trees
 	        var c = new Cursor();
 	        c.Push(p);
 
-	        bool? rightmostPage = null;
-	        bool? leftmostPage = null;
+	        bool rightmostPage = true;
+	        bool leftmostPage = true;
 
 	        while (p.Flags == (PageFlags.Branch))
 	        {
@@ -390,10 +389,12 @@ namespace Voron.Trees
 	            if (key.Options == SliceOptions.BeforeAllKeys)
 	            {
 	                p.LastSearchPosition = nodePos = 0;
+	                rightmostPage = false;
 	            }
 	            else if (key.Options == SliceOptions.AfterAllKeys)
 	            {
 	                p.LastSearchPosition = nodePos = (ushort) (p.NumberOfEntries - 1);
+	                leftmostPage = false;
 	            }
 	            else
 	            {
@@ -406,25 +407,16 @@ namespace Voron.Trees
 	                        p.LastSearchPosition--;
 	                    }
 
-	                    if (p.Flags == PageFlags.Branch)
-	                    {
-	                        if (nodePos == 0)
-	                            leftmostPage = leftmostPage.HasValue ? leftmostPage & true : true;
-	                        else
-	                            leftmostPage = false;
+	                    if (nodePos != 0)
+	                        leftmostPage = false;
 
-	                        rightmostPage = false;
-	                    }
+	                    rightmostPage = false;
 	                }
 	                else
 	                {
 	                    nodePos = (ushort) (p.LastSearchPosition - 1);
 
-	                    if (p.Flags == PageFlags.Branch)
-	                    {
-	                        rightmostPage = rightmostPage.HasValue ? rightmostPage & true : true;
-	                        leftmostPage = false;
-	                    }
+	                    leftmostPage = false;
 	                }
 	            }
 
@@ -441,10 +433,7 @@ namespace Voron.Trees
 
 	        p.Search(key, _cmp); // will set the LastSearchPosition
 
-	        if (p.NumberOfEntries > 0)
-	        {
-	            AddToRecentlyFoundPages(tx, c, p, leftmostPage, rightmostPage);
-	        }
+	        AddToRecentlyFoundPages(tx, c, p, leftmostPage, rightmostPage);
 
 	        cursor = new Lazy<Cursor>(() => c);
 	        return p;
@@ -458,12 +447,12 @@ namespace Voron.Trees
 	            FirstKey = leftmostPage == true ? Slice.BeforeAllKeys : p.GetNodeKey(0),
 	            LastKey = rightmostPage == true ? Slice.AfterAllKeys : p.GetNodeKey(p.NumberOfEntries - 1),
 	        };
-	        var cur = c.Pages.Last;
+	        var cur = c.Pages.First;
 	        int pos = foundPage.CursorPath.Length - 1;
 	        while (cur != null)
 	        {
 	            foundPage.CursorPath[pos--] = cur.Value.PageNumber;
-	            cur = cur.Previous;
+	            cur = cur.Next;
 	        }
 
 	        tx.AddRecentlyFoundPage(this, foundPage);
