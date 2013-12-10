@@ -166,7 +166,7 @@ namespace Voron.Impl.Paging
             var actualIncrease = Math.Min(_increaseSize, current / 4);
 
             // we then want to get the next power of two number, to get pretty file size
-            return Utils.NearestPowerOfTwo(current + actualIncrease);
+			return current + Utils.NearestPowerOfTwo(actualIncrease);
         }
 
         public abstract void WriteDirect(Page start, long pagePosition, int pagesToWrite);
