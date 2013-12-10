@@ -108,9 +108,10 @@ namespace Voron.Impl.Journal
                     int read;
 		            if (NativeFileMethods.ReadFile(_readHandle, buffer, count, out read, nativeOverlapped) == false)
 		            {
-			            if (Marshal.GetLastWin32Error() == ErrorHandleEof)
+			            var lastWin32Error = Marshal.GetLastWin32Error();
+			            if (lastWin32Error == ErrorHandleEof)
 				            return false;
-			            throw new Win32Exception();
+			            throw new Win32Exception(lastWin32Error);
 		            }
 	                count -= read;
 	                buffer += read;
