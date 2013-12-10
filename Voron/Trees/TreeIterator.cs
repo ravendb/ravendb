@@ -28,6 +28,19 @@ namespace Voron.Trees
 			return NodeHeader.GetDataSize(_tx, Current);
 		}
 
+		public IIterator CreateMutliValueIterator()
+		{
+			var item = Current;
+			if (item->Flags == NodeFlags.MultiValuePageRef)
+			{
+				var tree = _tree.OpenOrCreateMultiValueTree(_tx, _currentKey, item);
+
+				return tree.Iterate(_tx);
+			}
+
+			return new SingleEntryIterator(_cmp, item, _tx);
+		}
+
 		public bool Seek(Slice key)
 		{
 			Lazy<Cursor> lazy;

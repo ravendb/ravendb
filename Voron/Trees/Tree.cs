@@ -702,7 +702,7 @@ namespace Voron.Trees
 			return Name + " " + State.EntriesCount;
 		}
 
-		private Tree OpenOrCreateMultiValueTree(Transaction tx, Slice key, NodeHeader* item)
+		internal Tree OpenOrCreateMultiValueTree(Transaction tx, Slice key, NodeHeader* item)
 		{
 			Tree tree;
 			if (tx.TryGetMultiValueTree(this, key, out tree))
