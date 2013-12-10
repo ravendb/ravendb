@@ -315,27 +315,6 @@ namespace Voron.Impl.Journal
 			return _files.Select(x => x.GetSnapshot()).ToList();
 		}
 
-		public long SizeOfUnflushedTransactionsInJournalFile()
-		{
-			using (var tx = _env.NewTransaction(TransactionFlags.Read))
-			{
-				var journalInfo = _headerAccessor.Get(ptr => ptr->Journal);
-
-				var lastSyncedJournal = journalInfo.LastSyncedJournal;
-				var lastSyncedTransactionId = journalInfo.LastSyncedTransactionId; // TODO [ppekrol] need to calculate it differently
-
-				var sum = _files.Sum(file =>
-				{
-					if (file.Number == lastSyncedJournal && lastSyncedJournal != 0)
-						return lastSyncedTransactionId - file.WritePagePosition - 1;
-					return file.WritePagePosition == 0 ? 0 : file.WritePagePosition - 1;
-				});
-
-				tx.Commit();
-				return sum;
-			}
-		}
-
 		public void Clear(Transaction tx)
 		{
 			if(tx.Flags != TransactionFlags.ReadWrite)

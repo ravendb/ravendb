@@ -27,7 +27,7 @@ namespace Voron
         private readonly IVirtualPager _dataPager;
         internal readonly SliceComparer _sliceComparer;
 
-        private WriteAheadJournal _journal;
+        private readonly WriteAheadJournal _journal;
         private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
         private readonly AsyncManualResetEvent _flushWriter = new AsyncManualResetEvent();
 
@@ -39,6 +39,7 @@ namespace Voron
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private ScratchBufferPool _scratchBufferPool;
 	    private DebugJournal _debugJournal;
+	    private int _sizeOfUnflushedTransactionsInJournalFile;
 
 
 	    public TemporaryPage TemporaryPage { get; private set; }
@@ -371,7 +372,13 @@ namespace Voron
         private void TransactionAfterCommit(long txId)
         {
             Transaction tx;
-            _activeTransactions.TryGetValue(txId, out tx);
+	        if (_activeTransactions.TryGetValue(txId, out tx) == false)
+		        return;
+	        if (tx.FlushedToJournal)
+		        return;
+
+	        Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, tx.GetTransactionPages().Count);
+			_flushWriter.Set();
         }
 
         internal void TransactionCompleted(long txId)
@@ -433,16 +440,18 @@ namespace Voron
 
                 _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                var sizeOfUnflushedTransactionsInJournalFile = _journal.SizeOfUnflushedTransactionsInJournalFile();
                 if (hasWrites)
                     _flushWriter.Reset();
 
-                if (sizeOfUnflushedTransactionsInJournalFile == 0)
+	            var sizeOfUnflushedTransactionsInJournalFile = Thread.VolatileRead(ref _sizeOfUnflushedTransactionsInJournalFile);
+	            if (sizeOfUnflushedTransactionsInJournalFile == 0)
                     continue;
 
                 if (hasWrites == false ||
                     sizeOfUnflushedTransactionsInJournalFile >= _options.MaxNumberOfPagesInJournalBeforeFlush)
                 {
+	                Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, -sizeOfUnflushedTransactionsInJournalFile);
+
                     // we either reached our the max size we allow in the journal file before flush flushing (and therefor require a flush)
                     // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
                     // while there isn't any other activity going on.
