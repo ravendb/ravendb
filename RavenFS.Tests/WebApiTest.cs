@@ -4,20 +4,22 @@ using System.ServiceModel;
 using System.Threading.Tasks;
 using System.Web.Http.SelfHost;
 using Raven.Client.RavenFS;
+using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.RavenFS.Config;
 using Raven.Database.Server.RavenFS.Extensions;
+using Raven.Server;
 
 namespace RavenFS.Tests
 {
 	public class WebApiTest : WithNLog, IDisposable
 	{
-		private const string Url = "http://localhost:19079";
-		private readonly HttpSelfHostServer server;
+		private const string Url = "http://localhost:8079";
 		protected WebClient WebClient;
 		private HttpSelfHostConfiguration config;
 		private RavenFileSystem ravenFileSystem;
+		private RavenDbServer server;
 
 		static WebApiTest()
 		{
@@ -33,24 +35,35 @@ namespace RavenFS.Tests
 		public WebApiTest()
 		{
 			IOExtensions.DeleteDirectory("Test");
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(19079);
-			Task.Factory.StartNew(() => // initialize in MTA thread
-				                      {
-					                      config = new HttpSelfHostConfiguration(Url)
-						                               {
-							                               MaxReceivedMessageSize = Int64.MaxValue,
-							                               TransferMode = TransferMode.Streamed
-						                               };
-					                      var configuration = new InMemoryConfiguration();
-					                      configuration.Initialize();
-					                      configuration.DataDirectory = "~/Test";
-					                      ravenFileSystem = new RavenFileSystem(configuration);
-					                      ravenFileSystem.Start(config);
-				                      })
-			    .Wait();
+			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
+			var configuration = new InMemoryRavenConfiguration();
+			configuration.Initialize();
+			configuration.InitializeRavenFs();
+			configuration.DataDirectory = "~/Test";
 
-			server = new HttpSelfHostServer(config);
-			server.OpenAsync().Wait();
+			Task.Factory.StartNew(() => // initialize in MTA thread
+									  {
+
+										  config = new HttpSelfHostConfiguration(Url)
+													 {
+														 MaxReceivedMessageSize = Int64.MaxValue,
+														 TransferMode = TransferMode.Streamed
+													 };
+										  //var configuration = new InMemoryRavenConfiguration();
+										  //configuration.InitializeRavenFs();
+										  //configuration.DataDirectory = "~/Test";
+										  //ravenFileSystem = new RavenFileSystem(configuration);
+										  //ravenFileSystem.Start(config);
+
+										
+										  ravenFileSystem = new RavenFileSystem(configuration);
+									//	  ravenFileSystem.Start(config);
+										  server = new RavenDbServer(configuration);
+									  })
+				.Wait();
+
+			
+
 
 			WebClient = new WebClient
 				            {
@@ -60,11 +73,9 @@ namespace RavenFS.Tests
 
 		public virtual void Dispose()
 		{
-			server.CloseAsync().Wait();
 			server.Dispose();
 			ravenFileSystem.Dispose();
 		}
-
 
 		protected HttpWebRequest CreateWebRequest(string url)
 		{

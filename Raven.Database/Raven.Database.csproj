@@ -184,6 +184,15 @@
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.0.0\lib\net45\System.Net.Http.Formatting.dll</HintPath>
     </Reference>
     <Reference Include="System.Net.Http.WebRequest" />
+    <Reference Include="System.Reactive.Core">
+      <HintPath>..\packages\Rx-Core.2.1.30214.0\lib\Net45\System.Reactive.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Interfaces">
+      <HintPath>..\packages\Rx-Interfaces.2.1.30214.0\lib\Net45\System.Reactive.Interfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Linq">
+      <HintPath>..\packages\Rx-Linq.2.1.30214.0\lib\Net45\System.Reactive.Linq.dll</HintPath>
+    </Reference>
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Security" />
     <Reference Include="System.ServiceModel" />
@@ -201,6 +210,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Owin.5.0.0\lib\net45\System.Web.Http.Owin.dll</HintPath>
     </Reference>
+    <Reference Include="System.Web.Http.WebHost, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
@@ -307,6 +317,132 @@
     <Compile Include="Server\Controllers\TransactionController.cs" />
     <Compile Include="Server\Controllers\TransformersController.cs" />
     <Compile Include="Server\OwinHttpServer.cs" />
+    <Compile Include="Server\RavenFS\Config\InMemoryConfiguration.cs" />
+    <Compile Include="Server\RavenFS\Config\ServerUrlUtil.cs" />
+    <Compile Include="Server\RavenFS\Controllers\ChangesController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\FilesController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\FoldersController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\LogsController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\RavenFsApiController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\RdcController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\SearchController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\StaticController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\StatsController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\StorageController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\SynchronizationController.cs" />
+    <Compile Include="Server\RavenFS\Extensions\ByteExtensions.cs" />
+    <Compile Include="Server\RavenFS\Extensions\ConfigurationExtension.cs" />
+    <Compile Include="Server\RavenFS\Extensions\EnumExtensions.cs" />
+    <Compile Include="Server\RavenFS\Extensions\IOExtensions.cs" />
+    <Compile Include="Server\RavenFS\Extensions\MetadataExtensions.cs" />
+    <Compile Include="Server\RavenFS\Extensions\StreamExtensions.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\CachePreventingHandler.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\Connections\ConnectionState.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\Connections\EventsTransport.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\Connections\TimeSensitiveStore.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\Connections\TransportState.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\DelegateDependencyResolver.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\Historian.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\LimitedStream.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\NoBufferPolicySelector.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\SequenceActions.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\StorageOperationsTask.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\TempDirectoryTools.cs" />
+    <Compile Include="Server\RavenFS\Infrastructure\UuidGenerator.cs" />
+    <Compile Include="Server\RavenFS\Notifications\INotificationPublisher.cs" />
+    <Compile Include="Server\RavenFS\Notifications\NotificationPublisher.cs" />
+    <Compile Include="Server\RavenFS\Notifications\TypeHidingJsonSerializer.cs" />
+    <Compile Include="Server\RavenFS\RavenFileSystem.cs" />
+    <Compile Include="Server\RavenFS\Search\IndexSearcherHolder.cs" />
+    <Compile Include="Server\RavenFS\Search\IndexStorage.cs" />
+    <Compile Include="Server\RavenFS\Search\RavenQueryParser.cs" />
+    <Compile Include="Server\RavenFS\Storage\DeleteFileOperation.cs" />
+    <Compile Include="Server\RavenFS\Storage\EsentExtension.cs" />
+    <Compile Include="Server\RavenFS\Storage\FileAndPages.cs" />
+    <Compile Include="Server\RavenFS\Storage\FileHeader.cs" />
+    <Compile Include="Server\RavenFS\Storage\PageInformation.cs" />
+    <Compile Include="Server\RavenFS\Storage\RenameFileOperation.cs" />
+    <Compile Include="Server\RavenFS\Storage\SchemaCreator.cs" />
+    <Compile Include="Server\RavenFS\Storage\SearchResults.cs" />
+    <Compile Include="Server\RavenFS\Storage\SignatureReadOnlyStream.cs" />
+    <Compile Include="Server\RavenFS\Storage\StorageActionsAccessor.cs" />
+    <Compile Include="Server\RavenFS\Storage\StorageConfigurator.cs" />
+    <Compile Include="Server\RavenFS\Storage\StorageConstants.cs" />
+    <Compile Include="Server\RavenFS\Storage\TableColumnsCache.cs" />
+    <Compile Include="Server\RavenFS\Storage\TransactionalStorage.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\ConflictArtifactManager.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\ConflictDetector.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\ConflictResolution.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Conflictuality\ConflictResolver.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\ContentUpdateWorkItem.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\DataInfo.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\DeleteWorkItem.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\FileHeaderNameEqualityComparer.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\FileLockManager.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\MetadataUpdateWorkItem.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Multipart\MultipartSyncStreamProvider.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Multipart\SeedFilePart.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Multipart\SourceFilePart.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Multipart\SynchronizationMultipartRequest.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Multipart\SyncingMultipartConstants.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\NoSyncReason.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\IPartialDataAccess.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\LocalRdcManager.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\NeedListParser.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\RemoteRdcManager.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\RemoteSignaturePartialAccess.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\SignatureLevels.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\SignaturePartialAccess.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\ISignatureRepository.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\NeedListGenerator.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\RdcException.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\RdcFileReader.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\RdcNeed.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\RdcNeedType.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\RdcVersion.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\RdcVersionChecker.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\SigGenerator.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\SignatureInfo.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\StorageSignatureRepository.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\GeneratorParametersType.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcComparator.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcFileReader.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcGenerator.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcGeneratorFilterMaxParameters.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcGeneratorParameters.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcLibrary.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcSignatureReader.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\IRdcSimilarityGenerator.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\Msrdc.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcBufferPointer.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcBufferTools.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcError.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcLibrary.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcNeedPointer.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcSignature.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\RdcSignaturePointer.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\Unmanaged\SimilarityData.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\Rdc\Wrapper\VolatileSignatureRepository.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\RenameWorkItem.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\ServerInfo.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationHiLo.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationLock.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationQueue.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationStrategy.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationTask.cs" />
+    <Compile Include="Server\RavenFS\Synchronization\SynchronizationWorkItem.cs" />
+    <Compile Include="Server\RavenFS\Util\AwaitableQueue.cs" />
+    <Compile Include="Server\RavenFS\Util\CombinedStream.cs" />
+    <Compile Include="Server\RavenFS\Util\ConcurrencyAwareExecutor.cs" />
+    <Compile Include="Server\RavenFS\Util\FilePathTools.cs" />
+    <Compile Include="Server\RavenFS\Util\HashKey.cs" />
+    <Compile Include="Server\RavenFS\Util\NameValueCollectionJsonConverter.cs" />
+    <Compile Include="Server\RavenFS\Util\NarrowedStream.cs" />
+    <Compile Include="Server\RavenFS\Util\RabinKarpHasher.cs" />
+    <Compile Include="Server\RavenFS\Util\RavenFileNameHelper.cs" />
+    <Compile Include="Server\RavenFS\Util\StorageStream.cs" />
+    <Compile Include="Server\RavenFS\Util\StorageStreamAccess.cs" />
+    <Compile Include="Server\RavenFS\Util\SynchronizingFileStream.cs" />
     <Compile Include="Server\Responders\Admin\AdminDetailedSizeBreakdown.cs" />
     <Compile Include="Server\Responders\Debugging\DebugDocumentsCount.cs" />
     <Compile Include="Server\Responders\Debugging\DebugIndexFields.cs" />
@@ -1092,6 +1228,10 @@
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj">
+      <Project>{4E087ECB-E7CA-4891-AC3C-3C76702715B6}</Project>
+      <Name>Raven.Client.Lightweight</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Studio\Raven.Studio.csproj">
       <Project>{6828A6A5-B925-4716-8D08-2B26353C54C2}</Project>
       <Name>Raven.Studio</Name>
@@ -1102,9 +1242,7 @@
       <Name>Voron %28Voron\Voron%29</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Server\RavenFS\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildProjectDirectory)\..\Tools\StyleCop\StyleCop.Targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

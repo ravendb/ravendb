@@ -6,6 +6,7 @@ using System.ServiceModel;
 using System.Threading.Tasks;
 using System.Web.Http.SelfHost;
 using Raven.Client.RavenFS;
+using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.RavenFS;
@@ -40,8 +41,8 @@ namespace RavenFS.Tests
 							                               TransferMode = TransferMode.Streamed
 						                               };
 
-					                      var configuration = new InMemoryConfiguration();
-					                      configuration.Initialize();
+										  var configuration = new InMemoryRavenConfiguration();
+					                      configuration.InitializeRavenFs();
 					                      configuration.DataDirectory = "~/" + port;
 					                      configuration.Port = port;
 

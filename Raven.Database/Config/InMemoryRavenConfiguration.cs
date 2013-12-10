@@ -217,6 +217,19 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
+		public void InitializeRavenFs()
+		{
+			// Data settings
+			DataDirectory = Settings["Raven/FileSystem/DataDir"] ?? @"~\Data.ravenfs";
+
+			if (string.IsNullOrEmpty(Settings["Raven/FileSystem/IndexStoragePath"]) == false)
+			{
+				IndexStoragePath = Settings["Raven/FilesSystem/IndexStoragePath"];
+			}
+
+			SetVirtualDirectory();
+		}
+
 		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
 
 		public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
