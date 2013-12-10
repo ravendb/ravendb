@@ -1,4 +1,10 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Voron;
@@ -24,6 +30,7 @@ namespace FreeDB.Playground
 				_storageEnvironment.CreateTree(tx, "ix_titles");
 				tx.Commit();
 			}
+			
 			_currentBatch = new WriteBatch();
 		}
 
@@ -34,6 +41,7 @@ namespace FreeDB.Playground
 			var ms = new MemoryStream();
 			var writer = new StreamWriter(ms);
 			writer.Write(d);
+			writer.Flush();
 			ms.Position = 0;
 			var key = new Slice(EndianBitConverter.Big.GetBytes(counter++));
 			_currentBatch.Add(key, ms, "albums");
@@ -58,7 +66,7 @@ namespace FreeDB.Playground
 				_currentBatch.MultiAdd(title.ToLower(), key, "ix_titles");
 			}
 
-			if (counter % 100 == 0)
+			if (counter % 500 == 0)
 			{
 				_storageEnvironment.Writer.Write(_currentBatch);
 				_currentBatch = new WriteBatch();

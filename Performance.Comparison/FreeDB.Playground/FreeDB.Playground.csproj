@@ -55,8 +55,10 @@
     <Compile Include="DisksDestination.cs" />
     <Compile Include="Disk.cs" />
     <Compile Include="EntryDestination.cs" />
+    <Compile Include="FreeDbQueries.cs" />
     <Compile Include="GzipFileParser.cs" />
     <Compile Include="JsonFileDisksDestination.cs" />
+    <Compile Include="NullDisksDestination.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

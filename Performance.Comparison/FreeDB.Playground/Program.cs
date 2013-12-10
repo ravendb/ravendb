@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
-using XmcdParser;
 
 namespace FreeDB.Playground
 {
@@ -17,19 +15,13 @@ namespace FreeDB.Playground
 
 			var x = new GzipFileParser("freedb.json.gzip", new VoronEntriesDestination());
 			x.Start();
-		}
 
-	}
-
-	public class NullDisksDestination : DisksDestination
-	{
-		public override void Accept(Disk d)
-		{
+			//var freedbQueries = new FreeDbQueries("FreeDb");
 			
-		}
-
-		public override void Done()
-		{
+			//foreach (var disk in freedbQueries.FindByDiskId("a50b640d"))
+			//{
+			//	Console.WriteLine(disk.Artist + " " + disk.Title);
+			//}
 		}
 	}
 }

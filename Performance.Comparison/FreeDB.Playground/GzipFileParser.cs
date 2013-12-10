@@ -14,7 +14,7 @@ namespace FreeDB.Playground
 		private readonly string _path;
 		private readonly EntryDestination _insert;
 
-		private readonly BlockingCollection<string> _entries = new BlockingCollection<string>(10 * 1000);
+		private readonly BlockingCollection<string> _entries = new BlockingCollection<string>();
 		private int _reads, _written, _entriesWrittern;
 
 		public GzipFileParser(string path, EntryDestination insert)
@@ -29,7 +29,8 @@ namespace FreeDB.Playground
 			var reader = Task.Factory.StartNew(ReadFile);
 			var writer = Task.Factory.StartNew(Writer);
 
-			while (true)
+			var run = true;
+			while (run)
 			{
 				var tasks = new[] { reader, writer, Task.Delay(1000) };
 				var array = tasks
@@ -39,15 +40,12 @@ namespace FreeDB.Playground
 				{
 					tasks.First(x => x.IsFaulted).Wait();
 				}
-				if (array.Length <= 1)
-					break;
-				Task.WaitAny(array);
-				Console.Write("\r{0,10:#,#} sec r/w/e: {1:#,#}/{2:#,#}/{3:#,#}", sp.Elapsed.TotalSeconds, _reads, _written, _entriesWrittern);
+				if (array.Length > 1)
+					Task.WaitAny(array);
+				else
+					run = false;
+				Console.Write("\r{0,10:#,#} sec r-{1:#,#} w-{2:#,#} e-{3:#,#} l-{4:#,#}", sp.Elapsed.TotalSeconds, _reads, _written, _entriesWrittern, _reads - _written);
 			}
-			Console.WriteLine();
-			Console.WriteLine("Total");
-			Console.Write("\r{0,10:#,#} sec r/w/e: {1:#,#}/{2:#,#}/{3:#,#}", sp.Elapsed.TotalSeconds, _reads, _written, _entriesWrittern);
-
 		}
 
 		private void Writer()
