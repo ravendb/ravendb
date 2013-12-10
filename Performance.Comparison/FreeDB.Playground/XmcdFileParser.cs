@@ -14,13 +14,13 @@ namespace FreeDB.Playground
 	public class XmcdFileParser
 	{
 		private readonly string _path;
-		private readonly Action<Disk> _insert;
+		private readonly Destination _insert;
 
 		private int reads, parsed, writtern;
 		private readonly BlockingCollection<string> _entries = new BlockingCollection<string>();
 		private readonly BlockingCollection<Disk> _disks = new BlockingCollection<Disk>();
 
-		public XmcdFileParser(string path, Action<Disk> insert)
+		public XmcdFileParser(string path, Destination insert)
 		{
 			_path = path;
 			_insert = insert;
@@ -35,17 +35,18 @@ namespace FreeDB.Playground
 
 			while (true)
 			{
-				var tasks = new[] { reader, parser, processer, Task.Delay(1000) }.Where(x => x.IsCanceled == false && x.IsFaulted == false);
+				var tasks = new[] { reader, parser, processer, Task.Delay(1000) }
+					.Where(x => x.IsCanceled == false && x.IsFaulted == false && x.IsCompleted == false);
 				var array = tasks.ToArray();
 				if (array.Length <= 1)
 					break;
 				Task.WaitAny(array);
-				Console.Write("\r{0,10:#,#} sec reads: {1,10:#,#} parsed: {2,10:#,#} writtern: {3,10:#,#}", sp.Elapsed.TotalSeconds, reads,
+				Console.Write("\r{0,10:#,#} sec reads: {1,10:#,#} parsed: {2,10:#,#} written: {3,10:#,#}", sp.Elapsed.TotalSeconds, reads,
 					parsed, writtern);
 			}
 			Console.WriteLine();
 			Console.WriteLine("Total");
-			Console.WriteLine("{0,10:#,#} reads: {1:10:#,#} parsed: {2:10:#,#} writtern: {3:10:#,#}", sp.ElapsedMilliseconds, reads,
+			Console.WriteLine("{0,10:#,#} reads: {1:10:#,#} parsed: {2:10:#,#} written: {3:10:#,#}", sp.ElapsedMilliseconds, reads,
 					parsed, writtern);
 
 		}
@@ -57,9 +58,10 @@ namespace FreeDB.Playground
 				var entry = _disks.Take();
 				if (entry == null)
 					break;
-				_insert(entry);
+				_insert.Accept(entry);
 				Interlocked.Increment(ref writtern);
 			}
+			_insert.Done();
 		}
 
 		private void ParseEntries()
