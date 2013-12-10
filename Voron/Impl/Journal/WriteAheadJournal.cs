@@ -644,9 +644,9 @@ namespace Voron.Impl.Journal
 			{
 			    var pages = CompressPages(tx, pageCount, _compressionPager);
 
-                if (CurrentFile == null || CurrentFile.AvailablePages < pageCount)
+                if (CurrentFile == null || CurrentFile.AvailablePages < pages.Length)
 				{
-                    CurrentFile = NextFile(pageCount);
+					CurrentFile = NextFile(pages.Length);
 				}
 				var task = CurrentFile.Write(tx, pages)
 					.ContinueWith(result =>
