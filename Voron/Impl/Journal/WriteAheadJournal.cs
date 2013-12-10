@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Trees;
@@ -457,7 +458,12 @@ namespace Voron.Impl.Journal
 			            _waj._dataPager.Write(page);
 			        }
 
-                    _waj._dataPager.Sync();
+					_waj._dataPager.Sync();
+				}
+				catch (DiskFullException diskFullEx)
+				{
+					_waj._env.HandleDataDiskFullException(diskFullEx);
+					return;
 				}
 				finally 
 				{

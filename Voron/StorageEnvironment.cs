@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Debugging;
+using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Backup;
 using Voron.Impl.FileHeaders;
@@ -33,12 +35,13 @@ namespace Voron
 
         private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
-        private readonly Task _flushingTask;
+        private Task _flushingTask;
         private readonly HeaderAccessor _headerAccessor;
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private ScratchBufferPool _scratchBufferPool;
 	    private DebugJournal _debugJournal;
+	    private EndOfDiskSpaceEvent _endOfDiskSpace;
 
 
 	    public TemporaryPage TemporaryPage { get; private set; }
@@ -347,6 +350,17 @@ namespace Voron
                     _txWriter.Wait();
                     txId = _transactionsCounter + 1;
                     txLockTaken = true;
+
+					if (_endOfDiskSpace != null)
+					{
+						if (_endOfDiskSpace.CanContinueWriting)
+						{
+							Debug.Assert(_flushingTask.Status == TaskStatus.Canceled || _flushingTask.Status == TaskStatus.RanToCompletion);
+							_cancellationTokenSource = new CancellationTokenSource();
+							_flushingTask = FlushWritesToDataFileAsync();
+							_endOfDiskSpace = null;
+						}
+					}
                 }
                 var tx = new Transaction(this, txId, flags, _freeSpaceHandling);
                 _activeTransactions.TryAdd(txId, tx);
@@ -468,5 +482,14 @@ namespace Voron
 
             _flushingTask.Wait();// force re-throw of error
         }
+
+	    public void HandleDataDiskFullException(DiskFullException exception)
+	    {
+			if(_options.ManualFlushing)
+				return;
+
+		    _cancellationTokenSource.Cancel();
+			_endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo);
+	    }
     }
 }
