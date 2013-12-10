@@ -14,13 +14,13 @@ namespace FreeDB.Playground
 	public class XmcdFileParser
 	{
 		private readonly string _path;
-		private readonly Destination _insert;
+		private readonly DisksDestination _insert;
 
 		private int reads, parsed, writtern;
 		private readonly BlockingCollection<string> _entries = new BlockingCollection<string>();
 		private readonly BlockingCollection<Disk> _disks = new BlockingCollection<Disk>();
 
-		public XmcdFileParser(string path, Destination insert)
+		public XmcdFileParser(string path, DisksDestination insert)
 		{
 			_path = path;
 			_insert = insert;
@@ -35,9 +35,14 @@ namespace FreeDB.Playground
 
 			while (true)
 			{
-				var tasks = new[] { reader, parser, processer, Task.Delay(1000) }
-					.Where(x => x.IsCanceled == false && x.IsFaulted == false && x.IsCompleted == false);
-				var array = tasks.ToArray();
+				var tasks = new[] { reader, parser, processer, Task.Delay(1000) };
+				var array = tasks
+					.Where(x => x.IsCompleted == false)
+					.ToArray();
+				if (tasks.Any(x => x.IsFaulted))
+				{
+					tasks.First(x => x.IsFaulted).Wait();
+				}
 				if (array.Length <= 1)
 					break;
 				Task.WaitAny(array);

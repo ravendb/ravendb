@@ -12,13 +12,16 @@ namespace FreeDB.Playground
 	{
 		static void Main()
 		{
-			var x = new XmcdFileParser(@"C:\Users\Ayende\Downloads\freedb-complete-20130901.tar.bz2", new NullDestination());
+			//var x = new XmcdFileParser(@"C:\Users\Ayende\Downloads\freedb-complete-20130901.tar.bz2", new JsonFileDisksDestination());
+			//x.Start();
+
+			var x = new GzipFileParser("freedb.json.gzip", new VoronEntriesDestination());
 			x.Start();
 		}
 
 	}
 
-	internal class NullDestination : Destination
+	public class NullDisksDestination : DisksDestination
 	{
 		public override void Accept(Disk d)
 		{
