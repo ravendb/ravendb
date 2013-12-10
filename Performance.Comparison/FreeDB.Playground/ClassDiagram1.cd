@@ -31,5 +31,17 @@
       <FileName>XmcdFileParser.cs</FileName>
     </TypeIdentifier>
   </Class>
+  <Class Name="FreeDB.Playground.FreeDbQueries">
+    <Position X="2.25" Y="3.75" Width="4" />
+    <Members>
+      <Field Name="_serializer" Hidden="true" />
+      <Field Name="_storageEnvironment" Hidden="true" />
+    </Members>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAACEAAAAAAAAAAAAAAAAACAAEAAAAAAAABAA=</HashCode>
+      <FileName>FreeDbQueries.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
   <Font Name="Segoe UI" Size="9" />
 </ClassDiagram>
