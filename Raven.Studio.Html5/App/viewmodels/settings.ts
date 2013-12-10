@@ -1,9 +1,9 @@
 import durandalRouter = require("plugins/router");
 import raven = require("common/raven");
+import database = require("models/database");
 
 class settings {
 
-    displayName = "status";
     router = null;
     activeDatabase = raven.activeDatabase;
     isOnSystemDatabase: KnockoutComputed<boolean>;
@@ -16,7 +16,7 @@ class settings {
 
         this.router = durandalRouter.createChildRouter()
             .map([
-                { route: 'settings/apiKeys', moduleId: 'viewModels/apiKeys', title: 'API Keys', type: 'intro', nav: this.isOnSystemDatabase },
+                { route: 'settings/apiKeys', moduleId: 'viewModels/apiKeys', title: 'API Keys', type: 'intro', nav: true },
                 { route: 'settings/windowsAuth', moduleId: 'viewModels/windowsAuth', title: 'Windows Authentication', type: 'intro', nav: this.isOnSystemDatabase },
                 { route: 'settings/databaseSettings', moduleId: 'viewModels/databaseSettings', title: 'Database Settings', type: 'intro', nav: this.isOnUserDatabase },
                 { route: 'settings/periodicBackup', moduleId: 'viewModels/periodicBackup', title: 'Periodic Backup', type: 'intro', nav: this.isOnUserDatabase }
@@ -25,13 +25,17 @@ class settings {
     }
 
     activate(args) {
-        //if (this.activeDatabase()) {
-        //    if (this.activeDatabase().isSystem) {
-        //        this.router.navigate("settings/apiKeys");
-        //    } else {
-        //        this.router.navigate("settings/databaseSettings");
-        //    }
-        //}
+        console.log("zzzactivating settings!", args);
+        if (this.activeDatabase()) {
+            
+            if (this.activeDatabase().isSystem) {
+                console.log("zzzznav to api keys");
+                this.router.navigate("settings/apiKeys");
+            } else {
+                console.log("zzzznav to db settings");
+                this.router.navigate("settings/databaseSettings");
+            }
+        }
     }
 }
 

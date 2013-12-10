@@ -4,10 +4,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "models/apiKey"], function(require, exports, __commandBase__, __apiKey__) {
-    var commandBase = __commandBase__;
-    var apiKey = __apiKey__;
-
+define(["require", "exports", "commands/commandBase", "models/apiKey"], function(require, exports, commandBase, apiKey) {
     var getApiKeysCommand = (function (_super) {
         __extends(getApiKeysCommand, _super);
         function getApiKeysCommand() {
@@ -21,8 +18,10 @@ define(["require", "exports", "commands/commandBase", "models/apiKey"], function
                 pageSize: 256
             };
 
-            return this.query("/docs", args, null, function (dto) {
-                return new apiKey(dto);
+            return this.query("/docs", args, null, function (dtos) {
+                return dtos.map(function (dto) {
+                    return new apiKey(dto);
+                });
             });
         };
         return getApiKeysCommand;

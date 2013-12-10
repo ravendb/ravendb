@@ -11,7 +11,7 @@ class getApiKeysCommand extends commandBase {
             pageSize: 256
         };
 
-        return this.query("/docs", args, null, (dto: apiKeyDto) => new apiKey(dto));
+        return this.query("/docs", args, null, (dtos: apiKeyDto[]) => dtos.map(dto => new apiKey(dto)));
     }
 }
 

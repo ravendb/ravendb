@@ -1,16 +1,4 @@
-define(["require", "exports", "plugins/router", "models/collection", "models/database", "models/document", "common/raven", "common/pagedList"], function(require, exports, __router__, __collection__, __database__, __document__, __raven__, __pagedList__) {
-    
-    
-    
-    var router = __router__;
-
-    var collection = __collection__;
-    var database = __database__;
-    var document = __document__;
-    
-    var raven = __raven__;
-    var pagedList = __pagedList__;
-
+define(["require", "exports", "plugins/router", "models/collection", "models/database", "models/document", "viewModels/deleteCollection", "common/raven", "common/pagedList"], function(require, exports, router, collection, database, document, deleteCollection, raven, pagedList) {
     var userInfo = (function () {
         function userInfo() {
             this.displayName = "user info";

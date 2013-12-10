@@ -10,46 +10,35 @@ import raven = require("common/raven");
 import document = require("models/document");
 import appUrl = require("common/appUrl");
 import collection = require("models/collection");
-import deleteDocuments = require("viewmodels/deleteDocuments");
+import deleteDocuments = require("viewModels/deleteDocuments");
 import dialogResult = require("common/dialogResult");
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 import pagedList = require("common/pagedList");
+import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import getDatabasesCommand = require("commands/getDatabasesCommand");
+import getBuildVersionCommand = require("commands/getBuildVersionCommand");
+import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
 
 class shell {
 	private router = router;
 	databases = ko.observableArray<database>();
 	activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase");
-	ravenDb: raven;
 	currentAlert = ko.observable<alertArgs>();
     queuedAlerts = ko.observableArray<alertArgs>();
     databasesLoadedTask: JQueryPromise<any>;
     buildVersion = ko.observable<buildVersionDto>();
     licenseStatus = ko.observable<licenseStatusDto>();
 
-	constructor() {
-		this.ravenDb = new raven();
-		ko.postbox.subscribe("EditDocument", args => this.launchDocEditor(args.doc.getId(), args.docsList));
+    constructor() {
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateDatabase", (db: database) => this.databaseChanged(db));
+        //ko.postbox.subscribe("EditDocument", args => this.launchDocEditor(args.doc.getId(), args.docsList));
         NProgress.set(.5);
 	}
 
-	databasesLoaded(databases) {
-		var systemDatabase = new database("<system>");
-		systemDatabase.isSystem = true;
-		this.databases(databases.concat([systemDatabase]));
-		this.databases()[0].activate();
-	}
-
-    launchDocEditor(docId?: string, docsList?: pagedList) {
-        var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null);
-        router.navigate(editDocUrl);
-	}
-
     activate() {
-
         NProgress.set(.8);
 
 		router.map([
@@ -78,11 +67,23 @@ class shell {
 			e.preventDefault();
 			this.newDocument();
 		});
-	}
+    }
+
+    databasesLoaded(databases) {
+        var systemDatabase = new database("<system>");
+        systemDatabase.isSystem = true;
+        this.databases(databases.concat([systemDatabase]));
+        this.databases()[0].activate();
+    }
+
+    launchDocEditor(docId?: string, docsList?: pagedList) {
+        var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null);
+        router.navigate(editDocUrl);
+    }
 
 	connectToRavenServer() {
-        this.databasesLoadedTask = this.ravenDb
-			.databases()
+        this.databasesLoadedTask = new getDatabasesCommand()
+			.execute()
 			.fail(result => this.handleRavenConnectionFailure(result))
 			.done(results => {
 				this.databasesLoaded(results);
@@ -136,7 +137,7 @@ class shell {
     activateDatabaseWithName(databaseName: string) {
         if (this.databasesLoadedTask) {
             this.databasesLoadedTask.done(() => {
-                var matchingDatabase = this.databases().first(d => d.name == databaseName);
+                var matchingDatabase = this.databases().first<database>(d => d.name == databaseName);
                 if (matchingDatabase && this.activeDatabase() !== matchingDatabase) {
                     ko.postbox.publish("ActivateDatabase", matchingDatabase);
                 }
@@ -145,23 +146,23 @@ class shell {
     }
 
     databaseChanged(db: database) {
-        if (db && !db.statistics()) {
-            this.ravenDb
-                .databaseStats(db.name)
+        if (db) {
+            new getDatabaseStatsCommand(db)
+                .execute()
                 .done(result => db.statistics(result));
         }
     }
 
     fetchBuildVersion() {
-        this.ravenDb
-            .buildVersion()
-            .done(result => this.buildVersion(result));
+        new getBuildVersionCommand()
+            .execute()
+            .done((result: buildVersionDto) => this.buildVersion(result));
     }
 
     fetchLicenseStatus() {
-        this.ravenDb
-            .licenseStatus()
-            .done(result => this.licenseStatus(result));
+        new getLicenseStatusCommand()
+            .execute()
+            .done((result: licenseStatusDto) => this.licenseStatus(result));
     }
 }
 

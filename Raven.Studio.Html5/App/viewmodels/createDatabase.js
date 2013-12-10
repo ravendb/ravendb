@@ -1,9 +1,4 @@
-define(["require", "exports", "models/document", "plugins/dialog", "commands/createDatabaseCommand", "models/collection"], function(require, exports, __document__, __dialog__, __createDatabaseCommand__, __collection__) {
-    var document = __document__;
-    var dialog = __dialog__;
-    var createDatabaseCommand = __createDatabaseCommand__;
-    var collection = __collection__;
-
+define(["require", "exports", "models/document", "plugins/dialog", "commands/createDatabaseCommand", "models/collection"], function(require, exports, document, dialog, createDatabaseCommand, collection) {
     var createDatabase = (function () {
         function createDatabase() {
             this.creationTask = $.Deferred();
@@ -15,6 +10,8 @@ define(["require", "exports", "models/document", "plugins/dialog", "commands/cre
         };
 
         createDatabase.prototype.deactivate = function () {
+            // If we were closed via X button or other dialog dismissal, reject the deletion task since
+            // we never started it.
             if (!this.creationTaskStarted) {
                 this.creationTask.reject();
             }

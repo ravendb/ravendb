@@ -6,7 +6,7 @@ import router = require("plugins/router");
 import collection = require("models/collection");
 import database = require("models/database");
 import document = require("models/document");
-import deleteCollection = require("viewmodels/deleteCollection");
+import deleteCollection = require("viewModels/deleteCollection");
 import raven = require("common/raven");
 import pagedList = require("common/pagedList");
 

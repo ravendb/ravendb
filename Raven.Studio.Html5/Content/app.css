@@ -67,6 +67,9 @@ body {
   -webkit-box-shadow: 0 0 5px 1px #428bca;
   box-shadow: 0 0 5px 1px #428bca;
 }
+.databases-container .database.system-database {
+  background-color: #fdd9d5;
+}
 .document-collections {
   margin-top: 40px;
 }

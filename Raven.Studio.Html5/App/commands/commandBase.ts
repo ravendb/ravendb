@@ -2,15 +2,17 @@ import raven = require("common/raven");
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 import database = require("models/database");
+import appUrl = require("common/appUrl");
 
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
-    ravenDb: raven;
     private baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
     //private baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
 
+    // TODO: better place for this?
+    static ravenClientVersion = '3.0.0.0';
+
     constructor() {
-        this.ravenDb = new raven();
     }
 
     execute<T>(): JQueryPromise<T> {
@@ -38,13 +40,7 @@ class commandBase {
         if (resultsSelector) {
             var task = $.Deferred();
             ajax.done((results) => {
-                // If results is an array, apply the resultsSelector to each element.
-                if (results && results.length >= 0) {
-                    task.resolve(results.map(r => resultsSelector(r)));
-                } else {
-                    // Results isn't an array. Apply the selector directly on the result object.
-                    task.resolve(resultsSelector(results));
-                }
+                task.resolve(resultsSelector(results));
             });
             ajax.fail((request, status, error) => task.reject(request, status, error));
             return task;
@@ -53,15 +49,26 @@ class commandBase {
         }
     }
 
-    private reportProgress(type: alertType, title: string, details?: string) {
-        ko.postbox.publish("Alert", new alertArgs(type, title, details));
+    put(relativeUrl: string, args: any, database?: database, customHeaders?: any): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "PUT", database, customHeaders);
+    }
+
+    /*
+     * Performs a DELETE rest call.
+    */
+    del(relativeUrl: string, args: any, database?: database, customHeaders?: any): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "DELETE", database, customHeaders);
+    }
+
+    post(relativeUrl: string, args: any, database?: database, customHeaders?: any): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "POST", database, customHeaders);
     }
 
     private ajax(relativeUrl: string, args: any, method: string, database?: database, customHeaders?: any): JQueryPromise<any> {
 
         var options = {
             cache: false,
-            url: this.getDatabaseUrl(database) + relativeUrl,
+            url: appUrl.forDatabaseQuery(database) + relativeUrl,
             data: args,
             contentType: "application/json; charset=utf-8",
             type: method,
@@ -75,12 +82,8 @@ class commandBase {
         return $.ajax(options);
     }
 
-    private getDatabaseUrl(database: database) {
-        if (database && !database.isSystem) {
-            return this.baseUrl + "/databases/" + database.name;
-        }
-
-        return this.baseUrl;
+    private reportProgress(type: alertType, title: string, details?: string) {
+        ko.postbox.publish("Alert", new alertArgs(type, title, details));
     }
 }
 
