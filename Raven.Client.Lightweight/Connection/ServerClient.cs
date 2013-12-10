@@ -98,7 +98,20 @@ namespace Raven.Client.Connection
 			return asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, metadataOnly, exclude).ResultUnwrap();
 		}
 
-		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
+        /// <summary>
+        /// Execute a GET request against the provided url
+        /// and return the result as a json object
+        /// </summary>
+        /// <param name="requestUrl">The relative url to the server</param>
+        /// <remarks>
+        /// This method respects the replication semantics against the database.
+        /// </remarks>
+        public RavenJToken ExecuteGetRequest(string requestUrl)
+        {
+            return asyncServerClient.ExecuteGetRequest(requestUrl).ResultUnwrap();
+        }
+
+        public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
 		{
 			return asyncServerClient.CreateRequest(requestUrl, method, disableRequestCompression);
 		}
@@ -108,7 +121,7 @@ namespace Raven.Client.Connection
 			return asyncServerClient.CreateReplicationAwareRequest(currentServerUrl, requestUrl, method, disableRequestCompression);
 		}
 
-		internal void ExecuteWithReplication(string method, Action<string> operation)
+        internal void ExecuteWithReplication(string method, Action<string> operation)
 		{
 			asyncServerClient.ExecuteWithReplication(method, operationMetadata =>
 			{
