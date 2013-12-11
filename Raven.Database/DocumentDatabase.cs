@@ -1765,7 +1765,7 @@ namespace Raven.Database
             TransactionalStorage.Batch(
                 actions =>
                 {
-                    var docsToSkip = 0;
+                    var docsToSkip = start;
                     var addedDocs = 0;
                     var matchedDocs = 0;
                     int docCount;

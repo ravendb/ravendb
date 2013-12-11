@@ -12,6 +12,8 @@ using System.Diagnostics;
 
 namespace Raven.Tests
 {
+	using System.Collections.Generic;
+
 	public class RavenTest : RavenTestBase
 	{
 		static RavenTest()
@@ -36,6 +38,18 @@ namespace Raven.Tests
             timer.Stop();
             Console.WriteLine("Time take (ms)- " + timer.Elapsed.TotalMilliseconds);
             return timer.Elapsed.TotalMilliseconds;
+		}
+
+		public static IEnumerable<object[]> Storages
+		{
+			get
+			{
+				return new[]
+                                       {
+                                                   new object[] { "munin" }, 
+                                                   new object[] { "esent" }
+                                       };
+			}
 		}
 	}
 }
