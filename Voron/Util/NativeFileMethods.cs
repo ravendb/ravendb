@@ -13,7 +13,7 @@ using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Voron.Exceptions;
 
-namespace Voron.Impl
+namespace Voron.Util
 {
 	public static unsafe class NativeFileMethods
 	{
@@ -79,7 +79,7 @@ namespace Voron.Impl
 					while (GetFinalPathNameByHandle(fileHandle, filePath, filePath.Capacity, 0) > filePath.Capacity && 
 						filePath.Capacity < 32767) // max unicode path length
 					{
-						filePath = new StringBuilder(filePath.Capacity*2);
+					    filePath.EnsureCapacity(filePath.Capacity*2);
 					}
 
 					filePath = filePath.Replace(@"\\?\", string.Empty); // remove extended-length path prefix
