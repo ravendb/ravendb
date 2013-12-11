@@ -36,14 +36,12 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var read = tx.GetTree("tree").Read(tx, "key1");
-				Assert.NotNull(read);
+			    var read = tx.GetTree("tree").Read(tx, "key1");
+			    Assert.NotNull(read);
 
-				using (var reader = new BinaryReader(read.Stream))
-				{
-					Assert.Equal(buffer.Length, read.Stream.Length);
-					Assert.Equal(buffer, reader.ReadBytes((int)read.Stream.Length));
-				}
+			    var reader = read.Reader;
+			    Assert.Equal(buffer.Length, read.Reader.Length);
+			    Assert.Equal(buffer, reader.ReadBytes(read.Reader.Length));
 			}
 		}
 
@@ -90,10 +88,9 @@ namespace Voron.Tests.Storage
 					var read = tx.GetTree("tree").Read(tx, "key1");
 					Assert.NotNull(read);
 
-					using (var reader = new BinaryReader(read.Stream))
 					{
-						Assert.Equal(buffer.Length, read.Stream.Length);
-						Assert.Equal(buffer, reader.ReadBytes((int)read.Stream.Length));
+						Assert.Equal(buffer.Length, read.Reader.Length);
+						Assert.Equal(buffer, read.Reader.ReadBytes(read.Reader.Length));
 					}
 				}
 			}

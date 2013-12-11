@@ -73,7 +73,7 @@ namespace Voron.Tests.Storage
 				Assert.NotNull(readResult);
 
 				var memoryStream = new MemoryStream();
-				readResult.Stream.CopyTo(memoryStream);
+				readResult.Reader.CopyTo(memoryStream);
 				CompareBuffers(buffer, memoryStream);
 				tx.Commit();
 			}
@@ -87,7 +87,7 @@ namespace Voron.Tests.Storage
 				Assert.NotNull(readResult);
 
 				var memoryStream = new MemoryStream();
-				readResult.Stream.CopyTo(memoryStream);
+				readResult.Reader.CopyTo(memoryStream);
 				CompareBuffers(buffer, memoryStream);
 				tx.Commit();
 			}
@@ -100,7 +100,7 @@ namespace Voron.Tests.Storage
 				Assert.NotNull(readResult);
 
 				var memoryStream = new MemoryStream();
-				readResult.Stream.CopyTo(memoryStream);
+				readResult.Reader.CopyTo(memoryStream);
 				CompareBuffers(buffer, memoryStream);
 				tx.Commit();
 			}
@@ -116,7 +116,7 @@ namespace Voron.Tests.Storage
 				Assert.NotNull(readResult);
 
 				var memoryStream = new MemoryStream();
-				readResult.Stream.CopyTo(memoryStream);
+				readResult.Reader.CopyTo(memoryStream);
 				CompareBuffers(buffer, memoryStream);
 				tx.Commit();
 			}
@@ -147,7 +147,7 @@ namespace Voron.Tests.Storage
 				Assert.NotNull(readResult);
 
 				var memoryStream = new MemoryStream();
-				readResult.Stream.CopyTo(memoryStream);
+				readResult.Reader.CopyTo(memoryStream);
 				Assert.Equal(buffer, memoryStream.ToArray());
 				tx.Commit();
 			}
@@ -178,7 +178,7 @@ namespace Voron.Tests.Storage
 					Assert.NotNull(readResult);
 
 					var memoryStream = new MemoryStream();
-					readResult.Stream.CopyTo(memoryStream);
+					readResult.Reader.CopyTo(memoryStream);
 					Assert.Equal(buffers[i], memoryStream.ToArray());
 
 				}

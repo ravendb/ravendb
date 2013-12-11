@@ -41,5 +41,14 @@ namespace Voron.Impl.Journal
 
         [FieldOffset(168)]
         public TransactionMarker TxMarker;
+
+		[FieldOffset(169)]
+		public bool Compressed;
+
+		[FieldOffset(170)]
+		public int CompressedSize;
+
+		[FieldOffset(174)]
+		public int UncompressedSize;
 	}
 }

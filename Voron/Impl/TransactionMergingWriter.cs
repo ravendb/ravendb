@@ -1,321 +1,365 @@
 ﻿using System.Threading.Tasks;
+using Voron.Debugging;
+using Voron.Trees;
 using Voron.Util;
 
 namespace Voron.Impl
 {
-	using System;
-	using System.Collections.Concurrent;
-	using System.Collections.Generic;
-	using System.Diagnostics;
-	using System.IO;
-	using System.Linq;
-	using System.Threading;
-	using Extensions;
+    using System;
+    using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Threading;
+    using Extensions;
 
-	public class TransactionMergingWriter : IDisposable
-	{
-		private readonly StorageEnvironment _env;
+    public class TransactionMergingWriter : IDisposable
+    {
+        private readonly StorageEnvironment _env;
 
-		private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites;
-		private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-		private readonly ManualResetEventSlim _hasWritesEvent = new ManualResetEventSlim();
-		private readonly ManualResetEventSlim _stopWrites = new ManualResetEventSlim();
+        private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites;
+        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly ManualResetEventSlim _hasWritesEvent = new ManualResetEventSlim();
+        private readonly ManualResetEventSlim _stopWrites = new ManualResetEventSlim();
+        private readonly DebugJournal _debugJournal;
+        private readonly ConcurrentQueue<ManualResetEventSlim> _eventsBuffer = new ConcurrentQueue<ManualResetEventSlim>();
 
-		private readonly ConcurrentQueue<ManualResetEventSlim> _eventsBuffer = new ConcurrentQueue<ManualResetEventSlim>();
+        private bool ShouldRecordToDebugJournal
+        {
+            get
+            {
+                return _debugJournal != null && _debugJournal.IsRecording;
+            }
+        }
 
-		private readonly Lazy<Task> _backgroundTask;
+        private readonly Lazy<Task> _backgroundTask;
 
-		internal TransactionMergingWriter(StorageEnvironment env)
-		{
-			_env = env;
-			_pendingWrites = new ConcurrentQueue<OutstandingWrite>();
-			_stopWrites.Set();
+        internal TransactionMergingWriter(StorageEnvironment env, DebugJournal debugJournal = null)
+        {
+            _env = env;
+            _pendingWrites = new ConcurrentQueue<OutstandingWrite>();
+            _stopWrites.Set();
+            _debugJournal = debugJournal;
+            _backgroundTask = new Lazy<Task>(() => Task.Run(() => BackgroundWriter(), _cancellationTokenSource.Token));
+        }
 
-			_backgroundTask = new Lazy<Task>(() => Task.Run(() => BackgroundWriter(), _cancellationTokenSource.Token));
-		}
+        public IDisposable StopWrites()
+        {
+            _stopWrites.Reset();
 
-		public IDisposable StopWrites()
-		{
-			_stopWrites.Reset();
+            return new DisposableAction(() => _stopWrites.Set());
+        }
 
-			return new DisposableAction(() => _stopWrites.Set());
-		}
+        public void Write(WriteBatch batch)
+        {
+            if (batch.IsEmpty)
+                return;
 
-		public void Write(WriteBatch batch)
-		{
-			if (batch.IsEmpty)
-				return;
+            EnsureValidBackgroundTaskState();
 
-			EnsureValidBackgroundTaskState();
+            using (var mine = new OutstandingWrite(batch, this))
+            {
+                _pendingWrites.Enqueue(mine);
+                _hasWritesEvent.Set();
 
-			using (var mine = new OutstandingWrite(batch, this))
-			{
-				_pendingWrites.Enqueue(mine);
-				_hasWritesEvent.Set();
+                mine.Wait();
+            }
+        }
 
-				mine.Wait();
-			}
-		}
+        private void EnsureValidBackgroundTaskState()
+        {
+            var backgroundTask = _backgroundTask.Value;
+            if (backgroundTask.IsCanceled || backgroundTask.IsFaulted)
+                backgroundTask.Wait(); // would throw
+            if (backgroundTask.IsCompleted)
+                throw new InvalidOperationException("The write background task has already completed!");
+        }
 
-		private void EnsureValidBackgroundTaskState()
-		{
-			var backgroundTask = _backgroundTask.Value;
-			if (backgroundTask.IsCanceled || backgroundTask.IsFaulted)
-				backgroundTask.Wait(); // would throw
-			if (backgroundTask.IsCompleted)
-				throw new InvalidOperationException("The write background task has already completed!");
-		}
+        private void BackgroundWriter()
+        {
+            var cancellationToken = _cancellationTokenSource.Token;
+            while (cancellationToken.IsCancellationRequested == false)
+            {
+                _stopWrites.Wait(cancellationToken);
+                _hasWritesEvent.Reset();
 
-		private void BackgroundWriter()
-		{
-			var cancellationToken = _cancellationTokenSource.Token;
-			while (cancellationToken.IsCancellationRequested == false)
-			{
-				_stopWrites.Wait(cancellationToken);
-				_hasWritesEvent.Reset();
+                OutstandingWrite write;
+                while (_pendingWrites.TryPeek(out write))
+                {
+                    HandleActualWrites(write);
+                }
 
-				OutstandingWrite write;
-				while (_pendingWrites.TryPeek(out write))
-				{
-					HandleActualWrites(write);
-				}
+                _hasWritesEvent.Wait(cancellationToken);
+            }
+        }
 
-				_hasWritesEvent.Wait(cancellationToken);
-			}
-		}
+        private void HandleActualWrites(OutstandingWrite mine)
+        {
+            List<OutstandingWrite> writes = null;
+            try
+            {
+                writes = BuildBatchGroup(mine);
+                using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations));
 
-		private void HandleActualWrites(OutstandingWrite mine)
-		{
-			List<OutstandingWrite> writes = null;
-			try
-			{
-				writes = BuildBatchGroup(mine);
-				using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations));
+                    tx.Commit().ContinueWith(task =>
+                    {
+                        if (task.IsFaulted)
+                        {
+                            HandleWriteFailure(writes, mine, task.Exception);
+                        }
+                        else
+                        {
+                            if (ShouldRecordToDebugJournal)
+                                _debugJournal.Flush();
 
-				    tx.Commit().ContinueWith(task =>
-				    {
-				        if (task.IsFaulted)
-				        {
-				            HandleWriteFailure(writes, task.Exception);
-				        }
-				        else
-				        {
                             foreach (var write in writes)
                                 write.Completed();
-				        }
-				    });
-				}
-			}
-			catch (Exception e)
-			{
-				HandleWriteFailure(writes, e);
-			}
-			finally
-			{
-				Finalize(writes);
-			}
-		}
+                        }
+                    });
+                }        
+            }
+            catch (Exception e)
+            {
+                HandleWriteFailure(writes, mine, e);
+            }
+            finally
+            {
+                Finalize(writes);
+            }
+        }
 
-	    private void HandleWriteFailure(List<OutstandingWrite> writes, Exception e)
-	    {
+        private void HandleWriteFailure(List<OutstandingWrite> writes, OutstandingWrite mine, Exception e)
+        {
 	        if (writes == null || writes.Count == 0)
-	            throw new InvalidOperationException("Couldn't get items to write", e);
-
-	        if (writes.Count == 1)
 	        {
-	            writes[0].Errorred(e);
+				mine.Errored(e);
+		        throw new InvalidOperationException("Couldn't get items to write", e);
 	        }
 
-	        SplitWrites(writes);
-	    }
-
-	    private void Finalize(IEnumerable<OutstandingWrite> writes)
-		{
-			if (writes == null)
+	        if (writes.Count == 1)
+            {
+                writes[0].Errored(e);
 				return;
-			Debug.Assert(_pendingWrites.Count > 0);
-			foreach (var write in writes)
-			{
-				Debug.Assert(_pendingWrites.Peek() == write);
+            }
 
-				OutstandingWrite pendingWrite;
-				_pendingWrites.TryDequeue(out pendingWrite);
-			}
-		}
+            SplitWrites(writes);
+        }
 
-		private void HandleOperations(Transaction tx, IEnumerable<WriteBatch.BatchOperation> operations)
-		{
-			foreach (var g in operations.GroupBy(x => x.TreeName))
-			{
-				var tree = tx.State.GetTree(g.Key, tx);
-				// note that the ordering is done purely for performance reasons
-				// we rely on the fact that there can be only a single operation per key in
-				// each batch, and that we don't make any guarantees regarding ordering between
-				// concurrent merged writes
-				foreach (var operation in g.OrderBy(x => x.Key, SliceEqualityComparer.Instance))
-				{
-					operation.Reset();
+        private void Finalize(IEnumerable<OutstandingWrite> writes)
+        {
+            if (writes == null)
+                return;
+            Debug.Assert(_pendingWrites.Count > 0);
+            foreach (var write in writes)
+            {
+                Debug.Assert(_pendingWrites.Peek() == write);
 
-					switch (operation.Type)
-					{
-						case WriteBatch.BatchOperationType.Add:
-							tree.Add(tx, operation.Key, operation.Value as Stream, operation.Version);
-							break;
-						case WriteBatch.BatchOperationType.Delete:
-							tree.Delete(tx, operation.Key, operation.Version);
-							break;
-						case WriteBatch.BatchOperationType.MultiAdd:
-							tree.MultiAdd(tx, operation.Key, operation.Value as Slice, operation.Version);
-							break;
-						case WriteBatch.BatchOperationType.MultiDelete:
-							tree.MultiDelete(tx, operation.Key, operation.Value as Slice, operation.Version);
-							break;
-						default:
-							throw new ArgumentOutOfRangeException();
-					}
-				}
-			}
-		}
+                OutstandingWrite pendingWrite;
+                _pendingWrites.TryDequeue(out pendingWrite);
+            }
+        }
 
-		private void SplitWrites(IEnumerable<OutstandingWrite> writes)
-		{
-			foreach (var write in writes)
-			{
-				try
-				{
-					using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
-					{
-						HandleOperations(tx, write.Batch.Operations);
-						tx.Commit();
+        private void HandleOperations(Transaction tx, IEnumerable<WriteBatch.BatchOperation> operations)
+        {
+            foreach (var g in operations.GroupBy(x => x.TreeName))
+            {
+                var tree = tx.State.GetTree(g.Key, tx);
+                // note that the ordering is done purely for performance reasons
+                // we rely on the fact that there can be only a single operation per key in
+                // each batch, and that we don't make any guarantees regarding ordering between
+                // concurrent merged writes
+                foreach (var operation in g.OrderBy(x => x.Key, SliceEqualityComparer.Instance))
+                {
+                    operation.Reset();
+                    DebugActionType actionType;
+                    switch (operation.Type)
+                    {
+                        case WriteBatch.BatchOperationType.Add:
+                            tree.Add(tx, operation.Key, operation.Value as Stream, operation.Version);
+                            actionType = DebugActionType.Add;
+                            break;
+                        case WriteBatch.BatchOperationType.Delete:
+                            tree.Delete(tx, operation.Key, operation.Version);
+                            actionType = DebugActionType.Delete;
+                            break;
+                        case WriteBatch.BatchOperationType.MultiAdd:
+                            tree.MultiAdd(tx, operation.Key, operation.Value as Slice, operation.Version);
+                            actionType = DebugActionType.MultiAdd;
+                            break;
+                        case WriteBatch.BatchOperationType.MultiDelete:
+                            tree.MultiDelete(tx, operation.Key, operation.Value as Slice, operation.Version);
+                            actionType = DebugActionType.MultiDelete;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
 
-						write.Completed();
-					}
-				}
-				catch (Exception e)
-				{
-					write.Errorred(e);
-				}
-			}
-		}
+                    if (ShouldRecordToDebugJournal)
+                        _debugJournal.RecordAction(actionType, operation.Key, g.Key, operation.Value);
 
-		private List<OutstandingWrite> BuildBatchGroup(OutstandingWrite mine)
-		{
-			// Allow the group to grow up to a maximum size, but if the
-			// original write is small, limit the growth so we do not slow
-			// down the small write too much.
-			long maxSize = 16 * 1024 * 1024; // 16 MB by default
-			if (mine.Size < 128 * 1024)
-				maxSize = mine.Size + (1024 * 1024);
+                }
+            }
+        }
 
-			var list = new List<OutstandingWrite>();
-			var indexOfMine = -1;
-			var index = 0;
+        private void SplitWrites(List<OutstandingWrite> writes)
+        {
+	        for (var index = 0; index < writes.Count; index++)
+	        {
+		        var write = writes[index];
+		        try
+		        {
+			        using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
+			        {
+				        HandleOperations(tx, write.Batch.Operations);
+				        tx.Commit().ContinueWith(
+					        task =>
+						        {
+							        if (task.IsFaulted)
+							        {
+								        write.Errored(task.Exception);
+							        }
+							        else
+							        {
+								        write.Completed();
+							        }
+						        });
+			        }
+		        }
+		        catch (Exception e)
+		        {
+			        write.Errored(e);
+		        }
+	        }
+        }
 
-			foreach (var write in _pendingWrites)
-			{
-				if (maxSize <= 0)
-					break;
+	    private List<OutstandingWrite> BuildBatchGroup(OutstandingWrite mine)
+        {
+            // Allow the group to grow up to a maximum size, but if the
+            // original write is small, limit the growth so we do not slow
+            // down the small write too much.
+            long maxSize = 16 * 1024 * 1024; // 16 MB by default
+            if (mine.Size < 128 * 1024)
+                maxSize = mine.Size + (1024 * 1024);
 
-				if (write == mine)
-				{
-					indexOfMine = index;
-					continue;
-				}
+            var list = new List<OutstandingWrite>();
+            var indexOfMine = -1;
+            var index = 0;
 
-				list.Add(write);
+            foreach (var write in _pendingWrites)
+            {
+                if (maxSize <= 0)
+                    break;
 
-				maxSize -= write.Size;
-				index++;
-			}
+                if (write == mine)
+                {
+                    indexOfMine = index;
+                    continue;
+                }
 
-			Debug.Assert(indexOfMine >= 0);
+                list.Add(write);
 
-			list.Insert(indexOfMine, mine);
+                maxSize -= write.Size;
+                index++;
+            }
 
-			return list;
-		}
+            Debug.Assert(indexOfMine >= 0);
 
-		private class OutstandingWrite : IDisposable
-		{
-			private readonly TransactionMergingWriter _transactionMergingWriter;
-			private Exception _exception;
-			private readonly ManualResetEventSlim _completed;
+            list.Insert(indexOfMine, mine);
 
-			public OutstandingWrite(WriteBatch batch, TransactionMergingWriter transactionMergingWriter)
-			{
-				_transactionMergingWriter = transactionMergingWriter;
-				Batch = batch;
-				Size = batch.Size();
+            return list;
+        }
 
-				if (transactionMergingWriter._eventsBuffer.TryDequeue(out _completed) == false)
-					_completed = new ManualResetEventSlim();
-				_completed.Reset();
-			}
+        private class OutstandingWrite : IDisposable
+        {
+            private readonly TransactionMergingWriter _transactionMergingWriter;
+            private Exception _exception;
+            private readonly ManualResetEventSlim _completed;
 
-			public WriteBatch Batch { get; private set; }
+            public OutstandingWrite(WriteBatch batch, TransactionMergingWriter transactionMergingWriter)
+            {
+                _transactionMergingWriter = transactionMergingWriter;
+                Batch = batch;
+                Size = batch.Size();
 
-			public long Size { get; private set; }
+                if (transactionMergingWriter._eventsBuffer.TryDequeue(out _completed) == false)
+                    _completed = new ManualResetEventSlim();
+                _completed.Reset();
+            }
 
-			public void Dispose()
-			{
-				Batch.Dispose();
+            public WriteBatch Batch { get; private set; }
 
-				_transactionMergingWriter._eventsBuffer.Enqueue(_completed);
-			}
+            public long Size { get; private set; }
 
-			public void Errorred(Exception e)
-			{
-				_exception = e;
-				_completed.Set();
-			}
+            public void Dispose()
+            {
+                Batch.Dispose();
 
-			public void Completed()
-			{
-				_completed.Set();
-			}
+                _transactionMergingWriter._eventsBuffer.Enqueue(_completed);
+            }
 
-			public void Wait()
-			{
-				_completed.Wait();
-				if (_exception != null)
-				{
-					throw new AggregateException("Error when executing write", _exception);
-				}
-			}
-		}
+            public void Errored(Exception e)
+            {
+	            var wasSet = _completed.IsSet;
 
-		public void Dispose()
-		{
-			_cancellationTokenSource.Cancel();
-			_hasWritesEvent.Set();
-			_stopWrites.Set();
-			
-		    try
-		    {
+                _exception = e;
+                _completed.Set();
+
+				if (wasSet)
+					throw new InvalidOperationException("This should not happen.");
+            }
+
+            public void Completed()
+            {
+				var wasSet = _completed.IsSet;
+                _completed.Set();
+
+				if (wasSet)
+					throw new InvalidOperationException("This should not happen.");
+            }
+
+            public void Wait()
+            {
+                _completed.Wait();
+                if (_exception != null)
+                {
+                    throw new AggregateException("Error when executing write", _exception);
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            _cancellationTokenSource.Cancel();
+            _hasWritesEvent.Set();
+            _stopWrites.Set();
+
+            try
+            {
                 if (_backgroundTask.IsValueCreated == false)
                     return;
-		        _backgroundTask.Value.Wait();
-		    }
-		    catch (TaskCanceledException)
-		    {
-		    }
-		    catch (AggregateException e)
-		    {
-		        if (e.InnerException is TaskCanceledException)
-		            return;
-		        throw;
-		    }
-		    finally
-		    {
-		        foreach (var manualResetEventSlim in _eventsBuffer)
-		        {
-		            manualResetEventSlim.Dispose();
-		        }   
+                _backgroundTask.Value.Wait();
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            catch (AggregateException e)
+            {
+                if (e.InnerException is TaskCanceledException)
+                    return;
+                throw;
+            }
+            finally
+            {
+                foreach (var manualResetEventSlim in _eventsBuffer)
+                {
+                    manualResetEventSlim.Dispose();
+                }
                 _hasWritesEvent.Dispose();
                 _stopWrites.Dispose();
-		    }
-		}
-	}
+            }
+        }
+    }
 }

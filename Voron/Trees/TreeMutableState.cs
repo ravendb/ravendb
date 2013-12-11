@@ -52,7 +52,7 @@ namespace Voron.Trees
                     OverflowPages = OverflowPages,
                     PageCount = PageCount,
 					Flags = Flags,
-                    RootPageNumber = RootPageNumber
+                    RootPageNumber = RootPageNumber,
                 };
         }
 

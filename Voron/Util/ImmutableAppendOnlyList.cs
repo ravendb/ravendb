@@ -187,7 +187,7 @@ namespace Voron.Util
 		{
 			return nToRemove >= _count
 				? Empty
-				: new ImmutableAppendOnlyList<T>(_values, _head + nToRemove, _count - 1);
+                : new ImmutableAppendOnlyList<T>(_values, _head + nToRemove, _count - nToRemove);
 		}
 
 		/// <summary>

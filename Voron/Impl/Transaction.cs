@@ -15,14 +15,6 @@ namespace Voron.Impl
 {
 	public unsafe class Transaction : IDisposable
 	{
-		public class FoundPage
-		{
-			public long Number;
-			public Slice FirstKey;
-			public Slice LastKey;
-			public List<long> CursorPath;
-		}
-
 		private const int NumberOfRecentlyFoundPagesPerTree = 16;
 		private const int PagesTakenByHeader = 1;
 		private readonly IVirtualPager _dataPager;
@@ -36,7 +28,7 @@ namespace Voron.Impl
 		private readonly IFreeSpaceHandling _freeSpaceHandling;
 
 		private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable = new Dictionary<long, PageFromScratchBuffer>();
-		private readonly IDictionary<Tree, LinkedList<FoundPage>> _recentlyFoundPages = new Dictionary<Tree, LinkedList<FoundPage>>();
+		private readonly IDictionary<Tree, RecentlyFoundPages> _recentlyFoundPages = new Dictionary<Tree, RecentlyFoundPages>();
 
 		internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
@@ -121,6 +113,9 @@ namespace Voron.Impl
 			_txHeader->PageCount = -1;
 			_txHeader->Crc = 0;
 			_txHeader->TxMarker = TransactionMarker.None;
+			_txHeader->Compressed = false;
+			_txHeader->CompressedSize = 0;
+			_txHeader->UncompressedSize = 0;
 
 			_allocatedPagesInTransaction = 0;
 			_overflowPagesInTransaction = 0;
@@ -300,18 +295,6 @@ namespace Voron.Impl
 			_state.Root.State.CopyTo(&_txHeader->Root);
 			_state.FreeSpaceRoot.State.CopyTo(&_txHeader->FreeSpace);
 
-
-			uint crc = 0;
-
-			for (int i = 1; i < _transactionPages.Count; i++)
-			{
-				var txPage = _transactionPages[i];
-				crc = Crc.Extend(crc, _env.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer).Base, 0,
-					txPage.NumberOfPages * AbstractPager.PageSize);
-			}
-
-			_txHeader->Crc = crc;
-
 			_txHeader->TxMarker |= TransactionMarker.Commit;
 
 			Task task;
@@ -453,31 +436,27 @@ namespace Voron.Impl
 			return _transactionPages;
 		}
 
-		public IEnumerable<FoundPage> GetRecentlyFoundPages(Tree tree)
+		public RecentlyFoundPages GetRecentlyFoundPages(Tree tree)
 		{
-			LinkedList<FoundPage> list;
-			if (_recentlyFoundPages.TryGetValue(tree, out list))
-				return list;
-			
-			return Enumerable.Empty<FoundPage>();
+			RecentlyFoundPages pages;
+			if (_recentlyFoundPages.TryGetValue(tree, out pages))
+				return pages;
+
+			return null;
 		}
 
-		public void AddRecentlyFoundPage(Tree tree, FoundPage foundPage)
+	    public void ClearRecentFoundPages(Tree tree)
+	    {
+	        _recentlyFoundPages.Remove(tree);
+	    }
+
+		public void AddRecentlyFoundPage(Tree tree, RecentlyFoundPages.FoundPage foundPage)
 		{
-			LinkedList<FoundPage> list;
-			if (_recentlyFoundPages.TryGetValue(tree, out list) == false)
-				_recentlyFoundPages[tree] = list = new LinkedList<FoundPage>();
+			RecentlyFoundPages pages;
+		    if (_recentlyFoundPages.TryGetValue(tree, out pages) == false)
+		        _recentlyFoundPages[tree] = pages = new RecentlyFoundPages(Flags == TransactionFlags.Read ? 8 : 2);
 
-			list.AddFirst(foundPage);
-
-			if (list.Count > NumberOfRecentlyFoundPagesPerTree)
-				list.RemoveLast();
-		}
-
-		public void InvalidateRecentlyFoundPages(Tree tree)
-		{
-			if (_recentlyFoundPages.ContainsKey(tree))
-				_recentlyFoundPages[tree].Clear();
+			pages.Add(foundPage);
 		}
 	}
 }

@@ -34,7 +34,10 @@
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
-							return new ReadResult(CloneStream(stream), version.HasValue ? (ushort)(version.Value + 1) : tree.ReadVersion(Transaction, key));
+					    {
+					        var reader = new ValueReader(stream);
+					        return new ReadResult(reader, version.HasValue ? (ushort)(version.Value + 1) : tree.ReadVersion(Transaction, key));
+					    }
 						case WriteBatch.BatchOperationType.Delete:
 							return null;
 					}
@@ -102,17 +105,5 @@
 			var tree = treeName == null ? Transaction.State.Root : Transaction.State.GetTree(treeName, Transaction);
 			return tree;
 		}	
-
-		private static Stream CloneStream(Stream source)
-		{
-			var sourcePosition = source.Position;
-			var destination = new MemoryStream();
-
-			source.CopyTo(destination);
-			destination.Position = sourcePosition;
-			source.Position = sourcePosition;
-
-			return destination;
-		}
 	}
 }

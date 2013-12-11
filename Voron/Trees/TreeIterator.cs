@@ -28,6 +28,19 @@ namespace Voron.Trees
 			return NodeHeader.GetDataSize(_tx, Current);
 		}
 
+		public IIterator CreateMutliValueIterator()
+		{
+			var item = Current;
+			if (item->Flags == NodeFlags.MultiValuePageRef)
+			{
+				var tree = _tree.OpenOrCreateMultiValueTree(_tx, _currentKey, item);
+
+				return tree.Iterate(_tx);
+			}
+
+			return new SingleEntryIterator(_cmp, item, _tx);
+		}
+
 		public bool Seek(Slice key)
 		{
 			Lazy<Cursor> lazy;
@@ -137,9 +150,9 @@ namespace Voron.Trees
 			return _currentPage != null && this.ValidateCurrentKey(Current, _cmp);
 		}
 
-		public Stream CreateStreamForCurrent()
+		public ValueReader CreateReaderForCurrent()
 		{
-			return NodeHeader.Stream(_tx, Current);
+			return NodeHeader.Reader(_tx, Current);
 		}
 
 		public void Dispose()

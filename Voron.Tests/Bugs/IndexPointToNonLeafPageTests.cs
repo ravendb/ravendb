@@ -50,7 +50,7 @@ namespace Voron.Tests.Bugs
 
 					Assert.NotNull(readResult);
 
-					Assert.Equal(item.Value.Length, readResult.Stream.Length);
+					Assert.Equal(item.Value.Length, readResult.Reader.Length);
 				}
 			}
 		}

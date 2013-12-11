@@ -4,20 +4,16 @@ namespace Voron
 {
 	using System.IO;
 
-	public class ReadResult : IDisposable
+	public class ReadResult
 	{
-		public ReadResult(Stream stream, ushort version)
+        public ReadResult(ValueReader reader, ushort version)
 		{
-			Stream = stream;
+            Reader = reader;
 			Version = version;
 		}
 
-		public Stream Stream { get; private set; }
+		public ValueReader Reader { get; private set; }
 
 		public ushort Version { get; private set; }
-		public void Dispose()
-		{
-			Stream.Dispose();
-		}
 	}
 }

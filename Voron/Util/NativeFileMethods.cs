@@ -6,9 +6,12 @@
 
 using System;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
+using Voron.Exceptions;
 
 namespace Voron.Impl
 {
@@ -48,20 +51,54 @@ namespace Voron.Impl
 		[DllImport("kernel32.dll")]
 		public static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
+		[DllImport("kernel32.dll", EntryPoint = "GetFinalPathNameByHandleW", CharSet = CharSet.Unicode, SetLastError = true)]
+		public static extern int GetFinalPathNameByHandle(SafeFileHandle handle, [In, Out] StringBuilder path, int bufLen, int flags);
+		
 		public static void SetFileLength(SafeFileHandle fileHandle, long length)
 		{
 			var lo = (int)(length & 0xffffffff);
 			var hi = (int)(length >> 32);
 
+			int lastError;
+
 			if (SetFilePointer(fileHandle, lo, out hi, NativeFileMoveMethod.Begin) == -1)
 			{
-				if (Marshal.GetLastWin32Error() != 0)
-					throw new Win32Exception();
+				lastError = Marshal.GetLastWin32Error();
+				if (lastError != 0)
+					throw new Win32Exception(lastError);
 			}
 
 			if (SetEndOfFile(fileHandle) == false)
-				throw new Win32Exception();
+			{
+				lastError = Marshal.GetLastWin32Error();
+
+				if (lastError == (int) NativeFileErrors.DiskFull)
+				{
+					var filePath = new StringBuilder(256);
+
+					while (GetFinalPathNameByHandle(fileHandle, filePath, filePath.Capacity, 0) > filePath.Capacity && 
+						filePath.Capacity < 32767) // max unicode path length
+					{
+						filePath = new StringBuilder(filePath.Capacity*2);
+					}
+
+					filePath = filePath.Replace(@"\\?\", string.Empty); // remove extended-length path prefix
+
+					var fullFilePath = filePath.ToString();
+					var driveLetter = Path.GetPathRoot(fullFilePath);
+					var driveInfo = new DriveInfo(driveLetter);
+
+					throw new DiskFullException(driveInfo, fullFilePath, length);
+				}
+
+				throw new Win32Exception(lastError);
+			}
 		}
+	}
+
+	public enum NativeFileErrors
+	{
+		DiskFull = 0x70
 	}
 
 	public enum NativeFileMoveMethod : uint

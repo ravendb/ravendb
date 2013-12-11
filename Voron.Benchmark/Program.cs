@@ -264,13 +264,11 @@ namespace Voron.Benchmark
                             var ms = new byte[100];
                             for (int j = 0; j < ((ItemsPerTransaction * Transactions) / concurrency); j++)
                             {
-                                var current = j * currentBase;
+                                var current = j*currentBase;
                                 var key = current.ToString("0000000000000000");
-                                using (var stream = tx.State.Root.Read(tx, key).Stream)
+                                var stream = tx.State.Root.Read(tx, key).Reader;
+                                while (stream.Read(ms, 0, ms.Length) != 0)
                                 {
-                                    while (stream.Read(ms, 0, ms.Length) != 0)
-                                    {
-                                    }
                                 }
                             }
 
@@ -307,9 +305,9 @@ namespace Voron.Benchmark
 						{
 							var key = i.ToString("0000000000000000");
 
-							using (var read = snapshot.Read(null, key, batch))
+							var read = snapshot.Read(null, key, batch).Reader;
 							{
-								while (read.Stream.Read(ms, 0, ms.Length) != 0)
+								while (read.Read(ms, 0, ms.Length) != 0)
 								{
 								}
 							}
@@ -333,7 +331,7 @@ namespace Voron.Benchmark
                     for (int i = 0; i < Transactions * ItemsPerTransaction; i++)
                     {
                         var key = i.ToString("0000000000000000");
-                        using (var stream = tx.State.Root.Read(tx, key).Stream)
+                        var stream = tx.State.Root.Read(tx, key).Reader;
                         {
                             while (stream.Read(ms, 0, ms.Length) != 0)
                             {
@@ -387,7 +385,7 @@ namespace Voron.Benchmark
                             {
                                 var current = j * currentBase;
                                 var key = current.ToString("0000000000000000");
-                                using (var stream = tx.State.Root.Read(tx, key).Stream)
+                                var stream = tx.State.Root.Read(tx, key).Reader;
                                 {
                                     while (stream.Read(ms, 0, ms.Length) != 0)
                                     {
