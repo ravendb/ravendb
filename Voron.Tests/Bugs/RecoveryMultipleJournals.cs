@@ -159,7 +159,7 @@ namespace Voron.Tests.Bugs
             
 			StopDatabase();
 			
-            CorruptPage(lastJournal, page: 3, pos: 3);
+            CorruptPage(lastJournal, page: 4, pos: 3);
 
 			StartDatabase();
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

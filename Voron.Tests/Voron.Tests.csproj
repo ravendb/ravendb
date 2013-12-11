@@ -78,7 +78,6 @@
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
     <Compile Include="DebugJournalTest.cs" />
-    <Compile Include="Journal\ApplyingPolicies.cs" />
     <Compile Include="Journal\BasicActions.cs" />
     <Compile Include="Journal\EdgeCases.cs" />
     <Compile Include="Journal\Mvcc.cs" />

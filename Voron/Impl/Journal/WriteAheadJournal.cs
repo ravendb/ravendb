@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Trees;
@@ -436,7 +437,12 @@ namespace Voron.Impl.Journal
 			            _waj._dataPager.Write(page);
 			        }
 
-                    _waj._dataPager.Sync();
+					_waj._dataPager.Sync();
+				}
+				catch (DiskFullException diskFullEx)
+				{
+					_waj._env.HandleDataDiskFullException(diskFullEx);
+					return;
 				}
 				finally 
 				{
@@ -617,9 +623,9 @@ namespace Voron.Impl.Journal
 			{
 			    var pages = CompressPages(tx, pageCount, _compressionPager);
 
-                if (CurrentFile == null || CurrentFile.AvailablePages < pageCount)
+                if (CurrentFile == null || CurrentFile.AvailablePages < pages.Length)
 				{
-                    CurrentFile = NextFile(pageCount);
+					CurrentFile = NextFile(pages.Length);
 				}
 				var task = CurrentFile.Write(tx, pages)
 					.ContinueWith(result =>
