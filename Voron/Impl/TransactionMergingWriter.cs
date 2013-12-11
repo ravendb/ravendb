@@ -108,7 +108,7 @@ namespace Voron.Impl
                     {
                         if (task.IsFaulted)
                         {
-                            HandleWriteFailure(writes, task.Exception);
+                            HandleWriteFailure(writes, mine, task.Exception);
                         }
                         else
                         {
@@ -123,7 +123,7 @@ namespace Voron.Impl
             }
             catch (Exception e)
             {
-                HandleWriteFailure(writes, e);
+                HandleWriteFailure(writes, mine, e);
             }
             finally
             {
@@ -131,12 +131,15 @@ namespace Voron.Impl
             }
         }
 
-        private void HandleWriteFailure(List<OutstandingWrite> writes, Exception e)
+        private void HandleWriteFailure(List<OutstandingWrite> writes, OutstandingWrite mine, Exception e)
         {
-            if (writes == null || writes.Count == 0)
-                throw new InvalidOperationException("Couldn't get items to write", e);
+	        if (writes == null || writes.Count == 0)
+	        {
+				mine.Errored(e);
+		        throw new InvalidOperationException("Couldn't get items to write", e);
+	        }
 
-            if (writes.Count == 1)
+	        if (writes.Count == 1)
             {
                 writes[0].Errored(e);
 				return;
@@ -299,13 +302,22 @@ namespace Voron.Impl
 
             public void Errored(Exception e)
             {
+	            var wasSet = _completed.IsSet;
+
                 _exception = e;
                 _completed.Set();
+
+				if (wasSet)
+					throw new InvalidOperationException("This should not happen.");
             }
 
             public void Completed()
             {
+				var wasSet = _completed.IsSet;
                 _completed.Set();
+
+				if (wasSet)
+					throw new InvalidOperationException("This should not happen.");
             }
 
             public void Wait()
