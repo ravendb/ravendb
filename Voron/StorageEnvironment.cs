@@ -388,7 +388,7 @@ namespace Voron
             Transaction tx;
 	        if (_activeTransactions.TryGetValue(txId, out tx) == false)
 		        return;
-	        if (tx.FlushedToJournal)
+	        if (tx.FlushedToJournal == false)
 		        return;
 
 	        Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, tx.GetTransactionPages().Count);
