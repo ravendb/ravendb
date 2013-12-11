@@ -227,20 +227,7 @@
                             Api.JetPrepareUpdate(session, table, JET_prep.Insert);
                             Api.SetColumn(session, table, primaryColumnId, testData.Id);
                             Api.SetColumn(session, table, secondaryColumnId, valueToWrite);
-                            try
-                            {
-                                Api.JetUpdate(session, table);
-                            }
-                            catch (EsentErrorException e)
-                            {
-                                if (e.Error != JET_err.KeyDuplicate)
-                                    throw;
-                                Api.JetPrepareUpdate(session, table, JET_prep.Cancel);
-                                Api.JetPrepareUpdate(session, table, JET_prep.Replace);
-                                Api.SetColumn(session, table, primaryColumnId, testData.Id);
-                                Api.SetColumn(session, table, secondaryColumnId, valueToWrite);
-                                Api.JetUpdate(session, table);
-                            }
+                            Api.JetUpdate(session, table);
                         }
 
                         tx.Commit(CommitTransactionGrbit.None);
