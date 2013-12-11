@@ -233,14 +233,14 @@ namespace Raven.Database.Impl.DTC
 	    {
 	        if (etag == null)
 	            return;
-	        if (currentTxVal.Delete)
+            if (currentTxVal != null && currentTxVal.Delete)
 	        {
                 if (etag != Etag.Empty)
 	                throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag (delete)");
 	            return;
 	        }
 
-	        if (currentTxVal.Etag != etag)
+            if (currentTxVal != null && currentTxVal.Etag != etag)
 	            throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
 	    }
 
