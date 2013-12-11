@@ -1,16 +1,4 @@
-define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "models/document", "viewmodels/deleteCollection", "common/raven", "common/pagedList"], function(require, exports, __app__, __router__, __collection__, __database__, __document__, __deleteCollection__, __raven__, __pagedList__) {
-    
-    var app = __app__;
-    
-    var router = __router__;
-
-    var collection = __collection__;
-    var database = __database__;
-    var document = __document__;
-    var deleteCollection = __deleteCollection__;
-    var raven = __raven__;
-    var pagedList = __pagedList__;
-
+﻿define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "viewmodels/deleteCollection", "common/raven", "common/pagedList"], function(require, exports, app, router, collection, deleteCollection, raven, pagedList) {
     var documents = (function () {
         function documents() {
             var _this = this;
@@ -35,6 +23,7 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
             // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo/123&database="blahDb"
             this.collectionToSelectName = args ? args.collection : null;
 
+            // See if we've got a database to select.
             if (args && args.database) {
                 ko.postbox.publish("ActivateDatabaseWithName", args.database);
             }
@@ -53,7 +42,7 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
         documents.prototype.attached = function (view, parent) {
             // Initialize the context menu (using Bootstrap-ContextMenu library).
             // TypeScript doesn't know about Bootstrap-Context menu, so we cast jQuery as any.
-            ($('.document-collections li')).contextmenu({
+            $('.document-collections li').contextmenu({
                 target: '#collections-context-menu'
             });
         };
@@ -78,7 +67,7 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
                 }).reduce(function (first, second) {
                     return first + second;
                 }, 0);
-            });
+            }); // And sum them up.
 
             // All systems a-go. Load them into the UI and select the first one.
             var allCollections = [this.allDocumentsCollection].concat(collections);

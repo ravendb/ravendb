@@ -1,16 +1,4 @@
-define(["require", "exports", "plugins/router", "models/collection", "models/database", "models/document", "viewmodels/deleteCollection", "common/raven", "common/pagedList"], function(require, exports, __router__, __collection__, __database__, __document__, __deleteCollection__, __raven__, __pagedList__) {
-    
-    
-    
-    var router = __router__;
-
-    var collection = __collection__;
-    var database = __database__;
-    var document = __document__;
-    var deleteCollection = __deleteCollection__;
-    var raven = __raven__;
-    var pagedList = __pagedList__;
-
+define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "models/document", "viewmodels/deleteCollection", "common/raven", "common/pagedList"], function(require, exports, app, router, collection, database, document, deleteCollection, raven, pagedList) {
     var userInfo = (function () {
         function userInfo() {
             this.displayName = "user info";

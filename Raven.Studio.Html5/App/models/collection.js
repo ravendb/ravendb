@@ -1,7 +1,4 @@
-define(["require", "exports", "common/pagedList"], function(require, exports, __pagedList__) {
-    
-    var pagedList = __pagedList__;
-
+define(["require", "exports", "common/pagedList"], function(require, exports, pagedList) {
     var collection = (function () {
         function collection(name, isAllCollections) {
             this.name = name;

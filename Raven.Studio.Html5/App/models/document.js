@@ -1,6 +1,4 @@
-define(["require", "exports", "models/documentMetadata"], function(require, exports, __documentMetadata__) {
-    var documentMetadata = __documentMetadata__;
-
+define(["require", "exports", "models/documentMetadata"], function(require, exports, documentMetadata) {
     var document = (function () {
         function document(dto) {
             this.__metadata = new documentMetadata(dto['@metadata']);

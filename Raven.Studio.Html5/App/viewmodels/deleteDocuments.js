@@ -1,8 +1,4 @@
-define(["require", "exports", "models/document", "plugins/dialog", "commands/deleteDocumentsCommand"], function(require, exports, __document__, __dialog__, __deleteDocumentsCommand__) {
-    var document = __document__;
-    var dialog = __dialog__;
-    var deleteDocumentsCommand = __deleteDocumentsCommand__;
-
+define(["require", "exports", "models/document", "plugins/dialog", "commands/deleteDocumentsCommand"], function(require, exports, document, dialog, deleteDocumentsCommand) {
     var deleteDocuments = (function () {
         function deleteDocuments(documents) {
             this.documents = ko.observableArray();
@@ -38,6 +34,8 @@ define(["require", "exports", "models/document", "plugins/dialog", "commands/del
         };
 
         deleteDocuments.prototype.deactivate = function (args) {
+            // If we were closed via X button or other dialog dismissal, reject the deletion task since
+            // we never carried it out.
             if (!this.deletionStarted) {
                 this.deletionTask.reject();
             }

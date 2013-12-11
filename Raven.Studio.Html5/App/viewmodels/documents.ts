@@ -66,7 +66,7 @@ class documents {
         // Create the "All Documents" pseudo collection.
         this.allDocumentsCollection = new collection("All Documents", true);
         this.allDocumentsCollection.colorClass = "all-documents-collection";
-        <any>this.allDocumentsCollection.documentCount = ko.computed(() =>
+        this.allDocumentsCollection.documentCount = ko.computed(() =>
             this.collections()
                 .filter(c => c !== this.allDocumentsCollection) // Don't include self, the all documents collection.
                 .map(c => c.documentCount()) // Grab the document count of each.

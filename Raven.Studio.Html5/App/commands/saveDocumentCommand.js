@@ -4,10 +4,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "models/document"], function(require, exports, __commandBase__, __document__) {
-    var commandBase = __commandBase__;
-    var document = __document__;
-
+define(["require", "exports", "commands/commandBase", "models/document"], function(require, exports, commandBase, document) {
     var saveDocumentCommand = (function (_super) {
         __extends(saveDocumentCommand, _super);
         function saveDocumentCommand(id, document) {

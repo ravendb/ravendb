@@ -1,10 +1,4 @@
-define(["require", "exports", "models/database", "models/collection", "models/collectionInfo", "models/document", "common/pagedResultSet"], function(require, exports, __database__, __collection__, __collectionInfo__, __document__, __pagedResultSet__) {
-    var database = __database__;
-    var collection = __collection__;
-    var collectionInfo = __collectionInfo__;
-    var document = __document__;
-    var pagedResultSet = __pagedResultSet__;
-
+define(["require", "exports", "models/database", "models/collection", "models/collectionInfo", "models/document", "common/pagedResultSet"], function(require, exports, database, collection, collectionInfo, document, pagedResultSet) {
     var raven = (function () {
         function raven() {
             this.baseUrl = "http://localhost:8080";
@@ -167,8 +161,8 @@ define(["require", "exports", "models/database", "models/collection", "models/co
             return this.baseUrl;
         };
 
-        raven.getEntityNameFromId = // TODO: This doesn't really belong here.
-        function (id) {
+        // TODO: This doesn't really belong here.
+        raven.getEntityNameFromId = function (id) {
             if (!id) {
                 return null;
             }

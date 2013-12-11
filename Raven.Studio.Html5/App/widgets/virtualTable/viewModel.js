@@ -1,20 +1,6 @@
 ﻿/// <reference path="../../../Scripts/typings/knockout.postbox/knockout-postbox.d.ts" />
 /// <reference path="../../../Scripts/typings/durandal/durandal.d.ts" />
-define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl", "models/document", "models/collection", "models/database", "common/pagedResultSet", "viewmodels/deleteDocuments", "viewmodels/copyDocuments", "durandal/app", "widgets/virtualTable/row", "widgets/virtualTable/column"], function(require, exports, __pagedList__, __raven__, __appUrl__, __document__, __collection__, __database__, __pagedResultSet__, __deleteDocuments__, __copyDocuments__, __app__, __row__, __column__) {
-    
-    var pagedList = __pagedList__;
-    var raven = __raven__;
-    var appUrl = __appUrl__;
-    var document = __document__;
-    var collection = __collection__;
-    var database = __database__;
-    var pagedResultSet = __pagedResultSet__;
-    var deleteDocuments = __deleteDocuments__;
-    var copyDocuments = __copyDocuments__;
-    var app = __app__;
-    var row = __row__;
-    var column = __column__;
-
+define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl", "models/document", "models/collection", "models/database", "common/pagedResultSet", "viewmodels/deleteDocuments", "viewmodels/copyDocuments", "durandal/app", "widgets/virtualTable/row", "widgets/virtualTable/column"], function(require, exports, pagedList, raven, appUrl, document, collection, database, pagedResultSet, deleteDocuments, copyDocuments, app, row, column) {
     var ctor = (function () {
         function ctor() {
             this.visibleRowCount = 0;
@@ -41,7 +27,7 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
                 });
                 _this.items = list;
                 _this.selectedIndices.removeAll();
-                _this.columns.splice(2, _this.columns().length - 1);
+                _this.columns.splice(2, _this.columns().length - 1); // Remove all but the first 2 column (checked and ID)
                 _this.onGridScrolled();
             });
 
@@ -286,6 +272,7 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
             var isChecked = row.isChecked();
             var toggledIndices = isShiftSelect && this.selectedIndices().length > 0 ? this.getRowIndicesRange(this.selectedIndices.first(), rowIndex) : [rowIndex];
             if (!isChecked) {
+                // Going from unchecked to checked.
                 if (this.selectedIndices.indexOf(rowIndex) === -1) {
                     toggledIndices.filter(function (i) {
                         return !_this.selectedIndices.contains(i);

@@ -1,8 +1,4 @@
-define(["require", "exports", "common/raven", "common/alertArgs", "common/alertType"], function(require, exports, __raven__, __alertArgs__, __alertType__) {
-    var raven = __raven__;
-    var alertArgs = __alertArgs__;
-    var alertType = __alertType__;
-
+define(["require", "exports", "common/raven", "common/alertArgs", "common/alertType"], function(require, exports, raven, alertArgs, alertType) {
     /// Commands encapsulate a write operation to the database and support progress notifications.
     var commandBase = (function () {
         function commandBase() {
@@ -13,19 +9,19 @@ define(["require", "exports", "common/raven", "common/alertArgs", "common/alertT
         };
 
         commandBase.prototype.reportInfo = function (title, details) {
-            this.reportProgress(alertType.info, title, details);
+            this.reportProgress(0 /* info */, title, details);
         };
 
         commandBase.prototype.reportError = function (title, details) {
-            this.reportProgress(alertType.danger, title, details);
+            this.reportProgress(3 /* danger */, title, details);
         };
 
         commandBase.prototype.reportSuccess = function (title, details) {
-            this.reportProgress(alertType.success, title, details);
+            this.reportProgress(1 /* success */, title, details);
         };
 
         commandBase.prototype.reportWarning = function (title, details) {
-            this.reportProgress(alertType.warning, title, details);
+            this.reportProgress(2 /* warning */, title, details);
         };
 
         commandBase.prototype.reportProgress = function (type, title, details) {

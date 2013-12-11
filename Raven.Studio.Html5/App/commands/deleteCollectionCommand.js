@@ -4,10 +4,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "common/alertType"], function(require, exports, __commandBase__, __alertType__) {
-    var commandBase = __commandBase__;
-    var alertType = __alertType__;
-
+define(["require", "exports", "commands/commandBase", "common/alertType"], function(require, exports, commandBase, alertType) {
     var deleteCollectionCommand = (function (_super) {
         __extends(deleteCollectionCommand, _super);
         function deleteCollectionCommand(collectionName) {
