@@ -761,9 +761,11 @@
     <Content Include="Scripts\ace\worker\worker_test.js" />
     <Content Include="Scripts\jwerty-0.3.js" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.amd.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\jwerty\jwerty.d.ts" />
     <Content Include="Scripts\nprogress.js" />
-    <Content Include="Scripts\typings\ace\ace.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\ace\ace.d.ts" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
     <Content Include="web.config" />
     <Content Include="Scripts\ace\mode\xquery\JSONiqTokenizer.ebnf" />
@@ -1041,7 +1043,6 @@
     <TypeScriptCompile Include="App\widgets\virtualTable\viewModel.ts" />
     <Content Include="App\widgets\virtualTable\view.html" />
     <TypeScriptCompile Include="Scripts\extensions.ts" />
-    <Content Include="Scripts\typings\knockout.postbox\knockout-postbox.d.ts" />
     <Content Include="App\views\detail.html" />
     <Content Include="App\views\shell.html" />
     <Content Include="Content\app.css">
@@ -1102,12 +1103,12 @@
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
     <Content Include="Scripts\text.js" />
-    <Content Include="Scripts\typings\bootstrap\bootstrap.d.ts" />
     <Content Include="Scripts\typings\durandal\durandal.d.ts" />
-    <Content Include="Scripts\typings\jquery\jquery.d.ts" />
-    <Content Include="Scripts\typings\knockout\knockout.d.ts" />
     <Content Include="weyland-config.js" />
     <Content Include="Scripts\jquery-2.0.3.min.map" />
+    <TypeScriptCompile Include="Scripts\typings\knockout.postbox\knockout-postbox.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\knockout\knockout.amd.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\knockout\knockout.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\nprogress\nprogress.d.ts" />
   </ItemGroup>
   <ItemGroup />
@@ -1161,7 +1162,6 @@
     </VisualStudio>
   </ProjectExtensions>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
-    
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <TypeScriptTarget>ES5</TypeScriptTarget>
     <TypeScriptIncludeComments>true</TypeScriptIncludeComments>
@@ -1175,5 +1175,4 @@
     <TypeScriptModuleKind>AMD</TypeScriptModuleKind>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.targets" />
-  
 </Project>
