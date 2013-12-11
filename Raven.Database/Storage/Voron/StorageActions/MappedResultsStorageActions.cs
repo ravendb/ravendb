@@ -817,12 +817,13 @@
 		{
 			var reduceKey = value.Value<string>("reduceKey");
 
-			using (var read = dataIndex.Read(Snapshot, key, writeBatch))
-			{
-				if (read == null)
-					return null;
+			var read = dataIndex.Read(Snapshot, key, writeBatch);
+			if (read == null)
+				return null;
 
-				using (var stream = documentCodecs.Aggregate(read.Stream, (ds, codec) => codec.Decode(reduceKey, null, ds)))
+			using (var readerStream = read.Reader.AsStream())
+			{
+				using (var stream = documentCodecs.Aggregate(readerStream, (ds, codec) => codec.Decode(reduceKey, null, ds)))
 					return stream.ToJObject();
 			}
 		}

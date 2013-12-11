@@ -110,9 +110,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		{
 			var queuesData = tableStorage.Queues.GetIndex(Tables.Queues.Indices.Data);
 
-			using (var read = queuesData.Read(Snapshot, key, writeBatch))
+			var read = queuesData.Read(Snapshot, key, writeBatch);
+			using (var stream = read.Reader.AsStream())
 			{
-				return read.Stream.ReadData();
+				return stream.ReadData();
 			}
 		}
 	}
