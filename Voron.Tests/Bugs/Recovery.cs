@@ -328,16 +328,12 @@ namespace Voron.Tests.Bugs
 
 					for (var i = 0; i < count; i++)
 					{
-						var read = aTree.Read(tx, "a" + i);
-						Assert.NotNull(read);
-
-						using (var reader = new StreamReader(read.Stream))
-						{
-							Assert.Equal(expectedString, reader.ReadToEnd());
-						}
+					    var read = aTree.Read(tx, "a" + i);
+					    Assert.NotNull(read);
+					    Assert.Equal(expectedString, read.Reader.ToStringValue());
 					}
 
-					using (var iterator = bTree.MultiRead(tx, "a"))
+				    using (var iterator = bTree.MultiRead(tx, "a"))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 

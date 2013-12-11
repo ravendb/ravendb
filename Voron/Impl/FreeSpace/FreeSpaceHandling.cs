@@ -50,7 +50,7 @@ namespace Voron.Impl.FreeSpace
 
 			do
 			{
-				using (var stream = it.CreateStreamForCurrent())
+				var stream = it.CreateReaderForCurrent();
 				{
 					var current = new StreamBitArray(stream);
 					var currentSectionId = it.CurrentKey.ToInt64();
@@ -102,7 +102,7 @@ namespace Voron.Impl.FreeSpace
 						continue;
 					}
 
-					var next = new StreamBitArray(read.Stream);
+					var next = new StreamBitArray(read.Reader);
 
 					if (next.HasStartRangeCount(numberOfExtraBitsNeeded) == false)
 					{
@@ -149,7 +149,7 @@ namespace Voron.Impl.FreeSpace
 		{
 			do
 			{
-				using (var stream = it.CreateStreamForCurrent())
+			    var stream = it.CreateReaderForCurrent();
 				{
 					var current = new StreamBitArray(stream);
 					var currentSectionId = it.CurrentKey.ToInt64();
@@ -233,7 +233,7 @@ namespace Voron.Impl.FreeSpace
 			if (read == null)
 				return false;
 
-			var next = new StreamBitArray(read.Stream);
+			var next = new StreamBitArray(read.Reader);
 
 			var nextRange = num - currentRange;
 			if (next.HasStartRangeCount(nextRange) == false)
@@ -274,13 +274,10 @@ namespace Voron.Impl.FreeSpace
 		{
 			using (var tx = _env.NewTransaction(TransactionFlags.Read))
 			{
-				var readResult = tx.State.FreeSpaceRoot.Read(tx, _freePagesCount);
-				if (readResult == null)
-					return 0;
-				using (var br = new BinaryReader(readResult.Stream))
-				{
-					return br.ReadInt64();
-				}
+			    var readResult = tx.State.FreeSpaceRoot.Read(tx, _freePagesCount);
+			    if (readResult == null)
+			        return 0;
+                return readResult.Reader.ReadInt64();
 			}
 		}
 
@@ -294,7 +291,7 @@ namespace Voron.Impl.FreeSpace
 			var section = pageNumber / NumberOfPagesInSection;
 			var sectionKey = new Slice(EndianBitConverter.Big.GetBytes(section));
 			var result = tx.State.FreeSpaceRoot.Read(tx, sectionKey);
-			var sba = result == null ? new StreamBitArray() : new StreamBitArray(result.Stream);
+			var sba = result == null ? new StreamBitArray() : new StreamBitArray(result.Reader);
 			sba.Set((int)(pageNumber % NumberOfPagesInSection), true);
 			tx.State.FreeSpaceRoot.Add(tx, sectionKey, sba.ToStream());
 		}

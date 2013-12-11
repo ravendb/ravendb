@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Debugging;
+using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Backup;
 using Voron.Impl.FileHeaders;
@@ -27,19 +29,23 @@ namespace Voron
         private readonly IVirtualPager _dataPager;
         internal readonly SliceComparer _sliceComparer;
 
-        private WriteAheadJournal _journal;
+        private readonly WriteAheadJournal _journal;
         private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
         private readonly AsyncManualResetEvent _flushWriter = new AsyncManualResetEvent();
 
         private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
-        private readonly Task _flushingTask;
+        private Task _flushingTask;
         private readonly HeaderAccessor _headerAccessor;
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private ScratchBufferPool _scratchBufferPool;
+	    private DebugJournal _debugJournal;
+	    private EndOfDiskSpaceEvent _endOfDiskSpace;
+	    private int _sizeOfUnflushedTransactionsInJournalFile;
 
-        public TemporaryPage TemporaryPage { get; private set; }
+
+	    public TemporaryPage TemporaryPage { get; private set; }
 
 
         public TransactionMergingWriter Writer { get; private set; }
@@ -50,6 +56,18 @@ namespace Voron
         {
             return new SnapshotReader(NewTransaction(TransactionFlags.Read));
         }
+
+#if DEBUG
+	    public StorageEnvironment(StorageEnvironmentOptions options,string debugJournalName)
+			: this(options)
+	    {
+			DebugJournal = new DebugJournal(debugJournalName,this);
+			
+			if(Writer != null)
+				Writer.Dispose();
+			Writer = new TransactionMergingWriter(this, DebugJournal);
+	    }
+#endif
 
         public unsafe StorageEnvironment(StorageEnvironmentOptions options)
         {
@@ -101,7 +119,7 @@ namespace Voron
             {
                 var message = _journal.Files.Count == 0 ? "Unrecoverable database" : "Database recovered partially. Some data was lost.";
 
-                _options.InvokeRecoveryError(this, message);
+                _options.InvokeRecoveryError(this, message, null);
             }
 
             var entry = _headerAccessor.CopyHeader();
@@ -179,7 +197,38 @@ namespace Voron
             get { return _journal; }
         }
 
-        public void DeleteTree(Transaction tx, string name)
+	    public bool IsDebugRecording
+	    {
+		    get
+		    {
+			    if (DebugJournal == null)
+				    return false;
+			    return DebugJournal.IsRecording;
+		    }
+		    set
+		    {
+			    if (DebugJournal != null)
+				    DebugJournal.IsRecording = value;
+		    }
+	    }
+
+	    public DebugJournal DebugJournal
+	    {
+		    get { return _debugJournal; }
+		    set
+		    {
+			    _debugJournal = value;
+
+			    if (Writer != null && value != null)
+			    {
+				    Writer.Dispose();
+				    Writer = new TransactionMergingWriter(this, _debugJournal);
+			    }
+
+		    }
+	    }
+
+	    public void DeleteTree(Transaction tx, string name)
         {
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");
@@ -227,11 +276,17 @@ namespace Voron
             tree.State.IsModified = true;
             tx.State.AddTree(name, tree);
 
+			if(IsDebugRecording)
+				DebugJournal.RecordAction(DebugActionType.CreateTree, Slice.Empty,name,Stream.Null);
+
             return tree;
         }
 
         public void Dispose()
         {
+			if(DebugJournal != null)
+				DebugJournal.Dispose();
+
             _cancellationTokenSource.Cancel();
             _flushWriter.Set();
 
@@ -296,6 +351,17 @@ namespace Voron
                     _txWriter.Wait();
                     txId = _transactionsCounter + 1;
                     txLockTaken = true;
+
+					if (_endOfDiskSpace != null)
+					{
+						if (_endOfDiskSpace.CanContinueWriting)
+						{
+							Debug.Assert(_flushingTask.Status == TaskStatus.Canceled || _flushingTask.Status == TaskStatus.RanToCompletion);
+							_cancellationTokenSource = new CancellationTokenSource();
+							_flushingTask = FlushWritesToDataFileAsync();
+							_endOfDiskSpace = null;
+						}
+                }
                 }
                 var tx = new Transaction(this, txId, flags, _freeSpaceHandling);
                 _activeTransactions.TryAdd(txId, tx);
@@ -320,7 +386,13 @@ namespace Voron
         private void TransactionAfterCommit(long txId)
         {
             Transaction tx;
-            _activeTransactions.TryGetValue(txId, out tx);
+	        if (_activeTransactions.TryGetValue(txId, out tx) == false)
+		        return;
+	        if (tx.FlushedToJournal)
+		        return;
+
+	        Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, tx.GetTransactionPages().Count);
+			_flushWriter.Set();
         }
 
         internal void TransactionCompleted(long txId)
@@ -382,16 +454,18 @@ namespace Voron
 
                 _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                var sizeOfUnflushedTransactionsInJournalFile = _journal.SizeOfUnflushedTransactionsInJournalFile();
                 if (hasWrites)
                     _flushWriter.Reset();
 
+	            var sizeOfUnflushedTransactionsInJournalFile = Thread.VolatileRead(ref _sizeOfUnflushedTransactionsInJournalFile);
                 if (sizeOfUnflushedTransactionsInJournalFile == 0)
                     continue;
 
                 if (hasWrites == false ||
                     sizeOfUnflushedTransactionsInJournalFile >= _options.MaxNumberOfPagesInJournalBeforeFlush)
                 {
+	                Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, -sizeOfUnflushedTransactionsInJournalFile);
+
                     // we either reached our the max size we allow in the journal file before flush flushing (and therefor require a flush)
                     // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
                     // while there isn't any other activity going on.
@@ -417,5 +491,14 @@ namespace Voron
 
             _flushingTask.Wait();// force re-throw of error
         }
+
+	    public void HandleDataDiskFullException(DiskFullException exception)
+	    {
+			if(_options.ManualFlushing)
+				return;
+
+		    _cancellationTokenSource.Cancel();
+			_endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo);
+	    }
     }
 }

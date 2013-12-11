@@ -45,8 +45,7 @@ namespace Voron.Impl.Paging
         public const int PageSize = 4096;
         public static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
         private PagerState _pagerState;
-        private ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
-        private GCHandle _tempPageHandle;
+        private readonly ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
 
         public long NumberOfAllocatedPages { get; protected set; }
 
@@ -167,7 +166,7 @@ namespace Voron.Impl.Paging
             var actualIncrease = Math.Min(_increaseSize, current / 4);
 
             // we then want to get the next power of two number, to get pretty file size
-            return Utils.NearestPowerOfTwo(current + actualIncrease);
+			return current + Utils.NearestPowerOfTwo(actualIncrease);
         }
 
         public abstract void WriteDirect(Page start, long pagePosition, int pagesToWrite);

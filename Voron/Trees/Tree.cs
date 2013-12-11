@@ -8,6 +8,7 @@ using Voron.Debugging;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
+using Voron.Util;
 
 namespace Voron.Trees
 {
@@ -16,6 +17,7 @@ namespace Voron.Trees
 	public unsafe class Tree
 	{
 		private TreeMutableState _state = new TreeMutableState();
+
 		public string Name { get; set; }
 
 		public TreeMutableState State
@@ -246,15 +248,13 @@ namespace Voron.Trees
 			byte* dataPos;
 			if (page.HasSpaceFor(key, len) == false)
 			{
-				var cursor = lazy.Value;
-				cursor.Update(cursor.Pages.First, page);
-				
-				tx.InvalidateRecentlyFoundPages(this);
+			    var cursor = lazy.Value;
+			    cursor.Update(cursor.Pages.First, page);
+			    
+			    var pageSplitter = new PageSplitter(tx, this, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
+			    dataPos = pageSplitter.Execute();
 
-				var pageSplitter = new PageSplitter(tx, _cmp, key, len, pageNumber, nodeType, nodeVersion, cursor, State);
-				dataPos = pageSplitter.Execute();
-
-				DebugValidateTree(tx, State.RootPageNumber);
+			    DebugValidateTree(tx, State.RootPageNumber);
 			}
 			else
 			{
@@ -365,155 +365,158 @@ namespace Voron.Trees
 		{
 			Page p;
 
-			if (TryUseRecentTransactionPage(tx, key, out cursor, out p))
-				return p;
+		    if (TryUseRecentTransactionPage(tx, key, out cursor, out p))
+		    {
+		        return p;
+		    }
 
-			p = tx.GetReadOnlyPage(State.RootPageNumber);
-			var c = new Cursor();
-			c.Push(p);
-
-			bool? rightmostPage = null;
-			bool? leftmostPage = null;
-
-			while (p.Flags == (PageFlags.Branch))
-			{
-				int nodePos;
-				if (key.Options == SliceOptions.BeforeAllKeys)
-				{
-					p.LastSearchPosition = nodePos = 0;
-				}
-				else if (key.Options == SliceOptions.AfterAllKeys)
-				{
-					p.LastSearchPosition = nodePos = (ushort)(p.NumberOfEntries - 1);
-				}
-				else
-				{
-					if (p.Search(key, _cmp) != null)
-					{
-						nodePos = p.LastSearchPosition;
-						if (p.LastMatch != 0)
-						{
-							nodePos--;
-							p.LastSearchPosition--;
-						}
-
-						if (p.Flags == PageFlags.Branch)
-						{
-							if (nodePos == 0)
-								leftmostPage = leftmostPage.HasValue ? leftmostPage & true : true;
-							else
-								leftmostPage = false;
-
-							rightmostPage = false;
-						}
-					}
-					else
-					{
-						nodePos = (ushort)(p.LastSearchPosition - 1);
-
-						if (p.Flags == PageFlags.Branch)
-						{
-							rightmostPage = rightmostPage.HasValue ? rightmostPage & true : true;
-							leftmostPage = false;
-						}
-					}
-				}
-
-				var node = p.GetNode(nodePos);
-				p = tx.GetReadOnlyPage(node->PageNumber);
-                Debug.Assert(node->PageNumber == p.PageNumber, string.Format("Requested Page: #{0}. Got Page: #{1}", node->PageNumber, p.PageNumber));
-
-				c.Push(p);
-			}
-
-		    if (p.IsLeaf == false)
-		        throw new DataException("Index points to a non leaf page");
-
-		    p.NodePositionFor(key, _cmp); // will set the LastSearchPosition
-
-			if (p.NumberOfEntries > 0)
-			{
-				tx.AddRecentlyFoundPage(this, new Transaction.FoundPage
-					{
-						Number = p.PageNumber,
-						FirstKey = leftmostPage == true ? Slice.BeforeAllKeys : p.GetNodeKey(0),
-						LastKey = rightmostPage == true ? Slice.AfterAllKeys : p.GetNodeKey(p.NumberOfEntries - 1),
-						CursorPath = c.Pages.Select(x => x.PageNumber).Reverse().ToList()
-					});
-			}
-
-			cursor = new Lazy<Cursor>(()=>c);
-			return p;
+			return SearchForPage(tx, key, ref cursor);
 		}
 
-		private bool TryUseRecentTransactionPage(Transaction tx, Slice key, out Lazy<Cursor> cursor, out Page page)
+	    private Page SearchForPage(Transaction tx, Slice key, ref Lazy<Cursor> cursor)
+	    {
+	        Page p;
+	        p = tx.GetReadOnlyPage(State.RootPageNumber);
+	        var c = new Cursor();
+	        c.Push(p);
+
+	        bool rightmostPage = true;
+	        bool leftmostPage = true;
+
+	        while (p.Flags == (PageFlags.Branch))
+	        {
+	            int nodePos;
+	            if (key.Options == SliceOptions.BeforeAllKeys)
+	            {
+	                p.LastSearchPosition = nodePos = 0;
+	                rightmostPage = false;
+	            }
+	            else if (key.Options == SliceOptions.AfterAllKeys)
+	            {
+	                p.LastSearchPosition = nodePos = (ushort) (p.NumberOfEntries - 1);
+	                leftmostPage = false;
+	            }
+	            else
+	            {
+	                if (p.Search(key, _cmp) != null)
+	                {
+	                    nodePos = p.LastSearchPosition;
+	                    if (p.LastMatch != 0)
+	                    {
+	                        nodePos--;
+	                        p.LastSearchPosition--;
+	                    }
+
+	                    if (nodePos != 0)
+	                        leftmostPage = false;
+
+	                    rightmostPage = false;
+	                }
+	                else
+	                {
+	                    nodePos = (ushort) (p.LastSearchPosition - 1);
+
+	                    leftmostPage = false;
+	                }
+	            }
+
+	            var node = p.GetNode(nodePos);
+	            p = tx.GetReadOnlyPage(node->PageNumber);
+	            Debug.Assert(node->PageNumber == p.PageNumber,
+	                string.Format("Requested Page: #{0}. Got Page: #{1}", node->PageNumber, p.PageNumber));
+
+	            c.Push(p);
+	        }
+
+	        if (p.IsLeaf == false)
+	            throw new DataException("Index points to a non leaf page");
+
+	        p.Search(key, _cmp); // will set the LastSearchPosition
+
+	        AddToRecentlyFoundPages(tx, c, p, leftmostPage, rightmostPage);
+
+	        cursor = new Lazy<Cursor>(() => c);
+	        return p;
+	    }
+
+	    private void AddToRecentlyFoundPages(Transaction tx, Cursor c, Page p, bool? leftmostPage, bool? rightmostPage)
+	    {
+	        var foundPage = new RecentlyFoundPages.FoundPage(c.Pages.Count)
+	        {
+	            Number = p.PageNumber,
+	            FirstKey = leftmostPage == true ? Slice.BeforeAllKeys : p.GetNodeKey(0),
+	            LastKey = rightmostPage == true ? Slice.AfterAllKeys : p.GetNodeKey(p.NumberOfEntries - 1),
+	        };
+	        var cur = c.Pages.First;
+	        int pos = foundPage.CursorPath.Length - 1;
+	        while (cur != null)
+	        {
+	            foundPage.CursorPath[pos--] = cur.Value.PageNumber;
+	            cur = cur.Next;
+	        }
+
+	        tx.AddRecentlyFoundPage(this, foundPage);
+	    }
+
+	    private bool TryUseRecentTransactionPage(Transaction tx, Slice key, out Lazy<Cursor> cursor, out Page page)
 		{
 			page = null;
 			cursor = null;
 
-			foreach (var foundPage in tx.GetRecentlyFoundPages(this))
+			var recentPages = tx.GetRecentlyFoundPages(this);
+
+			if (recentPages == null)
+				return false;
+
+			var foundPage = recentPages.Find(key);
+
+			if (foundPage == null)
+				return false;
+
+			var lastFoundPageNumber = foundPage.Number;
+			page = tx.GetReadOnlyPage(lastFoundPageNumber);
+
+			if (page.IsLeaf == false)
+				throw new DataException("Index points to a non leaf page");
+
+			page.NodePositionFor(key, _cmp); // will set the LastSearchPosition
+
+			var cursorPath = foundPage.CursorPath;
+			var pageCopy = page;
+			cursor = new Lazy<Cursor>(() =>
 			{
-				var first = foundPage.FirstKey;
-				var last = foundPage.LastKey;
-
-				if (key.Options == SliceOptions.BeforeAllKeys && first.Options != SliceOptions.BeforeAllKeys)
-					continue;
-
-				if (key.Options == SliceOptions.AfterAllKeys && last.Options != SliceOptions.AfterAllKeys)
-					continue;
-
-				if (key.Options == SliceOptions.Key &&
-					((first.Options != SliceOptions.BeforeAllKeys && key.Compare(first, _cmp) < 0) ||
-					(last.Options != SliceOptions.AfterAllKeys && key.Compare(last, _cmp) > 0)))
-					continue;
-
-				var lastFoundPageNumber = foundPage.Number;
-				page = tx.GetReadOnlyPage(lastFoundPageNumber);
-
-				if (page.IsLeaf == false)
-					throw new DataException("Index points to a non leaf page");
-
-				page.NodePositionFor(key, _cmp); // will set the LastSearchPosition
-
-				var cursorPath = foundPage.CursorPath;
-				var pageCopy = page;
-				cursor = new Lazy<Cursor>(() =>
+				var c = new Cursor();
+				foreach (var p in cursorPath)
 				{
-					var c = new Cursor();
-					foreach (var p in cursorPath)
+					if (p == lastFoundPageNumber)
+						c.Push(pageCopy);
+					else
 					{
-						if (p == lastFoundPageNumber)
-							c.Push(pageCopy);
-						else
+						var cursorPage = tx.GetReadOnlyPage(p);
+						if (key.Options == SliceOptions.BeforeAllKeys)
 						{
-							var cursorPage = tx.GetReadOnlyPage(p);
-							if (key.Options == SliceOptions.BeforeAllKeys)
-							{
-								cursorPage.LastSearchPosition = 0;
-							}
-							else if (key.Options == SliceOptions.AfterAllKeys)
-							{
-								cursorPage.LastSearchPosition = (ushort)(cursorPage.NumberOfEntries - 1);
-							}
-							else if (cursorPage.Search(key, _cmp) != null)
-							{
-								if (cursorPage.LastMatch != 0)
-								{
-									cursorPage.LastSearchPosition--;
-								}
-							}
-
-							c.Push(cursorPage);
+							cursorPage.LastSearchPosition = 0;
 						}
+						else if (key.Options == SliceOptions.AfterAllKeys)
+						{
+							cursorPage.LastSearchPosition = (ushort)(cursorPage.NumberOfEntries - 1);
+						}
+						else if (cursorPage.Search(key, _cmp) != null)
+						{
+							if (cursorPage.LastMatch != 0)
+							{
+								cursorPage.LastSearchPosition--;
+							}
+						}
+
+						c.Push(cursorPage);
 					}
+				}
 
-					return c;
-				});
+				return c;
+			});
 
-				return true;
-			}
-
-			return false;
+			return true;
 		}
 
 		internal static Page NewPage(Transaction tx, PageFlags flags, int num)
@@ -545,12 +548,10 @@ namespace Voron.Trees
 
 			CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
 
-			var treeRebalancer = new TreeRebalancer(tx, this, _cmp);
+			var treeRebalancer = new TreeRebalancer(tx, this);
 			var changedPage = page;
 			while (changedPage != null)
 			{
-				tx.InvalidateRecentlyFoundPages(this);
-
 				changedPage = treeRebalancer.Execute(lazy.Value, changedPage);
 			}
 
@@ -566,16 +567,13 @@ namespace Voron.Trees
 		{
 			Lazy<Cursor> lazy;
 			var p = FindPageFor(tx, key, out lazy);
-			var node = p.Search(key, _cmp);
 
-			if (node == null)
-				return null;
+            if (p.LastMatch != 0)
+		        return null;
 
-			var item = new Slice(node);
+		    var node = p.GetNode(p.LastSearchPosition);
 
-			return item.Compare(key, _cmp) == 0
-				? new ReadResult(NodeHeader.Stream(tx, node), node->Version)
-				: null;
+		    return new ReadResult(NodeHeader.Reader(tx, node), node->Version);
 		}
 
 		public int GetDataSize(Transaction tx, Slice key)
@@ -704,7 +702,7 @@ namespace Voron.Trees
 			return Name + " " + State.EntriesCount;
 		}
 
-		private Tree OpenOrCreateMultiValueTree(Transaction tx, Slice key, NodeHeader* item)
+		internal Tree OpenOrCreateMultiValueTree(Transaction tx, Slice key, NodeHeader* item)
 		{
 			Tree tree;
 			if (tx.TryGetMultiValueTree(this, key, out tree))
@@ -729,7 +727,7 @@ namespace Voron.Trees
 
 		public bool IsMultiValueTree { get; set; }
 
-		private enum TreeActionType
+		public enum TreeActionType
 		{
 			Add,
 			Delete
@@ -737,7 +735,7 @@ namespace Voron.Trees
 
 		public Tree Clone()
 		{
-			return new Tree(_cmp, _state.Clone()){ Name = Name};
+			return new Tree(_cmp, _state.Clone()){ Name = Name };
 		}
 
 		private static bool TryOverwriteDataOrMultiValuePageRefNode(NodeHeader* updatedNode, Slice key, int len,

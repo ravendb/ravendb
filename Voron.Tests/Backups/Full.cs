@@ -81,7 +81,7 @@ namespace Voron.Tests.Backups
 						var readResult = tx.State.Root.Read(tx, "items/" + i);
 						Assert.NotNull(readResult);
 						var memoryStream = new MemoryStream();
-						readResult.Stream.CopyTo(memoryStream);
+						readResult.Reader.CopyTo(memoryStream);
 						Assert.Equal(memoryStream.ToArray(), buffer);
 					}
 				}

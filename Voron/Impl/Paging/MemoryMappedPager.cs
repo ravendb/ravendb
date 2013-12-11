@@ -9,19 +9,59 @@ using Voron.Trees;
 
 namespace Voron.Impl.Paging
 {
-    public unsafe class MemoryMapPager : AbstractPager
+    public unsafe class Win32MemoryMapPager : AbstractPager
     {
         private readonly NativeFileAccess access;
         private readonly FileInfo _fileInfo;
         private readonly SafeFileHandle _handle;
         private long _length;
-        private FileStream _fileStream;
+        private readonly FileStream _fileStream;
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
-        public MemoryMapPager(string file,
+
+        [DllImport("kernel32.dll")]
+        static extern IntPtr GetCurrentProcess();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool PrefetchVirtualMemory(IntPtr hProcess, UIntPtr NumberOfEntries, WIN32_MEMORY_RANGE_ENTRY* VirtualAddresses, ulong Flags);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private class MEMORYSTATUSEX
+        {
+            public uint dwLength;
+            public uint dwMemoryLoad;
+            public ulong ullTotalPhys;
+            public ulong ullAvailPhys;
+            public ulong ullTotalPageFile;
+            public ulong ullAvailPageFile;
+            public ulong ullTotalVirtual;
+            public ulong ullAvailVirtual;
+            public ulong ullAvailExtendedVirtual;
+            public MEMORYSTATUSEX()
+            {
+                this.dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX));
+            }
+        }
+
+
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        static extern bool GlobalMemoryStatusEx([In, Out] MEMORYSTATUSEX lpBuffer);
+
+        static readonly Version win8version = new Version(6, 2, 9200, 0);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct WIN32_MEMORY_RANGE_ENTRY
+        {
+            public byte* VirtualAddress;
+            public IntPtr NumberOfBytes;
+        }
+
+        public Win32MemoryMapPager(string file,
             NativeFileAttributes options = NativeFileAttributes.Normal,
             NativeFileAccess access = NativeFileAccess.GenericRead | NativeFileAccess.GenericWrite)
         {
@@ -30,10 +70,13 @@ namespace Voron.Impl.Paging
             var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
             _handle = NativeFileMethods.CreateFile(file, access, NativeFileShare.Read | NativeFileShare.Write | NativeFileShare.Delete, IntPtr.Zero,
                 NativeFileCreationDisposition.OpenAlways, options, IntPtr.Zero);
-            if (_handle.IsInvalid)
-                throw new Win32Exception();
+	        if (_handle.IsInvalid)
+	        {
+		        var lastWin32ErrorCode = Marshal.GetLastWin32Error();
+		        throw new IOException("Failed to open file storage of Win32MemoryMapPager",new Win32Exception(lastWin32ErrorCode));
+	        }
 
-            _fileStream = new FileStream(_handle, FileAccess.ReadWrite);
+	        _fileStream = new FileStream(_handle, FileAccess.ReadWrite);
 
             if (noData)
             {
@@ -44,7 +87,30 @@ namespace Voron.Impl.Paging
                 NumberOfAllocatedPages = _fileInfo.Length / PageSize;
                 PagerState.Release();
                 PagerState = CreateNewPagerState();
+
+                TryPrefetchingData();
             }
+        }
+
+        private void TryPrefetchingData()
+        {
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT || Environment.OSVersion.Version < win8version)
+                return; // this is limited to windows 8 or higher
+            var lpBuffer = new MEMORYSTATUSEX();
+            if (GlobalMemoryStatusEx(lpBuffer) == false)
+                return;
+
+            if (lpBuffer.dwMemoryLoad > 75)
+                return; // system loaded, let just load on demand
+
+            var size = Math.Min(_fileInfo.Length, (long)lpBuffer.ullAvailPhys);
+
+            var entries = stackalloc WIN32_MEMORY_RANGE_ENTRY[1];
+            entries[0].NumberOfBytes = new IntPtr(size);
+            entries[0].VirtualAddress = PagerState.MapBase;
+
+            if(PrefetchVirtualMemory(GetCurrentProcess(), new UIntPtr(1), entries, 0)== false)
+                throw new Win32Exception();
         }
 
         public override void AllocateMorePages(Transaction tx, long newLength)
@@ -94,7 +160,7 @@ namespace Voron.Impl.Paging
             return newPager;
         }
 
-        protected override unsafe string GetSourceName()
+        protected override string GetSourceName()
         {
             if (_fileInfo == null)
                 return "Unknown";

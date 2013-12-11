@@ -13,6 +13,6 @@ namespace Voron.Trees
 		bool MoveNext();
 		bool MovePrev();
 		bool Skip(int count);
-		Stream CreateStreamForCurrent();
+		ValueReader CreateReaderForCurrent();
 	}
 }

@@ -1,4 +1,6 @@
-﻿namespace Voron.Impl
+﻿using System.Collections.Concurrent;
+
+namespace Voron.Impl
 {
 	using System;
 	using System.Collections.Generic;
@@ -8,6 +10,7 @@
 	public class WriteBatch : IDisposable
 	{
 		private readonly Dictionary<string, Dictionary<Slice, BatchOperation>> _lastOperations;
+		private readonly Dictionary<string, Dictionary<Slice, List<BatchOperation>>>  _multiTreeOperations;
 
 		private readonly SliceEqualityComparer _sliceEqualityComparer;
 
@@ -15,8 +18,13 @@
 		{
 			get
 			{
-				return _lastOperations
-					.SelectMany(x => x.Value.Values);
+				var allOperations = _lastOperations.SelectMany(x => x.Value.Values);
+
+				if (_multiTreeOperations.Count == 0)
+					return allOperations;
+
+				return allOperations.Concat(_multiTreeOperations.SelectMany(x => x.Value.Values)
+												.SelectMany(x => x));
 			}
 		}
 
@@ -24,11 +32,26 @@
 		{
 			get
 			{
-				return () => _lastOperations.Sum(operation => operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
+				return () =>
+					{
+						long totalSize = 0;
+
+						if (_lastOperations.Count > 0)
+							totalSize += _lastOperations.Sum(
+								operation =>
+								operation.Value.Values.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size));
+
+						if (_multiTreeOperations.Count > 0)
+							totalSize += _multiTreeOperations.Sum(
+								tree =>
+								tree.Value.Sum(
+									multiOp => multiOp.Value.Sum(x => x.Type == BatchOperationType.Add ? x.ValueSize + x.Key.Size : x.Key.Size)));
+						return totalSize;
+					};
 			}
 		}
 
-	    public bool IsEmpty { get { return _lastOperations.Count == 0; } }
+		public bool IsEmpty { get { return _lastOperations.Count == 0 && _multiTreeOperations.Count == 0; } }
 
 	    internal bool TryGetValue(string treeName, Slice key, out Stream value, out ushort? version, out BatchOperationType operationType)
 		{
@@ -39,7 +62,19 @@
 			if (treeName == null)
 				treeName = Constants.RootTreeName;
 
-			Dictionary<Slice, BatchOperation> operations;
+			//first check if it is a multi-tree operation
+		    Dictionary<Slice, List<BatchOperation>> treeOperations;
+		    if (_multiTreeOperations.TryGetValue(treeName, out treeOperations))
+		    {
+                List<BatchOperation> operationRecords;
+			    if (treeOperations.TryGetValue(key, out operationRecords))
+			    {
+					//since in multi-tree there are many operations for single tree key, then fetching operation type and value is meaningless
+				    return true;
+			    }				
+		    }
+
+		    Dictionary<Slice, BatchOperation> operations;
 			if (_lastOperations.TryGetValue(treeName, out operations) == false)
 				return false;
 
@@ -52,16 +87,11 @@
 				if (operation.Type == BatchOperationType.Delete)
 					return true;
 
-				if (operation.Type == BatchOperationType.MultiDelete)
-					return true;
-
 			    value = operation.Value as Stream;
 
 				if (operation.Type == BatchOperationType.Add)
 					return true;
 
-				if (operation.Type == BatchOperationType.MultiAdd)
-					return true;
 			}
 
 			return false;
@@ -70,6 +100,7 @@
 		public WriteBatch()
 		{
 			_lastOperations = new Dictionary<string, Dictionary<Slice, BatchOperation>>();
+            _multiTreeOperations = new Dictionary<string, Dictionary<Slice, List<BatchOperation>>>();
 			_sliceEqualityComparer = new SliceEqualityComparer();
 		}
 
@@ -129,20 +160,38 @@
 			if (treeName == null)
 				treeName = Constants.RootTreeName;
 
-			Dictionary<Slice, BatchOperation> lastOpsForTree;
-			if (_lastOperations.TryGetValue(treeName, out lastOpsForTree) == false)
+			if (operation.Type == BatchOperationType.MultiAdd || operation.Type == BatchOperationType.MultiDelete)
 			{
-				_lastOperations[treeName] = lastOpsForTree = new Dictionary<Slice, BatchOperation>(_sliceEqualityComparer);
+                Dictionary<Slice, List<BatchOperation>> multiTreeOperationsOfTree;
+				if (_multiTreeOperations.TryGetValue(treeName, out multiTreeOperationsOfTree) == false)
+				{
+					_multiTreeOperations[treeName] =
+                        multiTreeOperationsOfTree = new Dictionary<Slice, List<BatchOperation>>(_sliceEqualityComparer);
+				}
+
+                List<BatchOperation> specificMultiTreeOperations;
+				if (multiTreeOperationsOfTree.TryGetValue(operation.Key, out specificMultiTreeOperations) == false)
+                    multiTreeOperationsOfTree[operation.Key] = specificMultiTreeOperations = new List<BatchOperation>();
+
+				specificMultiTreeOperations.Add(operation);
 			}
-			BatchOperation old;
-			if (lastOpsForTree.TryGetValue(operation.Key, out old))
+			else
 			{
-				operation.SetVersionFrom(old);
-				var disposable = old.Value as IDisposable;
-				if (disposable != null)
-					disposable.Dispose();
+				Dictionary<Slice, BatchOperation> lastOpsForTree;
+				if (_lastOperations.TryGetValue(treeName, out lastOpsForTree) == false)
+				{
+					_lastOperations[treeName] = lastOpsForTree = new Dictionary<Slice, BatchOperation>(_sliceEqualityComparer);
+				}
+				BatchOperation old;
+				if (lastOpsForTree.TryGetValue(operation.Key, out old))
+				{
+					operation.SetVersionFrom(old);
+					var disposable = old.Value as IDisposable;
+					if (disposable != null)
+						disposable.Dispose();
+				}
+				lastOpsForTree[operation.Key] = operation;
 			}
-			lastOpsForTree[operation.Key] = operation;
 		}
 
 		public class BatchOperation
