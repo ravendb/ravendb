@@ -169,6 +169,40 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
+		[Fact]
+		public void CanAddMultiValuesUnderTheSameKeyToBatch()
+		{
+			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+			{
+				var rand = new Random();
+				var testBuffer = new byte[168];
+				rand.NextBytes(testBuffer);
+
+				CreateTrees(env, 1, "multitree");
+
+				var batch = new WriteBatch();
+
+				batch.MultiAdd("key", "value1", "multitree0");
+				batch.MultiAdd("key", "value2", "multitree0");
+
+				env.Writer.Write(batch);
+
+				using (var tx = env.NewTransaction(TransactionFlags.Read))
+				{
+					var tree = tx.GetTree("multitree0");
+					using (var it = tree.MultiRead(tx, "key"))
+					{
+						Assert.True(it.Seek(Slice.BeforeAllKeys));
+
+						Assert.Equal("value1", it.CurrentKey.ToString());
+						Assert.True(it.MoveNext());
+
+						Assert.Equal("value2", it.CurrentKey.ToString());
+					}
+				}
+			}
+		}
+
 		private void ValidateRecords(StorageEnvironment env, IEnumerable<Tree> trees, int documentCount, int i)
 		{
 			using (var tx = env.NewTransaction(TransactionFlags.Read))

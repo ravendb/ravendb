@@ -58,10 +58,10 @@ namespace Voron.Tests.Bugs
 					var readResult = tx.State.Root.Read(tx, "foo/" + i);
 
 					Assert.NotNull(readResult);
-					Assert.Equal(value1.Length, readResult.Stream.Length);
+					Assert.Equal(value1.Length, readResult.Reader.Length);
 
-					var memoryStream = new MemoryStream();
-					readResult.Stream.CopyTo(memoryStream);
+                    var memoryStream = new MemoryStream(readResult.Reader.Length);
+					readResult.Reader.CopyTo(memoryStream);
 
 					fixed (byte* b = value1)
 					fixed (byte* c = memoryStream.GetBuffer())
@@ -108,10 +108,10 @@ namespace Voron.Tests.Bugs
 				var readResult = tx.State.Root.Read(tx, "foo/0");
 
 				Assert.NotNull(readResult);
-				Assert.Equal(value1.Length, readResult.Stream.Length);
+				Assert.Equal(value1.Length, readResult.Reader.Length);
 
 				var memoryStream = new MemoryStream();
-				readResult.Stream.CopyTo(memoryStream);
+				readResult.Reader.CopyTo(memoryStream);
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
@@ -124,10 +124,10 @@ namespace Voron.Tests.Bugs
 				var readResult = tx.State.Root.Read(tx, "foo/0");
 
 				Assert.NotNull(readResult);
-				Assert.Equal(value1.Length, readResult.Stream.Length);
+				Assert.Equal(value1.Length, readResult.Reader.Length);
 
 				var memoryStream = new MemoryStream();
-				readResult.Stream.CopyTo(memoryStream);
+				readResult.Reader.CopyTo(memoryStream);
 			}
 		}
 	}

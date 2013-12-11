@@ -25,6 +25,7 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -39,12 +40,6 @@
   <PropertyGroup>
     <StartupObject />
   </PropertyGroup>
-  <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
-  <PropertyGroup>
-    <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
-  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -53,14 +48,19 @@
     <Reference Include="System.IO.Compression.FileSystem" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Debugging\DebugActionType.cs" />
+    <Compile Include="Debugging\DebugJournal.cs" />
     <Compile Include="Debugging\EnvironmentStats.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
+    <Compile Include="Exceptions\DiskFullException.cs" />
     <Compile Include="Exceptions\QuotaException.cs" />
     <Compile Include="Impl\Backup\FullBackup.cs" />
     <Compile Include="Impl\Backup\IncrementalBackupInfo.cs" />
     <Compile Include="Impl\Constants.cs" />
     <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
+    <Compile Include="Util\EndOfDiskSpaceEvent.cs" />
+    <Compile Include="Util\GenericUtil.cs" />
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />
     <Compile Include="Impl\FileHeaders\HeaderAccessor.cs" />
     <Compile Include="Impl\FileHeaders\TreeFlags.cs" />
@@ -85,7 +85,7 @@
     <Compile Include="Impl\Paging\FilePager.cs" />
     <Compile Include="Impl\Paging\IVirtualPager.cs" />
     <Compile Include="Impl\Paging\MemoryMappedPager.cs" />
-    <Compile Include="Impl\Paging\PureMemoryPager.cs" />
+    <Compile Include="Impl\Paging\Win32PureMemoryPager.cs" />
     <Compile Include="Impl\Paging\TemporaryPage.cs" />
     <Compile Include="Impl\ScratchBufferPool.cs" />
     <Compile Include="Impl\SliceEqualityComparer.cs" />
@@ -98,7 +98,6 @@
     <Compile Include="StorageEnvironmentOptions.cs" />
     <Compile Include="Impl\StorageEnvironmentState.cs" />
     <Compile Include="TransactionFlags.cs" />
-    <Compile Include="Trees\CombinedIterator.cs" />
     <Compile Include="Trees\Cursor.cs" />
     <Compile Include="Debugging\DebugStuff.cs" />
     <Compile Include="Impl\NativeMethods.cs" />
@@ -125,25 +124,26 @@
     <Compile Include="Trees\TreeMutableState.cs" />
     <Compile Include="Trees\TreeRebalancer.cs" />
     <Compile Include="Util\AsyncManualResetEvent.cs" />
+    <Compile Include="Trees\RecentlyFoundPages.cs" />
     <Compile Include="Util\Conversion\Endianness.cs" />
     <Compile Include="Util\Crc.cs" />
     <Compile Include="Util\DisposableAction.cs" />
     <Compile Include="Util\ImmutableAppendOnlyList.cs" />
+    <Compile Include="Util\LZ4.cs" />
     <Compile Include="Util\NativeFileMethods.cs" />
     <Compile Include="Impl\Backup\BackupMethods.cs" />
     <Compile Include="Util\DataCopier.cs" />
     <Compile Include="Util\Conversion\BigEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\LittleEndianBitConverter.cs" />
     <Compile Include="Util\Conversion\EndianBitConverter.cs" />
+    <Compile Include="Util\SkipList.cs" />
     <Compile Include="Util\TreeExtensions.cs" />
     <Compile Include="Util\Utils.cs" />
     <Compile Include="Util\PageTable.cs" />
+    <Compile Include="ValueReader.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Util\Conversion\readme.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="RavenDB.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
