@@ -9,12 +9,14 @@ using System.IO;
 
 namespace Voron.Exceptions
 {
-	public class DiskFullException: Exception
+	public class DiskFullException : Exception
 	{
 		public DriveInfo DriveInfo { get; private set; }
 
-		public DiskFullException(DriveInfo driveInfo)
-			: base(string.Format("There is not enough space on the disk [Drive: {0}]", driveInfo.Name))
+		public DiskFullException(DriveInfo driveInfo, string filePath, long requestedFileSize)
+			: base(
+				string.Format("There is not enough space on {0} drive to set size of file {1} to {2} bytes", driveInfo.Name,
+				              filePath, requestedFileSize))
 		{
 			DriveInfo = driveInfo;
 		}

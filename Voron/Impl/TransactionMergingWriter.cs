@@ -108,7 +108,7 @@ namespace Voron.Impl
                     {
                         if (task.IsFaulted)
                         {
-                            HandleWriteFailure(writes, task.Exception);
+                            HandleWriteFailure(writes, mine, task.Exception);
                         }
                         else
                         {
@@ -119,14 +119,11 @@ namespace Voron.Impl
                                 write.Completed();
                         }
                     });
-
-                }
-
-               
+                }        
             }
             catch (Exception e)
             {
-                HandleWriteFailure(writes, e);
+                HandleWriteFailure(writes, mine, e);
             }
             finally
             {
@@ -134,14 +131,17 @@ namespace Voron.Impl
             }
         }
 
-        private void HandleWriteFailure(List<OutstandingWrite> writes, Exception e)
+        private void HandleWriteFailure(List<OutstandingWrite> writes, OutstandingWrite mine, Exception e)
         {
-            if (writes == null || writes.Count == 0)
-                throw new InvalidOperationException("Couldn't get items to write", e);
+	        if (writes == null || writes.Count == 0)
+	        {
+				mine.Errored(e);
+		        throw new InvalidOperationException("Couldn't get items to write", e);
+	        }
 
-            if (writes.Count == 1)
+	        if (writes.Count == 1)
             {
-                writes[0].Errorred(e);
+                writes[0].Errored(e);
 				return;
             }
 
@@ -204,28 +204,38 @@ namespace Voron.Impl
             }
         }
 
-        private void SplitWrites(IEnumerable<OutstandingWrite> writes)
+        private void SplitWrites(List<OutstandingWrite> writes)
         {
-            foreach (var write in writes)
-            {
-                try
-                {
-                    using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
-                    {
-                        HandleOperations(tx, write.Batch.Operations);
-                        tx.Commit();
-
-                        write.Completed();
-                    }
-                }
-                catch (Exception e)
-                {
-                    write.Errorred(e);
-                }
-            }
+	        for (var index = 0; index < writes.Count; index++)
+	        {
+		        var write = writes[index];
+		        try
+		        {
+			        using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
+			        {
+				        HandleOperations(tx, write.Batch.Operations);
+				        tx.Commit().ContinueWith(
+					        task =>
+						        {
+							        if (task.IsFaulted)
+							        {
+								        write.Errored(task.Exception);
+							        }
+							        else
+							        {
+								        write.Completed();
+							        }
+						        });
+			        }
+		        }
+		        catch (Exception e)
+		        {
+			        write.Errored(e);
+		        }
+	        }
         }
 
-        private List<OutstandingWrite> BuildBatchGroup(OutstandingWrite mine)
+	    private List<OutstandingWrite> BuildBatchGroup(OutstandingWrite mine)
         {
             // Allow the group to grow up to a maximum size, but if the
             // original write is small, limit the growth so we do not slow
@@ -290,15 +300,24 @@ namespace Voron.Impl
                 _transactionMergingWriter._eventsBuffer.Enqueue(_completed);
             }
 
-            public void Errorred(Exception e)
+            public void Errored(Exception e)
             {
+	            var wasSet = _completed.IsSet;
+
                 _exception = e;
                 _completed.Set();
+
+				if (wasSet)
+					throw new InvalidOperationException("This should not happen.");
             }
 
             public void Completed()
             {
+				var wasSet = _completed.IsSet;
                 _completed.Set();
+
+				if (wasSet)
+					throw new InvalidOperationException("This should not happen.");
             }
 
             public void Wait()

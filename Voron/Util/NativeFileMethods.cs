@@ -84,10 +84,11 @@ namespace Voron.Impl
 
 					filePath = filePath.Replace(@"\\?\", string.Empty); // remove extended-length path prefix
 
-					var driveLetter = Path.GetPathRoot(filePath.ToString());
+					var fullFilePath = filePath.ToString();
+					var driveLetter = Path.GetPathRoot(fullFilePath);
 					var driveInfo = new DriveInfo(driveLetter);
 
-					throw new DiskFullException(driveInfo);
+					throw new DiskFullException(driveInfo, fullFilePath, length);
 				}
 
 				throw new Win32Exception(lastError);
