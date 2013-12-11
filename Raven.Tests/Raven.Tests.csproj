@@ -221,6 +221,7 @@
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
     <Compile Include="Bugs\NullableDateTimeOffsetFromDateTimeParse.cs" />
     <Compile Include="Issues\RavenDB1508.cs" />
+    <Compile Include="Issues\RavenDB1519.cs" />
     <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
     <Compile Include="Bugs\LoDash.cs" />
     <Compile Include="Bugs\Errors\QueryIssues.cs" />
