@@ -159,7 +159,8 @@ namespace Raven.Database.Server.RavenFS
 				return Enumerable.Empty<object>();
 			});
 
-			config.Services.Replace(typeof(IHostBufferPolicySelector), new NoBufferPolicySelector());
+			//TODO: check
+			//config.Services.Replace(typeof(IHostBufferPolicySelector), new NoBufferPolicySelector());
 
 			config.MessageHandlers.Add(new CachePreventingHandler());
 
