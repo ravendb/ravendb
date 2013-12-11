@@ -21,9 +21,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
 		[HttpGet]
-		public HttpResponseMessage Signatures(string filename)
+		[Route("ravenfs/rdc/Signatures/{*id}")]
+		public HttpResponseMessage Signatures(string id)
 		{
-			filename = Uri.UnescapeDataString(filename);
+			var filename = Uri.UnescapeDataString(id);
 
 			Log.Debug("Got signatures of a file '{0}' request", filename);
 
@@ -36,6 +37,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
+		[Route("ravenfs/rdc/Stats")]
 		public RdcStats Stats()
 		{
 			using (var rdcVersionChecker = new RdcVersionChecker())
@@ -50,9 +52,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-		public async Task<HttpResponseMessage> Manifest(string filename)
+		[Route("ravenfs/rdc/Manifest/{*id")]
+		public async Task<HttpResponseMessage> Manifest(string id)
 		{
-			filename = Uri.UnescapeDataString(filename);
+			var filename = Uri.UnescapeDataString(id);
 			FileAndPages fileAndPages = null;
 			try
 			{

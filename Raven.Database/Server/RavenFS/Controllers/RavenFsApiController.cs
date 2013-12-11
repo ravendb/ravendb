@@ -22,7 +22,6 @@ using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
-	[RoutePrefix("ravenfs")]
 	public abstract class RavenFsApiController : ApiController
 	{
 		private static readonly ILog Log = LogManager.GetCurrentClassLogger();

@@ -9,7 +9,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 	public class ChangesController : RavenFsApiController
 	{
 		[HttpGet]
-		[Route("changes/events")]
+		[Route("ravenfs/changes/events")]
 		public HttpResponseMessage Events(string id)
 		{
 			var eventsTransport = new EventsTransport(id);
@@ -19,7 +19,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-		[Route("changes/config")]
+		[Route("ravenfs/changes/config")]
 		public HttpResponseMessage Config(string id, string command, string value = "")
 		{
 			if (string.IsNullOrEmpty(id))

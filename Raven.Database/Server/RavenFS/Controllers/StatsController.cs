@@ -1,7 +1,11 @@
-﻿namespace Raven.Database.Server.RavenFS.Controllers
+﻿using System.Web.Http;
+
+namespace Raven.Database.Server.RavenFS.Controllers
 {
 	public class StatsController : RavenFsApiController
 	{
+		[HttpGet]
+		[Route("ravenfs/stats")]
 		public object Get()
 		{
 			var count = 0;

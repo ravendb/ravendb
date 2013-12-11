@@ -10,6 +10,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 	//TODO: check this class
 	public class LogsController : ApiController
 	{
+		[HttpGet]
+		[Route("ravenfs/logs")]
 		public HttpResponseMessage Get(string type = null)
 		{
 			DatabaseMemoryTarget.BoundedMemoryTarget boundedMemoryTarget = null;

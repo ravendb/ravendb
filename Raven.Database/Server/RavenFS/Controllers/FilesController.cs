@@ -24,6 +24,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 	{
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
+		[HttpGet]
+		[Route("ravenfs/files")]
 		public List<FileHeader> Get()
 		{
 			List<FileHeader> fileHeaders = null;
@@ -36,6 +38,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return fileHeaders;
 		}
 
+		[HttpGet]
+		[Route("ravenfs/files/{*id}")]
 		public HttpResponseMessage Get(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -62,6 +66,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return result;
 		}
 
+		[HttpDelete]
+		[Route("ravenfs/files/{*id}")]
 		public HttpResponseMessage Delete(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -138,6 +144,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpHead]
+		[Route("ravenfs/files/{*id}")]
 		public HttpResponseMessage Head(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -163,6 +170,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return httpResponseMessage;
 		}
 
+		[HttpPost]
+		[Route("ravenfs/files/{*id}")]
 		public HttpResponseMessage Post(string name)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -197,6 +206,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPatch]
+		[Route("ravenfs/files/{*id}")]
 		public HttpResponseMessage Patch(string name, string rename)
 		{
 			name = RavenFileNameHelper.RavenPath(name);
@@ -260,6 +270,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return new HttpResponseMessage(HttpStatusCode.NoContent);
 		}
 
+		[HttpPut]
+		[Route("ravenfs/files/{*id}")]
 		public async Task<HttpResponseMessage> Put(string name, string uploadId = null)
 		{
 			try
