@@ -1,4 +1,8 @@
-define(["require", "exports", "plugins/router", "common/raven", "models/database"], function(require, exports, durandalRouter, raven, database) {
+define(["require", "exports", "plugins/router", "common/raven", "models/database"], function(require, exports, __durandalRouter__, __raven__, __database__) {
+    var durandalRouter = __durandalRouter__;
+    var raven = __raven__;
+    var database = __database__;
+
     var settings = (function () {
         function settings() {
             var _this = this;

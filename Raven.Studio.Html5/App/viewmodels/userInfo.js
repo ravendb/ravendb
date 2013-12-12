@@ -1,4 +1,16 @@
-define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "models/document", "common/raven", "common/pagedList"], function(require, exports, app, router, collection, database, document, raven, pagedList) {
+define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "models/document", "common/raven", "common/pagedList"], function(require, exports, __app__, __router__, __collection__, __database__, __document__, __raven__, __pagedList__) {
+    
+    var app = __app__;
+    
+    var router = __router__;
+
+    var collection = __collection__;
+    var database = __database__;
+    var document = __document__;
+    
+    var raven = __raven__;
+    var pagedList = __pagedList__;
+
     var userInfo = (function () {
         function userInfo() {
             this.displayName = "user info";

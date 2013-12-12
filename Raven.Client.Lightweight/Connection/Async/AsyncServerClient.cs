@@ -1891,6 +1891,21 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
+        public Task<RavenJToken> ExecuteGetRequest(string requestUrl)
+        {
+            EnsureIsNotNullOrEmpty(requestUrl, "url");
+            return ExecuteWithReplication("GET", serverUrl =>
+            {
+                var metadata = new RavenJObject();
+                AddTransactionInformation(metadata);
+                var request = jsonRequestFactory.CreateHttpJsonRequest(
+                        new CreateHttpJsonRequestParams(this, serverUrl + requestUrl, "GET", metadata, credentials, convention)
+                                .AddOperationHeaders(OperationsHeaders));
+
+                return request.ReadResponseJsonAsync();
+            });
+        }
+
 		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
 		{
 			var metadata = new RavenJObject();

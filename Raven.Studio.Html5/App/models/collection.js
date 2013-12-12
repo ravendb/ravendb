@@ -1,4 +1,10 @@
-define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCommand", "models/collectionInfo", "models/database"], function(require, exports, pagedList, getCollectionInfoCommand, collectionInfo, database) {
+define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCommand", "models/collectionInfo", "models/database"], function(require, exports, __pagedList__, __getCollectionInfoCommand__, __collectionInfo__, __database__) {
+    
+    var pagedList = __pagedList__;
+    var getCollectionInfoCommand = __getCollectionInfoCommand__;
+    var collectionInfo = __collectionInfo__;
+    var database = __database__;
+
     var collection = (function () {
         function collection(name) {
             this.name = name;

@@ -1,4 +1,6 @@
-define(["require", "exports", "models/document"], function(require, exports, document) {
+define(["require", "exports", "models/document"], function(require, exports, __document__) {
+    var document = __document__;
+
     var row = (function () {
         function row() {
             this.top = ko.observable(0);

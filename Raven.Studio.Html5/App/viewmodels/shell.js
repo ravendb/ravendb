@@ -1,6 +1,25 @@
 /// <reference path="../../Scripts/typings/nprogress/nprogress.d.ts" />
 /// <reference path="../../Scripts/typings/bootstrap/bootstrap.d.ts" />
-define(["require", "exports", "plugins/router", "durandal/app", "durandal/system", "models/database", "common/raven", "models/document", "common/appUrl", "models/collection", "common/dialogResult", "common/alertArgs", "common/alertType", "common/pagedList", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand", "commands/getBuildVersionCommand", "commands/getLicenseStatusCommand"], function(require, exports, router, app, sys, database, raven, document, appUrl, collection, dialogResult, alertArgs, alertType, pagedList, getDatabaseStatsCommand, getDatabasesCommand, getBuildVersionCommand, getLicenseStatusCommand) {
+define(["require", "exports", "plugins/router", "durandal/app", "durandal/system", "models/database", "common/raven", "models/document", "common/appUrl", "models/collection", "common/dialogResult", "common/alertArgs", "common/alertType", "common/pagedList", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand", "commands/getBuildVersionCommand", "commands/getLicenseStatusCommand"], function(require, exports, __router__, __app__, __sys__, __database__, __raven__, __document__, __appUrl__, __collection__, __dialogResult__, __alertArgs__, __alertType__, __pagedList__, __getDatabaseStatsCommand__, __getDatabasesCommand__, __getBuildVersionCommand__, __getLicenseStatusCommand__) {
+    var router = __router__;
+    var app = __app__;
+    var sys = __sys__;
+
+    var database = __database__;
+    var raven = __raven__;
+    var document = __document__;
+    var appUrl = __appUrl__;
+    var collection = __collection__;
+    
+    var dialogResult = __dialogResult__;
+    var alertArgs = __alertArgs__;
+    var alertType = __alertType__;
+    var pagedList = __pagedList__;
+    var getDatabaseStatsCommand = __getDatabaseStatsCommand__;
+    var getDatabasesCommand = __getDatabasesCommand__;
+    var getBuildVersionCommand = __getBuildVersionCommand__;
+    var getLicenseStatusCommand = __getLicenseStatusCommand__;
+
     var shell = (function () {
         function shell() {
             var _this = this;
@@ -41,7 +60,7 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
             router.isNavigating.subscribe(function (isNavigating) {
                 if (isNavigating)
                     NProgress.start();
-                else
+else
                     NProgress.done();
             });
 
@@ -102,7 +121,7 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
             if (currentAlert) {
                 // Maintain a 500ms time between alerts; otherwise successive alerts can fly by too quickly.
                 this.queuedAlerts.push(alert);
-                if (currentAlert.type !== 3 /* danger */) {
+                if (currentAlert.type !== alertType.danger) {
                     setTimeout(function () {
                         return _this.closeAlertAndShowNext(_this.currentAlert());
                     }, 500);
@@ -110,7 +129,7 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
             } else {
                 this.currentAlert(alert);
                 var fadeTime = 3000;
-                if (alert.type === 3 /* danger */ || alert.type === 2 /* warning */) {
+                if (alert.type === alertType.danger || alert.type === alertType.warning) {
                     fadeTime = 5000;
                 }
                 setTimeout(function () {
@@ -125,7 +144,7 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
             var nextAlert = this.queuedAlerts.pop();
             setTimeout(function () {
                 return _this.currentAlert(nextAlert);
-            }, 500); // Give the alert a chance to fade out before we push in the new alert.
+            }, 500);
         };
 
         shell.prototype.newDocument = function () {

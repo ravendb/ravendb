@@ -4,7 +4,9 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase"], function(require, exports, commandBase) {
+define(["require", "exports", "commands/commandBase"], function(require, exports, __commandBase__) {
+    var commandBase = __commandBase__;
+
     var createDatabaseCommand = (function (_super) {
         __extends(createDatabaseCommand, _super);
         function createDatabaseCommand(databaseName) {

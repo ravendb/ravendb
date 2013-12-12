@@ -1,4 +1,6 @@
-define(["require", "exports", "models/document"], function(require, exports, document) {
+define(["require", "exports", "models/document"], function(require, exports, __document__) {
+    var document = __document__;
+
     var collectionInfo = (function () {
         function collectionInfo(dto) {
             this.results = dto.Results.map(function (d) {

@@ -1,5 +1,4 @@
 /// <reference path="./typings/knockout/knockout.d.ts" />
-
 var subscribableFn = ko.subscribable.fn;
 var observableArrayFn = ko.observableArray.fn;
 
@@ -80,7 +79,6 @@ functionPrototype.memoize = function (thisVal) {
         }
     };
 };
-
 
 // Array.remove
 var arrayPrototype = Array.prototype;
