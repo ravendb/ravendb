@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.IO.Packaging;
 using Voron.Impl;
 using Voron.Impl.Backup;
 using Voron.Impl.Paging;
