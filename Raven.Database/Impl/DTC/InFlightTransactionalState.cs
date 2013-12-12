@@ -175,12 +175,12 @@ namespace Raven.Database.Impl.DTC
 					var currentTxVal = state.changes.LastOrDefault(x => string.Equals(x.Key, key, StringComparison.InvariantCultureIgnoreCase));
 					if (currentTxVal != null)
 					{
-					    EnsureValidEtag(key, etag, currentTxVal);
+						EnsureValidEtag(key, etag, committedEtag, currentTxVal);
 					    state.changes.Remove(currentTxVal);
 					}
 				    var result = changedInTransaction.AddOrUpdate(key, s =>
 					{
-                        EnsureValidEtag(key, etag, currentTxVal);
+						EnsureValidEtag(key, etag, committedEtag, currentTxVal);
 
 						return new ChangedDoc
 						{
@@ -192,7 +192,7 @@ namespace Raven.Database.Impl.DTC
 					{
 						if (existing.transactionId == transactionInformation.Id)
 						{
-                            EnsureValidEtag(key, etag, currentTxVal);
+							EnsureValidEtag(key, etag, committedEtag, currentTxVal);
 
 							return existing;
 						}
@@ -203,7 +203,7 @@ namespace Raven.Database.Impl.DTC
 						{
 							Rollback(existing.transactionId);
 
-                            EnsureValidEtag(key, etag, currentTxVal);
+							EnsureValidEtag(key, etag, committedEtag, currentTxVal);
 
 							return new ChangedDoc
 							{
@@ -229,7 +229,7 @@ namespace Raven.Database.Impl.DTC
 			}
 		}
 
-	    private static void EnsureValidEtag(string key, Etag etag, DocumentInTransactionData currentTxVal)
+	    private static void EnsureValidEtag(string key, Etag etag, Etag committedEtag, DocumentInTransactionData currentTxVal)
 	    {
 	        if (etag == null)
 	            return;
@@ -242,6 +242,9 @@ namespace Raven.Database.Impl.DTC
 
             if (currentTxVal != null && currentTxVal.Etag != etag)
 	            throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
+
+			if(etag != committedEtag)
+				throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
 	    }
 
 	    public bool TryGet(string key, TransactionInformation transactionInformation, out JsonDocument document)
