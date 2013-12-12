@@ -111,8 +111,9 @@ namespace Voron.Impl.Journal
 			var lastSyncedTransactionId = logInfo.LastSyncedTransactionId;
 
 			var journalFiles = new List<JournalFile>();
-		    long journalNumber;
-			for (journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
+			long lastSyncedTxId = -1;
+			long lastSyncedJournal = logInfo.LastSyncedJournal;
+			for (var journalNumber = oldestLogFileStillInUse; journalNumber <= logInfo.CurrentJournal; journalNumber++)
 			{
 				using (var recoveryPager = _env.Options.CreateScratchPager(StorageEnvironmentOptions.JournalRecoveryName(journalNumber)))
 				using (var pager = _env.Options.OpenJournalPager(journalNumber))
@@ -129,13 +130,6 @@ namespace Voron.Impl.Journal
 						.OrderBy(x => x.PageNumber)
 						.ToList();
 	
-					var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * AbstractPager.PageSize);
-					var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
-					jrnlFile.InitFrom(journalReader);
-					jrnlFile.AddRef(); // creator reference - write ahead log
-
-					journalFiles.Add(jrnlFile);
-
 					var lastReadHeaderPtr = journalReader.LastTransactionHeader;
 
 					if (lastReadHeaderPtr != null)
@@ -144,12 +138,18 @@ namespace Voron.Impl.Journal
 							ApplyPagesToDataFileFromJournal(pagesToWrite);
 
 						*txHeader = *lastReadHeaderPtr;
+						lastSyncedTxId = txHeader->TransactionId;
+						lastSyncedJournal = journalNumber;
+					}
 
-						_headerAccessor.Modify(header =>
-						{
-							header->Journal.LastSyncedTransactionId = txHeader->TransactionId;
-							header->Journal.LastSyncedJournal = journalNumber;
-						});
+					if (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal)
+					{
+						var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * AbstractPager.PageSize);
+						var jrnlFile = new JournalFile(jrnlWriter, journalNumber);
+						jrnlFile.InitFrom(journalReader);
+						jrnlFile.AddRef(); // creator reference - write ahead log
+
+						journalFiles.Add(jrnlFile);
 					}
 
 					if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
@@ -162,27 +162,23 @@ namespace Voron.Impl.Journal
 
 			_files = _files.AppendRange(journalFiles);
 
-			if (requireHeaderUpdate)
-			{
-				_headerAccessor.Modify(header =>
+			Debug.Assert(lastSyncedTxId >= 0);
+			Debug.Assert(lastSyncedJournal >= 0);
+
+			_journalIndex = lastSyncedJournal;
+
+			_headerAccessor.Modify(
+				header =>
 					{
-				        header->Journal.CurrentJournal = journalNumber;
+						header->Journal.LastSyncedJournal = lastSyncedJournal;
+						header->Journal.LastSyncedTransactionId = lastSyncedTxId;
+						header->Journal.CurrentJournal = lastSyncedJournal;
+						header->Journal.JournalFilesCount = _files.Count;
+						header->IncrementalBackup.LastCreatedJournal = _journalIndex;
 					});
 
-				logInfo = _headerAccessor.Get(ptr => ptr->Journal);
-
-				// we want to check that we cleanup newer log files, since everything from
-				// the current file is considered corrupted
-				var badJournalFiles = logInfo.CurrentJournal;
-				while (true)
-				{
-					badJournalFiles++;
-					if (_env.Options.TryDeleteJournal(badJournalFiles) == false)
-						break;
-				}
-			}
-
-			_journalIndex = logInfo.CurrentJournal;
+			CleanupInvalidJournalFiles(lastSyncedJournal);
+			CleanupUnusedJournalFiles(oldestLogFileStillInUse, lastSyncedJournal);
 
 			if (_files.Count > 0)
 			{
@@ -192,11 +188,32 @@ namespace Voron.Impl.Journal
 					CurrentFile = lastFile;
 			}
 
-			if (requireHeaderUpdate)
-			{
-				UpdateLogInfo();
-			}
 			return requireHeaderUpdate;
+		}
+
+		private void CleanupUnusedJournalFiles(long oldestLogFileStillInUse, long lastSyncedJournal)
+		{
+			var logFile = oldestLogFileStillInUse;
+			while (logFile < lastSyncedJournal)
+			{
+				_env.Options.TryDeleteJournal(logFile);
+				logFile++;
+			}
+		}
+
+		private void CleanupInvalidJournalFiles(long lastSyncedJournal)
+		{
+			// we want to check that we cleanup newer log files, since everything from
+			// the current file is considered corrupted
+			var badJournalFiles = lastSyncedJournal;
+			while (true)
+			{
+				badJournalFiles++;
+				if (_env.Options.TryDeleteJournal(badJournalFiles) == false)
+				{
+					break;
+				}
+			}
 		}
 
 		private void ApplyPagesToDataFileFromJournal(List<Page> sortedPagesToWrite)

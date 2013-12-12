@@ -51,6 +51,7 @@ namespace Voron.Impl.Journal
 
             if (current->TransactionId <= _lastSyncedTransactionId)
             {
+	            LastTransactionHeader = current;
                 _readingPage += compressedPages;
                 return true; // skipping
             }
