@@ -80,7 +80,7 @@ namespace RavenFS.Tests
 			var client = NewClient();
 			client.UploadAsync("abc.txt", ms).Wait();
 
-			var downloadString = WebClient.DownloadString("/files/abc.txt");
+			var downloadString = WebClient.DownloadString("ravenfs/files/abc.txt");
 			Assert.Equal(expected, downloadString);
 		}
 
@@ -173,7 +173,7 @@ namespace RavenFS.Tests
 			var buffer = new byte[1024*1024];
 			new Random().NextBytes(buffer);
 
-			WebClient.UploadData("/files/mb.bin", "PUT", buffer);
+			WebClient.UploadData("ravenfs/files/mb.bin", "PUT", buffer);
 
 
 			var result = client.Synchronization.GetRdcManifestAsync("mb.bin").Result;
@@ -188,7 +188,7 @@ namespace RavenFS.Tests
 			var buffer = new byte[1024*1024*2];
 			new Random().NextBytes(buffer);
 
-			WebClient.UploadData("/files/mb.bin", "PUT", buffer);
+			WebClient.UploadData("ravenfs/files/mb.bin", "PUT", buffer);
 
 
 			var result = client.Synchronization.GetRdcManifestAsync("mb.bin").Result;
@@ -210,7 +210,7 @@ namespace RavenFS.Tests
 			var buffer = new byte[1024*1024*4];
 			new Random().NextBytes(buffer);
 
-			WebClient.UploadData("/files/mb.bin", "PUT", buffer);
+			WebClient.UploadData("ravenfs/files/mb.bin", "PUT", buffer);
 			var signatureManifest = client.Synchronization.GetRdcManifestAsync("mb.bin").Result;
 
 			var ms = new MemoryStream();

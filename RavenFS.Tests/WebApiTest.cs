@@ -1,13 +1,10 @@
 using System;
 using System.Net;
-using System.ServiceModel;
 using System.Threading.Tasks;
-using System.Web.Http.SelfHost;
 using Raven.Client.RavenFS;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.RavenFS;
-using Raven.Database.Server.RavenFS.Config;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Server;
 
@@ -15,9 +12,8 @@ namespace RavenFS.Tests
 {
 	public class WebApiTest : WithNLog, IDisposable
 	{
-		private const string Url = "http://localhost:8079";
+		private const string Url = "http://localhost.fiddler:8079";
 		protected WebClient WebClient;
-		private HttpSelfHostConfiguration config;
 		private RavenFileSystem ravenFileSystem;
 		private RavenDbServer server;
 
@@ -40,24 +36,25 @@ namespace RavenFS.Tests
 			configuration.Initialize();
 			configuration.InitializeRavenFs();
 			configuration.DataDirectory = "~/Test";
+			configuration.Port = 8079;
 
 			Task.Factory.StartNew(() => // initialize in MTA thread
 									  {
 
-										  config = new HttpSelfHostConfiguration(Url)
-													 {
-														 MaxReceivedMessageSize = Int64.MaxValue,
-														 TransferMode = TransferMode.Streamed
-													 };
+										  //config = new HttpSelfHostConfiguration(Url)
+										  //		   {
+										  //			   MaxReceivedMessageSize = Int64.MaxValue,
+										  //			   TransferMode = TransferMode.Streamed
+										  //		   };
 										  //var configuration = new InMemoryRavenConfiguration();
 										  //configuration.InitializeRavenFs();
 										  //configuration.DataDirectory = "~/Test";
 										  //ravenFileSystem = new RavenFileSystem(configuration);
 										  //ravenFileSystem.Start(config);
-
+//	  ravenFileSystem.Start(config);
 										
-										  ravenFileSystem = new RavenFileSystem(configuration);
-									//	  ravenFileSystem.Start(config);
+										//  ravenFileSystem = new RavenFileSystem(configuration);
+									
 										  server = new RavenDbServer(configuration);
 									  })
 				.Wait();
@@ -74,7 +71,6 @@ namespace RavenFS.Tests
 		public virtual void Dispose()
 		{
 			server.Dispose();
-			ravenFileSystem.Dispose();
 		}
 
 		protected HttpWebRequest CreateWebRequest(string url)

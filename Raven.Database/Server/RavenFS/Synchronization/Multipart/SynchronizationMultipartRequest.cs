@@ -49,7 +49,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 				throw new Exception("Stream does not support reading");
 			}
 
-			request = (HttpWebRequest)WebRequest.Create(destinationUrl + "/synchronization/MultipartProceed");
+			request = (HttpWebRequest)WebRequest.Create(destinationUrl + "/ravenfs/synchronization/MultipartProceed");
 			request.Method = "POST";
 			request.SendChunked = true;
 			request.AllowWriteStreamBuffering = false;

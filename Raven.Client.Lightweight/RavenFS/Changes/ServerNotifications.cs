@@ -33,7 +33,7 @@ namespace Raven.Client.RavenFS.Changes
 		private async Task EstablishConnection()
 		{
 			//TODO: Fix not to use WebRequest
-			var request = (HttpWebRequest)WebRequest.Create(url + "/changes/events?id=" + id);
+			var request = (HttpWebRequest)WebRequest.Create(url + "/ravenfs/changes/events?id=" + id);
 			request.Method = "GET";
 
 			while (true)
@@ -192,7 +192,7 @@ namespace Raven.Client.RavenFS.Changes
 		{
 			try
 			{
-				var sendUrl = url + "/changes/config?id=" + id + "&command=" + command;
+				var sendUrl = url + "/ravenfs/changes/config?id=" + id + "&command=" + command;
 				if (string.IsNullOrEmpty(value) == false)
 					sendUrl += "&value=" + Uri.EscapeUriString(value);
 

@@ -52,7 +52,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-		[Route("ravenfs/rdc/Manifest/{*id")]
+		[Route("ravenfs/rdc/Manifest/{*id}")]
 		public async Task<HttpResponseMessage> Manifest(string id)
 		{
 			var filename = Uri.UnescapeDataString(id);

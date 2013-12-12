@@ -319,6 +319,7 @@
     <Compile Include="Server\RavenFS\Config\InMemoryConfiguration.cs" />
     <Compile Include="Server\RavenFS\Config\ServerUrlUtil.cs" />
     <Compile Include="Server\RavenFS\Controllers\ChangesController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\ConfigController.cs" />
     <Compile Include="Server\RavenFS\Controllers\FilesController.cs" />
     <Compile Include="Server\RavenFS\Controllers\FoldersController.cs" />
     <Compile Include="Server\RavenFS\Controllers\LogsController.cs" />

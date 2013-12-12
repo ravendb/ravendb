@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Newtonsoft.Json;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Util;
+using Raven.Imports.Newtonsoft.Json;
 using RavenFS.Tests.Tools;
 using Xunit;
 using Xunit.Extensions;
@@ -21,16 +21,16 @@ namespace RavenFS.Tests
 			var buffer = new byte[size];
 			new Random().NextBytes(buffer);
 
-			WebClient.UploadData("/files/mb.bin", "PUT", buffer);
+			WebClient.UploadData("/ravenfs/files/mb.bin", "PUT", buffer);
 
-			var downloadString = WebClient.DownloadString("/files/");
+			var downloadString = WebClient.DownloadString("/ravenfs/files/");
 			var files = JsonConvert.DeserializeObject<List<FileHeader>>(downloadString, new NameValueCollectionJsonConverter());
 			Assert.Equal(1, files.Count);
 			Assert.Equal(buffer.Length, files[0].TotalSize);
 			Assert.Equal(buffer.Length, files[0].UploadedSize);
 
 
-			var downloadData = WebClient.DownloadData("/files/mb.bin");
+			var downloadData = WebClient.DownloadData("/ravenfs/files/mb.bin");
 
 			Assert.Equal(buffer.Length, downloadData.Length);
 			Assert.Equal(buffer, downloadData);
@@ -43,15 +43,15 @@ namespace RavenFS.Tests
 			var buffer = new byte[size];
 			new Random().NextBytes(buffer);
 
-			WebClient.UploadData("/files/mb.bin", "PUT", buffer);
+			WebClient.UploadData("/ravenfs/files/mb.bin", "PUT", buffer);
 
-			var files = JsonConvert.DeserializeObject<List<FileHeader>>(WebClient.DownloadString("/files/"),
+			var files = JsonConvert.DeserializeObject<List<FileHeader>>(WebClient.DownloadString("/ravenfs/files/"),
 			                                                            new NameValueCollectionJsonConverter());
 			Assert.Equal(1, files.Count);
 			Assert.Equal(buffer.Length, files[0].TotalSize);
 			Assert.Equal(buffer.Length, files[0].UploadedSize);
-			
-			var readData = CreateWebRequest("/files/mb.bin")
+
+			var readData = CreateWebRequest("/ravenfs/files/mb.bin")
 				.WithRange(skip)
 				.MakeRequest()
 				.ReadData();

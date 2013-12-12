@@ -8,7 +8,7 @@ namespace RavenFS.Tests
 		[Fact]
 		public void CanGetFilesList_Empty()
 		{
-			var str = WebClient.DownloadString("/files");
+			var str = WebClient.DownloadString("/ravenfs/files");
 			Assert.Equal("[]", str);
 		}
 
@@ -16,16 +16,16 @@ namespace RavenFS.Tests
 		public void CanPutFile()
 		{
 			var data = new string('a', 1024*128);
-			WebClient.UploadString("/files/abc.txt", "PUT", data);
-			var downloadString = WebClient.DownloadString("/files/abc.txt");
+			WebClient.UploadString("/ravenfs/files/abc.txt", "PUT", data);
+			var downloadString = WebClient.DownloadString("/ravenfs/files/abc.txt");
 			Assert.Equal(data, downloadString);
 		}
 
 		[Fact]
 		public void CanGetFilesList()
 		{
-			WebClient.UploadString("/files/abc.txt", "PUT", "abc");
-			var str = WebClient.DownloadString("/files");
+			WebClient.UploadString("/ravenfs/files/abc.txt", "PUT", "abc");
+			var str = WebClient.DownloadString("/ravenfs/files");
 			Assert.True(Regex.IsMatch(str, "[{\"Name\":\"abc.txt\",\"TotalSize\":3,\"UploadedSize\":3,\"HumaneTotalSize\":\"3 Bytes\",\"HumaneUploadedSize\":\"3 Bytes\","
                 + "\"Metadata\":{\"Last\\-Modified\":\"(.+?)\"}}]"));
 		}
@@ -34,8 +34,8 @@ namespace RavenFS.Tests
 		public void CanSetFileMetadata_Then_GetItFromFilesList()
 		{
 			WebClient.Headers["Test"] = "Value";
-			WebClient.UploadString("/files/abc.txt", "PUT", "abc");
-			var str = WebClient.DownloadString("/files");
+			WebClient.UploadString("/ravenfs/files/abc.txt", "PUT", "abc");
+			var str = WebClient.DownloadString("/ravenfs/files");
 		    Assert.True(Regex.IsMatch(str,
 		                  "[{\"Name\":\"abc.txt\",\"TotalSize\":3,\"UploadedSize\":3,\"HumaneTotalSize\":\"3 Bytes\",\"HumaneUploadedSize\":\"3 Bytes\"," 
                           + "\"Metadata\":{\"Test\":\"Value\",\"Last\\-Modified\":\"(.+?)\"}}]"));
@@ -45,8 +45,8 @@ namespace RavenFS.Tests
 		public void CanSetFileMetadata_Then_GetItFromFile()
 		{
 			WebClient.Headers["Test"] = "Value";
-			WebClient.UploadString("/files/abc.txt", "PUT", "abc");
-			var str = WebClient.DownloadString("/files/abc.txt");
+			WebClient.UploadString("/ravenfs/files/abc.txt", "PUT", "abc");
+			var str = WebClient.DownloadString("/ravenfs/files/abc.txt");
 			Assert.Equal("abc", str);
 			Assert.Equal("Value", WebClient.ResponseHeaders["Test"]);
 		}

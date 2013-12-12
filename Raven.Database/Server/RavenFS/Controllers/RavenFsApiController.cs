@@ -5,9 +5,11 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using System.Web.Http.Controllers;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Client.RavenFS;
@@ -35,9 +37,19 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			get 
 			{
-				return ravenFileSystem ??
-				       (ravenFileSystem = (RavenFileSystem) ControllerContext.Configuration.DependencyResolver.GetService(typeof (RavenFileSystem)));
+				return ravenFileSystem ;
 			}
+		}
+
+		public override Task<HttpResponseMessage> ExecuteAsync(HttpControllerContext controllerContext, CancellationToken cancellationToken)
+		{
+			InnerInitialization(controllerContext);
+			return base.ExecuteAsync(controllerContext, cancellationToken);
+		}
+
+		protected void InnerInitialization(HttpControllerContext controllerContext)
+		{
+			ravenFileSystem = (RavenFileSystem)controllerContext.Configuration.Properties[typeof(RavenFileSystem)];
 		}
 
 		public NotificationPublisher Publisher
