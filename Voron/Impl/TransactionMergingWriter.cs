@@ -41,7 +41,9 @@ namespace Voron.Impl
             _pendingWrites = new ConcurrentQueue<OutstandingWrite>();
             _stopWrites.Set();
             _debugJournal = debugJournal;
-            _backgroundTask = new Lazy<Task>(() => Task.Run(() => BackgroundWriter(), _cancellationTokenSource.Token));
+	        _backgroundTask = new Lazy<Task>(() => Task.Factory.StartNew(BackgroundWriter, _cancellationTokenSource.Token,
+	                                                                     TaskCreationOptions.LongRunning,
+	                                                                     TaskScheduler.Current));
         }
 
         public IDisposable StopWrites()

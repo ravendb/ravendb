@@ -31,7 +31,7 @@ namespace Voron
 
         private readonly WriteAheadJournal _journal;
         private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
-        private readonly AsyncManualResetEvent _flushWriter = new AsyncManualResetEvent();
+		private readonly ManualResetEventSlim _flushWriter = new ManualResetEventSlim();
 
         private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -304,8 +304,10 @@ namespace Voron
                             {
                                 _flushingTask.Wait();
                             }
-                            catch (TaskCanceledException)
+                            catch (AggregateException ae)
                             {
+	                            if (ae.InnerException is OperationCanceledException == false)
+		                            throw ae.InnerException;
                             }
                             break;
                     }
@@ -444,36 +446,40 @@ namespace Voron
             State = state;
         }
 
-        private async Task FlushWritesToDataFileAsync()
+        private Task FlushWritesToDataFileAsync()
         {
-            while (_cancellationTokenSource.IsCancellationRequested == false)
-            {
-                _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+	        return Task.Factory.StartNew(() =>
+		        {
+			        while (_cancellationTokenSource.IsCancellationRequested == false)
+			        {
+				        _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                var hasWrites = await _flushWriter.WaitAsync(_options.IdleFlushTimeout);
+				        var hasWrites = _flushWriter.Wait(_options.IdleFlushTimeout);
 
-                _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+				        _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                if (hasWrites)
-                    _flushWriter.Reset();
+				        if (hasWrites)
+					        _flushWriter.Reset();
 
-	            var sizeOfUnflushedTransactionsInJournalFile = Thread.VolatileRead(ref _sizeOfUnflushedTransactionsInJournalFile);
-                if (sizeOfUnflushedTransactionsInJournalFile == 0)
-                    continue;
+				        var sizeOfUnflushedTransactionsInJournalFile =
+					        Thread.VolatileRead(ref _sizeOfUnflushedTransactionsInJournalFile);
+				        if (sizeOfUnflushedTransactionsInJournalFile == 0)
+					        continue;
 
-                if (hasWrites == false ||
-                    sizeOfUnflushedTransactionsInJournalFile >= _options.MaxNumberOfPagesInJournalBeforeFlush)
-                {
-	                Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, -sizeOfUnflushedTransactionsInJournalFile);
+				        if (hasWrites == false ||
+				            sizeOfUnflushedTransactionsInJournalFile >= _options.MaxNumberOfPagesInJournalBeforeFlush)
+				        {
+					        Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, -sizeOfUnflushedTransactionsInJournalFile);
 
-                    // we either reached our the max size we allow in the journal file before flush flushing (and therefor require a flush)
-                    // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
-                    // while there isn't any other activity going on.
+					        // we either reached our the max size we allow in the journal file before flush flushing (and therefor require a flush)
+					        // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
+					        // while there isn't any other activity going on.
 
-                    using (var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction))
-                        journalApplicator.ApplyLogsToDataFile();
-                }
-            }
+					        using (var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction))
+						        journalApplicator.ApplyLogsToDataFile();
+				        }
+			        }
+		        }, TaskCreationOptions.LongRunning);
         }
 
         public void FlushLogToDataFile(Transaction tx = null)
