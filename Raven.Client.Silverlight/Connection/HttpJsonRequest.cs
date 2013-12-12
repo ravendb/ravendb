@@ -39,7 +39,7 @@ namespace Raven.Client.Silverlight.Connection
 	{
 		internal readonly string Url;
 		internal readonly string Method;
-		private readonly DocumentConvention conventions;
+		private readonly Convention conventions;
 
 		private bool writeCalled;
 		private HttpClientHandler handler;

@@ -100,6 +100,7 @@
     <Compile Include="Document\DTC\VolatileOnlyTransactionRecoveryStorage.cs" />
     <Compile Include="Document\ReplicationBehavior.cs" />
     <Compile Include="Document\SessionOperations\LoadTransformerOperation.cs" />
+    <Compile Include="Convention.cs" />
     <Compile Include="Indexes\RavenMethodAttribute.cs" />
     <Compile Include="Linq\AggregationQuery.cs" />
     <Compile Include="Linq\DynamicAggregationQuery.cs" />

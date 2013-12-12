@@ -58,7 +58,7 @@ namespace Raven.Client.Connection
 		internal CachedRequest CachedRequestDetails;
 		private readonly HttpJsonRequestFactory factory;
 		private readonly IHoldProfilingInformation owner;
-		private readonly DocumentConvention conventions;
+		private readonly Convention conventions;
 		private string postedData;
 		private bool isRequestSentToServer;
 
