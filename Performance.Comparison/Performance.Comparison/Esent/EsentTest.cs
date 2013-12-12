@@ -32,12 +32,6 @@
             _database = Path.Combine(_path, "edbtest.db");
         }
 
-        ~EsentTest()
-        {
-            if (Directory.Exists(_path))
-                Directory.Delete(_path, true);
-        }
-
         public Instance CreateInstance(bool delete = true)
         {
             if (delete && Directory.Exists(_path))
@@ -101,7 +95,7 @@
 
                     var secondaryColumn = new JET_COLUMNDEF
                     {
-                        coltyp = JET_coltyp.Binary
+                        coltyp = JET_coltyp.LongBinary,
                     };
 
                     JET_COLUMNID primaryColumnId;
