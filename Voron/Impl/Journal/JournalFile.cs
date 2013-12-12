@@ -181,10 +181,9 @@ namespace Voron.Impl.Journal
 	    }
 
 
-        public void InitFrom(JournalReader journalReader, Dictionary<long, PagePosition> pageTranslationTable)
+        public void InitFrom(JournalReader journalReader)
         {
             _writePage = journalReader.NextWritePage;
-            _pageTranslationTable.SetItemsNoTransaction(pageTranslationTable);
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }

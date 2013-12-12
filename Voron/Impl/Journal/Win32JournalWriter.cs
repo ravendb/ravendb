@@ -1,14 +1,17 @@
-﻿using System;
-using System.ComponentModel;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Win32.SafeHandles;
-using Voron.Impl.Paging;
-
-namespace Voron.Impl.Journal
+﻿namespace Voron.Impl.Journal
 {
+	using System;
+	using System.ComponentModel;
+	using System.IO;
+	using System.Runtime.InteropServices;
+	using System.Threading;
+	using System.Threading.Tasks;
+
+	using Microsoft.Win32.SafeHandles;
+
+	using Voron.Impl.Paging;
+	using Voron.Util;
+
 	public unsafe class Win32FileJournalWriter: IJournalWriter
 	{
 		private readonly string _filename;
