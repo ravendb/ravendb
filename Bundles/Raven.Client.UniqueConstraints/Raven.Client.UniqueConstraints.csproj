@@ -52,6 +52,9 @@
     <Compile Include="..\Raven.Bundles.UniqueConstraints\Util.cs">
       <Link>Util.cs</Link>
     </Compile>
+    <Compile Include="ConstraintConfig.cs" />
+    <Compile Include="ConstraintInfo.cs" />
+    <Compile Include="ReflectedConstraintInfo.cs" />
     <Compile Include="UniqueConstraintAttribte.cs" />
     <Compile Include="UniqueConstraintExtensions.cs" />
     <Compile Include="UniqueConstraintsStoreListener.cs" />
