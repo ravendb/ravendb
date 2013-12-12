@@ -901,7 +901,8 @@ namespace Raven.Database.Config
 				if (File.Exists(Path.Combine(DataDirectory, "Data")))
 					return typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 			}
-			return DefaultStorageTypeName;
+
+			return DefaultStorageTypeName ?? typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
 		}
 
 		public void Dispose()
