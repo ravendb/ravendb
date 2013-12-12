@@ -142,6 +142,11 @@ namespace Raven.Database.Linq
 			return new AttachmentForIndexing(key);
 		}
 
+        // Required for RavenDB-1519
+	    protected dynamic LoadDocument<TIGnored>(object item)
+	    {
+	        return LoadDocument(item);
+	    }
 		protected dynamic LoadDocument(object item)
 		{
 			if (CurrentIndexingScope.Current == null)
