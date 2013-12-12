@@ -1,10 +1,10 @@
-﻿var __extends = this.__extends || function (d, b) {
+var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "models/collectionInfo"], function(require, exports, commandBase, collectionInfo) {
+define(["require", "exports", "commands/commandBase", "models/database", "models/collectionInfo"], function(require, exports, commandBase, database, collectionInfo) {
     var getCollectionInfoCommand = (function (_super) {
         __extends(getCollectionInfoCommand, _super);
         function getCollectionInfoCommand(collection, db) {

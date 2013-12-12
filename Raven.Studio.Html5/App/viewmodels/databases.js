@@ -1,4 +1,4 @@
-define(["require", "exports", "durandal/app", "plugins/router", "common/appUrl", "common/raven", "models/database", "viewModels/createDatabase", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand"], function(require, exports, app, router, appUrl, raven, database, createDatabase, getDatabaseStatsCommand, getDatabasesCommand) {
+define(["require", "exports", "durandal/app", "plugins/router", "common/appUrl", "common/raven", "models/database", "viewmodels/createDatabase", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand"], function(require, exports, app, router, appUrl, raven, database, createDatabase, getDatabaseStatsCommand, getDatabasesCommand) {
     var databases = (function () {
         function databases() {
             this.databases = ko.observableArray();
