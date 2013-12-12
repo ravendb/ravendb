@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Specialized;
-using Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.RavenFS.Util
 {
