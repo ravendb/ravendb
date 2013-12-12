@@ -1,4 +1,4 @@
-define(["require", "exports", "models/document", "plugins/dialog", "commands/deleteDocumentsCommand"], function(require, exports, document, dialog, deleteDocumentsCommand) {
+define(["require", "exports", "models/document", "plugins/dialog", "commands/deleteDocumentsCommand", "common/appUrl"], function(require, exports, document, dialog, deleteDocumentsCommand, appUrl) {
     var deleteDocuments = (function () {
         function deleteDocuments(documents) {
             this.documents = ko.observableArray();
@@ -15,7 +15,7 @@ define(["require", "exports", "models/document", "plugins/dialog", "commands/del
             var deletedDocIds = this.documents().map(function (i) {
                 return i.getId();
             });
-            var deleteCommand = new deleteDocumentsCommand(deletedDocIds);
+            var deleteCommand = new deleteDocumentsCommand(deletedDocIds, appUrl.getDatabase());
             var deleteCommandTask = deleteCommand.execute();
 
             deleteCommandTask.done(function () {

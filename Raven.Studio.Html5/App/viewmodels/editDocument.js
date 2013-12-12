@@ -1,5 +1,5 @@
 /// <reference path="../../Scripts/typings/ace/ace.amd.d.ts" />
-define(["require", "exports", "durandal/app", "durandal/system", "plugins/router", "ace/ace", "models/document", "models/documentMetadata", "commands/saveDocumentCommand", "common/raven", "viewmodels/deleteDocuments", "common/pagedList", "common/appUrl"], function(require, exports, app, sys, router, ace, document, documentMetadata, saveDocumentCommand, raven, deleteDocuments, pagedList, appUrl) {
+define(["require", "exports", "durandal/app", "durandal/system", "plugins/router", "ace/ace", "models/document", "models/documentMetadata", "commands/saveDocumentCommand", "common/raven", "viewModels/deleteDocuments", "common/pagedList", "common/appUrl", "commands/getDocumentsCommand"], function(require, exports, app, sys, router, ace, document, documentMetadata, saveDocumentCommand, raven, deleteDocuments, pagedList, appUrl, getDocumentsCommand) {
     var editDocument = (function () {
         function editDocument() {
             var _this = this;
@@ -60,7 +60,6 @@ define(["require", "exports", "durandal/app", "durandal/system", "plugins/router
             });
         }
         editDocument.prototype.activate = function (navigationArgs) {
-            var _this = this;
             // Find the database and collection we're supposed to load.
             // Used for paging through items.
             if (navigationArgs && navigationArgs.database) {
@@ -72,7 +71,7 @@ define(["require", "exports", "durandal/app", "durandal/system", "plugins/router
                 if (!isNaN(itemIndex)) {
                     var collectionName = decodeURIComponent(navigationArgs.list) === "All Documents" ? null : navigationArgs.list;
                     var fetcher = function (skip, take) {
-                        return _this.ravenDb.documents(collectionName, skip, take);
+                        return new getDocumentsCommand(collectionName, appUrl.getDatabase(), skip, take).execute();
                     };
                     var list = new pagedList(fetcher);
                     list.collectionName = navigationArgs.list;
@@ -165,7 +164,7 @@ define(["require", "exports", "durandal/app", "durandal/system", "plugins/router
             }
 
             var newDoc = new document(updatedDto);
-            var saveCommand = new saveDocumentCommand(this.userSpecifiedId(), newDoc);
+            var saveCommand = new saveDocumentCommand(this.userSpecifiedId(), newDoc, appUrl.getDatabase());
             var saveTask = saveCommand.execute();
             saveTask.done(function (idAndEtag) {
                 _this.isCreatingNewDocument(false);
@@ -280,6 +279,7 @@ define(["require", "exports", "durandal/app", "durandal/system", "plugins/router
         };
 
         editDocument.prototype.navigateToCollection = function (collectionName) {
+            // TODO: use appUrl instead.
             var databaseFragment = raven.activeDatabase() ? "&database=" + raven.activeDatabase().name : "";
             var collectionFragment = collectionName ? "&collection=" + collectionName : "";
             router.navigate("#documents?" + collectionFragment + databaseFragment);

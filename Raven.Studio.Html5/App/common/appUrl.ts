@@ -1,14 +1,18 @@
 import database = require("models/database");
-import raven = require("common/raven");
 import pagedList = require("common/pagedList");
+import router = require("plugins/router");
 
 // Helper class with static methods for generating app URLs.
 class appUrl {
 
+    static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
+    //private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
+
 	// Stores some computed values that update whenever the current database updates.
 	private static currentDbComputeds: computedAppUrls = {
 		documents: ko.computed(() => appUrl.forDocuments()),
-		status: ko.computed(() => appUrl.forStatus())
+        status: ko.computed(() => appUrl.forStatus()),
+        settings: ko.computed(() => appUrl.forSettings())
 	};
 	
     /**
@@ -18,7 +22,7 @@ class appUrl {
 	* @param docIndexInCollection The 0-based index of the doc to edit inside the paged collection, or null if paging will be disabled.
 	* @param database The database to use in the URL. If null, the current database will be used.
 	*/
-    static forEditDoc(id: string, collectionName?: string, docIndexInCollection?: number, db: database = raven.activeDatabase()): string {
+    static forEditDoc(id: string, collectionName?: string, docIndexInCollection?: number, db: database = appUrl.getDatabase()): string {
 		var databaseUrlPart = appUrl.getEncodedDbPart(db);
 		var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
 		var pagedListInfo = collectionName && docIndexInCollection != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + docIndexInCollection : "";
@@ -29,15 +33,67 @@ class appUrl {
 	* Gets the URL for status page.
 	* @param database The database to use in the URL. If null, the current database will be used.
 	*/
-	static forStatus(db: database = raven.activeDatabase()): string {
+	static forStatus(db: database = appUrl.getDatabase()): string {
 		return "#status?" + appUrl.getEncodedDbPart(db);
-	}
+    }
 
-	static forDocuments(collection?: string, db: database = raven.activeDatabase()): string {
+    static forSettings(db: database = appUrl.getDatabase()): string {
+        return "#settings? " + appUrl.getEncodedDbPart(db);
+    }
+
+	static forDocuments(collection?: string, db: database = appUrl.getDatabase()): string {
 		var databasePart = appUrl.getEncodedDbPart(db);
 		var collectionPart = collection ? "&collection=" + encodeURIComponent(collection) : "";
 		return "#documents?" + collectionPart + databasePart;
-	}
+    }
+
+    static forDatabaseQuery(db: database) {
+        if (db && !db.isSystem) {
+            return appUrl.baseUrl + "/databases/" + db.name;
+        }
+
+        return this.baseUrl;
+    }
+
+    static getDatabase(): database {
+
+        // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
+        
+        var dbIndicator = "database=";
+        var hash = window.location.hash;
+        var dbIndex = hash.indexOf(dbIndicator);
+        if (dbIndex >= 0) {
+            // A database is specified in the address.
+            var dbSegmentEnd = hash.indexOf("&", dbIndex);
+            if (dbSegmentEnd === -1) {
+                dbSegmentEnd = hash.length - 1;
+            }
+
+            var databaseName = hash.substring(dbIndex + dbIndicator.length, dbSegmentEnd + 1);
+            return new database(databaseName);
+        } else {
+            // No database is specified in the URL. Assume it's the system database.
+            var db = new database("<system>");
+            db.isSystem = true;
+            return db;
+        } 
+    }
+
+    /**
+    * Gets the server URL.
+    */
+    static forServer() {
+        // Ported this code from old Silverlight Studio. Do we still need this?
+        if (window.location.protocol === "file:") {
+            if (window.location.search.indexOf("fiddler")) {
+                return "http://localhost.fiddler:8080";
+            } else {
+                return "http://localhost:8080";
+            }
+        }
+
+        return window.location.protocol + "//" + window.location.host;
+    }
 
 	/**
 	* Gets an object containing computed URLs that update when the current database updates.

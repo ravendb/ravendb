@@ -3,24 +3,13 @@ import collection = require("models/collection");
 import collectionInfo = require("models/collectionInfo");
 import document = require("models/document");
 import pagedResultSet = require("common/pagedResultSet");
+import appUrl = require("common/appUrl");
 
 class raven {
-
-    private baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
-    //private baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
-
-    private static ravenClientVersion = '2.5.0.0';
+    
+    private static ravenClientVersion = '3.0.0.0';
     public static activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase");
-
-    public databases(): JQueryPromise<Array<database>> {
-        var resultsSelector = (databaseNames: string[]) => databaseNames.map(n => new database(n));
-        return this.fetch("/databases", { pageSize: 1024 }, null, resultsSelector);
-    }
-
-    public databaseStats(databaseName: string): JQueryPromise<documentStatistics> {
-        return this.fetch("/databases/" + databaseName + "/stats", null, null);
-    }
-
+    
     public collections(): JQueryPromise<Array<collection>> {
         this.requireActiveDatabase();
 
@@ -33,37 +22,10 @@ class raven {
         return this.fetch("/terms/Raven/DocumentsByEntityName", args, raven.activeDatabase(), resultsSelector);
     }
 
-    public collectionInfo(collectionName?: string, documentsSkip = 0, documentsTake = 0): JQueryPromise<collectionInfo> {
-        this.requireActiveDatabase();
-
-        var args = {
-            query: collectionName ? "Tag:" + collectionName : undefined,
-            start: documentsSkip,
-            pageSize: documentsTake
-        };
-
-        var resultsSelector = (dto: collectionInfoDto) => new collectionInfo(dto);
-        var url = "/indexes/Raven/DocumentsByEntityName";
-        return this.fetch(url, args, raven.activeDatabase(), resultsSelector);
-    }
-
     public userInfo() {
         this.requireActiveDatabase();
         var url = "/debug/user-info";
         return this.fetch(url, null, raven.activeDatabase(), null);
-    }
-
-    public documents(collectionName: string, skip = 0, take = 30): JQueryPromise<pagedResultSet> {
-        this.requireActiveDatabase();
-
-        var documentsTask = $.Deferred();
-        this.collectionInfo(collectionName, skip, take)
-            .then(collection => {
-                var items = collection.results;
-                var resultSet = new pagedResultSet(items, collection.totalResults);
-                documentsTask.resolve(resultSet);
-            });
-        return documentsTask;
     }
 
     public document(id: string): JQueryPromise<document> {
@@ -82,11 +44,6 @@ class raven {
         return this.docsById<Array<document>>(searchTerm, start, pageSize, metadataOnly, resultsSelector);
     }
 
-    public deleteDocuments(ids: string[]): JQueryPromise<any> {
-        var deleteDocs = ids.map(id => this.createDeleteDocument(id));
-        return this.post("/bulk_docs", ko.toJSON(deleteDocs), raven.activeDatabase());
-    }
-
     public deleteCollection(collectionName: string): JQueryPromise<any> {
         var args = {
             query: "Tag:" + collectionName,
@@ -98,49 +55,12 @@ class raven {
         return this.delete_(url + urlParams, null, raven.activeDatabase());
     }
 
-    public saveDocument(id: string, doc: document): JQueryPromise<{ Key: string; ETag: string }> {
-        var customHeaders = {
-            'Raven-Client-Version': raven.ravenClientVersion,
-            'Raven-Entity-Name': doc.__metadata.ravenEntityName,
-            'Raven-Clr-Type': doc.__metadata.ravenClrType,
-            'If-None-Match': doc.__metadata.etag
-        };
-        var args = JSON.stringify(doc.toDto());
-        var url = "/docs/" + id;
-        return this.put(url, args, raven.activeDatabase(), customHeaders);
-    }
-
-    public createDatabase(databaseName: string): JQueryPromise<any> {
-        if (!databaseName) {
-            throw new Error("Database must have a name.");
-        }
-
-        var databaseDoc = {
-            "Settings": {
-                "Raven/DataDir": "~\\Databases\\" + databaseName
-            },
-            "SecuredSettings": {},
-            "Disabled": false
-        };
-
-        var createTask = this.put("/admin/databases/" + databaseName, JSON.stringify(databaseDoc), null);
-
-        // Forces creation of standard indexes? Looks like it.
-        createTask.done(() => this.fetch("/databases/" + databaseName + "/silverlight/ensureStartup", null, null)); 
-
-        return createTask;
-    }
-
-    public getBaseUrl() {
-        return this.baseUrl;
-    }
-
     public getDatabaseUrl(database: database) {
         if (database && !database.isSystem) {
-            return this.baseUrl + "/databases/" + database.name;
+            return appUrl.baseUrl + "/databases/" + database.name;
         }
 
-        return this.baseUrl;
+        return appUrl.baseUrl;
     }
 
     // TODO: This doesn't really belong here.
@@ -167,15 +87,6 @@ class raven {
             pageSize: pageSize
         };
         return this.fetch(url, args, raven.activeDatabase(), resultsSelector);
-    }
-
-    private createDeleteDocument(id: string) {
-        return {
-            Key: id,
-            Method: "DELETE",
-            Etag: null,
-            AdditionalData: null
-        }
     }
 
     private requireActiveDatabase() {

@@ -1,4 +1,4 @@
-﻿define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "viewmodels/deleteCollection", "common/raven", "common/pagedList"], function(require, exports, app, router, collection, deleteCollection, raven, pagedList) {
+﻿define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "viewModels/deleteCollection", "common/raven", "common/pagedList", "common/appUrl", "commands/getDocumentsCommand"], function(require, exports, app, router, collection, deleteCollection, raven, pagedList, appUrl, getDocumentsCommand) {
     var documents = (function () {
         function documents() {
             var _this = this;
@@ -20,7 +20,7 @@
             });
             this.subscriptions.push(dbChangedSubscription);
 
-            // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo/123&database="blahDb"
+            // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
             this.collectionToSelectName = args ? args.collection : null;
 
             // See if we've got a database to select.
@@ -28,7 +28,7 @@
                 ko.postbox.publish("ActivateDatabaseWithName", args.database);
             }
 
-            return this.fetchCollections();
+            return this.fetchCollections(appUrl.getDatabase());
         };
 
         documents.prototype.deactivate = function () {
@@ -47,7 +47,7 @@
             });
         };
 
-        documents.prototype.collectionsLoaded = function (collections) {
+        documents.prototype.collectionsLoaded = function (collections, db) {
             var _this = this;
             // Set the color class for each of the collections.
             // These styles are found in app.less.
@@ -57,7 +57,8 @@
             });
 
             // Create the "All Documents" pseudo collection.
-            this.allDocumentsCollection = new collection("All Documents", true);
+            this.allDocumentsCollection = new collection("All Documents");
+            this.allDocumentsCollection.isAllDocuments = true;
             this.allDocumentsCollection.colorClass = "all-documents-collection";
             this.allDocumentsCollection.documentCount = ko.computed(function () {
                 return _this.collections().filter(function (c) {
@@ -69,36 +70,31 @@
                 }, 0);
             }); // And sum them up.
 
+            // Create the "System Documents" pseudo collection.
+            var systemDocumentsCollection = new collection("System Documents");
+            systemDocumentsCollection.isSystemDocuments = true;
+
             // All systems a-go. Load them into the UI and select the first one.
-            var allCollections = [this.allDocumentsCollection].concat(collections);
+            var allCollections = [this.allDocumentsCollection].concat(collections.concat(systemDocumentsCollection));
             this.collections(allCollections);
 
-            var collectionToSelect = collections.filter(function (c) {
+            var collectionToSelect = collections.first(function (c) {
                 return c.name === _this.collectionToSelectName;
-            })[0] || this.allDocumentsCollection;
+            }) || this.allDocumentsCollection;
             collectionToSelect.activate();
 
             // Fetch the collection info for each collection.
             // The collection info contains information such as total number of documents.
             collections.forEach(function (c) {
-                return _this.fetchTotalDocuments(c);
-            });
-        };
-
-        documents.prototype.fetchTotalDocuments = function (collection) {
-            this.ravenDb.collectionInfo(collection.name).done(function (info) {
-                collection.documentCount(info.totalResults);
+                return c.getInfo(db);
             });
         };
 
         documents.prototype.selectedCollectionChanged = function (selected) {
-            var _this = this;
             if (collection) {
                 var fetcher = function (skip, take) {
-                    var collectionName = selected !== _this.allDocumentsCollection ? selected.name : null;
-                    return _this.ravenDb.documents(collectionName, skip, take);
+                    return new getDocumentsCommand(selected, appUrl.getDatabase(), skip, take).execute();
                 };
-
                 var documentsList = new pagedList(fetcher);
                 documentsList.collectionName = selected.name;
                 this.currentCollectionPagedItems(documentsList);
@@ -107,8 +103,9 @@
 
         documents.prototype.databaseChanged = function (db) {
             if (db) {
+                // TODO: use appUrl here.
                 router.navigate("#documents?database=" + encodeURIComponent(db.name), false);
-                this.fetchCollections();
+                this.fetchCollections(db);
             }
         };
 
@@ -132,10 +129,10 @@
             router.navigate("#documents?" + collectionPart + databasePart, false);
         };
 
-        documents.prototype.fetchCollections = function () {
+        documents.prototype.fetchCollections = function (db) {
             var _this = this;
             return this.ravenDb.collections().done(function (results) {
-                return _this.collectionsLoaded(results);
+                return _this.collectionsLoaded(results, db);
             });
         };
         return documents;

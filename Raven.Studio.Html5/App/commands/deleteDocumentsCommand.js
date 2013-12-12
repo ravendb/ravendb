@@ -4,16 +4,20 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase"], function(require, exports, commandBase) {
+define(["require", "exports", "commands/commandBase", "models/database"], function(require, exports, commandBase, database) {
     var deleteDocumentsCommand = (function (_super) {
         __extends(deleteDocumentsCommand, _super);
-        function deleteDocumentsCommand(docIds) {
+        function deleteDocumentsCommand(docIds, db) {
             _super.call(this);
             this.docIds = docIds;
+            this.db = db;
         }
         deleteDocumentsCommand.prototype.execute = function () {
             var _this = this;
-            var deleteTask = this.ravenDb.deleteDocuments(this.docIds);
+            var deleteDocs = this.docIds.map(function (id) {
+                return _this.createDeleteDocument(id);
+            });
+            var deleteTask = this.post("/bulk_docs", ko.toJSON(deleteDocs), this.db);
 
             var docCount = this.docIds.length;
             var alertInfoTitle = docCount > 1 ? "Deleting " + docCount + "docs..." : "Deleting " + this.docIds[0];
@@ -27,6 +31,15 @@ define(["require", "exports", "commands/commandBase"], function(require, exports
             });
 
             return deleteTask;
+        };
+
+        deleteDocumentsCommand.prototype.createDeleteDocument = function (id) {
+            return {
+                Key: id,
+                Method: "DELETE",
+                Etag: null,
+                AdditionalData: null
+            };
         };
         return deleteDocumentsCommand;
     })(commandBase);

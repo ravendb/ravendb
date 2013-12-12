@@ -1,6 +1,6 @@
 ﻿/// <reference path="../../../Scripts/typings/knockout.postbox/knockout-postbox.d.ts" />
 /// <reference path="../../../Scripts/typings/durandal/durandal.d.ts" />
-define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl", "models/document", "models/collection", "models/database", "common/pagedResultSet", "viewmodels/deleteDocuments", "viewmodels/copyDocuments", "durandal/app", "widgets/virtualTable/row", "widgets/virtualTable/column"], function(require, exports, pagedList, raven, appUrl, document, collection, database, pagedResultSet, deleteDocuments, copyDocuments, app, row, column) {
+define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl", "models/document", "models/collection", "models/database", "common/pagedResultSet", "viewModels/deleteDocuments", "viewModels/copyDocuments", "durandal/app", "widgets/virtualTable/row", "widgets/virtualTable/column"], function(require, exports, pagedList, raven, appUrl, document, collection, database, pagedResultSet, deleteDocuments, copyDocuments, app, row, column) {
     var ctor = (function () {
         function ctor() {
             this.visibleRowCount = 0;
@@ -270,7 +270,8 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
             var _this = this;
             var rowIndex = row.rowIndex();
             var isChecked = row.isChecked();
-            var toggledIndices = isShiftSelect && this.selectedIndices().length > 0 ? this.getRowIndicesRange(this.selectedIndices.first(), rowIndex) : [rowIndex];
+            var firstIndex = this.selectedIndices.first();
+            var toggledIndices = isShiftSelect && this.selectedIndices().length > 0 ? this.getRowIndicesRange(firstIndex, rowIndex) : [rowIndex];
             if (!isChecked) {
                 // Going from unchecked to checked.
                 if (this.selectedIndices.indexOf(rowIndex) === -1) {
@@ -324,8 +325,8 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
             if (!this.items || this.selectedIndices().length === 0) {
                 return [];
             }
-
-            var maxSelectedIndices = max ? this.selectedIndices.slice(0, max) : this.selectedIndices();
+            var sliced = max ? this.selectedIndices.slice(0, max) : null;
+            var maxSelectedIndices = sliced || this.selectedIndices();
             return this.items.getCachedItemsAt(maxSelectedIndices);
         };
 

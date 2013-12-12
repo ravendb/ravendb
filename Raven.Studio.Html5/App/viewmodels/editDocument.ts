@@ -9,9 +9,10 @@ import document = require("models/document");
 import documentMetadata = require("models/documentMetadata");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import raven = require("common/raven");
-import deleteDocuments = require("viewmodels/deleteDocuments");
+import deleteDocuments = require("viewModels/deleteDocuments");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
+import getDocumentsCommand = require("commands/getDocumentsCommand");
 
 class editDocument {
 
@@ -80,7 +81,7 @@ class editDocument {
             var itemIndex = parseInt(navigationArgs.item, 10);
             if (!isNaN(itemIndex)) {
                 var collectionName = decodeURIComponent(navigationArgs.list) === "All Documents" ? null : navigationArgs.list;
-                var fetcher = (skip: number, take: number) => this.ravenDb.documents(collectionName, skip, take);
+                var fetcher = (skip: number, take: number) => new getDocumentsCommand(collectionName, appUrl.getDatabase(), skip, take).execute();
                 var list = new pagedList(fetcher);
                 list.collectionName = navigationArgs.list;
                 list.currentItemIndex(itemIndex);
@@ -165,7 +166,7 @@ class editDocument {
         }
 
         var newDoc = new document(updatedDto);
-        var saveCommand = new saveDocumentCommand(this.userSpecifiedId(), newDoc);
+        var saveCommand = new saveDocumentCommand(this.userSpecifiedId(), newDoc, appUrl.getDatabase());
         var saveTask = saveCommand.execute();
         saveTask.done((idAndEtag: { Key: string; ETag: string }) => {
             this.isCreatingNewDocument(false);
@@ -274,6 +275,7 @@ class editDocument {
     }
 
     navigateToCollection(collectionName: string) {
+        // TODO: use appUrl instead.
         var databaseFragment = raven.activeDatabase() ? "&database=" + raven.activeDatabase().name : "";
         var collectionFragment = collectionName ? "&collection=" + collectionName : "";
         router.navigate("#documents?" + collectionFragment + databaseFragment);

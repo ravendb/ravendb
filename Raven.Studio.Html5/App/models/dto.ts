@@ -47,3 +47,46 @@ interface documentStatistics {
     StaleIndexes: Array<any>;
     Triggers: Array<any>;
 }
+
+interface apiKeyDto {
+    Name: string;
+    Secret: string;
+    Enabled: boolean;
+    Databases: Array<apiKeyDatabaseDto>;
+}
+
+interface apiKeyDatabaseDto {
+    TenantId: string;
+    Admin: boolean;
+    ReadOnly: boolean;
+}
+
+interface buildVersionDto {
+    ProductVersion: string;
+    BuildVersion: string;
+}
+
+interface licenseStatusDto {
+    Message: string;
+    Status: string;
+    Error: boolean;
+    IsCommercial: boolean;
+    ValidCommercialLicenseSeen: boolean;
+    Attributes: {
+        periodicBackup: string;
+        encryption: string;
+        compression: string;
+        quotas: string;
+        authorization: string;
+        documentExpiration: string;
+        replication: string;
+        versioning: string;
+        version: string;
+        allowWindowsClustering: string;
+        OEM: string;
+        numberOfDatabases: string;
+        maxSizeInMb: string;
+        maxRamUtilization: string;
+        maxParallelism: string;
+    }
+}

@@ -9,8 +9,8 @@ import document = require("models/document");
 import collection = require("models/collection");
 import database = require("models/database");
 import pagedResultSet = require("common/pagedResultSet"); 
-import deleteDocuments = require("viewmodels/deleteDocuments");
-import copyDocuments = require("viewmodels/copyDocuments");
+import deleteDocuments = require("viewModels/deleteDocuments");
+import copyDocuments = require("viewModels/copyDocuments");
 import app = require("durandal/app");
 import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
@@ -160,7 +160,7 @@ class ctor {
 
     getCollectionClassFromDocument(doc: document) {
         var collectionName = doc.__metadata.ravenEntityName;
-        var collection = this.collections().first(c => c.name === collectionName);
+        var collection = this.collections().first<collection>(c => c.name === collectionName);
         if (collection) {
             return collection.colorClass;
         }
@@ -277,7 +277,8 @@ class ctor {
     toggleRowChecked(row: row, isShiftSelect = false) {
         var rowIndex = row.rowIndex();
         var isChecked = row.isChecked();
-        var toggledIndices: Array<number> = isShiftSelect && this.selectedIndices().length > 0 ? this.getRowIndicesRange(this.selectedIndices.first(), rowIndex) : [rowIndex];
+        var firstIndex = <number>this.selectedIndices.first();
+        var toggledIndices: Array<number> = isShiftSelect && this.selectedIndices().length > 0 ? this.getRowIndicesRange(firstIndex, rowIndex) : [rowIndex];
         if (!isChecked) {
             // Going from unchecked to checked.
             if (this.selectedIndices.indexOf(rowIndex) === -1) {
@@ -326,8 +327,8 @@ class ctor {
         if (!this.items || this.selectedIndices().length === 0) {
             return [];
         }
-
-        var maxSelectedIndices: Array<number> = max ? this.selectedIndices.slice(0, max) : this.selectedIndices();
+        var sliced = max ? <number[]>this.selectedIndices.slice(0, max) : null;
+        var maxSelectedIndices = sliced || <number[]>this.selectedIndices();
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 

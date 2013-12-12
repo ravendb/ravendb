@@ -1,4 +1,4 @@
-define(["require", "exports", "models/database", "common/raven", "common/pagedList"], function(require, exports, database, raven, pagedList) {
+define(["require", "exports", "models/database", "common/pagedList"], function(require, exports, database, pagedList) {
     // Helper class with static methods for generating app URLs.
     var appUrl = (function () {
         function appUrl() {
@@ -11,7 +11,7 @@ define(["require", "exports", "models/database", "common/raven", "common/pagedLi
         * @param database The database to use in the URL. If null, the current database will be used.
         */
         appUrl.forEditDoc = function (id, collectionName, docIndexInCollection, db) {
-            if (typeof db === "undefined") { db = raven.activeDatabase(); }
+            if (typeof db === "undefined") { db = appUrl.getDatabase(); }
             var databaseUrlPart = appUrl.getEncodedDbPart(db);
             var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
             var pagedListInfo = collectionName && docIndexInCollection != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + docIndexInCollection : "";
@@ -23,15 +23,66 @@ define(["require", "exports", "models/database", "common/raven", "common/pagedLi
         * @param database The database to use in the URL. If null, the current database will be used.
         */
         appUrl.forStatus = function (db) {
-            if (typeof db === "undefined") { db = raven.activeDatabase(); }
+            if (typeof db === "undefined") { db = appUrl.getDatabase(); }
             return "#status?" + appUrl.getEncodedDbPart(db);
         };
 
+        appUrl.forSettings = function (db) {
+            if (typeof db === "undefined") { db = appUrl.getDatabase(); }
+            return "#settings? " + appUrl.getEncodedDbPart(db);
+        };
+
         appUrl.forDocuments = function (collection, db) {
-            if (typeof db === "undefined") { db = raven.activeDatabase(); }
+            if (typeof db === "undefined") { db = appUrl.getDatabase(); }
             var databasePart = appUrl.getEncodedDbPart(db);
             var collectionPart = collection ? "&collection=" + encodeURIComponent(collection) : "";
             return "#documents?" + collectionPart + databasePart;
+        };
+
+        appUrl.forDatabaseQuery = function (db) {
+            if (db && !db.isSystem) {
+                return appUrl.baseUrl + "/databases/" + db.name;
+            }
+
+            return this.baseUrl;
+        };
+
+        appUrl.getDatabase = function () {
+            // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
+            var dbIndicator = "database=";
+            var hash = window.location.hash;
+            var dbIndex = hash.indexOf(dbIndicator);
+            if (dbIndex >= 0) {
+                // A database is specified in the address.
+                var dbSegmentEnd = hash.indexOf("&", dbIndex);
+                if (dbSegmentEnd === -1) {
+                    dbSegmentEnd = hash.length - 1;
+                }
+
+                var databaseName = hash.substring(dbIndex + dbIndicator.length, dbSegmentEnd + 1);
+                return new database(databaseName);
+            } else {
+                // No database is specified in the URL. Assume it's the system database.
+                var db = new database("<system>");
+                db.isSystem = true;
+                return db;
+            }
+        };
+
+        /**
+        * Gets the server URL.
+        */
+        appUrl.forServer = function () {
+            // Ported this code from old Silverlight Studio. Do we still need this?
+            if (window.location.protocol === "file:") {
+                if (window.location.search.indexOf("fiddler")) {
+                    return "http://localhost.fiddler:8080";
+                } else {
+                    return "http://localhost:8080";
+                }
+            }
+
+            return window.location.protocol + "//" + window.location.host;
         };
 
         /**
@@ -44,12 +95,17 @@ define(["require", "exports", "models/database", "common/raven", "common/pagedLi
         appUrl.getEncodedDbPart = function (db) {
             return db ? "&database=" + encodeURIComponent(db.name) : "";
         };
+        appUrl.baseUrl = "http://localhost:8080";
+
         appUrl.currentDbComputeds = {
             documents: ko.computed(function () {
                 return appUrl.forDocuments();
             }),
             status: ko.computed(function () {
                 return appUrl.forStatus();
+            }),
+            settings: ko.computed(function () {
+                return appUrl.forSettings();
             })
         };
         return appUrl;

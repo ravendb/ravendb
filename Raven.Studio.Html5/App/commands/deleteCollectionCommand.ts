@@ -1,17 +1,24 @@
 import commandBase = require("commands/commandBase");
 import alertType = require("common/alertType");
+import database = require("models/database");
 
 class deleteCollectionCommand extends commandBase {
 
-    constructor(private collectionName: string) {
+    constructor(private collectionName: string, private db: database) {
         super();
     }
 
     execute(): JQueryPromise<any> {
-        var deleteTask = this.ravenDb.deleteCollection(this.collectionName);
-
         this.reportInfo("Deleting " + this.collectionName + " collection...");
 
+        var args = {
+            query: "Tag:" + this.collectionName,
+            pageSize: 128,
+            allowStale: true
+        };
+        var url = "/bulk_docs/Raven/DocumentsByEntityName";
+        var urlParams = "?query=Tag%3A" + encodeURIComponent(this.collectionName) + "&pageSize=128&allowStale=true";
+        var deleteTask = this.del(url + urlParams, null, this.db);
         deleteTask.done(() => this.reportSuccess("Deleted " + this.collectionName + " collection"));
         deleteTask.fail((response) => this.reportError("Failed to delete collection", JSON.stringify(response)));
         return deleteTask;

@@ -1,4 +1,4 @@
-define(["require", "exports", "models/document", "plugins/dialog", "commands/deleteCollectionCommand", "models/collection"], function(require, exports, document, dialog, deleteCollectionCommand, collection) {
+define(["require", "exports", "models/document", "plugins/dialog", "commands/deleteCollectionCommand", "models/collection", "common/appUrl"], function(require, exports, document, dialog, deleteCollectionCommand, collection, appUrl) {
     var deleteCollection = (function () {
         function deleteCollection(collection) {
             this.collection = collection;
@@ -7,7 +7,7 @@ define(["require", "exports", "models/document", "plugins/dialog", "commands/del
         }
         deleteCollection.prototype.deleteCollection = function () {
             var _this = this;
-            var deleteCommand = new deleteCollectionCommand(this.collection.name);
+            var deleteCommand = new deleteCollectionCommand(this.collection.name, appUrl.getDatabase());
             var deleteCommandTask = deleteCommand.execute();
             deleteCommandTask.done(function () {
                 return _this.deletionTask.resolve(_this.collection);

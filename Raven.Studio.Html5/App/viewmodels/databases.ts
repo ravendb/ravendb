@@ -5,7 +5,9 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import raven = require("common/raven");
 import database = require("models/database");
-import createDatabase = require("viewmodels/createDatabase");
+import createDatabase = require("viewModels/createDatabase");
+import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import getDatabasesCommand = require("commands/getDatabasesCommand");
 
 class databases {
 
@@ -17,9 +19,9 @@ class databases {
     }
 
     activate(navigationArgs) {
-        this.ravenDb
-            .databases()
-            .done((results: Array<database>) => this.databasesLoaded(results));
+        new getDatabasesCommand()
+            .execute()
+            .done((results: database[]) => this.databasesLoaded(results));
     }
 
     navigateToDocuments(db: database) {
@@ -32,7 +34,11 @@ class databases {
     }
 
     databasesLoaded(results: Array<database>) {
-        this.databases(results);
+
+        var systemDatabase = new database("<system>");
+        systemDatabase.isSystem = true;
+
+        this.databases(results.concat(systemDatabase));
 
         // If we have just a few databases, grab the db stats for all of them.
         // (Otherwise, we'll grab them when we click them.)
@@ -46,13 +52,13 @@ class databases {
         var createDatabaseViewModel = new createDatabase();
         createDatabaseViewModel
             .creationTask
-            .done((databaseName: string) => this.databases.push(new database(databaseName)));
+            .done((databaseName: string) => this.databases.unshift(new database(databaseName)));
         app.showDialog(createDatabaseViewModel);
     }
 
     fetchStats(db: database) {
-        return this.ravenDb
-            .databaseStats(db.name)
+        new getDatabaseStatsCommand(db)
+            .execute()
             .done(result => db.statistics(result));
     }
 
