@@ -463,7 +463,6 @@ namespace Raven.Database.Server.Controllers
 			return msg;
 		}
 
-		//TODO: check
 		private static readonly string EmbeddedLastChangedDate =
 			File.GetLastWriteTime(typeof(HttpExtensions).Assembly.Location).Ticks.ToString("G");
 
