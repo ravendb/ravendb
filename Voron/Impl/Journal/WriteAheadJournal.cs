@@ -140,16 +140,16 @@ namespace Voron.Impl.Journal
 
 					if (lastReadHeaderPtr != null)
 					{
+						if (pagesToWrite.Count > 0)
+							ApplyPagesToDataFileFromJournal(pagesToWrite);
+
 						*txHeader = *lastReadHeaderPtr;
-						
+
 						_headerAccessor.Modify(header =>
 						{
 							header->Journal.LastSyncedTransactionId = txHeader->TransactionId;
 							header->Journal.LastSyncedJournal = journalNumber;
 						});
-
-						if (pagesToWrite.Count > 0)
-							ApplyPagesToDataFileFromJournal(pagesToWrite);
 					}
 
 					if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
