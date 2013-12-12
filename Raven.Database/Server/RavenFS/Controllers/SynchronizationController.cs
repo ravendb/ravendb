@@ -39,7 +39,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPost]
-		[Route("ravenfs/synchronization/start")]
+		[Route("ravenfs/synchronization/start/{*fileName}")]
 		public Task<SynchronizationReport> Start(string fileName, string destinationServerUrl)
 		{
 			Log.Debug("Starting to synchronize a file '{0}' to {1}", fileName, destinationServerUrl);
