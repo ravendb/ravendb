@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -14,6 +15,7 @@ using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
+using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
@@ -66,16 +68,17 @@ namespace Owin
 			app
 				//uncomment for debug 
 				.UseInterceptor()
-				.UseWebApi(CreateHttpCfg(options.Landlord, options.MixedModeRequestAuthorizer, options.RequestManager));
+				.UseWebApi(CreateHttpCfg(options.Landlord, options.MixedModeRequestAuthorizer, options.RequestManager, options.FileSystem));
 			return app;
 		}
 
-		private static HttpConfiguration CreateHttpCfg(DatabasesLandlord databasesLandlord, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, RequestManager requestManager)
+		private static HttpConfiguration CreateHttpCfg(DatabasesLandlord databasesLandlord, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, RequestManager requestManager, RavenFileSystem fileSystem)
 		{
 			var cfg = new HttpConfiguration();
 			cfg.Properties[typeof(DatabasesLandlord)] = databasesLandlord;
 			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = mixedModeRequestAuthorizer;
 			cfg.Properties[typeof(RequestManager)] = requestManager;
+			cfg.Properties[typeof (RavenFileSystem)] = fileSystem;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 
 			cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
@@ -86,11 +89,16 @@ namespace Owin
 				new { id = RouteParameter.Optional });
 
 			cfg.Routes.MapHttpRoute(
+				"RavenFs", "ravenfs/{controller}/{action}",
+				new { id = RouteParameter.Optional });
+
+			cfg.Routes.MapHttpRoute(
 				"Database Route", "databases/{databaseName}/{controller}/{action}",
 				new { id = RouteParameter.Optional });
 			cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
 
 			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
+			cfg.EnsureInitialized();
 			return cfg;
 		}
 

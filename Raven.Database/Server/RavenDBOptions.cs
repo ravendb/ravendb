@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Database.Config;
+using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
@@ -12,6 +13,7 @@ namespace Raven.Database.Server
 		private readonly MixedModeRequestAuthorizer mixedModeRequestAuthorizer;
 		private readonly DocumentDatabase systemDatabase;
 		private readonly RequestManager requestManager;
+		private readonly RavenFileSystem fileSystem;
 
 		public RavenDBOptions(InMemoryRavenConfiguration configuration)
 		{
@@ -24,6 +26,7 @@ namespace Raven.Database.Server
 			{
 				HttpEndpointRegistration.RegisterHttpEndpointTarget();
 				systemDatabase.SpinBackgroundWorkers();
+				fileSystem = new RavenFileSystem(configuration);
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
@@ -57,12 +60,18 @@ namespace Raven.Database.Server
 			get { return requestManager; }
 		}
 
+		public RavenFileSystem FileSystem
+		{
+			get { return fileSystem; }
+		}
+
 		public void Dispose()
 		{
 			mixedModeRequestAuthorizer.Dispose();
 			databasesLandlord.Dispose();
 			systemDatabase.Dispose();
 			requestManager.Dispose();
+			fileSystem.Dispose();
 		}
 
 		private class RavenServer : IRavenServer
