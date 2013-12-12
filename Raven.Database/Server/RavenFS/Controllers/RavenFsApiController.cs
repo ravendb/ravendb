@@ -13,6 +13,7 @@ using System.Web.Http.Controllers;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
 using Raven.Client.RavenFS;
+using Raven.Database.Server.Controllers;
 using Raven.Database.Server.RavenFS.Infrastructure;
 using Raven.Database.Server.RavenFS.Notifications;
 using Raven.Database.Server.RavenFS.Search;
@@ -24,10 +25,8 @@ using Raven.Database.Util.Streams;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
-	public abstract class RavenFsApiController : ApiController
+	public abstract class RavenFsApiController : RavenBaseApiController
 	{
-		private static readonly ILog Log = LogManager.GetCurrentClassLogger();
-
 		private PagingInfo paging;
 		private NameValueCollection queryString;
 
@@ -47,8 +46,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			return base.ExecuteAsync(controllerContext, cancellationToken);
 		}
 
-		protected void InnerInitialization(HttpControllerContext controllerContext)
+		protected override void InnerInitialization(HttpControllerContext controllerContext)
 		{
+			base.InnerInitialization(controllerContext);
 			ravenFileSystem = (RavenFileSystem)controllerContext.Configuration.Properties[typeof(RavenFileSystem)];
 		}
 
