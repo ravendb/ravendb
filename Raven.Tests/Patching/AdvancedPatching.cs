@@ -203,8 +203,7 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 		{
 			var doc = RavenJObject.FromObject(test);
 			Assert.Throws<ParseException>(
-				() =>
-				new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest { Script = "this.Id = 'Something" }));
+				() => new ScriptedJsonPatcher().Apply(doc, new ScriptedPatchRequest { Script = "this.Id = 'Something" }));
 		}
 
 		[Fact]
@@ -242,6 +241,37 @@ this.Comments.RemoveWhere(function(el) {return el == 'seven';});
 
 			Assert.Contains("Too many steps in script", x.Message);
 		}
+
+        [Fact]
+        public void CanUseToISOString()
+        {
+            var date = DateTime.UtcNow;
+            var dateOffset = DateTime.Now.AddMilliseconds(100);
+            var testObject = new CustomType { Date = date, DateOffset = dateOffset };
+            var doc = RavenJObject.FromObject(testObject);
+            var patch = new ScriptedPatchRequest()
+            {
+                Script = @"
+this.DateOutput = new Date(this.Date).toISOString();
+this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
+"
+            };
+            var scriptedJsonPatcher = new ScriptedJsonPatcher();
+            var result = scriptedJsonPatcher.Apply(doc, patch);
+
+            var dateOutput = result.Value<string>("DateOutput");
+            var dateOffsetOutput = result.Value<string>("DateOffsetOutput");
+
+            // Jint does something wierd when creating a Date from a .NET DateTimeOffset and/or DateTime string, 
+            // so this test doesn't check any of the millisecond digits as they don't always match!
+            Assert.True(dateOutput.StartsWith(date.ToString("yyyy-MM-ddTHH:mm:ss.")));
+            Assert.True(dateOutput.EndsWith("Z"));
+            Assert.Equal(24, dateOutput.Length);
+
+            Assert.True(dateOffsetOutput.StartsWith(dateOffset.ToString("yyyy-MM-ddTHH:mm:ss.")));
+            Assert.True(dateOffsetOutput.EndsWith("Z"));
+            Assert.Equal(24, dateOffsetOutput.Length);
+        }
 
 		[Fact]
 		public void CanPerformAdvancedPatching_Remotely()
@@ -710,6 +740,8 @@ PutDocument(
 			public string Owner { get; set; }
 			public int Value { get; set; }
 			public List<string> Comments { get; set; }
-		}        
+			public DateTime Date { get; set; }
+			public DateTimeOffset DateOffset { get; set; }
+		}
     }
 }
