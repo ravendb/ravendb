@@ -18,6 +18,8 @@ using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
+	using System.IO;
+
 	public unsafe class WriteAheadJournal : IDisposable
 	{
 		private readonly StorageEnvironment _env;
@@ -466,7 +468,7 @@ namespace Voron.Impl.Journal
 
 	                _waj._lastFlushedTransaction = lastFlushedTransactionId;
 
-					FreeScratchPages(txw ?? transaction, unusedJournalFiles);
+					FreeScratchPages(unusedJournalFiles);
 
                     foreach (var fullLog in unusedJournalFiles)
                     {
@@ -536,17 +538,17 @@ namespace Voron.Impl.Journal
 				}
 			}
 
-			private void FreeScratchPages(Transaction tx, IEnumerable<JournalFile> unusedJournalFiles)
+			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles)
 			{
 				foreach (var jrnl in _waj._files)
 				{
-					jrnl.FreeScratchPagesOlderThan(tx, _waj._env, _oldestActiveTransaction);
+					jrnl.FreeScratchPagesOlderThan(_waj._env, _lastSyncedTransactionId);
 				}
 				foreach (var journalFile in unusedJournalFiles)
 				{
 					if (_waj._env.Options.IncrementalBackupEnabled == false)
 						journalFile.DeleteOnClose = true;
-					journalFile.FreeScratchPagesOlderThan(tx, _waj._env, long.MaxValue);
+					journalFile.FreeScratchPagesOlderThan(_waj._env, long.MaxValue);
 				}
 			}
 
