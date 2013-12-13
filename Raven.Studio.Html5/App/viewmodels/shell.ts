@@ -41,6 +41,15 @@ class shell {
     activate() {
         NProgress.set(.8);
 
+        //        title?: string;
+        //moduleId?: string;
+        //hash?: string;
+        //route?: string;
+        //routePattern?: RegExp;
+        //isActive?: KnockoutComputed < boolean>;
+        //    nav: any;
+
+        var route1: DurandalRouteConfiguration = { route: 'documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: appUrl.forCurrentDatabase().documents };
 		router.map([
 			{ route: ['', 'databases'],	    title: 'Databases',		moduleId: 'viewmodels/databases',		nav: false },
             { route: 'documents',		    title: 'Documents',		moduleId: 'viewmodels/documents',		nav: true,	hash: appUrl.forCurrentDatabase().documents },
