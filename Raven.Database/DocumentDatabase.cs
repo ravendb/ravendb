@@ -1760,22 +1760,8 @@ namespace Raven.Database
             if (idPrefix == null)
                 throw new ArgumentNullException("idPrefix");
             idPrefix = idPrefix.Trim();
-<<<<<<< HEAD
-
-
-            TransactionalStorage.Batch(
-                actions =>
-                {
-                    var docsToSkip = start;
-                    var addedDocs = 0;
-                    var matchedDocs = 0;
-                    int docCount;
-                    start = 0;
-
-                    do
-=======
             TransactionalStorage.Batch(actions =>
-            {
+                {
                 bool returnedDocs = false;
                 while (true)
                 {
@@ -1783,7 +1769,6 @@ namespace Raven.Database
                     var documents = actions.Documents.GetDocumentsWithIdStartingWith(idPrefix, start, pageSize);
                     var documentRetriever = new DocumentRetriever(actions, ReadTriggers, inFlightTransactionalState);
                     foreach (var doc in documents)
->>>>>>> parent of a9ee523... backported the fix for RavenDB_1379 from 3.0 to 2.5
                     {
                         docCount++;
                         string keyTest = doc.Key.Substring(idPrefix.Length);
