@@ -48,9 +48,9 @@ namespace Voron.Tryout
 				Console.Write("{0,3} ", i);
 				try
 				{
-					var s = new MultiTransactions();
+					using(var s = new RecoveryMultipleJournals())
 					{
-						s.ShouldWork();
+						s.CorruptingOneTransactionWillKillAllFutureTransactions();
 					}
 					Console.WriteLine("Success");
 				}

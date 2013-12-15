@@ -14,6 +14,7 @@ namespace Voron.Tests.Bugs
 		{
 			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
 			options.OnRecoveryError += (sender, args) => { }; // just shut it up
+			options.ManualFlushing = true;
 		}
 
 		[Fact]
