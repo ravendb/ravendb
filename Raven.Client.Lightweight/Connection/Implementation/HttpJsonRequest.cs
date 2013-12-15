@@ -991,7 +991,7 @@ namespace Raven.Client.Connection
 			writeCalled = true;
 			var request = new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
-				Content = new CompressedStreamContent(streamToWrite)
+				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression)
 			};
 			request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
 			CopyHeadersToHttpRequestMessage(request);

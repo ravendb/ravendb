@@ -352,7 +352,7 @@ namespace Raven.Client.Silverlight.Connection
 
 			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
-				Content = new CompressedStreamContent(stream)
+				Content = new CompressedStreamContent(stream, factory.DisableRequestCompression)
 			});
 
 			if (Response.IsSuccessStatusCode == false)
