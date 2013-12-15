@@ -46,7 +46,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-		[Route("ravenfs/config/ConfigNamesStartingWith")]
+		[Route("ravenfs/config/search")]
 		public ConfigSearchResults ConfigNamesStartingWith(string prefix)
 		{
 			if (prefix == null)

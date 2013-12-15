@@ -25,11 +25,18 @@ namespace Raven.Database.Server.Connections
 		private readonly ConcurrentSet<string> matchingBulkInserts =
 			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
 
+		private readonly ConcurrentSet<string> matchingFolders =
+			new ConcurrentSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
 		private IEventsTransport eventsTransport;
 
 		private int watchAllDocuments;
 		private int watchAllIndexes;
 		private int watchAllReplicationConflicts;
+		private int watchCancellations;
+		private int watchConfig;
+		private int watchConflicts;
+		private int watchSync;
 
 		public ConnectionState(IEventsTransport eventsTransport)
 		{
@@ -82,6 +89,46 @@ namespace Raven.Database.Server.Connections
 		public void UnwatchAllIndexes()
 		{
 			Interlocked.Decrement(ref watchAllIndexes);
+		}
+
+		public void WatchConflicts()
+		{
+			Interlocked.Increment(ref watchConflicts);
+		}
+
+		public void UnwatchConflicts()
+		{
+			Interlocked.Decrement(ref watchConflicts);
+		}
+
+		public void WatchSync()
+		{
+			Interlocked.Increment(ref watchSync);
+		}
+
+		public void UnwatchSync()
+		{
+			Interlocked.Decrement(ref watchSync);
+		}
+
+		public void WatchFolder(string folder)
+		{
+			matchingFolders.TryAdd(folder);
+		}
+
+		public void UnwatchFolder(string folder)
+		{
+			matchingFolders.TryRemove(folder);
+		}
+
+		public void WatchCancellations()
+		{
+			Interlocked.Increment(ref watchCancellations);
+		}
+
+		public void UnwatchCancellations()
+		{
+			Interlocked.Decrement(ref watchCancellations);
 		}
 
 		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)

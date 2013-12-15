@@ -1225,7 +1225,7 @@ namespace Raven.Client.RavenFS
 			{
 				return ravenFileSystemClient.ExecuteWithReplication("POST", async operationUrl =>
 				{
-					var requestUriString = String.Format("{0}/storage/retryrenaming", operationUrl);
+					var requestUriString = String.Format("{0}/ravenfs/storage/retryrenaming", operationUrl);
 					var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
 					request.ContentLength = 0;
 					request.Method = "POST";
