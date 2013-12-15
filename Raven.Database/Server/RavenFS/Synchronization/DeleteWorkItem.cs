@@ -29,7 +29,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			var request =
 				(HttpWebRequest)
-				WebRequest.Create(destination + "/synchronization/delete?fileName=" + Uri.EscapeDataString(FileName));
+				WebRequest.Create(destination + "/ravenfs/synchronization?fileName=" + Uri.EscapeDataString(FileName));
 
 			request.Method = "DELETE";
 			request.ContentLength = 0;

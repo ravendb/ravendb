@@ -326,7 +326,7 @@
     <Compile Include="Server\RavenFS\Controllers\RavenFsApiController.cs" />
     <Compile Include="Server\RavenFS\Controllers\RdcController.cs" />
     <Compile Include="Server\RavenFS\Controllers\SearchController.cs" />
-    <Compile Include="Server\RavenFS\Controllers\StaticController.cs" />
+    <Compile Include="Server\RavenFS\Controllers\StaticFSController.cs" />
     <Compile Include="Server\RavenFS\Controllers\StatsController.cs" />
     <Compile Include="Server\RavenFS\Controllers\StorageController.cs" />
     <Compile Include="Server\RavenFS\Controllers\SynchronizationController.cs" />

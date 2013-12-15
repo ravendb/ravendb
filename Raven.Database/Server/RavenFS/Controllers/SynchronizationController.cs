@@ -241,7 +241,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPost]
-		[Route("ravenfs/synchronization/UpdateMetadata")]
+		[Route("ravenfs/synchronization/UpdateMetadata/{*fileName}")]
 		public HttpResponseMessage UpdateMetadata(string fileName)
 		{
 			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
@@ -533,7 +533,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPatch]
-		[Route("ravenfs/synchronization/ResolveConflict")]
+		[Route("ravenfs/synchronization/ResolveConflict/{*fileName}")]
 		public HttpResponseMessage ResolveConflict(string fileName, ConflictResolutionStrategy strategy)
 		{
 			Log.Debug("Resolving conflict of a file '{0}' by using {1} strategy", fileName, strategy);
@@ -551,7 +551,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPatch]
-		[Route("ravenfs/synchronization/ApplyConflict")]
+		[Route("ravenfs/synchronization/applyConflict/{*fileName}")]
 		public async Task<HttpResponseMessage> ApplyConflict(string filename, long remoteVersion, string remoteServerId,
 															 string remoteServerUrl)
 		{

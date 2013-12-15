@@ -9,14 +9,14 @@ using System.Web.Http;
 
 namespace Raven.Database.Server.RavenFS.Controllers
 {
-	public class StaticController : RavenFsApiController
+	public class StaticFSController : RavenFsApiController
 	{
 		[HttpGet]
 		[Route("ravenfs/static/clientAccessPolicy")]		
 
 		public HttpResponseMessage ClientAccessPolicy()
 		{
-			var manifestResourceStream = typeof(StaticController).Assembly.GetManifestResourceStream("RavenFS.Static.ClientAccessPolicy.xml");
+			var manifestResourceStream = typeof(StaticFSController).Assembly.GetManifestResourceStream("RavenFS.Static.ClientAccessPolicy.xml");
 
 			return new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -83,7 +83,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		{
 			var file = RavenStudioPotentialPaths.Any(File.Exists) ? "RavenFS.Studio.html" : "studio_not_found.html";
 
-			var manifestResourceStream = typeof(StaticController).Assembly.GetManifestResourceStream("RavenFS.Static." + file);
+			var manifestResourceStream = typeof(StaticFSController).Assembly.GetManifestResourceStream("RavenFS.Static." + file);
 
 			return new HttpResponseMessage(HttpStatusCode.OK)
 			{
@@ -98,12 +98,10 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpGet]
-		[Route("ravenfs/static/id")]
+		[Route("ravenfs/staticfs/id")]
 		public HttpResponseMessage Id()
 		{
-			var ravenFileSystem = (RavenFileSystem)ControllerContext.Configuration.DependencyResolver.GetService(typeof(RavenFileSystem));
-
-			return Request.CreateResponse(HttpStatusCode.OK, ravenFileSystem.Storage.Id);
+			return Request.CreateResponse(HttpStatusCode.OK, RavenFileSystem.Storage.Id);
 		}
 	}
 }

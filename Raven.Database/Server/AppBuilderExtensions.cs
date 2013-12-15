@@ -88,17 +88,19 @@ namespace Owin
 			cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
 			cfg.Filters.Add(new RavenExceptionFilterAttribute());
 			cfg.MapHttpAttributeRoutes();
+
+			cfg.Routes.MapHttpRoute(
+				"RavenFs", "ravenfs/{controller}/{action}",
+				new {id = RouteParameter.Optional});
+
 			cfg.Routes.MapHttpRoute(
 				"API Default", "{controller}/{action}",
 				new { id = RouteParameter.Optional });
 
 			cfg.Routes.MapHttpRoute(
-				"RavenFs", "ravenfs/{controller}/{action}",
-				new { id = RouteParameter.Optional });
-
-			cfg.Routes.MapHttpRoute(
 				"Database Route", "databases/{databaseName}/{controller}/{action}",
 				new { id = RouteParameter.Optional });
+
 			cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
 
 			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());

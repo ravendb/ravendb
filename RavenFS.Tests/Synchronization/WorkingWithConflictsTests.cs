@@ -217,7 +217,7 @@ namespace RavenFS.Tests.Synchronization
 			destination.UploadAsync(fileName, new MemoryStream(new byte[] {1})).Wait();
 
 			var request =
-				(HttpWebRequest) WebRequest.Create(destination.ServerUrl + "/synchronization/updatemetadata/" + fileName);
+				(HttpWebRequest) WebRequest.Create(destination.ServerUrl + "/ravenfs/synchronization/updatemetadata/" + fileName);
 
 			request.Method = "POST";
 			request.ContentLength = 0;
@@ -317,7 +317,7 @@ namespace RavenFS.Tests.Synchronization
 			                              new MemoryStream(new byte[] {1, 2, 3, 4})).Wait();
 
 			var webRequest =
-				(HttpWebRequest) WebRequest.Create(destinationClient.ServerUrl + "/synchronization/updatemetadata/test.bin");
+				(HttpWebRequest) WebRequest.Create(destinationClient.ServerUrl + "/ravenfs/synchronization/updatemetadata/test.bin");
 			webRequest.ContentLength = 0;
 			webRequest.Method = "POST";
 

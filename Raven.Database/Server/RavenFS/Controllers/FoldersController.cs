@@ -7,7 +7,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 	public class FoldersController : RavenFsApiController
 	{
 		[HttpGet]
-		[Route("ravenfs/folders/Subdirectories")]
+		[Route("ravenfs/folders/Subdirectories/{*directory}")]
 		public IEnumerable<string> Subdirectories(string directory = null)
 		{
 			var add = directory == null ? 0 : 1;

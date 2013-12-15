@@ -32,7 +32,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			var request =
 				(HttpWebRequest)
-				WebRequest.Create(destination + "/synchronization/rename?filename=" + Uri.EscapeDataString(FileName) + "&rename=" +
+				WebRequest.Create(destination + "/ravenfs/synchronization/rename?filename=" + Uri.EscapeDataString(FileName) + "&rename=" +
 								  Uri.EscapeDataString(rename));
 
 			request.Method = "PATCH";

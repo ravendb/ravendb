@@ -602,7 +602,7 @@ namespace Raven.Client.RavenFS
 		{
 			return ExecuteWithReplication("GET", async operationUrl =>
 			{
-				var requestUriString = operationUrl + "/ravenfs/id";
+				var requestUriString = operationUrl + "/ravenfs/staticfs/id/";
 				var request = (HttpWebRequest)WebRequest.Create(requestUriString);
 
 				try

@@ -40,7 +40,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 
 			var request =
 				(HttpWebRequest)
-				WebRequest.Create(destination + "/synchronization/updatemetadata?fileName=" + Uri.EscapeDataString(FileName));
+				WebRequest.Create(destination + "/ravenfs/synchronization/updatemetadata?fileName=" + Uri.EscapeDataString(FileName));
 
 			request.Method = "POST";
 			request.ContentLength = 0;
