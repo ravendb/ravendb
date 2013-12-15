@@ -85,7 +85,7 @@ namespace RavenFS.Tests
 
 		protected RavenFileSystem GetRavenFileSystem()
 		{
-			return ravenFileSystem;
+			return server.Server.FileSystem;
 		}
 	}
 }
