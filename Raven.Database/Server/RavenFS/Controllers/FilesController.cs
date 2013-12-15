@@ -289,12 +289,23 @@ namespace Raven.Database.Server.RavenFS.Controllers
 					AssertFileIsNotBeingSynced(name, accessor, true);
 					StorageOperationsTask.IndicateFileToDelete(name);
 
-					var contentLength = Request.Content.Headers.ContentLength;
-					if (Request.Headers.TransferEncodingChunked ?? false)
+					var sizeHeader = GetHeader("RavenFS-size");
+					long? size;
+					long sizeForParse;
+					if (long.TryParse(sizeHeader, out sizeForParse) == false)
 					{
-						contentLength = null;
+						size = Request.Content.Headers.ContentLength;
+						if (Request.Headers.TransferEncodingChunked ?? false)
+						{
+							size = null;
+						}
 					}
-					accessor.PutFile(name, contentLength, headers);
+					else
+					{
+						size = sizeForParse;
+					}
+				
+					accessor.PutFile(name, size, headers);
 
 					Search.Index(name, headers);
 				}));

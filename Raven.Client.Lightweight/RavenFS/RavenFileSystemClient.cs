@@ -449,6 +449,7 @@ namespace Raven.Client.RavenFS
 						operationUrl + "/ravenfs/files?name=" + Uri.EscapeDataString(filename) + "&uploadId=" + uploadIdentifier,
 						"PUT", new OperationCredentials("", new CredentialCache()), convention));
 
+				metadata.Add("RavenFS-Size", source.Length.ToString());
 
 				AddHeaders(metadata, request);
 
