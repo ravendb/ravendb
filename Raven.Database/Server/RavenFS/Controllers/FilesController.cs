@@ -278,7 +278,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				name = RavenFileNameHelper.RavenPath(name);
 
-				var headers = Request.Headers.FilterHeaders();
+				var headers = InnerHeaders.FilterHeaders();
 				Historian.UpdateLastModified(headers);
 				Historian.Update(name, headers);
 

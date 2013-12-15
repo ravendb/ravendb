@@ -72,7 +72,7 @@ namespace Raven.Client.Connection
 				Etag = etag,
 				TempIndexScore = metadata == null ? null : metadata.Value<float?>(Constants.TemporaryScoreValue),
 				NonAuthoritativeInformation = nai,
-				Metadata = metadata.FilterHeaders(),
+				Metadata = metadata.FilterHeadersToObject(),
 				DataAsJson = doc,
 			};
 			return jsonDocument;
@@ -173,7 +173,7 @@ namespace Raven.Client.Connection
 														   HttpStatusCode statusCode)
 		{
 			var jsonData = (RavenJObject)requestJson;
-			var meta = headers.FilterHeaders();
+			var meta = headers.FilterHeadersToObject();
 
 			var etag = headers.ETag.Tag;
 
@@ -193,7 +193,7 @@ namespace Raven.Client.Connection
 														   HttpStatusCode statusCode)
 		{
 			var jsonData = (RavenJObject)requestJson;
-			var meta = headers.FilterHeaders();
+			var meta = headers.FilterHeadersToObject();
 
 			var etag = headers["ETag"];
 
@@ -240,7 +240,7 @@ namespace Raven.Client.Connection
 			RavenJObject meta = null;
 			try
 			{
-				meta = headers.FilterHeaders();
+				meta = headers.FilterHeadersToObject();
 			}
 			catch (JsonReaderException jre)
 			{
@@ -271,7 +271,7 @@ namespace Raven.Client.Connection
 			RavenJObject meta = null;
 			try
 			{
-				meta = headers.FilterHeaders();
+				meta = headers.FilterHeadersToObject();
 			}
 			catch (JsonReaderException jre)
 			{

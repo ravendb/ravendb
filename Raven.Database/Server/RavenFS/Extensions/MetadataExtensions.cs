@@ -66,7 +66,7 @@ namespace Raven.Database.Server.RavenFS.Extensions
 			}
 		}
 
-		public static NameValueCollection FilterHeaders(this HttpRequestHeaders self)
+		public static NameValueCollection FilterHeaders(this HttpHeaders self)
 		{
 			var metadata = new NameValueCollection();
 			foreach (KeyValuePair<string, IEnumerable<string>> header in self)
@@ -118,7 +118,7 @@ namespace Raven.Database.Server.RavenFS.Extensions
 			return metadata;
 		}
 
-		public static T Value<T>(this HttpRequestHeaders self, string name)
+		public static T Value<T>(this HttpHeaders self, string name)
 		{
 			var value = self.GetValues(name).First();
 			return new JsonSerializer().Deserialize<T>(new JsonTextReader(new StringReader(value)));

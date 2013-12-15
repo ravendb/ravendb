@@ -2,7 +2,10 @@
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Profiling;
 using Raven.Database.Util;
 #if !SILVERLIGHT
 using TaskEx = System.Threading.Tasks.Task;
@@ -10,13 +13,20 @@ using TaskEx = System.Threading.Tasks.Task;
 
 namespace Raven.Client.RavenFS.Changes
 {
-	public class ServerNotifications : IServerNotifications, IObserver<string>, IDisposable
+	public class ServerNotifications : IServerNotifications, IObserver<string>, IDisposable, IHoldProfilingInformation
 	{
 		private readonly string url;
 		private readonly AtomicDictionary<NotificationSubject> subjects = new AtomicDictionary<NotificationSubject>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ConcurrentSet<Task> pendingConnectionTasks = new ConcurrentSet<Task>();
 		private int reconnectAttemptsRemaining;
 		private IDisposable connection;
+		private HttpJsonRequestFactory jsonRequestFactory =
+#if !SILVERLIGHT && !NETFX_CORE
+ new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+#else
+			  new HttpJsonRequestFactory();
+#endif
+		private const int DefaultNumberOfCachedRequests = 2048;
 
 		private static int connectionCounter;
 		private readonly string id;
@@ -33,21 +43,19 @@ namespace Raven.Client.RavenFS.Changes
 		private async Task EstablishConnection()
 		{
 			//TODO: Fix not to use WebRequest
-			var request = (HttpWebRequest)WebRequest.Create(url + "/changes/events?id=" + id);
-			request.Method = "GET";
+			var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/changes/events?id=" + id,
+						"GET", new OperationCredentials("", new CredentialCache()), null));
 
 			while (true)
 			{
 				try
 				{
-					//TODO: fix this!!!
-					//var result = await request.ServerPullAsync();
-					//reconnectAttemptsRemaining = 3; // after the first successful try, we will retry 3 times before giving up
-					//connection = (IDisposable)result;
-					//result.Subscribe(this);
+					var result = await request.ServerPullAsync();
+					reconnectAttemptsRemaining = 3; // after the first successful try, we will retry 3 times before giving up
+					connection = (IDisposable)result;
+					result.Subscribe(this);
 					
-					//TODO: remove this, this is just to keep the rest of the code happy
-					connection = (IDisposable) await request.GetResponseAsync();
 					return;
 				}
 				catch (Exception)
@@ -286,5 +294,7 @@ namespace Raven.Client.RavenFS.Changes
 		public void OnCompleted()
 		{
 		}
+
+		public ProfilingInformation ProfilingInformation { get; private set; }
 	}
 }

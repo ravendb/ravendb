@@ -408,15 +408,16 @@ namespace Raven.Client.RavenFS
 		{
 			return ExecuteWithReplication("POST", async operationUrl =>
 			{
-				var request = (HttpWebRequest)WebRequest.Create(operationUrl + "/ravenfs/files/" + filename);
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+						operationUrl + "/ravenfs/files/" + filename,
+						"POST", new OperationCredentials("", new CredentialCache()), convention));
 
-				request.Method = "POST";
-				request.ContentLength = 0;
-				//AddHeaders(metadata, request);
+				AddHeaders(metadata, request);
 
 				try
 				{
-					await request.GetResponseAsync();
+					await request.ExecuteRequestAsync();
 				}
 				catch (Exception e)
 				{

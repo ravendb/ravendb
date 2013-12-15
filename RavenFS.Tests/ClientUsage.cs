@@ -36,7 +36,7 @@ namespace RavenFS.Tests
 
 			var metadata = client.GetMetadataForAsync("abc.txt");
 			Assert.Equal("2", metadata.Result["test"]);
-			Assert.Equal(expected, WebClient.DownloadString("/files/abc.txt"));
+			Assert.Equal(expected, WebClient.DownloadString("/ravenfs/files/abc.txt"));
 		}
 
 		[Fact]

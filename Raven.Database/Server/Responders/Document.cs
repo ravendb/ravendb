@@ -180,7 +180,7 @@ namespace Raven.Database.Server.Responders
 		{
 			var json = context.ReadJson();
 			context.SetStatusToCreated("/docs/" + Uri.EscapeUriString(docId));
-			var putResult = Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeaders(), GetRequestTransaction(context));
+			var putResult = Database.Put(docId, context.GetEtag(), json, context.Request.Headers.FilterHeadersToObject(), GetRequestTransaction(context));
 			context.WriteJson(putResult);
 		}
 	}
