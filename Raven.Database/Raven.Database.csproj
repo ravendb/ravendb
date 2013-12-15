@@ -439,6 +439,7 @@
     <Compile Include="Server\RavenFS\Util\HashKey.cs" />
     <Compile Include="Server\RavenFS\Util\NameValueCollectionJsonConverter.cs" />
     <Compile Include="Server\RavenFS\Util\NarrowedStream.cs" />
+    <Compile Include="Server\RavenFS\Util\NaveValueCollectionJsonConverterOnlyForConfigFormatters.cs" />
     <Compile Include="Server\RavenFS\Util\RabinKarpHasher.cs" />
     <Compile Include="Server\RavenFS\Util\RavenFileNameHelper.cs" />
     <Compile Include="Server\RavenFS\Util\StorageStream.cs" />
