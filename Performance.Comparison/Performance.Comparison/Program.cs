@@ -1,4 +1,6 @@
-﻿namespace Performance.Comparison
+﻿using System.Collections;
+
+namespace Performance.Comparison
 {
     using System;
     using System.Collections.Generic;
@@ -49,6 +51,7 @@
 
                 Console.WriteLine("Testing: " + test.StorageName);
 
+                PerformanceRecord performanceRecord;
                 List<PerformanceRecord> performanceRecords;
                 long totalDuration;
                 long items;
@@ -82,7 +85,7 @@
                 WritePerfData("WriteSeq_Parallel_16", test, performanceRecords);
 
 
-                var performanceRecord = test.ReadSequential(perfTracker);
+                performanceRecord = test.ReadSequential(perfTracker);
                 items = performanceRecord.ProcessedItems;
                 totalDuration = performanceRecord.Duration;
                 OutputResults("Read Seq", items, totalDuration, perfTracker);
@@ -168,32 +171,32 @@
                 OutputResults("Read Rnd [16]", items, totalDuration, perfTracker);
                 WritePerfData("ReadRnd_Parallel_16", test, new List<PerformanceRecord> { performanceRecord });
 
-                //if (test.CanHandleBigData == false)
-                //	continue;
+                if (test.CanHandleBigData == false)
+                    continue;
 
-                //performanceRecords = test.WriteSequential(sequentialIdsLarge, perfTracker);
-                //items = performanceRecords.Sum(x => x.ProcessedItems);
-                //totalDuration = performanceRecords.Sum(x => x.Duration);
-                //OutputResults("Write Lrg Seq", items, totalDuration, perfTracker);
-                //WritePerfData("WriteLrgSeq", test, performanceRecords);
+                performanceRecords = test.WriteSequential(sequentialIdsLarge, perfTracker);
+                items = performanceRecords.Sum(x => x.ProcessedItems);
+                totalDuration = performanceRecords.Sum(x => x.Duration);
+                OutputResults("Write Lrg Seq", items, totalDuration, perfTracker);
+                WritePerfData("WriteLrgSeq", test, performanceRecords);
 
-                //performanceRecord = test.ReadSequential(perfTracker);
-                //items = performanceRecord.ProcessedItems;
-                //totalDuration = performanceRecord.Duration;
-                //OutputResults("Read Lrg Seq", items, totalDuration, perfTracker);
-                //WritePerfData("ReadLrgSeq", test, new List<PerformanceRecord> { performanceRecord });
+                performanceRecord = test.ReadSequential(perfTracker);
+                items = performanceRecord.ProcessedItems;
+                totalDuration = performanceRecord.Duration;
+                OutputResults("Read Lrg Seq", items, totalDuration, perfTracker);
+                WritePerfData("ReadLrgSeq", test, new List<PerformanceRecord> { performanceRecord });
 
-                //performanceRecords = test.WriteRandom(randomIdsLarge, perfTracker);
-                //items = performanceRecords.Sum(x => x.ProcessedItems);
-                //totalDuration = performanceRecords.Sum(x => x.Duration);
-                //OutputResults("Write Lrg Rnd", items, totalDuration, perfTracker);
-                //WritePerfData("WriteLrgRnd", test, performanceRecords);
+                performanceRecords = test.WriteRandom(randomIdsLarge, perfTracker);
+                items = performanceRecords.Sum(x => x.ProcessedItems);
+                totalDuration = performanceRecords.Sum(x => x.Duration);
+                OutputResults("Write Lrg Rnd", items, totalDuration, perfTracker);
+                WritePerfData("WriteLrgRnd", test, performanceRecords);
 
-                //performanceRecord = test.ReadRandom(randomIdsLarge.Select(x => x.Id), perfTracker);
-                //items = performanceRecord.ProcessedItems;
-                //totalDuration = performanceRecord.Duration;
-                //OutputResults("Read Lrg Rnd", items, totalDuration, perfTracker);
-                //WritePerfData("ReadLrgSeq", test, new List<PerformanceRecord> { performanceRecord });
+                performanceRecord = test.ReadRandom(randomIdsLarge.Select(x => x.Id), perfTracker);
+                items = performanceRecord.ProcessedItems;
+                totalDuration = performanceRecord.Duration;
+                OutputResults("Read Lrg Rnd", items, totalDuration, perfTracker);
+                WritePerfData("ReadLrgSeq", test, new List<PerformanceRecord> { performanceRecord });
             }
         }
 
@@ -223,8 +226,43 @@
 
         private static IEnumerable<TestData> InitRandomNumbers(int count, int minValueSize, int maxValueSize)
         {
-            var random = new Random(32);
-            return InitValue(Enumerable.Range(0, count).Select(i => random.Next(0, int.MaxValue)), minValueSize, maxValueSize);
+            var random = new RandomSequenceOfUnique(32);
+            var enumerable = Enumerable.Range(0, count).Select(i => random.Next());
+            var initRandomNumbers = InitValue(enumerable, minValueSize, maxValueSize);
+            foreach (var initRandomNumber in initRandomNumbers)
+            {
+                yield return initRandomNumber;
+            }
+        }
+
+        /// <summary>
+        /// from https://github.com/preshing/RandomSequence/blob/master/randomsequence.h
+        /// </summary>
+        private class RandomSequenceOfUnique
+        {
+            uint _index;
+            readonly uint _intermediateOffset;
+
+            const uint Prime = 4294967291u;
+
+            static uint PermuteQPR(uint x)
+            {
+                if (x >= Prime)
+                    return x;  // The 5 integers out of range are mapped to themselves.
+                uint residue = (uint)(((ulong)x * x) % Prime);
+                return (x <= Prime / 2) ? residue : Prime - residue;
+            }
+
+            public RandomSequenceOfUnique(uint seedBase)
+            {
+                _index = PermuteQPR(PermuteQPR(seedBase) + 0x682f0161);
+                _intermediateOffset = PermuteQPR(PermuteQPR(seedBase + 1) + 0x46790905);
+            }
+
+            public int Next()
+            {
+                return (int)PermuteQPR((PermuteQPR(_index++) + _intermediateOffset) ^ 0x5bf03635);
+            }
         }
 
         private static IEnumerable<TestData> InitSequentialNumbers(int count, int minValueSize, int maxValueSize)

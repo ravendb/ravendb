@@ -96,7 +96,6 @@ namespace Performance.Comparison.Voron
             NewStorage();
 
 	        var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(dataPath);
-	        storageEnvironmentOptions.ManualFlushing = true;
 	        using (var env = new StorageEnvironment(storageEnvironmentOptions))
             {
                 var enumerator = data.GetEnumerator();

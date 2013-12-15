@@ -32,12 +32,6 @@
             _database = Path.Combine(_path, "edbtest.db");
         }
 
-        ~EsentTest()
-        {
-            if (Directory.Exists(_path))
-                Directory.Delete(_path, true);
-        }
-
         public Instance CreateInstance(bool delete = true)
         {
             if (delete && Directory.Exists(_path))
@@ -101,7 +95,7 @@
 
                     var secondaryColumn = new JET_COLUMNDEF
                     {
-                        coltyp = JET_coltyp.Binary
+                        coltyp = JET_coltyp.LongBinary,
                     };
 
                     JET_COLUMNID primaryColumnId;
@@ -227,20 +221,7 @@
                             Api.JetPrepareUpdate(session, table, JET_prep.Insert);
                             Api.SetColumn(session, table, primaryColumnId, testData.Id);
                             Api.SetColumn(session, table, secondaryColumnId, valueToWrite);
-                            try
-                            {
-                                Api.JetUpdate(session, table);
-                            }
-                            catch (EsentErrorException e)
-                            {
-                                if (e.Error != JET_err.KeyDuplicate)
-                                    throw;
-                                Api.JetPrepareUpdate(session, table, JET_prep.Cancel);
-                                Api.JetPrepareUpdate(session, table, JET_prep.Replace);
-                                Api.SetColumn(session, table, primaryColumnId, testData.Id);
-                                Api.SetColumn(session, table, secondaryColumnId, valueToWrite);
-                                Api.JetUpdate(session, table);
-                            }
+                            Api.JetUpdate(session, table);
                         }
 
                         tx.Commit(CommitTransactionGrbit.None);

@@ -181,26 +181,25 @@ namespace Voron.Impl.Journal
 	    }
 
 
-        public void InitFrom(JournalReader journalReader, Dictionary<long, PagePosition> pageTranslationTable)
+        public void InitFrom(JournalReader journalReader)
         {
             _writePage = journalReader.NextWritePage;
-            _pageTranslationTable.SetItemsNoTransaction(pageTranslationTable);
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
 
-        public void FreeScratchPagesOlderThan(Transaction tx, StorageEnvironment env, long oldestActiveTransaction)
+        public void FreeScratchPagesOlderThan(StorageEnvironment env, long lastSyncedTransactionId)
         {
             List<KeyValuePair<long, PagePosition>> unusedPages;
 
             List<PagePosition> unusedAndFree;
             lock (_locker)
             {
-                unusedAndFree = _unusedPages.FindAll(position => position.TransactionId < oldestActiveTransaction);
-                _unusedPages.RemoveAll(position => position.TransactionId < oldestActiveTransaction);
+                unusedAndFree = _unusedPages.FindAll(position => position.TransactionId < lastSyncedTransactionId);
+                _unusedPages.RemoveAll(position => position.TransactionId < lastSyncedTransactionId);
 
-                unusedPages = _pageTranslationTable.AllPagesOlderThan(oldestActiveTransaction);
-                _pageTranslationTable.Remove(tx, unusedPages.Select(x => x.Key));
+                unusedPages = _pageTranslationTable.AllPagesOlderThan(lastSyncedTransactionId);
+                _pageTranslationTable.Remove(unusedPages.Select(x => x.Key), lastSyncedTransactionId);
             }
 
             foreach (var unusedScratchPage in unusedAndFree)
