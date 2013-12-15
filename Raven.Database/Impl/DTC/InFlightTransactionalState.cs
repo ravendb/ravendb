@@ -240,10 +240,17 @@ namespace Raven.Database.Impl.DTC
 	            return;
 	        }
 
-            if (currentTxVal != null && currentTxVal.Etag != etag)
-	            throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
+	        if (currentTxVal != null)
+	        {
+	            if (currentTxVal.Etag != etag)
+	            {
+	                throw new ConcurrencyException("Transaction operation attempted on : " + key +
+	                                               " using a non current etag");
+	            }
+	            return;
+	        }
 
-			if(etag != committedEtag)
+	        if(etag != committedEtag)
 				throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
 	    }
 
