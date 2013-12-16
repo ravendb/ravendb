@@ -80,8 +80,8 @@ class editDocument {
         if (navigationArgs && navigationArgs.list && navigationArgs.item) {
             var itemIndex = parseInt(navigationArgs.item, 10);
             if (!isNaN(itemIndex)) {
-                var collectionName = decodeURIComponent(navigationArgs.list) === "All Documents" ? null : navigationArgs.list;
-                var fetcher = (skip: number, take: number) => new getDocumentsCommand(collectionName, appUrl.getDatabase(), skip, take).execute();
+                var collection = new collection(navigationArgs.list, appUrl.getDatabase());
+                var fetcher = (skip: number, take: number) => collection.fetchDocuments(skip, take);
                 var list = new pagedList(fetcher);
                 list.collectionName = navigationArgs.list;
                 list.currentItemIndex(itemIndex);

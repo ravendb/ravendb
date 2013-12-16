@@ -9,18 +9,6 @@ class raven {
     
     private static ravenClientVersion = '3.0.0.0';
     public static activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase");
-    
-    public collections(): JQueryPromise<Array<collection>> {
-        this.requireActiveDatabase();
-
-        var args = {
-            field: "Tag",
-            fromValue: "",
-            pageSize: 100
-        };
-        var resultsSelector = (collectionNames: string[]) => collectionNames.map(n => new collection(n));
-        return this.fetch("/terms/Raven/DocumentsByEntityName", args, raven.activeDatabase(), resultsSelector);
-    }
 
     public userInfo() {
         this.requireActiveDatabase();

@@ -38,8 +38,11 @@ class ctor {
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
     selectedIndices = ko.observableArray();
+    memoizedCollectionColorFetcher: Function;
 
     constructor() {
+
+        this.memoizedCollectionColorFetcher = this.getCollectionClassFromRavenEntityName.memoize(this);
     }
 
     activate(settings: any) {
@@ -158,9 +161,17 @@ class ctor {
         }
     }
 
-    getCollectionClassFromDocument(doc: document) {
-        var collectionName = doc.__metadata.ravenEntityName;
-        var collection = this.collections().first<collection>(c => c.name === collectionName);
+    getCollectionClassFromDocument(doc: document): string {
+        var entityName = doc.__metadata.ravenEntityName;
+        return this.memoizedCollectionColorFetcher(entityName);
+    }
+
+    getCollectionClassFromRavenEntityName(entityName: string): string {
+        if (!entityName) {
+            return "system-documents-collection";
+        }
+
+        var collection = this.collections().first<collection>(c => c.name === entityName);
         if (collection) {
             return collection.colorClass;
         }

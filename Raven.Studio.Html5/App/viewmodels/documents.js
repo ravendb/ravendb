@@ -1,4 +1,4 @@
-define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "models/document", "viewmodels/deleteCollection", "common/raven", "common/pagedList", "common/appUrl", "commands/getDocumentsCommand"], function(require, exports, app, router, collection, database, document, deleteCollection, raven, pagedList, appUrl, getDocumentsCommand) {
+define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "models/document", "viewmodels/deleteCollection", "common/raven", "common/pagedList", "common/appUrl", "commands/getDocumentsCommand", "commands/getCollectionsCommand"], function(require, exports, app, router, collection, database, document, deleteCollection, raven, pagedList, appUrl, getDocumentsCommand, getCollectionsCommand) {
     var documents = (function () {
         function documents() {
             var _this = this;
@@ -57,8 +57,7 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
             });
 
             // Create the "All Documents" pseudo collection.
-            this.allDocumentsCollection = new collection("All Documents");
-            this.allDocumentsCollection.isAllDocuments = true;
+            this.allDocumentsCollection = collection.createAllDocsCollection(db);
             this.allDocumentsCollection.colorClass = "all-documents-collection";
             this.allDocumentsCollection.documentCount = ko.computed(function () {
                 return _this.collections().filter(function (c) {
@@ -71,14 +70,15 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
             }); // And sum them up.
 
             // Create the "System Documents" pseudo collection.
-            var systemDocumentsCollection = new collection("System Documents");
-            systemDocumentsCollection.isSystemDocuments = true;
+            var systemDocumentsCollection = collection.createSystemDocsCollection(db);
+            systemDocumentsCollection.colorClass = "system-documents-collection";
 
             // All systems a-go. Load them into the UI and select the first one.
-            var allCollections = [this.allDocumentsCollection].concat(collections.concat(systemDocumentsCollection));
+            var collectionsWithSysCollection = [systemDocumentsCollection].concat(collections);
+            var allCollections = [this.allDocumentsCollection].concat(collectionsWithSysCollection);
             this.collections(allCollections);
 
-            var collectionToSelect = collections.first(function (c) {
+            var collectionToSelect = allCollections.first(function (c) {
                 return c.name === _this.collectionToSelectName;
             }) || this.allDocumentsCollection;
             collectionToSelect.activate();
@@ -91,13 +91,9 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
         };
 
         documents.prototype.selectedCollectionChanged = function (selected) {
-            if (collection) {
-                var fetcher = function (skip, take) {
-                    return new getDocumentsCommand(selected, appUrl.getDatabase(), skip, take).execute();
-                };
-                var documentsList = new pagedList(fetcher);
-                documentsList.collectionName = selected.name;
-                this.currentCollectionPagedItems(documentsList);
+            if (selected) {
+                var pagedList = selected.getDocuments();
+                this.currentCollectionPagedItems(pagedList);
             }
         };
 
@@ -131,7 +127,7 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
 
         documents.prototype.fetchCollections = function (db) {
             var _this = this;
-            return this.ravenDb.collections().done(function (results) {
+            return new getCollectionsCommand(db).execute().done(function (results) {
                 return _this.collectionsLoaded(results, db);
             });
         };

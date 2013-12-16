@@ -6,13 +6,14 @@ import pagedResultSet = require("common/pagedResultSet");
 
 class getDocumentsCommand extends commandBase {
 
-    constructor(private collection: collection, private db: database, private skip: number, private take: number) {
+    constructor(private collection: collection, private skip: number, private take: number) {
         super();
     }
 
     execute(): JQueryPromise<pagedResultSet> {
+        var collectionArg = this.collection.isAllDocuments ? "" : "Tag:" + this.collection.name;
         var args = {
-            query: "Tag:" + this.collection.isAllDocuments ? '' : this.collection.name,
+            query: collectionArg,
             start: this.skip,
             pageSize: this.take
         };
@@ -20,7 +21,7 @@ class getDocumentsCommand extends commandBase {
         var resultsSelector = (dto: collectionInfoDto) => new collectionInfo(dto);
         var url =  "/indexes/Raven/DocumentsByEntityName";
         var documentsTask = $.Deferred();
-        this.query(url, args, this.db, resultsSelector)
+        this.query(url, args, this.collection.ownerDatabase, resultsSelector)
             .then(collection => {
                 var items = collection.results;
                 var resultSet = new pagedResultSet(items, collection.totalResults);

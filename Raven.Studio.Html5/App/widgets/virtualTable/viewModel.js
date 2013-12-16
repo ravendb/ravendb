@@ -16,6 +16,7 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
             this.scrollThrottleTimeoutHandle = 0;
             this.firstVisibleRow = null;
             this.selectedIndices = ko.observableArray();
+            this.memoizedCollectionColorFetcher = this.getCollectionClassFromRavenEntityName.memoize(this);
         }
         ctor.prototype.activate = function (settings) {
             var _this = this;
@@ -149,9 +150,17 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
         };
 
         ctor.prototype.getCollectionClassFromDocument = function (doc) {
-            var collectionName = doc.__metadata.ravenEntityName;
+            var entityName = doc.__metadata.ravenEntityName;
+            return this.memoizedCollectionColorFetcher(entityName);
+        };
+
+        ctor.prototype.getCollectionClassFromRavenEntityName = function (entityName) {
+            if (!entityName) {
+                return "system-documents-collection";
+            }
+
             var collection = this.collections().first(function (c) {
-                return c.name === collectionName;
+                return c.name === entityName;
             });
             if (collection) {
                 return collection.colorClass;

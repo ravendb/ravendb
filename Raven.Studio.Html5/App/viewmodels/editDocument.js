@@ -69,9 +69,9 @@ define(["require", "exports", "durandal/app", "durandal/system", "plugins/router
             if (navigationArgs && navigationArgs.list && navigationArgs.item) {
                 var itemIndex = parseInt(navigationArgs.item, 10);
                 if (!isNaN(itemIndex)) {
-                    var collectionName = decodeURIComponent(navigationArgs.list) === "All Documents" ? null : navigationArgs.list;
+                    var collection = new collection(navigationArgs.list, appUrl.getDatabase());
                     var fetcher = function (skip, take) {
-                        return new getDocumentsCommand(collectionName, appUrl.getDatabase(), skip, take).execute();
+                        return collection.fetchDocuments(skip, take);
                     };
                     var list = new pagedList(fetcher);
                     list.collectionName = navigationArgs.list;

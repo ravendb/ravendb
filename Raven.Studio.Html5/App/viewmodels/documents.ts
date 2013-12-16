@@ -9,6 +9,7 @@ import raven = require("common/raven");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import getDocumentsCommand = require("commands/getDocumentsCommand");
+import getCollectionsCommand = require("commands/getCollectionsCommand");
 
 class documents {
 
@@ -58,14 +59,14 @@ class documents {
     }
 
     collectionsLoaded(collections: Array<collection>, db: database) {
+
         // Set the color class for each of the collections.
         // These styles are found in app.less.
         var collectionStyleCount = 15;
         collections.forEach((c, index) => c.colorClass = "collection-style-" + (index % collectionStyleCount));
 
         // Create the "All Documents" pseudo collection.
-        this.allDocumentsCollection = new collection("All Documents");
-        this.allDocumentsCollection.isAllDocuments = true;
+        this.allDocumentsCollection = collection.createAllDocsCollection(db);
         this.allDocumentsCollection.colorClass = "all-documents-collection";
         this.allDocumentsCollection.documentCount = ko.computed(() =>
             this.collections()
@@ -74,14 +75,15 @@ class documents {
                 .reduce((first: number, second: number) => first + second, 0)); // And sum them up.
 
         // Create the "System Documents" pseudo collection.
-        var systemDocumentsCollection = new collection("System Documents");
-        systemDocumentsCollection.isSystemDocuments = true;
+        var systemDocumentsCollection = collection.createSystemDocsCollection(db);
+        systemDocumentsCollection.colorClass = "system-documents-collection";
 
         // All systems a-go. Load them into the UI and select the first one.
-        var allCollections = [this.allDocumentsCollection].concat(collections.concat(systemDocumentsCollection));
+        var collectionsWithSysCollection = [systemDocumentsCollection].concat(collections);
+        var allCollections = [this.allDocumentsCollection].concat(collectionsWithSysCollection);
         this.collections(allCollections);
 
-        var collectionToSelect = collections.first<collection>(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection;
+        var collectionToSelect = allCollections.first<collection>(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection;
         collectionToSelect.activate();
 
         // Fetch the collection info for each collection.
@@ -90,11 +92,9 @@ class documents {
     }
 
     selectedCollectionChanged(selected: collection) {
-        if (collection) {
-            var fetcher = (skip: number, take: number) => new getDocumentsCommand(selected, appUrl.getDatabase(), skip, take).execute();
-            var documentsList = new pagedList(fetcher);
-            documentsList.collectionName = selected.name;
-			this.currentCollectionPagedItems(documentsList);
+        if (selected) {
+            var pagedList = selected.getDocuments();
+			this.currentCollectionPagedItems(pagedList);
         }
     }
 
@@ -126,8 +126,8 @@ class documents {
     }
 
     fetchCollections(db: database): JQueryPromise<Array<collection>> {
-        return this.ravenDb
-            .collections()
+        return new getCollectionsCommand(db)
+            .execute()
             .done(results => this.collectionsLoaded(results, db));
     }
 }
