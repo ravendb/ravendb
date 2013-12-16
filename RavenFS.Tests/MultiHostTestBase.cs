@@ -75,8 +75,8 @@ namespace RavenFS.Tests
 		protected RavenFileSystem GetRavenFileSystem(int index)
 		{
 			return
-				disposables.OfType<RavenFileSystem>().First(
-					x => x.Configuration.DataDirectory.EndsWith(Ports[index].ToString(CultureInfo.InvariantCulture)));
+				disposables.OfType<RavenDbServer>().First(
+					x => x.Server.FileSystem.Configuration.DataDirectory.EndsWith(Ports[index].ToString(CultureInfo.InvariantCulture))).Server.FileSystem;
 		}
 
 		#region IDisposable Members
