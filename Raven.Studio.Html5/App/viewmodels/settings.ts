@@ -29,7 +29,6 @@ class settings {
         this.activeDatabase(appUrl.getDatabase());
 
         if (this.activeDatabase()) {
-            console.log("ZZZ", this.activeDatabase().isSystem);
             if (this.activeDatabase().isSystem) {
                 this.router.navigate("settings/apiKeys");
             } else {

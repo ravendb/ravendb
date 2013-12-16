@@ -1,4 +1,4 @@
-define(["require", "exports", "plugins/router", "common/raven", "models/database", "common/appUrl"], function(require, exports, durandalRouter, raven, database, appUrl) {
+﻿define(["require", "exports", "plugins/router", "common/raven", "models/database", "common/appUrl"], function(require, exports, durandalRouter, raven, database, appUrl) {
     var settings = (function () {
         function settings() {
             var _this = this;
@@ -22,7 +22,6 @@ define(["require", "exports", "plugins/router", "common/raven", "models/database
             this.activeDatabase(appUrl.getDatabase());
 
             if (this.activeDatabase()) {
-                console.log("ZZZ", this.activeDatabase().isSystem);
                 if (this.activeDatabase().isSystem) {
                     this.router.navigate("settings/apiKeys");
                 } else {

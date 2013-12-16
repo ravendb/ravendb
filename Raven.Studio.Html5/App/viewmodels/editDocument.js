@@ -1,5 +1,5 @@
 /// <reference path="../../Scripts/typings/ace/ace.amd.d.ts" />
-define(["require", "exports", "durandal/app", "durandal/system", "plugins/router", "ace/ace", "models/document", "models/documentMetadata", "commands/saveDocumentCommand", "common/raven", "viewmodels/deleteDocuments", "common/pagedList", "common/appUrl", "commands/getDocumentsCommand"], function(require, exports, app, sys, router, ace, document, documentMetadata, saveDocumentCommand, raven, deleteDocuments, pagedList, appUrl, getDocumentsCommand) {
+define(["require", "exports", "durandal/app", "durandal/system", "plugins/router", "ace/ace", "models/document", "models/collection", "commands/saveDocumentCommand", "common/raven", "viewmodels/deleteDocuments", "common/pagedList", "common/appUrl"], function(require, exports, app, sys, router, ace, document, collection, saveDocumentCommand, raven, deleteDocuments, pagedList, appUrl) {
     var editDocument = (function () {
         function editDocument() {
             var _this = this;
@@ -69,9 +69,9 @@ define(["require", "exports", "durandal/app", "durandal/system", "plugins/router
             if (navigationArgs && navigationArgs.list && navigationArgs.item) {
                 var itemIndex = parseInt(navigationArgs.item, 10);
                 if (!isNaN(itemIndex)) {
-                    var collection = new collection(navigationArgs.list, appUrl.getDatabase());
+                    var newCollection = new collection(navigationArgs.list, appUrl.getDatabase());
                     var fetcher = function (skip, take) {
-                        return collection.fetchDocuments(skip, take);
+                        return newCollection.fetchDocuments(skip, take);
                     };
                     var list = new pagedList(fetcher);
                     list.collectionName = navigationArgs.list;
@@ -149,7 +149,6 @@ define(["require", "exports", "durandal/app", "durandal/system", "plugins/router
             var updatedDto = JSON.parse(this.documentText());
             var meta = JSON.parse(this.metadataText());
             updatedDto['@metadata'] = meta;
-            console.log(this.documentText());
 
             // Fix up the metadata: if we're a new doc, attach the expected reserved properties like ID, ETag, and RavenEntityName.
             // AFAICT, Raven requires these reserved meta properties in order for the doc to be seen as a member of a collection.

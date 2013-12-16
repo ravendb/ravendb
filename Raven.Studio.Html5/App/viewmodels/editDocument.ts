@@ -7,6 +7,7 @@ import ace = require("ace/ace");
 
 import document = require("models/document");
 import documentMetadata = require("models/documentMetadata");
+import collection = require("models/collection");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
 import raven = require("common/raven");
 import deleteDocuments = require("viewmodels/deleteDocuments");
@@ -80,8 +81,8 @@ class editDocument {
         if (navigationArgs && navigationArgs.list && navigationArgs.item) {
             var itemIndex = parseInt(navigationArgs.item, 10);
             if (!isNaN(itemIndex)) {
-                var collection = new collection(navigationArgs.list, appUrl.getDatabase());
-                var fetcher = (skip: number, take: number) => collection.fetchDocuments(skip, take);
+                var newCollection = new collection(navigationArgs.list, appUrl.getDatabase());
+                var fetcher = (skip: number, take: number) => newCollection.fetchDocuments(skip, take);
                 var list = new pagedList(fetcher);
                 list.collectionName = navigationArgs.list;
                 list.currentItemIndex(itemIndex);
@@ -153,7 +154,6 @@ class editDocument {
         var updatedDto = JSON.parse(this.documentText());
         var meta = JSON.parse(this.metadataText());
         updatedDto['@metadata'] = meta;
-        console.log(this.documentText());
 
         // Fix up the metadata: if we're a new doc, attach the expected reserved properties like ID, ETag, and RavenEntityName.
         // AFAICT, Raven requires these reserved meta properties in order for the doc to be seen as a member of a collection.

@@ -7,7 +7,6 @@ class statistics {
 	}
 
 	activate(args) {
-		console.log("this is STATISTICS!");
 	}
 
 	canDeactivate() {
