@@ -1,4 +1,4 @@
-define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "models/document", "common/raven", "common/pagedList"], function(require, exports, app, router, collection, database, document, raven, pagedList) {
+﻿define(["require", "exports", "models/database", "common/raven"], function(require, exports, database, raven) {
     var userInfo = (function () {
         function userInfo() {
             this.displayName = "user info";
@@ -7,8 +7,6 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
         }
         userInfo.prototype.activate = function (args) {
             var _this = this;
-            console.log("this is USERINFO!");
-
             if (args && args.database) {
                 ko.postbox.publish("ActivateDatabaseWithName", args.database);
             }

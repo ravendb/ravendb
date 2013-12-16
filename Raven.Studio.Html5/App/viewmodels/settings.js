@@ -1,9 +1,9 @@
-define(["require", "exports", "plugins/router", "common/raven", "models/database"], function(require, exports, durandalRouter, raven, database) {
+﻿define(["require", "exports", "plugins/router", "common/raven", "models/database", "common/appUrl"], function(require, exports, durandalRouter, raven, database, appUrl) {
     var settings = (function () {
         function settings() {
             var _this = this;
             this.router = null;
-            this.activeDatabase = raven.activeDatabase;
+            this.activeDatabase = ko.observable().subscribeTo("ActivateDatabase");
             this.isOnSystemDatabase = ko.computed(function () {
                 return _this.activeDatabase() && _this.activeDatabase().isSystem;
             });
@@ -13,21 +13,30 @@ define(["require", "exports", "plugins/router", "common/raven", "models/database
 
             this.router = durandalRouter.createChildRouter().map([
                 { route: 'settings/apiKeys', moduleId: 'viewModels/apiKeys', title: 'API Keys', type: 'intro', nav: true },
-                { route: 'settings/windowsAuth', moduleId: 'viewModels/windowsAuth', title: 'Windows Authentication', type: 'intro', nav: this.isOnSystemDatabase },
-                { route: 'settings/databaseSettings', moduleId: 'viewModels/databaseSettings', title: 'Database Settings', type: 'intro', nav: this.isOnUserDatabase },
-                { route: 'settings/periodicBackup', moduleId: 'viewModels/periodicBackup', title: 'Periodic Backup', type: 'intro', nav: this.isOnUserDatabase }
+                { route: 'settings/windowsAuth', moduleId: 'viewModels/windowsAuth', title: 'Windows Authentication', type: 'intro', nav: true },
+                { route: 'settings/databaseSettings', moduleId: 'viewModels/databaseSettings', title: 'Database Settings', type: 'intro', nav: true },
+                { route: 'settings/periodicBackup', moduleId: 'viewModels/periodicBackup', title: 'Periodic Backup', type: 'intro', nav: true }
             ]).buildNavigationModel();
         }
         settings.prototype.activate = function (args) {
-            console.log("zzzactivating settings!", args);
+            this.activeDatabase(appUrl.getDatabase());
+
             if (this.activeDatabase()) {
                 if (this.activeDatabase().isSystem) {
-                    console.log("zzzznav to api keys");
                     this.router.navigate("settings/apiKeys");
                 } else {
-                    console.log("zzzznav to db settings");
                     this.router.navigate("settings/databaseSettings");
                 }
+            }
+        };
+
+        settings.prototype.routeIsVisible = function (route) {
+            if (route.title === "Periodic Backup" || route.title === "Database Settings") {
+                // Periodic backup and database settings are visible only when we're on a user database.
+                return this.isOnUserDatabase();
+            } else {
+                // API keys and Windows Auth are visible only when we're on the system database.
+                return this.isOnSystemDatabase();
             }
         };
         return settings;

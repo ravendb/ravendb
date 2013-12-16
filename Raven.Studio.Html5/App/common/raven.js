@@ -2,22 +2,6 @@ define(["require", "exports", "models/database", "models/collection", "models/co
     var raven = (function () {
         function raven() {
         }
-        raven.prototype.collections = function () {
-            this.requireActiveDatabase();
-
-            var args = {
-                field: "Tag",
-                fromValue: "",
-                pageSize: 100
-            };
-            var resultsSelector = function (collectionNames) {
-                return collectionNames.map(function (n) {
-                    return new collection(n);
-                });
-            };
-            return this.fetch("/terms/Raven/DocumentsByEntityName", args, raven.activeDatabase(), resultsSelector);
-        };
-
         raven.prototype.userInfo = function () {
             this.requireActiveDatabase();
             var url = "/debug/user-info";
@@ -46,17 +30,6 @@ define(["require", "exports", "models/database", "models/collection", "models/co
                 });
             };
             return this.docsById(searchTerm, start, pageSize, metadataOnly, resultsSelector);
-        };
-
-        raven.prototype.deleteCollection = function (collectionName) {
-            var args = {
-                query: "Tag:" + collectionName,
-                pageSize: 128,
-                allowStale: true
-            };
-            var url = "/bulk_docs/Raven/DocumentsByEntityName";
-            var urlParams = "?query=Tag%3A" + encodeURIComponent(collectionName) + "&pageSize=128&allowStale=true";
-            return this.delete_(url + urlParams, null, raven.activeDatabase());
         };
 
         raven.prototype.getDatabaseUrl = function (database) {

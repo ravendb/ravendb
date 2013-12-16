@@ -1,6 +1,6 @@
 /// <reference path="../../Scripts/typings/nprogress/nprogress.d.ts" />
 /// <reference path="../../Scripts/typings/bootstrap/bootstrap.d.ts" />
-define(["require", "exports", "plugins/router", "durandal/app", "durandal/system", "models/database", "common/raven", "models/document", "common/appUrl", "models/collection", "common/dialogResult", "common/alertArgs", "common/alertType", "common/pagedList", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand", "commands/getBuildVersionCommand", "commands/getLicenseStatusCommand"], function(require, exports, router, app, sys, database, raven, document, appUrl, collection, dialogResult, alertArgs, alertType, pagedList, getDatabaseStatsCommand, getDatabasesCommand, getBuildVersionCommand, getLicenseStatusCommand) {
+define(["require", "exports", "plugins/router", "durandal/app", "durandal/system", "models/database", "common/raven", "models/document", "common/appUrl", "models/collection", "viewmodels/deleteDocuments", "common/dialogResult", "common/alertArgs", "common/alertType", "common/pagedList", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand", "commands/getBuildVersionCommand", "commands/getLicenseStatusCommand"], function(require, exports, router, app, sys, database, raven, document, appUrl, collection, deleteDocuments, dialogResult, alertArgs, alertType, pagedList, getDatabaseStatsCommand, getDatabasesCommand, getBuildVersionCommand, getLicenseStatusCommand) {
     var shell = (function () {
         function shell() {
             var _this = this;
@@ -26,7 +26,6 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
         }
         shell.prototype.activate = function () {
             NProgress.set(.8);
-
             router.map([
                 { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: false },
                 { route: 'documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: appUrl.forCurrentDatabase().documents },

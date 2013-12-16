@@ -1,4 +1,4 @@
-define(["require", "exports", "durandal/app", "plugins/router", "common/appUrl", "common/raven", "models/database", "viewModels/createDatabase", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand"], function(require, exports, app, router, appUrl, raven, database, createDatabase, getDatabaseStatsCommand, getDatabasesCommand) {
+﻿define(["require", "exports", "durandal/app", "plugins/router", "common/appUrl", "common/raven", "models/database", "viewmodels/createDatabase", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand"], function(require, exports, app, router, appUrl, raven, database, createDatabase, getDatabaseStatsCommand, getDatabasesCommand) {
     var databases = (function () {
         function databases() {
             this.databases = ko.observableArray();
@@ -13,7 +13,7 @@ define(["require", "exports", "durandal/app", "plugins/router", "common/appUrl",
 
         databases.prototype.navigateToDocuments = function (db) {
             db.activate();
-            router.navigate("#documents?db=" + encodeURIComponent(db.name));
+            router.navigate(appUrl.forDocuments(null, db));
         };
 
         databases.prototype.getDocumentsUrl = function (db) {
@@ -60,6 +60,7 @@ define(["require", "exports", "durandal/app", "plugins/router", "common/appUrl",
         };
 
         databases.prototype.goToDocuments = function (db) {
+            // TODO: use appUrl for this.
             router.navigate("#documents?database=" + db.name);
         };
         return databases;

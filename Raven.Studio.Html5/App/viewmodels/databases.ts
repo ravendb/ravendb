@@ -5,7 +5,7 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import raven = require("common/raven");
 import database = require("models/database");
-import createDatabase = require("viewModels/createDatabase");
+import createDatabase = require("viewmodels/createDatabase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 
@@ -26,7 +26,7 @@ class databases {
 
     navigateToDocuments(db: database) {
         db.activate();
-        router.navigate("#documents?db=" + encodeURIComponent(db.name));
+        router.navigate(appUrl.forDocuments(null, db));
     }
 
     getDocumentsUrl(db: database) {
@@ -68,6 +68,7 @@ class databases {
     }
 
     goToDocuments(db: database) {
+        // TODO: use appUrl for this.
         router.navigate("#documents?database=" + db.name);
     }
 }

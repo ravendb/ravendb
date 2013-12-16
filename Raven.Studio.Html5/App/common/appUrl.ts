@@ -42,8 +42,8 @@ class appUrl {
     }
 
 	static forDocuments(collection?: string, db: database = appUrl.getDatabase()): string {
-		var databasePart = appUrl.getEncodedDbPart(db);
-		var collectionPart = collection ? "&collection=" + encodeURIComponent(collection) : "";
+        var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
+        var databasePart = appUrl.getEncodedDbPart(db);
 		return "#documents?" + collectionPart + databasePart;
     }
 
@@ -55,6 +55,9 @@ class appUrl {
         return this.baseUrl;
     }
 
+	/**
+	* Gets the database from the current web browser address. Returns the system database if no database name is found.
+	*/
     static getDatabase(): database {
 
         // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
@@ -70,7 +73,10 @@ class appUrl {
             }
 
             var databaseName = hash.substring(dbIndex + dbIndicator.length, dbSegmentEnd + 1);
-            return new database(databaseName);
+            var unescapedDatabaseName = decodeURIComponent(databaseName);
+            var db = new database(unescapedDatabaseName);
+            db.isSystem = unescapedDatabaseName === "<system>";
+            return db;
         } else {
             // No database is specified in the URL. Assume it's the system database.
             var db = new database("<system>");

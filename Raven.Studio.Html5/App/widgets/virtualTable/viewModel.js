@@ -1,6 +1,6 @@
 ﻿/// <reference path="../../../Scripts/typings/knockout.postbox/knockout-postbox.d.ts" />
 /// <reference path="../../../Scripts/typings/durandal/durandal.d.ts" />
-define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl", "models/document", "models/collection", "models/database", "common/pagedResultSet", "viewModels/deleteDocuments", "viewModels/copyDocuments", "durandal/app", "widgets/virtualTable/row", "widgets/virtualTable/column"], function(require, exports, pagedList, raven, appUrl, document, collection, database, pagedResultSet, deleteDocuments, copyDocuments, app, row, column) {
+define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl", "models/document", "models/collection", "models/database", "common/pagedResultSet", "viewmodels/deleteDocuments", "viewmodels/copyDocuments", "durandal/app", "widgets/virtualTable/row", "widgets/virtualTable/column"], function(require, exports, pagedList, raven, appUrl, document, collection, database, pagedResultSet, deleteDocuments, copyDocuments, app, row, column) {
     var ctor = (function () {
         function ctor() {
             this.visibleRowCount = 0;
@@ -16,6 +16,7 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
             this.scrollThrottleTimeoutHandle = 0;
             this.firstVisibleRow = null;
             this.selectedIndices = ko.observableArray();
+            this.memoizedCollectionColorFetcher = this.getCollectionClassFromRavenEntityName.memoize(this);
         }
         ctor.prototype.activate = function (settings) {
             var _this = this;
@@ -91,7 +92,7 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
             window.clearTimeout(this.scrollThrottleTimeoutHandle);
             this.scrollThrottleTimeoutHandle = setTimeout(function () {
                 return _this.loadRowData();
-            });
+            }, 100);
         };
 
         ctor.prototype.setupKeyboardShortcuts = function () {
@@ -149,9 +150,17 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
         };
 
         ctor.prototype.getCollectionClassFromDocument = function (doc) {
-            var collectionName = doc.__metadata.ravenEntityName;
+            var entityName = doc.__metadata.ravenEntityName;
+            return this.memoizedCollectionColorFetcher(entityName);
+        };
+
+        ctor.prototype.getCollectionClassFromRavenEntityName = function (entityName) {
+            if (!entityName) {
+                return "system-documents-collection";
+            }
+
             var collection = this.collections().first(function (c) {
-                return c.name === collectionName;
+                return c.name === entityName;
             });
             if (collection) {
                 return collection.colorClass;
