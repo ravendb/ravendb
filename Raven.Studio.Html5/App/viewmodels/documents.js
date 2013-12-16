@@ -1,4 +1,4 @@
-define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "viewmodels/deleteCollection", "common/raven", "common/appUrl", "commands/getCollectionsCommand"], function(require, exports, app, router, collection, database, deleteCollection, raven, appUrl, getCollectionsCommand) {
+define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "models/document", "viewmodels/deleteCollection", "common/raven", "common/pagedList", "common/appUrl", "commands/getDocumentsCommand", "commands/getCollectionsCommand"], function(require, exports, app, router, collection, database, document, deleteCollection, raven, pagedList, appUrl, getDocumentsCommand, getCollectionsCommand) {
     var documents = (function () {
         function documents() {
             var _this = this;

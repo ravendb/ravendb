@@ -4,7 +4,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "models/database", "models/collectionInfo", "common/pagedResultSet"], function(require, exports, commandBase, database, collectionInfo, pagedResultSet) {
+define(["require", "exports", "commands/commandBase", "models/database", "models/collectionInfo", "models/collection", "common/pagedResultSet"], function(require, exports, commandBase, database, collectionInfo, collection, pagedResultSet) {
     var getDocumentsCommand = (function (_super) {
         __extends(getDocumentsCommand, _super);
         function getDocumentsCommand(collection, skip, take) {
