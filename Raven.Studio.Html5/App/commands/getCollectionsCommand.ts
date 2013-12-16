@@ -22,6 +22,7 @@ class createDatabaseCommand extends commandBase {
             fromValue: "",
             pageSize: 128
         };
+
         var resultsSelector = (collectionNames: string[]) => collectionNames.map(n => new collection(n, this.ownerDb));
         return this.query("/terms/Raven/DocumentsByEntityName", args, this.ownerDb, resultsSelector);
     }

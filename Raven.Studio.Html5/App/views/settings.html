@@ -8,7 +8,6 @@
     </li>
     <li data-bind="with: activeDatabase">
         <a data-bind="text: name"></a>
-
     </li>
     <li class="active">
         <span>Settings</span>
@@ -31,7 +30,7 @@
 <div class="settings-container row">
     <div class="col-md-2">
         <ul class="nav nav-pills nav-stacked" data-bind="foreach: router.navigationModel">
-            <li data-bind="css: { active: isActive }">
+            <li data-bind="css: { active: isActive }, visible: $parent.routeIsVisible($data)">
                 <a data-bind="attr: { href: hash }, text: title"></a>
             </li>
         </ul>

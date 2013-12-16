@@ -92,7 +92,7 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
             window.clearTimeout(this.scrollThrottleTimeoutHandle);
             this.scrollThrottleTimeoutHandle = setTimeout(function () {
                 return _this.loadRowData();
-            });
+            }, 100);
         };
 
         ctor.prototype.setupKeyboardShortcuts = function () {

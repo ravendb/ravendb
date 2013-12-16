@@ -32,17 +32,6 @@ class raven {
         return this.docsById<Array<document>>(searchTerm, start, pageSize, metadataOnly, resultsSelector);
     }
 
-    public deleteCollection(collectionName: string): JQueryPromise<any> {
-        var args = {
-            query: "Tag:" + collectionName,
-            pageSize: 128,
-            allowStale: true
-        };
-        var url = "/bulk_docs/Raven/DocumentsByEntityName";
-        var urlParams = "?query=Tag%3A" + encodeURIComponent(collectionName) + "&pageSize=128&allowStale=true";
-        return this.delete_(url + urlParams, null, raven.activeDatabase());
-    }
-
     public getDatabaseUrl(database: database) {
         if (database && !database.isSystem) {
             return appUrl.baseUrl + "/databases/" + database.name;

@@ -5,7 +5,7 @@ import collection = require("models/collection");
 
 class getCollectionInfoCommand extends commandBase {
 
-    constructor(private collection: collection, private db: database) {
+    constructor(private collection: collection) {
         super();
     }
 
@@ -18,7 +18,7 @@ class getCollectionInfoCommand extends commandBase {
 
         var resultsSelector = (dto: collectionInfoDto) => new collectionInfo(dto);
         var url =  "/indexes/Raven/DocumentsByEntityName";
-        return this.query(url, args, this.db, resultsSelector);
+        return this.query(url, args, this.collection.ownerDatabase, resultsSelector);
     }
 }
 

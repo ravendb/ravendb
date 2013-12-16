@@ -30,10 +30,18 @@ class collection {
 		ko.postbox.publish("ActivateCollection", this);
     }
 
-    getInfo(db: database) {
-        new getCollectionInfoCommand(this, db)
-            .execute()
-            .done((info: collectionInfo) => this.documentCount(info.totalResults));
+    fetchTotalDocumentCount() {
+        // AFAICT, there's no way to fetch just the total number of system 
+        // documents, other than doing a full fetch for sys docs.
+        if (this.isSystemDocuments) {
+            new getSystemDocumentsCommand(this.ownerDatabase, 0, 1024)
+                .execute()
+                .done((results: pagedResultSet) => this.documentCount(results.totalResultCount));
+        } else {
+            new getCollectionInfoCommand(this)
+                .execute()
+                .done((info: collectionInfo) => this.documentCount(info.totalResults));
+        }
     }
 
     getDocuments(): pagedList {
@@ -46,7 +54,10 @@ class collection {
 
     fetchDocuments(skip: number, take: number): JQueryPromise<pagedResultSet> {
         if (this.isSystemDocuments) {
-            return new getSystemDocumentsCommand(this.ownerDatabase, skip, take).execute();
+            // System documents don't follow the normal paging rules. See getSystemDocumentsCommand.execute() for more info.
+            var task = new getSystemDocumentsCommand(this.ownerDatabase, skip, take).execute();
+            task.done((results: pagedResultSet) => this.documentCount(results.totalResultCount));
+            return task;
         } if (this.isAllDocuments) {
             return new getAllDocumentsCommand(this.ownerDatabase, skip, take).execute();
         } else {

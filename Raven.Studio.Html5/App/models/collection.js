@@ -16,11 +16,19 @@ define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCom
             ko.postbox.publish("ActivateCollection", this);
         };
 
-        collection.prototype.getInfo = function (db) {
+        collection.prototype.fetchTotalDocumentCount = function () {
             var _this = this;
-            new getCollectionInfoCommand(this, db).execute().done(function (info) {
-                return _this.documentCount(info.totalResults);
-            });
+            // AFAICT, there's no way to fetch just the total number of system
+            // documents, other than doing a full fetch for sys docs.
+            if (this.isSystemDocuments) {
+                new getSystemDocumentsCommand(this.ownerDatabase, 0, 1024).execute().done(function (results) {
+                    return _this.documentCount(results.totalResultCount);
+                });
+            } else {
+                new getCollectionInfoCommand(this).execute().done(function (info) {
+                    return _this.documentCount(info.totalResults);
+                });
+            }
         };
 
         collection.prototype.getDocuments = function () {
@@ -32,8 +40,14 @@ define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCom
         };
 
         collection.prototype.fetchDocuments = function (skip, take) {
+            var _this = this;
             if (this.isSystemDocuments) {
-                return new getSystemDocumentsCommand(this.ownerDatabase, skip, take).execute();
+                // System documents don't follow the normal paging rules. See getSystemDocumentsCommand.execute() for more info.
+                var task = new getSystemDocumentsCommand(this.ownerDatabase, skip, take).execute();
+                task.done(function (results) {
+                    return _this.documentCount(results.totalResultCount);
+                });
+                return task;
             }
             if (this.isAllDocuments) {
                 return new getAllDocumentsCommand(this.ownerDatabase, skip, take).execute();

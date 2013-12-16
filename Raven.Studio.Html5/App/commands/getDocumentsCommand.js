@@ -4,7 +4,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "models/database", "models/collectionInfo", "models/collection", "common/pagedResultSet"], function(require, exports, commandBase, database, collectionInfo, collection, pagedResultSet) {
+define(["require", "exports", "commands/commandBase", "models/database", "models/collectionInfo", "common/pagedResultSet"], function(require, exports, commandBase, database, collectionInfo, pagedResultSet) {
     var getDocumentsCommand = (function (_super) {
         __extends(getDocumentsCommand, _super);
         function getDocumentsCommand(collection, skip, take) {
@@ -14,9 +14,8 @@ define(["require", "exports", "commands/commandBase", "models/database", "models
             this.take = take;
         }
         getDocumentsCommand.prototype.execute = function () {
-            var collectionArg = this.collection.isAllDocuments ? "" : "Tag:" + this.collection.name;
             var args = {
-                query: collectionArg,
+                query: "Tag:" + this.collection.name,
                 start: this.skip,
                 pageSize: this.take
             };

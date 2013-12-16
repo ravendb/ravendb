@@ -88,7 +88,7 @@ class documents {
 
         // Fetch the collection info for each collection.
         // The collection info contains information such as total number of documents.
-        collections.forEach(c => c.getInfo(db));
+        collectionsWithSysCollection.forEach(c => c.fetchTotalDocumentCount());
     }
 
     selectedCollectionChanged(selected: collection) {

@@ -110,7 +110,7 @@ class ctor {
         this.ensureRowsCoverViewport();
 
         window.clearTimeout(this.scrollThrottleTimeoutHandle);
-        this.scrollThrottleTimeoutHandle = setTimeout(() => this.loadRowData());
+        this.scrollThrottleTimeoutHandle = setTimeout(() => this.loadRowData(), 100);
     }
 
     setupKeyboardShortcuts() {

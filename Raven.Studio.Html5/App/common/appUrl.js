@@ -1,4 +1,4 @@
-define(["require", "exports", "models/database", "common/pagedList"], function(require, exports, database, pagedList) {
+﻿define(["require", "exports", "models/database"], function(require, exports, database) {
     // Helper class with static methods for generating app URLs.
     var appUrl = (function () {
         function appUrl() {
@@ -47,6 +47,9 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
             return this.baseUrl;
         };
 
+        /**
+        * Gets the database from the current web browser address. Returns the system database if no database name is found.
+        */
         appUrl.getDatabase = function () {
             // TODO: instead of string parsing, can we pull this from durandal.activeInstruction()?
             var dbIndicator = "database=";
@@ -60,7 +63,10 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
                 }
 
                 var databaseName = hash.substring(dbIndex + dbIndicator.length, dbSegmentEnd + 1);
-                return new database(databaseName);
+                var unescapedDatabaseName = decodeURIComponent(databaseName);
+                var db = new database(unescapedDatabaseName);
+                db.isSystem = unescapedDatabaseName === "<system>";
+                return db;
             } else {
                 // No database is specified in the URL. Assume it's the system database.
                 var db = new database("<system>");

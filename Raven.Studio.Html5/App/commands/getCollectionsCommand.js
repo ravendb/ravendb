@@ -1,4 +1,4 @@
-var __extends = this.__extends || function (d, b) {
+﻿var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
     __.prototype = b.prototype;
@@ -25,6 +25,7 @@ define(["require", "exports", "commands/commandBase", "models/database", "models
                 fromValue: "",
                 pageSize: 128
             };
+
             var resultsSelector = function (collectionNames) {
                 return collectionNames.map(function (n) {
                     return new collection(n, _this.ownerDb);

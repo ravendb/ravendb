@@ -32,17 +32,6 @@ define(["require", "exports", "models/database", "models/collection", "models/co
             return this.docsById(searchTerm, start, pageSize, metadataOnly, resultsSelector);
         };
 
-        raven.prototype.deleteCollection = function (collectionName) {
-            var args = {
-                query: "Tag:" + collectionName,
-                pageSize: 128,
-                allowStale: true
-            };
-            var url = "/bulk_docs/Raven/DocumentsByEntityName";
-            var urlParams = "?query=Tag%3A" + encodeURIComponent(collectionName) + "&pageSize=128&allowStale=true";
-            return this.delete_(url + urlParams, null, raven.activeDatabase());
-        };
-
         raven.prototype.getDatabaseUrl = function (database) {
             if (database && !database.isSystem) {
                 return appUrl.baseUrl + "/databases/" + database.name;

@@ -1,4 +1,4 @@
-define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "models/document", "viewmodels/deleteCollection", "common/raven", "common/pagedList", "common/appUrl", "commands/getDocumentsCommand", "commands/getCollectionsCommand"], function(require, exports, app, router, collection, database, document, deleteCollection, raven, pagedList, appUrl, getDocumentsCommand, getCollectionsCommand) {
+define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "viewmodels/deleteCollection", "common/raven", "common/appUrl", "commands/getCollectionsCommand"], function(require, exports, app, router, collection, database, deleteCollection, raven, appUrl, getCollectionsCommand) {
     var documents = (function () {
         function documents() {
             var _this = this;
@@ -85,8 +85,8 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
 
             // Fetch the collection info for each collection.
             // The collection info contains information such as total number of documents.
-            collections.forEach(function (c) {
-                return c.getInfo(db);
+            collectionsWithSysCollection.forEach(function (c) {
+                return c.fetchTotalDocumentCount();
             });
         };
 

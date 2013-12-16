@@ -11,9 +11,8 @@ class getDocumentsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<pagedResultSet> {
-        var collectionArg = this.collection.isAllDocuments ? "" : "Tag:" + this.collection.name;
         var args = {
-            query: collectionArg,
+            query: "Tag:" + this.collection.name,
             start: this.skip,
             pageSize: this.take
         };

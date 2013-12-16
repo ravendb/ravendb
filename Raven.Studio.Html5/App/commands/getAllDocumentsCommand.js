@@ -4,7 +4,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "common/pagedResultSet", "models/document"], function(require, exports, commandBase, pagedResultSet, document) {
+define(["require", "exports", "commands/commandBase", "models/database", "common/pagedResultSet", "models/document"], function(require, exports, commandBase, database, pagedResultSet, document) {
     /*
     * getAllDocumentsCommand is a specialized command that fetches all the documents in a specified database.
     */
