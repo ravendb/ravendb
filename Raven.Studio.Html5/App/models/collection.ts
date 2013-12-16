@@ -3,6 +3,7 @@ import pagedList = require("common/pagedList");
 import getCollectionInfoCommand = require("commands/getCollectionInfoCommand");
 import getDocumentsCommand = require("commands/getDocumentsCommand");
 import getSystemDocumentsCommand = require("commands/getSystemDocumentsCommand");
+import getAllDocumentsCommand = require("commands/getAllDocumentsCommand");
 import collectionInfo = require("models/collectionInfo");
 import pagedResultSet = require("common/pagedResultSet");
 import database = require("models/database");
@@ -46,6 +47,8 @@ class collection {
     fetchDocuments(skip: number, take: number): JQueryPromise<pagedResultSet> {
         if (this.isSystemDocuments) {
             return new getSystemDocumentsCommand(this.ownerDatabase, skip, take).execute();
+        } if (this.isAllDocuments) {
+            return new getAllDocumentsCommand(this.ownerDatabase, skip, take).execute();
         } else {
             return new getDocumentsCommand(this, skip, take).execute();
         }
