@@ -408,6 +408,8 @@ namespace Raven.Client.Connection
 
 							document = new JsonDocument();
 							document.DataAsJson = RavenJObject.FromObject(failoverServers);
+
+							fromFailoverUrls = true;
 						}
 					}
 				}
