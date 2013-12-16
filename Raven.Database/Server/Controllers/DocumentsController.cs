@@ -34,13 +34,13 @@ namespace Raven.Database.Server.Controllers
 
 			var startsWith = GetQueryStringValue("startsWith");
 			HttpResponseMessage msg;
-			int nextPageStart = 0;
+		    int nextPageStart = GetNextPageStart();
 			if (string.IsNullOrEmpty(startsWith))
 				msg = GetMessageWithObject(Database.GetDocuments(GetStart(), GetPageSize(Database.Configuration.MaxPageSize),
 					GetEtagFromQueryString()));
 			else
 			{
-				msg = GetMessageWithObject(Database.GetDocumentsWithIdStartingWith(startsWith, GetQueryStringValue("matches"), null,
+                msg = GetMessageWithObject(Database.GetDocumentsWithIdStartingWith(startsWith, GetQueryStringValue("matches"), GetQueryStringValue("exclude"),
 				                                                                   GetStart(), GetPageSize(Database.Configuration.MaxPageSize), ref nextPageStart));
 			}
 

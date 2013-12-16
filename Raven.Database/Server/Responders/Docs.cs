@@ -53,7 +53,7 @@ namespace Raven.Database.Server.Responders
 							context.WriteJson(Database.GetDocuments(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize), context.GetEtagFromQueryString()));
 						else
 						{
-							int nextPageStart = 0;
+						    int nextPageStart = context.GetNextPageStart();
 							context.WriteJson(Database.GetDocumentsWithIdStartingWith(
 								startsWith,
 								context.Request.QueryString["matches"],

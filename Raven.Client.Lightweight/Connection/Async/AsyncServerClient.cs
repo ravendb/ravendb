@@ -1087,10 +1087,22 @@ namespace Raven.Client.Connection.Async
 			{
 				var metadata = new RavenJObject();
 				AddTransactionInformation(metadata);
+
+                var actualStart = start;
+
+                var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+                if (nextPage)
+                    actualStart = pagingInformation.NextPageStart;
+
 				var actualUrl = string.Format("{0}/docs?startsWith={1}&matches={5}&exclude={4}&start={2}&pageSize={3}", operationMetadata.Url,
-											  Uri.EscapeDataString(keyPrefix), start.ToInvariantString(), pageSize.ToInvariantString(), exclude, matches);
-				if (metadataOnly)
+                                              Uri.EscapeDataString(keyPrefix), actualStart.ToInvariantString(), pageSize.ToInvariantString(), exclude, matches);
+				
+                if (metadataOnly)
 					actualUrl += "&metadata-only=true";
+
+                if (nextPage)
+                    actualUrl += "&next-page=true";
+
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, actualUrl.NoCache(), "GET", metadata, credentials, convention)
 						.AddOperationHeaders(OperationsHeaders));
@@ -1098,10 +1110,16 @@ namespace Raven.Client.Connection.Async
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 				return request.ReadResponseJsonAsync()
-						.ContinueWith(
-							task =>
-							SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result).OfType<RavenJObject>()).ToArray());
+						.ContinueWith(task =>
+						{
+                            int nextPageStart;
+                            if (pagingInformation != null && int.TryParse(request.ResponseHeaders[Constants.NextPageStart], out nextPageStart))
+                                pagingInformation.Fill(start, pageSize, nextPageStart);
 
+						    return SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result)
+                                .OfType<RavenJObject>())
+                                .ToArray();
+						});
 			});
 		}
 
@@ -1686,7 +1704,7 @@ namespace Raven.Client.Connection.Async
 
 		public async Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null,
 																		  string matches = null, int start = 0,
-									int pageSize = Int32.MaxValue)
+									int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
 		{
 			if (fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");

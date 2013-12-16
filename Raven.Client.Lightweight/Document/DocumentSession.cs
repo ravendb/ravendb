@@ -617,19 +617,19 @@ namespace Raven.Client.Document
 			}
 		}
 
-		public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue)
+		public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
 		{
-			return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize);
+			return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation);
 		}
 
-		public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue)
+		public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
 		{
-			return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize);
+			return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation);
 		}
 
-		private IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
+		private IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation)
 		{
-			var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
+            var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation);
 
 			while (enumerator.MoveNext())
 			{

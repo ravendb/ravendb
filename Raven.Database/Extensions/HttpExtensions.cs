@@ -347,6 +347,15 @@ namespace Raven.Database.Extensions
 			return Math.Max(0, start);
 		}
 
+        public static int GetNextPageStart(this IHttpContext context)
+        {
+            bool isNextPage;
+            if (bool.TryParse(context.Request.QueryString["next-page"], out isNextPage) && isNextPage)
+                return GetStart(context);
+
+            return 0;
+        }
+
 		public static bool GetAllowStale(this IHttpContext context)
 		{
 			bool stale;

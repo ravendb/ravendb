@@ -2043,7 +2043,7 @@ namespace Raven.Database
 
 		                actualStart += pageSize;
 		            }
-		            while (docCount > 0 && addedDocs < pageSize);
+		            while (docCount > 0 && addedDocs < pageSize && actualStart > 0 && actualStart < int.MaxValue);
 		        });
 
 			if (addedDocs != pageSize)

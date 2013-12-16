@@ -641,7 +641,7 @@ namespace Raven.Client.Embedded
 		/// Streams the documents by etag OR starts with the prefix and match the matches
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
-        public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude)
+        public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation = null)
 		{
 			if(fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
