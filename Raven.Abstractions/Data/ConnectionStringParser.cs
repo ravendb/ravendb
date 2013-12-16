@@ -5,6 +5,8 @@ using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
+using Raven.Abstractions.Replication;
+using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
 {
@@ -145,19 +147,22 @@ namespace Raven.Abstractions.Data
 					if (string.IsNullOrEmpty(ConnectionStringOptions.Url))
 						ConnectionStringOptions.Url = value;
 					break;
-				case "failoverurl":
+				case "failover":
 					if (ConnectionStringOptions.FailoverServers == null)
 						ConnectionStringOptions.FailoverServers = new FailoverServers();
 
-					var databaseNameAndFailoverUrl = value.Split('|');
+					var databaseNameAndFailoverDestination = value.Split('|');
 
-					if (databaseNameAndFailoverUrl.Length == 1)
+					ReplicationDestination destination;
+					if (databaseNameAndFailoverDestination.Length == 1)
 					{
-						ConnectionStringOptions.FailoverServers.AddForDefaultDatabase(urls: databaseNameAndFailoverUrl[0]);
+						destination = JsonConvert.DeserializeObject<ReplicationDestination>(databaseNameAndFailoverDestination[0]);
+						ConnectionStringOptions.FailoverServers.AddForDefaultDatabase(destination);
 					}
 					else
 					{
-						ConnectionStringOptions.FailoverServers.AddForDatabase(databaseName: databaseNameAndFailoverUrl[0], urls: databaseNameAndFailoverUrl[1]);
+						destination = JsonConvert.DeserializeObject<ReplicationDestination>(databaseNameAndFailoverDestination[1]);
+						ConnectionStringOptions.FailoverServers.AddForDatabase(databaseName: databaseNameAndFailoverDestination[0], destinations: destination);
 					}
 					break;
 				case "database":
