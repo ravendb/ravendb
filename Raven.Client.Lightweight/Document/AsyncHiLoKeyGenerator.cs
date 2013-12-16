@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 #if !SILVERLIGHT
 using System.Linq;
 using System.Threading;
@@ -99,102 +100,110 @@ namespace Raven.Client.Document
 			return GetNextMaxAsyncInner(databaseCommands);
 		}
 
-		private Task<RangeValue> GetNextMaxAsyncInner(IAsyncDatabaseCommands databaseCommands)
-		{
-			var minNextMax = Range.Max;
-			return GetDocumentAsync(databaseCommands)
-				.ContinueWith(task =>
-				{
-					try
-					{
-						JsonDocument document;
-						try
-						{
-							document = task.Result;
-						}
-						catch (ConflictException e)
-						{
-							// resolving the conflict by selecting the highest number
-							var highestMax = e.ConflictedVersionIds
-								.Select(conflictedVersionId => databaseCommands.GetAsync(conflictedVersionId)
-								                               	.ContinueWith(t => GetMaxFromDocument(t.Result, minNextMax)))
-								.AggregateAsync(Enumerable.Max);
+	    private async Task<RangeValue> GetNextMaxAsyncInner(IAsyncDatabaseCommands databaseCommands)
+	    {
+	        var minNextMax = Range.Max;
 
-							return highestMax
-								.ContinueWith(t => PutDocumentAsync(databaseCommands, new JsonDocument
-								{
-									Etag = e.Etag,
-									Metadata = new RavenJObject(),
-									DataAsJson = RavenJObject.FromObject(new {Max = t.Result}),
-									Key = HiLoDocumentKey
-								}))
-								.Unwrap()
-								.ContinueWithTask(() => GetNextRangeAsync(databaseCommands));
-						}
+	        while (true)
+	        {
+                try
+                {
+                    ConflictException ce = null;
+                    JsonDocument document;
+                    try
+                    {
+                        document = await GetDocumentAsync(databaseCommands);
+                    }
+                    catch (ConflictException e)
+                    {
+                        ce = e;
+                        document = null;
+                    }
+                    if (ce != null)
+                        return await HandleConflictsAsync(databaseCommands, ce, minNextMax);
 
-						long min, max;
-						if (document == null)
-						{
-							min = minNextMax + 1;
-							max = minNextMax + capacity;
-							document = new JsonDocument
-							{
-								Etag = Etag.Empty,
-								// sending empty etag means - ensure the that the document does NOT exists
-								Metadata = new RavenJObject(),
-								DataAsJson = RavenJObject.FromObject(new {Max = max}),
-								Key = HiLoDocumentKey
-							};
-						}
-						else
-						{
-							var oldMax = GetMaxFromDocument(document, minNextMax);
-							min = oldMax + 1;
-							max = oldMax + capacity;
+                    long min, max;
+                    if (document == null)
+                    {
+                        min = minNextMax + 1;
+                        max = minNextMax + capacity;
+                        document = new JsonDocument
+                        {
+                            Etag = Etag.Empty,
+                            // sending empty etag means - ensure the that the document does NOT exists
+                            Metadata = new RavenJObject(),
+                            DataAsJson = RavenJObject.FromObject(new { Max = max }),
+                            Key = HiLoDocumentKey
+                        };
+                    }
+                    else
+                    {
+                        var oldMax = GetMaxFromDocument(document, minNextMax);
+                        min = oldMax + 1;
+                        max = oldMax + capacity;
 
-							document.DataAsJson["Max"] = max;
-						}
+                        document.DataAsJson["Max"] = max;
+                    }
 
-						return PutDocumentAsync(databaseCommands, document).WithResult(new RangeValue(min, max));
-					}
-					catch (ConcurrencyException)
-					{
-						return GetNextMaxAsyncInner(databaseCommands);
-					}
-				}).Unwrap();
-		}
+                    await PutDocumentAsync(databaseCommands, document);
+                    return new RangeValue(min, max);
+                }
+                catch (ConcurrencyException)
+                {
+                    //expected & ignored, will retry this
+                }
+	        }
+	    }
 
-		private Task PutDocumentAsync(IAsyncDatabaseCommands databaseCommands, JsonDocument document)
+	    private async Task<RangeValue> HandleConflictsAsync(IAsyncDatabaseCommands databaseCommands, ConflictException e, long minNextMax)
+	    {
+            // resolving the conflict by selecting the highest number
+	        long highestMax = -1;
+	        if (e.ConflictedVersionIds.Length == 0)
+	            throw new InvalidOperationException("Got conflict exception, but no conflicted versions",e);
+	        foreach (var conflictedVersionId in e.ConflictedVersionIds)
+	        {
+	            var doc = await databaseCommands.GetAsync(conflictedVersionId);
+	            highestMax = Math.Max(highestMax, GetMaxFromDocument(doc, minNextMax));
+	        }
+
+            await PutDocumentAsync(databaseCommands, new JsonDocument
+                {
+                    Etag = e.Etag,
+                    Metadata = new RavenJObject(),
+                    DataAsJson = RavenJObject.FromObject(new { Max = highestMax }),
+                    Key = HiLoDocumentKey
+                });
+	        return await GetNextRangeAsync(databaseCommands);
+	    }
+
+	    private Task PutDocumentAsync(IAsyncDatabaseCommands databaseCommands, JsonDocument document)
 		{
 			return databaseCommands.PutAsync(HiLoDocumentKey, document.Etag,
 								 document.DataAsJson,
 								 document.Metadata);
 		}
 
-		private Task<JsonDocument> GetDocumentAsync(IAsyncDatabaseCommands databaseCommands)
+		private async Task<JsonDocument> GetDocumentAsync(IAsyncDatabaseCommands databaseCommands)
 		{
-			return databaseCommands.GetAsync(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0])
-				.ContinueWith(task =>
-				{
-					var documents = task.Result;
-					if (documents.Results.Count == 2 && documents.Results[1] != null)
-					{
-						lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");
-					}
-					else
-					{
-						lastServerPrefix = string.Empty;
-					}
-					if (documents.Results.Count == 0 || documents.Results[0] == null)
-						return (JsonDocument)null;
+		    var documents = await databaseCommands.GetAsync(new[] {HiLoDocumentKey, RavenKeyServerPrefix}, new string[0]);
+		    if (documents.Results.Count == 2 && documents.Results[1] != null)
+		    {
+		        lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");
+		    }
+		    else
+		    {
+		        lastServerPrefix = string.Empty;
+		    }
+		    if (documents.Results.Count == 0 || documents.Results[0] == null)
+		        return null;
 
-					var jsonDocument = documents.Results[0].ToJsonDocument();
-					foreach (var key in jsonDocument.Metadata.Keys.Where(x => x.StartsWith("@")).ToArray())
-					{
-						jsonDocument.Metadata.Remove(key);
-					}
-					return jsonDocument;
-				});
+		    var jsonDocument = documents.Results[0].ToJsonDocument();
+		    foreach (var key in jsonDocument.Metadata.Keys.Where(x => x.StartsWith("@")).ToArray())
+		    {
+		        jsonDocument.Metadata.Remove(key);
+		    }
+		    return jsonDocument;
 		}
 	}
 }
