@@ -1037,7 +1037,6 @@
     <TypeScriptCompile Include="App\widgets\virtualTable\viewModel.ts" />
     <Content Include="App\widgets\virtualTable\view.html" />
     <TypeScriptCompile Include="Scripts\extensions.ts" />
-    <Content Include="App\views\detail.html" />
     <Content Include="App\views\shell.html" />
     <Content Include="Content\app.css">
       <DependentUpon>app.less</DependentUpon>
