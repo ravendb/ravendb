@@ -26,7 +26,7 @@ class databases {
 
     navigateToDocuments(db: database) {
         db.activate();
-        router.navigate("#documents?db=" + encodeURIComponent(db.name));
+        router.navigate(appUrl.forDocuments(null, db));
     }
 
     getDocumentsUrl(db: database) {
@@ -68,6 +68,7 @@ class databases {
     }
 
     goToDocuments(db: database) {
+        // TODO: use appUrl for this.
         router.navigate("#documents?database=" + db.name);
     }
 }

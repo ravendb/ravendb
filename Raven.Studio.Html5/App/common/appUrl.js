@@ -34,8 +34,8 @@
 
         appUrl.forDocuments = function (collection, db) {
             if (typeof db === "undefined") { db = appUrl.getDatabase(); }
+            var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
             var databasePart = appUrl.getEncodedDbPart(db);
-            var collectionPart = collection ? "&collection=" + encodeURIComponent(collection) : "";
             return "#documents?" + collectionPart + databasePart;
         };
 

@@ -42,8 +42,8 @@ class appUrl {
     }
 
 	static forDocuments(collection?: string, db: database = appUrl.getDatabase()): string {
-		var databasePart = appUrl.getEncodedDbPart(db);
-		var collectionPart = collection ? "&collection=" + encodeURIComponent(collection) : "";
+        var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
+        var databasePart = appUrl.getEncodedDbPart(db);
 		return "#documents?" + collectionPart + databasePart;
     }
 
