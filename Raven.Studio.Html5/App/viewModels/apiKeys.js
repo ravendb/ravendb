@@ -1,7 +1,4 @@
-define(["require", "exports", "commands/getApiKeysCommand", "models/apiKey"], function(require, exports, __getApiKeysCommand__, __apiKey__) {
-    var getApiKeysCommand = __getApiKeysCommand__;
-    var apiKey = __apiKey__;
-
+define(["require", "exports", "commands/getApiKeysCommand", "models/apiKey"], function(require, exports, getApiKeysCommand, apiKey) {
     var apiKeys = (function () {
         function apiKeys() {
             this.apiKeys = ko.observableArray();

@@ -4,12 +4,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "models/database", "models/collectionInfo"], function(require, exports, __commandBase__, __database__, __collectionInfo__) {
-    var commandBase = __commandBase__;
-    var database = __database__;
-    var collectionInfo = __collectionInfo__;
-    
-
+define(["require", "exports", "commands/commandBase", "models/database", "models/collectionInfo"], function(require, exports, commandBase, database, collectionInfo) {
     var getCollectionInfoCommand = (function (_super) {
         __extends(getCollectionInfoCommand, _super);
         function getCollectionInfoCommand(collection) {
