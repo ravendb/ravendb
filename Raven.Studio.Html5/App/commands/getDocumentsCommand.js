@@ -4,7 +4,13 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "models/database", "models/collectionInfo", "models/collection", "common/pagedResultSet"], function(require, exports, commandBase, database, collectionInfo, collection, pagedResultSet) {
+define(["require", "exports", "commands/commandBase", "models/database", "models/collectionInfo", "models/collection", "common/pagedResultSet"], function(require, exports, __commandBase__, __database__, __collectionInfo__, __collection__, __pagedResultSet__) {
+    var commandBase = __commandBase__;
+    var database = __database__;
+    var collectionInfo = __collectionInfo__;
+    var collection = __collection__;
+    var pagedResultSet = __pagedResultSet__;
+
     var getDocumentsCommand = (function (_super) {
         __extends(getDocumentsCommand, _super);
         function getDocumentsCommand(collection, skip, take) {

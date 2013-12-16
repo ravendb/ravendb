@@ -1,4 +1,11 @@
-define(["require", "exports", "models/database", "models/collection", "models/collectionInfo", "models/document", "common/pagedResultSet", "common/appUrl"], function(require, exports, database, collection, collectionInfo, document, pagedResultSet, appUrl) {
+define(["require", "exports", "models/database", "models/collection", "models/collectionInfo", "models/document", "common/pagedResultSet", "common/appUrl"], function(require, exports, __database__, __collection__, __collectionInfo__, __document__, __pagedResultSet__, __appUrl__) {
+    var database = __database__;
+    var collection = __collection__;
+    var collectionInfo = __collectionInfo__;
+    var document = __document__;
+    var pagedResultSet = __pagedResultSet__;
+    var appUrl = __appUrl__;
+
     var raven = (function () {
         function raven() {
         }
@@ -40,8 +47,8 @@ define(["require", "exports", "models/database", "models/collection", "models/co
             return appUrl.baseUrl;
         };
 
-        // TODO: This doesn't really belong here.
-        raven.getEntityNameFromId = function (id) {
+        raven.getEntityNameFromId = // TODO: This doesn't really belong here.
+        function (id) {
             if (!id) {
                 return null;
             }

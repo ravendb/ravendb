@@ -1,16 +1,20 @@
-define(["require", "exports", "models/database", "common/pagedList"], function(require, exports, database, pagedList) {
+define(["require", "exports", "models/database", "common/pagedList"], function(require, exports, __database__, __pagedList__) {
+    var database = __database__;
+    var pagedList = __pagedList__;
+    
+
     // Helper class with static methods for generating app URLs.
     var appUrl = (function () {
         function appUrl() {
         }
-        /**
+        appUrl.forEditDoc = /**
         * Gets the URL for edit document.
         * @param id The ID of the document to edit, or null to edit a new document.
         * @param collectionName The name of the collection to page through on the edit document, or null if paging will be disabled.
         * @param docIndexInCollection The 0-based index of the doc to edit inside the paged collection, or null if paging will be disabled.
         * @param database The database to use in the URL. If null, the current database will be used.
         */
-        appUrl.forEditDoc = function (id, collectionName, docIndexInCollection, db) {
+        function (id, collectionName, docIndexInCollection, db) {
             if (typeof db === "undefined") { db = appUrl.getDatabase(); }
             var databaseUrlPart = appUrl.getEncodedDbPart(db);
             var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
@@ -18,11 +22,11 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
             return "#edit?" + docIdUrlPart + databaseUrlPart + pagedListInfo;
         };
 
-        /**
+        appUrl.forStatus = /**
         * Gets the URL for status page.
         * @param database The database to use in the URL. If null, the current database will be used.
         */
-        appUrl.forStatus = function (db) {
+        function (db) {
             if (typeof db === "undefined") { db = appUrl.getDatabase(); }
             return "#status?" + appUrl.getEncodedDbPart(db);
         };
@@ -75,11 +79,10 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
             }
         };
 
-        /**
+        appUrl.forServer = /**
         * Gets the server URL.
         */
-        appUrl.forServer = function () {
-            // Ported this code from old Silverlight Studio. Do we still need this?
+        function () {
             if (window.location.protocol === "file:") {
                 if (window.location.search.indexOf("fiddler")) {
                     return "http://localhost.fiddler:8080";
@@ -91,10 +94,10 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
             return window.location.protocol + "//" + window.location.host;
         };
 
-        /**
+        appUrl.forCurrentDatabase = /**
         * Gets an object containing computed URLs that update when the current database updates.
         */
-        appUrl.forCurrentDatabase = function () {
+        function () {
             return appUrl.currentDbComputeds;
         };
 

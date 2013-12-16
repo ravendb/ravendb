@@ -1,4 +1,7 @@
-define(["require", "exports", "models/apiKeyDatabase", "common/appUrl"], function(require, exports, apiKeyDatabase, appUrl) {
+define(["require", "exports", "models/apiKeyDatabase", "common/appUrl"], function(require, exports, __apiKeyDatabase__, __appUrl__) {
+    var apiKeyDatabase = __apiKeyDatabase__;
+    var appUrl = __appUrl__;
+
     var apiKey = (function () {
         function apiKey(dto) {
             var _this = this;
