@@ -1,20 +1,14 @@
 ﻿using System;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Web.Http;
-using System.Web.Http.Hosting;
 using Raven.Database.Config;
+using Raven.Database.Server.Connections;
 using Raven.Database.Server.RavenFS.Infrastructure;
-using Raven.Database.Server.RavenFS.Infrastructure.Connections;
 using Raven.Database.Server.RavenFS.Notifications;
 using Raven.Database.Server.RavenFS.Search;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
-using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Util.Streams;
-using Raven.Imports.Newtonsoft.Json.Converters;
 
 namespace Raven.Database.Server.RavenFS
 {
@@ -34,7 +28,7 @@ namespace Raven.Database.Server.RavenFS
 		private readonly InMemoryRavenConfiguration systemConfiguration;
 		private readonly TransportState transportState;
 
-		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration)
+		public RavenFileSystem(InMemoryRavenConfiguration systemConfiguration, TransportState transportState)
 		{
 			this.systemConfiguration = systemConfiguration;
 
@@ -43,7 +37,7 @@ namespace Raven.Database.Server.RavenFS
 			sigGenerator = new SigGenerator();
 			var replicationHiLo = new SynchronizationHiLo(storage);
 			var sequenceActions = new SequenceActions(storage);
-			transportState = new TransportState();
+			this.transportState = transportState;
 			notificationPublisher = new NotificationPublisher(transportState);
 			fileLockManager = new FileLockManager();
 			storage.Initialize();

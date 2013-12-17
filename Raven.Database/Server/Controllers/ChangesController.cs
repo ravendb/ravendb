@@ -135,6 +135,14 @@ namespace Raven.Database.Server.Controllers
 			{
 				connectionState.UnwatchCancellations();
 			}
+			else if (Match(cmd, "watch-config"))
+			{
+				connectionState.WatchConfig();
+			}
+			else if (Match(cmd, "unwatch-config"))
+			{
+				connectionState.UnwatchConfig();
+			}
 			else
 			{
 				return GetMessageWithObject(new

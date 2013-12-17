@@ -8,6 +8,8 @@ using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.RavenFS.Connections;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 #if !SILVERLIGHT
 using TaskEx = System.Threading.Tasks.Task;
 #endif
@@ -261,11 +263,39 @@ namespace Raven.Client.RavenFS.Changes
 
 		public void OnNext(string dataFromConnection)
 		{
-			var notification = NotificationJSonUtilities.Parse<Notification>(dataFromConnection);
+			var ravenJObject = RavenJObject.Parse(dataFromConnection);
+			var value = ravenJObject.Value<RavenJObject>("Value");
+			var type = ravenJObject.Value<string>("Type");
+			//var notification = NotificationJSonUtilities.Parse<Notification>(dataFromConnection);
+			Notification notification;
 
-			if (notification is Heartbeat)
+			switch (type)
 			{
-				return;
+				case "ConfigChange":
+					notification = JsonConvert.DeserializeObject<ConfigChange>(value.ToString());
+					break;
+				case "FileChange":
+					notification = JsonConvert.DeserializeObject<FileChange>(value.ToString());
+					break;
+				case "ConflictNotification":
+					notification = JsonConvert.DeserializeObject<ConflictNotification>(value.ToString());
+					break;
+				case "SynchronizationUpdate":
+					notification = JsonConvert.DeserializeObject<SynchronizationUpdate>(value.ToString());
+					break;
+				case "UploadFailed":
+					notification = JsonConvert.DeserializeObject<UploadFailed>(value.ToString());
+					break;
+				case "ConflictDetected":
+					notification = JsonConvert.DeserializeObject<ConflictDetected>(value.ToString());
+					break;
+				case "ConflictResolved":
+					notification = JsonConvert.DeserializeObject<ConflictResolved>(value.ToString());
+					break;
+				case "Heartbeat":
+					return;
+				default:
+					return;
 			}
 
 			foreach (var subject in subjects)

@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Client.RavenFS;
 using Raven.Database.Server.Controllers;
 
 namespace Raven.Database.Server.Connections
@@ -69,6 +70,17 @@ namespace Raven.Database.Server.Connections
 			foreach (var connectionState in connections)
 			{
 				connectionState.Value.Send(documentChangeNotification);
+			}
+		}
+
+		public event Action<object, Notification> OnNotification = delegate { };
+
+		public void Send(Notification notification)
+		{
+			OnNotification(this, notification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.Send(notification);
 			}
 		}
 
