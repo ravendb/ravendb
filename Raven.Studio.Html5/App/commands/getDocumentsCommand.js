@@ -4,25 +4,18 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "models/database", "models/collectionInfo", "models/collection", "common/pagedResultSet"], function(require, exports, __commandBase__, __database__, __collectionInfo__, __collection__, __pagedResultSet__) {
-    var commandBase = __commandBase__;
-    var database = __database__;
-    var collectionInfo = __collectionInfo__;
-    var collection = __collection__;
-    var pagedResultSet = __pagedResultSet__;
-
+define(["require", "exports", "commands/commandBase", "models/database", "models/collectionInfo", "models/collection", "common/pagedResultSet"], function(require, exports, commandBase, database, collectionInfo, collection, pagedResultSet) {
     var getDocumentsCommand = (function (_super) {
         __extends(getDocumentsCommand, _super);
-        function getDocumentsCommand(collection, db, skip, take) {
+        function getDocumentsCommand(collection, skip, take) {
             _super.call(this);
             this.collection = collection;
-            this.db = db;
             this.skip = skip;
             this.take = take;
         }
         getDocumentsCommand.prototype.execute = function () {
             var args = {
-                query: "Tag:" + this.collection.isAllDocuments ? '' : this.collection.name,
+                query: "Tag:" + this.collection.name,
                 start: this.skip,
                 pageSize: this.take
             };
@@ -32,7 +25,7 @@ define(["require", "exports", "commands/commandBase", "models/database", "models
             };
             var url = "/indexes/Raven/DocumentsByEntityName";
             var documentsTask = $.Deferred();
-            this.query(url, args, this.db, resultsSelector).then(function (collection) {
+            this.query(url, args, this.collection.ownerDatabase, resultsSelector).then(function (collection) {
                 var items = collection.results;
                 var resultSet = new pagedResultSet(items, collection.totalResults);
                 documentsTask.resolve(resultSet);

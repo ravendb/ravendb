@@ -1,19 +1,5 @@
 /// <reference path="../../Scripts/typings/ace/ace.amd.d.ts" />
-define(["require", "exports", "durandal/app", "durandal/system", "plugins/router", "ace/ace", "models/document", "models/documentMetadata", "commands/saveDocumentCommand", "common/raven", "viewModels/deleteDocuments", "common/pagedList", "common/appUrl", "commands/getDocumentsCommand"], function(require, exports, __app__, __sys__, __router__, __ace__, __document__, __documentMetadata__, __saveDocumentCommand__, __raven__, __deleteDocuments__, __pagedList__, __appUrl__, __getDocumentsCommand__) {
-    var app = __app__;
-    var sys = __sys__;
-    var router = __router__;
-    var ace = __ace__;
-
-    var document = __document__;
-    var documentMetadata = __documentMetadata__;
-    var saveDocumentCommand = __saveDocumentCommand__;
-    var raven = __raven__;
-    var deleteDocuments = "viewModels/deleteDocuments";
-    var pagedList = __pagedList__;
-    var appUrl = __appUrl__;
-    var getDocumentsCommand = __getDocumentsCommand__;
-
+define(["require", "exports", "durandal/app", "durandal/system", "plugins/router", "ace/ace", "models/document", "models/documentMetadata", "models/collection", "commands/saveDocumentCommand", "common/raven", "viewmodels/deleteDocuments", "common/pagedList", "common/appUrl", "commands/getDocumentsCommand"], function(require, exports, app, sys, router, ace, document, documentMetadata, collection, saveDocumentCommand, raven, deleteDocuments, pagedList, appUrl, getDocumentsCommand) {
     var editDocument = (function () {
         function editDocument() {
             var _this = this;
@@ -74,6 +60,8 @@ define(["require", "exports", "durandal/app", "durandal/system", "plugins/router
             });
         }
         editDocument.prototype.activate = function (navigationArgs) {
+            // Find the database and collection we're supposed to load.
+            // Used for paging through items.
             if (navigationArgs && navigationArgs.database) {
                 ko.postbox.publish("ActivateDatabaseWithName", navigationArgs.database);
             }
@@ -81,14 +69,14 @@ define(["require", "exports", "durandal/app", "durandal/system", "plugins/router
             if (navigationArgs && navigationArgs.list && navigationArgs.item) {
                 var itemIndex = parseInt(navigationArgs.item, 10);
                 if (!isNaN(itemIndex)) {
-                    var collectionName = decodeURIComponent(navigationArgs.list) === "All Documents" ? null : navigationArgs.list;
+                    var newCollection = new collection(navigationArgs.list, appUrl.getDatabase());
                     var fetcher = function (skip, take) {
-                        return new getDocumentsCommand(collectionName, appUrl.getDatabase(), skip, take).execute();
+                        return newCollection.fetchDocuments(skip, take);
                     };
                     var list = new pagedList(fetcher);
                     list.collectionName = navigationArgs.list;
                     list.currentItemIndex(itemIndex);
-                    list.getNthItem(0);
+                    list.getNthItem(0); // Force us to get the total items count.
                     this.docsList(list);
                 }
             }
@@ -161,8 +149,9 @@ define(["require", "exports", "durandal/app", "durandal/system", "plugins/router
             var updatedDto = JSON.parse(this.documentText());
             var meta = JSON.parse(this.metadataText());
             updatedDto['@metadata'] = meta;
-            console.log(this.documentText());
 
+            // Fix up the metadata: if we're a new doc, attach the expected reserved properties like ID, ETag, and RavenEntityName.
+            // AFAICT, Raven requires these reserved meta properties in order for the doc to be seen as a member of a collection.
             if (this.isCreatingNewDocument()) {
                 this.attachReservedMetaProperties(this.userSpecifiedId(), meta);
             } else {

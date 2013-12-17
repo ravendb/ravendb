@@ -1,6 +1,4 @@
-define(["require", "exports", "common/alertType"], function(require, exports, __alertType__) {
-    var alertType = __alertType__;
-
+define(["require", "exports", "common/alertType"], function(require, exports, alertType) {
     var alertArgs = (function () {
         function alertArgs(type, title, details) {
             this.type = type;

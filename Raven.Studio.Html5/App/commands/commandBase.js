@@ -1,10 +1,4 @@
-define(["require", "exports", "common/alertArgs", "common/alertType", "models/database", "common/appUrl"], function(require, exports, __alertArgs__, __alertType__, __database__, __appUrl__) {
-    
-    var alertArgs = __alertArgs__;
-    var alertType = __alertType__;
-    var database = __database__;
-    var appUrl = __appUrl__;
-
+define(["require", "exports", "common/raven", "common/alertArgs", "common/alertType", "models/database", "common/appUrl"], function(require, exports, raven, alertArgs, alertType, database, appUrl) {
     /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
     var commandBase = (function () {
         function commandBase() {
@@ -15,19 +9,19 @@ define(["require", "exports", "common/alertArgs", "common/alertType", "models/da
         };
 
         commandBase.prototype.reportInfo = function (title, details) {
-            this.reportProgress(alertType.info, title, details);
+            this.reportProgress(0 /* info */, title, details);
         };
 
         commandBase.prototype.reportError = function (title, details) {
-            this.reportProgress(alertType.danger, title, details);
+            this.reportProgress(3 /* danger */, title, details);
         };
 
         commandBase.prototype.reportSuccess = function (title, details) {
-            this.reportProgress(alertType.success, title, details);
+            this.reportProgress(1 /* success */, title, details);
         };
 
         commandBase.prototype.reportWarning = function (title, details) {
-            this.reportProgress(alertType.warning, title, details);
+            this.reportProgress(2 /* warning */, title, details);
         };
 
         commandBase.prototype.query = function (relativeUrl, args, database, resultsSelector) {

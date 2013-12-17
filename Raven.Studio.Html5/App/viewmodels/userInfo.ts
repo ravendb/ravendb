@@ -6,7 +6,7 @@ import router = require("plugins/router");
 import collection = require("models/collection");
 import database = require("models/database");
 import document = require("models/document");
-import deleteCollection = require("viewModels/deleteCollection");
+import deleteCollection = require("viewmodels/deleteCollection");
 import raven = require("common/raven");
 import pagedList = require("common/pagedList");
 
@@ -22,7 +22,6 @@ class userInfo {
     }
 
 	activate(args) {
-		console.log("this is USERINFO!");
 
         if (args && args.database) {
             ko.postbox.publish("ActivateDatabaseWithName", args.database);

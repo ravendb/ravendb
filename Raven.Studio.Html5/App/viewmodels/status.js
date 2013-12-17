@@ -1,6 +1,4 @@
-define(["require", "exports", "plugins/router"], function(require, exports, __durandalRouter__) {
-    var durandalRouter = __durandalRouter__;
-
+define(["require", "exports", "plugins/router"], function(require, exports, durandalRouter) {
     var status = (function () {
         function status() {
             this.displayName = "status";

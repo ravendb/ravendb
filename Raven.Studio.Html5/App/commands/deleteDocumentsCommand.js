@@ -4,10 +4,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "models/database"], function(require, exports, __commandBase__, __database__) {
-    var commandBase = __commandBase__;
-    var database = __database__;
-
+define(["require", "exports", "commands/commandBase", "models/database"], function(require, exports, commandBase, database) {
     var deleteDocumentsCommand = (function (_super) {
         __extends(deleteDocumentsCommand, _super);
         function deleteDocumentsCommand(docIds, db) {

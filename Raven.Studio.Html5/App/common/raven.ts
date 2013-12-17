@@ -9,18 +9,6 @@ class raven {
     
     private static ravenClientVersion = '3.0.0.0';
     public static activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase");
-    
-    public collections(): JQueryPromise<Array<collection>> {
-        this.requireActiveDatabase();
-
-        var args = {
-            field: "Tag",
-            fromValue: "",
-            pageSize: 100
-        };
-        var resultsSelector = (collectionNames: string[]) => collectionNames.map(n => new collection(n));
-        return this.fetch("/terms/Raven/DocumentsByEntityName", args, raven.activeDatabase(), resultsSelector);
-    }
 
     public userInfo() {
         this.requireActiveDatabase();
@@ -42,17 +30,6 @@ class raven {
     public searchIds(searchTerm: string, start: number, pageSize: number, metadataOnly: boolean) {
         var resultsSelector = (dtoResults: documentDto[]) => dtoResults.map(dto => new document(dto));
         return this.docsById<Array<document>>(searchTerm, start, pageSize, metadataOnly, resultsSelector);
-    }
-
-    public deleteCollection(collectionName: string): JQueryPromise<any> {
-        var args = {
-            query: "Tag:" + collectionName,
-            pageSize: 128,
-            allowStale: true
-        };
-        var url = "/bulk_docs/Raven/DocumentsByEntityName";
-        var urlParams = "?query=Tag%3A" + encodeURIComponent(collectionName) + "&pageSize=128&allowStale=true";
-        return this.delete_(url + urlParams, null, raven.activeDatabase());
     }
 
     public getDatabaseUrl(database: database) {

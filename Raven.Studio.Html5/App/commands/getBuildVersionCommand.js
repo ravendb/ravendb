@@ -4,9 +4,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase"], function(require, exports, __commandBase__) {
-    var commandBase = __commandBase__;
-
+define(["require", "exports", "commands/commandBase"], function(require, exports, commandBase) {
     var getBuildVersionCommand = (function (_super) {
         __extends(getBuildVersionCommand, _super);
         function getBuildVersionCommand() {

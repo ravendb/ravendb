@@ -10,7 +10,7 @@ import raven = require("common/raven");
 import document = require("models/document");
 import appUrl = require("common/appUrl");
 import collection = require("models/collection");
-import deleteDocuments = require("viewModels/deleteDocuments");
+import deleteDocuments = require("viewmodels/deleteDocuments");
 import dialogResult = require("common/dialogResult");
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
@@ -40,7 +40,6 @@ class shell {
 
     activate() {
         NProgress.set(.8);
-
 		router.map([
 			{ route: ['', 'databases'],	    title: 'Databases',		moduleId: 'viewmodels/databases',		nav: false },
             { route: 'documents',		    title: 'Documents',		moduleId: 'viewmodels/documents',		nav: true,	hash: appUrl.forCurrentDatabase().documents },

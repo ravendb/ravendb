@@ -1,10 +1,4 @@
-define(["require", "exports", "models/document", "plugins/dialog", "commands/deleteCollectionCommand", "models/collection", "common/appUrl"], function(require, exports, __document__, __dialog__, __deleteCollectionCommand__, __collection__, __appUrl__) {
-    var document = __document__;
-    var dialog = __dialog__;
-    var deleteCollectionCommand = __deleteCollectionCommand__;
-    var collection = __collection__;
-    var appUrl = __appUrl__;
-
+define(["require", "exports", "models/document", "plugins/dialog", "commands/deleteCollectionCommand", "models/collection", "common/appUrl"], function(require, exports, document, dialog, deleteCollectionCommand, collection, appUrl) {
     var deleteCollection = (function () {
         function deleteCollection(collection) {
             this.collection = collection;
@@ -30,6 +24,8 @@ define(["require", "exports", "models/document", "plugins/dialog", "commands/del
         };
 
         deleteCollection.prototype.deactivate = function () {
+            // If we were closed via X button or other dialog dismissal, reject the deletion task since
+            // we never started it.
             if (!this.deletionStarted) {
                 this.deletionTask.reject();
             }

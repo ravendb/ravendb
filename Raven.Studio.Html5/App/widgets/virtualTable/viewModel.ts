@@ -9,8 +9,8 @@ import document = require("models/document");
 import collection = require("models/collection");
 import database = require("models/database");
 import pagedResultSet = require("common/pagedResultSet"); 
-import deleteDocuments = require("viewModels/deleteDocuments");
-import copyDocuments = require("viewModels/copyDocuments");
+import deleteDocuments = require("viewmodels/deleteDocuments");
+import copyDocuments = require("viewmodels/copyDocuments");
 import app = require("durandal/app");
 import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
@@ -38,8 +38,11 @@ class ctor {
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
     selectedIndices = ko.observableArray();
+    memoizedCollectionColorFetcher: Function;
 
     constructor() {
+
+        this.memoizedCollectionColorFetcher = this.getCollectionClassFromRavenEntityName.memoize(this);
     }
 
     activate(settings: any) {
@@ -107,7 +110,7 @@ class ctor {
         this.ensureRowsCoverViewport();
 
         window.clearTimeout(this.scrollThrottleTimeoutHandle);
-        this.scrollThrottleTimeoutHandle = setTimeout(() => this.loadRowData());
+        this.scrollThrottleTimeoutHandle = setTimeout(() => this.loadRowData(), 100);
     }
 
     setupKeyboardShortcuts() {
@@ -158,9 +161,17 @@ class ctor {
         }
     }
 
-    getCollectionClassFromDocument(doc: document) {
-        var collectionName = doc.__metadata.ravenEntityName;
-        var collection = this.collections().first<collection>(c => c.name === collectionName);
+    getCollectionClassFromDocument(doc: document): string {
+        var entityName = doc.__metadata.ravenEntityName;
+        return this.memoizedCollectionColorFetcher(entityName);
+    }
+
+    getCollectionClassFromRavenEntityName(entityName: string): string {
+        if (!entityName) {
+            return "system-documents-collection";
+        }
+
+        var collection = this.collections().first<collection>(c => c.name === entityName);
         if (collection) {
             return collection.colorClass;
         }

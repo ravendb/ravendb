@@ -1,30 +1,7 @@
-define(["require", "exports", "models/database", "models/collection", "models/collectionInfo", "models/document", "common/pagedResultSet", "common/appUrl"], function(require, exports, __database__, __collection__, __collectionInfo__, __document__, __pagedResultSet__, __appUrl__) {
-    var database = __database__;
-    var collection = __collection__;
-    var collectionInfo = __collectionInfo__;
-    var document = __document__;
-    var pagedResultSet = __pagedResultSet__;
-    var appUrl = __appUrl__;
-
+define(["require", "exports", "models/database", "models/collection", "models/collectionInfo", "models/document", "common/pagedResultSet", "common/appUrl"], function(require, exports, database, collection, collectionInfo, document, pagedResultSet, appUrl) {
     var raven = (function () {
         function raven() {
         }
-        raven.prototype.collections = function () {
-            this.requireActiveDatabase();
-
-            var args = {
-                field: "Tag",
-                fromValue: "",
-                pageSize: 100
-            };
-            var resultsSelector = function (collectionNames) {
-                return collectionNames.map(function (n) {
-                    return new collection(n);
-                });
-            };
-            return this.fetch("/terms/Raven/DocumentsByEntityName", args, raven.activeDatabase(), resultsSelector);
-        };
-
         raven.prototype.userInfo = function () {
             this.requireActiveDatabase();
             var url = "/debug/user-info";
@@ -55,17 +32,6 @@ define(["require", "exports", "models/database", "models/collection", "models/co
             return this.docsById(searchTerm, start, pageSize, metadataOnly, resultsSelector);
         };
 
-        raven.prototype.deleteCollection = function (collectionName) {
-            var args = {
-                query: "Tag:" + collectionName,
-                pageSize: 128,
-                allowStale: true
-            };
-            var url = "/bulk_docs/Raven/DocumentsByEntityName";
-            var urlParams = "?query=Tag%3A" + encodeURIComponent(collectionName) + "&pageSize=128&allowStale=true";
-            return this.delete_(url + urlParams, null, raven.activeDatabase());
-        };
-
         raven.prototype.getDatabaseUrl = function (database) {
             if (database && !database.isSystem) {
                 return appUrl.baseUrl + "/databases/" + database.name;
@@ -74,8 +40,8 @@ define(["require", "exports", "models/database", "models/collection", "models/co
             return appUrl.baseUrl;
         };
 
-        raven.getEntityNameFromId = // TODO: This doesn't really belong here.
-        function (id) {
+        // TODO: This doesn't really belong here.
+        raven.getEntityNameFromId = function (id) {
             if (!id) {
                 return null;
             }
