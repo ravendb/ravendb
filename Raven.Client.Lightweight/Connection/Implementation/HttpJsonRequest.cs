@@ -997,8 +997,7 @@ namespace Raven.Client.Connection
 			CopyHeadersToHttpRequestMessage(request);
 			Response = await httpClient.SendAsync(request);
 
-			if (Response.IsSuccessStatusCode == false)
-				throw new ErrorResponseException(Response);
+			await CheckForErrorsAndReturnCachedResultIfAnyAsync();
 
 			SetResponseHeaders(Response);
 		}
@@ -1014,13 +1013,7 @@ namespace Raven.Client.Connection
 			CopyHeadersToHttpRequestMessage(request);
 			Response = await httpClient.SendAsync(request);
 
-			if (Response.IsSuccessStatusCode == false)
-			{
-				var msg = await Response.Content.ReadAsStringAsync();
-				var token = RavenJToken.Parse(msg);
-				var error = token.SelectToken("Error");
-				throw new ErrorResponseException(Response, error.ToString());
-			}
+			await CheckForErrorsAndReturnCachedResultIfAnyAsync();
 
 			SetResponseHeaders(Response);
 		}
