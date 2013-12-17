@@ -2290,12 +2290,16 @@ namespace Raven.Database
             var indexes = Directory.GetFiles(Configuration.IndexStoragePath, "*.*", SearchOption.AllDirectories);
             var totalIndexSize = indexes.Sum(file =>
             {
-                try
-                {
-                    return new FileInfo(file).Length;
-                }
+	            try
+	            {
+		            return new FileInfo(file).Length;
+	            }
+	            catch (UnauthorizedAccessException)
+	            {
+		            return 0;
+	            }
                 catch (FileNotFoundException)
-                {
+                {					
                     return 0;
                 }
             });
