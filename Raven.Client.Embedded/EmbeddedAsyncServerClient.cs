@@ -454,9 +454,9 @@ namespace Raven.Client.Embedded
 		}
 
 		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
-									int pageSize = 2147483647, RavenPagingInformation pagingInformation = null)
+									int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null)
 		{
-			var streamDocs = databaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation);
+			var streamDocs = databaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation);
 			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(streamDocs));
 
 		}

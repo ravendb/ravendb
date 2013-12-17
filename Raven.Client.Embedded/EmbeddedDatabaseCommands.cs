@@ -663,15 +663,27 @@ namespace Raven.Client.Embedded
 						}
 						else
 						{
-							int nextPageStart = 0;
+                            var actualStart = start;
+                            var nextPageStart = 0;
+
+                            var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+                            if (nextPage)
+                            {
+                                actualStart = pagingInformation.NextPageStart;
+                                nextPageStart = actualStart;
+                            }
+
 							database.GetDocumentsWithIdStartingWith(
 								startsWith,
 								matches,
                                 exclude,
-								start,
+								actualStart,
 								pageSize,
 								ref nextPageStart,
 								items.Add);
+
+                            if (pagingInformation != null)
+                                pagingInformation.Fill(start, pageSize, nextPageStart);
 						}
 					}
 					catch (ObjectDisposedException)

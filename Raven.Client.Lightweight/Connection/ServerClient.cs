@@ -1216,11 +1216,16 @@ namespace Raven.Client.Connection
 				}
 			}
 
-			if (start != 0)
-				sb.Append("start=").Append(start).Append("&");
+		    var actualStart = start;
+
+            var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+            if (nextPage)
+                actualStart = pagingInformation.NextPageStart;
+
+            if (actualStart != 0)
+                sb.Append("start=").Append(actualStart).Append("&");
 			if (pageSize != int.MaxValue)
 				sb.Append("pageSize=").Append(pageSize).Append("&");
-
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", Credentials, convention)
@@ -1245,10 +1250,11 @@ namespace Raven.Client.Connection
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
 			var webResponse = request.RawExecuteRequest();
-			return YieldStreamResults(webResponse);
+
+			return YieldStreamResults(webResponse, start, pageSize, pagingInformation);
 		}
 
-		private static IEnumerator<RavenJObject> YieldStreamResults(WebResponse webResponse)
+		private static IEnumerator<RavenJObject> YieldStreamResults(WebResponse webResponse, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null)
 		{
 			using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
 			using (var streamReader = new StreamReader(stream))
@@ -1273,6 +1279,15 @@ namespace Raven.Client.Connection
 
 					yield return (RavenJObject)RavenJToken.ReadFrom(reader);
 				}
+
+			    if (pagingInformation == null || !reader.Read() || reader.TokenType != JsonToken.PropertyName || !Equals("NextPageStart", reader.Value))
+			        yield break;
+
+			    var nextPageStart = reader.ReadAsInt32();
+			    if (nextPageStart.HasValue == false)
+			        throw new InvalidOperationException("Unexpected end of data");
+
+			    pagingInformation.Fill(start, pageSize, nextPageStart.Value);
 			}
 		}
 

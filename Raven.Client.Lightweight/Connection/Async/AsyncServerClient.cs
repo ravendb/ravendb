@@ -1634,20 +1634,29 @@ namespace Raven.Client.Connection.Async
 		public class YieldStreamResults : IAsyncEnumerator<RavenJObject>
 		{
 			private readonly WebResponse webResponse;
-			private readonly Stream stream;
+
+		    private readonly int start;
+
+		    private readonly int pageSize;
+
+		    private readonly RavenPagingInformation pagingInformation;
+
+		    private readonly Stream stream;
 			private readonly StreamReader streamReader;
 			private readonly JsonTextReaderAsync reader;
 			private bool complete;
 
 			private bool wasInitalized;
 
-			public YieldStreamResults(WebResponse webResponse)
+			public YieldStreamResults(WebResponse webResponse, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null)
 			{
 				this.webResponse = webResponse;
-				stream = webResponse.GetResponseStreamWithHttpDecompression();
+			    this.start = start;
+			    this.pageSize = pageSize;
+			    this.pagingInformation = pagingInformation;
+			    stream = webResponse.GetResponseStreamWithHttpDecompression();
 				streamReader = new StreamReader(stream);
 				reader = new JsonTextReaderAsync(streamReader);
-
 			}
 
 			private async Task InitAsync()
@@ -1692,6 +1701,9 @@ namespace Raven.Client.Connection.Async
 				if (reader.TokenType == JsonToken.EndArray)
 				{
 					complete = true;
+
+                    await TryReadNextPageStart();
+
 					return false;
 				}
 
@@ -1699,12 +1711,24 @@ namespace Raven.Client.Connection.Async
 				return true;
 			}
 
-			public RavenJObject Current { get; private set; }
+		    private async Task TryReadNextPageStart()
+		    {
+		        if (pagingInformation == null || !(await reader.ReadAsync()) || reader.TokenType != JsonToken.PropertyName || !Equals("NextPageStart", reader.Value)) 
+                    return;
+
+		        var nextPageStart = await reader.ReadAsInt32();
+		        if (nextPageStart.HasValue == false)
+		            throw new InvalidOperationException("Unexpected end of data");
+
+		        pagingInformation.Fill(start, pageSize, nextPageStart.Value);
+		    }
+
+		    public RavenJObject Current { get; private set; }
 		}
 
 		public async Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null,
 																		  string matches = null, int start = 0,
-									int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
+									int pageSize = Int32.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null)
 		{
 			if (fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
@@ -1727,9 +1751,20 @@ namespace Raven.Client.Connection.Async
 				{
 					sb.Append("matches=").Append(Uri.EscapeDataString(matches)).Append("&");
 				}
+                if (exclude != null)
+                {
+                    sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
+                }
 			}
-			if (start != 0)
-				sb.Append("start=").Append(start).Append("&");
+
+            var actualStart = start;
+
+            var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+            if (nextPage)
+                actualStart = pagingInformation.NextPageStart;
+
+            if (actualStart != 0)
+                sb.Append("start=").Append(actualStart).Append("&");
 			if (pageSize != int.MaxValue)
 				sb.Append("pageSize=").Append(pageSize).Append("&");
 
@@ -1755,9 +1790,9 @@ namespace Raven.Client.Connection.Async
 
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-
 			var webResponse = await request.RawExecuteRequestAsync();
-			return new YieldStreamResults(webResponse);
+
+			return new YieldStreamResults(webResponse, start, pageSize, pagingInformation);
 		}
 #endif
 #if SILVERLIGHT
