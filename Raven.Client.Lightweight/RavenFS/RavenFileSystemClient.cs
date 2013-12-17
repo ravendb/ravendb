@@ -71,9 +71,9 @@ namespace Raven.Client.RavenFS
 			this.baseUrl = baseUrl;
 			if (ServerUrl.EndsWith("/"))
 				this.baseUrl = ServerUrl.Substring(0, ServerUrl.Length - 1);
-
-			notifications = new ServerNotifications(baseUrl);
+			
 			convention = new FileConvention();
+			notifications = new ServerNotifications(baseUrl, convention);
 			replicationInformer = new ReplicationInformer(convention);
 			this.readStripingBase = replicationInformer.GetReadStripingBase();
 		}

@@ -6,6 +6,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.RavenFS.Connections;
 using Raven.Database.Util;
 #if !SILVERLIGHT
 using TaskEx = System.Threading.Tasks.Task;
@@ -16,6 +17,7 @@ namespace Raven.Client.RavenFS.Changes
 	public class ServerNotifications : IServerNotifications, IObserver<string>, IDisposable, IHoldProfilingInformation
 	{
 		private readonly string url;
+		private readonly FileConvention convention;
 		private readonly AtomicDictionary<NotificationSubject> subjects = new AtomicDictionary<NotificationSubject>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ConcurrentSet<Task> pendingConnectionTasks = new ConcurrentSet<Task>();
 		private int reconnectAttemptsRemaining;
@@ -33,11 +35,12 @@ namespace Raven.Client.RavenFS.Changes
 		private Task connectionTask;
 		private object gate = new object();
 
-		public ServerNotifications(string url)
+		public ServerNotifications(string url, FileConvention convention)
 		{
 			id = Interlocked.Increment(ref connectionCounter) + "/" +
 				 Base62Util.Base62Random();
 			this.url = url;
+			this.convention = convention;
 		}
 
 		private async Task EstablishConnection()
@@ -45,7 +48,7 @@ namespace Raven.Client.RavenFS.Changes
 			//TODO: Fix not to use WebRequest
 			var request =
 					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/changes/events?id=" + id,
-						"GET", new OperationCredentials("", new CredentialCache()), null));
+						"GET", new OperationCredentials("", new CredentialCache()), convention));
 
 			while (true)
 			{
