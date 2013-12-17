@@ -4,22 +4,26 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "common/alertType"], function(require, exports, __commandBase__, __alertType__) {
-    var commandBase = __commandBase__;
-    var alertType = __alertType__;
-
+define(["require", "exports", "commands/commandBase", "common/alertType", "models/database"], function(require, exports, commandBase, alertType, database) {
     var deleteCollectionCommand = (function (_super) {
         __extends(deleteCollectionCommand, _super);
-        function deleteCollectionCommand(collectionName) {
+        function deleteCollectionCommand(collectionName, db) {
             _super.call(this);
             this.collectionName = collectionName;
+            this.db = db;
         }
         deleteCollectionCommand.prototype.execute = function () {
             var _this = this;
-            var deleteTask = this.ravenDb.deleteCollection(this.collectionName);
-
             this.reportInfo("Deleting " + this.collectionName + " collection...");
 
+            var args = {
+                query: "Tag:" + this.collectionName,
+                pageSize: 128,
+                allowStale: true
+            };
+            var url = "/bulk_docs/Raven/DocumentsByEntityName";
+            var urlParams = "?query=Tag%3A" + encodeURIComponent(this.collectionName) + "&pageSize=128&allowStale=true";
+            var deleteTask = this.del(url + urlParams, null, this.db);
             deleteTask.done(function () {
                 return _this.reportSuccess("Deleted " + _this.collectionName + " collection");
             });

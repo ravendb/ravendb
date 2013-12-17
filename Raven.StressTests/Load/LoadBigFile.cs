@@ -23,7 +23,7 @@ namespace Raven.StressTests.Load
 					{
 						Progress = Console.WriteLine
 					};
-					await dataDumper.ImportData(new SmugglerImportOptions(), stream);
+					await dataDumper.ImportData(new SmugglerImportOptions(), new SmugglerOptions(), stream);
 				}
 			}
 			sw.Stop();

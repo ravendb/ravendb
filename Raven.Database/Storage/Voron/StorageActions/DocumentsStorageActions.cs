@@ -153,7 +153,7 @@
 		private static string GetKeyFromCurrent(global::Voron.Trees.IIterator iterator)
 		{
 			string key;
-			using (var currentDataStream = iterator.CreateStreamForCurrent())
+			using (var currentDataStream = iterator.CreateReaderForCurrent().AsStream())
 			{
 				var keyBytes = currentDataStream.ReadData();
 				key = Encoding.UTF8.GetString(keyBytes);
@@ -493,20 +493,21 @@
 		{
 			var loweredKey = CreateKey(key);
 
-			using (var metadataReadResult = metadataIndex.Read(Snapshot, loweredKey, writeBatch))
-			{
-				if (metadataReadResult == null)
-					return null;
+			var metadataReadResult = metadataIndex.Read(Snapshot, loweredKey, writeBatch);
+			if (metadataReadResult == null)
+				return null;
 
-				metadataReadResult.Stream.Position = 0;
-				var etag = metadataReadResult.Stream.ReadEtag();
-				var originalKey = metadataReadResult.Stream.ReadString();
-				var lastModifiedDateTimeBinary = metadataReadResult.Stream.ReadInt64();
+			using (var stream = metadataReadResult.Reader.AsStream())
+			{
+				stream.Position = 0;
+				var etag = stream.ReadEtag();
+				var originalKey = stream.ReadString();
+				var lastModifiedDateTimeBinary = stream.ReadInt64();
 
 				var existingCachedDocument = documentCacher.GetCachedDocument(loweredKey, etag);
 
-				var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : metadataReadResult.Stream.ToJObject();
-				var lastModified = lastModifiedDateTimeBinary > 0 ? DateTime.FromBinary(lastModifiedDateTimeBinary) : (DateTime?)null;
+				var metadata = existingCachedDocument != null ? existingCachedDocument.Metadata : stream.ToJObject();
+				var lastModified = lastModifiedDateTimeBinary > 0 ? DateTime.FromBinary(lastModifiedDateTimeBinary) : (DateTime?) null;
 
 				return new JsonDocumentMetadata
 				{
@@ -570,17 +571,17 @@
 			if (existingCachedDocument != null)
 				return existingCachedDocument.Document;
 
-			using (var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch))
-			{
-				if (documentReadResult == null) //non existing document
-					return null;
+			var documentReadResult = tableStorage.Documents.Read(Snapshot, loweredKey, writeBatch);
+			if (documentReadResult == null) //non existing document
+				return null;
 
-				var decodedDocumentStream = documentCodecs.Aggregate(documentReadResult.Stream,
-							(current, codec) => codec.Value.Decode(loweredKey, metadata, documentReadResult.Stream));
+			using (var stream = documentReadResult.Reader.AsStream())
+			{
+				var decodedDocumentStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Value.Decode(loweredKey, metadata, stream));
 
 				var documentData = decodedDocumentStream.ToJObject();
 
-				documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, (int)documentReadResult.Stream.Length);
+				documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, (int) stream.Length);
 
 				return documentData;
 			}

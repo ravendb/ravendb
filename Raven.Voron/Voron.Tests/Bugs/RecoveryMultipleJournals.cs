@@ -51,9 +51,8 @@ namespace Voron.Tests.Bugs
 				{
 					var readResult = tx.GetTree("tree").Read(tx, "a" + i);
 					Assert.NotNull(readResult);
-					using (readResult.Stream)
 					{
-						Assert.Equal(100, readResult.Stream.Length);
+						Assert.Equal(100, readResult.Reader.Length);
 					}
 				}
 				tx.Commit();
@@ -113,11 +112,15 @@ namespace Voron.Tests.Bugs
 
 			var currentJournalInfo = Env.Journal.GetCurrentJournalInfo();
 
+			var random = new Random();
+			var buffer = new byte[1000000];
+			random.NextBytes(buffer);
+
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (var i = 0; i < 1000; i++)
 				{
-					tx.GetTree("tree").Add(tx, "b" + i, new MemoryStream(new byte[100]));
+					tx.GetTree("tree").Add(tx, "b" + i, new MemoryStream(buffer));
 				}
 				//tx.Commit(); - not committing here
 			}
@@ -126,7 +129,7 @@ namespace Voron.Tests.Bugs
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.GetTree("tree").Add(tx, "b", new MemoryStream(new byte[100]));
+				tx.GetTree("tree").Add(tx, "b", new MemoryStream(buffer));
 				tx.Commit();
 			}
 
@@ -156,7 +159,7 @@ namespace Voron.Tests.Bugs
             
 			StopDatabase();
 			
-            CorruptPage(lastJournal, page: 3, pos: 3);
+            CorruptPage(lastJournal, page: 4, pos: 3);
 
 			StartDatabase();
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))

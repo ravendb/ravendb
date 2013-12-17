@@ -60,12 +60,12 @@ namespace Voron.Tests.Bugs
                 var readResult = tx.State.Root.Read(tx, "item/1");
 
                 Assert.NotNull(readResult);
-                Assert.Equal(4000, readResult.Stream.Length);
+                Assert.Equal(4000, readResult.Reader.Length);
 
                 readResult = tx.State.Root.Read(tx, "item/2");
 
                 Assert.NotNull(readResult);
-                Assert.Equal(3999, readResult.Stream.Length);
+                Assert.Equal(3999, readResult.Reader.Length);
             }
         }
 
@@ -103,12 +103,12 @@ namespace Voron.Tests.Bugs
                 var readResult = tx.State.Root.Read(tx, "item/1");
 
                 Assert.NotNull(readResult);
-                Assert.Equal(4000, readResult.Stream.Length);
+                Assert.Equal(4000, readResult.Reader.Length);
 
                 readResult = tx.State.Root.Read(tx, "item/2");
 
                 Assert.NotNull(readResult);
-                Assert.Equal(3999, readResult.Stream.Length);
+                Assert.Equal(3999, readResult.Reader.Length);
             }
         }
 
@@ -130,7 +130,7 @@ namespace Voron.Tests.Bugs
 				var readResult = tx.State.Root.Read(tx, "items/1");
 
 				Assert.NotNull(readResult);
-				Assert.Equal(3, readResult.Stream.Length);
+				Assert.Equal(3, readResult.Reader.Length);
 			}
 		} 
 	}

@@ -47,16 +47,17 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		protected RavenJObject LoadJson(Table table, Slice key, WriteBatch writeBatch, out ushort version)
 		{
-			using (var read = table.Read(Snapshot, key, writeBatch))
+			var read = table.Read(Snapshot, key, writeBatch);
+			if (read == null)
 			{
-				if (read == null)
-				{
-					version = 0;
-					return null;
-				}
-
+				version = 0;
+				return null;
+			} 
+			
+			using (var stream = read.Reader.AsStream())
+			{
 				version = read.Version;
-				return read.Stream.ToJObject();
+				return stream.ToJObject();
 			}
 		}
 	}

@@ -1,5 +1,5 @@
-//knockout-postbox 0.3.1 | (c) 2013 Ryan Niemeyer | http://www.opensource.org/licenses/mit-license
-!(function(factory) {
+// knockout-postbox 0.4.2 | (c) 2013 Ryan Niemeyer |  http://www.opensource.org/licenses/mit-license
+;(function(factory) {
     //CommonJS
     if (typeof require === "function" && typeof exports === "object" && typeof module === "object") {
         factory(require("knockout"), exports);
@@ -36,9 +36,26 @@
 
     //provide a subscribe API for the postbox that takes in the topic as first arg
     existingSubscribe = exports.subscribe;
-    exports.subscribe = function(topic, action, target) {
+    exports.subscribe = function(topic, action, target, initializeWithLatestValue) {
+        var subscription, current;
+
         if (topic) {
-            return existingSubscribe.call(exports, action, target, topic);
+            if (typeof target === "boolean") {
+                initializeWithLatestValue = target;
+                target = undefined;
+            }
+
+            subscription = existingSubscribe.call(exports, action, target, topic);
+
+            if (initializeWithLatestValue) {
+                current = exports.topicCache[topic];
+
+                if (current !== undefined) {
+                    action.call(target, current.value);
+                }
+            }
+
+            return subscription;
         }
     };
 

@@ -29,6 +29,27 @@ namespace Voron.Tests.Journal
 				tx.Commit();
 			}
 
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var bytes = new byte[1 * AbstractPager.PageSize];
+				tx.State.Root.Add(tx, "items/1", new MemoryStream(bytes));
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var bytes = new byte[1 * AbstractPager.PageSize];
+				tx.State.Root.Add(tx, "items/1", new MemoryStream(bytes));
+				tx.Commit();
+			}
+
+			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+			{
+				var bytes = new byte[1 * AbstractPager.PageSize];
+				tx.State.Root.Add(tx, "items/1", new MemoryStream(bytes));
+				tx.Commit();
+			}
+
 			Assert.Null(Env.Journal.CurrentFile);
 			Assert.Equal(1, Env.Journal.Files.Count);
 		}

@@ -4,22 +4,28 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase", "models/document"], function(require, exports, __commandBase__, __document__) {
-    var commandBase = __commandBase__;
-    var document = __document__;
-
+define(["require", "exports", "commands/commandBase", "models/document", "models/database"], function(require, exports, commandBase, document, database) {
     var saveDocumentCommand = (function (_super) {
         __extends(saveDocumentCommand, _super);
-        function saveDocumentCommand(id, document) {
+        function saveDocumentCommand(id, document, db) {
             _super.call(this);
             this.id = id;
             this.document = document;
+            this.db = db;
         }
         saveDocumentCommand.prototype.execute = function () {
             var _this = this;
-            var saveTask = this.ravenDb.saveDocument(this.id, this.document);
-
             this.reportInfo("Saving " + this.id + "...");
+
+            var customHeaders = {
+                'Raven-Client-Version': commandBase.ravenClientVersion,
+                'Raven-Entity-Name': this.document.__metadata.ravenEntityName,
+                'Raven-Clr-Type': this.document.__metadata.ravenClrType,
+                'If-None-Match': this.document.__metadata.etag
+            };
+            var args = JSON.stringify(this.document.toDto());
+            var url = "/docs/" + this.id;
+            var saveTask = this.put(url, args, this.db, customHeaders);
 
             saveTask.done(function () {
                 return _this.reportSuccess("Saved " + _this.id);

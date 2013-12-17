@@ -60,7 +60,7 @@ namespace Voron.Tests.Optimizations
 
 				var readResult = tx.State.Root.Read(tx, new string('4', 1000));
 
-				Assert.Equal(21, readResult.Stream.Length);
+				Assert.Equal(21, readResult.Reader.Length);
 			}
 		}
 	}

@@ -1,16 +1,25 @@
 import commandBase = require("commands/commandBase");
 import document = require("models/document");
+import database = require("models/database");
 
 class saveDocumentCommand extends commandBase {
 
-    constructor(private id: string, private document: document) {
+    constructor(private id: string, private document: document, private db: database) {
         super();
     }
 
     execute(): JQueryPromise<{ Key: string; ETag: string }> {
-        var saveTask = this.ravenDb.saveDocument(this.id, this.document);
-
         this.reportInfo("Saving " + this.id + "...");
+
+        var customHeaders = {
+            'Raven-Client-Version': commandBase.ravenClientVersion,
+            'Raven-Entity-Name': this.document.__metadata.ravenEntityName,
+            'Raven-Clr-Type': this.document.__metadata.ravenClrType,
+            'If-None-Match': this.document.__metadata.etag
+        };
+        var args = JSON.stringify(this.document.toDto());
+        var url = "/docs/" + this.id;
+        var saveTask = this.put(url, args, this.db, customHeaders);
 
         saveTask.done(() => this.reportSuccess("Saved " + this.id));
         saveTask.fail((response) => this.reportError("Failed to save " + this.id, JSON.stringify(response)));

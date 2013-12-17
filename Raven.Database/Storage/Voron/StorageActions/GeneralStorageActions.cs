@@ -34,10 +34,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 generalTable.Add(writeBatch, lowerKeyName, BitConverter.GetBytes((long) 1));
                 return 1;
             }
-            
-            using (var readResult = generalTable.Read(snapshot, lowerKeyName, writeBatch))
+
+	        var readResult = generalTable.Read(snapshot, lowerKeyName, writeBatch);
+            using (var stream = readResult.Reader.AsStream())
             {
-                var newValue = readResult.Stream.ReadInt64() + 1;
+                var newValue = stream.ReadInt64() + 1;
 
                 generalTable.Add(writeBatch, lowerKeyName, BitConverter.GetBytes(newValue));
                 return newValue;

@@ -93,7 +93,6 @@
     <Compile Include="SQLServer\SqlServerTest.cs" />
     <Compile Include="StoragePerformanceTestBase.cs" />
     <Compile Include="TestData.cs" />
-    <Compile Include="Util\Filter.cs" />
     <Compile Include="Voron\VoronTest.cs" />
   </ItemGroup>
   <ItemGroup>

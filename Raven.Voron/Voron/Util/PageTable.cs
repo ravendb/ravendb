@@ -104,11 +104,11 @@ namespace Voron.Util
 			return false;
 		}
 
-		public long MaxJournalPos()
+		public long MaxTransactionId()
 		{
 			return _values.Values.Select(x => x[x.Count - 1].Value)
 				.Where(x => x != null)
-				.Max(x => x.JournalPos);
+				.Max(x => x.TransactionId);
 		}
 
 		public List<KeyValuePair<long, JournalFile.PagePosition>> AllPagesOlderThan(long oldestActiveTransaction)
