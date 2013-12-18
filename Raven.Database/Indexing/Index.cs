@@ -20,6 +20,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
+using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -38,6 +39,7 @@ using Raven.Database.Util;
 using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
 using Document = Lucene.Net.Documents.Document;
+using Field = Lucene.Net.Documents.Field;
 using Task = System.Threading.Tasks.Task;
 using Version = Lucene.Net.Util.Version;
 
@@ -367,62 +369,67 @@ namespace Raven.Database.Indexing
 				Analyzer searchAnalyzer = null;
 				var itemsInfo = new IndexedItemsInfo();
 
-				try
-				{
-					waitReason = "Write";
-					try
-					{
-						searchAnalyzer = CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose);
-					}
-					catch (Exception e)
-					{
-						context.AddError(name, "Creating Analyzer", e.ToString(), "Analyzer");
-						throw;
-					}
+			    try
+			    {
+			        waitReason = "Write";
+			        try
+			        {
+			            searchAnalyzer = CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose);
+			        }
+			        catch (Exception e)
+			        {
+			            context.AddError(name, "Creating Analyzer", e.ToString(), "Analyzer");
+			            throw;
+			        }
 
-					if (indexWriter == null)
-					{
-						CreateIndexWriter();
-					}
+			        if (indexWriter == null)
+			        {
+			            CreateIndexWriter();
+			        }
 
-					var locker = directory.MakeLock("writing-to-index.lock");
-					try
-					{
-						var stats = new IndexingWorkStats();
+			        var locker = directory.MakeLock("writing-to-index.lock");
+			        try
+			        {
+			            var stats = new IndexingWorkStats();
 
-						try
-						{
-							if (locker.Obtain() == false)
-							{
-								throw new InvalidOperationException(string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
-																				  name));
-							}
+			            try
+			            {
+			                if (locker.Obtain() == false)
+			                {
+			                    throw new InvalidOperationException(
+			                        string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
+			                            name));
+			                }
 
-							itemsInfo = action(indexWriter, searchAnalyzer, stats);
-							shouldRecreateSearcher = itemsInfo.ChangedDocs > 0;
-							foreach (var indexExtension in indexExtensions.Values)
-							{
-								indexExtension.OnDocumentsIndexed(currentlyIndexDocuments, searchAnalyzer);
-							}
-						}
-						catch (Exception e)
-						{
-							context.AddError(name, null, e.ToString(), "Write");
-							throw;
-						}
+			                itemsInfo = action(indexWriter, searchAnalyzer, stats);
+			                shouldRecreateSearcher = itemsInfo.ChangedDocs > 0;
+			                foreach (var indexExtension in indexExtensions.Values)
+			                {
+			                    indexExtension.OnDocumentsIndexed(currentlyIndexDocuments, searchAnalyzer);
+			                }
+			            }
+			            catch (Exception e)
+			            {
+			                context.AddError(name, null, e.ToString(), "Write");
+			                throw;
+			            }
 
-						if (itemsInfo.ChangedDocs > 0)
-						{
-							UpdateIndexingStats(context, stats);
-							WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
-							Flush(); // just make sure changes are flushed to disk
-						}
-					}
-					finally
-					{
-						locker.Release();
-					}
-				}
+			            if (itemsInfo.ChangedDocs > 0)
+			            {
+			                UpdateIndexingStats(context, stats);
+			                WriteInMemoryIndexToDiskIfNecessary(itemsInfo.HighestETag);
+			                Flush(); // just make sure changes are flushed to disk
+			            }
+			        }
+			        finally
+			        {
+			            locker.Release();
+			        }
+			    }
+			    catch (Exception e)
+			    {
+			        throw new InvalidOperationException("Could not properly write to index " + name, e);
+			    }
 				finally
 				{
 					currentlyIndexDocuments.Clear();
