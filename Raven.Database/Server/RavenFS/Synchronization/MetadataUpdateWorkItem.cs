@@ -3,12 +3,15 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Logging;
+using Raven.Client.Connection;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization.Multipart;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -39,26 +42,21 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				return await ApplyConflictOnDestinationAsync(conflict, destination, ServerInfo.Url, log);
 
 			var request =
-				(HttpWebRequest)
-				WebRequest.Create(destination + "/ravenfs/synchronization/updatemetadata?fileName=" + Uri.EscapeDataString(FileName));
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+						destination + "/ravenfs/synchronization/updatemetadata?fileName=" + Uri.EscapeDataString(FileName),
+						"POST", new OperationCredentials("", new CredentialCache()), Convention));
 
-			request.Method = "POST";
-			request.ContentLength = 0;
 			request.AddHeaders(FileMetadata);
+			
 
-			request.Headers[SyncingMultipartConstants.SourceServerInfo] = ServerInfo.AsJson();
+			request.AddHeader(SyncingMultipartConstants.SourceServerInfo, ServerInfo.AsJson());
 
 			try
 			{
-				using (var response = await request.GetResponseAsync())
-				{
-					using (var stream = response.GetResponseStream())
-					{
-						return new JsonSerializer().Deserialize<SynchronizationReport>(new JsonTextReader(new StreamReader(stream)));
-					}
-				}
+				var response = await request.ReadResponseJsonAsync();
+				return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
 			}
-			catch (WebException exception)
+			catch (ErrorResponseException exception)
 			{
 				throw exception.BetterWebExceptionError();
 			}

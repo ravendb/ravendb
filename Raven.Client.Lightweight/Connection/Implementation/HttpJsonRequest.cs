@@ -1,3 +1,4 @@
+using System.Web.UI.WebControls;
 #if !NETFX_CORE && !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="HttpJsonRequest.cs" company="Hibernating Rhinos LTD">
@@ -75,6 +76,7 @@ namespace Raven.Client.Connection
 		public Action<string, string, string> HandleReplicationStatusChanges = delegate { };
 
 		private readonly OperationCredentials _credentials;
+		private HttpContent postedContent;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -229,7 +231,8 @@ namespace Raven.Client.Connection
 				var key = headers.GetKey(i);
 				var values = headers.GetValues(i);
 				Debug.Assert(values != null);
-				httpRequestMessage.Headers.Add(key, values);
+
+				httpRequestMessage.Headers.TryAddWithoutValidation(key, values);
 			}
 		}
 
@@ -367,7 +370,7 @@ namespace Raven.Client.Connection
 
 			// throw the conflict exception
 			await CheckForErrorsAndReturnCachedResultIfAnyAsync();
-			
+
 			using (var stream = await Response.GetResponseStreamWithHttpDecompression())
 			{
 				SetResponseHeaders(Response);
@@ -554,6 +557,10 @@ namespace Raven.Client.Connection
 					commpressedData.Flush();
 					stream.Flush();
 				}
+			}
+			if (postedContent != null)
+			{
+				throw new NotImplementedException("Need to do this");
 			}
 			webRequest = newWebRequest;
 		}
@@ -915,21 +922,21 @@ namespace Raven.Client.Connection
 			HttpRequestHelper.WriteDataToRequest(webRequest, data, factory.DisableRequestCompression);
 		}
 
-	/*	public void Write(Stream streamToWrite)
-		{
-			writeCalled = true;
-			postedStream = streamToWrite;
-			webRequest.SendChunked = true;
-			CopyHeadersToWebRequest();
-			using (var stream = webRequest.GetRequestStream())
-			using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
+		/*	public void Write(Stream streamToWrite)
 			{
-				streamToWrite.CopyTo(commpressedData);
+				writeCalled = true;
+				postedStream = streamToWrite;
+				webRequest.SendChunked = true;
+				CopyHeadersToWebRequest();
+				using (var stream = webRequest.GetRequestStream())
+				using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
+				{
+					streamToWrite.CopyTo(commpressedData);
 
-				commpressedData.Flush();
-				stream.Flush();
-			}
-		}*/
+					commpressedData.Flush();
+					stream.Flush();
+				}
+			}*/
 
 		public async Task<IObservable<string>> ServerPullAsync()
 		{
@@ -985,15 +992,38 @@ namespace Raven.Client.Connection
 			await ExecuteRequestAsync();
 		}
 
-		private async Task WriteAsync(Stream streamToWrite)
+		public async Task WriteAsync(Stream streamToWrite)
 		{
 			postedStream = streamToWrite;
 			writeCalled = true;
 			var request = new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
 				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression)
+				{
+					Headers =
+					{
+						ContentType = new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"}
+					}
+				}
 			};
-			request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+			
+			CopyHeadersToHttpRequestMessage(request);
+			Response = await httpClient.SendAsync(request);
+
+			await CheckForErrorsAndReturnCachedResultIfAnyAsync();
+
+			SetResponseHeaders(Response);
+		}
+
+		public async Task WriteAsync(HttpContent content)
+		{
+			postedContent = content;
+			writeCalled = true;
+			var request = new HttpRequestMessage(new HttpMethod(Method), Url)
+			{
+				Content = content
+			};
+
 			CopyHeadersToHttpRequestMessage(request);
 			Response = await httpClient.SendAsync(request);
 
@@ -1094,6 +1124,19 @@ namespace Raven.Client.Connection
 		public void AddHeader(string key, string val)
 		{
 			headers.Set(key, val);
+		}
+
+		public void AddRange(long @from, long? to = null)
+		{
+			httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(from, to);
+		}
+
+		public void AddHeaders(NameValueCollection nameValueHeaders)
+		{
+			foreach (var key in nameValueHeaders.AllKeys)
+			{
+				AddHeader(key, nameValueHeaders[key]);
+			}
 		}
 	}
 }

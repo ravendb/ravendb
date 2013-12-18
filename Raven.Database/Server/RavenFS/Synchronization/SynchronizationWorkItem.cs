@@ -5,19 +5,24 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Logging;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.RavenFS;
+using Raven.Client.RavenFS.Connections;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization.Conflictuality;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
-	public abstract class SynchronizationWorkItem
+	public abstract class SynchronizationWorkItem : IHoldProfilingInformation
 	{
 		private readonly ConflictDetector conflictDetector;
 		private readonly ConflictResolver conflictResolver;
 		protected readonly CancellationTokenSource Cts = new CancellationTokenSource();
-
+		protected HttpJsonRequestFactory jsonRequestFactory = new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+		private const int DefaultNumberOfCachedRequests = 2048;
+		protected FileConvention Convention = new FileConvention();
 		protected SynchronizationWorkItem(string fileName, string sourceServerUrl, TransactionalStorage storage)
 		{
 			Storage = storage;
@@ -122,5 +127,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 				FileMetadata = fileAndPages.Metadata;
 			}
 		}
+
+		public ProfilingInformation ProfilingInformation { get; private set; }
 	}
 }
