@@ -5,12 +5,27 @@ import database = require("models/database");
 class userInfo {
 
     data = ko.observable<userInfoDto>();
+    activeDbSubscription: KnockoutSubscription;
+
+    constructor() {
+        this.activeDbSubscription = ko.postbox.subscribe("ActivateDatabase", (db: database) => this.fetchUserInfo(db));
+    }
     
     activate(args) {
         var db = appUrl.getDatabase();
-        return new getUserInfoCommand(db)
-            .execute()
-            .done((results: userInfoDto) => this.data(results));
+        this.fetchUserInfo(db);
+    }
+
+    deactivate() {
+        this.activeDbSubscription.dispose();
+    }
+
+    fetchUserInfo(db: database) {
+        if (db) {
+            return new getUserInfoCommand(db)
+                .execute()
+                .done((results: userInfoDto) => this.data(results));
+        }
     }
 }
 
