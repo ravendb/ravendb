@@ -209,15 +209,15 @@
                 for (var transactions = 0; transactions < numberOfTransactions; transactions++)
                 {
                     sw.Restart();
-
+                    long v = 0;
                     using (var tx = new Transaction(session))
                     {
                         for (var i = 0; i < itemsPerTransaction; i++)
                         {
                             enumerator.MoveNext();
-
                             var testData = enumerator.Current;
                             valueToWrite = GetValueToWrite(valueToWrite, testData.ValueSize);
+                            v += valueToWrite.Length;
                             Api.JetPrepareUpdate(session, table, JET_prep.Insert);
                             Api.SetColumn(session, table, primaryColumnId, testData.Id);
                             Api.SetColumn(session, table, secondaryColumnId, valueToWrite);
@@ -232,6 +232,7 @@
                     records.Add(
                         new PerformanceRecord
                             {
+                                Bytes = v,
                                 Operation = operation,
                                 Time = DateTime.Now,
                                 Duration = sw.ElapsedMilliseconds,
@@ -251,12 +252,13 @@
             {
                 var sw = Stopwatch.StartNew();
 
-                ReadInternal(ids, perfTracker, instance);
+                var bytes = ReadInternal(ids, perfTracker, instance);
 
                 sw.Stop();
 
                 return new PerformanceRecord
                            {
+                               Bytes = bytes,
                                Operation = operation,
                                Time = DateTime.Now,
                                Duration = sw.ElapsedMilliseconds,
@@ -273,7 +275,7 @@
             }
         }
 
-        private void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, Instance instance)
+        private long ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, Instance instance)
         {
             Table table;
             JET_COLUMNID primaryColumnId;
@@ -282,6 +284,7 @@
             {
                 var sw = Stopwatch.StartNew();
                 Api.JetSetCurrentIndex(session, table, "by_key");
+                long v = 0;
                 foreach (var id in ids)
                 {
                     Api.MoveBeforeFirst(session, table);
@@ -290,9 +293,12 @@
 
                     var value = Api.RetrieveColumn(session, table, secondaryColumnId);
 
+                    v += value.Length;
+
                     Debug.Assert(value != null);
                 }
                 perfTracker.Record(sw.ElapsedMilliseconds);
+                return v;
             }
         }
     }

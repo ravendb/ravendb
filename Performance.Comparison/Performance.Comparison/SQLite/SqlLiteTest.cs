@@ -204,12 +204,13 @@ namespace Performance.Comparison.SQLite
             }
         }
 
-        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, SQLiteConnection connection)
+        private static long ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, SQLiteConnection connection)
         {
             var buffer = new byte[4096];
 
             using (var tx = connection.BeginTransaction())
             {
+                long v = 0;
                 var sw = Stopwatch.StartNew();
                 foreach (var id in ids)
                 {
@@ -224,11 +225,13 @@ namespace Performance.Comparison.SQLite
                             while ((bytesRead = reader.GetBytes(0, fieldOffset, buffer, 0, buffer.Length)) > 0)
                             {
                                 fieldOffset += bytesRead;
+                                v += bytesRead;
                             }
                         }
                     }
                 }
                 perfTracker.Record(sw.ElapsedMilliseconds);
+                return v;
             }
         }
     }

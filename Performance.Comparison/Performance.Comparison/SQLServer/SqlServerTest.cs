@@ -191,7 +191,7 @@ namespace Performance.Comparison.SQLServer
             return ExecuteReadWithParallel(operation, ids, numberOfThreads, () => ReadInternal(ids, perfTracker, connectionString));
         }
 
-        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, string connectionString)
+        private static long ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, string connectionString)
         {
             using (var connection = new SqlConnection(connectionString))
             {
@@ -201,6 +201,7 @@ namespace Performance.Comparison.SQLServer
 
                 using (var tx = connection.BeginTransaction())
                 {
+                    long v = 0;
                     var sw = Stopwatch.StartNew();
                     foreach (var id in ids)
                     {
@@ -217,13 +218,14 @@ namespace Performance.Comparison.SQLServer
                                     while ((bytesRead = reader.GetBytes(0, fieldOffset, buffer, 0, buffer.Length)) > 0)
                                     {
                                         fieldOffset += bytesRead;
+                                        v += bytesRead;
                                     }
                                 }
                             }
                         }
                     }
                     perfTracker.Record(sw.ElapsedMilliseconds);
-
+                    return v;
                 }
             }
         }

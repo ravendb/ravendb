@@ -212,19 +212,20 @@
             }
         }
 
-        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, LightningEnvironment env,
+        private static long ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, LightningEnvironment env,
 			LightningDatabase db)
         {
             using (var tx = env.BeginTransaction(LightningDB.TransactionBeginFlags.ReadOnly))
 			using (var cursor = new LightningCursor(db, tx))
             {
-                var sw = Stopwatch.StartNew();
+                long v = 0;
                 foreach (var id in ids)
                 {
                     var value = cursor.MoveTo(Encoding.UTF8.GetBytes(id.ToString("0000000000000000")));
+                    v += value.Value.Length;
                     //Debug.Assert(value != null);
                 }
-                Console.WriteLine(sw.ElapsedMilliseconds);
+                return v;
             }
         }
     }

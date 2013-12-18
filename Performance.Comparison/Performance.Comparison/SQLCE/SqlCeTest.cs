@@ -197,7 +197,7 @@ namespace Performance.Comparison.SQLCE
             return ExecuteReadWithParallel(operation, ids, numberOfThreads, () => ReadInternal(ids, perfTracker, connectionString));
         }
 
-        private  void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, string connectionString)
+        private  long ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, string connectionString)
         {
             var buffer = new byte[4096];
 
@@ -207,6 +207,7 @@ namespace Performance.Comparison.SQLCE
 
                 using (var tx = connection.BeginTransaction())
                 {
+                    long v = 0;
                     var sw = Stopwatch.StartNew();
                     foreach (var id in ids)
                     {
@@ -222,12 +223,14 @@ namespace Performance.Comparison.SQLCE
                                     while ((bytesRead = reader.GetBytes(0, fieldOffset, buffer, 0, buffer.Length)) > 0)
                                     {
                                         fieldOffset += bytesRead;
+                                        v += bytesRead;
                                     }
                                 }
                             }
                         }
                     }
                     perfTracker.Record(sw.ElapsedMilliseconds);
+                    return v;
                 }
             }
         }

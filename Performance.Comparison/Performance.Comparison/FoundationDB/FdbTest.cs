@@ -258,12 +258,12 @@ namespace Performance.Comparison.FoundationDB
             return ReadParallelAsync(operation, ids, perfTracker, numberOfThreads).Result;
         }
 
-        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, FdbDatabase db)
+        private static long ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, FdbDatabase db)
         {
-            ReadInternalAsync(ids, perfTracker, db).Wait();
+            return ReadInternalAsync(ids, perfTracker, db).Result;
         }
 
-        private static async Task ReadInternalAsync(IEnumerable<int> ids, PerfTracker perfTracker, FdbDatabase db)
+        private static async Task<long> ReadInternalAsync(IEnumerable<int> ids, PerfTracker perfTracker, FdbDatabase db)
         {
             const int BATCH_SIZE = 1000;
 
@@ -272,6 +272,7 @@ namespace Performance.Comparison.FoundationDB
 
             Stopwatch sw = Stopwatch.StartNew();
 
+            long v = 0;
             foreach (int id in ids)
             {
                 list.Add(id);
@@ -280,7 +281,8 @@ namespace Performance.Comparison.FoundationDB
                 {
                     using (var tx = db.BeginReadOnlyTransaction())
                     {
-                        await tx.GetValuesAsync(location.PackRange(list));
+                        var slices = await tx.GetValuesAsync(location.PackRange(list));
+                        v += slices.Sum(x=>x.Count);
                     }
                     list.Clear();
                 }
@@ -290,11 +292,14 @@ namespace Performance.Comparison.FoundationDB
             {
                 using (var tx = db.BeginReadOnlyTransaction())
                 {
-                    await tx.GetValuesAsync(location.PackRange(list));
+                    var slices = await tx.GetValuesAsync(location.PackRange(list));
+                    v += slices.Sum(x => x.Count);
+                 
                 }
             }
 
             perfTracker.Record(sw.ElapsedMilliseconds);
+            return v;
         }
     }
 }
