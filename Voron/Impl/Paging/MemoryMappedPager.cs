@@ -26,6 +26,9 @@
 
 
         [DllImport("kernel32.dll")]
+        static extern bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
+
+        [DllImport("kernel32.dll")]
         static extern IntPtr GetCurrentProcess();
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -177,7 +180,10 @@
 
         public override void Sync()
         {
-            FlushFileBuffers(_handle);
+            if(FlushViewOfFile(PagerState.MapBase, new IntPtr(PagerState.Accessor.Capacity)) == false)
+                    throw new Win32Exception();
+            if (FlushFileBuffers(_handle) == false)
+                throw new Win32Exception();
         }
 
         public override void Write(Page page, long? pageNumber)
