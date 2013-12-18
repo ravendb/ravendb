@@ -90,3 +90,16 @@ interface licenseStatusDto {
         maxParallelism: string;
     }
 }
+
+interface userInfoDto {
+    Remark: string;
+    User: string;
+    IsAdminGlobal: boolean;
+    IsAdminCurrentDb: boolean;
+    Databases: string[];
+    Principal: string;
+    AdminDatabases: string[];
+    ReadOnlyDatabases: string[];
+    ReadWriteDatabases: string[];
+    AccessTokenBody: string;
+}

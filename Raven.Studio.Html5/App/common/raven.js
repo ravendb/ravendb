@@ -2,12 +2,6 @@ define(["require", "exports", "models/database", "models/collection", "models/co
     var raven = (function () {
         function raven() {
         }
-        raven.prototype.userInfo = function () {
-            this.requireActiveDatabase();
-            var url = "/debug/user-info";
-            return this.fetch(url, null, raven.activeDatabase(), null);
-        };
-
         raven.prototype.document = function (id) {
             var resultsSelector = function (dto) {
                 return new document(dto);

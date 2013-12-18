@@ -10,12 +10,6 @@ class raven {
     private static ravenClientVersion = '3.0.0.0';
     public static activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase");
 
-    public userInfo() {
-        this.requireActiveDatabase();
-        var url = "/debug/user-info";
-        return this.fetch(url, null, raven.activeDatabase(), null);
-    }
-
     public document(id: string): JQueryPromise<document> {
         var resultsSelector = (dto: documentDto) => new document(dto);
         var url = "/docs/" + encodeURIComponent(id);

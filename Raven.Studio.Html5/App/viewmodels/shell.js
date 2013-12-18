@@ -38,10 +38,12 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
             ]).buildNavigationModel();
 
             router.isNavigating.subscribe(function (isNavigating) {
-                if (isNavigating)
+                if (isNavigating) {
                     NProgress.start();
-                else
+                    NProgress.set(.5);
+                } else {
                     NProgress.done();
+                }
             });
 
             this.connectToRavenServer();

@@ -46,15 +46,21 @@ class shell {
 			{ route: 'indexes',			    title: 'Indexes',		moduleId: 'viewmodels/indexes',			nav: true },
 			{ route: 'query',			    title: 'Query',			moduleId: 'viewmodels/query',			nav: true },
 			{ route: 'tasks',			    title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true },
-			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true, hash: appUrl.forCurrentDatabase().settings },
+			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true,  hash: appUrl.forCurrentDatabase().settings },
             { route: 'status*details',	    title: 'Status',		moduleId: 'viewmodels/status',			nav: true,	hash: appUrl.forCurrentDatabase().status },
 			{ route: 'edit',			    title: 'Edit Document', moduleId: 'viewmodels/editDocument',	nav: false }
         ]).buildNavigationModel();
 
         router.isNavigating.subscribe(isNavigating => {
-            if (isNavigating) NProgress.start();
-            else NProgress.done();
+            if (isNavigating) {
+                NProgress.start();
+                NProgress.set(.5);
+            } else {
+                NProgress.done();
+            }
         });
+
+        
 
 		this.connectToRavenServer();
 	}

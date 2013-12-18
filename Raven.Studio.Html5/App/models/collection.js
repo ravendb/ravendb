@@ -1,4 +1,4 @@
-define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCommand", "commands/getDocumentsCommand", "commands/getSystemDocumentsCommand", "commands/getAllDocumentsCommand", "common/pagedResultSet"], function(require, exports, pagedList, getCollectionInfoCommand, getDocumentsCommand, getSystemDocumentsCommand, getAllDocumentsCommand, pagedResultSet) {
+define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCommand", "commands/getDocumentsCommand", "commands/getSystemDocumentsCommand", "commands/getAllDocumentsCommand", "models/collectionInfo", "common/pagedResultSet", "models/database"], function(require, exports, pagedList, getCollectionInfoCommand, getDocumentsCommand, getSystemDocumentsCommand, getAllDocumentsCommand, collectionInfo, pagedResultSet, database) {
     var collection = (function () {
         function collection(name, ownerDatabase) {
             this.name = name;

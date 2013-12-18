@@ -1,5 +1,5 @@
 /// <reference path="../../Scripts/typings/ace/ace.amd.d.ts" />
-define(["require", "exports", "durandal/app", "durandal/system", "plugins/router", "ace/ace", "models/document", "models/collection", "commands/saveDocumentCommand", "common/raven", "viewmodels/deleteDocuments", "common/pagedList", "common/appUrl"], function(require, exports, app, sys, router, ace, document, collection, saveDocumentCommand, raven, deleteDocuments, pagedList, appUrl) {
+define(["require", "exports", "durandal/app", "durandal/system", "plugins/router", "ace/ace", "models/document", "models/documentMetadata", "models/collection", "commands/saveDocumentCommand", "common/raven", "viewmodels/deleteDocuments", "common/pagedList", "common/appUrl", "commands/getDocumentsCommand"], function(require, exports, app, sys, router, ace, document, documentMetadata, collection, saveDocumentCommand, raven, deleteDocuments, pagedList, appUrl, getDocumentsCommand) {
     var editDocument = (function () {
         function editDocument() {
             var _this = this;
