@@ -509,7 +509,6 @@ namespace Voron.Impl.Journal
 				catch (DiskFullException diskFullEx)
 				{
 					_waj._env.HandleDataDiskFullException(diskFullEx);
-					return;
 				}
 				finally
 				{
@@ -520,25 +519,25 @@ namespace Voron.Impl.Journal
 			private void EnsureDataPagerSpacing(Transaction transaction, Page last, int numberOfPagesInLastPage,
 					bool alreadyInWriteTx)
 			{
-				if (_waj._dataPager.WillRequireExtension(last.PageNumber, numberOfPagesInLastPage))
-				{
-					if (alreadyInWriteTx)
-					{
-						_waj._dataPager.EnsureContinuous(transaction, last.PageNumber, numberOfPagesInLastPage);
-					}
-					else
-					{
-						using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
-						{
-							_waj._dataPager.EnsureContinuous(tx, last.PageNumber, numberOfPagesInLastPage);
+			    if (_waj._dataPager.WillRequireExtension(last.PageNumber, numberOfPagesInLastPage) == false) 
+                        return;
 
-							tx.Commit();
-						}
-					}
-				}
+			    if (alreadyInWriteTx)
+			    {
+			        _waj._dataPager.EnsureContinuous(transaction, last.PageNumber, numberOfPagesInLastPage);
+			    }
+			    else
+			    {
+			        using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
+			        {
+			            _waj._dataPager.EnsureContinuous(tx, last.PageNumber, numberOfPagesInLastPage);
+
+			            tx.Commit();
+			        }
+			    }
 			}
 
-			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles)
+		    private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles)
 			{
 				foreach (var jrnl in _waj._files)
 				{
