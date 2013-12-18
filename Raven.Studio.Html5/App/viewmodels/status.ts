@@ -1,14 +1,15 @@
 import durandalRouter = require("plugins/router");
+import database = require("models/database");
+import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
 
-class status {
+class status extends activeDbViewModelBase {
 
-	displayName = "status";
-	router = null;
+    router: DurandalRootRouter;
 
 	constructor() {
+        super();
 
         this.router = durandalRouter.createChildRouter()
-        //.makeRelative({ moduleId: 'viewmodels/status', fromParent: true })
             .map([
                 { route: 'status',                  moduleId: 'viewmodels/statistics',          title: 'Stats',     type: 'intro', nav: false },
                 { route: 'status/statistics',       moduleId: 'viewmodels/statistics',          title: 'Stats', type: 'intro', nav: true },
@@ -20,14 +21,6 @@ class status {
 			])
 			.buildNavigationModel();
     }
-
-	activate(args) { 
-		//this.router.navigate("status/statistics");
-    }
-
-    canDeactivate() {
-        return true; 
-    } 
 }
 
 export = status;    

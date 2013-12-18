@@ -1,31 +1,38 @@
-define(["require", "exports", "commands/getUserInfoCommand", "common/appUrl"], function(require, exports, getUserInfoCommand, appUrl) {
-    var userInfo = (function () {
+var __extends = this.__extends || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    __.prototype = b.prototype;
+    d.prototype = new __();
+};
+define(["require", "exports", "commands/getUserInfoCommand", "models/database", "viewmodels/activeDbViewModelBase"], function(require, exports, getUserInfoCommand, database, activeDbViewModelBase) {
+    var userInfo = (function (_super) {
+        __extends(userInfo, _super);
         function userInfo() {
-            var _this = this;
+            _super.apply(this, arguments);
             this.data = ko.observable();
-            this.activeDbSubscription = ko.postbox.subscribe("ActivateDatabase", function (db) {
-                return _this.fetchUserInfo(db);
-            });
         }
         userInfo.prototype.activate = function (args) {
-            var db = appUrl.getDatabase();
-            this.fetchUserInfo(db);
-        };
-
-        userInfo.prototype.deactivate = function () {
-            this.activeDbSubscription.dispose();
-        };
-
-        userInfo.prototype.fetchUserInfo = function (db) {
             var _this = this;
+            _super.prototype.activate.call(this, args);
+            this.activeDatabase.subscribe(function () {
+                return _this.fetchUserInfo();
+            });
+            this.fetchUserInfo();
+        };
+
+        userInfo.prototype.fetchUserInfo = function () {
+            var _this = this;
+            var db = this.activeDatabase();
             if (db) {
                 return new getUserInfoCommand(db).execute().done(function (results) {
                     return _this.data(results);
                 });
             }
+
+            return null;
         };
         return userInfo;
-    })();
+    })(activeDbViewModelBase);
 
     
     return userInfo;

@@ -1,8 +1,15 @@
-define(["require", "exports", "plugins/router"], function(require, exports, durandalRouter) {
-    var status = (function () {
+var __extends = this.__extends || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    __.prototype = b.prototype;
+    d.prototype = new __();
+};
+define(["require", "exports", "plugins/router", "viewmodels/activeDbViewModelBase"], function(require, exports, durandalRouter, activeDbViewModelBase) {
+    var status = (function (_super) {
+        __extends(status, _super);
         function status() {
-            this.displayName = "status";
-            this.router = null;
+            _super.call(this);
+
             this.router = durandalRouter.createChildRouter().map([
                 { route: 'status', moduleId: 'viewmodels/statistics', title: 'Stats', type: 'intro', nav: false },
                 { route: 'status/statistics', moduleId: 'viewmodels/statistics', title: 'Stats', type: 'intro', nav: true },
@@ -13,15 +20,8 @@ define(["require", "exports", "plugins/router"], function(require, exports, dura
                 { route: 'status/userInfo', moduleId: 'viewmodels/userInfo', title: 'User Info', type: 'intro', nav: true }
             ]).buildNavigationModel();
         }
-        status.prototype.activate = function (args) {
-            //this.router.navigate("status/statistics");
-        };
-
-        status.prototype.canDeactivate = function () {
-            return true;
-        };
         return status;
-    })();
+    })(activeDbViewModelBase);
 
     
     return status;
