@@ -129,7 +129,7 @@
             _fileStream.Flush(true);
         }
 
-        public override void Write(Page page, long? pageNumber)
+        public override int Write(Page page, long? pageNumber)
         {
             var number = pageNumber ?? page.PageNumber;
 
@@ -138,7 +138,7 @@
 
             var toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
 
-            WriteDirect(page, number, toWrite);
+            return WriteDirect(page, number, toWrite);
         }
 
         public override string ToString()
@@ -146,7 +146,7 @@
             return _fileInfo.Name;
         }
 
-        public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
+        public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
         {
             if (_fileInfo.Extension == ".voron" && pagePosition > 1)
             {
@@ -175,6 +175,8 @@
 					toWrite -= written;
 					startWrite += written;
 				}
+
+		        return toWrite;
 	        }
 	        finally
 	        {

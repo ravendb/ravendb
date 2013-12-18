@@ -118,7 +118,7 @@ namespace Voron.Impl.Paging
             return (overflowSize / PageSize) + (overflowSize % PageSize == 0 ? 0 : 1);
         }
 
-        public abstract void Write(Page page, long? pageNumber);
+        public abstract int Write(Page page, long? pageNumber);
 
         public bool Disposed { get; private set; }
 
@@ -169,7 +169,7 @@ namespace Voron.Impl.Paging
 			return current + Utils.NearestPowerOfTwo(actualIncrease);
         }
 
-        public abstract void WriteDirect(Page start, long pagePosition, int pagesToWrite);
+        public abstract int WriteDirect(Page start, long pagePosition, int pagesToWrite);
 
         public override abstract string ToString();
 

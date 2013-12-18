@@ -475,8 +475,7 @@ namespace Voron
 					        // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
 					        // while there isn't any other activity going on.
 
-					        using (var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction))
-						        journalApplicator.ApplyLogsToDataFile();
+					        _journal.Applicator.ApplyLogsToDataFile(OldestTransaction);
 				        }
 			        }
 		        }, TaskCreationOptions.LongRunning);
@@ -486,8 +485,8 @@ namespace Voron
         {
             if (_options.ManualFlushing == false)
                 throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
-            using (var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction))
-                journalApplicator.ApplyLogsToDataFile(tx);
+
+           _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, tx);
         }
 
         public void AssertFlushingNotFailed()

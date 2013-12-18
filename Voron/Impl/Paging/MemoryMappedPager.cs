@@ -186,13 +186,13 @@
                 throw new Win32Exception();
         }
 
-        public override void Write(Page page, long? pageNumber)
+        public override int Write(Page page, long? pageNumber)
         {
             var startPage = pageNumber ?? page.PageNumber;
 
             var toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
 
-            WriteDirect(page, startPage, toWrite);
+            return WriteDirect(page, startPage, toWrite);
         }
 
         public override string ToString()
@@ -200,9 +200,12 @@
             return _fileInfo.Name;
         }
 
-        public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
+        public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
         {
-            NativeMethods.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, pagesToWrite * PageSize);
+	        var toCopy = pagesToWrite*PageSize;
+            NativeMethods.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
+
+	        return toCopy;
         }
 
         public override void Dispose()
