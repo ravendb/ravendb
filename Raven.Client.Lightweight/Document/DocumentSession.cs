@@ -871,9 +871,9 @@ namespace Raven.Client.Document
 			return AddLazyOperation<TResult[]>(lazyOp, null);
 		}
 
-		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude)
+		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation)
 		{
-			var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this);
+			var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation);
 
 			return AddLazyOperation<T[]>(operation, null);
 		}

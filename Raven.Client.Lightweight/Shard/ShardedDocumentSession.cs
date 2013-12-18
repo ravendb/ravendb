@@ -774,7 +774,7 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Not supported for sharded session");
 		}
 
-		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude)
+		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation)
 		{
 			IncrementRequestCount();
 			var cmds = GetCommandsToOperateOn(new ShardRequestData
@@ -783,7 +783,7 @@ namespace Raven.Client.Shard
 				Keys = { keyPrefix }
 			});
 
-			var lazyLoadOperation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this);
+			var lazyLoadOperation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, null);
 
 			return AddLazyOperation<T[]>(lazyLoadOperation, null, cmds);
 		}
