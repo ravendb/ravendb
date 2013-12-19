@@ -32,6 +32,7 @@ namespace Voron.Impl.Journal
 		private readonly LZ4 _lz4 = new LZ4();
 		private readonly SemaphoreSlim _writeSemaphore = new SemaphoreSlim(1, 1);
 		private readonly JournalApplicator _journalApplicator;
+		private readonly ModifyHeaderAction _updateLogInfo;
 
 		private ImmutableAppendOnlyList<JournalFile> _files = ImmutableAppendOnlyList<JournalFile>.Empty;
 		internal JournalFile CurrentFile;
@@ -47,6 +48,13 @@ namespace Voron.Impl.Journal
 			_dataPager = _env.Options.DataPager;
 			_currentJournalFileSize = env.Options.InitialLogFileSize;
 			_headerAccessor = env.HeaderAccessor;
+			_updateLogInfo = header =>
+			{
+				var journalFilesCount = _files.Count;
+				header->Journal.CurrentJournal = journalFilesCount > 0 ? _journalIndex : -1;
+				header->Journal.JournalFilesCount = journalFilesCount;
+				header->IncrementalBackup.LastCreatedJournal = _journalIndex;
+			};
 
 			_compressionPager = _env.Options.CreateScratchPager("compression.buffers");
 			_journalApplicator = new JournalApplicator(this);
@@ -80,7 +88,7 @@ namespace Voron.Impl.Journal
 
 			_files = _files.Append(journal);
 
-			UpdateLogInfo();
+			_headerAccessor.Modify(_updateLogInfo);
 
 			return journal;
 		}
@@ -247,17 +255,6 @@ namespace Voron.Impl.Journal
 			_currentJournalFileSize = journalSize;
 		}
 
-		public void UpdateLogInfo()
-		{
-			_headerAccessor.Modify(header =>
-				{
-					var journalFilesCount = _files.Count;
-					header->Journal.CurrentJournal = journalFilesCount > 0 ? _journalIndex : -1;
-					header->Journal.JournalFilesCount = journalFilesCount;
-					header->IncrementalBackup.LastCreatedJournal = _journalIndex;
-				});
-		}
-
 		public Page ReadPage(Transaction tx, long pageNumber)
 		{
 			// read transactions have to read from journal snapshots
@@ -365,14 +362,16 @@ namespace Voron.Impl.Journal
 
 		public class JournalApplicator
 		{
-
+			private const long DelayedDataFileSynchronizationBytesLimit = 2L*1024*1024*1024;
+			private readonly TimeSpan DelayedDataFileSynchronizationTimeLimit = TimeSpan.FromMinutes(1);
 			private readonly SemaphoreSlim _flushingSemaphore = new SemaphoreSlim(1, 1);
-			private readonly List<JournalFile> _journalsToDelete = new List<JournalFile>();
+			private readonly Dictionary<long, JournalFile> _journalsToDelete = new Dictionary<long, JournalFile>();
 			private readonly WriteAheadJournal _waj;
 			private long _lastSyncedTransactionId;
 			private long _lastSyncedJournal;
-			private long _totallyAppliedBytes = 0;
-			private JournalFile _lastSynced;
+			private long _totalWrittenButUnsyncedBytes;
+			private DateTime _lastDataFileSyncTime;
+			private JournalFile _lastFlushedJournal;
 
 			public JournalApplicator(WriteAheadJournal waj)
 			{
@@ -382,6 +381,7 @@ namespace Voron.Impl.Journal
 			public void ApplyLogsToDataFile(long oldestActiveTransaction, Transaction transaction = null)
 			{
 				_flushingSemaphore.Wait();
+
 				try
 				{
 					var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
@@ -390,10 +390,6 @@ namespace Voron.Impl.Journal
 					if (jrnls.Count == 0)
 						return; // nothing to do
 
-					var journalInfo = _waj._headerAccessor.Get(ptr => ptr->Journal);
-
-					_lastSyncedJournal = journalInfo.LastSyncedJournal;
-					_lastSyncedTransactionId = journalInfo.LastSyncedTransactionId;
 					Debug.Assert(jrnls.First().Number >= _lastSyncedJournal);
 
 					var pagesToWrite = new Dictionary<long, long>();
@@ -450,42 +446,50 @@ namespace Voron.Impl.Journal
 					_lastSyncedJournal = lastProcessedJournal;
 					_lastSyncedTransactionId = lastFlushedTransactionId;
 
-					
-					ApplyPagesToDataFileFromScratch(pagesToWrite, transaction, alreadyInWriteTx);
+					try
+					{
+						ApplyPagesToDataFileFromScratch(pagesToWrite, transaction, alreadyInWriteTx);
+					}
+					catch (DiskFullException diskFullEx)
+					{
+						_waj._env.HandleDataDiskFullException(diskFullEx);
+						return;
+					}
 
-					var unusedJournalsAfterThisApply = GetUnusedJournalFiles(jrnls);
+					var unusedJournals = GetUnusedJournalFiles(jrnls);
 
-					_journalsToDelete.AddRange(
-						unusedJournalsAfterThisApply.Where(x => _journalsToDelete.Contains(x) == false));
+					foreach (var unused in unusedJournals.Where(unused => !_journalsToDelete.ContainsKey(unused.Number)))
+					{
+						_journalsToDelete.Add(unused.Number, unused);
+					}
 
 					using (var txw = alreadyInWriteTx ? null : _waj._env.NewTransaction(TransactionFlags.ReadWrite))
 					{
-						_lastSynced = _waj._files.First(x => x.Number == _lastSyncedJournal);
+						_lastFlushedJournal = _waj._files.First(x => x.Number == _lastSyncedJournal);
 
-						var lastJournalFileToRemove = unusedJournalsAfterThisApply.LastOrDefault();
-						if (lastJournalFileToRemove != null)
-							_waj._files = _waj._files.RemoveWhile(x => x.Number <= lastJournalFileToRemove.Number, new List<JournalFile>());
-
-						if (_waj._files.Count == 0)
+						if (unusedJournals.Count > 0)
 						{
-							_waj.CurrentFile = null;
+							var lastUnusedJournalNumber = unusedJournals.Last().Number;
+							_waj._files = _waj._files.RemoveWhile(x => x.Number <= lastUnusedJournalNumber, new List<JournalFile>());
 						}
 
-						FreeScratchPages(unusedJournalsAfterThisApply);
+						if (_waj._files.Count == 0)
+							_waj.CurrentFile = null;
+						
+						FreeScratchPages(unusedJournals);
 
-						if (_totallyAppliedBytes > 1L* 1024*1024*1024)
+						if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
+							DateTime.Now - _lastDataFileSyncTime > DelayedDataFileSynchronizationTimeLimit)
 						{
 							_waj._dataPager.Sync();
 
-							UpdateFileHeaderAfterDataFileSync(_lastSynced, oldestActiveTransaction);
-
-							_waj.UpdateLogInfo();
+							UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, oldestActiveTransaction);
 
 							Debug.Assert(lastFlushedTransactionId != -1);
 
 							_waj._lastFlushedTransaction = lastFlushedTransactionId;
 
-							foreach (var toDelete in _journalsToDelete)
+							foreach (var toDelete in _journalsToDelete.Values)
 							{
 								if (_waj._env.Options.IncrementalBackupEnabled == false)
 									toDelete.DeleteOnClose = true;
@@ -494,8 +498,8 @@ namespace Voron.Impl.Journal
 							}
 
 							_journalsToDelete.Clear();
-
-							_totallyAppliedBytes = 0;
+							_totalWrittenButUnsyncedBytes = 0;
+							_lastDataFileSyncTime = DateTime.Now;
 						}
 
 						if (txw != null)
@@ -534,11 +538,7 @@ namespace Voron.Impl.Journal
 						written += _waj._dataPager.Write(page);
 					}
 
-					_totallyAppliedBytes += written;
-				}
-				catch (DiskFullException diskFullEx)
-				{
-					_waj._env.HandleDataDiskFullException(diskFullEx);
+					_totalWrittenButUnsyncedBytes += written;
 				}
 				finally
 				{
@@ -631,6 +631,8 @@ namespace Voron.Impl.Journal
 
 						header->Root = lastReadTxHeader.Root;
 						header->FreeSpace = lastReadTxHeader.FreeSpace;
+
+						_waj._updateLogInfo(header);
 					});
 			}
 		}
