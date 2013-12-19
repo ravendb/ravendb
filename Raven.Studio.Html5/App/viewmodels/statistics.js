@@ -37,8 +37,6 @@ define(["require", "exports", "viewmodels/activeDbViewModelBase", "commands/getD
             var _this = this;
             // Attach some human readable dates to the indexes.
             results.Indexes.forEach(function (i) {
-                i.ReduceIndexingAttempts = 42;
-                i.ReduceIndexingSuccesses = 23;
                 i['CreatedTimestampText'] = _this.createHumanReadableTimeDuration(i.CreatedTimestamp);
                 i['LastIndexedTimestampText'] = _this.createHumanReadableTimeDuration(i.LastIndexedTimestamp);
                 i['LastQueryTimestampText'] = _this.createHumanReadableTimeDuration(i.LastQueryTimestamp);

@@ -33,8 +33,6 @@ class statistics extends activeDbViewModelBase {
 
         // Attach some human readable dates to the indexes.
         results.Indexes.forEach(i => {
-            i.ReduceIndexingAttempts = 42;
-            i.ReduceIndexingSuccesses = 23;
             i['CreatedTimestampText'] = this.createHumanReadableTimeDuration(i.CreatedTimestamp);
             i['LastIndexedTimestampText'] = this.createHumanReadableTimeDuration(i.LastIndexedTimestamp);
             i['LastQueryTimestampText'] = this.createHumanReadableTimeDuration(i.LastQueryTimestamp);
