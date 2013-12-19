@@ -8,8 +8,8 @@ class getDatabaseStatsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<databaseStatisticsDto> {
-        var url = this.db.isSystem ? "/stats" : "/databases/" + this.db.name + "/stats";
-        return this.query<databaseStatisticsDto>(url, null, null);
+        var url = "/stats";
+        return this.query<databaseStatisticsDto>(url, null, this.db);
     }
 }
 

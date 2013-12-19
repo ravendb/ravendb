@@ -1,6 +1,6 @@
 ﻿/// <reference path="../../../Scripts/typings/knockout.postbox/knockout-postbox.d.ts" />
 /// <reference path="../../../Scripts/typings/durandal/durandal.d.ts" />
-define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl", "models/document", "models/collection", "models/database", "common/pagedResultSet", "viewmodels/deleteDocuments", "viewmodels/copyDocuments", "durandal/app", "widgets/virtualTable/row", "widgets/virtualTable/column"], function(require, exports, pagedList, raven, appUrl, document, collection, database, pagedResultSet, deleteDocuments, copyDocuments, app, row, column) {
+define(["require", "exports", "common/appUrl", "models/database", "common/pagedResultSet", "viewmodels/deleteDocuments", "viewmodels/copyDocuments", "durandal/app", "widgets/virtualTable/row", "widgets/virtualTable/column"], function(require, exports, appUrl, database, pagedResultSet, deleteDocuments, copyDocuments, app, row, column) {
     var ctor = (function () {
         function ctor() {
             this.visibleRowCount = 0;
@@ -29,6 +29,7 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
                 _this.items = list;
                 _this.selectedIndices.removeAll();
                 _this.columns.splice(2, _this.columns().length - 1); // Remove all but the first 2 column (checked and ID)
+                _this.gridViewport.scrollTop(0);
                 _this.onGridScrolled();
             });
 
@@ -50,20 +51,22 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
                 throw new Error("There should be 1 " + this.gridSelector + " on the page, but found " + this.grid.length.toString());
             }
 
+            var windowHeightObservable = window['ravenStudioWindowHeight'];
+            this.windowHeightSubscription = windowHeightObservable.subscribe(function (height) {
+                return _this.onWindowHeightChanged(height);
+            });
             this.gridViewport = this.grid.find(".ko-grid-viewport-container");
             this.gridViewport.scroll(function () {
                 return _this.onGridScrolled();
             });
-            var desiredRowCount = this.calculateRecycleRowCount();
-            this.recycleRows(this.createRecycleRows(desiredRowCount));
-            this.ensureRowsCoverViewport();
-            this.loadRowData();
+            this.onWindowHeightChanged(windowHeightObservable());
             this.setupContextMenu();
             this.setupKeyboardShortcuts();
         };
 
         ctor.prototype.detached = function () {
             $(this.gridSelector).unbind('keydown.jwerty');
+            this.windowHeightSubscription.dispose();
         };
 
         ctor.prototype.calculateRecycleRowCount = function () {
@@ -93,6 +96,22 @@ define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl
             this.scrollThrottleTimeoutHandle = setTimeout(function () {
                 return _this.loadRowData();
             }, 100);
+        };
+
+        ctor.prototype.onWindowHeightChanged = function (height) {
+            // We want the viewport height to reach to the footer.
+            var footerTop = $("footer").position().top;
+            var viewportTop = this.gridViewport.offset().top;
+            var desiredHeight = footerTop - viewportTop;
+            var minimumHeight = 100;
+            if (desiredHeight > minimumHeight) {
+                this.viewportHeight(desiredHeight);
+            }
+
+            var desiredRowCount = this.calculateRecycleRowCount();
+            this.recycleRows(this.createRecycleRows(desiredRowCount));
+            this.ensureRowsCoverViewport();
+            this.loadRowData();
         };
 
         ctor.prototype.setupKeyboardShortcuts = function () {

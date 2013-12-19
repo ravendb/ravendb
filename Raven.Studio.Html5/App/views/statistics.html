@@ -1,4 +1,4 @@
-﻿<section data-bind="with: stats">
+﻿<section data-bind="with: stats, stickToFooter: window.ravenStudioWindowHeight()">
     <form class="form-horizontal" role="form">
         <div class="form-group">
             <label class="col-md-2 control-label">Last document Etag</label>
@@ -71,8 +71,9 @@
                                         <label class="col-md-2 control-label">Runs</label>
                                         <div class="col-md-8">
                                             <p class="form-control-static" data-bind="css: { 'text-success': IndexingAttempts === IndexingSuccesses, 'text-warning': IndexingSuccesses > 0 && IndexingSuccesses < IndexingAttempts, 'text-danger': IndexingAttempts > 0 && IndexingSuccesses === 0 }">
-                                                <span data-bind="text: IndexingAttempts"></span>
-                                                <span data-bind="visible: IndexingAttempts === IndexingSuccesses">- all successful</span>
+                                                <span data-bind="visible: IndexingAttempts > 0, text: IndexingAttempts"></span>
+                                                <span data-bind="visible: IndexingAttempts === 0" class="text-muted">Never run</span>
+                                                <span data-bind="visible: IndexingAttempts === IndexingSuccesses && IndexingAttempts > 0">- all successful</span>
                                                 <span data-bind="visible: IndexingSuccesses > 0 && IndexingSuccesses < IndexingAttempts, text: 'attempts ' + (IndexingAttempts - IndexingSuccesses) + ' failed'"></span>
                                                 <span data-bind="visible: IndexingAttempts > 0 && IndexingSuccesses === 0">- all failed</span>
                                             </p>
@@ -88,8 +89,9 @@
                                         <label class="col-md-2 control-label">Reduce runs</label>
                                         <div class="col-md-8">
                                             <p class="form-control-static" data-bind="css: { 'text-success': ReduceIndexingAttempts === ReduceIndexingSuccesses, 'text-warning': ReduceIndexingSuccesses > 0 && ReduceIndexingSuccesses < ReduceIndexingAttempts, 'text-danger': ReduceIndexingAttempts > 0 && ReduceIndexingSuccesses === 0 }">
-                                                <span data-bind="text: ReduceIndexingAttempts"></span>
-                                                <span data-bind="visible: ReduceIndexingAttempts === ReduceIndexingSuccesses">- all successful</span>
+                                                <span data-bind="visible: ReduceIndexingAttempts > 0, text: ReduceIndexingAttempts"></span>
+                                                <span data-bind="visible: !ReduceIndexingAttempts" class="text-muted">Never run</span>
+                                                <span data-bind="visible: ReduceIndexingAttempts === ReduceIndexingSuccesses && ReduceIndexingAttempts > 0">- all successful</span>
                                                 <span data-bind="visible: ReduceIndexingSuccesses > 0 && ReduceIndexingSuccesses < ReduceIndexingAttempts, text: 'attempts, ' + (ReduceIndexingAttempts - ReduceIndexingSuccesses) + ' failed'"></span>
                                                 <span data-bind="visible: ReduceIndexingAttempts > 0 && ReduceIndexingSuccesses === 0">- all failed</span>
                                             </p>

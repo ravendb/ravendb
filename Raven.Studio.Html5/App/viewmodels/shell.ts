@@ -19,6 +19,7 @@ import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
+import stickToFooterBindingHandler = require("common/stickToFooterBindingHandler");
 
 class shell {
 	private router = router;
@@ -29,12 +30,12 @@ class shell {
     databasesLoadedTask: JQueryPromise<any>;
     buildVersion = ko.observable<buildVersionDto>();
     licenseStatus = ko.observable<licenseStatusDto>();
+    windowHeightObservable: KnockoutObservable<number>;
 
     constructor() {
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateDatabase", (db: database) => this.databaseChanged(db));
-        //ko.postbox.subscribe("EditDocument", args => this.launchDocEditor(args.doc.getId(), args.docsList));
         NProgress.set(.5);
 	}
 
@@ -64,12 +65,15 @@ class shell {
         this.connectToRavenServer();
 	}
 
-	// The view must be attached to the DOM before we can hook up keyboard shortcuts.
+	// Called by Durandal when shell.html has been put into the DOM.
     attached() {
-		jwerty.key("ctrl+alt+n", e => {
+        // The view must be attached to the DOM before we can hook up keyboard shortcuts.
+        jwerty.key("ctrl+alt+n", e => {
 			e.preventDefault();
 			this.newDocument();
-		});
+        });
+
+        new stickToFooterBindingHandler().install();
     }
 
     databasesLoaded(databases) {

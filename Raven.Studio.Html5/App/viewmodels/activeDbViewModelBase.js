@@ -1,4 +1,4 @@
-﻿define(["require", "exports", "common/appUrl"], function(require, exports, appUrl) {
+define(["require", "exports", "common/appUrl", "models/database"], function(require, exports, appUrl, database) {
     /*
     * Base view model class that keeps track of the currently selected database.
     */

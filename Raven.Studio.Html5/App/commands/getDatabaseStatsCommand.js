@@ -12,8 +12,8 @@ define(["require", "exports", "commands/commandBase", "models/database"], functi
             this.db = db;
         }
         getDatabaseStatsCommand.prototype.execute = function () {
-            var url = this.db.isSystem ? "/stats" : "/databases/" + this.db.name + "/stats";
-            return this.query(url, null, null);
+            var url = "/stats";
+            return this.query(url, null, this.db);
         };
         return getDatabaseStatsCommand;
     })(commandBase);
