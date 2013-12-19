@@ -464,6 +464,11 @@ more responsive application.
                 if (entityType == typeof (RavenJObject))
                     return documentFound.CloneToken();
 
+				foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
+				{
+					extendedDocumentConversionListener.BeforeConversionToEntity(id, documentFound, metadata);
+				}
+
 				var defaultValue = GetDefaultValue(entityType);
 				var entity = defaultValue;
 				EnsureNotReadVetoed(metadata);
@@ -490,6 +495,11 @@ more responsive application.
 				foreach (var documentConversionListener in listeners.ConversionListeners)
 				{
 					documentConversionListener.DocumentToEntity(id, entity, documentFound, metadata);
+				}
+				
+				foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
+				{
+					extendedDocumentConversionListener.AfterConversionToEntity(id, documentFound, metadata, entity);
 				}
 
 				return entity;
