@@ -26,7 +26,7 @@ namespace Raven.Database.Server
 			{
 				HttpEndpointRegistration.RegisterHttpEndpointTarget();
 				systemDatabase.SpinBackgroundWorkers();
-				fileSystem = new RavenFileSystem(configuration);
+				fileSystem = new RavenFileSystem(configuration, systemDatabase.TransportState);
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();

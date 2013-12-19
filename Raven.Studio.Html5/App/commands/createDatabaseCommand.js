@@ -4,28 +4,46 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/commandBase"], function(require, exports, __commandBase__) {
-    var commandBase = __commandBase__;
-
+define(["require", "exports", "commands/commandBase"], function(require, exports, commandBase) {
     var createDatabaseCommand = (function (_super) {
         __extends(createDatabaseCommand, _super);
         function createDatabaseCommand(databaseName) {
             _super.call(this);
             this.databaseName = databaseName;
+
+            if (!databaseName) {
+                throw new Error("Database must have a name.");
+            }
         }
         createDatabaseCommand.prototype.execute = function () {
             var _this = this;
-            var createDbTask = this.ravenDb.createDatabase(this.databaseName);
-
             this.reportInfo("Creating " + this.databaseName);
 
-            createDbTask.done(function () {
+            // TODO: include selected bundles from UI.
+            var databaseDoc = {
+                "Settings": {
+                    "Raven/DataDir": "~\\Databases\\" + this.databaseName
+                },
+                "SecuredSettings": {},
+                "Disabled": false
+            };
+
+            var url = "/admin/databases/" + this.databaseName;
+            var createTask = this.put(url, JSON.stringify(databaseDoc), null);
+
+            createTask.done(function () {
                 return _this.reportSuccess(_this.databaseName + " created");
             });
-            createDbTask.fail(function (response) {
+            createTask.fail(function (response) {
                 return _this.reportError("Failed to create database", JSON.stringify(response));
             });
-            return createDbTask;
+
+            // Forces creation of standard indexes? Looks like it.
+            createTask.done(function () {
+                return _this.query("/databases/" + _this.databaseName + "/silverlight/ensureStartup", null, null);
+            });
+
+            return createTask;
         };
         return createDatabaseCommand;
     })(commandBase);

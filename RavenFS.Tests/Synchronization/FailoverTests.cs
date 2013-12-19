@@ -31,7 +31,7 @@ namespace RavenFS.Tests.Synchronization
 			Assert.Equal(1, destinationFiles.FileCount);
 			Assert.Equal(1, destinationFiles.Files.Length);
 
-			var server = GetRavenFileSystem(0);
+			var server = GetServer(0);
 			server.Dispose();
 			var fileFromSync = await sourceClient.GetFilesAsync("/");
 			Assert.Equal(1, fileFromSync.FileCount);

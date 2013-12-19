@@ -2,19 +2,25 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Profiling;
 using Raven.Client.RavenFS;
+using Raven.Client.RavenFS.Connections;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper;
 using Raven.Database.Server.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 {
-	public class SynchronizationMultipartRequest
+	public class SynchronizationMultipartRequest : IHoldProfilingInformation
 	{
 		private readonly string destinationUrl;
 		private readonly string fileName;
@@ -23,7 +29,10 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 		private readonly NameValueCollection sourceMetadata;
 		private readonly Stream sourceStream;
 		private readonly string syncingBoundary;
-		private HttpWebRequest request;
+		private HttpJsonRequest request;
+		protected HttpJsonRequestFactory jsonRequestFactory = new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+		private const int DefaultNumberOfCachedRequests = 2048;
+		protected FileConvention Convention = new FileConvention();
 
 		public SynchronizationMultipartRequest(string destinationUrl, ServerInfo serverInfo, string fileName,
 											   NameValueCollection sourceMetadata, Stream sourceStream,
@@ -40,7 +49,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 
 		public async Task<SynchronizationReport> PushChangesAsync(CancellationToken token)
 		{
-			token.Register(() => request.Abort());
+			token.Register(() => { });//request.Abort() TODO: check this
 
 			token.ThrowIfCancellationRequested();
 
@@ -49,34 +58,28 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 				throw new Exception("Stream does not support reading");
 			}
 
-			request = (HttpWebRequest)WebRequest.Create(destinationUrl + "/ravenfs/synchronization/MultipartProceed");
-			request.Method = "POST";
-			request.SendChunked = true;
-			request.AllowWriteStreamBuffering = false;
-			request.KeepAlive = true;
+			request =
+				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+					destinationUrl + "/ravenfs/synchronization/MultipartProceed",
+					"POST", new OperationCredentials("", new CredentialCache()), Convention));
+
+			//request.SendChunked = true;
+			//request.AllowWriteStreamBuffering = false;
+			//request.KeepAlive = true;
 
 			request.AddHeaders(sourceMetadata);
 
-			request.ContentType = "multipart/form-data; boundary=" + syncingBoundary;
+			request.AddHeader("Content-Type", "multipart/form-data; boundary=" + syncingBoundary);
 
-			request.Headers[SyncingMultipartConstants.FileName] = fileName;
-			request.Headers[SyncingMultipartConstants.SourceServerInfo] = serverInfo.AsJson();
+			request.AddHeader(SyncingMultipartConstants.FileName, fileName);
+			request.AddHeader(SyncingMultipartConstants.SourceServerInfo, serverInfo.AsJson());
 
 			try
 			{
-				using (var requestStream = await request.GetRequestStreamAsync())
-				{
-					await PrepareMultipartContent(token).CopyToAsync(requestStream);
+				await request.WriteAsync(PrepareMultipartContent(token));
 
-					using (var respose = await request.GetResponseAsync())
-					{
-						using (var responseStream = respose.GetResponseStream())
-						{
-							return
-								new JsonSerializer().Deserialize<SynchronizationReport>(new JsonTextReader(new StreamReader(responseStream)));
-						}
-					}
-				}
+				var respose = await request.ReadResponseJsonAsync();
+				return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(respose));
 			}
 			catch (Exception exception)
 			{
@@ -85,7 +88,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 					throw new OperationCanceledException(token);
 				}
 
-				var webException = exception as WebException;
+				var webException = exception as ErrorResponseException;
 
 				if (webException != null)
 				{
@@ -98,7 +101,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 
 		internal MultipartContent PrepareMultipartContent(CancellationToken token)
 		{
-			var content = new MultipartContent("form-data", syncingBoundary);
+			var content = new CompressedMultiPartContent("form-data", syncingBoundary);
 
 			foreach (var item in needList)
 			{
@@ -123,5 +126,23 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Multipart
 
 			return content;
 		}
+
+		public class CompressedMultiPartContent : MultipartContent
+		{
+			public CompressedMultiPartContent(string subtype, string boundary) : base(subtype, boundary)
+			{
+				Headers.ContentEncoding.Add("gzip");
+				Headers.ContentLength = null;
+			}
+
+			protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
+			{
+				using (stream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
+					await base.SerializeToStreamAsync(stream, context);
+			}
+		}
+
+
+		public ProfilingInformation ProfilingInformation { get; private set; }
 	}
 }

@@ -7,6 +7,8 @@ using System.Linq.Expressions;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web.Http;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
 
@@ -32,13 +34,37 @@ namespace Raven.Client.RavenFS
 			})
 					   .Unwrap();
 		}
+		public static Exception BetterWebExceptionError(this ErrorResponseException webException)
+		{
+			if (webException.StatusCode == (HttpStatusCode)420)
+			{
+				return
+					new JsonSerializer().Deserialize<SynchronizationException>(
+						new JsonTextReader(new StringReader(webException.Message)));
+			}
+			if (webException.StatusCode == HttpStatusCode.MethodNotAllowed)
+			{
+				return new JsonSerializer().Deserialize<ConcurrencyException>(new JsonTextReader(new StringReader(webException.Message)));
+			}
+			if (webException.StatusCode == HttpStatusCode.NotFound)
+			{
+				return new FileNotFoundException();
+			}
+
+			using (var reader = new StringReader(webException.Message))
+			{
+				var readToEnd = reader.ReadToEnd();
+				return new InvalidOperationException(
+					webException + Environment.NewLine + readToEnd);
+			}
+		}
 
 		public static Exception BetterWebExceptionError(this WebException webException)
 		{
 			var httpWebResponse = webException.Response as HttpWebResponse;
 			if (httpWebResponse != null)
 			{
-				if (httpWebResponse.StatusCode == HttpStatusCode.PreconditionFailed)
+				if (httpWebResponse.StatusCode == (HttpStatusCode)420)
 				{
 					using (var stream = webException.Response.GetResponseStream())
 					{
@@ -115,6 +141,11 @@ namespace Raven.Client.RavenFS
 
 		public static Exception TryThrowBetterError(this Exception exception)
 		{
+			var httpException = exception as ErrorResponseException;
+			if (httpException != null)
+			{
+				return httpException.BetterWebExceptionError();
+			}
 			var aggregateException = exception as AggregateException;
 			if (aggregateException == null)
 			{

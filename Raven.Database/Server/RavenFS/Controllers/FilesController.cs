@@ -165,7 +165,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				return new HttpResponseMessage(HttpStatusCode.NotFound);
 			}
 
-			var httpResponseMessage = Request.CreateResponse(HttpStatusCode.OK, fileAndPages);
+			var httpResponseMessage = GetEmptyMessage();
 			MetadataExtensions.AddHeaders(httpResponseMessage, fileAndPages);
 			return httpResponseMessage;
 		}
@@ -278,7 +278,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			{
 				name = RavenFileNameHelper.RavenPath(name);
 
-				var headers = Request.Headers.FilterHeaders();
+				var headers = InnerHeaders.FilterHeaders();
 				Historian.UpdateLastModified(headers);
 				Historian.Update(name, headers);
 
@@ -289,12 +289,23 @@ namespace Raven.Database.Server.RavenFS.Controllers
 					AssertFileIsNotBeingSynced(name, accessor, true);
 					StorageOperationsTask.IndicateFileToDelete(name);
 
-					var contentLength = Request.Content.Headers.ContentLength;
-					if (Request.Headers.TransferEncodingChunked ?? false)
+					var sizeHeader = GetHeader("RavenFS-size");
+					long? size;
+					long sizeForParse;
+					if (long.TryParse(sizeHeader, out sizeForParse) == false)
 					{
-						contentLength = null;
+						size = Request.Content.Headers.ContentLength;
+						if (Request.Headers.TransferEncodingChunked ?? false)
+						{
+							size = null;
+						}
 					}
-					accessor.PutFile(name, contentLength, headers);
+					else
+					{
+						size = sizeForParse;
+					}
+				
+					accessor.PutFile(name, size, headers);
 
 					Search.Index(name, headers);
 				}));

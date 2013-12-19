@@ -59,9 +59,8 @@
 					var result = snapshot.Read("tree1", "docs/" + i);
 					Assert.NotNull(result);
 
-					using (var reader = new BinaryReader(result.Stream))
 					{
-						Assert.Equal(testBuffer, reader.ReadBytes((int)result.Stream.Length));
+                        Assert.Equal(testBuffer, result.Reader.ReadBytes(result.Reader.Length));
 					}
 				}
 			}

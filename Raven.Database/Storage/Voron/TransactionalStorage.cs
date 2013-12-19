@@ -191,10 +191,11 @@ namespace Raven.Storage.Voron
 			{
 				using (var snapshot = tableStorage.CreateSnapshot())
 				{
-					using (var read = tableStorage.Details.Read(snapshot, "id", null))
-					using (var reader = new BinaryReader(read.Stream))
+					var read = tableStorage.Details.Read(snapshot, "id", null);
+					using (var stream = read.Reader.AsStream())
+					using (var reader = new BinaryReader(stream))
 					{
-						Id = new Guid(reader.ReadBytes((int)read.Stream.Length));
+						Id = new Guid(reader.ReadBytes((int)stream.Length));
 					}
 				}
 			}

@@ -57,8 +57,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 			var fileName = Request.Headers.GetValues(SyncingMultipartConstants.FileName).FirstOrDefault();
 			var tempFileName = RavenFileNameHelper.DownloadingFileName(fileName);
 
-			var sourceServerInfo = Request.Headers.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-			var sourceFileETag = Request.Headers.Value<Guid>("ETag");
+			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
+			var sourceFileETag = InnerHeaders.Value<Guid>("ETag");
 
 			var report = new SynchronizationReport(fileName, sourceFileETag, SynchronizationType.ContentUpdate);
 
@@ -81,7 +81,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
 
-				var sourceMetadata = Request.Headers.FilterHeaders();
+				NameValueCollection sourceMetadata = InnerHeaders.FilterHeaders();
 
 				var localMetadata = GetLocalMetadata(fileName);
 
@@ -241,11 +241,11 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPost]
-		[Route("ravenfs/synchronization/UpdateMetadata")]
+		[Route("ravenfs/synchronization/UpdateMetadata/{*fileName}")]
 		public HttpResponseMessage UpdateMetadata(string fileName)
 		{
-			var sourceServerInfo = Request.Headers.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-			var sourceFileETag = Request.Headers.Value<Guid>("ETag");
+			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
+			var sourceFileETag = InnerHeaders.Value<Guid>("ETag");
 
 			Log.Debug("Starting to update a metadata of file '{0}' with ETag {1} from {2} because of synchronization", fileName,
 					  sourceFileETag, sourceServerInfo);
@@ -265,7 +265,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				Storage.Batch(accessor => StartupProceed(fileName, accessor));
 
 				var localMetadata = GetLocalMetadata(fileName);
-				var sourceMetadata = Request.Headers.FilterHeaders();
+				var sourceMetadata = InnerHeaders.FilterHeaders();
 
 				bool isConflictResolved;
 
@@ -312,8 +312,8 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		[Route("ravenfs/synchronization")]
 		public HttpResponseMessage Delete(string fileName)
 		{
-			var sourceServerInfo = Request.Headers.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-			var sourceFileETag = Request.Headers.Value<Guid>("ETag");
+			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
+			var sourceFileETag = InnerHeaders.Value<Guid>("ETag");
 
 			Log.Debug("Starting to delete a file '{0}' with ETag {1} from {2} because of synchronization", fileName,
 					  sourceFileETag, sourceServerInfo);
@@ -396,9 +396,9 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		[Route("ravenfs/synchronization/Rename")]
 		public HttpResponseMessage Rename(string fileName, string rename)
 		{
-			var sourceServerInfo = Request.Headers.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
-			var sourceFileETag = Request.Headers.Value<Guid>("ETag");
-			var sourceMetadata = Request.Headers.FilterHeaders();
+			var sourceServerInfo = InnerHeaders.Value<ServerInfo>(SyncingMultipartConstants.SourceServerInfo);
+			var sourceFileETag = InnerHeaders.Value<Guid>("ETag");
+			var sourceMetadata = InnerHeaders.FilterHeaders();
 
 			Log.Debug("Starting to rename a file '{0}' to '{1}' with ETag {2} from {3} because of synchronization", fileName,
 					  rename, sourceFileETag, sourceServerInfo);
@@ -533,7 +533,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPatch]
-		[Route("ravenfs/synchronization/ResolveConflict")]
+		[Route("ravenfs/synchronization/ResolveConflict/{*fileName}")]
 		public HttpResponseMessage ResolveConflict(string fileName, ConflictResolutionStrategy strategy)
 		{
 			Log.Debug("Resolving conflict of a file '{0}' by using {1} strategy", fileName, strategy);
@@ -551,7 +551,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 		}
 
 		[HttpPatch]
-		[Route("ravenfs/synchronization/ApplyConflict")]
+		[Route("ravenfs/synchronization/applyConflict/{*fileName}")]
 		public async Task<HttpResponseMessage> ApplyConflict(string filename, long remoteVersion, string remoteServerId,
 															 string remoteServerUrl)
 		{

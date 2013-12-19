@@ -9,21 +9,21 @@
             <ul class="nav navbar-nav">
                 <li class="dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                        <i class="icon-plus"></i> New <b class="caret"></b>
+                        <i class="fa fa-plus"></i> New <b class="caret"></b>
                     </a>
                     <ul class="dropdown-menu">
                         <li>
                             <a href="#" data-bind="click: newDocument">
-                                <i class="icon-file"></i>
+                                <i class="fa fa-file-o"></i>
                                 <span>Document</span>
                                 <span class="text-muted keyboard-shortcut">Ctrl+Alt+N</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#"><i class="icon-bolt"></i> Index</a>
+                            <a href="#"><i class="fa fa-bolt"></i> Index</a>
                         </li>
                         <li>
-                            <a href="#"><i class="icon-search"></i> Transformer</a>
+                            <a href="#"><i class="fa fa-search"></i> Transformer</a>
                         </li>
                     </ul>
                 </li>
@@ -46,10 +46,9 @@
                         </li>
                     </ul>
                 </li>
-                <li><a href="#" title="edit database settings"><i class="icon-cogs"></i></a></li>
                 <li>
                     <a class="navbar-brand" href="#">
-                        <i class="icon-home"></i>
+                        <i class="fa fa-home"></i>
                         <span>RavenDB</span>
                     </a>
                 </li>
@@ -70,7 +69,7 @@
     <div class="page-host" data-bind="router: { transition:'entrance', cacheViews:false }"></div>
 </div>
 
-<footer>
+<footer style="z-index: 999">
     <div class="navbar navbar-fixed-bottom navbar-inverse" data-bind="with: activeDatabase">
         <div class="navbar-inner">
             <ul class="nav navbar-nav">
@@ -84,9 +83,9 @@
                 <li><a href="#documents" data-bind="text: ApproximateTaskCount + ' tasks'"></a></li>
                 <!-- /ko -->
             </ul>
-            <ul class="nav navbar-nav pull-right">
-                <li><a>AGPL - Open Source</a></li>
-                <li><a>Server Build #30</a></li>
+            <ul class="nav navbar-nav pull-right" data-bind="with: $root">
+                <li data-bind="with: licenseStatus"><a data-bind="text: 'License Status: ' + Status">AGPL - Open Source</a></li>
+                <li data-bind="with: buildVersion"><a data-bind="text: 'Server Build #' + BuildVersion"></a></li>
                 <li><a>Client Build #30</a></li>
             </ul>
         </div>

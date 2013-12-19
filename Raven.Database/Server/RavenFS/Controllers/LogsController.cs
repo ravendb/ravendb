@@ -19,7 +19,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 				boundedMemoryTarget = LogManager.Configuration.AllTargets.OfType<DatabaseMemoryTarget.BoundedMemoryTarget>().FirstOrDefault();
 
 			if (boundedMemoryTarget == null)
-				throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.PreconditionFailed,
+				throw new HttpResponseException(Request.CreateErrorResponse((HttpStatusCode)420,
 																			"HttpEndpoint was not registered in the log configuration, logs endpoint disable"));
 
 			var log = boundedMemoryTarget.GeneralLog;

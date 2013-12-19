@@ -15,6 +15,7 @@ using Raven.Client.RavenFS.Changes;
 using Raven.Client.RavenFS.Connections;
 using Raven.Client.RavenFS.Util;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 using FailoverStatusChangedEventArgs = Raven.Client.RavenFS.Connections.FailoverStatusChangedEventArgs;
 using ReplicationInformer = Raven.Client.RavenFS.Connections.ReplicationInformer;
 
@@ -71,11 +72,11 @@ namespace Raven.Client.RavenFS
 			this.baseUrl = baseUrl;
 			if (ServerUrl.EndsWith("/"))
 				this.baseUrl = ServerUrl.Substring(0, ServerUrl.Length - 1);
-
-			notifications = new ServerNotifications(baseUrl);
+			
 			convention = new FileConvention();
+			notifications = new ServerNotifications(baseUrl, convention);
 			replicationInformer = new ReplicationInformer(convention);
-			this.readStripingBase = replicationInformer.GetReadStripingBase();
+			readStripingBase = replicationInformer.GetReadStripingBase();
 		}
 
 		public string ServerUrl
@@ -105,15 +106,15 @@ namespace Raven.Client.RavenFS
 			return ExecuteWithReplication("GET", async operationUrl =>
 			{
 				var requestUriString = operationUrl + "/ravenfs/stats";
-				var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+						"GET", new OperationCredentials("", new CredentialCache()), convention));
 
 				try
 				{
-					var webResponse = await request.GetResponseAsync();
-					using (var stream = webResponse.GetResponseStream())
-					{
-						return new JsonSerializer().Deserialize<ServerStats>(new JsonTextReader(new StreamReader(stream)));
-					}
+					var response = await request.ReadResponseJsonAsync();
+
+					return new JsonSerializer().Deserialize<ServerStats>(new RavenJTokenReader(response));
 				}
 				catch (Exception e)
 				{
@@ -127,13 +128,14 @@ namespace Raven.Client.RavenFS
 			return ExecuteWithReplication("DELETE", async operationUrl =>
 			{
 				var requestUriString = operationUrl + "/ravenfs/files/" + Uri.EscapeDataString(filename);
-				var request = (HttpWebRequest)WebRequest.Create(requestUriString);
-				request.Method = "DELETE";
+
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+						"DELETE", new OperationCredentials("", new CredentialCache()), convention));
 
 				try
 				{
-					var webResponse = await request.GetResponseAsync();
-					webResponse.Close();
+					await request.ExecuteRequestAsync();
 				}
 				catch (Exception e)
 				{
@@ -148,13 +150,14 @@ namespace Raven.Client.RavenFS
 			{
 				var requestUriString = operationUrl + "/ravenfs/files/" + Uri.EscapeDataString(filename) + "?rename=" +
 									   Uri.EscapeDataString(rename);
-				var request = (HttpWebRequest)WebRequest.Create(requestUriString);
-				request.Method = "PATCH";
+
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+						"PATCH", new OperationCredentials("", new CredentialCache()), convention));
 
 				try
 				{
-					var webResponse = await request.GetResponseAsync();
-					webResponse.Close();
+					await request.ExecuteRequestAsync();
 				}
 				catch (Exception e)
 				{
@@ -167,14 +170,14 @@ namespace Raven.Client.RavenFS
 		{
 			return ExecuteWithReplication("GET", async operationUrl =>
 			{
-				var request = (HttpWebRequest)WebRequest.Create((operationUrl + "/ravenfs/files?start=" + start + "&pageSize=" + pageSize).NoCache());
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,(operationUrl + "/ravenfs/files?start=" + start + "&pageSize=" + pageSize).NoCache() ,
+						"GET", new OperationCredentials("", new CredentialCache()), convention));
 
 				try
 				{
-					var webResponse = await request.GetResponseAsync();
-					using (var responseStream = webResponse.GetResponseStream())
-					using (var streamReader = new StreamReader(responseStream))
-					using (var jsonTextReader = new JsonTextReader(streamReader))
+					var response = await request.ReadResponseJsonAsync();
+					using (var jsonTextReader = new RavenJTokenReader(response))
 					{
 						return new JsonSerializer
 						{
@@ -233,14 +236,15 @@ namespace Raven.Client.RavenFS
 			return ExecuteWithReplication("GET", async operationUrl =>
 			{
 				var requestUriString = string.Format("{0}/ravenfs/search/terms?start={1}&pageSize={2}", operationUrl, start, pageSize).NoCache();
-				var request = (HttpWebRequest)WebRequest.Create(requestUriString);
+				var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+							"GET", new OperationCredentials("", new CredentialCache()), convention));
 
 				try
 				{
-					var webResponse = await request.GetResponseAsync();
-					using (var stream = webResponse.GetResponseStream())
+					var response = await request.ReadResponseJsonAsync();
 					{
-						return new JsonSerializer().Deserialize<string[]>(new JsonTextReader(new StreamReader(stream)));
+						return new JsonSerializer().Deserialize<string[]>(new RavenJTokenReader(response));
 					}
 				}
 				catch (Exception e)
@@ -269,13 +273,14 @@ namespace Raven.Client.RavenFS
 						requestUriBuilder.Append("&sort=").Append(sortField);
 					}
 				}
-				var request = (HttpWebRequest)WebRequest.Create(requestUriBuilder.ToString().NoCache());
+
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriBuilder.ToString().NoCache(),
+						"GET", new OperationCredentials("", new CredentialCache()), convention));
 				try
 				{
-					var webResponse = await request.GetResponseAsync();
-					using (var responseStream = webResponse.GetResponseStream())
-					using (var streamReader = new StreamReader(responseStream))
-					using (var jsonTextReader = new JsonTextReader(streamReader))
+					var response = await request.ReadResponseJsonAsync();
+					using (var jsonTextReader = new RavenJTokenReader(response))
 					{
 						return new JsonSerializer
 						{
@@ -298,45 +303,61 @@ namespace Raven.Client.RavenFS
 		{
 			return ExecuteWithReplication("HEAD", async operationUrl =>
 			{
-				var request = (HttpWebRequest)WebRequest.Create(operationUrl + "/ravenfs/files?name=" + Uri.EscapeDataString(filename));
-				request.Method = "HEAD";
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,operationUrl + "/ravenfs/files?name=" + Uri.EscapeDataString(filename) ,
+						"HEAD", new OperationCredentials("", new CredentialCache()), convention));
 				try
 				{
-					var webResponse = await request.GetResponseAsync();
+					await request.ExecuteRequestAsync();
 
 					try
 					{
-						return new NameValueCollection(webResponse.Headers);
+						var result = new NameValueCollection();
+						foreach (var header in request.Response.Headers)
+						{
+							foreach (var s in header.Value)
+							{
+								result.Add(header.Key, s);
+								
+							}
+						}
+						foreach (var header in request.Response.Content.Headers)
+						{
+							foreach (var s in header.Value)
+							{
+								result.Add(header.Key, s);
+							}
+						}
+
+						return result;
 					}
 					catch (Exception e)
 					{
 						var aggregate = e as AggregateException;
-						WebException we;
+
+						ErrorResponseException we;
 						if (aggregate != null)
-							we = aggregate.ExtractSingleInnerException() as WebException;
+							we = aggregate.ExtractSingleInnerException() as ErrorResponseException;
 						else
-							we = e as WebException;
+							we = e as ErrorResponseException;
 						if (we == null)
 							throw;
-						var httpWebResponse = we.Response as HttpWebResponse;
-						if (httpWebResponse == null)
-							throw;
-						if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+						if (we.StatusCode == HttpStatusCode.NotFound)
 							return null;
 						throw;
 					}
 				}
 				catch (Exception e)
 				{
-					var web = e as WebException;
-					if (web != null)
+					var responseException = e as ErrorResponseException;
+					if (responseException != null)
 					{
-						var httpWebResponse = web.Response as HttpWebResponse;
-						if (httpWebResponse == null)
-							throw e.TryThrowBetterError();
-						if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-							return null;
+						if (responseException.StatusCode == HttpStatusCode.NotFound)
+							return null;	
+						throw e.TryThrowBetterError();
+						
 					}
+
 					throw e.TryThrowBetterError();
 				}
 			});
@@ -364,7 +385,9 @@ namespace Raven.Client.RavenFS
 				if (destination.CanWrite == false)
 					throw new ArgumentException("Stream does not support writing");
 
-				var request = (HttpWebRequest)WebRequest.Create(operationUrl + path + filename);
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + path + filename,
+						"GET", new OperationCredentials("", new CredentialCache()), convention));
 
 #if !SILVERLIGHT
 				if (from != null)
@@ -383,17 +406,26 @@ namespace Raven.Client.RavenFS
 
 				try
 				{
-					var webResponse = await request.GetResponseAsync();
-					foreach (var header in webResponse.Headers.AllKeys)
+					using (var responseStream = new MemoryStream(await request.ReadResponseBytesAsync()))
 					{
-						collection[header] = webResponse.Headers[header];
+						foreach (var header in request.ResponseHeaders.AllKeys)
+						{
+							collection[header] = request.ResponseHeaders[header];
+						}
+						foreach (var header in request.Response.Content.Headers)
+						{
+							foreach (var s in header.Value)
+							{
+								collection[header.Key] = s;								
+							}
+						}
+						await responseStream.CopyToAsync(destination, i =>
+						{
+							if (progress != null)
+								progress(filename, i);
+						});
 					}
-					var responseStream = webResponse.GetResponseStream();
-					await responseStream.CopyToAsync(destination, i =>
-					{
-						if (progress != null)
-							progress(filename, i);
-					});
+
 					return collection;
 				}
 				catch (Exception e)
@@ -408,15 +440,16 @@ namespace Raven.Client.RavenFS
 		{
 			return ExecuteWithReplication("POST", async operationUrl =>
 			{
-				var request = (HttpWebRequest)WebRequest.Create(operationUrl + "/ravenfs/files/" + filename);
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+						operationUrl + "/ravenfs/files/" + filename,
+						"POST", new OperationCredentials("", new CredentialCache()), convention));
 
-				request.Method = "POST";
-				request.ContentLength = 0;
-				//AddHeaders(metadata, request);
+				AddHeaders(metadata, request);
 
 				try
 				{
-					await request.GetResponseAsync();
+					await request.ExecuteRequestAsync();
 				}
 				catch (Exception e)
 				{
@@ -449,6 +482,7 @@ namespace Raven.Client.RavenFS
 						operationUrl + "/ravenfs/files?name=" + Uri.EscapeDataString(filename) + "&uploadId=" + uploadIdentifier,
 						"PUT", new OperationCredentials("", new CredentialCache()), convention));
 
+				metadata.Add("RavenFS-Size", source.Length.ToString());
 
 				AddHeaders(metadata, request);
 
@@ -512,20 +546,20 @@ namespace Raven.Client.RavenFS
 		{
 			get
 			{
-				return new SynchronizationClient(this);
+				return new SynchronizationClient(this, Convention);
 			}
 		}
 
 		public ConfigurationClient Config
 		{
-			get { return new ConfigurationClient(this); }
+			get { return new ConfigurationClient(this, Convention); }
 		}
 
 		public StorageClient Storage
 		{
 			get
 			{
-				return new StorageClient(this);
+				return new StorageClient(this, Convention);
 			}
 		}
 
@@ -563,16 +597,16 @@ namespace Raven.Client.RavenFS
 
 				var requestUriString = operationUrl + "/ravenfs/folders/subdirectories/" + Uri.EscapeUriString(path) + "?pageSize=" +
 									   pageSize + "&start=" + start;
-				var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
+
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+						"GET", new OperationCredentials("", new CredentialCache()), convention));
 
 				try
 				{
-					var webResponse = await request.GetResponseAsync();
-
-					using (var stream = webResponse.GetResponseStream())
-					{
-						return new JsonSerializer().Deserialize<string[]>(new JsonTextReader(new StreamReader(stream)));
-					}
+					var response = await request.ReadResponseJsonAsync();
+					
+					return new JsonSerializer().Deserialize<string[]>(new RavenJTokenReader(response));
 				}
 				catch (Exception e)
 				{
@@ -600,17 +634,16 @@ namespace Raven.Client.RavenFS
 		{
 			return ExecuteWithReplication("GET", async operationUrl =>
 			{
-				var requestUriString = operationUrl + "/ravenfs/id";
-				var request = (HttpWebRequest)WebRequest.Create(requestUriString);
+				var requestUriString = operationUrl + "/ravenfs/staticfs/id/";
+
+				var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+						"GET", new OperationCredentials("", new CredentialCache()), convention));
 
 				try
 				{
-					var webResponse = await request.GetResponseAsync();
-
-					using (var stream = webResponse.GetResponseStream())
-					{
-						return new JsonSerializer().Deserialize<Guid>(new JsonTextReader(new StreamReader(stream)));
-					}
+					var response = await request.ReadResponseJsonAsync();
+					return new JsonSerializer().Deserialize<Guid>(new RavenJTokenReader(response));
 				}
 				catch (Exception e)
 				{
@@ -681,12 +714,19 @@ namespace Raven.Client.RavenFS
 			return sortFields;
 		}
 
-		public class ConfigurationClient
+		public class ConfigurationClient : IHoldProfilingInformation
 		{
 			private readonly RavenFileSystemClient ravenFileSystemClient;
+			private readonly FileConvention convention;
 			private readonly JsonSerializer jsonSerializer;
+			private HttpJsonRequestFactory jsonRequestFactory =
+#if !SILVERLIGHT && !NETFX_CORE
+ new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+#else
+			  new HttpJsonRequestFactory();
+#endif
 
-			public ConfigurationClient(RavenFileSystemClient ravenFileSystemClient)
+			public ConfigurationClient(RavenFileSystemClient ravenFileSystemClient, FileConvention convention)
 			{
 				jsonSerializer = new JsonSerializer
 				{
@@ -697,6 +737,7 @@ namespace Raven.Client.RavenFS
 				};
 
 				this.ravenFileSystemClient = ravenFileSystemClient;
+				this.convention = convention;
 			}
 
 			public Task<string[]> GetConfigNames(int start = 0, int pageSize = 25)
@@ -704,15 +745,15 @@ namespace Raven.Client.RavenFS
 				return ravenFileSystemClient.ExecuteWithReplication("GET", async operationUrl =>
 				{
 					var requestUriString = operationUrl + "/ravenfs/config?start=" + start + "&pageSize=" + pageSize;
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+							"GET", new OperationCredentials("", new CredentialCache()), convention));
 
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
-						using (var responseStream = webResponse.GetResponseStream())
-						{
-							return jsonSerializer.Deserialize<string[]>(new JsonTextReader(new StreamReader(responseStream)));
-						}
+						var response = await request.ReadResponseJsonAsync();
+						return jsonSerializer.Deserialize<string[]>(new RavenJTokenReader(response));
 					}
 					catch (Exception e)
 					{
@@ -726,18 +767,18 @@ namespace Raven.Client.RavenFS
 				return ravenFileSystemClient.ExecuteWithReplication("PUT", async operationUrl =>
 				{
 					var requestUriString = operationUrl + "/ravenfs/config?name=" + StringUtils.UrlEncode(name);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString);
-					request.Method = "PUT";
+					var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+						"PUT", new OperationCredentials("", new CredentialCache()), convention));
 
-					var stream = await request.GetRequestStreamAsync();
-
-					using (var streamWriter = new StreamWriter(stream))
+					using(var ms = new MemoryStream())
+					using (var streamWriter = new StreamWriter(ms))
 					{
 						jsonSerializer.Serialize(streamWriter, data);
 						streamWriter.Flush();
+						ms.Position = 0;
+						await request.ExecuteWriteAsync(ms);
 					}
-
-					await request.GetResponseAsync();
 				});
 			}
 
@@ -746,11 +787,13 @@ namespace Raven.Client.RavenFS
 				return ravenFileSystemClient.ExecuteWithReplication("DELETE", operationUrl =>
 				{
 					var requestUriString = operationUrl + "/ravenfs/config?name=" + StringUtils.UrlEncode(name);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString);
-					request.Method = "DELETE";
-					return request.GetResponseAsync();
-				});
 
+					var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+						"DELETE", new OperationCredentials("", new CredentialCache()), convention));
+
+					return request.ExecuteRequestAsync();
+				});
 			}
 
 			public Task<NameValueCollection> GetConfig(string name)
@@ -758,25 +801,23 @@ namespace Raven.Client.RavenFS
 				return ravenFileSystemClient.ExecuteWithReplication("GET", async operationUrl =>
 				{
 					var requestUriString = operationUrl + "/ravenfs/config?name=" + StringUtils.UrlEncode(name);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
 
+					var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+						"GET", new OperationCredentials("", new CredentialCache()), convention));
+					
 					try
 					{
-						var response = await request.GetResponseAsync();
-
-						var webResponse = response;
-						return jsonSerializer.Deserialize<NameValueCollection>(
-							new JsonTextReader(new StreamReader(webResponse.GetResponseStream())));
+						var response = await request.ReadResponseJsonAsync();
+						return jsonSerializer.Deserialize<NameValueCollection>(new RavenJTokenReader(response));
 					}
 					catch (Exception e)
 					{
-						var webException = e as WebException;
-						if (webException == null)
+						var responseException = e as ErrorResponseException;
+						if (responseException == null)
 							throw;
-						var httpWebResponse = webException.Response as HttpWebResponse;
-						if (httpWebResponse == null)
-							throw;
-						if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+
+						if (responseException.StatusCode == HttpStatusCode.NotFound)
 							return null;
 						throw;
 					}
@@ -795,14 +836,14 @@ namespace Raven.Client.RavenFS
 						.Append("&pageSize=")
 						.Append(pageSize);
 
-					var request = (HttpWebRequest)WebRequest.Create(requestUriBuilder.ToString().NoCache());
-
+					var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriBuilder.ToString().NoCache(),
+						"GET", new OperationCredentials("", new CredentialCache()), convention));
+				
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
-						using (var responseStream = webResponse.GetResponseStream())
-						using (var streamReader = new StreamReader(responseStream))
-						using (var jsonTextReader = new JsonTextReader(streamReader))
+						var response = await request.ReadResponseJsonAsync();
+						using (var jsonTextReader = new RavenJTokenReader(response))
 						{
 							return new JsonSerializer().Deserialize<ConfigSearchResults>(jsonTextReader);
 						}
@@ -813,15 +854,26 @@ namespace Raven.Client.RavenFS
 					}
 				});
 			}
+
+			public ProfilingInformation ProfilingInformation { get; private set; }
 		}
 
-		public class SynchronizationClient
+		public class SynchronizationClient : IHoldProfilingInformation
 		{
 			private readonly RavenFileSystemClient ravenFileSystemClient;
+			private readonly FileConvention convention;
 
-			public SynchronizationClient(RavenFileSystemClient ravenFileSystemClient)
+			private HttpJsonRequestFactory jsonRequestFactory =
+#if !SILVERLIGHT && !NETFX_CORE
+ new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+#else
+			  new HttpJsonRequestFactory();
+#endif
+
+			public SynchronizationClient(RavenFileSystemClient ravenFileSystemClient, FileConvention convention)
 			{
 				this.ravenFileSystemClient = ravenFileSystemClient;
+				this.convention = convention;
 			}
 
 			public Task DownloadSignatureAsync(string sigName, Stream destination, long? from = null, long? to = null)
@@ -834,16 +886,14 @@ namespace Raven.Client.RavenFS
 				return ravenFileSystemClient.ExecuteWithReplication("GET", async operationUrl =>
 				{
 					var requestUriString = operationUrl + "/ravenfs/rdc/manifest/" + StringUtils.UrlEncode(path);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString);
+					var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+						"GET", new OperationCredentials("", new CredentialCache()), convention));
 
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
-
-						using (var stream = webResponse.GetResponseStream())
-						{
-							return new JsonSerializer().Deserialize<SignatureManifest>(new JsonTextReader(new StreamReader(stream)));
-						}
+						var response = await request.ReadResponseJsonAsync();
+						return new JsonSerializer().Deserialize<SignatureManifest>(new RavenJTokenReader(response));	
 					}
 					catch (Exception e)
 					{
@@ -858,17 +908,15 @@ namespace Raven.Client.RavenFS
 				{
 					var requestUriString = String.Format("{0}/ravenfs/synchronization/ToDestinations?forceSyncingAll={1}", operationUrl,
 														 forceSyncingAll);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString);
-					request.Method = "POST";
-					request.ContentLength = 0;
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+							"POST", new OperationCredentials("", new CredentialCache()), convention));
+
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
-
-						using (var stream = webResponse.GetResponseStream())
-						{
-							return new JsonSerializer().Deserialize<DestinationSyncResult[]>(new JsonTextReader(new StreamReader(stream)));
-						}
+						var response = await request.ReadResponseJsonAsync();
+						return new JsonSerializer().Deserialize<DestinationSyncResult[]>(new RavenJTokenReader(response));
 					}
 					catch (Exception e)
 					{
@@ -883,16 +931,15 @@ namespace Raven.Client.RavenFS
 				{
 					var requestUriString = String.Format("{0}/ravenfs/synchronization/start/{1}?destinationServerUrl={2}", operationUrl,
 														 Uri.EscapeDataString(fileName), Uri.EscapeDataString(destinationServerUrl));
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString);
-					request.Method = "POST";
-					request.ContentLength = 0;
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+							"POST", new OperationCredentials("", new CredentialCache()), convention));
+
 					try
 					{
-						using (var webResponse = await request.GetResponseAsync())
-						using (var stream = webResponse.GetResponseStream())
-						{
-							return new JsonSerializer().Deserialize<SynchronizationReport>(new JsonTextReader(new StreamReader(stream)));
-						}
+						var response = await request.ReadResponseJsonAsync();
+						return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
 					}
 					catch (Exception e)
 					{
@@ -906,17 +953,15 @@ namespace Raven.Client.RavenFS
 				return ravenFileSystemClient.ExecuteWithReplication("GET", async operationUrl =>
 				{
 					var requestUriString = String.Format("{0}/ravenfs/synchronization/status/{1}", operationUrl, Uri.EscapeDataString(fileName));
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
-					request.ContentLength = 0;
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+							"GET", new OperationCredentials("", new CredentialCache()), convention));
 
 					try
 					{
-						using (var webResponse = await request.GetResponseAsync())
-						using (var stream = webResponse.GetResponseStream())
-						{
-							return new JsonSerializer().Deserialize<SynchronizationReport>(new JsonTextReader(new StreamReader(stream)));
-						}
-
+						var response = await request.ReadResponseJsonAsync();
+						return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
 					}
 					catch (Exception e)
 					{
@@ -932,13 +977,14 @@ namespace Raven.Client.RavenFS
 					var requestUriString = String.Format("{0}/ravenfs/synchronization/resolveConflict/{1}?strategy={2}",
 														 operationUrl, Uri.EscapeDataString(filename),
 														 Uri.EscapeDataString(strategy.ToString()));
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString);
-					request.Method = "PATCH";
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+							"PATCH", new OperationCredentials("", new CredentialCache()), convention));
 
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
-						webResponse.Close();
+						await request.ExecuteRequestAsync();
 					}
 					catch (Exception e)
 					{
@@ -956,21 +1002,24 @@ namespace Raven.Client.RavenFS
 						String.Format("{0}/ravenfs/synchronization/applyConflict/{1}?remoteVersion={2}&remoteServerId={3}&remoteServerUrl={4}",
 									  operationUrl, Uri.EscapeDataString(filename), remoteVersion,
 									  Uri.EscapeDataString(remoteServerId), Uri.EscapeDataString(remoteServerUrl));
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString);
-					request.Method = "PATCH";
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+							"PATCH", new OperationCredentials("", new CredentialCache()), convention));
 
 					try
 					{
-						var stream = await request.GetRequestStreamAsync();
+						using (var stream = new MemoryStream())
+						{
+							var sb = new StringBuilder();
+							var jw = new JsonTextWriter(new StringWriter(sb));
+							new JsonSerializer().Serialize(jw, remoteHistory);
+							var bytes = Encoding.UTF8.GetBytes(sb.ToString());
 
-						var sb = new StringBuilder();
-						var jw = new JsonTextWriter(new StringWriter(sb));
-						new JsonSerializer().Serialize(jw, remoteHistory);
-						var bytes = Encoding.UTF8.GetBytes(sb.ToString());
-
-						await stream.WriteAsync(bytes, 0, bytes.Length);
-						stream.Close();
-						await request.GetResponseAsync();
+							await stream.WriteAsync(bytes, 0, bytes.Length);
+							stream.Position = 0;
+							await request.ExecuteWriteAsync(stream);
+						}
 					}
 					catch (Exception e)
 					{
@@ -985,18 +1034,17 @@ namespace Raven.Client.RavenFS
 				{
 					var requestUriString = String.Format("{0}/ravenfs/synchronization/finished?start={1}&pageSize={2}", operationUrl, page,
 														 pageSize);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
-					request.ContentLength = 0;
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+							"GET", new OperationCredentials("", new CredentialCache()), convention));
+
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
-
-						using (var stream = webResponse.GetResponseStream())
-						{
-							var preResult =
-								new JsonSerializer().Deserialize<ListPage<SynchronizationReport>>(new JsonTextReader(new StreamReader(stream)));
-							return preResult;
-						}
+						var response = await request.ReadResponseJsonAsync();
+						var preResult =
+							new JsonSerializer().Deserialize<ListPage<SynchronizationReport>>(new RavenJTokenReader(response));
+						return preResult;
 					}
 					catch (Exception e)
 					{
@@ -1011,18 +1059,17 @@ namespace Raven.Client.RavenFS
 				{
 					var requestUriString = String.Format("{0}/ravenfs/synchronization/active?start={1}&pageSize={2}",
 														 operationUrl, page, pageSize);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
-					request.ContentLength = 0;
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+							"GET", new OperationCredentials("", new CredentialCache()), convention));
+
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
-
-						using (var stream = webResponse.GetResponseStream())
-						{
-							var preResult =
-								new JsonSerializer().Deserialize<ListPage<SynchronizationDetails>>(new JsonTextReader(new StreamReader(stream)));
-							return preResult;
-						}
+						var response = await request.ReadResponseJsonAsync();
+						var preResult =
+							new JsonSerializer().Deserialize<ListPage<SynchronizationDetails>>(new RavenJTokenReader(response));
+						return preResult;
 					}
 					catch (Exception e)
 					{
@@ -1037,19 +1084,19 @@ namespace Raven.Client.RavenFS
 				{
 					var requestUriString = String.Format("{0}/ravenfs/synchronization/pending?start={1}&pageSize={2}",
 														 operationUrl, page, pageSize);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
-					request.ContentLength = 0;
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+							"GET", new OperationCredentials("", new CredentialCache()), convention));
 
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
+						var response = await request.ReadResponseJsonAsync();
 
-						using (var stream = webResponse.GetResponseStream())
-						{
-							var preResult =
-								new JsonSerializer().Deserialize<ListPage<SynchronizationDetails>>(new JsonTextReader(new StreamReader(stream)));
-							return preResult;
-						}
+						var preResult =
+							new JsonSerializer().Deserialize<ListPage<SynchronizationDetails>>(new RavenJTokenReader(response));
+						return preResult;
+
 					}
 					catch (Exception e)
 					{
@@ -1064,18 +1111,17 @@ namespace Raven.Client.RavenFS
 				{
 					var requestUriString = String.Format("{0}/ravenfs/synchronization/LastSynchronization?from={1}",
 														 operationUrl, serverId);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
-					request.ContentLength = 0;
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+							"GET", new OperationCredentials("", new CredentialCache()), convention));
+
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
-
-						using (var stream = webResponse.GetResponseStream())
-						{
-							var preResult =
-								new JsonSerializer().Deserialize<SourceSynchronizationInformation>(new JsonTextReader(new StreamReader(stream)));
-							return preResult;
-						}
+						var response = await request.ReadResponseJsonAsync();
+						var preResult =
+							new JsonSerializer().Deserialize<SourceSynchronizationInformation>(new RavenJTokenReader(response));
+						return preResult;
 					}
 					catch (Exception e)
 					{
@@ -1089,28 +1135,29 @@ namespace Raven.Client.RavenFS
 				return ravenFileSystemClient.ExecuteWithReplication("POST", async operationUrl =>
 				{
 					var requestUriString = String.Format("{0}/ravenfs/synchronization/Confirm", operationUrl);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString);
-					request.ContentType = "application/json";
-					request.Method = "POST";
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+							"POST", new OperationCredentials("", new CredentialCache()), convention));
+				
 					try
 					{
-						var stream = await request.GetRequestStreamAsync();
-
-						var sb = new StringBuilder();
-						var jw = new JsonTextWriter(new StringWriter(sb));
-						new JsonSerializer().Serialize(jw, sentFiles);
-						var bytes = Encoding.UTF8.GetBytes(sb.ToString());
-
-						await stream.WriteAsync(bytes, 0, bytes.Length);
-						stream.Close();
-						var webResponse = await request.GetResponseAsync();
-
-						using (var responseStream = webResponse.GetResponseStream())
+						using (var stream = new MemoryStream())
 						{
-							return
-								new JsonSerializer().Deserialize<IEnumerable<SynchronizationConfirmation>>(
-									new JsonTextReader(new StreamReader(responseStream)));
+							var sb = new StringBuilder();
+							var jw = new JsonTextWriter(new StringWriter(sb));
+							new JsonSerializer().Serialize(jw, sentFiles);
+							var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+
+							await stream.WriteAsync(bytes, 0, bytes.Length);
+							stream.Position = 0;
+							await request.WriteAsync(stream);
+							var response = await request.ReadResponseJsonAsync();
+
+							return new JsonSerializer().Deserialize<IEnumerable<SynchronizationConfirmation>>(
+								new RavenJTokenReader(response));
 						}
+						
 					}
 					catch (Exception e)
 					{
@@ -1125,18 +1172,17 @@ namespace Raven.Client.RavenFS
 				{
 					var requestUriString = String.Format("{0}/ravenfs/synchronization/conflicts?start={1}&pageSize={2}", operationUrl, page,
 														 pageSize);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
-					request.ContentLength = 0;
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+							"GET", new OperationCredentials("", new CredentialCache()), convention));
+
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
-
-						using (var stream = webResponse.GetResponseStream())
-						{
-							var preResult =
-								new JsonSerializer().Deserialize<ListPage<ConflictItem>>(new JsonTextReader(new StreamReader(stream)));
-							return preResult;
-						}
+						var response = await request.ReadResponseJsonAsync();
+						var preResult =
+							new JsonSerializer().Deserialize<ListPage<ConflictItem>>(new RavenJTokenReader(response));
+						return preResult;
 					}
 					catch (Exception e)
 					{
@@ -1152,13 +1198,14 @@ namespace Raven.Client.RavenFS
 					var requestUriString =
 						String.Format("{0}/ravenfs/synchronization/IncrementLastETag?sourceServerId={1}&sourceServerUrl={2}&sourceFileETag={3}",
 									  operationUrl, sourceServerId, sourceServerUrl, sourceFileETag);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
-					request.ContentLength = 0;
-					request.Method = "POST";
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+							"POST", new OperationCredentials("", new CredentialCache()), convention));
+
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
-						webResponse.Close();
+						await request.ExecuteRequestAsync();
 					}
 					catch (Exception e)
 					{
@@ -1172,15 +1219,15 @@ namespace Raven.Client.RavenFS
 				return ravenFileSystemClient.ExecuteWithReplication("GET", async operationUrl =>
 				{
 					var requestUriString = operationUrl + "/ravenfs/rdc/stats";
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+							"GET", new OperationCredentials("", new CredentialCache()), convention));
 
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
-						using (var stream = webResponse.GetResponseStream())
-						{
-							return new JsonSerializer().Deserialize<RdcStats>(new JsonTextReader(new StreamReader(stream)));
-						}
+						var response = await request.ReadResponseJsonAsync();
+						return new JsonSerializer().Deserialize<RdcStats>(new RavenJTokenReader(response));
 					}
 					catch (Exception e)
 					{
@@ -1188,15 +1235,25 @@ namespace Raven.Client.RavenFS
 					}
 				});
 			}
+
+			public ProfilingInformation ProfilingInformation { get; private set; }
 		}
 
-		public class StorageClient
+		public class StorageClient : IHoldProfilingInformation
 		{
 			private readonly RavenFileSystemClient ravenFileSystemClient;
+			private readonly FileConvention convention;
+			private HttpJsonRequestFactory jsonRequestFactory =
+#if !SILVERLIGHT && !NETFX_CORE
+ new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+#else
+			  new HttpJsonRequestFactory();
+#endif
 
-			public StorageClient(RavenFileSystemClient ravenFileSystemClient)
+			public StorageClient(RavenFileSystemClient ravenFileSystemClient, FileConvention convention)
 			{
 				this.ravenFileSystemClient = ravenFileSystemClient;
+				this.convention = convention;
 			}
 
 			public Task CleanUp()
@@ -1204,14 +1261,14 @@ namespace Raven.Client.RavenFS
 				return ravenFileSystemClient.ExecuteWithReplication("POST", async operationUrl =>
 				{
 					var requestUriString = String.Format("{0}/ravenfs/storage/cleanup", operationUrl);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
-					request.ContentLength = 0;
-					request.Method = "POST";
+
+					var request =
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+							"POST", new OperationCredentials("", new CredentialCache()), convention));
 
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
-						webResponse.Close();
+						await request.ExecuteRequestAsync();
 					}
 					catch (Exception e)
 					{
@@ -1224,15 +1281,15 @@ namespace Raven.Client.RavenFS
 			{
 				return ravenFileSystemClient.ExecuteWithReplication("POST", async operationUrl =>
 				{
-					var requestUriString = String.Format("{0}/storage/retryrenaming", operationUrl);
-					var request = (HttpWebRequest)WebRequest.Create(requestUriString.NoCache());
-					request.ContentLength = 0;
-					request.Method = "POST";
+					var requestUriString = String.Format("{0}/ravenfs/storage/retryrenaming", operationUrl);
+
+					var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
+						"POST", new OperationCredentials("", new CredentialCache()), convention));
 
 					try
 					{
-						var webResponse = await request.GetResponseAsync();
-						webResponse.Close();
+						await request.ExecuteRequestAsync();
 					}
 					catch (Exception e)
 					{
@@ -1240,6 +1297,8 @@ namespace Raven.Client.RavenFS
 					}
 				});
 			}
+
+			public ProfilingInformation ProfilingInformation { get; private set; }
 		}
 
 		public void Dispose()

@@ -2,52 +2,65 @@
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection;
+using Raven.Client.Connection.Profiling;
+using Raven.Client.RavenFS.Connections;
 using Raven.Database.Util;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 #if !SILVERLIGHT
 using TaskEx = System.Threading.Tasks.Task;
 #endif
 
 namespace Raven.Client.RavenFS.Changes
 {
-	public class ServerNotifications : IServerNotifications, IObserver<string>, IDisposable
+	public class ServerNotifications : IServerNotifications, IObserver<string>, IDisposable, IHoldProfilingInformation
 	{
 		private readonly string url;
+		private readonly FileConvention convention;
 		private readonly AtomicDictionary<NotificationSubject> subjects = new AtomicDictionary<NotificationSubject>(StringComparer.InvariantCultureIgnoreCase);
 		private readonly ConcurrentSet<Task> pendingConnectionTasks = new ConcurrentSet<Task>();
 		private int reconnectAttemptsRemaining;
 		private IDisposable connection;
+		private HttpJsonRequestFactory jsonRequestFactory =
+#if !SILVERLIGHT && !NETFX_CORE
+ new HttpJsonRequestFactory(DefaultNumberOfCachedRequests);
+#else
+			  new HttpJsonRequestFactory();
+#endif
+		private const int DefaultNumberOfCachedRequests = 2048;
 
 		private static int connectionCounter;
 		private readonly string id;
 		private Task connectionTask;
 		private object gate = new object();
 
-		public ServerNotifications(string url)
+		public ServerNotifications(string url, FileConvention convention)
 		{
 			id = Interlocked.Increment(ref connectionCounter) + "/" +
 				 Base62Util.Base62Random();
 			this.url = url;
+			this.convention = convention;
 		}
 
 		private async Task EstablishConnection()
 		{
 			//TODO: Fix not to use WebRequest
-			var request = (HttpWebRequest)WebRequest.Create(url + "/ravenfs/changes/events?id=" + id);
-			request.Method = "GET";
+			var request =
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url + "/changes/events?id=" + id,
+						"GET", new OperationCredentials("", new CredentialCache()), convention));
 
 			while (true)
 			{
 				try
 				{
-					//TODO: fix this!!!
-					//var result = await request.ServerPullAsync();
-					//reconnectAttemptsRemaining = 3; // after the first successful try, we will retry 3 times before giving up
-					//connection = (IDisposable)result;
-					//result.Subscribe(this);
+					var result = await request.ServerPullAsync();
+					reconnectAttemptsRemaining = 3; // after the first successful try, we will retry 3 times before giving up
+					connection = (IDisposable)result;
+					result.Subscribe(this);
 					
-					//TODO: remove this, this is just to keep the rest of the code happy
-					connection = (IDisposable) await request.GetResponseAsync();
 					return;
 				}
 				catch (Exception)
@@ -192,7 +205,7 @@ namespace Raven.Client.RavenFS.Changes
 		{
 			try
 			{
-				var sendUrl = url + "/ravenfs/changes/config?id=" + id + "&command=" + command;
+				var sendUrl = url + "/changes/config?id=" + id + "&command=" + command;
 				if (string.IsNullOrEmpty(value) == false)
 					sendUrl += "&value=" + Uri.EscapeUriString(value);
 
@@ -250,11 +263,39 @@ namespace Raven.Client.RavenFS.Changes
 
 		public void OnNext(string dataFromConnection)
 		{
-			var notification = NotificationJSonUtilities.Parse<Notification>(dataFromConnection);
+			var ravenJObject = RavenJObject.Parse(dataFromConnection);
+			var value = ravenJObject.Value<RavenJObject>("Value");
+			var type = ravenJObject.Value<string>("Type");
+			//var notification = NotificationJSonUtilities.Parse<Notification>(dataFromConnection);
+			Notification notification;
 
-			if (notification is Heartbeat)
+			switch (type)
 			{
-				return;
+				case "ConfigChange":
+					notification = JsonConvert.DeserializeObject<ConfigChange>(value.ToString());
+					break;
+				case "FileChange":
+					notification = JsonConvert.DeserializeObject<FileChange>(value.ToString());
+					break;
+				case "ConflictNotification":
+					notification = JsonConvert.DeserializeObject<ConflictNotification>(value.ToString());
+					break;
+				case "SynchronizationUpdate":
+					notification = JsonConvert.DeserializeObject<SynchronizationUpdate>(value.ToString());
+					break;
+				case "UploadFailed":
+					notification = JsonConvert.DeserializeObject<UploadFailed>(value.ToString());
+					break;
+				case "ConflictDetected":
+					notification = JsonConvert.DeserializeObject<ConflictDetected>(value.ToString());
+					break;
+				case "ConflictResolved":
+					notification = JsonConvert.DeserializeObject<ConflictResolved>(value.ToString());
+					break;
+				case "Heartbeat":
+					return;
+				default:
+					return;
 			}
 
 			foreach (var subject in subjects)
@@ -286,5 +327,7 @@ namespace Raven.Client.RavenFS.Changes
 		public void OnCompleted()
 		{
 		}
+
+		public ProfilingInformation ProfilingInformation { get; private set; }
 	}
 }

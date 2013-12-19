@@ -57,7 +57,7 @@ namespace Raven.Database.Server.Responders.Admin
 					var json = RavenJObject.FromObject(dbDoc);
 					json.Remove("Id");
 
-					Database.Put(docKey, null, json, context.Request.Headers.FilterHeaders(), null);
+					Database.Put(docKey, null, json, context.Request.Headers.FilterHeadersToObject(), null);
 					break;
 				case "DELETE":
 					var configuration = server.CreateTenantConfiguration(db);

@@ -2,11 +2,14 @@
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
+using Raven.Client.Connection;
 using Raven.Client.RavenFS;
 using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Server.RavenFS.Storage;
 using Raven.Database.Server.RavenFS.Synchronization.Multipart;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace Raven.Database.Server.RavenFS.Synchronization
 {
@@ -29,29 +32,22 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 		{
 			FileAndPages fileAndPages = null;
 			Storage.Batch(accessor => fileAndPages = accessor.GetFile(FileName, 0, 0));
-
 			var request =
-				(HttpWebRequest)
-				WebRequest.Create(destination + "/synchronization/rename?filename=" + Uri.EscapeDataString(FileName) + "&rename=" +
-								  Uri.EscapeDataString(rename));
+				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
+					destination + "/ravenfs/synchronization/rename?filename=" + Uri.EscapeDataString(FileName) + "&rename=" +
+								  Uri.EscapeDataString(rename),
+					"PATCH", new OperationCredentials("", new CredentialCache()), Convention));
 
-			request.Method = "PATCH";
-			request.ContentLength = 0;
 			request.AddHeaders(fileAndPages.Metadata);
 
-			request.Headers[SyncingMultipartConstants.SourceServerInfo] = ServerInfo.AsJson();
+			request.AddHeader(SyncingMultipartConstants.SourceServerInfo, ServerInfo.AsJson());
 
 			try
 			{
-				using (var response = await request.GetResponseAsync())
-				{
-					using (var stream = response.GetResponseStream())
-					{
-						return new JsonSerializer().Deserialize<SynchronizationReport>(new JsonTextReader(new StreamReader(stream)));
-					}
-				}
+				var response = await request.ReadResponseJsonAsync();
+				return new JsonSerializer().Deserialize<SynchronizationReport>(new RavenJTokenReader(response));
 			}
-			catch (WebException exception)
+			catch (ErrorResponseException exception)
 			{
 				throw exception.BetterWebExceptionError();
 			}

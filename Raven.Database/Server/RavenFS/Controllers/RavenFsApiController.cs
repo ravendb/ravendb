@@ -196,7 +196,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 								                                        {
 									                                        FileName = filename
 								                                        },
-							                   ContentLength = length,
+							                  // ContentLength = length,
 							                   ContentRange = contentRange,
 						                   }
 				                   };
@@ -219,7 +219,7 @@ namespace Raven.Database.Server.RavenFS.Controllers
 
 				if (wrapByResponseException)
 				{
-					throw new HttpResponseException(Request.CreateResponse(HttpStatusCode.PreconditionFailed, beingSyncedException));
+					throw new HttpResponseException(Request.CreateResponse((HttpStatusCode)420, beingSyncedException));
 				}
 
 				throw beingSyncedException;

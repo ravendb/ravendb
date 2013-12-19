@@ -15,21 +15,34 @@ namespace Raven.Client.Connection
 	public class CompressedStreamContent : HttpContent
 	{
         private readonly Stream data;
+		private readonly bool disableRequestCompression;
 
-		public CompressedStreamContent(Stream data)
+		public CompressedStreamContent(Stream data, bool disableRequestCompression)
 		{
 		    if (data == null) throw new ArgumentNullException("data");
 		    this.data = data;
-			Headers.ContentEncoding.Add("gzip");
+			this.disableRequestCompression = disableRequestCompression;
+
+			if (disableRequestCompression == false)
+			{
+				Headers.ContentEncoding.Add("gzip");
+			}
 		}
 
 		protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
-            using (data)
-			using (var dataStream = new GZipStream(stream, CompressionMode.Compress, true))
+			try
 			{
-			    await data.CopyToAsync(dataStream);
-				await dataStream.FlushAsync();
+				if (disableRequestCompression == false)
+					stream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
+
+				await data.CopyToAsync(stream);
+				await stream.FlushAsync();
+			}
+			finally
+			{
+				if (disableRequestCompression == false)
+					stream.Dispose();
 			}
 		}
 

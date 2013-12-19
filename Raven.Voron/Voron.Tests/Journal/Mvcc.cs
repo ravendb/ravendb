@@ -52,7 +52,7 @@ namespace Voron.Tests.Journal
 
 				var readResult = txr.State.Root.Read(txr, "items/1");
 
-				var readData = readResult.Stream.ReadData();
+			    var readData = readResult.Reader.ReadBytes(readResult.Reader.Length);
 
 				for (int i = 0; i < 3000; i++)
 				{

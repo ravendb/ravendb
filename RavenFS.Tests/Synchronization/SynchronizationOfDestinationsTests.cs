@@ -264,8 +264,8 @@ namespace RavenFS.Tests.Synchronization
 			var sourceContent = new RandomStream(1);
 			var sourceClient = NewClient(0);
 
-			sourceClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLimit,
-			                              new NameValueCollection {{"value", "\"1\""}}).Wait();
+			await sourceClient.Config.SetConfig(SynchronizationConstants.RavenSynchronizationLimit,
+			                              new NameValueCollection {{"value", "\"1\""}});
 
 			var destinationClient = NewClient(1);
 

@@ -3,11 +3,11 @@
         <div class="col-md-2">
             <br />
             <ul class="nav nav-pills nav-stacked document-collections affix" data-bind="foreach: collections">
-                <li data-bind="event: { mousedown: $parent.activateCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllCollections">
-                    <a href="javascript:void(0)"> 
+                <li data-bind="event: { mousedown: $parent.activateCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
+                    <a href="javascript:void(0)">
                         <div class="collection-color-strip" data-bind="css: colorClass"></div>
                         <span data-bind="text: name"></span>
-                        <span class="text-muted" data-bind="text: '(' + documentCount() + ')'"></span>
+                        <span class="text-muted" data-bind="visible: !isSystemDocuments, css: { 'text-muted': $data !== $parent.selectedCollection() }, text: '(' + documentCount() + ')'"></span>
                     </a>
                 </li>
             </ul>

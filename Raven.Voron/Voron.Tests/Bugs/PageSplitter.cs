@@ -112,16 +112,10 @@ namespace Voron.Tests.Bugs
 					{
 						var tree = tx.GetTree(treeName);
 
-						if (ids.IndexOf(id) == 33)
-						{
-							DebugStuff.RenderAndShow(tx, tree.State.RootPageNumber, 1);
-						}
 						tree.Add(tx, id, new MemoryStream(testBuffer));
 
 						var readResult = tree.Read(tx, id);
-						if (readResult == null)
-						{
-						}
+						
 						Assert.NotNull(readResult);
 					}
 
@@ -182,7 +176,12 @@ namespace Voron.Tests.Bugs
 						{
 							keys.Add(iterator.CurrentKey.ToString());
 							Assert.True(ids.Contains(iterator.CurrentKey.ToString()));
-							Assert.NotNull(snapshot.Read(tree, iterator.CurrentKey));
+						    var readResult = snapshot.Read(tree, iterator.CurrentKey);
+						    if (readResult == null)
+						    {
+						        
+						    }
+						    Assert.NotNull(readResult);
 
 							count++;
 						}

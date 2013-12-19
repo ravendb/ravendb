@@ -18,12 +18,8 @@ namespace Voron.Tests.Storage
 
 			using (var snapshot = Env.CreateSnapshot())
 			{
-				using (var stream = snapshot.Read(null, "key/1").Stream)
-				using (var reader = new StreamReader(stream))
-				{
-					var result = reader.ReadToEnd();
-					Assert.Equal("123", result);
-				}
+			    var reader = snapshot.Read(null, "key/1").Reader;
+			    Assert.Equal("123", reader.ToStringValue());
 			}
 		}
 
@@ -40,13 +36,9 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				using(var stream = tx.State.Root.Read(tx, "key/1").Stream)
-				using (var reader = new StreamReader(stream))
-				{
-					var result = reader.ReadToEnd();
-					Assert.Equal("123", result);
-				}
-				tx.Commit();
+                var reader = tx.State.Root.Read(tx, "key/1").Reader;
+			    Assert.Equal("123", reader.ToStringValue());
+			    tx.Commit();
 			}
 		}
 	}

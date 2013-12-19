@@ -12,17 +12,17 @@
     {
 	    private readonly AbstractPager _pager;
 
-#if DEBUG
+#if DEBUG_PAGER_STATE
         public static ConcurrentDictionary<PagerState, StackTrace> Instances = new ConcurrentDictionary<PagerState, StackTrace>();
 #endif
 
         public PagerState(AbstractPager pager)
         {
 	        _pager = pager;
-#if DEBUG
+#if DEBUG_PAGER_STATE
             Instances[this] = new StackTrace(true);
 #endif
-        }
+		}
 
         private int _refs;
 
@@ -39,12 +39,12 @@
             if (Interlocked.Decrement(ref _refs) != 0)
                 return;
 
-#if DEBUG
+#if DEBUG_PAGER_STATE
             StackTrace value;
             Instances.TryRemove(this, out value);
 #endif
 
-	        _pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
+			_pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
         }
 
         private void ReleaseInternal()
@@ -65,21 +65,21 @@
             Released = true;
         }
 
-#if DEBUG
+#if DEBUG_PAGER_STATE
         public ConcurrentQueue<StackTrace> AddedRefs = new ConcurrentQueue<StackTrace>();
 #endif
 
-        public void AddRef()
+		public void AddRef()
         {
             Interlocked.Increment(ref _refs);
-#if DEBUG
-            AddedRefs.Enqueue(new StackTrace(true));
-	        while (AddedRefs.Count > 500)
-	        {
-		        StackTrace trace;
-		        AddedRefs.TryDequeue(out trace);
-	        }
+#if DEBUG_PAGER_STATE
+			AddedRefs.Enqueue(new StackTrace(true));
+			while (AddedRefs.Count > 500)
+			{
+				StackTrace trace;
+				AddedRefs.TryDequeue(out trace);
+			}
 #endif
-        }
+		}
     }
 }

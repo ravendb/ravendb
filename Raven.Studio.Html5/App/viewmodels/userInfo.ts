@@ -22,7 +22,6 @@ class userInfo {
     }
 
 	activate(args) {
-		console.log("this is USERINFO!");
 
         if (args && args.database) {
             ko.postbox.publish("ActivateDatabaseWithName", args.database);

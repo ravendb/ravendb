@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -127,9 +128,12 @@ namespace Raven.Database.Server.RavenFS.Search
 			doc.Add(new Field("__key", lowerKey, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
 
 			var fileName = Path.GetFileName(lowerKey);
+			Debug.Assert(fileName != null);
 			doc.Add(new Field("__fileName", fileName, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
 			// the reversed version of the file name is used to allow searches that start with wildcards
-			doc.Add(new Field("__rfileName", fileName.Reverse().ToString(), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
+			char[] revFileName = fileName.ToCharArray();
+			Array.Reverse(revFileName);
+			doc.Add(new Field("__rfileName", new string(revFileName), Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS));
 
 			int level = 0;
 			var directoryName = Path.GetDirectoryName(lowerKey);

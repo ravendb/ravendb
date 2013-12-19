@@ -624,6 +624,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			if (aggregateException != null)
 			{
 				e = aggregateException.ExtractSingleInnerException();
+
 			}
 
 			var webException = (e as WebException) ?? (e.InnerException as WebException);

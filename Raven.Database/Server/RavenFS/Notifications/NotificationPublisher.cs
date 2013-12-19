@@ -1,5 +1,5 @@
 ﻿using Raven.Client.RavenFS;
-using Raven.Database.Server.RavenFS.Infrastructure.Connections;
+using Raven.Database.Server.Connections;
 
 namespace Raven.Database.Server.RavenFS.Notifications
 {
