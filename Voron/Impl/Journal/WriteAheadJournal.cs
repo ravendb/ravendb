@@ -614,8 +614,10 @@ namespace Voron.Impl.Journal
 						break;
 
 					lastReadTxHeader = *readTxHeader;
-					//TODO need to take into account that pages are compressed
-					txPos += readTxHeader->PageCount + readTxHeader->OverflowPageCount + 1;
+					
+					var compressedPages = (readTxHeader->CompressedSize / AbstractPager.PageSize) + (readTxHeader->CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
+
+					txPos += compressedPages + 1;
 				}
 
 				Debug.Assert(_lastSyncedJournal != -1);
