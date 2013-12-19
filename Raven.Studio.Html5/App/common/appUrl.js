@@ -1,4 +1,4 @@
-﻿define(["require", "exports", "models/database"], function(require, exports, database) {
+define(["require", "exports", "models/database", "common/pagedList"], function(require, exports, database, pagedList) {
     // Helper class with static methods for generating app URLs.
     var appUrl = (function () {
         function appUrl() {

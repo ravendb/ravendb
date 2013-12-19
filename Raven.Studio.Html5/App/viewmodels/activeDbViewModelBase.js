@@ -1,4 +1,4 @@
-define(["require", "exports", "common/appUrl", "models/database"], function(require, exports, appUrl, database) {
+﻿define(["require", "exports", "common/appUrl"], function(require, exports, appUrl) {
     /*
     * Base view model class that keeps track of the currently selected database.
     */
@@ -7,7 +7,11 @@ define(["require", "exports", "common/appUrl", "models/database"], function(requ
             this.activeDatabase = ko.observable().subscribeTo("ActivateDatabase", true);
         }
         activeDbViewModelBase.prototype.activate = function (args) {
-            this.activeDatabase(appUrl.getDatabase());
+            var db = appUrl.getDatabase();
+            var currentDb = this.activeDatabase();
+            if (!currentDb || currentDb.name !== db.name) {
+                ko.postbox.publish("ActivateDatabaseWithName", db.name);
+            }
         };
 
         activeDbViewModelBase.prototype.deactivate = function () {

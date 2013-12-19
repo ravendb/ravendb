@@ -1,4 +1,4 @@
-﻿/// <reference path="../../Scripts/typings/nprogress/nprogress.d.ts" />
+/// <reference path="../../Scripts/typings/nprogress/nprogress.d.ts" />
 /// <reference path="../../Scripts/typings/bootstrap/bootstrap.d.ts" />
 define(["require", "exports", "plugins/router", "durandal/app", "durandal/system", "models/database", "common/appUrl", "common/alertType", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand", "commands/getBuildVersionCommand", "commands/getLicenseStatusCommand"], function(require, exports, router, app, sys, database, appUrl, alertType, getDatabaseStatsCommand, getDatabasesCommand, getBuildVersionCommand, getLicenseStatusCommand) {
     var shell = (function () {
@@ -37,6 +37,7 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
                 { route: 'edit', title: 'Edit Document', moduleId: 'viewmodels/editDocument', nav: false }
             ]).buildNavigationModel();
 
+            // Show progress whenever we navigate.
             router.isNavigating.subscribe(function (isNavigating) {
                 if (isNavigating) {
                     NProgress.start();

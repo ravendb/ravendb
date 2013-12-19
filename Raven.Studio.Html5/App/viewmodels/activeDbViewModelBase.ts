@@ -8,7 +8,11 @@ class activeDbViewModelBase {
     activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
 
     activate(args) {
-        this.activeDatabase(appUrl.getDatabase());
+        var db = appUrl.getDatabase();
+        var currentDb = this.activeDatabase();
+        if (!currentDb || currentDb.name !== db.name) {
+            ko.postbox.publish("ActivateDatabaseWithName", db.name);
+        }
     }
 
     deactivate() {

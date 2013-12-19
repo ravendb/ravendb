@@ -4,7 +4,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "plugins/router", "viewmodels/activeDbViewModelBase"], function(require, exports, durandalRouter, activeDbViewModelBase) {
+define(["require", "exports", "plugins/router", "models/database", "viewmodels/activeDbViewModelBase"], function(require, exports, durandalRouter, database, activeDbViewModelBase) {
     var status = (function (_super) {
         __extends(status, _super);
         function status() {

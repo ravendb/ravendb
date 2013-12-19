@@ -40,12 +40,46 @@ interface databaseStatisticsDto {
     Errors: Array<any>;
     Extensions: Array<any>;
     InMemoryIndexingQueueSize: number;
-    Indexes: Array<any>;
+    Indexes: indexStatisticsDto[];
     LastAttachmentEtag: string;
     LastDocEtag: string;
     Prefetches: Array<any>;
     StaleIndexes: Array<any>;
     Triggers: Array<any>;
+}
+
+interface indexStatisticsDto {
+    Name: string;
+    IndexingAttempts: number;
+    IndexingSuccesses: number;
+    IndexingErrors: number;
+    LastIndexedEtag: string;
+    LastIndexedTimestamp: string;
+    LastQueryTimestamp: string;
+    TouchCount: number;
+    Priority: string;
+    ReduceIndexingAttempts: number;
+    ReduceIndexingSuccesses: number;
+    ReduceIndexingErrors: number;
+    LastReducedEtag: string;
+    LastReducedTimestamp: string; 
+    CreatedTimestamp: string; 
+    LastIndexingTime: string;
+    IsOnRam: boolean;
+    LockMode: string;
+    ForEntityName: string[];
+    Performance: indexPerformanceDto[];
+    DocsCount: number;
+}
+
+interface indexPerformanceDto {
+    Operation: string;
+    OutputCount: number;
+    InputCount: number;
+    ItemsCount: number;
+    Duration: string;
+    Started: string; // Date
+    DurationMilliseconds: number;
 }
 
 interface apiKeyDto {

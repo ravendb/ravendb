@@ -51,6 +51,7 @@ class shell {
 			{ route: 'edit',			    title: 'Edit Document', moduleId: 'viewmodels/editDocument',	nav: false }
         ]).buildNavigationModel();
 
+        // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => {
             if (isNavigating) {
                 NProgress.start();
@@ -60,7 +61,7 @@ class shell {
             }
         });
 
-		this.connectToRavenServer();
+        this.connectToRavenServer();
 	}
 
 	// The view must be attached to the DOM before we can hook up keyboard shortcuts.

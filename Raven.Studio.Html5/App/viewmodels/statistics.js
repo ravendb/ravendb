@@ -4,7 +4,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "viewmodels/activeDbViewModelBase", "commands/getDatabaseStatsCommand", "models/database"], function(require, exports, activeDbViewModelBase, getDatabaseStatsCommand, database) {
+define(["require", "exports", "viewmodels/activeDbViewModelBase", "commands/getDatabaseStatsCommand", "models/database", "moment"], function(require, exports, activeDbViewModelBase, getDatabaseStatsCommand, database, moment) {
     var statistics = (function (_super) {
         __extends(statistics, _super);
         function statistics() {
@@ -26,11 +26,38 @@ define(["require", "exports", "viewmodels/activeDbViewModelBase", "commands/getD
             var db = this.activeDatabase();
             if (db) {
                 return new getDatabaseStatsCommand(db).execute().done(function (result) {
-                    return _this.stats(result);
+                    return _this.processStatsResults(result);
                 });
             }
 
             return null;
+        };
+
+        statistics.prototype.processStatsResults = function (results) {
+            var _this = this;
+            // Attach some human readable dates to the indexes.
+            results.Indexes.forEach(function (i) {
+                i.ReduceIndexingAttempts = 42;
+                i.ReduceIndexingSuccesses = 23;
+                i['CreatedTimestampText'] = _this.createHumanReadableTimeDuration(i.CreatedTimestamp);
+                i['LastIndexedTimestampText'] = _this.createHumanReadableTimeDuration(i.LastIndexedTimestamp);
+                i['LastQueryTimestampText'] = _this.createHumanReadableTimeDuration(i.LastQueryTimestamp);
+                i['LastIndexingTimeText'] = _this.createHumanReadableTimeDuration(i.LastIndexingTime);
+                i['LastReducedTimestampText'] = _this.createHumanReadableTimeDuration(i.LastReducedTimestamp);
+            });
+
+            this.stats(results);
+        };
+
+        statistics.prototype.createHumanReadableTimeDuration = function (aspnetJsonDate) {
+            if (aspnetJsonDate) {
+                var dateMoment = moment(aspnetJsonDate);
+                var now = moment();
+                var agoInMs = dateMoment.diff(now);
+                return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MMMM Do YYYY, h:mma)");
+            }
+
+            return aspnetJsonDate;
         };
         return statistics;
     })(activeDbViewModelBase);
