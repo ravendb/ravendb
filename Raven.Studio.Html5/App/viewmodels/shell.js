@@ -1,6 +1,6 @@
-/// <reference path="../../Scripts/typings/nprogress/nprogress.d.ts" />
+﻿/// <reference path="../../Scripts/typings/nprogress/nprogress.d.ts" />
 /// <reference path="../../Scripts/typings/bootstrap/bootstrap.d.ts" />
-define(["require", "exports", "plugins/router", "durandal/app", "durandal/system", "models/database", "common/raven", "models/document", "common/appUrl", "models/collection", "viewmodels/deleteDocuments", "common/dialogResult", "common/alertArgs", "common/alertType", "common/pagedList", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand", "commands/getBuildVersionCommand", "commands/getLicenseStatusCommand"], function(require, exports, router, app, sys, database, raven, document, appUrl, collection, deleteDocuments, dialogResult, alertArgs, alertType, pagedList, getDatabaseStatsCommand, getDatabasesCommand, getBuildVersionCommand, getLicenseStatusCommand) {
+define(["require", "exports", "plugins/router", "durandal/app", "durandal/system", "models/database", "common/appUrl", "common/alertType", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand", "commands/getBuildVersionCommand", "commands/getLicenseStatusCommand"], function(require, exports, router, app, sys, database, appUrl, alertType, getDatabaseStatsCommand, getDatabasesCommand, getBuildVersionCommand, getLicenseStatusCommand) {
     var shell = (function () {
         function shell() {
             var _this = this;
@@ -52,7 +52,6 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
         // The view must be attached to the DOM before we can hook up keyboard shortcuts.
         shell.prototype.attached = function () {
             var _this = this;
-            NProgress.remove();
             jwerty.key("ctrl+alt+n", function (e) {
                 e.preventDefault();
                 _this.newDocument();

@@ -60,14 +60,11 @@ class shell {
             }
         });
 
-        
-
 		this.connectToRavenServer();
 	}
 
 	// The view must be attached to the DOM before we can hook up keyboard shortcuts.
     attached() {
-        NProgress.remove();
 		jwerty.key("ctrl+alt+n", e => {
 			e.preventDefault();
 			this.newDocument();
@@ -95,7 +92,7 @@ class shell {
                 router.activate();
                 this.fetchBuildVersion();
                 this.fetchLicenseStatus();
-			});
+            });
 	}
 
     handleRavenConnectionFailure(result) {

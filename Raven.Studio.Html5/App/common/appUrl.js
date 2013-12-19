@@ -1,4 +1,4 @@
-define(["require", "exports", "models/database", "common/pagedList"], function(require, exports, database, pagedList) {
+﻿define(["require", "exports", "models/database"], function(require, exports, database) {
     // Helper class with static methods for generating app URLs.
     var appUrl = (function () {
         function appUrl() {
@@ -103,15 +103,17 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
         };
         appUrl.baseUrl = "http://localhost:8080";
 
+        appUrl.currentDatabase = ko.observable().subscribeTo("ActivateDatabase", true);
+
         appUrl.currentDbComputeds = {
             documents: ko.computed(function () {
-                return appUrl.forDocuments();
+                return appUrl.forDocuments(null, appUrl.currentDatabase());
             }),
             status: ko.computed(function () {
-                return appUrl.forStatus();
+                return appUrl.forStatus(appUrl.currentDatabase());
             }),
             settings: ko.computed(function () {
-                return appUrl.forSettings();
+                return appUrl.forSettings(appUrl.currentDatabase());
             })
         };
         return appUrl;

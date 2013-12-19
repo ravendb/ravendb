@@ -1,17 +1,32 @@
+import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import database = require("models/database");
 
-class statistics {
+class statistics extends activeDbViewModelBase {
 
-	displayName = "statistics";
+    stats = ko.observable<databaseStatisticsDto>();
 
-	constructor() {
-	}
+    constructor() {
+        super();
+    }
 
-	activate(args) {
-	}
+    activate(args) {
+        super.activate(args);
 
-	canDeactivate() {
-		return true;
-	}
+        this.activeDatabase.subscribe(() => this.fetchStats());
+        this.fetchStats();
+    }
+
+    fetchStats(): JQueryPromise<databaseStatisticsDto> {
+        var db = this.activeDatabase();
+        if (db) {
+            return new getDatabaseStatsCommand(db)
+                .execute()
+                .done((result: databaseStatisticsDto) => this.stats(result));
+        }
+
+        return null;
+    }
 }
 
 export = statistics;    

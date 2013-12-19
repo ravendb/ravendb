@@ -7,9 +7,9 @@ class getDatabaseStatsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<documentStatistics> {
+    execute(): JQueryPromise<databaseStatisticsDto> {
         var url = this.db.isSystem ? "/stats" : "/databases/" + this.db.name + "/stats";
-        return this.query<documentStatistics>(url, null, null);
+        return this.query<databaseStatisticsDto>(url, null, null);
     }
 }
 

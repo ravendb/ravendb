@@ -29,7 +29,7 @@ interface documentMetadataDto {
 	'@etag': string;
 }
 
-interface documentStatistics {
+interface databaseStatisticsDto {
     ApproximateTaskCount: number;
     CountOfDocuments: number;
     CountOfIndexes: number;

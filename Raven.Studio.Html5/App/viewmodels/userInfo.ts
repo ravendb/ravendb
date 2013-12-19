@@ -9,8 +9,9 @@ class userInfo extends activeDbViewModelBase {
     
     activate(args) {
         super.activate(args);
+
         this.activeDatabase.subscribe(() => this.fetchUserInfo());
-        this.fetchUserInfo();
+        return this.fetchUserInfo();
     }
 
     fetchUserInfo(): JQueryPromise<userInfoDto> {

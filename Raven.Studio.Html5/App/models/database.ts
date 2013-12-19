@@ -1,7 +1,7 @@
 class database {
     isSystem = false;
     isSelected = ko.observable(false);
-    statistics = ko.observable<documentStatistics>();
+    statistics = ko.observable<databaseStatisticsDto>();
     docCount: KnockoutComputed<number>;
 
     constructor(public name: string) {

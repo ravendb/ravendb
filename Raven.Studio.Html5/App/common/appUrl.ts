@@ -7,12 +7,13 @@ class appUrl {
 
     static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
     //private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
+    private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
 
 	// Stores some computed values that update whenever the current database updates.
 	private static currentDbComputeds: computedAppUrls = {
-		documents: ko.computed(() => appUrl.forDocuments()),
-        status: ko.computed(() => appUrl.forStatus()),
-        settings: ko.computed(() => appUrl.forSettings())
+		documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
+        status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
+        settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase()))
 	};
 	
     /**
