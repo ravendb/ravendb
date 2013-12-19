@@ -53,9 +53,9 @@
 
         public FileStream FileStream { get { return _fileStream; }}
 
-        public override byte* AcquirePagePointer(long pageNumber)
+        public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
         {
-            return PagerState.MapBase + (pageNumber * PageSize);
+            return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
         }
 
 	    protected override unsafe string GetSourceName()

@@ -79,7 +79,7 @@ namespace Voron.Impl.Paging
 			}
 		}
 
-		public override byte* AcquirePagePointer(long pageNumber)
+		public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
 		{
 			if (pageNumber >= NumberOfAllocatedPages)
 				throw new InvalidOperationException("Tried to read a page that wasn't committed");

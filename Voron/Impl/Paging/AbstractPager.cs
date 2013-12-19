@@ -49,7 +49,7 @@ namespace Voron.Impl.Paging
 
         public long NumberOfAllocatedPages { get; protected set; }
 
-        public Page Read(long pageNumber)
+        public Page Read(long pageNumber, PagerState pagerState = null)
         {
             if (pageNumber + 1 > NumberOfAllocatedPages)
             {
@@ -57,7 +57,7 @@ namespace Voron.Impl.Paging
                                                     " because number of allocated pages is " + NumberOfAllocatedPages);
             }
 
-            return new Page(AcquirePagePointer(pageNumber), _source);
+            return new Page(AcquirePagePointer(pageNumber, pagerState), _source);
         }
 
         protected abstract string GetSourceName();
@@ -73,7 +73,7 @@ namespace Voron.Impl.Paging
             return new Page(AcquirePagePointer(pageNumber), _source);
         }
 
-        public abstract byte* AcquirePagePointer(long pageNumber);
+        public abstract byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null);
 
         public abstract void Sync();
 

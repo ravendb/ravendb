@@ -7,8 +7,8 @@ namespace Voron.Impl
     {
 		PagerState PagerState { get; }
 
-		byte* AcquirePagePointer(long pageNumber);
-        Page Read(long pageNumber);
+		byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null);
+        Page Read(long pageNumber, PagerState pagerState = null);
 		void AllocateMorePages(Transaction tx, long newLength);
 	
 		bool Disposed { get; }

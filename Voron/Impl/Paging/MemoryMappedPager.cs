@@ -173,9 +173,9 @@
             return "MemMap: " + _fileInfo.Name;
         }
 
-        public override byte* AcquirePagePointer(long pageNumber)
+        public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
         {
-            return PagerState.MapBase + (pageNumber * PageSize);
+            return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
         }
 
         public override void Sync()

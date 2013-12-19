@@ -521,7 +521,7 @@ namespace Voron.Impl.Journal
 				try
 				{
 					var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-													.Select(x => scratchBufferPool.ReadPage(x.Value))
+													.Select(x => scratchBufferPool.ReadPage(x.Value, scratchPagerState))
 													.ToList();
 
 					var last = sortedPages.Last();
