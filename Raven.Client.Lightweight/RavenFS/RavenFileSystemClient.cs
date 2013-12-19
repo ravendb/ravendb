@@ -910,7 +910,7 @@ namespace Raven.Client.RavenFS
 														 forceSyncingAll);
 
 					var request =
-						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString,
+						jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString.NoCache(),
 							"POST", new OperationCredentials("", new CredentialCache()), convention));
 
 					try

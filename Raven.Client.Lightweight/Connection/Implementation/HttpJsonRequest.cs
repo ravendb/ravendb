@@ -1021,7 +1021,11 @@ namespace Raven.Client.Connection
 			writeCalled = true;
 			var request = new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
-				Content = content
+				Content = content,
+				Headers =
+				{
+					TransferEncodingChunked = true,
+				}
 			};
 
 			CopyHeadersToHttpRequestMessage(request);

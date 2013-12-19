@@ -505,6 +505,18 @@ namespace Raven.Database.Server.RavenFS.Synchronization
 			{
 				return null;
 			}
+			FileAndPages fileAndPages = null;
+			{
+				try
+				{
+					storage.Batch(accessor => fileAndPages  = accessor.GetFile(fileName, 0, 0));
+				}
+				catch (FileNotFoundException)
+				{
+					
+				}
+			}
+
 			return result;
 		}
 
