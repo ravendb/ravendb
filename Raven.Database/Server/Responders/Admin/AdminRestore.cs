@@ -46,12 +46,17 @@ namespace Raven.Database.Server.Responders.Admin
 			if (string.IsNullOrWhiteSpace(databaseName))
 			{
 				context.SetStatusToBadRequest();
+
+				var errorMessage = (databaseDocument == null || String.IsNullOrWhiteSpace(databaseDocument.Id))
+					? "Database.Document file is invalid - database name was not found and not supplied in the request"
+					: "A database name must be supplied if the restore location does not contain a valid Database.Document file";
+
 				context.WriteJson(new
 				{
-					Error = "A database name must be supplied if the restore location does not contain a valid Database.Document file"
+					Error = errorMessage
 				});
 
-				restoreStatus.Add("A database name must be supplied if the restore location does not contain a valid Database.Document file");
+				restoreStatus.Add(errorMessage);
 				SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
 							   RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
 

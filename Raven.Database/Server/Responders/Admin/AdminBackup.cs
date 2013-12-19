@@ -40,8 +40,9 @@ namespace Raven.Database.Server.Responders.Admin
 				var jsonDocument = SystemDatabase.Get("Raven/Databases/" + Database.Name, null);
 				if (jsonDocument != null)
 				{
-					backupRequest.DatabaseDocument = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
+					backupRequest.DatabaseDocument = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();					
 					server.Unprotect(backupRequest.DatabaseDocument);
+					backupRequest.DatabaseDocument.Id = Database.Name;
 				}
 			}
 			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
