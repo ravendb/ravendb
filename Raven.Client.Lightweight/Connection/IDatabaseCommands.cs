@@ -332,6 +332,12 @@ namespace Raven.Client.Connection
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		FacetResults GetFacets( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null );
 
+		/// <summary>
+		/// Sends a multiple faceted queries in a single request and calculates the facet results for each of them
+		/// </summary>
+		/// <param name="facetedQueries">List of queries</param>
+		FacetResults[] GetMultiFacets(FacetQuery[] facetedQueries);
+
         /// <summary>
         /// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
         /// </summary>

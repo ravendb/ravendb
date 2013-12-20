@@ -1021,6 +1021,28 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
+		public Task<FacetResults[]> GetMultiFacetsAsync(FacetQuery[] facetedQueries)
+		{
+			return ExecuteWithReplication("POST", async operationMetadata =>
+			{
+
+				var requestUri = operationMetadata.Url + "/facets/multisearch";
+
+				var request = jsonRequestFactory.CreateHttpJsonRequest(
+					new CreateHttpJsonRequestParams(this, requestUri.NoCache(), "POST", credentials, convention)
+						.AddOperationHeaders(OperationsHeaders));
+
+				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
+													HandleReplicationStatusChanges);
+
+				var data = JsonConvert.SerializeObject(facetedQueries);
+				await request.WriteAsync(data);
+				var response = (RavenJArray)await request.ReadResponseJsonAsync();
+
+				return convention.CreateSerializer().Deserialize<FacetResults[]>(new RavenJTokenReader(response));
+			});
+		}
+
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>

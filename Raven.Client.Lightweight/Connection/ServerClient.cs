@@ -629,6 +629,15 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
+		/// Sends a multiple faceted queries in a single request and calculates the facet results for each of them
+		/// </summary>
+		/// <param name="facetedQueries">List of queries</param>
+		public FacetResults[] GetMultiFacets(FacetQuery[] facetedQueries)
+		{
+			return asyncServerClient.GetMultiFacetsAsync(facetedQueries).ResultUnwrap();
+		}
+
+		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
 		/// </summary>
 		/// <param name="index">Name of the index</param>

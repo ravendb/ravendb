@@ -837,6 +837,11 @@ namespace Raven.Client.Shard
 		{
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
+
+		public FacetResults[] MultiFacetedSearch(params FacetQuery[] queries)
+		{
+			throw new NotSupportedException("Multi faceted searching is currently not supported by sharded document store");
+		}
 	}
 }
 
