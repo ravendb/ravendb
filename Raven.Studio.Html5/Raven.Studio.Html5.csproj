@@ -77,7 +77,9 @@
     <TypeScriptCompile Include="App\commands\getDatabasesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDatabaseStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getDocumentWithMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLicenseStatusCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getLogsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSystemDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getUserInfoCommand.ts" />
     <TypeScriptCompile Include="App\common\stickToFooterBindingHandler.ts" />

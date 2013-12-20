@@ -137,3 +137,16 @@ interface userInfoDto {
     ReadWriteDatabases: string[];
     AccessTokenBody: string;
 }
+
+interface logDto {
+    TimeStamp: string;
+    Message: string;
+    LoggerName: string;
+    Level: string;
+    Exception: string;
+}
+
+interface queryResultDto {
+    Results: any[];
+    Includes: any[];
+}
