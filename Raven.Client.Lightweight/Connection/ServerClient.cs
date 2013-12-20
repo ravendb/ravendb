@@ -95,10 +95,7 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
 		{
-			return asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, metadataOnly, exclude).ResultUnwrap();
-			EnsureIsNotNullOrEmpty(keyPrefix, "keyPrefix");
-
-			return ExecuteWithReplication("GET", u => DirectStartsWith(u, keyPrefix, matches, exclude, start, pageSize, pagingInformation, metadataOnly));
+			return asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude).ResultUnwrap();
 		}
 
 		/// <summary>

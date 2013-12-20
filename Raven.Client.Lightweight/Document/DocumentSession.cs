@@ -857,9 +857,9 @@ namespace Raven.Client.Document
 			}
 		}
 
-		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null)
+		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
 		{
-			return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude)
+			return DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude, pagingInformation: pagingInformation)
 			                       .Select(TrackEntity<T>)
 			                       .ToArray();
 		}
