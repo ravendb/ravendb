@@ -286,9 +286,9 @@
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
-    <Compile Include="Issues\RavenDB_1379_Client_Lazy.cs" />
-    <Compile Include="Issues\RavenDB_1379_Client_Remote.cs" />
-    <Compile Include="Issues\RavenDB_1379_Client.cs" />
+    <Compile Include="Issues\1379\RavenDB_1379_Client_Lazy.cs" />
+    <Compile Include="Issues\1379\RavenDB_1379_Client_Remote.cs" />
+    <Compile Include="Issues\1379\RavenDB_1379_Client.cs" />
     <Compile Include="Issues\RavenDB_1305.cs" />
     <Compile Include="Issues\RavenDB_1443 .cs" />
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
@@ -706,7 +706,7 @@
     <Compile Include="Issues\RavenDB_1353.cs" />
     <Compile Include="Issues\RavenDB_1345.cs" />
     <Compile Include="Issues\RavenDB_1346.cs" />
-    <Compile Include="Issues\RavenDB_1379.cs">
+    <Compile Include="Issues\1379\RavenDB_1379.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Issues\RavenDB_1374 .cs" />

@@ -126,7 +126,7 @@ namespace Raven.Client.Document.Batches
 		/// <summary>
 		/// Load documents with the specified key prefix
 		/// </summary>
-		Lazy<TResult[]> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation ravenPagingInformation = null);
+		Lazy<TResult[]> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null);
 
 		Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query);
 	}

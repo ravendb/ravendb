@@ -1227,6 +1227,9 @@ namespace Raven.Client.Connection
 			if (pageSize != int.MaxValue)
 				sb.Append("pageSize=").Append(pageSize).Append("&");
 
+            if (nextPage)
+                sb.Append("next-page=true").Append("&");
+
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 				new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", Credentials, convention)
 					.AddOperationHeaders(OperationsHeaders))

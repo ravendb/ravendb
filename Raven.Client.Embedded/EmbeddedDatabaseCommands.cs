@@ -616,6 +616,8 @@ namespace Raven.Client.Embedded
 							});
 							
 						}
+
+					    return 0;
 					}
 					catch (Exception e)
 					{
@@ -682,19 +684,20 @@ namespace Raven.Client.Embedded
 								ref nextPageStart,
 								items.Add);
 
-                            if (pagingInformation != null)
-                                pagingInformation.Fill(start, pageSize, nextPageStart);
+						    return nextPageStart;
 						}
 					}
 					catch (ObjectDisposedException)
 					{
 					}
 				}
+
+			    return 0;
 			});
-			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
+			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task, start, pageSize, pagingInformation), items.Dispose);
 		}
 
-		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task task)
+		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task<int> task, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null)
 		{
 			try
 			{
@@ -706,6 +709,11 @@ namespace Raven.Client.Embedded
 						break;
 					yield return ravenJObject;
 				}
+
+			    var nextPageStart = task.Result;
+
+                if (pagingInformation != null)
+                    pagingInformation.Fill(start, pageSize, nextPageStart);
 			}
 			finally
 			{

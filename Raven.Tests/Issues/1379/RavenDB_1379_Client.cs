@@ -98,6 +98,10 @@ namespace Raven.Tests.Issues
 					.StartsWith("FooBar", string.Empty, 0, 4, pagingInformation: pagingInformation, exclude: string.Empty)
 					.ToList();
 
+                Assert.Equal(4, pagingInformation.PageSize);
+                Assert.Equal(0, pagingInformation.Start);
+                Assert.Equal(4, pagingInformation.NextPageStart);
+
 				var foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
 												   .ToList();
 
@@ -112,6 +116,10 @@ namespace Raven.Tests.Issues
 					.StartsWith("FooBar", string.Empty, 4, 4, pagingInformation: pagingInformation, exclude: string.Empty)
 					.ToList();
 
+                Assert.Equal(4, pagingInformation.PageSize);
+                Assert.Equal(4, pagingInformation.Start);
+                Assert.Equal(8, pagingInformation.NextPageStart);
+
 				foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
 												   .ToList();
 
@@ -125,6 +133,10 @@ namespace Raven.Tests.Issues
 					.DatabaseCommands
 					.StartsWith("FooBar", string.Empty, 8, 4, pagingInformation: pagingInformation, exclude: string.Empty)
 					.ToList();
+
+                Assert.Equal(4, pagingInformation.PageSize);
+                Assert.Equal(8, pagingInformation.Start);
+                Assert.Equal(8, pagingInformation.NextPageStart);
 
 				foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
 												   .ToList();
@@ -225,6 +237,10 @@ namespace Raven.Tests.Issues
 					.Result
 					.ToList();
 
+                Assert.Equal(4, pagingInformation.PageSize);
+                Assert.Equal(0, pagingInformation.Start);
+                Assert.Equal(4, pagingInformation.NextPageStart);
+
 				var foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
 												   .ToList();
 
@@ -239,6 +255,10 @@ namespace Raven.Tests.Issues
 					.StartsWithAsync("FooBar", string.Empty, 4, 4, pagingInformation: pagingInformation, exclude: string.Empty)
 					.Result
 					.ToList();
+
+                Assert.Equal(4, pagingInformation.PageSize);
+                Assert.Equal(4, pagingInformation.Start);
+                Assert.Equal(8, pagingInformation.NextPageStart);
 
 				foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
 												   .ToList();
@@ -255,6 +275,10 @@ namespace Raven.Tests.Issues
 					.Result
 					.ToList();
 
+                Assert.Equal(4, pagingInformation.PageSize);
+                Assert.Equal(8, pagingInformation.Start);
+                Assert.Equal(8, pagingInformation.NextPageStart);
+
 				foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
 												   .ToList();
 
@@ -262,6 +286,145 @@ namespace Raven.Tests.Issues
 				Assert.Contains("FooBar8", foundDocKeys);
 			}
 		}
+
+        [Theory]
+        [InlineData("voron")]
+        [InlineData("esent")]
+        public void PagingWithExcludesWithPagingInformation(string requestedStorage)
+        {
+            using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
+            {
+                documentStore.DocumentDatabase.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
+
+                var pagingInformation = new RavenPagingInformation();
+                var fetchedDocuments = documentStore
+                    .DatabaseCommands
+                    .StartsWith("FooBar", string.Empty, 0, 2, pagingInformation: pagingInformation, exclude: "1*")
+                    .ToList();
+
+                Assert.Equal(0, pagingInformation.Start);
+                Assert.Equal(2, pagingInformation.PageSize);
+                Assert.Equal(6, pagingInformation.NextPageStart);
+
+                var foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
+
+                Assert.Equal(2, foundDocKeys.Count);
+                Assert.Contains("FooBar21", foundDocKeys);
+                Assert.Contains("FooBar3", foundDocKeys);
+
+                fetchedDocuments = documentStore
+                    .DatabaseCommands
+                    .StartsWith("FooBar", string.Empty, 2, 2, pagingInformation: pagingInformation, exclude: "1*")
+                    .ToList();
+
+                Assert.Equal(2, pagingInformation.Start);
+                Assert.Equal(2, pagingInformation.PageSize);
+                Assert.Equal(8, pagingInformation.NextPageStart);
+
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
+
+                Assert.Equal(2, foundDocKeys.Count);
+                Assert.Contains("FooBar5", foundDocKeys);
+                Assert.Contains("FooBar6", foundDocKeys);
+
+                fetchedDocuments = documentStore
+                    .DatabaseCommands
+                    .StartsWith("FooBar", string.Empty, 4, 2, pagingInformation: pagingInformation, exclude: "1*")
+                    .ToList();
+
+                Assert.Equal(4, pagingInformation.Start);
+                Assert.Equal(2, pagingInformation.PageSize);
+                Assert.Equal(8, pagingInformation.NextPageStart);
+
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
+
+                Assert.Equal(1, foundDocKeys.Count);
+                Assert.Contains("FooBar8", foundDocKeys);
+            }
+        }
+
+        [Theory]
+        [InlineData("voron")]
+        [InlineData("esent")]
+        public void PagingWithMatchesWithPagingInformation(string requestedStorage)
+        {
+            using (var documentStore = NewDocumentStore(requestedStorage: requestedStorage))
+            {
+                documentStore.DocumentDatabase.Put("FooBar1", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("BarFoo2", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar3", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar11", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar12", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar21", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar5", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("BarFoo7", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar111", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("BarFoo6", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar6", null, new RavenJObject(), new RavenJObject(), null);
+                documentStore.DocumentDatabase.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
+
+                var pagingInformation = new RavenPagingInformation();
+                var fetchedDocuments = documentStore
+                    .DatabaseCommands
+                    .StartsWith("FooBar", "1*", 0, 2, pagingInformation: pagingInformation)
+                    .ToList();
+
+                Assert.Equal(0, pagingInformation.Start);
+                Assert.Equal(2, pagingInformation.PageSize);
+                Assert.Equal(2, pagingInformation.NextPageStart);
+
+                var foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
+
+                Assert.Equal(2, foundDocKeys.Count);
+                Assert.Contains("FooBar1", foundDocKeys);
+                Assert.Contains("FooBar11", foundDocKeys);
+
+                fetchedDocuments = documentStore
+                    .DatabaseCommands
+                    .StartsWith("FooBar", "1*", 2, 1, pagingInformation: pagingInformation)
+                    .ToList();
+
+                Assert.Equal(2, pagingInformation.Start);
+                Assert.Equal(1, pagingInformation.PageSize);
+                Assert.Equal(3, pagingInformation.NextPageStart);
+
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
+
+                Assert.Equal(1, foundDocKeys.Count);
+                Assert.Contains("FooBar111", foundDocKeys);
+
+                fetchedDocuments = documentStore
+                    .DatabaseCommands
+                    .StartsWith("FooBar", "1*", 3, 10, pagingInformation: pagingInformation)
+                    .ToList();
+
+                Assert.Equal(3, pagingInformation.Start);
+                Assert.Equal(10, pagingInformation.PageSize);
+                Assert.Equal(3, pagingInformation.NextPageStart);
+
+                foundDocKeys = fetchedDocuments.Select(doc => doc.Key)
+                                                   .ToList();
+
+                Assert.Equal(1, foundDocKeys.Count);
+                Assert.Contains("FooBar12", foundDocKeys);
+            }
+        }
 
 	    [Theory]
 	    [InlineData("voron")]
@@ -357,6 +520,10 @@ namespace Raven.Tests.Issues
                 while (fetchedDocuments.MoveNext())
                     foundDocKeys.Add(fetchedDocuments.Current["@metadata"].Value<string>("@id"));
 
+                Assert.Equal(4, pagingInformation.PageSize);
+                Assert.Equal(0, pagingInformation.Start);
+                Assert.Equal(4, pagingInformation.NextPageStart);
+
                 Assert.Equal(4, foundDocKeys.Count);
                 Assert.Contains("FooBar1", foundDocKeys);
                 Assert.Contains("FooBar11", foundDocKeys);
@@ -372,6 +539,10 @@ namespace Raven.Tests.Issues
                 while (fetchedDocuments.MoveNext())
                     foundDocKeys.Add(fetchedDocuments.Current["@metadata"].Value<string>("@id"));
 
+                Assert.Equal(4, pagingInformation.PageSize);
+                Assert.Equal(4, pagingInformation.Start);
+                Assert.Equal(8, pagingInformation.NextPageStart);
+
                 Assert.Equal(4, foundDocKeys.Count);
                 Assert.Contains("FooBar21", foundDocKeys);
                 Assert.Contains("FooBar3", foundDocKeys);
@@ -386,6 +557,10 @@ namespace Raven.Tests.Issues
 
                 while (fetchedDocuments.MoveNext())
                     foundDocKeys.Add(fetchedDocuments.Current["@metadata"].Value<string>("@id"));
+
+                Assert.Equal(4, pagingInformation.PageSize);
+                Assert.Equal(8, pagingInformation.Start);
+                Assert.Equal(8, pagingInformation.NextPageStart);
 
                 Assert.Equal(1, foundDocKeys.Count);
                 Assert.Contains("FooBar8", foundDocKeys);
@@ -486,6 +661,10 @@ namespace Raven.Tests.Issues
                 while (fetchedDocuments.MoveNextAsync().Result)
                     foundDocKeys.Add(fetchedDocuments.Current["@metadata"].Value<string>("@id"));
 
+                Assert.Equal(4, pagingInformation.PageSize);
+                Assert.Equal(0, pagingInformation.Start);
+                Assert.Equal(4, pagingInformation.NextPageStart);
+
                 Assert.Equal(4, foundDocKeys.Count);
                 Assert.Contains("FooBar1", foundDocKeys);
                 Assert.Contains("FooBar11", foundDocKeys);
@@ -501,6 +680,10 @@ namespace Raven.Tests.Issues
                 while (fetchedDocuments.MoveNextAsync().Result)
                     foundDocKeys.Add(fetchedDocuments.Current["@metadata"].Value<string>("@id"));
 
+                Assert.Equal(4, pagingInformation.PageSize);
+                Assert.Equal(4, pagingInformation.Start);
+                Assert.Equal(8, pagingInformation.NextPageStart);
+
                 Assert.Equal(4, foundDocKeys.Count);
                 Assert.Contains("FooBar21", foundDocKeys);
                 Assert.Contains("FooBar3", foundDocKeys);
@@ -515,6 +698,10 @@ namespace Raven.Tests.Issues
 
                 while (fetchedDocuments.MoveNextAsync().Result)
                     foundDocKeys.Add(fetchedDocuments.Current["@metadata"].Value<string>("@id"));
+
+                Assert.Equal(4, pagingInformation.PageSize);
+                Assert.Equal(8, pagingInformation.Start);
+                Assert.Equal(8, pagingInformation.NextPageStart);
 
                 Assert.Equal(1, foundDocKeys.Count);
                 Assert.Contains("FooBar8", foundDocKeys);

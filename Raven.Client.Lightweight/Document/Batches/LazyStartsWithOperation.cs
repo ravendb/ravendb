@@ -55,12 +55,13 @@ namespace Raven.Client.Document.Batches
 				Url = "/docs",
 				Query =
 					string.Format(
-						"startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}",
+						"startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}&next-page={5}",
 						Uri.EscapeDataString(keyPrefix),
                         actualStart.ToInvariantString(),
 						pageSize.ToInvariantString(),
 						Uri.EscapeDataString(matches ?? ""),
-                        Uri.EscapeDataString(exclude ?? ""))
+                        Uri.EscapeDataString(exclude ?? ""),
+                        nextPage ? "true" : "false")
 			};
 		}
 
@@ -123,7 +124,7 @@ namespace Raven.Client.Document.Batches
 #if !SILVERLIGHT
 		public object ExecuteEmbedded(IDatabaseCommands commands)
 		{
-			return commands.StartsWith(keyPrefix, matches, start, pageSize, pagingInformation)
+			return commands.StartsWith(keyPrefix, matches, start, pageSize, pagingInformation, exclude: exclude)
 				.Select(sessionOperations.TrackEntity<T>)
 				.ToArray();
 		}
