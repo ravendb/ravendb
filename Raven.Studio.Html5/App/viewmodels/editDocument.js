@@ -1,5 +1,5 @@
 /// <reference path="../../Scripts/typings/ace/ace.amd.d.ts" />
-define(["require", "exports", "durandal/app", "durandal/system", "plugins/router", "ace/ace", "models/document", "models/documentMetadata", "models/collection", "commands/saveDocumentCommand", "common/raven", "viewmodels/deleteDocuments", "common/pagedList", "common/appUrl", "commands/getDocumentsCommand"], function(require, exports, app, sys, router, ace, document, documentMetadata, collection, saveDocumentCommand, raven, deleteDocuments, pagedList, appUrl, getDocumentsCommand) {
+define(["require", "exports", "durandal/app", "durandal/system", "plugins/router", "ace/ace", "models/document", "models/database", "models/documentMetadata", "models/collection", "commands/saveDocumentCommand", "common/raven", "viewmodels/deleteDocuments", "common/pagedList", "common/appUrl", "commands/getDocumentsCommand", "commands/getDocumentWithMetadataCommand"], function(require, exports, app, sys, router, ace, document, database, documentMetadata, collection, saveDocumentCommand, raven, deleteDocuments, pagedList, appUrl, getDocumentsCommand, getDocumentWithMetadataCommand) {
     var editDocument = (function () {
         function editDocument() {
             var _this = this;
@@ -62,6 +62,7 @@ define(["require", "exports", "durandal/app", "durandal/system", "plugins/router
         editDocument.prototype.activate = function (navigationArgs) {
             // Find the database and collection we're supposed to load.
             // Used for paging through items.
+            this.databaseForEditedDoc = appUrl.getDatabase();
             if (navigationArgs && navigationArgs.database) {
                 ko.postbox.publish("ActivateDatabaseWithName", navigationArgs.database);
             }
@@ -193,7 +194,7 @@ define(["require", "exports", "durandal/app", "durandal/system", "plugins/router
 
         editDocument.prototype.loadDocument = function (id) {
             var _this = this;
-            var loadDocTask = this.ravenDb.documentWithMetadata(id);
+            var loadDocTask = new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc).execute();
             loadDocTask.done(function (document) {
                 return _this.document(document);
             });

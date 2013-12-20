@@ -1,4 +1,4 @@
-define(["require", "exports", "models/document"], function(require, exports, document) {
+﻿define(["require", "exports"], function(require, exports) {
     var row = (function () {
         function row() {
             this.top = ko.observable(0);
@@ -16,6 +16,15 @@ define(["require", "exports", "models/document"], function(require, exports, doc
             }
             this.collectionClass('');
             this.isChecked(false);
+        };
+
+        row.prototype.createPlaceholderCells = function (cellNames) {
+            var _this = this;
+            cellNames.filter(function (c) {
+                return c != "Id";
+            }).forEach(function (c) {
+                return _this.addOrUpdateCellMap(c, null);
+            });
         };
 
         row.prototype.fillCells = function (rowData) {

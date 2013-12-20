@@ -6,9 +6,10 @@ define(["require", "exports", "durandal/composition"], function(require, exports
     var stickToFooterBindingHandler = (function () {
         function stickToFooterBindingHandler() {
             var _this = this;
+            this.throttleTimeMs = 100;
             var $window = $(window);
             this.windowHeightObservable = ko.observable($window.height());
-            window['ravenStudioWindowHeight'] = this.windowHeightObservable.throttle(200);
+            window['ravenStudioWindowHeight'] = this.windowHeightObservable.throttle(this.throttleTimeMs);
             $window.resize(function (ev) {
                 return _this.windowHeightObservable($window.height());
             });
@@ -31,8 +32,15 @@ define(["require", "exports", "durandal/composition"], function(require, exports
 
         // Called by Knockout each time the dependent observable value changes.
         stickToFooterBindingHandler.prototype.update = function (element, valueAccessor, allBindings, viewModel, bindingContext) {
-            valueAccessor(); // Necessary to register knockout dependency. Without it, update won't fire when window height changes.
-            this.stickToFooter(element);
+            var newWindowHeight = valueAccessor();
+
+            // Check what was the last dispatched height to this element.
+            var lastWindowHeightKey = "ravenStudioLastDispatchedHeight";
+            var lastWindowHeight = ko.utils.domData.get(element, lastWindowHeightKey);
+            if (lastWindowHeight !== newWindowHeight) {
+                ko.utils.domData.set(element, lastWindowHeightKey, newWindowHeight);
+                this.stickToFooter(element);
+            }
         };
 
         stickToFooterBindingHandler.prototype.stickToFooter = function (element) {
@@ -46,7 +54,7 @@ define(["require", "exports", "durandal/composition"], function(require, exports
                 var minimumHeight = 100;
                 if (desiredElementHeight >= minimumHeight) {
                     $element.height(desiredElementHeight);
-                    ko.postbox.publish("StickyFooterHeightSet", { element: element, height: desiredElementHeight });
+                    $element.trigger("StickyFooterHeightSet", desiredElementHeight);
                 }
             }
         };

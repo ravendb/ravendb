@@ -59,10 +59,10 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
                 // A database is specified in the address.
                 var dbSegmentEnd = hash.indexOf("&", dbIndex);
                 if (dbSegmentEnd === -1) {
-                    dbSegmentEnd = hash.length - 1;
+                    dbSegmentEnd = hash.length;
                 }
 
-                var databaseName = hash.substring(dbIndex + dbIndicator.length, dbSegmentEnd + 1);
+                var databaseName = hash.substring(dbIndex + dbIndicator.length, dbSegmentEnd);
                 var unescapedDatabaseName = decodeURIComponent(databaseName);
                 var db = new database(unescapedDatabaseName);
                 db.isSystem = unescapedDatabaseName === "<system>";

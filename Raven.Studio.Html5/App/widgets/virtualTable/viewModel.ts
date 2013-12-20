@@ -39,7 +39,6 @@ class ctor {
     firstVisibleRow: row = null;
     selectedIndices = ko.observableArray();
     memoizedCollectionColorFetcher: Function;
-    windowHeightSubscription: KnockoutSubscription;
 
     constructor() {
         this.memoizedCollectionColorFetcher = this.getCollectionClassFromRavenEntityName.memoize(this);
@@ -74,18 +73,15 @@ class ctor {
             throw new Error("There should be 1 " + this.gridSelector + " on the page, but found " + this.grid.length.toString());
         }
 
-        var windowHeightObservable: KnockoutObservable<number> = window['ravenStudioWindowHeight'];
-        this.windowHeightSubscription = windowHeightObservable.subscribe((height: number) => this.onWindowHeightChanged(height));
         this.gridViewport = this.grid.find(".ko-grid-viewport-container");
+        this.gridViewport.on('StickyFooterHeightSet', () => this.onWindowHeightChanged());
         this.gridViewport.scroll(() => this.onGridScrolled());
-        this.onWindowHeightChanged(windowHeightObservable());
         this.setupContextMenu();
         this.setupKeyboardShortcuts();
     }
 
     detached() {
         $(this.gridSelector).unbind('keydown.jwerty');
-        this.windowHeightSubscription.dispose();
     }
 
     calculateRecycleRowCount() {
@@ -98,6 +94,7 @@ class ctor {
         var rows = [];
         for (var i = 0; i < rowCount; i++) {
             var newRow = new row();
+            newRow.createPlaceholderCells(this.columns().map(c => c.name));
             newRow.rowIndex(i);
             var desiredTop = i * this.rowHeight;
             newRow.top(desiredTop);
@@ -114,20 +111,14 @@ class ctor {
         this.scrollThrottleTimeoutHandle = setTimeout(() => this.loadRowData(), 100);
     }
 
-    onWindowHeightChanged(height: number) {
-        // We want the viewport height to reach to the footer.
-        var footerTop = $("footer").position().top;
-        var viewportTop = this.gridViewport.offset().top;
-        var desiredHeight = footerTop - viewportTop;
-        var minimumHeight = 100;
-        if (desiredHeight > minimumHeight) {
-            this.viewportHeight(desiredHeight);
-        }
-
+    onWindowHeightChanged() {
+        var newViewportHeight = this.gridViewport.height();
+        this.viewportHeight(newViewportHeight);
         var desiredRowCount = this.calculateRecycleRowCount();
         this.recycleRows(this.createRecycleRows(desiredRowCount));
         this.ensureRowsCoverViewport();
         this.loadRowData();
+        
     }
 
     setupKeyboardShortcuts() {

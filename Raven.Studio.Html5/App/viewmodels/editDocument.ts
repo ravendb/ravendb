@@ -6,6 +6,7 @@ import router = require("plugins/router");
 import ace = require("ace/ace");
 
 import document = require("models/document");
+import database = require("models/database");
 import documentMetadata = require("models/documentMetadata");
 import collection = require("models/collection");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
@@ -14,6 +15,7 @@ import deleteDocuments = require("viewmodels/deleteDocuments");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import getDocumentsCommand = require("commands/getDocumentsCommand");
+import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 
 class editDocument {
 
@@ -30,6 +32,7 @@ class editDocument {
     isCreatingNewDocument = ko.observable(false);
     docsList = ko.observable<pagedList>();
     docEditor: AceAjax.Editor;
+    databaseForEditedDoc: database;
 
     constructor() {
         this.ravenDb = new raven();
@@ -74,6 +77,7 @@ class editDocument {
 
         // Find the database and collection we're supposed to load.
         // Used for paging through items.
+        this.databaseForEditedDoc = appUrl.getDatabase();
         if (navigationArgs && navigationArgs.database) {
             ko.postbox.publish("ActivateDatabaseWithName", navigationArgs.database);
         }
@@ -195,7 +199,7 @@ class editDocument {
     }
 
     loadDocument(id: string): JQueryPromise<document> {
-        var loadDocTask = this.ravenDb.documentWithMetadata(id);
+        var loadDocTask = new getDocumentWithMetadataCommand(id, this.databaseForEditedDoc).execute();
         loadDocTask.done(document => this.document(document));
         loadDocTask.fail(response => this.failedToLoadDoc(id, response));
         loadDocTask.always(() => this.isBusy(false));

@@ -16,11 +16,6 @@ class raven {
         return this.fetch(url, null, raven.activeDatabase(), resultsSelector);
     }
 
-    public documentWithMetadata(id: string): JQueryPromise<document> {
-        var resultsSelector = (dtoResults: documentDto[]) => new document(dtoResults[0]);
-        return this.docsById<document>(id, 0, 1, false, resultsSelector);
-    }
-
     public searchIds(searchTerm: string, start: number, pageSize: number, metadataOnly: boolean) {
         var resultsSelector = (dtoResults: documentDto[]) => dtoResults.map(dto => new document(dto));
         return this.docsById<Array<document>>(searchTerm, start, pageSize, metadataOnly, resultsSelector);

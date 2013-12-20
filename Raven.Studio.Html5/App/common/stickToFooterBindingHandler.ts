@@ -6,11 +6,12 @@ import composition = require("durandal/composition");
  */
 class stickToFooterBindingHandler {
     windowHeightObservable: KnockoutObservable<number>;
+    throttleTimeMs = 100;
 
     constructor() {
         var $window = $(window);
         this.windowHeightObservable = ko.observable<number>($window.height());
-        window['ravenStudioWindowHeight'] = this.windowHeightObservable.throttle(200);
+        window['ravenStudioWindowHeight'] = this.windowHeightObservable.throttle(this.throttleTimeMs);
         $window.resize((ev: JQueryEventObject) => this.windowHeightObservable($window.height()));
     }
 
@@ -32,8 +33,15 @@ class stickToFooterBindingHandler {
 
     // Called by Knockout each time the dependent observable value changes.
     update(element: HTMLElement, valueAccessor: () => number, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
-        valueAccessor(); // Necessary to register knockout dependency. Without it, update won't fire when window height changes.
-        this.stickToFooter(element);
+        var newWindowHeight = valueAccessor(); // Necessary to register knockout dependency. Without it, update won't fire when window height changes.
+
+        // Check what was the last dispatched height to this element.
+        var lastWindowHeightKey = "ravenStudioLastDispatchedHeight";
+        var lastWindowHeight: number = ko.utils.domData.get(element, lastWindowHeightKey);
+        if (lastWindowHeight !== newWindowHeight) {
+            ko.utils.domData.set(element, lastWindowHeightKey, newWindowHeight);
+            this.stickToFooter(element);
+        }
     }
 
     stickToFooter(element: HTMLElement) {
@@ -47,7 +55,7 @@ class stickToFooterBindingHandler {
             var minimumHeight = 100;
             if (desiredElementHeight >= minimumHeight) {
                 $element.height(desiredElementHeight);
-                ko.postbox.publish("StickyFooterHeightSet", { element: element, height: desiredElementHeight });
+                $element.trigger("StickyFooterHeightSet", desiredElementHeight);
             }
         }
     }

@@ -10,13 +10,6 @@ define(["require", "exports", "models/database", "models/collection", "models/co
             return this.fetch(url, null, raven.activeDatabase(), resultsSelector);
         };
 
-        raven.prototype.documentWithMetadata = function (id) {
-            var resultsSelector = function (dtoResults) {
-                return new document(dtoResults[0]);
-            };
-            return this.docsById(id, 0, 1, false, resultsSelector);
-        };
-
         raven.prototype.searchIds = function (searchTerm, start, pageSize, metadataOnly) {
             var resultsSelector = function (dtoResults) {
                 return dtoResults.map(function (dto) {
