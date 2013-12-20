@@ -1,31 +1,28 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.IO.MemoryMappedFiles;
-using System.Threading;
-using Voron.Impl.Paging;
-
-namespace Voron.Impl
+﻿namespace Voron.Impl
 {
+    using System.Collections.Concurrent;
+    using System.Diagnostics;
+    using System.IO.MemoryMappedFiles;
+    using System.Threading;
     using System.Threading.Tasks;
+
+    using Voron.Impl.Paging;
 
     public unsafe class PagerState
     {
 	    private readonly AbstractPager _pager;
-	    private readonly bool _asyncRelease;
 
-#if DEBUG
+#if DEBUG_PAGER_STATE
         public static ConcurrentDictionary<PagerState, StackTrace> Instances = new ConcurrentDictionary<PagerState, StackTrace>();
 #endif
 
-        public PagerState(AbstractPager pager, bool asyncRelease)
+        public PagerState(AbstractPager pager)
         {
 	        _pager = pager;
-	        _asyncRelease = asyncRelease;
-
-#if DEBUG
+#if DEBUG_PAGER_STATE
             Instances[this] = new StackTrace(true);
 #endif
-        }
+		}
 
         private int _refs;
 
@@ -42,18 +39,12 @@ namespace Voron.Impl
             if (Interlocked.Decrement(ref _refs) != 0)
                 return;
 
-#if DEBUG
+#if DEBUG_PAGER_STATE
             StackTrace value;
             Instances.TryRemove(this, out value);
 #endif
 
-            if (_asyncRelease)
-            {
-	            _pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
-                return;
-            }
-
-            ReleaseInternal();
+			_pager.RegisterDisposal(Task.Run(() => ReleaseInternal()));
         }
 
         private void ReleaseInternal()
@@ -74,21 +65,21 @@ namespace Voron.Impl
             Released = true;
         }
 
-#if DEBUG
+#if DEBUG_PAGER_STATE
         public ConcurrentQueue<StackTrace> AddedRefs = new ConcurrentQueue<StackTrace>();
 #endif
 
-        public void AddRef()
+		public void AddRef()
         {
             Interlocked.Increment(ref _refs);
-#if DEBUG
-            AddedRefs.Enqueue(new StackTrace(true));
-	        while (AddedRefs.Count > 500)
-	        {
-		        StackTrace trace;
-		        AddedRefs.TryDequeue(out trace);
-	        }
+#if DEBUG_PAGER_STATE
+			AddedRefs.Enqueue(new StackTrace(true));
+			while (AddedRefs.Count > 500)
+			{
+				StackTrace trace;
+				AddedRefs.TryDequeue(out trace);
+			}
 #endif
-        }
+		}
     }
 }

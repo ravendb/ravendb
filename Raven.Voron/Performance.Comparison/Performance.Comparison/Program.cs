@@ -1,4 +1,4 @@
-﻿using Performance.Comparison.FoundationDB;
+﻿using System.Collections;
 
 namespace Performance.Comparison
 {
@@ -7,23 +7,16 @@ namespace Performance.Comparison
     using System.IO;
     using System.Linq;
     using System.Text;
-
-    using global::Voron.Impl;
-
     using Performance.Comparison.Esent;
-    using Performance.Comparison.LMDB;
-    using Performance.Comparison.SQLCE;
-    using Performance.Comparison.SQLite;
-    using Performance.Comparison.SQLServer;
     using Performance.Comparison.Voron;
 
-	class Program
+    class Program
     {
         private const bool EnableCsvOutput = true;
 
         private static StreamWriter writer;
 
-        static  void Main()
+        static void Main()
         {
             var random = new Random();
             var buffer = new byte[87 * 1024];
@@ -31,7 +24,7 @@ namespace Performance.Comparison
 
             var path = @"c:\work\temp\";
 
-            writer = new StreamWriter("output.txt",false) {AutoFlush = true};
+            writer = new StreamWriter("output.txt", false) { AutoFlush = true };
 
             var sequentialIds = InitSequentialNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 128, maxValueSize: 128);
             var randomIds = InitRandomNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 128, maxValueSize: 128);
@@ -39,52 +32,60 @@ namespace Performance.Comparison
             var sequentialIdsLarge = InitSequentialNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 512, maxValueSize: 87 * 1024);
             var randomIdsLarge = InitRandomNumbers(Constants.WriteTransactions * Constants.ItemsPerTransaction, minValueSize: 512, maxValueSize: 87 * 1024);
 
-        
+
             var performanceTests = new List<IStoragePerformanceTest>()
 				{
                     //new SqlServerTest(buffer),
                     //new SqlLiteTest(path, buffer),
                     //new SqlCeTest(path, buffer),
                     //new LmdbTest(path, buffer),
-					//new EsentTest(path, buffer),
+                    new EsentTest(path, buffer),
                     //new FdbTest(buffer),
 					new VoronTest(path, buffer)
 				};
 
             var perfTracker = new PerfTracker();
-            for(var i = 0; i < performanceTests.Count; i++)
+            for (var i = 0; i < performanceTests.Count; i++)
             {
                 var test = performanceTests[i];
 
                 Console.WriteLine("Testing: " + test.StorageName);
 
-                var performanceRecords = test.WriteSequential(sequentialIds, perfTracker);
-                var items = performanceRecords.Sum(x => x.ProcessedItems);
-                var totalDuration = performanceRecords.Sum(x => x.Duration);
+                PerformanceRecord performanceRecord;
+                List<PerformanceRecord> performanceRecords;
+                long totalDuration;
+                long items;
+
+                performanceRecords = test.WriteSequential(sequentialIds, perfTracker);
+                items = performanceRecords.Sum(x => x.ProcessedItems);
+                totalDuration = performanceRecords.Sum(x => x.Duration);
                 OutputResults("Write Seq", items, totalDuration, perfTracker);
                 WritePerfData("WriteSeq", test, performanceRecords);
 
-				performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 2, out totalDuration);
-				items = performanceRecords.Sum(x => x.ProcessedItems);
-				OutputResults("Write Seq [2]", items, totalDuration, perfTracker);
-				WritePerfData("WriteSeq_Parallel_2", test, performanceRecords);
+                performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 2, out totalDuration);
+                items = performanceRecords.Sum(x => x.ProcessedItems);
+                OutputResults("Write Seq [2]", items, totalDuration, perfTracker);
+                WritePerfData("WriteSeq_Parallel_2", test, performanceRecords);
 
-				performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 4, out totalDuration);
-				items = performanceRecords.Sum(x => x.ProcessedItems);
-				OutputResults("Write Seq [4]", items, totalDuration, perfTracker);
-				WritePerfData("WriteSeq_Parallel_4", test, performanceRecords);
 
-				performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 8, out totalDuration);
-				items = performanceRecords.Sum(x => x.ProcessedItems);
-				OutputResults("Write Seq [8]", items, totalDuration, perfTracker);
-				WritePerfData("WriteSeq_Parallel_8", test, performanceRecords);
+                performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 4, out totalDuration);
+                items = performanceRecords.Sum(x => x.ProcessedItems);
+                OutputResults("Write Seq [4]", items, totalDuration, perfTracker);
+                WritePerfData("WriteSeq_Parallel_4", test, performanceRecords);
 
-				performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 16, out totalDuration);
-				items = performanceRecords.Sum(x => x.ProcessedItems);
-				OutputResults("Write Seq [16]", items, totalDuration, perfTracker);
-				WritePerfData("WriteSeq_Parallel_16", test, performanceRecords);
-				
-                var performanceRecord = test.ReadSequential(perfTracker);
+
+                performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 8, out totalDuration);
+                items = performanceRecords.Sum(x => x.ProcessedItems);
+                OutputResults("Write Seq [8]", items, totalDuration, perfTracker);
+                WritePerfData("WriteSeq_Parallel_8", test, performanceRecords);
+
+                performanceRecords = test.WriteParallelSequential(sequentialIds, perfTracker, 16, out totalDuration);
+                items = performanceRecords.Sum(x => x.ProcessedItems);
+                OutputResults("Write Seq [16]", items, totalDuration, perfTracker);
+                WritePerfData("WriteSeq_Parallel_16", test, performanceRecords);
+
+
+                performanceRecord = test.ReadSequential(perfTracker);
                 items = performanceRecord.ProcessedItems;
                 totalDuration = performanceRecord.Duration;
                 OutputResults("Read Seq", items, totalDuration, perfTracker);
@@ -170,7 +171,7 @@ namespace Performance.Comparison
                 OutputResults("Read Rnd [16]", items, totalDuration, perfTracker);
                 WritePerfData("ReadRnd_Parallel_16", test, new List<PerformanceRecord> { performanceRecord });
 
-				//if (test.CanHandleBigData==false)
+                if (test.CanHandleBigData == false)
                     continue;
 
                 performanceRecords = test.WriteSequential(sequentialIdsLarge, perfTracker);
@@ -199,7 +200,7 @@ namespace Performance.Comparison
             }
         }
 
-       
+
         private static void OutputResults(string name, long itemsCount, double duration, PerfTracker perfTracker)
         {
             Console.WriteLine("{0}:\t{1,10:#,#;;0} items in {2,10:#,#;;0} sec, {3,10:#,#} ops/s.", name, itemsCount, duration, itemsCount / (duration / 1000));
@@ -223,36 +224,60 @@ namespace Performance.Comparison
             }
         }
 
-        private static HashSet<TestData> InitRandomNumbers(int count, int minValueSize, int maxValueSize)
+        private static IEnumerable<TestData> InitRandomNumbers(int count, int minValueSize, int maxValueSize)
         {
-            var random = new Random(1337 ^ 13);
-            var randomNumbers = new HashSet<int>();
-
-            while (randomNumbers.Count < count)
+            var random = new RandomSequenceOfUnique(32);
+            var enumerable = Enumerable.Range(0, count).Select(i => random.Next());
+            var initRandomNumbers = InitValue(enumerable, minValueSize, maxValueSize);
+            foreach (var initRandomNumber in initRandomNumbers)
             {
-                randomNumbers.Add(random.Next(0, int.MaxValue));
+                yield return initRandomNumber;
             }
-
-            return InitValue(randomNumbers, minValueSize, maxValueSize);
         }
 
-        private static HashSet<TestData> InitSequentialNumbers(int count, int minValueSize, int maxValueSize)
+        /// <summary>
+        /// from https://github.com/preshing/RandomSequence/blob/master/randomsequence.h
+        /// </summary>
+        private class RandomSequenceOfUnique
+        {
+            uint _index;
+            readonly uint _intermediateOffset;
+
+            const uint Prime = 4294967291u;
+
+            static uint PermuteQPR(uint x)
+            {
+                if (x >= Prime)
+                    return x;  // The 5 integers out of range are mapped to themselves.
+                uint residue = (uint)(((ulong)x * x) % Prime);
+                return (x <= Prime / 2) ? residue : Prime - residue;
+            }
+
+            public RandomSequenceOfUnique(uint seedBase)
+            {
+                _index = PermuteQPR(PermuteQPR(seedBase) + 0x682f0161);
+                _intermediateOffset = PermuteQPR(PermuteQPR(seedBase + 1) + 0x46790905);
+            }
+
+            public int Next()
+            {
+                return (int)PermuteQPR((PermuteQPR(_index++) + _intermediateOffset) ^ 0x5bf03635);
+            }
+        }
+
+        private static IEnumerable<TestData> InitSequentialNumbers(int count, int minValueSize, int maxValueSize)
         {
             return InitValue(Enumerable.Range(0, count), minValueSize, maxValueSize);
         }
 
-        private static HashSet<TestData> InitValue(IEnumerable<int> ids, int minValueSize, int maxValueSize)
+        private static IEnumerable<TestData> InitValue(IEnumerable<int> ids, int minValueSize, int maxValueSize)
         {
-            var data = new HashSet<TestData>();
-
             var random = new Random(1337 ^ 13);
 
             foreach (var id in ids)
             {
-                data.Add(new TestData { Id = id, ValueSize = random.Next(minValueSize, maxValueSize) });
+                yield return new TestData { Id = id, ValueSize = random.Next(minValueSize, maxValueSize) };
             }
-
-            return data;
         }
     }
 }

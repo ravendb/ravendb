@@ -63,12 +63,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 			var nameAndKey = CreateKey(name, key);
 
-			using (var read = listsByNameAndKey.Read(Snapshot, nameAndKey,writeBatch))
-			{
-				if (read == null)
-					return;
+			var read = listsByNameAndKey.Read(Snapshot, nameAndKey, writeBatch);
+			if (read == null)
+				return;
 
-				using (var reader = new StreamReader(read.Stream))
+			using (var stream = read.Reader.AsStream())
+			{
+				using (var reader = new StreamReader(stream))
 				{
 					var etag = reader.ReadToEnd();
 					tableStorage.Lists.Delete(writeBatch, etag);
@@ -110,12 +111,13 @@ namespace Raven.Database.Storage.Voron.StorageActions
 			var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
 			var nameAndKey = CreateKey(name, key);
 
-			using (var read = listsByNameAndKey.Read(Snapshot, nameAndKey, writeBatch))
-			{
-				if (read == null)
-					return null;
+			var read = listsByNameAndKey.Read(Snapshot, nameAndKey, writeBatch);
+			if (read == null)
+				return null;
 
-				using (var reader = new StreamReader(read.Stream))
+			using (var stream = read.Reader.AsStream())
+			{
+				using (var reader = new StreamReader(stream))
 				{
 					var etag = reader.ReadToEnd();
 					return ReadInternal(etag);

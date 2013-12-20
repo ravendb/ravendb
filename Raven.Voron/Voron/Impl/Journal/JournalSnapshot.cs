@@ -1,12 +1,13 @@
-﻿using Voron.Util;
+﻿using System.Collections.Generic;
+using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
 	public class JournalSnapshot
 	{
 		public long Number;
-        public SafeDictionary<long, JournalFile.PagePosition> PageTranslationTable;
-        public SafeDictionary<long, long> TransactionEndPositions;
+		public PageTable PageTranslationTable;
 	    public long AvailablePages;
+		public long LastTransaction;
 	}
 }

@@ -16,16 +16,16 @@ namespace Voron
 	{
 		public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
 
-		public void InvokeRecoveryError(object sender, string message)
+		public void InvokeRecoveryError(object sender, string message, Exception e)
 		{
 			var handler = OnRecoveryError;
 			if (handler == null)
 			{
 				throw new InvalidDataException(message + Environment.NewLine +
-					 "An exception has been thrown because there isn't a listener to the OnRecoveryError event on the storage options.");
+					 "An exception has been thrown because there isn't a listener to the OnRecoveryError event on the storage options.", e);
 			}
 
-			handler(this, new RecoveryErrorEventArgs(message));
+			handler(this, new RecoveryErrorEventArgs(message, e));
 		}
 
 		public long MaxLogFileSize
@@ -118,7 +118,7 @@ namespace Voron
 				{
 					Directory.CreateDirectory(_basePath);
 				}
-				_dataPager = new Lazy<IVirtualPager>(() => new MemoryMapPager(Path.Combine(_basePath, "db.voron"), asyncPagerRelease: false));
+				_dataPager = new Lazy<IVirtualPager>(() => new Win32MemoryMapPager(Path.Combine(_basePath, "db.voron")));
 			}
 
 			public override IVirtualPager DataPager
@@ -222,13 +222,13 @@ namespace Voron
 				}
 			}
 
-			public override IVirtualPager CreateScratchPager()
+			public override IVirtualPager CreateScratchPager(string name)
 			{
-			    var scratchFile = Path.Combine(_basePath, "scratch.buffers");
+			    var scratchFile = Path.Combine(_basePath, name);
 			    if (File.Exists(scratchFile)) 
                     File.Delete(scratchFile);
 
-                return new MemoryMapPager(scratchFile, true, (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
+                return new Win32MemoryMapPager(scratchFile, (NativeFileAttributes.DeleteOnClose | NativeFileAttributes.Temporary));
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
@@ -237,13 +237,13 @@ namespace Voron
 				var path = Path.Combine(_basePath, name);
 				if (File.Exists(path) == false)
 					throw new InvalidOperationException("No such journal " + path);
-				return new MemoryMapPager(path, asyncPagerRelease: false, access: NativeFileAccess.GenericRead);
+				return new Win32MemoryMapPager(path, access: NativeFileAccess.GenericRead);
 			}
 		}
 
 		public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
 		{
-			private readonly PureMemoryPager _dataPager;
+			private readonly Win32PureMemoryPager _dataPager;
 
 			private Dictionary<string, IJournalWriter> _logs =
 				new Dictionary<string, IJournalWriter>(StringComparer.OrdinalIgnoreCase);
@@ -254,7 +254,7 @@ namespace Voron
 
 			public PureMemoryStorageEnvironmentOptions()
 			{
-				_dataPager = new PureMemoryPager();
+				_dataPager = new Win32PureMemoryPager();
 			}
 
 			public override IVirtualPager DataPager
@@ -323,9 +323,9 @@ namespace Voron
 				NativeMethods.memcpy((byte*)ptr, (byte*)header, sizeof(FileHeader));
 			}
 
-			public override IVirtualPager CreateScratchPager()
+			public override IVirtualPager CreateScratchPager(string name)
 			{
-				return new PureMemoryPager();
+				return new Win32PureMemoryPager();
 			}
 
 			public override IVirtualPager OpenJournalPager(long journalNumber)
@@ -343,6 +343,11 @@ namespace Voron
 			return string.Format("{0:D19}.journal", number);
 		}
 
+		public static string JournalRecoveryName(long number)
+		{
+			return string.Format("{0:D19}.recovery", number);
+		}
+
 		public abstract void Dispose();
 
 		public abstract bool TryDeleteJournal(long number);
@@ -351,7 +356,7 @@ namespace Voron
 
 		public unsafe abstract void WriteHeader(string filename, FileHeader* header);
 
-		public abstract IVirtualPager CreateScratchPager();
+		public abstract IVirtualPager CreateScratchPager(string name);
 
 		public abstract IVirtualPager OpenJournalPager(long journalNumber);
 	}

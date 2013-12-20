@@ -38,8 +38,11 @@ class ctor {
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
     selectedIndices = ko.observableArray();
+    memoizedCollectionColorFetcher: Function;
 
     constructor() {
+
+        this.memoizedCollectionColorFetcher = this.getCollectionClassFromRavenEntityName.memoize(this);
     }
 
     activate(settings: any) {
@@ -107,7 +110,7 @@ class ctor {
         this.ensureRowsCoverViewport();
 
         window.clearTimeout(this.scrollThrottleTimeoutHandle);
-        this.scrollThrottleTimeoutHandle = setTimeout(() => this.loadRowData());
+        this.scrollThrottleTimeoutHandle = setTimeout(() => this.loadRowData(), 100);
     }
 
     setupKeyboardShortcuts() {
@@ -158,9 +161,17 @@ class ctor {
         }
     }
 
-    getCollectionClassFromDocument(doc: document) {
-        var collectionName = doc.__metadata.ravenEntityName;
-        var collection = this.collections().first(c => c.name === collectionName);
+    getCollectionClassFromDocument(doc: document): string {
+        var entityName = doc.__metadata.ravenEntityName;
+        return this.memoizedCollectionColorFetcher(entityName);
+    }
+
+    getCollectionClassFromRavenEntityName(entityName: string): string {
+        if (!entityName) {
+            return "system-documents-collection";
+        }
+
+        var collection = this.collections().first<collection>(c => c.name === entityName);
         if (collection) {
             return collection.colorClass;
         }
@@ -277,7 +288,8 @@ class ctor {
     toggleRowChecked(row: row, isShiftSelect = false) {
         var rowIndex = row.rowIndex();
         var isChecked = row.isChecked();
-        var toggledIndices: Array<number> = isShiftSelect && this.selectedIndices().length > 0 ? this.getRowIndicesRange(this.selectedIndices.first(), rowIndex) : [rowIndex];
+        var firstIndex = <number>this.selectedIndices.first();
+        var toggledIndices: Array<number> = isShiftSelect && this.selectedIndices().length > 0 ? this.getRowIndicesRange(firstIndex, rowIndex) : [rowIndex];
         if (!isChecked) {
             // Going from unchecked to checked.
             if (this.selectedIndices.indexOf(rowIndex) === -1) {
@@ -326,8 +338,8 @@ class ctor {
         if (!this.items || this.selectedIndices().length === 0) {
             return [];
         }
-
-        var maxSelectedIndices: Array<number> = max ? this.selectedIndices.slice(0, max) : this.selectedIndices();
+        var sliced = max ? <number[]>this.selectedIndices.slice(0, max) : null;
+        var maxSelectedIndices = sliced || <number[]>this.selectedIndices();
         return this.items.getCachedItemsAt(maxSelectedIndices);
     }
 

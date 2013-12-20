@@ -134,6 +134,8 @@ namespace Voron
 		public int Compare(Slice other, SliceComparer cmp)
 		{
 			Debug.Assert(Options == SliceOptions.Key);
+			Debug.Assert(other.Options == SliceOptions.Key);
+
 			var r = CompareData(other, cmp, Math.Min(Size, other.Size));
 			if (r != 0)
 				return r;

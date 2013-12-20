@@ -1,6 +1,7 @@
 import document = require("models/document");
 import dialog = require("plugins/dialog");
 import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
+import appUrl = require("common/appUrl");
 
 class deleteDocuments {
 
@@ -18,7 +19,7 @@ class deleteDocuments {
 
     deleteDocs() {
         var deletedDocIds = this.documents().map(i => i.getId());
-        var deleteCommand = new deleteDocumentsCommand(deletedDocIds);
+        var deleteCommand = new deleteDocumentsCommand(deletedDocIds, appUrl.getDatabase());
         var deleteCommandTask = deleteCommand.execute();
 
         deleteCommandTask.done(() => this.deletionTask.resolve(this.documents()));

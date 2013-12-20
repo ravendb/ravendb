@@ -673,7 +673,10 @@ namespace Raven.Client.Document
 					databaseUrl = rootDatabaseUrl;
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
-				return new ServerClient(databaseUrl, Conventions, ApiKey, Credentials, GetReplicationInformerForDatabase, null, jsonRequestFactory, currentSessionId, listeners.ConflictListeners);
+				return new ServerClient(new AsyncServerClient(
+					databaseUrl, Conventions, ApiKey, Credentials, jsonRequestFactory,
+					currentSessionId, GetReplicationInformerForDatabase, null,
+					listeners.ConflictListeners));
 			};
 #endif
 
@@ -731,13 +734,13 @@ namespace Raven.Client.Document
 
 			if (dbName == DefaultDatabase)
 			{
-				if (FailoverServers.IsSetForDefaultDatabase && result.FailoverUrls == null)
-					result.FailoverUrls = FailoverServers.ForDefaultDatabase;
+				if (FailoverServers.IsSetForDefaultDatabase && result.FailoverServers == null)
+					result.FailoverServers = FailoverServers.ForDefaultDatabase;
 		}
 			else
 			{
-				if (FailoverServers.IsSetForDatabase(dbName) && result.FailoverUrls == null)
-					result.FailoverUrls = FailoverServers.GetForDatabase(dbName);
+				if (FailoverServers.IsSetForDatabase(dbName) && result.FailoverServers == null)
+					result.FailoverServers = FailoverServers.GetForDatabase(dbName);
 			}
 
 			return result;

@@ -74,7 +74,7 @@ namespace Voron.Impl.Journal
 			array[pages.Length].Buffer = null;// null terminating
 
 		    WriteFileGather(_handle, array, (uint) pages.Length*4096, IntPtr.Zero, nativeOverlapped);
-			return HandleResponse(nativeOverlapped, tcs, allocHGlobal);
+		    return HandleResponse(nativeOverlapped, tcs, allocHGlobal);
 		}
 
 		public long NumberOfAllocatedPages { get; private set; }
@@ -82,7 +82,7 @@ namespace Voron.Impl.Journal
 
 	    public IVirtualPager CreatePager()
 		{
-			return new MemoryMapPager(_filename, false);
+			return new Win32MemoryMapPager(_filename);
 		}
 
 	    public bool Read(long pageNumber, byte* buffer, int count)
@@ -108,9 +108,10 @@ namespace Voron.Impl.Journal
                     int read;
 		            if (NativeFileMethods.ReadFile(_readHandle, buffer, count, out read, nativeOverlapped) == false)
 		            {
-			            if (Marshal.GetLastWin32Error() == ErrorHandleEof)
+			            var lastWin32Error = Marshal.GetLastWin32Error();
+			            if (lastWin32Error == ErrorHandleEof)
 				            return false;
-			            throw new Win32Exception();
+			            throw new Win32Exception(lastWin32Error);
 		            }
 	                count -= read;
 	                buffer += read;
@@ -129,8 +130,6 @@ namespace Voron.Impl.Journal
 			switch (lastWin32Error)
 			{
                 case ErrorSuccess:
-			        tcs.TrySetResult(null);
-			        return tcs.Task;
 			    case ErrorIOPending:
 			        return tcs.Task;
 			}

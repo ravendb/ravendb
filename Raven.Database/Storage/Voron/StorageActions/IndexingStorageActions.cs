@@ -57,9 +57,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
 				{
 					var key = indexingStatsIterator.CurrentKey.ToString();
 
-					var indexStats = indexingStatsIterator
-						.CreateStreamForCurrent()
-						.ToJObject();
+					RavenJObject indexStats;
+					using (var stream = indexingStatsIterator.CreateReaderForCurrent().AsStream())
+					{
+						indexStats = stream.ToJObject();
+					}
 
 					ushort version;
 					var reduceStats = Load(tableStorage.ReduceStats, key, out version);

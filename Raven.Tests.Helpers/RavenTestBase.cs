@@ -29,7 +29,6 @@ using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Server;
-using Raven.Storage.Voron;
 using Xunit;
 using Xunit.Sdk;
 
@@ -233,11 +232,11 @@ namespace Raven.Tests.Helpers
 			if (storageType == "munin")
 				newTransactionalStorage = new Storage.Managed.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
 			else if (storageType == "voron")
-				newTransactionalStorage = new TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), RunInMemory = runInMemory }, () => { });
+				newTransactionalStorage = new Storage.Voron.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), RunInMemory = runInMemory }, () => { });
 			else
 				newTransactionalStorage = new Storage.Esent.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
 
-			newTransactionalStorage.Initialize(new DummyUuidGenerator(), (documentCodecs == null) ? new OrderedPartCollection<AbstractDocumentCodec>() : documentCodecs );
+			newTransactionalStorage.Initialize(new DummyUuidGenerator(), documentCodecs ?? new OrderedPartCollection<AbstractDocumentCodec>());
 			return newTransactionalStorage;
 		}
 

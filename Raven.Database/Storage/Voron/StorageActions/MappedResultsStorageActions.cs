@@ -424,11 +424,6 @@
 			}
 		}
 
-		public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete)
-		{
-			throw new NotImplementedException();
-		}
-
 		private IEnumerable<MappedResultInfo> GetResultsForBucket(int view, int level, string reduceKey, int bucket, bool loadData)
 		{
 			switch (level)
@@ -524,7 +519,7 @@
 			}
 		}
 
-		public ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete)
+		public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete)
 		{
 			if (itemsToDelete == null)
 				return null;
@@ -822,12 +817,13 @@
 		{
 			var reduceKey = value.Value<string>("reduceKey");
 
-			using (var read = dataIndex.Read(Snapshot, key, writeBatch))
-			{
-				if (read == null)
-					return null;
+			var read = dataIndex.Read(Snapshot, key, writeBatch);
+			if (read == null)
+				return null;
 
-				using (var stream = documentCodecs.Aggregate(read.Stream, (ds, codec) => codec.Decode(reduceKey, null, ds)))
+			using (var readerStream = read.Reader.AsStream())
+			{
+				using (var stream = documentCodecs.Aggregate(readerStream, (ds, codec) => codec.Decode(reduceKey, null, ds)))
 					return stream.ToJObject();
 			}
 		}

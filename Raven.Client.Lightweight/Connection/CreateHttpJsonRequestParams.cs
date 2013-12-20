@@ -28,25 +28,6 @@ namespace Raven.Client.Connection
 		/// Adds the operation headers.
 		/// </summary>
 		/// <param name="operationsHeaders">The operations headers.</param>
-		public CreateHttpJsonRequestParams AddOperationHeaders(IDictionary<string, string> operationsHeaders)
-		{
-			urlCached = null;
-			operationsHeadersDictionary = operationsHeaders;
-			foreach (var operationsHeader in operationsHeaders)
-			{
-				operationHeadersHash = (operationHeadersHash * 397) ^ operationsHeader.Key.GetHashCode();
-				if (operationsHeader.Value != null)
-				{
-					operationHeadersHash = (operationHeadersHash * 397) ^ operationsHeader.Value.GetHashCode();
-				}
-			}
-			return this;
-		}
-
-		/// <summary>
-		/// Adds the operation headers.
-		/// </summary>
-		/// <param name="operationsHeaders">The operations headers.</param>
 		public CreateHttpJsonRequestParams AddOperationHeaders(NameValueCollection operationsHeaders)
 		{
 			urlCached = null;
@@ -68,13 +49,6 @@ namespace Raven.Client.Connection
 
 		public void UpdateHeaders(WebRequest webRequest)
 		{
-			if (operationsHeadersDictionary != null)
-			{
-				foreach (var kvp in operationsHeadersDictionary)
-				{
-					webRequest.Headers[kvp.Key] = kvp.Value;
-				}
-			}
 			if (operationsHeadersCollection != null)
 			{
 				foreach (string header in operationsHeadersCollection)
@@ -92,15 +66,31 @@ namespace Raven.Client.Connection
 			}
 		}
 
+		public void UpdateHeaders(NameValueCollection headers)
+		{
+			if (operationsHeadersCollection != null)
+			{
+				foreach (string header in operationsHeadersCollection)
+				{
+					try
+					{
+						headers[header] = operationsHeadersCollection[header];
+					}
+					catch (Exception e)
+					{
+						throw new InvalidOperationException(
+							"Failed to set header '" + header + "' to the value: " + operationsHeadersCollection[header], e);
+					}
+				}
+			}
+		}
+
 		public CreateHttpJsonRequestParams(IHoldProfilingInformation self, string url, string method, OperationCredentials credentials, DocumentConvention convention)
 			: this(self, url, method, new RavenJObject(), credentials, convention)
-		{
-
-		}
+		{}
 
 		private int operationHeadersHash;
 		private NameValueCollection operationsHeadersCollection;
-		private IDictionary<string, string> operationsHeadersDictionary;
 		public IHoldProfilingInformation Owner { get; set; }
 		private string url;
 		private string urlCached;

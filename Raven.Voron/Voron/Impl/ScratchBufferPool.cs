@@ -23,7 +23,7 @@ namespace Voron.Impl
 
 		public ScratchBufferPool(StorageEnvironment env)
 		{
-			_scratchPager = env.Options.CreateScratchPager();
+			_scratchPager = env.Options.CreateScratchPager("scratch.buffers");
 			_scratchPager.AllocateMorePages(null, env.Options.InitialLogFileSize);
 		}
 
@@ -84,6 +84,11 @@ namespace Voron.Impl
 		public Page ReadPage(long p)
 		{
 			return _scratchPager.Read(p);
+		}
+
+		public byte* AcquirePagePointer(long p)
+		{
+			return _scratchPager.AcquirePagePointer(p);
 		}
 	}
 

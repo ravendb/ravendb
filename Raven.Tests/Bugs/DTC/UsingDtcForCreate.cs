@@ -8,9 +8,10 @@ namespace Raven.Tests.Bugs.DTC
 {
 	public class UsingDtcForCreate : RemoteClientTest
 	{
-		[Theory]
-		[InlineData(true)]
-		[InlineData(false)]
+		//[Theory]
+		//[InlineData(true)]
+		//[InlineData(false)]
+		[TimeBombedFact(2014,1,1)]
 		public void ShouldWork(bool runinmemory)
 		{
 			using (GetNewServer(runInMemory: runinmemory))

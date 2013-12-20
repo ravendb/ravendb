@@ -4,7 +4,6 @@ define(["require", "exports"], function(require, exports) {
             this.displayName = "statistics";
         }
         statistics.prototype.activate = function (args) {
-            console.log("this is STATISTICS!");
         };
 
         statistics.prototype.canDeactivate = function () {

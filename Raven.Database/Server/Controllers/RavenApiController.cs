@@ -90,20 +90,21 @@ namespace Raven.Database.Server.Controllers
 			InnerInitialization(controllerContext);
 			var authorizer = (MixedModeRequestAuthorizer)controllerContext.Configuration.Properties[typeof(MixedModeRequestAuthorizer)];
 			var result = new HttpResponseMessage();
-
-			try
+			if (InnerRequest.Method.Method != "OPTIONS")
 			{
-				await RequestManager.HandleActualRequest(this, async () =>
+				try
 				{
-					SetHeaders();
-					result = await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
-				});
+					await RequestManager.HandleActualRequest(this, async () =>
+					{
+						SetHeaders();
+						result = await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
+					});
+				}
+				catch (HttpException httpException)
+				{
+					result = GetMessageWithObject(new {Error = httpException.Message}, HttpStatusCode.ServiceUnavailable);
+				}
 			}
-			catch (HttpException httpException)
-			{
-				result = GetMessageWithObject(new { Error = httpException.Message }, HttpStatusCode.ServiceUnavailable);
-			}
-
 			RequestManager.AddAccessControlHeaders(this, result);
 			return result;
 		}

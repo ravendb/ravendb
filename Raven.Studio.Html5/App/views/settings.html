@@ -1,0 +1,41 @@
+﻿<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#databases">
+                Databases
+            </a>
+        </h3>
+    </li>
+    <li data-bind="with: activeDatabase">
+        <a data-bind="text: name"></a>
+    </li>
+    <li class="active">
+        <span>Settings</span>
+    </li>
+</ul>
+
+<div class="alert alert-danger">
+    TODO: finish implementing this page.
+    <ul>
+        <li>Should hide API keys and Windows Auth if viewing settings for DB other than system DB.</li>
+        <li>Should hide Database Settings and Periodic Backup if viewing settings for system DB</li>
+        <li>Make 'Save Changes' button work</li>
+        <li>Make search work</li>
+        <li>Make API key-&gt;Databases be interactive (right now, each database cell is static text).</li>
+        <li>Should prompt user if navigating away with unsaved changes</li>
+        <li>Implement Windows Auth section (currently a blank UI)</li>
+    </ul>
+</div>
+
+<div class="settings-container row">
+    <div class="col-md-2">
+        <ul class="nav nav-pills nav-stacked" data-bind="foreach: router.navigationModel">
+            <li data-bind="css: { active: isActive }, visible: $parent.routeIsVisible($data)">
+                <a data-bind="attr: { href: hash }, text: title"></a>
+            </li>
+        </ul>
+    </div>
+    <div class="col-md-10">
+        <!--ko router: { transition:'entrance', cacheViews:true }--><!--/ko-->
+    </div>
+</div>

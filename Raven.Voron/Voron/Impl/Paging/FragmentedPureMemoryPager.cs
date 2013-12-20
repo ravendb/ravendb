@@ -9,11 +9,10 @@ namespace Voron.Impl.Paging
 {
 	public class FragmentedPureMemoryPager : AbstractPager
 	{
-		private readonly SafeList<PureMemoryJournalWriter.Buffer> _buffers;
+		private readonly ImmutableAppendOnlyList<PureMemoryJournalWriter.Buffer> _buffers;
 
 
-		internal FragmentedPureMemoryPager(SafeList<PureMemoryJournalWriter.Buffer> buffers) 
-            : base(false)
+		internal FragmentedPureMemoryPager(ImmutableAppendOnlyList<PureMemoryJournalWriter.Buffer> buffers)
 		{
 			_buffers = buffers;
 			NumberOfAllocatedPages = buffers.Sum(x => x.SizeInPages);

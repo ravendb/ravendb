@@ -1,4 +1,6 @@
-﻿namespace Performance.Comparison
+﻿using System.Collections.Concurrent;
+
+namespace Performance.Comparison
 {
     using System;
     using System.Collections.Generic;
@@ -67,7 +69,7 @@
                         var index = (int)state;
                         var pData = parallelData[index];
 
-                        records[index] = writeFunction(pData.Enumerator, pData.ItemsPerTransaction, pData.NumberOfTransactions);
+                        records[index] = writeFunction(pData.Enumerate(), pData.ItemsPerTransaction, pData.NumberOfTransactions);
 
                         countdownEvent.Signal();
                     },
@@ -113,10 +115,10 @@
             };
         }
 
-        private IList<ParallelTestData> SplitData(IEnumerable<TestData> data, int currentNumberOfTransactions, int currentNumberOfItemsPerTransaction, int numberOfThreads)
+        private IList<ParallelTestData> SplitData(IEnumerable<TestData> input, int currentNumberOfTransactions, int currentNumberOfItemsPerTransaction, int numberOfThreads)
         {
-            var count = data.Count();
-            Debug.Assert(count == currentNumberOfItemsPerTransaction * currentNumberOfTransactions);
+            var data = new ConcurrentQueue<TestData>(input);
+            Debug.Assert(data.Count == currentNumberOfItemsPerTransaction * currentNumberOfTransactions);
 
             var results = new List<ParallelTestData>();
 
@@ -130,11 +132,7 @@
 
                 var item = new ParallelTestData
                                {
-                                   Enumerator =
-                                       data
-                                       .Skip(i * currentNumberOfItemsPerTransaction * numberOfTransactionsPerThread)
-                                       .Take(actualNumberOfTransactionsPerThread * currentNumberOfItemsPerTransaction)
-                                       .GetEnumerator(),
+                                   Queue = data,
                                    ItemsPerTransaction = currentNumberOfItemsPerTransaction,
                                    NumberOfTransactions = actualNumberOfTransactionsPerThread
                                };

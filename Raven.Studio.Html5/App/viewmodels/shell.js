@@ -1,21 +1,6 @@
 /// <reference path="../../Scripts/typings/nprogress/nprogress.d.ts" />
 /// <reference path="../../Scripts/typings/bootstrap/bootstrap.d.ts" />
-define(["require", "exports", "plugins/router", "durandal/app", "durandal/system", "models/database", "common/raven", "models/document", "common/appUrl", "models/collection", "viewmodels/deleteDocuments", "common/dialogResult", "common/alertArgs", "common/alertType", "common/pagedList"], function(require, exports, __router__, __app__, __sys__, __database__, __raven__, __document__, __appUrl__, __collection__, __deleteDocuments__, __dialogResult__, __alertArgs__, __alertType__, __pagedList__) {
-    var router = __router__;
-    var app = __app__;
-    var sys = __sys__;
-
-    var database = __database__;
-    var raven = __raven__;
-    var document = __document__;
-    var appUrl = __appUrl__;
-    var collection = __collection__;
-    var deleteDocuments = __deleteDocuments__;
-    var dialogResult = __dialogResult__;
-    var alertArgs = __alertArgs__;
-    var alertType = __alertType__;
-    var pagedList = __pagedList__;
-
+define(["require", "exports", "plugins/router", "durandal/app", "durandal/system", "models/database", "common/raven", "models/document", "common/appUrl", "models/collection", "viewmodels/deleteDocuments", "common/dialogResult", "common/alertArgs", "common/alertType", "common/pagedList", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand", "commands/getBuildVersionCommand", "commands/getLicenseStatusCommand"], function(require, exports, router, app, sys, database, raven, document, appUrl, collection, deleteDocuments, dialogResult, alertArgs, alertType, pagedList, getDatabaseStatsCommand, getDatabasesCommand, getBuildVersionCommand, getLicenseStatusCommand) {
     var shell = (function () {
         function shell() {
             var _this = this;
@@ -24,10 +9,8 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
             this.activeDatabase = ko.observable().subscribeTo("ActivateDatabase");
             this.currentAlert = ko.observable();
             this.queuedAlerts = ko.observableArray();
-            this.ravenDb = new raven();
-            ko.postbox.subscribe("EditDocument", function (args) {
-                return _this.launchDocEditor(args.doc.getId(), args.docsList);
-            });
+            this.buildVersion = ko.observable();
+            this.licenseStatus = ko.observable();
             ko.postbox.subscribe("Alert", function (alert) {
                 return _this.showAlert(alert);
             });
@@ -37,30 +20,19 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
             ko.postbox.subscribe("ActivateDatabase", function (db) {
                 return _this.databaseChanged(db);
             });
+
+            //ko.postbox.subscribe("EditDocument", args => this.launchDocEditor(args.doc.getId(), args.docsList));
             NProgress.set(.5);
         }
-        shell.prototype.databasesLoaded = function (databases) {
-            var systemDatabase = new database("<system>");
-            systemDatabase.isSystem = true;
-            this.databases(databases.concat([systemDatabase]));
-            this.databases()[0].activate();
-        };
-
-        shell.prototype.launchDocEditor = function (docId, docsList) {
-            var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null);
-            router.navigate(editDocUrl);
-        };
-
         shell.prototype.activate = function () {
             NProgress.set(.8);
-
             router.map([
                 { route: ['', 'databases'], title: 'Databases', moduleId: 'viewmodels/databases', nav: false },
                 { route: 'documents', title: 'Documents', moduleId: 'viewmodels/documents', nav: true, hash: appUrl.forCurrentDatabase().documents },
                 { route: 'indexes', title: 'Indexes', moduleId: 'viewmodels/indexes', nav: true },
                 { route: 'query', title: 'Query', moduleId: 'viewmodels/query', nav: true },
                 { route: 'tasks', title: 'Tasks', moduleId: 'viewmodels/tasks', nav: true },
-                { route: 'settings', title: 'Settings', moduleId: 'viewmodels/settings', nav: true },
+                { route: 'settings*details', title: 'Settings', moduleId: 'viewmodels/settings', nav: true, hash: appUrl.forCurrentDatabase().settings },
                 { route: 'status*details', title: 'Status', moduleId: 'viewmodels/status', nav: true, hash: appUrl.forCurrentDatabase().status },
                 { route: 'edit', title: 'Edit Document', moduleId: 'viewmodels/editDocument', nav: false }
             ]).buildNavigationModel();
@@ -68,7 +40,7 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
             router.isNavigating.subscribe(function (isNavigating) {
                 if (isNavigating)
                     NProgress.start();
-else
+                else
                     NProgress.done();
             });
 
@@ -85,23 +57,39 @@ else
             });
         };
 
+        shell.prototype.databasesLoaded = function (databases) {
+            var systemDatabase = new database("<system>");
+            systemDatabase.isSystem = true;
+            this.databases(databases.concat([systemDatabase]));
+            this.databases()[0].activate();
+        };
+
+        shell.prototype.launchDocEditor = function (docId, docsList) {
+            var editDocUrl = appUrl.forEditDoc(docId, docsList ? docsList.collectionName : null, docsList ? docsList.currentItemIndex() : null);
+            router.navigate(editDocUrl);
+        };
+
         shell.prototype.connectToRavenServer = function () {
             var _this = this;
-            this.databasesLoadedTask = this.ravenDb.databases().fail(function (result) {
+            this.databasesLoadedTask = new getDatabasesCommand().execute().fail(function (result) {
                 return _this.handleRavenConnectionFailure(result);
             }).done(function (results) {
                 _this.databasesLoaded(results);
                 router.activate();
+                _this.fetchBuildVersion();
+                _this.fetchLicenseStatus();
             });
         };
 
         shell.prototype.handleRavenConnectionFailure = function (result) {
             var _this = this;
+            NProgress.done();
             sys.log("Unable to connect to Raven.", result);
             var tryAgain = 'Try again';
             var messageBoxResultPromise = app.showMessage("Couldn't connect to Raven. Details in the browser console.", ":-(", [tryAgain]);
             messageBoxResultPromise.done(function (messageBoxResult) {
                 if (messageBoxResult === tryAgain) {
+                    NProgress.start();
                     _this.connectToRavenServer();
                 }
             });
@@ -113,7 +101,7 @@ else
             if (currentAlert) {
                 // Maintain a 500ms time between alerts; otherwise successive alerts can fly by too quickly.
                 this.queuedAlerts.push(alert);
-                if (currentAlert.type !== alertType.danger) {
+                if (currentAlert.type !== 3 /* danger */) {
                     setTimeout(function () {
                         return _this.closeAlertAndShowNext(_this.currentAlert());
                     }, 500);
@@ -121,7 +109,7 @@ else
             } else {
                 this.currentAlert(alert);
                 var fadeTime = 3000;
-                if (alert.type === alertType.danger || alert.type === alertType.warning) {
+                if (alert.type === 3 /* danger */ || alert.type === 2 /* warning */) {
                     fadeTime = 5000;
                 }
                 setTimeout(function () {
@@ -136,7 +124,7 @@ else
             var nextAlert = this.queuedAlerts.pop();
             setTimeout(function () {
                 return _this.currentAlert(nextAlert);
-            }, 500);
+            }, 500); // Give the alert a chance to fade out before we push in the new alert.
         };
 
         shell.prototype.newDocument = function () {
@@ -158,11 +146,25 @@ else
         };
 
         shell.prototype.databaseChanged = function (db) {
-            if (db && !db.statistics()) {
-                this.ravenDb.databaseStats(db.name).done(function (result) {
+            if (db) {
+                new getDatabaseStatsCommand(db).execute().done(function (result) {
                     return db.statistics(result);
                 });
             }
+        };
+
+        shell.prototype.fetchBuildVersion = function () {
+            var _this = this;
+            new getBuildVersionCommand().execute().done(function (result) {
+                return _this.buildVersion(result);
+            });
+        };
+
+        shell.prototype.fetchLicenseStatus = function () {
+            var _this = this;
+            new getLicenseStatusCommand().execute().done(function (result) {
+                return _this.licenseStatus(result);
+            });
         };
         return shell;
     })();

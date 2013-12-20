@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Voron.Trees
 {
-    public class Cursor : IDisposable
+    public class Cursor 
     {
         public LinkedList<Page> Pages = new LinkedList<Page>();
         private readonly Dictionary<long, Page> _pagesByNum = new Dictionary<long, Page>(); 
@@ -76,10 +76,6 @@ namespace Voron.Trees
 	            return page;
 	        return null;
 	    }
-
-        public void Dispose()
-        {
-        }
 
         public void Clear()
         {

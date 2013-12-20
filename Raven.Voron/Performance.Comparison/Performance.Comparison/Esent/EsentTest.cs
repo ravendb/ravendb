@@ -222,9 +222,10 @@
                         {
                             enumerator.MoveNext();
 
-                            valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
+                            var testData = enumerator.Current;
+                            valueToWrite = GetValueToWrite(valueToWrite, testData.ValueSize);
                             Api.JetPrepareUpdate(session, table, JET_prep.Insert);
-                            Api.SetColumn(session, table, primaryColumnId, enumerator.Current.Id);
+                            Api.SetColumn(session, table, primaryColumnId, testData.Id);
                             Api.SetColumn(session, table, secondaryColumnId, valueToWrite);
                             Api.JetUpdate(session, table);
                         }
@@ -289,6 +290,7 @@
                 Api.JetSetCurrentIndex(session, table, "by_key");
                 foreach (var id in ids)
                 {
+                    Api.MoveBeforeFirst(session, table);
                     Api.MakeKey(session, table, id, MakeKeyGrbit.NewKey);
                     Api.JetSeek(session, table, SeekGrbit.SeekEQ);
 

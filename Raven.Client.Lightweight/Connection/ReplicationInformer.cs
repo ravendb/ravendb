@@ -63,9 +63,9 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
-		/// Urls of failover servers set manually in config file or when document store was initialized
+		/// Failover servers set manually in config file or when document store was initialized
 		/// </summary>
-		public string[] FailoverUrls { get; internal set; }
+		public ReplicationDestination[] FailoverServers { get; internal set; }
 
 		/// <summary>
 		/// Gets the replication destinations.
@@ -335,17 +335,14 @@ namespace Raven.Client.Connection
 
 						if (document == null)
 						{
-							if (FailoverUrls != null && FailoverUrls.Length > 0) // try to use configured failover servers
+							if (FailoverServers != null && FailoverServers.Length > 0) // try to use configured failover servers
 							{
 								var failoverServers = new ReplicationDocument { Destinations = new List<ReplicationDestination>() };
 
-								foreach (var failoverUrl in FailoverUrls)
+								foreach (var failover in FailoverServers)
 								{
-									failoverServers.Destinations.Add(new ReplicationDestination()
-									{
-										Url = failoverUrl
-									});
-					}
+									failoverServers.Destinations.Add(failover);
+								}
 
 								document = new JsonDocument();
 								document.DataAsJson = RavenJObject.FromObject(failoverServers);
@@ -382,7 +379,9 @@ namespace Raven.Client.Connection
 
 				try
 				{
-					document = commands.DirectGet(new OperationMetadata(commands.Url, commands.Credentials), RavenReplicationDestinations);
+					//TODO: check how to add Credentials
+					//document = commands.DirectGet(new OperationMetadata(commands.Url, commands.Credentials), RavenReplicationDestinations);
+					document = commands.DirectGet(new OperationMetadata(commands.Url), RavenReplicationDestinations);
 					failureCounts[commands.Url] = new FailureCounter(); // we just hit the master, so we can reset its failure count
 				}
 				catch (Exception e)
@@ -392,20 +391,19 @@ namespace Raven.Client.Connection
 
 					if (document == null)
 					{
-						if (FailoverUrls != null && FailoverUrls.Length > 0) // try to use configured failover servers
+						if (FailoverServers != null && FailoverServers.Length > 0) // try to use configured failover servers
 						{
 							var failoverServers = new ReplicationDocument {Destinations = new List<ReplicationDestination>()};
 
-							foreach (var failoverUrl in FailoverUrls)
+							foreach (var failover in FailoverServers)
 							{
-								failoverServers.Destinations.Add(new ReplicationDestination()
-								{
-									Url = failoverUrl
-								});
+								failoverServers.Destinations.Add(failover);
 							}
 
 							document = new JsonDocument();
 							document.DataAsJson = RavenJObject.FromObject(failoverServers);
+
+							fromFailoverUrls = true;
 						}
 					}
 				}

@@ -667,7 +667,7 @@ namespace Raven.Client.Document
 
         protected void ClearSortHints(IAsyncDatabaseCommands dbCommands)
         {
-            foreach (var key in dbCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
+            foreach (var key in dbCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
             {
                 dbCommands.OperationsHeaders.Remove(key);
             }

@@ -30,16 +30,14 @@ namespace Voron.Trees
 		}
 
 
-		public unsafe static Stream Stream(Transaction tx, NodeHeader* node)
+        public unsafe static ValueReader Reader(Transaction tx, NodeHeader* node)
 		{
 			if (node->Flags == (NodeFlags.PageRef))
 			{
 				var overFlowPage = tx.GetReadOnlyPage(node->PageNumber);
-				return new UnmanagedMemoryStream(overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize,
-												 overFlowPage.OverflowSize, FileAccess.Read);
+                return new ValueReader(overFlowPage.Base + Constants.PageHeaderSize, overFlowPage.OverflowSize);
 			}
-			return new UnmanagedMemoryStream((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize,
-											 node->DataSize, FileAccess.Read);
+            return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
 		}
 
 	    public unsafe static Slice GetData(Transaction tx, NodeHeader* node)

@@ -28,7 +28,7 @@ namespace Voron.Impl.Backup
 				{
 					long allocatedPages;
 
-					SafeList<JournalFile> files; // thread safety copy
+					ImmutableAppendOnlyList<JournalFile> files; // thread safety copy
 					long lastWrittenLogPage = -1;
 					long lastWrittenLogFile = -1;
 					using (var txw = env.NewTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
@@ -57,7 +57,10 @@ namespace Voron.Impl.Backup
 						// journal files snapshot
 						files = env.Journal.Files;
 
-						files.ForEach(x => x.AddRef());
+						foreach (var journalFile in files)
+						{
+							journalFile.AddRef();
+						}
 
 						if (env.Journal.CurrentFile != null)
 						{
@@ -100,7 +103,10 @@ namespace Voron.Impl.Backup
 					}
 					finally
 					{
-						files.ForEach(x => x.Release());
+						foreach (var journalFile in files)
+						{
+							journalFile.Release();
+						}
 					}
 				}
 			}

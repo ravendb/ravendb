@@ -4,11 +4,22 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using FoundationDB.Client;
+using FoundationDB.Layers.Tuples;
 
 namespace Performance.Comparison.FoundationDB
 {
     public class FdbTest : StoragePerformanceTestBase
     {
+
+        /// <summary>set this to null to use the default cluter file, or to the path of your custom fdb.cluster when testing against a remote cluster</summary>
+        private const string CLUSTER_FILE = null;
+
+        /// <summary>Database name (must be 'DB')</summary>
+        private const string DB_NAME = "DB";
+
+        /// <summary>prefix for all the keys</summary>
+        private const string PREFIX = "TEST"; 
+
         public FdbTest(byte[] buffer)
             : base(buffer)
         {
@@ -19,19 +30,19 @@ namespace Performance.Comparison.FoundationDB
             get { return "FoundationDB"; }
         }
 
-        private async Task NewDatabaseAsync()
+        private Task<FdbDatabase> OpenDatabaseAsync()
         {
-            using (FdbDatabase db = await Fdb.OpenAsync())
-            using (IFdbTransaction tx = db.BeginTransaction())
-            {
-                tx.ClearRange(new FdbKeyRange(FdbKey.MinValue, FdbKey.MaxValue));
-                await tx.CommitAsync();
-            }
+            var globalSpace = FdbSubspace.Create(FdbTuple.Create(PREFIX));
+
+            return Fdb.OpenAsync(CLUSTER_FILE, DB_NAME, globalSpace);
         }
 
-        private void NewDatabase()
+        private async Task NewDatabaseAsync()
         {
-            NewDatabaseAsync().Wait();
+            using (FdbDatabase db = await OpenDatabaseAsync())
+            {
+                await db.ClearRangeAsync(db.GlobalSpace);
+            }
         }
 
         public override List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data, PerfTracker perfTracker)
@@ -109,9 +120,9 @@ namespace Performance.Comparison.FoundationDB
             int itemsPerTransaction,
             int numberOfTransactions, PerfTracker perfTracker)
         {
-            NewDatabase();
+            await NewDatabaseAsync();
 
-            using (FdbDatabase db = await Fdb.OpenAsync())
+            using (FdbDatabase db = await OpenDatabaseAsync())
             {
                 IEnumerator<TestData> enumerator = data.GetEnumerator();
 
@@ -135,9 +146,9 @@ namespace Performance.Comparison.FoundationDB
             IEnumerable<TestData> data,
             int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker, int numberOfThreads)
         {
-            NewDatabase();
+            await NewDatabaseAsync();
 
-            using (FdbDatabase db = await Fdb.OpenAsync())
+            using (FdbDatabase db = await OpenDatabaseAsync())
             {
                 long elapsedMilliseconds;
                 List<PerformanceRecord> records = ExecuteWriteWithParallel(
@@ -160,6 +171,8 @@ namespace Performance.Comparison.FoundationDB
             byte[] valueToWrite = null;
             var records = new List<PerformanceRecord>();
 
+            var location = db.GlobalSpace;
+
             sw.Restart();
             for (int transactions = 0; transactions < numberOfTransactions; transactions++)
             {
@@ -172,7 +185,7 @@ namespace Performance.Comparison.FoundationDB
 
                         valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
 
-                        tx.Set(db.Pack(Slice.FromFixed32(enumerator.Current.Id)), Slice.Create(valueToWrite));
+                        tx.Set(location.Pack(enumerator.Current.Id), Slice.Create(valueToWrite));
                     }
 
                     await tx.CommitAsync();
@@ -212,7 +225,7 @@ namespace Performance.Comparison.FoundationDB
         {
             Stopwatch sw = Stopwatch.StartNew();
 
-            using (FdbDatabase db = await Fdb.OpenAsync())
+            using (FdbDatabase db = await OpenDatabaseAsync())
             {
                 await ReadInternalAsync(ids, perfTracker, db);
             }
@@ -232,7 +245,7 @@ namespace Performance.Comparison.FoundationDB
             PerfTracker perfTracker,
             int numberOfThreads)
         {
-            using (FdbDatabase db = await Fdb.OpenAsync())
+            using (FdbDatabase db = await OpenDatabaseAsync())
             {
                 return ExecuteReadWithParallel(operation, ids, numberOfThreads,
                     () => ReadInternal(ids, perfTracker, db));
@@ -252,14 +265,35 @@ namespace Performance.Comparison.FoundationDB
 
         private static async Task ReadInternalAsync(IEnumerable<int> ids, PerfTracker perfTracker, FdbDatabase db)
         {
+            const int BATCH_SIZE = 1000;
+
+            var list = new List<int>(BATCH_SIZE);
+            var location = db.GlobalSpace;
+
             Stopwatch sw = Stopwatch.StartNew();
+
             foreach (int id in ids)
             {
-                using (var tx = db.BeginTransaction())
+                list.Add(id);
+
+                if (list.Count >= BATCH_SIZE)
                 {
-                    await tx.GetAsync(db.Pack(Slice.FromFixed32(id)));
+                    using (var tx = db.BeginReadOnlyTransaction())
+                    {
+                        await tx.GetValuesAsync(location.PackRange(list));
+                    }
+                    list.Clear();
                 }
             }
+
+            if (list.Count > 0)
+            {
+                using (var tx = db.BeginReadOnlyTransaction())
+                {
+                    await tx.GetValuesAsync(location.PackRange(list));
+                }
+            }
+
             perfTracker.Record(sw.ElapsedMilliseconds);
         }
     }

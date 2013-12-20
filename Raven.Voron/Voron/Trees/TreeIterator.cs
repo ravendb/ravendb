@@ -11,7 +11,7 @@ namespace Voron.Trees
 		private readonly Tree _tree;
 		private readonly Transaction _tx;
 		private readonly SliceComparer _cmp;
-		private readonly Cursor _cursor;
+		private Cursor _cursor;
 		private Page _currentPage;
 		private readonly Slice _currentKey = new Slice(SliceOptions.Key);
 
@@ -20,7 +20,6 @@ namespace Voron.Trees
 			_tree = tree;
 			_tx = tx;
 			_cmp = cmp;
-			_cursor = tx.NewCursor(_tree);
 		}
 
 
@@ -29,9 +28,24 @@ namespace Voron.Trees
 			return NodeHeader.GetDataSize(_tx, Current);
 		}
 
+		public IIterator CreateMutliValueIterator()
+		{
+			var item = Current;
+			if (item->Flags == NodeFlags.MultiValuePageRef)
+			{
+				var tree = _tree.OpenOrCreateMultiValueTree(_tx, _currentKey, item);
+
+				return tree.Iterate(_tx);
+			}
+
+			return new SingleEntryIterator(_cmp, item, _tx);
+		}
+
 		public bool Seek(Slice key)
 		{
-			_currentPage = _tree.FindPageFor(_tx, key, _cursor);
+			Lazy<Cursor> lazy;
+			_currentPage = _tree.FindPageFor(_tx, key, out lazy);
+			_cursor = lazy.Value;
 			_cursor.Pop();
 			var node = _currentPage.Search(key, _cmp);
 			if (node == null)
@@ -136,14 +150,13 @@ namespace Voron.Trees
 			return _currentPage != null && this.ValidateCurrentKey(Current, _cmp);
 		}
 
-		public Stream CreateStreamForCurrent()
+		public ValueReader CreateReaderForCurrent()
 		{
-			return NodeHeader.Stream(_tx, Current);
+			return NodeHeader.Reader(_tx, Current);
 		}
 
 		public void Dispose()
 		{
-			_cursor.Dispose();
 		}
 
 		public Slice RequiredPrefix { get; set; }

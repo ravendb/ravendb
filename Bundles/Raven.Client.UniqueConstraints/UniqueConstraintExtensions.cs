@@ -22,12 +22,20 @@ namespace Raven.Client.UniqueConstraints
 			if (value == null) throw new ArgumentNullException("value", "The unique value cannot be null");
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
 			var body = GetMemberExpression(keySelector);
-		    var propertyName = body.Member.Name;
-            var att = (UniqueConstraintAttribute)Attribute.GetCustomAttribute(body.Member, typeof(UniqueConstraintAttribute));
+			var propertyName = body.Member.Name;
+			var att = (UniqueConstraintAttribute)Attribute.GetCustomAttribute(body.Member, typeof(UniqueConstraintAttribute));
+			bool isDef = Attribute.IsDefined(body.Member, typeof(UniqueConstraintAttribute));
 
+			if (isDef == false)
+			{
+				var msg = string.Format(
+					"You are calling LoadByUniqueConstraints on {0}.{1}, but you haven't marked this property with [UniqueConstraint]",
+					body.Member.DeclaringType.Name, propertyName);
+				throw new InvalidOperationException(msg);
+			}
 
 			var uniqueId = "UniqueConstraints/" + typeName.ToLowerInvariant() + "/" + propertyName.ToLowerInvariant() + "/" +
-                           Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value, att.CaseInsensitive);
+						   Raven.Bundles.UniqueConstraints.Util.EscapeUniqueValue(value, att.CaseInsensitive);
 			var constraintDoc = session.Include("RelatedId").Load<RavenJObject>(uniqueId);
 			if (constraintDoc == null)
 				return default(T);

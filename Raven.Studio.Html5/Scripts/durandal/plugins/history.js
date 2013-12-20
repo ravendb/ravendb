@@ -1,5 +1,5 @@
 /**
- * Durandal 2.0.0 Copyright (c) 2012 Blue Spire Consulting, Inc. All Rights Reserved.
+ * Durandal 2.0.1 Copyright (c) 2012 Blue Spire Consulting, Inc. All Rights Reserved.
  * Available via the MIT license.
  * see: http://durandaljs.com or https://github.com/BlueSpire/Durandal for details.
  */
@@ -79,7 +79,7 @@ define(['durandal/system', 'jquery'], function (system, $) {
     history.getFragment = function(fragment, forcePushState) {
         if (fragment == null) {
             if (history._hasPushState || !history._wantsHashChange || forcePushState) {
-                fragment = history.location.pathname;
+                fragment = history.location.pathname + history.location.search;
                 var root = history.root.replace(trailingSlash, '');
                 if (!fragment.indexOf(root)) {
                     fragment = fragment.substr(root.length);
@@ -243,7 +243,13 @@ define(['durandal/system', 'jquery'], function (system, $) {
         }
 
         history.fragment = fragment;
+
         var url = history.root + fragment;
+
+        // Don't include a trailing slash on the root.
+        if(fragment === '' && url !== '/') {
+            url = url.slice(0, -1);
+        }
 
         // If pushState is available, we use it to set the fragment as a real URL.
         if (history._hasPushState) {

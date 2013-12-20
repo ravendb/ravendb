@@ -17,7 +17,7 @@ namespace Voron.Impl.Journal
 			public IntPtr Handle;
 		}
 
-		private SafeList<Buffer> _buffers = SafeList<Buffer>.Empty;
+		private ImmutableAppendOnlyList<Buffer> _buffers = ImmutableAppendOnlyList<Buffer>.Empty;
 		private long _lastPos;
 
 		private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
@@ -69,7 +69,7 @@ namespace Voron.Impl.Journal
 			{
 				Marshal.FreeHGlobal(buffer.Handle);
 			}
-			_buffers = SafeList<Buffer>.Empty;
+			_buffers = ImmutableAppendOnlyList<Buffer>.Empty;
 		}
 
 		public Task WriteGatherAsync(long position, byte*[] pages)
@@ -91,7 +91,7 @@ namespace Voron.Impl.Journal
 					Pointer = (byte*)handle.ToPointer(),
 					SizeInPages = pages.Length
 				};
-				_buffers = _buffers.Add(buffer);
+				_buffers = _buffers.Append(buffer);
 
 				for (int index = 0; index < pages.Length; index++)
 				{

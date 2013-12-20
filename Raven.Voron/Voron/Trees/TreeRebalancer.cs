@@ -9,32 +9,27 @@ namespace Voron.Trees
     {
         private readonly Transaction _tx;
 		private readonly Tree _tree;
-        private readonly SliceComparer _cmp;
 
-		public TreeRebalancer(Transaction tx, Tree tree, SliceComparer cmp)
+        public TreeRebalancer(Transaction tx, Tree tree)
         {
             _tx = tx;
 			_tree = tree;
-            _cmp = cmp;
         }
 
         public Page Execute(Cursor cursor, Page page)
         {
+            _tx.ClearRecentFoundPages(_tree);
             if (cursor.PageCount <= 1) // the root page
             {
                 RebalanceRoot(cursor, page);
                 return null;
             }
-			
-			var parentPage = _tx.ModifyPage(cursor.ParentPage.PageNumber, cursor);
+
+			var parentPage = _tx.ModifyPage(cursor.ParentPage.PageNumber, cursor.ParentPage);
 			cursor.Update(cursor.Pages.First.Next, parentPage);
 
             if (page.NumberOfEntries == 0) // empty page, just delete it and fixup parent
             {
-				if (page.PageNumber == 2053 && parentPage.PageNumber == 726)
-				{
-					DebugStuff.DumpHumanReadable(_tx, _tree.State.RootPageNumber, "before-2053-removal-");
-				}
 				// need to delete the implicit left page, shift right 
                 if (parentPage.LastSearchPosition == 0 && parentPage.NumberOfEntries > 2)
                 {
@@ -50,12 +45,6 @@ namespace Voron.Trees
 				
 				_tx.FreePage(page.PageNumber);
                 cursor.Pop();
-
-				if (page.PageNumber == 2053 && parentPage.PageNumber == 726)
-				{
-					DebugStuff.DumpHumanReadable(_tx, _tree.State.RootPageNumber, "after-2053-removal-");
-				}
-
 
                 return parentPage;
             }
@@ -77,10 +66,6 @@ namespace Voron.Trees
                 // neighbor is over the min size and has enough key, can move just one key to  the current page
 	            if (page.IsBranch)
 	            {
-		            if (page.PageNumber == 916 && sibling.PageNumber == 1866)
-		            {
-			            DebugStuff.DumpHumanReadable(_tx,_tree.State.RootPageNumber,"before-exception-");
-		            }
 		            MoveBranchNode(parentPage, sibling, page);
 	            }
 	            else
@@ -144,7 +129,7 @@ namespace Voron.Trees
             if (parentPage.LastSearchPosition == 0) // we are the left most item
             {
                 parentPage.LastSearchPosition = 1;
-                sibling = _tx.ModifyPage(parentPage.GetNode(1)->PageNumber, c);
+                sibling = _tx.ModifyPage(parentPage.GetNode(1)->PageNumber, null);
                 parentPage.LastSearchPosition = 0;
                 sibling.LastSearchPosition = 0;
                 page.LastSearchPosition = page.NumberOfEntries;
@@ -156,7 +141,7 @@ namespace Voron.Trees
                 if (beyondLast)
                     parentPage.LastSearchPosition--;
                 parentPage.LastSearchPosition--;
-                sibling = _tx.ModifyPage(parentPage.GetNode(parentPage.LastSearchPosition)->PageNumber, c);
+                sibling = _tx.ModifyPage(parentPage.GetNode(parentPage.LastSearchPosition)->PageNumber, null);
                 parentPage.LastSearchPosition++;
                 if (beyondLast)
                     parentPage.LastSearchPosition++;
@@ -296,7 +281,7 @@ namespace Voron.Trees
 			_tree.State.Depth = 1;
 			_tree.State.PageCount = 1;
 
-			var rootPage = _tx.ModifyPage(node->PageNumber, cursor);
+			var rootPage = _tx.ModifyPage(node->PageNumber, null);
 			_tree.State.RootPageNumber = rootPage.PageNumber;
 
             Debug.Assert(rootPage.Dirty);

@@ -6,6 +6,8 @@
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
@@ -18,6 +20,7 @@ namespace Raven.Database.Server.Controllers
 		public JsonContent(RavenJToken token = null)
 		{
 			Token = token;
+			Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
 		}
 
 		public RavenJToken Token { get; set; }
