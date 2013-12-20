@@ -82,24 +82,24 @@
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return Read(string.Format("[LMDB] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
         public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return ReadParallel(string.Format("[LMDB] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker, numberOfThreads);
         }
 
-        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker)
+        public override PerformanceRecord ReadRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker)
         {
             return Read(string.Format("[LMDB] random read ({0} items)", Constants.ReadItems), randomIds, perfTracker);
         }
 
-        public override PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads)
+        public override PerformanceRecord ReadParallelRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker, int numberOfThreads)
         {
             return ReadParallel(string.Format("[LMDB] parallel random read ({0} items)", Constants.ReadItems), randomIds, perfTracker, numberOfThreads);
         }
@@ -182,7 +182,7 @@
             return records;
         }
 
-        private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
+        private PerformanceRecord Read(string operation, IEnumerable<uint> ids, PerfTracker perfTracker)
         {
 			LightningDatabase db;
             using (var env = NewEnvironment(out db, delete: false))
@@ -203,7 +203,7 @@
             }
         }
 
-        private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker, int numberOfThreads)
+        private PerformanceRecord ReadParallel(string operation, IEnumerable<uint> ids, PerfTracker perfTracker, int numberOfThreads)
         {
 			LightningDatabase db;
             using (var env = NewEnvironment(out db, delete: false))
@@ -212,7 +212,7 @@
             }
         }
 
-        private static long ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, LightningEnvironment env,
+        private static long ReadInternal(IEnumerable<uint> ids, PerfTracker perfTracker, LightningEnvironment env,
 			LightningDatabase db)
         {
             using (var tx = env.BeginTransaction(LightningDB.TransactionBeginFlags.ReadOnly))

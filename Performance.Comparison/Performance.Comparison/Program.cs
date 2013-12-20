@@ -288,18 +288,18 @@ namespace Performance.Comparison
                 _intermediateOffset = PermuteQPR(PermuteQPR(seedBase + 1) + 0x46790905);
             }
 
-            public int Next()
+            public uint Next()
             {
-                return (int)PermuteQPR((PermuteQPR(_index++) + _intermediateOffset) ^ 0x5bf03635);
+				return PermuteQPR((PermuteQPR(_index++) + _intermediateOffset) ^ 0x5bf03635);
             }
         }
 
         private static IEnumerable<TestData> InitSequentialNumbers(int count, int minValueSize, int maxValueSize)
         {
-            return InitValue(Enumerable.Range(0, count), minValueSize, maxValueSize);
+	        return InitValue(Enumerable.Range(0, count).Select(x => (uint) x), minValueSize, maxValueSize);
         }
 
-        private static IEnumerable<TestData> InitValue(IEnumerable<int> ids, int minValueSize, int maxValueSize)
+        private static IEnumerable<TestData> InitValue(IEnumerable<uint> ids, int minValueSize, int maxValueSize)
         {
             var random = new Random(1337 ^ 13);
 

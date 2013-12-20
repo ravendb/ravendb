@@ -34,9 +34,9 @@ namespace Performance.Comparison
 
         public abstract PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads);
 
-        public abstract PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker);
+        public abstract PerformanceRecord ReadRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker);
 
-        public abstract PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads);
+        public abstract PerformanceRecord ReadParallelRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker, int numberOfThreads);
 
         protected byte[] GetValueToWrite(byte[] currentValue, int newSize)
         {
@@ -86,7 +86,7 @@ namespace Performance.Comparison
                 .ToList();
         }
 
-        protected PerformanceRecord ExecuteReadWithParallel(string operation, IEnumerable<int> ids, int numberOfThreads, Func<long> readAction)
+        protected PerformanceRecord ExecuteReadWithParallel(string operation, IEnumerable<uint> ids, int numberOfThreads, Func<long> readAction)
         {
             var countdownEvent = new CountdownEvent(numberOfThreads);
 
