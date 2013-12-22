@@ -39,25 +39,9 @@ namespace RavenFS.Tests
 			configuration.Port = 8079;
 
 			Task.Factory.StartNew(() => // initialize in MTA thread
-									  {
-
-										  //config = new HttpSelfHostConfiguration(Url)
-										  //		   {
-										  //			   MaxReceivedMessageSize = Int64.MaxValue,
-										  //			   TransferMode = TransferMode.Streamed
-										  //		   };
-										  //var configuration = new InMemoryRavenConfiguration();
-										  //configuration.InitializeRavenFs();
-										  //configuration.DataDirectory = "~/Test";
-										  //ravenFileSystem = new RavenFileSystem(configuration);
-										  //ravenFileSystem.Start(config);
-//	  ravenFileSystem.Start(config);
-										
-										//  ravenFileSystem = new RavenFileSystem(configuration);
-									
-										  server = new RavenDbServer(configuration);
-									  })
-				.Wait();
+			{
+				server = new RavenDbServer(configuration);
+			}).Wait();
 
 			
 
