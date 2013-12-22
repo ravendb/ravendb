@@ -48,7 +48,7 @@ namespace Raven.Database.Server.Responders.Admin
 				context.SetStatusToBadRequest();
 
 				var errorMessage = (databaseDocument == null || String.IsNullOrWhiteSpace(databaseDocument.Id))
-					? "Database.Document file is invalid - database name was not found and not supplied in the request"
+					? "Database.Document file is invalid - database name was not found and not supplied in the request (Id property is missing or null). This is probably a bug - should never happen."
 					: "A database name must be supplied if the restore location does not contain a valid Database.Document file";
 
 				context.WriteJson(new

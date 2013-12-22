@@ -17,12 +17,12 @@ namespace Raven.Client.Extensions
 			AssertValidName(name);
 			var doc = RavenJObject.FromObject(new DatabaseDocument
 			                                          	{
+															Id = name,
 			                                          		Settings =
 			                                          			{
 			                                          				{"Raven/DataDir", Path.Combine("~", Path.Combine("Databases", name))}
 			                                          			}
 			                                          	});
-			doc.Remove("Id");
 			return doc;
 		}
 
