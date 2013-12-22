@@ -5,26 +5,27 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Replication;
 
 namespace Raven.Abstractions.Data
 {
 	public class FailoverServers
 	{
-		private readonly HashSet<string> forDefaultDatabase = new HashSet<string>();
-		private readonly IDictionary<string, HashSet<string>> forDatabases = new Dictionary<string, HashSet<string>>();
+		private readonly HashSet<ReplicationDestination> forDefaultDatabase = new HashSet<ReplicationDestination>();
+		private readonly IDictionary<string, HashSet<ReplicationDestination>> forDatabases = new Dictionary<string, HashSet<ReplicationDestination>>();
 
-		public string[] ForDefaultDatabase
+		public ReplicationDestination[] ForDefaultDatabase
 		{
 			get
 			{
-				var result = new string[forDefaultDatabase.Count];
+				var result = new ReplicationDestination[forDefaultDatabase.Count];
 				forDefaultDatabase.CopyTo(result);
 				return result;
 			}
 			set { AddForDefaultDatabase(value); }
 		}
 
-		public IDictionary<string, string[]> ForDatabases
+		public IDictionary<string, ReplicationDestination[]> ForDatabases
 		{
 			set
 			{
@@ -45,34 +46,34 @@ namespace Raven.Abstractions.Data
 			return forDatabases.Keys.Contains(databaseName) && forDatabases[databaseName] != null && forDatabases[databaseName].Count > 0;
 		}
 
-		public string[] GetForDatabase(string databaseName)
+		public ReplicationDestination[] GetForDatabase(string databaseName)
 		{
 			if (forDatabases.Keys.Contains(databaseName) == false || forDatabases[databaseName] == null)
 				return null;
 
-			var result = new string[forDatabases[databaseName].Count];
+			var result = new ReplicationDestination[forDatabases[databaseName].Count];
 			forDatabases[databaseName].CopyTo(result);
 			return result;
 		}
 
-		public void AddForDefaultDatabase(params string[] urls)
+		public void AddForDefaultDatabase(params ReplicationDestination[] destinations)
 		{
-			foreach (var url in urls)
+			foreach (var dest in destinations)
 			{
-				forDefaultDatabase.Add(url.EndsWith("/") ? url.Substring(0, url.Length - 1) : url);
+				forDefaultDatabase.Add(dest);
 			}
 		}
 
-		public void AddForDatabase(string databaseName, params string[] urls)
+		public void AddForDatabase(string databaseName, params ReplicationDestination[] destinations)
 		{
 			if (forDatabases.Keys.Contains(databaseName) == false)
 			{
-				forDatabases[databaseName] = new HashSet<string>();
+				forDatabases[databaseName] = new HashSet<ReplicationDestination>();
 			}
 
-			foreach (var url in urls)
+			foreach (var dest in destinations)
 			{
-				forDatabases[databaseName].Add(url.EndsWith("/") ? url.Substring(0, url.Length - 1) : url);
+				forDatabases[databaseName].Add(dest);
 			}
 		}
 	}
