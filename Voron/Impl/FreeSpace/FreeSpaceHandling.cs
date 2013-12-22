@@ -23,6 +23,9 @@ namespace Voron.Impl.FreeSpace
 			if (tx.State.FreeSpaceRoot == null)
 				return null; // initial setup
 
+		    if (tx.State.FreeSpaceRoot.State.EntriesCount == 0)
+		        return null;
+
 			using (var it = tx.State.FreeSpaceRoot.Iterate(tx))
 			{
 				var buffer = new byte[8];

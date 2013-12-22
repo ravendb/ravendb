@@ -79,7 +79,7 @@ namespace Voron.Impl.Paging
 			}
 		}
 
-		public override byte* AcquirePagePointer(long pageNumber)
+		public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
 		{
 			if (pageNumber >= NumberOfAllocatedPages)
 				throw new InvalidOperationException("Tried to read a page that wasn't committed");
@@ -131,18 +131,22 @@ namespace Voron.Impl.Paging
 			return "memory";
 		}
 
-		public override void Write(Page page, long? pageNumber)
+		public override int Write(Page page, long? pageNumber)
 		{
 			var toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
 			var requestedPageNumber = pageNumber ?? page.PageNumber;
 
-			WriteDirect(page, requestedPageNumber, toWrite);
+			return WriteDirect(page, requestedPageNumber, toWrite);
 		}
 
-		public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
+		public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
 		{
 			EnsureContinuous(null, pagePosition, pagesToWrite);
-			NativeMethods.memcpy(AcquirePagePointer(pagePosition), start.Base, pagesToWrite * PageSize);
+
+			var toCopy = pagesToWrite*PageSize;
+			NativeMethods.memcpy(AcquirePagePointer(pagePosition), start.Base, toCopy);
+
+			return toCopy;
 		}
 
 		public override void Dispose()
