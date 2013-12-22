@@ -51,13 +51,14 @@ namespace Voron.Impl.Journal
 
             if (current->TransactionId <= _lastSyncedTransactionId)
             {
+	            LastTransactionHeader = current;
                 _readingPage += compressedPages;
                 return true; // skipping
             }
 
 	        if (checkCrc)
 	        {
-		        uint crc = Crc.Value(_pager.Read(_readingPage).Base, 0, compressedPages * AbstractPager.PageSize);
+		        uint crc = Crc.Value(_pager.AcquirePagePointer(_readingPage), 0, compressedPages * AbstractPager.PageSize);
 
 				if (crc != current->Crc)
 				{
@@ -69,12 +70,12 @@ namespace Voron.Impl.Journal
 	        }
 
             _recoveryPager.EnsureContinuous(null, _recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
-            var dataPage = _recoveryPager.GetWritable(_recoveryPage);
+            var dataPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
 
-            NativeMethods.memset(dataPage.Base, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
+            NativeMethods.memset(dataPage, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
             try
             {
-                LZ4.Decode64(_pager.AcquirePagePointer(_readingPage), current->CompressedSize, dataPage.Base, current->UncompressedSize, true);
+                LZ4.Decode64(_pager.AcquirePagePointer(_readingPage), current->CompressedSize, dataPage, current->UncompressedSize, true);
             }
             catch (Exception e)
             {

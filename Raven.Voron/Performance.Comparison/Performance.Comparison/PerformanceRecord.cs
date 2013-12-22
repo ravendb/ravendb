@@ -13,6 +13,7 @@ namespace Performance.Comparison
 		public string Operation;
 		public DateTime Time;
 		public long Duration;
+	    public long Bytes;
 		public long ProcessedItems;
 	}
 }

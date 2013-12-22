@@ -1,15 +1,18 @@
-﻿using System;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.IO.MemoryMappedFiles;
-using System.Runtime.InteropServices;
-using Microsoft.Win32.SafeHandles;
-using Voron.Trees;
-
-namespace Voron.Impl.Paging
+﻿namespace Voron.Impl.Paging
 {
-    public unsafe class Win32MemoryMapPager : AbstractPager
+	using System;
+	using System.ComponentModel;
+	using System.Diagnostics;
+	using System.IO;
+	using System.IO.MemoryMappedFiles;
+	using System.Runtime.InteropServices;
+
+	using Microsoft.Win32.SafeHandles;
+
+	using Voron.Trees;
+	using Voron.Util;
+
+	public unsafe class Win32MemoryMapPager : AbstractPager
     {
         private readonly NativeFileAccess access;
         private readonly FileInfo _fileInfo;
@@ -21,6 +24,9 @@ namespace Voron.Impl.Paging
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
+
+        [DllImport("kernel32.dll")]
+        static extern bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
 
         [DllImport("kernel32.dll")]
         static extern IntPtr GetCurrentProcess();
@@ -167,23 +173,26 @@ namespace Voron.Impl.Paging
             return "MemMap: " + _fileInfo.Name;
         }
 
-        public override byte* AcquirePagePointer(long pageNumber)
+        public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
         {
-            return PagerState.MapBase + (pageNumber * PageSize);
+            return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
         }
 
         public override void Sync()
         {
-            FlushFileBuffers(_handle);
+            if(FlushViewOfFile(PagerState.MapBase, new IntPtr(PagerState.Accessor.Capacity)) == false)
+                    throw new Win32Exception();
+            if (FlushFileBuffers(_handle) == false)
+                throw new Win32Exception();
         }
 
-        public override void Write(Page page, long? pageNumber)
+        public override int Write(Page page, long? pageNumber)
         {
             var startPage = pageNumber ?? page.PageNumber;
 
             var toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
 
-            WriteDirect(page, startPage, toWrite);
+            return WriteDirect(page, startPage, toWrite);
         }
 
         public override string ToString()
@@ -191,9 +200,12 @@ namespace Voron.Impl.Paging
             return _fileInfo.Name;
         }
 
-        public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
+        public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
         {
-            NativeMethods.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, pagesToWrite * PageSize);
+	        var toCopy = pagesToWrite*PageSize;
+            NativeMethods.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
+
+	        return toCopy;
         }
 
         public override void Dispose()
