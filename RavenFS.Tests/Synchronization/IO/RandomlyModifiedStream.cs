@@ -5,15 +5,21 @@ namespace RavenFS.Tests.Synchronization.IO
 {
 	public class RandomlyModifiedStream : Stream
 	{
-		private readonly double _probability;
 		private readonly Random _random;
 		private readonly Stream _source;
-
+		private readonly int calls;
+		private int reads;
 
 		public RandomlyModifiedStream(Stream source, double probability, int? seed = null)
+			: this(source, (int)(probability*100), seed)
+		{
+		}
+
+
+		public RandomlyModifiedStream(Stream source, int calls, int? seed = null)
 		{
 			_source = source;
-			_probability = probability;
+			this.calls = calls;
 
 			if (seed != null)
 			{
@@ -69,7 +75,8 @@ namespace RavenFS.Tests.Synchronization.IO
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			var result = _source.Read(buffer, offset, count);
-			if (_random.NextDouble() < _probability)
+
+			if (reads++ % calls == 0)
 			{
 				var oneByte = new byte[1];
 				_random.NextBytes(oneByte);

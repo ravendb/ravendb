@@ -138,7 +138,7 @@ namespace RavenFS.Tests.Synchronization
 
 		[Theory]
 		[InlineData(1024*1024, 1)] // this pair of parameters heleped to discover storage reading issue 
-		//[InlineData(1024*1024, null)]
+		[InlineData(1024*1024, null)]
 		public void Synchronization_of_already_synchronized_file_should_detect_that_no_work_is_needed(int size, int? seed)
 		{
 			Random r;
@@ -153,6 +153,11 @@ namespace RavenFS.Tests.Synchronization
 			var destinationContent = new RandomlyModifiedStream(new RandomStream(size, 1), 0.01, seed);
 			var destinationClient = NewClient(0);
 			var sourceClient = NewClient(1);
+
+			var srcMd5 = sourceContent.GetMD5Hash();
+			sourceContent.Position = 0;
+			var dstMd5 = (new RandomlyModifiedStream(new RandomStream(size, 1), 0.01, seed)).GetMD5Hash();
+
 
 			destinationClient.UploadAsync("test.bin", new NameValueCollection(), destinationContent).Wait();
 			sourceClient.UploadAsync("test.bin", new NameValueCollection(), sourceContent).Wait();
