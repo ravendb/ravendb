@@ -23,7 +23,7 @@ namespace Voron
             var position = stream.Position;
             _len = (int)(stream.Length - stream.Position);
             _buffer = new byte[_len];
-
+	        
             int pos = 0;
             while (true)
             {
@@ -33,11 +33,15 @@ namespace Voron
                 pos += read;
             }
             stream.Position = position;
-
         }
 
 	    public Stream AsStream()
-	    {
+	    {		    
+			if(_val == null)
+			{
+				return new MemoryStream(_buffer, writable: false);
+			}
+			
 		    return new UnmanagedMemoryStream(_val, _len, _len, FileAccess.Read);
 	    }
 
@@ -117,6 +121,5 @@ namespace Voron
                 stream.Write(buffer, 0, read);
             }
         }
-
-    }
+   }
 }
