@@ -12,7 +12,7 @@ namespace RavenFS.Tests
 {
 	public class WebApiTest : WithNLog, IDisposable
 	{
-		private const string Url = "http://localhost.fiddler:8079";
+		private const string Url = "http://localhost:8079";
 		protected WebClient WebClient;
 		private RavenFileSystem ravenFileSystem;
 		private RavenDbServer server;

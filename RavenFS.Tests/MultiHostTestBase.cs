@@ -17,7 +17,7 @@ namespace RavenFS.Tests
 {
 	public abstract class MultiHostTestBase : WithNLog, IDisposable
 	{
-		protected const string UrlBase = "http://localhost.fiddler:";
+		protected const string UrlBase = "http://localhost:";
 		public static readonly int[] Ports = {19079, 19081};
 
 		private readonly IList<IDisposable> disposables = new List<IDisposable>();
