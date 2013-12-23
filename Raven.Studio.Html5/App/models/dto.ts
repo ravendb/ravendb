@@ -15,7 +15,7 @@ interface collectionInfoDto {
 }
 
 interface documentDto {
-	'@metadata': documentMetadataDto;
+	'@metadata'?: documentMetadataDto;
 }
 
 interface documentMetadataDto {

@@ -74,7 +74,7 @@ class ctor {
         }
 
         this.gridViewport = this.grid.find(".ko-grid-viewport-container");
-        this.gridViewport.on('StickyFooterHeightSet', () => this.onWindowHeightChanged());
+        this.gridViewport.on('DynamicHeightSet', () => this.onWindowHeightChanged());
         this.gridViewport.scroll(() => this.onGridScrolled());
         this.setupContextMenu();
         this.setupKeyboardShortcuts();

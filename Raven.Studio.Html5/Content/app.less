@@ -1,4 +1,6 @@
-﻿html, body {
+﻿@selectionColor: #ffc;
+
+html, body {
     height: 100%;
 }
 
@@ -280,7 +282,7 @@
         }
 
         &.checked {
-            background-color: #ffc;
+            background-color: @selectionColor;
         }
     }
 
@@ -323,6 +325,53 @@
 
 .keyboard-shortcut {
     margin-left: 20px;
+}
+
+.single-line-row-table {
+    table-layout: fixed;
+    width: 100%;
+    overflow-x: hidden;
+    -ms-word-break: break-all;
+    word-break: break-all;
+    /*display: block;*/
+    cursor: pointer;
+
+    tbody {
+        td {
+            overflow: hidden;
+            white-space: nowrap;
+            -ms-word-wrap: break-word;
+            word-wrap: break-word;
+            -ms-text-overflow: ellipsis;
+            -o-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+        }
+    }
+}
+
+#logsContainer {
+
+    table {
+        outline: none;
+
+        .selected {
+            background-color: @selectionColor;
+        }
+    }
+
+    .log-details {
+        padding: 10px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+}
+
+.text-ellipsis {
+    overflow: hidden;
+    -ms-text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 footer {

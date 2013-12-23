@@ -1,10 +1,11 @@
 import composition = require("durandal/composition");
 
 /*
- * A custom Knockout binding handler that causes a DOM element to change its height so that its bottom reaches to the <footer>.
- * Usage: data-bind="stickToFooter: window.ravenStudioWindowHeight()"
+ * A custom Knockout binding handler that causes a DOM element to change its height so that its bottom reaches to a target element.
+ * Usage: data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }"
+ * Target can be whatever element you choose.
  */
-class stickToFooterBindingHandler {
+class dynamicHeightBindingHandler {
     windowHeightObservable: KnockoutObservable<number>;
     throttleTimeMs = 100;
 
@@ -16,49 +17,57 @@ class stickToFooterBindingHandler {
     }
 
     install() {
-        ko.bindingHandlers['stickToFooter'] = this;
+        ko.bindingHandlers['dynamicHeight'] = this;
 
         // This tells Durandal to fire this binding handler only after composition 
         // is complete and attached to the DOM.
         // This is required so that we know the correct height for the element.
         // See http://durandaljs.com/documentation/Interacting-with-the-DOM/
-        composition.addBindingHandler('stickToFooter');
+        composition.addBindingHandler('dynamicHeight');
     }
 
     // Called by Knockout a single time when the binding handler is setup.
-    init(element: HTMLElement, valueAccessor: () => number, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
+    init(element: HTMLElement, valueAccessor: () => { height: number; target?: string; }, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
         element.style.overflowY = "auto";
         element.style.overflowX = "hidden";
     }
 
     // Called by Knockout each time the dependent observable value changes.
-    update(element: HTMLElement, valueAccessor: () => number, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
-        var newWindowHeight = valueAccessor(); // Necessary to register knockout dependency. Without it, update won't fire when window height changes.
+    update(element: HTMLElement, valueAccessor: () => { resizeTrigger: number; target?: string; }, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
+        var bindingValue = valueAccessor(); // Necessary to register knockout dependency. Without it, update won't fire when window height changes.
+        var newWindowHeight = bindingValue.resizeTrigger;
+        var targetSelector = bindingValue.target || "footer";
 
         // Check what was the last dispatched height to this element.
         var lastWindowHeightKey = "ravenStudioLastDispatchedHeight";
         var lastWindowHeight: number = ko.utils.domData.get(element, lastWindowHeightKey);
         if (lastWindowHeight !== newWindowHeight) {
             ko.utils.domData.set(element, lastWindowHeightKey, newWindowHeight);
-            this.stickToFooter(element);
+            this.stickToTarget(element, targetSelector);
         }
     }
 
-    stickToFooter(element: HTMLElement) {
+    stickToTarget(element: HTMLElement, targetSelector: string) {
+        var targetElement = $(targetSelector);
+        if (targetSelector.length === 0) {
+            throw new Error("Couldn't configure dynamic height because the target element isn't on the page. Target element: " + targetSelector);
+        }
+
         var $element = $(element);
         var isVisible = $element.is(":visible");
+
         if (isVisible) {
             var elementTop = $element.offset().top;
-            var footerTop = $("footer").position().top;
+            var footerTop = $(targetSelector).position().top;
             var padding = 5;
             var desiredElementHeight = footerTop - elementTop - padding;
             var minimumHeight = 100;
             if (desiredElementHeight >= minimumHeight) {
                 $element.height(desiredElementHeight);
-                $element.trigger("StickyFooterHeightSet", desiredElementHeight);
+                $element.trigger("DynamicHeightSet", desiredElementHeight);
             }
         }
     }
 }
 
-export = stickToFooterBindingHandler;
+export = dynamicHeightBindingHandler;

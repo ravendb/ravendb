@@ -19,7 +19,7 @@ import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
-import stickToFooterBindingHandler = require("common/stickToFooterBindingHandler");
+import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 
 class shell {
 	private router = router;
@@ -73,7 +73,7 @@ class shell {
 			this.newDocument();
         });
 
-        new stickToFooterBindingHandler().install();
+        new dynamicHeightBindingHandler().install();
     }
 
     databasesLoaded(databases) {

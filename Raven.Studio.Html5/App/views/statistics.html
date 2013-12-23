@@ -1,4 +1,4 @@
-﻿<section data-bind="with: stats, stickToFooter: window.ravenStudioWindowHeight()">
+﻿<section data-bind="with: stats, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
     <form class="form-horizontal" role="form">
         <div class="form-group">
             <label class="col-md-2 control-label">Last document Etag</label>

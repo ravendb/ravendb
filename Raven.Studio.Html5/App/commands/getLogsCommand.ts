@@ -7,9 +7,9 @@ class getLogsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<logDto> {
+    execute(): JQueryPromise<logDto[]> {
         var url = "/logs";
-        return this.query<logDto>(url, null, this.db);
+        return this.query<logDto[]>(url, null, this.db);
     }
 }
 

@@ -1,6 +1,6 @@
 /// <reference path="../../Scripts/typings/nprogress/nprogress.d.ts" />
 /// <reference path="../../Scripts/typings/bootstrap/bootstrap.d.ts" />
-define(["require", "exports", "plugins/router", "durandal/app", "durandal/system", "models/database", "common/raven", "models/document", "common/appUrl", "models/collection", "viewmodels/deleteDocuments", "common/dialogResult", "common/alertArgs", "common/alertType", "common/pagedList", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand", "commands/getBuildVersionCommand", "commands/getLicenseStatusCommand", "common/stickToFooterBindingHandler"], function(require, exports, router, app, sys, database, raven, document, appUrl, collection, deleteDocuments, dialogResult, alertArgs, alertType, pagedList, getDatabaseStatsCommand, getDatabasesCommand, getBuildVersionCommand, getLicenseStatusCommand, stickToFooterBindingHandler) {
+define(["require", "exports", "plugins/router", "durandal/app", "durandal/system", "models/database", "common/raven", "models/document", "common/appUrl", "models/collection", "viewmodels/deleteDocuments", "common/dialogResult", "common/alertArgs", "common/alertType", "common/pagedList", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand", "commands/getBuildVersionCommand", "commands/getLicenseStatusCommand", "common/dynamicHeightBindingHandler"], function(require, exports, router, app, sys, database, raven, document, appUrl, collection, deleteDocuments, dialogResult, alertArgs, alertType, pagedList, getDatabaseStatsCommand, getDatabasesCommand, getBuildVersionCommand, getLicenseStatusCommand, dynamicHeightBindingHandler) {
     var shell = (function () {
         function shell() {
             var _this = this;
@@ -57,7 +57,7 @@ define(["require", "exports", "plugins/router", "durandal/app", "durandal/system
                 _this.newDocument();
             });
 
-            new stickToFooterBindingHandler().install();
+            new dynamicHeightBindingHandler().install();
         };
 
         shell.prototype.databasesLoaded = function (databases) {
