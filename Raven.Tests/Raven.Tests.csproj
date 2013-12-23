@@ -810,6 +810,7 @@
     <Compile Include="MailingList\AnyBugTest.cs" />
     <Compile Include="MailingList\Marisic.cs" />
     <Compile Include="MailingList\MoreLikeThisEvaluation.cs" />
+    <Compile Include="MailingList\Mouhong.cs" />
     <Compile Include="MailingList\MultiLoadInTransaction.cs" />
     <Compile Include="MailingList\nberardi.cs" />
     <Compile Include="MailingList\Nemitoff.cs" />
