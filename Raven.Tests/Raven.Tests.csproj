@@ -859,6 +859,7 @@
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\StrangeNames.cs" />
     <Compile Include="MailingList\Strange_select_behaviour_in_query_tests.cs" />
+    <Compile Include="MailingList\StreamingHalfWay.cs" />
     <Compile Include="MailingList\StreamSortTest.cs" />
     <Compile Include="MailingList\StringIsNullOrEmpty.cs" />
     <Compile Include="MailingList\SuggestAsync.cs" />
