@@ -44,9 +44,9 @@ namespace Raven.Database.Server.Responders.Admin
 				case "GET":
 					if (db.Equals(Constants.SystemDatabase,StringComparison.OrdinalIgnoreCase))
 					{
-
-						var systemDatabaseDocument = new DatabaseDocument();
-						var serializedDatabaseDocument = JsonExtensions.ToJObject(systemDatabaseDocument).ToString();
+						//fetch fake (empty) system database document
+						var systemDatabaseDocument = new DatabaseDocument { Id = Constants.SystemDatabase };
+						var serializedDatabaseDocument = RavenJObject.FromObject(systemDatabaseDocument).ToString();
 
 						context.Write(serializedDatabaseDocument);
 					}
@@ -58,32 +58,46 @@ namespace Raven.Database.Server.Responders.Admin
 
 					break;
 				case "PUT":
-					dbDoc = context.ReadJsonObject<DatabaseDocument>();
-					server.Protect(dbDoc);
-					var json = RavenJObject.FromObject(dbDoc);
-					json.Remove("Id");
+					if (!db.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
+					{
+						dbDoc = context.ReadJsonObject<DatabaseDocument>();
+						server.Protect(dbDoc);
+						var json = RavenJObject.FromObject(dbDoc);
+						json.Remove("Id");
 
-					Database.Put(docKey, null, json, new RavenJObject(), null);
+						Database.Put(docKey, null, json, new RavenJObject(), null);
+					}
+					else
+					{
+						context.SetStatusToForbidden(); //forbidden to edit system database document
+					}
 					break;
 				case "DELETE":
-					var configuration = server.CreateTenantConfiguration(db);
-					var databasedocument = Database.Get(docKey, null);
-
-					if (configuration == null)
-						return;
-					Database.Delete(docKey, null, null);
-					bool result;
-					if(bool.TryParse(context.Request.QueryString["hard-delete"], out result) && result)
+					if (!db.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
 					{
-						IOExtensions.DeleteDirectory(configuration.DataDirectory);	
-						IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
+						var configuration = server.CreateTenantConfiguration(db);
+						var databasedocument = Database.Get(docKey, null);
 
-						if (databasedocument != null)
+						if (configuration == null)
+							return;
+						Database.Delete(docKey, null, null);
+						bool result;
+						if (bool.TryParse(context.Request.QueryString["hard-delete"], out result) && result)
 						{
-							dbDoc = databasedocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
-							if(dbDoc != null && dbDoc.Settings.ContainsKey(Constants.RavenLogsPath))
-								IOExtensions.DeleteDirectory(dbDoc.Settings[Constants.RavenLogsPath]);
-						}	
+							IOExtensions.DeleteDirectory(configuration.DataDirectory);
+							IOExtensions.DeleteDirectory(configuration.IndexStoragePath);
+
+							if (databasedocument != null)
+							{
+								dbDoc = databasedocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
+								if (dbDoc != null && dbDoc.Settings.ContainsKey(Constants.RavenLogsPath))
+									IOExtensions.DeleteDirectory(dbDoc.Settings[Constants.RavenLogsPath]);
+							}
+						}
+					}
+					else
+					{
+						context.SetStatusToForbidden(); //forbidden to delete system database document
 					}
 					break;
 			}
