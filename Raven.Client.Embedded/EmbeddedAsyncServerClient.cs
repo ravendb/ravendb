@@ -47,7 +47,7 @@ namespace Raven.Client.Embedded
 
 		public Task<MultiLoadResult> GetAsync(string[] keys, string[] includes, string transformer = null, Dictionary<string, RavenJToken> queryInputs = null, bool metadataOnly = false)
 		{
-			return new CompletedTask<MultiLoadResult>(databaseCommands.Get(keys, includes,transformer: transformer, queryInputs:queryInputs, metadataOnly: metadataOnly));
+			return new CompletedTask<MultiLoadResult>(databaseCommands.Get(keys, includes, transformer: transformer, queryInputs: queryInputs, metadataOnly: metadataOnly));
 		}
 
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false)
@@ -56,7 +56,7 @@ namespace Raven.Client.Embedded
 		}
 
 		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
-		{
+	    {
 			return new CompletedTask<QueryResult>(databaseCommands.Query(index, query, includes, metadataOnly));
 		}
 
@@ -220,7 +220,7 @@ namespace Raven.Client.Embedded
             return new CompletedTask<AttachmentInformation[]>(databaseCommands.GetAttachments(startEtag, batchSize));
 	    }
 
-		public Task PutAttachmentAsync(string key, Etag etag, Stream stream, RavenJObject metadata)
+	    public Task PutAttachmentAsync(string key, Etag etag, Stream stream, RavenJObject metadata)
 		{
 			databaseCommands.PutAttachment(key, etag, stream, metadata);
 			return new CompletedTask();
@@ -268,7 +268,7 @@ namespace Raven.Client.Embedded
 		}
 
 		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null ) {
-			return new CompletedTask<FacetResults>( databaseCommands.GetFacets( index, query, facetSetupDoc, start, pageSize ) );
+			return new CompletedTask<FacetResults>(databaseCommands.GetFacets(index, query, facetSetupDoc, start, pageSize));
 		}
 
 		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null)
@@ -321,10 +321,10 @@ namespace Raven.Client.Embedded
 			throw new NotSupportedException();
 		}
 
-		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
 		{
 			// Should add a 'matches' parameter? Setting to null for now.
-            return new CompletedTask<JsonDocument[]>(databaseCommands.StartsWith(keyPrefix, matches, start, pageSize, metadataOnly, exclude));
+			return new CompletedTask<JsonDocument[]>(databaseCommands.StartsWith(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude));
 		}
 
 		public IDisposable ForceReadFromMaster()
@@ -345,14 +345,12 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(result));
 		}
 
-		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(
-            Etag fromEtag = null, string startsWith = null,
-            string matches = null, int start = 0,
-            int pageSize = 2147483647, string exclude = null)
+		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
+									int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null)
 		{
-			var streamDocs = databaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
+			var streamDocs = databaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation);
 			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(streamDocs));
-	
+
 		}
 
 	    public Task DeleteAsync(string key, Etag etag)
@@ -412,7 +410,7 @@ namespace Raven.Client.Embedded
 	        throw new NotImplementedException();
 	    }
 
-	    #region IAsyncGlobalAdminDatabaseCommands
+		#region IAsyncGlobalAdminDatabaseCommands
 
 		public IAsyncGlobalAdminDatabaseCommands GlobalAdmin
 		{

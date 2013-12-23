@@ -1166,31 +1166,47 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
-		{
-			return ExecuteWithReplication("GET", operationMetadata =>
-			{
-				var metadata = new RavenJObject();
-				AddTransactionInformation(metadata);
-				var actualUrl = string.Format("{0}/docs?startsWith={1}&matches={4}&exclude={5}&start={2}&pageSize={3}", operationMetadata,
-																		 Uri.EscapeDataString(keyPrefix), start.ToInvariantString(), pageSize.ToInvariantString(),
-																		 Uri.EscapeDataString(matches ?? ""),
-																		 Uri.EscapeDataString(exclude ?? ""));
-				if (metadataOnly)
-					actualUrl += "&metadata-only=true";
-				var request = jsonRequestFactory.CreateHttpJsonRequest(
-						new CreateHttpJsonRequestParams(this, actualUrl.NoCache(), "GET", metadata, credentials, convention)
-								.AddOperationHeaders(OperationsHeaders));
+        public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
+        {
+            return ExecuteWithReplication("GET", operationMetadata =>
+            {
+                var metadata = new RavenJObject();
+                AddTransactionInformation(metadata);
 
-				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+                var actualStart = start;
 
-				return request.ReadResponseJsonAsync()
-								.ContinueWith(
-										task =>
-										SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result).OfType<RavenJObject>()).ToArray());
+                var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+                if (nextPage)
+                    actualStart = pagingInformation.NextPageStart;
 
-			});
-		}
+                var actualUrl = string.Format("{0}/docs?startsWith={1}&matches={5}&exclude={4}&start={2}&pageSize={3}", operationMetadata.Url,
+                                              Uri.EscapeDataString(keyPrefix), actualStart.ToInvariantString(), pageSize.ToInvariantString(), exclude, matches);
+
+                if (metadataOnly)
+                    actualUrl += "&metadata-only=true";
+
+                if (nextPage)
+                    actualUrl += "&next-page=true";
+
+                var request = jsonRequestFactory.CreateHttpJsonRequest(
+                    new CreateHttpJsonRequestParams(this, actualUrl.NoCache(), "GET", metadata, credentials, convention)
+                        .AddOperationHeaders(OperationsHeaders));
+
+                request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
+
+                return request.ReadResponseJsonAsync()
+                        .ContinueWith(task =>
+                        {
+                            int nextPageStart;
+                            if (pagingInformation != null && int.TryParse(request.ResponseHeaders[Constants.NextPageStart], out nextPageStart))
+                                pagingInformation.Fill(start, pageSize, nextPageStart);
+
+                            return SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result)
+                                .OfType<RavenJObject>())
+                                .ToArray();
+                        });
+            });
+        }
 
 		/// <summary>
 		/// Perform a single POST request containing multiple nested GET requests
@@ -1688,82 +1704,107 @@ namespace Raven.Client.Connection.Async
 			return new YieldStreamResults(webResponse);
 		}
 
-		public class YieldStreamResults : IAsyncEnumerator<RavenJObject>
-		{
-			private readonly WebResponse webResponse;
-			private readonly Stream stream;
-			private readonly StreamReader streamReader;
-			private readonly JsonTextReaderAsync reader;
-			private bool complete;
+        public class YieldStreamResults : IAsyncEnumerator<RavenJObject>
+        {
+            private readonly WebResponse webResponse;
 
-			private bool wasInitalized;
+            private readonly int start;
 
-			public YieldStreamResults(WebResponse webResponse)
-			{
-				this.webResponse = webResponse;
-				stream = webResponse.GetResponseStreamWithHttpDecompression();
-				streamReader = new StreamReader(stream);
-				reader = new JsonTextReaderAsync(streamReader);
+            private readonly int pageSize;
 
-			}
+            private readonly RavenPagingInformation pagingInformation;
 
-			private async Task InitAsync()
-			{
-				if (await reader.ReadAsync() == false || reader.TokenType != JsonToken.StartObject)
-					throw new InvalidOperationException("Unexpected data at start of stream");
+            private readonly Stream stream;
+            private readonly StreamReader streamReader;
+            private readonly JsonTextReaderAsync reader;
+            private bool complete;
 
-				if (await reader.ReadAsync() == false || reader.TokenType != JsonToken.PropertyName ||
-					Equals("Results", reader.Value) == false)
-					throw new InvalidOperationException("Unexpected data at stream 'Results' property name");
+            private bool wasInitalized;
 
-				if (await reader.ReadAsync() == false || reader.TokenType != JsonToken.StartArray)
-					throw new InvalidOperationException("Unexpected data at 'Results', could not find start results array");
-			}
+            public YieldStreamResults(WebResponse webResponse, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null)
+            {
+                this.webResponse = webResponse;
+                this.start = start;
+                this.pageSize = pageSize;
+                this.pagingInformation = pagingInformation;
+                stream = webResponse.GetResponseStreamWithHttpDecompression();
+                streamReader = new StreamReader(stream);
+                reader = new JsonTextReaderAsync(streamReader);
+            }
 
-			public void Dispose()
-			{
-				reader.Close();
-				streamReader.Close();
-				stream.Close();
-				webResponse.Close();
-			}
+            private async Task InitAsync()
+            {
+                if (await reader.ReadAsync() == false || reader.TokenType != JsonToken.StartObject)
+                    throw new InvalidOperationException("Unexpected data at start of stream");
 
-			public async Task<bool> MoveNextAsync()
-			{
-				if (complete)
-				{
-					// to parallel IEnumerable<T>, subsequent calls to MoveNextAsync after it has returned false should
-					// also return false, rather than throwing
-					return false;
-				}
+                if (await reader.ReadAsync() == false || reader.TokenType != JsonToken.PropertyName ||
+                    Equals("Results", reader.Value) == false)
+                    throw new InvalidOperationException("Unexpected data at stream 'Results' property name");
 
-				if (wasInitalized == false)
-				{
-					await InitAsync();
-					wasInitalized = true;
-				}
+                if (await reader.ReadAsync() == false || reader.TokenType != JsonToken.StartArray)
+                    throw new InvalidOperationException("Unexpected data at 'Results', could not find start results array");
+            }
 
-				if (await reader.ReadAsync() == false)
-					throw new InvalidOperationException("Unexpected end of data");
+            public void Dispose()
+            {
+                reader.Close();
+                streamReader.Close();
+                stream.Close();
+                webResponse.Close();
+            }
 
-				if (reader.TokenType == JsonToken.EndArray)
-				{
-					complete = true;
-					return false;
-				}
+            public async Task<bool> MoveNextAsync()
+            {
+                if (complete)
+                {
+                    // to parallel IEnumerable<T>, subsequent calls to MoveNextAsync after it has returned false should
+                    // also return false, rather than throwing
+                    return false;
+                }
 
-				Current = (RavenJObject)await RavenJToken.ReadFromAsync(reader);
-				return true;
-			}
+                if (wasInitalized == false)
+                {
+                    await InitAsync();
+                    wasInitalized = true;
+                }
 
-			public RavenJObject Current { get; private set; }
-		}
+                if (await reader.ReadAsync() == false)
+                    throw new InvalidOperationException("Unexpected end of data");
+
+                if (reader.TokenType == JsonToken.EndArray)
+                {
+                    complete = true;
+
+                    await TryReadNextPageStart();
+
+                    return false;
+                }
+
+                Current = (RavenJObject)await RavenJToken.ReadFromAsync(reader);
+                return true;
+            }
+
+            private async Task TryReadNextPageStart()
+            {
+                if (pagingInformation == null || !(await reader.ReadAsync()) || reader.TokenType != JsonToken.PropertyName || !Equals("NextPageStart", reader.Value))
+                    return;
+
+                var nextPageStart = await reader.ReadAsInt32();
+                if (nextPageStart.HasValue == false)
+                    throw new InvalidOperationException("Unexpected end of data");
+
+                pagingInformation.Fill(start, pageSize, nextPageStart.Value);
+            }
+
+            public RavenJObject Current { get; private set; }
+        }
 
 		public async Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(
 						Etag fromEtag = null, string startsWith = null,
 						string matches = null, int start = 0,
 						int pageSize = Int32.MaxValue,
-						string exclude = null)
+						string exclude = null,
+                        RavenPagingInformation pagingInformation = null)
 		{
 			if (fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
@@ -1791,11 +1832,20 @@ namespace Raven.Client.Connection.Async
 					sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
 				}
 			}
-			if (start != 0)
-				sb.Append("start=").Append(start).Append("&");
-			if (pageSize != int.MaxValue)
-				sb.Append("pageSize=").Append(pageSize).Append("&");
 
+            var actualStart = start;
+
+            var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+            if (nextPage)
+                actualStart = pagingInformation.NextPageStart;
+
+            if (actualStart != 0)
+                sb.Append("start=").Append(actualStart).Append("&");
+            if (pageSize != int.MaxValue)
+                sb.Append("pageSize=").Append(pageSize).Append("&");
+
+            if (nextPage)
+                sb.Append("next-page=true").Append("&");
 
 			var request = jsonRequestFactory.CreateHttpJsonRequest(
 					new CreateHttpJsonRequestParams(this, sb.ToString().NoCache(), "GET", credentials, convention)
@@ -1803,8 +1853,9 @@ namespace Raven.Client.Connection.Async
 																			.AddReplicationStatusHeaders(Url, url, replicationInformer,
 																																	 convention.FailoverBehavior,
 																																	 HandleReplicationStatusChanges);
-			var webResponse = await request.RawExecuteRequestAsync();
-			return new YieldStreamResults(webResponse);
+            var webResponse = await request.RawExecuteRequestAsync();
+
+            return new YieldStreamResults(webResponse, start, pageSize, pagingInformation);
 		}
 
 		public Task DeleteAsync(string key, Etag etag)

@@ -49,7 +49,7 @@ namespace Raven.Client.Connection.Async
 		/// Admin operations for current database
 		/// </summary>
 		IAsyncAdminDatabaseCommands Admin { get; }
-		
+
 		IAsyncInfoDatabaseCommands Info { get; }
 
 		/// <summary>
@@ -74,7 +74,7 @@ namespace Raven.Client.Connection.Async
 		/// </remarks>
 		Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false);
 
-		/// <summary>
+        /// <summary>
 		/// Begins the async query.
 		/// </summary>
 		/// <param name="index">The index.</param>
@@ -265,7 +265,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0);
 
-		/// <summary>
+        /// <summary>
 		/// Puts the attachment with the specified key asynchronously
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -336,7 +336,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null );
+		Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null);
 
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
@@ -366,7 +366,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Get documents with id of a specific prefix
 		/// </summary>
-		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null);
+		Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null);
 
 		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
@@ -390,7 +390,7 @@ namespace Raven.Client.Connection.Async
 		/// Streams the documents by etag OR starts with the prefix and match the matches
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
-		Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null);
+		Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null);
 
 #if SILVERLIGHT
 		/// <summary>
@@ -484,7 +484,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		Task CompactDatabaseAsync(string databaseName);
 	}
-	
+
 	public interface IAsyncAdminDatabaseCommands
 	{
 		/// <summary>
