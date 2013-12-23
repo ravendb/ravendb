@@ -1071,7 +1071,31 @@ namespace Raven.Client.Embedded
 			return database.ExecuteGetTermsQuery( index, query, facetSetupDoc, start, pageSize );
 		}
 
-        /// <summary>
+		/// <summary>
+		/// Sends a multiple faceted queries in a single request and calculates the facet results for each of them
+		/// </summary>
+		/// <param name="facetedQueries">List of queries</param>
+		public FacetResults[] GetMultiFacets(FacetQuery[] facetedQueries)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+
+			return
+				facetedQueries.Select(
+					facetedQuery =>
+					{
+						if (facetedQuery.FacetSetupDoc != null)
+							return database.ExecuteGetTermsQuery(facetedQuery.IndexName, facetedQuery.Query, facetedQuery.FacetSetupDoc,
+							                                     facetedQuery.PageStart, facetedQuery.PageSize);
+						if (facetedQuery.Facets != null)
+							return database.ExecuteGetTermsQuery(facetedQuery.IndexName, facetedQuery.Query, facetedQuery.Facets,
+							                                     facetedQuery.PageStart,
+							                                     facetedQuery.PageSize);
+
+						throw new InvalidOperationException("Missing a facet setup document or a list of facets");
+					}).ToArray();
+		}
+
+		/// <summary>
         /// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
         /// </summary>
         /// <param name="index">Name of the index</param>

@@ -271,6 +271,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<FacetResults>(databaseCommands.GetFacets(index, query, facetSetupDoc, start, pageSize));
 		}
 
+		public Task<FacetResults[]> GetMultiFacetsAsync(FacetQuery[] facetedQueries)
+		{
+			return new CompletedTask<FacetResults[]>(databaseCommands.GetMultiFacets(facetedQueries));
+		}
+
 		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null)
 		{
 			return new CompletedTask<FacetResults>(databaseCommands.GetFacets(index, query, facets, start, pageSize));
@@ -293,28 +298,24 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<BuildNumber>(databaseCommands.GetBuildNumber());			
 		}
 
-		// TODO arek
 		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
 		{
 			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
-		// TODO arek
 		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
 		{
 			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
-		// TODO arek
 		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null)
 		{
 			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
-		//TODO arek
 		public Task<string> GetIndexingStatusAsync()
 		{
 			// No sync equivalent on IDatabaseCommands.

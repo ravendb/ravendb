@@ -104,5 +104,7 @@ namespace Raven.Client
 		/// Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called
 		/// </summary>
 		IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null);
+
+		FacetResults[] MultiFacetedSearch(params FacetQuery[] queries);
 	}
 }

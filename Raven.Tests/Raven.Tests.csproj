@@ -285,6 +285,7 @@
     <Compile Include="Issues\1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="Issues\1379\RavenDB_1379_Client.cs" />
+    <Compile Include="Issues\RavenDB_1466.cs" />
     <Compile Include="Issues\RavenDB_1305.cs" />
     <Compile Include="Issues\RavenDB_1443 .cs" />
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />

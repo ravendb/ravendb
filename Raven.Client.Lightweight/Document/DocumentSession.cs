@@ -627,8 +627,14 @@ namespace Raven.Client.Document
 			return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation);
 		}
 
+		public FacetResults[] MultiFacetedSearch(params FacetQuery[] facetQueries)
+		{
+			return DatabaseCommands.GetMultiFacets(facetQueries);
+		}
+
 		private IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation)
 		{
+
             var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation);
 
 			while (enumerator.MoveNext())
