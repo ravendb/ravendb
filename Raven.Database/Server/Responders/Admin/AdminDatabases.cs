@@ -4,11 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System.Linq;
 using Raven.Abstractions.Extensions;
@@ -34,22 +36,26 @@ namespace Raven.Database.Server.Responders.Admin
 
 			var match = urlMatcher.Match(context.GetRequestUrl());
 			var db = Uri.UnescapeDataString(match.Groups[1].Value);
-
+			
 			DatabaseDocument dbDoc;
 			var docKey = "Raven/Databases/" + db;
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					var document = Database.Get(docKey, null);
-					if (document == null)
+					if (db.Equals(Constants.SystemDatabase,StringComparison.OrdinalIgnoreCase))
 					{
-						context.SetStatusToNotFound();
-						return;
+
+						var systemDatabaseDocument = new DatabaseDocument();
+						var serializedDatabaseDocument = JsonExtensions.ToJObject(systemDatabaseDocument).ToString();
+
+						context.Write(serializedDatabaseDocument);
 					}
-					dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
-					dbDoc.Id = db;	
-					server.Unprotect(dbDoc);
-					context.WriteJson(dbDoc);
+					else
+					{
+						dbDoc = GetDatabaseDocument(context, docKey, db);
+						context.WriteJson(dbDoc);
+					}
+
 					break;
 				case "PUT":
 					dbDoc = context.ReadJsonObject<DatabaseDocument>();
@@ -81,6 +87,21 @@ namespace Raven.Database.Server.Responders.Admin
 					}
 					break;
 			}
+		}
+
+		private DatabaseDocument GetDatabaseDocument(IHttpContext context, string docKey, string db)
+		{
+			var document = Database.Get(docKey, null);
+			if (document == null)
+			{
+				context.SetStatusToNotFound();
+				return null;
+			}
+
+			var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
+			dbDoc.Id = db;
+			server.Unprotect(dbDoc);
+			return dbDoc;
 		}
 	}
 }
