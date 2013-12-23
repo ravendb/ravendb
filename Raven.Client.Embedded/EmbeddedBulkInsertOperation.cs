@@ -23,8 +23,9 @@ namespace Raven.Client.Embedded
 		private readonly BulkInsertOptions options;
 		BlockingCollection<JsonDocument> queue;
 		private Task doBulkInsert;
+	    private IDisposable subscription;
 
-		/// <summary>
+	    /// <summary>
 		/// Create new instance of this class
 		/// </summary>
 		public EmbeddedBulkInsertOperation(DocumentDatabase database,BulkInsertOptions options, IDatabaseChanges changes)
@@ -52,7 +53,7 @@ namespace Raven.Client.Embedded
 
 		private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
 		{
-			changes
+			subscription = changes
 				.ForBulkInsert(OperationId)
 				.Subscribe(this);
 		}
@@ -115,7 +116,13 @@ namespace Raven.Client.Embedded
 		public void Dispose()
 		{
 			queue.Add(null);
+            
+            if(subscription != null)
+                subscription.Dispose();
+
 			doBulkInsert.Wait();
+
+
 			var onReport = Report;
 			if (onReport != null)
 				onReport("Done with bulk insert");

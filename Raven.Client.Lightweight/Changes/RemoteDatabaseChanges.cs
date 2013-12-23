@@ -332,10 +332,12 @@ namespace Raven.Client.Changes
 
             var counter = counters.GetOrAdd("bulk-operations/" + id, s =>
             {
+                watchedBulkInserts.TryAdd(id);
                 var documentSubscriptionTask = AfterConnection(() =>
                 {
-                    watchedBulkInserts.TryAdd(id);
-                    return Send("watch-bulk-operation", id);
+                    if (watchedBulkInserts.Contains(id)) // might have been removed in the meantime
+                        return Send("watch-bulk-operation", id);
+                    return Task;
                 });
 
                 return new LocalConnectionState(

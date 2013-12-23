@@ -78,14 +78,13 @@ namespace Raven.Client.Document
                 SubscribeToBulkInsertNotifications(changes);
 #endif
             }
-
         }
 
 #if !MONO
 
         private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
         {
-            changes
+            subscription = changes
                 .ForBulkInsert(OperationId)
                 .Subscribe(this);
         }
@@ -270,6 +269,7 @@ namespace Raven.Client.Document
         }
 
         private volatile bool disposed;
+        private IDisposable subscription;
 
         public async Task DisposeAsync()
         {
@@ -277,6 +277,12 @@ namespace Raven.Client.Document
                 return;
             disposed = true;
             queue.Add(null);
+            if (subscription != null)
+            {
+                subscription.Dispose();
+               
+            }
+           
             // The first await call in this method MUST call ConfigureAwait(false) in order to avoid DEADLOCK when this code is called by synchronize code, like Dispose().
             await operationTask.ConfigureAwait(false);
 
