@@ -29,6 +29,7 @@ class logs extends activeDbViewModelBase {
         this.errorLogCount = ko.computed(() => this.fetchedLogs().count<logDto>(l => l.Level === "Error"));
         this.fatalLogCount = ko.computed(() => this.fetchedLogs().count<logDto>(l => l.Level === "Fatal"));
         this.searchTextThrottled = this.searchText.throttle(200);
+        this.activeDatabase.subscribe(() => this.fetchedLogs());
     }
 
     activate(args) {

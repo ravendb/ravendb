@@ -323,7 +323,6 @@ body {
     overflow-x: hidden;
     -ms-word-break: break-all;
     word-break: break-all;
-    /*display: block;*/
     cursor: pointer;
 }
 
@@ -337,15 +336,20 @@ body {
     text-overflow: ellipsis;
 }
 
-#logsContainer table {
+#logsContainer table,
+#alertsContainer table {
     outline: none;
 }
 
-#logsContainer table .selected {
+#logsContainer table .selected,
+#alertsContainer table .selected {
     background-color: #ffffcc;
 }
 
-#logsContainer .log-details {
+#logsContainer .log-details,
+#alertsContainer .log-details,
+#logsContainer .alert-details,
+#alertsContainer .alert-details {
     padding: 10px;
     overflow-y: auto;
     overflow-x: hidden;

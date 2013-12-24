@@ -13,7 +13,12 @@ class appUrl {
 	private static currentDbComputeds: computedAppUrls = {
 		documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
-        settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase()))
+        settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase())),
+        logs: ko.computed(() => appUrl.forLogs(appUrl.currentDatabase())),
+        alerts: ko.computed(() => appUrl.forAlerts(appUrl.currentDatabase())),
+        indexErrors: ko.computed(() => appUrl.forIndexErrors(appUrl.currentDatabase())),
+        replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
+        userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
 	};
 	
     /**
@@ -39,7 +44,27 @@ class appUrl {
     }
 
     static forSettings(db: database = appUrl.getDatabase()): string {
-        return "#settings? " + appUrl.getEncodedDbPart(db);
+        return "#settings?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forLogs(db: database = appUrl.getDatabase()): string {
+        return "#status/logs?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forAlerts(db: database = appUrl.getDatabase()): string {
+        return "#status/alerts?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forIndexErrors(db: database = appUrl.getDatabase()): string {
+        return "#status/indexErrors?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forReplicationStats(db: database = appUrl.getDatabase()): string {
+        return "#status/replicationStats?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forUserInfo(db: database = appUrl.getDatabase()): string {
+        return "#status/userInfo?" + appUrl.getEncodedDbPart(db);
     }
 
 	static forDocuments(collection?: string, db: database = appUrl.getDatabase()): string {

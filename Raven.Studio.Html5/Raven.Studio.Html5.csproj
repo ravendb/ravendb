@@ -88,6 +88,7 @@
     <TypeScriptCompile Include="App\commands\getSystemDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getUserInfoCommand.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
+    <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
     <TypeScriptCompile Include="App\models\apiKeyDatabase.ts" />
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />

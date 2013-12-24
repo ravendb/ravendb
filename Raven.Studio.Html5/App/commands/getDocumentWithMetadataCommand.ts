@@ -18,7 +18,7 @@ class getDocumentWithMetadataCommand extends commandBase {
 
     execute(): JQueryPromise<document> {
         // Executing /queries will return the doc with the metadata. 
-        // We can do a GET call to /docs/[id], however, it returns the metadata only as headers, 
+        // We can do a GET call to /docs/<id>, however, it returns the metadata only as headers, 
         // which can have some issues when querying via CORS.
         var documentResult = $.Deferred();
         var postResult = this.post("/queries", JSON.stringify([this.id]), this.db);

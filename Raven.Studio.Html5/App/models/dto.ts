@@ -151,6 +151,10 @@ interface queryResultDto {
     Includes: any[];
 }
 
+interface alertContainerDto {
+    Alerts: alertDto[];
+}
+
 interface alertDto {
     Title: string;
     CreatedAt: string;
