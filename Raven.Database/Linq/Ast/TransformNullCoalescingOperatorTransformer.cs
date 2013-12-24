@@ -19,8 +19,9 @@ namespace Raven.Database.Linq.Ast
 			if(binaryOperatorExpression.Operator==BinaryOperatorType.NullCoalescing)
 			{
 				var node = new ConditionalExpression(
-					new BinaryOperatorExpression(binaryOperatorExpression.Left.Clone(), BinaryOperatorType.InEquality,
-					                             new PrimitiveExpression(null, null)),
+					new BinaryOperatorExpression(new MemberReferenceExpression(new ThisReferenceExpression(), "__dynamic_null")
+						, BinaryOperatorType.InEquality,
+						binaryOperatorExpression.Left.Clone()),
 					binaryOperatorExpression.Left.Clone(),
 					binaryOperatorExpression.Right.Clone()
 					);

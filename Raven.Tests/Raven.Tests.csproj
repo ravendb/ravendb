@@ -750,6 +750,7 @@
     <Compile Include="MailingList\ConcurrencyTests2.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
+    <Compile Include="MailingList\DictionaryOfEnum.cs" />
     <Compile Include="MailingList\DifferentKeysWithTheSameFirst127CharactersAreDifferent.cs" />
     <Compile Include="MailingList\DistinctWithPaging.cs" />
     <Compile Include="MailingList\DynamicFieldNoAnalysisStillAnalyzesTest.cs" />

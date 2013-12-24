@@ -42,6 +42,7 @@ namespace Raven.Database.Util
 	        }
 	        catch (Exception)
 	        {
+		        return -1;
 	        }
         }
 
