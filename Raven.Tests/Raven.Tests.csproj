@@ -232,6 +232,7 @@
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
     <Compile Include="Issues\RavenDB_1435.cs" />
     <Compile Include="Issues\RavenDB_1497.cs" />
+    <Compile Include="Issues\RavenDB_1520.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\In.cs" />
@@ -1502,6 +1503,10 @@
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
       <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Backup\Raven.Backup.csproj">
+      <Project>{dbb6561c-6264-430d-8f3c-e11c6268981e}</Project>
+      <Name>Raven.Backup</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Embedded\Raven.Client.Embedded.csproj">
       <Project>{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B}</Project>

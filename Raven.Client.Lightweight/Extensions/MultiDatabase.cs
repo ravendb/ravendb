@@ -15,14 +15,17 @@ namespace Raven.Client.Extensions
 		public static RavenJObject CreateDatabaseDocument(string name)
 		{
 			AssertValidName(name);
+			if (name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
+				return RavenJObject.FromObject(new DatabaseDocument { Id = Constants.SystemDatabase });
+
 			var doc = RavenJObject.FromObject(new DatabaseDocument
 			                                          	{
+															Id = name,
 			                                          		Settings =
 			                                          			{
 			                                          				{"Raven/DataDir", Path.Combine("~", Path.Combine("Databases", name))}
 			                                          			}
 			                                          	});
-			doc.Remove("Id");
 			return doc;
 		}
 
@@ -31,10 +34,15 @@ namespace Raven.Client.Extensions
 		private static void AssertValidName(string name)
 		{
 			if (name == null) throw new ArgumentNullException("name");
-			var result = Regex.Matches(name, validDbNameChars);
-			if (result.Count == 0 || result[0].Value != name)
+
+			if (!name.Equals(Constants.SystemDatabase,StringComparison.OrdinalIgnoreCase))
 			{
-				throw new InvalidOperationException("Database name can only contain only A-Z, a-z, \"_\", \".\" or \"-\" but was: " + name);
+				var result = Regex.Matches(name, validDbNameChars);
+				if (result.Count == 0 || result[0].Value != name)
+				{
+					throw new InvalidOperationException(
+						"Database name can only contain only A-Z, a-z, \"_\", \".\" or \"-\" but was: " + name);
+				}
 			}
 		}
 
