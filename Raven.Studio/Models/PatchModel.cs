@@ -534,7 +534,7 @@ namespace Raven.Studio.Models
 				dbName = null;
 			AskUser.SelectItem("Load", "Choose saved patching to load",
 												() => ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession(dbName).Advanced.
-				                                             LoadStartingWithAsync<PatchDocument>("Studio/Patch/").ContinueWith(
+				                                             LoadStartingWithAsync<PatchDocument>("Studio/Patch/", null).ContinueWith(
 					                                             task =>
 					                                             {
 						                                             IList<string> objects = task.Result.Select(document => document.Id.Substring("Studio/Patch/".Length)).ToList();

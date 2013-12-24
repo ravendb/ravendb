@@ -158,6 +158,7 @@
     <Compile Include="RavenFS\SynchronizationUpdate.cs" />
     <Compile Include="RavenFS\UploadFailed.cs" />
     <Compile Include="RavenFS\Util\TaskExtensions.cs" />
+    <Compile Include="RavenPagingInformation.cs" />
     <Compile Include="Shard\ShardedRavenQueryInspector.cs" />
     <Compile Include="Spatial\SpatialCriteria.cs" />
     <Compile Include="Spatial\SpatialCriteriaFactory.cs" />

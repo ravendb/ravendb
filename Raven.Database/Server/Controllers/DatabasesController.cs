@@ -34,8 +34,10 @@ namespace Raven.Database.Server.Controllers
 			// If admin, show all dbs
 
 			List<string> approvedDatabases = null;
-			var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, GetStart(),
-																	GetPageSize(Database.Configuration.MaxPageSize));
+		    var start = GetStart();
+			var nextPageStart = start; // will trigger rapid pagination
+			var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, start,
+																	GetPageSize(Database.Configuration.MaxPageSize), ref nextPageStart);
 			var data = databases
 				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
 				.ToArray();

@@ -34,10 +34,10 @@
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
-					    {
-					        var reader = new ValueReader(stream);
-					        return new ReadResult(reader, version.HasValue ? (ushort)(version.Value + 1) : tree.ReadVersion(Transaction, key));
-					    }
+						{
+							var reader = new ValueReader(stream);
+							return new ReadResult(reader, version.HasValue ? (ushort) (version.Value + 1) : tree.ReadVersion(Transaction, key));
+						}
 						case WriteBatch.BatchOperationType.Delete:
 							return null;
 					}

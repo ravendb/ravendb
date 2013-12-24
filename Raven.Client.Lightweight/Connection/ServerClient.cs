@@ -93,25 +93,25 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
-		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
+		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
 		{
-			return asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, metadataOnly, exclude).ResultUnwrap();
+			return asyncServerClient.StartsWithAsync(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude).ResultUnwrap();
 		}
 
-        /// <summary>
-        /// Execute a GET request against the provided url
-        /// and return the result as a json object
-        /// </summary>
-        /// <param name="requestUrl">The relative url to the server</param>
-        /// <remarks>
-        /// This method respects the replication semantics against the database.
-        /// </remarks>
-        public RavenJToken ExecuteGetRequest(string requestUrl)
-        {
+		/// <summary>
+		/// Execute a GET request against the provided url
+		/// and return the result as a json object
+		/// </summary>
+		/// <param name="requestUrl">The relative url to the server</param>
+		/// <remarks>
+		/// This method respects the replication semantics against the database.
+		/// </remarks>
+		public RavenJToken ExecuteGetRequest(string requestUrl)
+		{
             return asyncServerClient.ExecuteGetRequest(requestUrl).ResultUnwrap();
-        }
+		}
 
-        public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
+		public HttpJsonRequest CreateRequest(string requestUrl, string method, bool disableRequestCompression = false)
 		{
 			return asyncServerClient.CreateRequest(requestUrl, method, disableRequestCompression);
 		}
@@ -145,14 +145,14 @@ namespace Raven.Client.Connection
 		{
 			//TODO: add transformer
 			return asyncServerClient.DirectGetAsync(operationMetadata, key).ResultUnwrap();
-		}
+			}
 
 		public JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false)
 		{
 			return asyncServerClient.GetDocumentsAsync(start, pageSize, metadataOnly).ResultUnwrap();
 		}
 
-		/// <summary>
+	    /// <summary>
 		/// Puts the document with the specified key in the database
 		/// </summary>
 		/// <param name="key">The key.</param>
@@ -205,8 +205,8 @@ namespace Raven.Client.Connection
 		{
 			return new AsycnEnumerableWrapper<Attachment>(asyncServerClient.GetAttachmentHeadersStartingWithAsync(idPrefix,
 					start, pageSize).Result);
-			
-		}
+
+					}
 
 		/// <summary>
 		/// Gets the attachment by the specified key
@@ -375,17 +375,17 @@ namespace Raven.Client.Connection
 			Task<IAsyncEnumerator<RavenJObject>> streamQueryAsync = asyncServerClient.StreamQueryAsync(index, query, reference);
 			queryHeaderInfo = reference.Value;
 			return new AsycnEnumerableWrapper<RavenJObject>(streamQueryAsync.Result);
-		}
+			}
 
 		/// <summary>
 		/// Streams the documents by etag OR starts with the prefix and match the matches
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
-		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude)
+		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation = null)
 		{
 			return new AsycnEnumerableWrapper<RavenJObject>(
 					asyncServerClient.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude).Result);
-		}
+			}
 
 		/// <summary>
 		/// Deletes the index.
@@ -515,7 +515,7 @@ namespace Raven.Client.Connection
 		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale = false)
 		{
 			return asyncServerClient.DeleteByIndexAsync(indexName, queryToDelete, allowStale).ResultUnwrap();
-		}
+				}
 
 		/// <summary>
 		/// Perform a set based update using the specified index.
@@ -602,7 +602,7 @@ namespace Raven.Client.Connection
 		public GetResponse[] MultiGet(GetRequest[] requests)
 		{
 			return asyncServerClient.MultiGetAsync(requests).ResultUnwrap();
-		}
+			}
 
 		///<summary>
 		/// Get the possible terms for the specified field in the index 
@@ -626,6 +626,15 @@ namespace Raven.Client.Connection
 		public FacetResults GetFacets(string index, IndexQuery query, string facetSetupDoc, int start, int? pageSize)
 		{
 			return asyncServerClient.GetFacetsAsync(index, query, facetSetupDoc, start, pageSize).ResultUnwrap();
+		}
+
+		/// <summary>
+		/// Sends a multiple faceted queries in a single request and calculates the facet results for each of them
+		/// </summary>
+		/// <param name="facetedQueries">List of queries</param>
+		public FacetResults[] GetMultiFacets(FacetQuery[] facetedQueries)
+		{
+			return asyncServerClient.GetMultiFacetsAsync(facetedQueries).ResultUnwrap();
 		}
 
 		/// <summary>
@@ -660,7 +669,7 @@ namespace Raven.Client.Connection
 		public RavenJObject Patch(string key, PatchRequest[] patches, bool ignoreMissing)
 		{
 			return asyncServerClient.PatchAsync(key, patches, ignoreMissing).ResultUnwrap();
-		}
+				}
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
@@ -681,7 +690,7 @@ namespace Raven.Client.Connection
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch, bool ignoreMissing)
 		{
 			return asyncServerClient.PatchAsync(key, patch, ignoreMissing).ResultUnwrap();
-		}
+					  }
 
 		/// <summary>
 		/// Sends a patch request for a specific document
@@ -692,7 +701,7 @@ namespace Raven.Client.Connection
 		public RavenJObject Patch(string key, PatchRequest[] patches, Etag etag)
 		{
 			return asyncServerClient.PatchAsync(key, patches, etag).ResultUnwrap();
-		}
+			      			}
 
 		/// <summary>
 		/// Sends a patch request for a specific document which may or may not currently exist
@@ -704,7 +713,7 @@ namespace Raven.Client.Connection
 		public RavenJObject Patch(string key, PatchRequest[] patchesToExisting, PatchRequest[] patchesToDefault, RavenJObject defaultMetadata)
 		{
 			return asyncServerClient.PatchAsync(key, patchesToExisting, patchesToDefault, defaultMetadata).ResultUnwrap();
-		}
+							}
 
 		/// <summary>
 		/// Sends a patch request for a specific document, ignoring the document's Etag
@@ -715,7 +724,7 @@ namespace Raven.Client.Connection
 		public RavenJObject Patch(string key, ScriptedPatchRequest patch, Etag etag)
 		{
 			return asyncServerClient.PatchAsync(key, patch, etag).ResultUnwrap();
-		}
+				}
 
 		/// <summary>
 		/// Sends a patch request for a specific document which may or may not currently exist
@@ -727,7 +736,7 @@ namespace Raven.Client.Connection
 		public RavenJObject Patch(string key, ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata)
 		{
 			return asyncServerClient.PatchAsync(key, patchExisting, patchDefault, defaultMetadata).ResultUnwrap();
-		}
+				}
 
 		/// <summary>
 		/// Disable all caching within the given scope
@@ -755,7 +764,7 @@ namespace Raven.Client.Connection
 		{
 			GC.SuppressFinalize(this);
 			asyncServerClient.Dispose();
-		}
+			}
 
 		/// <summary>
 		/// Allows an <see cref="T:System.Object"/> to attempt to free resources and perform other cleanup operations before the <see cref="T:System.Object"/> is reclaimed by garbage collection.
@@ -768,7 +777,7 @@ namespace Raven.Client.Connection
 		public RavenJToken GetOperationStatus(long id)
 		{
 			return asyncServerClient.GetOperationStatusAsync(id).ResultUnwrap();
-		}
+			}
 
 		//TODO Owin host handles 100s, is this needed?
 		public IDisposable Expect100Continue()
@@ -793,25 +802,25 @@ namespace Raven.Client.Connection
 			public AsycnEnumerableWrapper(IAsyncEnumerator<T> asyncEnumerator)
 			{
 				this.asyncEnumerator = asyncEnumerator;
-			}
+		}
 
 			public void Dispose()
-			{
+		{
 				asyncEnumerator.Dispose();
 			}
 
 			public bool MoveNext()
 			{
 				return asyncEnumerator.MoveNextAsync().ResultUnwrap();
-			}
+		}
 
 			public void Reset()
-			{
+		{
 				throw new NotSupportedException();
-			}
+		}
 
 			public T Current
-			{
+		{
 				get { return asyncEnumerator.Current; }
 			}
 
@@ -823,13 +832,13 @@ namespace Raven.Client.Connection
 			public IEnumerator<T> GetEnumerator()
 			{
 				return this;
-			}
+		}
 
 			IEnumerator IEnumerable.GetEnumerator()
 			{
 				return GetEnumerator();
-			}
-		}
+	}
+}
 	}
 }
 #endif

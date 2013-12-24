@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
@@ -32,13 +33,14 @@ namespace Raven.Database.Server.Controllers
 			var startsWith = GetQueryStringValue("startsWith");
 			var pageSize = GetPageSize(int.MaxValue);
 			var matches = GetQueryStringValue("matches");
+		    var nextPageStart = GetNextPageStart();
 			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
 				pageSize = int.MaxValue;
 
 			return new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = new PushStreamContent((stream, content, transportContext) =>
-					StreamToClient(stream, startsWith, start, pageSize, etag, matches))
+					StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart))
 				{
 					Headers =
 					{
@@ -48,7 +50,7 @@ namespace Raven.Database.Server.Controllers
 			};
 		}
 
-		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches)
+		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart)
 		{
 			using (var writer = new JsonTextWriter(new StreamWriter(stream)))
 			{
@@ -66,11 +68,19 @@ namespace Raven.Database.Server.Controllers
 						if (string.IsNullOrEmpty(startsWith))
 							Database.GetDocuments(start, pageSize, etag, doc => doc.WriteTo(writer));
 						else
-							Database.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, doc => doc.WriteTo(writer));
+						{
+						    var nextPageStartInternal = nextPageStart;
+
+                            Database.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, ref nextPageStartInternal, doc => doc.WriteTo(writer));
+
+						    nextPageStart = nextPageStartInternal;
+						}
 					}
 				});
 
 				writer.WriteEndArray();
+                writer.WritePropertyName("NextPageStart");
+                writer.WriteValue(nextPageStart);
 				writer.WriteEndObject();
 				writer.Flush();
 			}

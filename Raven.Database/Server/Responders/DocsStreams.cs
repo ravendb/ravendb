@@ -50,12 +50,14 @@ namespace Raven.Database.Server.Responders
 							}
 							else
 							{
+								int nextPageStart = 0;
 								Database.GetDocumentsWithIdStartingWith(
 									startsWith,
 									context.Request.QueryString["matches"],
                                     context.Request.QueryString["exclude"],
 									context.GetStart(),
 									pageSize,
+									ref nextPageStart,
 									doc => doc.WriteTo(writer));
 							}
 						}
