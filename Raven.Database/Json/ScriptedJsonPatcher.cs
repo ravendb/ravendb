@@ -32,7 +32,7 @@ namespace Raven.Database.Json
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
-		private readonly Dictionary<JsInstance, KeyValuePair<RavenJValue, object>> propertiesTypeByName = new Dictionary<JsInstance, KeyValuePair<RavenJValue, object>>();
+		private readonly Dictionary<JsInstance, KeyValuePair<RavenJValue, object>> propertiesByValue = new Dictionary<JsInstance, KeyValuePair<RavenJValue, object>>();
 
 		public ScriptedJsonPatcher(DocumentDatabase database = null)
 		{
@@ -200,7 +200,7 @@ namespace Raven.Database.Json
 			        var num = (double) v.Value;
 
 					KeyValuePair<RavenJValue, object> property;
-					if (propertiesTypeByName.TryGetValue(v, out property))
+					if (propertiesByValue.TryGetValue(v, out property))
 					{
 						var originalValue = property.Key;
 						if (originalValue.Type == JTokenType.Float)
@@ -210,7 +210,7 @@ namespace Raven.Database.Json
 							// If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 
 							// which will convert a Int64 to jsFloat.
 							var originalJsValue = property.Value;
-							if (originalJsValue is double && num == (double)originalJsValue)
+							if (originalJsValue is double && Math.Abs(num - (double)originalJsValue) < double.Epsilon)
 								return originalValue;
 					        
 							return new RavenJValue((long) num);
@@ -277,7 +277,7 @@ namespace Raven.Database.Json
 
 				var value = prop.Value as RavenJValue;
 				if (value != null)
-					propertiesTypeByName[jsValue] = new KeyValuePair<RavenJValue, object>(value, jsValue.Value);
+					propertiesByValue[jsValue] = new KeyValuePair<RavenJValue, object>(value, jsValue.Value);
 
 				jsObject.DefineOwnProperty(prop.Key, jsValue);
 			}
