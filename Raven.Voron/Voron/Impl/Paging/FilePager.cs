@@ -1,18 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.IO.MemoryMappedFiles;
-using System.Runtime.InteropServices;
-using System.Threading;
-using Microsoft.Win32.SafeHandles;
-using Voron.Impl.Paging;
-using Voron.Trees;
-
-namespace Voron.Impl
+﻿namespace Voron.Impl
 {
-    public unsafe class FilePager : AbstractPager
+	using System;
+	using System.ComponentModel;
+	using System.Diagnostics;
+	using System.IO;
+	using System.IO.MemoryMappedFiles;
+	using System.Threading;
+
+	using Microsoft.Win32.SafeHandles;
+
+	using Voron.Impl.Paging;
+	using Voron.Trees;
+	using Voron.Util;
+
+	public unsafe class FilePager : AbstractPager
     {
         private readonly FileStream _fileStream;
         private readonly FileInfo _fileInfo;
@@ -52,9 +53,9 @@ namespace Voron.Impl
 
         public FileStream FileStream { get { return _fileStream; }}
 
-        public override byte* AcquirePagePointer(long pageNumber)
+        public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
         {
-            return PagerState.MapBase + (pageNumber * PageSize);
+            return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
         }
 
 	    protected override unsafe string GetSourceName()
@@ -128,7 +129,7 @@ namespace Voron.Impl
             _fileStream.Flush(true);
         }
 
-        public override void Write(Page page, long? pageNumber)
+        public override int Write(Page page, long? pageNumber)
         {
             var number = pageNumber ?? page.PageNumber;
 
@@ -137,7 +138,7 @@ namespace Voron.Impl
 
             var toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
 
-            WriteDirect(page, number, toWrite);
+            return WriteDirect(page, number, toWrite);
         }
 
         public override string ToString()
@@ -145,7 +146,7 @@ namespace Voron.Impl
             return _fileInfo.Name;
         }
 
-        public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
+        public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
         {
             if (_fileInfo.Extension == ".voron" && pagePosition > 1)
             {
@@ -174,6 +175,8 @@ namespace Voron.Impl
 					toWrite -= written;
 					startWrite += written;
 				}
+
+		        return toWrite;
 	        }
 	        finally
 	        {

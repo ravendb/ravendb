@@ -52,6 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DateTimeSeries.cs" />
     <Compile Include="DisksDestination.cs" />
     <Compile Include="Disk.cs" />
     <Compile Include="EntryDestination.cs" />

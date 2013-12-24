@@ -23,7 +23,7 @@ namespace Voron.Impl.Paging
 			return "FragmentedPureMemoryPager";
 		}
 
-		public override unsafe byte* AcquirePagePointer(long pageNumber)
+		public override unsafe byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
 		{
 			long page = 0;
 			foreach (var buffer in _buffers)
@@ -46,12 +46,12 @@ namespace Voron.Impl.Paging
 			throw new NotSupportedException();
 		}
 
-		public override void Write(Page page, long? pageNumber)
+		public override int Write(Page page, long? pageNumber)
 		{
 			throw new NotSupportedException();
 		}
 
-		public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
+		public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
 		{
 			throw new NotSupportedException();
 		}

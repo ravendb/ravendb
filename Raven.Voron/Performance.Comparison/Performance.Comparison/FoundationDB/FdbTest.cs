@@ -82,7 +82,7 @@ namespace Performance.Comparison.FoundationDB
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
-            IEnumerable<int> sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			IEnumerable<uint> sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return Read(string.Format("[FoundationDB] sequential read ({0} items)", Constants.ReadItems), sequentialIds,
                 perfTracker);
@@ -90,21 +90,20 @@ namespace Performance.Comparison.FoundationDB
 
         public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
         {
-            IEnumerable<int> sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			IEnumerable<uint> sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return ReadParallel(
                 string.Format("[FoundationDB] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds,
                 perfTracker, numberOfThreads);
         }
 
-        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker)
+        public override PerformanceRecord ReadRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker)
         {
             return Read(string.Format("[FoundationDB] random read ({0} items)", Constants.ReadItems), randomIds,
                 perfTracker);
         }
 
-        public override PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker,
-            int numberOfThreads)
+        public override PerformanceRecord ReadParallelRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker, int numberOfThreads)
         {
             return ReadParallel(string.Format("[FoundationDB] parallel random read ({0} items)", Constants.ReadItems),
                 randomIds, perfTracker, numberOfThreads);
@@ -216,12 +215,12 @@ namespace Performance.Comparison.FoundationDB
                     .Result;
         }
 
-        private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
+        private PerformanceRecord Read(string operation, IEnumerable<uint> ids, PerfTracker perfTracker)
         {
             return ReadAsync(operation, ids, perfTracker).Result;
         }
 
-        private async Task<PerformanceRecord> ReadAsync(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
+        private async Task<PerformanceRecord> ReadAsync(string operation, IEnumerable<uint> ids, PerfTracker perfTracker)
         {
             Stopwatch sw = Stopwatch.StartNew();
 
@@ -241,7 +240,7 @@ namespace Performance.Comparison.FoundationDB
             };
         }
 
-        private async Task<PerformanceRecord> ReadParallelAsync(string operation, IEnumerable<int> ids,
+        private async Task<PerformanceRecord> ReadParallelAsync(string operation, IEnumerable<uint> ids,
             PerfTracker perfTracker,
             int numberOfThreads)
         {
@@ -252,18 +251,18 @@ namespace Performance.Comparison.FoundationDB
             }
         }
 
-        private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker,
+        private PerformanceRecord ReadParallel(string operation, IEnumerable<uint> ids, PerfTracker perfTracker,
             int numberOfThreads)
         {
             return ReadParallelAsync(operation, ids, perfTracker, numberOfThreads).Result;
         }
 
-        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, FdbDatabase db)
+        private static long ReadInternal(IEnumerable<uint> ids, PerfTracker perfTracker, FdbDatabase db)
         {
-            ReadInternalAsync(ids, perfTracker, db).Wait();
+            return ReadInternalAsync(ids, perfTracker, db).Result;
         }
 
-        private static async Task ReadInternalAsync(IEnumerable<int> ids, PerfTracker perfTracker, FdbDatabase db)
+        private static async Task<long> ReadInternalAsync(IEnumerable<uint> ids, PerfTracker perfTracker, FdbDatabase db)
         {
             const int BATCH_SIZE = 1000;
 
@@ -272,6 +271,7 @@ namespace Performance.Comparison.FoundationDB
 
             Stopwatch sw = Stopwatch.StartNew();
 
+            long v = 0;
             foreach (int id in ids)
             {
                 list.Add(id);
@@ -280,7 +280,8 @@ namespace Performance.Comparison.FoundationDB
                 {
                     using (var tx = db.BeginReadOnlyTransaction())
                     {
-                        await tx.GetValuesAsync(location.PackRange(list));
+                        var slices = await tx.GetValuesAsync(location.PackRange(list));
+                        v += slices.Sum(x=>x.Count);
                     }
                     list.Clear();
                 }
@@ -290,11 +291,14 @@ namespace Performance.Comparison.FoundationDB
             {
                 using (var tx = db.BeginReadOnlyTransaction())
                 {
-                    await tx.GetValuesAsync(location.PackRange(list));
+                    var slices = await tx.GetValuesAsync(location.PackRange(list));
+                    v += slices.Sum(x => x.Count);
+                 
                 }
             }
 
             perfTracker.Record(sw.ElapsedMilliseconds);
+            return v;
         }
     }
 }
