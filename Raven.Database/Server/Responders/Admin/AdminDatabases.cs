@@ -46,9 +46,9 @@ namespace Raven.Database.Server.Responders.Admin
 					{
 						//fetch fake (empty) system database document
 						var systemDatabaseDocument = new DatabaseDocument { Id = Constants.SystemDatabase };
-						var serializedDatabaseDocument = RavenJObject.FromObject(systemDatabaseDocument).ToString();
+						var serializedDatabaseDocument = RavenJObject.FromObject(systemDatabaseDocument);
 
-						context.Write(serializedDatabaseDocument);
+						context.WriteJson(serializedDatabaseDocument);
 					}
 					else
 					{
