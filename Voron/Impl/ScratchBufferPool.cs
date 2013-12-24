@@ -81,9 +81,9 @@ namespace Voron.Impl
 			_scratchPager.Dispose();
 		}
 
-		public Page ReadPage(long p)
+		public Page ReadPage(long p, PagerState pagerState = null)
 		{
-			return _scratchPager.Read(p);
+			return _scratchPager.Read(p, pagerState);
 		}
 
 		public byte* AcquirePagePointer(long p)

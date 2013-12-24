@@ -21,7 +21,7 @@ namespace Performance.Comparison
 
 		PerformanceRecord ReadSequential(PerfTracker perfTracker);
         PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads);
-		PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker);
-        PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads);
+		PerformanceRecord ReadRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker);
+        PerformanceRecord ReadParallelRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker, int numberOfThreads);
 	}
 }

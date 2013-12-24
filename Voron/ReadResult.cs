@@ -1,5 +1,9 @@
-﻿namespace Voron
+﻿using System;
+
+namespace Voron
 {
+	using System.IO;
+
 	public class ReadResult
 	{
         public ReadResult(ValueReader reader, ushort version)

@@ -32,12 +32,6 @@
             _database = Path.Combine(_path, "edbtest.db");
         }
 
-        ~EsentTest()
-        {
-            if (Directory.Exists(_path))
-                Directory.Delete(_path, true);
-        }
-
         public Instance CreateInstance(bool delete = true)
         {
             if (delete && Directory.Exists(_path))
@@ -101,7 +95,7 @@
 
                     var secondaryColumn = new JET_COLUMNDEF
                     {
-                        coltyp = JET_coltyp.Binary
+                        coltyp = JET_coltyp.LongBinary,
                     };
 
                     JET_COLUMNID primaryColumnId;
@@ -150,24 +144,24 @@
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return Read(string.Format("[Esent] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
         public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return ReadParallel(string.Format("[Esent] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker, numberOfThreads);
         }
 
-        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker)
+        public override PerformanceRecord ReadRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker)
         {
             return Read(string.Format("[Esent] random read ({0} items)", Constants.ReadItems), randomIds, perfTracker);
         }
 
-        public override PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads)
+        public override PerformanceRecord ReadParallelRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker, int numberOfThreads)
         {
             return ReadParallel(string.Format("[Esent] parallel random read ({0} items)", Constants.ReadItems), randomIds, perfTracker, numberOfThreads);
         }
@@ -215,15 +209,15 @@
                 for (var transactions = 0; transactions < numberOfTransactions; transactions++)
                 {
                     sw.Restart();
-
+                    long v = 0;
                     using (var tx = new Transaction(session))
                     {
                         for (var i = 0; i < itemsPerTransaction; i++)
                         {
                             enumerator.MoveNext();
-
                             var testData = enumerator.Current;
                             valueToWrite = GetValueToWrite(valueToWrite, testData.ValueSize);
+                            v += valueToWrite.Length;
                             Api.JetPrepareUpdate(session, table, JET_prep.Insert);
                             Api.SetColumn(session, table, primaryColumnId, testData.Id);
                             Api.SetColumn(session, table, secondaryColumnId, valueToWrite);
@@ -238,6 +232,7 @@
                     records.Add(
                         new PerformanceRecord
                             {
+                                Bytes = v,
                                 Operation = operation,
                                 Time = DateTime.Now,
                                 Duration = sw.ElapsedMilliseconds,
@@ -251,18 +246,19 @@
             return records;
         }
 
-        private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
+        private PerformanceRecord Read(string operation, IEnumerable<uint> ids, PerfTracker perfTracker)
         {
             using (var instance = CreateInstance(delete: false))
             {
                 var sw = Stopwatch.StartNew();
 
-                ReadInternal(ids, perfTracker, instance);
+                var bytes = ReadInternal(ids, perfTracker, instance);
 
                 sw.Stop();
 
                 return new PerformanceRecord
                            {
+                               Bytes = bytes,
                                Operation = operation,
                                Time = DateTime.Now,
                                Duration = sw.ElapsedMilliseconds,
@@ -271,7 +267,7 @@
             }
         }
 
-        private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker, int numberOfThreads)
+        private PerformanceRecord ReadParallel(string operation, IEnumerable<uint> ids, PerfTracker perfTracker, int numberOfThreads)
         {
             using (var instance = CreateInstance(delete: false))
             {
@@ -279,7 +275,7 @@
             }
         }
 
-        private void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, Instance instance)
+        private long ReadInternal(IEnumerable<uint> ids, PerfTracker perfTracker, Instance instance)
         {
             Table table;
             JET_COLUMNID primaryColumnId;
@@ -288,6 +284,7 @@
             {
                 var sw = Stopwatch.StartNew();
                 Api.JetSetCurrentIndex(session, table, "by_key");
+                long v = 0;
                 foreach (var id in ids)
                 {
                     Api.MoveBeforeFirst(session, table);
@@ -296,9 +293,12 @@
 
                     var value = Api.RetrieveColumn(session, table, secondaryColumnId);
 
+                    v += value.Length;
+
                     Debug.Assert(value != null);
                 }
                 perfTracker.Record(sw.ElapsedMilliseconds);
+                return v;
             }
         }
     }
