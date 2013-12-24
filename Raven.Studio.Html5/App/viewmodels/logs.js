@@ -4,7 +4,7 @@
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/getLogsCommand", "viewmodels/activeDbViewModelBase", "models/database", "moment", "models/document"], function(require, exports, getLogsCommand, activeDbViewModelBase, database, moment, document) {
+define(["require", "exports", "durandal/app", "commands/getLogsCommand", "viewmodels/activeDbViewModelBase", "commands/getDatabaseStatsCommand", "models/database", "moment", "viewmodels/copyDocuments", "models/document"], function(require, exports, app, getLogsCommand, activeDbViewModelBase, getDatabaseStatsCommand, database, moment, copyDocuments, document) {
     var logs = (function (_super) {
         __extends(logs, _super);
         function logs() {

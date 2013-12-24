@@ -1,6 +1,6 @@
 ﻿/// <reference path="../../../Scripts/typings/knockout.postbox/knockout-postbox.d.ts" />
 /// <reference path="../../../Scripts/typings/durandal/durandal.d.ts" />
-define(["require", "exports", "common/appUrl", "models/database", "common/pagedResultSet", "viewmodels/deleteDocuments", "viewmodels/copyDocuments", "durandal/app", "widgets/virtualTable/row", "widgets/virtualTable/column"], function(require, exports, appUrl, database, pagedResultSet, deleteDocuments, copyDocuments, app, row, column) {
+define(["require", "exports", "common/pagedList", "common/raven", "common/appUrl", "models/document", "models/collection", "models/database", "common/pagedResultSet", "viewmodels/deleteDocuments", "viewmodels/copyDocuments", "durandal/app", "widgets/virtualTable/row", "widgets/virtualTable/column"], function(require, exports, pagedList, raven, appUrl, document, collection, database, pagedResultSet, deleteDocuments, copyDocuments, app, row, column) {
     var ctor = (function () {
         function ctor() {
             this.visibleRowCount = 0;

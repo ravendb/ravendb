@@ -69,6 +69,11 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="App\commands\commandBase.ts" />
+    <TypeScriptCompile Include="App\commands\createDatabaseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteCollectionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteDocumentsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getAlertsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getAllDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getApiKeysCommand.ts" />
     <TypeScriptCompile Include="App\commands\getBuildVersionCommand.ts" />
@@ -98,10 +103,6 @@
     <TypeScriptCompile Include="App\viewmodels\periodicBackup.ts" />
     <TypeScriptCompile Include="App\viewmodels\replicationStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
-    <TypeScriptCompile Include="App\commands\createDatabaseCommand.ts" />
-    <Content Include="App\commands\createDatabaseCommand.js">
-      <DependentUpon>createDatabaseCommand.ts</DependentUpon>
-    </Content>
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
     <Content Include="App\common\nav.js">
@@ -996,18 +997,6 @@
     <TypeScriptCompile Include="App\common\pagedList.ts" />
     <TypeScriptCompile Include="App\common\pagedResultSet.ts" />
     <TypeScriptCompile Include="App\common\dialogResult.ts" />
-    <TypeScriptCompile Include="App\commands\deleteDocumentsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\commandBase.ts" />
-    <Content Include="App\commands\commandBase.js">
-      <DependentUpon>commandBase.ts</DependentUpon>
-    </Content>
-    <TypeScriptCompile Include="App\commands\deleteCollectionCommand.ts" />
-    <Content Include="App\commands\deleteCollectionCommand.js">
-      <DependentUpon>deleteCollectionCommand.ts</DependentUpon>
-    </Content>
-    <Content Include="App\commands\deleteDocumentsCommand.js">
-      <DependentUpon>deleteDocumentsCommand.ts</DependentUpon>
-    </Content>
     <TypeScriptCompile Include="App\common\alertType.ts" />
     <TypeScriptCompile Include="App\common\alertArgs.ts" />
     <TypeScriptCompile Include="App\common\raven.ts" />

@@ -36,4 +36,4 @@ class createDatabaseCommand extends commandBase {
     }
 }
 
-export = createDatabaseCommand;
+export = createDatabaseCommand; 

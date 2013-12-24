@@ -150,3 +150,13 @@ interface queryResultDto {
     Results: any[];
     Includes: any[];
 }
+
+interface alertDto {
+    Title: string;
+    CreatedAt: string;
+    Observed: boolean;
+    Message: string;
+    AlertLevel: string;
+    Exception: string;
+    UniqueKey: string;
+}
