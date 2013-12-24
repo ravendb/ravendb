@@ -214,8 +214,10 @@
     <Compile Include="Bugs\Chripede\IndexOnList.cs" />
     <Compile Include="Bugs\AccessingMetadataInTransformer.cs" />
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
+    <Compile Include="Bugs\RavenDB_1532.cs" />
     <Compile Include="Bugs\ConcurrencyTests.cs" />
     <Compile Include="Bugs\NullableDateTimeOffsetFromDateTimeParse.cs" />
+    <Compile Include="Bugs\RawQueryShouldGoThroughAnalysis.cs" />
     <Compile Include="Issues\RavenDB1508.cs" />
     <Compile Include="Issues\RavenDB1519.cs" />
     <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
@@ -224,6 +226,7 @@
     <Compile Include="Bugs\Facets\FacetErrors.cs" />
     <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
     <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
+    <Compile Include="Issues\RavenDB_1379.cs" />
     <Compile Include="Issues\RavenDB_1470.cs" />
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
@@ -808,6 +811,7 @@
     <Compile Include="MailingList\AnyBugTest.cs" />
     <Compile Include="MailingList\Marisic.cs" />
     <Compile Include="MailingList\MoreLikeThisEvaluation.cs" />
+    <Compile Include="MailingList\Mouhong.cs" />
     <Compile Include="MailingList\MultiLoadInTransaction.cs" />
     <Compile Include="MailingList\nberardi.cs" />
     <Compile Include="MailingList\Nemitoff.cs" />
@@ -1247,6 +1251,7 @@
     <Compile Include="Synchronization\ConcurrentJsonDocumentSortedListTests.cs" />
     <Compile Include="Synchronization\EtagSynchronizerTests.cs" />
     <Compile Include="Synchronization\IndexationTests.cs" />
+    <Compile Include="T1.cs" />
     <Compile Include="TemporaryCulture.cs" />
     <Compile Include="MailingList\Thor\JoinedChildTransport.cs" />
     <Compile Include="MailingList\Thor\Child.cs" />

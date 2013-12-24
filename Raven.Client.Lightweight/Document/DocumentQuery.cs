@@ -783,7 +783,7 @@ namespace Raven.Client.Document
 		public IDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
 		{
             var orderByfields = propertySelectors.Select(expression => MakeFieldSortDescending(GetMemberQueryPathForOrderBy(expression))).ToArray();
-            OrderBy(orderByfields);
+            OrderByDescending(orderByfields);
             for (int index = 0; index < orderByfields.Length; index++)
             {
                 var fld = orderByfields[index];

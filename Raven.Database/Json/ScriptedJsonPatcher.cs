@@ -32,7 +32,7 @@ namespace Raven.Database.Json
 		private readonly int maxSteps;
 		private readonly int additionalStepsPerSize;
 
-		private readonly Dictionary<string, JTokenType> propertiesTypeByName;
+		private readonly Dictionary<JsInstance, KeyValuePair<RavenJValue, object>> propertiesTypeByName = new Dictionary<JsInstance, KeyValuePair<RavenJValue, object>>();
 
 		public ScriptedJsonPatcher(DocumentDatabase database = null)
 		{
@@ -56,7 +56,6 @@ namespace Raven.Database.Json
 					return jsonDocument == null ? null : jsonDocument.ToJson();
 				};
 			}
-			propertiesTypeByName = new Dictionary<string, JTokenType>();
 		}
 
 		public RavenJObject Apply(RavenJObject document, ScriptedPatchRequest patch, int size = 0, string docId = null)
@@ -181,12 +180,12 @@ namespace Raven.Database.Json
 					case JsInstance.CLASS_FUNCTION:
 						continue;
 				}
-				rjo[key] = ToRavenJToken(jsInstance, key);
+				rjo[key] = ToRavenJToken(jsInstance);
 			}
 			return rjo;
 		}
 
-		private RavenJToken ToRavenJToken(JsInstance v, string propertyName)
+		private RavenJToken ToRavenJToken(JsInstance v)
 		{
 			switch (v.Class)
 			{
@@ -200,13 +199,22 @@ namespace Raven.Database.Json
 			    case JsInstance.CLASS_NUMBER:
 			        var num = (double) v.Value;
 
-			        JTokenType type;
-			        if (propertiesTypeByName.TryGetValue(propertyName, out type))
-			        {
-			            if (type == JTokenType.Float)
+					KeyValuePair<RavenJValue, object> property;
+					if (propertiesTypeByName.TryGetValue(v, out property))
+					{
+						var originalValue = property.Key;
+						if (originalValue.Type == JTokenType.Float)
 			                return new RavenJValue(num);
-			            if (type == JTokenType.Integer)
-			                return new RavenJValue((long) num);
+						if (originalValue.Type == JTokenType.Integer)
+				        {
+							// If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 
+							// which will convert a Int64 to jsFloat.
+							var originalJsValue = property.Value;
+							if (originalJsValue is double && num == (double)originalJsValue)
+								return originalValue;
+					        
+							return new RavenJValue((long) num);
+				        }
 			        }
 
 			        // If we don't have the type, assume that if the number ending with ".0" it actually an integer.
@@ -243,7 +251,7 @@ namespace Raven.Database.Json
 			        for (int i = 0; i < jsArray.Length; i++)
 			        {
 			            var jsInstance = jsArray.get(i);
-			            var ravenJToken = ToRavenJToken(jsInstance, propertyName);
+			            var ravenJToken = ToRavenJToken(jsInstance);
 			            if (ravenJToken == null)
 			                continue;
 			            rja.Add(ravenJToken);
@@ -265,10 +273,13 @@ namespace Raven.Database.Json
 			var jsObject = global.ObjectClass.New();
 			foreach (var prop in doc)
 			{
-				if (prop.Value is RavenJValue)
-					propertiesTypeByName[prop.Key] = prop.Value.Type;
-				var val = ToJsInstance(global, prop.Value);
-				jsObject.DefineOwnProperty(prop.Key, val);
+				var jsValue = ToJsInstance(global, prop.Value);
+
+				var value = prop.Value as RavenJValue;
+				if (value != null)
+					propertiesTypeByName[jsValue] = new KeyValuePair<RavenJValue, object>(value, jsValue.Value);
+
+				jsObject.DefineOwnProperty(prop.Key, jsValue);
 			}
 			return jsObject;
 		}
