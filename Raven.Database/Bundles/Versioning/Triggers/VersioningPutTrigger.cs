@@ -132,7 +132,8 @@ namespace Raven.Bundles.Versioning.Triggers
 
 			while (true)
 			{
-				var docs = Database.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize);
+				int nextPageStart = start; // will trigger rapid pagination
+				var docs = Database.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize, ref nextPageStart);
 				if (!docs.Any())
 					break;
 

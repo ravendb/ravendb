@@ -24,7 +24,7 @@ namespace Raven.Studio.Features.Settings
 			ApiKeys = new ObservableCollection<ApiKeyDefinition>();
 
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
-			session.Advanced.LoadStartingWithAsync<ApiKeyDefinition>("Raven/ApiKeys/", pageSize:256).ContinueOnSuccessInTheUIThread(
+			session.Advanced.LoadStartingWithAsync<ApiKeyDefinition>("Raven/ApiKeys/", null, pageSize:256).ContinueOnSuccessInTheUIThread(
 				apiKeys =>
 				{
 					OriginalApiKeys = new ObservableCollection<ApiKeyDefinition>(apiKeys);
@@ -107,7 +107,7 @@ namespace Raven.Studio.Features.Settings
 		private void SearchApiKeysCommand()
 		{
 			var session = ApplicationModel.Current.Server.Value.DocumentStore.OpenAsyncSession();
-			session.Advanced.LoadStartingWithAsync<ApiKeyDefinition>("Raven/ApiKeys/" + SearchApiKeys).ContinueOnSuccessInTheUIThread(
+			session.Advanced.LoadStartingWithAsync<ApiKeyDefinition>("Raven/ApiKeys/" + SearchApiKeys, null).ContinueOnSuccessInTheUIThread(
 				apiKeys =>
 				{
 					OriginalApiKeys = new ObservableCollection<ApiKeyDefinition>(apiKeys);
