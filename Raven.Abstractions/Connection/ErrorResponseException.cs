@@ -18,14 +18,6 @@ namespace Raven.Abstractions.Connection
 			get { return Response.StatusCode; }
 		}
 
-		public async Task<string> GetMessage()
-		{
-			using (var sr = new StreamReader(await Response.GetResponseStreamWithHttpDecompression()))
-			{
-				return sr.ReadToEnd();
-			}
-		}
-
 		public ErrorResponseException()
 		{
 		}

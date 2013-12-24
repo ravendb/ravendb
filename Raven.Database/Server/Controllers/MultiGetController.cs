@@ -14,7 +14,7 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class MultiGetController : RavenApiController
+	public class MultiGetController : RavenDbApiController
 	{
 		private static ThreadLocal<bool> recursive = new ThreadLocal<bool>(() => false);
 

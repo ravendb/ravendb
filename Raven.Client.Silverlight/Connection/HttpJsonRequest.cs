@@ -12,10 +12,13 @@ using System.Net.Browser;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Ionic.Zlib;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection.Profiling;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -39,14 +42,13 @@ namespace Raven.Client.Silverlight.Connection
 	{
 		internal readonly string Url;
 		internal readonly string Method;
-		private readonly DocumentConvention conventions;
+		private readonly Convention conventions;
 
 		private bool writeCalled;
-		private HttpClientHandler handler;
+		private readonly HttpClientHandler handler;
 		internal HttpClient httpClient;
 
 		private Stream postedData;
-		private int retries;
 		public static readonly string ClientVersion = new AssemblyName(typeof(HttpJsonRequest).Assembly.FullName).Version.ToString();
 		private bool disabledAuthRetries;
 
@@ -55,25 +57,6 @@ namespace Raven.Client.Silverlight.Connection
 		private string operationUrl;
 
 		public Action<string, string, string> HandleReplicationStatusChanges = delegate { };
-
-		private async Task RecreateWebRequest(Action<HttpClient> result)
-		{
-			retries++;
-			// we now need to clone the request, since just calling GetRequest again wouldn't do anything
-			var newHttpClient = new HttpClient(new HttpClientHandler
-		{
-			Credentials = handler.Credentials,
-		});
-			// HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
-			result(newHttpClient);
-			httpClient = newHttpClient;
-			requestSendToServer = false;
-
-			if (postedData == null)
-				return;
-
-			await WriteAsync(postedData);
-		}
 
 		public void DisableAuthentication()
 		{
@@ -99,8 +82,7 @@ namespace Raven.Client.Silverlight.Connection
 #endif
 		}
 
-		private HttpJsonRequestFactory factory;
-
+		private readonly HttpJsonRequestFactory factory;
 		private static Task noopWaitForTask = new CompletedTask();
 
 
@@ -155,7 +137,7 @@ namespace Raven.Client.Silverlight.Connection
 			return ReadResponseStringAsync();
 		}
 
-		private bool requestSendToServer;
+		private bool isRequestSentToServer;
 
 		private readonly OperationCredentials _credentials;
 
@@ -164,10 +146,10 @@ namespace Raven.Client.Silverlight.Connection
 		/// </summary>
 		private async Task<string> ReadResponseStringAsync()
 		{
-			if (requestSendToServer)
+			if (isRequestSentToServer)
 				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
 
-			requestSendToServer = true;
+			isRequestSentToServer = true;
 
 			await WaitForTask;
 
@@ -203,19 +185,34 @@ namespace Raven.Client.Silverlight.Connection
 			}
 		}
 
-
-		public async Task HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse)
+		public async Task<bool> HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse)
 		{
 			if (conventions.HandleUnauthorizedResponseAsync == null)
-				return;
+				return false;
 
 			var unauthorizedResponseAsync = conventions.HandleUnauthorizedResponseAsync(unauthorizedResponse, _credentials);
 			if (unauthorizedResponseAsync == null)
+				return false;
+
+			await RecreateHttpClient(await unauthorizedResponseAsync);
+			return true;
+		}
+
+		private async Task RecreateHttpClient(Action<HttpClient> result)
+		{
+			var newHttpClient = new HttpClient(new HttpClientHandler
+			{
+				Credentials = handler.Credentials,
+			});
+			//HttpJsonRequestHelper.CopyHeaders(webRequest, newWebRequest);
+			result(newHttpClient);
+			httpClient = newHttpClient;
+			isRequestSentToServer = false;
+
+			if (postedData == null)
 				return;
 
-			var result = await unauthorizedResponseAsync;
-			// await RecreateWebRequest(result);
-			throw new NotImplementedException();
+			await WriteAsync(postedData);
 		}
 
 		public async Task<byte[]> ReadResponseBytesAsync()
@@ -352,7 +349,7 @@ namespace Raven.Client.Silverlight.Connection
 
 			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
-				Content = new CompressedStreamContent(stream)
+				Content = new CompressedStreamContent(stream, factory.DisableRequestCompression)
 			});
 
 			if (Response.IsSuccessStatusCode == false)
@@ -381,67 +378,119 @@ namespace Raven.Client.Silverlight.Connection
 			return this;
 		}
 
-		public Task<IObservable<string>> ServerPullAsync(int retries = 0)
+		public async Task<IObservable<string>> ServerPullAsync(int retries = 0)
 		{
-			throw new NotImplementedException();
-			/*return WaitForTask.ContinueWith(__ =>
+			while (true)
 			{
-				webRequest.AllowReadStreamBuffering = false;
-				webRequest.AllowWriteStreamBuffering = false;
-				webRequest.Headers["Requires-Big-Initial-Download"] = "True";
-				return webRequest.GetResponseAsync()
-				   .ContinueWith(task =>
-				   {
-					   var stream = task.Result.GetResponseStream();
-					   var observableLineStream = new ObservableLineStream(stream, () =>
-																					   {
-																						   webRequest.Abort();
-																						   try
-																						   {
-																							   task.Result.Close();
-																						   }
-																						   catch (Exception)
-																						   {
-																							   // we expect an exception, because we aborted the connection
-																						   }
-																					   });
-					   observableLineStream.Start();
-					   return (IObservable<string>)observableLineStream;
-				   })
-				   .ContinueWith(task =>
-				   {
-					   var webException = task.Exception.ExtractSingleInnerException() as WebException;
-					   if (webException == null || retries >= 3 || disabledAuthRetries)
-						   return task;// effectively throw
+				ErrorResponseException webException;
 
-					   var httpWebResponse = webException.Response as HttpWebResponse;
-					   if (httpWebResponse == null ||
-							(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
-							 httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
-							 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
-						   return task; // effectively throw
+				try
+				{
+					Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url), HttpCompletionOption.ResponseHeadersRead);
+					await CheckForErrorsAndReturnCachedResultIfAnyAsync();
 
-					   if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
-					   {
-						   HandleForbiddenResponseAsync(httpWebResponse);
-						   return task;
-					   }
+					var stream = await Response.GetResponseStreamWithHttpDecompression();
+					var observableLineStream = new ObservableLineStream(stream, () => Response.Dispose());
+					SetResponseHeaders(Response);
+					observableLineStream.Start();
+					return (IObservable<string>)observableLineStream;
+				}
+				catch (ErrorResponseException e)
+				{
+					if (++retries >= 3 || disabledAuthRetries)
+						throw;
 
-					   var authorizeResponse = HandleUnauthorizedResponseAsync(httpWebResponse);
+					if (e.StatusCode != HttpStatusCode.Unauthorized &&
+						e.StatusCode != HttpStatusCode.Forbidden &&
+						e.StatusCode != HttpStatusCode.PreconditionFailed)
+						throw;
 
-					   if (authorizeResponse == null)
-						   return task; // effectively throw
+					webException = e;
+				}
 
-					   return authorizeResponse
-						   .ContinueWith(_ =>
-						   {
-							   _.Wait(); //throw on error
-							   return ServerPullAsync(retries + 1);
-						   })
-						   .Unwrap();
-				   }).Unwrap();
-			})
-				.Unwrap();*/
+				if (webException.StatusCode == HttpStatusCode.Forbidden)
+				{
+					await HandleForbiddenResponseAsync(webException.Response);
+					await new CompletedTask(webException).Task; // Throws, preserving original stack
+				}
+
+				if (await HandleUnauthorizedResponseAsync(webException.Response) == false)
+					await new CompletedTask(webException).Task; // Throws, preserving original stack
+			}
+		}
+
+		private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync()
+		{
+			if (Response.IsSuccessStatusCode == false)
+			{
+				if (Response.StatusCode == HttpStatusCode.Unauthorized ||
+					Response.StatusCode == HttpStatusCode.NotFound ||
+					Response.StatusCode == HttpStatusCode.Conflict)
+				{
+					throw new ErrorResponseException(Response);
+				}
+
+				using (var sr = new StreamReader(await Response.GetResponseStreamWithHttpDecompression()))
+				{
+					var readToEnd = sr.ReadToEnd();
+
+					if (string.IsNullOrWhiteSpace(readToEnd))
+						throw new ErrorResponseException(Response);
+
+					RavenJObject ravenJObject;
+					try
+					{
+						ravenJObject = RavenJObject.Parse(readToEnd);
+					}
+					catch (Exception e)
+					{
+						throw new ErrorResponseException(Response, readToEnd, e);
+					}
+					if (ravenJObject.ContainsKey("IndexDefinitionProperty"))
+					{
+						throw new IndexCompilationException(ravenJObject.Value<string>("Message"))
+						{
+							IndexDefinitionProperty = ravenJObject.Value<string>("IndexDefinitionProperty"),
+							ProblematicText = ravenJObject.Value<string>("ProblematicText")
+						};
+					}
+					if (Response.StatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
+					{
+						throw new BadRequestException(ravenJObject.Value<string>("Message"), new ErrorResponseException(Response));
+					}
+					if (ravenJObject.ContainsKey("Error"))
+					{
+						var sb = new StringBuilder();
+						foreach (var prop in ravenJObject)
+						{
+							if (prop.Key == "Error")
+								continue;
+
+							sb.Append(prop.Key).Append(": ").AppendLine(prop.Value.ToString(Formatting.Indented));
+						}
+
+						if (sb.Length > 0)
+							sb.AppendLine();
+						sb.Append(ravenJObject.Value<string>("Error"));
+
+						throw new ErrorResponseException(Response, sb.ToString());
+					}
+					throw new ErrorResponseException(Response, readToEnd);
+				}
+			}
+			return null;
+		}
+
+		private async Task HandleForbiddenResponseAsync(HttpResponseMessage forbiddenResponse)
+		{
+			if (conventions.HandleForbiddenResponseAsync == null)
+				return;
+
+			var forbiddenResponseAsync = conventions.HandleForbiddenResponseAsync(forbiddenResponse, _credentials);
+			if (forbiddenResponseAsync == null)
+				return;
+
+			await forbiddenResponseAsync;
 		}
 
 		public async Task ExecuteWriteAsync(string data)
@@ -502,10 +551,10 @@ namespace Raven.Client.Silverlight.Connection
 		{
 			throw new NotImplementedException();
 			/*
-						if (requestSendToServer)
+						if (isRequestSentToServer)
 							throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
 
-						requestSendToServer = true;
+						isRequestSentToServer = true;
 						webRequest.AllowReadStreamBuffering = false;
 						webRequest.AllowWriteStreamBuffering = false;
 

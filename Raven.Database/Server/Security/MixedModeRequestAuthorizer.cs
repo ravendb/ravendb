@@ -94,7 +94,7 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.Authorize(context, IgnoreDb.Urls.Contains(requestUrl));
 		}
 
-		public bool TryAuthorize(RavenApiController controller, out HttpResponseMessage msg)
+		public bool TryAuthorize(RavenDbApiController controller, out HttpResponseMessage msg)
 		{
 			var requestUrl = controller.GetRequestUrl();
 			if (NeverSecret.Urls.Contains(requestUrl))
@@ -167,7 +167,7 @@ namespace Raven.Database.Server.Security
 			return true;
 		}
 
-		private bool TryAuthorizeUsingleUseAuthToken(RavenApiController controller, string token, out HttpResponseMessage msg)
+		private bool TryAuthorizeUsingleUseAuthToken(RavenDbApiController controller, string token, out HttpResponseMessage msg)
 		{
 			OneTimeToken value;
 			if (singleUseAuthTokens.TryRemove(token, out value) == false)
@@ -224,7 +224,7 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.GetUser(context);
 		}
 
-		public IPrincipal GetUser(RavenApiController controller)
+		public IPrincipal GetUser(RavenDbApiController controller)
 		{
 			var hasApiKey = "True".Equals(controller.GetQueryStringValue("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
 			var authHeader = controller.GetHeader("Authorization");
@@ -252,7 +252,7 @@ namespace Raven.Database.Server.Security
 			return approved;
 		}
 
-		public List<string> GetApprovedDatabases(IPrincipal user, RavenApiController controller, string[] databases)
+		public List<string> GetApprovedDatabases(IPrincipal user, RavenDbApiController controller, string[] databases)
 		{
 			var authHeader = controller.GetHeader("Authorization");
 
@@ -298,7 +298,7 @@ namespace Raven.Database.Server.Security
 			return tokenString;
 		}
 
-		public string GenerateSingleUseAuthToken(DocumentDatabase db, IPrincipal user, RavenApiController controller)
+		public string GenerateSingleUseAuthToken(DocumentDatabase db, IPrincipal user, RavenDbApiController controller)
 		{
 			var token = new OneTimeToken
 			{

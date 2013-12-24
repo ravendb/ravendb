@@ -7,7 +7,7 @@ using Raven.Abstractions.Extensions;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class StaticController : RavenApiController
+	public class StaticController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("static/")]

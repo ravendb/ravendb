@@ -66,6 +66,7 @@ namespace Raven.Database.Server.WebApi.Handlers
 			if (response.RequestMessage != null && 
 				response.RequestMessage.Headers.AcceptEncoding != null && 
 				response.RequestMessage.Headers.AcceptEncoding.Count != 0 && 
+				response.Content != null &&
 				response.Content is ChangesPushContent == false)
 			{
 				string encodingType = response.RequestMessage.Headers.AcceptEncoding.First().Value;
