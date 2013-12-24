@@ -81,12 +81,13 @@
     <TypeScriptCompile Include="App\commands\getCollectionsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDatabasesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDatabaseStatsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\getDocumentsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getDocumentsByEntityNameCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentWithMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLicenseStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLogsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSystemDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getUserInfoCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveAlertsCommand.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />

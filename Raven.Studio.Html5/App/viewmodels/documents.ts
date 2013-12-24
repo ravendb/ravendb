@@ -8,7 +8,6 @@ import deleteCollection = require("viewmodels/deleteCollection");
 import raven = require("common/raven");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
-import getDocumentsCommand = require("commands/getDocumentsCommand");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
 
 class documents {
@@ -83,7 +82,7 @@ class documents {
         var allCollections = [this.allDocumentsCollection].concat(collectionsWithSysCollection);
         this.collections(allCollections);
 
-        var collectionToSelect = allCollections.first<collection>(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection;
+        var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection;
         collectionToSelect.activate();
 
         // Fetch the collection info for each collection.

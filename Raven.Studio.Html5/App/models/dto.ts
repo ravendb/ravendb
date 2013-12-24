@@ -19,11 +19,11 @@ interface documentDto {
 }
 
 interface documentMetadataDto {
-	'Raven-Entity-Name': string;
-	'Raven-Clr-Type': string;
+	'Raven-Entity-Name'?: string;
+	'Raven-Clr-Type'?: string;
 	'Non-Authoritative-Information': boolean;
 	'@id': string;
-	'Temp-Index-Score': number;
+	'Temp-Index-Score'?: number;
 	'Last-Modified': string;
 	'Raven-Last-Modified': string;
 	'@etag': string;
@@ -152,6 +152,7 @@ interface queryResultDto {
 }
 
 interface alertContainerDto {
+    '@metadata': documentMetadataDto;
     Alerts: alertDto[];
 }
 

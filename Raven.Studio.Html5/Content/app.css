@@ -341,18 +341,23 @@ body {
     outline: none;
 }
 
-#logsContainer table .selected,
-#alertsContainer table .selected {
+#logsContainer table .selected td,
+#alertsContainer table .selected td {
     background-color: #ffffcc;
 }
 
 #logsContainer .log-details,
 #alertsContainer .log-details,
-#logsContainer .alert-details,
-#alertsContainer .alert-details {
+#logsContainer .alerts-details,
+#alertsContainer .alerts-details {
     padding: 10px;
     overflow-y: auto;
     overflow-x: hidden;
+}
+
+#logsContainer .unread td,
+#alertsContainer .unread td {
+    font-weight: bold;
 }
 
 .text-ellipsis {
@@ -410,3 +415,5 @@ footer ul {
         margin-bottom: 0;
     }
 }
+
+/*# sourceMappingURL=/Content/app.less.map */

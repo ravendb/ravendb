@@ -24,7 +24,7 @@ class status extends activeDbViewModelBase {
 
         this.currentRouteTitle = ko.computed(() => {
             // Is there a better way to get the active route?
-            var activeRoute = this.router.navigationModel().first<DurandalRouteConfiguration>(r => r.isActive());
+            var activeRoute = this.router.navigationModel().first(r => r.isActive());
             return activeRoute != null ? activeRoute.title : "";
         });
     }

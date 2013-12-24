@@ -179,7 +179,7 @@ class ctor {
             return "system-documents-collection";
         }
 
-        var collection = this.collections().first<collection>(c => c.name === entityName);
+        var collection = this.collections().first(c => c.name === entityName);
         if (collection) {
             return collection.colorClass;
         }

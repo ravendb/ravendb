@@ -354,14 +354,22 @@ html, body {
         outline: none;
 
         .selected {
-            background-color: @selectionColor;
+            td {
+                background-color: @selectionColor;
+            }
         }
     }
 
-    .log-details, .alert-details {
+    .log-details, .alerts-details {
         padding: 10px;
         overflow-y: auto;
         overflow-x: hidden;
+    }
+
+    .unread {
+        td {
+            font-weight: bold;
+        }
     }
 }
 
