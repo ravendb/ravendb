@@ -2,20 +2,17 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using System.Web.Http;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Bundles.Replication.Tasks;
-using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -219,13 +216,6 @@ namespace Raven.Database.Server.Controllers
 			return DatabasesLandlord.SystemDatabase == Database;
 		}
 
-		public int GetStart()
-		{
-			int start;
-			int.TryParse(GetQueryStringValue("start"), out start);
-			return Math.Max(0, start);
-		}
-
         public int GetNextPageStart()
         {
             bool isNextPage;
@@ -234,55 +224,6 @@ namespace Raven.Database.Server.Controllers
 
             return 0;
         }
-
-		public int GetPageSize(int maxPageSize)
-		{
-			int pageSize;
-			if (int.TryParse(GetQueryStringValue("pageSize"), out pageSize) == false || pageSize < 0)
-				pageSize = 25;
-			if (pageSize > maxPageSize)
-				pageSize = maxPageSize;
-			return pageSize;
-		}
-
-		public bool MatchEtag(Etag etag)
-		{
-			return EtagHeaderToEtag() == etag;
-		}
-
-		internal Etag EtagHeaderToEtag()
-		{
-			var responseHeader = GetHeader("If-None-Match");
-			if (string.IsNullOrEmpty(responseHeader))
-				return Etag.InvalidEtag;
-
-			if (responseHeader[0] == '\"')
-				return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
-
-			return Etag.Parse(responseHeader);
-		}
-
-		public string GetQueryStringValue(string key)
-		{
-			return GetQueryStringValue(InnerRequest, key);
-		}
-
-		public static string GetQueryStringValue(HttpRequestMessage req, string key)
-		{
-			return req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
-		}
-
-		public string[] GetQueryStringValues(string key)
-		{
-			var items = InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key == key);
-			return items.Select(pair => pair.Value).ToArray();
-		}
-
-		public Etag GetEtagFromQueryString()
-		{
-			var etagAsString = GetQueryStringValue("etag");
-			return etagAsString != null ? Etag.Parse(etagAsString) : null;
-		}
 
 		protected TransactionInformation GetRequestTransaction()
 		{
