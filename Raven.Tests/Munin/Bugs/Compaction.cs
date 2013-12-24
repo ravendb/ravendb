@@ -14,7 +14,7 @@ namespace Raven.Munin.Tests.Bugs
 
 	using Xunit;
 
-	public class Compaction : IDisposable
+	public class Compaction
 	{
 		public Compaction()
 		{
@@ -82,11 +82,6 @@ namespace Raven.Munin.Tests.Bugs
 				Assert.Equal(value, readResult.Data());
 				database.Commit();
 			}
-		}
-
-		public void Dispose()
-		{
-			Encryptor.Dispose();
 		}
 	}
 }
