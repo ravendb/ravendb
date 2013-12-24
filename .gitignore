@@ -49,7 +49,12 @@ Testresults
 /*.shfbproj_Fitzchak
 Raven.Studio/Settings.dat
 Raven.Studio.Html5/App/commands/*.js
+Raven.Studio.Html5/App/commands/*.js.map
 Raven.Studio.Html5/App/common/*.js
+Raven.Studio.Html5/App/common/*.js.map
 Raven.Studio.Html5/App/models/*.js
+Raven.Studio.Html5/App/models/*.js.map
 Raven.Studio.Html5/App/viewmodels/*.js
-Raven.Studio.Html5/App/widgets/*.js
+Raven.Studio.Html5/App/viewmodels/*.js.map
+Raven.Studio.Html5/App/widgets/virtualTable/*.js
+Raven.Studio.Html5/App/widgets/virtualTable/*.js.map
