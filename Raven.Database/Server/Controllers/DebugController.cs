@@ -1,16 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using System.Web.Http.Controllers;
+using System.Web.Http.Routing;
+using System.Web.Routing;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Server.Abstractions;
+using Raven.Database.Server.RavenFS.Extensions;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
 using Raven.Json.Linq;
@@ -240,5 +247,84 @@ namespace Raven.Database.Server.Controllers
 
 			return GetMessageWithObject(tasks);
 		}
+
+		[HttpGet]
+		[Route("debug/routes")]
+		[Description(@"Output the debug information for all the supported routes in Raven Server.")]
+		public HttpResponseMessage Routes()
+		{
+			var routes = new SortedDictionary<string, RouteInfo>();
+
+			foreach (var route in ControllerContext.Configuration.Routes)
+			{
+				var inner = route as IEnumerable<IHttpRoute>;
+				if (inner == null) continue;
+
+				foreach (var httpRoute in inner)
+				{
+					var key = httpRoute.RouteTemplate;
+					bool forDatabase = false;
+					if (key.StartsWith("databases/{databaseName}/"))
+					{
+						key = key.Substring("databases/{databaseName}/".Length);
+						forDatabase = true;
+					}
+					var data = new RouteInfo(key);
+					if (routes.ContainsKey(key))
+						data = routes[key];
+
+					if (forDatabase)
+						data.CanRunForSpecificDatabase = true;
+
+					var actions = (IEnumerable<ReflectedHttpActionDescriptor>)httpRoute.DataTokens["actions"];
+
+					foreach (var reflectedHttpActionDescriptor in actions)
+					{
+						
+						foreach (var httpMethod in reflectedHttpActionDescriptor.SupportedHttpMethods)
+						{
+							if (data.Methods.Any(method => method.Name == httpMethod.Method)) 
+								continue;
+
+							string description = null;
+							var descriptionAttibute =
+								reflectedHttpActionDescriptor.MethodInfo.CustomAttributes.FirstOrDefault(attributeData => attributeData.AttributeType == typeof(DescriptionAttribute));
+							if(descriptionAttibute != null)
+								description = descriptionAttibute.ConstructorArguments[0].Value.ToString();
+								
+							data.Methods.Add(new Method
+							{
+								Name = httpMethod.Method,
+								Description = description
+							});
+						}
+					}
+
+					routes[key] = data;
+				}
+			}
+
+			return GetMessageWithObject(routes);
+		}
+	}
+
+	public class RouteInfo
+	{
+		public string Key { get; set; }
+		public List<Method> Methods { get; set; }
+
+		public bool CanRunForSpecificDatabase { get; set; }
+
+		public RouteInfo(string key)
+		{
+			Key = key;
+			Methods = new List<Method>();
+		}
+	}
+
+	public class Method
+	{
+		public string Name { get; set; }
+		public string Description { get; set; }
 	}
 }
