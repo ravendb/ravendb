@@ -196,7 +196,7 @@ namespace Raven.Database.Impl.DTC
 						{
 							if (etag != null && etag != existing.currentEtag)
 								throw new ConcurrencyException("Transaction operation attempted on : " + key + " using a non current etag");
-
+							existing.currentEtag = item.Etag;
 							return existing;
 						}
 
