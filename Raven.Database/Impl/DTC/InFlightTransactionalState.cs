@@ -193,7 +193,7 @@ namespace Raven.Database.Impl.DTC
 						if (existing.transactionId == transactionInformation.Id)
 						{
 							EnsureValidEtag(key, etag, committedEtag, currentTxVal);
-
+							existing.currentEtag = item.Etag;
 							return existing;
 						}
 
