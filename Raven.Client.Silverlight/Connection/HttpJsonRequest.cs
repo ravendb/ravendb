@@ -15,6 +15,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Navigation;
 using Ionic.Zlib;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Util;
@@ -56,7 +57,7 @@ namespace Raven.Client.Silverlight.Connection
 
 		private string operationUrl;
 
-		public Action<string, string, string> HandleReplicationStatusChanges = delegate { };
+		public Action<NameValueCollection, string, string> HandleReplicationStatusChanges = delegate { };
 
 		public void DisableAuthentication()
 		{
@@ -510,7 +511,7 @@ namespace Raven.Client.Silverlight.Connection
 			return 0;
 		}
 
-		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<string, string, string> handleReplicationStatusChanges)
+		public HttpJsonRequest AddReplicationStatusHeaders(string thePrimaryUrl, string currentUrl, ReplicationInformer replicationInformer, FailoverBehavior failoverBehavior, Action<NameValueCollection, string, string> handleReplicationStatusChanges)
 		{
 			if (thePrimaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
 				return this;

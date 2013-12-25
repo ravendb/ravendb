@@ -1548,44 +1548,55 @@ namespace Raven.Client.Connection.Async
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-																						 (operationMetadata.Url + "/static/" +
-																						  key).NoCache(), method, metadata,
-																						 operationMetadata.Credentials,
-																						 convention)
-															 .AddOperationHeaders(OperationsHeaders));
-
-			request.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
-												HandleReplicationStatusChanges);
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/static/" + key).NoCache(), method, metadata, operationMetadata.Credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders))
+			                                .AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			ErrorResponseException responseException;
 			try
 			{
 				var result = await request.ReadResponseBytesAsync();
-				var memoryStream = new MemoryStream(result);
-				return new Attachment
+				HandleReplicationStatusChanges(request.ResponseHeaders, Url, operationMetadata.Url);
+
+				if (method == "GET")
 				{
-					Key = key,
-					Data = () => memoryStream,
-					Size = result.Length,
-					Etag = request.Response.GetEtagHeader(),
-					Metadata = request.ResponseHeaders.FilterHeadersAttachment()
-				};
+					var memoryStream = new MemoryStream(result);
+					return new Attachment
+					{
+						Key = key,
+						Data = () => memoryStream,
+						Size = result.Length,
+						Etag = request.Response.GetEtagHeader(),
+						Metadata = request.ResponseHeaders.FilterHeadersAttachment()
+					};
+				}
+				else
+				{
+					return new Attachment
+					{
+						Key = key,
+						Data = () =>
+						{
+							throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " + method);
+						},
+						Size = (int)request.Response.Content.Headers.ContentLength.Value,
+						Etag = request.Response.GetEtagHeader(),
+						Metadata = request.ResponseHeaders.FilterHeadersAttachment()
+					};
+				}
 			}
 			catch (ErrorResponseException e)
 			{
 				if (e.StatusCode == HttpStatusCode.NotFound)
 					return null;
-				if (e.StatusCode != HttpStatusCode.Conflict)
+				if (e.StatusCode != HttpStatusCode.Conflict) 
 					throw;
 				responseException = e;
 			}
-			var conflictsDoc =
-				RavenJObject.Load(new BsonReader(await responseException.Response.GetResponseStreamWithHttpDecompression()));
+			var conflictsDoc = RavenJObject.Load(new BsonReader(await responseException.Response.GetResponseStreamWithHttpDecompression()));
 			var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
-			throw new ConflictException(
-				"Conflict detected on " + key + ", conflict must be resolved before the attachment will be accessible", true)
+			throw new ConflictException("Conflict detected on " + key + ", conflict must be resolved before the attachment will be accessible", true)
 			{
 				ConflictedVersionIds = conflictIds,
 				Etag = responseException.Response.GetEtagHeader()
@@ -2111,70 +2122,12 @@ namespace Raven.Client.Connection.Async
 			return httpJsonRequest.ReadResponseJsonAsync();
 		}
 
-		private async Task<Attachment> DirectGetAttachment(string method, string key, string operationUrl)
-		{
-			var webRequest = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + "/static/" + key, method, credentials, convention))
-											.AddReplicationStatusHeaders(url, operationUrl, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
-			try
-			{
-				int len;
-				Func<Stream> data;
-				if (method == "GET")
-				{
-					var memoryStream = new MemoryStream(await webRequest.ReadResponseBytesAsync());
-					data = () => memoryStream;
-					len = (int)memoryStream.Length;
-				}
-				else
-				{
-					await webRequest.ExecuteRequestAsync();
-
-					len = (int)webRequest.Response.Content.Headers.ContentLength;
-					data = () =>
-					{
-						throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " +
-																								method);
-					};
-				}
-
-				HandleReplicationStatusChanges(webRequest.ResponseHeaders[Constants.RavenForcePrimaryServerCheck], url,
-						operationUrl);
-
-				return new Attachment
-				{
-					Data = data,
-					Size = len,
-					Etag = webRequest.GetEtagHeader(),
-					Metadata = webRequest.ResponseHeaders.FilterHeadersAttachment()
-				};
-			}
-			catch (ErrorResponseException e)
-			{
-				if (e.StatusCode == HttpStatusCode.Conflict)
-				{
-					var conflictsDoc = RavenJObject.Load(new BsonReader(e.Response.GetResponseStreamWithHttpDecompression().Result)); //TODO can't await in a catch block
-					var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
-
-					throw new ConflictException("Conflict detected on " + key +
-																			", conflict must be resolved before the attachment will be accessible", true)
-					{
-						ConflictedVersionIds = conflictIds,
-						Etag = e.Response.GetEtagHeader()
-					};
-				}
-				if (e.StatusCode == HttpStatusCode.NotFound)
-					return null;
-				throw;
-			}
-		}
-
-
-
-		private void HandleReplicationStatusChanges(string forceCheck, string primaryUrl, string currentUrl)
+		private void HandleReplicationStatusChanges(NameValueCollection headers, string primaryUrl, string currentUrl)
 		{
 			if (primaryUrl.Equals(currentUrl, StringComparison.OrdinalIgnoreCase))
 				return;
 
+			var forceCheck = headers[Constants.RavenForcePrimaryServerCheck];
 			bool shouldForceCheck;
 			if (!string.IsNullOrEmpty(forceCheck) && bool.TryParse(forceCheck, out shouldForceCheck))
 			{

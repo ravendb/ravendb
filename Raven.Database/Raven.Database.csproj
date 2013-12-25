@@ -284,6 +284,7 @@
     <Compile Include="Server\Controllers\AdminBundlesApiController.cs" />
     <Compile Include="Server\Controllers\BundlesApiController.cs" />
     <Compile Include="Server\Controllers\RavenBaseApiController.cs" />
+    <Compile Include="Server\Contents\StaticHeadContent.cs" />
     <Compile Include="Server\RavenDBOptions.cs" />
     <Compile Include="Server\Connections\IEventsTransport.cs" />
     <Compile Include="Server\Connections\ChangesPushContent.cs" />
@@ -301,7 +302,7 @@
     <Compile Include="Server\Controllers\HardRouteController.cs" />
     <Compile Include="Server\Controllers\IdentityController.cs" />
     <Compile Include="Server\Controllers\IndexController.cs" />
-    <Compile Include="Server\Controllers\JsonContent.cs" />
+    <Compile Include="Server\Contents\JsonContent.cs" />
     <Compile Include="Server\Controllers\LicensingController.cs" />
     <Compile Include="Server\Controllers\LogsController.cs" />
     <Compile Include="Server\Controllers\MoreLikeThisController.cs" />

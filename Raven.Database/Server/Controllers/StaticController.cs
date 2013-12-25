@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -88,8 +89,7 @@ namespace Raven.Database.Server.Controllers
 				}
 
 				WriteHeaders(attachmentAndHeaders.Metadata, attachmentAndHeaders.Etag, result);
-				//TODO: set length
-				//context.Response.ContentLength64 = attachmentAndHeaders.Size;
+				result.Content = new StaticHeadContent(attachmentAndHeaders.Size);
 			});
 
 			return result;

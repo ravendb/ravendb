@@ -21,8 +21,9 @@ namespace Raven.Abstractions.Data
 		public Func<Stream> Data { get; set; }
 
 		/// <summary>
-		/// The size of the attachment
+		/// The size of the attachment.
 		/// </summary>
+		/// <remarks>The max size of an attachment can be 2GB.</remarks>
 		public int Size { get; set; }
 
 		/// <summary>
