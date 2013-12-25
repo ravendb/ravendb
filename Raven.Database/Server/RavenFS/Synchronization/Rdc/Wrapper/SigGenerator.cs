@@ -60,7 +60,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 		public IList<SignatureInfo> GenerateSignatures(Stream source, string fileName,
 													   ISignatureRepository signatureRepository)
 		{
-			_recursionDepth = EvaluatetRecursionDepth(source);
+			_recursionDepth = EvaluateRecursionDepth(source);
 			if (_recursionDepth == 0)
 				return new List<SignatureInfo>();
 
@@ -264,7 +264,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 			return result;
 		}
 
-		public int EvaluatetRecursionDepth(Stream source)
+		public int EvaluateRecursionDepth(Stream source)
 		{
 			int result;
 			var hr = _rdcLibrary.ComputeDefaultRecursionDepth(source.Length, out result);
@@ -294,8 +294,7 @@ namespace Raven.Database.Server.RavenFS.Synchronization.Rdc.Wrapper
 		{
 			try
 			{
-				Trace.WriteLine(
-					"~SigGenerator: Disposing esent resources from finalizer! You should call Dispose() instead!");
+				Trace.WriteLine("~SigGenerator: Disposing esent resources from finalizer! You should call Dispose() instead!");
 				DisposeInternal();
 			}
 			catch (Exception exception)
