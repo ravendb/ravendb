@@ -12,6 +12,7 @@ using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Storage;
+using Raven.Database.Tasks;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
@@ -116,7 +117,7 @@ namespace Raven.Database.Server.Controllers
 
 		[HttpGet]
 		[Route("debug/sl0w-d0c-c0unts")]
-		[Route("debug/sl0w-d0c-c0unts")]
+		[Route("databases/{databaseName}/debug/sl0w-d0c-c0unts")]
 		public HttpResponseMessage SlowDocCounts()
 		{
 			DebugDocumentStats stat = null;
@@ -215,6 +216,29 @@ namespace Raven.Database.Server.Controllers
 			};
 
 			return GetMessageWithObject(unknown);
+		}
+
+		[HttpGet]
+		[Route("debug/tasks")]
+		[Route("databases/{databaseName}/debug/tasks")]
+		public HttpResponseMessage Tasks()
+		{
+			IList<TaskMetadata> tasks = null;
+			Database.TransactionalStorage.Batch(accessor =>
+			{
+				tasks = accessor.Tasks
+					.GetPendingTasksForDebug()
+					.ToList();
+			});
+
+			foreach (var taskMetadata in tasks)
+			{
+				var indexInstance = Database.IndexStorage.GetIndexInstance(taskMetadata.IndexId);
+				if (indexInstance != null)
+					taskMetadata.IndexName = indexInstance.PublicName;
+			}
+
+			return GetMessageWithObject(tasks);
 		}
 	}
 }
