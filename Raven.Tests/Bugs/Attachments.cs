@@ -29,7 +29,8 @@ namespace Raven.Tests.Bugs
 			}
 
 			Assert.NotNull(attachment);
-			Assert.Throws<InvalidOperationException>(() => attachment.Data());
+			var exception = Assert.Throws<InvalidOperationException>(() => attachment.Data());
+			Assert.Equal("Cannot get attachment data because it was loaded using: HEAD", exception.Message);
 		}
 
 		[Fact]
