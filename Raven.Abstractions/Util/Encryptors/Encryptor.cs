@@ -9,15 +9,12 @@ namespace Raven.Abstractions.Util.Encryptors
 
 	public static class Encryptor
 	{
-		private static IEncryptor current = new DefaultEncryptor();
-
-		public static IEncryptor Current
+		static Encryptor()
 		{
-			get
-			{
-				return current;
-			}
+			Current = new DefaultEncryptor();
 		}
+
+		public static IEncryptor Current { get; private set; }
 
 		public static Lazy<bool> IsFipsEnabled
 		{
@@ -27,8 +24,8 @@ namespace Raven.Abstractions.Util.Encryptors
 				{
 					try
 					{
-						current = new DefaultEncryptor();
-						current.Hash.Compute16(new byte[] { 1 });
+						var defaultEncryptor = new DefaultEncryptor();
+						defaultEncryptor.Hash.Compute16(new byte[] { 1 });
 
 						return false;
 					}
@@ -42,12 +39,7 @@ namespace Raven.Abstractions.Util.Encryptors
 
 		public static void Initialize(bool useFips)
 		{
-			current = useFips ? (IEncryptor)new FipsEncryptor() : new DefaultEncryptor();
-		}
-
-		public static void Dispose()
-		{
-			current = null;
+			Current = useFips ? (IEncryptor)new FipsEncryptor() : new DefaultEncryptor();
 		}
 	}
 }

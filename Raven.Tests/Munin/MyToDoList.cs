@@ -8,7 +8,7 @@ namespace Raven.Munin.Tests
 
 	using Xunit;
 
-	public class MyToDoList : IDisposable
+	public class MyToDoList
 	{
 		public MyToDoList()
 		{
@@ -77,11 +77,6 @@ namespace Raven.Munin.Tests
 			Assert.Equal("Buy Milk #9", results[0].Action);
 			Assert.Equal("Buy Milk #8", results[1].Action);
 			Assert.Equal("Buy Milk #7", results[2].Action);
-		}
-
-		public void Dispose()
-		{
-			Encryptor.Dispose();
 		}
 	}
 }
