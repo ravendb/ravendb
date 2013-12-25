@@ -1,4 +1,20 @@
-﻿<div>
+﻿<ul class="breadcrumb">
+    <li>
+        <h3>
+            <a href="#databases">
+                Databases
+            </a>
+        </h3>
+    </li>
+    <li data-bind="with: activeDatabase">
+        <a data-bind="text: name"></a>
+    </li>
+    <li class="active">
+        <span data-bind="text: currentRouteTitle"></span>
+    </li>
+</ul>
+
+<div>
     <div class="row">
 		<div class="col-md-2">
 			<ul class="nav nav-list nav-pills nav-stacked" data-bind="foreach: router.navigationModel">

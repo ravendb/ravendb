@@ -7,12 +7,18 @@ class appUrl {
 
     static baseUrl = "http://localhost:8080"; // For debugging purposes, uncomment this line to point Raven at an already-running Raven server. Requires the Raven server to have it's config set to <add key="Raven/AccessControlAllowOrigin" value="*" />
     //private static baseUrl = ""; // This should be used when serving HTML5 Studio from the server app.
+    private static currentDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
 
 	// Stores some computed values that update whenever the current database updates.
 	private static currentDbComputeds: computedAppUrls = {
-		documents: ko.computed(() => appUrl.forDocuments()),
-        status: ko.computed(() => appUrl.forStatus()),
-        settings: ko.computed(() => appUrl.forSettings())
+		documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
+        status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
+        settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase())),
+        logs: ko.computed(() => appUrl.forLogs(appUrl.currentDatabase())),
+        alerts: ko.computed(() => appUrl.forAlerts(appUrl.currentDatabase())),
+        indexErrors: ko.computed(() => appUrl.forIndexErrors(appUrl.currentDatabase())),
+        replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
+        userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
 	};
 	
     /**
@@ -38,7 +44,27 @@ class appUrl {
     }
 
     static forSettings(db: database = appUrl.getDatabase()): string {
-        return "#settings? " + appUrl.getEncodedDbPart(db);
+        return "#settings?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forLogs(db: database = appUrl.getDatabase()): string {
+        return "#status/logs?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forAlerts(db: database = appUrl.getDatabase()): string {
+        return "#status/alerts?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forIndexErrors(db: database = appUrl.getDatabase()): string {
+        return "#status/indexErrors?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forReplicationStats(db: database = appUrl.getDatabase()): string {
+        return "#status/replicationStats?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forUserInfo(db: database = appUrl.getDatabase()): string {
+        return "#status/userInfo?" + appUrl.getEncodedDbPart(db);
     }
 
 	static forDocuments(collection?: string, db: database = appUrl.getDatabase()): string {
@@ -69,10 +95,10 @@ class appUrl {
             // A database is specified in the address.
             var dbSegmentEnd = hash.indexOf("&", dbIndex);
             if (dbSegmentEnd === -1) {
-                dbSegmentEnd = hash.length - 1;
+                dbSegmentEnd = hash.length;
             }
 
-            var databaseName = hash.substring(dbIndex + dbIndicator.length, dbSegmentEnd + 1);
+            var databaseName = hash.substring(dbIndex + dbIndicator.length, dbSegmentEnd);
             var unescapedDatabaseName = decodeURIComponent(databaseName);
             var db = new database(unescapedDatabaseName);
             db.isSystem = unescapedDatabaseName === "<system>";

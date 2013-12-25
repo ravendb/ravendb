@@ -9,7 +9,7 @@
         <div class="ko-grid-column-header" data-bind="style: { width: width() + 'px' }, text: name, attr: { title: name }"></div>
         <!-- /ko -->
     </div>
-    <div class="ko-grid-viewport-container" data-bind="style: { height: viewportHeight() + 'px' }">
+    <div class="ko-grid-viewport-container" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
         <div class="ko-grid-viewport" data-bind="foreach: recycleRows, style: { height: virtualHeight() + 'px' }">
             <div class="ko-grid-row" data-bind="foreach: $parent.columns, visible: isInUse, style: { height: $parent.rowHeight + 'px', top: top() + 'px' }, css: { even: rowIndex() % 2 === 0, checked: isChecked }">
                 <div class="ko-grid-cell" data-bind="style: { width: width() + 'px' }, attr: { title: $parent.cellMap[name] }">

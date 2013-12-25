@@ -1,1 +1,0 @@
-{"version":3,"file":"query.js","sourceRoot":"","sources":["query.ts"],"names":["query","query.constructor","query.activate","query.canDeactivate"],"mappings":"AAAA;IAAA;QAAAA;YAEIC,KAAAA,WAAWA,GAAGA,OAAOA,CAACA;;AAOzBD,QANGA,2BAAAA;QAEAE,CAACA;QACDF,gCAAAA;YACIG,OAAOA,IAAIA;QACfA,CAACA;QACLH,aAACA;IAADA,CAACA,IAAA;IATD,sBASC;GAAA"}

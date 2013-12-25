@@ -31,4 +31,4 @@ class deleteDocumentsCommand extends commandBase {
     }
 }
 
-export = deleteDocumentsCommand;
+export = deleteDocumentsCommand; 

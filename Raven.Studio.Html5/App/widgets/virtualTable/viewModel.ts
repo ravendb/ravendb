@@ -41,7 +41,6 @@ class ctor {
     memoizedCollectionColorFetcher: Function;
 
     constructor() {
-
         this.memoizedCollectionColorFetcher = this.getCollectionClassFromRavenEntityName.memoize(this);
     }
 
@@ -55,6 +54,7 @@ class ctor {
             this.items = list;
             this.selectedIndices.removeAll();
             this.columns.splice(2, this.columns().length - 1); // Remove all but the first 2 column (checked and ID)
+            this.gridViewport.scrollTop(0);
             this.onGridScrolled();
         });
 
@@ -74,11 +74,8 @@ class ctor {
         }
 
         this.gridViewport = this.grid.find(".ko-grid-viewport-container");
+        this.gridViewport.on('DynamicHeightSet', () => this.onWindowHeightChanged());
         this.gridViewport.scroll(() => this.onGridScrolled());
-        var desiredRowCount = this.calculateRecycleRowCount();
-        this.recycleRows(this.createRecycleRows(desiredRowCount));
-        this.ensureRowsCoverViewport();
-        this.loadRowData();
         this.setupContextMenu();
         this.setupKeyboardShortcuts();
     }
@@ -97,6 +94,7 @@ class ctor {
         var rows = [];
         for (var i = 0; i < rowCount; i++) {
             var newRow = new row();
+            newRow.createPlaceholderCells(this.columns().map(c => c.name));
             newRow.rowIndex(i);
             var desiredTop = i * this.rowHeight;
             newRow.top(desiredTop);
@@ -111,6 +109,16 @@ class ctor {
 
         window.clearTimeout(this.scrollThrottleTimeoutHandle);
         this.scrollThrottleTimeoutHandle = setTimeout(() => this.loadRowData(), 100);
+    }
+
+    onWindowHeightChanged() {
+        var newViewportHeight = this.gridViewport.height();
+        this.viewportHeight(newViewportHeight);
+        var desiredRowCount = this.calculateRecycleRowCount();
+        this.recycleRows(this.createRecycleRows(desiredRowCount));
+        this.ensureRowsCoverViewport();
+        this.loadRowData();
+        
     }
 
     setupKeyboardShortcuts() {
