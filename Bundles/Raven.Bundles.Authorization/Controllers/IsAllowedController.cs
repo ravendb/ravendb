@@ -12,7 +12,7 @@ using Raven.Database.Server.Controllers;
 
 namespace Raven.Bundles.Authorization.Controllers
 {
-	public class IsAllowedController : RavenApiController
+	public class IsAllowedController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("authorization/IsAllowed/{*userId}")]
