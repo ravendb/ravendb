@@ -31,7 +31,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var lowerKeyName = name.ToLowerInvariant();
             if (!generalTable.Contains(snapshot, lowerKeyName, writeBatch))
             {
-                generalTable.Add(writeBatch, lowerKeyName, BitConverter.GetBytes((long) 1));
+                generalTable.Add(writeBatch, lowerKeyName, BitConverter.GetBytes((long) 1), expectedVersion: 0);
                 return 1;
             }
 
@@ -40,7 +40,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             {
                 var newValue = stream.ReadInt64() + 1;
 
-                generalTable.Add(writeBatch, lowerKeyName, BitConverter.GetBytes(newValue));
+                generalTable.Add(writeBatch, lowerKeyName, BitConverter.GetBytes(newValue), expectedVersion: readResult.Version);
                 return newValue;
             }
         }

@@ -68,13 +68,13 @@
 				WriteBatch.BatchOperationType operationType;
 			    Stream stream;
 			    ushort? version;
-			    if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType) && version.HasValue)
+			    if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
 				{
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
 						case WriteBatch.BatchOperationType.Delete:
-					        return (ushort)(version.Value + 1);
+					        return version == null ? (ushort)0 : (ushort)(version.Value + 1);
 					}
 				}
 			}
