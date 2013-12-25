@@ -26,6 +26,11 @@ namespace Raven.Tests.Bugs
 						Name = "Product 1",
 						Price = 0,
 						Quantity = 0,
+						NestedDecimal = new NestedDecimalValue
+						{
+							DecimalValue = 0, 
+							IntValue = 0, 
+						},
 					});
 					session.SaveChanges();
 				}
@@ -57,13 +62,38 @@ namespace Raven.Tests.Bugs
 
 		private void AssertThatPriceIsDecimal(IDocumentStore store)
 		{
+			var json = store.DatabaseCommands.Get("products/1").DataAsJson;
+
 			RavenJToken price;
-			store.DatabaseCommands.Get("products/1").DataAsJson.TryGetValue("Price", out price);
+			json.TryGetValue("Price", out price);
 			Assert.Equal(JTokenType.Float, price.Type);
 
 			RavenJToken quantity;
-			store.DatabaseCommands.Get("products/1").DataAsJson.TryGetValue("Quantity", out quantity);
+			json.TryGetValue("Quantity", out quantity);
 			Assert.Equal(JTokenType.Integer, quantity.Type);
+
+			// ---
+
+			RavenJToken nestedDecimal;
+			json.TryGetValue("NestedDecimal", out nestedDecimal);
+
+			RavenJToken decimalValue;
+			((RavenJObject) nestedDecimal).TryGetValue("DecimalValue", out decimalValue);
+			Assert.Equal(JTokenType.Float, decimalValue.Type);
+
+			RavenJToken intValue;
+			((RavenJObject) nestedDecimal).TryGetValue("IntValue", out intValue);
+			Assert.Equal(JTokenType.Integer, intValue.Type);
+
+			// ---
+
+			RavenJToken parentDecimalValue;
+			json.TryGetValue("DecimalValue", out parentDecimalValue);
+			Assert.Equal(JTokenType.Integer, parentDecimalValue.Type);
+
+			RavenJToken parentIntValue;
+			json.TryGetValue("IntValue", out parentIntValue);
+			Assert.Equal(JTokenType.Float, parentIntValue.Type);
 		}
 
 		public class Product
@@ -72,6 +102,17 @@ namespace Raven.Tests.Bugs
 			public string Name { get; set; }
 			public decimal Price { get; set; }
 			public int Quantity { get; set; }
+			public NestedDecimalValue NestedDecimal { get; set; }
+
+			// This is intended to be int, despite the name DecimalValue. We want to test that there is no conflict between the name of the nested object.
+			public int DecimalValue { get; set; }
+			public decimal IntValue { get; set; }
+		}
+
+		public class NestedDecimalValue
+		{
+			public decimal DecimalValue { get; set; }
+			public int IntValue { get; set; }
 		}
 	}
 }

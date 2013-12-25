@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Linq;
 using Raven.Database.Indexing;
 using Raven.Json.Linq;
 
@@ -14,6 +15,10 @@ namespace Raven.Database.Linq
 		public string SourceCode { get; set; }
 
 		public string ViewText { get; set; }
+
+		// ReSharper disable once InconsistentNaming
+		protected DynamicNullObject __dynamic_null = new DynamicNullObject();
+
 
 		protected dynamic LoadDocument(object key)
 		{
