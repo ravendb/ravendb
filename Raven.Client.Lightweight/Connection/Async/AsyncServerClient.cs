@@ -739,14 +739,9 @@ namespace Raven.Client.Connection.Async
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var request =
-				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,
-																						 (operationMetadata.Url + "/docs/" + Uri.EscapeDataString(key)),
-																						 "GET", metadata, credentials, convention)
-				.AddOperationHeaders(OperationsHeaders));
-
-			request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
-												HandleReplicationStatusChanges);
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/docs/" + Uri.EscapeDataString(key)), "GET", metadata, credentials, convention);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders))
+			                                .AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			Task<JsonDocument> resolveConflictTask;
 			try
@@ -755,9 +750,7 @@ namespace Raven.Client.Connection.Async
 				var docKey = request.ResponseHeaders.Get(Constants.DocumentIdFieldName) ?? key;
 				docKey = Uri.UnescapeDataString(docKey);
 				request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
-				var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson,
-																						  request.ResponseHeaders,
-																		  request.Response.StatusCode);
+				var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson, request.ResponseHeaders,  request.Response.StatusCode);
 				return deserializeJsonDocument;
 			}
 			catch (ErrorResponseException e)
