@@ -3,9 +3,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Impl;
 using Raven.Database.Server.WebApi.Attributes;
@@ -27,21 +29,22 @@ namespace Raven.Database.Server.Controllers
 							select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation))
 				.ToArray();
 
-			//TODO: log
-			//context.Log(log => log.Debug(() =>
-			//{
-			//	if (commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
-			//	{
-			//		return "\tExecuted " + string.Join(", ", commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#;;0} {1} operations", x.Count(), x.Key)));
-			//	}
+			Log.Debug(() =>
+			{
+				if (commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
+				{
+					return "\tExecuted " +
+					       string.Join(", ",
+						       commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#;;0} {1} operations", x.Count(), x.Key)));
+				}
 
-			//	var sb = new StringBuilder();
-			//	foreach (var commandData in commands)
-			//	{
-			//		sb.AppendFormat("\t{0} {1}{2}", commandData.Method, commandData.Key, Environment.NewLine);
-			//	}
-			//	return sb.ToString();
-			//}));
+				var sb = new StringBuilder();
+				foreach (var commandData in commands)
+				{
+					sb.AppendFormat("\t{0} {1}{2}", commandData.Method, commandData.Key, Environment.NewLine);
+				}
+				return sb.ToString();
+			});
 
 			var batchResult = Database.Batch(commands);
 			return GetMessageWithObject(batchResult);
