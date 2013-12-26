@@ -29,9 +29,9 @@ namespace Raven.Tests.Bugs
                         session.SaveChanges();
                     }
 
-
                     tx.Complete();
                 }
+
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.AllowNonAuthoritativeInformation = false;
@@ -81,9 +81,9 @@ namespace Raven.Tests.Bugs
                             id = entity.Id;
                         }
 
-
                         tx.Complete();
                     }
+
                     using (var session = store.OpenSession())
                     {
                         session.Advanced.AllowNonAuthoritativeInformation = false;
@@ -98,15 +98,10 @@ namespace Raven.Tests.Bugs
 
     public class DtcBluesRemoteAndTouchingTheDisk : RemoteClientTest
     {
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration ravenConfiguration)
-        {
-            ravenConfiguration.RunInMemory = false;
-        }
-
         [Fact]
         public void CanQueryDtcForUncommittedItem()
         {
-            using (GetNewServer())
+            using (GetNewServer(runInMemory: false))
             using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
             {
                 for (int i = 0; i < 150; i++)
@@ -128,6 +123,7 @@ namespace Raven.Tests.Bugs
 
                         tx.Complete();
                     }
+
                     using (var session = store.OpenSession())
                     {
                         session.Advanced.AllowNonAuthoritativeInformation = false;
@@ -137,6 +133,5 @@ namespace Raven.Tests.Bugs
                 }
             }
         }
-
     }
 }
