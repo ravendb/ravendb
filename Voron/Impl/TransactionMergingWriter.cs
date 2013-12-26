@@ -18,9 +18,10 @@ namespace Voron.Impl
     {
         private readonly StorageEnvironment _env;
 
-        private readonly BlockingCollection<OutstandingWrite> _pendingWrites = new BlockingCollection<OutstandingWrite>();
+        private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites = new ConcurrentQueue<OutstandingWrite>();
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ManualResetEventSlim _stopWrites = new ManualResetEventSlim();
+        private readonly ManualResetEventSlim _hasWrites = new ManualResetEventSlim();
         private readonly DebugJournal _debugJournal;
         private readonly ConcurrentQueue<ManualResetEventSlim> _eventsBuffer = new ConcurrentQueue<ManualResetEventSlim>();
 
@@ -60,7 +61,9 @@ namespace Voron.Impl
 
             using (var mine = new OutstandingWrite(batch, this))
             {
-                _pendingWrites.Add(mine);
+                _pendingWrites.Enqueue(mine);
+
+                _hasWrites.Set();
 
                 mine.Wait();
             }
@@ -77,16 +80,19 @@ namespace Voron.Impl
 
         private void BackgroundWriter()
         {
+            var self = this;
             var cancellationToken = _cancellationTokenSource.Token;
             while (cancellationToken.IsCancellationRequested == false)
             {
                 _stopWrites.Wait(cancellationToken);
+                _hasWrites.Reset();
 
                 OutstandingWrite write;
-                while (_pendingWrites.TryTake(out write, Timeout.Infinite, cancellationToken))
+                while (_pendingWrites.TryDequeue(out write))
                 {
                     HandleActualWrites(write);
                 }
+
             }
         }
 
@@ -228,12 +234,11 @@ namespace Voron.Impl
 
 		    while (true)
 		    {
-
 				if (maxSize <= 0)
 					break;
 
 			    OutstandingWrite item;
-			    if (_pendingWrites.TryTake(out item, TimeSpan.Zero) == false)
+			    if (_pendingWrites.TryDequeue(out item) == false)
 				    break;
 				list.Add(item);
 			    maxSize -= item.Size;
@@ -304,6 +309,7 @@ namespace Voron.Impl
         {
             _cancellationTokenSource.Cancel();
             _stopWrites.Set();
+            _hasWrites.Set();
 
             try
             {
@@ -327,6 +333,7 @@ namespace Voron.Impl
                     manualResetEventSlim.Dispose();
                 }
                 _stopWrites.Dispose();
+                _hasWrites.Dispose();
             }
         }
     }
