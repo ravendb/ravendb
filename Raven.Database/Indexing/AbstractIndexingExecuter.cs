@@ -242,10 +242,10 @@ namespace Raven.Database.Indexing
                 context.UpdateFoundWork();
                 context.CancellationToken.ThrowIfCancellationRequested();
 
-                using (context.IndexDefinitionStorage.CurrentlyIndexing())
-                {
-               ExecuteIndexingWork(indexesToWorkOn, synchronizationEtag);
-            }
+				using (context.IndexDefinitionStorage.CurrentlyIndexing())
+				{
+					ExecuteIndexingWork(indexesToWorkOn, synchronizationEtag);
+				}
 
             return true;
         }
