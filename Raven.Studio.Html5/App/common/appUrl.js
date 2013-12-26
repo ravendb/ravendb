@@ -29,7 +29,32 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
 
         appUrl.forSettings = function (db) {
             if (typeof db === "undefined") { db = appUrl.getDatabase(); }
-            return "#settings? " + appUrl.getEncodedDbPart(db);
+            return "#settings?" + appUrl.getEncodedDbPart(db);
+        };
+
+        appUrl.forLogs = function (db) {
+            if (typeof db === "undefined") { db = appUrl.getDatabase(); }
+            return "#status/logs?" + appUrl.getEncodedDbPart(db);
+        };
+
+        appUrl.forAlerts = function (db) {
+            if (typeof db === "undefined") { db = appUrl.getDatabase(); }
+            return "#status/alerts?" + appUrl.getEncodedDbPart(db);
+        };
+
+        appUrl.forIndexErrors = function (db) {
+            if (typeof db === "undefined") { db = appUrl.getDatabase(); }
+            return "#status/indexErrors?" + appUrl.getEncodedDbPart(db);
+        };
+
+        appUrl.forReplicationStats = function (db) {
+            if (typeof db === "undefined") { db = appUrl.getDatabase(); }
+            return "#status/replicationStats?" + appUrl.getEncodedDbPart(db);
+        };
+
+        appUrl.forUserInfo = function (db) {
+            if (typeof db === "undefined") { db = appUrl.getDatabase(); }
+            return "#status/userInfo?" + appUrl.getEncodedDbPart(db);
         };
 
         appUrl.forDocuments = function (collection, db) {
@@ -59,10 +84,10 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
                 // A database is specified in the address.
                 var dbSegmentEnd = hash.indexOf("&", dbIndex);
                 if (dbSegmentEnd === -1) {
-                    dbSegmentEnd = hash.length - 1;
+                    dbSegmentEnd = hash.length;
                 }
 
-                var databaseName = hash.substring(dbIndex + dbIndicator.length, dbSegmentEnd + 1);
+                var databaseName = hash.substring(dbIndex + dbIndicator.length, dbSegmentEnd);
                 var unescapedDatabaseName = decodeURIComponent(databaseName);
                 var db = new database(unescapedDatabaseName);
                 db.isSystem = unescapedDatabaseName === "<system>";
@@ -103,15 +128,32 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
         };
         appUrl.baseUrl = "http://localhost:8080";
 
+        appUrl.currentDatabase = ko.observable().subscribeTo("ActivateDatabase", true);
+
         appUrl.currentDbComputeds = {
             documents: ko.computed(function () {
-                return appUrl.forDocuments();
+                return appUrl.forDocuments(null, appUrl.currentDatabase());
             }),
             status: ko.computed(function () {
-                return appUrl.forStatus();
+                return appUrl.forStatus(appUrl.currentDatabase());
             }),
             settings: ko.computed(function () {
-                return appUrl.forSettings();
+                return appUrl.forSettings(appUrl.currentDatabase());
+            }),
+            logs: ko.computed(function () {
+                return appUrl.forLogs(appUrl.currentDatabase());
+            }),
+            alerts: ko.computed(function () {
+                return appUrl.forAlerts(appUrl.currentDatabase());
+            }),
+            indexErrors: ko.computed(function () {
+                return appUrl.forIndexErrors(appUrl.currentDatabase());
+            }),
+            replicationStats: ko.computed(function () {
+                return appUrl.forReplicationStats(appUrl.currentDatabase());
+            }),
+            userInfo: ko.computed(function () {
+                return appUrl.forUserInfo(appUrl.currentDatabase());
             })
         };
         return appUrl;

@@ -1,26 +1,39 @@
-define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "models/document", "viewmodels/deleteCollection", "common/raven", "common/pagedList"], function(require, exports, app, router, collection, database, document, deleteCollection, raven, pagedList) {
-    var userInfo = (function () {
+var __extends = this.__extends || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    __.prototype = b.prototype;
+    d.prototype = new __();
+};
+define(["require", "exports", "commands/getUserInfoCommand", "common/appUrl", "models/database", "viewmodels/activeDbViewModelBase"], function(require, exports, getUserInfoCommand, appUrl, database, activeDbViewModelBase) {
+    var userInfo = (function (_super) {
+        __extends(userInfo, _super);
         function userInfo() {
-            this.displayName = "user info";
+            _super.apply(this, arguments);
             this.data = ko.observable();
-            this.ravenDb = new raven();
         }
         userInfo.prototype.activate = function (args) {
             var _this = this;
-            if (args && args.database) {
-                ko.postbox.publish("ActivateDatabaseWithName", args.database);
+            _super.prototype.activate.call(this, args);
+
+            this.activeDatabase.subscribe(function () {
+                return _this.fetchUserInfo();
+            });
+            return this.fetchUserInfo();
+        };
+
+        userInfo.prototype.fetchUserInfo = function () {
+            var _this = this;
+            var db = this.activeDatabase();
+            if (db) {
+                return new getUserInfoCommand(db).execute().done(function (results) {
+                    return _this.data(results);
+                });
             }
 
-            this.ravenDb.userInfo().done(function (info) {
-                _this.data(info);
-            });
-        };
-
-        userInfo.prototype.canDeactivate = function () {
-            return true;
+            return null;
         };
         return userInfo;
-    })();
+    })(activeDbViewModelBase);
 
     
     return userInfo;

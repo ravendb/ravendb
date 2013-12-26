@@ -106,9 +106,6 @@
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
-    <Content Include="App\common\nav.js">
-      <DependentUpon>appUrl.ts</DependentUpon>
-    </Content>
     <TypeScriptCompile Include="App\viewmodels\userInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\statistics.ts" />
     <Content Include="App\views\alerts.html" />
@@ -130,9 +127,6 @@
     <Content Include="App\views\windowsAuth.html" />
     <Content Include="App\widgets\virtualTable\column.js">
       <DependentUpon>column.ts</DependentUpon>
-    </Content>
-    <Content Include="App\widgets\virtualTable\virtualRow.js">
-      <DependentUpon>row.ts</DependentUpon>
     </Content>
     <Content Include="Content\bootstrap-theme.css" />
     <Content Include="Content\bootstrap-theme.min.css" />
@@ -1003,9 +997,6 @@
     <TypeScriptCompile Include="App\common\alertArgs.ts" />
     <TypeScriptCompile Include="App\common\raven.ts" />
     <TypeScriptCompile Include="App\commands\saveDocumentCommand.ts" />
-    <Content Include="App\commands\saveDocumentCommand.js">
-      <DependentUpon>saveDocumentCommand.ts</DependentUpon>
-    </Content>
     <Content Include="App\common\raven.js">
       <DependentUpon>raven.ts</DependentUpon>
     </Content>
