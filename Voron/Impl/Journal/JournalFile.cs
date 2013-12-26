@@ -138,7 +138,7 @@ namespace Voron.Impl.Journal
             return _journalWriter.Read(pos, (byte*)txHeader, sizeof(TransactionHeader));
         }
 
-        public Task Write(Transaction tx, byte*[] pages)
+        public void Write(Transaction tx, byte*[] pages)
         {
             var txPages = tx.GetTransactionPages();
 
@@ -155,7 +155,7 @@ namespace Voron.Impl.Journal
                 _unusedPages.AddRange(unused);
             }
 
-            return _journalWriter.WriteGatherAsync(writePagePos * AbstractPager.PageSize, pages);
+            _journalWriter.WriteGather(writePagePos * AbstractPager.PageSize, pages);
         }
 
 	    private unsafe void UpdatePageTranslationTable(Transaction tx, List<PageFromScratchBuffer> txPages, List<PagePosition> unused, Dictionary<long, PagePosition> ptt)

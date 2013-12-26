@@ -302,7 +302,7 @@
                 Env.CreateTree(tx, "tree1");
                 Env.CreateTree(tx, "tree2");
 
-                await tx.Commit();
+                tx.Commit();
             }
 
             await Task.WhenAll(Task.Run(() => Env.Writer.Write(batch1)), Task.Run(() => Env.Writer.Write(batch2)));

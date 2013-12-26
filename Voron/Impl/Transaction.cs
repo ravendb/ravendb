@@ -253,10 +253,10 @@ namespace Voron.Impl
 			return node->DataSize;
 		}
 
-		public Task Commit()
+		public void Commit()
 		{
 			if (Flags != (TransactionFlags.ReadWrite) || RolledBack)
-				return Task.FromResult(1); // nothing to do
+				return; // nothing to do
 
 			FlushAllMultiValues();
 
@@ -297,22 +297,15 @@ namespace Voron.Impl
 
 			_txHeader->TxMarker |= TransactionMarker.Commit;
 
-			Task task;
 			if (_allocatedPagesInTransaction + _overflowPagesInTransaction > 0) // nothing changed in this transaction
 			{
-				task = _journal.WriteToJournal(this, _allocatedPagesInTransaction + _overflowPagesInTransaction + PagesTakenByHeader);
+				_journal.WriteToJournal(this, _allocatedPagesInTransaction + _overflowPagesInTransaction + PagesTakenByHeader);
 				FlushedToJournal = true;
 			}
-			else
-			{
-				task = Task.FromResult(1);
-			}
 
-			_env.SetStateAfterTransactionCommit(State);
+		    _env.SetStateAfterTransactionCommit(State);
 			Committed = true;
 			AfterCommit(_id);
-
-			return task;
 		}
 
 

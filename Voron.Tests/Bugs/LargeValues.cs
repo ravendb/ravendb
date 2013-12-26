@@ -35,7 +35,7 @@
                             tx.State.Root.Add(tx, enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
                         }
 
-                        tx.Commit().Wait();
+                        tx.Commit();
                     }
 
                     if (transactions == 50)
