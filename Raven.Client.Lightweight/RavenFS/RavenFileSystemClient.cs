@@ -303,59 +303,25 @@ namespace Raven.Client.RavenFS
 		{
 			return ExecuteWithReplication("HEAD", async operationUrl =>
 			{
-				var request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this,operationUrl + "/ravenfs/files?name=" + Uri.EscapeDataString(filename) ,
-						"HEAD", new OperationCredentials("", new CredentialCache()), convention));
+				var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationUrl + "/ravenfs/files?name=" + Uri.EscapeDataString(filename),
+					"HEAD", new OperationCredentials("", new CredentialCache()), convention));
 				try
 				{
 					await request.ExecuteRequestAsync();
-
-					try
-					{
-						var result = new NameValueCollection();
-						foreach (var header in request.Response.Headers)
-						{
-							foreach (var s in header.Value)
-							{
-								result.Add(header.Key, s);
-								
-							}
-						}
-						foreach (var header in request.Response.Content.Headers)
-						{
-							foreach (var s in header.Value)
-							{
-								result.Add(header.Key, s);
-							}
-						}
-
-						return result;
-					}
-					catch (Exception e)
-					{
-						var aggregate = e as AggregateException;
-
-						ErrorResponseException we;
-						if (aggregate != null)
-							we = aggregate.ExtractSingleInnerException() as ErrorResponseException;
-						else
-							we = e as ErrorResponseException;
-						if (we == null)
-							throw;
-						if (we.StatusCode == HttpStatusCode.NotFound)
-							return null;
-						throw;
-					}
+					return request.ResponseHeaders;
 				}
 				catch (Exception e)
 				{
+					var aggregateException = e as AggregateException;
+					
 					var responseException = e as ErrorResponseException;
+					if (responseException == null && aggregateException != null)
+						responseException = aggregateException.ExtractSingleInnerException() as ErrorResponseException;
 					if (responseException != null)
 					{
 						if (responseException.StatusCode == HttpStatusCode.NotFound)
 							return null;	
 						throw e.TryThrowBetterError();
-						
 					}
 
 					throw e.TryThrowBetterError();
@@ -411,13 +377,6 @@ namespace Raven.Client.RavenFS
 						foreach (var header in request.ResponseHeaders.AllKeys)
 						{
 							collection[header] = request.ResponseHeaders[header];
-						}
-						foreach (var header in request.Response.Content.Headers)
-						{
-							foreach (var s in header.Value)
-							{
-								collection[header.Key] = s;								
-							}
 						}
 						await responseStream.CopyToAsync(destination, i =>
 						{

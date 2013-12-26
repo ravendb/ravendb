@@ -246,6 +246,13 @@ namespace Raven.Client.Connection
 					ResponseHeaders.Add(header.Key, val);
 				}
 			}
+			foreach (var header in response.Content.Headers)
+			{
+				foreach (var val in header.Value)
+				{
+					ResponseHeaders.Add(header.Key, val);
+				}
+			}
 		}
 
 		private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync()
@@ -828,7 +835,7 @@ namespace Raven.Client.Connection
 			set { webRequest.Timeout = (int)value.TotalMilliseconds; }
 		}
 
-		public HttpResponseMessage Response { get; private set; }
+		private HttpResponseMessage Response { get; set; }
 
 		private void WriteMetadata(RavenJObject metadata)
 		{

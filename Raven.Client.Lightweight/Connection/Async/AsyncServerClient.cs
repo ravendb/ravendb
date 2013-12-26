@@ -750,7 +750,7 @@ namespace Raven.Client.Connection.Async
 				var docKey = request.ResponseHeaders.Get(Constants.DocumentIdFieldName) ?? key;
 				docKey = Uri.UnescapeDataString(docKey);
 				request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
-				var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson, request.ResponseHeaders,  request.Response.StatusCode);
+				var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson, request.ResponseHeaders,  request.ResponseStatusCode);
 				return deserializeJsonDocument;
 			}
 			catch (ErrorResponseException e)
@@ -1559,7 +1559,7 @@ namespace Raven.Client.Connection.Async
 						Key = key,
 						Data = () => memoryStream,
 						Size = result.Length,
-						Etag = request.Response.GetEtagHeader(),
+						Etag = request.ResponseHeaders.GetEtagHeader(),
 						Metadata = request.ResponseHeaders.FilterHeadersAttachment()
 					};
 				}
@@ -1572,8 +1572,8 @@ namespace Raven.Client.Connection.Async
 						{
 							throw new InvalidOperationException("Cannot get attachment data because it was loaded using: " + method);
 						},
-						Size = (int)request.Response.Content.Headers.ContentLength.Value,
-						Etag = request.Response.GetEtagHeader(),
+						Size = int.Parse(request.ResponseHeaders["Content-Length"]),
+						Etag = request.ResponseHeaders.GetEtagHeader(),
 						Metadata = request.ResponseHeaders.FilterHeadersAttachment()
 					};
 				}
@@ -1949,7 +1949,7 @@ namespace Raven.Client.Connection.Async
 			{
 				await request.ReadResponseJsonAsync();
 				return SerializationHelper.DeserializeJsonDocumentMetadata(key, request.ResponseHeaders,
-																		   request.Response.StatusCode);
+																		   request.ResponseStatusCode);
 			}
 			catch (ErrorResponseException e)
 			{
