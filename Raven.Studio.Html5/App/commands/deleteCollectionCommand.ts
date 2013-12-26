@@ -25,4 +25,4 @@ class deleteCollectionCommand extends commandBase {
     }
 }
 
-export = deleteCollectionCommand;
+export = deleteCollectionCommand; 

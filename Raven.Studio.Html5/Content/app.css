@@ -83,7 +83,8 @@ body {
 }
 
 .databases-container .database.system-database {
-    background-color: #fdd9d5;
+    background-color: rgba(192, 192, 192, 0.21);
+    border-color: salmon;
 }
 
 .document-collections {
@@ -275,7 +276,7 @@ body {
 }
 
 .ko-grid .ko-grid-row.checked {
-    background-color: #ffc;
+    background-color: #ffffcc;
 }
 
 .ko-grid .ko-grid-cell {
@@ -314,6 +315,52 @@ body {
 
 .keyboard-shortcut {
     margin-left: 20px;
+}
+
+.single-line-row-table {
+    table-layout: fixed;
+    width: 100%;
+    overflow-x: hidden;
+    -ms-word-break: break-all;
+    word-break: break-all;
+    cursor: pointer;
+}
+
+.single-line-row-table tbody td {
+    overflow: hidden;
+    white-space: nowrap;
+    -ms-word-wrap: break-word;
+    word-wrap: break-word;
+    -ms-text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+}
+
+#logsContainer table,
+#alertsContainer table {
+    outline: none;
+}
+
+#logsContainer table .selected,
+#alertsContainer table .selected {
+    background-color: #ffffcc;
+}
+
+#logsContainer .log-details,
+#alertsContainer .log-details,
+#logsContainer .alert-details,
+#alertsContainer .alert-details {
+    padding: 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.text-ellipsis {
+    overflow: hidden;
+    -ms-text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 footer {

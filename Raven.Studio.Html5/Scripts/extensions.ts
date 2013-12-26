@@ -104,6 +104,7 @@ interface Array<T> {
     last<T>(filter?: (item: T) => boolean): T;
     pushAll<T>(items: T[]): void;
     contains<T>(item: T): boolean;
+    count<T>(filter?: (item: T) => boolean): number;
 }
 
 // Array.remove
@@ -171,4 +172,21 @@ arrayPrototype.pushAll = function (items: Array<any>) {
 arrayPrototype.contains = function (item: any) {
     var self: any[] = this;
     return self.indexOf(item) !== -1;
+}
+
+// Array.count
+arrayPrototype.count = function (filter?: (item) => boolean) {
+    var self: any[] = this;
+    if (filter) {
+        var matches = 0;
+        for (var i = 0; i < self.length; i++) {
+            if (filter(self[i])) {
+                matches++;
+            }
+        }
+
+        return matches;
+    }
+
+    return self.length;
 }

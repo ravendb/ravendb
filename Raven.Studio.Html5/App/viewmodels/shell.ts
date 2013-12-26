@@ -19,6 +19,7 @@ import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
 import getBuildVersionCommand = require("commands/getBuildVersionCommand");
 import getLicenseStatusCommand = require("commands/getLicenseStatusCommand");
+import dynamicHeightBindingHandler = require("common/dynamicHeightBindingHandler");
 
 class shell {
 	private router = router;
@@ -29,12 +30,12 @@ class shell {
     databasesLoadedTask: JQueryPromise<any>;
     buildVersion = ko.observable<buildVersionDto>();
     licenseStatus = ko.observable<licenseStatusDto>();
+    windowHeightObservable: KnockoutObservable<number>;
 
     constructor() {
         ko.postbox.subscribe("Alert", (alert: alertArgs) => this.showAlert(alert));
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateDatabase", (db: database) => this.databaseChanged(db));
-        //ko.postbox.subscribe("EditDocument", args => this.launchDocEditor(args.doc.getId(), args.docsList));
         NProgress.set(.5);
 	}
 
@@ -46,26 +47,33 @@ class shell {
 			{ route: 'indexes',			    title: 'Indexes',		moduleId: 'viewmodels/indexes',			nav: true },
 			{ route: 'query',			    title: 'Query',			moduleId: 'viewmodels/query',			nav: true },
 			{ route: 'tasks',			    title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true },
-			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true, hash: appUrl.forCurrentDatabase().settings },
+			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true,  hash: appUrl.forCurrentDatabase().settings },
             { route: 'status*details',	    title: 'Status',		moduleId: 'viewmodels/status',			nav: true,	hash: appUrl.forCurrentDatabase().status },
 			{ route: 'edit',			    title: 'Edit Document', moduleId: 'viewmodels/editDocument',	nav: false }
         ]).buildNavigationModel();
 
+        // Show progress whenever we navigate.
         router.isNavigating.subscribe(isNavigating => {
-            if (isNavigating) NProgress.start();
-            else NProgress.done();
+            if (isNavigating) {
+                NProgress.start();
+                NProgress.set(.5);
+            } else {
+                NProgress.done();
+            }
         });
 
-		this.connectToRavenServer();
+        this.connectToRavenServer();
 	}
 
-	// The view must be attached to the DOM before we can hook up keyboard shortcuts.
+	// Called by Durandal when shell.html has been put into the DOM.
     attached() {
-        NProgress.remove();
-		jwerty.key("ctrl+alt+n", e => {
+        // The view must be attached to the DOM before we can hook up keyboard shortcuts.
+        jwerty.key("ctrl+alt+n", e => {
 			e.preventDefault();
 			this.newDocument();
-		});
+        });
+
+        new dynamicHeightBindingHandler().install();
     }
 
     databasesLoaded(databases) {
@@ -89,7 +97,7 @@ class shell {
                 router.activate();
                 this.fetchBuildVersion();
                 this.fetchLicenseStatus();
-			});
+            });
 	}
 
     handleRavenConnectionFailure(result) {

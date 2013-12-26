@@ -21,6 +21,12 @@ class row {
         this.isChecked(false);
     }
 
+    createPlaceholderCells(cellNames: string[]) {
+        cellNames
+            .filter(c => c != "Id")
+            .forEach(c => this.addOrUpdateCellMap(c, null));
+    }
+
     fillCells(rowData: document) {
         this.isInUse(true);
         var rowProperties = rowData.getDocumentPropertyNames();

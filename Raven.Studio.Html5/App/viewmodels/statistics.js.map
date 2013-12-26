@@ -1,1 +1,0 @@
-{"version":3,"file":"statistics.js","sourceRoot":"","sources":["statistics.ts"],"names":["statistics","statistics.constructor","statistics.activate","statistics.canDeactivate"],"mappings":"AAAA;IACA;QAICA;YAFAC,KAAAA,WAAWA,GAAGA,YAAYA,CAACA;QAG3BA,CAACA;QAEDD,gCAAAA,UAASA,IAAIA;QACbE,CAACA;;QAEDF,qCAAAA;YACCG,OAAOA,IAAIA;QACZA,CAACA;QACFH,kBAACA;IAADA,CAACA,IAAA;;;;GAEuB"}

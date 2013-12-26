@@ -69,6 +69,11 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="App\commands\commandBase.ts" />
+    <TypeScriptCompile Include="App\commands\createDatabaseCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteCollectionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteDocumentsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getAlertsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getAllDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getApiKeysCommand.ts" />
     <TypeScriptCompile Include="App\commands\getBuildVersionCommand.ts" />
@@ -77,40 +82,48 @@
     <TypeScriptCompile Include="App\commands\getDatabasesCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDatabaseStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getDocumentWithMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLicenseStatusCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getLogsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getSystemDocumentsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getUserInfoCommand.ts" />
+    <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
+    <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
     <TypeScriptCompile Include="App\models\apiKeyDatabase.ts" />
+    <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
+    <TypeScriptCompile Include="App\viewmodels\copyDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\createDatabase.ts" />
+    <TypeScriptCompile Include="App\viewmodels\databases.ts" />
     <TypeScriptCompile Include="App\viewmodels\databaseSettings.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\editDocument.ts" />
+    <TypeScriptCompile Include="App\viewmodels\indexErrors.ts" />
+    <TypeScriptCompile Include="App\viewmodels\logs.ts" />
     <TypeScriptCompile Include="App\viewmodels\periodicBackup.ts" />
+    <TypeScriptCompile Include="App\viewmodels\replicationStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
-    <TypeScriptCompile Include="App\commands\createDatabaseCommand.ts" />
-    <Content Include="App\commands\createDatabaseCommand.js">
-      <DependentUpon>createDatabaseCommand.ts</DependentUpon>
-    </Content>
-    <TypeScriptCompile Include="App\viewmodels\copyDocuments.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
     <Content Include="App\common\nav.js">
       <DependentUpon>appUrl.ts</DependentUpon>
     </Content>
-    <Content Include="App\viewmodels\copyDocuments.js">
-      <DependentUpon>copyDocuments.ts</DependentUpon>
-    </Content>
     <TypeScriptCompile Include="App\viewmodels\userInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\statistics.ts" />
+    <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\copyDocuments.html" />
     <Content Include="App\views\createDatabase.html" />
     <Content Include="App\views\databaseSettings.html" />
     <Content Include="App\views\dialog.html" />
+    <Content Include="App\views\indexErrors.html" />
+    <Content Include="App\views\logs.html" />
     <Content Include="App\views\periodicBackup.html" />
+    <Content Include="App\views\replicationStats.html" />
     <Content Include="App\views\settings.html" />
     <Content Include="App\views\userInfo.html" />
+    <TypeScriptCompile Include="App\viewmodels\activeDbViewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\windowsAuth.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\row.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
@@ -753,6 +766,7 @@
     <Content Include="Scripts\knockout-3.0.0.js" />
     <Content Include="Scripts\knockout-postbox.js" />
     <Content Include="Scripts\knockout-postbox.min.js" />
+    <Content Include="Scripts\moment.js" />
     <Content Include="Scripts\nprogress.js" />
     <TypeScriptCompile Include="Scripts\typings\ace\ace.d.ts" />
     <Content Include="Scripts\r.js" />
@@ -985,18 +999,6 @@
     <TypeScriptCompile Include="App\common\pagedList.ts" />
     <TypeScriptCompile Include="App\common\pagedResultSet.ts" />
     <TypeScriptCompile Include="App\common\dialogResult.ts" />
-    <TypeScriptCompile Include="App\commands\deleteDocumentsCommand.ts" />
-    <TypeScriptCompile Include="App\commands\commandBase.ts" />
-    <Content Include="App\commands\commandBase.js">
-      <DependentUpon>commandBase.ts</DependentUpon>
-    </Content>
-    <TypeScriptCompile Include="App\commands\deleteCollectionCommand.ts" />
-    <Content Include="App\commands\deleteCollectionCommand.js">
-      <DependentUpon>deleteCollectionCommand.ts</DependentUpon>
-    </Content>
-    <Content Include="App\commands\deleteDocumentsCommand.js">
-      <DependentUpon>deleteDocumentsCommand.ts</DependentUpon>
-    </Content>
     <TypeScriptCompile Include="App\common\alertType.ts" />
     <TypeScriptCompile Include="App\common\alertArgs.ts" />
     <TypeScriptCompile Include="App\common\raven.ts" />
@@ -1020,10 +1022,6 @@
     <TypeScriptCompile Include="App\models\document.ts" />
     <TypeScriptCompile Include="App\viewmodels\documents.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteCollection.ts" />
-    <TypeScriptCompile Include="App\viewmodels\databases.ts" />
-    <Content Include="App\viewmodels\databases.js">
-      <DependentUpon>databases.ts</DependentUpon>
-    </Content>
     <Content Include="App\views\databases.html" />
     <Content Include="App\views\deleteCollection.html" />
     <Content Include="App\views\deleteDocuments.html" />
@@ -1064,6 +1062,8 @@
     <Content Include="Scripts\jquery-2.0.3.min.map" />
     <TypeScriptCompile Include="Scripts\typings\knockout.postbox\knockout-postbox.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\knockout\knockout.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\moment\moment.amd.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\moment\moment.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\nprogress\nprogress.d.ts" />
   </ItemGroup>
   <ItemGroup />

@@ -1,40 +1,28 @@
-import http = require("plugins/http");
-import app = require("durandal/app");
-import sys = require("durandal/system");
-import router = require("plugins/router");
-
-import collection = require("models/collection");
+import getUserInfoCommand = require("commands/getUserInfoCommand");
+import appUrl = require("common/appUrl");
 import database = require("models/database");
-import document = require("models/document");
-import deleteCollection = require("viewmodels/deleteCollection");
-import raven = require("common/raven");
-import pagedList = require("common/pagedList");
+import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
 
-class userInfo {
+class userInfo extends activeDbViewModelBase {
 
-    displayName = "user info";
-    data = ko.observable();
+    data = ko.observable<userInfoDto>();
+    
+    activate(args) {
+        super.activate(args);
 
-    ravenDb: raven;
-
-    constructor() {
-        this.ravenDb = new raven();
+        this.activeDatabase.subscribe(() => this.fetchUserInfo());
+        return this.fetchUserInfo();
     }
 
-	activate(args) {
-
-        if (args && args.database) {
-            ko.postbox.publish("ActivateDatabaseWithName", args.database);
+    fetchUserInfo(): JQueryPromise<userInfoDto> {
+        var db = this.activeDatabase();
+        if (db) {
+            return new getUserInfoCommand(db)
+                .execute()
+                .done((results: userInfoDto) => this.data(results));
         }
 
-        this.ravenDb.userInfo()
-            .done(info => {
-                this.data(info);
-            });
-    }
-
-    canDeactivate() {
-        return true;
+        return null;
     }
 }
 

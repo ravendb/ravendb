@@ -36,6 +36,8 @@ namespace Raven.Database.Config
 		private bool containerExternallySet;
 		private string dataDirectory;
 		private string pluginsDirectory;
+		private string ravenFsDataDirectory;
+
 
 		public InMemoryRavenConfiguration()
 		{
@@ -69,6 +71,7 @@ namespace Raven.Database.Config
 
 		public void Initialize()
 		{
+			InitializeRavenFs();
 			int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
 			int defaultInitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
@@ -217,17 +220,17 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
-		public void InitializeRavenFs()
+		private void InitializeRavenFs()
 		{
 			// Data settings
-			DataDirectory = Settings["Raven/FileSystem/DataDir"] ?? @"~\Data.ravenfs";
+			RavenFsDataDirectory = Settings["Raven/FileSystem/DataDir"] ?? @"~\Data.ravenfs";
 
 			if (string.IsNullOrEmpty(Settings["Raven/FileSystem/IndexStoragePath"]) == false)
 			{
-				IndexStoragePath = Settings["Raven/FilesSystem/IndexStoragePath"];
+				RavenFsIndexStoragePath = Settings["Raven/FilesSystem/IndexStoragePath"];
 			}
 
-			SetVirtualDirectory();
+			//SetVirtualDirectory();
 		}
 
 		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
@@ -603,6 +606,17 @@ namespace Raven.Database.Config
 		}
 
 		/// <summary>
+		/// The directory for the RavenDB database. 
+		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
+		/// Default: ~\Data
+		/// </summary>
+		public string RavenFsDataDirectory
+		{
+			get { return ravenFsDataDirectory; }
+			set { ravenFsDataDirectory = value == null ? null : value.ToFullPath(); }
+		}
+
+		/// <summary>
 		/// What storage type to use (see: RavenDB Storage engines)
 		/// Allowed values: esent, munin
 		/// Default: esent
@@ -723,6 +737,7 @@ namespace Raven.Database.Config
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
 		private string indexStoragePath;
+		private string ravenFsIndexStoragePath;
 		private int? maxNumberOfParallelIndexTasks;
 		private int initialNumberOfItemsToIndexInSingleBatch;
 		private AnonymousUserAccessMode anonymousUserAccessMode;
@@ -765,6 +780,17 @@ namespace Raven.Database.Config
 				return indexStoragePath;
 			}
 			set { indexStoragePath = value.ToFullPath(); }
+		}
+
+		public string RavenFsIndexStoragePath
+		{
+			get
+			{
+				if (string.IsNullOrEmpty(ravenFsDataDirectory))
+					ravenFsDataDirectory = Path.Combine(RavenFsDataDirectory, "Indexes");
+				return ravenFsDataDirectory;
+			}
+			set { ravenFsDataDirectory = value.ToFullPath(); }
 		}
 
 		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }

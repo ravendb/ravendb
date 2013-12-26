@@ -34,7 +34,6 @@ namespace RavenFS.Tests
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 			var configuration = new InMemoryRavenConfiguration();
 			configuration.Initialize();
-			configuration.InitializeRavenFs();
 			configuration.DataDirectory = "~/Test";
 			configuration.Port = 8079;
 

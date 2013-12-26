@@ -15,7 +15,7 @@ interface collectionInfoDto {
 }
 
 interface documentDto {
-	'@metadata': documentMetadataDto;
+	'@metadata'?: documentMetadataDto;
 }
 
 interface documentMetadataDto {
@@ -29,7 +29,7 @@ interface documentMetadataDto {
 	'@etag': string;
 }
 
-interface documentStatistics {
+interface databaseStatisticsDto {
     ApproximateTaskCount: number;
     CountOfDocuments: number;
     CountOfIndexes: number;
@@ -40,12 +40,46 @@ interface documentStatistics {
     Errors: Array<any>;
     Extensions: Array<any>;
     InMemoryIndexingQueueSize: number;
-    Indexes: Array<any>;
+    Indexes: indexStatisticsDto[];
     LastAttachmentEtag: string;
     LastDocEtag: string;
     Prefetches: Array<any>;
     StaleIndexes: Array<any>;
     Triggers: Array<any>;
+}
+
+interface indexStatisticsDto {
+    Name: string;
+    IndexingAttempts: number;
+    IndexingSuccesses: number;
+    IndexingErrors: number;
+    LastIndexedEtag: string;
+    LastIndexedTimestamp: string;
+    LastQueryTimestamp: string;
+    TouchCount: number;
+    Priority: string;
+    ReduceIndexingAttempts: number;
+    ReduceIndexingSuccesses: number;
+    ReduceIndexingErrors: number;
+    LastReducedEtag: string;
+    LastReducedTimestamp: string; 
+    CreatedTimestamp: string; 
+    LastIndexingTime: string;
+    IsOnRam: boolean;
+    LockMode: string;
+    ForEntityName: string[];
+    Performance: indexPerformanceDto[];
+    DocsCount: number;
+}
+
+interface indexPerformanceDto {
+    Operation: string;
+    OutputCount: number;
+    InputCount: number;
+    ItemsCount: number;
+    Duration: string;
+    Started: string; // Date
+    DurationMilliseconds: number;
 }
 
 interface apiKeyDto {
@@ -89,4 +123,44 @@ interface licenseStatusDto {
         maxRamUtilization: string;
         maxParallelism: string;
     }
+}
+
+interface userInfoDto {
+    Remark: string;
+    User: string;
+    IsAdminGlobal: boolean;
+    IsAdminCurrentDb: boolean;
+    Databases: string[];
+    Principal: string;
+    AdminDatabases: string[];
+    ReadOnlyDatabases: string[];
+    ReadWriteDatabases: string[];
+    AccessTokenBody: string;
+}
+
+interface logDto {
+    TimeStamp: string;
+    Message: string;
+    LoggerName: string;
+    Level: string;
+    Exception: string;
+}
+
+interface queryResultDto {
+    Results: any[];
+    Includes: any[];
+}
+
+interface alertContainerDto {
+    Alerts: alertDto[];
+}
+
+interface alertDto {
+    Title: string;
+    CreatedAt: string;
+    Observed: boolean;
+    Message: string;
+    AlertLevel: string;
+    Exception: string;
+    UniqueKey: string;
 }

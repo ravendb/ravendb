@@ -146,4 +146,21 @@ arrayPrototype.contains = function (item) {
     var self = this;
     return self.indexOf(item) !== -1;
 };
+
+// Array.count
+arrayPrototype.count = function (filter) {
+    var self = this;
+    if (filter) {
+        var matches = 0;
+        for (var i = 0; i < self.length; i++) {
+            if (filter(self[i])) {
+                matches++;
+            }
+        }
+
+        return matches;
+    }
+
+    return self.length;
+};
 //# sourceMappingURL=extensions.js.map
