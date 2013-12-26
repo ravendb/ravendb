@@ -37,7 +37,7 @@ interface databaseStatisticsDto {
     CurrentNumberOfItemsToReduceInSingleBatch: number;
     DatabaseId: string;
     DatabaseTransactionVersionSizeInMB: number;
-    Errors: Array<any>;
+    Errors: serverErrorDto[];
     Extensions: Array<any>;
     InMemoryIndexingQueueSize: number;
     Indexes: indexStatisticsDto[];
@@ -164,4 +164,13 @@ interface alertDto {
     AlertLevel: string;
     Exception: string;
     UniqueKey: string;
+}
+
+interface serverErrorDto {
+    Index: number;
+    IndexName: string;
+    Error: string;
+    Timestamp: string;
+    Document: string;
+    Action: string;
 }

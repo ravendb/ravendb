@@ -337,26 +337,34 @@ body {
 }
 
 #logsContainer table,
-#alertsContainer table {
+#alertsContainer table,
+#indexErrorsContainer table {
     outline: none;
 }
 
 #logsContainer table .selected td,
-#alertsContainer table .selected td {
+#alertsContainer table .selected td,
+#indexErrorsContainer table .selected td {
     background-color: #ffffcc;
 }
 
 #logsContainer .log-details,
 #alertsContainer .log-details,
+#indexErrorsContainer .log-details,
 #logsContainer .alerts-details,
-#alertsContainer .alerts-details {
+#alertsContainer .alerts-details,
+#indexErrorsContainer .alerts-details,
+#logsContainer .index-errors-details,
+#alertsContainer .index-errors-details,
+#indexErrorsContainer .index-errors-details {
     padding: 10px;
     overflow-y: auto;
     overflow-x: hidden;
 }
 
 #logsContainer .unread td,
-#alertsContainer .unread td {
+#alertsContainer .unread td,
+#indexErrorsContainer .unread td {
     font-weight: bold;
 }
 
