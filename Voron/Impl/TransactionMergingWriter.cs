@@ -18,9 +18,8 @@ namespace Voron.Impl
     {
         private readonly StorageEnvironment _env;
 
-        private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites;
+        private readonly BlockingCollection<OutstandingWrite> _pendingWrites = new BlockingCollection<OutstandingWrite>();
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-        private readonly ManualResetEventSlim _hasWritesEvent = new ManualResetEventSlim();
         private readonly ManualResetEventSlim _stopWrites = new ManualResetEventSlim();
         private readonly DebugJournal _debugJournal;
         private readonly ConcurrentQueue<ManualResetEventSlim> _eventsBuffer = new ConcurrentQueue<ManualResetEventSlim>();
@@ -38,7 +37,6 @@ namespace Voron.Impl
         internal TransactionMergingWriter(StorageEnvironment env, DebugJournal debugJournal = null)
         {
             _env = env;
-            _pendingWrites = new ConcurrentQueue<OutstandingWrite>();
             _stopWrites.Set();
             _debugJournal = debugJournal;
 	        _backgroundTask = new Lazy<Task>(() => Task.Factory.StartNew(BackgroundWriter, _cancellationTokenSource.Token,
@@ -62,8 +60,7 @@ namespace Voron.Impl
 
             using (var mine = new OutstandingWrite(batch, this))
             {
-                _pendingWrites.Enqueue(mine);
-                _hasWritesEvent.Set();
+                _pendingWrites.Add(mine);
 
                 mine.Wait();
             }
@@ -84,15 +81,12 @@ namespace Voron.Impl
             while (cancellationToken.IsCancellationRequested == false)
             {
                 _stopWrites.Wait(cancellationToken);
-                _hasWritesEvent.Reset();
 
                 OutstandingWrite write;
-                while (_pendingWrites.TryPeek(out write))
+                while (_pendingWrites.TryTake(out write, Timeout.Infinite, cancellationToken))
                 {
                     HandleActualWrites(write);
                 }
-
-                _hasWritesEvent.Wait(cancellationToken);
             }
         }
 
@@ -127,10 +121,6 @@ namespace Voron.Impl
             {
                 HandleWriteFailure(writes, mine, e);
             }
-            finally
-            {
-                Finalize(writes);
-            }
         }
 
         private void HandleWriteFailure(List<OutstandingWrite> writes, OutstandingWrite mine, Exception e)
@@ -148,20 +138,6 @@ namespace Voron.Impl
             }
 
             SplitWrites(writes);
-        }
-
-        private void Finalize(IEnumerable<OutstandingWrite> writes)
-        {
-            if (writes == null)
-                return;
-            Debug.Assert(_pendingWrites.Count > 0);
-            foreach (var write in writes)
-            {
-                Debug.Assert(_pendingWrites.Peek() == write);
-
-                OutstandingWrite pendingWrite;
-                _pendingWrites.TryDequeue(out pendingWrite);
-            }
         }
 
         private void HandleOperations(Transaction tx, IEnumerable<WriteBatch.BatchOperation> operations)
@@ -244,32 +220,24 @@ namespace Voron.Impl
             // down the small write too much.
             long maxSize = 16 * 1024 * 1024; // 16 MB by default
             if (mine.Size < 128 * 1024)
-                maxSize = mine.Size + (1024 * 1024);
+                maxSize = (1024 * 1024); // 1 MB if small
 
-            var list = new List<OutstandingWrite>();
-            var indexOfMine = -1;
-            var index = 0;
+		    var list = new List<OutstandingWrite> {mine};
 
-            foreach (var write in _pendingWrites)
-            {
-                if (maxSize <= 0)
-                    break;
+		    maxSize -= mine.Size;
 
-                if (write == mine)
-                {
-                    indexOfMine = index;
-                    continue;
-                }
+		    while (true)
+		    {
 
-                list.Add(write);
+				if (maxSize <= 0)
+					break;
 
-                maxSize -= write.Size;
-                index++;
-            }
-
-            Debug.Assert(indexOfMine >= 0);
-
-            list.Insert(indexOfMine, mine);
+			    OutstandingWrite item;
+			    if (_pendingWrites.TryTake(out item, TimeSpan.Zero) == false)
+				    break;
+				list.Add(item);
+			    maxSize -= item.Size;
+		    }
 
             return list;
         }
@@ -335,7 +303,6 @@ namespace Voron.Impl
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
-            _hasWritesEvent.Set();
             _stopWrites.Set();
 
             try
@@ -359,7 +326,6 @@ namespace Voron.Impl
                 {
                     manualResetEventSlim.Dispose();
                 }
-                _hasWritesEvent.Dispose();
                 _stopWrites.Dispose();
             }
         }
