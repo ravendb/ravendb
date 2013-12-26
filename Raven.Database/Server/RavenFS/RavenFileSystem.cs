@@ -32,8 +32,8 @@ namespace Raven.Database.Server.RavenFS
 		{
 			this.systemConfiguration = systemConfiguration;
 
-			storage = new TransactionalStorage(systemConfiguration.DataDirectory, systemConfiguration.Settings);
-			search = new IndexStorage(systemConfiguration.IndexStoragePath, systemConfiguration.Settings);
+			storage = new TransactionalStorage(systemConfiguration.RavenFsDataDirectory, systemConfiguration.Settings);
+			search = new IndexStorage(systemConfiguration.RavenFsIndexStoragePath, systemConfiguration.Settings);
 			sigGenerator = new SigGenerator();
 			var replicationHiLo = new SynchronizationHiLo(storage);
 			var sequenceActions = new SequenceActions(storage);
