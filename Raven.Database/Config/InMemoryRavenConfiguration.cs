@@ -227,7 +227,7 @@ namespace Raven.Database.Config
 
 			if (string.IsNullOrEmpty(Settings["Raven/FileSystem/IndexStoragePath"]) == false)
 			{
-				RavenFsDataDirectory = Settings["Raven/FilesSystem/IndexStoragePath"];
+				RavenFsIndexStoragePath = Settings["Raven/FilesSystem/IndexStoragePath"];
 			}
 
 			//SetVirtualDirectory();
