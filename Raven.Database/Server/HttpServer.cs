@@ -48,7 +48,11 @@ namespace Raven.Database.Server
 	{
 		private readonly DateTime startUpTime = SystemTime.UtcNow;
 		private DateTime lastWriteRequest;
-		private const int MaxConcurrentRequests = 10 * 1024;
+		
+		// Important! this value is syncronized with the max sessions number in esent
+		// since we cannot have more reqquests in the system than we have sessions for them
+		// and we also need to allow sessions for background operations
+		private const int MaxConcurrentRequests = 512;
 		public DocumentDatabase SystemDatabase { get; private set; }
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
 		readonly MixedModeRequestAuthorizer requestAuthorizer;
