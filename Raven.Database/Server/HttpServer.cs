@@ -281,7 +281,12 @@ namespace Raven.Database.Server
 
 		public void Dispose()
 		{
-			disposerLock.EnterWriteLock();
+			bool hasWriteLock = true;
+			if (disposerLock.TryEnterWriteLock(TimeSpan.FromMinutes(2)))
+			{
+				hasWriteLock = false;
+				logger.Warn("After waiting for 2 minutes for disposer lock, giving up. Will do rude disposal");
+			}
 			try
 			{
 				TenantDatabaseModified.Occured -= TenantDatabaseRemoved;
@@ -350,7 +355,8 @@ namespace Raven.Database.Server
 			}
 			finally
 			{
-				disposerLock.ExitWriteLock();
+				if (hasWriteLock)
+					disposerLock.ExitWriteLock();
 			}
 		}
 
