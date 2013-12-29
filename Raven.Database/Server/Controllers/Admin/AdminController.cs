@@ -53,9 +53,10 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			DatabaseDocument databaseDocument = null;
 
-			if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, "Database.Document")))
+			var databaseDocumentPath = Path.Combine(restoreRequest.RestoreLocation, "Database.Document");
+			if (File.Exists(databaseDocumentPath))
 			{
-				var databaseDocumentText = File.ReadAllText(Path.Combine(restoreRequest.RestoreLocation, "Database.Document"));
+				var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
 				databaseDocument = RavenJObject.Parse(databaseDocumentText).JsonDeserialization<DatabaseDocument>();
 			}
 
