@@ -1,5 +1,7 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
@@ -15,6 +17,13 @@ namespace Raven.Database.Server.Controllers.Admin
 		[HttpGet][Route("admin/databases/{*id}")]
 		public HttpResponseMessage DatabasesGet(string id)
 		{
+			if (IsSystemDatabase(id))
+			{
+				//fetch fake (empty) system database document
+				var systemDatabaseDocument = new DatabaseDocument { Id = Constants.SystemDatabase };
+				return GetMessageWithObject(systemDatabaseDocument);
+			}
+
 			var docKey = "Raven/Databases/" + id;
 
 			var document = Database.Get(docKey, null);
@@ -28,8 +37,11 @@ namespace Raven.Database.Server.Controllers.Admin
 		}
 
 		[HttpPut][Route("admin/databases/{*id}")]
-		public async Task DatabasesPut(string id)
+		public async Task<HttpResponseMessage> DatabasesPut(string id)
 		{
+			if (IsSystemDatabase(id))
+				return GetMessageWithString("System Database document cannot be changed", HttpStatusCode.Forbidden);
+
 			var docKey = "Raven/Databases/" + id;
 			var dbDoc = await ReadJsonObjectAsync<DatabaseDocument>();
 			DatabasesLandlord.Protect(dbDoc);
@@ -37,17 +49,22 @@ namespace Raven.Database.Server.Controllers.Admin
 			json.Remove("Id");
 
 			Database.Put(docKey, null, json, new RavenJObject(), null);
+
+			return GetEmptyMessage();
 		}
 
 		[HttpDelete][Route("admin/databases/{*id}")]
-		public void DatabasesDelete(string id)
+		public HttpResponseMessage DatabasesDelete(string id)
 		{
+			if (IsSystemDatabase(id))
+				return GetMessageWithString("System Database document cannot be deleted", HttpStatusCode.Forbidden);
+
 			var docKey = "Raven/Databases/" + id;
 			var configuration = DatabasesLandlord.CreateTenantConfiguration(id);
 			var databasedocument = Database.Get(docKey, null);
 
 			if (configuration == null)
-				return;
+				return GetEmptyMessage();
 
 			Database.Delete(docKey, null, null);
 			bool result;
@@ -64,6 +81,9 @@ namespace Raven.Database.Server.Controllers.Admin
 						IOExtensions.DeleteDirectory(dbDoc.Settings[Constants.RavenLogsPath]);
 				}
 			}
+
+			return GetEmptyMessage();
 		}
+
 	}
 }
