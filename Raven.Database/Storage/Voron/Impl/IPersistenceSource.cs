@@ -4,7 +4,7 @@
 
 	using global::Voron;
 
-	public interface IPersistanceSource : IDisposable
+	public interface IPersistenceSource : IDisposable
 	{
 		StorageEnvironmentOptions Options { get; }
 

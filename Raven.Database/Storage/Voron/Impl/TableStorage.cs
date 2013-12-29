@@ -16,19 +16,19 @@ namespace Raven.Database.Storage.Voron.Impl
 
 	public class TableStorage : IDisposable
 	{
-		private readonly IPersistanceSource persistanceSource;
+		private readonly IPersistenceSource persistenceSource;
 
 		private readonly StorageEnvironment env;
 
-		public TableStorage(IPersistanceSource persistanceSource)
+		public TableStorage(IPersistenceSource persistenceSource)
 		{
-			if(persistanceSource == null)
-				throw new ArgumentNullException("persistanceSource");
+			if(persistenceSource == null)
+				throw new ArgumentNullException("persistenceSource");
 
-			this.persistanceSource = persistanceSource;
+			this.persistenceSource = persistenceSource;
 			
-			Debug.Assert(persistanceSource.Options != null);
-			env = new StorageEnvironment(persistanceSource.Options);
+			Debug.Assert(persistenceSource.Options != null);
+			env = new StorageEnvironment(persistenceSource.Options);
 
 			Initialize();
 			CreateSchema();
@@ -47,11 +47,11 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			var reportData = new Dictionary<string, object>
 	        {
-	            {"MaxNodeSize", persistanceSource.Options.DataPager.MaxNodeSize},
-	            {"NumberOfAllocatedPages", persistanceSource.Options.DataPager.NumberOfAllocatedPages},
-	           // {"PageMaxSpace", persistanceSource.Options.DataPager.PageMaxSpace},
-	            {"PageMinSpace", persistanceSource.Options.DataPager.PageMinSpace},
-	           // {"PageSize", persistanceSource.Options.DataPager.PageSize},
+	            {"MaxNodeSize", persistenceSource.Options.DataPager.MaxNodeSize},
+	            {"NumberOfAllocatedPages", persistenceSource.Options.DataPager.NumberOfAllocatedPages},
+	           // {"PageMaxSpace", persistenceSource.Options.DataPager.PageMaxSpace},
+	            {"PageMinSpace", persistenceSource.Options.DataPager.PageMinSpace},
+	           // {"PageSize", persistenceSource.Options.DataPager.PageSize},
                 {"Documents", GetEntriesCount(Documents)},
                 {"Indexes", GetEntriesCount(IndexingStats)},
                 {"Attachments", GetEntriesCount(Attachments)},
@@ -141,8 +141,8 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public void Dispose()
 		{
-			if (persistanceSource != null)
-				persistanceSource.Dispose();
+			if (persistenceSource != null)
+				persistenceSource.Dispose();
 
 			if (env != null)
 				env.Dispose();
