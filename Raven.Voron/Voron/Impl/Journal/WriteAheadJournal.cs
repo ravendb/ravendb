@@ -30,7 +30,6 @@ namespace Voron.Impl.Journal
 
 		private long _journalIndex = -1;
 		private readonly LZ4 _lz4 = new LZ4();
-		private readonly SemaphoreSlim _writeSemaphore = new SemaphoreSlim(1, 1);
 		private readonly JournalApplicator _journalApplicator;
 		private readonly ModifyHeaderAction _updateLogInfo;
 
@@ -312,8 +311,6 @@ namespace Voron.Impl.Journal
 
 			// we cannot dispose the journal until we are done with all of the pending writes
 
-			_writeSemaphore.Wait();
-
 			_compressionPager.Dispose();
 			_lz4.Dispose();
 			if (_env.Options.OwnsPagers)
@@ -333,8 +330,6 @@ namespace Voron.Impl.Journal
 			}
 
 			_files = ImmutableAppendOnlyList<JournalFile>.Empty;
-
-			_writeSemaphore.Dispose();
 		}
 
 		public JournalInfo GetCurrentJournalInfo()
@@ -639,38 +634,20 @@ namespace Voron.Impl.Journal
 			}
 		}
 
-		public Task WriteToJournal(Transaction tx, int pageCount)
+		public void WriteToJournal(Transaction tx, int pageCount)
 		{
-			// this is a bit strange, because we want to return a task of the actual write to disk
-			// but at the same time, we want to only allow a single write to disk at a given point in time
-			// there for, we wait for the write to disk to complete before releasing the semaphore
-			_writeSemaphore.Wait();
-			try
-			{
-				var pages = CompressPages(tx, pageCount, _compressionPager);
+		    var pages = CompressPages(tx, pageCount, _compressionPager);
 
-				if (CurrentFile == null || CurrentFile.AvailablePages < pages.Length)
-				{
-					CurrentFile = NextFile(pages.Length);
-				}
-				var task = CurrentFile.Write(tx, pages)
-					.ContinueWith(result =>
-					{
-						_writeSemaphore.Release(); // release semaphore on write completion
-						return result;
-					}).Unwrap();
-				if (CurrentFile.AvailablePages == 0)
-				{
-					CurrentFile = null;
-				}
+		    if (CurrentFile == null || CurrentFile.AvailablePages < pages.Length)
+		    {
+		        CurrentFile = NextFile(pages.Length);
+		    }
+		    CurrentFile.Write(tx, pages);
+		    if (CurrentFile.AvailablePages == 0)
+		    {
+		        CurrentFile = null;
+		    }
 
-				return task;
-			}
-			catch
-			{
-				_writeSemaphore.Release();
-				throw;
-			}
 		}
 
 

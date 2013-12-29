@@ -18,9 +18,10 @@ namespace Voron.Impl
     {
         private readonly StorageEnvironment _env;
 
-        private readonly BlockingCollection<OutstandingWrite> _pendingWrites = new BlockingCollection<OutstandingWrite>();
+        private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites = new ConcurrentQueue<OutstandingWrite>();
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ManualResetEventSlim _stopWrites = new ManualResetEventSlim();
+        private readonly ManualResetEventSlim _hasWrites = new ManualResetEventSlim();
         private readonly DebugJournal _debugJournal;
         private readonly ConcurrentQueue<ManualResetEventSlim> _eventsBuffer = new ConcurrentQueue<ManualResetEventSlim>();
 
@@ -39,9 +40,9 @@ namespace Voron.Impl
             _env = env;
             _stopWrites.Set();
             _debugJournal = debugJournal;
-	        _backgroundTask = new Lazy<Task>(() => Task.Factory.StartNew(BackgroundWriter, _cancellationTokenSource.Token,
-	                                                                     TaskCreationOptions.LongRunning,
-	                                                                     TaskScheduler.Current));
+            _backgroundTask = new Lazy<Task>(() => Task.Factory.StartNew(BackgroundWriter, _cancellationTokenSource.Token,
+                                                                         TaskCreationOptions.LongRunning,
+                                                                         TaskScheduler.Current));
         }
 
         public IDisposable StopWrites()
@@ -60,7 +61,9 @@ namespace Voron.Impl
 
             using (var mine = new OutstandingWrite(batch, this))
             {
-                _pendingWrites.Add(mine);
+                _pendingWrites.Enqueue(mine);
+
+                _hasWrites.Set();
 
                 mine.Wait();
             }
@@ -77,16 +80,19 @@ namespace Voron.Impl
 
         private void BackgroundWriter()
         {
+            var self = this;
             var cancellationToken = _cancellationTokenSource.Token;
             while (cancellationToken.IsCancellationRequested == false)
             {
                 _stopWrites.Wait(cancellationToken);
+                _hasWrites.Reset();
 
                 OutstandingWrite write;
-                while (_pendingWrites.TryTake(out write, Timeout.Infinite, cancellationToken))
+                while (_pendingWrites.TryDequeue(out write))
                 {
                     HandleActualWrites(write);
                 }
+
             }
         }
 
@@ -100,22 +106,24 @@ namespace Voron.Impl
                 {
                     HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations));
 
-                    tx.Commit().ContinueWith(task =>
+                    try
                     {
-                        if (task.IsFaulted)
-                        {
-                            HandleWriteFailure(writes, mine, task.Exception);
-                        }
-                        else
-                        {
-                            if (ShouldRecordToDebugJournal)
-                                _debugJournal.Flush();
+                        tx.Commit();
+                        if (ShouldRecordToDebugJournal)
+                            _debugJournal.Flush();
 
-                            foreach (var write in writes)
-                                write.Completed();
+                        foreach (var write in writes)
+                            write.Completed();
+                    }
+                    catch (Exception e)
+                    {
+                        // if we have an error duing the commit, we can't recover, just fail them all.
+                        foreach (var write in writes)
+                        {
+                            write.Errored(e);
                         }
-                    });
-                }        
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -125,16 +133,16 @@ namespace Voron.Impl
 
         private void HandleWriteFailure(List<OutstandingWrite> writes, OutstandingWrite mine, Exception e)
         {
-	        if (writes == null || writes.Count == 0)
-	        {
-				mine.Errored(e);
-		        throw new InvalidOperationException("Couldn't get items to write", e);
-	        }
+            if (writes == null || writes.Count == 0)
+            {
+                mine.Errored(e);
+                throw new InvalidOperationException("Couldn't get items to write", e);
+            }
 
-	        if (writes.Count == 1)
+            if (writes.Count == 1)
             {
                 writes[0].Errored(e);
-				return;
+                return;
             }
 
             SplitWrites(writes);
@@ -184,36 +192,26 @@ namespace Voron.Impl
 
         private void SplitWrites(List<OutstandingWrite> writes)
         {
-	        for (var index = 0; index < writes.Count; index++)
-	        {
-		        var write = writes[index];
-		        try
-		        {
-			        using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
-			        {
-				        HandleOperations(tx, write.Batch.Operations);
-				        tx.Commit().ContinueWith(
-					        task =>
-						        {
-							        if (task.IsFaulted)
-							        {
-								        write.Errored(task.Exception);
-							        }
-							        else
-							        {
-								        write.Completed();
-							        }
-						        });
-			        }
-		        }
-		        catch (Exception e)
-		        {
-			        write.Errored(e);
-		        }
-	        }
+            for (var index = 0; index < writes.Count; index++)
+            {
+                var write = writes[index];
+                try
+                {
+                    using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        HandleOperations(tx, write.Batch.Operations);
+                        tx.Commit();
+                        write.Completed();
+                    }
+                }
+                catch (Exception e)
+                {
+                    write.Errored(e);
+                }
+            }
         }
 
-	    private List<OutstandingWrite> BuildBatchGroup(OutstandingWrite mine)
+        private List<OutstandingWrite> BuildBatchGroup(OutstandingWrite mine)
         {
             // Allow the group to grow up to a maximum size, but if the
             // original write is small, limit the growth so we do not slow
@@ -222,22 +220,21 @@ namespace Voron.Impl
             if (mine.Size < 128 * 1024)
                 maxSize = (1024 * 1024); // 1 MB if small
 
-		    var list = new List<OutstandingWrite> {mine};
+            var list = new List<OutstandingWrite> { mine };
 
-		    maxSize -= mine.Size;
+            maxSize -= mine.Size;
 
-		    while (true)
-		    {
+            while (true)
+            {
+                if (maxSize <= 0)
+                    break;
 
-				if (maxSize <= 0)
-					break;
-
-			    OutstandingWrite item;
-			    if (_pendingWrites.TryTake(out item, TimeSpan.Zero) == false)
-				    break;
-				list.Add(item);
-			    maxSize -= item.Size;
-		    }
+                OutstandingWrite item;
+                if (_pendingWrites.TryDequeue(out item) == false)
+                    break;
+                list.Add(item);
+                maxSize -= item.Size;
+            }
 
             return list;
         }
@@ -272,22 +269,22 @@ namespace Voron.Impl
 
             public void Errored(Exception e)
             {
-	            var wasSet = _completed.IsSet;
+                var wasSet = _completed.IsSet;
 
                 _exception = e;
                 _completed.Set();
 
-				if (wasSet)
-					throw new InvalidOperationException("This should not happen.");
+                if (wasSet)
+                    throw new InvalidOperationException("This should not happen.");
             }
 
             public void Completed()
             {
-				var wasSet = _completed.IsSet;
+                var wasSet = _completed.IsSet;
                 _completed.Set();
 
-				if (wasSet)
-					throw new InvalidOperationException("This should not happen.");
+                if (wasSet)
+                    throw new InvalidOperationException("This should not happen.");
             }
 
             public void Wait()
@@ -304,6 +301,7 @@ namespace Voron.Impl
         {
             _cancellationTokenSource.Cancel();
             _stopWrites.Set();
+            _hasWrites.Set();
 
             try
             {
@@ -327,6 +325,7 @@ namespace Voron.Impl
                     manualResetEventSlim.Dispose();
                 }
                 _stopWrites.Dispose();
+                _hasWrites.Dispose();
             }
         }
     }

@@ -1,4 +1,7 @@
-﻿namespace Voron.Impl.Journal
+﻿using System.Diagnostics;
+using Voron.Trees;
+
+namespace Voron.Impl.Journal
 {
 	using System;
 	using System.ComponentModel;
@@ -60,24 +63,41 @@
 		private const int ErrorOperationAborted = 995;
 		private const int ErrorHandleEof = 38;
 
-		public Task WriteGatherAsync(long position, byte*[] pages)
+		public void WriteGather(long position, byte*[] pages)
 		{
-			if (Disposed)
+            if (Disposed)
 				throw new ObjectDisposedException("Win32JournalWriter");
 
-			var tcs = new TaskCompletionSource<object>();
-			var mre = new ManualResetEvent(false);
-			var allocHGlobal = Marshal.AllocHGlobal(sizeof(FileSegmentElement) * (pages.Length + 1));
-			var nativeOverlapped = CreateNativeOverlapped(position, tcs, allocHGlobal, mre);
-			var array = (FileSegmentElement*)allocHGlobal.ToPointer();
-			for (int i = 0; i < pages.Length; i++)
-			{
-				array[i].Buffer = pages[i];
-			}
-			array[pages.Length].Buffer = null;// null terminating
+		    using (var mre = new ManualResetEvent(false))
+		    {
+		        var segments = (FileSegmentElement*) (Marshal.AllocHGlobal((pages.Length + 1)*sizeof (FileSegmentElement)));
+		        NativeOverlapped* nativeOverlapped = stackalloc NativeOverlapped[1];
+		        nativeOverlapped->OffsetLow = (int) (position & 0xffffffff);
+		        nativeOverlapped->OffsetHigh = (int) (position >> 32);
+		        nativeOverlapped->EventHandle = mre.SafeWaitHandle.DangerousGetHandle();
+                
+		        for (int i = 0; i < pages.Length; i++)
+		        {
+		            segments[i].Buffer = pages[i];
+		        }
+		        segments[pages.Length].Buffer = null; // null terminating
 
-		    WriteFileGather(_handle, array, (uint) pages.Length*4096, IntPtr.Zero, nativeOverlapped);
-		    return HandleResponse(nativeOverlapped, tcs, allocHGlobal);
+		        var result = WriteFileGather(_handle, segments, (uint) pages.Length*4096, IntPtr.Zero, nativeOverlapped);
+		        if (result)
+		        {
+		            Console.WriteLine("really?");
+		        }
+		        switch (Marshal.GetLastWin32Error())
+		        {
+		            case ErrorSuccess:
+		            case ErrorIOPending:
+		                mre.WaitOne();
+		                break;
+		            default:
+		                throw new Win32Exception(Marshal.GetLastWin32Error());
+		        }
+                Marshal.FreeHGlobal((IntPtr)segments);
+		    }
 		}
 
 		public long NumberOfAllocatedPages { get; private set; }
@@ -127,53 +147,7 @@
 	        }
 	    }
 
-		private static Task HandleResponse(NativeOverlapped* nativeOverlapped, TaskCompletionSource<object> tcs, IntPtr memoryToFree)
-		{
-			var lastWin32Error = Marshal.GetLastWin32Error();
-			switch (lastWin32Error)
-			{
-                case ErrorSuccess:
-			    case ErrorIOPending:
-			        return tcs.Task;
-			}
-
-			Overlapped.Free(nativeOverlapped);
-			if (memoryToFree != IntPtr.Zero)
-				Marshal.FreeHGlobal(memoryToFree);
-			throw new Win32Exception(lastWin32Error);
-		}
-
-		private static NativeOverlapped* CreateNativeOverlapped(long position, TaskCompletionSource<object> tcs, IntPtr memoryToFree, ManualResetEvent manualResetEvent)
-		{
-			var o = new Overlapped((int)(position & 0xffffffff), (int)(position >> 32), manualResetEvent.SafeWaitHandle.DangerousGetHandle(), null);
-			var nativeOverlapped = o.Pack((code, bytes, overlap) =>
-			{
-				try
-				{
-					switch (code)
-					{
-						case ErrorSuccess:
-							tcs.TrySetResult(null);
-							break;
-						case ErrorOperationAborted:
-							tcs.TrySetCanceled();
-							break;
-						default:
-							tcs.TrySetException(new Win32Exception((int)code));
-							break;
-					}
-				}
-				finally
-				{
-					Overlapped.Free(overlap);
-					if (memoryToFree != IntPtr.Zero)
-						Marshal.FreeHGlobal(memoryToFree);
-				}
-			}, null);
-			return nativeOverlapped;
-		}
-
-		public void Dispose()
+	    public void Dispose()
 		{
 			Disposed = true;
 			GC.SuppressFinalize(this);
