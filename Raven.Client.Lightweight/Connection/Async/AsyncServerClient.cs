@@ -228,7 +228,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="overwrite">Should overwrite index</param>
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
-			return ExecuteWithReplication("PUT", opUrl => DirectPutIndexAsync(name, indexDef, overwrite, opUrl));
+			return ExecuteWithReplication("PUT", operationMetadata => DirectPutIndexAsync(name, indexDef, overwrite, operationMetadata));
 		}
 
 		/// <summary>
@@ -236,7 +236,7 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public Task<string> PutTransformerAsync(string name, TransformerDefinition transformerDefinition)
 		{
-			return ExecuteWithReplication("PUT", opUrl => DirectPutTransformerAsync(name, transformerDefinition, opUrl));
+			return ExecuteWithReplication("PUT", operationMetadata => DirectPutTransformerAsync(name, transformerDefinition, operationMetadata));
 		}
 
 		/// <summary>
@@ -872,7 +872,7 @@ namespace Raven.Client.Connection.Async
 		/// </remarks>
 		public Task<JsonDocument[]> GetDocumentsAsync(int start, int pageSize, bool metadataOnly = false)
 		{
-			return ExecuteWithReplication("GET", async url =>
+			return ExecuteWithReplication("GET", async operationMetadata =>
 			{
                 var result = await GetDocumentsInternalAsync(start, null, pageSize, metadataOnly);
 
@@ -884,7 +884,7 @@ namespace Raven.Client.Connection.Async
 
 	    public Task<JsonDocument[]> GetDocumentsAsync(Etag fromEtag, int pageSize, bool metadataOnly = false)
 	    {
-            return ExecuteWithReplication("GET", async url =>
+            return ExecuteWithReplication("GET", async operationMetadata =>
             {
                 var result = await GetDocumentsInternalAsync(null, fromEtag, pageSize, metadataOnly);
                 return result.Cast<RavenJObject>()
@@ -930,12 +930,12 @@ namespace Raven.Client.Connection.Async
 		{
 			var requestUrl = query.GetRequestUri();
 			EnsureIsNotNullOrEmpty(requestUrl, "url");
-			var result = await ExecuteWithReplication("GET", async serverUrl =>
+			var result = await ExecuteWithReplication("GET", async operationMetadata =>
 			{
 				var metadata = new RavenJObject();
 				AddTransactionInformation(metadata);
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-						new CreateHttpJsonRequestParams(this, serverUrl + requestUrl, "GET", metadata, credentials, convention)
+						new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, "GET", metadata, credentials, convention)
 								.AddOperationHeaders(OperationsHeaders));
 
 				return await request.ReadResponseJsonAsync();
@@ -945,10 +945,10 @@ namespace Raven.Client.Connection.Async
 
 		public Task<long> NextIdentityForAsync(string name)
 		{
-			return ExecuteWithReplication("POST", async url =>
+			return ExecuteWithReplication("POST", async operationMetadata =>
 			{
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
-						new CreateHttpJsonRequestParams(this, url + "/identity/next?name=" + Uri.EscapeDataString(name), "POST", credentials, convention)
+						new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/identity/next?name=" + Uri.EscapeDataString(name), "POST", credentials, convention)
 								.AddOperationHeaders(OperationsHeaders));
 				var readResponseJson = await request.ReadResponseJsonAsync();
 				return readResponseJson.Value<long>("Value");
@@ -1974,12 +1974,12 @@ namespace Raven.Client.Connection.Async
         public Task<RavenJToken> ExecuteGetRequest(string requestUrl)
         {
             EnsureIsNotNullOrEmpty(requestUrl, "url");
-            return ExecuteWithReplication("GET", serverUrl =>
+            return ExecuteWithReplication("GET", operationMetadata =>
             {
                 var metadata = new RavenJObject();
                 AddTransactionInformation(metadata);
                 var request = jsonRequestFactory.CreateHttpJsonRequest(
-                        new CreateHttpJsonRequestParams(this, serverUrl + requestUrl, "GET", metadata, credentials, convention)
+                        new CreateHttpJsonRequestParams(this, operationMetadata.Url + requestUrl, "GET", metadata, credentials, convention)
                                 .AddOperationHeaders(OperationsHeaders));
 
                 return request.ReadResponseJsonAsync();
