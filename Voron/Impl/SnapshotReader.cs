@@ -56,30 +56,30 @@
 			return tree.GetDataSize(Transaction, key);
 		}
 
-		public bool Contains(string treeName, Slice key, WriteBatch writeBatch = null)
-		{
-			if (writeBatch != null)
-			{
-				WriteBatch.BatchOperationType operationType;
-				Stream stream;
-				ushort? version;
-				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
-				{
-					switch (operationType)
-					{
-						case WriteBatch.BatchOperationType.Add:
-							return true;
-						case WriteBatch.BatchOperationType.Delete:
-							return false;
-						default:
-							throw new ArgumentOutOfRangeException(operationType.ToString());
-					}
-				}
-			}
+        public bool Contains(string treeName, Slice key, WriteBatch writeBatch = null)
+        {
+            if (writeBatch != null)
+            {
+                WriteBatch.BatchOperationType operationType;
+                Stream stream;
+                ushort? version;
+                if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
+                {
+                    switch (operationType)
+                    {
+                        case WriteBatch.BatchOperationType.Add:
+                            return true;
+                        case WriteBatch.BatchOperationType.Delete:
+                            return false;
+                        default:
+                            throw new ArgumentOutOfRangeException(operationType.ToString());
+                    }
+                }
+            }
 
-			var tree = GetTree(treeName);
-			return tree.ReadVersion(Transaction, key) > 0;
-		}
+            var tree = GetTree(treeName);
+            return tree.ReadVersion(Transaction, key) > 0;
+        }
 
 		public ushort ReadVersion(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
@@ -88,13 +88,13 @@
 				WriteBatch.BatchOperationType operationType;
 			    Stream stream;
 			    ushort? version;
-			    if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
+			    if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType) && version.HasValue)
 				{
 					switch (operationType)
 					{
 						case WriteBatch.BatchOperationType.Add:
 						case WriteBatch.BatchOperationType.Delete:
-					        return version == null ? (ushort)0 : (ushort)(version.Value + 1);
+					        return (ushort)(version.Value + 1);
 					}
 				}
 			}
