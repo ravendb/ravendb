@@ -211,9 +211,17 @@ namespace Raven.Database.Util
         {
             foreach (var property in CounterProperties)
             {
-                var counter = property.GetValue(this, null) as IPerformanceCounter;
-                counter.Close();
-                counter.RemoveInstance();
+				var counter = (IPerformanceCounter)property.GetValue(this, null);
+	            try
+	            {
+		            counter.Close();
+		            counter.RemoveInstance();
+	            }
+	            catch (Exception)
+	            {
+		            // we don't really have anything that we can do here, and something perf counter
+					// just love to throw stuff because the moon is full or the tide just came in
+	            }
             }
         }
 

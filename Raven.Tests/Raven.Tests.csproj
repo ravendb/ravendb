@@ -232,6 +232,8 @@
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />
     <Compile Include="Issues\RavenDB_1435.cs" />
     <Compile Include="Issues\RavenDB_1497.cs" />
+    <Compile Include="Issues\RavenDB_1520.cs" />
+    <Compile Include="Issues\RavenDB_1539.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\In.cs" />
@@ -750,6 +752,7 @@
     <Compile Include="MailingList\ConcurrencyTests2.cs" />
     <Compile Include="MailingList\CustomizingIndexQuery.cs" />
     <Compile Include="MailingList\DateTimeOffsetIssues.cs" />
+    <Compile Include="MailingList\DictionaryOfEnum.cs" />
     <Compile Include="MailingList\DifferentKeysWithTheSameFirst127CharactersAreDifferent.cs" />
     <Compile Include="MailingList\DistinctWithPaging.cs" />
     <Compile Include="MailingList\DynamicFieldNoAnalysisStillAnalyzesTest.cs" />
@@ -830,6 +833,7 @@
     <Compile Include="MailingList\ProjectionShouldNotLoadDocument.cs" />
     <Compile Include="MailingList\QueryExplanation.cs" />
     <Compile Include="MailingList\QueryIn.cs" />
+    <Compile Include="MailingList\QueryingIntArray.cs" />
     <Compile Include="MailingList\QueryingOn_A_Prefix.cs" />
     <Compile Include="MailingList\QueryingOnValueWithMultipleMinusAnalyzed .cs" />
     <Compile Include="MailingList\QueryingUsingOr.cs" />
@@ -862,6 +866,7 @@
     <Compile Include="MailingList\Stif.cs" />
     <Compile Include="MailingList\StrangeNames.cs" />
     <Compile Include="MailingList\Strange_select_behaviour_in_query_tests.cs" />
+    <Compile Include="MailingList\StreamingHalfWay.cs" />
     <Compile Include="MailingList\StreamSortTest.cs" />
     <Compile Include="MailingList\StringIsNullOrEmpty.cs" />
     <Compile Include="MailingList\SuggestAsync.cs" />
@@ -1501,6 +1506,10 @@
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
       <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Backup\Raven.Backup.csproj">
+      <Project>{dbb6561c-6264-430d-8f3c-e11c6268981e}</Project>
+      <Name>Raven.Backup</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Embedded\Raven.Client.Embedded.csproj">
       <Project>{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B}</Project>

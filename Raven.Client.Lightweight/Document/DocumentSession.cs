@@ -590,32 +590,35 @@ namespace Raven.Client.Document
 
 		private static IEnumerator<StreamResult<T>> YieldQuery<T>(IDocumentQuery<T> query, IEnumerator<RavenJObject> enumerator)
 		{
-			var queryOperation = ((DocumentQuery<T>)query).InitializeQueryOperation(null);
-			queryOperation.DisableEntitiesTracking = true;
-			while (enumerator.MoveNext())
-			{
-				var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
+		    using (enumerator)
+		    {
+                var queryOperation = ((DocumentQuery<T>)query).InitializeQueryOperation(null);
+                queryOperation.DisableEntitiesTracking = true;
+                while (enumerator.MoveNext())
+                {
+                    var meta = enumerator.Current.Value<RavenJObject>(Constants.Metadata);
 
-				string key = null;
-				Etag etag = null;
-				if (meta != null)
-				{
-				    key = meta.Value<string>("@id") ??
-                          meta.Value<string>(Constants.DocumentIdFieldName);
+                    string key = null;
+                    Etag etag = null;
+                    if (meta != null)
+                    {
+                        key = meta.Value<string>("@id") ??
+                              meta.Value<string>(Constants.DocumentIdFieldName);
 
-					var value = meta.Value<string>("@etag");
-					if (value != null)
-						etag = Etag.Parse(value);
-				}
+                        var value = meta.Value<string>("@etag");
+                        if (value != null)
+                            etag = Etag.Parse(value);
+                    }
 
-				yield return new StreamResult<T>
-				{
-					Document = queryOperation.Deserialize<T>(enumerator.Current),
-					Etag = etag,
-					Key = key,
-					Metadata = meta
-				};
-			}
+                    yield return new StreamResult<T>
+                    {
+                        Document = queryOperation.Deserialize<T>(enumerator.Current),
+                        Etag = etag,
+                        Key = key,
+                        Metadata = meta
+                    };
+                }
+		    }
 		}
 
 		public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue)
@@ -630,20 +633,21 @@ namespace Raven.Client.Document
 
 		private IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize)
 		{
-			var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
+		    using (var enumerator = DatabaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize))
+		    {
+		        while (enumerator.MoveNext())
+		        {
+		            var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
 
-			while (enumerator.MoveNext())
-			{
-				var document = SerializationHelper.RavenJObjectToJsonDocument(enumerator.Current);
-
-				yield return new StreamResult<T>
-				{
-					Document = (T)ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
-					Etag = document.Etag,
-					Key = document.Key,
-					Metadata = document.Metadata
-				};
-			}
+		            yield return new StreamResult<T>
+		            {
+		                Document = (T) ConvertToEntity<T>(document.Key, document.DataAsJson, document.Metadata),
+		                Etag = document.Etag,
+		                Key = document.Key,
+		                Metadata = document.Metadata
+		            };
+		        }
+		    }
 		}
 
 		/// <summary>
