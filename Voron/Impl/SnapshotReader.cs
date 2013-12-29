@@ -58,7 +58,27 @@
 
 		public bool Contains(string treeName, Slice key, WriteBatch writeBatch = null)
 		{
-			return ReadVersion(treeName, key, writeBatch) > 0;
+			if (writeBatch != null)
+			{
+				WriteBatch.BatchOperationType operationType;
+				Stream stream;
+				ushort? version;
+				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
+				{
+					switch (operationType)
+					{
+						case WriteBatch.BatchOperationType.Add:
+							return true;
+						case WriteBatch.BatchOperationType.Delete:
+							return false;
+						default:
+							throw new ArgumentOutOfRangeException(operationType.ToString());
+					}
+				}
+			}
+
+			var tree = GetTree(treeName);
+			return tree.ReadVersion(Transaction, key) > 0;
 		}
 
 		public ushort ReadVersion(string treeName, Slice key, WriteBatch writeBatch = null)
