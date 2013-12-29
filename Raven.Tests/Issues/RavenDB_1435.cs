@@ -18,6 +18,7 @@ namespace Raven.Tests.Issues
 	{
 		[Theory]
 		[InlineData("esent")]
+		[InlineData("voron")]
 		[InlineData("munin")]
 		public void ShouldWork(string requestedStorage)
 		{
