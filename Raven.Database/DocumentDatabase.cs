@@ -207,7 +207,7 @@ namespace Raven.Database
 					IndexReaderWarmers = IndexReaderWarmers
 				};
 
-				TransactionalStorage = configuration.CreateTransactionalStorage(workContext.HandleWorkNotifications);
+				TransactionalStorage = configuration.CreateTransactionalStorage(configuration.SelectStorageEngine(), workContext.HandleWorkNotifications);
 
 				try
 				{
@@ -2412,18 +2412,33 @@ namespace Raven.Database
 			}), new RavenJObject(), null);
 			IndexStorage.FlushMapIndexes();
 			IndexStorage.FlushReduceIndexes();
+
+			if (databaseDocument.Settings.ContainsKey("Raven/StorageTypeName") == false)
+				databaseDocument.Settings["Raven/StorageTypeName"] = TransactionalStorage.FriendlyName ?? TransactionalStorage.GetType().AssemblyQualifiedName;
+
 			TransactionalStorage.StartBackupOperation(this, backupDestinationDirectory, incrementalBackup, databaseDocument);
 		}
 
 		public static void Restore(RavenConfiguration configuration, string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
-			using (var transactionalStorage = configuration.CreateTransactionalStorage(() => { }))
-			{
-				if (!string.IsNullOrWhiteSpace(databaseLocation))
-				{
-					configuration.DataDirectory = databaseLocation;
-				}
+			var databaseDocumentPath = Path.Combine(backupLocation, "Database.Document");
+			if (File.Exists(databaseDocumentPath) == false)
+				throw new InvalidOperationException("Cannot restore when the Database.Document file is missing in the backup folder: " + backupLocation);
+			
+			var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
+			var databaseDocument = RavenJObject.Parse(databaseDocumentText).JsonDeserialization<DatabaseDocument>();
 
+			string storage;
+			if (databaseDocument.Settings.TryGetValue("Raven/StorageTypeName", out storage) == false)
+			{
+				storage = "esent";
+			}
+
+			if (!string.IsNullOrWhiteSpace(databaseLocation))
+				configuration.DataDirectory = databaseLocation;
+			
+			using (var transactionalStorage = configuration.CreateTransactionalStorage(storage, () => { }))
+			{
 				transactionalStorage.Restore(backupLocation, databaseLocation, output, defrag);
 			}
 		}

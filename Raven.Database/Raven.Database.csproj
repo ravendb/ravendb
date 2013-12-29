@@ -1084,7 +1084,7 @@
     <Compile Include="Storage\Voron\StorageActions\GeneralStorageActions.cs" />
     <Compile Include="Storage\Voron\StorageActions\IndexingStorageActions.cs" />
     <Compile Include="Storage\Voron\Impl\Table.cs" />
-    <Compile Include="Storage\Voron\Impl\IPersistanceSource.cs" />
+    <Compile Include="Storage\Voron\Impl\IPersistenceSource.cs" />
     <Compile Include="Storage\Voron\Impl\MemoryMapPersistanceSource.cs" />
     <Compile Include="Storage\Voron\Impl\MemoryPersistanceSource.cs" />
     <Compile Include="Storage\Voron\StorageActions\ListsStorageActions.cs" />

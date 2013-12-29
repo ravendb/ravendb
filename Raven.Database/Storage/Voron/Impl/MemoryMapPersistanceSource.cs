@@ -8,7 +8,7 @@
 	using global::Voron;
 	using global::Voron.Impl;
 
-	public class MemoryMapPersistanceSource : IPersistanceSource
+	public class MemoryMapPersistenceSource : IPersistenceSource
 	{
 		private readonly InMemoryRavenConfiguration configuration;
 	    private const string PAGER_FILENAME = "Raven.voron";
@@ -17,7 +17,7 @@
 
 		private readonly string filePath;
 
-		public MemoryMapPersistanceSource(InMemoryRavenConfiguration configuration)
+		public MemoryMapPersistenceSource(InMemoryRavenConfiguration configuration)
 		{
 			this.configuration = configuration;
 			directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;

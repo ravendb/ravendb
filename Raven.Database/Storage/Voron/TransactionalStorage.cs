@@ -173,11 +173,11 @@ namespace Raven.Storage.Voron
 		    uuidGenerator = generator;
 			_documentCodecs = documentCodecs;
 
-			var persistanceSource = configuration.RunInMemory ? (IPersistanceSource)new MemoryPersistanceSource() : new MemoryMapPersistanceSource(configuration);
+			var persistenceSource = configuration.RunInMemory ? (IPersistenceSource)new MemoryPersistenceSource() : new MemoryMapPersistenceSource(configuration);
 
-			tableStorage = new TableStorage(persistanceSource);
+			tableStorage = new TableStorage(persistenceSource);
 
-			if (persistanceSource.CreatedNew)
+			if (persistenceSource.CreatedNew)
 			{
 				Id = Guid.NewGuid();
 
@@ -200,7 +200,7 @@ namespace Raven.Storage.Voron
 				}
 			}
 
-			return persistanceSource.CreatedNew;
+			return persistenceSource.CreatedNew;
 		}
 
 		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup,

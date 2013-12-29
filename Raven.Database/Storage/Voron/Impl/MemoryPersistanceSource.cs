@@ -2,9 +2,9 @@
 {
 	using global::Voron;
 
-	public class MemoryPersistanceSource : IPersistanceSource
+	public class MemoryPersistenceSource : IPersistenceSource
 	{
-		public MemoryPersistanceSource()
+		public MemoryPersistenceSource()
 		{
 			CreatedNew = true;
 			Options = new StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions();

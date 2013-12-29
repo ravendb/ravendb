@@ -618,7 +618,7 @@ namespace Raven.Database.Config
 
 		/// <summary>
 		/// What storage type to use (see: RavenDB Storage engines)
-		/// Allowed values: esent, munin
+		/// Allowed values: esent, voron, munin
 		/// Default: esent
 		/// </summary>
 		public string DefaultStorageTypeName
@@ -631,7 +631,7 @@ namespace Raven.Database.Config
 		private bool runInMemory;
 
 		/// <summary>
-		/// Should RavenDB's storage be in-memory. If set to true, Munin would be used as the
+		/// Should RavenDB's storage be in-memory. If set to true, Voron would be used as the
 		/// storage engine, regardless of what was specified for StorageTypeName
 		/// Allowed values: true/false
 		/// Default: false
@@ -886,9 +886,8 @@ namespace Raven.Database.Config
 			return null;
 		}
 
-		public ITransactionalStorage CreateTransactionalStorage(Action notifyAboutWork)
+		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork)
 		{
-			var storageEngine = SelectStorageEngine();
 			switch (storageEngine.ToLowerInvariant())
 			{
 				case "esent":
@@ -909,7 +908,7 @@ namespace Raven.Database.Config
 			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
 		}
 
-		private string SelectStorageEngine()
+		public string SelectStorageEngine()
 		{
 			if (RunInMemory)
 				return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
