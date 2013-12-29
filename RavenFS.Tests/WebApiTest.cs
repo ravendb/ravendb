@@ -34,7 +34,7 @@ namespace RavenFS.Tests
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(8079);
 			var configuration = new InMemoryRavenConfiguration();
 			configuration.Initialize();
-			configuration.DataDirectory = "~/Test";
+			configuration.RavenFsDataDirectory = "~/Test";
 			configuration.Port = 8079;
 
 			Task.Factory.StartNew(() => // initialize in MTA thread
