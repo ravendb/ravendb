@@ -36,7 +36,8 @@ namespace RavenFS.Tests
 			//HttpSelfHostConfiguration config = null;
 			var configuration = new InMemoryRavenConfiguration();
 			configuration.Initialize();
-			configuration.DataDirectory = "~/" + port;
+			configuration.RavenFsDataDirectory = "~/" + port;
+			configuration.DataDirectory = "~/data/" + port;
 			configuration.Port = port;
 
 			Task.Factory.StartNew(() => // initialize in MTA thread
@@ -49,7 +50,7 @@ namespace RavenFS.Tests
 										  
 										  
 
-					                      IOExtensions.DeleteDirectory(configuration.DataDirectory);
+					                      IOExtensions.DeleteDirectory(configuration.RavenFsDataDirectory);
 										  var server = new RavenDbServer(configuration);
 										  disposables.Add(server);
 				                      })

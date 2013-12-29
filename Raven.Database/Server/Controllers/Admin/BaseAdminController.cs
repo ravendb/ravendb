@@ -1,8 +1,11 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Security.Principal;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Security;
@@ -18,6 +21,13 @@ namespace Raven.Database.Server.Controllers.Admin
 				return new WindowsBuiltInRole[0];
 			}
 		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		protected bool IsSystemDatabase(string databaseId)
+		{
+			return databaseId.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase);
+		}
+
 
 		public override async Task<HttpResponseMessage> ExecuteAsync(System.Web.Http.Controllers.HttpControllerContext controllerContext, System.Threading.CancellationToken cancellationToken)
 		{

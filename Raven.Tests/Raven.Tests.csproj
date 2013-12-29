@@ -92,9 +92,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Jint.Raven.dll</HintPath>
     </Reference>
-    <Reference Include="log4net, Version=1.2.12.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+    <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\log4net.2.0.2\lib\net40-full\log4net.dll</HintPath>
+      <HintPath>..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Lucene.Net, Version=2.9.1.2, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -289,6 +289,7 @@
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
     <Compile Include="Issues\RavenDB_1435.cs" />
     <Compile Include="Issues\RavenDB_1497.cs" />
+    <Compile Include="Issues\RavenDB_1520.cs" />
     <Compile Include="Issues\RavenDB_1539.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
@@ -1578,6 +1579,10 @@
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41ac479e-1eb2-4d23-aaf2-e4c8df1bc2ba}</Project>
       <Name>Raven.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Raven.Backup\Raven.Backup.csproj">
+      <Project>{dbb6561c-6264-430d-8f3c-e11c6268981e}</Project>
+      <Name>Raven.Backup</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Client.Embedded\Raven.Client.Embedded.csproj">
       <Project>{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B}</Project>

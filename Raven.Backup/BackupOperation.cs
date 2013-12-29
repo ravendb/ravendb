@@ -1,19 +1,15 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Client;
+﻿using Raven.Abstractions.Data;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
+using System;
+using System.Net;
+using System.Threading;
 
 namespace Raven.Backup
 {
+	using Raven.Abstractions.Connection;
+
 	public class BackupOperation : IDisposable
 	{
 		private DocumentStore store;
@@ -35,20 +31,48 @@ namespace Raven.Backup
 		public bool InitBackup()
 		{
 			ServerUrl = ServerUrl.TrimEnd('/');
+			try //precaution - to show error properly just in case
+			{
+				var serverUri = new Uri(ServerUrl);
+				if ((String.IsNullOrWhiteSpace(serverUri.PathAndQuery) || serverUri.PathAndQuery.Equals("/")) &&
+					String.IsNullOrWhiteSpace(Database))
+					Database = Constants.SystemDatabase;
 
-			store = new DocumentStore {Url = ServerUrl, DefaultDatabase = Database, ApiKey = ApiKey};
-			store.Initialize();
-			
-			var json = @"{ ""BackupLocation"": """ + BackupPath.Replace("\\", "\\\\") + @""" }";
+				var serverHostname = serverUri.Scheme + Uri.SchemeDelimiter + serverUri.Host + ":" + serverUri.Port;
+
+				store = new DocumentStore { Url = serverHostname, DefaultDatabase = Database, ApiKey = ApiKey };
+				store.Initialize();
+			}
+			catch (Exception exc)
+			{
+				Console.WriteLine(exc.Message);
+				try
+				{
+					store.Dispose();
+				}
+				// ReSharper disable once EmptyGeneralCatchClause
+				catch (Exception) { }
+				return false;
+			}
+
+
+			var backupRequest = new
+			{
+				BackupLocation = BackupPath.Replace("\\", "\\\\"),
+				DatabaseDocument = new DatabaseDocument { Id = Database }
+			};
+
+			var json = RavenJObject.FromObject(backupRequest).ToString();
 
 			var url = "/admin/backup";
 			if (Incremental)
 				url += "?incremental=true";
-			var req = CreateRequest(url, "POST");
-			
-			req.Write(json);
 			try
 			{
+				var req = CreateRequest(url, "POST");
+
+				req.Write(json);
+
 				Console.WriteLine("Sending json {0} to {1}", json, ServerUrl);
 
 				var response = req.ReadResponseJson();
@@ -66,20 +90,20 @@ namespace Raven.Backup
 		private HttpJsonRequest CreateRequest(string url, string method)
 		{
 			var uriString = ServerUrl;
-			if (string.IsNullOrWhiteSpace(Database) == false)
+			if (string.IsNullOrWhiteSpace(Database) == false && !Database.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
 			{
 				uriString += "/databases/" + Database;
 			}
-			uriString += url;
-			if (Incremental)
-				uriString += "?incremental=true";
-			var req = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationCredentials(ApiKey, CredentialCache.DefaultCredentials), store.Conventions));
 
+			uriString += url;
+
+			var req = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, uriString, method, new OperationCredentials(ApiKey, CredentialCache.DefaultCredentials), store.Conventions));
+			Console.WriteLine("Request url - " + uriString);
 			if (Timeout.HasValue)
 			{
 				req.Timeout = TimeSpan.FromMilliseconds(Timeout.Value);
 			}
-			
+
 			return req;
 		}
 
@@ -105,7 +129,7 @@ namespace Raven.Backup
 				Thread.Sleep(1000);
 				status = GetStatusDoc();
 			}
-			
+
 			foreach (var msg in status.Messages)
 			{
 				Console.WriteLine("[{0}] {1}", msg.Timestamp, msg.Message);

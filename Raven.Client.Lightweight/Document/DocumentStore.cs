@@ -444,7 +444,8 @@ namespace Raven.Client.Document
 #if !SILVERLIGHT && !NETFX_CORE && !MONO
 				RecoverPendingTransactions();
 
-				if (string.IsNullOrEmpty(DefaultDatabase) == false)
+				if (string.IsNullOrEmpty(DefaultDatabase) == false && 
+					DefaultDatabase.Equals(Constants.SystemDatabase) == false) //system database exists anyway
 				{
 					DatabaseCommands.ForSystemDatabase().GlobalAdmin.EnsureDatabaseExists(DefaultDatabase, ignoreFailures: true);
 				}

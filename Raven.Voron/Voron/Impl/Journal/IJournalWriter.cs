@@ -5,7 +5,7 @@ namespace Voron.Impl.Journal
 {
 	public unsafe interface IJournalWriter : IDisposable
 	{
-		Task WriteGatherAsync(long position, byte*[] pages);
+		void WriteGather(long position, byte*[] pages);
 		long NumberOfAllocatedPages { get;  }
 		bool Disposed { get; }
 	    bool DeleteOnClose { get; set; }
