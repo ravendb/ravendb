@@ -25,12 +25,12 @@ namespace Raven.Client.Document
 		/// Includes the specified path.
 		/// </summary>
 		/// <param name="path">The path.</param>
-		public MultiLoaderWithInclude<T> Include(string path)
+        public ILoaderWithInclude<T> Include(string path)
 		{
 			return Include(path, typeof(object));
 		}
 
-		MultiLoaderWithInclude<T> Include(string path, Type type)
+        ILoaderWithInclude<T> Include(string path, Type type)
 		{
 			includes.Add(new KeyValuePair<string, Type>(path, type));
 			return this;
@@ -40,7 +40,7 @@ namespace Raven.Client.Document
 		/// Includes the specified path.
 		/// </summary>
 		/// <param name="path">The path.</param>
-		public MultiLoaderWithInclude<T> Include(Expression<Func<T, object>> path)
+        public ILoaderWithInclude<T> Include(Expression<Func<T, object>> path)
 		{
 			return Include(path.ToPropertyPath());
 		}
@@ -49,7 +49,7 @@ namespace Raven.Client.Document
 		/// Includes the specified path.
 		/// </summary>
 		/// <param name="path">The path.</param>
-		public MultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path)
+        public ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path)
 		{
 			var fullId = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(-1, typeof (TInclude), false);
 			var id = path.ToPropertyPath();
