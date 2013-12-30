@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Tests.Bugs;
 using Raven.Tests.Indexes;
 using Raven.Tests.MultiGet;
 using Raven.Tests.Notifications;
@@ -15,9 +16,9 @@ namespace Raven.Tryouts
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-                using (var x = new MultiGetProfiling())
+				using (var x = new ManyDocumentBeingIndexed())
 				{
-					x.CanProfileFullyAggressivelyCached();
+					x.WouldBeIndexedProperly("voron");
 				}
 			}
 			

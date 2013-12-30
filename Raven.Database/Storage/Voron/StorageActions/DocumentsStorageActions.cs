@@ -83,7 +83,7 @@
 					var document = DocumentByKey(key, null);
 					if (document == null) //precaution - should never be true
 					{
-						throw new ApplicationException(string.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found", key));
+						throw new ApplicationException(string.Format("Possible data corruption - the key = '{0}' was found in the documents indice, but matching document was not found.", key));
 					}
 
 					yield return document;

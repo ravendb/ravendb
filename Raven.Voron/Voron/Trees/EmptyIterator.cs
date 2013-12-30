@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Voron.Trees
@@ -28,6 +29,11 @@ namespace Voron.Trees
 		public ValueReader CreateReaderForCurrent()
 		{
 			throw new InvalidOperationException("No current page");
+		}
+
+		public IEnumerable<string> DumpValues()
+		{
+			yield break;
 		}
 
 		public unsafe NodeHeader* Current

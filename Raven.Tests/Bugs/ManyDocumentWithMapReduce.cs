@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -57,14 +58,24 @@ namespace Raven.Tests.Bugs
 					                   .ToList();
 
 					var missing = new List<int>();
-					for (int i = 0; i < 5000; i++)
+					for (int i = 1; i <= 5000; i++)
 					{
-						if (items.Any(x => x.Id == i + 1) == false)
+						if (items.Any(x => x.Id == i) == false)
 							missing.Add(i);
 					}
 
 					WaitForUserToContinueTheTest(store);
-					Assert.Equal(expectedCount, items.Count);
+
+					try
+					{
+						Assert.Equal(expectedCount, items.Count);
+					}
+					catch (Exception)
+					{
+						Console.WriteLine("Missing {0} documents", missing.Count);
+						Console.WriteLine(string.Join(" , ", missing));
+						throw;
+					}
 				}
 			}
 		}
