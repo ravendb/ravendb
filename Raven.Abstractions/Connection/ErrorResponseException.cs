@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Raven.Abstractions.Connection
@@ -35,9 +36,23 @@ namespace Raven.Abstractions.Connection
         }
 
 		public ErrorResponseException(HttpResponseMessage response)
+			:base(GenerateMessage(response))
         {
             Response = response;
         }
+
+		private static string GenerateMessage(HttpResponseMessage response)
+		{
+			var sb = new StringBuilder("Status code: ").Append(response.StatusCode).AppendLine();
+
+			if (response.Content != null)
+			{
+				var readAsStringAsync = response.Content.ReadAsStringAsync();
+				if (readAsStringAsync != null && readAsStringAsync.IsCompleted)
+					sb.AppendLine(readAsStringAsync.Result);
+			}
+			return sb.ToString();
+		}
 
 #if !NETFX_CORE && !SILVERLIGHT
 		protected ErrorResponseException(
