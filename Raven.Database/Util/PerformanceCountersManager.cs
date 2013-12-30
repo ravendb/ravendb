@@ -237,7 +237,18 @@ namespace Raven.Database.Util
 
             // Fire this off on an separate thread
             bool result = false;
-            var thread = new Thread(() => result = PerformanceCounterExists());
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    result = PerformanceCounterExists();
+                }
+                catch (Exception e)
+                {
+                    log.Warn("Could not use performance counters", e);
+                    result = false;
+                }
+            });
             thread.Start();
 
             if (!thread.Join(PerformanceCounterWaitTimeout))

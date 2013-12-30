@@ -12,6 +12,7 @@ using System.ComponentModel.Composition.Primitives;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions.Data;
@@ -211,6 +212,13 @@ namespace Raven.Database.Config
 
 			PostInit();
 		}
+
+        /// <summary>
+        /// This limits the number of concurrent multi get requests,
+        /// Note that this plays with the max number of requests allowed as well as the max number
+        /// of sessions
+        /// </summary>
+        public SemaphoreSlim ConcurrentMultiGetRequests = new SemaphoreSlim(192);
 
 		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
 
