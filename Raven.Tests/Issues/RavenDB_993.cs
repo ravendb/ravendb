@@ -237,6 +237,7 @@ namespace Raven.Tests.Issues
 				Settings = { { "Raven/ActiveBundles", "replication" } },
                 AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.Admin,
 				DataDirectory = dataDirectory,
+				RavenFsDataDirectory = "ravenfs" + dataDirectory,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 				RunInMemory = false,
 				Port = port,
