@@ -155,6 +155,17 @@ namespace Voron.Trees
 			return NodeHeader.Reader(_tx, Current);
 		}
 
+		public IEnumerable<string> DumpValues()
+		{
+			if(Seek(Slice.BeforeAllKeys) == false)
+				yield break;
+
+			do
+			{
+				yield return CurrentKey.ToString();
+			} while (MoveNext());
+		}
+
 		public void Dispose()
 		{
 		}
