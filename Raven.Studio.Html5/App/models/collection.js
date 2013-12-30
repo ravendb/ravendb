@@ -1,4 +1,4 @@
-define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCommand", "commands/getDocumentsCommand", "commands/getSystemDocumentsCommand", "commands/getAllDocumentsCommand", "models/collectionInfo", "common/pagedResultSet", "models/database"], function(require, exports, pagedList, getCollectionInfoCommand, getDocumentsCommand, getSystemDocumentsCommand, getAllDocumentsCommand, collectionInfo, pagedResultSet, database) {
+define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCommand", "commands/getDocumentsByEntityNameCommand", "commands/getSystemDocumentsCommand", "commands/getAllDocumentsCommand", "models/collectionInfo", "common/pagedResultSet", "models/database"], function(require, exports, pagedList, getCollectionInfoCommand, getDocumentsByEntityNameCommand, getSystemDocumentsCommand, getAllDocumentsCommand, collectionInfo, pagedResultSet, database) {
     var collection = (function () {
         function collection(name, ownerDatabase) {
             this.name = name;
@@ -52,7 +52,7 @@ define(["require", "exports", "common/pagedList", "commands/getCollectionInfoCom
             if (this.isAllDocuments) {
                 return new getAllDocumentsCommand(this.ownerDatabase, skip, take).execute();
             } else {
-                return new getDocumentsCommand(this, skip, take).execute();
+                return new getDocumentsByEntityNameCommand(this, skip, take).execute();
             }
         };
 

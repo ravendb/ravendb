@@ -175,14 +175,9 @@ namespace Raven.Storage.Voron
 		    uuidGenerator = generator;
 			_documentCodecs = documentCodecs;
 
-<<<<<<< Updated upstream
 			var persistenceSource = configuration.RunInMemory ? (IPersistenceSource)new MemoryPersistenceSource() : new MemoryMapPersistenceSource(configuration);
 
 			tableStorage = new TableStorage(persistenceSource);
-=======
-			var persistanceSource = configuration.RunInMemory ? (IPersistanceSource)new MemoryPersistanceSource() : new MemoryMapPersistanceSource(configuration);
-			tableStorage = new TableStorage(persistanceSource);
->>>>>>> Stashed changes
 
 			if (persistenceSource.CreatedNew)
 			{
@@ -220,7 +215,7 @@ namespace Raven.Storage.Voron
 				throw new InvalidOperationException("Cannot begin database backup - table store is not initialized");
 			
 			var backupOperation = new BackupOperation(database, database.Configuration.DataDirectory,
-		        backupDestinationDirectory, tableStorage.Environment, incrementalBackup);
+		        backupDestinationDirectory, tableStorage.Environment, incrementalBackup,documentDatabase);
 			
             Task.Factory.StartNew(backupOperation.Execute);
 		}       

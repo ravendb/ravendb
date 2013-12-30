@@ -28,11 +28,13 @@ namespace Raven.Database.Storage.Voron.Backup
         private string backupDestinationDirectory;
 	    private readonly StorageEnvironment env;
         private bool incrementalBackup;
+	    private readonly DatabaseDocument databaseDocument;
 
-		public BackupOperation(DocumentDatabase database, string backupSourceDirectory, string backupDestinationDirectory, StorageEnvironment env, bool incrementalBackup)
+	    public BackupOperation(DocumentDatabase database, string backupSourceDirectory, string backupDestinationDirectory, StorageEnvironment env, bool incrementalBackup, DatabaseDocument databaseDocument)
         {
-            if (database == null) throw new ArgumentNullException("database");
-            if (backupSourceDirectory == null) throw new ArgumentNullException("backupSourceDirectory");
+			if (databaseDocument == null) throw new ArgumentNullException("databaseDocument");
+			if (database == null) throw new ArgumentNullException("database");
+			if (backupSourceDirectory == null) throw new ArgumentNullException("backupSourceDirectory");
             if (backupDestinationDirectory == null) throw new ArgumentNullException("backupDestinationDirectory");
             if (env == null) throw new ArgumentNullException("env");
 
@@ -41,6 +43,7 @@ namespace Raven.Database.Storage.Voron.Backup
             this.backupDestinationDirectory = backupDestinationDirectory;
 			this.env = env;
             this.incrementalBackup = incrementalBackup;
+			this.databaseDocument = databaseDocument;
         }
 
         public void Execute()
@@ -94,6 +97,10 @@ namespace Raven.Database.Storage.Voron.Backup
 
                 UpdateBackupStatus(string.Format("Finished indexes backup. Executing data backup.."), BackupStatus.BackupMessageSeverity.Informational);
 				ExecuteBackup(backupFilePath,incrementalBackup);
+
+				if (databaseDocument != null)
+					File.WriteAllText(Path.Combine(backupDestinationDirectory, "Database.Document"), RavenJObject.FromObject(databaseDocument).ToString());
+
 			}
             catch (AggregateException e)
             {
