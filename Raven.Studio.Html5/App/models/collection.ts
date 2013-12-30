@@ -1,7 +1,7 @@
 import raven = require("common/raven");
 import pagedList = require("common/pagedList");
 import getCollectionInfoCommand = require("commands/getCollectionInfoCommand");
-import getDocumentsCommand = require("commands/getDocumentsCommand");
+import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityNameCommand");
 import getSystemDocumentsCommand = require("commands/getSystemDocumentsCommand");
 import getAllDocumentsCommand = require("commands/getAllDocumentsCommand");
 import collectionInfo = require("models/collectionInfo");
@@ -61,7 +61,7 @@ class collection {
         } if (this.isAllDocuments) {
             return new getAllDocumentsCommand(this.ownerDatabase, skip, take).execute();
         } else {
-            return new getDocumentsCommand(this, skip, take).execute();
+            return new getDocumentsByEntityNameCommand(this, skip, take).execute();
         }
     }
 

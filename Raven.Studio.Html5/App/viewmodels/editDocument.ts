@@ -14,7 +14,6 @@ import raven = require("common/raven");
 import deleteDocuments = require("viewmodels/deleteDocuments");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
-import getDocumentsCommand = require("commands/getDocumentsCommand");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
 
 class editDocument {

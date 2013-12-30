@@ -39,8 +39,9 @@ class commandBase {
         var ajax = this.ajax(relativeUrl, args, "GET", database);
         if (resultsSelector) {
             var task = $.Deferred();
-            ajax.done((results) => {
-                task.resolve(resultsSelector(results));
+            ajax.done((results, status, xhr) => {
+                var transformedResults = resultsSelector(results);
+                task.resolve(transformedResults);
             });
             ajax.fail((request, status, error) => task.reject(request, status, error));
             return task;
@@ -65,12 +66,22 @@ class commandBase {
     }
 
     private ajax(relativeUrl: string, args: any, method: string, database?: database, customHeaders?: any): JQueryPromise<any> {
-
+        // ContentType:
+        //
+        // Can't use application/json in cross-domain requests, otherwise it 
+        // issues OPTIONS prefligh request first, which doesn't return proper 
+        // headers(e.g.Etag header, etc.)
+        // 
+        // So, for GETs, we issue text/plain requests, which skip the OPTIONS
+        // request and goes straight for the GET request.
+        var contentType = method === "GET" ?
+            "text/plain; charset=utf-8" :
+            "application/json; charset=utf-8";
         var options = {
             cache: false,
             url: appUrl.forDatabaseQuery(database) + relativeUrl,
             data: args,
-            contentType: "application/json; charset=utf-8",
+            contentType: contentType, 
             type: method,
             headers: undefined
         };

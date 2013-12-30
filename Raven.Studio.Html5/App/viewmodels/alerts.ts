@@ -1,21 +1,32 @@
 import app = require("durandal/app");
 import getAlertsCommand = require("commands/getAlertsCommand");
-import alert = require("models/alert");
 import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import database = require("models/database");
 import moment = require("moment");
 import copyDocuments = require("viewmodels/copyDocuments");
 import document = require("models/document");
+import alert = require("models/alert");
+import saveAlertsCommand = require("commands/saveAlertsCommand");
 
 class alerts extends activeDbViewModelBase {
 
+    alertDoc = ko.observable<alertContainerDto>();
     allAlerts = ko.observableArray<alert>();
     filterLevel = ko.observable("All");
     selectedAlert = ko.observable<alert>();
+    unreadAlertCount: KnockoutComputed<number>;
+    readAlertCount: KnockoutComputed<number>;
+    now = ko.observable<Moment>();
+    updateNowTimeoutHandle = 0;
 
     constructor() {
         super();
+
+        this.unreadAlertCount = ko.computed(() => this.allAlerts().count(a => a.observed() === false));
+        this.readAlertCount = ko.computed(() => this.allAlerts().count(a => a.observed() === true));
+        this.updateCurrentNowTime();
+        this.activeDatabase.subscribe(() => this.fetchAlerts());
     }
 
     activate(args) {
@@ -23,38 +34,57 @@ class alerts extends activeDbViewModelBase {
         this.fetchAlerts();
     }
 
+    deactivate() {
+        clearTimeout(this.updateNowTimeoutHandle);
+    }
+
     fetchAlerts(): JQueryPromise<alert[]> {
         var db = this.activeDatabase();
         if (db) {
             return new getAlertsCommand(db)
                 .execute()
-                .done((results: alert[]) => this.processAlertsResults(results))
-                .fail(() => this.processAlertsResults([])); // When no alerts present, Raven shoots us back a 404. :-(
+                .done((result: alertContainerDto) => this.processAlertsResults(result))
         }
 
         return null;
     }
 
-    processAlertsResults(results: alert[]) {
+    processAlertsResults(result: alertContainerDto) {
         var now = moment();
-        results.forEach(r => {
-            r['createdAtText'] = this.createHumanReadableTime(r.createdAt, now);
-            //r['isVisible'] = ko.computed(() => this.matchesFilterAndSearch(r));
+        var alerts = result.Alerts.map(a => new alert(a));
+        alerts.forEach(r => {
+            r.createdAtHumanized = this.createHumanReadableTime(r.createdAt),
+            r.isVisible = ko.computed(() => this.matchesFilter(r));
         });
-        this.allAlerts(results.reverse());
+        this.alertDoc(result);
+        this.allAlerts(alerts);
     }
 
-    createHumanReadableTime(time: string, now: Moment) {
-        if (time) {
-            var dateMoment = moment(time);
-            var agoInMs = dateMoment.diff(now);
-            return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
+    matchesFilter(a: alert): boolean {
+        if (this.filterLevel() === "All") {
+            return true;
         }
 
-        return time;
+        var unreadFilterWithUnreadAlert = this.filterLevel() === "Unread" && a.observed() === false;
+        var readFilterWithReadAlert = this.filterLevel() === "Read" && a.observed() === true;
+        return unreadFilterWithUnreadAlert || readFilterWithReadAlert;
     }
 
-    selectLog(selection: alert) {
+    createHumanReadableTime(time: string): KnockoutComputed<string> {
+        if (time) {
+            // Return a computed that returns a humanized string based off the current time, e.g. "7 minutes ago".
+            // It's a computed so that it updates whenever we update this.now (scheduled to occur every minute.)
+            return ko.computed(() => {
+                var dateMoment = moment(time);
+                var agoInMs = dateMoment.diff(this.now());
+                return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
+            });
+        }
+
+        return ko.computed(() => time);
+    }
+
+    selectAlert(selection: alert) {
         this.selectedAlert(selection);
     }
 
@@ -75,7 +105,7 @@ class alerts extends activeDbViewModelBase {
                 }
 
                 this.selectedAlert(this.allAlerts()[newSelectionIndex]);
-                var newSelectedRow = $("#logsContainer table tbody tr:nth-child(" + (newSelectionIndex + 1) + ")");
+                var newSelectedRow = $("#alertsContainer table tbody tr:nth-child(" + (newSelectionIndex + 1) + ")");
                 if (newSelectedRow) {
                     this.ensureRowVisible(newSelectedRow);
                 }
@@ -97,6 +127,54 @@ class alerts extends activeDbViewModelBase {
             table.scrollTop(scrollTop + rowTop);
         } else if (rowBottom > scrollHeight) {
             table.scrollTop(scrollTop + (rowBottom - scrollHeight));
+        }
+    }
+
+    setFilterAll() {
+        this.filterLevel("All");
+    }
+
+    setFilterUnread() {
+        this.filterLevel("Unread");
+    }
+
+    setFilterRead() {
+        this.filterLevel("Read");
+    }
+
+    updateCurrentNowTime() {
+        this.now(moment());
+        this.updateNowTimeoutHandle = setTimeout(() => this.updateCurrentNowTime(), 60000);
+    }
+
+    toggleSelectedReadState() {
+        var alert = this.selectedAlert();
+        if (alert) {
+            alert.observed(!alert.observed());
+        }
+    }
+
+    deleteSelectedAlert() {
+        var alert = this.selectedAlert();
+        if (alert) {
+            this.allAlerts.remove(alert);
+        }
+    }
+
+    deleteReadAlerts() {
+        this.allAlerts.remove(a => a.observed());
+    }
+
+    deleteAllAlerts() {
+        this.allAlerts.removeAll();
+    }
+
+    saveAlerts() {
+        var alertDoc = this.alertDoc();
+        var db = this.activeDatabase();
+        if (alertDoc && db) {
+            alertDoc.Alerts = this.allAlerts().map(a => a.toDto());
+            new saveAlertsCommand(alertDoc, db).execute();
         }
     }
 }

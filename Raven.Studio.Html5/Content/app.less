@@ -348,20 +348,28 @@ html, body {
     }
 }
 
-#logsContainer, #alertsContainer {
+#logsContainer, #alertsContainer, #indexErrorsContainer {
 
     table {
         outline: none;
 
         .selected {
-            background-color: @selectionColor;
+            td {
+                background-color: @selectionColor;
+            }
         }
     }
 
-    .log-details, .alert-details {
+    .log-details, .alerts-details, .index-errors-details {
         padding: 10px;
         overflow-y: auto;
         overflow-x: hidden;
+    }
+
+    .unread {
+        td {
+            font-weight: bold;
+        }
     }
 }
 

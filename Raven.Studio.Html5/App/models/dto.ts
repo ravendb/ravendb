@@ -19,11 +19,11 @@ interface documentDto {
 }
 
 interface documentMetadataDto {
-	'Raven-Entity-Name': string;
-	'Raven-Clr-Type': string;
+	'Raven-Entity-Name'?: string;
+	'Raven-Clr-Type'?: string;
 	'Non-Authoritative-Information': boolean;
 	'@id': string;
-	'Temp-Index-Score': number;
+	'Temp-Index-Score'?: number;
 	'Last-Modified': string;
 	'Raven-Last-Modified': string;
 	'@etag': string;
@@ -37,7 +37,7 @@ interface databaseStatisticsDto {
     CurrentNumberOfItemsToReduceInSingleBatch: number;
     DatabaseId: string;
     DatabaseTransactionVersionSizeInMB: number;
-    Errors: Array<any>;
+    Errors: serverErrorDto[];
     Extensions: Array<any>;
     InMemoryIndexingQueueSize: number;
     Indexes: indexStatisticsDto[];
@@ -152,6 +152,7 @@ interface queryResultDto {
 }
 
 interface alertContainerDto {
+    '@metadata': documentMetadataDto;
     Alerts: alertDto[];
 }
 
@@ -163,4 +164,33 @@ interface alertDto {
     AlertLevel: string;
     Exception: string;
     UniqueKey: string;
+}
+
+interface serverErrorDto {
+    Index: number;
+    IndexName: string;
+    Error: string;
+    Timestamp: string;
+    Document: string;
+    Action: string;
+}
+
+interface replicationStatsDocumentDto {
+    Self: string; // e.g. "http://judah-pc:8080/databases/ReplSrc"
+    MostRecentDocumentEtag: string;
+    MostRecentAttachmentEtag: string;
+    Stats: replicationStatsDto[];
+}
+
+interface replicationStatsDto {
+    FailureCountInternal: number;
+    Url: string;
+    LastHeartbeatReceived: string;
+    LastEtagCheckedForReplication: string;
+    LastReplicatedEtag: string;
+    LastReplicatedLastModified: string;
+    LastSuccessTimestamp: string;
+    LastFailureTimestamp: string;
+    FailureCount: number;
+    LastError: string;
 }

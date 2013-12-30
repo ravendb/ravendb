@@ -1,3 +1,53 @@
-﻿<section>
-    TODO: replication stats
+﻿<section data-bind="with: replStatsDoc, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+    <div class="panel-group" id="indexStatsAccordion" data-bind="foreach: Stats">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" href="#collapseOne" data-bind="text: Url, attr: { href: '#statsIndexCollapse' + $index() }"></a>
+                </h4>
+            </div>
+            <div class="panel-collapse collapse" data-bind="attr: { id: 'statsIndexCollapse' + $index() }">
+                <div class="panel-body">
+                    <div class="form-horizontal" role="form">
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Last success</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: LastSuccessTimestampHumanized"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Last failure</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: LastFailureTimestampHumanized"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Last failure message</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: LastError"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Failures</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: FailureCount"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Last replicated ETag</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: LastReplicatedEtag"></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Last checked ETag</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static" data-bind="text: LastEtagCheckedForReplication"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>

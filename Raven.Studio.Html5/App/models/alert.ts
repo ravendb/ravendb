@@ -3,9 +3,12 @@ class alert {
     createdAt: string;
     exception: string;
     message: string;
-    observed = ko.observable(false);
     title: string;
     uniqueKey: string;
+    observed = ko.observable(false);
+
+    isVisible: KnockoutComputed<boolean>;
+    createdAtHumanized: KnockoutComputed<string>;
 
     constructor(dto: alertDto) {
         this.alertLevel = dto.AlertLevel;
@@ -15,6 +18,18 @@ class alert {
         this.observed(dto.Observed);
         this.title = dto.Title;
         this.uniqueKey = dto.UniqueKey;
+    }
+
+    toDto(): alertDto {
+        return {
+            AlertLevel: this.alertLevel,
+            CreatedAt: this.createdAt,
+            Exception: this.exception,
+            Message: this.message,
+            Observed: this.observed(),
+            Title: this.title,
+            UniqueKey: this.uniqueKey
+        };
     }
 }
 

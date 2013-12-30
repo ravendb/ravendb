@@ -58,3 +58,5 @@ Raven.Studio.Html5/App/viewmodels/*.js
 Raven.Studio.Html5/App/viewmodels/*.js.map
 Raven.Studio.Html5/App/widgets/virtualTable/*.js
 Raven.Studio.Html5/App/widgets/virtualTable/*.js.map
+Raven.Studio.Html5/Content/app.css
+Raven.Studio.Html5/Content/app.min.css

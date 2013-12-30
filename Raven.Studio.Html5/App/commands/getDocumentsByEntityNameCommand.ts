@@ -4,7 +4,7 @@ import collectionInfo = require("models/collectionInfo");
 import collection = require("models/collection");
 import pagedResultSet = require("common/pagedResultSet");
 
-class getDocumentsCommand extends commandBase {
+class getDocumentsByEntityNameCommand extends commandBase {
 
     constructor(private collection: collection, private skip: number, private take: number) {
         super();
@@ -30,4 +30,4 @@ class getDocumentsCommand extends commandBase {
     }
 }
 
-export = getDocumentsCommand;
+export = getDocumentsByEntityNameCommand;

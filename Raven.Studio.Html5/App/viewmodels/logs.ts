@@ -9,7 +9,7 @@ import document = require("models/document");
 
 class logs extends activeDbViewModelBase {
 
-    fetchedLogs = ko.observableArray<logDto>();
+    allLogs = ko.observableArray<logDto>();
     filterLevel = ko.observable("All");
     selectedLog = ko.observable<logDto>();
     debugLogCount: KnockoutComputed<number>;
@@ -19,22 +19,29 @@ class logs extends activeDbViewModelBase {
     fatalLogCount: KnockoutComputed<number>;
     searchText = ko.observable("");
     searchTextThrottled: KnockoutObservable<string>;
+    now = ko.observable<Moment>();
+    updateNowTimeoutHandle = 0;
 
     constructor() {
         super();
 
-        this.debugLogCount = ko.computed(() => this.fetchedLogs().count<logDto>(l => l.Level === "Debug"));
-        this.infoLogCount = ko.computed(() => this.fetchedLogs().count<logDto>(l => l.Level === "Info"));
-        this.warningLogCount = ko.computed(() => this.fetchedLogs().count<logDto>(l => l.Level === "Warn"));
-        this.errorLogCount = ko.computed(() => this.fetchedLogs().count<logDto>(l => l.Level === "Error"));
-        this.fatalLogCount = ko.computed(() => this.fetchedLogs().count<logDto>(l => l.Level === "Fatal"));
+        this.debugLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Debug"));
+        this.infoLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Info"));
+        this.warningLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Warn"));
+        this.errorLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Error"));
+        this.fatalLogCount = ko.computed(() => this.allLogs().count(l => l.Level === "Fatal"));
         this.searchTextThrottled = this.searchText.throttle(200);
-        this.activeDatabase.subscribe(() => this.fetchedLogs());
+        this.activeDatabase.subscribe(() => this.fetchLogs());
+        this.updateCurrentNowTime();
     }
 
     activate(args) {
         super.activate(args);
         return this.fetchLogs();
+    }
+
+    deactivate() {
+        clearTimeout(this.updateNowTimeoutHandle);
     }
 
     fetchLogs(): JQueryPromise<logDto[]> {
@@ -51,10 +58,10 @@ class logs extends activeDbViewModelBase {
     processLogResults(results: logDto[]) {
         var now = moment();
         results.forEach(r => {
-            r['TimeStampText'] = this.createHumanReadableTime(r.TimeStamp, now);
+            r['TimeStampText'] = this.createHumanReadableTime(r.TimeStamp);
             r['IsVisible'] = ko.computed(() => this.matchesFilterAndSearch(r));
         });
-        this.fetchedLogs(results.reverse());
+        this.allLogs(results.reverse());
     }
 
     matchesFilterAndSearch(log: logDto) {
@@ -68,14 +75,16 @@ class logs extends activeDbViewModelBase {
         return matchesLogLevel && matchesSearchText;
     }
 
-    createHumanReadableTime(time: string, now: Moment) {
+    createHumanReadableTime(time: string): KnockoutComputed<string> {
         if (time) {
-            var dateMoment = moment(time);
-            var agoInMs = dateMoment.diff(now);
-            return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
+            return ko.computed(() => {
+                var dateMoment = moment(time);
+                var agoInMs = dateMoment.diff(this.now());
+                return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
+            });
         }
 
-        return time;
+        return ko.computed(() => time);
     }
 
     selectLog(log: logDto) {
@@ -90,15 +99,15 @@ class logs extends activeDbViewModelBase {
 
             var oldSelection = this.selectedLog();
             if (oldSelection) {
-                var oldSelectionIndex = this.fetchedLogs.indexOf(oldSelection);
+                var oldSelectionIndex = this.allLogs.indexOf(oldSelection);
                 var newSelectionIndex = oldSelectionIndex;
                 if (isKeyUp && oldSelectionIndex > 0) {
                     newSelectionIndex--;
-                } else if (isKeyDown && oldSelectionIndex < this.fetchedLogs().length - 1) {
+                } else if (isKeyDown && oldSelectionIndex < this.allLogs().length - 1) {
                     newSelectionIndex++;
                 }
 
-                this.selectedLog(this.fetchedLogs()[newSelectionIndex]);
+                this.selectedLog(this.allLogs()[newSelectionIndex]);
                 var newSelectedRow = $("#logsContainer table tbody tr:nth-child(" + (newSelectionIndex + 1) + ")");
                 if (newSelectedRow) {
                     this.ensureRowVisible(newSelectedRow);
@@ -146,6 +155,11 @@ class logs extends activeDbViewModelBase {
 
     setFilterFatal() {
         this.filterLevel("Fatal");
+    }
+
+    updateCurrentNowTime() {
+        this.now(moment());
+        this.updateNowTimeoutHandle = setTimeout(() => this.updateCurrentNowTime(), 60000);
     }
 }
 

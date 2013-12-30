@@ -98,13 +98,13 @@ functionPrototype.memoize = function (thisVal) {
 // Array extensions
 
 interface Array<T> {
-    remove<T>(item: T): number;
-    removeAll<T>(items: T[]): void;
-    first<T>(filter?: (item: T) => boolean): T;
-    last<T>(filter?: (item: T) => boolean): T;
-    pushAll<T>(items: T[]): void;
-    contains<T>(item: T): boolean;
-    count<T>(filter?: (item: T) => boolean): number;
+    remove(item: T): number;
+    removeAll(items: T[]): void;
+    first(filter?: (item: T) => boolean): T;
+    last(filter?: (item: T) => boolean): T;
+    pushAll(items: T[]): void;
+    contains(item: T): boolean;
+    count(filter?: (item: T) => boolean): number;
 }
 
 // Array.remove

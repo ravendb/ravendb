@@ -144,7 +144,7 @@ class shell {
     activateDatabaseWithName(databaseName: string) {
         if (this.databasesLoadedTask) {
             this.databasesLoadedTask.done(() => {
-                var matchingDatabase = this.databases().first<database>(d => d.name == databaseName);
+                var matchingDatabase = this.databases().first(d => d.name == databaseName);
                 if (matchingDatabase && this.activeDatabase() !== matchingDatabase) {
                     ko.postbox.publish("ActivateDatabase", matchingDatabase);
                 }
