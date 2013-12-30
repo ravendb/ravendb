@@ -88,8 +88,8 @@ namespace Raven.Database.Server.Controllers
 					return;
 				}
 
-				WriteHeaders(attachmentAndHeaders.Metadata, attachmentAndHeaders.Etag, result);
 				result.Content = new StaticHeadContent(attachmentAndHeaders.Size);
+				WriteHeaders(attachmentAndHeaders.Metadata, attachmentAndHeaders.Etag, result);
 			});
 
 			return result;
