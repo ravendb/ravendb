@@ -45,7 +45,7 @@ namespace Raven.Tests.Storage
 		public void AfterBackupRestoreCanReadDocument()
 		{
 			db.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
-
+			
 			db.StartBackup(BackupDir, false, new DatabaseDocument());
 			WaitForBackup(db, true);
 
@@ -56,7 +56,10 @@ namespace Raven.Tests.Storage
 
 			db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir});
 
-			var jObject = db.Get("ayende", null).ToJson();
+			var document = db.Get("ayende", null);
+			Assert.NotNull(document);
+
+			var jObject = document.ToJson();
 			Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
 		}
 

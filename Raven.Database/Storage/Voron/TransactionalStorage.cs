@@ -3,6 +3,7 @@ using Raven.Database;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Voron;
 using Raven.Database.Storage.Voron.Backup;
+using Voron;
 using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Storage.Voron
@@ -48,6 +49,7 @@ namespace Raven.Storage.Voron
 			this.onCommit = onCommit;
 			documentCacher = new DocumentCacher(configuration);
 			exitLockDisposable = new DisposableAction(() => Monitor.Exit(this));
+
 		}
 
 		public void Dispose()
@@ -173,9 +175,14 @@ namespace Raven.Storage.Voron
 		    uuidGenerator = generator;
 			_documentCodecs = documentCodecs;
 
+<<<<<<< Updated upstream
 			var persistenceSource = configuration.RunInMemory ? (IPersistenceSource)new MemoryPersistenceSource() : new MemoryMapPersistenceSource(configuration);
 
 			tableStorage = new TableStorage(persistenceSource);
+=======
+			var persistanceSource = configuration.RunInMemory ? (IPersistanceSource)new MemoryPersistanceSource() : new MemoryMapPersistanceSource(configuration);
+			tableStorage = new TableStorage(persistanceSource);
+>>>>>>> Stashed changes
 
 			if (persistenceSource.CreatedNew)
 			{
@@ -192,10 +199,13 @@ namespace Raven.Storage.Voron
 				using (var snapshot = tableStorage.CreateSnapshot())
 				{
 					var read = tableStorage.Details.Read(snapshot, "id", null);
+					if (read == null || read.Reader == null || read.Reader.Length == 0) //precaution - might prevent NRE in edge cases
+						throw new InvalidDataException("Failed to initialize Voron transactional storage. Possible data corruption.");
+
 					using (var stream = read.Reader.AsStream())
 					using (var reader = new BinaryReader(stream))
 					{
-						Id = new Guid(reader.ReadBytes((int)stream.Length));
+						Id = new Guid(reader.ReadBytes((int) stream.Length));
 					}
 				}
 			}
@@ -206,15 +216,18 @@ namespace Raven.Storage.Voron
 		public void StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup,
 			DatabaseDocument documentDatabase)
 		{
-		    var backupOperation = new BackupOperation(database, database.Configuration.DataDirectory,
-		        backupDestinationDirectory, tableStorage, incrementalBackup);
-
+			if (tableStorage == null) 
+				throw new InvalidOperationException("Cannot begin database backup - table store is not initialized");
+			
+			var backupOperation = new BackupOperation(database, database.Configuration.DataDirectory,
+		        backupDestinationDirectory, tableStorage.Environment, incrementalBackup);
+			
             Task.Factory.StartNew(backupOperation.Execute);
 		}       
 
 		public void Restore(string backupLocation, string databaseLocation, Action<string> output, bool defrag)
 		{
-            new RestoreOperation(backupLocation, configuration, output).Execute();
+			new RestoreOperation(backupLocation, configuration, output).Execute();
 		}
 
 		public long GetDatabaseSizeInBytes()

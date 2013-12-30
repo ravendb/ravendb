@@ -114,11 +114,12 @@ namespace Voron
 			public DirectoryStorageEnvironmentOptions(string basePath)
 			{
 				_basePath = Path.GetFullPath(basePath);
+				
 				if (Directory.Exists(_basePath) == false)
 				{
 					Directory.CreateDirectory(_basePath);
 				}
-				_dataPager = new Lazy<IVirtualPager>(() => new Win32MemoryMapPager(Path.Combine(_basePath, "db.voron")));
+				_dataPager = new Lazy<IVirtualPager>(() => new Win32MemoryMapPager(Path.Combine(_basePath, Constants.DatabaseFilename)));
 			}
 
 			public override IVirtualPager DataPager

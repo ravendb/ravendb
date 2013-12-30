@@ -456,7 +456,8 @@ namespace Voron
 
 				        var hasWrites = _flushWriter.Wait(_options.IdleFlushTimeout);
 
-				        _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+				        
+						_cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
 				        if (hasWrites)
 					        _flushWriter.Reset();

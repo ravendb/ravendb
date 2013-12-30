@@ -18,6 +18,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Mono.CSharp;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
@@ -2430,7 +2431,7 @@ namespace Raven.Database
 
 			string storage;
 			if (databaseDocument.Settings.TryGetValue("Raven/StorageTypeName", out storage) == false)
-			{
+			{								
 				storage = "esent";
 			}
 

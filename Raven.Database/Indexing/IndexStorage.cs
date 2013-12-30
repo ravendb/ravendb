@@ -676,7 +676,7 @@ namespace Raven.Database.Indexing
             var value = GetIndexInstance(id);
             if (value == null)
 			{
-                log.Debug("Ignoring delete for non existing index {0}", value.PublicName);
+				log.Debug("Ignoring delete for non existing index {0}", id);
 				return;
 			}
             documentDatabase.TransactionalStorage.Batch(accessor =>

@@ -1,37 +1,43 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO.Compression;
 using System.Linq;
-using System.Text;
-using Raven.Abstractions.Logging;
 using Raven.Database.Config;
-using Raven.Database.Extensions;
+using System;
+using System.IO;
+using Raven.Database.Storage.Voron.Impl;
+using Voron;
+using Voron.Impl.Backup;
 
 namespace Raven.Database.Storage.Voron.Backup
 {
     public class RestoreOperation : BaseRestoreOperation
     {
-        private const string VORON_BACKUP_FILENAME = "RavenDB.Voron.Backup";
-        private const string VORON_DATABASE_FILENAME = "Raven.voron";
-        
-        
-
-        public RestoreOperation(string backupLocation,InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback)
+		public RestoreOperation(string backupLocation, InMemoryRavenConfiguration configuration, Action<string> operationOutputCallback)
             : base(backupLocation,configuration,operationOutputCallback)
-        {
-        }
+		{
+		}
 
         public void Execute()
         {
-            ValidateRestorePreconditions(VORON_BACKUP_FILENAME);
+			ValidateRestorePreconditions(BackupMethods.Filename);
 
             try
             {
                 CopyIndexes();
+				CopyIndexDefinitions();
 
-                var backupFile = new FileInfo(BackupFilenamePath(VORON_BACKUP_FILENAME));
+				var backupFilenamePath = BackupFilenamePath(BackupMethods.Filename);
 
-                backupFile.CopyTo(Path.Combine(configuration.DataDirectory, VORON_DATABASE_FILENAME), false);
+				if (Directory.GetDirectories(backupLocation, "Inc*").Any() == false)
+		            BackupMethods.Full.Restore(backupFilenamePath, configuration.DataDirectory);
+	            else
+				{
+		            //note - restore happens when storage environment is not initialized
+					using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(configuration.DataDirectory)))
+					{
+						BackupMethods.Incremental.Restore(env, backupFilenamePath);
+					}
+				}
+
             }
             catch (Exception e)
             {
