@@ -174,3 +174,23 @@ interface serverErrorDto {
     Document: string;
     Action: string;
 }
+
+interface replicationStatsDocumentDto {
+    Self: string; // e.g. "http://judah-pc:8080/databases/ReplSrc"
+    MostRecentDocumentEtag: string;
+    MostRecentAttachmentEtag: string;
+    Stats: replicationStatsDto[];
+}
+
+interface replicationStatsDto {
+    FailureCountInternal: number;
+    Url: string;
+    LastHeartbeatReceived: string;
+    LastEtagCheckedForReplication: string;
+    LastReplicatedEtag: string;
+    LastReplicatedLastModified: string;
+    LastSuccessTimestamp: string;
+    LastFailureTimestamp: string;
+    FailureCount: number;
+    LastError: string;
+}
