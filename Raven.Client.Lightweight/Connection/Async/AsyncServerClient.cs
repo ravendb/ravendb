@@ -583,22 +583,10 @@ namespace Raven.Client.Connection.Async
 			request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
 												HandleReplicationStatusChanges);
 
-			try
-			{
-				await request.WriteAsync(document.ToString());
-			}
-			catch (ErrorResponseException)
-			{
-				throw;
-			}
-			catch (Exception e)
-			{
-				throw new InvalidOperationException("Unable to write to server", e);
-			}
-
 			ErrorResponseException responseException;
 			try
 			{
+				await request.WriteAsync(document.ToString());
 				var result = await request.ReadResponseJsonAsync();
 				return convention.CreateSerializer().Deserialize<PutResult>(new RavenJTokenReader(result));
 			}
