@@ -49,7 +49,7 @@ namespace Raven.Tests.MailingList
 					var badIn = new {Id = badId};
 					session.Store(badIn);
 
-					var throws = Assert.Throws<InvalidOperationException>(()=>session.SaveChanges());
+					var throws = Assert.Throws<ErrorResponseException>(()=>session.SaveChanges());
 
 					Assert.Contains(@"PUT vetoed by Raven.Database.Plugins.Builtins.InvalidDocumentNames because: Document names cannot contains '\' but attempted to save with: bad\one", throws.Message);
 				}
