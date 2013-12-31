@@ -87,6 +87,11 @@ class appUrl {
         return this.baseUrl;
     }
 
+    static forExport(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/export?" + databasePart;
+    }
+
 	/**
 	* Gets the database from the current web browser address. Returns the system database if no database name is found.
 	*/

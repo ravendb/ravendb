@@ -49,6 +49,18 @@ class indexes extends activeDbViewModelBase {
     expandAll() {
         $(".index-group-content").collapse('show');
     }
+
+    deleteIdleIndexes() {
+        
+    }
+
+    deleteDisabledIndexes() {
+        // TODO: implement
+    }
+
+    deleteAbandonedIndexes() {
+        // TODO: implement
+    }
 }
 
 export = indexes;

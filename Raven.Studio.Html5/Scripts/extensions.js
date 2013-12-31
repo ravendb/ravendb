@@ -47,6 +47,13 @@ subscribableFn.select = function (selector) {
     return selectedResults;
 };
 
+// observable.toggle
+subscribableFn.toggle = function () {
+    var observable = this;
+    observable(!observable());
+    return observable;
+};
+
 // observableArray.pushAll
 observableArrayFn.pushAll = function (items) {
     this.push.apply(this, items);

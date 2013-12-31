@@ -5,12 +5,13 @@ interface KnockoutObservable<T> {
     throttle(throttleTimeInMs: number): KnockoutObservable<T>;
     select<TReturn>(selector: (item: any) => any): KnockoutObservable<TReturn>;
     distinctUntilChanged(): KnockoutObservable<T>;
+    toggle(): KnockoutObservable<T>;
 }
 
 interface KnockoutObservableArray<T> {
     pushAll(items: T[]): number;
     contains(item: T): boolean;
-    first(filter?: (item) => boolean): T;
+    first(filter?: (item: T) => boolean): T;
     last(filter?: (item) => boolean): T;
 }
 
@@ -59,6 +60,13 @@ subscribableFn.select = function (selector: (any) => any) {
     var selectedResults = ko.observable();
     observable.subscribe(val => selectedResults(selector(val)));
     return selectedResults;
+}
+
+// observable.toggle
+subscribableFn.toggle = function () {
+    var observable: KnockoutObservable<boolean> = this;
+    observable(!observable());
+    return observable;
 }
 
 // observableArray.pushAll
