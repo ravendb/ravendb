@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Bundles.Versioning.Data;
@@ -217,7 +218,7 @@ namespace Raven.Tests.Bundles.Versioning
 					TransactionInformation = new TransactionInformation()
 				});
 
-				Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+				Assert.Throws<ErrorResponseException>(() => session.SaveChanges());
 			}
 		}
 
