@@ -1,17 +1,37 @@
-class indexes {
+import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
 
-    indexGroups = ko.observableArray();
+class indexes extends activeDbViewModelBase {
 
-    constructor() {
-
-        // TODO: fill this with real data.
-        this.indexGroups.pushAll([
-            { name: 'FakeIndexGroup1' },
-            { name: 'FakeIndexGroup2' }
-        ]);
-    }
+    indexGroups = ko.observableArray<{ entityName: string; indexes: indexStatisticsDto[] }>();
     
-    activate() {
+    activate(args) {
+        super.activate(args);
+
+        new getDatabaseStatsCommand(this.activeDatabase())
+            .execute()
+            .done((stats: databaseStatisticsDto) => this.processDbStats(stats));
+    }
+
+    processDbStats(stats: databaseStatisticsDto) {
+        stats.Indexes.forEach(i => this.putIndexIntoGroups(i));
+    }
+
+    putIndexIntoGroups(index: indexStatisticsDto) {
+        if (index.ForEntityName.length === 0) {
+            this.putIndexIntoGroupNamed(index, "Other");
+        } else {
+            index.ForEntityName.forEach(e => this.putIndexIntoGroupNamed(index, e));
+        }
+    }
+
+    putIndexIntoGroupNamed(index: indexStatisticsDto, groupName: string) {
+        var group = this.indexGroups.first(g => g.entityName === groupName);
+        if (group) {
+            group.indexes.push(index);
+        } else {
+            this.indexGroups.push({ entityName: groupName, indexes: [index] });
+        }
     }
 
     navigateToQuery() {
@@ -23,11 +43,11 @@ class indexes {
     }
 
     collapseAll() {
-        console.log("TODO: implement");
+        $(".index-group-content").collapse('hide');
     }
 
     expandAll() {
-        console.log("TODO: implement");
+        $(".index-group-content").collapse('show');
     }
 }
 
