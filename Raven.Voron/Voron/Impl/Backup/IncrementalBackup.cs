@@ -155,99 +155,133 @@ namespace Voron.Impl.Backup
             }
         }
 
-        public void Restore(StorageEnvironment env, string backupPath)
+        public void Restore(StorageEnvironmentOptions options, IEnumerable<string> backupPaths)
+        {
+            var ownsPagers = options.OwnsPagers;
+            options.OwnsPagers = false;
+            using (var env = new StorageEnvironment(options))
+            {
+                foreach (var backupPath in backupPaths)
+                {
+                    Restore(env, backupPath);
+                }
+            }
+            options.OwnsPagers = ownsPagers;
+        }
+
+        private void Restore(StorageEnvironment env, string backupPath)
         {
             using (env.Journal.Applicator.TakeFlushingLock())
-            using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                using (env.Options.AllowManualFlushing())
+                using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    env.FlushLogToDataFile(txw);
-                }
-
-                List<string> journalNames;
-
-                using (var package = ZipFile.Open(backupPath, ZipArchiveMode.Read))
-                {
-                    journalNames = package.Entries.Select(x => x.Name).ToList();
-                }
-
-                var tempDir = Directory.CreateDirectory(Path.GetTempPath() + Guid.NewGuid()).FullName;
-                var toDispose = new List<IDisposable>();
-
-                try
-                {
-                    ZipFile.ExtractToDirectory(backupPath, tempDir);
-
-                    TransactionHeader* lastTxHeader = null;
-
-                    var pagesToWrite = new Dictionary<long, Func<Page>>();
-
-                    foreach (var journalName in journalNames)
+                    using (env.Options.AllowManualFlushing())
                     {
-                        var pager = new Win32MemoryMapPager(Path.Combine(tempDir, journalName));
-                        toDispose.Add(pager);
-
-                        long number;
-
-                        if (long.TryParse(journalName.Replace(".journal", string.Empty), out number) == false)
-                        {
-                            throw new InvalidOperationException("Cannot parse journal file number");
-                        }
-
-                        var recoveryPager = new Win32MemoryMapPager(Path.Combine(tempDir, StorageEnvironmentOptions.JournalRecoveryName(number)));
-                        toDispose.Add(recoveryPager);
-
-                        var reader = new JournalReader(pager, recoveryPager, 0, lastTxHeader);
-
-                        while (reader.ReadOneTransaction(env.Options))
-                        {
-                            lastTxHeader = reader.LastTransactionHeader;
-                        }
-
-                        foreach (var translation in reader.TransactionPageTranslation)
-                        {
-                            var pageInJournal = translation.Value.JournalPos;
-                            pagesToWrite[translation.Key] = () => recoveryPager.Read(pageInJournal);
-                        }
+                        env.FlushLogToDataFile(txw);
                     }
 
-                    var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-                                                  .Select(x => x.Value())
-                                                  .ToList();
+                    List<string> journalNames;
 
-                    var last = sortedPages.Last();
-
-                    env.Options.DataPager.EnsureContinuous(txw, last.PageNumber,
-                                                    last.IsOverflow
-                                                        ? env.Options.DataPager.GetNumberOfOverflowPages(
-                                                            last.OverflowSize)
-                                                        : 1);
-
-                    foreach (var page in sortedPages)
+                    using (var package = ZipFile.Open(backupPath, ZipArchiveMode.Read))
                     {
-                        env.Options.DataPager.Write(page);
+                        journalNames = package.Entries.Select(x => x.Name).ToList();
                     }
 
-                    env.Options.DataPager.Sync();
+                    if (journalNames.Count == 0)
+                        return;
 
-                    txw.State.Root = Tree.Open(txw, env._sliceComparer, &lastTxHeader->Root);
-                    txw.State.FreeSpaceRoot = Tree.Open(txw, env._sliceComparer, &lastTxHeader->FreeSpace);
+                    var tempDir = Directory.CreateDirectory(Path.GetTempPath() + Guid.NewGuid()).FullName;
+                    var toDispose = new List<IDisposable>();
 
-                    txw.State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
-                    txw.State.Root.Name = Constants.RootTreeName;
+                    try
+                    {
+                        ZipFile.ExtractToDirectory(backupPath, tempDir);
 
-                    txw.State.NextPageNumber = lastTxHeader->LastPageNumber + 1;
+                        TransactionHeader* lastTxHeader = null;
 
-                    env.Journal.Clear(txw);
+                        var pagesToWrite = new Dictionary<long, Func<Page>>();
 
-                    txw.Commit();
-                }
-                finally
-                {
-                    toDispose.ForEach(x => x.Dispose());
+                        long journalNumber = -1;
+                        foreach (var journalName in journalNames)
+                        {
+                            var pager = new Win32MemoryMapPager(Path.Combine(tempDir, journalName));
+                            toDispose.Add(pager);
 
-                    Directory.Delete(tempDir, true);
+
+                            if (long.TryParse(journalName.Replace(".journal", string.Empty), out journalNumber) == false)
+                            {
+                                throw new InvalidOperationException("Cannot parse journal file number");
+                            }
+
+                            var recoveryPager = new Win32MemoryMapPager(Path.Combine(tempDir, StorageEnvironmentOptions.JournalRecoveryName(journalNumber)));
+                            toDispose.Add(recoveryPager);
+
+                            var reader = new JournalReader(pager, recoveryPager, 0, lastTxHeader);
+
+                            while (reader.ReadOneTransaction(env.Options))
+                            {
+                                lastTxHeader = reader.LastTransactionHeader;
+                            }
+
+                            foreach (var translation in reader.TransactionPageTranslation)
+                            {
+                                var pageInJournal = translation.Value.JournalPos;
+                                pagesToWrite[translation.Key] = () => recoveryPager.Read(pageInJournal);
+                            }
+                        }
+
+                        var sortedPages = pagesToWrite.OrderBy(x => x.Key)
+                                                      .Select(x => x.Value())
+                                                      .ToList();
+
+                        var last = sortedPages.Last();
+
+                        env.Options.DataPager.EnsureContinuous(txw, last.PageNumber,
+                                                        last.IsOverflow
+                                                            ? env.Options.DataPager.GetNumberOfOverflowPages(
+                                                                last.OverflowSize)
+                                                            : 1);
+
+                        foreach (var page in sortedPages)
+                        {
+                            env.Options.DataPager.Write(page);
+                        }
+
+                        env.Options.DataPager.Sync();
+
+                        txw.State.Root = Tree.Open(txw, env._sliceComparer, &lastTxHeader->Root);
+                        txw.State.FreeSpaceRoot = Tree.Open(txw, env._sliceComparer, &lastTxHeader->FreeSpace);
+
+                        txw.State.FreeSpaceRoot.Name = Constants.FreeSpaceTreeName;
+                        txw.State.Root.Name = Constants.RootTreeName;
+
+                        txw.State.NextPageNumber = lastTxHeader->LastPageNumber + 1;
+
+                        env.Journal.Clear(txw);
+
+                        txw.Commit();
+
+                        env.HeaderAccessor.Modify(header =>
+                        {
+                            header->TransactionId = lastTxHeader->TransactionId;
+                            header->LastPageNumber = lastTxHeader->LastPageNumber;
+
+                            header->Journal.LastSyncedJournal = journalNumber;
+                            header->Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
+
+                            header->Root = lastTxHeader->Root;
+                            header->FreeSpace = lastTxHeader->FreeSpace;
+
+                            header->Journal.CurrentJournal = journalNumber + 1;
+                            header->Journal.JournalFilesCount = 0;
+                        });
+                    }
+                    finally
+                    {
+                        toDispose.ForEach(x => x.Dispose());
+
+                        Directory.Delete(tempDir, true);
+                    }
                 }
             }
         }
