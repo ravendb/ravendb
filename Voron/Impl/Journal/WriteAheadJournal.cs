@@ -441,10 +441,14 @@ namespace Voron.Impl.Journal
 					_lastSyncedJournal = lastProcessedJournal;
 					_lastSyncedTransactionId = lastFlushedTransactionId;
 
-					try
-					{
-						ApplyPagesToDataFileFromScratch(pagesToWrite, transaction, alreadyInWriteTx);
-					}
+				    try
+				    {
+				        ApplyPagesToDataFileFromScratch(pagesToWrite, transaction, alreadyInWriteTx);
+				    }
+				    catch (TimeoutException)
+				    {
+				        return; // nothing to do, will try again next time
+				    }
 					catch (DiskFullException diskFullEx)
 					{
 						_waj._env.HandleDataDiskFullException(diskFullEx);
@@ -553,7 +557,7 @@ namespace Voron.Impl.Journal
 				}
 				else
 				{
-					using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
+					using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite, TimeSpan.FromSeconds(5)))
 					{
 						_waj._dataPager.EnsureContinuous(tx, last.PageNumber, numberOfPagesInLastPage);
 
