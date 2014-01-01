@@ -25,6 +25,7 @@ namespace Raven.Database.Storage.Voron.Impl
 				throw new ArgumentNullException("configuration");
 
 			var allowIncrementalBackupsSetting = configuration.Settings["Raven/Voron/AllowIncrementalBackups"] ?? "false";
+
 			if (!allowIncrementalBackupsSetting.Equals("true",StringComparison.OrdinalIgnoreCase) &&
 				!allowIncrementalBackupsSetting.Equals("false", StringComparison.OrdinalIgnoreCase))
 				throw new ArgumentException("Raven/Voron/AllowIncrementalBackups settings key contains invalid value");
@@ -46,7 +47,10 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			CreatedNew = Directory.EnumerateFileSystemEntries(directoryPath).Any() == false;
 
-			Options = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(directoryPath);
+			Options = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(directoryPath)
+			{
+				IncrementalBackupEnabled = allowIncrementalBackups
+			};
 		}
 
 		public void Dispose()
