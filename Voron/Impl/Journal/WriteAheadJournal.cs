@@ -380,7 +380,7 @@ namespace Voron.Impl.Journal
 			    bool locked = false;
 			    if (_flushingSemaphore.IsWriteLockHeld == false)
 			    {
-			        _flushingSemaphore.EnterReadLock();
+			        _flushingSemaphore.EnterWriteLock();
 			        locked = true;
 			    }
 
