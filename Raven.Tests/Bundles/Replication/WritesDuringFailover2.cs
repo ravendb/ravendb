@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Tests.Bundles.Versioning;
@@ -36,7 +37,7 @@ namespace Raven.Tests.Bundles.Replication
 
 			using (var session = store1.OpenSession())
 			{
-				Assert.Throws<WebException>(() => session.Load<Company>("companies/1"));
+				Assert.Throws<HttpRequestException>(() => session.Load<Company>("companies/1"));
 			}
 		}
 	}

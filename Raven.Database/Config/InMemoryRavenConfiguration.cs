@@ -223,7 +223,7 @@ namespace Raven.Database.Config
 		private void InitializeRavenFs()
 		{
 			// Data settings
-			RavenFsDataDirectory = Settings["Raven/FileSystem/DataDir"] ?? @"~\Data.ravenfs";
+			RavenFsDataDirectory = Settings["Raven/FileSystem/DataDir"];
 
 			if (string.IsNullOrEmpty(Settings["Raven/FileSystem/IndexStoragePath"]) == false)
 			{
@@ -612,7 +612,12 @@ namespace Raven.Database.Config
 		/// </summary>
 		public string RavenFsDataDirectory
 		{
-			get { return ravenFsDataDirectory; }
+			get
+			{
+				if (ravenFsDataDirectory == null)
+					return Path.Combine(DataDirectory, "FileSystem", "Data.ravenfs");
+				return ravenFsDataDirectory;
+			}
 			set { ravenFsDataDirectory = value == null ? null : value.ToFullPath(); }
 		}
 
@@ -786,11 +791,11 @@ namespace Raven.Database.Config
 		{
 			get
 			{
-				if (string.IsNullOrEmpty(ravenFsDataDirectory))
-					ravenFsDataDirectory = Path.Combine(RavenFsDataDirectory, "Indexes");
-				return ravenFsDataDirectory;
+				if (string.IsNullOrEmpty(ravenFsIndexStoragePath))
+					ravenFsIndexStoragePath = Path.Combine(RavenFsDataDirectory, "Indexes");
+				return ravenFsIndexStoragePath;
 			}
-			set { ravenFsDataDirectory = value.ToFullPath(); }
+			set { ravenFsIndexStoragePath = value.ToFullPath(); }
 		}
 
 		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }

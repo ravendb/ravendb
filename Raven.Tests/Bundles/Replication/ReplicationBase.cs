@@ -51,7 +51,6 @@ namespace Raven.Tests.Bundles.Replication
 										  Settings = { { "Raven/ActiveBundles", "replication" + (enableCompressionBundle ? ";compression" : string.Empty) } },
 										  AnonymousUserAccessMode = anonymousUserAccessMode,
 										  DataDirectory = "Data #" + stores.Count,
-										  RavenFsDataDirectory = "File System #" + stores.Count,
 										  RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 										  RunInMemory = true,
 										  Port = port,

@@ -1029,12 +1029,6 @@
     <Content Include="App\widgets\virtualTable\view.html" />
     <TypeScriptCompile Include="Scripts\extensions.ts" />
     <Content Include="App\views\shell.html" />
-    <Content Include="Content\app.css">
-      <DependentUpon>app.less</DependentUpon>
-    </Content>
-    <Content Include="Content\app.min.css">
-      <DependentUpon>app.less</DependentUpon>
-    </Content>
     <Content Include="Content\images\checked.png" />
     <Content Include="Content\images\glyphicons-halflings-white.png" />
     <Content Include="Content\images\glyphicons-halflings.png" />
