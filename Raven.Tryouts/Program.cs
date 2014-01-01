@@ -5,6 +5,7 @@ using Raven.Tests.Indexes;
 using Raven.Tests.MultiGet;
 using Raven.Tests.Notifications;
 using Raven.Tests.Track;
+using Voron.Tests.Journal;
 
 namespace Raven.Tryouts
 {
@@ -12,13 +13,13 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			for (int i = 0; i < 100; i++)
+			for (int i = 0; i < 10000; i++)
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new ManyDocumentBeingIndexed())
+				using (var x = new EdgeCases())
 				{
-					x.WouldBeIndexedProperly("voron");
+					x.TransactionCommitShouldSetCurrentLogFileToNullIfItIsFull();
 				}
 			}
 			
