@@ -1,5 +1,7 @@
-﻿using Amazon.ImportExport.Model;
+﻿using System.Linq;
+using Amazon.ImportExport.Model;
 using Microsoft.Isam.Esent.Interop;
+
 
 namespace Raven.Database.Storage.Voron.Impl
 {
@@ -13,11 +15,9 @@ namespace Raven.Database.Storage.Voron.Impl
 
 	public class MemoryMapPersistenceSource : IPersistenceSource
 	{
-		private const string PAGER_FILENAME = "Raven.voron";
 
 		private readonly string directoryPath;
 
-		private readonly string filePath;
 
 		public MemoryMapPersistenceSource(InMemoryRavenConfiguration configuration)
 		{
@@ -31,8 +31,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 
 			directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
-            filePath = directoryPath;
-		    var filePathFolder = new DirectoryInfo(filePath);
+			var filePathFolder = new DirectoryInfo(directoryPath);
 		    if (filePathFolder.Exists == false)
 		        filePathFolder.Create();
 
@@ -45,23 +44,9 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		private void Initialize(bool allowIncrementalBackups)
 		{
-			var storageFilePath = Path.Combine(filePath, PAGER_FILENAME);
+			CreatedNew = Directory.EnumerateFileSystemEntries(directoryPath).Any() == false;
 
-			if (Directory.Exists(directoryPath))
-			{
-				CreatedNew = !File.Exists(storageFilePath);
-			}
-			else
-			{
-				Directory.CreateDirectory(directoryPath);
-				CreatedNew = true;
-			}
-
-			Options = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(directoryPath)
-			{
-				IncrementalBackupEnabled = allowIncrementalBackups
-			};
-
+			Options = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(directoryPath);
 		}
 
 		public void Dispose()

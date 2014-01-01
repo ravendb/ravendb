@@ -35,10 +35,16 @@ namespace Raven.Tests.Util
 			IOExtensions.DeleteDirectory(_dataDir);
 
 			var exePath = GetPath("Raven.Server.Exe");
+			var configPath = GetPath("Raven.Server.Exe.Config");
 
 			if (!File.Exists(exePath))
 			{
 				throw new Exception("Could not find Raven.server.exe");
+			}
+
+			if (!File.Exists(configPath))
+			{
+				throw new Exception("Could not find Raven.server.exe.config");
 			}
 
 			StartProcess(exePath, "--ram --set=Raven/Port==8079 --msgBox --set=Raven/AnonymousAccess==Admin --set=Raven/Encryption/FIPS==" + SettingsHelper.UseFipsEncryptionAlgorithms);
