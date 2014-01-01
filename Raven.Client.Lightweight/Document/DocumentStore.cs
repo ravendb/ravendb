@@ -674,8 +674,7 @@ namespace Raven.Client.Document
 					databaseUrl = rootDatabaseUrl;
 					databaseUrl = databaseUrl + "/databases/" + DefaultDatabase;
 				}
-				return new ServerClient(new AsyncServerClient(
-					databaseUrl, Conventions, ApiKey, Credentials, jsonRequestFactory,
+				return new ServerClient(new AsyncServerClient(databaseUrl, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory,
 					currentSessionId, GetReplicationInformerForDatabase, null,
 					listeners.ConflictListeners));
 			};
@@ -697,7 +696,7 @@ namespace Raven.Client.Document
 
 			asyncDatabaseCommandsGenerator = () =>
 			{
-				var asyncServerClient = new AsyncServerClient(Url, Conventions, ApiKey, Credentials, jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
+				var asyncServerClient = new AsyncServerClient(Url, Conventions, new OperationCredentials(ApiKey, Credentials), jsonRequestFactory, currentSessionId, GetReplicationInformerForDatabase, null, listeners.ConflictListeners);
 
 				if (string.IsNullOrEmpty(DefaultDatabase))
 					return asyncServerClient;

@@ -71,9 +71,6 @@ namespace Raven.Client.Connection.Async
 		private int requestCount;
 		private int readStripingBase;
 
-		private readonly ICredentials _credentials;
-		private readonly string _apiKey;
-
 		public string Url
 		{
 			get { return url; }
@@ -87,7 +84,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
 		/// </summary>
-		public AsyncServerClient(string url, DocumentConvention convention, string apiKey, ICredentials credentials,
+		public AsyncServerClient(string url, DocumentConvention convention, OperationCredentials credentials,
 								 HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId,
 								 Func<string, ReplicationInformer> replicationInformerGetter, string databaseName,
 								 IDocumentConflictListener[] conflictListeners)
@@ -105,9 +102,7 @@ namespace Raven.Client.Connection.Async
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;
 			this.convention = convention;
-			this.credentials = new OperationCredentials(apiKey, credentials);
-			_apiKey = apiKey;
-			_credentials = credentials;
+			this.credentials = credentials;
 			this.databaseName = databaseName;
 			this.conflictListeners = conflictListeners;
 			this.replicationInformerGetter = replicationInformerGetter;
@@ -609,7 +604,7 @@ namespace Raven.Client.Connection.Async
 			databaseUrl = databaseUrl + "/databases/" + database + "/";
 			if (databaseUrl == url)
 				return this;
-			return new AsyncServerClient(databaseUrl, convention, _apiKey, _credentials, jsonRequestFactory, sessionId,
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId,
 										 replicationInformerGetter, database, conflictListeners)
 			{
 				operationsHeaders = operationsHeaders
@@ -625,7 +620,7 @@ namespace Raven.Client.Connection.Async
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == url)
 				return this;
-			return new AsyncServerClient(databaseUrl, convention, _apiKey, _credentials, jsonRequestFactory, sessionId,
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId,
 										 replicationInformerGetter, databaseName, conflictListeners)
 			{
 				operationsHeaders = operationsHeaders
@@ -2379,7 +2374,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new AsyncServerClient(url, convention, _apiKey, credentialsForSession, jsonRequestFactory, sessionId,
+			return new AsyncServerClient(url, convention, new OperationCredentials(credentials.ApiKey, credentialsForSession), jsonRequestFactory, sessionId,
 										 replicationInformerGetter, databaseName, conflictListeners);
 		}
 	}
