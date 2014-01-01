@@ -117,9 +117,12 @@ namespace Raven.Storage.Esent
 
         public void Dispose()
         {
-            disposerLock.EnterWriteLock();
+            var tryEnterWriteLock = disposerLock.TryEnterWriteLock(TimeSpan.FromMinutes(2));
             try
             {
+                if (tryEnterWriteLock == false)
+                    log.Warn( "After waiting for 2 minutes, could not aqcuire disposal lock, will force disposal anyway, pending transactions will all error");
+
                 if (disposed)
                     return;
 
@@ -147,7 +150,8 @@ namespace Raven.Storage.Esent
             }
             finally
             {
-                disposerLock.ExitWriteLock();
+                if (tryEnterWriteLock)
+                    disposerLock.ExitWriteLock();
             }
         }
 
