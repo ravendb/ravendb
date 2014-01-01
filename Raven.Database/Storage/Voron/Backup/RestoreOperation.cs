@@ -33,9 +33,7 @@ namespace Raven.Database.Storage.Voron.Backup
 				{
 		            //note - restore happens when storage environment is not initialized
 					using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(configuration.DataDirectory)))
-					{
 						BackupMethods.Incremental.Restore(env, backupFilenamePath);
-					}
 				}
 
             }

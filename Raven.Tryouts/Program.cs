@@ -4,8 +4,11 @@ using Raven.Tests.Bugs;
 using Raven.Tests.Indexes;
 using Raven.Tests.MultiGet;
 using Raven.Tests.Notifications;
+using Raven.Tests.Storage;
 using Raven.Tests.Track;
+using Raven.Tests.Views;
 using Voron.Tests.Journal;
+using Voron.Tests.Trees;
 
 namespace Raven.Tryouts
 {
@@ -17,9 +20,9 @@ namespace Raven.Tryouts
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new EdgeCases())
+				using (var x = new MapReduce())
 				{
-					x.TransactionCommitShouldSetCurrentLogFileToNullIfItIsFull();
+					x.CanDelete();
 				}
 			}
 			
