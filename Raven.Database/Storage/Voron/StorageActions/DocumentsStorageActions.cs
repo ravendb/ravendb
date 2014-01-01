@@ -578,13 +578,15 @@
 
 			using (var stream = documentReadResult.Reader.AsStream())
 			{
-				var decodedDocumentStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Value.Decode(loweredKey, metadata, stream));
+				using (var decodedDocumentStream = documentCodecs.Aggregate(stream,
+						(current, codec) => codec.Value.Decode(loweredKey, metadata, current)))
+				{
+					var documentData = decodedDocumentStream.ToJObject();
 
-				var documentData = decodedDocumentStream.ToJObject();
+					documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, (int)stream.Length);
 
-				documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, (int) stream.Length);
-
-				return documentData;
+					return documentData;	
+				}
 			}
 		}
 
