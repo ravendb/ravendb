@@ -17,10 +17,17 @@ namespace Voron.Impl.Paging
 
         public PagerState PagerState
         {
-            get { return _pagerState; }
+	        get
+	        {
+				Debug.Assert(Disposed == false);
+
+				return _pagerState;
+	        }
             set
             {
-                _source = GetSourceName();
+				Debug.Assert(Disposed == false);
+				
+				_source = GetSourceName();
                 _pagerState = value;
             }
         }
@@ -51,7 +58,9 @@ namespace Voron.Impl.Paging
 
         public Page Read(long pageNumber, PagerState pagerState = null)
         {
-            if (pageNumber + 1 > NumberOfAllocatedPages)
+			Debug.Assert(Disposed == false);
+			
+			if (pageNumber + 1 > NumberOfAllocatedPages)
             {
                 throw new InvalidOperationException("Cannot get page number " + pageNumber +
                                                     " because number of allocated pages is " + NumberOfAllocatedPages);
@@ -64,7 +73,9 @@ namespace Voron.Impl.Paging
 
         public virtual Page GetWritable(long pageNumber)
         {
-            if (pageNumber + 1 > NumberOfAllocatedPages)
+			Debug.Assert(Disposed == false);
+			
+			if (pageNumber + 1 > NumberOfAllocatedPages)
             {
                 throw new InvalidOperationException("Cannot get page number " + pageNumber +
                                                     " because number of allocated pages is " + NumberOfAllocatedPages);
@@ -79,6 +90,8 @@ namespace Voron.Impl.Paging
 
         public virtual PagerState TransactionBegan()
         {
+			Debug.Assert(Disposed == false);
+
             var state = PagerState;
             state.AddRef();
             return state;
@@ -86,12 +99,16 @@ namespace Voron.Impl.Paging
 
         public bool WillRequireExtension(long requestedPageNumber, int numberOfPages)
         {
-            return requestedPageNumber + numberOfPages > NumberOfAllocatedPages;
+			Debug.Assert(Disposed == false);
+			
+			return requestedPageNumber + numberOfPages > NumberOfAllocatedPages;
         }
 
         public void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages)
         {
-            if (requestedPageNumber + numberOfPages <= NumberOfAllocatedPages)
+			Debug.Assert(Disposed == false);
+
+			if (requestedPageNumber + numberOfPages <= NumberOfAllocatedPages)
                 return;
 
             // this ensure that if we want to get a range that is more than the current expansion
@@ -109,12 +126,16 @@ namespace Voron.Impl.Paging
 
         public bool ShouldGoToOverflowPage(int len)
         {
-            return len + Constants.PageHeaderSize > MaxNodeSize;
+			Debug.Assert(Disposed == false);
+			
+			return len + Constants.PageHeaderSize > MaxNodeSize;
         }
 
         public int GetNumberOfOverflowPages(int overflowSize)
         {
-            overflowSize += Constants.PageHeaderSize;
+			Debug.Assert(Disposed == false);
+			
+			overflowSize += Constants.PageHeaderSize;
             return (overflowSize / PageSize) + (overflowSize % PageSize == 0 ? 0 : 1);
         }
 
