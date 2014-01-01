@@ -36,7 +36,6 @@ namespace RavenFS.Tests
 			//HttpSelfHostConfiguration config = null;
 			var configuration = new InMemoryRavenConfiguration();
 			configuration.Initialize();
-			configuration.RavenFsDataDirectory = "~/" + port;
 			configuration.DataDirectory = "~/data/" + port;
 			configuration.Port = port;
 
