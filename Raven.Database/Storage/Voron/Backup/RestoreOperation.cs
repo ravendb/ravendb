@@ -32,7 +32,13 @@ namespace Raven.Database.Storage.Voron.Backup
 	            else
 				{
                     using (var options = StorageEnvironmentOptions.ForPath(configuration.DataDirectory))
-                        BackupMethods.Incremental.Restore(options, new[] { backupFilenamePath });
+                    {
+                        var backupPaths = Directory.GetDirectories(backupLocation, "Inc*")
+                            .OrderBy(dir=>dir)
+                            .Select(dir=> Path.Combine(dir,BackupMethods.Filename))
+                            .ToList();
+                        BackupMethods.Incremental.Restore(options,backupPaths);
+                    }
 				}
 
             }
