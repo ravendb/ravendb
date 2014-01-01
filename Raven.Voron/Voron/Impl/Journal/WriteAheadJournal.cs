@@ -359,7 +359,7 @@ namespace Voron.Impl.Journal
 		{
 			private const long DelayedDataFileSynchronizationBytesLimit = 2L*1024*1024*1024;
 			private readonly TimeSpan DelayedDataFileSynchronizationTimeLimit = TimeSpan.FromMinutes(1);
-			private readonly SemaphoreSlim _flushingSemaphore = new SemaphoreSlim(1, 1);
+            private readonly ReaderWriterLockSlim _flushingSemaphore = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
 			private readonly Dictionary<long, JournalFile> _journalsToDelete = new Dictionary<long, JournalFile>();
 			private readonly WriteAheadJournal _waj;
 			private long _lastSyncedTransactionId;
@@ -377,7 +377,12 @@ namespace Voron.Impl.Journal
 
 			public void ApplyLogsToDataFile(long oldestActiveTransaction, Transaction transaction = null)
 			{
-				_flushingSemaphore.Wait();
+			    bool locked = false;
+			    if (_flushingSemaphore.IsWriteLockHeld == false)
+			    {
+			        _flushingSemaphore.EnterReadLock();
+			        locked = true;
+			    }
 
 				try
 				{
@@ -509,7 +514,8 @@ namespace Voron.Impl.Journal
 				}
 				finally
 				{
-					_flushingSemaphore.Release();
+				    if (locked)
+				        _flushingSemaphore.ExitWriteLock();
 				}
 			}
 
@@ -641,8 +647,8 @@ namespace Voron.Impl.Journal
 
 		    public IDisposable TakeFlushingLock()
 		    {
-		        _flushingSemaphore.Wait();
-		        return new DisposableAction(() => _flushingSemaphore.Release());
+		        _flushingSemaphore.EnterWriteLock();
+		        return new DisposableAction(() => _flushingSemaphore.ExitWriteLock());
 		    }
 		}
 
