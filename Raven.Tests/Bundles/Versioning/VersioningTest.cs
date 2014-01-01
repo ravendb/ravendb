@@ -40,6 +40,7 @@ namespace Raven.Tests.Bundles.Versioning
 			{
 				Port = port,
 				DataDirectory = path,
+				RavenFsDataDirectory = Path.Combine(path, "ravenfs"),
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 				Settings =
 					{
