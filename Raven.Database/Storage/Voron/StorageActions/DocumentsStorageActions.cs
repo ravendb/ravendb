@@ -541,14 +541,15 @@
 				};
 			}
 
-			Stream dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream                  
+			var dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream                  
 
-			data.WriteTo(dataStream);
-			var finalDataStream = documentCodecs.Aggregate(dataStream,
-					(current, codec) => codec.Encode(loweredKey, data, metadata, current));
-			
-			finalDataStream.Flush();
-      
+
+			using (var finalDataStream = documentCodecs.Aggregate((Stream) new UndisposableStream(dataStream),
+				(current, codec) => codec.Encode(loweredKey, data, metadata, current)))
+			{
+				data.WriteTo(finalDataStream);
+				finalDataStream.Flush();
+			}
  
 			dataStream.Position = 0;
 			tableStorage.Documents.Add(writeBatch, loweredKey, dataStream); 

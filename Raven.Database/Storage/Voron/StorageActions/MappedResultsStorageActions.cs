@@ -75,9 +75,12 @@
 
 			var mappedResultsData = tableStorage.MappedResults.GetIndex(Tables.MappedResults.Indices.Data);
 
-			var ms = new MemoryStream();
-			using (var stream = documentCodecs.Aggregate((Stream)ms, (ds, codec) => codec.Value.Encode(reduceKey, data, null, ds)))
+			var ms = new MemoryStream();// TODO - use BufferPoolStream
+			using (var stream = documentCodecs.Aggregate((Stream) new UndisposableStream(ms), (ds, codec) => codec.Value.Encode(reduceKey, data, null, ds)))
+			{
 				data.WriteTo(stream);
+				stream.Flush();
+			}
 
 			var id = generator.CreateSequentialUuid(UuidType.MappedResults);
 			var idAsString = id.ToString();
@@ -96,7 +99,8 @@
 					{ "timestamp", SystemTime.UtcNow }
 				}, 0);
 
-			mappedResultsData.Add(writeBatch, idAsString, ms.ToArray(), 0);
+			ms.Position = 0;
+			mappedResultsData.Add(writeBatch, idAsString, ms, 0);
 
 			mappedResultsByViewAndDocumentId.MultiAdd(writeBatch, CreateKey(view, docId), idAsString);
 			mappedResultsByView.MultiAdd(writeBatch, CreateKey(view), idAsString);
@@ -583,9 +587,14 @@
 				tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.ByView);
 			var reduceResultsData = tableStorage.ReduceResults.GetIndex(Tables.ReduceResults.Indices.Data);
 
-			var ms = new MemoryStream();
-			using (var stream = documentCodecs.Aggregate((Stream)ms, (ds, codec) => codec.Value.Encode(reduceKey, data, null, ds)))
+			var ms = new MemoryStream();// TODO - use BufferPoolStream
+			using (
+				var stream = documentCodecs.Aggregate((Stream) new UndisposableStream(ms),
+					(ds, codec) => codec.Value.Encode(reduceKey, data, null, ds)))
+			{
 				data.WriteTo(stream);
+				stream.Flush();
+			}
 
 			var id = generator.CreateSequentialUuid(UuidType.MappedResults);
 			var idAsString = id.ToString();
@@ -605,7 +614,8 @@
 				},
 				0);
 
-			reduceResultsData.Add(writeBatch, idAsString, ms.ToArray(), 0);
+			ms.Position = 0;
+			reduceResultsData.Add(writeBatch, idAsString, ms, 0);
 
 			var viewAndReduceKeyAndLevelAndSourceBucket = CreateKey(view, reduceKey, level, sourceBucket);
 			var viewAndReduceKeyAndLevel = CreateKey(view, reduceKey, level);
