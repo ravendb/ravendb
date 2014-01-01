@@ -373,6 +373,8 @@ namespace Voron.Impl.Journal
 				_waj = waj;
 			}
 
+
+
 			public void ApplyLogsToDataFile(long oldestActiveTransaction, Transaction transaction = null)
 			{
 				_flushingSemaphore.Wait();
@@ -557,7 +559,7 @@ namespace Voron.Impl.Journal
 				}
 				else
 				{
-					using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite, TimeSpan.FromSeconds(5)))
+					using (var tx = _waj._env.NewTransaction(TransactionFlags.ReadWrite))
 					{
 						_waj._dataPager.EnsureContinuous(tx, last.PageNumber, numberOfPagesInLastPage);
 
@@ -636,6 +638,12 @@ namespace Voron.Impl.Journal
 						_waj._updateLogInfo(header);
 					});
 			}
+
+		    public IDisposable TakeFlushingLock()
+		    {
+		        _flushingSemaphore.Wait();
+		        return new DisposableAction(() => _flushingSemaphore.Release());
+		    }
 		}
 
 		public void WriteToJournal(Transaction tx, int pageCount)
