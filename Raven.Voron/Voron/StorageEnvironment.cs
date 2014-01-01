@@ -344,13 +344,19 @@ namespace Voron
 
         public Transaction NewTransaction(TransactionFlags flags)
         {
+            return NewTransaction(flags, TimeSpan.FromHours(1));
+        }
+
+        public Transaction NewTransaction(TransactionFlags flags, TimeSpan timeout)
+        {
             bool txLockTaken = false;
             try
             {
                 long txId = _transactionsCounter;
                 if (flags == (TransactionFlags.ReadWrite))
                 {
-                    _txWriter.Wait();
+                    if (_txWriter.Wait(timeout, _cancellationTokenSource.Token) == false)
+                        throw new TimeoutException("Timeout for waiting for write transaction has expired");
                     txId = _transactionsCounter + 1;
                     txLockTaken = true;
 
