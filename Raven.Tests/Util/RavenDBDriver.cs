@@ -107,6 +107,10 @@ namespace Raven.Tests.Util
 		protected string GetPath(string subFolderName)
 		{
 			string retPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(RavenDBDriver)).CodeBase);
+
+			// We need to have the Raven.Server.exe.config file, with the assemblyRedirect
+			retPath = retPath.Replace("Raven.Tests", "Raven.Server");
+			
 			return Path.Combine(retPath, subFolderName).Substring(6); //remove leading file://
 		}
 

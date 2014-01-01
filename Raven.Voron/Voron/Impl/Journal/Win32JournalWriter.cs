@@ -71,32 +71,43 @@ namespace Voron.Impl.Journal
 		    using (var mre = new ManualResetEvent(false))
 		    {
 		        var segments = (FileSegmentElement*) (Marshal.AllocHGlobal((pages.Length + 1)*sizeof (FileSegmentElement)));
-		        NativeOverlapped* nativeOverlapped = stackalloc NativeOverlapped[1];
-		        nativeOverlapped->OffsetLow = (int) (position & 0xffffffff);
-		        nativeOverlapped->OffsetHigh = (int) (position >> 32);
-		        nativeOverlapped->EventHandle = mre.SafeWaitHandle.DangerousGetHandle();
-                
-		        for (int i = 0; i < pages.Length; i++)
+		        try
 		        {
-		            segments[i].Buffer = pages[i];
-		        }
-		        segments[pages.Length].Buffer = null; // null terminating
+		            var nativeOverlapped = (NativeOverlapped*) Marshal.AllocHGlobal(sizeof (NativeOverlapped));
+		            try
+		            {
+                        nativeOverlapped->OffsetLow = (int)(position & 0xffffffff);
+                        nativeOverlapped->OffsetHigh = (int)(position >> 32);
+                        nativeOverlapped->EventHandle = mre.SafeWaitHandle.DangerousGetHandle();
+		                nativeOverlapped->InternalHigh = IntPtr.Zero;
+                        nativeOverlapped->InternalLow = IntPtr.Zero;
 
-		        var result = WriteFileGather(_handle, segments, (uint) pages.Length*4096, IntPtr.Zero, nativeOverlapped);
-		        if (result)
-		        {
-		            Console.WriteLine("really?");
+                        for (int i = 0; i < pages.Length; i++)
+                        {
+                            segments[i].Buffer = pages[i];
+                        }
+                        segments[pages.Length].Buffer = null; // null terminating
+
+                        WriteFileGather(_handle, segments, (uint)pages.Length * 4096, IntPtr.Zero, nativeOverlapped);
+                        switch (Marshal.GetLastWin32Error())
+                        {
+                            case ErrorSuccess:
+                            case ErrorIOPending:
+                                mre.WaitOne();
+                                break;
+                            default:
+                                throw new Win32Exception(Marshal.GetLastWin32Error());
+                        }
+		            }
+		            finally
+		            {
+		                Marshal.FreeHGlobal((IntPtr) nativeOverlapped);
+		            }
 		        }
-		        switch (Marshal.GetLastWin32Error())
+		        finally
 		        {
-		            case ErrorSuccess:
-		            case ErrorIOPending:
-		                mre.WaitOne();
-		                break;
-		            default:
-		                throw new Win32Exception(Marshal.GetLastWin32Error());
+                    Marshal.FreeHGlobal((IntPtr)segments);
 		        }
-                Marshal.FreeHGlobal((IntPtr)segments);
 		    }
 		}
 

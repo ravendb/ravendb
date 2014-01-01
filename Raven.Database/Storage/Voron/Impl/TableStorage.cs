@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Voron.Impl.Backup;
+
 namespace Raven.Database.Storage.Voron.Impl
 {
 	using System;
@@ -32,16 +34,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 			Initialize();
 			CreateSchema();
-		}
-
-		public void ExecuteBackup(Stream outputStream)
-		{
-			if (outputStream == null) throw new ArgumentNullException("outputStream");
-			if (!outputStream.CanWrite) throw new ArgumentException("must be writable stream", "outputStream");
-
-			throw new NotImplementedException("not yet implemented");
-			//env.Backup(outputStream);
-		}
+		}		
 
 		internal Dictionary<string, object> GenerateReportOnStorage()
 		{
@@ -98,6 +91,14 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public Table General { get; private set; }
 
+		public StorageEnvironment Environment
+		{
+			get
+			{
+				return env;
+			}
+		}
+
 		public void Write(WriteBatch writeBatch)
 		{
 			env.Writer.Write(writeBatch);
@@ -129,11 +130,11 @@ namespace Raven.Database.Storage.Voron.Impl
 
 			var tree = tx.GetTree(table.TableName);
 
-			var path = Path.Combine(Environment.CurrentDirectory, "test-tree.dot");
+			var path = Path.Combine(System.Environment.CurrentDirectory, "test-tree.dot");
 			var rootPageNumber = tree.State.RootPageNumber;
 			TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
 
-			var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
+			var output = Path.Combine(System.Environment.CurrentDirectory, "output.svg");
 			var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.32\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
 			p.WaitForExit();
 			Process.Start(output);
@@ -307,5 +308,6 @@ namespace Raven.Database.Storage.Voron.Impl
 			General = new Table(Tables.General.TableName);
 			ReduceStats = new Table(Tables.ReduceStats.TableName);
 		}
+
 	}
 }

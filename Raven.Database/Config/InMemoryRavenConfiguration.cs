@@ -924,7 +924,7 @@ namespace Raven.Database.Config
 				{
 					return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 				}
-                if (File.Exists(Path.Combine(DataDirectory, "Raven.voron")))
+				if (File.Exists(Path.Combine(DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
                 {
                     return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
                 }
