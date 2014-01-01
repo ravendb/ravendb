@@ -174,7 +174,6 @@ namespace Raven.Tests.Helpers
 			{
 				Port = port,
 				DataDirectory = dataDirectory ?? NewDataPath(),
-				RavenFsDataDirectory = NewDataPath("ravenfs"),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 #if DEBUG
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
