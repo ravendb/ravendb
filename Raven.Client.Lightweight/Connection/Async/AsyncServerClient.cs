@@ -1939,16 +1939,14 @@ namespace Raven.Client.Connection.Async
 		}
 
 #endif
-#if SILVERLIGHT
+
 		/// <summary>
-		/// Get the low level  bulk insert operation
+		/// Get the low level bulk insert operation
 		/// </summary>
 		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
 		{
 			return new RemoteBulkInsertOperation(options, this, changes);
 		}
-#endif
-
 
 		/// <summary>
 		/// Do a direct HEAD request against the server for the specified document

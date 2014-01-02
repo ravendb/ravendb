@@ -537,9 +537,7 @@ namespace Raven.Client.Connection
 		private void WriteMetadata(RavenJObject metadata)
 		{
 			if (metadata == null || metadata.Count == 0)
-			{
 				return;
-			}
 
 			foreach (var prop in metadata)
 			{
@@ -592,18 +590,18 @@ namespace Raven.Client.Connection
 						case "Host": // Host property is not supported by 3.5
 							break;*/
 						case "Content-Type":
-							webRequest.ContentType = value;
+							httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", value);
 							break;
 						case "If-Modified-Since":
 							DateTime tmp;
 							DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out tmp);
-							webRequest.IfModifiedSince = tmp;
+							httpClient.DefaultRequestHeaders.IfModifiedSince = tmp;
 							break;
 						case "Accept":
-							webRequest.Accept = value;
+							httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(value));
 							break;
 						case "Connection":
-							webRequest.Connection = value;
+							httpClient.DefaultRequestHeaders.Connection.Add(value);
 							break;
 					}
 				}

@@ -11,15 +11,20 @@ namespace Raven.Client.Connection
 {
 	public class ConnectionOptions
 	{
-		public static IDisposable Expect100Continue(string url)
+		public static IDisposable Expect100Continue(Uri uri)
 		{
 #if SILVERLIGHT || NETFX_CORE
 			return new DisposableAction(() => { });
 #else
-			var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
+			var servicePoint = ServicePointManager.FindServicePoint(uri);
 			servicePoint.Expect100Continue = true;
 			return new DisposableAction(() => servicePoint.Expect100Continue = false);
 #endif
-		} 
+		}
+
+		public static IDisposable Expect100Continue(string url)
+		{
+			return Expect100Continue(new Uri(url));
+		}
 	}
 }
