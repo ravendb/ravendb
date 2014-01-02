@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using Lucene.Net.Util;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Database.Server;
@@ -100,7 +101,7 @@ namespace Raven.Tests.Notifications
 					Conventions = { FailoverBehavior = FailoverBehavior.FailImmediately }
 				}.Initialize())
 				{
-					Assert.Throws<InvalidOperationException>(() =>
+					var exception = Assert.Throws<InvalidOperationException>(() =>
 					{
 						using (var session = store.OpenSession())
 						{
@@ -108,6 +109,7 @@ namespace Raven.Tests.Notifications
 							session.SaveChanges();
 						}
 					});
+					Assert.Equal("Invalid API key", exception.Message);
 				}
 			}
 		}
@@ -213,7 +215,7 @@ namespace Raven.Tests.Notifications
 					Conventions = { FailoverBehavior = FailoverBehavior.FailImmediately }
 				}.Initialize())
 				{
-					Assert.Throws<WebException>(() =>
+					Assert.Throws<ErrorResponseException>(() =>
 					{
 						using (var session = store.OpenSession())
 						{
@@ -287,7 +289,7 @@ namespace Raven.Tests.Notifications
 					Conventions = { FailoverBehavior = FailoverBehavior.FailImmediately }
 				}.Initialize())
 				{
-					Assert.Throws<WebException>(() =>
+					Assert.Throws<ErrorResponseException>(() =>
 					{
 						using (var session = store.OpenSession())
 						{

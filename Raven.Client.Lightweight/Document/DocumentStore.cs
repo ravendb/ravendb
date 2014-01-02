@@ -10,7 +10,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security;
-using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -38,8 +37,6 @@ using Raven.Client.Document.DTC;
 
 namespace Raven.Client.Document
 {
-	using Raven.Abstractions.Connection;
-
 	/// <summary>
 	/// Manages access to RavenDB and open sessions to work with RavenDB.
 	/// </summary>
@@ -497,7 +494,7 @@ namespace Raven.Client.Document
 
 		private void InitializeSecurity()
 		{
-			if (Conventions.HandleUnauthorizedResponse != null)
+			if (Conventions.HandleUnauthorizedResponseAsync != null)
 				return; // already setup by the user
 
 			if (string.IsNullOrEmpty(ApiKey) == false)
@@ -510,31 +507,6 @@ namespace Raven.Client.Document
 
 			jsonRequestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
 			jsonRequestFactory.ConfigureRequest += securedAuthenticator.ConfigureRequest;
-
-#if !SILVERLIGHT && !NETFX_CORE
-
-			Conventions.HandleUnauthorizedResponse = (response, credentials) =>
-			{
-				var oauthSource = response.Headers["OAuth-Source"];
-
-				if (string.IsNullOrEmpty(oauthSource) == false &&
-					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
-				{
-					return basicAuthenticator.DoOAuthRequest(oauthSource, credentials.ApiKey);
-				}
-
-				if (credentials.ApiKey == null)
-				{
-					AssertUnauthorizedCredentialSupportWindowsAuth(response, credentials.Credentials);
-
-					return null;
-				}
-				if (string.IsNullOrEmpty(oauthSource))
-					oauthSource = Url + "/OAuth/API-Key";
-
-				return securedAuthenticator.DoOAuthRequest(oauthSource, credentials.ApiKey);
-			};
-#endif
 
 			Conventions.HandleForbiddenResponseAsync = (forbiddenResponse, credentials) =>
 			{
@@ -551,6 +523,13 @@ namespace Raven.Client.Document
 			{
 				var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
 
+#if DEBUG && FIDDLER
+                // Make sure to avoid a cross DNS security issue, when running with Fiddler
+				if (string.IsNullOrEmpty(oauthSource) == false)
+					oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
+#endif
+
+				// Legacy support
 				if (string.IsNullOrEmpty(oauthSource) == false &&
 					oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
 				{
@@ -564,7 +543,7 @@ namespace Raven.Client.Document
 				}
 
 				if (string.IsNullOrEmpty(oauthSource))
-					oauthSource = this.Url + "/OAuth/API-Key";
+					oauthSource = Url + "/OAuth/API-Key";
 
 				return securedAuthenticator.DoOAuthRequestAsync(Url, oauthSource, credentials.ApiKey);
 			};
