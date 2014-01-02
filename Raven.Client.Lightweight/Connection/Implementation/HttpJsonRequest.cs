@@ -50,7 +50,6 @@ namespace Raven.Client.Connection
 
 		private readonly WebRequestHandler handler;
 		internal volatile HttpClient httpClient;
-		internal volatile HttpWebRequest webRequest;
 
 		private readonly NameValueCollection headers = new NameValueCollection();
 
@@ -98,35 +97,26 @@ namespace Raven.Client.Connection
 
 			handler = new WebRequestHandler
 			{
-				UseDefaultCredentials = true,
+				UseDefaultCredentials = _credentials.HasCredentials() == false,
 				Credentials = requestParams.Credentials.Credentials,
 			};
 			httpClient = new HttpClient(handler);
 
-			webRequest = (HttpWebRequest)WebRequest.Create(requestParams.Url);
-			webRequest.UseDefaultCredentials = true;
-			webRequest.Credentials = requestParams.Credentials.Credentials;
-			webRequest.Method = requestParams.Method;
-
 			if (factory.DisableRequestCompression == false && requestParams.DisableRequestCompression == false)
 			{
-				if (requestParams.Method == "POST" || requestParams.Method == "PUT" ||
-					requestParams.Method == "PATCH" || requestParams.Method == "EVAL")
+				if (Method == "POST" || Method == "PUT" || Method == "PATCH" || Method == "EVAL")
 				{
-					webRequest.Headers["Content-Encoding"] = "gzip";
 					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Encoding", "gzip");
+					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
 				}
 
-				webRequest.Headers["Accept-Encoding"] = "gzip";
-				httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Encoding", "gzip");
+				httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+				httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "utf-8" });
 			}
 
-			webRequest.ContentType = "application/json; charset=utf-8";
-			httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "utf-8" });
 			headers.Add("Raven-Client-Version", ClientVersion);
 			WriteMetadata(requestParams.Metadata);
 			requestParams.UpdateHeaders(headers);
-			requestParams.UpdateHeaders(webRequest);
 		}
 
 		public void DisableAuthentication()
@@ -158,47 +148,60 @@ namespace Raven.Client.Connection
 
 			if (SkipServerCheck)
 			{
-				var result = factory.GetCachedResponse(this);
+				var cachedResult = factory.GetCachedResponse(this);
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
-					Method = webRequest.Method,
-					HttpResult = (int)ResponseStatusCode,
+					Method = Method,
+					HttpResult = (int) ResponseStatusCode,
 					Status = RequestStatus.AggressivelyCached,
-					Result = result.ToString(),
-					Url = webRequest.RequestUri.PathAndQuery,
+					Result = cachedResult.ToString(),
+					Url = Url,
 					PostedData = postedData
 				});
-				return result;
+				return cachedResult;
 			}
 
+			if (writeCalled)
+				return await ReadJsonInternalAsync();
+
+			var result = await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url));
+			if (result != null)
+				return result;
+			return await ReadJsonInternalAsync();
+		}
+
+		private async Task<RavenJToken> SendRequestInternal(Func<HttpRequestMessage> getRequestMessage)
+		{
+			return await RunWithAuthRetry(async () =>
+			{
+				try
+				{
+					var requestMessage = getRequestMessage();
+					CopyHeadersToHttpRequestMessage(requestMessage);
+					Response = await httpClient.SendAsync(requestMessage);
+					SetResponseHeaders(Response);
+					ResponseStatusCode = Response.StatusCode;
+				}
+				finally
+				{
+					sp.Stop();
+				}
+
+				// throw the conflict exception
+				return await CheckForErrorsAndReturnCachedResultIfAnyAsync();
+			});
+		}
+
+		private async Task<T> RunWithAuthRetry<T>(Func<Task<T>> requestOperation)
+		{
 			int retries = 0;
 			while (true)
 			{
-				ErrorResponseException webException;
+				ErrorResponseException responseException;
 				try
 				{
-					if (writeCalled == false)
-					{
-						try
-						{
-							var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
-							CopyHeadersToHttpRequestMessage(httpRequestMessage);
-							HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage);
-							Response = httpResponseMessage;
-							SetResponseHeaders(Response);
-
-							ResponseStatusCode = Response.StatusCode;
-						}
-						finally
-						{
-							sp.Stop();
-						}
-						var result = await CheckForErrorsAndReturnCachedResultIfAnyAsync();
-						if (result != null)
-							return result;
-					}
-					return await ReadJsonInternalAsync();
+					return await requestOperation();
 				}
 				catch (ErrorResponseException e)
 				{
@@ -210,17 +213,17 @@ namespace Raven.Client.Connection
 						e.StatusCode != HttpStatusCode.PreconditionFailed)
 						throw;
 
-					webException = e;
+					responseException = e;
 				}
 
 				if (Response.StatusCode == HttpStatusCode.Forbidden)
 				{
 					await HandleForbiddenResponseAsync(Response);
-					await new CompletedTask(webException).Task; // Throws, preserving original stack
+					throw responseException;
 				}
 
 				if (await HandleUnauthorizedResponseAsync(Response) == false)
-					await new CompletedTask(webException).Task; // Throws, preserving original stack
+					throw responseException;
 			}
 		}
 
@@ -266,11 +269,11 @@ namespace Raven.Client.Connection
 					factory.InvokeLogRequest(owner, () => new RequestResultArgs
 					{
 						DurationMilliseconds = CalculateDuration(),
-						Method = webRequest.Method,
+						Method = Method,
 						HttpResult = (int)Response.StatusCode,
 						Status = RequestStatus.ErrorOnServer,
 						Result = Response.StatusCode.ToString(),
-						Url = webRequest.RequestUri.PathAndQuery,
+						Url = Url,
 						PostedData = postedData
 					});
 
@@ -291,11 +294,11 @@ namespace Raven.Client.Connection
 					factory.InvokeLogRequest(owner, () => new RequestResultArgs
 					{
 						DurationMilliseconds = CalculateDuration(),
-						Method = webRequest.Method,
+						Method = Method,
 						HttpResult = (int)Response.StatusCode,
 						Status = RequestStatus.Cached,
 						Result = result.ToString(),
-						Url = webRequest.RequestUri.PathAndQuery,
+						Url = Url,
 						PostedData = postedData
 					});
 
@@ -310,11 +313,11 @@ namespace Raven.Client.Connection
 					factory.InvokeLogRequest(owner, () => new RequestResultArgs
 					{
 						DurationMilliseconds = CalculateDuration(),
-						Method = webRequest.Method,
+						Method = Method,
 						HttpResult = (int)Response.StatusCode,
 						Status = RequestStatus.Cached,
 						Result = readToEnd,
-						Url = webRequest.RequestUri.PathAndQuery,
+						Url = Url,
 						PostedData = postedData
 					});
 
@@ -371,16 +374,10 @@ namespace Raven.Client.Connection
 				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
 			isRequestSentToServer = true;
 
-			var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
-			CopyHeadersToHttpRequestMessage(httpRequestMessage);
-			Response = await httpClient.SendAsync(httpRequestMessage);
-
-			// throw the conflict exception
-			await CheckForErrorsAndReturnCachedResultIfAnyAsync();
+			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url));
 
 			using (var stream = await Response.GetResponseStreamWithHttpDecompression())
 			{
-				SetResponseHeaders(Response);
 				return await stream.ReadDataAsync();
 			}
 		}
@@ -388,74 +385,6 @@ namespace Raven.Client.Connection
 		public void ExecuteRequest()
 		{
 			ReadResponseJson();
-		}
-
-		/*public byte[] ReadResponseBytes()
-		{
-			if (writeCalled == false)
-				webRequest.ContentLength = 0;
-			using (var webResponse = webRequest.GetResponse())
-			using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
-			{
-				ResponseHeaders = new NameValueCollection(webResponse.Headers);
-				return stream.ReadData();
-			}
-		}*/
-
-		/// <summary>
-		/// Reads the response string.
-		/// </summary>
-		/// <returns></returns>
-		public RavenJToken ReadResponseJson()
-		{
-			if (SkipServerCheck)
-			{
-				var result = factory.GetCachedResponse(this);
-				factory.InvokeLogRequest(owner, () => new RequestResultArgs
-				{
-					DurationMilliseconds = CalculateDuration(),
-					Method = webRequest.Method,
-					HttpResult = (int)ResponseStatusCode,
-					Status = RequestStatus.AggressivelyCached,
-					Result = result.ToString(),
-					Url = webRequest.RequestUri.PathAndQuery,
-					PostedData = postedData
-				});
-				return result;
-			}
-
-			int retries = 0;
-			while (true)
-			{
-				try
-				{
-					if (writeCalled == false)
-						webRequest.ContentLength = 0;
-					CopyHeadersToWebRequest();
-					return ReadJsonInternal(webRequest.GetResponse);
-				}
-				catch (WebException e)
-				{
-					if (++retries >= 3 || disabledAuthRetries)
-						throw;
-
-					var httpWebResponse = e.Response as HttpWebResponse;
-					if (httpWebResponse == null ||
-						(httpWebResponse.StatusCode != HttpStatusCode.Unauthorized &&
-						 httpWebResponse.StatusCode != HttpStatusCode.Forbidden &&
-						 httpWebResponse.StatusCode != HttpStatusCode.PreconditionFailed))
-						throw;
-
-					if (httpWebResponse.StatusCode == HttpStatusCode.Forbidden)
-					{
-						HandleForbiddenResponse(httpWebResponse);
-						throw;
-					}
-
-					if (HandleUnauthorizedResponse(httpWebResponse) == false)
-						throw;
-				}
-			}
 		}
 
 		private void CopyHeadersToWebRequest()
@@ -470,27 +399,6 @@ namespace Raven.Client.Connection
 					webRequest.Headers.Set(key, value);
 				}
 			}
-		}
-
-		public bool HandleUnauthorizedResponse(HttpWebResponse unauthorizedResponse)
-		{
-			if (conventions.HandleUnauthorizedResponse == null)
-				return false;
-
-			var handleUnauthorizedResponse = conventions.HandleUnauthorizedResponse(unauthorizedResponse, _credentials);
-			if (handleUnauthorizedResponse == null)
-				return false;
-
-			RecreateWebRequest(handleUnauthorizedResponse);
-			return true;
-		}
-
-		private void HandleForbiddenResponse(HttpWebResponse forbiddenResponse)
-		{
-			if (conventions.HandleForbiddenResponse == null)
-				return;
-
-			conventions.HandleForbiddenResponse(forbiddenResponse);
 		}
 
 		public async Task<bool> HandleUnauthorizedResponseAsync(HttpResponseMessage unauthorizedResponse)
@@ -635,11 +543,11 @@ namespace Raven.Client.Connection
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
-					Method = webRequest.Method,
+					Method = Method,
 					HttpResult = (int)ResponseStatusCode,
 					Status = RequestStatus.SentToServer,
 					Result = (data ?? "").ToString(),
-					Url = webRequest.RequestUri.PathAndQuery,
+					Url = Url,
 					PostedData = postedData
 				});
 
@@ -662,11 +570,11 @@ namespace Raven.Client.Connection
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
-					Method = webRequest.Method,
+					Method = Method,
 					HttpResult = httpResult,
 					Status = RequestStatus.ErrorOnServer,
 					Result = e.Message,
-					Url = webRequest.RequestUri.PathAndQuery,
+					Url = Url,
 					PostedData = postedData
 				});
 
@@ -684,11 +592,11 @@ namespace Raven.Client.Connection
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
-					Method = webRequest.Method,
+					Method = Method,
 					HttpResult = (int)httpWebResponse.StatusCode,
 					Status = RequestStatus.Cached,
 					Result = result.ToString(),
-					Url = webRequest.RequestUri.PathAndQuery,
+					Url = Url,
 					PostedData = postedData
 				});
 
@@ -703,11 +611,11 @@ namespace Raven.Client.Connection
 				factory.InvokeLogRequest(owner, () => new RequestResultArgs
 				{
 					DurationMilliseconds = CalculateDuration(),
-					Method = webRequest.Method,
+					Method = Method,
 					HttpResult = (int)httpWebResponse.StatusCode,
 					Status = RequestStatus.Cached,
 					Result = readToEnd,
-					Url = webRequest.RequestUri.PathAndQuery,
+					Url = Url,
 					PostedData = postedData
 				});
 
@@ -947,44 +855,18 @@ namespace Raven.Client.Connection
 
 		public async Task<IObservable<string>> ServerPullAsync()
 		{
-			int retries = 0;
-			while (true)
+			return await RunWithAuthRetry(async () =>
 			{
-				ErrorResponseException webException;
+				Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url), HttpCompletionOption.ResponseHeadersRead);
+				SetResponseHeaders(Response);
 
-				try
-				{
-					Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url), HttpCompletionOption.ResponseHeadersRead);
-					await CheckForErrorsAndReturnCachedResultIfAnyAsync();
+				await CheckForErrorsAndReturnCachedResultIfAnyAsync();
 
-					var stream = await Response.GetResponseStreamWithHttpDecompression();
-					var observableLineStream = new ObservableLineStream(stream, () => Response.Dispose());
-					SetResponseHeaders(Response);
-					observableLineStream.Start();
-					return (IObservable<string>)observableLineStream;
-				}
-				catch (ErrorResponseException e)
-				{
-					if (++retries >= 3 || disabledAuthRetries)
-						throw;
-
-					if (e.StatusCode != HttpStatusCode.Unauthorized &&
-						e.StatusCode != HttpStatusCode.Forbidden &&
-						e.StatusCode != HttpStatusCode.PreconditionFailed)
-						throw;
-
-					webException = e;
-				}
-
-				if (webException.StatusCode == HttpStatusCode.Forbidden)
-				{
-					await HandleForbiddenResponseAsync(webException.Response);
-					await new CompletedTask(webException).Task; // Throws, preserving original stack
-				}
-
-				if (await HandleUnauthorizedResponseAsync(webException.Response) == false)
-					await new CompletedTask(webException).Task; // Throws, preserving original stack
-			}
+				var stream = await Response.GetResponseStreamWithHttpDecompression();
+				var observableLineStream = new ObservableLineStream(stream, () => Response.Dispose());
+				observableLineStream.Start();
+				return (IObservable<string>)observableLineStream;
+			});
 		}
 
 		public async Task ExecuteWriteAsync(string data)
@@ -1003,7 +885,8 @@ namespace Raven.Client.Connection
 		{
 			postedStream = streamToWrite;
 			writeCalled = true;
-			var request = new HttpRequestMessage(new HttpMethod(Method), Url)
+
+			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
 				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression)
 				{
@@ -1012,51 +895,37 @@ namespace Raven.Client.Connection
 						ContentType = new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"}
 					}
 				}
-			};
-			
-			CopyHeadersToHttpRequestMessage(request);
-			Response = await httpClient.SendAsync(request);
-
-			await CheckForErrorsAndReturnCachedResultIfAnyAsync();
-
-			SetResponseHeaders(Response);
+			});
 		}
 
 		public async Task WriteAsync(HttpContent content)
 		{
 			postedContent = content;
 			writeCalled = true;
-			var request = new HttpRequestMessage(new HttpMethod(Method), Url)
+
+			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
 				Content = content,
 				Headers =
 				{
 					TransferEncodingChunked = true,
 				}
-			};
-
-			CopyHeadersToHttpRequestMessage(request);
-			Response = await httpClient.SendAsync(request);
-
-			await CheckForErrorsAndReturnCachedResultIfAnyAsync();
-
-			SetResponseHeaders(Response);
+			});
 		}
 
 		public async Task WriteAsync(string data)
 		{
 			writeCalled = true;
-			var request = new HttpRequestMessage(new HttpMethod(Method), Url)
+			
+			await SendRequestInternal(() =>
 			{
-				Content = new CompressedStringContent(data, factory.DisableRequestCompression),
-			};
-			request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
-			CopyHeadersToHttpRequestMessage(request);
-			Response = await httpClient.SendAsync(request);
-
-			await CheckForErrorsAndReturnCachedResultIfAnyAsync();
-
-			SetResponseHeaders(Response);
+				var request = new HttpRequestMessage(new HttpMethod(Method), Url)
+				{
+					Content = new CompressedStringContent(data, factory.DisableRequestCompression),
+				};
+				request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+				return request;
+			});
 		}
 
 		public Task<Stream> GetRawRequestStream()
