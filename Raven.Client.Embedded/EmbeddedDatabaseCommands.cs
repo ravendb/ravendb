@@ -920,14 +920,6 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
-		/// Get the low level  bulk insert operation
-		/// </summary>
-		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
-		{
-			return new EmbeddedBulkInsertOperation(database, options, changes);
-		}
-
-		/// <summary>
 		/// Perform a set based update using the specified index, not allowing the operation
 		/// if the index is stale
 		/// </summary>
