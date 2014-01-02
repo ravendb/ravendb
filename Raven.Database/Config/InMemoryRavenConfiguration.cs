@@ -152,7 +152,7 @@ namespace Raven.Database.Config
 
 			if (string.IsNullOrEmpty(DefaultStorageTypeName))
 			{
-				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "voron";
+				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "munin";
 			}
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
@@ -916,7 +916,7 @@ namespace Raven.Database.Config
 		public string SelectStorageEngine()
 		{
 			if (RunInMemory)
-				return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+				return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 
 			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{
@@ -932,7 +932,7 @@ namespace Raven.Database.Config
 					return typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 			}
 
-			return DefaultStorageTypeName ?? typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+			return DefaultStorageTypeName ?? typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 		}
 
 		public void Dispose()
