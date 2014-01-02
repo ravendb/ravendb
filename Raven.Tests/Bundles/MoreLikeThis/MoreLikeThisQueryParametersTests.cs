@@ -1,6 +1,7 @@
 ﻿using System.Web;
 using Raven.Abstractions.Data;
 using Raven.Database.Bundles.MoreLikeThis;
+using Raven.Database.Server.Controllers;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
 
@@ -26,7 +27,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
 			var path = uri.Substring(0, uri.IndexOf('?'));
 			var queryString = HttpUtility.ParseQueryString(uri.Substring(uri.IndexOf('?')));
-			var decodedParameters = MoreLikeThisResponder.GetParametersFromPath(path, queryString);
+			var decodedParameters = MoreLikeThisController.GetParametersFromPath(path, queryString);
 
 			Assert.Equal("dataIndex", decodedParameters.IndexName);
 			Assert.Equal(JsonConvert.SerializeObject(parameters), JsonConvert.SerializeObject(decodedParameters));
@@ -52,7 +53,7 @@ namespace Raven.Tests.Bundles.MoreLikeThis
 
 			var path = uri.Substring(0, uri.IndexOf('?'));
 			var queryString = HttpUtility.ParseQueryString(uri.Substring(uri.IndexOf('?')));
-			var decodedParameters = MoreLikeThisResponder.GetParametersFromPath(path, queryString);
+			var decodedParameters = MoreLikeThisController.GetParametersFromPath(path, queryString);
 
 			Assert.Equal("dataIndex", decodedParameters.IndexName);
 			Assert.Equal(JsonConvert.SerializeObject(parameters), JsonConvert.SerializeObject(decodedParameters));
