@@ -2335,9 +2335,6 @@ namespace Raven.Client.Connection.Async
 			var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
 
 			request.DisableAuthentication();
-#if !SILVERLIGHT
-			request.webRequest.ContentLength = 0;
-#endif
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 			var result = await request.ReadResponseJsonAsync();
 			return result.Value<string>("Token");
