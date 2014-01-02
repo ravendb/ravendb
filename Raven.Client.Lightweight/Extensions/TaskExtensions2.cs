@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.ExceptionServices;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,8 +11,6 @@ using Raven.Abstractions.Util;
 
 namespace Raven.Client.Extensions
 {
-	using System.Runtime.ExceptionServices;
-
 	public static class Time
 	{
 		public static Task Delay(TimeSpan timeOut)

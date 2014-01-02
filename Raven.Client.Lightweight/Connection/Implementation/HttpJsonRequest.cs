@@ -1,4 +1,5 @@
 using System.Web.UI.WebControls;
+using Raven.Client.Extensions;
 #if !NETFX_CORE && !SILVERLIGHT
 //-----------------------------------------------------------------------
 // <copyright file="HttpJsonRequest.cs" company="Hibernating Rhinos LTD">
