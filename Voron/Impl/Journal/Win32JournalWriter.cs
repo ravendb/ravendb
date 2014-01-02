@@ -21,7 +21,7 @@ namespace Voron.Impl.Journal
 		private readonly SafeFileHandle _handle;
 		private SafeFileHandle _readHandle;
 
-		[DllImport("kernel32.dll")]
+		[DllImport("kernel32.dll", SetLastError = true)]
 		static extern bool WriteFileGather(
 			SafeFileHandle hFile,
 			FileSegmentElement* aSegmentArray,
