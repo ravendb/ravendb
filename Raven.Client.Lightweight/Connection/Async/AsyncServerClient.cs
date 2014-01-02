@@ -1717,25 +1717,23 @@ namespace Raven.Client.Connection.Async
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
 
-			var webResponse = await request.RawExecuteRequestAsync();
+			var response = await request.RawExecuteRequestAsync();
 			queryHeaderInfo.Value = new QueryHeaderInformation
 			{
-				Index = webResponse.Headers["Raven-Index"],
-				IndexTimestamp = DateTime.ParseExact(webResponse.Headers["Raven-Index-Timestamp"], Default.DateTimeFormatsToRead,
+				Index = response.Headers.GetFirstValue("Raven-Index"),
+				IndexTimestamp = DateTime.ParseExact(response.Headers.GetFirstValue("Raven-Index-Timestamp"), Default.DateTimeFormatsToRead,
 																CultureInfo.InvariantCulture, DateTimeStyles.None),
-				IndexEtag = Etag.Parse(webResponse.Headers["Raven-Index-Etag"]),
-				ResultEtag = Etag.Parse(webResponse.Headers["Raven-Result-Etag"]),
-				IsStable = bool.Parse(webResponse.Headers["Raven-Is-Stale"]),
-				TotalResults = int.Parse(webResponse.Headers["Raven-Total-Results"])
+				IndexEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Index-Etag")),
+				ResultEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Result-Etag")),
+				IsStable = bool.Parse(response.Headers.GetFirstValue("Raven-Is-Stale")),
+				TotalResults = int.Parse(response.Headers.GetFirstValue("Raven-Total-Results"))
 			};
 
-			return new YieldStreamResults(webResponse);
+			return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression());
 		}
 
         public class YieldStreamResults : IAsyncEnumerator<RavenJObject>
         {
-            private readonly WebResponse webResponse;
-
             private readonly int start;
 
             private readonly int pageSize;
@@ -1747,15 +1745,14 @@ namespace Raven.Client.Connection.Async
             private readonly JsonTextReaderAsync reader;
             private bool complete;
 
-            private bool wasInitalized;
+            private bool wasInitialized;
 
-            public YieldStreamResults(WebResponse webResponse, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null)
+			public YieldStreamResults(Stream stream, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null)
             {
-                this.webResponse = webResponse;
                 this.start = start;
                 this.pageSize = pageSize;
                 this.pagingInformation = pagingInformation;
-                stream = webResponse.GetResponseStreamWithHttpDecompression();
+				this.stream = stream;
                 streamReader = new StreamReader(stream);
                 reader = new JsonTextReaderAsync(streamReader);
             }
@@ -1778,7 +1775,6 @@ namespace Raven.Client.Connection.Async
                 reader.Close();
                 streamReader.Close();
                 stream.Close();
-                webResponse.Close();
             }
 
             public async Task<bool> MoveNextAsync()
@@ -1790,10 +1786,10 @@ namespace Raven.Client.Connection.Async
                     return false;
                 }
 
-                if (wasInitalized == false)
+                if (wasInitialized == false)
                 {
                     await InitAsync();
-                    wasInitalized = true;
+                    wasInitialized = true;
                 }
 
                 if (await reader.ReadAsync() == false)
@@ -1899,8 +1895,8 @@ namespace Raven.Client.Connection.Async
 
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-			var webResponse = await request.RawExecuteRequestAsync();
-            return new YieldStreamResults(webResponse, start, pageSize, pagingInformation);
+			var response = await request.RawExecuteRequestAsync();
+            return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression(), start, pageSize, pagingInformation);
 		}
 
 		public Task DeleteAsync(string key, Etag etag)

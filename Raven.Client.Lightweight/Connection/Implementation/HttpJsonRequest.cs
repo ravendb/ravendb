@@ -77,6 +77,7 @@ namespace Raven.Client.Connection
 
 		private readonly OperationCredentials _credentials;
 		private HttpContent postedContent;
+		private HttpRequestMessage rawRequestMessage;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -690,9 +691,12 @@ namespace Raven.Client.Connection
 
 		public Task<Stream> GetRawRequestStream()
 		{
-			CopyHeadersToWebRequest();
-			webRequest.SendChunked = true;
-			return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
+			rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
+			CopyHeadersToHttpRequestMessage(rawRequestMessage);
+			httpClient.DefaultRequestHeaders.TransferEncodingChunked = true;
+			// webRequest.SendChunked = true;
+			// return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
+			throw new NotImplementedException();
 		}
 
 		/*public WebResponse RawExecuteRequest()
@@ -725,25 +729,18 @@ namespace Raven.Client.Connection
 			}
 		}*/
 
-		public async Task<WebResponse> RawExecuteRequestAsync()
+		public async Task<HttpResponseMessage> RawExecuteRequestAsync()
 		{
-			try
+			CopyHeadersToHttpRequestMessage(rawRequestMessage);
+			var response = await httpClient.SendAsync(rawRequestMessage);
+
+			if (response.IsSuccessStatusCode == false)
 			{
-				CopyHeadersToWebRequest();
-				return await webRequest.GetResponseAsync();
-			}
-			catch (WebException we)
-			{
-				var httpWebResponse = we.Response as HttpWebResponse;
-				if (httpWebResponse == null)
-					throw;
 				var sb = new StringBuilder()
-					.Append(httpWebResponse.StatusCode)
-					.Append(" ")
-					.Append(httpWebResponse.StatusDescription)
+					.Append(response.StatusCode)
 					.AppendLine();
 
-				using (var reader = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression()))
+				using (var reader = new StreamReader(await response.GetResponseStreamWithHttpDecompression()))
 				{
 					string line;
 					while ((line = reader.ReadLine()) != null)
@@ -751,14 +748,16 @@ namespace Raven.Client.Connection
 						sb.AppendLine(line);
 					}
 				}
-				throw new InvalidOperationException(sb.ToString(), we);
+				throw new InvalidOperationException(sb.ToString());
 			}
+
+			return response;
 		}
 
 		public void PrepareForLongRequest()
 		{
 			Timeout = TimeSpan.FromHours(6);
-			webRequest.AllowWriteStreamBuffering = false;
+			// webRequest.AllowWriteStreamBuffering = false;
 		}
 
 		public void AddHeader(string key, string val)
