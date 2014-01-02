@@ -255,8 +255,14 @@ namespace Voron.Impl
 
 		public void Commit()
 		{
-			if (Flags != (TransactionFlags.ReadWrite) || RolledBack)
+			if (Flags != (TransactionFlags.ReadWrite))
 				return; // nothing to do
+
+            if (Committed)
+                throw new InvalidOperationException("Cannot commit already commited transaction.");
+
+            if (RolledBack)
+                throw new InvalidOperationException("Cannot commit rolledback transaction.");
 
 			FlushAllMultiValues();
 
@@ -303,7 +309,6 @@ namespace Voron.Impl
 				FlushedToJournal = true;
 			}
 
-		    _env.SetStateAfterTransactionCommit(State);
 			Committed = true;
 			AfterCommit(_id);
 		}

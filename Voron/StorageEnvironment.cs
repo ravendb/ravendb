@@ -33,6 +33,8 @@ namespace Voron
         private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
 		private readonly ManualResetEventSlim _flushWriter = new ManualResetEventSlim();
 
+        private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
+
         private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         private Task _flushingTask;
@@ -363,19 +365,28 @@ namespace Voron
 							_flushingTask = FlushWritesToDataFileAsync();
 							_endOfDiskSpace = null;
 						}
+                    }
                 }
-                }
-                var tx = new Transaction(this, txId, flags, _freeSpaceHandling);
-                _activeTransactions.TryAdd(txId, tx);
-                var state = _dataPager.TransactionBegan();
-                tx.AddPagerState(state);
 
-                if (flags == TransactionFlags.ReadWrite)
+                _txCommit.EnterReadLock();
+                try
                 {
-                    tx.AfterCommit = TransactionAfterCommit;
-                }
+                    var tx = new Transaction(this, txId, flags, _freeSpaceHandling);
+                    _activeTransactions.TryAdd(txId, tx);
+                    var state = _dataPager.TransactionBegan();
+                    tx.AddPagerState(state);
 
-                return tx;
+                    if (flags == TransactionFlags.ReadWrite)
+                    {
+                        tx.AfterCommit = TransactionAfterCommit;
+                    }
+
+                    return tx;
+                }
+                finally
+                {
+                    _txCommit.ExitReadLock();
+                }
             }
             catch (Exception)
             {
@@ -390,10 +401,24 @@ namespace Voron
             Transaction tx;
 	        if (_activeTransactions.TryGetValue(txId, out tx) == false)
 		        return;
-	        if (tx.FlushedToJournal == false)
-		        return;
+	        
+            _txCommit.EnterWriteLock();
+            try
+            {
+                if (tx.Committed && tx.FlushedToJournal)
+                    _transactionsCounter = txId;
 
-	        Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, tx.GetTransactionPages().Count);
+                State = tx.State;
+            }
+            finally
+            {
+                _txCommit.ExitWriteLock();
+            }
+
+            if (tx.FlushedToJournal == false)
+                return;
+
+            Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, tx.GetTransactionPages().Count);
 			_flushWriter.Set();
         }
 
@@ -405,12 +430,8 @@ namespace Voron
 
             if (tx.Flags != (TransactionFlags.ReadWrite))
                 return;
-            if (tx.Committed && tx.FlushedToJournal)
-            {
-                _transactionsCounter = txId;
-            }
+            
             _txWriter.Release();
-
         }
 
         public Dictionary<string, List<long>> AllPages(Transaction tx)
@@ -439,11 +460,6 @@ namespace Voron
                     RootPages = State.Root.State.PageCount,
                     UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber
                 };
-        }
-
-        public void SetStateAfterTransactionCommit(StorageEnvironmentState state)
-        {
-            State = state;
         }
 
         private Task FlushWritesToDataFileAsync()
