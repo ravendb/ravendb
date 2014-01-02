@@ -1701,6 +1701,22 @@ namespace Raven.Client.Connection.Async
 																																	 convention.FailoverBehavior,
 																																	 HandleReplicationStatusChanges);
 
+			
+			request.RemoveAuthorizationHeader();
+			var token = await GetSingleAuthToken();
+			try
+			{
+				token = await ValidateThatWeCanUseAuthenticateTokens(token);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+					e);
+			}
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+
+
 			var webResponse = await request.RawExecuteRequestAsync();
 			queryHeaderInfo.Value = new QueryHeaderInformation
 			{
@@ -1865,8 +1881,25 @@ namespace Raven.Client.Connection.Async
 																			.AddReplicationStatusHeaders(Url, url, replicationInformer,
 																																	 convention.FailoverBehavior,
 																																	 HandleReplicationStatusChanges);
-            var webResponse = await request.RawExecuteRequestAsync();
 
+			request.RemoveAuthorizationHeader();
+
+			var token = await GetSingleAuthToken();
+
+			try
+			{
+				token = await ValidateThatWeCanUseAuthenticateTokens(token);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate token for docs streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+					e);
+			}
+
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+
+			var webResponse = await request.RawExecuteRequestAsync();
             return new YieldStreamResults(webResponse, start, pageSize, pagingInformation);
 		}
 
