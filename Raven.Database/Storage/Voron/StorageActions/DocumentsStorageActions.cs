@@ -541,14 +541,15 @@
 				};
 			}
 
-			Stream dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream                  
+			var dataStream = new MemoryStream(); //TODO : do not forget to change to BufferedPoolStream                  
 
-			data.WriteTo(dataStream);
-			var finalDataStream = documentCodecs.Aggregate(dataStream,
-					(current, codec) => codec.Encode(loweredKey, data, metadata, current));
-			
-			finalDataStream.Flush();
-      
+
+			using (var finalDataStream = documentCodecs.Aggregate((Stream) new UndisposableStream(dataStream),
+				(current, codec) => codec.Encode(loweredKey, data, metadata, current)))
+			{
+				data.WriteTo(finalDataStream);
+				finalDataStream.Flush();
+			}
  
 			dataStream.Position = 0;
 			tableStorage.Documents.Add(writeBatch, loweredKey, dataStream); 
@@ -577,13 +578,15 @@
 
 			using (var stream = documentReadResult.Reader.AsStream())
 			{
-				var decodedDocumentStream = documentCodecs.Aggregate(stream, (current, codec) => codec.Value.Decode(loweredKey, metadata, stream));
+				using (var decodedDocumentStream = documentCodecs.Aggregate(stream,
+						(current, codec) => codec.Value.Decode(loweredKey, metadata, current)))
+				{
+					var documentData = decodedDocumentStream.ToJObject();
 
-				var documentData = decodedDocumentStream.ToJObject();
+					documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, (int)stream.Length);
 
-				documentCacher.SetCachedDocument(loweredKey, existingEtag, documentData, metadata, (int) stream.Length);
-
-				return documentData;
+					return documentData;	
+				}
 			}
 		}
 

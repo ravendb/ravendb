@@ -8,7 +8,7 @@ using Raven.Database.Extensions;
 
 namespace Raven.Database.Storage
 {
-    public  abstract class BaseRestoreOperation
+    public abstract class BaseRestoreOperation
     {
         protected static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -24,7 +24,7 @@ namespace Raven.Database.Storage
         {
             this.backupLocation = backupLocation;
             this.configuration = configuration;
-            this.output = output;
+            this.output = output;			
         }
 
         protected void LogFailureAndRethrow(Exception e)
@@ -111,7 +111,38 @@ namespace Raven.Database.Storage
                     "Error: Index {0} could not be restored. All already copied index files was deleted. " +
                     "Index will be recreated after launching Raven instance. Thrown exception:{1}{2}",
                     indexName, Environment.NewLine, ex));
-        }        
+        }
+
+	    protected void CopyIndexDefinitions()
+	    {
+			var directories = Directory.GetDirectories(backupLocation, "Inc*")
+												  .OrderByDescending(dir => dir)
+												  .ToList();
+
+			string indexDefinitionsBackupFolder;
+			string indexDefinitionsDestinationFolder = Path.Combine(databaseLocation, "IndexDefinitions");
+			if (directories.Count == 0)
+			    indexDefinitionsBackupFolder = Path.Combine(backupLocation, "IndexDefinitions");
+		    else
+		    {
+				var latestIncrementalBackupDirectory = directories.First();
+			    if (Directory.Exists(Path.Combine(latestIncrementalBackupDirectory, "IndexDefinitions")) == false)
+			    {
+				    output("Failed to restore index definitions. It seems the index definitions are missing from backup folder.");
+					return;
+			    }
+				indexDefinitionsBackupFolder = Path.Combine(latestIncrementalBackupDirectory, "IndexDefinitions");
+		    }
+
+			try
+			{
+				CopyAll(new DirectoryInfo(indexDefinitionsBackupFolder), new DirectoryInfo(indexDefinitionsDestinationFolder));
+			}
+			catch (Exception ex)
+			{
+				output("Failed to restore index definitions. This is not supposed to happen. Reason : " + ex);
+			}
+		}
 
         protected void CopyIndexes()
         {
@@ -132,7 +163,8 @@ namespace Raven.Database.Storage
                     }
                     catch (Exception ex)
                     {
-                        ForceIndexReset(indexPath, indexName, ex);
+						output("Failed to restore indexes, forcing index reset. Reason : " + ex);
+						ForceIndexReset(indexPath, indexName, ex);
                     }
                 }
 

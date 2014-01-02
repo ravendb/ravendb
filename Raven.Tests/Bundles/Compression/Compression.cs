@@ -28,7 +28,7 @@ namespace Raven.Tests.Bundles.Compression
 			             		Port = 8079,
 			             		RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 			             		DataDirectory = path,
-								Settings = {{"Raven/ActiveBundles", "Compression"}}
+								Settings = {{"Raven/ActiveBundles", "Compression"}},
 			             	};
 			config.PostInit();
 			ravenDbServer = new RavenDbServer(config);

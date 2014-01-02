@@ -18,6 +18,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Mono.CSharp;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
@@ -2397,12 +2398,19 @@ namespace Raven.Database
 				}
 			}
 
-			bool circularLogging;
+			bool enableIncrementalBackup;
 			if (incrementalBackup &&
 				TransactionalStorage is Raven.Storage.Esent.TransactionalStorage &&
-				(bool.TryParse(Configuration.Settings["Raven/Esent/CircularLog"], out circularLogging) == false || circularLogging))
+				(bool.TryParse(Configuration.Settings["Raven/Esent/CircularLog"], out enableIncrementalBackup) == false || enableIncrementalBackup))
 			{
 				throw new InvalidOperationException("In order to run incremental backups using Esent you must have circular logging disabled");
+			}
+			
+			if (incrementalBackup &&
+			    TransactionalStorage is Raven.Storage.Voron.TransactionalStorage &&
+				bool.TryParse(Configuration.Settings["Raven/Voron/AllowIncrementalBackups"], out enableIncrementalBackup) == false)
+			{
+				throw new InvalidOperationException("In order to run incremental backups using Voron you must have the appropriate setting key (Raven/Voron/AllowIncrementalBackups) set to true");
 			}
 
 			Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(new BackupStatus
@@ -2430,7 +2438,7 @@ namespace Raven.Database
 
 			string storage;
 			if (databaseDocument.Settings.TryGetValue("Raven/StorageTypeName", out storage) == false)
-			{
+			{								
 				storage = "esent";
 			}
 
