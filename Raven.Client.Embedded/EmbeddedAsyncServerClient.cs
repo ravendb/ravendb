@@ -11,9 +11,12 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
+using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
+using Raven.Database;
 using Raven.Database.Data;
 using Raven.Json.Linq;
 
@@ -21,10 +24,12 @@ namespace Raven.Client.Embedded
 {
 	internal class EmbeddedAsyncServerClient : IAsyncDatabaseCommands, IAsyncInfoDatabaseCommands, IAsyncGlobalAdminDatabaseCommands
 	{
+		private readonly DocumentDatabase documentDatabase;
 		private readonly IDatabaseCommands databaseCommands;
 
-		public EmbeddedAsyncServerClient(IDatabaseCommands databaseCommands)
+		public EmbeddedAsyncServerClient(DocumentDatabase documentDatabase, IDatabaseCommands databaseCommands)
 		{
+			this.documentDatabase = documentDatabase;
 			this.databaseCommands = databaseCommands;
 			OperationsHeaders = databaseCommands.OperationsHeaders;
 		}
@@ -177,17 +182,17 @@ namespace Raven.Client.Embedded
 
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
-			return new EmbeddedAsyncServerClient(databaseCommands.ForDatabase(database));
+			return new EmbeddedAsyncServerClient(documentDatabase, databaseCommands.ForDatabase(database));
 		}
 
 		public IAsyncDatabaseCommands ForSystemDatabase()
 		{
-			return new EmbeddedAsyncServerClient(databaseCommands.ForSystemDatabase());
+			return new EmbeddedAsyncServerClient(documentDatabase, databaseCommands.ForSystemDatabase());
 		}
 
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new EmbeddedAsyncServerClient(databaseCommands.With(credentialsForSession));
+			return new EmbeddedAsyncServerClient(documentDatabase, databaseCommands.With(credentialsForSession));
 		}
 
 		public Task<DatabaseStatistics> GetStatisticsAsync()
@@ -354,7 +359,15 @@ namespace Raven.Client.Embedded
 
 		}
 
-	    public Task DeleteAsync(string key, Etag etag)
+		/// <summary>
+		/// Get the low level  bulk insert operation
+		/// </summary>
+		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
+		{
+			return new EmbeddedBulkInsertOperation(documentDatabase, options, changes);
+		}
+
+		public Task DeleteAsync(string key, Etag etag)
 	    {
 	        throw new NotImplementedException();
 	    }

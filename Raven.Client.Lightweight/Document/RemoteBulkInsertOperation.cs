@@ -2,6 +2,7 @@
 
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
+using Raven.Client.Connection.Async;
 #if !NETFX_CORE
 using System;
 using System.Collections.Concurrent;
@@ -52,12 +53,7 @@ namespace Raven.Client.Document
     public class RemoteBulkInsertOperation : ILowLevelBulkInsertOperation, IObserver<BulkInsertChangeNotification>
     {
         private CancellationTokenSource cancellationTokenSource;
-
-#if !SILVERLIGHT
-        private readonly ServerClient operationClient;
-#else
 		private readonly AsyncServerClient operationClient;
-#endif
         private readonly IDatabaseChanges operationChanges;
         private readonly MemoryStream bufferedStream = new MemoryStream();
         private readonly BlockingCollection<RavenJObject> queue;
@@ -65,12 +61,7 @@ namespace Raven.Client.Document
         private HttpJsonRequest operationRequest;
         private readonly Task operationTask;
         private int total;
-
-#if !SILVERLIGHT
-	    public RemoteBulkInsertOperation(BulkInsertOptions options, ServerClient client, IDatabaseChanges changes)
-#else
 		public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
-#endif
 	    {
 		    using (NoSynchronizationContext.Scope())
 		    {
@@ -97,38 +88,25 @@ namespace Raven.Client.Document
 
         private async Task StartBulkInsertAsync(BulkInsertOptions options)
         {
-#if !SILVERLIGHT
-            var expect100Continue = operationClient.Expect100Continue();
-#endif
-            var operationUrl = CreateOperationUrl(options);
-            var token = await GetToken();
-            try
-            {
-                token = await ValidateThatWeCanUseAuthenticateTokens(token);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException(
-                    "Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
-                    e);
-            }
+	        Stream stream;
+	        using (ConnectionOptions.Expect100Continue(operationClient.Url))
+	        {
+		        var operationUrl = CreateOperationUrl(options);
+		        var token = await GetToken();
+		        try
+		        {
+			        token = await ValidateThatWeCanUseAuthenticateTokens(token);
+		        }
+		        catch (Exception e)
+		        {
+			        throw new InvalidOperationException("Could not authenticate token for bulk insert, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration", e);
+		        }
 
-            operationRequest = CreateOperationRequest(operationUrl, token);
+		        operationRequest = CreateOperationRequest(operationUrl, token);
 
-            var stream = await operationRequest.GetRawRequestStream();
-
-#if !SILVERLIGHT
-            try
-            {
-                if (expect100Continue != null)
-                    expect100Continue.Dispose();
-            }
-            catch
-            {
-
-            }
-#endif
-            var cancellationToken = CreateCancellationToken();
+		        stream = await operationRequest.GetRawRequestStream();
+	        }
+	        var cancellationToken = CreateCancellationToken();
             await Task.Factory.StartNew(() => WriteQueueToServer(stream, options, cancellationToken), TaskCreationOptions.LongRunning);
         }
 
@@ -267,11 +245,7 @@ namespace Raven.Client.Document
 
         private Task<RavenJToken> GetOperationStatus(long operationId)
         {
-#if !SILVERLIGHT
-            return new CompletedTask<RavenJToken>(operationClient.GetOperationStatus(operationId));
-#else
-			return operationClient.GetOperationStatusAsync(operationId);
-#endif
+            return operationClient.GetOperationStatusAsync(operationId);
         }
 
         private volatile bool disposed;
@@ -292,7 +266,7 @@ namespace Raven.Client.Document
             long operationId;
 
             using (var response = await operationRequest.RawExecuteRequestAsync())
-            using (var stream = response.GetResponseStream())
+			using (var stream = await response.GetResponseStreamWithHttpDecompression())
             using (var streamReader = new StreamReader(stream))
             {
                 var result = RavenJObject.Load(new JsonTextReader(streamReader));

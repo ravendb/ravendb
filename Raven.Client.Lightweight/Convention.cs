@@ -99,16 +99,6 @@ namespace Raven.Client
 		}
 
 		/// <summary>
-		/// Handles unauthenticated responses, usually by authenticating against the oauth server
-		/// </summary>
-		public Func<HttpWebResponse, OperationCredentials, Action<HttpWebRequest>> HandleUnauthorizedResponse { get; set; }
-
-		/// <summary>
-		/// Handles forbidden responses
-		/// </summary>
-		public Func<HttpWebResponse, Action<HttpWebRequest>> HandleForbiddenResponse { get; set; }
-
-		/// <summary>
 		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
 		/// in async manner
 		/// </summary>

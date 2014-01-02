@@ -77,7 +77,7 @@ namespace Raven.Client.Connection
 			if (RequestTimeout != null)
 				request.Timeout = RequestTimeout.Value;
 
-			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs {Request = request.webRequest, Credentials = createHttpJsonRequestParams.Credentials});
+			ConfigureRequest(createHttpJsonRequestParams.Owner, new WebRequestEventArgs {Client = request.httpClient, Credentials = createHttpJsonRequestParams.Credentials});
 			return request;
 		}
 

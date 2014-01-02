@@ -449,13 +449,6 @@ namespace Raven.Client.Connection
 		/// </summary>
 		IDisposable ForceReadFromMaster();
 
-#if !NETFX_CORE
-
-		/// <summary>
-		/// Get the low level  bulk insert operation
-		/// </summary>
-		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
-#endif
 		/// <summary>
 		/// Gets the transformers from the server
 		/// </summary>

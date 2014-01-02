@@ -398,12 +398,10 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null);
 
-#if SILVERLIGHT
 		/// <summary>
 		/// Get the low level  bulk insert operation
 		/// </summary>
 		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
-#endif
 
 		Task DeleteAsync(string key, Etag etag);
 
