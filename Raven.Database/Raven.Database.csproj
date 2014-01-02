@@ -454,6 +454,9 @@
     <Compile Include="Server\RavenFS\Util\StorageStream.cs" />
     <Compile Include="Server\RavenFS\Util\StorageStreamAccess.cs" />
     <Compile Include="Server\RavenFS\Util\SynchronizingFileStream.cs" />
+    <Compile Include="Server\Responders\AddIncludesCommand.cs" />
+    <Compile Include="Server\Responders\DatabaseSize.cs" />
+    <Compile Include="Server\Responders\Debugging\ExecutingQueryInfo.cs" />
     <Compile Include="Server\Security\Authentication.cs" />
     <Compile Include="Server\Security\AuthenticationForCommercialUseOnly.cs" />
     <Compile Include="Extensions\ConcurrentQueueExtensions.cs" />
