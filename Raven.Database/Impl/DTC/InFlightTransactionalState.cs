@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading;
 using System.Transactions;
 using Raven.Abstractions;
@@ -106,6 +107,9 @@ namespace Raven.Database.Impl.DTC
 		{
 			ChangedDoc existing;
 			if (changedInTransaction.TryGetValue(key, out existing) == false || (tx != null && tx.Id == existing.transactionId))
+				return null;
+
+			if (currentlyCommittingTransaction.Value == existing.transactionId)
 				return null;
 
 			TransactionState value;
