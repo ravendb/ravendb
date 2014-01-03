@@ -92,19 +92,5 @@
 
             return p;
         }
-
-	    public Page GetPage(long p)
-	    {
-	        Page page;
-	        if (_pagesByNum.TryGetValue(p, out page))
-	            return page;
-	        return null;
-	    }
-
-        public void Clear()
-        {
-            _pagesByNum.Clear();
-            Pages.Clear();
-        }
     }
 }
