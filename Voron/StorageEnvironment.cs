@@ -349,11 +349,9 @@ namespace Voron
             bool txLockTaken = false;
             try
             {
-                long txId = _transactionsCounter;
                 if (flags == (TransactionFlags.ReadWrite))
                 {
                     _txWriter.Wait();
-                    txId = _transactionsCounter + 1;
                     txLockTaken = true;
 
 					if (_endOfDiskSpace != null)
@@ -368,25 +366,30 @@ namespace Voron
                     }
                 }
 
+                long txId;
+                Transaction tx;
+
                 _txCommit.EnterReadLock();
                 try
                 {
-                    var tx = new Transaction(this, txId, flags, _freeSpaceHandling);
-                    _activeTransactions.TryAdd(txId, tx);
-                    var state = _dataPager.TransactionBegan();
-                    tx.AddPagerState(state);
-
-                    if (flags == TransactionFlags.ReadWrite)
-                    {
-                        tx.AfterCommit = TransactionAfterCommit;
-                    }
-
-                    return tx;
+                    txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
+                    tx = new Transaction(this, txId, flags, _freeSpaceHandling);
                 }
                 finally
                 {
                     _txCommit.ExitReadLock();
                 }
+
+                _activeTransactions.TryAdd(txId, tx);
+                var state = _dataPager.TransactionBegan();
+                tx.AddPagerState(state);
+
+                if (flags == TransactionFlags.ReadWrite)
+                {
+                    tx.AfterCommit = TransactionAfterCommit;
+                }
+
+                return tx;
             }
             catch (Exception)
             {
