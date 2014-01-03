@@ -105,6 +105,7 @@
     <TypeScriptCompile Include="App\viewmodels\databaseSettings.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteDatabaseConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteDocuments.ts" />
+    <TypeScriptCompile Include="App\viewmodels\deleteIndexesConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\editDocument.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexErrors.ts" />
     <TypeScriptCompile Include="App\viewmodels\logs.ts" />
@@ -124,6 +125,7 @@
     <Content Include="App\views\createDatabase.html" />
     <Content Include="App\views\databaseSettings.html" />
     <Content Include="App\views\deleteDatabaseConfirm.html" />
+    <Content Include="App\views\deleteIndexesConfirm.html" />
     <Content Include="App\views\dialog.html" />
     <Content Include="App\views\indexErrors.html" />
     <Content Include="App\views\logs.html" />

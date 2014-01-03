@@ -16,10 +16,14 @@ class index {
     createdTimestamp: string;
     lastIndexingTime: string;
     isOnRam: boolean;
-    lockMode = ko.observable<string>();
     forEntityName: string[];
     performance: indexPerformanceDto[];
     docsCount: number;
+
+    lockMode = ko.observable<string>();
+    isIdle = ko.observable(false);
+    isAbandoned = ko.observable(false);
+    isDisabled = ko.observable(false);
 
     constructor(dto: indexStatisticsDto) {
         this.createdTimestamp = dto.CreatedTimestamp;
@@ -43,6 +47,10 @@ class index {
         this.reduceIndexingErrors = dto.ReduceIndexingErrors;
         this.reduceIndexingSuccesses = dto.ReduceIndexingSuccesses;
         this.touchCount = dto.TouchCount;
+
+        this.isAbandoned(this.priority && this.priority.indexOf("Abandoned") !== -1);
+        this.isDisabled(this.priority && this.priority.indexOf("Disabled") !== -1);
+        this.isIdle(this.priority && this.priority.indexOf("Idle") !== -1);
     }
 }
 

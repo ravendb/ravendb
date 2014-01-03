@@ -3,7 +3,8 @@ import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
 import index = require("models/index");
 import appUrl = require("common/appUrl");
 import saveIndexLockModeCommand = require("commands/saveIndexLockModeCommand");
-import deleteIndexCommand = require("commands/deleteIndexCommand");
+import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
+import app = require("durandal/app");
 
 class indexes extends activeDbViewModelBase {
 
@@ -61,22 +62,43 @@ class indexes extends activeDbViewModelBase {
     }
 
     deleteIdleIndexes() {
-        // TODO: implement
+        var idleIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Idle") !== -1);
+        this.promptDeleteIndexes(idleIndexes);
     }
 
     deleteDisabledIndexes() {
-        // TODO: implement
+        var abandonedIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Disabled") !== -1);
+        this.promptDeleteIndexes(abandonedIndexes);
     }
 
     deleteAbandonedIndexes() {
-        // TODO: implement
+        var abandonedIndexes = this.getAllIndexes().filter(i => i.priority && i.priority.indexOf("Abandoned") !== -1);
+        this.promptDeleteIndexes(abandonedIndexes);
+    }
+
+    deleteAllIndexes() {
+        this.promptDeleteIndexes(this.getAllIndexes());
+    }
+
+    promptDeleteIndexes(indexes: index[]) {
+        if (indexes.length > 0) {
+            var deleteIndexesVm = new deleteIndexesConfirm(indexes, this.activeDatabase());
+            app.showDialog(deleteIndexesVm);
+            deleteIndexesVm.deleteTask.done(() => this.removeIndexesFromAllGroups(indexes));
+        }
+    }
+
+    removeIndexesFromAllGroups(indexes: index[]) {
+        this.indexGroups().forEach(g => {
+            g.indexes.removeAll(indexes);
+        });
     }
 
     unlockIndex(i: index) {
         this.updateIndexLockMode(i, "Unlock");
     }
 
-    lockIndex(i: index) {
+    lockIndex(i: index) { 
         this.updateIndexLockMode(i, "LockedIgnore");
     }
 
@@ -96,6 +118,12 @@ class indexes extends activeDbViewModelBase {
                 .execute()
                 .fail(() => i.lockMode(originalLockMode));
         }
+    }
+
+    getAllIndexes(): index[]{
+        var all: index[] = [];
+        this.indexGroups().forEach(g => all.pushAll(g.indexes));
+        return all.distinct();
     }
 }
 

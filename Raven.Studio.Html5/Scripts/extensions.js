@@ -170,4 +170,17 @@ arrayPrototype.count = function (filter) {
 
     return self.length;
 };
+
+// Array.count
+arrayPrototype.distinct = function () {
+    var distinctElements = [];
+    for (var i = 0; i < this.length; i++) {
+        var element = this[i];
+        if (!distinctElements.contains(element)) {
+            distinctElements.push(element);
+        }
+    }
+
+    return distinctElements;
+};
 //# sourceMappingURL=extensions.js.map
