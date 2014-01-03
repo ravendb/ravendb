@@ -176,7 +176,7 @@ namespace Voron
 
         public long OldestTransaction
         {
-            get { return _activeTransactions.Keys.OrderBy(x => x).FirstOrDefault(); }
+            get { return Math.Min(_activeTransactions.Keys.OrderBy(x => x).FirstOrDefault(), _transactionsCounter); }
         }
 
         public IEnumerable<Tree> Trees
