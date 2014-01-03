@@ -175,15 +175,22 @@ namespace Voron.Impl
 			return _journal.ReadPage(this, p) ?? _dataPager.Read(p);
 		}
 
-		public Page GetReadOnlyPage(long n)
+		public Page GetReadOnlyPage(long pageNumber)
 		{
 			PageFromScratchBuffer value;
-			if (_scratchPagesTable.TryGetValue(n, out value))
+		    Page p;
+			if (_scratchPagesTable.TryGetValue(pageNumber, out value))
 			{
-				return _env.ScratchBufferPool.ReadPage(value.PositionInScratchBuffer);
+			    p = _env.ScratchBufferPool.ReadPage(value.PositionInScratchBuffer);
+			}
+			else
+			{
+			    p =  _journal.ReadPage(this, pageNumber) ?? _dataPager.Read(pageNumber);
 			}
 
-			return _journal.ReadPage(this, n) ?? _dataPager.Read(n);
+            Debug.Assert(p != null && p.PageNumber == pageNumber);
+
+		    return p;
 		}
 
 		public Page AllocatePage(int numberOfPages, long? pageNumber = null)
