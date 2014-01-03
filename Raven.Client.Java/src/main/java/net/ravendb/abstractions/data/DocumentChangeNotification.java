@@ -6,6 +6,8 @@ import net.ravendb.abstractions.basic.EventArgs;
 public class DocumentChangeNotification extends EventArgs {
   private DocumentChangeTypes type;
   private String id;
+  private String collectionName;
+  private String typeName;
   private Etag etag;
   private String message;
 
@@ -22,6 +24,25 @@ public class DocumentChangeNotification extends EventArgs {
 
   public void setType(DocumentChangeTypes type) {
     this.type = type;
+  }
+
+  public String getCollectionName() {
+    return collectionName;
+  }
+
+
+  public void setCollectionName(String collectionName) {
+    this.collectionName = collectionName;
+  }
+
+
+  public String getTypeName() {
+    return typeName;
+  }
+
+
+  public void setTypeName(String typeName) {
+    this.typeName = typeName;
   }
 
   public String getId() {

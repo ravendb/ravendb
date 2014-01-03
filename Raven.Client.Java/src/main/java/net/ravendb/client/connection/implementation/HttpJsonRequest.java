@@ -16,6 +16,7 @@ import net.ravendb.abstractions.closure.Action1;
 import net.ravendb.abstractions.closure.Action3;
 import net.ravendb.abstractions.closure.Delegates;
 import net.ravendb.abstractions.connection.HttpRequestHelper;
+import net.ravendb.abstractions.connection.OperationCredentials;
 import net.ravendb.abstractions.data.Constants;
 import net.ravendb.abstractions.data.HttpMethods;
 import net.ravendb.abstractions.exceptions.BadRequestException;
@@ -34,7 +35,7 @@ import net.ravendb.client.connection.ServerClient.HandleReplicationStatusChanges
 import net.ravendb.client.connection.profiling.IHoldProfilingInformation;
 import net.ravendb.client.connection.profiling.RequestResultArgs;
 import net.ravendb.client.connection.profiling.RequestStatus;
-import net.ravendb.client.document.DocumentConvention;
+import net.ravendb.client.document.Convention;
 import net.ravendb.client.document.FailoverBehaviorSet;
 import net.ravendb.java.http.client.GzipHttpEntity;
 import net.ravendb.java.http.client.HttpEval;
@@ -78,7 +79,7 @@ public class HttpJsonRequest {
   private CachedRequest cachedRequestDetails;
   private final HttpJsonRequestFactory factory;
   private final IHoldProfilingInformation owner;
-  private final DocumentConvention conventions;
+  private final Convention conventions;
   private String postedData;
   private final StopWatch sp;
   boolean shouldCacheRequest;
@@ -86,6 +87,8 @@ public class HttpJsonRequest {
   private boolean disabledAuthRetries;
   private String primaryUrl;
   private String operationUrl;
+  private final OperationCredentials _credentials;
+
   private Map<String, String> responseHeaders;
   private boolean skipServerCheck;
   private int contentLength = -1;
@@ -118,6 +121,7 @@ public class HttpJsonRequest {
     this.factory = factory;
     this.owner = requestParams.getOwner();
     this.conventions = requestParams.getConvention();
+    this._credentials = requestParams.getCredentials();
     this.method = requestParams.getMethod();
     this.webRequest = createWebRequest(requestParams.getUrl(), requestParams.getMethod());
     if (factory.isDisableRequestCompression() == false && requestParams.isDisableRequestCompression() == false) {
@@ -337,7 +341,7 @@ public class HttpJsonRequest {
   private boolean handleUnauthorizedResponse(HttpResponse unauthorizedResponse) {
     if (conventions.getHandleUnauthorizedResponse() == null) return false;
 
-    Action1<HttpRequest> handleUnauthorizedResponse = conventions.handleUnauthorizedResponse(unauthorizedResponse);
+    Action1<HttpRequest> handleUnauthorizedResponse = conventions.handleUnauthorizedResponse(unauthorizedResponse, _credentials);
     if (handleUnauthorizedResponse == null) return false;
 
     recreateWebRequest(handleUnauthorizedResponse);

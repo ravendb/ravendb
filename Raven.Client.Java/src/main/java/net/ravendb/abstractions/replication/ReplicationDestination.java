@@ -1,5 +1,7 @@
 package net.ravendb.abstractions.replication;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
+
 public class ReplicationDestination {
 
   private String url;
@@ -112,5 +114,48 @@ public class ReplicationDestination {
     }
 
   }
+
+  @Override
+  public int hashCode() {
+    return new HashCodeBuilder().append(apiKey).append(clientVisibleUrl)
+      .append(database).append(disabled).append(domain)
+      .append(ignoredClient).append(ignoredClient).append(password).append(transitiveReplicationBehavior).append(username).hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null) return false;
+    if (getClass() != obj.getClass()) return false;
+    ReplicationDestination other = (ReplicationDestination) obj;
+    if (apiKey == null) {
+      if (other.apiKey != null) return false;
+    } else if (!apiKey.equals(other.apiKey)) return false;
+    if (clientVisibleUrl == null) {
+      if (other.clientVisibleUrl != null) return false;
+    } else if (!clientVisibleUrl.equals(other.clientVisibleUrl)) return false;
+    if (database == null) {
+      if (other.database != null) return false;
+    } else if (!database.equals(other.database)) return false;
+    if (disabled == null) {
+      if (other.disabled != null) return false;
+    } else if (!disabled.equals(other.disabled)) return false;
+    if (domain == null) {
+      if (other.domain != null) return false;
+    } else if (!domain.equals(other.domain)) return false;
+    if (ignoredClient == null) {
+      if (other.ignoredClient != null) return false;
+    } else if (!ignoredClient.equals(other.ignoredClient)) return false;
+    if (password == null) {
+      if (other.password != null) return false;
+    } else if (!password.equals(other.password)) return false;
+    if (transitiveReplicationBehavior != other.transitiveReplicationBehavior) return false;
+    if (username == null) {
+      if (other.username != null) return false;
+    } else if (!username.equals(other.username)) return false;
+    return true;
+  }
+
+
 
 }

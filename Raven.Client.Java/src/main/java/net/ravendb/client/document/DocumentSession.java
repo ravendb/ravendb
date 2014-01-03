@@ -24,6 +24,8 @@ import net.ravendb.abstractions.closure.Function0;
 import net.ravendb.abstractions.data.BatchResult;
 import net.ravendb.abstractions.data.Constants;
 import net.ravendb.abstractions.data.Etag;
+import net.ravendb.abstractions.data.FacetQuery;
+import net.ravendb.abstractions.data.FacetResults;
 import net.ravendb.abstractions.data.GetRequest;
 import net.ravendb.abstractions.data.GetResponse;
 import net.ravendb.abstractions.data.IndexQuery;
@@ -38,6 +40,7 @@ import net.ravendb.client.IDocumentQuery;
 import net.ravendb.client.IDocumentSessionImpl;
 import net.ravendb.client.ISyncAdvancedSessionOperation;
 import net.ravendb.client.LoadConfigurationFactory;
+import net.ravendb.client.RavenPagingInformation;
 import net.ravendb.client.RavenQueryHighlightings;
 import net.ravendb.client.RavenQueryStatistics;
 import net.ravendb.client.connection.IDatabaseCommands;
@@ -233,7 +236,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     incrementRequestCount();
 
     MultiLoadResult multiLoadResult = getDatabaseCommands().get(ids, new String[] { }, transformer, queryInputs);
-    return new LoadTransformerOperation(this, transformer, ids.length).complete(clazz, multiLoadResult);
+    return new LoadTransformerOperation(this, transformer, ids).complete(clazz, multiLoadResult);
   }
 
 
@@ -525,6 +528,7 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return new StreamIterator<>(query, iterator);
   }
 
+
   private static class StreamIterator<T> implements Iterator<StreamResult<T>> {
 
     private Iterator<RavenJObject> innerIterator;
@@ -601,8 +605,18 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
 
   @Override
   public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize) {
-    Iterator<RavenJObject> iterator = databaseCommands.streamDocs(fromEtag, startsWith, matches, start, pageSize);
+    return stream(entityClass, fromEtag, startsWith, matches, start, pageSize, null);
+  }
+
+  @Override
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize, RavenPagingInformation pagingInformation) {
+    Iterator<RavenJObject> iterator = databaseCommands.streamDocs(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation);
     return new SimpleSteamIterator<>(iterator, entityClass);
+  }
+
+  @Override
+  public FacetResults[] multiFacetedSearch(FacetQuery...facetQueries) {
+    return databaseCommands.getMultiFacets(facetQueries);
   }
 
   private class SimpleSteamIterator<T> implements Iterator<StreamResult<T>> {
@@ -827,19 +841,22 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
 
   @Override
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize) {
-    return loadStartingWith(clazz, keyPrefix, matches, start, 25, null);
+    return loadStartingWith(clazz, keyPrefix, matches, start, 25, null, null);
   }
 
   @Override
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize, String exclude) {
-    List<JsonDocument> results = getDatabaseCommands().startsWith(keyPrefix, matches, start, pageSize, false, exclude);
+    return loadStartingWith(clazz, keyPrefix, matches, start, pageSize, exclude, null);
+  }
+
+  @Override
+  public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize, String exclude, RavenPagingInformation pagingInformation) {
+    List<JsonDocument> results = getDatabaseCommands().startsWith(keyPrefix, matches, start, pageSize, false, exclude, pagingInformation);
     for (JsonDocument doc: results) {
       trackEntity(clazz, doc);
     }
     return results.toArray((T[])Array.newInstance(clazz, 0));
   }
-
-
 
 
 }

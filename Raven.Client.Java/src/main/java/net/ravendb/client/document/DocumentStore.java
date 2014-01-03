@@ -18,6 +18,7 @@ import net.ravendb.abstractions.closure.Action1;
 import net.ravendb.abstractions.closure.Function0;
 import net.ravendb.abstractions.closure.Function1;
 import net.ravendb.abstractions.closure.Function4;
+import net.ravendb.abstractions.connection.OperationCredentials;
 import net.ravendb.abstractions.connection.WebRequestEventArgs;
 import net.ravendb.abstractions.data.BulkInsertOptions;
 import net.ravendb.abstractions.data.ConnectionStringParser;
@@ -33,11 +34,12 @@ import net.ravendb.client.IDocumentStore;
 import net.ravendb.client.changes.IDatabaseChanges;
 import net.ravendb.client.changes.RemoteDatabaseChanges;
 import net.ravendb.client.connection.IDatabaseCommands;
+import net.ravendb.client.connection.OperationMetadata;
 import net.ravendb.client.connection.ReplicationInformer;
 import net.ravendb.client.connection.ServerClient;
 import net.ravendb.client.connection.implementation.HttpJsonRequestFactory;
 import net.ravendb.client.connection.profiling.RequestResultArgs;
-import net.ravendb.client.delegates.HttpResponseHandler;
+import net.ravendb.client.delegates.HttpResponseWithMetaHandler;
 import net.ravendb.client.extensions.MultiDatabase;
 import net.ravendb.client.listeners.IDocumentConflictListener;
 import net.ravendb.client.util.EvictItemsFromCacheBasedOnChanges;
@@ -311,7 +313,7 @@ public class DocumentStore extends DocumentStoreBase {
 
       initialized = true;
 
-      if (StringUtils.isNotEmpty(defaultDatabase)) {
+      if (StringUtils.isNotEmpty(defaultDatabase) && !defaultDatabase.equals(Constants.SYSTEM_DATABASE)) { //system database exists anyway
         getDatabaseCommands().forSystemDatabase().getGlobalAdmin().ensureDatabaseExists(defaultDatabase, true);
       }
     } catch (Exception e) {
@@ -352,7 +354,7 @@ public class DocumentStore extends DocumentStoreBase {
       return ; // already setup by the user
     }
 
-    final BasicAuthenticator basicAuthenticator = new BasicAuthenticator(jsonRequestFactory.getHttpClient(), apiKey, jsonRequestFactory.isEnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers());
+    final BasicAuthenticator basicAuthenticator = new BasicAuthenticator(jsonRequestFactory.getHttpClient(), jsonRequestFactory.isEnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers());
     final SecuredAuthenticator securedAuthenticator = new SecuredAuthenticator(apiKey, jsonRequestFactory);
 
     jsonRequestFactory.addConfigureRequestEventHandler(new EventHandler<WebRequestEventArgs>() {
@@ -368,17 +370,17 @@ public class DocumentStore extends DocumentStoreBase {
       }
     });
 
-    conventions.setHandleUnauthorizedResponse(new HttpResponseHandler() {
+    conventions.setHandleUnauthorizedResponse(new HttpResponseWithMetaHandler() {
       @SuppressWarnings("null")
       @Override
-      public Action1<HttpRequest> handle(HttpResponse response) {
+      public Action1<HttpRequest> handle(HttpResponse response, OperationCredentials credentials) {
         Header oauthSourceHeader = response.getFirstHeader("OAuth-Source");
         String oauthSource = null;
         if (oauthSourceHeader != null) {
           oauthSource = oauthSourceHeader.getValue();
         }
         if (StringUtils.isNotEmpty(oauthSource) && !oauthSource.toLowerCase().endsWith("/OAuth/API-Key".toLowerCase())) {
-          return basicAuthenticator.doOAuthRequest(oauthSource);
+          return basicAuthenticator.doOAuthRequest(oauthSource, credentials.getApiKey());
         }
         if (apiKey == null) {
           //AssertUnauthorizedCredentialSupportWindowsAuth(response);
@@ -387,7 +389,7 @@ public class DocumentStore extends DocumentStoreBase {
         if (StringUtils.isEmpty(oauthSource)) {
           oauthSource = getUrl() + "/OAuth/API-Key";
         }
-        return securedAuthenticator.doOAuthRequest(oauthSource);
+        return securedAuthenticator.doOAuthRequest(oauthSource, credentials.getApiKey());
       }
     });
   }
@@ -417,7 +419,7 @@ public class DocumentStore extends DocumentStoreBase {
           databaseUrl += "/databases/" + defaultDatabase;
         }
 
-        return new ServerClient(databaseUrl, conventions,
+        return new ServerClient(databaseUrl, conventions, apiKey,
           new ReplicationInformerGetter()
         , null, jsonRequestFactory, currentSessionId.get(), listeners.getConflictListeners().toArray(new IDocumentConflictListener[0]));
       }
@@ -454,12 +456,12 @@ public class DocumentStore extends DocumentStoreBase {
     }
 
     if (dbName.equals(getDefaultDatabase())) {
-      if (failoverServers.isSetForDefaultDatabase() && informer.getFailoverUrls() == null) {
-        informer.setFailoverUrls(failoverServers.getForDefaultDatabase());
+      if (failoverServers.isSetForDefaultDatabase() && informer.getFailoverServers() == null) {
+        informer.setFailoverServers(failoverServers.getForDefaultDatabase());
       }
     } else {
-      if (failoverServers.isSetForDatabase(dbName) && informer.getFailoverUrls() == null) {
-        informer.setFailoverUrls(failoverServers.getForDatabase(dbName));
+      if (failoverServers.isSetForDatabase(dbName) && informer.getFailoverServers() == null) {
+        informer.setFailoverServers(failoverServers.getForDatabase(dbName));
       }
     }
 
@@ -531,7 +533,7 @@ public class DocumentStore extends DocumentStoreBase {
     }
     final String databaseClousure = database;
 
-    return new RemoteDatabaseChanges(dbUrl,
+    return new RemoteDatabaseChanges(dbUrl, apiKey,
       jsonRequestFactory,
       getConventions(),
       getReplicationInformerForDatabase(database),
@@ -540,9 +542,9 @@ public class DocumentStore extends DocumentStoreBase {
       public void apply() {
         databaseChanges.remove(databaseClousure);
       }
-    }, new Function4<String, Etag, String[], String, Boolean>() {
+    }, new Function4<String, Etag, String[], OperationMetadata, Boolean>() {
       @Override
-      public Boolean apply(String key, Etag etag, String[] conflictedIds, String opUrl) {
+      public Boolean apply(String key, Etag etag, String[] conflictedIds, OperationMetadata opUrl) {
         return getDatabaseCommands().tryResolveConflictByUsingRegisteredListeners(key, etag, conflictedIds, opUrl);
       }
     }

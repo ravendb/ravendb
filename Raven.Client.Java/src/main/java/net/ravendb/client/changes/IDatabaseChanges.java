@@ -28,6 +28,14 @@ public interface IDatabaseChanges {
 
   public IObservable<DocumentChangeNotification> forDocumentsStartingWith(String docIdPrefix);
 
+  public IObservable<DocumentChangeNotification> forDocumentsInCollection(String collectionName);
+
+  public IObservable<DocumentChangeNotification> forDocumentsInCollection(Class<?> clazz);
+
+  public IObservable<DocumentChangeNotification> forDocumentsOfType(String typeName);
+
+  public IObservable<DocumentChangeNotification> forDocumentsOfType(Class<?> clazz);
+
   public IObservable<ReplicationConflictNotification> forAllReplicationConflicts();
 
   public IObservable<BulkInsertChangeNotification> forBulkInsert(UUID operationId);

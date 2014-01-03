@@ -44,6 +44,7 @@ public class IncludesUtil {
       break;
     case STRING:
       loadId.apply(token.value(String.class), prefix);
+      loadId.apply(token.value(String.class), null);
       break;
     case INTEGER:
       loadId.apply(token.value(Long.class).toString(), prefix);

@@ -63,7 +63,7 @@ public abstract class RavenDBAwareTests {
 
   public final static int DEFAULT_RUNNER_PORT = 8585;
 
-  public final static boolean RUN_IN_MEMORY = true;
+  public final static boolean RUN_IN_MEMORY = false;
 
   public final static String DEFAULT_SERVER_RUNNER_URL = "http://" + DEFAULT_HOST + ":" + DEFAULT_RUNNER_PORT + "/servers";
 
@@ -100,7 +100,7 @@ public abstract class RavenDBAwareTests {
 
     replicationInformer = new ReplicationInformer(convention);
 
-    serverClient = new ServerClient(DEFAULT_SERVER_URL_1, convention,
+    serverClient = new ServerClient(DEFAULT_SERVER_URL_1, convention, null,
       new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
       UUID.randomUUID(), new IDocumentConflictListener[0]);
 

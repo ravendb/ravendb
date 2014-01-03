@@ -29,6 +29,7 @@ public class Attachment {
 
   /**
    * @return the size
+   * The max size of an attachment can be 2GB.
    */
   public int getSize() {
     return size;

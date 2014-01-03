@@ -4,6 +4,8 @@ import java.util.Iterator;
 
 import net.ravendb.abstractions.basic.Reference;
 import net.ravendb.abstractions.data.Etag;
+import net.ravendb.abstractions.data.FacetQuery;
+import net.ravendb.abstractions.data.FacetResults;
 import net.ravendb.abstractions.data.QueryHeaderInformation;
 import net.ravendb.abstractions.data.StreamResult;
 import net.ravendb.client.document.batches.IEagerSessionOperations;
@@ -70,6 +72,18 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @return
    */
   public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize, String exclude);
+
+  /**
+   * Load documents with the specified key prefix
+   * @param clazz
+   * @param keyPrefix
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public <T> T[] loadStartingWith(Class<T> clazz, String keyPrefix, String matches, int start, int pageSize, String exclude, RavenPagingInformation pagingInformation);
+
 
 
   /**
@@ -141,6 +155,7 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @return
    */
   public <T> Iterator<StreamResult<T>> stream(IRavenQueryable<T> query, Reference<QueryHeaderInformation> queryHeaderInformation);
+
 
   /**
    * Stream the results on the query to the client, converting them to
@@ -224,5 +239,25 @@ public interface ISyncAdvancedSessionOperation extends IAdvancedDocumentSessionO
    * @return
    */
   public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize);
+
+  /**
+   * Stream the results on the query to the client, converting them to
+   * Java types along the way.
+   * Does NOT track the entities in the session, and will not includes changes there when saveChanges() is called
+   * @param fromEtag
+   * @param startsWith
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public <T> Iterator<StreamResult<T>> stream(Class<T> entityClass, Etag fromEtag, String startsWith, String matches, int start, int pageSize, RavenPagingInformation pagingInformation);
+
+  /**
+   *
+   * @param FacetQuery
+   * @return
+   */
+  public FacetResults[] multiFacetedSearch(FacetQuery... queries);
 
 }
