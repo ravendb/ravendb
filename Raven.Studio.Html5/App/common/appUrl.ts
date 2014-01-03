@@ -13,6 +13,7 @@ class appUrl {
 	private static currentDbComputeds: computedAppUrls = {
         documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         indexes: ko.computed(() => appUrl.forIndexes(appUrl.currentDatabase())),
+        query: ko.computed(() => appUrl.forQuery(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
         settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase())),
         logs: ko.computed(() => appUrl.forLogs(appUrl.currentDatabase())),
@@ -77,6 +78,11 @@ class appUrl {
     static forIndexes(db: database = appUrl.getDatabase()): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#indexes?" + databasePart;
+    }
+
+    static forQuery(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#query?" + databasePart;
     }
 
     static forDatabaseQuery(db: database) {

@@ -2,6 +2,7 @@
 interface computedAppUrls {
     documents: KnockoutComputed<string>;
     indexes: KnockoutComputed<string>;
+    query: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     settings: KnockoutComputed<string>;
     logs: KnockoutComputed<string>;

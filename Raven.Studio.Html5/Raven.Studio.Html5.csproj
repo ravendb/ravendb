@@ -74,6 +74,7 @@
     <TypeScriptCompile Include="App\commands\deleteCollectionCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDatabaseCommand.ts" />
     <TypeScriptCompile Include="App\commands\deleteDocumentsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\deleteIndexCommand.ts" />
     <TypeScriptCompile Include="App\commands\getAlertsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getAllDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getApiKeysCommand.ts" />
@@ -90,10 +91,12 @@
     <TypeScriptCompile Include="App\commands\getSystemDocumentsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getUserInfoCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveAlertsCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveIndexLockModeCommand.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
     <TypeScriptCompile Include="App\models\apiKeyDatabase.ts" />
+    <TypeScriptCompile Include="App\models\index.ts" />
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyDocuments.ts" />

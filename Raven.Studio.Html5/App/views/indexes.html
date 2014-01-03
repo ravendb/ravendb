@@ -26,8 +26,8 @@
 
 <div class="btn-toolbar" role="toolbar">
     <div class="btn-group">
-        <button type="button" class="btn btn-primary" data-bind="click: navigateToNewIndex"><i class="fa fa-plus"></i> New Index</button>
-        <button type="button" class="btn btn-primary" data-bind="click: navigateToQuery"><i class="fa fa-search"></i> Query</button>
+        <button type="button" class="btn btn-primary"><i class="fa fa-plus"></i> New Index</button>
+        <a class="btn btn-primary" data-bind="attr: { href: queryUrl }"><i class="fa fa-search"></i> Query</a>
         <div class="btn-group">
             <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
                 Recent Queries <span class="caret"></span>
@@ -69,12 +69,14 @@
             <div class="index-group-content panel-collapse collapse" data-bind="attr: { id: 'indexCollapse' + $index() }">
                 <div class="panel panel-default" style="overflow: visible;">
                     <div class="panel-body" data-bind="foreach: indexes">
-                        <div class="panel panel-default" style="overflow: visible;">
+                        <div class="panel panel-default">
                             <div class="panel-body">
-                                <span data-bind="text: Name"></span>
-                                <span class="text-muted" data-bind="text: '(' + DocsCount + ')'" title="The number of documents affected by this index"></span>
-                                <div class="pull-right">
-                                    <div class="btn-group">
+                                <h4 class="pull-left">
+                                    <span data-bind="text: name"></span>
+                                    <small class="text-muted" data-bind="text: '(' + docsCount + ')'" title="The number of documents affected by this index"></small>
+                                </h4>
+                                <div class="pull-right" style="display: inline-block">
+                                    <!--<div class="btn-group">
                                         <button type="button" class="btn btn-default dropdown-toggle btn-sm" data-toggle="dropdown" title="Change index lock">
                                             <i class="fa fa-lock"></i> <span class="caret"></span>
                                         </button>
@@ -83,8 +85,24 @@
                                             <li><a href="#"><i class="fa fa-lock"></i> Locked (Ignore)</a></li>
                                             <li><a href="#"><i class="fa fa-lock text-danger"></i> Locked (Error)</a></li>
                                         </ul>
+                                    </div>-->
+
+                                    <div class="btn-group">
+                                        <label class="btn btn-default" data-bind="click: $root.unlockIndex.bind($root, $data), css: { active: lockMode() === 'Unlock' }" title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
+                                            <i class="fa fa-unlock"></i>
+                                            Unlocked
+                                        </label>
+                                        <label class="btn btn-default" data-bind="click: $root.lockIndex.bind($root, $data), css: { active: lockMode() === 'LockedIgnore' }" title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored.">
+                                            <i class="fa fa-lock"></i>
+                                            Locked
+                                        </label>
+                                        <label class="btn btn-default" data-bind="click: $root.lockErrorIndex.bind($root, $data), css: { active: lockMode() === 'LockedError' }" title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it.">
+                                            <i class="fa fa-lock text-danger"></i>
+                                            Locked (Error)
+                                        </label>
                                     </div>
-                                    <button class="btn btn-default btn-sm">
+
+                                    <button class="btn btn-primary" title="Edit the index">
                                         <i class="fa fa-pencil"></i>
                                     </button>
                                 </div>
