@@ -1,83 +1,96 @@
-/// <reference path="./typings/knockout/knockout.d.ts" />
+interface KnockoutObservable<T> {
+    where(predicate: (item: T) => boolean): KnockoutObservable<string>;
+    throttle(throttleTimeInMs: number): KnockoutObservable<T>;
+    select<TReturn>(selector: (item: any) => any): KnockoutObservable<TReturn>;
+    distinctUntilChanged(): KnockoutObservable<T>;
+    toggle(): KnockoutObservable<T>;
+}
 
-var subscribableFn = ko.subscribable.fn;
-var observableArrayFn = ko.observableArray.fn;
+interface KnockoutObservableArray<T> {
+    pushAll(items: T[]): number;
+    contains(item: T): boolean;
+    first(filter?: (item: T) => boolean): T;
+    last(filter?: (item) => boolean): T;
+}
+
+interface Function {
+    memoize(thisArg: any): Function;
+}
+
+var subscribableFn: any = ko.subscribable.fn;
+var observableArrayFn: any = ko.observableArray.fn;
 
 // observable.where
-subscribableFn.where = function (predicate) {
-    var observable = this;
+subscribableFn.where = function (predicate: (item) => boolean) {
+    var observable: KnockoutObservable<any> = this;
     var matches = ko.observable();
-    observable.subscribe(function (val) {
+    observable.subscribe(val => {
         if (predicate(val)) {
             matches(val);
         }
     });
     return matches;
-};
+}
 
 // observable.distinctUntilChanged
 subscribableFn.distinctUntilChanged = function () {
-    var observable = this;
+    var observable: KnockoutObservable<any> = this;
     var matches = ko.observable();
     var lastMatch = observable();
-    observable.subscribe(function (val) {
+    observable.subscribe(val => {
         if (val !== lastMatch) {
             lastMatch = val;
             matches(val);
         }
     });
     return matches;
-};
+}
 
 // observable.throttled
-subscribableFn.throttle = function (throttleTimeMs) {
+subscribableFn.throttle = function (throttleTimeMs: number) {
     var observable = this;
-    return ko.computed(function () {
-        return observable();
-    }).extend({ throttle: throttleTimeMs });
-};
+    return ko.computed(() => observable()).extend({ throttle: throttleTimeMs });
+}
 
 // observable.select
-subscribableFn.select = function (selector) {
+subscribableFn.select = function (selector: (any) => any) {
     var observable = this;
     var selectedResults = ko.observable();
-    observable.subscribe(function (val) {
-        return selectedResults(selector(val));
-    });
+    observable.subscribe(val => selectedResults(selector(val)));
     return selectedResults;
-};
+}
 
 // observable.toggle
 subscribableFn.toggle = function () {
-    var observable = this;
+    var observable: KnockoutObservable<boolean> = this;
     observable(!observable());
     return observable;
-};
+}
 
 // observableArray.pushAll
-observableArrayFn.pushAll = function (items) {
+observableArrayFn.pushAll = function (items: Array<any>) {
     this.push.apply(this, items);
-};
+}
 
 // observableArray.contains
-observableArrayFn.contains = function (item) {
+observableArrayFn.contains = function (item: any) {
     return this.indexOf(item) !== -1;
-};
+}
 
 // observableArray.first
-observableArrayFn.first = function (filter) {
+observableArrayFn.first = function (filter?: (item) => boolean) {
     return this().first(filter);
-};
+}
 
 // observableArray.last
-observableArrayFn.last = function (filter) {
+observableArrayFn.last = function (filter?: (item) => boolean) {
     return this().last(filter);
-};
+}
 
 // Function.memoize
-var functionPrototype = Function.prototype;
+var functionPrototype: any = Function.prototype;
 functionPrototype.memoize = function (thisVal) {
-    var self = this;
+    var self = this
     var cache = {};
     return function (arg) {
         if (arg in cache) {
@@ -85,25 +98,37 @@ functionPrototype.memoize = function (thisVal) {
         } else {
             return cache[arg] = self.call(thisVal, arg);
         }
-    };
-};
+    }
+}
 
+// Array extensions
+
+interface Array<T> {
+    remove(item: T): number;
+    removeAll(items: T[]): void;
+    first(filter?: (item: T) => boolean): T;
+    last(filter?: (item: T) => boolean): T;
+    pushAll(items: T[]): void;
+    contains(item: T): boolean;
+    count(filter?: (item: T) => boolean): number;
+    distinct(): T[];
+}
 
 // Array.remove
-var arrayPrototype = Array.prototype;
+var arrayPrototype: any = Array.prototype;
 arrayPrototype.remove = function (item) {
-    var self = this;
+    var self: any[] = this;
     var index = self.indexOf(item);
     if (index >= 0) {
         self.splice(index, 1);
     }
     return index;
-};
+}
 
 // Array.removeAll
-arrayPrototype.removeAll = function (items) {
+arrayPrototype.removeAll = function (items: Array<any>) {
     var i = 0;
-    var self = this;
+    var self: Array<any> = this;
     for (var i = self.length - 1; i >= 0 && items.length > 0; i--) {
         var itemsIndex = items.indexOf(self[i]);
         if (itemsIndex >= 0) {
@@ -111,52 +136,54 @@ arrayPrototype.removeAll = function (items) {
             items.splice(itemsIndex);
         }
     }
-};
+}
 
 // Array.first
-arrayPrototype.first = function (filter) {
-    var self = this;
+arrayPrototype.first = function (filter?: (item) => boolean) {
+    var self: any[] = this;
     if (self.length > 0) {
         if (filter) {
             return ko.utils.arrayFirst(self, filter);
-        } else if (self.length > 0) {
+        }
+        else if (self.length > 0) {
             return self[0];
         }
     }
 
     return null;
-};
+}
 
 // Array.last
-arrayPrototype.last = function (filter) {
-    var self = this;
+arrayPrototype.last = function (filter?: (item) => boolean) {
+    var self: any[] = this;
     if (filter) {
         for (var i = self.length - 1; i > 0; i--) {
             if (filter(self[i])) {
                 return self[i];
             }
         }
-    } else if (self.length > 0) {
+    }
+    else if (self.length > 0) {
         return self[self.length - 1];
     }
 
     return null;
-};
+}
 
 // Array.pushAll
-arrayPrototype.pushAll = function (items) {
+arrayPrototype.pushAll = function (items: Array<any>) {
     this.push.apply(this, items);
-};
+}
 
 // Array.contains
-arrayPrototype.contains = function (item) {
-    var self = this;
+arrayPrototype.contains = function (item: any) {
+    var self: any[] = this;
     return self.indexOf(item) !== -1;
-};
+}
 
 // Array.count
-arrayPrototype.count = function (filter) {
-    var self = this;
+arrayPrototype.count = function (filter?: (item) => boolean) {
+    var self: any[] = this;
     if (filter) {
         var matches = 0;
         for (var i = 0; i < self.length; i++) {
@@ -169,7 +196,7 @@ arrayPrototype.count = function (filter) {
     }
 
     return self.length;
-};
+}
 
 // Array.count
 arrayPrototype.distinct = function () {
@@ -182,5 +209,4 @@ arrayPrototype.distinct = function () {
     }
 
     return distinctElements;
-};
-//# sourceMappingURL=extensions.js.map
+}
