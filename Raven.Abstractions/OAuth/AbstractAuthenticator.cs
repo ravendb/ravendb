@@ -12,7 +12,18 @@ namespace Raven.Abstractions.OAuth
 
 		public virtual void ConfigureRequest(object sender, WebRequestEventArgs e)
 		{
-			SetAuthorization(e.Client);
+			SetAuthorization(e);
+		}
+
+		protected void SetAuthorization(WebRequestEventArgs e)
+		{
+			if (string.IsNullOrEmpty(CurrentOauthToken))
+				return;
+
+			if (e.Client != null)
+			{
+				SetAuthorization(e.Client);
+			}
 
 #if !SILVERLIGHT && !NETFX_CORE
 			if (e.Request != null)
@@ -20,14 +31,14 @@ namespace Raven.Abstractions.OAuth
 #endif
 		}
 
-		protected void SetAuthorization(HttpClient httpClient)
+		protected void SetAuthorization(HttpClient e)
 		{
 			if (string.IsNullOrEmpty(CurrentOauthToken))
 				return;
 
 			try
 			{
-				httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CurrentOauthToken);
+				e.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", CurrentOauthToken);
 			}
 			catch (Exception ex)
 			{

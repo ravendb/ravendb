@@ -600,6 +600,9 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
+			if (database == Constants.SystemDatabase)
+				return ForSystemDatabase();
+
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			databaseUrl = databaseUrl + "/databases/" + database + "/";
 			if (databaseUrl == url)
@@ -1716,8 +1719,7 @@ namespace Raven.Client.Connection.Async
 			}
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-
-			var response = await request.RawExecuteRequestAsync();
+			var response = await request.ExecuteRawResponseAsync();
 			queryHeaderInfo.Value = new QueryHeaderInformation
 			{
 				Index = response.Headers.GetFirstValue("Raven-Index"),
@@ -1895,7 +1897,7 @@ namespace Raven.Client.Connection.Async
 
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-			var response = await request.RawExecuteRequestAsync();
+			var response = await request.ExecuteRawResponseAsync();
             return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression(), start, pageSize, pagingInformation);
 		}
 
@@ -2000,9 +2002,8 @@ namespace Raven.Client.Connection.Async
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var createHttpJsonRequestParams =
-				new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention)
-					.AddOperationHeaders(OperationsHeaders);
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention)
+				.AddOperationHeaders(OperationsHeaders);
 			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}

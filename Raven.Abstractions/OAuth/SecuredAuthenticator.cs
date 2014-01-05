@@ -31,7 +31,8 @@ namespace Raven.Abstractions.OAuth
 
 			if (e.Credentials != null && e.Credentials.ApiKey != null)
 			{
-				e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
+				if (e.Client != null)
+					e.Client.DefaultRequestHeaders.Add("Has-Api-Key", "true");
 #if !NETFX_CORE && !SILVERLIGHT
 				if (e.Request != null)
 					e.Request.Headers["Has-Api-Key"] = "true";
