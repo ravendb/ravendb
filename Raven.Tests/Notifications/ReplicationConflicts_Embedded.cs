@@ -91,7 +91,7 @@ namespace Raven.Tests.Notifications
 		}
 
 		[Fact]
-		public void ConflictShouldBeResolvedByRegisiteredConflictListenerWhenNotificationArrives()
+		public void ConflictShouldBeResolvedByRegisteredConflictListenerWhenNotificationArrives()
 		{
 			using (var store1 = CreateEmbeddableStore())
 			using (var store2 = CreateEmbeddableStore())
