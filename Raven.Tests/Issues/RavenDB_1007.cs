@@ -13,6 +13,7 @@ using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using Raven.Tests.Bundles.MoreLikeThis;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -33,7 +34,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = DataDir,
+				DataDirectory = DataDir,				
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 				Settings =
 				{
@@ -50,14 +51,15 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(db);
 
-				db.StartBackup(BackupDir, false, new DatabaseDocument());
+				var databaseDocument = new DatabaseDocument();
+				db.StartBackup(BackupDir, false, databaseDocument);
 				WaitForBackup(db, true);
 
 				db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
 				WaitForIndexing(db);
 
-				db.StartBackup(BackupDir, true, new DatabaseDocument());
+				db.StartBackup(BackupDir, true, databaseDocument);
 				WaitForBackup(db, true);
 
 			}
@@ -79,7 +81,7 @@ namespace Raven.Tests.Issues
 				sb.ToString());
 
 			using (var db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}))
-			{
+			{				
 				db.SpinBackgroundWorkers();
 				QueryResult queryResult;
 				do

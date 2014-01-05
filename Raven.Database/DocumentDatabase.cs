@@ -18,7 +18,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Lucene.Net.Support;
 using Mono.CSharp;
+using NetTopologySuite.Utilities;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
@@ -49,6 +51,7 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
+using Raven.Storage.Esent;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
 using BitConverter = System.BitConverter;
@@ -159,10 +162,12 @@ namespace Raven.Database
 		public TaskScheduler BackgroundTaskScheduler { get { return backgroundTaskScheduler; } }
 
 		private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
-		private System.Threading.Tasks.Task indexingBackgroundTask;
-		private System.Threading.Tasks.Task reducingBackgroundTask;
+		private Task indexingBackgroundTask;
+		private Task reducingBackgroundTask;
 		private readonly TaskScheduler backgroundTaskScheduler;
 		private readonly object idleLocker = new object();
+
+		private readonly ManualResetEventSlim indexStorageInitializedEvent = new ManualResetEventSlim();		
 
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -239,7 +244,9 @@ namespace Raven.Database
 						configuration.DataDirectory,
 						configuration.Container.GetExportedValues<AbstractViewGenerator>(),
 						Extensions);
+					
 					IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
+					indexStorageInitializedEvent.Set();
 
 					CompleteWorkContextSetup();
 
@@ -273,7 +280,7 @@ namespace Raven.Database
 			}
 
 			Encryptor.Initialize(configuration.UseFips);
-			Lucene.Net.Support.Cryptography.FIPSCompliant = configuration.UseFips;
+			Cryptography.FIPSCompliant = configuration.UseFips;
 		}
 
 		private void SecondStageInitialization()
@@ -371,7 +378,7 @@ namespace Raven.Database
 				}
 			}
 		}
-
+		
 		public DatabaseStatistics Statistics
 		{
 			get
@@ -498,7 +505,7 @@ namespace Raven.Database
 			if (disposed)
 				return;
 
-            log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);
+            log.Debug("Start shutdown the following database: {0}", Name ?? Constants.SystemDatabase);			
 
 			var onDisposing = Disposing;
 			if (onDisposing != null)
@@ -521,6 +528,8 @@ namespace Raven.Database
 					lastCollectionEtags.Flush();
 			});
 
+			exceptionAggregator.Execute(() => indexStorageInitializedEvent.Dispose());
+	
 			exceptionAggregator.Execute(() =>
 			{
 				AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
@@ -677,10 +686,10 @@ namespace Raven.Database
 			backgroundWorkersSpun = true;
 
 			workContext.StartIndexing();
-			indexingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+			indexingBackgroundTask = Task.Factory.StartNew(
 				indexingExecuter.Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
-			reducingBackgroundTask = System.Threading.Tasks.Task.Factory.StartNew(
+			reducingBackgroundTask = Task.Factory.StartNew(
 				new ReducingExecuter(workContext).Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
@@ -1359,7 +1368,7 @@ namespace Raven.Database
 					return null;
 				};
 				var stale = false;
-				System.Tuple<DateTime, Etag> indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
+				Tuple<DateTime, Etag> indexTimestamp = Tuple.Create(DateTime.MinValue, Etag.Empty);
 				Etag resultEtag = Etag.Empty;
 				var nonAuthoritativeInformation = false;
 
@@ -1755,10 +1764,13 @@ namespace Raven.Database
 		{
 			//remove the header information in a sync process
 			TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(id));
-			var task = Task.Run(() =>
+			var deleteIndexTask = Task.Run(() =>
 			{
-				// Data can take a while
-				IndexStorage.DeleteIndexData(id);
+				indexStorageInitializedEvent.Wait(); //do not start this until index storage is initialed
+				
+				Debug.Assert(IndexStorage != null);
+				IndexStorage.DeleteIndexData(id); // Data can take a while
+
 				TransactionalStorage.Batch(actions =>
 				{
 					// And Esent data can take a while too
@@ -1771,9 +1783,10 @@ namespace Raven.Database
 			});
 
 			long taskId;
-			AddTask(task, null, out taskId);
+			AddTask(deleteIndexTask, null, out taskId);
+			
 			PendingTaskAndState value;
-			task.ContinueWith(_ => pendingTasks.TryRemove(taskId, out value));
+			deleteIndexTask.ContinueWith(_ => pendingTasks.TryRemove(taskId, out value));
 		}
 
 		public Attachment GetStatic(string name)
@@ -2400,7 +2413,7 @@ namespace Raven.Database
 
 			bool enableIncrementalBackup;
 			if (incrementalBackup &&
-				TransactionalStorage is Raven.Storage.Esent.TransactionalStorage &&
+				TransactionalStorage is TransactionalStorage &&
 				(bool.TryParse(Configuration.Settings["Raven/Esent/CircularLog"], out enableIncrementalBackup) == false || enableIncrementalBackup))
 			{
 				throw new InvalidOperationException("In order to run incremental backups using Esent you must have circular logging disabled");
