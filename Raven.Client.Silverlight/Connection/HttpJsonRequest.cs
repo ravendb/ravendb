@@ -542,13 +542,12 @@ namespace Raven.Client.Silverlight.Connection
 			// webRequest.AllowWriteStreamBuffering = false;
 		}
 
-		public Task<Stream> GetRawRequestStream()
+		public async Task<HttpResponseMessage> ExecuteRawResponseAsync()
 		{
 			throw new NotImplementedException();
-			//	return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
 		}
 
-		public Task<HttpResponseMessage> RawExecuteRequestAsync()
+		public async Task<HttpResponseMessage> ExecuteRawRequestAsync(CancellationToken? cancellationToken, Action<Stream, TaskCompletionSource<object>> action)
 		{
 			throw new NotImplementedException();
 		}

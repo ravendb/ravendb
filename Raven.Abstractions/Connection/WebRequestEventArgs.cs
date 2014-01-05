@@ -6,10 +6,7 @@
 
 using System;
 using System.Net;
-
-#if SILVERLIGHT
-using Raven.Client.Silverlight.Connection;
-#endif
+using System.Net.Http;
 
 namespace Raven.Abstractions.Connection
 {
@@ -22,7 +19,7 @@ namespace Raven.Abstractions.Connection
 		/// Gets or sets the web request.
 		/// </summary>
 		/// <value>The request.</value>
-		public System.Net.Http.HttpClient Client { get; set; }
+		public HttpClient Client { get; set; }
 
 #if !SILVERLIGHT && !NETFX_CORE 
 		/// <summary>
@@ -36,7 +33,7 @@ namespace Raven.Abstractions.Connection
 	/// <summary>
 	/// The RavenDB json request
 	/// </summary>
-		public HttpJsonRequest JsonRequest { get; set; }
+		public Client.Silverlight.Connection.HttpJsonRequest JsonRequest { get; set; }
 #endif
 
 		public OperationCredentials Credentials { get; set; }

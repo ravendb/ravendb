@@ -1,4 +1,3 @@
-using System.Web.UI.WebControls;
 using Raven.Client.Extensions;
 #if !NETFX_CORE && !SILVERLIGHT
 //-----------------------------------------------------------------------
@@ -77,7 +76,6 @@ namespace Raven.Client.Connection
 
 		private readonly OperationCredentials _credentials;
 		private HttpContent postedContent;
-		private HttpRequestMessage rawRequestMessage;
 
 		/// <summary>
 		/// Gets or sets the response headers.
@@ -689,51 +687,57 @@ namespace Raven.Client.Connection
 			});
 		}
 
-		public Task<Stream> GetRawRequestStream()
+		public async Task<HttpResponseMessage> ExecuteRawResponseAsync()
 		{
-			rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
-			CopyHeadersToHttpRequestMessage(rawRequestMessage);
-			httpClient.DefaultRequestHeaders.TransferEncodingChunked = true;
-			// webRequest.SendChunked = true;
-			// return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
-			throw new NotImplementedException();
-		}
-
-		/*public WebResponse RawExecuteRequest()
-		{
-			try
-			{
-				CopyHeadersToWebRequest();
-				return webRequest.GetResponse();
-			}
-			catch (WebException we)
-			{
-				var httpWebResponse = we.Response as HttpWebResponse;
-				if (httpWebResponse == null)
-					throw;
-				var sb = new StringBuilder()
-					.Append(httpWebResponse.StatusCode)
-					.Append(" ")
-					.Append(httpWebResponse.StatusDescription)
-					.AppendLine();
-
-				using (var reader = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression()))
-				{
-					string line;
-					while ((line = reader.ReadLine()) != null)
-					{
-						sb.AppendLine(line);
-					}
-				}
-				throw new InvalidOperationException(sb.ToString(), we);
-			}
-		}*/
-
-		public async Task<HttpResponseMessage> RawExecuteRequestAsync()
-		{
+			var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
 			CopyHeadersToHttpRequestMessage(rawRequestMessage);
 			var response = await httpClient.SendAsync(rawRequestMessage);
+			await AssertNotFailingResponse(response);
+			return response;
+		}
 
+		public async Task<HttpResponseMessage> ExecuteRawRequestAsync(CancellationToken? cancellationToken, Action<Stream, TaskCompletionSource<object>> action)
+		{
+			httpClient.DefaultRequestHeaders.TransferEncodingChunked = true;
+
+			var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url)
+			{
+				Content = new PushContent(action)
+			};
+
+			CopyHeadersToHttpRequestMessage(rawRequestMessage);
+			var response = cancellationToken == null ? await httpClient.SendAsync(rawRequestMessage)
+				: await httpClient.SendAsync(rawRequestMessage, cancellationToken.Value);
+
+			await AssertNotFailingResponse(response);
+			return response;
+		}
+
+		private class PushContent : HttpContent
+		{
+			private readonly Action<Stream, TaskCompletionSource<object>> action;
+			private readonly TaskCompletionSource<object> tcs = new TaskCompletionSource<object>();
+
+			public PushContent(Action<Stream, TaskCompletionSource<object>> action)
+			{
+				this.action = action;
+			}
+
+			protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+			{
+				action(stream, tcs);
+				return tcs.Task;
+			}
+
+			protected override bool TryComputeLength(out long length)
+			{
+				length = -1;
+				return false;
+			}
+		}
+
+		private static async Task AssertNotFailingResponse(HttpResponseMessage response)
+		{
 			if (response.IsSuccessStatusCode == false)
 			{
 				var sb = new StringBuilder()
@@ -750,8 +754,6 @@ namespace Raven.Client.Connection
 				}
 				throw new InvalidOperationException(sb.ToString());
 			}
-
-			return response;
 		}
 
 		public void PrepareForLongRequest()
