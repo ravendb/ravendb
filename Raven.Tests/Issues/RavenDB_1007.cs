@@ -37,7 +37,8 @@ namespace Raven.Tests.Issues
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 				Settings =
 				{
-					{"Raven/Esent/CircularLog", "false"}
+					{"Raven/Esent/CircularLog", "false"},
+					{"Raven/Voron/AllowIncrementalBackups", "true"}
 				}
 			}))
 			{

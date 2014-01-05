@@ -82,7 +82,7 @@ namespace Raven.Database.Storage.Voron.Backup
                                         Path.Combine(backupSourceDirectory, "Temp" + Guid.NewGuid().ToString("N")), incrementalBackup)
 				};
 
-                database.IndexStorage.Backup(backupDestinationDirectory, incrementalTag);				
+                database.IndexStorage.Backup(backupDestinationDirectory, null);				
 
                 foreach (var directoryBackup in directoryBackups)
                 {
