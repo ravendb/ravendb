@@ -71,7 +71,7 @@ namespace Raven.Backup
 			{
 				var req = CreateRequest(url, "POST");
 
-				req.Write(json);
+				req.WriteAsync(json).Wait();
 
 				Console.WriteLine("Sending json {0} to {1}", json, ServerUrl);
 

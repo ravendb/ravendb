@@ -11,11 +11,11 @@ namespace Raven.Database.Server.Responders.Admin
 {
     public class AdminDetailedSizeBreakdown : AdminResponder
     {
-
         public override string UrlPattern
         {
             get { return "^/admin/detailed-storage-breakdown?$"; }
         }
+
         public override string[] SupportedVerbs
         {
             get { return new[] {"GET"}; }

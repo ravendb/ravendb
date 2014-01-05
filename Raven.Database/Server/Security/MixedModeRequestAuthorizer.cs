@@ -80,7 +80,7 @@ namespace Raven.Database.Server.Security
 			var oneTimeToken = context.Request.Headers["Single-Use-Auth-Token"];
 			if (string.IsNullOrEmpty(oneTimeToken) == false)
 			{
-				return AuthorizeUsingleUseAuthToken(context, oneTimeToken);
+				return AuthorizeSingleUseAuthToken(context, oneTimeToken);
 			}
 
 			var authHeader = context.Request.Headers["Authorization"];
@@ -113,7 +113,7 @@ namespace Raven.Database.Server.Security
 			var oneTimeToken = controller.GetHeader("Single-Use-Auth-Token");
 			if (string.IsNullOrEmpty(oneTimeToken) == false)
 			{
-				return TryAuthorizeUsingleUseAuthToken(controller, oneTimeToken, out msg);
+				return TryAuthorizeSingleUseAuthToken(controller, oneTimeToken, out msg);
 			}
 
 			var authHeader = controller.GetHeader("Authorization");
@@ -127,7 +127,7 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.TryAuthorize(controller, IgnoreDb.Urls.Contains(requestUrl), out msg);
 		}
 
-		private bool AuthorizeUsingleUseAuthToken(IHttpContext context, string token)
+		private bool AuthorizeSingleUseAuthToken(IHttpContext context, string token)
 		{
 			OneTimeToken value;
 			if (singleUseAuthTokens.TryRemove(token, out value) == false)
@@ -167,7 +167,7 @@ namespace Raven.Database.Server.Security
 			return true;
 		}
 
-		private bool TryAuthorizeUsingleUseAuthToken(RavenDbApiController controller, string token, out HttpResponseMessage msg)
+		private bool TryAuthorizeSingleUseAuthToken(RavenDbApiController controller, string token, out HttpResponseMessage msg)
 		{
 			OneTimeToken value;
 			if (singleUseAuthTokens.TryRemove(token, out value) == false)

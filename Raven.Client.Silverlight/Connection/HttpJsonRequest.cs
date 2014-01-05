@@ -548,22 +548,9 @@ namespace Raven.Client.Silverlight.Connection
 			//	return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
 		}
 
-		public Task<WebResponse> RawExecuteRequestAsync()
+		public Task<HttpResponseMessage> RawExecuteRequestAsync()
 		{
 			throw new NotImplementedException();
-			/*
-						if (isRequestSentToServer)
-							throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
-
-						isRequestSentToServer = true;
-						webRequest.AllowReadStreamBuffering = false;
-						webRequest.AllowWriteStreamBuffering = false;
-
-						return WaitForTask.ContinueWith(_ => webRequest
-																 .GetResponseAsync()
-																 .ConvertSecurityExceptionToServerNotFound()
-																 .AddUrlIfFaulting(webRequest.RequestUri))
-																 .Unwrap();*/
 		}
 	}
 }

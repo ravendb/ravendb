@@ -76,7 +76,7 @@ namespace Raven.Tests.Issues
 			                                                                                db1Url + "/admin/replicationInfo",
 																							"POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
-			request.Write(replicationDocument.DataAsJson.ToString(Formatting.None));
+			request.WriteAsync(replicationDocument.DataAsJson.ToString(Formatting.None)).Wait();
 			var result = request.ReadResponseJson() as RavenJArray;
 
 			Assert.NotNull(result);
@@ -132,7 +132,7 @@ namespace Raven.Tests.Issues
 																							db1Url + "/admin/replicationInfo",
 																							"POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
-			request.Write(replicationDocument.DataAsJson.ToString(Formatting.None));
+			request.WriteAsync(replicationDocument.DataAsJson.ToString(Formatting.None)).Wait();
 			var result = request.ReadResponseJson() as RavenJArray;
 
 			Assert.NotNull(result);
@@ -171,7 +171,7 @@ namespace Raven.Tests.Issues
 																							db1Url + "/admin/replicationInfo",
 																							"POST", new OperationCredentials(null, CredentialCache.DefaultCredentials), store1.Conventions));
 
-			request.Write(replicationDocument.DataAsJson.ToString(Formatting.None));
+			request.WriteAsync(replicationDocument.DataAsJson.ToString(Formatting.None)).Wait();
 			var result = request.ReadResponseJson() as RavenJArray;
 
 			Assert.NotNull(result);
@@ -210,7 +210,7 @@ namespace Raven.Tests.Issues
 
 
 
-			request.Write(RavenJObject.FromObject(new ReplicationDocument
+			request.WriteAsync(RavenJObject.FromObject(new ReplicationDocument
 			{
 				Destinations = new EquatableList<ReplicationDestination>
 				{
@@ -219,7 +219,7 @@ namespace Raven.Tests.Issues
 						Url = "http://unknown.url/"
 					}
 				}
-			}).ToString(Formatting.None));
+			}).ToString(Formatting.None)).Wait();
 			var result = request.ReadResponseJson() as RavenJArray;
 
 			Assert.NotNull(result);

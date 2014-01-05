@@ -8,17 +8,15 @@ namespace Raven.Abstractions.OAuth
 {
 	public abstract class AbstractAuthenticator
 	{
-		protected string CurrentOauthToken;
+		protected string CurrentOauthToken { get; set; }
 
 		public virtual void ConfigureRequest(object sender, WebRequestEventArgs e)
 		{
-			if (string.IsNullOrEmpty(CurrentOauthToken))
-				return;
+			SetAuthorization(e.Client);
 
-#if NETFX_CORE || SILVERLIGHT
-			e.Client.DefaultRequestHeaders.Add("Authorization", CurrentOauthToken);
-#else
-			SetHeader(e.Request.Headers, "Authorization", CurrentOauthToken);
+#if !SILVERLIGHT && !NETFX_CORE
+			if (e.Request != null)
+				SetHeader(e.Request.Headers, "Authorization", CurrentOauthToken);
 #endif
 		}
 
