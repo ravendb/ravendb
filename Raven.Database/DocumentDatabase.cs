@@ -51,7 +51,6 @@ using Raven.Database.Linq;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
 using Raven.Database.Tasks;
-using Raven.Storage.Esent;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Json.Linq;
 using BitConverter = System.BitConverter;
@@ -2455,7 +2454,7 @@ namespace Raven.Database
 
 			bool enableIncrementalBackup;
 			if (incrementalBackup &&
-				TransactionalStorage is TransactionalStorage &&
+				TransactionalStorage is Raven.Storage.Esent.TransactionalStorage &&
 				(bool.TryParse(Configuration.Settings["Raven/Esent/CircularLog"], out enableIncrementalBackup) == false || enableIncrementalBackup))
 			{
 				throw new InvalidOperationException("In order to run incremental backups using Esent you must have circular logging disabled");
