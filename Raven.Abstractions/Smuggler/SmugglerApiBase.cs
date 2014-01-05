@@ -83,7 +83,8 @@ namespace Raven.Abstractions.Smuggler
 					var counter = 1;
 					while (true)
 					{
-						result.FilePath = Path.Combine(result.FilePath, SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-incremental-dump");
+// ReSharper disable once AssignNullToNotNullAttribute
+						result.FilePath = Path.Combine(Path.GetDirectoryName(result.FilePath), SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture) + " - " + counter + ".ravendb-incremental-dump");
 
 						if (File.Exists(result.FilePath) == false)
 							break;
@@ -197,7 +198,8 @@ namespace Raven.Abstractions.Smuggler
 
 		public static void WriteLastEtagsFromFile(ExportDataResult result, string backupPath)
 		{
-			var etagFileLocation = Path.Combine(backupPath, IncrementalExportStateFile);
+// ReSharper disable once AssignNullToNotNullAttribute
+			var etagFileLocation = Path.Combine(Path.GetDirectoryName(backupPath), IncrementalExportStateFile);
 			using (var streamWriter = new StreamWriter(File.Create(etagFileLocation)))
 			{
 				new RavenJObject

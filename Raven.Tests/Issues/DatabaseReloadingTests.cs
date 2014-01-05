@@ -11,6 +11,7 @@ using Raven.Database;
 using Raven.Json.Linq;
 using Raven.Server;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -79,14 +80,12 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
-        public void Should_fail_put_to_tenant_database_if_tenant_database_is_reloaded_after_the_put_transaction_because_tx_was_reset()
+		//basically if you do not call prepare before commit, exception will be thrown
+		[Fact]
+		public void Should_fail_put_to_tenant_database_if_tenant_database_is_reloaded_after_the_put_transaction_because_tx_was_reset()
         {
-            using (var server = GetNewServer(runInMemory: false))
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+			using (var server = GetNewServer(runInMemory: false))
+            using (var store = NewRemoteDocumentStore(ravenDbServer:server))
             {
                 store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument { Id = TenantName, Settings = { { "Raven/DataDir", @"~\Databases\Mine" } }, });
 
