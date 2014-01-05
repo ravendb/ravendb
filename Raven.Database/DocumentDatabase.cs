@@ -130,6 +130,11 @@ namespace Raven.Database
 		/// </summary>
 		public string Name { get; private set; }
 
+		/// <summary>
+		/// true if the database finished initialization process, false otherwise
+		/// </summary>
+		public bool IsInitialized { get; private set; }
+
 		private readonly WorkContext workContext;
 		private readonly IndexingExecuter indexingExecuter;
 		public IndexingExecuter IndexingExecuter
@@ -166,8 +171,6 @@ namespace Raven.Database
 		private Task reducingBackgroundTask;
 		private readonly TaskScheduler backgroundTaskScheduler;
 		private readonly object idleLocker = new object();
-
-		private readonly ManualResetEventSlim indexStorageInitializedEvent = new ManualResetEventSlim();		
 
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
@@ -246,7 +249,6 @@ namespace Raven.Database
 						Extensions);
 					
 					IndexStorage = new IndexStorage(IndexDefinitionStorage, configuration, this);
-					indexStorageInitializedEvent.Set();
 
 					CompleteWorkContextSetup();
 
@@ -266,6 +268,9 @@ namespace Raven.Database
 					throw;
 				}
 			}
+			
+			RaiseInitializeComplete();
+			IsInitialized = true;
 		}
 
 		private static void InitializeEncryption(InMemoryRavenConfiguration configuration)
@@ -528,8 +533,6 @@ namespace Raven.Database
 					lastCollectionEtags.Flush();
 			});
 
-			exceptionAggregator.Execute(() => indexStorageInitializedEvent.Dispose());
-	
 			exceptionAggregator.Execute(() =>
 			{
 				AppDomain.CurrentDomain.DomainUnload -= DomainUnloadOrProcessExit;
@@ -574,7 +577,11 @@ namespace Raven.Database
 					{
 						try
 						{
+#if DEBUG
+							pendingTaskAndState.Task.Wait(3000);
+#else
 							pendingTaskAndState.Task.Wait();
+#endif
 						}
 						catch (Exception)
 						{
@@ -717,7 +724,16 @@ namespace Raven.Database
 			TransportState.Send(obj);
 		}
 
+		protected void RaiseInitializeComplete()
+		{			
+			var onInitializeComplete = OnInitialized;
+			if (onInitializeComplete != null)
+				onInitializeComplete();
+		}
+
 		public event Action<DocumentDatabase, DocumentChangeNotification, RavenJObject> OnDocumentChange;
+
+		public event Action OnInitialized;
 
 		public void RunIdleOperations()
 		{
@@ -1258,11 +1274,28 @@ namespace Raven.Database
 					break;
 			}
 
+			InternalPutNewIndex(name, definition);
 
+			workContext.ClearErrorsFor(name);
+
+			TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
+			{
+				Name = name,
+				Type = IndexChangeTypes.IndexAdded,
+			}));
+
+			return name;
+		}
+
+		internal void InternalPutNewIndex(string name, IndexDefinition definition)
+		{
+			Debug.Assert(IndexStorage != null);
+			Debug.Assert(TransactionalStorage != null);
+			Debug.Assert(workContext != null);
 
 			TransactionalStorage.Batch(actions =>
 			{
-				definition.IndexId = (int)GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions, null);
+				definition.IndexId = (int) GetNextIdentityValueWithoutOverwritingOnExistingDocuments("IndexId", actions, null);
 				IndexDefinitionStorage.RegisterNewIndexInThisSession(name, definition);
 
 				// this has to happen in this fashion so we will expose the in memory status after the commit, but 
@@ -1281,16 +1314,6 @@ namespace Raven.Database
 			// we have to do it in this way so first we prepare all the elements of the 
 			// index, then we add it to the storage in a way that make it public
 			IndexDefinitionStorage.AddIndex(definition.IndexId, definition);
-
-			workContext.ClearErrorsFor(name);
-
-			TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
-			{
-				Name = name,
-				Type = IndexChangeTypes.IndexAdded,
-			}));
-
-			return name;
 		}
 
 		private void InvokeSuggestionIndexing(string name, IndexDefinition definition)
@@ -1376,7 +1399,6 @@ namespace Raven.Database
 				{
 					query.FieldsToFetch = new[] { Constants.AllFields };
 				}
-
 
 				var duration = Stopwatch.StartNew();
 				var idsToLoad = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1749,7 +1771,7 @@ namespace Raven.Database
 				workContext.ClearErrorsFor(name);
 
 				// And delete the data in the background
-				StartDeletingIndexData(instance.IndexId);
+				StartDeletingIndexDataAsync(instance.IndexId);
 
 				// We raise the notification now because as far as we're concerned it is done *now*
 				TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() => RaiseNotifications(new IndexChangeNotification
@@ -1760,19 +1782,17 @@ namespace Raven.Database
 			}
 		}
 
-		internal void StartDeletingIndexData(int id)
+		internal Task StartDeletingIndexDataAsync(int id)
 		{
 			//remove the header information in a sync process
 			TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(id));
-			var deleteIndexTask = Task.Run(() =>
+			var actuallyDeleteIndexTask = new Task(() =>
 			{
-				indexStorageInitializedEvent.Wait(); //do not start this until index storage is initialed
-				
 				Debug.Assert(IndexStorage != null);
 				IndexStorage.DeleteIndexData(id); // Data can take a while
 
 				TransactionalStorage.Batch(actions =>
-				{
+				{					
 					// And Esent data can take a while too
 					actions.Indexing.DeleteIndex(id, WorkContext.CancellationToken);
 					if (WorkContext.CancellationToken.IsCancellationRequested)
@@ -1780,13 +1800,35 @@ namespace Raven.Database
 
 					actions.Lists.Remove("Raven/Indexes/PendingDeletion", id.ToString(CultureInfo.InvariantCulture));
 				});
+
 			});
+
+			Task deleteIndexTask;
+			if (IsInitialized)
+			{
+				deleteIndexTask = actuallyDeleteIndexTask;
+				deleteIndexTask.Start();
+			}
+			else
+			{
+				var initializationComplete = new ManualResetEventSlim();
+				OnInitialized += initializationComplete.Set;
+
+				deleteIndexTask = Task.Run(() =>
+										{
+											initializationComplete.Wait();
+											initializationComplete.Dispose();
+										})
+									   .ContinueWith(_ => actuallyDeleteIndexTask.Start());
+			}
 
 			long taskId;
 			AddTask(deleteIndexTask, null, out taskId);
 			
 			PendingTaskAndState value;
 			deleteIndexTask.ContinueWith(_ => pendingTasks.TryRemove(taskId, out value));
+
+			return deleteIndexTask;
 		}
 
 		public Attachment GetStatic(string name)

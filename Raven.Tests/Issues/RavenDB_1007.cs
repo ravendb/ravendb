@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Database;
@@ -15,6 +16,7 @@ using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.MoreLikeThis;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -29,13 +31,16 @@ namespace Raven.Tests.Issues
 			BackupDir = NewDataPath("BackupDatabase");
 		}
 
-		[Fact]
-		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt()
+		[Theory]
+		[InlineData("esent")]
+		//[InlineData("voron")] //TODO : investigate Voron issue --> access violation exception when this runs
+		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
 		{
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{
 				DataDirectory = DataDir,				
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+				DefaultStorageTypeName = storageName,
 				Settings =
 				{
 					{"Raven/Esent/CircularLog", "false"},
@@ -85,7 +90,7 @@ namespace Raven.Tests.Issues
 				db.SpinBackgroundWorkers();
 				QueryResult queryResult;
 				do
-				{
+				{					
 					queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
 					{
 						Query = "Tag:[[Users]]",
@@ -108,11 +113,14 @@ namespace Raven.Tests.Issues
 			BackupDir = NewDataPath("BackupDatabase");
 		}
 
-		[Fact]
-		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt()
+		[Theory]
+		[InlineData("esent")]
+		//[InlineData("voron")] 
+		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
 		{
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{
+				DefaultStorageTypeName = storageName,
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 			}))
