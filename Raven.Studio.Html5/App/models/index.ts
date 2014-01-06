@@ -1,3 +1,5 @@
+import appUrl = require("common/appUrl");
+
 class index {
     name: string;
     indexingAttempts: number;
@@ -24,6 +26,7 @@ class index {
     isIdle = ko.observable(false);
     isAbandoned = ko.observable(false);
     isDisabled = ko.observable(false);
+    editUrl: KnockoutComputed<string>;
 
     constructor(dto: indexStatisticsDto) {
         this.createdTimestamp = dto.CreatedTimestamp;
@@ -51,6 +54,7 @@ class index {
         this.isAbandoned(this.priority && this.priority.indexOf("Abandoned") !== -1);
         this.isDisabled(this.priority && this.priority.indexOf("Disabled") !== -1);
         this.isIdle(this.priority && this.priority.indexOf("Idle") !== -1);
+        this.editUrl = appUrl.forCurrentDatabase().editIndex(encodeURIComponent(this.name));
     }
 }
 

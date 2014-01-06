@@ -45,7 +45,7 @@ class shell {
 		router.map([
 			{ route: ['', 'databases'],	    title: 'Databases',		moduleId: 'viewmodels/databases',		nav: false },
             { route: 'documents',		    title: 'Documents',		moduleId: 'viewmodels/documents',		nav: true,	hash: appUrl.forCurrentDatabase().documents },
-			{ route: 'indexes',			    title: 'Indexes',		moduleId: 'viewmodels/indexes',			nav: true,  hash: appUrl.forCurrentDatabase().indexes },
+			{ route: 'indexes*details',		title: 'Indexes',		moduleId: 'viewmodels/indexes',			nav: true,  hash: appUrl.forCurrentDatabase().indexes },
 			{ route: 'query',			    title: 'Query',			moduleId: 'viewmodels/query',			nav: true },
 			{ route: 'tasks',			    title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true },
 			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true,  hash: appUrl.forCurrentDatabase().settings },

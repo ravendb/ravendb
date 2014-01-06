@@ -107,7 +107,10 @@
     <TypeScriptCompile Include="App\viewmodels\deleteDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteIndexesConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\editDocument.ts" />
+    <TypeScriptCompile Include="App\viewmodels\editIndex.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexErrors.ts" />
+    <TypeScriptCompile Include="App\viewmodels\indexes.ts" />
+    <TypeScriptCompile Include="App\viewmodels\indexesAll.ts" />
     <TypeScriptCompile Include="App\viewmodels\logs.ts" />
     <TypeScriptCompile Include="App\viewmodels\periodicBackup.ts" />
     <TypeScriptCompile Include="App\viewmodels\replicationStats.ts" />
@@ -127,7 +130,9 @@
     <Content Include="App\views\deleteDatabaseConfirm.html" />
     <Content Include="App\views\deleteIndexesConfirm.html" />
     <Content Include="App\views\dialog.html" />
+    <Content Include="App\views\editIndex.html" />
     <Content Include="App\views\indexErrors.html" />
+    <Content Include="App\views\indexes.html" />
     <Content Include="App\views\logs.html" />
     <Content Include="App\views\periodicBackup.html" />
     <Content Include="App\views\replicationStats.html" />
@@ -1022,7 +1027,6 @@
     <TypeScriptCompile Include="App\models\collection.ts" />
     <TypeScriptCompile Include="App\models\collectionInfo.ts" />
     <TypeScriptCompile Include="App\models\database.ts" />
-    <TypeScriptCompile Include="App\viewmodels\indexes.ts" />
     <TypeScriptCompile Include="App\viewmodels\query.ts" />
     <TypeScriptCompile Include="App\viewmodels\settings.ts" />
     <TypeScriptCompile Include="App\viewmodels\status.ts" />
@@ -1036,7 +1040,7 @@
     <Content Include="App\views\deleteDocuments.html" />
     <Content Include="App\views\documents.html" />
     <Content Include="App\views\editDocument.html" />
-    <Content Include="App\views\indexes.html" />
+    <Content Include="App\views\indexesAll.html" />
     <Content Include="App\views\query.html" />
     <Content Include="App\views\statistics.html" />
     <Content Include="App\views\status.html" />
