@@ -179,7 +179,7 @@ namespace Raven.Json.Linq
 
 			//precaution and better exception message
 			if (!(value.Value is IConvertible))
-				throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined and does not implement IConvertible. This should not be happening - probably it is a bug.", value.Value.GetType()));
+				throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined and does not implement IConvertible. ", value.Value.GetType()));
 
 			return (U)System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
 		}
