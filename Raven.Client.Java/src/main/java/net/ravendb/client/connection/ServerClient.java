@@ -127,7 +127,7 @@ public class ServerClient implements IDatabaseCommands {
     replicationInformer.removeFailoverStatusChanged(event);
   }
 
-  public ServerClient(String url, DocumentConvention convention, String apiKey, Function1<String, ReplicationInformer> replicationInformerGetter,  String databaseName,
+  public ServerClient(String url, DocumentConvention convention, OperationCredentials operationCredentials, Function1<String, ReplicationInformer> replicationInformerGetter,  String databaseName,
     HttpJsonRequestFactory httpJsonRequestFactory, UUID currentSessionId, IDocumentConflictListener[] conflictListeners) {
     this.profilingInformation = ProfilingInformation.createProfilingInformation(currentSessionId);
     this.replicationInformerGetter = replicationInformerGetter;
@@ -136,7 +136,7 @@ public class ServerClient implements IDatabaseCommands {
     this.currentSessionId = currentSessionId;
     this.conflictListeners = conflictListeners;
     this.url = url;
-    this.credentials = new OperationCredentials(apiKey);
+    this.credentials = operationCredentials;
 
     if (url.endsWith("/")) {
       this.url = url.substring(0, url.length() - 1);
@@ -1696,7 +1696,7 @@ public class ServerClient implements IDatabaseCommands {
     if (databaseUrl.equals(url)) {
       return this;
     }
-    ServerClient client = new ServerClient(databaseUrl, convention, null, replicationInformerGetter, database, jsonRequestFactory, currentSessionId, conflictListeners);
+    ServerClient client = new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, database, jsonRequestFactory, currentSessionId, conflictListeners);
     client.setOperationsHeaders(operationsHeaders);
     return client;
   }
@@ -1707,7 +1707,7 @@ public class ServerClient implements IDatabaseCommands {
     if (databaseUrl.equals(url)) {
       return this;
     }
-    ServerClient client = new ServerClient(databaseUrl, convention, null, replicationInformerGetter, null, jsonRequestFactory, currentSessionId, conflictListeners);
+    ServerClient client = new ServerClient(databaseUrl, convention, credentials, replicationInformerGetter, null, jsonRequestFactory, currentSessionId, conflictListeners);
     client.setOperationsHeaders(operationsHeaders);
     return client;
   }

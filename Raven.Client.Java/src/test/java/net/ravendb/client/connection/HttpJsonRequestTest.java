@@ -16,6 +16,7 @@ import java.util.UUID;
 
 import net.ravendb.abstractions.basic.EventHandler;
 import net.ravendb.abstractions.closure.Functions;
+import net.ravendb.abstractions.connection.OperationCredentials;
 import net.ravendb.abstractions.connection.WebRequestEventArgs;
 import net.ravendb.abstractions.data.Etag;
 import net.ravendb.abstractions.data.HttpMethods;
@@ -61,7 +62,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
 
     replicationInformer = new ReplicationInformer(convention);
 
-    serverClient = new ServerClient(DEFAULT_SERVER_URL_1, convention, null,
+    serverClient = new ServerClient(DEFAULT_SERVER_URL_1, convention, new OperationCredentials(),
       new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
       UUID.randomUUID(), new IDocumentConflictListener[0]);
     initFactory();
