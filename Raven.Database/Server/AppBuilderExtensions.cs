@@ -135,7 +135,7 @@ namespace Owin
 			{
 				if (HostingEnvironment.IsHosted)
 				{
-					if(DateTime.Now > new DateTime(2013,12,31))
+					if(DateTime.Now > new DateTime(2014,1,13))
 						throw new InvalidOperationException("This bug was supposed to be fixed by now");
 
 					return (response.Content is ChangesPushContent ||

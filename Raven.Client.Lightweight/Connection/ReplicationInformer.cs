@@ -681,7 +681,13 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		{
 			var tryWithPrimaryCredentials = IsFirstFailure(operationMetadata.Url) && primaryOperationMetadata != null;
 
-			Task<Task<T>> finalTask = state.Operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata).ContinueWith(task =>
+			OperationMetadata operationMetadataToUse;
+			if (tryWithPrimaryCredentials)
+				operationMetadataToUse = new OperationMetadata(operationMetadata.Url,primaryOperationMetadata.Credentials);
+			else
+				operationMetadataToUse = operationMetadata;
+
+			Task<Task<T>> finalTask = state.Operation(operationMetadataToUse).ContinueWith(task =>
 			{
 				switch (task.Status)
 				{
@@ -908,7 +914,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		public OperationMetadata(string url, OperationCredentials credentials)
 		{
 			Url = url;
-			Credentials = new OperationCredentials(credentials.ApiKey, credentials.Credentials);
+			Credentials = credentials != null ? new OperationCredentials(credentials.ApiKey, credentials.Credentials) : new OperationCredentials(null,null);
 		}
 
 		public OperationMetadata(OperationMetadata operationMetadata)

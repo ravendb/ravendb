@@ -723,6 +723,16 @@ namespace Raven.Client.Connection.Async
 
 		public async Task<JsonDocument> DirectGetAsync(OperationMetadata operationMetadata, string key)
 		{
+			if (key.Length > 127)
+			{
+				// avoid hitting UrlSegmentMaxLength limits in Http.sys
+				var multiLoadResult = await DirectGetAsync(operationMetadata, new[] { key }, new string[0], null, new Dictionary<string, RavenJToken>(), false);
+				var result = multiLoadResult.Results.FirstOrDefault();
+				if (result == null)
+					return null;
+				return SerializationHelper.RavenJObjectToJsonDocument(result);
+			}
+
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
 			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/docs/" + Uri.EscapeDataString(key)), "GET", metadata, credentials, convention);
@@ -2166,7 +2176,9 @@ namespace Raven.Client.Connection.Async
 			try
 			{
 				return
-					await replicationInformer.ExecuteWithReplicationAsync(method, url, credentials, currentRequest, readStripingBase, operation);
+					await
+						replicationInformer.ExecuteWithReplicationAsync(method, url, credentials, currentRequest, readStripingBase,
+							operation);
 			}
 			finally
 			{
