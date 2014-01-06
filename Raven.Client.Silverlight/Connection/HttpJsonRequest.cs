@@ -542,28 +542,14 @@ namespace Raven.Client.Silverlight.Connection
 			// webRequest.AllowWriteStreamBuffering = false;
 		}
 
-		public Task<Stream> GetRawRequestStream()
+		public async Task<HttpResponseMessage> ExecuteRawResponseAsync()
 		{
 			throw new NotImplementedException();
-			//	return Task.Factory.FromAsync<Stream>(webRequest.BeginGetRequestStream, webRequest.EndGetRequestStream, null);
 		}
 
-		public Task<WebResponse> RawExecuteRequestAsync()
+		public async Task<HttpResponseMessage> ExecuteRawRequestAsync(CancellationToken? cancellationToken, Action<Stream, TaskCompletionSource<object>> action)
 		{
 			throw new NotImplementedException();
-			/*
-						if (isRequestSentToServer)
-							throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
-
-						isRequestSentToServer = true;
-						webRequest.AllowReadStreamBuffering = false;
-						webRequest.AllowWriteStreamBuffering = false;
-
-						return WaitForTask.ContinueWith(_ => webRequest
-																 .GetResponseAsync()
-																 .ConvertSecurityExceptionToServerNotFound()
-																 .AddUrlIfFaulting(webRequest.RequestUri))
-																 .Unwrap();*/
 		}
 	}
 }

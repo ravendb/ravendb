@@ -312,7 +312,7 @@ namespace Raven.Tests.Helpers
 					return true;
 				}
 				return false;
-			}, TimeSpan.FromMinutes(15));
+			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
 			Assert.True(done);
 		}
 

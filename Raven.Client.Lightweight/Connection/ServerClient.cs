@@ -468,14 +468,6 @@ namespace Raven.Client.Connection
 		}
 
 		/// <summary>
-		/// Get the low level  bulk insert operation
-		/// </summary>
-		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
-		{
-			return new RemoteBulkInsertOperation(options, this, changes);
-		}
-
-		/// <summary>
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
 		public IDisposable ForceReadFromMaster()
@@ -772,19 +764,6 @@ namespace Raven.Client.Connection
 		~ServerClient()
 		{
 			Dispose();
-		}
-
-		public RavenJToken GetOperationStatus(long id)
-		{
-			return asyncServerClient.GetOperationStatusAsync(id).ResultUnwrap();
-			}
-
-		//TODO Owin host handles 100s, is this needed?
-		public IDisposable Expect100Continue()
-		{
-			var servicePoint = ServicePointManager.FindServicePoint(new Uri(asyncServerClient.Url));
-			servicePoint.Expect100Continue = true;
-			return new DisposableAction(() => servicePoint.Expect100Continue = false);
 		}
 
 		/// <summary>

@@ -42,6 +42,9 @@ namespace Raven.Tests.Bugs
 		private void CreateServer()
 		{
 			IOExtensions.DeleteDirectory("HiLoData");
+			if(server != null)
+				server.Dispose();
+
 			server = new RavenDbServer(new RavenConfiguration
 										{
 											Port = 8079,
@@ -49,6 +52,7 @@ namespace Raven.Tests.Bugs
 											RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 											AnonymousUserAccessMode = AnonymousUserAccessMode.Admin
 										});
+			
 
 		}
 

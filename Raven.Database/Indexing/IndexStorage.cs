@@ -179,14 +179,27 @@ namespace Raven.Database.Indexing
 		{
 			try
 			{
-			    documentDatabase.StartDeletingIndexData(indexDefinition.IndexId);
-				documentDatabase.TransactionalStorage.Batch(accessor => accessor.Indexing.AddIndex(indexDefinition.IndexId, indexDefinition.IsMapReduce));
+				if (documentDatabase.IsInitialized)
+				{
+					documentDatabase.DeleteIndex(indexName);
+					documentDatabase.InternalPutNewIndex(indexName, indexDefinition);
+				}
+				else
+				{
+					documentDatabase.OnInitialized += () =>
+					{
+						documentDatabase.DeleteIndex(indexName);
+						documentDatabase.InternalPutNewIndex(indexName, indexDefinition);
+					};
+				}
 
-                var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString());
+				// ReSharper disable once SpecifyACultureInStringConversionExplicitly
+				var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString());
 				IOExtensions.DeleteDirectory(indexFullPath);
 
-                var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
-                IOExtensions.DeleteDirectory(suggestionsForIndex);
+				var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
+				IOExtensions.DeleteDirectory(suggestionsForIndex);
+				
 			}
 			catch (Exception exception)
 			{

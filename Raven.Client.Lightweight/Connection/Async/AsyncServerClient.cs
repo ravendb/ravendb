@@ -71,9 +71,6 @@ namespace Raven.Client.Connection.Async
 		private int requestCount;
 		private int readStripingBase;
 
-		private readonly ICredentials _credentials;
-		private readonly string _apiKey;
-
 		public string Url
 		{
 			get { return url; }
@@ -87,7 +84,7 @@ namespace Raven.Client.Connection.Async
 		/// <summary>
 		/// Initializes a new instance of the <see cref="AsyncServerClient"/> class.
 		/// </summary>
-		public AsyncServerClient(string url, DocumentConvention convention, string apiKey, ICredentials credentials,
+		public AsyncServerClient(string url, DocumentConvention convention, OperationCredentials credentials,
 								 HttpJsonRequestFactory jsonRequestFactory, Guid? sessionId,
 								 Func<string, ReplicationInformer> replicationInformerGetter, string databaseName,
 								 IDocumentConflictListener[] conflictListeners)
@@ -105,9 +102,7 @@ namespace Raven.Client.Connection.Async
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.sessionId = sessionId;
 			this.convention = convention;
-			this.credentials = new OperationCredentials(apiKey, credentials);
-			_apiKey = apiKey;
-			_credentials = credentials;
+			this.credentials = credentials;
 			this.databaseName = databaseName;
 			this.conflictListeners = conflictListeners;
 			this.replicationInformerGetter = replicationInformerGetter;
@@ -605,11 +600,14 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
+			if (database == Constants.SystemDatabase)
+				return ForSystemDatabase();
+
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			databaseUrl = databaseUrl + "/databases/" + database + "/";
 			if (databaseUrl == url)
 				return this;
-			return new AsyncServerClient(databaseUrl, convention, _apiKey, _credentials, jsonRequestFactory, sessionId,
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId,
 										 replicationInformerGetter, database, conflictListeners)
 			{
 				operationsHeaders = operationsHeaders
@@ -625,7 +623,7 @@ namespace Raven.Client.Connection.Async
 			var databaseUrl = MultiDatabase.GetRootDatabaseUrl(url);
 			if (databaseUrl == url)
 				return this;
-			return new AsyncServerClient(databaseUrl, convention, _apiKey, _credentials, jsonRequestFactory, sessionId,
+			return new AsyncServerClient(databaseUrl, convention, credentials, jsonRequestFactory, sessionId,
 										 replicationInformerGetter, databaseName, conflictListeners)
 			{
 				operationsHeaders = operationsHeaders
@@ -1706,25 +1704,38 @@ namespace Raven.Client.Connection.Async
 																																	 convention.FailoverBehavior,
 																																	 HandleReplicationStatusChanges);
 
-			var webResponse = await request.RawExecuteRequestAsync();
+			
+			request.RemoveAuthorizationHeader();
+			var token = await GetSingleAuthToken();
+			try
+			{
+				token = await ValidateThatWeCanUseAuthenticateTokens(token);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate token for query streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+					e);
+			}
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+
+			var response = await request.ExecuteRawResponseAsync();
 			queryHeaderInfo.Value = new QueryHeaderInformation
 			{
-				Index = webResponse.Headers["Raven-Index"],
-				IndexTimestamp = DateTime.ParseExact(webResponse.Headers["Raven-Index-Timestamp"], Default.DateTimeFormatsToRead,
+				Index = response.Headers.GetFirstValue("Raven-Index"),
+				IndexTimestamp = DateTime.ParseExact(response.Headers.GetFirstValue("Raven-Index-Timestamp"), Default.DateTimeFormatsToRead,
 																CultureInfo.InvariantCulture, DateTimeStyles.None),
-				IndexEtag = Etag.Parse(webResponse.Headers["Raven-Index-Etag"]),
-				ResultEtag = Etag.Parse(webResponse.Headers["Raven-Result-Etag"]),
-				IsStable = bool.Parse(webResponse.Headers["Raven-Is-Stale"]),
-				TotalResults = int.Parse(webResponse.Headers["Raven-Total-Results"])
+				IndexEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Index-Etag")),
+				ResultEtag = Etag.Parse(response.Headers.GetFirstValue("Raven-Result-Etag")),
+				IsStable = bool.Parse(response.Headers.GetFirstValue("Raven-Is-Stale")),
+				TotalResults = int.Parse(response.Headers.GetFirstValue("Raven-Total-Results"))
 			};
 
-			return new YieldStreamResults(webResponse);
+			return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression());
 		}
 
         public class YieldStreamResults : IAsyncEnumerator<RavenJObject>
         {
-            private readonly WebResponse webResponse;
-
             private readonly int start;
 
             private readonly int pageSize;
@@ -1736,15 +1747,14 @@ namespace Raven.Client.Connection.Async
             private readonly JsonTextReaderAsync reader;
             private bool complete;
 
-            private bool wasInitalized;
+            private bool wasInitialized;
 
-            public YieldStreamResults(WebResponse webResponse, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null)
+			public YieldStreamResults(Stream stream, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null)
             {
-                this.webResponse = webResponse;
                 this.start = start;
                 this.pageSize = pageSize;
                 this.pagingInformation = pagingInformation;
-                stream = webResponse.GetResponseStreamWithHttpDecompression();
+				this.stream = stream;
                 streamReader = new StreamReader(stream);
                 reader = new JsonTextReaderAsync(streamReader);
             }
@@ -1767,7 +1777,6 @@ namespace Raven.Client.Connection.Async
                 reader.Close();
                 streamReader.Close();
                 stream.Close();
-                webResponse.Close();
             }
 
             public async Task<bool> MoveNextAsync()
@@ -1779,10 +1788,10 @@ namespace Raven.Client.Connection.Async
                     return false;
                 }
 
-                if (wasInitalized == false)
+                if (wasInitialized == false)
                 {
                     await InitAsync();
-                    wasInitalized = true;
+                    wasInitialized = true;
                 }
 
                 if (await reader.ReadAsync() == false)
@@ -1870,9 +1879,26 @@ namespace Raven.Client.Connection.Async
 																			.AddReplicationStatusHeaders(Url, url, replicationInformer,
 																																	 convention.FailoverBehavior,
 																																	 HandleReplicationStatusChanges);
-            var webResponse = await request.RawExecuteRequestAsync();
 
-            return new YieldStreamResults(webResponse, start, pageSize, pagingInformation);
+			request.RemoveAuthorizationHeader();
+
+			var token = await GetSingleAuthToken();
+
+			try
+			{
+				token = await ValidateThatWeCanUseAuthenticateTokens(token);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException(
+					"Could not authenticate token for docs streaming, if you are using ravendb in IIS make sure you have Anonymous Authentication enabled in the IIS configuration",
+					e);
+			}
+
+			request.AddOperationHeader("Single-Use-Auth-Token", token);
+
+			var response = await request.ExecuteRawResponseAsync();
+            return new YieldStreamResults(await response.GetResponseStreamWithHttpDecompression(), start, pageSize, pagingInformation);
 		}
 
 		public Task DeleteAsync(string key, Etag etag)
@@ -1911,16 +1937,14 @@ namespace Raven.Client.Connection.Async
 		}
 
 #endif
-#if SILVERLIGHT
+
 		/// <summary>
-		/// Get the low level  bulk insert operation
+		/// Get the low level bulk insert operation
 		/// </summary>
 		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
 		{
 			return new RemoteBulkInsertOperation(options, this, changes);
 		}
-#endif
-
 
 		/// <summary>
 		/// Do a direct HEAD request against the server for the specified document
@@ -1978,9 +2002,8 @@ namespace Raven.Client.Connection.Async
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var createHttpJsonRequestParams =
-				new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention)
-					.AddOperationHeaders(OperationsHeaders);
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, url + requestUrl, method, metadata, credentials, convention)
+				.AddOperationHeaders(OperationsHeaders);
 			createHttpJsonRequestParams.DisableRequestCompression = disableRequestCompression;
 			return jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams);
 		}
@@ -2307,9 +2330,6 @@ namespace Raven.Client.Connection.Async
 			var request = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
 
 			request.DisableAuthentication();
-#if !SILVERLIGHT
-			request.webRequest.ContentLength = 0;
-#endif
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 			var result = await request.ReadResponseJsonAsync();
 			return result.Value<string>("Token");
@@ -2379,7 +2399,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="credentialsForSession">The credentials for session.</param>
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new AsyncServerClient(url, convention, _apiKey, credentialsForSession, jsonRequestFactory, sessionId,
+			return new AsyncServerClient(url, convention, new OperationCredentials(credentials.ApiKey, credentialsForSession), jsonRequestFactory, sessionId,
 										 replicationInformerGetter, databaseName, conflictListeners);
 		}
 	}

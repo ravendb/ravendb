@@ -569,7 +569,8 @@ namespace Raven.Client.Embedded
 
 				var key = header;
 
-				if(DateTime.Now > new DateTime(2014,1,1))
+				// Need to be removed when we remove the embedded.
+				if(DateTime.Now > new DateTime(2014,2,1))
 					throw new Exception("This is an ugly code that was supposed to be fixed by this time");
 				if (sort == SortOptions.Long && key.EndsWith("_Range"))
 				{
@@ -916,14 +917,6 @@ namespace Raven.Client.Embedded
 		{
 			// nothing to do, there is no replication for embedded 
 			return null;
-		}
-
-		/// <summary>
-		/// Get the low level  bulk insert operation
-		/// </summary>
-		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
-		{
-			return new EmbeddedBulkInsertOperation(database, options, changes);
 		}
 
 		/// <summary>
