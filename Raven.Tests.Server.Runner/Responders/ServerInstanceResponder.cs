@@ -268,7 +268,8 @@ namespace Raven.Tests.Server.Runner.Responders
             var configuration = new RavenConfiguration
                                 {
                                     Port = Port,
-                                    RunInMemory = RunInMemory
+                                    RunInMemory = RunInMemory,
+                                    DefaultStorageTypeName = "esent"
                                 };
 
             foreach (var key in Settings.Keys)
