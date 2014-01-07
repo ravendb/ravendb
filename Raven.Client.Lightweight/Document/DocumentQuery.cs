@@ -24,8 +24,6 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>
 	{
-
-
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>

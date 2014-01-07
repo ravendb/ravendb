@@ -774,6 +774,20 @@ namespace Raven.Client.Document
 			return lazyValue;
 		}
 
+		internal Lazy<int> AddLazyCountOperation(ILazyOperation operation)
+		{
+			pendingLazyOperations.Add(operation);
+			var lazyValue = new Lazy<int>(() =>
+			{
+				ExecuteAllPendingLazyOperations();
+				// TODO work out if this is a robust way of doing it????
+				// Should be go thru GetQueryResult() in RavenQueryProviderProcessor with SpecialQueryType.Count??
+				return operation.QueryResult.TotalResults;
+			});
+
+			return lazyValue;
+		}
+
 		/// <summary>
 		/// Register to lazily load documents and include
 		/// </summary>

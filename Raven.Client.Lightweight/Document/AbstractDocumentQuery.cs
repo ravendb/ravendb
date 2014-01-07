@@ -712,6 +712,24 @@ namespace Raven.Client.Document
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
 
+		/// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public virtual Lazy<int> LazyCount()
+		{
+			var headers = new Dictionary<string, string>();
+			if (queryOperation == null)
+			{
+				ExecuteBeforeQueryListeners();
+				queryOperation = InitializeQueryOperation((key, val) => headers[key] = val);
+			}
+
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
+			lazyQueryOperation.SetHeaders(headers);
+
+			return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
+		}
 #endif
 
 		/// <summary>

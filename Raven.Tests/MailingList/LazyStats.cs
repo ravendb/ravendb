@@ -23,8 +23,13 @@ namespace Raven.Tests.MailingList
 					{
 						FirstName = "Ayende"
 					});
+					session.Store(new User
+					{
+						FirstName = "SomethingElse"
+					});
 					session.SaveChanges();
 				}
+
 				using (var session = store.OpenSession())
 				{
 					session.Query<User>()
@@ -38,10 +43,19 @@ namespace Raven.Tests.MailingList
 
 					var results = query.Take(8).Lazily();
 
+                    // TODO should the LazyCount stuff go in it's own test???
+
+					// Want to be able to support these 2 scenarios for LazyCount!!
+					var lazyCount = query.LazyCount(); // filtered, only 1 match
+					var baseLazyCount = session.Query<User>().LazyCount(); // no filter, will match all Users
+
 					var enumerable = results.Value; //force evaluation
 					Assert.Equal(1, enumerable.Count());
 					Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
-					Assert.True(stats.TotalResults > 0);
+					Assert.Equal(1, stats.TotalResults);
+
+					Assert.Equal(1, lazyCount.Value);
+					Assert.Equal(2, baseLazyCount.Value);
 				}
 			}
 		}
@@ -58,25 +72,39 @@ namespace Raven.Tests.MailingList
 					{
 						FirstName = "Ayende"
 					});
+					session.Store(new User
+					{
+						FirstName = "SomethingElse"
+					});
 					session.SaveChanges();
 				}
+
 				using (var session = store.OpenSession())
 				{
 					session.Query<User>()
 						.Customize(x => x.WaitForNonStaleResults())
 						.Take(15).ToList();
-					RavenQueryStatistics stats;
 
+					RavenQueryStatistics stats;
 					var query = session.Query<User>().Statistics(out stats)
 						.Customize(x => x.WaitForNonStaleResults())
 						.Where(x => x.FirstName == "Ayende");
 
 					var results = query.Take(8).Lazily();
 
+                    // TODO should the LazyCount stuff go in it's own test???
+
+					// Want to be able to support these 2 scenarios for LazyCount!!
+					var lazyCount = query.LazyCount(); // filtered, only 1 match
+					var baseLazyCount = session.Query<User>().LazyCount(); // no filter, will match all Users
+
 					var enumerable = results.Value; //force evaluation
 					Assert.Equal(1, enumerable.Count());
 					Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
-					Assert.True(stats.TotalResults > 0);
+					Assert.Equal(1, stats.TotalResults);
+
+					Assert.Equal(1, lazyCount.Value);
+					Assert.Equal(2, baseLazyCount.Value);
 				}
 			}
 		}

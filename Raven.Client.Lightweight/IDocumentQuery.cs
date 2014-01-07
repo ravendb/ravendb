@@ -68,6 +68,12 @@ namespace Raven.Client
 		Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval);
 
 		/// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed.
+		/// </summary>
+		Lazy<int> LazyCount();
+
+		/// <summary>
 		/// Create the index query object for this query
 		/// </summary>
 		IndexQuery GetIndexQuery(bool isAsync);
