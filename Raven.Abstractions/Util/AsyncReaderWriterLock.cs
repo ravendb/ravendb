@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace Raven.Abstractions
+namespace Raven.Abstractions.Util
 {
 	/// <summary>
 	/// with some adaptations taken from blog post http://blogs.msdn.com/b/pfxteam/archive/2012/02/12/10267069.aspx
@@ -28,8 +26,13 @@ namespace Raven.Abstractions
 
 		public AsyncReaderWriterLock()
 		{
+#if !SILVERLIGHT			
 			readerReleaser = Task.FromResult(new Releaser(this, false));
 			writerReleaser = Task.FromResult(new Releaser(this, true));
+#else
+			readerReleaser = CompletedTask.With(new Releaser(this, false));
+			writerReleaser = CompletedTask.With(new Releaser(this, true));
+#endif
 		}
 
 	    public Task<Releaser> ReadLockAsync()
