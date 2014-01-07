@@ -9,6 +9,7 @@ namespace Voron.Tests.Bugs
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
 
     using Voron.Impl;
     using Voron.Impl.Paging;
@@ -175,6 +176,8 @@ namespace Voron.Tests.Bugs
                         transactions.Add(txr);
                     }
                 }
+
+                Assert.Equal(transactions.OrderBy(x => x.Id).First().Id, env.OldestTransaction);
 
                 foreach (var tx in transactions)
                 {
