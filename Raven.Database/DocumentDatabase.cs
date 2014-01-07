@@ -1273,7 +1273,7 @@ namespace Raven.Database
 					break;
 			}
 
-			InternalPutNewIndex(name, definition);
+			PutNewIndexIntoStorage(name, definition);
 
 			workContext.ClearErrorsFor(name);
 
@@ -1286,7 +1286,7 @@ namespace Raven.Database
 			return name;
 		}
 
-		internal void InternalPutNewIndex(string name, IndexDefinition definition)
+		internal void PutNewIndexIntoStorage(string name, IndexDefinition definition)
 		{
 			Debug.Assert(IndexStorage != null);
 			Debug.Assert(TransactionalStorage != null);
@@ -1785,7 +1785,7 @@ namespace Raven.Database
 		{
 			//remove the header information in a sync process
 			TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(id));
-			var actuallyDeleteIndexTask = new Task(() =>
+            var deleteIndexTask = Task.Run(() =>
 			{
 				Debug.Assert(IndexStorage != null);
 				IndexStorage.DeleteIndexData(id); // Data can take a while
@@ -1799,27 +1799,7 @@ namespace Raven.Database
 
 					actions.Lists.Remove("Raven/Indexes/PendingDeletion", id.ToString(CultureInfo.InvariantCulture));
 				});
-
 			});
-
-			Task deleteIndexTask;
-			if (IsInitialized)
-			{
-				deleteIndexTask = actuallyDeleteIndexTask;
-				deleteIndexTask.Start();
-			}
-			else
-			{
-				var initializationComplete = new ManualResetEventSlim();
-				OnInitialized += initializationComplete.Set;
-
-				deleteIndexTask = Task.Run(() =>
-										{
-											initializationComplete.Wait();
-											initializationComplete.Dispose();
-										})
-									   .ContinueWith(_ => actuallyDeleteIndexTask.Start());
-			}
 
 			long taskId;
 			AddTask(deleteIndexTask, null, out taskId);

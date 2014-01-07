@@ -177,24 +177,23 @@ namespace Raven.Database.Indexing
 
 		private void TryResettingIndex(string indexName, IndexDefinition indexDefinition)
 		{
+		    Debug.Assert(documentDatabase.IsInitialized == false,"we assume that we can only reset indexes in this way during db init");
 			try
 			{
-				if (documentDatabase.IsInitialized)
-				{
-					documentDatabase.DeleteIndex(indexName);
-					documentDatabase.InternalPutNewIndex(indexName, indexDefinition);
-				}
-				else
-				{
-					documentDatabase.OnInitialized += () =>
-					{
-						documentDatabase.DeleteIndex(indexName);
-						documentDatabase.InternalPutNewIndex(indexName, indexDefinition);
-					};
-				}
+                documentDatabase.OnInitialized += () =>
+                {
+                    try
+                    {
+                        documentDatabase.DeleteIndex(indexName);
+                        documentDatabase.PutNewIndexIntoStorage(indexName, indexDefinition);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Could not finalize reseting of index: " + indexName, e);
+                    }
+                };
 
-				// ReSharper disable once SpecifyACultureInStringConversionExplicitly
-				var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString());
+				var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString(CultureInfo.InvariantCulture));
 				IOExtensions.DeleteDirectory(indexFullPath);
 
 				var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
