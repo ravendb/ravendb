@@ -45,6 +45,9 @@ namespace Raven.Bundles.Replication.Tasks
 			public int Value;
 		}
 
+		public const int SystemDocsLimitForRemoteEtagUpdate = 15;
+		public const int DestinationDocsLimitForRemoteEtagUpdate = 15;
+
 		public readonly ConcurrentQueue<Task> activeTasks = new ConcurrentQueue<Task>();
 
 		private readonly ConcurrentDictionary<string, DestinationStats> destinationStats =
@@ -422,7 +425,8 @@ namespace Raven.Bundles.Replication.Tasks
 				{
 					// we don't notify remote server about updates to system docs, see: RavenDB-715
 					if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments == 0 ||
-						documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > 15)
+						documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > SystemDocsLimitForRemoteEtagUpdate  ||
+						documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromDestination > DestinationDocsLimitForRemoteEtagUpdate) // see RavenDB-1555
 					{
 						SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
 					}
@@ -653,6 +657,7 @@ namespace Raven.Bundles.Replication.Tasks
 			public DateTime LastLastModified { get; set; }
 			public RavenJArray Documents { get; set; }
 			public int CountOfFilteredDocumentsWhichAreSystemDocuments { get; set; }
+			public int CountOfFilteredDocumentsWhichOriginFromDestination { get; set; }
 		}
 
 		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
@@ -699,6 +704,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 						docsSinceLastReplEtag += docsToReplicate.Count;
 						result.CountOfFilteredDocumentsWhichAreSystemDocuments += docsToReplicate.Count(doc => destination.IsSystemDocumentId(doc.Key));
+						result.CountOfFilteredDocumentsWhichOriginFromDestination +=
+							docsToReplicate.Count(doc => destination.OriginsFromDestination(destinationId, doc.Metadata));
 
 						if (docsToReplicate.Count > 0)
 						{
