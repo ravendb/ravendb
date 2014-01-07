@@ -51,7 +51,7 @@ namespace Voron.Impl
 			get { return _id; }
 		}
 
-		internal Action<long> AfterCommit = delegate { };
+		internal Action<Transaction> AfterCommit = delegate { };
 		private readonly StorageEnvironmentState _state;
 		private int _allocatedPagesInTransaction;
 		private int _overflowPagesInTransaction;
@@ -188,7 +188,7 @@ namespace Voron.Impl
 			    p =  _journal.ReadPage(this, pageNumber) ?? _dataPager.Read(pageNumber);
 			}
 
-            Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1}", pageNumber, p.PageNumber));
+            Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
 
 		    return p;
 		}
@@ -317,7 +317,7 @@ namespace Voron.Impl
 			}
 
 			Committed = true;
-			AfterCommit(_id);
+			AfterCommit(this);
 		}
 
 
@@ -358,7 +358,7 @@ namespace Voron.Impl
 			if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
 				Rollback();
 
-			_env.TransactionCompleted(_id);
+			_env.TransactionCompleted(this);
 			foreach (var pagerState in _pagerStates)
 			{
 				pagerState.Release();

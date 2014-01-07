@@ -4,148 +4,152 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
-using System.IO;
-using Voron.Impl;
-using Voron.Impl.Paging;
-using Xunit;
-
 namespace Voron.Tests.Bugs
 {
+    using System;
     using System.Collections.Generic;
+    using System.IO;
 
+    using Voron.Impl;
+    using Voron.Impl.Paging;
     using Voron.Trees;
 
+    using Xunit;
+
     public class FlushingToDataFile : StorageTest
-	{
-		protected override void Configure(StorageEnvironmentOptions options)
-		{
-			options.ManualFlushing = true;
-			options.MaxLogFileSize = 2 * AbstractPager.PageSize;
-		}
+    {
+        protected override void Configure(StorageEnvironmentOptions options)
+        {
+            options.ManualFlushing = true;
+            options.MaxLogFileSize = 2 * AbstractPager.PageSize;
+        }
 
-		[Fact]
-		public unsafe void ReadTransactionShouldNotReadFromJournalSnapshotIfJournalWasFlushedInTheMeanwhile()
-		{
-			var value1 = new byte[4000];
+        [Fact]
+        public unsafe void ReadTransactionShouldNotReadFromJournalSnapshotIfJournalWasFlushedInTheMeanwhile()
+        {
+            var value1 = new byte[4000];
 
-			new Random().NextBytes(value1);
+            new Random().NextBytes(value1);
 
-			Assert.Equal(2 * AbstractPager.PageSize, Env.Options.MaxLogFileSize);
+            Assert.Equal(2 * AbstractPager.PageSize, Env.Options.MaxLogFileSize);
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				tx.State.Root.Add(tx, "foo/0", new MemoryStream(value1));
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                tx.State.Root.Add(tx, "foo/0", new MemoryStream(value1));
 
-				tx.Commit();
-			}
+                tx.Commit();
+            }
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				tx.State.Root.Add(tx, "foo/1", new MemoryStream(value1));
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                tx.State.Root.Add(tx, "foo/1", new MemoryStream(value1));
 
-				tx.Commit();
-			}
+                tx.Commit();
+            }
 
-			using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			{
-				Env.FlushLogToDataFile(); // force flushing during read transaction
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                Env.FlushLogToDataFile(); // force flushing during read transaction
 
-				using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					// empty transaction is enough to expose the issue because it allocates 1 page in the scratch space for the transaction header
-					txw.Commit();
-				}
+                using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    // empty transaction is enough to expose the issue because it allocates 1 page in the scratch space for the transaction header
+                    txw.Commit();
+                }
 
-				for (var i = 0; i < 2; i++)
-				{
-					var readResult = tx.State.Root.Read(tx, "foo/" + i);
+                for (var i = 0; i < 2; i++)
+                {
+                    var readResult = tx.State.Root.Read(tx, "foo/" + i);
 
-					Assert.NotNull(readResult);
-					Assert.Equal(value1.Length, readResult.Reader.Length);
+                    Assert.NotNull(readResult);
+                    Assert.Equal(value1.Length, readResult.Reader.Length);
 
                     var memoryStream = new MemoryStream(readResult.Reader.Length);
-					readResult.Reader.CopyTo(memoryStream);
+                    readResult.Reader.CopyTo(memoryStream);
 
-					fixed (byte* b = value1)
-					fixed (byte* c = memoryStream.GetBuffer())
-						Assert.Equal(0, NativeMethods.memcmp(b, c, value1.Length));
-				}
-			}
-		}
+                    fixed (byte* b = value1)
+                    fixed (byte* c = memoryStream.GetBuffer())
+                        Assert.Equal(0, NativeMethods.memcmp(b, c, value1.Length));
+                }
+            }
+        }
 
-		[Fact]
-		public void FlushingOperationShouldHaveOwnScratchPagerStateReference()
-		{
-			var value1 = new byte[4000];
+        [Fact]
+        public void FlushingOperationShouldHaveOwnScratchPagerStateReference()
+        {
+            var value1 = new byte[4000];
 
-			new Random().NextBytes(value1);
+            new Random().NextBytes(value1);
 
-			Assert.Equal(2 * AbstractPager.PageSize, Env.Options.MaxLogFileSize);
+            Assert.Equal(2 * AbstractPager.PageSize, Env.Options.MaxLogFileSize);
 
-			Env.FlushLogToDataFile();
+            Env.FlushLogToDataFile();
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				tx.State.Root.Add(tx, "foo/0", new MemoryStream(value1));
-				tx.State.Root.Add(tx, "foo/1", new MemoryStream(value1));
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                tx.State.Root.Add(tx, "foo/0", new MemoryStream(value1));
+                tx.State.Root.Add(tx, "foo/1", new MemoryStream(value1));
 
-				tx.Commit();
-			}
+                tx.Commit();
+            }
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				tx.State.Root.Add(tx, "foo/0", new MemoryStream(value1));
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                tx.State.Root.Add(tx, "foo/0", new MemoryStream(value1));
 
-				tx.Commit();
-			}
+                tx.Commit();
+            }
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				tx.State.Root.Add(tx, "foo/4", new MemoryStream(value1));
-				tx.Commit();
-			}
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                tx.State.Root.Add(tx, "foo/4", new MemoryStream(value1));
+                tx.Commit();
+            }
 
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var readResult = tx.State.Root.Read(tx, "foo/0");
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var readResult = tx.State.Root.Read(tx, "foo/0");
 
-				Assert.NotNull(readResult);
-				Assert.Equal(value1.Length, readResult.Reader.Length);
+                Assert.NotNull(readResult);
+                Assert.Equal(value1.Length, readResult.Reader.Length);
 
-				var memoryStream = new MemoryStream();
-				readResult.Reader.CopyTo(memoryStream);
-			}
+                var memoryStream = new MemoryStream();
+                readResult.Reader.CopyTo(memoryStream);
+            }
 
-			using (var tx = Env.NewTransaction(TransactionFlags.Read))
-			{
-				Env.FlushLogToDataFile();
-			}
+            using (var tx = Env.NewTransaction(TransactionFlags.Read))
+            {
+                Env.FlushLogToDataFile();
+            }
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var readResult = tx.State.Root.Read(tx, "foo/0");
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var readResult = tx.State.Root.Read(tx, "foo/0");
 
-				Assert.NotNull(readResult);
-				Assert.Equal(value1.Length, readResult.Reader.Length);
+                Assert.NotNull(readResult);
+                Assert.Equal(value1.Length, readResult.Reader.Length);
 
-				var memoryStream = new MemoryStream();
-				readResult.Reader.CopyTo(memoryStream);
-			}
-		}
+                var memoryStream = new MemoryStream();
+                readResult.Reader.CopyTo(memoryStream);
+            }
+        }
 
         [Fact]
         public void UnknownIssue()
         {
-            var options = StorageEnvironmentOptions.GetInMemory();
+            var directory = "Test";
+
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, true);
+
+            var options = StorageEnvironmentOptions.ForPath(directory);
 
             options.ManualFlushing = true;
             using (var env = new StorageEnvironment(options))
             {
                 var trees = CreateTrees(env, 1, "tree");
                 var transactions = new List<Transaction>();
-                var iterators = new List<IIterator>();
 
                 for (int a = 0; a < 100; a++)
                 {
@@ -191,5 +195,5 @@ namespace Voron.Tests.Bugs
                 }
             }
         }
-	}
+    }
 }

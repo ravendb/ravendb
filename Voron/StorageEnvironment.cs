@@ -23,8 +23,7 @@ namespace Voron
     {
         private readonly StorageEnvironmentOptions _options;
 
-        private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
-            new ConcurrentDictionary<long, Transaction>();
+        private readonly ConcurrentList<Transaction> _activeTransactions = new ConcurrentList<Transaction>();
 
         private readonly IVirtualPager _dataPager;
         internal readonly SliceComparer _sliceComparer;
@@ -176,7 +175,10 @@ namespace Voron
 
         public long OldestTransaction
         {
-            get { return Math.Min(_activeTransactions.Keys.OrderBy(x => x).FirstOrDefault(), _transactionsCounter); }
+            get
+            {
+                return Math.Min(_activeTransactions.OrderBy(x => x.Id).Select(x => x.Id).FirstOrDefault(), _transactionsCounter);
+            }
         }
 
         public IEnumerable<Tree> Trees
@@ -380,7 +382,7 @@ namespace Voron
                     _txCommit.ExitReadLock();
                 }
 
-                _activeTransactions.TryAdd(txId, tx);
+                _activeTransactions.Add(tx);
                 var state = _dataPager.TransactionBegan();
                 tx.AddPagerState(state);
 
@@ -399,17 +401,16 @@ namespace Voron
             }
         }
 
-        private void TransactionAfterCommit(long txId)
+        private void TransactionAfterCommit(Transaction tx)
         {
-            Transaction tx;
-	        if (_activeTransactions.TryGetValue(txId, out tx) == false)
+            if (_activeTransactions.Contains(tx) == false)
 		        return;
 	        
             _txCommit.EnterWriteLock();
             try
             {
                 if (tx.Committed && tx.FlushedToJournal)
-                    _transactionsCounter = txId;
+                    _transactionsCounter = tx.Id;
 
                 State = tx.State;
             }
@@ -425,10 +426,9 @@ namespace Voron
 			_flushWriter.Set();
         }
 
-        internal void TransactionCompleted(long txId)
+        internal void TransactionCompleted(Transaction tx)
         {
-            Transaction tx;
-            if (_activeTransactions.TryRemove(txId, out tx) == false)
+            if (_activeTransactions.Remove(tx) == false)
                 return;
 
             if (tx.Flags != (TransactionFlags.ReadWrite))
