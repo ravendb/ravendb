@@ -129,11 +129,6 @@ namespace Raven.Database
 		/// </summary>
 		public string Name { get; private set; }
 
-		/// <summary>
-		/// true if the database finished initialization process, false otherwise
-		/// </summary>
-		public bool IsInitialized { get; private set; }
-
 		private readonly WorkContext workContext;
 		private readonly IndexingExecuter indexingExecuter;
 		public IndexingExecuter IndexingExecuter
@@ -255,6 +250,8 @@ namespace Raven.Database
 					prefetcher = new Prefetcher(workContext);
 					indexingExecuter = new IndexingExecuter(workContext, etagSynchronizer, prefetcher);
 
+                    RaiseIndexingWiringComplete();
+
 					InitializeTriggersExceptIndexCodecs();
 					SecondStageInitialization();
 					ExecuteStartupTasks();
@@ -267,9 +264,6 @@ namespace Raven.Database
 					throw;
 				}
 			}
-			
-			RaiseInitializeComplete();
-			IsInitialized = true;
 		}
 
 		private static void InitializeEncryption(InMemoryRavenConfiguration configuration)
@@ -723,16 +717,17 @@ namespace Raven.Database
 			TransportState.Send(obj);
 		}
 
-		protected void RaiseInitializeComplete()
+		protected void RaiseIndexingWiringComplete()
 		{			
-			var onInitializeComplete = OnInitialized;
-			if (onInitializeComplete != null)
-				onInitializeComplete();
+			var indexingWiringComplete = OnIndexingWiringComplete;
+		    OnIndexingWiringComplete = null; // we can only init once, release all actions
+			if (indexingWiringComplete != null)
+				indexingWiringComplete();
 		}
 
 		public event Action<DocumentDatabase, DocumentChangeNotification, RavenJObject> OnDocumentChange;
 
-		public event Action OnInitialized;
+		public event Action OnIndexingWiringComplete;
 
 		public void RunIdleOperations()
 		{
@@ -1273,7 +1268,7 @@ namespace Raven.Database
 					break;
 			}
 
-			InternalPutNewIndex(name, definition);
+			PutNewIndexIntoStorage(name, definition);
 
 			workContext.ClearErrorsFor(name);
 
@@ -1286,7 +1281,7 @@ namespace Raven.Database
 			return name;
 		}
 
-		internal void InternalPutNewIndex(string name, IndexDefinition definition)
+		internal void PutNewIndexIntoStorage(string name, IndexDefinition definition)
 		{
 			Debug.Assert(IndexStorage != null);
 			Debug.Assert(TransactionalStorage != null);
@@ -1785,7 +1780,7 @@ namespace Raven.Database
 		{
 			//remove the header information in a sync process
 			TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(id));
-			var actuallyDeleteIndexTask = new Task(() =>
+            var deleteIndexTask = Task.Run(() =>
 			{
 				Debug.Assert(IndexStorage != null);
 				IndexStorage.DeleteIndexData(id); // Data can take a while
@@ -1799,27 +1794,7 @@ namespace Raven.Database
 
 					actions.Lists.Remove("Raven/Indexes/PendingDeletion", id.ToString(CultureInfo.InvariantCulture));
 				});
-
 			});
-
-			Task deleteIndexTask;
-			if (IsInitialized)
-			{
-				deleteIndexTask = actuallyDeleteIndexTask;
-				deleteIndexTask.Start();
-			}
-			else
-			{
-				var initializationComplete = new ManualResetEventSlim();
-				OnInitialized += initializationComplete.Set;
-
-				deleteIndexTask = Task.Run(() =>
-										{
-											initializationComplete.Wait();
-											initializationComplete.Dispose();
-										})
-									   .ContinueWith(_ => actuallyDeleteIndexTask.Start());
-			}
 
 			long taskId;
 			AddTask(deleteIndexTask, null, out taskId);
