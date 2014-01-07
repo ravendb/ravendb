@@ -81,8 +81,8 @@ namespace Raven.Tests.MultiGet
 					session.Query<User>().Where(x => x.Name == "oren").Lazily();
 					session.Query<User>().Where(x => x.Name == "ayende").Lazily();
 					session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
-
 				}
+
 				var profilingInformation = store.GetProfilingInformationFor(id);
 				Assert.Equal(1, profilingInformation.Requests.Count);
 

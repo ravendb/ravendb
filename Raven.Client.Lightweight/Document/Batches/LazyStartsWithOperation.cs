@@ -51,11 +51,13 @@ namespace Raven.Client.Document.Batches
 						start.ToInvariantString(),
 						pageSize.ToInvariantString(),
 						Uri.EscapeDataString(matches ?? ""),
-                        Uri.EscapeDataString(exclude ?? ""))
+						Uri.EscapeDataString(exclude ?? ""))
 			};
 		}
 
 		public object Result { get; set; }
+
+		public QueryResult QueryResult { get; set; }
 
 		public bool RequiresRetry { get; set; }
 
