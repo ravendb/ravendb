@@ -188,7 +188,7 @@ namespace Voron.Impl
 			    p =  _journal.ReadPage(this, pageNumber) ?? _dataPager.Read(pageNumber);
 			}
 
-            Debug.Assert(p != null && p.PageNumber == pageNumber);
+            Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1}", pageNumber, p.PageNumber));
 
 		    return p;
 		}

@@ -12,7 +12,11 @@ using Xunit;
 
 namespace Voron.Tests.Bugs
 {
-	public class FlushingToDataFile : StorageTest
+    using System.Collections.Generic;
+
+    using Voron.Trees;
+
+    public class FlushingToDataFile : StorageTest
 	{
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
@@ -130,5 +134,62 @@ namespace Voron.Tests.Bugs
 				readResult.Reader.CopyTo(memoryStream);
 			}
 		}
+
+        [Fact]
+        public void UnknownIssue()
+        {
+            var options = StorageEnvironmentOptions.GetInMemory();
+
+            options.ManualFlushing = true;
+            using (var env = new StorageEnvironment(options))
+            {
+                var trees = CreateTrees(env, 1, "tree");
+                var transactions = new List<Transaction>();
+                var iterators = new List<IIterator>();
+
+                for (int a = 0; a < 100; a++)
+                {
+                    var random = new Random(1337);
+                    var buffer = new byte[random.Next(100, 1000)];
+                    random.NextBytes(buffer);
+
+                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        for (int i = 0; i < 100; i++)
+                        {
+                            foreach (var tree in trees)
+                            {
+                                tx.GetTree(tree).Add(tx, string.Format("key/{0}/{1}", a, i), new MemoryStream(buffer));
+                            }
+
+                        }
+
+                        tx.Commit();
+                        env.FlushLogToDataFile(tx);
+                        var txr = env.NewTransaction(TransactionFlags.Read);
+
+                        transactions.Add(txr);
+                    }
+                }
+
+                foreach (var tx in transactions)
+                {
+                    foreach (var tree in trees)
+                    {
+                        using (var iterator = tx.GetTree(tree).Iterate(tx))
+                        {
+                            if (!iterator.Seek(Slice.BeforeAllKeys))
+                                continue;
+
+                            do
+                            {
+                                Assert.Contains("key/", iterator.CurrentKey.ToString());
+                            }
+                            while (iterator.MoveNext());
+                        }
+                    }
+                }
+            }
+        }
 	}
 }
