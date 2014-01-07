@@ -136,7 +136,7 @@ namespace Voron.Tests.Bugs
         }
 
         [Fact]
-        public void UnknownIssue()
+        public void OldestActiveTransactionShouldBeCalculatedProperly()
         {
             var directory = "Test";
 
