@@ -6,25 +6,13 @@ namespace Raven.Abstractions
 {
 	public static class Default
 	{
+
 		public static readonly string[] OnlyDateTimeFormat = new[]
 		{
 			"yyyy'-'MM'-'dd'T'HH':'mm':'ss",
-			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.f",
-			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.ff",
-			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fff",
-			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.ffff",
-			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffff",
-			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.ffffff",
 			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff",
 			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'Z'"
 		};
-
-		//public static readonly string[] OnlyDateTimeFormat = new[]
-		//{
-		//"yyyy'-'MM'-'dd'T'HH':'mm':'ss",
-		//	"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff",
-		//	"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'Z'"
-		//};
 
 		/// <remarks>
 		/// 'r' format is used on the in metadata, because it's delivered as http header. 
