@@ -19,6 +19,13 @@ namespace Raven.Abstractions
 			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'Z'"
 		};
 
+		//public static readonly string[] OnlyDateTimeFormat = new[]
+		//{
+		//"yyyy'-'MM'-'dd'T'HH':'mm':'ss",
+		//	"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff",
+		//	"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'Z'"
+		//};
+
 		/// <remarks>
 		/// 'r' format is used on the in metadata, because it's delivered as http header. 
 		/// </remarks>

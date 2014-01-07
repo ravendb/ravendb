@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
-using Raven.Json.Utilities;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Json.Linq
@@ -176,6 +175,9 @@ namespace Raven.Json.Linq
 
 				return default(U);
 			}
+
+			if (value.Value == null)
+				throw new InvalidOperationException("value.Value == null and conversion target type is not generic");
 
 			//precaution and better exception message
 			if (!(value.Value is IConvertible))

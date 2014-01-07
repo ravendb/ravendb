@@ -26,11 +26,10 @@ namespace Raven.Database.Server.WebApi
 		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
 		private readonly TimeSpan frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 
-		private readonly DateTime startUpTime = SystemTime.UtcNow;
 		private DateTime lastWriteRequest;
 		private bool disposed;
-		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
-
+		//private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
+		private readonly AsyncReaderWriterLock disposerLock = new AsyncReaderWriterLock();
 		private int physicalRequestsCount;
 		private bool initialized;
 
@@ -66,8 +65,7 @@ namespace Raven.Database.Server.WebApi
 
 		public void Dispose()
 		{
-			disposerLock.EnterWriteLock();
-			try
+			using(disposerLock.WriteLock())
 			{
 				disposed = true;
 				var exceptionAggregator = new ExceptionAggregator(Logger, "Could not properly dispose of HttpServer");
@@ -78,18 +76,11 @@ namespace Raven.Database.Server.WebApi
 						serverTimer.Dispose();
 				});
 			}
-			finally
-			{
-				disposerLock.ExitWriteLock();
-			}
 		}
 
 		public async Task HandleActualRequest(RavenDbApiController controller, Func<Task> action)
 		{
-			var isReadLockHeld = disposerLock.IsReadLockHeld;
-			if (isReadLockHeld == false)
-				disposerLock.EnterReadLock();
-			try
+			using(await disposerLock.ReadLockAsync())
 			{
 				if (disposed)
 					return;
@@ -120,11 +111,7 @@ namespace Raven.Database.Server.WebApi
 					}
 				}
 			}
-			finally
-			{
-				if (isReadLockHeld == false)
-					disposerLock.ExitReadLock();
-			}
+			
 		}
 
 		// Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
