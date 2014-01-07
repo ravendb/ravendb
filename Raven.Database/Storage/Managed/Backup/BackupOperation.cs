@@ -57,15 +57,17 @@ namespace Raven.Storage.Managed.Backup
 				{
 					persistentSource.FlushLog();
 
+					var progressNotifier = new ProgressNotifier();
 					foreach (var directoryBackup in directoryBackups)
 					{
 						directoryBackup.Notify += UpdateBackupStatus;
-						directoryBackup.Prepare();
+						var backupSize = directoryBackup.Prepare();
+						progressNotifier.TotalBytes += backupSize;
 					}
 
 					foreach (var directoryBackup in directoryBackups)
 					{
-						directoryBackup.Execute();
+						directoryBackup.Execute(progressNotifier);
 					}
 
 					return 0;// ignored

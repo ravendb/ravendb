@@ -57,13 +57,13 @@ namespace Raven.Storage.Esent.Backup
 
 					while (true)
 				    {
-                        incrementalTag = SystemTime.UtcNow.ToString("Inc yyyy-MM-dd HH-mm-ss");
-					to = Path.Combine(to, incrementalTag);
+						incrementalTag = SystemTime.UtcNow.ToString("Inc yyyy-MM-dd HH-mm-ss");
+						to = Path.Combine(to, incrementalTag);
 
-				        if (Directory.Exists(to) == false)
-				            break;
-                        Thread.Sleep(100); // wait until the second changes, should only even happen in tests
-				    }
+						if (Directory.Exists(to) == false)
+							break;
+						Thread.Sleep(100); // wait until the second changes, should only even happen in tests
+					}
 				}
 				else
 				{
@@ -78,25 +78,29 @@ namespace Raven.Storage.Esent.Backup
 
 				database.IndexStorage.Backup(basePath, incrementalTag);
 
+				var progressNotifier = new ProgressNotifier();
 				foreach (var directoryBackup in directoryBackups)
 				{
 					directoryBackup.Notify += UpdateBackupStatus;
-					directoryBackup.Prepare();
+					var backupSize = directoryBackup.Prepare();
+					progressNotifier.TotalBytes += backupSize;
 				}
 
 				foreach (var directoryBackup in directoryBackups)
 				{
-					directoryBackup.Execute();
+					directoryBackup.Execute(progressNotifier);
 				}
 
 				// Make sure we have an Indexes folder in the backup location
 				if (!Directory.Exists(Path.Combine(to, "Indexes")))
 					Directory.CreateDirectory(Path.Combine(to, "Indexes"));
 
+				// It doesn't seem to be possible to get the % complete from an esent backup, but any status msgs 
+				// that is does give us are displayed live during the backup.
 				var esentBackup = new EsentBackup(instance, to, incrementalBackup ? BackupGrbit.Incremental : BackupGrbit.Atomic);
 				esentBackup.Notify += UpdateBackupStatus;
 				esentBackup.Execute();
-				if(databaseDocument != null)
+				if (databaseDocument != null)
 					File.WriteAllText(Path.Combine(to, "Database.Document"), RavenJObject.FromObject(databaseDocument).ToString());
 
 				File.WriteAllText(backupConfigPath, "Backup completed " + SystemTime.UtcNow);
@@ -163,7 +167,8 @@ namespace Raven.Storage.Esent.Backup
 					Timestamp = SystemTime.UtcNow,
 					Severity = severity
 				});
-				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus), jsonDocument.Metadata,
+				database.Put(BackupStatus.RavenBackupStatusDocumentKey, null, RavenJObject.FromObject(backupStatus), 
+							 jsonDocument.Metadata,
 							 null);
 			}
 			catch (Exception e)
