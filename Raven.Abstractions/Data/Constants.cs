@@ -109,5 +109,7 @@ namespace Raven.Abstractions.Data
 		public const double MilesToKm = 1.60934;
 
 		public const string RavenClientVersion = "Raven-Client-Version";
+
+        public const string RavenDefaultQueryTimeout = "Raven_Default_Query_Timeout";
 	}
 }
