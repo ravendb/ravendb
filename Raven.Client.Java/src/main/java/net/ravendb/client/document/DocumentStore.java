@@ -419,7 +419,7 @@ public class DocumentStore extends DocumentStoreBase {
           databaseUrl += "/databases/" + defaultDatabase;
         }
 
-        return new ServerClient(databaseUrl, conventions, apiKey,
+        return new ServerClient(databaseUrl, conventions, new OperationCredentials(apiKey),
           new ReplicationInformerGetter()
         , null, jsonRequestFactory, currentSessionId.get(), listeners.getConflictListeners().toArray(new IDocumentConflictListener[0]));
       }
