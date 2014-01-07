@@ -129,11 +129,6 @@ namespace Raven.Database
 		/// </summary>
 		public string Name { get; private set; }
 
-		/// <summary>
-		/// true if the database finished initialization process, false otherwise
-		/// </summary>
-		public bool IsInitialized { get; private set; }
-
 		private readonly WorkContext workContext;
 		private readonly IndexingExecuter indexingExecuter;
 		public IndexingExecuter IndexingExecuter
@@ -255,6 +250,8 @@ namespace Raven.Database
 					prefetcher = new Prefetcher(workContext);
 					indexingExecuter = new IndexingExecuter(workContext, etagSynchronizer, prefetcher);
 
+                    RaiseIndexingWiringComplete();
+
 					InitializeTriggersExceptIndexCodecs();
 					SecondStageInitialization();
 					ExecuteStartupTasks();
@@ -267,9 +264,6 @@ namespace Raven.Database
 					throw;
 				}
 			}
-			
-			RaiseInitializeComplete();
-			IsInitialized = true;
 		}
 
 		private static void InitializeEncryption(InMemoryRavenConfiguration configuration)
@@ -723,16 +717,17 @@ namespace Raven.Database
 			TransportState.Send(obj);
 		}
 
-		protected void RaiseInitializeComplete()
+		protected void RaiseIndexingWiringComplete()
 		{			
-			var onInitializeComplete = OnInitialized;
-			if (onInitializeComplete != null)
-				onInitializeComplete();
+			var indexingWiringComplete = OnIndexingWiringComplete;
+		    OnIndexingWiringComplete = null; // we can only init once, release all actions
+			if (indexingWiringComplete != null)
+				indexingWiringComplete();
 		}
 
 		public event Action<DocumentDatabase, DocumentChangeNotification, RavenJObject> OnDocumentChange;
 
-		public event Action OnInitialized;
+		public event Action OnIndexingWiringComplete;
 
 		public void RunIdleOperations()
 		{

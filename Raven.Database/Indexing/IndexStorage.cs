@@ -177,10 +177,10 @@ namespace Raven.Database.Indexing
 
 		private void TryResettingIndex(string indexName, IndexDefinition indexDefinition)
 		{
-		    Debug.Assert(documentDatabase.IsInitialized == false,"we assume that we can only reset indexes in this way during db init");
 			try
 			{
-                documentDatabase.OnInitialized += () =>
+                // we have to defer the work here until the database is actually ready for work
+                documentDatabase.OnIndexingWiringComplete += () =>
                 {
                     try
                     {
