@@ -54,7 +54,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
-		public void Attachment_metadata_keys_should_not_conflict_with_http_headers()
+		public void Attachment_metadata_content_type_should_overwrite_http_content_type()
 		{
 			using (var store = NewRemoteDocumentStore(requestedStorage: "esent"))
 			{
