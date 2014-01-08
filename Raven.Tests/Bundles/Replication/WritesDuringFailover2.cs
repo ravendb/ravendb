@@ -9,7 +9,7 @@ namespace Raven.Tests.Bundles.Replication
 {
 	public class WritesDuringFailover2 : ReplicationBase
 	{
-		protected override void ConfigureStore(DocumentStore documentStore)
+		protected override void ModifyStore(DocumentStore documentStore)
 		{
 			documentStore.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 		}

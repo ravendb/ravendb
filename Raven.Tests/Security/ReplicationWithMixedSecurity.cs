@@ -33,7 +33,7 @@ namespace Raven.Tests.Security
 
 		private int _storeCounter, _databaseCounter;
 
-		protected override void ConfigureStore(DocumentStore store)
+		protected override void ModifyStore(DocumentStore store)
 		{
 			var isApiStore = _storeCounter % 2 == 0;
 
