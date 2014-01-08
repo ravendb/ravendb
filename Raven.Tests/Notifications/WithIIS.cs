@@ -5,14 +5,9 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
-using System.IO;
-using System.Net;
-using System.Reactive.Linq;
 using Raven.Abstractions.Data;
-using Raven.Client.Changes;
 using Raven.Tests.Bugs.Identifiers;
 using Xunit;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Tests.Notifications
 {
@@ -22,8 +17,7 @@ namespace Raven.Tests.Notifications
 		{
 		}
 
-		//[IISExpressInstalledFact]
-		[TimeBombedFact(2013, 12, 31)]
+		[IISExpressInstalledFact]
 		public void CheckNotificationInIIS()
 		{
 			using (var store = NewDocumentStore())
