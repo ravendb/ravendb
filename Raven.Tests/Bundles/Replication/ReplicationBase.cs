@@ -37,10 +37,11 @@ namespace Raven.Tests.Bundles.Replication
 			return CreateStoreAtPort(port, enableCompressionBundle, configureStore, anonymousUserAccessMode, enableAuthorization);
 		}
 
-        public EmbeddableDocumentStore CreateEmbeddableStore(bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin)
+        public EmbeddableDocumentStore CreateEmbeddableStore(bool enableCompressionBundle = false, 
+			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin)
 		{
 			var port = PortRangeStart - stores.Count;
-			return CreateEmbeddableStoreAtPort(port, enableCompressionBundle, removeDataDirectory, configureStore, anonymousUserAccessMode);
+			return CreateEmbeddableStoreAtPort(port, enableCompressionBundle, anonymousUserAccessMode);
 		}
 
 		private DocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, 
@@ -62,39 +63,13 @@ namespace Raven.Tests.Bundles.Replication
 			return documentStore;
 		}
 
-		private EmbeddableDocumentStore CreateEmbeddableStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
+		private EmbeddableDocumentStore CreateEmbeddableStoreAtPort(int port, bool enableCompressionBundle = false, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All)
 		{
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-
-			var embeddedStore = new EmbeddableDocumentStore
-			{
-				UseEmbeddedHttpServer = true,
-				Configuration =
-				{
-					Settings = { { "Raven/ActiveBundles", "replication" + (enableCompressionBundle ? ";compression" : string.Empty) } },
-					AnonymousUserAccessMode = anonymousUserAccessMode,
-					DataDirectory = "Data #" + stores.Count,
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-					RunInMemory = true,
-					Port = port,
-					UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
-					DefaultStorageTypeName = GetDefaultStorageType()
-				},
-			};
-
-			if (removeDataDirectory)
-			{
-				IOExtensions.DeleteDirectory(embeddedStore.Configuration.DataDirectory);
-			}
-
-			ModifyStore(embeddedStore);
-			if (configureStore != null)
-				configureStore(embeddedStore);
-			embeddedStore.Initialize();
-
-			stores.Add(embeddedStore);
-
-			return embeddedStore;
+			var store = NewDocumentStore(port: port,
+				activeBundles: "replication" + (enableCompressionBundle ? ";compression" : string.Empty),
+				anonymousUserAccessMode: anonymousUserAccessMode);
+			return store;
 		}
 
 		protected virtual void ConfigureDatabase(DocumentDatabase database)

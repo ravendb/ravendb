@@ -58,21 +58,31 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			ComposablePartCatalog catalog = null,
 			string dataDir = null,
-			bool enableAuthentication = false)
+			bool enableAuthentication = false,
+			string activeBundles = null,
+			int? port = null,
+			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin)
 		{
 			var storageType = GetDefaultStorageType(requestedStorage);
 			var documentStore = new EmbeddableDocumentStore
 			{
+				UseEmbeddedHttpServer = port.HasValue,
 				Configuration =
 				{
 					DefaultStorageTypeName = storageType,
 					DataDirectory = dataDir ?? NewDataPath(),
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
-					Port = 8079,
-					UseFips = SettingsHelper.UseFipsEncryptionAlgorithms
+					Port = port == null ? 8079 : port.Value,
+					UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
+					AnonymousUserAccessMode = anonymousUserAccessMode,
 				}
 			};
+
+			if (activeBundles != null)
+			{
+				documentStore.Configuration.Settings["Raven/ActiveBundles"] = activeBundles;
+			}
 
 			if (catalog != null)
 				documentStore.Configuration.Catalog.Catalogs.Add(catalog);
@@ -87,7 +97,6 @@ namespace Raven.Tests.Helpers
 				if (enableAuthentication)
 				{
 					EnableAuthentication(documentStore.DocumentDatabase);
-					ModifyConfiguration(documentStore.Configuration);
 				}
 
 				CreateDefaultIndexes(documentStore);
