@@ -372,9 +372,9 @@ namespace Raven.Client.Connection
 		public IEnumerator<RavenJObject> StreamQuery(string index, IndexQuery query, out QueryHeaderInformation queryHeaderInfo)
 		{
 			var reference = new Reference<QueryHeaderInformation>();
-			Task<IAsyncEnumerator<RavenJObject>> streamQueryAsync = asyncServerClient.StreamQueryAsync(index, query, reference);
+			var streamQueryAsync = asyncServerClient.StreamQueryAsync(index, query, reference).Result;
 			queryHeaderInfo = reference.Value;
-			return new AsycnEnumerableWrapper<RavenJObject>(streamQueryAsync.Result);
+			return new AsycnEnumerableWrapper<RavenJObject>(streamQueryAsync);
 			}
 
 		/// <summary>
