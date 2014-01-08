@@ -780,8 +780,6 @@ namespace Raven.Client.Document
 			var lazyValue = new Lazy<int>(() =>
 			{
 				ExecuteAllPendingLazyOperations();
-				// TODO work out if this is a robust way of doing it????
-				// Should be go thru GetQueryResult() in RavenQueryProviderProcessor with SpecialQueryType.Count??
 				return operation.QueryResult.TotalResults;
 			});
 

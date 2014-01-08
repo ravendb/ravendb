@@ -74,7 +74,7 @@ namespace Raven.Client.Linq
 		/// <summary>
 		/// Convert the Linq query to a lazy-count Lucene query and provide a function to execute when it is being evaluated
 		/// </summary>
-		Lazy<int> LazyCount<T>(Expression expression);
+		Lazy<int> LazilyCount<T>(Expression expression);
 
 		/// <summary>
 		/// Move the registered after query actions

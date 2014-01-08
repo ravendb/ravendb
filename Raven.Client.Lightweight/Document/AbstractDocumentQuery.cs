@@ -716,7 +716,7 @@ namespace Raven.Client.Document
 		/// Register the query as a lazy-count query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
-		public virtual Lazy<int> LazyCount()
+		public virtual Lazy<int> LazilyCount()
 		{
 			var headers = new Dictionary<string, string>();
 			if (queryOperation == null)
