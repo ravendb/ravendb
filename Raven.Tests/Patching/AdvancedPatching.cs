@@ -262,15 +262,9 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             var dateOutput = result.Value<string>("DateOutput");
             var dateOffsetOutput = result.Value<string>("DateOffsetOutput");
 
-            // Jint does something wierd when creating a Date from a .NET DateTimeOffset and/or DateTime string, 
-            // so this test doesn't check any of the millisecond digits as they don't always match!
-            Assert.True(dateOutput.StartsWith(date.ToString("yyyy-MM-ddTHH:mm:ss.")));
-            Assert.True(dateOutput.EndsWith("Z"));
-            Assert.Equal(24, dateOutput.Length);
-
-            Assert.True(dateOffsetOutput.StartsWith(dateOffset.ToString("yyyy-MM-ddTHH:mm:ss.")));
-            Assert.True(dateOffsetOutput.EndsWith("Z"));
-            Assert.Equal(24, dateOffsetOutput.Length);
+            // With the custom fixes to Jint, these tests now pass (RavenDB-1536)
+            Assert.Equal(date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), dateOutput);
+            Assert.Equal(dateOffset.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), dateOffsetOutput);
         }
 
 		[Fact]

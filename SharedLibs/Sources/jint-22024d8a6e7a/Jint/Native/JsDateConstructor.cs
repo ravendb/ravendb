@@ -110,12 +110,14 @@ namespace Jint.Native {
                     result = New(parameters[0].ToNumber());
                 }
                 else {
-                    double d;
+                    JsDate d;
+
+                    // Make sure we create a date in a reliable way, the old method lost precision!
                     if (ParseDate(parameters[0].ToString(), CultureInfo.InvariantCulture, out d)) {
-                        result = New(d);
+                        result = d;
                     }
                     else if (ParseDate(parameters[0].ToString(), CultureInfo.CurrentCulture, out d)) {
-                        result = New(d);
+                        result = d;
                     }
                     else {
                         result = New(0);
@@ -178,17 +180,17 @@ namespace Jint.Native {
             return result;
         }
 
-        private bool ParseDate(string p, IFormatProvider culture, out double result) {
-            DateTime d = new DateTime(0, DateTimeKind.Utc); ;
-            result = 0;
+        private bool ParseDate(string p, IFormatProvider culture, out JsDate result) {
+            DateTime d = new DateTime(0, DateTimeKind.Utc);
+            result = null;
 
             if (DateTime.TryParse(p, culture, DateTimeStyles.None, out d)) {
-                result = New(d).ToNumber();
+                result = New(d);
                 return true;
             }
 
             if (DateTime.TryParseExact(p, JsDate.FORMAT, culture, DateTimeStyles.None, out d)) {
-                result = New(d).ToNumber();
+                result = New(d);
                 return true;
             }
 
@@ -203,7 +205,7 @@ namespace Jint.Native {
             }
 
             if (d.Ticks > 0) {
-                result = New(d).ToNumber();
+                result = New(d);
                 return true;
             }
 
@@ -216,9 +218,9 @@ namespace Jint.Native {
         /// <param name="str"></param>
         /// <returns></returns>
         public JsInstance ParseImpl(JsInstance[] parameters) {
-            double d;
+            JsDate d;
             if (ParseDate(parameters[0].ToString(), CultureInfo.InvariantCulture, out d)) {
-                return Global.NumberClass.New(d);
+                return Global.NumberClass.New(d.ToNumber());
             }
             else {
                 return Global.NaN;
@@ -231,9 +233,9 @@ namespace Jint.Native {
         /// <param name="str"></param>
         /// <returns></returns>
         public JsInstance ParseLocaleImpl(JsInstance[] parameters) {
-            double d;
+            JsDate d;
             if (ParseDate(parameters[0].ToString(), CultureInfo.CurrentCulture, out d)) {
-                return Global.NumberClass.New(d);
+                return Global.NumberClass.New(d.ToNumber());
             }
             else {
                 return Global.NaN;
@@ -578,7 +580,8 @@ namespace Jint.Native {
                 return Global.NaN;
             }
 
-            return Global.NumberClass.New(CreateDateTime(target.ToNumber()).ToLocalTime().Millisecond);
+            DateTime dateTime = (DateTime)target.Value;
+            return Global.NumberClass.New(dateTime.ToLocalTime().Millisecond);
         }
 
         /// <summary>
@@ -592,7 +595,8 @@ namespace Jint.Native {
                 return Global.NaN;
             }
 
-            return Global.NumberClass.New(CreateDateTime(target.ToNumber()).ToUniversalTime().Millisecond);
+            DateTime dateTime = (DateTime)target.Value;
+            return Global.NumberClass.New(dateTime.ToUniversalTime().Millisecond);
         }
 
         /// <summary>
@@ -793,7 +797,6 @@ namespace Jint.Native {
             valueOf = valueOf.AddDays(parameters[0].ToNumber());
             target.Value = valueOf;
             return target;
-
         }
 
         /// <summary>
