@@ -1387,7 +1387,7 @@ namespace Raven.Client.Connection.Async
 												HandleReplicationStatusChanges);
 
 				var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
-				var data = jArray.ToString(Formatting.None);
+				var data = jArray.ToString(Formatting.None, Default.Converters);
 
 				ErrorResponseException responseException;
 				try

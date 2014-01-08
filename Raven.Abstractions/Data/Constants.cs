@@ -112,5 +112,9 @@ namespace Raven.Abstractions.Data
 		public const string RavenClientVersion = "Raven-Client-Version";
 
 		public const string NextPageStart = "Next-Page-Start";
+
+#if DEBUG
+		public const int EnterLockTimeout = 10000;
+#endif
 	}
 }
