@@ -8,7 +8,13 @@ namespace Raven.Abstractions
 	{
 		public static readonly string[] OnlyDateTimeFormat = new[]
 		{
-		"yyyy'-'MM'-'dd'T'HH':'mm':'ss",
+			"yyyy'-'MM'-'dd'T'HH':'mm':'ss",
+			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.f",
+			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.ff",
+			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fff",
+			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.ffff",
+			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffff",
+			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.ffffff",
 			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff",
 			"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'Z'"
 		};

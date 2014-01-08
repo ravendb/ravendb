@@ -179,22 +179,21 @@ namespace Raven.Database.Indexing
 		{
 			try
 			{
-				if (documentDatabase.IsInitialized)
-				{
-					documentDatabase.DeleteIndex(indexName);
-					documentDatabase.InternalPutNewIndex(indexName, indexDefinition);
-				}
-				else
-				{
-					documentDatabase.OnInitialized += () =>
-					{
-						documentDatabase.DeleteIndex(indexName);
-						documentDatabase.InternalPutNewIndex(indexName, indexDefinition);
-					};
-				}
+                // we have to defer the work here until the database is actually ready for work
+                documentDatabase.OnIndexingWiringComplete += () =>
+                {
+                    try
+                    {
+                        documentDatabase.DeleteIndex(indexName);
+                        documentDatabase.PutNewIndexIntoStorage(indexName, indexDefinition);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Could not finalize reseting of index: " + indexName, e);
+                    }
+                };
 
-				// ReSharper disable once SpecifyACultureInStringConversionExplicitly
-				var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString());
+				var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString(CultureInfo.InvariantCulture));
 				IOExtensions.DeleteDirectory(indexFullPath);
 
 				var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
