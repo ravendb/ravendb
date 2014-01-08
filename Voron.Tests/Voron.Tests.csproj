@@ -65,6 +65,7 @@
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\FlushingToDataFile.cs" />
     <Compile Include="Bugs\IndexPointToNonLeafPageTests.cs" />
+    <Compile Include="Bugs\Isolation.cs" />
     <Compile Include="Bugs\LargeValues.cs" />
     <Compile Include="Bugs\MultiAdds.cs" />
     <Compile Include="Bugs\RecoveryMultipleJournals.cs" />
