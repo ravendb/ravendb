@@ -323,12 +323,8 @@ namespace Raven.Database.Server.Controllers
 
 		public virtual HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
-			var resMsg = new HttpResponseMessage(code)
-			{
-				Content = new JsonContent()
-			};
+			var resMsg = new HttpResponseMessage(code);
 			WriteETag(etag, resMsg);
-
 			return resMsg;
 		}
 
