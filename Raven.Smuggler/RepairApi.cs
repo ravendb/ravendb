@@ -87,13 +87,23 @@ namespace Raven.Smuggler
             {
                 foreach (var doc in batch)
                 {
-                    var metadata = doc["@metadata"];
+                    var metadata = (RavenJObject)doc["@metadata"];
 
                     var id = metadata.Value<string>("@id");
                     if (id.Contains("/conflicts/"))
                     {
                         id = id.Substring(0, id.IndexOf('/'));
                     }
+                    metadata["@id"] = id;
+
+                    // clear replication data
+                    foreach (var key in metadata.Keys)
+                    {
+                        if (key.StartsWith("Raven-Replication"))
+                            metadata.Remove(key);
+                    }
+                    doc["@metadata"] = metadata;
+                    
 
                     RavenJObject conflict;
                     if (!docs.TryGetValue(id, out conflict))
