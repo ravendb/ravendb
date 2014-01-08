@@ -874,13 +874,12 @@ namespace Raven.Database.Config
 			return AnonymousUserAccessMode.Admin;
 		}
 
-		public string GetFullUrl(string baseUrl)
+		public Uri GetFullUrl(string baseUrl)
 		{
 			if (baseUrl.StartsWith("/"))
 				baseUrl = baseUrl.Substring(1);
-			if (VirtualDirectory.EndsWith("/"))
-				return VirtualDirectory + baseUrl;
-			return VirtualDirectory + "/" + baseUrl;
+			var url = VirtualDirectory.EndsWith("/") ? VirtualDirectory + baseUrl : VirtualDirectory + "/" + baseUrl;
+			return new Uri(url, UriKind.RelativeOrAbsolute);
 		}
 
 		public T? GetConfigurationValue<T>(string configName) where T : struct
