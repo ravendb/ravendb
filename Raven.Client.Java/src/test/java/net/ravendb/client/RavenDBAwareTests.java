@@ -84,7 +84,7 @@ public abstract class RavenDBAwareTests {
 
   @BeforeClass
   public static void startServerBefore() throws Exception {
-    startServer(DEFAULT_SERVER_PORT_1);
+    startServer(DEFAULT_SERVER_PORT_1, true);
   }
 
   @AfterClass
@@ -154,7 +154,7 @@ public abstract class RavenDBAwareTests {
     HttpPut put = null;
     try {
       put = new HttpPut(getServerUrl(i) + "/admin/databases/" + UrlUtils.escapeDataString(dbName));
-      put.setEntity(new StringEntity(getCreateDbDocument(dbName), ContentType.APPLICATION_JSON));
+      put.setEntity(new StringEntity(getCreateDbDocument(dbName, getDefaultServerPort(i)), ContentType.APPLICATION_JSON));
       HttpResponse httpResponse = client.execute(put);
       if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
         throw new IllegalStateException("Invalid response on put:" + httpResponse.getStatusLine().getStatusCode());
@@ -166,11 +166,18 @@ public abstract class RavenDBAwareTests {
     }
   }
 
+  private int getDefaultServerPort(int i) {
+    if (i == 1) {
+      return DEFAULT_SERVER_PORT_1;
+    }
+    return DEFAULT_SERVER_PORT_2;
+  }
+
   protected void createDbAtPort(String dbName, int port) throws Exception {
     HttpPut put = null;
     try {
       put = new HttpPut("http://" + DEFAULT_HOST + ":" + port + "/admin/databases/" + UrlUtils.escapeDataString(dbName));
-      put.setEntity(new StringEntity(getCreateDbDocument(dbName), ContentType.APPLICATION_JSON));
+      put.setEntity(new StringEntity(getCreateDbDocument(dbName, port), ContentType.APPLICATION_JSON));
       HttpResponse httpResponse = client.execute(put);
       if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
         throw new IllegalStateException("Invalid response on put:" + httpResponse.getStatusLine().getStatusCode());
@@ -183,7 +190,7 @@ public abstract class RavenDBAwareTests {
   }
 
   protected void startServer() throws Exception{
-    startServer(DEFAULT_SERVER_PORT_1);
+    startServer(DEFAULT_SERVER_PORT_1, true);
   }
 
   protected void stopServer() throws Exception{
@@ -206,10 +213,14 @@ public abstract class RavenDBAwareTests {
     }
   }
 
-  protected static void startServer(int port) throws Exception {
+  protected static void startServer(int port, boolean deleteData) throws Exception {
     HttpPut put = null;
     try {
-      put = new HttpPut(DEFAULT_SERVER_RUNNER_URL);
+      String putUrl = DEFAULT_SERVER_RUNNER_URL;
+      if (deleteData) {
+        putUrl += "?deleteData=true";
+      }
+      put = new HttpPut(putUrl);
       put.setEntity(new StringEntity(getCreateServerDocument(port), ContentType.APPLICATION_JSON));
       HttpResponse httpResponse = client.execute(put);
       if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
@@ -238,11 +249,11 @@ public abstract class RavenDBAwareTests {
   }
 
 
-  protected String getCreateDbDocument(String dbName) {
+  protected String getCreateDbDocument(String dbName, int port) {
     RavenJObject doc = new RavenJObject();
     RavenJObject settings = new RavenJObject();
     doc.add("Settings", settings);
-    settings.add("Raven/DataDir", RavenJValue.fromObject("~\\Databases\\" + dbName));
+    settings.add("Raven/DataDir", RavenJValue.fromObject("~\\" +  port + "\\Databases\\" + dbName));
     settings.add("Raven/ActiveBundles", RavenJValue.fromObject("Replication"));
     doc.add("SecuredSettings", new RavenJObject());
     doc.add("Disabled", new RavenJValue(false));

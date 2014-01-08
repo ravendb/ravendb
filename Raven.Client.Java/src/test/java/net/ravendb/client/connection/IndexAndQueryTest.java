@@ -495,11 +495,9 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
 
       RavenJObject meta1 = new RavenJObject();
       meta1.add(Constants.RAVEN_ENTITY_NAME, RavenJValue.fromObject("Developers"));
-      meta1.add(Constants.LAST_MODIFIED, RavenJValue.fromObject(new Date()));
 
       RavenJObject meta2 = new RavenJObject();
       meta2.add(Constants.RAVEN_ENTITY_NAME, RavenJValue.fromObject("Developers"));
-      meta2.add(Constants.LAST_MODIFIED, RavenJValue.fromObject(new Date()));
 
       dbCommands.put("developers/1", null, RavenJObject.fromObject(d1), meta1);
       dbCommands.put("developers/2", null, RavenJObject.fromObject(d2), meta2);
