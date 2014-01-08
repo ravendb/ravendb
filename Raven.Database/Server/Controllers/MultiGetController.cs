@@ -100,8 +100,8 @@ namespace Raven.Database.Server.Controllers
 
 					var jsonContent = (JsonContent)result.Content;
 
-					if(jsonContent.Token != null)
-						jsonContent.Token.WriteTo(writer, Default.Converters);
+					if(jsonContent.Data != null)
+						jsonContent.Data.WriteTo(writer, Default.Converters);
 
 					writer.WriteEndObject();
 				}

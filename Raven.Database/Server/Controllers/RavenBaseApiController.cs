@@ -323,7 +323,10 @@ namespace Raven.Database.Server.Controllers
 
 		public virtual HttpResponseMessage GetEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
-			var resMsg = new HttpResponseMessage(code);
+			var resMsg = new HttpResponseMessage(code)
+			{
+				Content = new JsonContent()
+			};
 			WriteETag(etag, resMsg);
 			return resMsg;
 		}
@@ -335,21 +338,14 @@ namespace Raven.Database.Server.Controllers
 				msg = GetEmptyMessage(status);
 
 			var jsonContent = ((JsonContent)msg.Content);
-			var jsonp = GetQueryStringValue("jsonp");
 
 			WriteHeaders(headers, etag, msg);
 
+			var jsonp = GetQueryStringValue("jsonp");
 			if (string.IsNullOrEmpty(jsonp) == false)
-			{
-				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/javascript") { CharSet = "utf-8" };
 				jsonContent.Jsonp = jsonp;
-			}
-			else
-			{
-				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
-			}
 
-			jsonContent.Token = data;
+			jsonContent.Data = data;
 
 			return msg;
 		}
