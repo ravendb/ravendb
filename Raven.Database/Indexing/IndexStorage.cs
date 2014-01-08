@@ -179,14 +179,26 @@ namespace Raven.Database.Indexing
 		{
 			try
 			{
-			    documentDatabase.StartDeletingIndexData(indexDefinition.IndexId);
-				documentDatabase.TransactionalStorage.Batch(accessor => accessor.Indexing.AddIndex(indexDefinition.IndexId, indexDefinition.IsMapReduce));
+                // we have to defer the work here until the database is actually ready for work
+                documentDatabase.OnIndexingWiringComplete += () =>
+                {
+                    try
+                    {
+                        documentDatabase.DeleteIndex(indexName);
+                        documentDatabase.PutNewIndexIntoStorage(indexName, indexDefinition);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Could not finalize reseting of index: " + indexName, e);
+                    }
+                };
 
-                var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString());
+				var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString(CultureInfo.InvariantCulture));
 				IOExtensions.DeleteDirectory(indexFullPath);
 
-                var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
-                IOExtensions.DeleteDirectory(suggestionsForIndex);
+				var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
+				IOExtensions.DeleteDirectory(suggestionsForIndex);
+				
 			}
 			catch (Exception exception)
 			{
