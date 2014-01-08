@@ -246,6 +246,8 @@ Usage:
 		Raven.Smuggler out http://localhost:8080/ dump.raven
 	- Dump the dump.raven file to stdout
 		Raven.Smuggler dump dump.raven
+	- Repair the dump.raven to dump.raven.repair
+		Raven.Smuggler reapir dump.raven    
 
 Command line options:", SystemTime.UtcNow.Year);
 
