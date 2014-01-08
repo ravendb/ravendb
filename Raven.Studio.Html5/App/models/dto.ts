@@ -65,7 +65,7 @@ interface indexStatisticsDto {
     LastReducedTimestamp: string; 
     CreatedTimestamp: string; 
     LastIndexingTime: string;
-    IsOnRam: boolean;
+    IsOnRam: string; // Yep, really. Example values: "false", "true (3 KBytes)"
     LockMode: string;
     ForEntityName: string[];
     Performance: indexPerformanceDto[];

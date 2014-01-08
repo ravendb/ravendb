@@ -3,6 +3,7 @@ import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
 import index = require("models/index");
 import appUrl = require("common/appUrl");
 import saveIndexLockModeCommand = require("commands/saveIndexLockModeCommand");
+import saveIndexAsPersistentCommand = require("commands/saveIndexAsPersistentCommand");
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import app = require("durandal/app");
 
@@ -127,6 +128,10 @@ class indexes extends activeDbViewModelBase {
         var all: index[] = [];
         this.indexGroups().forEach(g => all.pushAll(g.indexes()));
         return all.distinct();
+    }
+
+    makeIndexPersistent(index: index) {
+        new saveIndexAsPersistentCommand(index, this.activeDatabase()).execute();
     }
 }
 

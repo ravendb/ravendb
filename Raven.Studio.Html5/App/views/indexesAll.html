@@ -61,17 +61,6 @@
                                     <small class="text-muted" data-bind="text: ' - ' + docsCount + ' docs'" title="The number of documents affected by this index"></small>
                                 </h4>
                                 <div class="pull-right" style="display: inline-block">
-                                    <!--<div class="btn-group">
-                                        <button type="button" class="btn btn-default dropdown-toggle btn-sm" data-toggle="dropdown" title="Change index lock">
-                                            <i class="fa fa-lock"></i> <span class="caret"></span>
-                                        </button>
-                                        <ul class="dropdown-menu" role="menu">
-                                            <li><a href="#"><i class="fa fa-unlock"></i> Unlock Index</a></li>
-                                            <li><a href="#"><i class="fa fa-lock"></i> Locked (Ignore)</a></li>
-                                            <li><a href="#"><i class="fa fa-lock text-danger"></i> Locked (Error)</a></li>
-                                        </ul>
-                                    </div>-->
-
                                     <div class="btn-group">
                                         <label class="btn btn-default" data-bind="click: $root.unlockIndex.bind($root, $data), css: { active: lockMode() === 'Unlock' }" title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
                                             <i class="fa fa-unlock"></i>
@@ -86,7 +75,9 @@
                                             Locked (Error)
                                         </label>
                                     </div>
-
+                                    <button class="btn btn-default btn-warning" title="Make index persistent" data-bind="click: $root.makeIndexPersistent.bind($root, $data), visible: isOnRam() !== 'false'">
+                                        <i class="fa fa-download"></i>
+                                    </button>
                                     <a class="btn btn-primary" title="Edit the index" data-bind="attr: { href: editUrl }">
                                         <i class="fa fa-pencil"></i>
                                     </a>

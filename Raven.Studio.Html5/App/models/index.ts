@@ -17,11 +17,11 @@ class index {
     lastReducedTimestamp: string;
     createdTimestamp: string;
     lastIndexingTime: string;
-    isOnRam: boolean;
     forEntityName: string[];
     performance: indexPerformanceDto[];
     docsCount: number;
 
+    isOnRam = ko.observable<string>();
     lockMode = ko.observable<string>();
     isIdle = ko.observable(false);
     isAbandoned = ko.observable(false);
@@ -35,7 +35,7 @@ class index {
         this.indexingAttempts = dto.IndexingAttempts;
         this.indexingErrors = dto.IndexingErrors;
         this.indexingSuccesses = dto.IndexingSuccesses;
-        this.isOnRam = dto.IsOnRam;
+        this.isOnRam(dto.IsOnRam);
         this.lastIndexedEtag = dto.LastIndexedEtag;
         this.lastIndexedTimestamp = dto.LastIndexedTimestamp;
         this.lastIndexingTime = dto.LastIndexingTime;
