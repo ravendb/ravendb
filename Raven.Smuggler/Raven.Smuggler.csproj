@@ -63,8 +63,11 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
+    <Compile Include="DumpApi.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="RepairApi.cs" />
     <Compile Include="SmugglerApi.cs" />
+    <Compile Include="SmugglerApiFactory.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\Raven.Server\favicon.ico">

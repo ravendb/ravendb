@@ -13,21 +13,21 @@ using Raven.Abstractions.Smuggler;
 
 namespace Raven.Smuggler
 {
-	using System.Net.Sockets;
+    using System.Net.Sockets;
 
-	public class Program
-	{
-		private readonly RavenConnectionStringOptions connectionStringOptions;
-		private readonly SmugglerOptions options;
-		private readonly OptionSet optionSet;
-		bool incremental, waitForIndexing;
+    public class Program
+    {
+        private readonly RavenConnectionStringOptions connectionStringOptions;
+        private readonly SmugglerOptions options;
+        private readonly OptionSet optionSet;
+        bool incremental, waitForIndexing;
 
-		private Program()
-		{
-			connectionStringOptions = new RavenConnectionStringOptions();
-			options = new SmugglerOptions();
+        private Program()
+        {
+            connectionStringOptions = new RavenConnectionStringOptions();
+            options = new SmugglerOptions();
 
-			optionSet = new OptionSet
+            optionSet = new OptionSet
 			            	{
 			            		{
 			            			"operate-on-types:", "Specify the types to operate on. Specify the types to operate on. You can specify more than one type by combining items with a comma." + Environment.NewLine +
@@ -92,123 +92,149 @@ namespace Raven.Smuggler
                                 {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true },
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
 			            	};
-		}
+        }
 
-		private NetworkCredential Credentials
-		{
-			get { return connectionStringOptions.Credentials ?? (connectionStringOptions.Credentials = new NetworkCredential()); }
-		}
+        private NetworkCredential Credentials
+        {
+            get { return connectionStringOptions.Credentials ?? (connectionStringOptions.Credentials = new NetworkCredential()); }
+        }
 
-		static void Main(string[] args)
-		{
-			var program = new Program();
-			program.Parse(args);
-		}
+        static void Main(string[] args)
+        {
+            var program = new Program();
+            program.Parse(args);
+        }
 
-		private void Parse(string[] args)
-		{
-			// Do these arguments the traditional way to maintain compatibility
-			if (args.Length < 3)
-				PrintUsageAndExit(-1);
+        private void Parse(string[] args)
+        {
+            // Do these arguments the traditional way to maintain compatibility
+            if (args.Length < 2)
+                PrintUsageAndExit(-1);
 
-			SmugglerAction action = SmugglerAction.Export;
-			if (string.Equals(args[0], "in", StringComparison.OrdinalIgnoreCase))
-				action = SmugglerAction.Import;
-			else if (string.Equals(args[0], "out", StringComparison.OrdinalIgnoreCase))
-				action = SmugglerAction.Export;
-			else
-				PrintUsageAndExit(-1);
+            var action = SmugglerAction.Export;
+            switch (args[0].ToLowerInvariant())
+            {
+                case "in":
+                    action = SmugglerAction.Import;
+                    break;
 
-			var url = args[1];
-			if (url == null)
-			{
-				PrintUsageAndExit(-1);
-				return;
-			}
-			connectionStringOptions.Url = url;
+                case "out":
+                    action = SmugglerAction.Export;
+                    break;
 
-			options.BackupPath = args[2];
-			if (options.BackupPath == null)
-				PrintUsageAndExit(-1);
+                case "dump":
+                    action = SmugglerAction.Dump;
+                    break;
 
-			try
-			{
-				optionSet.Parse(args);
-			}
-			catch (Exception e)
-			{
-				PrintUsageAndExit(e);
-			}
+                case "repair":
+                    action = SmugglerAction.Repair;
+                    break;
 
-			if (options.BackupPath != null && Directory.Exists(options.BackupPath))
-			{
-				incremental = true;
-			}
+                default:
+                    PrintUsageAndExit(-1);
+                    break;
+            }
 
-			var smugglerApi = new SmugglerApi(options,connectionStringOptions);
+            if (action == SmugglerAction.Import || action == SmugglerAction.Export)
+            {
+                var url = args[1];
+                if (url == null)
+                {
+                    PrintUsageAndExit(-1);
+                    return;
+                }
+                connectionStringOptions.Url = url;
 
-			try
-			{
-				switch (action)
-				{
-					case SmugglerAction.Import:
-						smugglerApi.ImportData(options, incremental);
-						if(waitForIndexing)
-							smugglerApi.WaitForIndexing(options);
-						break;
-					case SmugglerAction.Export:
-						smugglerApi.ExportData(options, incremental);
-						break;
-				}
-			}
-			catch (WebException e)
-			{
-				if (e.Status == WebExceptionStatus.ConnectFailure)
-				{
-					Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url);
-					var socketException = e.InnerException as SocketException;
-					if (socketException != null)
-					{
-						Console.WriteLine("Details: {0}", socketException.Message);
-						Console.WriteLine("Socket Error Code: {0}", socketException.SocketErrorCode);
-					}
+                options.BackupPath = args[2];
+            }
+            else
+            {
+                options.BackupPath = args[1];
+            }
 
-					Environment.Exit((int)e.Status);
-				}
+            if (options.BackupPath == null)
+                PrintUsageAndExit(-1);
 
-				var httpWebResponse = e.Response as HttpWebResponse;
-				if (httpWebResponse == null)
-					throw;
-				Console.WriteLine("Error: " + e.Message);
-				Console.WriteLine("Http Status Code: " + httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription);
+            try
+            {
+                optionSet.Parse(args);
+            }
+            catch (Exception e)
+            {
+                PrintUsageAndExit(e);
+            }
 
-				using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
-				{
-					string line;
-					while ((line = reader.ReadLine()) != null)
-					{
-						Console.WriteLine(line);
-					}
-				}
+            if (options.BackupPath != null && Directory.Exists(options.BackupPath))
+            {
+                incremental = true;
+            }
 
-				Environment.Exit((int)httpWebResponse.StatusCode);
-			}
-			catch (Exception e)
-			{
-				Console.WriteLine(e);
-				Environment.Exit(-1);
-			}
-		}
+            var smugglerApi = SmugglerApiFactory.Create(action, options, connectionStringOptions);
 
-		private void PrintUsageAndExit(Exception e)
-		{
-			Console.WriteLine(e.Message);
-			PrintUsageAndExit(-1);
-		}
+            try
+            {
+                switch (action)
+                {
+                    case SmugglerAction.Import:
+                    case SmugglerAction.Dump:
+                    case SmugglerAction.Repair:
+                        smugglerApi.ImportData(options, incremental);
+                        if (waitForIndexing)
+                            smugglerApi.WaitForIndexing(options);
+                        break;
+                    case SmugglerAction.Export:
+                        smugglerApi.ExportData(options, incremental);
+                        break;
+                }
+            }
+            catch (WebException e)
+            {
+                if (e.Status == WebExceptionStatus.ConnectFailure)
+                {
+                    Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url);
+                    var socketException = e.InnerException as SocketException;
+                    if (socketException != null)
+                    {
+                        Console.WriteLine("Details: {0}", socketException.Message);
+                        Console.WriteLine("Socket Error Code: {0}", socketException.SocketErrorCode);
+                    }
 
-		private void PrintUsageAndExit(int exitCode)
-		{
-			Console.WriteLine(@"
+                    Environment.Exit((int)e.Status);
+                }
+
+                var httpWebResponse = e.Response as HttpWebResponse;
+                if (httpWebResponse == null)
+                    throw;
+                Console.WriteLine("Error: " + e.Message);
+                Console.WriteLine("Http Status Code: " + httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription);
+
+                using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
+                {
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        Console.WriteLine(line);
+                    }
+                }
+
+                Environment.Exit((int)httpWebResponse.StatusCode);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                Environment.Exit(-1);
+            }
+        }
+
+        private void PrintUsageAndExit(Exception e)
+        {
+            Console.WriteLine(e.Message);
+            PrintUsageAndExit(-1);
+        }
+
+        private void PrintUsageAndExit(int exitCode)
+        {
+            Console.WriteLine(@"
 Smuggler Import/Export utility for RavenDB
 ----------------------------------------
 Copyright (C) 2008 - {0} - Hibernating Rhinos
@@ -218,13 +244,15 @@ Usage:
 		Raven.Smuggler in http://localhost:8080/ dump.raven
 	- Export a local instance to dump.raven:
 		Raven.Smuggler out http://localhost:8080/ dump.raven
+	- Dump the dump.raven file to stdout
+		Raven.Smuggler dump dump.raven
 
 Command line options:", SystemTime.UtcNow.Year);
 
-			optionSet.WriteOptionDescriptions(Console.Out);
-			Console.WriteLine();
+            optionSet.WriteOptionDescriptions(Console.Out);
+            Console.WriteLine();
 
-			Environment.Exit(exitCode);
-		}
-	}
+            Environment.Exit(exitCode);
+        }
+    }
 }
