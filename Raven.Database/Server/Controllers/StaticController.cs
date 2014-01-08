@@ -1,6 +1,4 @@
-﻿using System;
-using System.Globalization;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -104,7 +102,7 @@ namespace Raven.Database.Server.Controllers
 			var newEtag = Database.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync(), InnerHeaders.FilterHeadersAttachment());
 
 			var msg = GetEmptyMessage(HttpStatusCode.Created);
-			msg.Headers.Location = Database.Configuration.GetFullUrl("/static/" + Uri.EscapeUriString(filename));
+			msg.Headers.Location = Database.Configuration.GetFullUrl("static/" + filename);
 
 			WriteETag(newEtag, msg);
 			return msg;

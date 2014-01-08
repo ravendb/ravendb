@@ -213,7 +213,7 @@ namespace Raven.Database.Server.Controllers
 					return GetEmptyMessage(HttpStatusCode.NotFound);
 				case PatchResult.Patched:
 					var msg = GetMessageWithObject(new { Patched = true, Debug = debug });
-					msg.Headers.Location = Database.Configuration.GetFullUrl("/docs/" + docId);
+					msg.Headers.Location = Database.Configuration.GetFullUrl("docs/" + docId);
 					return msg;
 				case PatchResult.Tested:
 					return GetMessageWithObject(new

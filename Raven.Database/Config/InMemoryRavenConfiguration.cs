@@ -876,8 +876,11 @@ namespace Raven.Database.Config
 
 		public Uri GetFullUrl(string baseUrl)
 		{
+			baseUrl = Uri.EscapeUriString(baseUrl);
+
 			if (baseUrl.StartsWith("/"))
 				baseUrl = baseUrl.Substring(1);
+
 			var url = VirtualDirectory.EndsWith("/") ? VirtualDirectory + baseUrl : VirtualDirectory + "/" + baseUrl;
 			return new Uri(url, UriKind.RelativeOrAbsolute);
 		}
