@@ -102,7 +102,8 @@ namespace Raven.Database.Server.Controllers
 		{
 			var filename = id;
 
-			var newEtag = Database.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync(), InnerHeaders.FilterHeadersAttachment());
+			var contentStream = await InnerRequest.Content.ReadAsStreamAsync();
+			var newEtag = Database.PutStatic(filename, GetEtag(), contentStream, InnerHeaders.FilterHeadersAttachment());
 
 			var msg = GetEmptyMessage(HttpStatusCode.NoContent);
 

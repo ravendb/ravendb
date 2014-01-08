@@ -1,3 +1,4 @@
+using System.Linq;
 using Raven.Client.Extensions;
 #if !NETFX_CORE && !SILVERLIGHT
 //-----------------------------------------------------------------------
@@ -45,6 +46,8 @@ namespace Raven.Client.Connection
 	/// </summary>
 	public class HttpJsonRequest
 	{
+		private const string DefaultContentType = "application/json";
+		private const string ContentTypeDefaultCharset = "utf-8";
 		internal readonly string Url;
 		internal readonly string Method;
 
@@ -590,6 +593,7 @@ namespace Raven.Client.Connection
 							break;*/
 						case "Content-Type":
 							httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", value);
+							headers["Content-Type"] = value;
 							break;
 						case "If-Modified-Since":
 							DateTime tmp;
@@ -644,31 +648,16 @@ namespace Raven.Client.Connection
 			postedStream = streamToWrite;
 			writeCalled = true;
 
-			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
-			{
-				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression)
-				{
-					Headers =
-					{
-						ContentType = new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"}
-					}
-				}
-			});
+			var messageContent = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression);
+			await SendRequestInternal(() => GetRequestMessage(messageContent));
 		}
 
-		public async Task WriteAsync(HttpContent content)
+		public async Task WriteAsync(HttpContent messageContent)
 		{
-			postedContent = content;
+			postedContent = messageContent;
 			writeCalled = true;
 
-			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
-			{
-				Content = content,
-				Headers =
-				{
-					TransferEncodingChunked = true,
-				}
-			});
+			await SendRequestInternal(() => GetRequestMessage(messageContent,isTransferEncodingChunked:true));
 		}
 
 		public async Task WriteAsync(string data)
@@ -676,15 +665,8 @@ namespace Raven.Client.Connection
 			postedData = data;
 			writeCalled = true;
 
-			await SendRequestInternal(() =>
-			{
-				var request = new HttpRequestMessage(new HttpMethod(Method), Url)
-				{
-					Content = new CompressedStringContent(data, factory.DisableRequestCompression),
-				};
-				request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
-				return request;
-			});
+			var messageContent = new CompressedStringContent(data, factory.DisableRequestCompression);
+			await SendRequestInternal(() =>	GetRequestMessage(messageContent));
 		}
 
 		public async Task<HttpResponseMessage> ExecuteRawResponseAsync()
@@ -779,6 +761,29 @@ namespace Raven.Client.Connection
 				AddHeader(key, nameValueHeaders[key]);
 			}
 		}
+
+		private HttpRequestMessage GetRequestMessage(HttpContent content, MediaTypeHeaderValue contentType = null, bool isTransferEncodingChunked = false)
+		{
+			var httpRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url)
+			{
+				Content = content,
+			};
+
+			if (contentType != null)
+				httpRequestMessage.Content.Headers.ContentType = contentType;
+			else
+			{
+				httpRequestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue(headers["Content-Type"] ?? DefaultContentType);
+				if (httpRequestMessage.Content.Headers.ContentType.MediaType.Equals(DefaultContentType))
+					httpRequestMessage.Content.Headers.ContentType.CharSet = ContentTypeDefaultCharset;
+			}
+
+			if (isTransferEncodingChunked)
+				httpRequestMessage.Headers.TransferEncodingChunked = true;
+
+			return httpRequestMessage;
+		}
+
 	}
 }
 #endif
