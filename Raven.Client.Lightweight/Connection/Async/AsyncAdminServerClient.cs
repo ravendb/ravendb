@@ -29,7 +29,7 @@ namespace Raven.Client.Connection.Async
 			RavenJObject doc;
 			var req = adminRequest.CreateDatabase(databaseDocument, out doc);
 
-			return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
+			return req.WriteAsync(doc.ToString(Formatting.Indented));
 		}
 
 		public Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false)
@@ -64,7 +64,7 @@ namespace Raven.Client.Connection.Async
 			RavenJObject backupSettings;
 			var request = adminRequest.StartBackup(backupLocation, databaseDocument, out backupSettings);
 
-			return request.ExecuteWriteAsync(backupSettings.ToString(Formatting.None));
+			return request.WriteAsync(backupSettings.ToString(Formatting.None));
 		}
 
 		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
@@ -72,7 +72,7 @@ namespace Raven.Client.Connection.Async
 			RavenJObject restoreSettings;
 			var request = adminRequest.StartRestore(restoreLocation, databaseLocation, databaseName, defrag, out restoreSettings);
 
-			return request.ExecuteWriteAsync(restoreSettings.ToString(Formatting.None));
+			return request.WriteAsync(restoreSettings.ToString(Formatting.None));
 		}
 
 		public Task<string> GetIndexingStatusAsync()

@@ -343,7 +343,7 @@ namespace Raven.Client.Silverlight.Connection
 		/// <summary>
 		/// Begins the write operation
 		/// </summary>
-		private async Task WriteAsync(Stream stream)
+		public async Task WriteAsync(Stream stream)
 		{
 			writeCalled = true;
 			postedData = stream;

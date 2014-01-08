@@ -451,7 +451,7 @@ namespace Raven.Client.RavenFS
 
 				try
 				{
-					await request.ExecuteWriteAsync(source);
+					await request.WriteAsync(source);
 					
 					//using (var destination = await request.GetRequestStreamAsync())
 					//{
@@ -736,7 +736,7 @@ namespace Raven.Client.RavenFS
 						jsonSerializer.Serialize(streamWriter, data);
 						streamWriter.Flush();
 						ms.Position = 0;
-						await request.ExecuteWriteAsync(ms);
+						await request.WriteAsync(ms);
 					}
 				});
 			}
@@ -977,7 +977,7 @@ namespace Raven.Client.RavenFS
 
 							await stream.WriteAsync(bytes, 0, bytes.Length);
 							stream.Position = 0;
-							await request.ExecuteWriteAsync(stream);
+							await request.WriteAsync(stream);
 						}
 					}
 					catch (Exception e)

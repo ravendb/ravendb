@@ -1136,18 +1136,18 @@ namespace Raven.Client.Connection.Async
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/backup").NoCache(), "POST", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
-			return request.ExecuteWriteAsync(new RavenJObject
-			                                 {
-				                                 {"BackupLocation", backupLocation},
-				                                 {"DatabaseDocument", RavenJObject.FromObject(databaseDocument)}
-			                                 }.ToString(Formatting.None));
+			return request.WriteAsync(new RavenJObject
+			{
+				{"BackupLocation", backupLocation},
+				{"DatabaseDocument", RavenJObject.FromObject(databaseDocument)}
+			}.ToString(Formatting.None));
 		}
 
 		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string name = null, bool defrag = false)
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (url + "/admin/restore?defrag=" + defrag).NoCache(), "POST", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
-			return request.ExecuteWriteAsync(new RavenJObject
+			return request.WriteAsync(new RavenJObject
 			{
 				{"RestoreLocation", restoreLocation},
 				{"DatabaseLocation", databaseLocation},
@@ -1513,7 +1513,7 @@ namespace Raven.Client.Connection.Async
 				request.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
 													HandleReplicationStatusChanges);
 
-				return request.ExecuteWriteAsync(data);
+				return request.WriteAsync(data);
 			});
 		}
 
@@ -2369,7 +2369,7 @@ namespace Raven.Client.Connection.Async
 
 
 			var req = CreateRequest("/admin/databases/" + Uri.EscapeDataString(dbname), "PUT");
-			return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
+			return req.WriteAsync(doc.ToString(Formatting.Indented));
 		}
 
 		public Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false)
