@@ -146,7 +146,7 @@ namespace Raven.Tests.Server.Runner.Responders
 
         private RavenDbServer CreateNewServer(RavenConfiguration configuration, IHttpContext context)
         {
-            configuration.DataDirectory = Path.Combine(DataDir, configuration.Port.ToString());
+            configuration.DataDirectory = Path.Combine(DataDir, configuration.Port.ToString() + "\\");
 
             bool deleteData;
             bool.TryParse(context.Request.QueryString["deleteData"], out deleteData);
