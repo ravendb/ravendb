@@ -588,9 +588,9 @@ namespace Raven.Client.Connection
 						case "Proxy-Connection":
 						case "Host": // Host property is not supported by 3.5
 							break;*/
-						case "Content-Type":
+						/*case "Content-Type":
 							httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", value);
-							break;
+							break;*/
 						case "If-Modified-Since":
 							DateTime tmp;
 							DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out tmp);
@@ -646,13 +646,7 @@ namespace Raven.Client.Connection
 
 			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
-				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression)
-				{
-					Headers =
-					{
-						ContentType = new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"}
-					}
-				}
+				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression).SetContentType(headers)
 			});
 		}
 
