@@ -28,8 +28,8 @@ namespace Raven.Database.Prefetching
 		private readonly ConcurrentDictionary<string, HashSet<Etag>> documentsToRemove =
 			new ConcurrentDictionary<string, HashSet<Etag>>(StringComparer.InvariantCultureIgnoreCase);
 
-		private readonly ConcurrentDictionary<string, HashSet<Etag>> updatedDocuments =
-			new ConcurrentDictionary<string, HashSet<Etag>>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ReaderWriterLockSlim updatedDocumentsLock = new ReaderWriterLockSlim();
+		private readonly HashSet<Etag> updatedDocuments = new HashSet<Etag>();
 
 		private readonly ConcurrentDictionary<Etag, FutureIndexBatch> futureIndexBatches =
 			new ConcurrentDictionary<Etag, FutureIndexBatch>();
@@ -380,13 +380,14 @@ namespace Raven.Database.Prefetching
 				documentsToRemove.TryRemove(docToRemove.Key, out _);
 			}
 
-			foreach (var updatedDocs in updatedDocuments)
+			updatedDocumentsLock.EnterWriteLock();
+			try
 			{
-				if (updatedDocs.Value.All(etag => highest.CompareTo(etag) > 0) == false)
-					continue;
-
-				HashSet<Etag> _;
-				updatedDocuments.TryRemove(updatedDocs.Key, out _);
+				updatedDocuments.RemoveWhere(x => highest.CompareTo(x) >= 0);
+			}
+			finally
+			{
+				updatedDocumentsLock.ExitWriteLock();
 			}
 
 			JsonDocument result;
@@ -410,8 +411,19 @@ namespace Raven.Database.Prefetching
 
 		public void AfterUpdate(string key, Etag etagBeforeUpdate)
 		{
-			updatedDocuments.AddOrUpdate(key, s => new HashSet<Etag> { etagBeforeUpdate },
-										  (s, set) => new HashSet<Etag>(set) { etagBeforeUpdate });
+			updatedDocumentsLock.EnterWriteLock();
+			try
+			{
+				if (updatedDocuments.Add(etagBeforeUpdate) == false)
+				{
+					throw new InvalidOperationException("Could not add the following etag: " + etagBeforeUpdate +
+														". It's possible a duplicate");
+				}
+			}
+			finally
+			{
+				updatedDocumentsLock.ExitWriteLock();
+			}
 		}
 
 		public bool ShouldSkipDeleteFromIndex(JsonDocument item)
@@ -444,9 +456,17 @@ namespace Raven.Database.Prefetching
 
 		private Etag SkipUpdatedEtags(Etag nextEtag)
 		{
-			while (updatedDocuments.Any(x => x.Value.Contains(nextEtag)))
+			updatedDocumentsLock.EnterReadLock();
+			try
 			{
-				nextEtag = EtagUtil.Increment(nextEtag, 1);
+				while (updatedDocuments.Contains(nextEtag))
+				{
+					nextEtag = EtagUtil.Increment(nextEtag, 1);
+				}
+			}
+			finally
+			{
+				updatedDocumentsLock.ExitReadLock();
 			}
 
 			return nextEtag;
