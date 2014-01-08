@@ -393,9 +393,9 @@ namespace Raven.Tests.Bundles.Replication
 				resolvedDocument = new JsonDocument
 				{
 					DataAsJson = new RavenJObject
-					 {
-						 {"Name", string.Join(" ", conflictedDocs.Select(x => x.DataAsJson.Value<string>("Name")).OrderBy(x=>x))}
-					 },
+					{
+						{"Name", string.Join(" ", conflictedDocs.Select(x => x.DataAsJson.Value<string>("Name")).OrderBy(x => x))}
+					},
 					Metadata = new RavenJObject()
 				};
 				return true;
