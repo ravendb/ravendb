@@ -66,13 +66,12 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpHead]
-		[Route("docs/{*id}")]
-		[Route("databases/{databaseName}/docs/{*id}")]
-		public HttpResponseMessage DocHead(string id)
+		[Route("docs/{*docId}")]
+		[Route("databases/{databaseName}/docs/{*docId}")]
+		public HttpResponseMessage DocHead(string docId)
 		{
 			var msg = GetEmptyMessage();
 			msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
-			var docId = id;
 			var transactionInformation = GetRequestTransaction();
 			var documentMetadata = Database.GetDocumentMetadata(docId, transactionInformation);
 			if (documentMetadata == null)
@@ -100,11 +99,10 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("docs/{*id}")]
-		[Route("databases/{databaseName}/docs/{*id}")]
-		public HttpResponseMessage DocGet(string id)
+		[Route("docs/{*docId}")]
+		[Route("databases/{databaseName}/docs/{*docId}")]
+		public HttpResponseMessage DocGet(string docId)
 		{
-			var docId = id;
 			var msg = GetEmptyMessage();
 			if (string.IsNullOrEmpty(GetHeader("If-None-Match")))
 				return GetDocumentDirectly(docId, msg);
@@ -135,32 +133,29 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpDelete]
-		[Route("docs/{*id}")]
-		[Route("databases/{databaseName}/docs/{*id}")]
-		public HttpResponseMessage DocDelete(string id)
+		[Route("docs/{*docId}")]
+		[Route("databases/{databaseName}/docs/{*docId}")]
+		public HttpResponseMessage DocDelete(string docId)
 		{
-			var docId = id;
 			Database.Delete(docId, GetEtag(), GetRequestTransaction());
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpPut]
-		[Route("docs/{*id}")]
-		[Route("databases/{databaseName}/docs/{*id}")]
-		public async Task<HttpResponseMessage> DocPut(string id)
+		[Route("docs/{*docId}")]
+		[Route("databases/{databaseName}/docs/{*docId}")]
+		public async Task<HttpResponseMessage> DocPut(string docId)
 		{
-			var docId = id;
 			var json = await ReadJsonAsync();
 			var putResult = Database.Put(docId, GetEtag(), json, InnerHeaders.FilterHeadersToObject(), GetRequestTransaction());
 			return GetMessageWithObject(putResult, HttpStatusCode.Created);
 		}
 
 		[HttpPatch]
-		[Route("docs/{*id}")]
-		[Route("databases/{databaseName}/docs/{*id}")]
-		public async Task<HttpResponseMessage> DocPatch(string id)
+		[Route("docs/{*docId}")]
+		[Route("databases/{databaseName}/docs/{*docId}")]
+		public async Task<HttpResponseMessage> DocPatch(string docId)
 		{
-			var docId = id;
 			var patchRequestJson = await ReadJsonArrayAsync();
 			var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 			var patchResult = Database.ApplyPatch(docId, GetEtag(), patchRequests, GetRequestTransaction());
@@ -168,11 +163,10 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpEval]
-		[Route("docs/{*id}")]
-		[Route("databases/{databaseName}/docs/{*id}")]
-		public async Task<HttpResponseMessage> DocEval(string id)
+		[Route("docs/{*docId}")]
+		[Route("databases/{databaseName}/docs/{*docId}")]
+		public async Task<HttpResponseMessage> DocEval(string docId)
 		{
-			var docId = id;
 			var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
 			var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
 			bool testOnly;
