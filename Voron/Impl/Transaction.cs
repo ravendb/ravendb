@@ -164,18 +164,10 @@ namespace Voron.Impl
 
 		private Page GetPageForModification(long p, Page page)
 		{
-			if (page != null)
-				return page;
-
-			PageFromScratchBuffer value;
-			if (_scratchPagesTable.TryGetValue(p, out value))
-			{
-				return _env.ScratchBufferPool.ReadPage(value.PositionInScratchBuffer);
-			}
-			return _journal.ReadPage(this, p) ?? _dataPager.Read(p);
+		    return page ?? GetReadOnlyPage(p);
 		}
 
-		public Page GetReadOnlyPage(long pageNumber)
+	    public Page GetReadOnlyPage(long pageNumber)
 		{
 			PageFromScratchBuffer value;
 		    Page p;
