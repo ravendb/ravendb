@@ -414,11 +414,7 @@ namespace Raven.Database.Prefetching
 			updatedDocumentsLock.EnterWriteLock();
 			try
 			{
-				if (updatedDocuments.Add(etagBeforeUpdate) == false)
-				{
-					throw new InvalidOperationException("Could not add the following etag: " + etagBeforeUpdate +
-														". It's possible a duplicate");
-				}
+			    updatedDocuments.Add(etagBeforeUpdate);
 			}
 			finally
 			{
