@@ -47,25 +47,6 @@ namespace Raven.Client.Connection
 			return this;
 		}
 
-		public void UpdateHeaders(WebRequest webRequest)
-		{
-			if (operationsHeadersCollection != null)
-			{
-				foreach (string header in operationsHeadersCollection)
-				{
-					try
-					{
-						webRequest.Headers[header] = operationsHeadersCollection[header];
-					}
-					catch (Exception e)
-					{
-						throw new InvalidOperationException(
-							"Failed to set header '" + header + "' to the value: " + operationsHeadersCollection[header], e);
-					}
-				}
-			}
-		}
-
 		public void UpdateHeaders(NameValueCollection headers)
 		{
 			if (operationsHeadersCollection != null)

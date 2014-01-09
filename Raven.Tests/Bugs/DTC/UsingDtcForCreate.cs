@@ -11,7 +11,7 @@ namespace Raven.Tests.Bugs.DTC
 		//[Theory]
 		//[InlineData(true)]
 		//[InlineData(false)]
-		[TimeBombedFact(2014,1,1)]
+		[TimeBombedFact(2014,2,1)]
 		public void ShouldWork(bool runinmemory)
 		{
 			using (GetNewServer(runInMemory: runinmemory))

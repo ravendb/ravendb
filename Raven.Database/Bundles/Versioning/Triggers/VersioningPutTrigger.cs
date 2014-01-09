@@ -71,7 +71,6 @@ namespace Raven.Bundles.Versioning.Triggers
 				if (parentRevision != null)
 				{
 					copyMetadata[VersioningUtil.RavenDocumentParentRevision] = key + "/revisions/" + parentRevision;
-					copyMetadata[VersioningUtil.RavenDocumentParentRevision] = key + "/revisions/" + parentRevision;
 				}
 
 				object value;

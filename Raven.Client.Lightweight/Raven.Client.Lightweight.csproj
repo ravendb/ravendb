@@ -90,6 +90,7 @@
     <Compile Include="Connection\Async\AsyncAdminServerClient.cs" />
     <Compile Include="Connection\ConnectionOptions.cs" />
     <Compile Include="Connection\CompressedStreamContent.cs" />
+    <Compile Include="Connection\HttpContentExtentions.cs" />
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Connection\NameValueCollectionExtensions.cs" />
     <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />

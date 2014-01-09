@@ -11,25 +11,31 @@ using System.Net.Mime;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
 	public class JsonContent : HttpContent
 	{
-		public JsonContent(RavenJToken token = null)
+		public JsonContent(RavenJToken data = null)
 		{
-			Token = token;
-			Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+			Data = data;
 		}
 
-		public RavenJToken Token { get; set; }
+		public RavenJToken Data { get; set; }
+
 		public string Jsonp { get; set; }
 
 		protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
-			if (Token == null)
+			if (HasNoData())
 				return Task.FromResult(true);
+
+			if (string.IsNullOrEmpty(Jsonp))
+				Headers.ContentType = new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"};
+			else
+				Headers.ContentType = new MediaTypeHeaderValue("application/javascript") {CharSet = "utf-8"};
 
 			var writer = new StreamWriter(stream);
 			if (string.IsNullOrEmpty(Jsonp) == false)
@@ -38,7 +44,7 @@ namespace Raven.Database.Server.Controllers
 				writer.Write("(");
 			}
 
-			Token.WriteTo(new JsonTextWriter(writer), Default.Converters);
+			Data.WriteTo(new JsonTextWriter(writer), Default.Converters);
 
 			if (string.IsNullOrEmpty(Jsonp) == false)
 				writer.Write(")");
@@ -47,10 +53,16 @@ namespace Raven.Database.Server.Controllers
 			return Task.FromResult(true);
 		}
 
+		private bool HasNoData()
+		{
+			return Data == null || Data.Type == JTokenType.Null;
+		}
+
 		protected override bool TryComputeLength(out long length)
 		{
-			length = 0;
-			return Token == null;
+			var hasNoData = HasNoData();
+			length = hasNoData ? 0 : -1;
+			return hasNoData;
 		}
 	}
 }

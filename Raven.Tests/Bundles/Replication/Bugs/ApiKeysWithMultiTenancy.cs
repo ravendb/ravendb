@@ -6,6 +6,7 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
@@ -19,7 +20,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 	{
 		private const string apikey = "test/ThisIsMySecret";
 
-		protected override void ConfigureServer(Database.Config.RavenConfiguration serverConfiguration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
 		{
 			serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();

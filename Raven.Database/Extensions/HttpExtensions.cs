@@ -271,14 +271,6 @@ namespace Raven.Database.Extensions
 			context.Response.StatusDescription = "No Content";
 		}
 
-		public static void SetStatusToCreated(this IHttpContext context, string location)
-		{
-			context.Response.StatusCode = 201;
-			context.Response.StatusDescription = "Created";
-			context.Response.AddHeader("Location", context.Configuration.GetFullUrl(location));
-		}
-
-
 		public static void SetStatusToWriteConflict(this IHttpContext context)
 		{
 			context.Response.StatusCode = 409;

@@ -178,11 +178,20 @@ namespace Raven.Json.Linq
 				return default(U);
 			}
 
-			//precaution and better exception message
-			if (!(value.Value is IConvertible))
-				throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined and does not implement IConvertible. ", value.Value.GetType()));
+			if (value.Value == null && typeof(U).IsValueType)
+				throw new InvalidOperationException("value.Value == null and conversion target type is not nullable");
 
-			return (U)System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
+			try
+			{
+				return (U) System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
+			}
+			catch (Exception e)
+			{
+				if (value.Value != null)
+					throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined and does not implement IConvertible. ", value.Value.GetType()),e);
+				
+				throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined ", value),e);
+			}
 		}
 	}
 }

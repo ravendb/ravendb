@@ -10,15 +10,15 @@ namespace Raven.Tests.Bundles.Replication.Issues
 		{
 			using (var store1 = CreateEmbeddableStore())
 			{
+				store1.DatabaseCommands.Put("ayende", null, new RavenJObject
+				{
+					{"Name", "Ayende"}
+				}, new RavenJObject());
+
+				store1.DatabaseCommands.Put("marker", null, new RavenJObject(), new RavenJObject());
+
 				using (var store2 = CreateEmbeddableStore())
 				{
-					store1.DatabaseCommands.Put("ayende", null, new RavenJObject
-					{
-						{"Name", "Ayende"}
-					}, new RavenJObject());
-
-					store1.DatabaseCommands.Put("marker", null, new RavenJObject(), new RavenJObject());
-
 					store2.DatabaseCommands.Put("ayende", null, new RavenJObject
 					{
 						{"Name", "Rahien"}
@@ -42,15 +42,15 @@ namespace Raven.Tests.Bundles.Replication.Issues
 		{
 			using (var store1 = CreateEmbeddableStore())
 			{
+				store1.DatabaseCommands.Put("ayende", null, new RavenJObject
+				{
+					{"Name", "Ayende"}
+				}, new RavenJObject());
+
+				store1.DatabaseCommands.Put("marker", null, new RavenJObject(), new RavenJObject());
+
 				using (var store2 = CreateEmbeddableStore())
 				{
-					store1.DatabaseCommands.Put("ayende", null, new RavenJObject
-					{
-						{"Name", "Ayende"}
-					}, new RavenJObject());
-
-					store1.DatabaseCommands.Put("marker", null, new RavenJObject(), new RavenJObject());
-
 					store2.DatabaseCommands.Put("ayende", null, new RavenJObject
 					{
 						{"Name", "Rahien"}

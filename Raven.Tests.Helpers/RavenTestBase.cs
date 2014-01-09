@@ -58,21 +58,31 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			ComposablePartCatalog catalog = null,
 			string dataDir = null,
-			bool enableAuthentication = false)
+			bool enableAuthentication = false,
+			string activeBundles = null,
+			int? port = null,
+			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin)
 		{
 			var storageType = GetDefaultStorageType(requestedStorage);
 			var documentStore = new EmbeddableDocumentStore
 			{
+				UseEmbeddedHttpServer = port.HasValue,
 				Configuration =
 				{
 					DefaultStorageTypeName = storageType,
 					DataDirectory = dataDir ?? NewDataPath(),
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
-					Port = 8079,
-					UseFips = SettingsHelper.UseFipsEncryptionAlgorithms
+					Port = port == null ? 8079 : port.Value,
+					UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
+					AnonymousUserAccessMode = anonymousUserAccessMode,
 				}
 			};
+
+			if (activeBundles != null)
+			{
+				documentStore.Configuration.Settings["Raven/ActiveBundles"] = activeBundles;
+			}
 
 			if (catalog != null)
 				documentStore.Configuration.Catalog.Catalogs.Add(catalog);
@@ -87,7 +97,6 @@ namespace Raven.Tests.Helpers
 				if (enableAuthentication)
 				{
 					EnableAuthentication(documentStore.DocumentDatabase);
-					ModifyConfiguration(documentStore.Configuration);
 				}
 
 				CreateDefaultIndexes(documentStore);
@@ -116,12 +125,13 @@ namespace Raven.Tests.Helpers
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
 
-		public IDocumentStore 
+		public DocumentStore
 			NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
-			 bool runInMemory = true,
-			string dataDirectory = null,
-			string requestedStorage = null,
-			 bool enableAuthentication = false)
+				bool runInMemory = true,
+				string dataDirectory = null,
+				string requestedStorage = null,
+				bool enableAuthentication = false,
+				Action<DocumentStore> configureStore = null)
 		{
 			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication);
 			ModifyServer(ravenDbServer);
@@ -132,8 +142,11 @@ namespace Raven.Tests.Helpers
 			};
 			stores.Add(store);
 			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
+			if (configureStore != null)
+				configureStore(store);
 			ModifyStore(store);
-			return store.Initialize();
+			store.Initialize();
+			return store;
 		}
 
 		private static string GetServerUrl(bool fiddler, string serverUrl)
@@ -179,7 +192,8 @@ namespace Raven.Tests.Helpers
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif
 				DefaultStorageTypeName = storageType,
-				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin
+				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
+				UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
 			};
 
 			if (activeBundles != null)

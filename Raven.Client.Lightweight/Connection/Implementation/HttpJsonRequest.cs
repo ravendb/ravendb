@@ -141,11 +141,6 @@ namespace Raven.Client.Connection
 		/// </summary>
 		public async Task<RavenJToken> ReadResponseJsonAsync()
 		{
-			if (isRequestSentToServer)
-				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
-
-			isRequestSentToServer = true;
-
 			if (SkipServerCheck)
 			{
 				var cachedResult = factory.GetCachedResponse(this);
@@ -173,6 +168,10 @@ namespace Raven.Client.Connection
 
 		private async Task<RavenJToken> SendRequestInternal(Func<HttpRequestMessage> getRequestMessage)
 		{
+			if (isRequestSentToServer)
+				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
+			isRequestSentToServer = true;
+
 			return await RunWithAuthRetry(async () =>
 			{
 				try
@@ -369,10 +368,6 @@ namespace Raven.Client.Connection
 
 		public async Task<byte[]> ReadResponseBytesAsync()
 		{
-			if (isRequestSentToServer)
-				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
-			isRequestSentToServer = true;
-
 			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url));
 
 			using (var stream = await Response.GetResponseStreamWithHttpDecompression())
@@ -589,7 +584,7 @@ namespace Raven.Client.Connection
 						case "Host": // Host property is not supported by 3.5
 							break;*/
 						case "Content-Type":
-							httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", value);
+							headers["Content-Type"] = value;
 							break;
 						case "If-Modified-Since":
 							DateTime tmp;
@@ -627,18 +622,6 @@ namespace Raven.Client.Connection
 			});
 		}
 
-		public async Task ExecuteWriteAsync(string data)
-		{
-			await WriteAsync(data);
-			await ExecuteRequestAsync();
-		}
-
-		public async Task ExecuteWriteAsync(Stream data)
-		{
-			await WriteAsync(data);
-			await ExecuteRequestAsync();
-		}
-
 		public async Task WriteAsync(Stream streamToWrite)
 		{
 			postedStream = streamToWrite;
@@ -646,13 +629,7 @@ namespace Raven.Client.Connection
 
 			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
 			{
-				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression)
-				{
-					Headers =
-					{
-						ContentType = new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"}
-					}
-				}
+				Content = new CompressedStreamContent(streamToWrite, factory.DisableRequestCompression).SetContentType(headers)
 			});
 		}
 

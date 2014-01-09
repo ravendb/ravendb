@@ -30,7 +30,7 @@ namespace Raven.Tests.Security.OAuth
 
 		private int storeCounter, databaseCounter;
 
-		protected override void ConfigureStore(DocumentStore store)
+		protected override void ModifyStore(DocumentStore store)
 		{
 			store.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries;
 			store.Credentials = null;

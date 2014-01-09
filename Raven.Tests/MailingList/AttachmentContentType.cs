@@ -33,17 +33,14 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void CanGetOverHttp()
 		{
-			using(GetNewServer())
-			using (var store = new DocumentStore
+			using (GetNewServer())
+			using (var store = new DocumentStore {Url = "http://localhost:8079"}.Initialize())
 			{
-				Url = "http://localhost:8079"
-			}.Initialize())
-			{
-				var dummyImageBytes = new Byte[] { 1, 2, 3, 4 }; //creating empty attachment will fail
+				var dummyImageBytes = new Byte[] {1, 2, 3, 4}; //creating empty attachment will fail
 				using (var dummyImageData = new MemoryStream(dummyImageBytes))
 				{
 					store.DatabaseCommands.PutAttachment("images/image.jpg", null, dummyImageData,
-														 new RavenJObject { { "Content-Type", "image/jpeg" } });
+						new RavenJObject {{"Content-Type", "image/jpeg"}});
 				}
 
 				var attachment = store.DatabaseCommands.GetAttachment("images/image.jpg");

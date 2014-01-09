@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -96,15 +95,14 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPut]
-		[Route("static/{*id}")]
-		[Route("databases/{databaseName}/static/{*id}")]
-		public async Task<HttpResponseMessage> StaticPut(string id)
+		[Route("static/{*filename}")]
+		[Route("databases/{databaseName}/static/{*filename}")]
+		public async Task<HttpResponseMessage> StaticPut(string filename)
 		{
-			var filename = id;
-
 			var newEtag = Database.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync(), InnerHeaders.FilterHeadersAttachment());
 
-			var msg = GetEmptyMessage(HttpStatusCode.NoContent);
+			var msg = GetEmptyMessage(HttpStatusCode.Created);
+			msg.Headers.Location = Database.Configuration.GetFullUrl("static/" + filename);
 
 			WriteETag(newEtag, msg);
 			return msg;

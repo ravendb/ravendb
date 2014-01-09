@@ -298,7 +298,11 @@ namespace Raven.Database.Server.Controllers
 
 		public virtual HttpResponseMessage GetMessageWithObject(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
-			var token = item as RavenJToken ?? RavenJToken.FromObject(item);
+			var token = item as RavenJToken;
+			if (token == null && item != null)
+			{
+				token = RavenJToken.FromObject(item);
+			}
 			var msg = new HttpResponseMessage(code)
 			{
 				Content = new JsonContent(token),
@@ -328,7 +332,6 @@ namespace Raven.Database.Server.Controllers
 				Content = new JsonContent()
 			};
 			WriteETag(etag, resMsg);
-
 			return resMsg;
 		}
 
@@ -339,21 +342,14 @@ namespace Raven.Database.Server.Controllers
 				msg = GetEmptyMessage(status);
 
 			var jsonContent = ((JsonContent)msg.Content);
-			var jsonp = GetQueryStringValue("jsonp");
 
 			WriteHeaders(headers, etag, msg);
 
+			var jsonp = GetQueryStringValue("jsonp");
 			if (string.IsNullOrEmpty(jsonp) == false)
-			{
-				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/javascript") { CharSet = "utf-8" };
 				jsonContent.Jsonp = jsonp;
-			}
-			else
-			{
-				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
-			}
 
-			jsonContent.Token = data;
+			jsonContent.Data = data;
 
 			return msg;
 		}

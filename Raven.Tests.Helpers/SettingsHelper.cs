@@ -3,10 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Configuration;
+
 namespace Raven.Tests.Helpers
 {
-	using System.Configuration;
-
 	public static class SettingsHelper
 	{
 		public static bool UseFipsEncryptionAlgorithms

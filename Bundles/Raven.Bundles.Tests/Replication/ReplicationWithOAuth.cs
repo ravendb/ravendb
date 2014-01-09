@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.Replication;
 using Xunit;
@@ -11,17 +12,16 @@ namespace Raven.Bundles.Tests.Replication
 {
 	public class ReplicationWithOAuth : ReplicationBase
 	{
-		protected override void ConfigureServer(database::Raven.Database.Config.RavenConfiguration serverConfiguration)
+		protected override void ModifyConfiguration(database::Raven.Database.Config.InMemoryRavenConfiguration serverConfiguration)
 		{
 			serverConfiguration.AnonymousUserAccessMode = database::Raven.Database.Server.AnonymousUserAccessMode.None;
 			database::Raven.Database.Server.Security.Authentication.EnableOnce();
 		}
 
 
-		protected override void ConfigureStore(Client.Document.DocumentStore documentStore)
+		protected override void ModifyStore(DocumentStore documentStore)
 		{
 			documentStore.ApiKey = "Ayende/abc";
-			base.ConfigureStore(documentStore);
 		}
 
 		protected override void SetupDestination(Abstractions.Replication.ReplicationDestination replicationDestination)
