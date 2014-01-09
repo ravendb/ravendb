@@ -255,7 +255,7 @@ public class HttpJsonRequestTest extends RavenDBAwareTests {
   }
 
 
-  @Test(expected = IllegalStateException.class)
+  @Test(expected = HttpOperationException.class)
   public void testBadRequest() {
     HttpJsonRequest jsonRequest = factory.createHttpJsonRequest(new CreateHttpJsonRequestParams(null, DEFAULT_SERVER_URL_1 + "/admin/noSuchEndpoint", HttpMethods.GET,
       new RavenJObject(), null, convention).addOperationHeaders(new HashMap<String, String>()));

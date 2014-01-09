@@ -2183,12 +2183,12 @@ public class ServerClient implements IDatabaseCommands {
   }
 
   protected FacetResults directGetFacets(OperationMetadata operationMetadata, String index, IndexQuery query, String facetSetupDoc, int start, Integer pageSize) {
-    String requestUri = operationMetadata.getUrl() + String.format("/facets/%s?facetDoc=%s&%s&facetStart=%d&facetPageSize=%d",
+    String requestUri = operationMetadata.getUrl() + String.format("/facets/%s?facetDoc=%s&%s&facetStart=%d&facetPageSize=%s",
       UrlUtils.escapeUriString(index),
       UrlUtils.escapeDataString(facetSetupDoc),
       query.getMinimalQueryString(),
       start,
-      pageSize);
+      pageSize != null ? pageSize : "");
 
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
       new CreateHttpJsonRequestParams(this, requestUri, HttpMethods.GET, new RavenJObject(), credentials, convention)

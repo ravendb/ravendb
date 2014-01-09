@@ -4,13 +4,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import net.ravendb.abstractions.data.Etag;
 import net.ravendb.abstractions.data.JsonDocument;
 import net.ravendb.abstractions.data.UuidType;
-import net.ravendb.abstractions.json.linq.RavenJArray;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.abstractions.replication.ReplicationDocument;
 import net.ravendb.client.connection.IDatabaseCommands;
@@ -37,11 +35,6 @@ public class ReplicationTest extends AbstractReplicationTest {
 
       ReplicationDocument repDoc = createReplicationDocument();
 
-      RavenJObject o = new RavenJObject();
-      List<String> destinations = new ArrayList<>();
-      destinations.add(DEFAULT_SERVER_URL_2);
-      o.add("Destinations", new RavenJArray(destinations));
-
       source.put("Raven/Replication/Destinations", null, RavenJObject.fromObject(repDoc), new RavenJObject());
 
       Etag etag = new Etag();
@@ -62,6 +55,7 @@ public class ReplicationTest extends AbstractReplicationTest {
         assertEquals("val1", jsonDocument.getDataAsJson().get("key").value(String.class));
         break;
       }
+      assertNotNull(jsonDocument);
 
     } finally {
       deleteDb(SOURCE, 1);

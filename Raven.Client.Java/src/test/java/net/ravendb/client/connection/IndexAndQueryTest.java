@@ -324,6 +324,7 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
   }
 
   @Test
+  @Ignore("waiting for RavenDB-1560")
   public void testQueryWithIncludes() throws Exception {
     try {
       createDb();
@@ -481,6 +482,7 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
   }
 
   @Test
+  @Ignore("waiting for RavenDB-1560")
   public void testCreateIndexAndQuery() throws Exception {
     try {
       createDb();
