@@ -122,8 +122,8 @@ namespace Raven.Smuggler
                     action = SmugglerAction.Export;
                     break;
 
-                case "dump":
-                    action = SmugglerAction.Dump;
+                case "dryrun":
+                    action = SmugglerAction.Dryrun;
                     break;
 
                 case "repair":
@@ -176,7 +176,7 @@ namespace Raven.Smuggler
                 switch (action)
                 {
                     case SmugglerAction.Import:
-                    case SmugglerAction.Dump:
+                    case SmugglerAction.Dryrun:
                     case SmugglerAction.Repair:
                         smugglerApi.ImportData(options, incremental);
                         if (waitForIndexing)
@@ -245,9 +245,9 @@ Usage:
 	- Export a local instance to dump.raven:
 		Raven.Smuggler out http://localhost:8080/ dump.raven
 	- Dump the dump.raven file to stdout
-		Raven.Smuggler dump dump.raven
+		Raven.Smuggler dryrun dump.raven
 	- Repair the dump.raven to dump.raven.repair
-		Raven.Smuggler reapir dump.raven    
+		Raven.Smuggler repair dump.raven    
 
 Command line options:", SystemTime.UtcNow.Year);
 

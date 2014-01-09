@@ -4,7 +4,7 @@ namespace Raven.Abstractions.Smuggler
     {
         Import = 1,
         Export,
-        Dump,
+        Dryrun,
         Repair,
     }
 }

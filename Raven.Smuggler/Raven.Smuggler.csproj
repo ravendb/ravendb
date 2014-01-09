@@ -63,7 +63,7 @@
     <Compile Include="..\Raven.Server\FromMono\Options.cs">
       <Link>FromMono\Options.cs</Link>
     </Compile>
-    <Compile Include="DumpApi.cs" />
+    <Compile Include="DryrunApi.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="RepairApi.cs" />
     <Compile Include="SmugglerApi.cs" />

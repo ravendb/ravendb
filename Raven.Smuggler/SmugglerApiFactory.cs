@@ -9,8 +9,8 @@ namespace Raven.Smuggler
         {
             switch (action)
             {
-                case SmugglerAction.Dump:
-                    return new DumpApi(options);                    
+                case SmugglerAction.Dryrun:
+                    return new DryrunApi(options);                    
 
                 case SmugglerAction.Repair:
                     return new RepairApi(options);

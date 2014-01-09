@@ -102,7 +102,7 @@ namespace Raven.Smuggler
                         if (key.StartsWith("Raven-Replication"))
                             metadata.Remove(key);
                     }
-                    doc["@metadata"] = metadata;
+                    doc["@metadata"] = metadata; // probably not needed, as it is the same reference
                     
 
                     RavenJObject conflict;

@@ -7,9 +7,9 @@ using Raven.Json.Linq;
 
 namespace Raven.Smuggler
 {
-    public class DumpApi : SmugglerApiBase
+    public class DryrunApi : SmugglerApiBase
     {
-        public DumpApi(SmugglerOptions smugglerOptions) : base(smugglerOptions)
+        public DryrunApi(SmugglerOptions smugglerOptions) : base(smugglerOptions)
         {
         }
 
