@@ -10,7 +10,8 @@ namespace Raven.Client.Document.Batches
 	public interface ILazyOperation
 	{
 		GetRequest CreateRequest();
-		object Result { get;  }
+		object Result { get; }
+		QueryResult QueryResult { get; }
 		bool RequiresRetry { get; }
 		void HandleResponse(GetResponse response);
 #if !SILVERLIGHT

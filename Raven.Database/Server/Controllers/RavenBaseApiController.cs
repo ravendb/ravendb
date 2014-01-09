@@ -298,7 +298,11 @@ namespace Raven.Database.Server.Controllers
 
 		public virtual HttpResponseMessage GetMessageWithObject(object item, HttpStatusCode code = HttpStatusCode.OK, Etag etag = null)
 		{
-			var token = item as RavenJToken ?? RavenJToken.FromObject(item);
+			var token = item as RavenJToken;
+			if (token == null && item != null)
+			{
+				token = RavenJToken.FromObject(item);
+			}
 			var msg = new HttpResponseMessage(code)
 			{
 				Content = new JsonContent(token),

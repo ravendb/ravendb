@@ -227,6 +227,7 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="Backup\ProgressNotifier.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTask.cs" />
@@ -1075,6 +1076,7 @@
     <EmbeddedResource Include="Json\ToJson.js" />
     <EmbeddedResource Include="Json\RavenDB.js" />
     <EmbeddedResource Include="Json\lodash.js" />
+    <EmbeddedResource Include="Json\ECMAScript5.js" />
     <Content Include="Server\WebUI\css\smoothness\images\ui-anim_basic_16x16.gif" />
     <Content Include="Server\WebUI\studio_not_found.html" />
     <Content Include="Server\WebUI\studio.html" />

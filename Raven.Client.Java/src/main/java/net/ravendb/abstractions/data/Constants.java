@@ -44,6 +44,8 @@ public class Constants {
   public final static double DEFAULT_SPATIAL_DISTANCE_ERROR_PCT = 0.025d;
   public final static String DISTANCE_FIELD_NAME = "__distance";
 
+  public final static String NEXT_PAGE_START = "Next-Page-Start";
+
 
   /**
    * The International Union of Geodesy and Geophysics says the Earth's mean radius in KM is:

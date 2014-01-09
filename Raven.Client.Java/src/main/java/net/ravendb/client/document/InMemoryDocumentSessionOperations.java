@@ -42,6 +42,7 @@ import net.ravendb.client.exceptions.NonUniqueObjectException;
 import net.ravendb.client.listeners.IDocumentConversionListener;
 import net.ravendb.client.listeners.IDocumentDeleteListener;
 import net.ravendb.client.listeners.IDocumentStoreListener;
+import net.ravendb.client.listeners.IExtendedDocumentConversionListener;
 import net.ravendb.client.util.IdentityHashSet;
 import net.ravendb.client.utils.Closer;
 
@@ -449,6 +450,10 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
       if (RavenJObject.class.equals(entityType)) {
         return documentFound.cloneToken();
       }
+      for (IExtendedDocumentConversionListener extendedDocumentConversionListener: listeners.getExtendedConversionListeners()) {
+        extendedDocumentConversionListener.beforeConversionToEntity(id, documentFound, metadata);
+      }
+
       Object defaultValue = getDefaultValue(entityType);
       Object entity = defaultValue;
       ensureNotReadVetoed(metadata);
@@ -480,6 +485,10 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
         generateEntityIdOnTheClient.trySetIdentity(entity, id);
         for (IDocumentConversionListener documentConversionListener: listeners.getConversionListeners()) {
           documentConversionListener.documentToEntity(id, entity, documentFound, metadata);
+        }
+
+        for (IExtendedDocumentConversionListener extendedDocumentConversionListener: listeners.getExtendedConversionListeners()) {
+          extendedDocumentConversionListener.afterConversionToEntity(id, documentFound, metadata, entity);
         }
 
         return entity;
@@ -555,7 +564,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     knownMissingIds.add(value.getKey());
   }
 
-  private static void ensureNotReadVetoed(RavenJObject metadata) {
+  public static void ensureNotReadVetoed(RavenJObject metadata) {
     RavenJToken readVetoToken = metadata.get("Raven-Read-Veto");
     if (readVetoToken instanceof RavenJObject) {
       RavenJObject readVeto = (RavenJObject) readVetoToken;

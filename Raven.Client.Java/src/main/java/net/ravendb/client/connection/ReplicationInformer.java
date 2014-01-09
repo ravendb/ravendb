@@ -16,6 +16,7 @@ import net.ravendb.abstractions.basic.EventHandler;
 import net.ravendb.abstractions.basic.EventHelper;
 import net.ravendb.abstractions.basic.Reference;
 import net.ravendb.abstractions.closure.Function1;
+import net.ravendb.abstractions.connection.OperationCredentials;
 import net.ravendb.abstractions.data.HttpMethods;
 import net.ravendb.abstractions.data.JsonDocument;
 import net.ravendb.abstractions.exceptions.HttpOperationException;
@@ -39,14 +40,14 @@ public class ReplicationInformer implements AutoCloseable {
   private static Log log = LogFactory.getLog(ReplicationInformer.class.getCanonicalName());
 
   private static String RAVEN_REPLICATION_DESTINATIONS = "Raven/Replication/Destinations";
-  private static List<String> EMPTY = new ArrayList<>();
+  private static List<OperationMetadata> EMPTY = new ArrayList<>();
 
   private boolean firstTime = true;
   protected DocumentConvention conventions;
 
   protected Date lastReplicationUpdate = new Date(0);
   private final Object replicationLock = new Object();
-  private List<ReplicationDestinationData> replicationDestinations = new ArrayList<>();
+  private List<OperationMetadata> replicationDestinations = new ArrayList<>();
 
   protected static AtomicInteger readStripingBase = new AtomicInteger(0);
 
@@ -56,31 +57,31 @@ public class ReplicationInformer implements AutoCloseable {
 
   private Thread refreshReplicationInformationTask;
 
-  private String[] failoverUrls;
+  private ReplicationDestination[] failoverServers;
 
-  public void setFailoverUrls(String[] failoverUrls) {
-    this.failoverUrls = failoverUrls;
+  public void setFailoverServers(ReplicationDestination[] failoverServers) {
+    this.failoverServers = failoverServers;
   }
 
-  public String[] getFailoverUrls() {
-    return failoverUrls;
+  public ReplicationDestination[] getFailoverServers() {
+    return failoverServers;
   }
 
   public ReplicationInformer(DocumentConvention conventions) {
     this.conventions = conventions;
   }
 
-  public List<ReplicationDestinationData> getReplicationDestinations() {
+  public List<OperationMetadata> getReplicationDestinations() {
     return this.replicationDestinations;
   }
 
-  public List<String> getReplicationDestinationsUrls() {
+  public List<OperationMetadata> getReplicationDestinationsUrls() {
     if (FailoverBehavior.FAIL_IMMEDIATELY.equals(this.conventions.getFailoverBehavior())) {
       return EMPTY;
     }
-    List<String> result = new ArrayList<>();
-    for (ReplicationDestinationData rdd : this.replicationDestinations) {
-      result.add(rdd.getUrl());
+    List<OperationMetadata> result = new ArrayList<>();
+    for (OperationMetadata opMeta : this.replicationDestinations) {
+      result.add(new OperationMetadata(opMeta));
     }
     return result;
   }
@@ -138,14 +139,15 @@ public class ReplicationInformer implements AutoCloseable {
     return readStripingBase.incrementAndGet();
   }
 
-  public <T> T executeWithReplication(HttpMethods method, String primaryUrl, int currentRequest,
-    int currentReadStripingBase, Function1<String, T> operation) throws ServerClientException {
+  public <T> T executeWithReplication(HttpMethods method, String primaryUrl, OperationCredentials primaryCredentials, int currentRequest,
+    int currentReadStripingBase, Function1<OperationMetadata, T> operation) throws ServerClientException {
 
     Reference<T> resultHolder = new Reference<>();
     Reference<Boolean> timeoutThrown = new Reference<>();
     timeoutThrown.value = Boolean.FALSE;
 
-    List<String> localReplicationDestinations = getReplicationDestinationsUrls(); // thread safe copy
+    List<OperationMetadata> localReplicationDestinations = getReplicationDestinationsUrls(); // thread safe copy
+    OperationMetadata primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials);
 
     boolean shouldReadFromAllServers = conventions.getFailoverBehavior().contains(
       FailoverBehavior.READ_FROM_ALL_SERVERS);
@@ -155,55 +157,70 @@ public class ReplicationInformer implements AutoCloseable {
       // if replicationIndex < 0, then we were explicitly instructed to use the master
       if (replicationIndex < localReplicationDestinations.size() && replicationIndex >= 0) {
         // if it is failing, ignore that, and move to the master or any of the replicas
-        if (shouldExecuteUsing(localReplicationDestinations.get(replicationIndex), currentRequest, method, false)) {
-          if (tryOperation(operation, localReplicationDestinations.get(replicationIndex), true, resultHolder,
+        if (shouldExecuteUsing(localReplicationDestinations.get(replicationIndex).getUrl(), currentRequest, method, false)) {
+          if (tryOperation(operation, localReplicationDestinations.get(replicationIndex), primaryOperation, true, resultHolder,
             timeoutThrown)) return resultHolder.value;
         }
       }
     }
 
-    if (shouldExecuteUsing(primaryUrl, currentRequest, method, true)) {
+    if (shouldExecuteUsing(primaryOperation.getUrl(), currentRequest, method, true)) {
 
-      if (tryOperation(operation, primaryUrl, !timeoutThrown.value && localReplicationDestinations.size() > 0, resultHolder,
+      if (tryOperation(operation, primaryOperation, null, !timeoutThrown.value && localReplicationDestinations.size() > 0, resultHolder,
         timeoutThrown)) {
         return resultHolder.value;
       }
-      if (!timeoutThrown.value && isFirstFailure(primaryUrl)
-        && tryOperation(operation, primaryUrl, localReplicationDestinations.size() > 0, resultHolder, timeoutThrown)) {
+      if (!timeoutThrown.value && isFirstFailure(primaryOperation.getUrl())
+        && tryOperation(operation, primaryOperation, null, localReplicationDestinations.size() > 0, resultHolder, timeoutThrown)) {
         return resultHolder.value;
       }
-      incrementFailureCount(primaryUrl);
+      incrementFailureCount(primaryOperation.getUrl());
     }
 
     for (int i = 0; i < localReplicationDestinations.size(); i++) {
-      String replicationDestination = localReplicationDestinations.get(i);
-      if (!shouldExecuteUsing(replicationDestination, currentRequest, method, false)) {
+      OperationMetadata replicationDestination = localReplicationDestinations.get(i);
+      if (!shouldExecuteUsing(replicationDestination.getUrl(), currentRequest, method, false)) {
         continue;
       }
-      if (tryOperation(operation, replicationDestination, !timeoutThrown.value, resultHolder, timeoutThrown)) {
+      if (tryOperation(operation, replicationDestination, primaryOperation, !timeoutThrown.value, resultHolder, timeoutThrown)) {
         return resultHolder.value;
       }
       if (!timeoutThrown.value
-        && isFirstFailure(replicationDestination)
-        && tryOperation(operation, replicationDestination, localReplicationDestinations.size() > i + 1, resultHolder,
+        && isFirstFailure(replicationDestination.getUrl())
+        && tryOperation(operation, replicationDestination, primaryOperation, localReplicationDestinations.size() > i + 1, resultHolder,
           timeoutThrown)) {
         return resultHolder.value;
       }
-      incrementFailureCount(replicationDestination);
+      incrementFailureCount(replicationDestination.getUrl());
 
     }
     // this should not be thrown, but since I know the value of should...
     throw new IllegalStateException("Attempted to connect to master and all replicas have failed, giving up. There is a high probability of a network problem preventing access to all the replicas. Failed to get in touch with any of the " + (1 + localReplicationDestinations.size()) + " Raven instances.");
   }
 
-  protected <T> boolean tryOperation(Function1<String, T> operation, String operationUrl, boolean avoidThrowing,
+  protected <T> boolean tryOperation(Function1<OperationMetadata, T> operation, OperationMetadata operationMetadata, OperationMetadata primaryOperationMetadata, boolean avoidThrowing,
     Reference<T> result, Reference<Boolean> wasTimeout) {
     try {
-      result.value = operation.apply(operationUrl);
-      resetFailureCount(operationUrl);
+      boolean tryWithPrimaryCredentials = isFirstFailure(operationMetadata.getUrl()) && primaryOperationMetadata != null;
+
+      result.value = operation.apply(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.getUrl(), primaryOperationMetadata.getCredentials()) : operationMetadata);
+      resetFailureCount(operationMetadata.getUrl());
       wasTimeout.value = Boolean.FALSE;
       return true;
     } catch (Exception e) {
+      /* TODO
+       * var webException = e as WebException;
+                if (tryWithPrimaryCredentials && operationMetadata.Credentials.HasCredentials() && webException != null)
+                {
+                    IncrementFailureCount(operationMetadata.Url);
+
+                    var response = webException.Response as HttpWebResponse;
+                    if (response != null && response.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        return TryOperation(operation, operationMetadata, primaryOperationMetadata, avoidThrowing, out result, out wasTimeout);
+                    }
+                }
+       */
       if (avoidThrowing == false) {
         throw e;
       }
@@ -336,7 +353,8 @@ public class ReplicationInformer implements AutoCloseable {
 
       JsonDocument document;
       try {
-        document = commands.directGet(commands.getUrl(), RAVEN_REPLICATION_DESTINATIONS);
+        //TODO: add credentials
+        document = commands.directGet(new OperationMetadata(commands.getUrl()), RAVEN_REPLICATION_DESTINATIONS);
         failureCounts.put(commands.getUrl(), new FailureCounter()); // we just hit the master, so we can reset its failure count
       } catch (Exception e) {
         log.error("Could not contact master for new replication information", e);
@@ -362,20 +380,20 @@ public class ReplicationInformer implements AutoCloseable {
       log.error("Mapping Exception", e);
       return;
     }
-    List<ReplicationDestinationData> replicationDestinations = new ArrayList<>();
+    List<OperationMetadata> replicationDestinations = new ArrayList<>();
     for (ReplicationDestination x : replicationDocument.getDestinations()) {
       String url = StringUtils.isEmpty(x.getClientVisibleUrl()) ? x.getUrl() : x.getClientVisibleUrl();
       if (StringUtils.isEmpty(url) || Boolean.TRUE.equals(x.getDisabled()) || Boolean.TRUE.equals(x.getIgnoredClient())) {
         return;
       }
       if (StringUtils.isEmpty(x.getDatabase())) {
-        replicationDestinations.add(new ReplicationDestinationData(url));
+        replicationDestinations.add(new OperationMetadata(url,new OperationCredentials(x.getApiKey())));
         return;
       }
-      replicationDestinations.add(new ReplicationDestinationData(MultiDatabase.getRootDatabaseUrl(url) + "/databases/"
-        + x.getDatabase()));
+      replicationDestinations.add(new OperationMetadata(MultiDatabase.getRootDatabaseUrl(url) + "/databases/"
+        + x.getDatabase(), new OperationCredentials(x.getApiKey())));
     }
-    for (ReplicationDestinationData replicationDestination : replicationDestinations) {
+    for (OperationMetadata replicationDestination : replicationDestinations) {
       if (!failureCounts.containsKey(replicationDestination.getUrl())) {
         failureCounts.put(replicationDestination.getUrl(), new FailureCounter());
       }
@@ -489,24 +507,6 @@ public class ReplicationInformer implements AutoCloseable {
 
     public FailureCounter() {
       this.lastCheck = new Date();
-    }
-  }
-
-  public class ReplicationDestinationData {
-
-    public ReplicationDestinationData(String url) {
-      super();
-      this.url = url;
-    }
-
-    private String url;
-
-    public String getUrl() {
-      return url;
-    }
-
-    public void setUrl(String url) {
-      this.url = url;
     }
   }
 

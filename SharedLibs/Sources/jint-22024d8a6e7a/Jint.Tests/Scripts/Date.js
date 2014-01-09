@@ -21,7 +21,6 @@ assert(now.toTimeString(), new Date(Date.parse(now.toTimeString())).toTimeString
 assert(now.toString(), new Date(Date.parse(now.toString())).toString());
 assert(new Date(now.getTime()).toString(),now.toString());
 
-
 var d = new Date(1970, 0, 1, 0, 0, 1);
 if (d.getTimezoneOffset() == 8 * 60) { // timezone dependent
     assert(28801000, Number(d));
@@ -43,3 +42,8 @@ assert(31, new Date(Date.UTC(2006, 0, 0)).getUTCDate());
 
 assert(false, new Date(0) == new Date(0));
 
+// There is a bug for certain Millisecond values, they're rounded incorrectly and so don't match
+var dateCtorTest = new Date('2013-12-13T10:56:05.3006771+00:00');
+assert(300, dateCtorTest.getUTCMilliseconds()); //originally this returned 299!!
+assert(5, dateCtorTest.getUTCSeconds());
+assert(56, dateCtorTest.getUTCMinutes());

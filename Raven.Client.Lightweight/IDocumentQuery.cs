@@ -18,7 +18,6 @@ namespace Raven.Client
 	/// </summary>
 	public interface IDocumentQuery<T> : IEnumerable<T>, IDocumentQueryBase<T, IDocumentQuery<T>>
 	{
-
 		/// <summary>
 		/// Selects the specified fields directly from the index
 		/// </summary>
@@ -66,6 +65,12 @@ namespace Raven.Client
 		/// Also provide a function to execute when the value is evaluated
 		/// </summary>
 		Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval);
+
+		/// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed.
+		/// </summary>
+		Lazy<int> CountLazily();
 
 		/// <summary>
 		/// Create the index query object for this query

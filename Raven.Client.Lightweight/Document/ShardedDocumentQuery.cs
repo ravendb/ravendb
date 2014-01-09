@@ -227,12 +227,27 @@ namespace Raven.Client.Document
 		}
 
 #if !SILVERLIGHT
-
 		/// <summary>
 		/// Register the query as a lazy query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
 		public override Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
+		{
+			var lazyQueryOperation = ProcessLazyQuery();
+			return ((ShardedDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval, ShardDatabaseCommands);
+		}
+
+        /// <summary>
+        /// Register the query as a lazy-count query in the session and return a lazy
+        /// instance that will evaluate the query only when needed
+        /// </summary>
+        public override Lazy<int> CountLazily()
+		{
+			var lazyQueryOperation = ProcessLazyQuery();
+			return ((ShardedDocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation, ShardDatabaseCommands);
+		}
+
+		private LazyQueryOperation<T> ProcessLazyQuery()
 		{
 			if (queryOperation == null)
 			{
@@ -243,14 +258,13 @@ namespace Raven.Client.Document
 						databaseCommands11.OperationsHeaders.Remove(key);
 					}
 				}
-			
+
 				ExecuteBeforeQueryListeners();
 				queryOperation = InitializeQueryOperation((s, s1) => ShardDatabaseCommands.ForEach(cmd => cmd.OperationsHeaders.Set(s, s1)));
 			}
 
 			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
-
-			return ((ShardedDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval, ShardDatabaseCommands);
+			return lazyQueryOperation;
 		}
 #endif
 

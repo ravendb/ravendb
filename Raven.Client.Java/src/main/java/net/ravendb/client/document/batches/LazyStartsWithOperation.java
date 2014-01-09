@@ -3,11 +3,13 @@ package net.ravendb.client.document.batches;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.ravendb.abstractions.data.Constants;
 import net.ravendb.abstractions.data.GetRequest;
 import net.ravendb.abstractions.data.GetResponse;
 import net.ravendb.abstractions.data.JsonDocument;
 import net.ravendb.abstractions.json.linq.RavenJArray;
 import net.ravendb.abstractions.json.linq.RavenJObject;
+import net.ravendb.client.RavenPagingInformation;
 import net.ravendb.client.connection.IDatabaseCommands;
 import net.ravendb.client.connection.SerializationHelper;
 import net.ravendb.client.document.InMemoryDocumentSessionOperations;
@@ -21,12 +23,13 @@ public class LazyStartsWithOperation<T> implements ILazyOperation {
   private final int start;
   private final int pageSize;
   private final InMemoryDocumentSessionOperations sessionOperations;
+  private final RavenPagingInformation pagingInformation;
   private final Class<T> clazz;
 
   private Object result;
   private boolean requiresRetry;
 
-  public LazyStartsWithOperation(Class<T> clazz, String keyPrefix, String matches, String exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations) {
+  public LazyStartsWithOperation(Class<T> clazz, String keyPrefix, String matches, String exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations, RavenPagingInformation pagingInformation) {
     this.clazz = clazz;
     this.keyPrefix = keyPrefix;
     this.matches = matches;
@@ -34,16 +37,23 @@ public class LazyStartsWithOperation<T> implements ILazyOperation {
     this.start = start;
     this.pageSize = pageSize;
     this.sessionOperations = sessionOperations;
+    this.pagingInformation = pagingInformation;
   }
 
   @Override
   public GetRequest createRequest() {
+    int actualStart = start;
+    boolean nextPage = pagingInformation != null && pagingInformation.isForPreviousPage(start, pageSize);
+    if (nextPage) {
+      actualStart = pagingInformation.getNextPageStart();
+    }
+
     GetRequest getRequest = new GetRequest();
     getRequest.setUrl("/docs");
-    getRequest.setQuery(String.format("startsWith=%s&matches=%s&exclude=%s&start=%d&pageSize=%d", UrlUtils.escapeDataString(keyPrefix),
+    getRequest.setQuery(String.format("startsWith=%s&matches=%s&exclude=%s&start=%d&pageSize=%d&next-page=%s", UrlUtils.escapeDataString(keyPrefix),
         UrlUtils.escapeDataString(matches != null ? matches : ""),
         UrlUtils.escapeDataString(exclude != null ? exclude : ""),
-        start, pageSize));
+        actualStart, pageSize, nextPage ? "true" : "false"));
     return getRequest;
   }
 
@@ -79,6 +89,16 @@ public class LazyStartsWithOperation<T> implements ILazyOperation {
     for (JsonDocument doc: jsonDocuments) {
       resultList.add(sessionOperations.trackEntity(clazz, doc));
     }
+
+    if (pagingInformation !=null) {
+      try {
+        int nextPageStart = Integer.parseInt(response.getHeaders().get(Constants.NEXT_PAGE_START));
+        pagingInformation.fill(start, pageSize, nextPageStart);
+      } catch (NumberFormatException e) {
+        // ignore
+      }
+    }
+
     result = resultList.toArray();
   }
 

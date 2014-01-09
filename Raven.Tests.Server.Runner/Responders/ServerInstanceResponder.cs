@@ -146,7 +146,7 @@ namespace Raven.Tests.Server.Runner.Responders
 
         private RavenDbServer CreateNewServer(RavenConfiguration configuration, IHttpContext context)
         {
-            configuration.DataDirectory = Path.Combine(DataDir, configuration.Port.ToString());
+            configuration.DataDirectory = Path.Combine(DataDir, configuration.Port.ToString() + "\\");
 
             bool deleteData;
             bool.TryParse(context.Request.QueryString["deleteData"], out deleteData);
@@ -268,7 +268,8 @@ namespace Raven.Tests.Server.Runner.Responders
             var configuration = new RavenConfiguration
                                 {
                                     Port = Port,
-                                    RunInMemory = RunInMemory
+                                    RunInMemory = RunInMemory,
+                                    DefaultStorageTypeName = "esent"
                                 };
 
             foreach (var key in Settings.Keys)

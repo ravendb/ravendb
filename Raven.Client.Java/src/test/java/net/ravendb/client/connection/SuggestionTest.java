@@ -31,7 +31,6 @@ public class SuggestionTest extends RavenDBAwareTests {
 
       RavenJObject meta1 = new RavenJObject();
       meta1.add(Constants.RAVEN_ENTITY_NAME, RavenJValue.fromObject("users"));
-      meta1.add(Constants.LAST_MODIFIED, RavenJValue.fromObject(new Date()));
 
       List<String> persons = Arrays.asList("John Smith", "Jack Johnson", "Robery Jones", "David Jones");
       for (int i = 0; i < persons.size(); i++) {

@@ -11,6 +11,7 @@ using System.Net.Mime;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
@@ -28,7 +29,7 @@ namespace Raven.Database.Server.Controllers
 
 		protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
-			if (Data == null)
+			if (HasNoData())
 				return Task.FromResult(true);
 
 			if (string.IsNullOrEmpty(Jsonp))
@@ -52,10 +53,16 @@ namespace Raven.Database.Server.Controllers
 			return Task.FromResult(true);
 		}
 
+		private bool HasNoData()
+		{
+			return Data == null || Data.Type == JTokenType.Null;
+		}
+
 		protected override bool TryComputeLength(out long length)
 		{
-			length = 0;
-			return Data == null;
+			var hasNoData = HasNoData();
+			length = hasNoData ? 0 : -1;
+			return hasNoData;
 		}
 	}
 }

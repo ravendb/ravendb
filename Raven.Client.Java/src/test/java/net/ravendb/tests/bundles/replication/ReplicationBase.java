@@ -30,7 +30,7 @@ public class ReplicationBase extends RavenDBAwareTests {
   public IDocumentStore createStore() {
     int port = DEFAULT_SERVER_PORT_1 + stores.size();
     try {
-      startServer(port);
+      startServer(port, false);
       createDbAtPort(getDbName(), port);
       IDocumentStore store = new DocumentStore("http://" + DEFAULT_HOST + ":" + port, getDbName()).initialize();
       stores.add(store);

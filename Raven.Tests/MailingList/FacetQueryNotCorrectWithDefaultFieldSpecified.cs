@@ -74,10 +74,9 @@ namespace Raven.Tests.MailingList
 		public void ShouldWorkWithRavenServer()
 		{
 			//arrange
-			using(var store = (DocumentStore)NewRemoteDocumentStore())
+			using(var store = NewRemoteDocumentStore())
 			{
 				store.RegisterListener(new NoStaleQueriesListener());
-				store.Initialize();
 
 				SetupTestData(store);
 
