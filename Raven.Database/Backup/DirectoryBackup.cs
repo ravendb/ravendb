@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -45,8 +46,8 @@ namespace Raven.Database.Backup
 			if (Directory.Exists(tempPath) == false)
 				Directory.CreateDirectory(tempPath);
 			
-			if (!allowOverwrite && Directory.Exists(destination))
-				throw new InvalidOperationException("Directory exists and overwrite was not explicitly requested by user: " + destination);
+			if (!allowOverwrite && Directory.Exists(destination) && Directory.EnumerateFileSystemEntries(destination).Any())
+				throw new InvalidOperationException("Directory exists and it is not empty; overwrite was not explicitly requested by user: " + destination);
 
 			if (Directory.Exists(destination) == false)
 				Directory.CreateDirectory(destination);

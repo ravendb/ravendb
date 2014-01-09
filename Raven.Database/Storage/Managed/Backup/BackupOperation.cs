@@ -48,7 +48,10 @@ namespace Raven.Storage.Managed.Backup
 				{
 					new DirectoryBackup(src, to, Path.Combine("TempData" + Guid.NewGuid().ToString("N")), false),
 					new DirectoryBackup(Path.Combine(src, "IndexDefinitions"), Path.Combine(to, "IndexDefinitions"),
-										Path.Combine(src, "Temp" + Guid.NewGuid().ToString("N")), false)
+										Path.Combine(src, "Temp-IndexDefinitions" + Guid.NewGuid().ToString("N")), false),
+					new DirectoryBackup(Path.Combine(src, "Indexes"), Path.Combine(to, "Indexes"),
+										Path.Combine(src, "Temp-Indexes" + Guid.NewGuid().ToString("N")), false)
+
 				};
 
 				database.IndexStorage.Backup(to);

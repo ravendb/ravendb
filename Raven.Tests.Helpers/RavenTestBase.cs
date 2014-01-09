@@ -138,7 +138,7 @@ namespace Raven.Tests.Helpers
 			var store = new DocumentStore
 			{
 				Url = GetServerUrl(fiddler, ravenDbServer.SystemDatabase.ServerUrl),
-				DefaultDatabase = databaseName,
+				DefaultDatabase = databaseName				
 			};
 			stores.Add(store);
 			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
@@ -183,7 +183,7 @@ namespace Raven.Tests.Helpers
 				pathsToDelete.Add(dataDirectory);
 
 			var storageType = GetDefaultStorageType(requestedStorage);
-			var ravenConfiguration = new RavenConfiguration
+			var ravenConfiguration = new RavenConfiguration()
 			{
 				Port = port,
 				DataDirectory = dataDirectory ?? NewDataPath(),
@@ -195,6 +195,7 @@ namespace Raven.Tests.Helpers
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
 				UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
 			};
+			
 
 			if (activeBundles != null)
 			{
@@ -203,6 +204,7 @@ namespace Raven.Tests.Helpers
 
 			ModifyConfiguration(ravenConfiguration);
 
+			ravenConfiguration.Initialize(shouldOverrideExistingPortValue:false);
 			ravenConfiguration.PostInit();
 
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
