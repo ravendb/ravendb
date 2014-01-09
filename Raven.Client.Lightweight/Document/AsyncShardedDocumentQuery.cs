@@ -199,6 +199,11 @@ namespace Raven.Client.Document
 		{
 			throw new NotSupportedException("Lazy in not supported with the async API");
 		}
+
+		public override Lazy<int> LazilyCount()
+		{
+			throw new NotSupportedException("Lazy in not supported with the async API");
+		}
 #endif
 
 		public override IDatabaseCommands DatabaseCommands

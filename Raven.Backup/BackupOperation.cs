@@ -107,10 +107,10 @@ namespace Raven.Backup
 			return req;
 		}
 
-
 		public void WaitForBackup()
 		{
 			BackupStatus status = null;
+			var messagesSeenSoFar = new Queue<BackupStatus.BackupMessage>();
 
 			while (status == null)
 			{
@@ -126,14 +126,29 @@ namespace Raven.Backup
 
 			while (status.IsRunning)
 			{
+				// Write out the messages as we poll for them, don't wait until the end, this allows "live" updates
+				foreach (var msg in status.Messages)
+				{
+					if (messagesSeenSoFar.Contains(msg) == false)
+					{
+						messagesSeenSoFar.Enqueue(msg);
+						Console.WriteLine("[{0}] {1}", msg.Timestamp, msg.Message);
+					}
+				}
+
 				Thread.Sleep(1000);
 				status = GetStatusDoc();
 			}
 
+			// After we've know it's finished, write out any remaining messages
 			foreach (var msg in status.Messages)
 			{
+				if (messagesSeenSoFar.Contains(msg) == false)
+				{
+					messagesSeenSoFar.Enqueue(msg);
 				Console.WriteLine("[{0}] {1}", msg.Timestamp, msg.Message);
 			}
+		}
 		}
 
 		public BackupStatus GetStatusDoc()

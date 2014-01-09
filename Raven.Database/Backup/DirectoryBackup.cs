@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Directory = System.IO.Directory;
 using Raven.Database.Extensions;
+using System.Linq;
 
 namespace Raven.Database.Backup
 {
@@ -60,7 +61,7 @@ namespace Raven.Database.Backup
 		/// b) copy the hard links to the destination directory
 		/// c) delete the temp directory
 		/// </summary>
-		public void Execute()
+		public void Execute(ProgressNotifier progressNotifier)
 		{
 			if (allowOverwrite) // clean destination folder; we want to do this as close as possible to the actual backup operation
 			{
@@ -72,7 +73,7 @@ namespace Raven.Database.Backup
 			{
 				Notify("Copying " + Path.GetFileName(file), BackupStatus.BackupMessageSeverity.Informational);
 				var fullName = new FileInfo(file).FullName;
-				FileCopy(file, Path.Combine(destination, Path.GetFileName(file)), fileToSize[fullName]);
+				FileCopy(file, Path.Combine(destination, Path.GetFileName(file)), fileToSize[fullName], progressNotifier);
 				Notify("Copied " + Path.GetFileName(file), BackupStatus.BackupMessageSeverity.Informational);
 			}
 
@@ -82,9 +83,7 @@ namespace Raven.Database.Backup
 			}
 			catch (Exception e) //cannot delete, probably because there is a file being written there
 			{
-				logger.WarnException(
-					string.Format("Could not delete {0}, will delete those on startup", tempPath),
-					e);
+				logger.WarnException(string.Format("Could not delete {0}, will delete those on startup", tempPath), e);
 
 				foreach (var file in Directory.EnumerateFiles(tempPath))
 				{
@@ -94,18 +93,20 @@ namespace Raven.Database.Backup
 			}
 		}
 
-		private static void FileCopy(string src, string dest, long size)
+		private void FileCopy(string src, string dest, long size, ProgressNotifier notifier)
 		{
 			var buffer = new byte[16 * 1024];
+			var initialSize = size;
 			using (var srcStream = File.Open(src,FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
 			{
-				if(File.Exists(dest))
+				if (File.Exists(dest))
 					File.SetAttributes(dest,FileAttributes.Normal);
 				using (var destStream = File.Create(dest, buffer.Length))
 				{
 					while (true)
 					{
 						var read = srcStream.Read(buffer, 0, (int)Math.Min(buffer.Length, size));
+						notifier.UpdateProgress(read, Notify);
 						if (read == 0)
 							break;
 						size -= read;
@@ -116,7 +117,7 @@ namespace Raven.Database.Backup
 			}
 		}
 
-		public void Prepare()
+		public long Prepare()
 		{
 			string[] sourceFilesSnapshot;
 			try
@@ -126,7 +127,7 @@ namespace Raven.Database.Backup
 			catch (Exception e)
 			{
 				logger.WarnException("Could not get directory files, maybe it was deleted", e);
-				return;
+				return 0;
 			}
 			for (int index = 0; index < sourceFilesSnapshot.Length; index++)
 			{
@@ -163,10 +164,12 @@ namespace Raven.Database.Backup
 			// of all the files
 			foreach (var sourceFile in sourceFilesSnapshot)
 			{
-				if(sourceFile == null)
+				if (sourceFile == null)
 					continue;
 				Notify("Hard linked " + sourceFile, BackupStatus.BackupMessageSeverity.Informational);
 			}
+
+			return fileToSize.Sum(f => f.Value);
 		}
 	}
 }

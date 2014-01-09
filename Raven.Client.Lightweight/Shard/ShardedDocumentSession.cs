@@ -446,6 +446,18 @@ namespace Raven.Client.Shard
 			return lazyValue;
 		}
 
+		internal Lazy<int> AddLazyCountOperation(ILazyOperation operation, IList<IDatabaseCommands> cmds)
+		{
+			pendingLazyOperations.Add(Tuple.Create(operation, cmds));
+			var lazyValue = new Lazy<int>(() =>
+			{
+				ExecuteAllPendingLazyOperations();
+				return operation.QueryResult.TotalResults;
+			});
+
+			return lazyValue;
+		}
+
 		/// <summary>
 		/// Loads the specified entity with the specified id after applying
 		/// conventions on the provided id to get the real document id.

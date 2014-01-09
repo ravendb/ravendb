@@ -67,6 +67,8 @@ namespace Raven.Client.Document.Batches
 
 		public object Result { get; set; }
 
+		public QueryResult QueryResult { get; set; }
+
 		public bool RequiresRetry { get; set; }
 
 		public void HandleResponse(GetResponse response)

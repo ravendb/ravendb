@@ -84,15 +84,17 @@ namespace Raven.Database.Storage.Voron.Backup
 
                 database.IndexStorage.Backup(backupDestinationDirectory, null);				
 
+                var progressNotifier = new ProgressNotifier();
                 foreach (var directoryBackup in directoryBackups)
                 {
                     directoryBackup.Notify += UpdateBackupStatus;
-                    directoryBackup.Prepare();
+                    var backupSize = directoryBackup.Prepare();
+                    progressNotifier.TotalBytes += backupSize;
                 }
 
                 foreach (var directoryBackup in directoryBackups)
                 {
-                    directoryBackup.Execute();
+                    directoryBackup.Execute(progressNotifier);
                 }
 
                 UpdateBackupStatus(string.Format("Finished indexes backup. Executing data backup.."), BackupStatus.BackupMessageSeverity.Informational);

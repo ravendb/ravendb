@@ -128,7 +128,5 @@ namespace Raven.Tests.MultiGet
 				Assert.Equal(1, server.Server.NumberOfRequests);
 			}
 		}
-
-
 	}
 }

@@ -29,6 +29,25 @@ namespace Raven.Abstractions.Data
 			public string Message { get; set; }
 			public DateTime Timestamp { get; set; }
 			public BackupMessageSeverity Severity { get; set; }
+
+			public override bool Equals(object obj)
+			{
+				var item = obj as BackupMessage;
+
+				if (item == null)
+				{
+					return false;
+				}
+
+				return this.Message == item.Message &&
+					this.Timestamp == item.Timestamp &&
+					this.Severity == item.Severity;
+			}
+
+			public override int GetHashCode()
+			{
+				return Message.GetHashCode() ^ Timestamp.GetHashCode() ^ (Severity.GetHashCode() << 16);
+			}
 		}
 
 		public BackupStatus()
