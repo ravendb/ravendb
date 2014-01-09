@@ -3,11 +3,13 @@ package net.ravendb.client.indexes;
 import java.io.IOException;
 
 import net.ravendb.abstractions.closure.Action2;
+import net.ravendb.abstractions.connection.OperationCredentials;
 import net.ravendb.abstractions.data.JsonDocument;
 import net.ravendb.abstractions.extensions.JsonExtensions;
 import net.ravendb.abstractions.replication.ReplicationDestination;
 import net.ravendb.abstractions.replication.ReplicationDocument;
 import net.ravendb.client.connection.IDatabaseCommands;
+import net.ravendb.client.connection.OperationMetadata;
 import net.ravendb.client.connection.ServerClient;
 import net.ravendb.client.document.DocumentConvention;
 
@@ -20,15 +22,16 @@ public class AbstractCommonApiForIndexesAndTransformers {
 
   private Log logger = LogFactory.getLog(getClass());
 
-  protected String getReplicationUrl(ReplicationDestination replicationDestination) {
+  protected OperationMetadata getReplicationOperation(ReplicationDestination replicationDestination) {
     String replicationUrl = replicationDestination.getUrl();
     if (replicationDestination.getClientVisibleUrl() != null) {
       replicationUrl = replicationDestination.getClientVisibleUrl();
     }
-    return StringUtils.isBlank(replicationDestination.getDatabase()) ? replicationUrl : replicationUrl + "/databases/" + replicationDestination.getDatabase();
+    String url = StringUtils.isBlank(replicationDestination.getDatabase()) ? replicationUrl : replicationUrl + "/databases/" + replicationDestination.getDatabase();
+    return new OperationMetadata(url, new OperationCredentials(replicationDestination.getApiKey()));
   }
 
-  protected void updateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention, Action2<ServerClient, String> action) {
+  protected void updateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention, Action2<ServerClient, OperationMetadata> action) {
     ServerClient serverClient = (ServerClient) databaseCommands;
     if (serverClient == null) {
       return ;
@@ -54,7 +57,7 @@ public class AbstractCommonApiForIndexesAndTransformers {
         if (replicationDestination.getDisabled() || replicationDestination.getIgnoredClient()) {
           continue;
         }
-        action.apply(serverClient, getReplicationUrl(replicationDestination));
+        action.apply(serverClient, getReplicationOperation(replicationDestination));
       } catch (Exception e) {
         logger.warn("Could not put index in replication server", e);
       }

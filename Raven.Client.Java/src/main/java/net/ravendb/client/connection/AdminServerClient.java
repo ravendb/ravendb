@@ -77,11 +77,11 @@ public class AdminServerClient implements IAdminDatabaseCommands, IGlobalAdminDa
 
   @Override
   public void stopIndexing() {
-    innerServerClient.executeWithReplication(HttpMethods.POST, new Function1<String, Void>() {
+    innerServerClient.executeWithReplication(HttpMethods.POST, new Function1<OperationMetadata, Void>() {
 
       @Override
-      public Void apply(String operationUrl) {
-        adminRequest.stopIndexing(operationUrl).executeRequest();
+      public Void apply(OperationMetadata operationMetadata) {
+        adminRequest.stopIndexing(operationMetadata.getUrl()).executeRequest();
         return null;
       }
     });
@@ -89,11 +89,11 @@ public class AdminServerClient implements IAdminDatabaseCommands, IGlobalAdminDa
 
   @Override
   public void startIndexing() {
-    innerServerClient.executeWithReplication(HttpMethods.POST, new Function1<String, Void>() {
+    innerServerClient.executeWithReplication(HttpMethods.POST, new Function1<OperationMetadata, Void>() {
 
       @Override
-      public Void apply(String operationUrl) {
-        adminRequest.startIndexing(operationUrl).executeRequest();
+      public Void apply(OperationMetadata operationMetadata) {
+        adminRequest.startIndexing(operationMetadata.getUrl()).executeRequest();
         return null;
       }
     });
@@ -132,11 +132,11 @@ public class AdminServerClient implements IAdminDatabaseCommands, IGlobalAdminDa
 
   @Override
   public String getIndexingStatus() {
-    return innerServerClient.executeWithReplication(HttpMethods.GET, new Function1<String, String>() {
+    return innerServerClient.executeWithReplication(HttpMethods.GET, new Function1<OperationMetadata, String>() {
 
       @Override
-      public String apply(String operationUrl) {
-        RavenJToken result = adminRequest.indexingStatus(operationUrl).readResponseJson();
+      public String apply(OperationMetadata operationMetadata) {
+        RavenJToken result = adminRequest.indexingStatus(operationMetadata.getUrl()).readResponseJson();
         return result.value(String.class, "IndexingStatus");
       }
     });

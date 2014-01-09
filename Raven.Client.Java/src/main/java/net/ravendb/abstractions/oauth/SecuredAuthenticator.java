@@ -46,7 +46,7 @@ public class SecuredAuthenticator extends AbstractAuthenticator {
       e.getRequest().setHeader("Has-Api-Key", "true");
     }
   }
-  private Tuple<HttpPost, String> prepareOAuthRequest(String oauthSource, String serverRSAExponent, String serverRSAModulus, String challenge) {
+  private Tuple<HttpPost, String> prepareOAuthRequest(String oauthSource, String serverRSAExponent, String serverRSAModulus, String challenge, String apiKey) {
     HttpPost authRequest = new HttpPost(oauthSource);
     authRequest.setHeader("grant_type", "client_credentials");
     authRequest.setHeader("Accept", "application/json;charset=UTF-8");
@@ -86,7 +86,7 @@ public class SecuredAuthenticator extends AbstractAuthenticator {
 
 
   @Override
-  public Action1<HttpRequest> doOAuthRequest(String oauthSource) {
+  public Action1<HttpRequest> doOAuthRequest(String oauthSource, String apiKey) {
     String serverRSAExponent = null;
     String serverRSAModulus = null;
     String challenge = null;
@@ -102,7 +102,7 @@ public class SecuredAuthenticator extends AbstractAuthenticator {
     while(true) {
       tries++;
 
-      Tuple<HttpPost, String> authRequestTuple = prepareOAuthRequest(oauthSource, serverRSAExponent, serverRSAModulus, challenge);
+      Tuple<HttpPost, String> authRequestTuple = prepareOAuthRequest(oauthSource, serverRSAExponent, serverRSAModulus, challenge, apiKey);
       HttpPost authRequest = authRequestTuple.getItem1();
       if (authRequestTuple.getItem2() != null) {
         authRequest.setEntity(new StringEntity(authRequestTuple.getItem2()));

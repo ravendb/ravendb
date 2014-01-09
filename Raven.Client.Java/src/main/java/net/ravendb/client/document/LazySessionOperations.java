@@ -10,10 +10,12 @@ import net.ravendb.abstractions.basic.Lazy;
 import net.ravendb.abstractions.basic.Tuple;
 import net.ravendb.abstractions.closure.Action1;
 import net.ravendb.abstractions.closure.Function0;
+import net.ravendb.abstractions.data.MoreLikeThisQuery;
+import net.ravendb.client.RavenPagingInformation;
 import net.ravendb.client.document.batches.ILazyLoaderWithInclude;
 import net.ravendb.client.document.batches.ILazySessionOperations;
 import net.ravendb.client.document.batches.LazyLoadOperation;
-import net.ravendb.client.document.batches.LazyMultiLoadOperation;
+import net.ravendb.client.document.batches.LazyMoreLikeThisOperation;
 import net.ravendb.client.document.batches.LazyMultiLoaderWithInclude;
 import net.ravendb.client.document.batches.LazyStartsWithOperation;
 import net.ravendb.client.document.batches.LazyTransformerLoadOperation;
@@ -150,8 +152,9 @@ public class LazySessionOperations implements ILazySessionOperations {
     Class<TTransformer> tranformerClass, Class<TResult> clazz, String id) {
     try {
       String transformer = tranformerClass.newInstance().getTransformerName();
-      LoadTransformerOperation loadOperation = new LoadTransformerOperation(delegate, transformer, 1);
-      LazyTransformerLoadOperation<TResult> lazyLoadOperation = new LazyTransformerLoadOperation<>(clazz, id, transformer, loadOperation, true);
+      String[] ids = new String[] { id };
+      LoadTransformerOperation loadOperation = new LoadTransformerOperation(delegate, transformer, ids);
+      LazyTransformerLoadOperation<TResult> lazyLoadOperation = new LazyTransformerLoadOperation<>(clazz, ids, transformer, loadOperation, true);
       return delegate.addLazyOperation(lazyLoadOperation, null);
     } catch (IllegalAccessException | InstantiationException e) {
       throw new RuntimeException(e);
@@ -163,13 +166,9 @@ public class LazySessionOperations implements ILazySessionOperations {
     Class<TTransformer> tranformerClass, Class<TResult> clazz, String... ids) {
     try {
       String transformer = tranformerClass.newInstance().getTransformerName();
-      MultiLoadOperation multiLoadOperation = new MultiLoadOperation(delegate, new Function0<AutoCloseable>() {
-        @Override
-        public AutoCloseable apply() {
-          return delegate.getDatabaseCommands().disableAllCaching();
-        }
-      }, ids, null);
-      LazyMultiLoadOperation<TResult> lazyLoadOperation = new LazyMultiLoadOperation<>(clazz,  multiLoadOperation, ids, null, transformer);
+      LoadTransformerOperation transformerOperation = new LoadTransformerOperation(delegate, transformer, ids);
+
+      LazyTransformerLoadOperation<TResult> lazyLoadOperation = new LazyTransformerLoadOperation<>(clazz, ids, transformer, transformerOperation, false);
       return delegate.addLazyOperation(lazyLoadOperation, null);
     } catch (IllegalAccessException | InstantiationException e) {
       throw new RuntimeException(e);
@@ -217,11 +216,21 @@ public class LazySessionOperations implements ILazySessionOperations {
   @Override
   public <TResult> Lazy<TResult[]> loadStartingWith(Class<TResult> clazz, String keyPrefix, String matches, int start,
     int pageSize, String exclude) {
-    LazyStartsWithOperation<TResult> operation = new LazyStartsWithOperation<>(clazz, keyPrefix, matches, exclude, start, pageSize, delegate);
+    return loadStartingWith(clazz, keyPrefix, matches, start, pageSize, exclude, null);
+  }
+
+  @Override
+  public <TResult> Lazy<TResult[]> loadStartingWith(Class<TResult> clazz, String keyPrefix, String matches, int start,
+    int pageSize, String exclude, RavenPagingInformation pagingInformation) {
+    LazyStartsWithOperation<TResult> operation = new LazyStartsWithOperation<>(clazz, keyPrefix, matches, exclude, start, pageSize, delegate, pagingInformation);
     return delegate.addLazyOperation(operation, null);
   }
 
-
-
+  @Override
+  public <TResult> Lazy<TResult[]> moreLikeThis(Class<TResult> clazz, MoreLikeThisQuery query) {
+    MultiLoadOperation multiLoadOperation = new MultiLoadOperation(delegate, delegate.new DisableAllCachingCallback(), null, null);
+    LazyMoreLikeThisOperation<TResult> lazyOp = new LazyMoreLikeThisOperation<>(clazz, multiLoadOperation, query);
+    return delegate.addLazyOperation(lazyOp, null);
+  }
 
 }
