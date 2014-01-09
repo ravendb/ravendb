@@ -9,50 +9,51 @@ using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
 {
-	public class BackupStatus
-	{
-		public const string RavenBackupStatusDocumentKey = "Raven/Backup/Status";
+    public class BackupStatus
+    {
+        public enum BackupMessageSeverity
+        {
+            Informational,
+            Error
+        }
 
-		public enum BackupMessageSeverity
-		{
-			Informational,
-			Error
-		}
+        public const string RavenBackupStatusDocumentKey = "Raven/Backup/Status";
 
-		public DateTime Started { get; set; }
-		public DateTime? Completed { get; set; }
-		public bool IsRunning { get; set; }
-		public List<BackupMessage> Messages { get; set; }
+        public BackupStatus()
+        {
+            Messages = new List<BackupMessage>();
+        }
 
-		public class BackupMessage
-		{
-			public string Message { get; set; }
-			public DateTime Timestamp { get; set; }
-			public BackupMessageSeverity Severity { get; set; }
+        public DateTime Started { get; set; }
+        public DateTime? Completed { get; set; }
+        public bool IsRunning { get; set; }
+        public List<BackupMessage> Messages { get; set; }
 
-			public override bool Equals(object obj)
-			{
-				var item = obj as BackupMessage;
+        public class BackupMessage
+        {
+            public string Message { get; set; }
+            public DateTime Timestamp { get; set; }
+            public BackupMessageSeverity Severity { get; set; }
 
-				if (item == null)
-				{
-					return false;
-				}
+            public override bool Equals(object obj)
+            {
+                var item = obj as BackupMessage;
 
-				return this.Message == item.Message &&
-					this.Timestamp == item.Timestamp &&
-					this.Severity == item.Severity;
-			}
+                if (item == null)
+                {
+                    return false;
+                }
 
-			public override int GetHashCode()
-			{
-				return Message.GetHashCode() ^ Timestamp.GetHashCode() ^ (Severity.GetHashCode() << 16);
-			}
-		}
+                return Message == item.Message &&
+                       Timestamp == item.Timestamp &&
+                       Severity == item.Severity;
+            }
 
-		public BackupStatus()
-		{
-			Messages = new List<BackupMessage>();
-		}
-	}
+            public override int GetHashCode()
+            {
+                return (Message != null ? Message.GetHashCode() : 0) ^ Timestamp.GetHashCode() ^
+                       (Severity.GetHashCode() << 16);
+            }
+        }
+    }
 }
