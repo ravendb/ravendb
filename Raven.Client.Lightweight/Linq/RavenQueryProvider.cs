@@ -289,11 +289,11 @@ namespace Raven.Client.Linq
 		/// Register the query as a lazy-count query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
-		public Lazy<int> LazilyCount<S>(Expression expression)
+		public Lazy<int> CountLazily<S>(Expression expression)
 		{
 			var processor = GetQueryProviderProcessor<S>();
 			var query = processor.GetLuceneQueryFor(expression);
-			return query.LazilyCount();
+			return query.CountLazily();
 		}
 
 		protected virtual RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()

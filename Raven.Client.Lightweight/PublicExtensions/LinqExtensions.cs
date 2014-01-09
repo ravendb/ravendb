@@ -448,13 +448,13 @@ namespace Raven.Client
 		/// Register the query as a lazy-count query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
-		public static Lazy<int> LazilyCount<T>(this IRavenQueryable<T> source)
+		public static Lazy<int> CountLazily<T>(this IRavenQueryable<T> source)
 		{
 			var provider = source.Provider as IRavenQueryProvider;
 			if (provider == null)
 				throw new ArgumentException("You can only use Raven Queryable with LazyCount");
 
-			return provider.LazilyCount<T>(source.Expression);
+			return provider.CountLazily<T>(source.Expression);
 		}
 
 		/// <summary>

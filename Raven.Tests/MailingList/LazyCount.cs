@@ -46,8 +46,8 @@ namespace Raven.Tests.MailingList
                     var results = query.Take(8).Lazily();
 
                     // Want to be able to support these 2 scenarios for LazyCount!!
-                    var lazyCount = query.LazilyCount(); // filtered, only 1 match
-                    var baseLazyCount = session.Query<User>().LazilyCount(); // no filter, will match all Users
+                    var lazyCount = query.CountLazily(); // filtered, only 1 match
+                    var baseLazyCount = session.Query<User>().CountLazily(); // no filter, will match all Users
 
                     var enumerable = results.Value; //force evaluation
                     Assert.Equal(1, enumerable.Count());
@@ -98,8 +98,8 @@ namespace Raven.Tests.MailingList
                     var results = query.Take(8).Lazily();
 
                     // Want to be able to support these 2 scenarios for LazyCount!!
-                    var lazyCount = query.LazilyCount(); // filtered, only 1 match
-                    var baseLazyCount = session.Query<User>().LazilyCount(); // no filter, will match all Users
+                    var lazyCount = query.CountLazily(); // filtered, only 1 match
+                    var baseLazyCount = session.Query<User>().CountLazily(); // no filter, will match all Users
 
                     var enumerable = results.Value; //force evaluation
                     Assert.Equal(1, enumerable.Count());
@@ -150,8 +150,8 @@ namespace Raven.Tests.MailingList
                     var results = query.Take(8).Lazily();
 
                     // Want to be able to support these 2 scenarios for LazyCount!!
-                    var lazyCount = query.LazilyCount(); // filtered, only 1 match
-                    var baseLazyCount = session.Query<User>().LazilyCount(); // no filter, will match all Users
+                    var lazyCount = query.CountLazily(); // filtered, only 1 match
+                    var baseLazyCount = session.Query<User>().CountLazily(); // no filter, will match all Users
 
                     var enumerable = results.Value; //force evaluation
                     Assert.Equal(1, enumerable.Count());
@@ -201,8 +201,8 @@ namespace Raven.Tests.MailingList
                     var results = query.Take(8).Lazily();
 
                     // Want to be able to support these 2 scenarios for LazyCount!!
-                    var lazyCount = query.LazilyCount(); // filtered, only 1 match
-                    var baseLazyCount = session.Query<User>().LazilyCount(); // no filter, will match all Users
+                    var lazyCount = query.CountLazily(); // filtered, only 1 match
+                    var baseLazyCount = session.Query<User>().CountLazily(); // no filter, will match all Users
 
                     var enumerable = results.Value; //force evaluation
                     Assert.Equal(1, enumerable.Count());

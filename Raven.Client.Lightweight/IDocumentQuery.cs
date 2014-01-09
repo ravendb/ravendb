@@ -70,7 +70,7 @@ namespace Raven.Client
 		/// Register the query as a lazy-count query in the session and return a lazy
 		/// instance that will evaluate the query only when needed.
 		/// </summary>
-		Lazy<int> LazilyCount();
+		Lazy<int> CountLazily();
 
 		/// <summary>
 		/// Create the index query object for this query
