@@ -98,6 +98,8 @@ namespace Raven.Database.Config
 
 			PreventAutomaticSuggestionCreation = ravenSettings.PreventAutomaticSuggestionCreation.Value;
 
+			DisablePerformanceCounters = ravenSettings.DisablePerformanceCounters.Value;
+
 			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
 
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
@@ -790,6 +792,11 @@ namespace Raven.Database.Config
 		/// If True the server will not create suggestions automatically based on the suggestion query. Default: false.
 		/// </summary>
 		public bool PreventAutomaticSuggestionCreation { get; set; }
+
+		/// <summary>
+		/// If True then no PerformanceCounters will be used. Default: false
+		/// </summary>
+		public bool DisablePerformanceCounters { get; set; }
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]

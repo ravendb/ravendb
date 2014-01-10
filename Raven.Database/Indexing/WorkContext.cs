@@ -244,7 +244,7 @@ namespace Raven.Database.Indexing
 
 		public void Init(string name)
 		{
-			if (Configuration.RunInMemory == false)
+			if (Configuration.DisablePerformanceCounters == false && Configuration.RunInMemory == false)
 			{
                 PerformanceCounters.Setup(name ?? Constants.SystemDatabase);
 			}
