@@ -55,12 +55,12 @@
 
             try
             {
-                _lock.EnterWriteLock();
+                _lock.EnterReadLock();
                 list = new List<T>(_internalList);
             }
             finally
             {
-                _lock.ExitWriteLock();
+                _lock.EnterReadLock();
             }
 
             return list.GetEnumerator();
