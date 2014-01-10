@@ -12,9 +12,10 @@
 
         public void Add(T value)
         {
+            _lock.EnterWriteLock();
+
             try
             {
-                _lock.EnterWriteLock();
                 _internalList.Add(value);
             }
             finally
@@ -23,11 +24,12 @@
             }
         }
 
-        public bool  Remove(T value)
+        public bool Remove(T value)
         {
+            _lock.EnterWriteLock();
+
             try
             {
-                _lock.EnterWriteLock();
                 return _internalList.Remove(value);
             }
             finally
@@ -38,9 +40,10 @@
 
         public bool Contains(T value)
         {
+            _lock.EnterReadLock();
+
             try
             {
-                _lock.EnterReadLock();
                 return _internalList.Contains(value);
             }
             finally
@@ -53,14 +56,15 @@
         {
             List<T> list;
 
+            _lock.EnterReadLock();
+
             try
             {
-                _lock.EnterReadLock();
                 list = new List<T>(_internalList);
             }
             finally
             {
-                _lock.EnterReadLock();
+                _lock.ExitReadLock();
             }
 
             return list.GetEnumerator();
