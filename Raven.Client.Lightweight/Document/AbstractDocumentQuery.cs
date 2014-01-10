@@ -56,7 +56,6 @@ namespace Raven.Client.Document
 			typeof (T)
 		};
 
-
 		static Dictionary<Type, Func<object, string>> implicitStringsCache = new Dictionary<Type, Func<object, string>>();
 
 		/// <summary>
@@ -86,9 +85,9 @@ namespace Raven.Client.Document
 
 		private int currentClauseDepth;
 
-	    protected KeyValuePair<string, string> lastEquality;
+		protected KeyValuePair<string, string> lastEquality;
 
-        protected Dictionary<string, RavenJToken> queryInputs = new Dictionary<string, RavenJToken>();
+		protected Dictionary<string, RavenJToken> queryInputs = new Dictionary<string, RavenJToken>();
 
 		/// <summary>
 		///   The list of fields to project directly from the results
@@ -1124,7 +1123,6 @@ If you really want to do in memory filtering on the data returned from the query
 			}
 
 			return whereParams.FieldName;
-
 		}
 
 		///<summary>
@@ -1170,9 +1168,9 @@ If you really want to do in memory filtering on the data returned from the query
 			AppendSpaceIfNeeded(queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false);
 			NegateIfNeeded();
 
-            var list = UnpackEnumerable(values).ToList();
+			var list = UnpackEnumerable(values).ToList();
 
-			if(list.Count == 0)
+			if (list.Count == 0)
 			{
 				queryText.Append("@emptyIn<")
 					.Append(fieldName)
@@ -2042,7 +2040,7 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   The last term that we asked the query to use equals on
+		/// The last term that we asked the query to use equals on
 		/// </summary>
 		public KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false)
 		{
@@ -2052,6 +2050,51 @@ If you really want to do in memory filtering on the data returned from the query
 		public void Intersect()
 		{
 			queryText.Append(Constants.IntersectSeparator);
+		}
+
+		public void ContainsAny(string fieldName, IEnumerable<object> values)
+		{
+			ContainsAnyAllProcessor(fieldName, values, "OR");
+		}
+
+		public void ContainsAll(string fieldName, IEnumerable<object> values)
+		{
+			ContainsAnyAllProcessor(fieldName, values, "AND");
+		}
+
+		private void ContainsAnyAllProcessor(string fieldName, IEnumerable<object> values, string seperator)
+		{
+			AppendSpaceIfNeeded(queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false);
+			NegateIfNeeded();
+
+			var list = UnpackEnumerable(values).ToList();
+			if (list.Count == 0)
+			{
+				return;
+			}
+
+			var first = true;
+			queryText.Append("(");
+			foreach (var value in list)
+			{
+				if (first == false)
+				{
+					queryText.Append(" " + seperator + " ");
+				}
+				first = false;
+				var whereParams = new WhereParams
+				{
+					AllowWildcards = true,
+					IsAnalyzed = true,
+					FieldName = fieldName,
+					Value = value
+				};
+				EnsureValidFieldName(whereParams);
+				queryText.Append(fieldName)
+						 .Append(":")
+						 .Append(TransformToEqualValue(whereParams));
+			}
+			queryText.Append(")");
 		}
 
 		public void AddRootType(Type type)
