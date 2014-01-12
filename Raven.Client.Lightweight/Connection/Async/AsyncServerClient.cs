@@ -790,7 +790,7 @@ namespace Raven.Client.Connection.Async
 		{
 			var path = operationMetadata.Url + "/queries/?";
 			if (metadataOnly)
-				path += "metadata-only=true&";
+				path += "&metadata-only=true";
 			if (includes != null && includes.Length > 0)
 			{
 				path += string.Join("&", includes.Select(x => "include=" + x).ToArray());
