@@ -183,7 +183,7 @@ namespace Raven.Tests.Helpers
 				pathsToDelete.Add(dataDirectory);
 
 			var storageType = GetDefaultStorageType(requestedStorage);
-			var ravenConfiguration = new RavenConfiguration()
+			var ravenConfiguration = new RavenConfiguration
 			{
 				Port = port,
 				DataDirectory = dataDirectory ?? NewDataPath(),
@@ -204,7 +204,7 @@ namespace Raven.Tests.Helpers
 
 			ModifyConfiguration(ravenConfiguration);
 
-			ravenConfiguration.Initialize(shouldOverrideExistingPortValue:false);
+			ravenConfiguration.Initialize();
 			ravenConfiguration.PostInit();
 
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);

@@ -12,8 +12,6 @@ using System.Diagnostics;
 
 namespace Raven.Tests
 {
-	using Raven.Abstractions.Util.Encryptors;
-
 	public class RavenTest : RavenTestBase
 	{
 		static RavenTest()
