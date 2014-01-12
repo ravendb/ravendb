@@ -615,7 +615,7 @@ namespace Raven.Database.Config
 			get
 			{
 				if (ravenFsDataDirectory == null)
-					return Path.Combine(DataDirectory, "FileSystem", "Data.ravenfs");
+					ravenFsDataDirectory = Path.Combine(DataDirectory, "FileSystem");
 				return ravenFsDataDirectory;
 			}
 			set { ravenFsDataDirectory = value == null ? null : value.ToFullPath(); }
