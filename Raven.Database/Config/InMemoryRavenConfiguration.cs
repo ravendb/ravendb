@@ -15,6 +15,7 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
@@ -26,17 +27,13 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Config
 {
-	using System.Runtime;
-
-	using Raven.Abstractions.Util.Encryptors;
-
 	public class InMemoryRavenConfiguration
 	{
 		private CompositionContainer container;
 		private bool containerExternallySet;
 		private string dataDirectory;
 		private string pluginsDirectory;
-		private string ravenFsDataDirectory;
+		private string fileSystemDataDirectory;
 
 
 		public InMemoryRavenConfiguration()
@@ -51,9 +48,7 @@ namespace Raven.Database.Config
 
 			IndexingScheduler = new FairIndexingSchedulerWithNewIndexesBias();
 
-			Catalog = new AggregateCatalog(
-				new AssemblyCatalog(typeof(DocumentDatabase).Assembly)
-				);
+			Catalog = new AggregateCatalog(new AssemblyCatalog(typeof(DocumentDatabase).Assembly));
 
 			Catalog.Changed += (sender, args) => ResetContainer();
 		}
@@ -71,7 +66,6 @@ namespace Raven.Database.Config
 
 		public void Initialize()
 		{
-			InitializeRavenFs();
 			int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
 			int defaultInitialNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 512 : 256;
 
@@ -169,6 +163,10 @@ namespace Raven.Database.Config
 
 			DataDirectory = ravenSettings.DataDir.Value;
 
+			FileSystemDataDirectory = ravenSettings.FileSystemDataDir.Value;
+
+			FileSystemIndexStoragePath = ravenSettings.FileSystemIndexStoragePath.Value;
+
 			var indexStoragePathSettingValue = ravenSettings.IndexStoragePath.Value;
 			if (string.IsNullOrEmpty(indexStoragePathSettingValue) == false)
 			{
@@ -218,19 +216,6 @@ namespace Raven.Database.Config
 			AllowLocalAccessWithoutAuthorization = ravenSettings.AllowLocalAccessWithoutAuthorization.Value;
 
 			PostInit();
-		}
-
-		private void InitializeRavenFs()
-		{
-			// Data settings
-			RavenFsDataDirectory = Settings["Raven/FileSystem/DataDir"];
-
-			if (string.IsNullOrEmpty(Settings["Raven/FileSystem/IndexStoragePath"]) == false)
-			{
-				RavenFsIndexStoragePath = Settings["Raven/FilesSystem/IndexStoragePath"];
-			}
-
-			//SetVirtualDirectory();
 		}
 
 		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
@@ -610,15 +595,10 @@ namespace Raven.Database.Config
 		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
 		/// Default: ~\Data
 		/// </summary>
-		public string RavenFsDataDirectory
+		public string FileSystemDataDirectory
 		{
-			get
-			{
-				if (ravenFsDataDirectory == null)
-					ravenFsDataDirectory = Path.Combine(DataDirectory, "FileSystem");
-				return ravenFsDataDirectory;
-			}
-			set { ravenFsDataDirectory = value == null ? null : value.ToFullPath(); }
+			get { return fileSystemDataDirectory; }
+			set { fileSystemDataDirectory = value == null ? null : value.ToFullPath(); }
 		}
 
 		/// <summary>
@@ -742,7 +722,7 @@ namespace Raven.Database.Config
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
 		private string indexStoragePath;
-		private string ravenFsIndexStoragePath;
+		private string fileSystemIndexStoragePath;
 		private int? maxNumberOfParallelIndexTasks;
 		private int initialNumberOfItemsToIndexInSingleBatch;
 		private AnonymousUserAccessMode anonymousUserAccessMode;
@@ -787,15 +767,15 @@ namespace Raven.Database.Config
 			set { indexStoragePath = value.ToFullPath(); }
 		}
 
-		public string RavenFsIndexStoragePath
+		public string FileSystemIndexStoragePath
 		{
 			get
 			{
-				if (string.IsNullOrEmpty(ravenFsIndexStoragePath))
-					ravenFsIndexStoragePath = Path.Combine(RavenFsDataDirectory, "Indexes");
-				return ravenFsIndexStoragePath;
+				if (string.IsNullOrEmpty(fileSystemIndexStoragePath))
+					fileSystemIndexStoragePath = Path.Combine(FileSystemDataDirectory, "Indexes");
+				return fileSystemIndexStoragePath;
 			}
-			set { ravenFsIndexStoragePath = value.ToFullPath(); }
+			set { fileSystemIndexStoragePath = value.ToFullPath(); }
 		}
 
 		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }

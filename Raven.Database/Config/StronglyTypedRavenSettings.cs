@@ -64,10 +64,16 @@ namespace Raven.Database.Config
 				new BooleanSetting(settings["Raven/CreateAutoIndexesForAdHocQueriesIfNeeded"], true);
 			ResetIndexOnUncleanShutdown =
 				new BooleanSetting(settings["Raven/ResetIndexOnUncleanShutdown"], false);
+			
 			DataDir =
 				new StringSetting(settings["Raven/DataDir"], @"~\Data");
 			IndexStoragePath =
-				new StringSetting(settings["Raven/IndexStoragePath"], (string) null);
+				new StringSetting(settings["Raven/IndexStoragePath"], (string)null);
+			FileSystemDataDir =
+				new StringSetting(settings["Raven/FileSystem/DataDir"], @"~\Data\FileSystem");
+			FileSystemIndexStoragePath =
+				new StringSetting(settings["Raven/FileSystem/DataDir"], (string)null);
+			
 			HostName =
 				new StringSetting(settings["Raven/HostName"], (string) null);
 			Port =
@@ -181,6 +187,10 @@ namespace Raven.Database.Config
 		public StringSetting DataDir { get; private set; }
 
 		public StringSetting IndexStoragePath { get; private set; }
+
+		public StringSetting FileSystemDataDir { get; private set; }
+		
+		public StringSetting FileSystemIndexStoragePath { get; private set; }
 
 		public StringSetting HostName { get; private set; }
 
