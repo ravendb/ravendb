@@ -208,7 +208,6 @@ namespace Raven.Tests.Helpers
 
 			ModifyConfiguration(ravenConfiguration);
 
-			ravenConfiguration.Initialize();
 			ravenConfiguration.PostInit();
 
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
