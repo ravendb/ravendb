@@ -673,7 +673,7 @@ namespace Raven.Client.Connection
 			return response;
 		}
 
-		public async Task<HttpResponseMessage> ExecuteRawRequestAsync(CancellationToken? cancellationToken, Action<Stream, TaskCompletionSource<object>> action)
+		public async Task<HttpResponseMessage> ExecuteRawRequestAsync(Action<Stream, TaskCompletionSource<object>> action)
 		{
 			httpClient.DefaultRequestHeaders.TransferEncodingChunked = true;
 
@@ -683,8 +683,7 @@ namespace Raven.Client.Connection
 			};
 
 			CopyHeadersToHttpRequestMessage(rawRequestMessage);
-			var response = cancellationToken == null ? await httpClient.SendAsync(rawRequestMessage)
-				: await httpClient.SendAsync(rawRequestMessage, cancellationToken.Value);
+			var response = await httpClient.SendAsync(rawRequestMessage);
 
 			await AssertNotFailingResponse(response);
 			return response;

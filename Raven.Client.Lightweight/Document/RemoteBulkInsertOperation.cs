@@ -1,5 +1,5 @@
 ﻿using System.Net;
-
+using System.Net.Http;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Client.Connection.Async;
@@ -104,7 +104,7 @@ namespace Raven.Client.Document
 				operationRequest = CreateOperationRequest(operationUrl, token);
 
 				var cancellationToken = CreateCancellationToken();
-				var response = await operationRequest.ExecuteRawRequestAsync(cancellationToken, (stream, source) => Task.Factory.StartNew(() =>
+				var response = await operationRequest.ExecuteRawRequestAsync((stream, source) => Task.Factory.StartNew(() =>
 				{
 					try
 					{
@@ -239,6 +239,8 @@ namespace Raven.Client.Document
 
 		private async Task<bool> IsOperationCompleted(long operationId)
 		{
+			ErrorResponseException errorResponse;
+
 			try
 			{
 				var status = await GetOperationStatus(operationId);
@@ -250,15 +252,17 @@ namespace Raven.Client.Document
 
 				return false;
 			}
-			catch (WebException e)
+			catch (ErrorResponseException e)
 			{
-				var response = e.Response as HttpWebResponse;
-				if (response == null) throw;
-
-				if (response.StatusCode != HttpStatusCode.Conflict)
+				if (e.StatusCode != HttpStatusCode.Conflict)
 					throw;
 
-				var conflicts = new StreamReader(response.GetResponseStreamWithHttpDecompression());
+				errorResponse = e;
+			}
+
+			using (var stream = await errorResponse.Response.GetResponseStreamWithHttpDecompression())
+			{
+				var conflicts = new StreamReader(stream);
 				var conflictsDocument = RavenJObject.Load(new RavenJsonTextReader(conflicts));
 
 				throw new ConcurrencyException(conflictsDocument.Value<string>("Error"));
