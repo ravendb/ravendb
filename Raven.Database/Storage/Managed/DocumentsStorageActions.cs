@@ -297,7 +297,7 @@ namespace Raven.Storage.Managed
 			var isUpdate = readResult != null;
 
 			if (isUpdate && checkForUpdates == false)
-				throw new ConcurrencyException("Cannot insert document " + key + " because it already exists");
+				throw new ConcurrencyException("Illegal duplicate key " + key);
 
 			Etag existingEtag = null;
 			if(isUpdate)
