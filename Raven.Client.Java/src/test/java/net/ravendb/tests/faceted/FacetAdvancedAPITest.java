@@ -181,9 +181,6 @@ public class FacetAdvancedAPITest {
     facet.setName(x.date);
     facet.setRanges(x.date.lt(new Date()), x.date.gt(makeDate(2010, 12, 5)).and(x.date.lt(testDateTime)));
 
-    //TODO: delete me
-    System.out.println(makeDate(2010, 12, 5));
-
     assertEquals(2, facet.getRanges().size());
     assertTrue(StringUtils.isNotEmpty(facet.getRanges().get(0)));
     assertEquals("[2010\\-12\\-05T00\\:00\\:00.0000000Z TO 2001\\-12\\-05T00\\:00\\:00.0000000Z]", facet.getRanges().get(1));

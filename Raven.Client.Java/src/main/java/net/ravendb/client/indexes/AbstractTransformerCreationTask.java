@@ -4,6 +4,7 @@ import net.ravendb.abstractions.closure.Action2;
 import net.ravendb.abstractions.indexing.TransformerDefinition;
 import net.ravendb.client.IDocumentStore;
 import net.ravendb.client.connection.IDatabaseCommands;
+import net.ravendb.client.connection.OperationMetadata;
 import net.ravendb.client.connection.ServerClient;
 import net.ravendb.client.document.DocumentConvention;
 
@@ -61,11 +62,11 @@ public abstract class AbstractTransformerCreationTask extends AbstractCommonApiF
     // the new definition.
     databaseCommands.putTransformer(getTransformerName(), transformerDefinition);
 
-    updateIndexInReplication(databaseCommands, conventions, new Action2<ServerClient, String>() {
+    updateIndexInReplication(databaseCommands, conventions, new Action2<ServerClient, OperationMetadata>() {
 
       @Override
-      public void apply(ServerClient commands, String url) {
-        commands.directPutTransformer(getTransformerName(), url, transformerDefinition);
+      public void apply(ServerClient commands, OperationMetadata operationMetadata) {
+        commands.directPutTransformer(getTransformerName(), operationMetadata, transformerDefinition);
       }
     });
 

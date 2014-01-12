@@ -16,6 +16,7 @@ import net.ravendb.abstractions.indexing.SpatialOptionsFactory;
 import net.ravendb.abstractions.indexing.SuggestionOptions;
 import net.ravendb.client.IDocumentStore;
 import net.ravendb.client.connection.IDatabaseCommands;
+import net.ravendb.client.connection.OperationMetadata;
 import net.ravendb.client.connection.ServerClient;
 import net.ravendb.client.document.DocumentConvention;
 
@@ -99,10 +100,10 @@ public class AbstractIndexCreationTask extends AbstractCommonApiForIndexesAndTra
     // the new definition.
     databaseCommands.putIndex(getIndexName(), indexDefinition, true);
 
-    updateIndexInReplication(databaseCommands, documentConvention, new Action2<ServerClient, String>() {
+    updateIndexInReplication(databaseCommands, documentConvention, new Action2<ServerClient, OperationMetadata>() {
       @Override
-      public void apply(ServerClient commands, String url) {
-        commands.directPutIndex(getIndexName(), url, true, indexDefinition);
+      public void apply(ServerClient commands, OperationMetadata operationMetadata) {
+        commands.directPutIndex(getIndexName(), operationMetadata, true, indexDefinition);
       }
     });
   }

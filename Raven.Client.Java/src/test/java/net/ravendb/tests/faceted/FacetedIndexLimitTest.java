@@ -27,9 +27,10 @@ import net.ravendb.samples.entities.QGroupResult;
 import net.ravendb.tests.faceted.QCamera;
 
 import org.apache.commons.lang.time.DateUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 
-
+@Ignore("waiting for RavenDB-1561")
 public class FacetedIndexLimitTest extends FacetTestBase {
   private final List<Camera> data;
   private final int numCameras = 1000;

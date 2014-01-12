@@ -52,6 +52,8 @@ namespace Raven.Client.Document.Batches
 
 		public object Result { get; set; }
 
+		public QueryResult QueryResult { get; set; }
+
 		public bool RequiresRetry { get; set; }
 #if !SILVERLIGHT
 		public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
@@ -75,6 +77,7 @@ namespace Raven.Client.Document.Batches
 			if (afterQueryExecuted != null)
 				afterQueryExecuted(queryResult);
 			Result = queryOperation.Complete<T>();
+			QueryResult = queryResult;
 		}
 #endif
 		public void HandleResponse(GetResponse response)
@@ -95,6 +98,7 @@ namespace Raven.Client.Document.Batches
 			if (afterQueryExecuted != null)
 				afterQueryExecuted(queryResult);
 			Result = queryOperation.Complete<T>();
+			QueryResult = queryResult;
 		}
 
 		public IDisposable EnterContext()

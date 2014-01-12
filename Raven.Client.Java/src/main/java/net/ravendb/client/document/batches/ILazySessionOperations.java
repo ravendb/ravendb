@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import net.ravendb.abstractions.basic.Lazy;
 import net.ravendb.abstractions.closure.Action1;
+import net.ravendb.abstractions.data.MoreLikeThisQuery;
+import net.ravendb.client.RavenPagingInformation;
 import net.ravendb.client.indexes.AbstractTransformerCreationTask;
 
 
@@ -232,6 +234,19 @@ public interface ILazySessionOperations {
    * @return
    */
   public <TResult> Lazy<TResult[]> loadStartingWith(Class<TResult> clazz, String keyPrefix, String matches, int start, int pageSize, String exclude);
+
+  /**
+   * Load documents with the specified key prefix
+   * @param clazz
+   * @param keyPrefix
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @return
+   */
+  public <TResult> Lazy<TResult[]> loadStartingWith(Class<TResult> clazz, String keyPrefix, String matches, int start, int pageSize, String exclude, RavenPagingInformation pagingInformation);
+
+  public <TResult> Lazy<TResult[]> moreLikeThis(Class<TResult> clazz, MoreLikeThisQuery query);
 
   public <TResult, TTransformer extends AbstractTransformerCreationTask> Lazy<TResult> load(Class<TTransformer> tranformerClass,
     Class<TResult> clazz, String id);

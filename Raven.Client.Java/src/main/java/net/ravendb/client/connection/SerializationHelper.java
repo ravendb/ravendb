@@ -184,7 +184,7 @@ public class SerializationHelper {
     QueryResult result = new QueryResult();
     result.setStale(json.value(Boolean.class, "IsStale"));
     result.setIndexTimestamp(json.value(Date.class, "IndexTimestamp"));
-    result.setIndexEtag(etagHeader);
+    result.setIndexEtag(Etag.parse(json.value(String.class, "IndexEtag")));
     result.setResults(json.value(RavenJArray.class, "Results").values(RavenJObject.class));
     result.setIncludes(json.value(RavenJArray.class, "Includes").values(RavenJObject.class));
     result.setTotalResults(json.value(Integer.class, "TotalResults"));

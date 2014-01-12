@@ -828,7 +828,7 @@ public class RavenQueryProviderProcessor<T> {
     } else {
       fieldsToFetch.add(docField);
     }
-    if (!docField.equals(renamedField)) {
+    if (renamedField != null && !docField.equals(renamedField)) {
       if (identityProperty == null) {
         String idPropName = luceneQuery.getDocumentConvention().getFindIdentityPropertyNameFromEntityName().find(luceneQuery.getDocumentConvention().getTypeTagName(clazz));
         if (docField.equals(idPropName)) {

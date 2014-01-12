@@ -324,6 +324,7 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
   }
 
   @Test
+  @Ignore("waiting for RavenDB-1560")
   public void testQueryWithIncludes() throws Exception {
     try {
       createDb();
@@ -473,7 +474,6 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
 
     RavenJObject meta1 = new RavenJObject();
     meta1.add(Constants.RAVEN_ENTITY_NAME, RavenJValue.fromObject("Companies"));
-    meta1.add(Constants.LAST_MODIFIED, RavenJValue.fromObject(new Date()));
 
     dbCommands.put("companies/1", null, RavenJObject.fromObject(c1), meta1);
     dbCommands.put("companies/2", null, RavenJObject.fromObject(c2), meta1);
@@ -482,6 +482,7 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
   }
 
   @Test
+  @Ignore("waiting for RavenDB-1560")
   public void testCreateIndexAndQuery() throws Exception {
     try {
       createDb();
@@ -496,11 +497,9 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
 
       RavenJObject meta1 = new RavenJObject();
       meta1.add(Constants.RAVEN_ENTITY_NAME, RavenJValue.fromObject("Developers"));
-      meta1.add(Constants.LAST_MODIFIED, RavenJValue.fromObject(new Date()));
 
       RavenJObject meta2 = new RavenJObject();
       meta2.add(Constants.RAVEN_ENTITY_NAME, RavenJValue.fromObject("Developers"));
-      meta2.add(Constants.LAST_MODIFIED, RavenJValue.fromObject(new Date()));
 
       dbCommands.put("developers/1", null, RavenJObject.fromObject(d1), meta1);
       dbCommands.put("developers/2", null, RavenJObject.fromObject(d2), meta2);

@@ -187,7 +187,7 @@ namespace Raven.Client
 		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		public static Lazy<FacetResults> ToFacetsLazy<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
+		public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
@@ -263,7 +263,7 @@ namespace Raven.Client
 		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		public static Task<FacetResults> ToFacetsAsync<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
+		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			return ravenQueryInspector.GetFacetsAsync(facetSetupDoc, start, pageSize );
@@ -442,6 +442,19 @@ namespace Raven.Client
 				throw new ArgumentException("You can only use Raven Queryable with Lazily");
 
 			return provider.Lazily(source.Expression, onEval);
+		}
+
+        /// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public static Lazy<int> CountLazily<T>(this IRavenQueryable<T> source)
+		{
+			var provider = source.Provider as IRavenQueryProvider;
+			if (provider == null)
+				throw new ArgumentException("You can only use Raven Queryable with LazyCount");
+
+			return provider.CountLazily<T>(source.Expression);
 		}
 
 		/// <summary>

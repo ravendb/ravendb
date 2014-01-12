@@ -24,6 +24,7 @@ import net.ravendb.abstractions.closure.Function1;
 import net.ravendb.abstractions.closure.Function4;
 import net.ravendb.abstractions.closure.Predicate;
 import net.ravendb.abstractions.closure.Predicates;
+import net.ravendb.abstractions.connection.OperationCredentials;
 import net.ravendb.abstractions.data.BulkInsertChangeNotification;
 import net.ravendb.abstractions.data.DocumentChangeNotification;
 import net.ravendb.abstractions.data.Etag;
@@ -38,11 +39,13 @@ import net.ravendb.abstractions.logging.LogManager;
 import net.ravendb.abstractions.util.AtomicDictionary;
 import net.ravendb.abstractions.util.Base62Util;
 import net.ravendb.client.connection.CreateHttpJsonRequestParams;
+import net.ravendb.client.connection.OperationMetadata;
 import net.ravendb.client.connection.RavenUrlExtensions;
 import net.ravendb.client.connection.ReplicationInformer;
 import net.ravendb.client.connection.implementation.HttpJsonRequest;
 import net.ravendb.client.connection.implementation.HttpJsonRequestFactory;
 import net.ravendb.client.document.DocumentConvention;
+import net.ravendb.client.document.ReflectionUtil;
 import net.ravendb.client.utils.UrlUtils;
 
 import org.apache.commons.lang.StringUtils;
@@ -56,6 +59,8 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
   private static final ILog logger = LogManager.getCurrentClassLogger();
   private final ConcurrentSkipListSet<String> watchedDocs = new ConcurrentSkipListSet<>();
   private final ConcurrentSkipListSet<String> watchedPrefixes = new ConcurrentSkipListSet<>();
+  private final ConcurrentSkipListSet<String> watchedTypes = new ConcurrentSkipListSet<>();
+  private final ConcurrentSkipListSet<String> watchedCollections = new ConcurrentSkipListSet<>();
   private final ConcurrentSkipListSet<String> watchedIndexes = new ConcurrentSkipListSet<>();
   private final ConcurrentSkipListSet<String> watchedBulkInserts = new ConcurrentSkipListSet<>();
   private boolean watchAllDocs;
@@ -64,11 +69,12 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
   private Timer clientSideHeartbeatTimer;
 
   private final String url;
+  private OperationCredentials credentials;
   private final HttpJsonRequestFactory jsonRequestFactory;
   private final DocumentConvention conventions;
   private final ReplicationInformer replicationInformer;
   private final Action0 onDispose;
-  private final Function4<String, Etag, String[] , String, Boolean> tryResolveConflictByUsingRegisteredConflictListeners;
+  private final Function4<String, Etag, String[] , OperationMetadata, Boolean> tryResolveConflictByUsingRegisteredConflictListeners;
   private final AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<>(String.CASE_INSENSITIVE_ORDER);
   private Closeable connection;
   private Date lastHeartbeat = new Date();
@@ -100,9 +106,9 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
 
 
 
-  public RemoteDatabaseChanges(String url, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions,
+  public RemoteDatabaseChanges(String url, String apiKey, HttpJsonRequestFactory jsonRequestFactory, DocumentConvention conventions,
     ReplicationInformer replicationInformer, Action0 onDispose,
-    Function4<String, Etag, String[], String, Boolean> tryResolveConflictByUsingRegisteredConflictListeners) {
+    Function4<String, Etag, String[], OperationMetadata, Boolean> tryResolveConflictByUsingRegisteredConflictListeners) {
     connectionStatusChanged = Arrays.<EventHandler<VoidArgs>> asList(new EventHandler<VoidArgs>() {
       @Override
       public void handle(Object sender, VoidArgs event) {
@@ -116,6 +122,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
       id = connectionCounter + "/" + Base62Util.base62Random();
     }
     this.url = url;
+    this.credentials = new OperationCredentials(apiKey);
     this.jsonRequestFactory = jsonRequestFactory;
     this.conventions = conventions;
     this.replicationInformer = replicationInformer;
@@ -136,7 +143,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
       clientSideHeartbeatTimer = null;
     }
 
-    CreateHttpJsonRequestParams requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, HttpMethods.GET, null, conventions);
+    CreateHttpJsonRequestParams requestParams = new CreateHttpJsonRequestParams(null, url + "/changes/events?id=" + id, HttpMethods.GET, null, credentials, conventions);
     requestParams.setAvoidCachingRequest(true);
     logger.info("Trying to connect to %s with id %s", requestParams.getUrl(), id);
     boolean retry = false;
@@ -201,6 +208,12 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
     }
     for (String watchedPrefix : watchedPrefixes) {
       send("watch-prefix", watchedPrefix);
+    }
+    for (String watchedCollection : watchedCollections) {
+      send("watch-collection", watchedCollection);
+    }
+    for (String watchedType : watchedTypes) {
+      send("watch-type", watchedType);
     }
     for (String watchedIndex : watchedIndexes) {
       send("watch-indexes", watchedIndex);
@@ -276,7 +289,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
 
         sendUrl = RavenUrlExtensions.noCache(sendUrl);
 
-        CreateHttpJsonRequestParams requestParams = new CreateHttpJsonRequestParams(null, sendUrl, HttpMethods.GET, null, conventions);
+        CreateHttpJsonRequestParams requestParams = new CreateHttpJsonRequestParams(null, sendUrl, HttpMethods.GET, null, credentials, conventions);
         requestParams.setAvoidCachingRequest(true);
         HttpJsonRequest httpJsonRequest = jsonRequestFactory.createHttpJsonRequest(requestParams);
         httpJsonRequest.executeRequest();
@@ -486,6 +499,108 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
   }
 
   @Override
+  public IObservable<DocumentChangeNotification> forDocumentsInCollection(final String collectionName) {
+    if (collectionName == null) {
+      throw new IllegalArgumentException("Collection name is null");
+    }
+    LocalConnectionState counter = counters.getOrAdd("collections/" + collectionName, new Function1<String, LocalConnectionState>() {
+      @Override
+      public LocalConnectionState apply(String s) {
+        watchedCollections.add(collectionName);
+        send("watch-collection", collectionName);
+
+        return new LocalConnectionState(new Action0() {
+          @Override
+          public void apply() {
+            watchedCollections.remove(collectionName);
+            send("unwatch-collection", collectionName);
+            counters.remove("collections/" + collectionName);
+          }
+        });
+      }
+    });
+
+    final TaskedObservable<DocumentChangeNotification> taskedObservable = new TaskedObservable<>(counter, new Predicate<DocumentChangeNotification>() {
+      @Override
+      public Boolean apply(DocumentChangeNotification notification) {
+        return notification.getCollectionName() != null &&  notification.getCollectionName().equalsIgnoreCase(collectionName);
+      }
+    });
+
+    counter.getOnDocumentChangeNotification().add(new Action1<DocumentChangeNotification>() {
+      @Override
+      public void apply(DocumentChangeNotification msg) {
+        taskedObservable.send(msg);
+      }
+    });
+    counter.getOnError().add(new Action1<ExceptionEventArgs>() {
+      @Override
+      public void apply(ExceptionEventArgs ex) {
+        taskedObservable.error(ex.getException());
+      }
+    });
+    return taskedObservable;
+  }
+
+  @Override
+  public IObservable<DocumentChangeNotification> forDocumentsInCollection(Class<?> clazz) {
+    String collectionName = conventions.getTypeTagName(clazz);
+    return forDocumentsInCollection(collectionName);
+  }
+
+  @Override
+  public IObservable<DocumentChangeNotification> forDocumentsOfType(final String typeName) {
+    if (typeName == null) {
+      throw new IllegalArgumentException("TypeName name is null");
+    }
+
+    LocalConnectionState counter = counters.getOrAdd("types/" + typeName, new Function1<String, LocalConnectionState>() {
+      @Override
+      public LocalConnectionState apply(String s) {
+        watchedTypes.add(typeName);
+        send("watch-type", typeName);
+
+        return new LocalConnectionState(new Action0() {
+          @Override
+          public void apply() {
+            watchedTypes.remove(typeName);
+            send("unwatch-type", typeName);
+            counters.remove("types/" + typeName);
+          }
+        });
+      }
+    });
+
+    final TaskedObservable<DocumentChangeNotification> taskedObservable = new TaskedObservable<>(counter, new Predicate<DocumentChangeNotification>() {
+      @Override
+      public Boolean apply(DocumentChangeNotification notification) {
+        return notification.getTypeName() != null &&  notification.getTypeName().equalsIgnoreCase(typeName);
+      }
+    });
+
+    counter.getOnDocumentChangeNotification().add(new Action1<DocumentChangeNotification>() {
+      @Override
+      public void apply(DocumentChangeNotification msg) {
+        taskedObservable.send(msg);
+      }
+    });
+    counter.getOnError().add(new Action1<ExceptionEventArgs>() {
+      @Override
+      public void apply(ExceptionEventArgs ex) {
+        taskedObservable.error(ex.getException());
+      }
+    });
+    return taskedObservable;
+  }
+
+  @Override
+  public IObservable<DocumentChangeNotification> forDocumentsOfType(Class<?> clazz) {
+    String typeName = ReflectionUtil.getFullNameWithoutVersionInformation(clazz);
+    return forDocumentsOfType(typeName);
+  }
+
+
+  @Override
   public IObservable<ReplicationConflictNotification> forAllReplicationConflicts() {
     LocalConnectionState counter = counters.getOrAdd("all-replication-conflicts", new Function1<String, LocalConnectionState>() {
       @Override
@@ -590,7 +705,7 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
           }
           if (replicationConflictNotification.getItemType().equals(ReplicationConflictTypes.DOCUMENT_REPLICATION_CONFLICT)) {
             boolean result = tryResolveConflictByUsingRegisteredConflictListeners.apply(replicationConflictNotification.getId(),
-                replicationConflictNotification.getEtag(), replicationConflictNotification.getConflicts(), null);
+              replicationConflictNotification.getEtag(), replicationConflictNotification.getConflicts(), null);
             if (result) {
               logger.debug("Document replication conflict for %s was resolved by one of the registered conflict listeners",
                 replicationConflictNotification.getId());

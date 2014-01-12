@@ -805,6 +805,9 @@ namespace Raven.Client.Connection.Async
 											 current + ("&" + string.Format("qp-{0}={1}", queryInput.Key, queryInput.Value)));
 			}
 
+			var metadata = new RavenJObject();
+			AddTransactionInformation(metadata);
+
 			var uniqueIds = new HashSet<string>(keys);
 			HttpJsonRequest request;
 			// if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
@@ -813,7 +816,7 @@ namespace Raven.Client.Connection.Async
 			{
 				path += "&" + string.Join("&", uniqueIds.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
 				request =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", credentials,
+					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path.NoCache(), "GET", metadata, credentials,
 																							 convention)
 																 .AddOperationHeaders(OperationsHeaders));
 
@@ -824,7 +827,7 @@ namespace Raven.Client.Connection.Async
 				return await CompleteMultiGetAsync(operationMetadata, keys, includes, result);
 			}
 			request =
-				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "POST", credentials, convention)
+				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "POST",metadata , credentials, convention)
 															 .AddOperationHeaders(OperationsHeaders));
 
 			await request.WriteAsync(new RavenJArray(uniqueIds).ToString(Formatting.None));

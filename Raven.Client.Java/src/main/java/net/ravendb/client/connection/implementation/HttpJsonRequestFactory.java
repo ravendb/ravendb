@@ -161,7 +161,7 @@ public class HttpJsonRequestFactory implements AutoCloseable {
       request.setTimeout(getRequestTimeout());
     }
 
-    EventHelper.invoke(configureRequest, createHttpJsonRequestParams.getOwner(), new WebRequestEventArgs(request.getWebRequest()));
+    EventHelper.invoke(configureRequest, createHttpJsonRequestParams.getOwner(), new WebRequestEventArgs(request.getWebRequest(), createHttpJsonRequestParams.getCredentials()));
     return request;
   }
 

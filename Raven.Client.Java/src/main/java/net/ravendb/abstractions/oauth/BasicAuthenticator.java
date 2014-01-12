@@ -11,20 +11,18 @@ import org.apache.http.impl.client.CloseableHttpClient;
 
 
 public class BasicAuthenticator extends AbstractAuthenticator {
-  private final String apiKey;
   private final boolean enableBasicAuthenticationOverUnsecuredHttp;
   private final CloseableHttpClient httpClient;
 
-  public BasicAuthenticator(CloseableHttpClient httpClient, String apiKey, boolean enableBasicAuthenticationOverUnsecuredHttp) {
-    this.apiKey = apiKey;
+  public BasicAuthenticator(CloseableHttpClient httpClient, boolean enableBasicAuthenticationOverUnsecuredHttp) {
     this.enableBasicAuthenticationOverUnsecuredHttp = enableBasicAuthenticationOverUnsecuredHttp;
     this.httpClient = httpClient;
   }
 
   @Override
-  public Action1<HttpRequest> doOAuthRequest(String oauthSource) {
+  public Action1<HttpRequest> doOAuthRequest(String oauthSource, String apiKey) {
     try {
-      HttpGet authRequest = prepareOAuthRequest(oauthSource);
+      HttpGet authRequest = prepareOAuthRequest(oauthSource, apiKey);
       try (CloseableHttpResponse httpReponse = httpClient.execute(authRequest)) {
         final String response = IOUtils.toString(httpReponse.getEntity().getContent());
         return new Action1<HttpRequest>() {
@@ -40,7 +38,7 @@ public class BasicAuthenticator extends AbstractAuthenticator {
     }
   }
 
-  private HttpGet prepareOAuthRequest(String oauthSource) {
+  private HttpGet prepareOAuthRequest(String oauthSource, String apiKey) {
     HttpGet get = new HttpGet();
     get.setHeader("grant_type", "client_credentials");
     get.setHeader("Accept", "application/json;charset=UTF-8");
