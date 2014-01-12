@@ -11,7 +11,11 @@ class appUrl {
 
 	// Stores some computed values that update whenever the current database updates.
 	private static currentDbComputeds: computedAppUrls = {
-		documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
+        documents: ko.computed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
+        indexes: ko.computed(() => appUrl.forIndexes(appUrl.currentDatabase())),
+        newIndex: ko.computed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
+        editIndex: (indexName: string) => ko.computed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
+        query: ko.computed(() => appUrl.forQuery(appUrl.currentDatabase())),
         status: ko.computed(() => appUrl.forStatus(appUrl.currentDatabase())),
         settings: ko.computed(() => appUrl.forSettings(appUrl.currentDatabase())),
         logs: ko.computed(() => appUrl.forLogs(appUrl.currentDatabase())),
@@ -20,7 +24,11 @@ class appUrl {
         replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
         userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
 	};
-	
+
+    static forDatabases(): string {
+        return "#databases";
+    }
+
     /**
 	* Gets the URL for edit document.
 	* @param id The ID of the document to edit, or null to edit a new document.
@@ -73,12 +81,38 @@ class appUrl {
 		return "#documents?" + collectionPart + databasePart;
     }
 
+    static forIndexes(db: database = appUrl.getDatabase()): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#indexes?" + databasePart;
+    }
+
+    static forNewIndex(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#indexes/edit?" + databasePart;
+    }
+
+    static forEditIndex(indexName: string, db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        var indexNamePart = "/" + indexName;
+        return "#indexes/edit" + indexNamePart + databasePart;
+    }
+
+    static forQuery(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#query?" + databasePart;
+    }
+
     static forDatabaseQuery(db: database) {
         if (db && !db.isSystem) {
             return appUrl.baseUrl + "/databases/" + db.name;
         }
 
         return this.baseUrl;
+    }
+
+    static forExport(db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#tasks/export?" + databasePart;
     }
 
 	/**

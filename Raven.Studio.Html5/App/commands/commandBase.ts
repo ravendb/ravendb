@@ -35,6 +35,16 @@ class commandBase {
         this.reportProgress(alertType.warning, title, details);
     }
 
+    urlEncodeArgs(args: any): string {
+        var propNameAndValues = [];
+        for (var prop in args) {
+            var value = args[prop];
+            propNameAndValues.push(prop + "=" + encodeURIComponent(value));
+        }
+
+        return "?" + propNameAndValues.join("&");
+    }
+
     query<T>(relativeUrl: string, args: any, database?: database, resultsSelector?: (results: any) => T): JQueryPromise<T> {
         var ajax = this.ajax(relativeUrl, args, "GET", database);
         if (resultsSelector) {

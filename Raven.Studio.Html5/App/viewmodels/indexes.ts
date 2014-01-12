@@ -1,33 +1,28 @@
-class indexes {
+import durandalRouter = require("plugins/router");
+import database = require("models/database");
+import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import appUrl = require("common/appUrl");
 
-    indexGroups = ko.observableArray();
+class indexes extends activeDbViewModelBase {
+    router: DurandalRootRouter;
+    currentRouteTitle: KnockoutComputed<string>;
+    indexesUrl = appUrl.forCurrentDatabase().indexes;
 
     constructor() {
+        super();
 
-        // TODO: fill this with real data.
-        this.indexGroups.pushAll([
-            { name: 'FakeIndexGroup1' },
-            { name: 'FakeIndexGroup2' }
-        ]);
-    }
-    
-    activate() {
-    }
+        this.router = durandalRouter.createChildRouter()
+            .map([
+                { route: 'indexes', moduleId: 'viewmodels/indexesAll', title: 'Indexes', nav: true },
+                { route: 'indexes/edit(/:indexName)', moduleId: 'viewmodels/editIndex', title: 'Edit Index', nav: true }
+            ])
+            .buildNavigationModel();
 
-    navigateToQuery() {
-        console.log("TODO: implement");
-    }
-
-    navigateToNewIndex() {
-        console.log("TODO: implement");
-    }
-
-    collapseAll() {
-        console.log("TODO: implement");
-    }
-
-    expandAll() {
-        console.log("TODO: implement");
+        this.currentRouteTitle = ko.computed(() => {
+            // Is there a better way to get the active route?
+            var activeRoute = this.router.navigationModel().first(r => r.isActive());
+            return activeRoute != null ? activeRoute.title : "";
+        });
     }
 }
 

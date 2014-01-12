@@ -58,37 +58,44 @@ html, body {
     width: 98%;
 }
 
-.databases-container {
-    margin-top: 10px;
+.database-page {
 
-    .database {
-        cursor: pointer;
-        border-radius: 10px;
-        -webkit-box-shadow: 0 0 5px 1px silver;
-        box-shadow: 0 0 5px 1px silver;
-        margin-right: 10px;
-        min-width: 140px;
-        min-height: 60px;
-        display: inline-block;
-        padding: 8px;
+    .btn-toolbar {
+        margin-bottom: 20px;
+    }
 
-        @selectColor: rgb(66, 139, 202);
-        @hoverColor: lighten(@selectColor, 10%);
+    .databases-container {
+        margin-top: 10px;
 
-        &:hover {
-            background-color: white;
-            -webkit-box-shadow: 0 0 5px 1px @hoverColor;
-            box-shadow: 0 0 5px 1px @hoverColor;
-        }
+        .database {
+            cursor: pointer;
+            border-radius: 10px;
+            -webkit-box-shadow: 0 0 5px 1px silver;
+            box-shadow: 0 0 5px 1px silver;
+            margin-right: 10px;
+            min-width: 140px;
+            min-height: 60px;
+            display: inline-block;
+            padding: 8px;
 
-        &.selected {
-            -webkit-box-shadow: 0 0 5px 1px @selectColor;
-            box-shadow: 0 0 5px 1px @selectColor;
-        }
+            @selectColor: rgb(66, 139, 202);
+            @hoverColor: lighten(@selectColor, 10%);
 
-        &.system-database {
-            background-color: rgba(192, 192, 192, 0.21);
-            border-color: salmon;
+            &:hover {
+                background-color: white;
+                -webkit-box-shadow: 0 0 5px 0 @hoverColor;
+                box-shadow: 0 0 5px 0 @hoverColor;
+            }
+
+            &.selected {
+                -webkit-box-shadow: 0 0 6px 0 @selectColor;
+                box-shadow: 0 0 6px 0 @selectColor;
+                background-color: fade(@hoverColor, 25%);
+            }
+
+            &.system-database {
+                background-color: rgba(192, 192, 192, 0.21);
+            }
         }
     }
 }
@@ -109,25 +116,10 @@ html, body {
 .indexes-container {
     margin-top: 10px;
 
-    .panel-group {
-        margin-bottom: 30px;
+    .index-group {
+        /*width: 50%;*/
+        /*overflow: visible;*/
     }
-
-    a {
-        .icon-expand-alt {
-            display: none;
-        }
-    }
-
-        a.collapsed {
-            .icon-collapse-alt {
-                display: none;
-            }
-
-            .icon-expand-alt {
-                display: inline;
-            }
-        }
 }
 
 .settings-container {

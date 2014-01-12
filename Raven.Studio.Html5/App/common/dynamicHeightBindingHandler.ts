@@ -33,21 +33,22 @@ class dynamicHeightBindingHandler {
     }
 
     // Called by Knockout each time the dependent observable value changes.
-    update(element: HTMLElement, valueAccessor: () => { resizeTrigger: number; target?: string; }, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
+    update(element: HTMLElement, valueAccessor: () => { resizeTrigger: number; target?: string; bottomMargin: number }, allBindings: any, viewModel: any, bindingContext: KnockoutBindingContext) {
         var bindingValue = valueAccessor(); // Necessary to register knockout dependency. Without it, update won't fire when window height changes.
         var newWindowHeight = bindingValue.resizeTrigger;
         var targetSelector = bindingValue.target || "footer";
+        var bottomMargin = bindingValue.bottomMargin || 0;
 
         // Check what was the last dispatched height to this element.
         var lastWindowHeightKey = "ravenStudioLastDispatchedHeight";
         var lastWindowHeight: number = ko.utils.domData.get(element, lastWindowHeightKey);
         if (lastWindowHeight !== newWindowHeight) {
             ko.utils.domData.set(element, lastWindowHeightKey, newWindowHeight);
-            this.stickToTarget(element, targetSelector);
+            this.stickToTarget(element, targetSelector, bottomMargin);
         }
     }
 
-    stickToTarget(element: HTMLElement, targetSelector: string) {
+    stickToTarget(element: HTMLElement, targetSelector: string, bottomMargin: number) {
         var targetElement = $(targetSelector);
         if (targetSelector.length === 0) {
             throw new Error("Couldn't configure dynamic height because the target element isn't on the page. Target element: " + targetSelector);
@@ -59,7 +60,7 @@ class dynamicHeightBindingHandler {
         if (isVisible) {
             var elementTop = $element.offset().top;
             var footerTop = $(targetSelector).position().top;
-            var padding = 5;
+            var padding = 5 + bottomMargin;
             var desiredElementHeight = footerTop - elementTop - padding;
             var minimumHeight = 100;
             if (desiredElementHeight >= minimumHeight) {

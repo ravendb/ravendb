@@ -37,6 +37,7 @@ class shell {
         ko.postbox.subscribe("ActivateDatabaseWithName", (databaseName: string) => this.activateDatabaseWithName(databaseName));
         ko.postbox.subscribe("ActivateDatabase", (db: database) => this.databaseChanged(db));
         NProgress.set(.5);
+        new dynamicHeightBindingHandler().install();
 	}
 
     activate() {
@@ -44,7 +45,7 @@ class shell {
 		router.map([
 			{ route: ['', 'databases'],	    title: 'Databases',		moduleId: 'viewmodels/databases',		nav: false },
             { route: 'documents',		    title: 'Documents',		moduleId: 'viewmodels/documents',		nav: true,	hash: appUrl.forCurrentDatabase().documents },
-			{ route: 'indexes',			    title: 'Indexes',		moduleId: 'viewmodels/indexes',			nav: true },
+			{ route: 'indexes*details',		title: 'Indexes',		moduleId: 'viewmodels/indexes',			nav: true,  hash: appUrl.forCurrentDatabase().indexes },
 			{ route: 'query',			    title: 'Query',			moduleId: 'viewmodels/query',			nav: true },
 			{ route: 'tasks',			    title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true },
 			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true,  hash: appUrl.forCurrentDatabase().settings },
@@ -72,8 +73,6 @@ class shell {
 			e.preventDefault();
 			this.newDocument();
         });
-
-        new dynamicHeightBindingHandler().install();
     }
 
     databasesLoaded(databases) {
