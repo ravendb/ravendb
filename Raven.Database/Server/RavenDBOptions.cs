@@ -28,13 +28,12 @@ namespace Raven.Database.Server
 			{
 				HttpEndpointRegistration.RegisterHttpEndpointTarget();
 				systemDatabase.SpinBackgroundWorkers();
-				TransportState transportState = systemDatabase.TransportState;
+				var transportState = systemDatabase.TransportState;
 				fileSystem = Task.Run(() => new RavenFileSystem(configuration, transportState));
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
-				mixedModeRequestAuthorizer.Initialize(systemDatabase,
-					new RavenServer(databasesLandlord.SystemDatabase, configuration));
+				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
 			}
 			catch
 			{

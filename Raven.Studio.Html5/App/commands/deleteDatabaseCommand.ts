@@ -1,0 +1,21 @@
+import commandBase = require("commands/commandBase");
+import database = require("models/database");
+
+class deleteDatabaseCommand extends commandBase {
+    constructor(private databaseName: string, private isHardDelete: boolean, private systemDb: database) {
+        super();
+    }
+
+    execute(): JQueryPromise<any> {
+
+        this.reportInfo("Deleting " + this.databaseName + "...");
+
+        var url = "/admin/databases/" + encodeURIComponent(this.databaseName) + "?hard-delete=" + this.isHardDelete;
+        var deleteTask = this.del(url, null, this.systemDb);
+        deleteTask.fail((response) => this.reportError("Failed to create database", JSON.stringify(response)));
+        deleteTask.done(() => this.reportSuccess("Deleted " + this.databaseName));
+        return deleteTask;
+    }
+} 
+
+export = deleteDatabaseCommand;

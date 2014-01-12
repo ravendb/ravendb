@@ -71,7 +71,7 @@ namespace Raven.Database.Config
 			HostName =
 				new StringSetting(settings["Raven/HostName"], (string) null);
 			Port =
-				new StringSetting(settings["Raven/Port"], (string) null);
+				new StringSetting(settings["Raven/Port"], "*");
 			UseSsl = 
 				new BooleanSetting(settings["Raven/UseSsl"], false);
 			HttpCompression =

@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 
 class createDatabaseCommand extends commandBase {
 
-    constructor(private databaseName: string) {
+    constructor(private databaseName: string, private activeBundles: string[]) {
         super();
 
         if (!databaseName) {
@@ -17,7 +17,8 @@ class createDatabaseCommand extends commandBase {
         // TODO: include selected bundles from UI.
         var databaseDoc = {
             "Settings": {
-                "Raven/DataDir": "~\\Databases\\" + this.databaseName
+                "Raven/DataDir": "~\\Databases\\" + this.databaseName,
+                "Raven/ActiveBundles": this.activeBundles.join(";")
             },
             "SecuredSettings": {},
             "Disabled": false
@@ -25,7 +26,6 @@ class createDatabaseCommand extends commandBase {
 
         var url = "/admin/databases/" + this.databaseName;
         var createTask = this.put(url, JSON.stringify(databaseDoc), null);
-
         createTask.done(() => this.reportSuccess(this.databaseName + " created"));
         createTask.fail((response) => this.reportError("Failed to create database", JSON.stringify(response)));
 

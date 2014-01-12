@@ -7,59 +7,30 @@ using Raven.Client.Document;
 using Raven.Database.Server;
 using Raven.Tests.Indexes;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
 	public class DocumentUrl : RavenTest
 	{
-		[Fact]
-		public void CanGetFullUrl()
+		[Theory]
+		[InlineData("http://localhost:8079")]
+		[InlineData("http://localhost:8079/")]
+		public void CanGetFullUrl_WithSlashOnTheEnd(string url)
 		{
 			using (var store = NewDocumentStore())
 			{
-				store.Configuration.Port = 8079;
 				using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
 				{
 					server.StartListening();
-					using (var documentStore = new DocumentStore
-					{
-						Url = "http://localhost:8079"
-					}.Initialize())
+					using (var documentStore = new DocumentStore {Url = url}.Initialize())
 					{
 						var session = documentStore.OpenSession();
 
 						var entity = new LinqIndexesFromClient.User();
 						session.Store(entity);
 
-						Assert.Equal("http://localhost:8079/docs/users/1",
-						             session.Advanced.GetDocumentUrl(entity));
-					}
-				}
-			}
-		}
-
-		[Fact]
-		public void CanGetFullUrlWithSlashOnTheEnd()
-		{
-			using (var store = NewDocumentStore())
-			{
-				store.Configuration.Port = 8079;
-				using (var server = new HttpServer(store.Configuration, store.DocumentDatabase))
-				{
-					server.StartListening();
-					using (var documentStore = new DocumentStore
-					{
-						Url = "http://localhost:8079/"
-					}.Initialize())
-					{
-
-						var session = documentStore.OpenSession();
-
-						var entity = new LinqIndexesFromClient.User();
-						session.Store(entity);
-
-						Assert.Equal("http://localhost:8079/docs/users/1",
-						             session.Advanced.GetDocumentUrl(entity));
+						Assert.Equal("http://localhost:8079/docs/users/1", session.Advanced.GetDocumentUrl(entity));
 					}
 				}
 			}

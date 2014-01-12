@@ -69,7 +69,7 @@ namespace Raven.Database.Config
 			SetupGC();
 		}
 
-		public void Initialize(bool shouldOverrideExistingPortValue = true) //probably needs a better solution
+		public void Initialize()
 		{
 			InitializeRavenFs();
 			int defaultMaxNumberOfItemsToIndexInSingleBatch = Environment.Is64BitProcess ? 128 * 1024 : 16 * 1024;
@@ -178,7 +178,7 @@ namespace Raven.Database.Config
 			// HTTP settings
 			HostName = ravenSettings.HostName.Value;
 
-			if (string.IsNullOrEmpty(DatabaseName) && shouldOverrideExistingPortValue) // we only use this for root database
+			if (string.IsNullOrEmpty(DatabaseName) && Port == 0) // we only use this for root database
 			{
 				Port = PortUtil.GetPort(ravenSettings.Port.Value);
 				UseSsl = ravenSettings.UseSsl.Value;
