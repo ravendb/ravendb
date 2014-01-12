@@ -51,7 +51,7 @@ namespace Voron.Impl
 			get { return _id; }
 		}
 
-		internal Action<long> AfterCommit = delegate { };
+		internal Action<Transaction> AfterCommit = delegate { };
 		private readonly StorageEnvironmentState _state;
 		private int _allocatedPagesInTransaction;
 		private int _overflowPagesInTransaction;
@@ -164,26 +164,25 @@ namespace Voron.Impl
 
 		private Page GetPageForModification(long p, Page page)
 		{
-			if (page != null)
-				return page;
-
-			PageFromScratchBuffer value;
-			if (_scratchPagesTable.TryGetValue(p, out value))
-			{
-				return _env.ScratchBufferPool.ReadPage(value.PositionInScratchBuffer);
-			}
-			return _journal.ReadPage(this, p) ?? _dataPager.Read(p);
+		    return page ?? GetReadOnlyPage(p);
 		}
 
-		public Page GetReadOnlyPage(long n)
+	    public Page GetReadOnlyPage(long pageNumber)
 		{
 			PageFromScratchBuffer value;
-			if (_scratchPagesTable.TryGetValue(n, out value))
+		    Page p;
+			if (_scratchPagesTable.TryGetValue(pageNumber, out value))
 			{
-				return _env.ScratchBufferPool.ReadPage(value.PositionInScratchBuffer);
+			    p = _env.ScratchBufferPool.ReadPage(value.PositionInScratchBuffer);
+			}
+			else
+			{
+			    p =  _journal.ReadPage(this, pageNumber) ?? _dataPager.Read(pageNumber);
 			}
 
-			return _journal.ReadPage(this, n) ?? _dataPager.Read(n);
+            Debug.Assert(p != null && p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from {2}", pageNumber, p.PageNumber, p.Source));
+
+		    return p;
 		}
 
 		public Page AllocatePage(int numberOfPages, long? pageNumber = null)
@@ -255,8 +254,14 @@ namespace Voron.Impl
 
 		public void Commit()
 		{
-			if (Flags != (TransactionFlags.ReadWrite) || RolledBack)
+			if (Flags != (TransactionFlags.ReadWrite))
 				return; // nothing to do
+
+            if (Committed)
+                throw new InvalidOperationException("Cannot commit already commited transaction.");
+
+            if (RolledBack)
+                throw new InvalidOperationException("Cannot commit rolledback transaction.");
 
 			FlushAllMultiValues();
 
@@ -303,9 +308,8 @@ namespace Voron.Impl
 				FlushedToJournal = true;
 			}
 
-		    _env.SetStateAfterTransactionCommit(State);
 			Committed = true;
-			AfterCommit(_id);
+			AfterCommit(this);
 		}
 
 
@@ -346,7 +350,7 @@ namespace Voron.Impl
 			if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
 				Rollback();
 
-			_env.TransactionCompleted(_id);
+			_env.TransactionCompleted(this);
 			foreach (var pagerState in _pagerStates)
 			{
 				pagerState.Release();

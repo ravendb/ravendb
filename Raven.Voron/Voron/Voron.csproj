@@ -40,12 +40,6 @@
   <PropertyGroup>
     <StartupObject />
   </PropertyGroup>
-  <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
-  </PropertyGroup>
-  <PropertyGroup>
-    <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
-  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -65,6 +59,7 @@
     <Compile Include="Impl\Constants.cs" />
     <Compile Include="Impl\Extensions\ConcurrentQueueExtensions.cs" />
     <Compile Include="Impl\Backup\IncrementalBackup.cs" />
+    <Compile Include="Util\ConcurrentList.cs" />
     <Compile Include="Util\EndOfDiskSpaceEvent.cs" />
     <Compile Include="Util\GenericUtil.cs" />
     <Compile Include="Impl\FileHeaders\FileHeader.cs" />
@@ -150,9 +145,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Util\Conversion\readme.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="RavenDB.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

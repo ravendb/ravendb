@@ -47,7 +47,7 @@ namespace Voron.Impl
 			    return pageFromScratchBuffer;
 			}
 			// we don't have free pages to give out, need to allocate some
-			_scratchPager.EnsureContinuous(tx, _lastUsedPage, numberOfPages);
+			_scratchPager.EnsureContinuous(tx, _lastUsedPage, (int) size);
 
 			var result = new PageFromScratchBuffer
 			{
