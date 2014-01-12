@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Database.Config;
-using Raven.Database.Server.Connections;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -20,9 +19,8 @@ namespace Raven.Database.Server
 		public RavenDBOptions(InMemoryRavenConfiguration configuration)
 		{
 			if (configuration == null)
-			{
 				throw new ArgumentNullException("configuration");
-			}
+
 			systemDatabase = new DocumentDatabase(configuration);
 			try
 			{

@@ -64,13 +64,15 @@ namespace Raven.Tests.Helpers
 			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin)
 		{
 			var storageType = GetDefaultStorageType(requestedStorage);
+			var dataDirectory = dataDir ?? NewDataPath();
 			var documentStore = new EmbeddableDocumentStore
 			{
 				UseEmbeddedHttpServer = port.HasValue,
 				Configuration =
 				{
 					DefaultStorageTypeName = storageType,
-					DataDirectory = dataDir ?? NewDataPath(),
+					DataDirectory = dataDirectory,
+					FileSystemDataDirectory = Path.Combine(dataDirectory, "FileSystem"),
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 					Port = port == null ? 8079 : port.Value,
@@ -183,10 +185,12 @@ namespace Raven.Tests.Helpers
 				pathsToDelete.Add(dataDirectory);
 
 			var storageType = GetDefaultStorageType(requestedStorage);
+			var directory = dataDirectory ?? NewDataPath();
 			var ravenConfiguration = new RavenConfiguration
 			{
 				Port = port,
-				DataDirectory = dataDirectory ?? NewDataPath(),
+				DataDirectory = directory,
+				FileSystemDataDirectory = Path.Combine(directory, "FileSystem"),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 #if DEBUG
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
@@ -204,7 +208,6 @@ namespace Raven.Tests.Helpers
 
 			ModifyConfiguration(ravenConfiguration);
 
-			ravenConfiguration.Initialize();
 			ravenConfiguration.PostInit();
 
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(ravenConfiguration.Port);
@@ -245,12 +248,20 @@ namespace Raven.Tests.Helpers
 			ITransactionalStorage newTransactionalStorage;
 			string storageType = GetDefaultStorageType(requestedStorage);
 
+			var dataDirectory = dataDir ?? NewDataPath();
+			var ravenConfiguration = new RavenConfiguration
+			{
+				DataDirectory = dataDirectory,
+				FileSystemDataDirectory = Path.Combine(dataDirectory, "FileSystem"),
+				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
+			};
+
 			if (storageType == "munin")
-				newTransactionalStorage = new Storage.Managed.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
+				newTransactionalStorage = new Storage.Managed.TransactionalStorage(ravenConfiguration, () => { });
 			else if (storageType == "voron")
-				newTransactionalStorage = new Storage.Voron.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), RunInMemory = runInMemory }, () => { });
+				newTransactionalStorage = new Storage.Voron.TransactionalStorage(ravenConfiguration, () => { });
 			else
-				newTransactionalStorage = new Storage.Esent.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
+				newTransactionalStorage = new Storage.Esent.TransactionalStorage(ravenConfiguration, () => { });
 
 			newTransactionalStorage.Initialize(new DummyUuidGenerator(), documentCodecs ?? new OrderedPartCollection<AbstractDocumentCodec>());
 			return newTransactionalStorage;
