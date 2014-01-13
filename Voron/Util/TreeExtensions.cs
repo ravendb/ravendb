@@ -10,11 +10,11 @@ namespace Voron
 		public static Tree GetTree(this StorageEnvironmentState state,string treeName,Transaction tx)
 		{			
 			if (String.IsNullOrEmpty(treeName))
-				throw new InvalidOperationException("Cannot fetch tree with empty name");			
+				throw new InvalidOperationException("Cannot fetch tree with empty name");
 
-			Tree tree;
+		    Tree tree = tx.GetTree(treeName);
 
-			if (state.Trees.TryGetValue(treeName, out tree))
+			if (tree != null)
 				return tree;
 
 			if (treeName.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase))

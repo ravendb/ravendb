@@ -181,11 +181,6 @@ namespace Voron
             }
         }
 
-        public IEnumerable<Tree> Trees
-        {
-            get { return State.Trees.Select(x => x.Value); }
-        }
-
         public long NextPageNumber
         {
             get { return State.NextPageNumber; }
@@ -237,9 +232,9 @@ namespace Voron
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");
 
-            Tree tree;
-            if (tx.State.Trees.TryGetValue(name, out tree) == false)
-                return;
+	        Tree tree = tx.GetTree(name);
+	        if (tree == null)
+	            return;
 
             foreach (var page in tree.AllPages(tx))
             {
@@ -248,7 +243,7 @@ namespace Voron
 
             tx.State.Root.Delete(tx, name);
 
-            tx.DeletedTree(name);
+            tx.RemoveTree(name);
         }
 
         public unsafe Tree CreateTree(Transaction tx, string name)
@@ -256,8 +251,8 @@ namespace Voron
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot create a new tree with a read only transaction");
 
-            Tree tree;
-            if (tx.State.Trees.TryGetValue(name, out tree))
+            Tree tree = tx.GetTree(name);
+            if (tree != null)
                 return tree;
 
             Slice key = name;
@@ -268,7 +263,7 @@ namespace Voron
             {
                 tree = Tree.Open(tx, _sliceComparer, header);
                 tree.Name = name;
-                tx.State.AddTree(name, tree);
+                tx.AddTree(name, tree);
                 return tree;
             }
 
@@ -278,7 +273,7 @@ namespace Voron
 
             tree.State.CopyTo((TreeRootHeader*)space);
             tree.State.IsModified = true;
-            tx.State.AddTree(name, tree);
+            tx.AddTree(name, tree);
 
 			if(IsDebugRecording)
 				DebugJournal.RecordAction(DebugActionType.CreateTree, Slice.Empty,name,Stream.Null);
@@ -446,9 +441,9 @@ namespace Voron
 					{"Free Pages", _freeSpaceHandling.AllPages(tx)}
 				};
 
-            foreach (var tree in State.Trees)
+            foreach (var tree in tx.Trees)
             {
-                results.Add(tree.Key, tree.Value.AllPages(tx));
+                results.Add(tree.Name, tree.AllPages(tx));
             }
 
             return results;
