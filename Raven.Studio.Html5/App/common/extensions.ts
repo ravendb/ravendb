@@ -1,16 +1,15 @@
-/// <reference path="./typings/knockout/knockout.d.ts" />
-
 interface KnockoutObservable<T> {
     where(predicate: (item: T) => boolean): KnockoutObservable<string>;
     throttle(throttleTimeInMs: number): KnockoutObservable<T>;
     select<TReturn>(selector: (item: any) => any): KnockoutObservable<TReturn>;
     distinctUntilChanged(): KnockoutObservable<T>;
+    toggle(): KnockoutObservable<T>;
 }
 
 interface KnockoutObservableArray<T> {
     pushAll(items: T[]): number;
     contains(item: T): boolean;
-    first(filter?: (item) => boolean): T;
+    first(filter?: (item: T) => boolean): T;
     last(filter?: (item) => boolean): T;
 }
 
@@ -61,6 +60,13 @@ subscribableFn.select = function (selector: (any) => any) {
     return selectedResults;
 }
 
+// observable.toggle
+subscribableFn.toggle = function () {
+    var observable: KnockoutObservable<boolean> = this;
+    observable(!observable());
+    return observable;
+}
+
 // observableArray.pushAll
 observableArrayFn.pushAll = function (items: Array<any>) {
     this.push.apply(this, items);
@@ -105,6 +111,7 @@ interface Array<T> {
     pushAll(items: T[]): void;
     contains(item: T): boolean;
     count(filter?: (item: T) => boolean): number;
+    distinct(): T[];
 }
 
 // Array.remove
@@ -189,4 +196,17 @@ arrayPrototype.count = function (filter?: (item) => boolean) {
     }
 
     return self.length;
+}
+
+// Array.count
+arrayPrototype.distinct = function () {
+    var distinctElements = [];
+    for (var i = 0; i < this.length; i++) {
+        var element = this[i];
+        if (!distinctElements.contains(element)) {
+            distinctElements.push(element);
+        }
+    }
+
+    return distinctElements;
 }

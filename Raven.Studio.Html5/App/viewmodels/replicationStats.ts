@@ -5,7 +5,7 @@ import moment = require("moment");
 class replicationStats extends activeDbViewModelBase {
 
     replStatsDoc = ko.observable<replicationStatsDocumentDto>();
-    noReplStatsAvailable = ko.observable(false);
+    hasNoReplStatsAvailable = ko.observable(false);
     now = ko.observable<Moment>();
     updateNowTimeoutHandle = 0;
 
@@ -26,8 +26,11 @@ class replicationStats extends activeDbViewModelBase {
         this.replStatsDoc(null);
         new getReplicationStatsCommand(this.activeDatabase())
             .execute()
-            .fail(() => this.noReplStatsAvailable(true)) // When there are no replication stats, we'll get a 404 error.
-            .done((result: replicationStatsDocumentDto) => this.processResults(result));
+            .fail(() => this.hasNoReplStatsAvailable(true)) // If replication is not setup, the fetch will fail with 404.
+            .done((result: replicationStatsDocumentDto) => {
+                this.hasNoReplStatsAvailable(result.Stats.length === 0);
+                this.processResults(result);
+            });
     }
 
     processResults(results: replicationStatsDocumentDto) {

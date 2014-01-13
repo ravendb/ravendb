@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Database.Config;
-using Raven.Database.Server.Connections;
 using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
@@ -20,21 +19,19 @@ namespace Raven.Database.Server
 		public RavenDBOptions(InMemoryRavenConfiguration configuration)
 		{
 			if (configuration == null)
-			{
 				throw new ArgumentNullException("configuration");
-			}
+
 			systemDatabase = new DocumentDatabase(configuration);
 			try
 			{
 				HttpEndpointRegistration.RegisterHttpEndpointTarget();
 				systemDatabase.SpinBackgroundWorkers();
-				TransportState transportState = systemDatabase.TransportState;
+				var transportState = systemDatabase.TransportState;
 				fileSystem = Task.Run(() => new RavenFileSystem(configuration, transportState));
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
 				requestManager = new RequestManager(databasesLandlord);
 				mixedModeRequestAuthorizer = new MixedModeRequestAuthorizer();
-				mixedModeRequestAuthorizer.Initialize(systemDatabase,
-					new RavenServer(databasesLandlord.SystemDatabase, configuration));
+				mixedModeRequestAuthorizer.Initialize(systemDatabase, new RavenServer(databasesLandlord.SystemDatabase, configuration));
 			}
 			catch
 			{

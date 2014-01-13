@@ -547,7 +547,7 @@ namespace Raven.Client.Silverlight.Connection
 			throw new NotImplementedException();
 		}
 
-		public async Task<HttpResponseMessage> ExecuteRawRequestAsync(CancellationToken? cancellationToken, Action<Stream, TaskCompletionSource<object>> action)
+		public async Task<HttpResponseMessage> ExecuteRawRequestAsync(Action<Stream, TaskCompletionSource<object>> action)
 		{
 			throw new NotImplementedException();
 		}

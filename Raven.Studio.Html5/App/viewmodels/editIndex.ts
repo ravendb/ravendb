@@ -1,0 +1,4 @@
+class editIndex { 
+}
+
+export = editIndex; 

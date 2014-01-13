@@ -13,6 +13,7 @@ using Raven.Client.Embedded.Changes;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
+using Raven.Database.Util;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
@@ -54,9 +55,14 @@ namespace Raven.Client.Embedded
 		///</summary>
 		public RavenConfiguration Configuration
 		{
-			get { return configuration ?? (configuration = new RavenConfiguration()); }
+			get
+			{
+				return configuration ?? (configuration = new RavenConfiguration
+				{
+					Port = PortUtil.DefaultPort, // Do not use the default "*" value, in embedded mode.
+				});
+			}
 		}
-
 
 		/// <summary>
 		/// Run RavenDB in an embedded mode, using in memory only storage.
@@ -235,7 +241,7 @@ namespace Raven.Client.Embedded
 						{
 							log.WarnException("Error during database idle operations", e);
 						}
-					},null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+					}, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 				}
 				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId, listeners.ConflictListeners);
 				asyncDatabaseCommandsGenerator = () => new EmbeddedAsyncServerClient(DocumentDatabase, DatabaseCommands);

@@ -17,7 +17,6 @@ class documents {
     collections = ko.observableArray<collection>();
     selectedCollection = ko.observable<collection>().subscribeTo("ActivateCollection").distinctUntilChanged();
     allDocumentsCollection: collection;
-    collectionColors = [];
     collectionToSelectName: string;
     private currentCollectionPagedItems = ko.observable<pagedList>();
     subscriptions: Array<KnockoutSubscription> = [];

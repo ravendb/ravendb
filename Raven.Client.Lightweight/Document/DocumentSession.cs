@@ -780,6 +780,18 @@ namespace Raven.Client.Document
 			return lazyValue;
 		}
 
+		internal Lazy<int> AddLazyCountOperation(ILazyOperation operation)
+		{
+			pendingLazyOperations.Add(operation);
+			var lazyValue = new Lazy<int>(() =>
+			{
+				ExecuteAllPendingLazyOperations();
+				return operation.QueryResult.TotalResults;
+			});
+
+			return lazyValue;
+		}
+
 		/// <summary>
 		/// Register to lazily load documents and include
 		/// </summary>

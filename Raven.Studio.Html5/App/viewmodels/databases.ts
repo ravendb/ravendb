@@ -1,21 +1,21 @@
 import app = require("durandal/app");
-import sys = require("durandal/system");
 import router = require("plugins/router");
 
 import appUrl = require("common/appUrl");
-import raven = require("common/raven");
 import database = require("models/database");
 import createDatabase = require("viewmodels/createDatabase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import getDatabasesCommand = require("commands/getDatabasesCommand");
+import deleteDatabaseConfirm = require("viewmodels/deleteDatabaseConfirm");
 
 class databases {
 
-    ravenDb: raven;
     databases = ko.observableArray<database>();
+    searchText = ko.observable("");
+    selectedDatabase = ko.observable<database>();
 
     constructor() {
-        this.ravenDb = new raven();
+        this.searchText.subscribe(s => this.filterDatabases(s));
     }
 
     activate(navigationArgs) {
@@ -65,11 +65,37 @@ class databases {
     selectDatabase(db: database) {
         this.databases().forEach(d => d.isSelected(d === db));
         db.activate();
+        this.selectedDatabase(db);
     }
 
     goToDocuments(db: database) {
         // TODO: use appUrl for this.
         router.navigate("#documents?database=" + db.name);
+    }
+
+    filterDatabases(filter: string) {
+        var filterLower = filter.toLowerCase();
+        this.databases().forEach(d => {
+            var isMatch = !filter || d.name.toLowerCase().indexOf(filterLower) >= 0;
+            d.isVisible(isMatch);
+        });
+    }
+
+    deleteSelectedDatabase() {
+        var db = this.selectedDatabase();
+        var systemDb = this.databases.first(db => db.isSystem);
+        if (db && systemDb) {
+            var confirmDeleteVm = new deleteDatabaseConfirm(db, systemDb);
+            confirmDeleteVm.deleteTask.done(() => this.onDatabaseDeleted(db));
+            app.showDialog(confirmDeleteVm);
+        }
+    }
+
+    onDatabaseDeleted(db: database) {
+        this.databases.remove(db);
+        if (this.selectedDatabase() === db) {
+            this.selectedDatabase(null);
+        }
     }
 }
 

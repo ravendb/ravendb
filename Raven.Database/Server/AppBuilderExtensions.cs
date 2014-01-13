@@ -67,10 +67,12 @@ namespace Owin
 				}
 			}
 
-			app
-				//uncomment for debug 
-				.UseInterceptor()
-				.UseWebApi(CreateHttpCfg(options.Landlord, options.MixedModeRequestAuthorizer, options.RequestManager, options.FileSystem));
+#if DEBUG
+			app.UseInterceptor();
+#endif
+		
+			app.UseWebApi(CreateHttpCfg(options.Landlord, options.MixedModeRequestAuthorizer, options.RequestManager, options.FileSystem));
+			
 			return app;
 		}
 
@@ -83,7 +85,6 @@ namespace Owin
 			cfg.Properties[typeof (RavenFileSystem)] = fileSystem;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
 			cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
-			
 
 			cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
 			cfg.Filters.Add(new RavenExceptionFilterAttribute());

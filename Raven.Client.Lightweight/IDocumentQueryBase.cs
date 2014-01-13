@@ -9,7 +9,7 @@ using Raven.Client.Document;
 namespace Raven.Client
 {
 	/// <summary>
-	///   A query against a Raven index
+	/// A query against a Raven index
 	/// </summary>
 	public interface IDocumentQueryBase<T, out TSelf>
 		where TSelf : IDocumentQueryBase<T, TSelf>
@@ -34,7 +34,6 @@ namespace Raven.Client
 		/// </summary>
 		/// <param name = "path">The path.</param>
 		TSelf Include(string path);
-
 
 		/// <summary>
 		///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
@@ -137,9 +136,9 @@ If you really want to do in memory filtering on the data returned from the query
 		TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool isAnalyzed);
 
 		/// <summary>
-		///   Matches exact value
+		/// Matches exact value
 		/// </summary>
-		TSelf WhereEquals (WhereParams whereParams);
+		TSelf WhereEquals(WhereParams whereParams);
 
 		/// <summary>
 		/// Check that the field has one of the specified value
@@ -534,7 +533,6 @@ If you really want to do in memory filtering on the data returned from the query
 		/// </summary>
 		TSelf RandomOrdering(string seed);
 
-
 		/// <summary>
 		///   Adds an ordering for a specific field to the query
 		/// </summary>
@@ -586,6 +584,26 @@ If you really want to do in memory filtering on the data returned from the query
 		/// across different index entries.
 		/// </summary>
 		TSelf Intersect();
+
+		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+		TSelf ContainsAny(string fieldName, IEnumerable<object> values);
+
+		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+		TSelf ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		TSelf ContainsAll(string fieldName, IEnumerable<object> values);
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		TSelf ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
 
 		/// <summary>
 		/// Callback to get the results of the query

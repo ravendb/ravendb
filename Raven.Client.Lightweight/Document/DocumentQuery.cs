@@ -24,8 +24,6 @@ namespace Raven.Client.Document
 	/// </summary>
 	public class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>
 	{
-
-
 		/// <summary>
 		/// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
 		/// </summary>
@@ -275,6 +273,42 @@ namespace Raven.Client.Document
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Intersect()
 		{
 			Intersect();
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.ContainsAny(string fieldName, IEnumerable<object> values)
+		{
+			ContainsAny(fieldName, values);
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+		public IDocumentQuery<T> ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+		{
+			ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.ContainsAll(string fieldName, IEnumerable<object> values)
+		{
+			ContainsAll(fieldName, values);
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		public IDocumentQuery<T> ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+		{
+			ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
 			return this;
 		}
 

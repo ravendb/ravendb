@@ -49,7 +49,7 @@ namespace RavenFS.Tests
 										  
 										  
 
-					                      IOExtensions.DeleteDirectory(configuration.RavenFsDataDirectory);
+					                      IOExtensions.DeleteDirectory(configuration.FileSystemDataDirectory);
 										  var server = new RavenDbServer(configuration);
 										  disposables.Add(server);
 				                      })
@@ -75,14 +75,14 @@ namespace RavenFS.Tests
 		{
 			return
 				disposables.OfType<RavenDbServer>().First(
-					x => x.Server.FileSystem.Configuration.RavenFsDataDirectory.EndsWith(Ports[index].ToString(CultureInfo.InvariantCulture))).Server.FileSystem;
+					x => x.Server.FileSystem.Configuration.FileSystemDataDirectory.EndsWith(Ports[index].ToString(CultureInfo.InvariantCulture))).Server.FileSystem;
 		}
 
 		protected RavenDbServer GetServer(int index)
 		{
 			return
 				disposables.OfType<RavenDbServer>().First(
-					x => x.Server.FileSystem.Configuration.RavenFsDataDirectory.EndsWith(Ports[index].ToString(CultureInfo.InvariantCulture)));
+					x => x.Server.FileSystem.Configuration.FileSystemDataDirectory.EndsWith(Ports[index].ToString(CultureInfo.InvariantCulture)));
 
 		}
 

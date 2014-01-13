@@ -14,7 +14,7 @@ namespace Raven.Database.Util
 	{
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
-		const int DefaultPort = 8080;
+		public const int DefaultPort = 8080;
 
 		public static int GetPort(string portStr)
 		{
@@ -38,7 +38,7 @@ namespace Raven.Database.Util
 
 			try
 			{
-				if (portStr == "*" || string.IsNullOrWhiteSpace(portStr))
+				if (portStr == "*")
 				{
 					int autoPort;
 

@@ -8,6 +8,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Changes;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Raven.Database;
 using Raven.Json.Linq;
 using Task = System.Threading.Tasks.Task;
@@ -24,6 +25,7 @@ namespace Raven.Client.Embedded
 		private readonly BulkInsertOptions options;
 		BlockingCollection<JsonDocument> queue;
 		private Task doBulkInsert;
+		private bool disposed;
 
 		/// <summary>
 		/// Create new instance of this class
@@ -104,10 +106,24 @@ namespace Raven.Client.Embedded
 		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
 		/// </summary>
 		/// <returns></returns>
-		public Task DisposeAsync()
+		public async Task DisposeAsync()
 		{
-			Dispose();
-			return new CompletedTask();
+			if (disposed)
+				return;
+			disposed = true;
+			queue.Add(null);
+
+			await doBulkInsert.ConfigureAwait(false);
+			doBulkInsert.AssertNotFailed();
+
+			ReportInternal("Done with bulk insert");
+		}
+
+		private void ReportInternal(string format, params object[] args)
+		{
+			var onReport = Report;
+			if (onReport != null)
+				onReport(string.Format(format, args));
 		}
 
 		/// <summary>
@@ -115,20 +131,14 @@ namespace Raven.Client.Embedded
 		/// </summary>
 		public void Dispose()
 		{
-			queue.Add(null);
+			if (disposed)
+				return;
 
-		    try
-		    {
-                doBulkInsert.Wait();
-		    }
-		    catch (AggregateException e)
-		    {
-		        throw e.ExtractSingleInnerException();
-		    }
-			
-			var onReport = Report;
-			if (onReport != null)
-				onReport("Done with bulk insert");
+			using (NoSynchronizationContext.Scope())
+			{
+				var disposeAsync = DisposeAsync().ConfigureAwait(false);
+				disposeAsync.GetAwaiter().GetResult();
+			}
 		}
 
 		/// <summary>

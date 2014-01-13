@@ -63,37 +63,35 @@ namespace Raven.Tests.Issues
             {
                 store.DatabaseCommands.Put("foos/1", null, new RavenJObject(), new RavenJObject());
 
-                var e = Assert.Throws<ConcurrencyException>(
-                    () =>
-                    {
-                        using (var bulk = store.BulkInsert())
-                        {
-                            bulk.Store(new { }, "foos/1");
-                        }
-                    });
+	            var e = Assert.Throws<ConcurrencyException>(() =>
+	            {
+		            using (var bulk = store.BulkInsert())
+		            {
+			            bulk.Store(new {}, "foos/1");
+		            }
+	            });
 
                 Assert.Equal("Illegal duplicate key foos/1", e.Message);
             }
         }
 
         [Theory]
-        [InlineData("esent")]
+		[InlineData("esent")]
         [InlineData("voron")]
         public void BulkInsertOperationShouldThrowConcurrencyExceptionOnDuplicateKeys(string requestedStorage)
         {
-            using (var store = NewDocumentStore(requestedStorage: requestedStorage))
-            {
-                store.DatabaseCommands.Put("foos/1", null, new RavenJObject(), new RavenJObject());
+	        using (var store = NewDocumentStore(requestedStorage: requestedStorage))
+	        {
+		        store.DatabaseCommands.Put("foos/1", null, new RavenJObject(), new RavenJObject());
 
-                Assert.Throws<ConcurrencyException>(
-                    () =>
-                    {
-                        using (var bulk = store.BulkInsert())
-                        {
-                            bulk.Store(new { }, "foos/1");
-                        }
-                    });
-            }
+		        Assert.Throws<ConcurrencyException>(() =>
+		        {
+			        using (var bulk = store.BulkInsert())
+			        {
+				        bulk.Store(new {}, "foos/1");
+			        }
+		        });
+	        }
         }
     }
 }

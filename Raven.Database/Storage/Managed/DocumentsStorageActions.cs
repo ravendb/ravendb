@@ -297,7 +297,7 @@ namespace Raven.Storage.Managed
 			var isUpdate = readResult != null;
 
 			if (isUpdate && checkForUpdates == false)
-				throw new InvalidOperationException("Cannot insert document " + key + " because it already exists");
+				throw new ConcurrencyException("Cannot insert document " + key + " because it already exists");
 
 			Etag existingEtag = null;
 			if(isUpdate)
