@@ -138,6 +138,10 @@ namespace Raven.Database.Prefetching
 				if (prefetchingQueue.TryDequeue(out result) == false)
 					continue;
 
+                // this shouldn't happen, but... 
+                if(result == null)
+                    continue;
+
 				if (result.Etag != nextDocEtag)
 					continue;
 
