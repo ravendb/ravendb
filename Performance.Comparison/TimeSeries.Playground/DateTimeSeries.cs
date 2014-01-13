@@ -34,7 +34,7 @@ public class DateTimeSeries : IDisposable
 	{
 		using (var tx = _storageEnvironment.NewTransaction(TransactionFlags.ReadWrite))
 		{
-			var data = tx.GetTree("data");
+            var data = _storageEnvironment.State.GetTree(tx, "data");
 			var buffer = new byte[16];
 			var key = new Slice(buffer);
 			var ms = new MemoryStream();
@@ -59,7 +59,7 @@ public class DateTimeSeries : IDisposable
 	{
 		using (var tx = _storageEnvironment.NewTransaction(TransactionFlags.Read))
 		{
-			var data = tx.GetTree("data");
+            var data = _storageEnvironment.State.GetTree(tx, "data");
 			var startBuffer = new byte[16];
 			EndianBitConverter.Big.CopyBytes(start.ToBinary(), startBuffer, 0);
 			var startKey = new Slice(startBuffer);
