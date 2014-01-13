@@ -55,7 +55,7 @@ jQuery(function ($) {
           search: App.$searchTodo.val()
         },
         complete : function(xhr) {
-            var items = JSON.parse(xhr.responseText).subitems;
+            var items = JSON.parse(xhr.responseText);
             that.$todoList.html(that.todoTemplate(items));
             that.$main.toggle(!!items.length);
             that.$toggleAll.prop('checked', !that.activeTodoCount(items));
@@ -98,7 +98,7 @@ jQuery(function ($) {
       var count = 0;
 
       $.each(items, function (i, val) {
-        if (!val.completed) {
+        if (!val.Completed) {
           count++;
         }
       });

@@ -15,6 +15,7 @@ import net.ravendb.abstractions.commands.ICommandData;
 import net.ravendb.abstractions.commands.PatchCommandData;
 import net.ravendb.abstractions.data.PatchCommandType;
 import net.ravendb.abstractions.data.PatchRequest;
+import net.ravendb.abstractions.json.linq.RavenJArray;
 import net.ravendb.abstractions.json.linq.RavenJValue;
 import net.ravendb.client.IDocumentSession;
 import net.ravendb.client.IDocumentStore;
@@ -87,7 +88,8 @@ public class JSONTodoListServlet extends HttpServlet {
 
             List<Todo> todosList = query.toList();
 
-            writeJsonResponse(todosList, response);
+            response.getWriter().write(RavenJArray.fromObject(todosList).toString());
+            response.getWriter().close();
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -149,28 +151,6 @@ public class JSONTodoListServlet extends HttpServlet {
                 throw new RuntimeException(e);
             }
         }
-    }
-
-    private void writeJsonResponse(List<Todo> todosList, HttpServletResponse response) throws IOException {
-        JsonFactory jfactory = new JsonFactory();
-        JsonGenerator jGenerator = jfactory.createJsonGenerator(response.getWriter());
-
-        jGenerator.writeStartObject();
-        jGenerator.writeFieldName("subitems");
-        jGenerator.writeStartArray();
-        for (Todo item : todosList) {
-            jGenerator.writeStartObject();
-            jGenerator.writeNumberField("id", item.getId().intValue());
-            jGenerator.writeStringField("title", StringUtils.defaultIfBlank(item.getTitle(), ""));
-            jGenerator.writeBooleanField("completed", BooleanUtils.isTrue(item.getCompleted()));
-            jGenerator.writeEndObject();
-
-        }
-        jGenerator.writeEndArray();
-        jGenerator.writeEndObject();
-        jGenerator.close();
-        response.getWriter().close();
-
     }
 
 }

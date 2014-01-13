@@ -35,13 +35,13 @@
         </footer>
         <script id="todo-template" type="text/x-handlebars-template">
         {{#this}}
-        <li class="chk-list {{#if completed}}completed{{/if}}" data-id="{{id}}">
+        <li class="chk-list {{#if Completed}}completed{{/if}}" data-id="{{Id}}">
             <div class="view">
-                <input class="toggle" type="checkbox" {{#if completed}}checked{{/if}}/>
-                <label>{{title}}</label>
+                <input class="toggle" type="checkbox" {{#if Completed}}checked{{/if}}/>
+                <label>{{Title}}</label>
                 <button class="destroy"></button>
             </div>
-            <input class="edit" value="{{title}}"/>
+            <input class="edit" value="{{Title}}"/>
         </li>
         {{/this}}
         </script>
