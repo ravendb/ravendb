@@ -4,212 +4,212 @@ using Voron.Debugging;
 
 namespace Voron.Tests.Bugs
 {
-	using System;
-	using System.Collections.Generic;
-	using System.IO;
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
 
-	using Voron.Impl;
-	using Voron.Trees;
+    using Voron.Impl;
+    using Voron.Trees;
 
-	using Xunit;
+    using Xunit;
 
-	public class PageSplitter : StorageTest
-	{
-		readonly Random _random = new Random(1234);
+    public class PageSplitter : StorageTest
+    {
+        readonly Random _random = new Random(1234);
 
-		private string RandomString(int size)
-		{
-			var builder = new StringBuilder();
-			for (int i = 0; i < size; i++)
-			{
-				builder.Append(Convert.ToChar(Convert.ToInt32(Math.Floor(26 * _random.NextDouble() + 65))));
-			}
+        private string RandomString(int size)
+        {
+            var builder = new StringBuilder();
+            for (int i = 0; i < size; i++)
+            {
+                builder.Append(Convert.ToChar(Convert.ToInt32(Math.Floor(26 * _random.NextDouble() + 65))));
+            }
 
-			return builder.ToString();
-		}
+            return builder.ToString();
+        }
 
-		//Voron must support this in order to support MultiAdd() with values > 2000 characters
-		[Fact]
-		public void TreeAdds_WithVeryLargeKey()
-		{
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				Env.CreateTree(tx, "foo");
-				tx.Commit();
-			}
+        //Voron must support this in order to support MultiAdd() with values > 2000 characters
+        [Fact]
+        public void TreeAdds_WithVeryLargeKey()
+        {
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                Env.CreateTree(tx, "foo");
+                tx.Commit();
+            }
 
-			var inputData = new List<string>();
-			for (int i = 0; i < 1000; i++)
-			{
-				inputData.Add(RandomString(1024));
-			}
+            var inputData = new List<string>();
+            for (int i = 0; i < 1000; i++)
+            {
+                inputData.Add(RandomString(1024));
+            }
 
-			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
-			{
-				var tree = tx.GetTree("foo");
-				for (int index = 0; index < inputData.Count; index++)
-				{
-					var keyString = inputData[index];
-					Assert.DoesNotThrow(() => tree.Add(tx, keyString, new MemoryStream(new byte[] { 1, 2, 3, 4 })));
-				}
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var tree = tx.Environment.State.GetTree(tx, "foo");
+                for (int index = 0; index < inputData.Count; index++)
+                {
+                    var keyString = inputData[index];
+                    Assert.DoesNotThrow(() => tree.Add(tx, keyString, new MemoryStream(new byte[] { 1, 2, 3, 4 })));
+                }
 
-				tx.Commit();
-			}
-		}
+                tx.Commit();
+            }
+        }
 
-		[Fact]
-		public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
-		{
-			var ids = ReadIds("data.txt");
-			var env = Env;
-			{
-				var rand = new Random();
-				var testBuffer = new byte[79];
-				rand.NextBytes(testBuffer);
+        [Fact]
+        public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
+        {
+            var ids = ReadIds("data.txt");
+            var env = Env;
+            {
+                var rand = new Random();
+                var testBuffer = new byte[79];
+                rand.NextBytes(testBuffer);
 
-				var trees = CreateTrees(env, 1, "tree");
+                var trees = CreateTrees(env, 1, "tree");
 
-				var addedIds = new List<string>();
-				foreach (var id in ids) // 244276974/13/250/2092845878 -> 8887 iteration
-				{
-					
-					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-					{
-						foreach (var treeName in trees)
-						{
-						    var tree = tx.GetTree(treeName);
+                var addedIds = new List<string>();
+                foreach (var id in ids) // 244276974/13/250/2092845878 -> 8887 iteration
+                {
 
-							tree.Add(tx, id, new MemoryStream(testBuffer));
-						}
+                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        foreach (var treeName in trees)
+                        {
+                            var tree = tx.Environment.State.GetTree(tx, treeName);
 
-						tx.Commit();
+                            tree.Add(tx, id, new MemoryStream(testBuffer));
+                        }
 
-						addedIds.Add(id);
-					}
-				}
+                        tx.Commit();
 
-				ValidateRecords(env, trees, ids);
-			}
-		}
+                        addedIds.Add(id);
+                    }
+                }
 
-		[Fact]
-		public void PageSplitter_SmallRun()
-		{
-			var ids = ReadIds("data.txt", 35);
-			var env = Env;
-			var rand = new Random();
-			var testBuffer = new byte[79];
-			rand.NextBytes(testBuffer);
+                ValidateRecords(env, trees, ids);
+            }
+        }
 
-			var trees = CreateTrees(env, 1, "tree");
+        [Fact]
+        public void PageSplitter_SmallRun()
+        {
+            var ids = ReadIds("data.txt", 35);
+            var env = Env;
+            var rand = new Random();
+            var testBuffer = new byte[79];
+            rand.NextBytes(testBuffer);
 
-			var addedIds = new List<string>();
-			foreach (var id in ids) // 244276974/13/250/2092845878 -> 8887 iteration
-			{
-				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-				{
-					foreach (var treeName in trees)
-					{
-						var tree = tx.GetTree(treeName);
+            var trees = CreateTrees(env, 1, "tree");
 
-						tree.Add(tx, id, new MemoryStream(testBuffer));
+            var addedIds = new List<string>();
+            foreach (var id in ids) // 244276974/13/250/2092845878 -> 8887 iteration
+            {
+                using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                {
+                    foreach (var treeName in trees)
+                    {
+                        var tree = tx.Environment.State.GetTree(tx, treeName);
 
-						var readResult = tree.Read(tx, id);
-						
-						Assert.NotNull(readResult);
-					}
+                        tree.Add(tx, id, new MemoryStream(testBuffer));
 
-					tx.Commit();
+                        var readResult = tree.Read(tx, id);
 
-					addedIds.Add(id);
-				}
-			}
+                        Assert.NotNull(readResult);
+                    }
 
-			ValidateRecords(env, trees, ids);
-		}
+                    tx.Commit();
 
-		[Fact]
-		public void PageSplitterShouldCalculateSeparatorKeyCorrectly2()
-		{
-			var ids = ReadIds("data2.txt");
+                    addedIds.Add(id);
+                }
+            }
 
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
-			{
-				var rand = new Random();
-				var testBuffer = new byte[69];
-				rand.NextBytes(testBuffer);
+            ValidateRecords(env, trees, ids);
+        }
 
-				var trees = CreateTrees(env, 1, "tree");
+        [Fact]
+        public void PageSplitterShouldCalculateSeparatorKeyCorrectly2()
+        {
+            var ids = ReadIds("data2.txt");
 
-				foreach (var id in ids)
-				{
-					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
-					{
-						foreach (var treeName in trees)
-						{
-							var tree = tx.GetTree(treeName);
-							tree.Add(tx, id, new MemoryStream(testBuffer));
-						}
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+            {
+                var rand = new Random();
+                var testBuffer = new byte[69];
+                rand.NextBytes(testBuffer);
 
-						tx.Commit();
-					}
-				}
+                var trees = CreateTrees(env, 1, "tree");
 
-				ValidateRecords(env, trees, ids);
-			}
-		}
+                foreach (var id in ids)
+                {
+                    using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        foreach (var treeName in trees)
+                        {
+                            var tree = tx.Environment.State.GetTree(tx, treeName);
+                            tree.Add(tx, id, new MemoryStream(testBuffer));
+                        }
 
-		private void ValidateRecords(StorageEnvironment env, IEnumerable<string> trees, IList<string> ids)
-		{
-			using (var snapshot = env.CreateSnapshot())
-			{
-				foreach (var tree in trees)
-				{
-					using (var iterator = snapshot.Iterate(tree))
-					{
-						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
+                        tx.Commit();
+                    }
+                }
 
-						var keys = new HashSet<string>();
+                ValidateRecords(env, trees, ids);
+            }
+        }
 
-						var count = 0;
-						do
-						{
-							keys.Add(iterator.CurrentKey.ToString());
-							Assert.True(ids.Contains(iterator.CurrentKey.ToString()));
-						    var readResult = snapshot.Read(tree, iterator.CurrentKey);
-						    if (readResult == null)
-						    {
-						        
-						    }
-						    Assert.NotNull(readResult);
+        private void ValidateRecords(StorageEnvironment env, IEnumerable<string> trees, IList<string> ids)
+        {
+            using (var snapshot = env.CreateSnapshot())
+            {
+                foreach (var tree in trees)
+                {
+                    using (var iterator = snapshot.Iterate(tree))
+                    {
+                        Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 
-							count++;
-						}
-						while (iterator.MoveNext());
+                        var keys = new HashSet<string>();
 
-						Assert.Equal(ids.Count, snapshot.Transaction.GetTree(tree).State.EntriesCount);
-						Assert.Equal(ids.Count, count);
-						Assert.Equal(ids.Count, keys.Count);
-					}
-				}
-			}
-		}
+                        var count = 0;
+                        do
+                        {
+                            keys.Add(iterator.CurrentKey.ToString());
+                            Assert.True(ids.Contains(iterator.CurrentKey.ToString()));
+                            var readResult = snapshot.Read(tree, iterator.CurrentKey);
+                            if (readResult == null)
+                            {
 
-		private static IList<string> ReadIds(string fileName, int maxSize = int.MaxValue)
-		{
-			using (var reader = new StreamReader("Bugs/Data/" + fileName))
-			{
-				string line;
+                            }
+                            Assert.NotNull(readResult);
 
-				var results = new List<string>();
+                            count++;
+                        }
+                        while (iterator.MoveNext());
 
-				while (!string.IsNullOrEmpty(line = reader.ReadLine()) && results.Count < maxSize)
-				{
-					results.Add(line.Trim());
-				}
+                        Assert.Equal(ids.Count, snapshot.Transaction.Environment.State.GetTree(snapshot.Transaction, tree).State.EntriesCount);
+                        Assert.Equal(ids.Count, count);
+                        Assert.Equal(ids.Count, keys.Count);
+                    }
+                }
+            }
+        }
 
-				return results;
-			}
-		}
-	}
+        private static IList<string> ReadIds(string fileName, int maxSize = int.MaxValue)
+        {
+            using (var reader = new StreamReader("Bugs/Data/" + fileName))
+            {
+                string line;
+
+                var results = new List<string>();
+
+                while (!string.IsNullOrEmpty(line = reader.ReadLine()) && results.Count < maxSize)
+                {
+                    results.Add(line.Trim());
+                }
+
+                return results;
+            }
+        }
+    }
 }

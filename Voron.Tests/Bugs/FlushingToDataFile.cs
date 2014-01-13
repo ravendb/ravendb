@@ -164,7 +164,7 @@ namespace Voron.Tests.Bugs
                         {
                             foreach (var tree in trees)
                             {
-                                tx.GetTree(tree).Add(tx, string.Format("key/{0}/{1}", a, i), new MemoryStream(buffer));
+                                tx.Environment.State.GetTree(tx,tree).Add(tx, string.Format("key/{0}/{1}", a, i), new MemoryStream(buffer));
                             }
 
                         }
@@ -183,7 +183,7 @@ namespace Voron.Tests.Bugs
                 {
                     foreach (var tree in trees)
                     {
-                        using (var iterator = tx.GetTree(tree).Iterate(tx))
+                        using (var iterator = tx.Environment.State.GetTree(tx,tree).Iterate(tx))
                         {
                             if (!iterator.Seek(Slice.BeforeAllKeys))
                                 continue;

@@ -152,7 +152,7 @@ namespace Voron.Impl
         {
             foreach (var g in operations.GroupBy(x => x.TreeName))
             {
-                var tree = tx.State.GetTree(g.Key, tx);
+                var tree = tx.State.GetTree(tx, g.Key);
                 // note that the ordering is done purely for performance reasons
                 // we rely on the fact that there can be only a single operation per key in
                 // each batch, and that we don't make any guarantees regarding ordering between

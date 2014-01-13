@@ -20,7 +20,7 @@ namespace Voron.Tests.Trees
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var stream = tx.GetTree("test").Read(tx, "test");
+				var stream = tx.Environment.State.GetTree(tx,"test").Read(tx, "test");
 				Assert.NotNull(stream);
 
 				tx.Commit();
@@ -42,14 +42,14 @@ namespace Voron.Tests.Trees
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 
-				tx.GetTree("test").Add(tx, "test2", StreamFor("abc"));
+				tx.Environment.State.GetTree(tx,"test").Add(tx, "test2", StreamFor("abc"));
 
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var stream = tx.GetTree("test").Read(tx, "test2");
+				var stream = tx.Environment.State.GetTree(tx,"test").Read(tx, "test2");
 				Assert.NotNull(stream);
 
 				tx.Commit();
@@ -68,7 +68,7 @@ namespace Voron.Tests.Trees
 			    {
 			        using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			        {
-			            tx.GetTree("test");
+			            tx.Environment.State.GetTree(tx,"test");
 			        }
 			    });
 			Assert.Equal("No such tree: test", e.Message);

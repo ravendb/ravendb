@@ -132,12 +132,26 @@ namespace Voron.Impl
 			}
 		}
 
-		public Tree GetTree(string treeName)
+		public Tree ReadTree(string treeName)
 		{
-			return State.GetTree(treeName, this);
+		    Tree tree;
+		    if (_trees.TryGetValue(treeName, out tree))
+		        return tree;
+
+            var header = (TreeRootHeader*)State.Root.DirectRead(this, treeName);
+		    if (header != null)
+		    {
+		        tree = Tree.Open(this, _env.SliceComparer, header);
+		        tree.Name = treeName;
+		        _trees.Add(treeName, tree);
+		        return tree;
+		    }
+
+		    _trees.Add(treeName, null);
+		    return null;
 		}
 
-		public Page ModifyPage(long num, Page page)
+	    public Page ModifyPage(long num, Page page)
 		{
 			_env.AssertFlushingNotFailed();
 
@@ -449,7 +463,12 @@ namespace Voron.Impl
 
 	    public void AddTree(string name, Tree tree)
 	    {
-	        _trees.Add(name, tree);
+	        Tree value;
+	        if (_trees.TryGetValue(name, out value) && value != null)
+	        {
+	            throw new InvalidOperationException("Tree already exists: " + name);
+	        }
+	        _trees[name] = tree;
 	    }
 	}
 }

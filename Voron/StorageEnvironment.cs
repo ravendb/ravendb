@@ -232,7 +232,7 @@ namespace Voron
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");
 
-	        Tree tree = tx.GetTree(name);
+	        Tree tree = tx.ReadTree(name);
 	        if (tree == null)
 	            return;
 
@@ -251,7 +251,7 @@ namespace Voron
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot create a new tree with a read only transaction");
 
-            Tree tree = tx.GetTree(name);
+            Tree tree = tx.ReadTree(name);
             if (tree != null)
                 return tree;
 

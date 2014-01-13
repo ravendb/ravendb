@@ -24,8 +24,8 @@
                 {
                     using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                     {
-                        tx.GetTree("tree0").Add(tx, string.Format("key/{0}/{1}/1", new string('0', 1000), a), new MemoryStream());
-                        tx.GetTree("tree0").Add(tx, string.Format("key/{0}/{1}/2", new string('0', 1000), a), new MemoryStream());
+                        tx.Environment.State.GetTree(tx,"tree0").Add(tx, string.Format("key/{0}/{1}/1", new string('0', 1000), a), new MemoryStream());
+                        tx.Environment.State.GetTree(tx,"tree0").Add(tx, string.Format("key/{0}/{1}/2", new string('0', 1000), a), new MemoryStream());
 
                         tx.Commit();
                     }
@@ -33,14 +33,14 @@
 
                 using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                 {
-                    tx.GetTree("tree1").Add(tx, "yek/1", new MemoryStream());
+                    tx.Environment.State.GetTree(tx,"tree1").Add(tx, "yek/1", new MemoryStream());
 
                     tx.Commit();
                 }
 
                 using (var txr = env.NewTransaction(TransactionFlags.Read))
                 {
-                    using (var iterator = txr.GetTree("tree0").Iterate(txr))
+                    using (var iterator = txr.Environment.State.GetTree(txr, "tree0").Iterate(txr))
                     {
                         Assert.True(iterator.Seek(Slice.BeforeAllKeys)); // all pages are from scratch (one from position 11)
 
@@ -50,7 +50,7 @@
 
                         using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
                         {
-                            var tree = txw.GetTree("tree1");
+                            var tree = txw.Environment.State.GetTree(txw, "tree1");
                             tree.Add(txw, string.Format("yek/{0}/0/0", new string('0', 1000)), new MemoryStream()); // allocates new page from scratch (position 11)
 
                             txw.Commit();

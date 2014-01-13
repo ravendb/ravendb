@@ -122,7 +122,7 @@
 
 		private Tree GetTree(string treeName)
 		{
-			var tree = treeName == null ? Transaction.State.Root : Transaction.State.GetTree(treeName, Transaction);
+			var tree = treeName == null ? Transaction.State.Root : Transaction.State.GetTree(Transaction, treeName);
 			return tree;
 		}	
 	}
