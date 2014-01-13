@@ -327,7 +327,7 @@ namespace Voron.Impl
 
 			foreach (var pageFromScratch in _transactionPages)
 			{
-				_env.ScratchBufferPool.Free(pageFromScratch.PositionInScratchBuffer);
+				_env.ScratchBufferPool.Free(pageFromScratch.PositionInScratchBuffer, -1);
 			}
 
 			RolledBack = true;

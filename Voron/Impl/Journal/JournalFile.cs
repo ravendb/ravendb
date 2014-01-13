@@ -188,7 +188,7 @@ namespace Voron.Impl.Journal
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
 
-        public void FreeScratchPagesOlderThan(StorageEnvironment env, long lastSyncedTransactionId)
+        public void FreeScratchPagesOlderThan(Transaction tx, long lastSyncedTransactionId)
         {
             List<KeyValuePair<long, PagePosition>> unusedPages;
 
@@ -204,12 +204,12 @@ namespace Voron.Impl.Journal
 
             foreach (var unusedScratchPage in unusedAndFree)
             {
-                env.ScratchBufferPool.Free(unusedScratchPage.ScratchPos);
+                tx.Environment.ScratchBufferPool.Free(unusedScratchPage.ScratchPos, tx.Id);
             }
 
             foreach (var unusedScratchPage in unusedPages)
             {
-                env.ScratchBufferPool.Free(unusedScratchPage.Value.ScratchPos);
+                tx.Environment.ScratchBufferPool.Free(unusedScratchPage.Value.ScratchPos, tx.Id);
             }
         }
     }

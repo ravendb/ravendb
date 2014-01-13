@@ -471,7 +471,7 @@ namespace Voron.Impl.Journal
 						if (_waj._files.Count == 0)
 							_waj.CurrentFile = null;
 						
-						FreeScratchPages(unusedJournals);
+						FreeScratchPages(unusedJournals, txw);
 
 						if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
 							DateTime.Now - _lastDataFileSyncTime > DelayedDataFileSynchronizationTimeLimit)
@@ -562,15 +562,15 @@ namespace Voron.Impl.Journal
 				}
 			}
 
-			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles)
+			private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, Transaction txw)
 			{
 				foreach (var jrnl in _waj._files)
 				{
-					jrnl.FreeScratchPagesOlderThan(_waj._env, _lastSyncedTransactionId);
+                    jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
 				}
 				foreach (var journalFile in unusedJournalFiles)
 				{
-					journalFile.FreeScratchPagesOlderThan(_waj._env, long.MaxValue);
+                    journalFile.FreeScratchPagesOlderThan(txw, long.MaxValue);
 				}
 			}
 
