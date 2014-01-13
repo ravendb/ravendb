@@ -303,6 +303,11 @@ namespace Raven.Database.Server.Controllers
 			{
 				token = RavenJToken.FromObject(item);
 			}
+
+            bool metadataOnly;
+            if (bool.TryParse(GetQueryStringValue("metadata-only"), out metadataOnly) && metadataOnly)
+                token = HttpExtensions.MinimizeToken(token);
+            
 			var msg = new HttpResponseMessage(code)
 			{
 				Content = new JsonContent(token),
