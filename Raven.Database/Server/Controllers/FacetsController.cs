@@ -19,6 +19,7 @@ namespace Raven.Database.Server.Controllers
 	{
 		[HttpGet]
 		[Route("facets/{*id}")]
+        [Route("databases/{databaseName}/facets/{*id}")]
 		public async Task<HttpResponseMessage> FacetsGet(string id)
 		{
 			return await Facets(id, "GET");
@@ -26,6 +27,7 @@ namespace Raven.Database.Server.Controllers
 
 		[HttpPost]
 		[Route("facets/{*id}")]
+        [Route("databases/{databaseName}/facets/{*id}")]
 		public async Task<HttpResponseMessage> FacetsPost(string id)
 		{
 			return await Facets(id, "POST");
