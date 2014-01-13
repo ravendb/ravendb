@@ -51,4 +51,4 @@ class copyDocuments {
     }
 }
 
-export = copyDocuments;
+export = copyDocuments; 
