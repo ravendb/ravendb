@@ -194,3 +194,28 @@ interface replicationStatsDto {
     FailureCount: number;
     LastError: string;
 }
+
+interface indexDefinitionContainerDto {
+    Index: indexDefinitionDto;
+}
+
+interface indexDefinitionDto {
+    Name: string;
+    LockMode: string;
+    Map: string;
+    Maps: string[];
+    Reduce: string;
+    TransformResults: string;
+    IsMapReduce: boolean;
+    IsCompiled: boolean;
+    Stores: any;
+    Indexes: any;
+    SortOptions: any;
+    Analyzers: any;
+    Fields: string[];
+    Suggestions: any;
+    TermVectors: any;
+    SpatialIndexes: any;
+    InternalFieldsMapping: any;
+    Type: string;
+}

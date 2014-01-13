@@ -1,3 +1,43 @@
 ﻿<section>
-    TODO: Edit index
+    
+    <button class="btn btn-primary">
+        <i class="fa fa-save"></i>
+    </button>
+
+    <div class="btn-group">
+        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+            <i class="fa fa-plus"></i>
+            Add
+            <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu">
+            <li><a href="#">Map</a></li>
+            <li><a href="#">Reduce</a></li>
+            <li><a href="#">Field</a></li>
+            <li><a href="#">Transform</a></li>
+            <li><a href="#">Spatial Field</a></li>
+        </ul>
+    </div>
+
+    <div class="btn-group">
+        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+            <span data-bind="text: priorityText"></span>
+            <span class="caret"></span>
+        </button>
+            
+        <ul class="dropdown-menu">
+            <li><a href="#">Normal</a></li>
+            <li><a href="#">Idle</a></li>
+            <li><a href="#">Disabled</a></li>
+            <li><a href="#">Abandoned</a></li>
+        </ul>
+    </div>
+
+    <div class="btn-group">
+        <a class="btn btn-default" title="Run the index">
+            <i class="fa fa-play"></i>
+        </a>
+        <a class="btn btn-default" href="#" title="Navigate to index terms">Terms</a>
+        <a class="btn btn-default" href="#" title="Navigate to index stats">Stats</a>
+    </div>
 </section>

@@ -49,10 +49,8 @@ class indexes extends activeDbViewModelBase {
     putIndexIntoGroupNamed(i: index, groupName: string) {
         var group = this.indexGroups.first(g => g.entityName === groupName);
         if (group) {
-            console.log("putting index into existing group", group.entityName);
             group.indexes.push(i);
         } else {
-            console.log("putting index into new group", groupName);
             this.indexGroups.push({ entityName: groupName, indexes: ko.observableArray([i]) });
         }
     }

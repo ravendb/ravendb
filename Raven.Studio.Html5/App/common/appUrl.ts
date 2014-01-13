@@ -93,8 +93,7 @@ class appUrl {
 
     static forEditIndex(indexName: string, db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        var indexNamePart = "/" + indexName;
-        return "#indexes/edit" + indexNamePart + databasePart;
+        return "#indexes/edit/" + indexName + "?" + databasePart;
     }
 
     static forQuery(db: database): string {

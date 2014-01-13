@@ -85,6 +85,7 @@
     <TypeScriptCompile Include="App\commands\getDatabaseStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsByEntityNameCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentWithMetadataCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getIndexDefinitionCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLicenseStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLogsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationStatsCommand.ts" />
