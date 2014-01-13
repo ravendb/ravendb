@@ -13,7 +13,7 @@ class indexes extends activeDbViewModelBase {
 
         this.router = durandalRouter.createChildRouter()
             .map([
-                { route: 'indexes', moduleId: 'viewmodels/indexesAll', title: 'Indexes', nav: true },
+                { route: 'indexes', moduleId: 'viewmodels/indexesAll', title: 'Index List', nav: true },
                 { route: 'indexes/edit(/:indexName)', moduleId: 'viewmodels/editIndex', title: 'Edit Index', nav: true }
             ])
             .buildNavigationModel();

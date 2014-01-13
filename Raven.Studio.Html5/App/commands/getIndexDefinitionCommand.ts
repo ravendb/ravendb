@@ -11,3 +11,5 @@ class getIndexDefinitionCommand extends commandBase {
         return this.query(url, null, this.db);
     }
 }
+
+export = getIndexDefinitionCommand;

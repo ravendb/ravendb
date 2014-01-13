@@ -1,43 +1,85 @@
 ﻿<section>
-    
-    <button class="btn btn-primary">
-        <i class="fa fa-save"></i>
-    </button>
+    <div class="btn-toolbar">
+        <div class="btn-group">
+            <button class="btn btn-primary">
+                <i class="fa fa-save"></i>
+            </button>
+        </div>
 
-    <div class="btn-group">
-        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-            <i class="fa fa-plus"></i>
-            Add
-            <span class="caret"></span>
-        </button>
-        <ul class="dropdown-menu">
-            <li><a href="#">Map</a></li>
-            <li><a href="#">Reduce</a></li>
-            <li><a href="#">Field</a></li>
-            <li><a href="#">Transform</a></li>
-            <li><a href="#">Spatial Field</a></li>
-        </ul>
+        <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <i class="fa fa-plus"></i>
+                Add
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                <li><a href="#">Map</a></li>
+                <li><a href="#">Reduce</a></li>
+                <li><a href="#">Field</a></li>
+                <li><a href="#">Transform</a></li>
+                <li><a href="#">Spatial Field</a></li>
+            </ul>
+        </div>
+
+        <div class="btn-group">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                <span data-bind="text: priorityText"></span>
+                <span class="caret"></span>
+            </button>
+
+            <ul class="dropdown-menu">
+                <li><a href="#">Normal</a></li>
+                <li><a href="#">Idle</a></li>
+                <li><a href="#">Disabled</a></li>
+                <li><a href="#">Abandoned</a></li>
+            </ul>
+        </div>
+
+        <div class="btn-group">
+            <a class="btn btn-default" title="Run the index">
+                <i class="fa fa-play"></i>
+            </a>
+            <a class="btn btn-default" href="#" title="Navigate to index terms">Terms</a>
+            <a class="btn btn-default" href="#" title="Navigate to index stats">Stats</a>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes">
+                <i class="fa fa-refresh"></i>
+            </button>
+            <button class="btn btn-danger" title="Delete index">
+                <i class="fa fa-trash-o"></i>
+            </button>
+        </div>
     </div>
 
-    <div class="btn-group">
-        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-            <span data-bind="text: priorityText"></span>
-            <span class="caret"></span>
-        </button>
-            
-        <ul class="dropdown-menu">
-            <li><a href="#">Normal</a></li>
-            <li><a href="#">Idle</a></li>
-            <li><a href="#">Disabled</a></li>
-            <li><a href="#">Abandoned</a></li>
-        </ul>
-    </div>
-
-    <div class="btn-group">
-        <a class="btn btn-default" title="Run the index">
-            <i class="fa fa-play"></i>
-        </a>
-        <a class="btn btn-default" href="#" title="Navigate to index terms">Terms</a>
-        <a class="btn btn-default" href="#" title="Navigate to index stats">Stats</a>
+    <div data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+        <br />
+        <form class="form-horizontal" role="form" data-bind="with: editedIndex">
+            <div class="form-group">
+                <label for="indexName" class="col-md-1 control-label">Name</label>
+                <div class="col-md-11">
+                    <input type="text" class="form-control" id="indexName" placeholder="Index name" data-bind="value: name">
+                </div>
+            </div>
+            <div class="form-group">
+                <label id="indexMapsLabel" class="col-sm-1 control-label" data-placement="auto right" data-original-title="Index maps" data-trigger="hover">
+                    Maps
+                    <i class="fa fa-info-circle text-info"></i>
+                </label>
+                <div class="col-md-11" data-bind="foreach: maps">
+                    <textarea class="form-control" rows="5" placeholder="from order in docs.Orders where order.IsShipped select new { order.Amount }" data-bind="value: $data"></textarea>
+                </div>
+            </div>
+            <div class="form-group" data-bind="if: reduce">
+                <label id="indexReduceLabel" for="indexReduce" class="col-md-1 control-label" data-placement="auto right" data-original-title="Index reduce" data-trigger="hover">
+                    Reduce
+                    <i class="fa fa-info-circle text-info"></i>
+                </label>
+                <div class="col-md-11">
+                    <textarea class="form-control" id="indexReduce" rows="8" placeholder="Reduce" data-bind="value: reduce"></textarea>
+                </div>
+            </div>
+        </form>
     </div>
 </section>
