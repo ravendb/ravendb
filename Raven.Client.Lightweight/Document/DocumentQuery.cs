@@ -277,6 +277,42 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.ContainsAny(string fieldName, IEnumerable<object> values)
+		{
+			ContainsAny(fieldName, values);
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+		public IDocumentQuery<T> ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+		{
+			ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.ContainsAll(string fieldName, IEnumerable<object> values)
+		{
+			ContainsAll(fieldName, values);
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		public IDocumentQuery<T> ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+		{
+			ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+			return this;
+		}
+
+		/// <summary>
 		/// Provide statistics about the query, such as total count of matching records
 		/// </summary>
 		IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Statistics(out RavenQueryStatistics stats)

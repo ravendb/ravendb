@@ -292,7 +292,7 @@ namespace Raven.Database.Server.Controllers
 
 			if (queryResult.NonAuthoritativeInformation)
 				return GetEmptyMessage(HttpStatusCode.NonAuthoritativeInformation, indexEtag);
-
+		    
 			return GetMessageWithObject(queryResult, HttpStatusCode.OK, indexEtag);
 		}
 

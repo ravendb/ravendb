@@ -29,6 +29,8 @@ namespace Raven.Database.Server.Controllers
 
 		protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
+
+            
 			if (HasNoData())
 				return Task.FromResult(true);
 
