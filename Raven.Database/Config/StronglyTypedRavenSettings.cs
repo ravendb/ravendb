@@ -41,6 +41,8 @@ namespace Raven.Database.Config
 				new IntegerSetting(settings["Raven/MaxIndexWritesBeforeRecreate"], 256 * 1024);
 			PreventAutomaticSuggestionCreation =
 				new BooleanSetting(settings["Raven/PreventAutomaticSuggestionCreation"], false);
+			DisablePerformanceCounters =
+				new BooleanSetting(settings["Raven/DisablePerformanceCounters"], false);
 
 			MaxNumberOfItemsToIndexInSingleBatch =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"],
@@ -244,5 +246,7 @@ namespace Raven.Database.Config
 		public IntegerSetting MaxIndexWritesBeforeRecreate { get; private set; }
 
 		public BooleanSetting PreventAutomaticSuggestionCreation { get; set; }
-	}
+    
+        public BooleanSetting DisablePerformanceCounters { get; set; }
+    }
 }
