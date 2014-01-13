@@ -1614,6 +1614,7 @@
     </None>
     <None Include="App.config">
       <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <EmbeddedResource Include="DefaultLogging.config" />
     <EmbeddedResource Include="MailingList\MapReduceIssue\MvcMusicStore_Dump.json" />

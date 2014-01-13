@@ -13,14 +13,14 @@ namespace Raven.Tests.Bugs.Iulian
 			public string Tag { get; set; }
 		}
 
-		//[Fact]
-		[TimeBombedFact(2014, 1, 31)]
+		[Fact]
+		//[TimeBombedFact(2014, 1, 31)]
 		public void Can_Load_entities_with_id_containing_url()
 		{
 			var id = @"mssage@msmq://local/Sample.AppService";
 
-			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+			using (var server = GetNewServer(requestedStorage:"esent"))
+			using (var store = NewRemoteDocumentStore(true,server))
 			{
 				using (var s = store.OpenSession())
 				{
@@ -31,7 +31,7 @@ namespace Raven.Tests.Bugs.Iulian
 
 				using (var s = store.OpenSession())
 				{
-					Event loaded = s.Query<Event>().Where(e => e.Id == id).Single();
+					Event loaded = s.Query<Event>().Single(e => e.Id == id);
 					// this passes
 					Assert.NotNull(loaded);
 					Assert.Equal("tag",loaded.Tag);

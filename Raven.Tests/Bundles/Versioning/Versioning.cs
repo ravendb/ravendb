@@ -15,6 +15,7 @@ using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Smuggler;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bundles.Versioning
 {
@@ -263,8 +264,8 @@ namespace Raven.Tests.Bundles.Versioning
 		}
 
 		// This test will fail on munin
-		// [Fact]
-		[TimeBombedFact(2014, 3, 1)]
+		[Fact]
+		//[TimeBombedFact(2014, 3, 1)]
 		public void Will_delete_child_revisions_if_purge_is_true()
 		{
 			using (var session = documentStore.OpenSession())
