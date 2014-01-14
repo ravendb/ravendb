@@ -56,6 +56,14 @@
                             txw.Commit();
                         }
 
+						using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+                        {
+                            var tree = txw.Environment.State.GetTree(txw, "tree1");
+                            tree.Add(txw, "fake", new MemoryStream());
+
+                            txw.Commit();
+                        }
+
                         Assert.Equal(currentKey, iterator.CurrentKey.ToString());
 
                         var count = 0;
