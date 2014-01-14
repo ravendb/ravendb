@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
@@ -244,11 +245,17 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 
 			storage.Batch(
 				accessor =>
-				filesToRename =
-				accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.RenameOperationConfigPrefix, 0, 10).Select(
-					config => config.AsObject<RenameFileOperation>()).ToList());
+				{
+					var configsThatStartWithPrefix =
+						accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.RenameOperationConfigPrefix, 0, 10);
+
+					filesToRename = configsThatStartWithPrefix.Select(config => config.AsObject<RenameFileOperation>()).ToList();
+				});
 
 			var tasks = new List<Task>();
+
+			if(filesToRename == null)
+				throw new InvalidOperationException("Files to rename list is null. This should never happen.");
 
 			foreach (var item in filesToRename)
 			{
