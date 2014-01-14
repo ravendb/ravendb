@@ -11,6 +11,8 @@ class indexDefinition {
     name = ko.observable<string>();
     reduce = ko.observable<string>();
     sortOptions: any;
+    transformResults = ko.observable<string>();
+    spatialIndexes: any;
 
     constructor(dto: indexDefinitionDto) {
         this.analyzers = dto.Analyzers;
@@ -25,6 +27,8 @@ class indexDefinition {
         this.name(dto.Name);
         this.reduce(dto.Reduce);
         this.sortOptions = dto.SortOptions;
+        this.spatialIndexes = dto.SpatialIndexes;
+        this.transformResults(dto.TransformResults);
     }
 }
 

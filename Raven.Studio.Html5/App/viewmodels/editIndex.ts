@@ -10,11 +10,15 @@ class editIndex extends activeDbViewModelBase {
     priority = ko.observable("");
     priorityText: KnockoutComputed<string>;
     editedIndex = ko.observable<indexDefinition>();
+    hasExistingReduce: KnockoutComputed<string>;
+    hasExistingTransform: KnockoutComputed<string>;
 
     constructor() {
         super();
 
         this.priorityText = ko.computed(() => this.priority() ? "Priority: " + this.priority() : "Priority");
+        this.hasExistingReduce = ko.computed(() => this.editedIndex() && this.editedIndex().reduce());
+        this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
     }
 
     activate(indexToEditName: string) {
@@ -41,6 +45,12 @@ class editIndex extends activeDbViewModelBase {
             html: true,
             trigger: 'hover',
             content: 'The Reduce function consolidates documents from the Maps stage into a smaller set of documents. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> result <span class="code-keyword">in</span> results<br/><span class="code-keyword">group</span> result <span class="code-keyword">by new</span> { result.RegionId, result.Date }<br/><span class="code-keyword">select new</span><br/>{<br/>  Date = g.Key.Date,<br/>  RegionId = g.Key.RegionId,<br/>  Amount = g.Sum(x => x.Amount)<br/>}</pre>The objects produced by the Reduce function should have the same fields as the inputs.',
+        });
+
+        $("#indexTransformLabel").popover({
+            html: true,
+            trigger: 'hover',
+            content: '<span class="text-danger">Deprecated.</span> Index Transform has been replaced with <span class="text-info">Result Transformers</span>.<br/><br/>The Transform function allows you to change the shape of individual result documents before the server returns them. It uses LINQ query syntax.<br/><br/>Example:<pre><span class="code-keyword">from</span> order <span class="code-keyword">in</span> orders<br/><span class="code-keyword">let</span> region = Database.Load(result.RegionId)<br/><span class="code-keyword">select new</span><br/>{<br/>   result.Date,<br/>   result.Amount,<br/>   Region = region.Name,<br/>   Manager = region.Manager<br/>}</pre>'
         });
     }
 

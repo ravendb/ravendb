@@ -14,9 +14,9 @@
             </button>
             <ul class="dropdown-menu">
                 <li><a href="#">Map</a></li>
-                <li><a href="#">Reduce</a></li>
+                <li data-bind="visible: !hasExistingReduce()"><a href="#">Reduce</a></li>
                 <li><a href="#">Field</a></li>
-                <li><a href="#">Transform</a></li>
+                <li data-bind="visible: !hasExistingTransform()" title="Transform - deprecated. Use Result Transformers instead"><a class="text-muted" href="#">Transform</a></li>
                 <li><a href="#">Spatial Field</a></li>
             </ul>
         </div>
@@ -58,26 +58,52 @@
         <form class="form-horizontal" role="form" data-bind="with: editedIndex">
             <div class="form-group">
                 <label for="indexName" class="col-md-1 control-label">Name</label>
-                <div class="col-md-11">
+                <div class="col-md-10">
                     <input type="text" class="form-control" id="indexName" placeholder="Index name" data-bind="value: name">
                 </div>
             </div>
             <div class="form-group">
-                <label id="indexMapsLabel" class="col-sm-1 control-label" data-placement="auto right" data-original-title="Index maps" data-trigger="hover">
+                <label id="indexMapsLabel" style="cursor: help;" class="col-sm-1 control-label" data-placement="auto right" data-original-title="Index maps" data-trigger="hover">
                     Maps
                     <i class="fa fa-info-circle text-info"></i>
                 </label>
-                <div class="col-md-11" data-bind="foreach: maps">
-                    <textarea class="form-control" rows="5" placeholder="from order in docs.Orders where order.IsShipped select new { order.Amount }" data-bind="value: $data"></textarea>
+                <div data-bind="foreach: maps">
+                    <div class="col-md-10">
+                        <textarea class="col-md-10 form-control" rows="5" placeholder="from order in docs.Orders where order.IsShipped select new { order.Amount }" data-bind="value: $data"></textarea>
+                    </div>
+                    <div class="col-md-1" data-bind="visible: $index() !== 0">
+                        <button class="btn btn-danger" title="Remove this map from the index">
+                            <i class="fa fa-trash-o"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="form-group" data-bind="if: reduce">
-                <label id="indexReduceLabel" for="indexReduce" class="col-md-1 control-label" data-placement="auto right" data-original-title="Index reduce" data-trigger="hover">
+                <label id="indexReduceLabel" style="cursor: help;" for="indexReduce" class="col-md-1 control-label" data-placement="auto right" data-original-title="Index reduce" data-trigger="hover">
                     Reduce
                     <i class="fa fa-info-circle text-info"></i>
                 </label>
-                <div class="col-md-11">
+                <div class="col-md-10">
                     <textarea class="form-control" id="indexReduce" rows="8" placeholder="Reduce" data-bind="value: reduce"></textarea>
+                </div>
+                <div class="col-md-1">
+                    <button class="btn btn-danger" title="Remove the Reduce function from the index">
+                        <i class="fa fa-trash-o"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="form-group" data-bind="if: transformResults">
+                <label id="indexTransformLabel" style="cursor: help;" for="indexTransform" class="col-md-1 control-label" data-placement="auto right" data-original-title="Index transform" data-trigger="hover">
+                    <span class="text-danger">Transform</span>
+                    <i class="fa fa-info-circle text-info"></i>
+                </label>
+                <div class="col-md-10">
+                    <textarea class="form-control" id="indexTransform" rows="5" placeholder="Transform" data-bind="value: transformResults"></textarea>
+                </div>
+                <div class="col-md-1">
+                    <button class="btn btn-danger" title="Remove transform results statement from the index">
+                        <i class="fa fa-trash-o"></i>
+                    </button>
                 </div>
             </div>
         </form>
