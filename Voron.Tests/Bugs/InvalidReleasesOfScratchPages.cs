@@ -12,6 +12,28 @@ namespace Voron.Tests.Bugs
 	public class InvalidReleasesOfScratchPages : StorageTest
 	{
 		[Fact]
+		public void ReadTransactionCanReadJustCommittedValue()
+		{
+			var options = StorageEnvironmentOptions.GetInMemory();
+			options.ManualFlushing = true;
+			using (var env = new StorageEnvironment(options))
+			{
+				CreateTrees(env, 1, "tree");
+
+				using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					txw.Environment.State.GetTree(txw, "tree0").Add(txw, "key/1", new MemoryStream());
+					txw.Commit();
+
+					using (var txr = env.NewTransaction(TransactionFlags.Read))
+					{
+						Assert.NotNull(txr.Environment.State.GetTree(txr, "tree0").Read(txr, "key/1"));
+					}
+				}
+			}
+		}
+
+		[Fact]
 		public void ParallelWritesInBatchesAndReadsByUsingTreeIterator()
 		{
 			const int numberOfWriteThreads = 10;
