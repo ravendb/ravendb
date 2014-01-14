@@ -56,6 +56,8 @@
                             txw.Commit();
                         }
 
+						Assert.Equal(currentKey, iterator.CurrentKey.ToString());
+
 						using (var txw = env.NewTransaction(TransactionFlags.ReadWrite))
                         {
                             var tree = txw.Environment.State.GetTree(txw, "tree1");
