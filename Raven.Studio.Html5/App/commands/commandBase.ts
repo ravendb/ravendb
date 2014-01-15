@@ -1,4 +1,3 @@
-import raven = require("common/raven");
 import alertArgs = require("common/alertArgs");
 import alertType = require("common/alertType");
 import database = require("models/database");

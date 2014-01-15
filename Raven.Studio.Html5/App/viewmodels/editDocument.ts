@@ -10,15 +10,14 @@ import database = require("models/database");
 import documentMetadata = require("models/documentMetadata");
 import collection = require("models/collection");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
-import raven = require("common/raven");
 import deleteDocuments = require("viewmodels/deleteDocuments");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
 
-class editDocument {
+class editDocument extends activeDbViewModelBase {
 
-    ravenDb: raven;
     document = ko.observable<document>();
     metadata: KnockoutComputed<documentMetadata>;
     documentText = ko.observable('');
@@ -34,7 +33,7 @@ class editDocument {
     databaseForEditedDoc: database;
 
     constructor() {
-        this.ravenDb = new raven();
+        super();
         this.metadata = ko.computed(() => this.document() ? this.document().__metadata : null);
 
         this.document.subscribe(doc => {
@@ -74,9 +73,11 @@ class editDocument {
 
     activate(navigationArgs) {
 
+        super.activate(navigationArgs);
+
         // Find the database and collection we're supposed to load.
         // Used for paging through items.
-        this.databaseForEditedDoc = appUrl.getDatabase();
+        this.databaseForEditedDoc = this.activeDatabase();
         if (navigationArgs && navigationArgs.database) {
             ko.postbox.publish("ActivateDatabaseWithName", navigationArgs.database);
         }
@@ -180,7 +181,7 @@ class editDocument {
 
     attachReservedMetaProperties(id: string, target: documentMetadataDto) {
         target['@etag'] = '00000000-0000-0000-0000-000000000000';
-        target['Raven-Entity-Name'] = raven.getEntityNameFromId(id);
+        target['Raven-Entity-Name'] = document.getEntityNameFromId(id);
         target['@id'] = id;
     }
 
@@ -278,10 +279,8 @@ class editDocument {
     }
 
     navigateToCollection(collectionName: string) {
-        // TODO: use appUrl instead.
-        var databaseFragment = raven.activeDatabase() ? "&database=" + raven.activeDatabase().name : "";
-        var collectionFragment = collectionName ? "&collection=" + collectionName : "";
-        router.navigate("#documents?" + collectionFragment + databaseFragment);
+        var collectionUrl = appUrl.forDocuments(collectionName, this.activeDatabase());
+        router.navigate(collectionUrl);
     }
 
     navigateToDocuments() {

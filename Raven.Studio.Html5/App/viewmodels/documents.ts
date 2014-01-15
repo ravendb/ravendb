@@ -5,47 +5,33 @@ import collection = require("models/collection");
 import database = require("models/database");
 import document = require("models/document");
 import deleteCollection = require("viewmodels/deleteCollection");
-import raven = require("common/raven");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
+import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
 
-class documents {
+class documents extends activeDbViewModelBase {
 
     displayName = "documents";
-    ravenDb: raven;
     collections = ko.observableArray<collection>();
     selectedCollection = ko.observable<collection>().subscribeTo("ActivateCollection").distinctUntilChanged();
     allDocumentsCollection: collection;
     collectionToSelectName: string;
     private currentCollectionPagedItems = ko.observable<pagedList>();
-    subscriptions: Array<KnockoutSubscription> = [];
 
     constructor() {
-        this.ravenDb = new raven();
+        super();
         this.selectedCollection.subscribe(c => this.selectedCollectionChanged(c));
     }
 
     activate(args) {
-
-        var dbChangedSubscription = ko.postbox.subscribe("ActivateDatabase", (db: database) => this.databaseChanged(db));
-        this.subscriptions.push(dbChangedSubscription);
+        super.activate(args);
+        this.activeDatabase.subscribe((db: database) => this.databaseChanged(db));
 
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
         this.collectionToSelectName = args ? args.collection : null;
-
-        // See if we've got a database to select.
-        if (args && args.database) {
-            ko.postbox.publish("ActivateDatabaseWithName", args.database);
-        }
-
+        
         return this.fetchCollections(appUrl.getDatabase());
-    }
-
-    deactivate() {
-        // Unsubscribe when we leave the page.
-        // This is necessary, otherwise our subscriptions will keep the page alive in memory and otherwise screw with us.
-        this.subscriptions.forEach(s => s.dispose());
     }
 
     attached(view: HTMLElement, parent: HTMLElement) {
@@ -98,8 +84,8 @@ class documents {
 
     databaseChanged(db: database) {
         if (db) {
-            // TODO: use appUrl here.
-            router.navigate("#documents?database=" + encodeURIComponent(db.name), false);
+            var documentsUrl = appUrl.forDocuments(null, db);
+            router.navigate(documentsUrl, false);
             this.fetchCollections(db);
         }
     }
@@ -116,11 +102,10 @@ class documents {
         }
     }
 
-    activateCollection(collection: collection) {
+    selectCollection(collection: collection) {
         collection.activate();
-        var collectionPart = "collection=" + encodeURIComponent(collection.name);
-        var databasePart = raven.activeDatabase() ? "&database=" + raven.activeDatabase().name : "";
-        router.navigate("#documents?" + collectionPart + databasePart, false);
+        var documentsWithCollectionUrl = appUrl.forDocuments(collection.name, this.activeDatabase());
+        router.navigate(documentsWithCollectionUrl, false);
     }
 
     fetchCollections(db: database): JQueryPromise<Array<collection>> {

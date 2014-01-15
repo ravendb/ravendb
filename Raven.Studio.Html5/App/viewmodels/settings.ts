@@ -1,5 +1,4 @@
 import durandalRouter = require("plugins/router");
-import raven = require("common/raven");
 import database = require("models/database");
 import appUrl = require("common/appUrl");
 

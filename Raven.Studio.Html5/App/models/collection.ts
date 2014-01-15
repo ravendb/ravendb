@@ -1,4 +1,3 @@
-import raven = require("common/raven");
 import pagedList = require("common/pagedList");
 import getCollectionInfoCommand = require("commands/getCollectionInfoCommand");
 import getDocumentsByEntityNameCommand = require("commands/getDocumentsByEntityNameCommand");

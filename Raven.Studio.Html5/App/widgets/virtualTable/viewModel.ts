@@ -3,7 +3,6 @@
 
 import widget = require("plugins/widget");
 import pagedList = require("common/pagedList");
-import raven = require("common/raven");
 import appUrl = require("common/appUrl");
 import document = require("models/document");
 import collection = require("models/collection");

@@ -6,7 +6,6 @@ import app = require("durandal/app");
 import sys = require("durandal/system");
 
 import database = require("models/database");
-import raven = require("common/raven");
 import document = require("models/document");
 import appUrl = require("common/appUrl");
 import collection = require("models/collection");

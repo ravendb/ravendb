@@ -95,6 +95,7 @@
     <TypeScriptCompile Include="App\commands\saveIndexAsPersistentCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexLockModeCommand.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
+    <TypeScriptCompile Include="App\common\luceneField.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
     <TypeScriptCompile Include="App\models\apiKeyDatabase.ts" />
@@ -120,9 +121,6 @@
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
-    <Content Include="App\common\nav.js">
-      <DependentUpon>appUrl.ts</DependentUpon>
-    </Content>
     <TypeScriptCompile Include="App\viewmodels\userInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\statistics.ts" />
     <Content Include="App\views\alerts.html" />
@@ -1021,13 +1019,9 @@
     <TypeScriptCompile Include="App\common\dialogResult.ts" />
     <TypeScriptCompile Include="App\common\alertType.ts" />
     <TypeScriptCompile Include="App\common\alertArgs.ts" />
-    <TypeScriptCompile Include="App\common\raven.ts" />
     <TypeScriptCompile Include="App\commands\saveDocumentCommand.ts" />
     <Content Include="App\commands\saveDocumentCommand.js">
       <DependentUpon>saveDocumentCommand.ts</DependentUpon>
-    </Content>
-    <Content Include="App\common\raven.js">
-      <DependentUpon>raven.ts</DependentUpon>
     </Content>
     <Content Include="App\main.js" />
     <TypeScriptCompile Include="App\models\collection.ts" />
