@@ -3,7 +3,7 @@
         <div class="col-md-2">
             <br />
             <ul class="nav nav-pills nav-stacked document-collections affix" data-bind="foreach: collections">
-                <li data-bind="event: { mousedown: $parent.activateCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
+                <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
                     <a href="javascript:void(0)">
                         <div class="collection-color-strip" data-bind="css: colorClass"></div>
                         <span data-bind="text: name"></span>
