@@ -64,6 +64,7 @@
     <Compile Include="Backups\Incremental.cs" />
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
     <Compile Include="Bugs\FlushingToDataFile.cs" />
+    <Compile Include="Bugs\PagesFilteredOutByJournalApplicator.cs" />
     <Compile Include="Bugs\IndexPointToNonLeafPageTests.cs" />
     <Compile Include="Bugs\Isolation.cs" />
     <Compile Include="Bugs\LargeValues.cs" />
