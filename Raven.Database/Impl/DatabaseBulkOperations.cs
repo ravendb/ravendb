@@ -61,6 +61,7 @@ namespace Raven.Database.Impl
 				Query = indexQuery.Query,
 				Start = indexQuery.Start,
 				Cutoff = indexQuery.Cutoff,
+                WaitForNonStaleResultsAsOfNow = indexQuery.WaitForNonStaleResultsAsOfNow,
 				PageSize = int.MaxValue,
 				FieldsToFetch = new[] { Constants.DocumentIdFieldName },
 				SortedFields = indexQuery.SortedFields,

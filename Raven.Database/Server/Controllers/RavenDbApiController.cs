@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
@@ -250,6 +251,7 @@ namespace Raven.Database.Server.Controllers
 				Query = GetQueryStringValue("query") ?? "",
 				Start = GetStart(),
 				Cutoff = GetCutOff(),
+                WaitForNonStaleResultsAsOfNow = GetWaitForNonStaleResultsAsOfNow(),
 				CutoffEtag = GetCutOffEtag(),
 				PageSize = GetPageSize(maxPageSize),
 				SkipTransformResults = GetSkipTransformResults(),
@@ -273,6 +275,9 @@ namespace Raven.Database.Server.Controllers
 				SortHints = GetSortHints(),
 				IsDistinct = IsDistinct()
 			};
+
+            if (query.WaitForNonStaleResultsAsOfNow)
+                query.Cutoff = SystemTime.UtcNow;
 
 
 			var spatialFieldName = GetQueryStringValue("spatialField") ?? Constants.DefaultSpatialFieldName;
@@ -350,6 +355,13 @@ namespace Raven.Database.Server.Controllers
 			bool.TryParse(GetQueryStringValue("explainScores"), out result);
 			return result;
 		}
+
+        private bool GetWaitForNonStaleResultsAsOfNow()
+        {
+            bool result;
+            bool.TryParse(GetQueryStringValue("waitForNonStaleResultsAsOfNow"), out result);
+            return result;
+        }
 
 		public DateTime? GetCutOff()
 		{

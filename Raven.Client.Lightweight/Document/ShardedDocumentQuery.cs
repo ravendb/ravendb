@@ -108,6 +108,7 @@ namespace Raven.Client.Document
 				cutoffEtag = cutoffEtag,
 				queryStats = queryStats,
 				theWaitForNonStaleResults = theWaitForNonStaleResults,
+                theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
 				isDistinct = isDistinct,
