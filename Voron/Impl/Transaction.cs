@@ -78,6 +78,10 @@ namespace Voron.Impl
 			_freeSpaceHandling = freeSpaceHandling;
 			Flags = flags;
 
+            var scratchPagerState = env.ScratchBufferPool.PagerState;
+            scratchPagerState.AddRef();
+            _pagerStates.Add(scratchPagerState);
+
 			if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
 			{
 				_state = env.State;
@@ -86,10 +90,6 @@ namespace Voron.Impl
 			}
 
 			_state = env.State.Clone();
-
-			var scratchPagerState = env.ScratchBufferPool.PagerState;
-			scratchPagerState.AddRef();
-			_pagerStates.Add(scratchPagerState);
 
 			InitTransactionHeader();
 

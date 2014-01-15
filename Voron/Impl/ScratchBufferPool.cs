@@ -65,7 +65,7 @@ namespace Voron.Impl
             if (!_freePagesBySize.TryGetValue(size, out list) || list.Count <= 0)
                 return false;
             var val = list.First.Value;
-            if (val.ValidAfterTransactionId >= tx.Id)
+            if (val.ValidAfterTransactionId >= tx.Environment.OldestTransaction)
                 return false;
 
             list.RemoveFirst();
