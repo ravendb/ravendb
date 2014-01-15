@@ -37,7 +37,6 @@ namespace Voron.Impl.Journal
 		internal JournalFile CurrentFile;
 
 		private readonly HeaderAccessor _headerAccessor;
-		private long _lastFlushedTransaction = -1;
 
 		private IVirtualPager _compressionPager;
 
@@ -265,13 +264,6 @@ namespace Voron.Impl.Journal
 					JournalFile.PagePosition value;
 					if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
 					{
-						if (value.TransactionId <= _lastFlushedTransaction)
-						{
-							// requested page is already in the data file, don't read from the scratch space 
-							// because it was freed and might be overwritten there
-							return null;
-						}
-
 						var page = _env.ScratchBufferPool.ReadPage(value.ScratchPos);
 
 						Debug.Assert(page.PageNumber == pageNumber);
@@ -479,10 +471,6 @@ namespace Voron.Impl.Journal
 							_waj._dataPager.Sync();
 
 							UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, oldestActiveTransaction);
-
-							Debug.Assert(lastFlushedTransactionId != -1);
-
-							_waj._lastFlushedTransaction = lastFlushedTransactionId;
 
 							foreach (var toDelete in _journalsToDelete.Values)
 							{
