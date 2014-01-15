@@ -120,7 +120,7 @@ namespace Raven.Database.Server.Security.Windows
 			}
 		}
 
-		public bool TryAuthorize(RavenApiController controller, bool ignoreDb, out HttpResponseMessage msg)
+		public bool TryAuthorize(RavenDbApiController controller, bool ignoreDb, out HttpResponseMessage msg)
 		{
 			Func<HttpResponseMessage> onRejectingRequest;
 			var databaseName = controller.DatabaseName ?? Constants.SystemDatabase;
@@ -241,7 +241,7 @@ namespace Raven.Database.Server.Security.Windows
 			return true;
 		}
 
-		private bool TryCreateUser(RavenApiController controller, string databaseName, out Func<HttpResponseMessage> onRejectingRequest)
+		private bool TryCreateUser(RavenDbApiController controller, string databaseName, out Func<HttpResponseMessage> onRejectingRequest)
 		{
 			var invalidUser = (controller.User == null || controller.User.Identity.IsAuthenticated == false);
 			if (invalidUser)
@@ -302,7 +302,7 @@ namespace Raven.Database.Server.Security.Windows
 			}
 		}
 
-		private static HttpResponseMessage ProvideDebugAuthInfo(RavenApiController controller, object msg)
+		private static HttpResponseMessage ProvideDebugAuthInfo(RavenDbApiController controller, object msg)
 		{
 			string debugAuth = controller.GetQueryStringValue("debug-auth");
 			if (debugAuth == null)
@@ -339,7 +339,7 @@ namespace Raven.Database.Server.Security.Windows
 			return user;
 		}
 
-		private PrincipalWithDatabaseAccess UpdateUserPrincipal(RavenApiController controller, List<DatabaseAccess> databaseAccessLists)
+		private PrincipalWithDatabaseAccess UpdateUserPrincipal(RavenDbApiController controller, List<DatabaseAccess> databaseAccessLists)
 		{
 			var access = controller.User as PrincipalWithDatabaseAccess;
 			if (access != null)
@@ -390,7 +390,7 @@ namespace Raven.Database.Server.Security.Windows
 			return userCreated ? ctx.User : null;
 		}
 
-		public IPrincipal GetUser(RavenApiController controller)
+		public IPrincipal GetUser(RavenDbApiController controller)
 		{
 			Func<HttpResponseMessage> onRejectingRequest;
 			var databaseName = controller.DatabaseName ?? Constants.SystemDatabase;

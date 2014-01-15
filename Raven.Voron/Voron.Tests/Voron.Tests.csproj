@@ -37,6 +37,12 @@
     <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable, Version=1.0.27.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
@@ -51,19 +57,25 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
-    <Reference Include="xunit">
-      <HintPath>..\..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
+    <Reference Include="xunit, Version=1.9.2.1705, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
     </Reference>
     <Reference Include="xunit.extensions">
-      <HintPath>..\..\packages\xunit.extensions.1.9.2\lib\net20\xunit.extensions.dll</HintPath>
+      <HintPath>..\packages\xunit.extensions.1.9.2\lib\net20\xunit.extensions.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Backups\Full.cs" />
     <Compile Include="Backups\Incremental.cs" />
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
+    <Compile Include="Bugs\FlushingToDataFile.cs" />
+    <Compile Include="Bugs\IndexPointToNonLeafPageTests.cs" />
+    <Compile Include="Bugs\Isolation.cs" />
+    <Compile Include="Bugs\LargeValues.cs" />
     <Compile Include="Bugs\MultiAdds.cs" />
     <Compile Include="Bugs\RecoveryMultipleJournals.cs" />
+    <Compile Include="Bugs\RecoveryWithManualFlush.cs" />
     <Compile Include="Bugs\Snapshots.cs" />
     <Compile Include="Bugs\Deletes.cs" />
     <Compile Include="Bugs\EmptyTree.cs" />
@@ -72,7 +84,7 @@
     <Compile Include="Bugs\TreeRebalancer.cs" />
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
-    <Compile Include="Journal\ApplyingPolicies.cs" />
+    <Compile Include="DebugJournalTest.cs" />
     <Compile Include="Journal\BasicActions.cs" />
     <Compile Include="Journal\EdgeCases.cs" />
     <Compile Include="Journal\Mvcc.cs" />
@@ -83,8 +95,10 @@
     <Compile Include="Storage\Batches.cs" />
     <Compile Include="Storage\BigValue.cs" />
     <Compile Include="Storage\Concurrency.cs" />
+    <Compile Include="Storage\FreeScratchPages.cs" />
     <Compile Include="Storage\MultiTransactions.cs" />
     <Compile Include="Storage\Pagers.cs" />
+    <Compile Include="Storage\Quotas.cs" />
     <Compile Include="Storage\Restarts.cs" />
     <Compile Include="Storage\Snapshots.cs" />
     <Compile Include="Storage\SplittingVeryBig.cs" />
@@ -99,6 +113,7 @@
     <Compile Include="Trees\Rebalance.cs" />
     <Compile Include="Trees\Updates.cs" />
     <Compile Include="Util\CrcTests.cs" />
+    <Compile Include="Util\ImmutableAppendOnlyTests.cs" />
     <Compile Include="Util\StreamExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -114,9 +129,17 @@
     <Content Include="Bugs\Data\data2.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Bugs\Data\non-leaf-page-seq-id-large-values-2.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Bugs\Data\non-leaf-page-seq-id-large-values.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="RavenDB.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />

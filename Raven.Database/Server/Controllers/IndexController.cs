@@ -23,7 +23,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class IndexController : RavenApiController
+	public class IndexController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("indexes")]
@@ -292,7 +292,7 @@ namespace Raven.Database.Server.Controllers
 
 			if (queryResult.NonAuthoritativeInformation)
 				return GetEmptyMessage(HttpStatusCode.NonAuthoritativeInformation, indexEtag);
-
+		    
 			return GetMessageWithObject(queryResult, HttpStatusCode.OK, indexEtag);
 		}
 

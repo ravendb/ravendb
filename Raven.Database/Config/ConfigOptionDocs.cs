@@ -42,7 +42,7 @@ namespace Raven.Database.Config
 			{"Raven/Tenants/FrequencyToCheckForIdleDatabases", "int", null, "The time in seconds to check for an idle tenant database"},
 
 			// Storage
-			{"Raven/StorageTypeName", "string", "esent,munin,Fully Qualified Type Name", "The storage engine to use for the database. Default: esent."},
+			{"Raven/StorageTypeName", "string", "esent, voron, munin or Assembly Qualified Name", "The storage engine to use for the database. Default: esent."},
 
 			// Indexing
 			{"Raven/MaxNumberOfItemsToIndexInSingleBatch", "int", null, "The max number of items that will be indexed in a single batch. Larger batch size result in faster indexing, but higher memory usage."},
@@ -80,6 +80,9 @@ namespace Raven.Database.Config
 			{"Raven/Esent/MaxCursors", "int", null, "The maximum number of cursors allowed concurrently. Default: 2048."},
 			{"Raven/Esent/DbExtensionSize", "int", null, "The size that the database file will be enlarged with when the file is full. The value is in megabytes. Lower values result in smaller file size, but slower performance when the database size grows. Default: 8."},
 			{"Raven/Esent/CircularLog", "bool", "true / false", "Whatever circular logs will be used, defaults to true. If you want to use incremental backups, you need to turn this off, but logs will only be truncated on backup."},
+
+			//Voron	
+			{"Raven/Voron/AllowIncrementalBackups", "bool", "true / false", "Defaults to false. If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted on backup."},
 
 			// Advanced
 			{"Raven/TransactionMode", "string", "lazy,safe", "What transaction mode to use. Safe transaction mode ensures data consistency, but is slower. Lazy is faster, but may result in a data loss if the server crashes. Default: Safe."},

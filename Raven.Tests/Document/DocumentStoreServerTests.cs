@@ -1228,11 +1228,9 @@ namespace Raven.Tests.Document
 			documentStore.DatabaseCommands.PutAttachment("sample", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject { { "Hello", "World" } });
 
 			var attachmentOnlyWithMetadata = documentStore.DatabaseCommands.HeadAttachment("sample");
-
 			Assert.Equal("World", attachmentOnlyWithMetadata.Metadata.Value<string>("Hello"));
 
 			var exception = Assert.Throws<InvalidOperationException>(() => attachmentOnlyWithMetadata.Data());
-
 			Assert.Equal("Cannot get attachment data because it was loaded using: HEAD", exception.Message);
 		}
 

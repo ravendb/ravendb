@@ -28,6 +28,7 @@ namespace Raven.Database.Server.Controllers.Admin
 			bool incrementalBackup;
 			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
 				incrementalBackup = false;
+			
 			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
 
 			return GetEmptyMessage(HttpStatusCode.Created);		
@@ -53,9 +54,10 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			DatabaseDocument databaseDocument = null;
 
-			if (File.Exists(Path.Combine(restoreRequest.RestoreLocation, "Database.Document")))
+			var databaseDocumentPath = Path.Combine(restoreRequest.RestoreLocation, "Database.Document");
+			if (File.Exists(databaseDocumentPath))
 			{
-				var databaseDocumentText = File.ReadAllText(Path.Combine(restoreRequest.RestoreLocation, "Database.Document"));
+				var databaseDocumentText = File.ReadAllText(databaseDocumentPath);
 				databaseDocument = RavenJObject.Parse(databaseDocumentText).JsonDeserialization<DatabaseDocument>();
 			}
 
@@ -64,10 +66,11 @@ namespace Raven.Database.Server.Controllers.Admin
 
 			if (string.IsNullOrWhiteSpace(databaseName))
 			{
-				return
-					GetMessageWithString(
-						"A database name must be supplied if the restore location does not contain a valid Database.Document file",
-						HttpStatusCode.BadRequest);
+				var errorMessage = (databaseDocument == null || String.IsNullOrWhiteSpace(databaseDocument.Id))
+								? "Database.Document file is invalid - database name was not found and not supplied in the request (Id property is missing or null). This is probably a bug - should never happen."
+								: "A database name must be supplied if the restore location does not contain a valid Database.Document file";
+
+				return GetMessageWithString(errorMessage,HttpStatusCode.BadRequest);
 			}
 
 			if (databaseName == Constants.SystemDatabase)

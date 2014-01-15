@@ -15,6 +15,7 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util.Encryptors;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
@@ -26,16 +27,14 @@ using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Database.Config
 {
-	using System.Runtime;
-
-	using Raven.Abstractions.Util.Encryptors;
-
 	public class InMemoryRavenConfiguration
 	{
 		private CompositionContainer container;
 		private bool containerExternallySet;
 		private string dataDirectory;
 		private string pluginsDirectory;
+		private string fileSystemDataDirectory;
+
 
 		public InMemoryRavenConfiguration()
 		{
@@ -49,9 +48,7 @@ namespace Raven.Database.Config
 
 			IndexingScheduler = new FairIndexingSchedulerWithNewIndexesBias();
 
-			Catalog = new AggregateCatalog(
-				new AssemblyCatalog(typeof(DocumentDatabase).Assembly)
-				);
+			Catalog = new AggregateCatalog(new AssemblyCatalog(typeof(DocumentDatabase).Assembly));
 
 			Catalog.Changed += (sender, args) => ResetContainer();
 		}
@@ -149,7 +146,7 @@ namespace Raven.Database.Config
 
 			if (string.IsNullOrEmpty(DefaultStorageTypeName))
 			{
-				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "voron";
+				DefaultStorageTypeName = Settings["Raven/StorageTypeName"] ?? Settings["Raven/StorageEngine"] ?? "esent";
 			}
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
@@ -166,6 +163,10 @@ namespace Raven.Database.Config
 
 			DataDirectory = ravenSettings.DataDir.Value;
 
+			FileSystemDataDirectory = ravenSettings.FileSystemDataDir.Value;
+
+			FileSystemIndexStoragePath = ravenSettings.FileSystemIndexStoragePath.Value;
+
 			var indexStoragePathSettingValue = ravenSettings.IndexStoragePath.Value;
 			if (string.IsNullOrEmpty(indexStoragePathSettingValue) == false)
 			{
@@ -175,7 +176,7 @@ namespace Raven.Database.Config
 			// HTTP settings
 			HostName = ravenSettings.HostName.Value;
 
-			if (string.IsNullOrEmpty(DatabaseName)) // we only use this for root database
+			if (string.IsNullOrEmpty(DatabaseName) && Port == 0) // we only use this for root database
 			{
 				Port = PortUtil.GetPort(ravenSettings.Port.Value);
 				UseSsl = ravenSettings.UseSsl.Value;
@@ -590,8 +591,19 @@ namespace Raven.Database.Config
 		}
 
 		/// <summary>
+		/// The directory for the RavenDB database. 
+		/// You can use the ~\ prefix to refer to RavenDB's base directory. 
+		/// Default: ~\Data
+		/// </summary>
+		public string FileSystemDataDirectory
+		{
+			get { return fileSystemDataDirectory; }
+			set { fileSystemDataDirectory = value == null ? null : value.ToFullPath(); }
+		}
+
+		/// <summary>
 		/// What storage type to use (see: RavenDB Storage engines)
-		/// Allowed values: esent, munin
+		/// Allowed values: esent, voron, munin
 		/// Default: esent
 		/// </summary>
 		public string DefaultStorageTypeName
@@ -604,7 +616,7 @@ namespace Raven.Database.Config
 		private bool runInMemory;
 
 		/// <summary>
-		/// Should RavenDB's storage be in-memory. If set to true, Munin would be used as the
+		/// Should RavenDB's storage be in-memory. If set to true, Voron would be used as the
 		/// storage engine, regardless of what was specified for StorageTypeName
 		/// Allowed values: true/false
 		/// Default: false
@@ -710,6 +722,7 @@ namespace Raven.Database.Config
 		public bool RunInUnreliableYetFastModeThatIsNotSuitableForProduction { get; set; }
 
 		private string indexStoragePath;
+		private string fileSystemIndexStoragePath;
 		private int? maxNumberOfParallelIndexTasks;
 		private int initialNumberOfItemsToIndexInSingleBatch;
 		private AnonymousUserAccessMode anonymousUserAccessMode;
@@ -752,6 +765,17 @@ namespace Raven.Database.Config
 				return indexStoragePath;
 			}
 			set { indexStoragePath = value.ToFullPath(); }
+		}
+
+		public string FileSystemIndexStoragePath
+		{
+			get
+			{
+				if (string.IsNullOrEmpty(fileSystemIndexStoragePath))
+					fileSystemIndexStoragePath = Path.Combine(FileSystemDataDirectory, "Indexes");
+				return fileSystemIndexStoragePath;
+			}
+			set { fileSystemIndexStoragePath = value.ToFullPath(); }
 		}
 
 		public int AvailableMemoryForRaisingIndexBatchSizeLimit { get; set; }
@@ -830,13 +854,15 @@ namespace Raven.Database.Config
 			return AnonymousUserAccessMode.Admin;
 		}
 
-		public string GetFullUrl(string baseUrl)
+		public Uri GetFullUrl(string baseUrl)
 		{
+			baseUrl = Uri.EscapeUriString(baseUrl);
+
 			if (baseUrl.StartsWith("/"))
 				baseUrl = baseUrl.Substring(1);
-			if (VirtualDirectory.EndsWith("/"))
-				return VirtualDirectory + baseUrl;
-			return VirtualDirectory + "/" + baseUrl;
+
+			var url = VirtualDirectory.EndsWith("/") ? VirtualDirectory + baseUrl : VirtualDirectory + "/" + baseUrl;
+			return new Uri(url, UriKind.RelativeOrAbsolute);
 		}
 
 		public T? GetConfigurationValue<T>(string configName) where T : struct
@@ -847,9 +873,8 @@ namespace Raven.Database.Config
 			return null;
 		}
 
-		public ITransactionalStorage CreateTransactionalStorage(Action notifyAboutWork)
+		public ITransactionalStorage CreateTransactionalStorage(string storageEngine, Action notifyAboutWork)
 		{
-			var storageEngine = SelectStorageEngine();
 			switch (storageEngine.ToLowerInvariant())
 			{
 				case "esent":
@@ -870,10 +895,10 @@ namespace Raven.Database.Config
 			return (ITransactionalStorage)Activator.CreateInstance(type, this, notifyAboutWork);
 		}
 
-		private string SelectStorageEngine()
+		public string SelectStorageEngine()
 		{
 			if (RunInMemory)
-				return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
+				return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 
 			if (String.IsNullOrEmpty(DataDirectory) == false && Directory.Exists(DataDirectory))
 			{
@@ -881,14 +906,15 @@ namespace Raven.Database.Config
 				{
 					return typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 				}
-                if (File.Exists(Path.Combine(DataDirectory, "Raven.voron")))
+				if (File.Exists(Path.Combine(DataDirectory, Voron.Impl.Constants.DatabaseFilename)))
                 {
                     return typeof(Raven.Storage.Voron.TransactionalStorage).AssemblyQualifiedName;
                 }
 				if (File.Exists(Path.Combine(DataDirectory, "Data")))
 					return typeof(Raven.Storage.Esent.TransactionalStorage).AssemblyQualifiedName;
 			}
-			return DefaultStorageTypeName;
+
+			return DefaultStorageTypeName ?? typeof(Raven.Storage.Managed.TransactionalStorage).AssemblyQualifiedName;
 		}
 
 		public void Dispose()

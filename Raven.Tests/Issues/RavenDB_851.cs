@@ -19,7 +19,7 @@ namespace Raven.Tests.Issues
 					                                          session.Query<Foo>()
 						                                          .Where(r => r.Items.Count(f => f == "foo") > 1)
 						                                          .ToList());
-					Assert.Equal("Invalid computation: r.Items.Count(f => (f == \"foo\")). You cannot use computation (only simple member expression are allowed) in RavenDB queries.",
+                    Assert.Equal("Not supported computation: r.Items.Count(f => (f == \"foo\")). You cannot use computation in RavenDB queries (only simple member expressions are allowed).",
 						ae.Message);
 				}
 			}

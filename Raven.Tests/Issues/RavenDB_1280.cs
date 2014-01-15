@@ -1,17 +1,16 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
-using Xunit.Sdk;
-using Raven.Client;
 
 namespace Raven.Tests.Indexes
 {
 	public class RavenDB_1280 : RavenTest
 	{
-		//[Fact]
-		[TimeBombedFact(2013, 12, 31)]
+		[Fact]
+		//[TimeBombedFact(2013, 12, 31)]
 		public void Referenced_Docs_Are_Indexed_During_Heavy_Writing()
 		{
 			const int iterations = 8000;

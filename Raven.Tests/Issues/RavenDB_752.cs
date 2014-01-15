@@ -14,6 +14,8 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
+	using Raven.Abstractions.Connection;
+
 	public class RavenDB_752
 	{
 		[Fact]
@@ -26,18 +28,9 @@ namespace Raven.Tests.Issues
 			{
 				ReplicationDestinations =
 					{
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:2"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:3"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:4"
-						},
+						new OperationMetadata("http://localhost:2"),
+						new OperationMetadata("http://localhost:3"),
+						new OperationMetadata("http://localhost:4")
 					}
 			};
 
@@ -45,9 +38,9 @@ namespace Raven.Tests.Issues
 
 			var webException = Assert.Throws<WebException>(() =>
 			{
-				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", 1, 1, url =>
+				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
 				{
-					urlsTried.Add(url);
+					urlsTried.Add(url.Url);
 					throw new WebException("Timeout", WebExceptionStatus.Timeout);
 
 					return 1;
@@ -71,18 +64,9 @@ namespace Raven.Tests.Issues
 			{
 				ReplicationDestinations =
 					{
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:2"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:3"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:4"
-						},
+						new OperationMetadata("http://localhost:2"),
+						new OperationMetadata("http://localhost:3"),
+						new OperationMetadata("http://localhost:4")
 					}
 			};
 
@@ -90,9 +74,9 @@ namespace Raven.Tests.Issues
 
 			var webException = Assert.Throws<WebException>(() =>
 			{
-				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", 1, 1, url =>
+				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
 				{
-					urlsTried.Add(url);
+					urlsTried.Add(url.Url);
 					throw new WebException("Timeout", WebExceptionStatus.Timeout);
 
 					return 1;
@@ -116,27 +100,18 @@ namespace Raven.Tests.Issues
 			{
 				ReplicationDestinations =
 					{
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:2"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:3"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:4"
-						},
+						new OperationMetadata("http://localhost:2"),
+						new OperationMetadata("http://localhost:3"),
+						new OperationMetadata("http://localhost:4")
 					}
 			};
 
 			var urlsTried = new List<string>();
 
 			var aggregateException = Assert.Throws<AggregateException>(() =>
-				replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", 1, 1, url =>
+				replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
 				{
-					urlsTried.Add(url);
+					urlsTried.Add(url.Url);
 
 					return new CompletedTask<int>(new WebException("Timeout", WebExceptionStatus.Timeout));
 				}).Wait()
@@ -161,27 +136,18 @@ namespace Raven.Tests.Issues
 			{
 				ReplicationDestinations =
 					{
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:2"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:3"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:4"
-						},
+						new OperationMetadata("http://localhost:2"),
+						new OperationMetadata("http://localhost:3"),
+						new OperationMetadata("http://localhost:4")
 					}
 			};
 
 			var urlsTried = new List<string>();
 
 			var aggregateException = Assert.Throws<AggregateException>(() =>
-				replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", 1, 1, url =>
+				replicationInformer.ExecuteWithReplicationAsync<int>("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), 1, 1, url =>
 				{
-					urlsTried.Add(url);
+					urlsTried.Add(url.Url);
 
 					return new CompletedTask<int>(new WebException("Timeout", WebExceptionStatus.Timeout));
 				}).Wait()

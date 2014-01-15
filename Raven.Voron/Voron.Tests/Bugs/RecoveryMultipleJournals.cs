@@ -1,6 +1,9 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
+using System.Linq.Expressions;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using Xunit;
 
 namespace Voron.Tests.Bugs
@@ -9,7 +12,9 @@ namespace Voron.Tests.Bugs
 	{
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
-			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
+			options.OnRecoveryError += (sender, args) => { }; // just shut it up
+			options.ManualFlushing = true;
 		}
 
 		[Fact]
@@ -47,9 +52,8 @@ namespace Voron.Tests.Bugs
 				{
 					var readResult = tx.GetTree("tree").Read(tx, "a" + i);
 					Assert.NotNull(readResult);
-					using (readResult.Stream)
 					{
-						Assert.Equal(100, readResult.Stream.Length);
+						Assert.Equal(100, readResult.Reader.Length);
 					}
 				}
 				tx.Commit();
@@ -109,11 +113,15 @@ namespace Voron.Tests.Bugs
 
 			var currentJournalInfo = Env.Journal.GetCurrentJournalInfo();
 
+			var random = new Random();
+			var buffer = new byte[1000000];
+			random.NextBytes(buffer);
+
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				for (var i = 0; i < 1000; i++)
 				{
-					tx.GetTree("tree").Add(tx, "b" + i, new MemoryStream(new byte[100]));
+					tx.GetTree("tree").Add(tx, "b" + i, new MemoryStream(buffer));
 				}
 				//tx.Commit(); - not committing here
 			}
@@ -122,7 +130,7 @@ namespace Voron.Tests.Bugs
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.GetTree("tree").Add(tx, "b", new MemoryStream(new byte[100]));
+				tx.GetTree("tree").Add(tx, "b", new MemoryStream(buffer));
 				tx.Commit();
 			}
 
@@ -134,13 +142,10 @@ namespace Voron.Tests.Bugs
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				Env.CreateTree(tx, "tree");
+				Env.CreateTree(tx, "tree").Add(tx, "exists", new MemoryStream(new byte[100]));
 
 				tx.Commit();
 			}
-
-			var currentJournalInfo = Env.Journal.GetCurrentJournalInfo();
-
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
@@ -152,14 +157,23 @@ namespace Voron.Tests.Bugs
 			}
 
 			var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
-
+            
 			StopDatabase();
-
-			CorruptPage(lastJournal - 1, page: 2, pos: 3);
+			
+            CorruptPage(lastJournal, page: 4, pos: 3);
 
 			StartDatabase();
-			Assert.Equal(currentJournalInfo.CurrentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
-
+            using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
+            {
+                var tree = Env.CreateTree(tx, "tree");
+                Assert.NotNull(tree.Read(tx, "exists"));
+                Assert.Null(tree.Read(tx, "a1"));
+                Assert.Null(tree.Read(tx, "a100"));
+                Assert.Null(tree.Read(tx, "a500"));
+                Assert.Null(tree.Read(tx, "a1000"));
+                
+                tx.Commit();
+            }
 		}
 
 		[Fact]
@@ -246,11 +260,36 @@ namespace Voron.Tests.Bugs
 
 		}
 
-		private unsafe void CorruptPage(long journal, long page, int pos)
+		private void CorruptPage(long journal, long page, int pos)
 		{
-			var journalPager = _options.CreateJournalPager(journal);
-			var writable = journalPager.GetWritable(page);
-			*(writable.Base + pos) = 42;
+			_options.Dispose();
+			_options = StorageEnvironmentOptions.ForPath("test.data");
+			Configure(_options);
+			using (var fileStream = new FileStream(
+				Path.Combine("test.data", StorageEnvironmentOptions.JournalName(journal)), 
+				FileMode.Open,
+				FileAccess.ReadWrite, 
+				FileShare.ReadWrite | FileShare.Delete))
+		    {
+		        fileStream.Position = page*AbstractPager.PageSize;
+
+				var buffer = new byte[AbstractPager.PageSize];
+
+		        var remaining = buffer.Length;
+		        var start = 0;
+		        while (remaining > 0)
+		        {
+		            var read = fileStream.Read(buffer, start, remaining);
+		            if (read == 0)
+		                break;
+		            start += read;
+		            remaining -= read;
+		        }
+
+		        buffer[pos] = 42;
+				fileStream.Position = page * AbstractPager.PageSize;
+		        fileStream.Write(buffer, 0, buffer.Length);
+		    }
 		}
 	}
 }

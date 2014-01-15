@@ -29,7 +29,6 @@ using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
 using Raven.Server;
-using Raven.Storage.Voron;
 using Xunit;
 using Xunit.Sdk;
 
@@ -59,21 +58,33 @@ namespace Raven.Tests.Helpers
 			string requestedStorage = null,
 			ComposablePartCatalog catalog = null,
 			string dataDir = null,
-			bool enableAuthentication = false)
+			bool enableAuthentication = false,
+			string activeBundles = null,
+			int? port = null,
+			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin)
 		{
 			var storageType = GetDefaultStorageType(requestedStorage);
+			var dataDirectory = dataDir ?? NewDataPath();
 			var documentStore = new EmbeddableDocumentStore
 			{
+				UseEmbeddedHttpServer = port.HasValue,
 				Configuration =
 				{
 					DefaultStorageTypeName = storageType,
-					DataDirectory = dataDir ?? NewDataPath(),
+					DataDirectory = dataDirectory,
+					FileSystemDataDirectory = Path.Combine(dataDirectory, "FileSystem"),
 					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 					RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
-					Port = 8079,
-					UseFips = SettingsHelper.UseFipsEncryptionAlgorithms
+					Port = port == null ? 8079 : port.Value,
+					UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
+					AnonymousUserAccessMode = anonymousUserAccessMode,
 				}
 			};
+
+			if (activeBundles != null)
+			{
+				documentStore.Configuration.Settings["Raven/ActiveBundles"] = activeBundles;
+			}
 
 			if (catalog != null)
 				documentStore.Configuration.Catalog.Catalogs.Add(catalog);
@@ -88,7 +99,6 @@ namespace Raven.Tests.Helpers
 				if (enableAuthentication)
 				{
 					EnableAuthentication(documentStore.DocumentDatabase);
-					ModifyConfiguration(documentStore.Configuration);
 				}
 
 				CreateDefaultIndexes(documentStore);
@@ -117,24 +127,28 @@ namespace Raven.Tests.Helpers
 			database.StartupTasks.OfType<AuthenticationForCommercialUseOnly>().First().Execute(database);
 		}
 
-		public IDocumentStore 
+		public DocumentStore
 			NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
-			 bool runInMemory = true,
-			string dataDirectory = null,
-			string requestedStorage = null,
-			 bool enableAuthentication = false)
+				bool runInMemory = true,
+				string dataDirectory = null,
+				string requestedStorage = null,
+				bool enableAuthentication = false,
+				Action<DocumentStore> configureStore = null)
 		{
 			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication);
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
 				Url = GetServerUrl(fiddler, ravenDbServer.SystemDatabase.ServerUrl),
-				DefaultDatabase = databaseName,
+				DefaultDatabase = databaseName				
 			};
 			stores.Add(store);
 			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
+			if (configureStore != null)
+				configureStore(store);
 			ModifyStore(store);
-			return store.Initialize();
+			store.Initialize();
+			return store;
 		}
 
 		private static string GetServerUrl(bool fiddler, string serverUrl)
@@ -171,17 +185,21 @@ namespace Raven.Tests.Helpers
 				pathsToDelete.Add(dataDirectory);
 
 			var storageType = GetDefaultStorageType(requestedStorage);
+			var directory = dataDirectory ?? NewDataPath();
 			var ravenConfiguration = new RavenConfiguration
 			{
 				Port = port,
-				DataDirectory = dataDirectory ?? NewDataPath(),
+				DataDirectory = directory,
+				FileSystemDataDirectory = Path.Combine(directory, "FileSystem"),
 				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
 #if DEBUG
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = runInMemory,
 #endif
 				DefaultStorageTypeName = storageType,
-				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin
+				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
+				UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
 			};
+			
 
 			if (activeBundles != null)
 			{
@@ -230,14 +248,22 @@ namespace Raven.Tests.Helpers
 			ITransactionalStorage newTransactionalStorage;
 			string storageType = GetDefaultStorageType(requestedStorage);
 
-			if (storageType == "munin")
-				newTransactionalStorage = new Storage.Managed.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
-			else if (storageType == "voron")
-				newTransactionalStorage = new TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), RunInMemory = runInMemory }, () => { });
-			else
-				newTransactionalStorage = new Storage.Esent.TransactionalStorage(new RavenConfiguration { DataDirectory = dataDir ?? NewDataPath(), }, () => { });
+			var dataDirectory = dataDir ?? NewDataPath();
+			var ravenConfiguration = new RavenConfiguration
+			{
+				DataDirectory = dataDirectory,
+				FileSystemDataDirectory = Path.Combine(dataDirectory, "FileSystem"),
+				RunInMemory = storageType.Equals("esent", StringComparison.OrdinalIgnoreCase) == false && runInMemory,
+			};
 
-			newTransactionalStorage.Initialize(new DummyUuidGenerator(), (documentCodecs == null) ? new OrderedPartCollection<AbstractDocumentCodec>() : documentCodecs );
+			if (storageType == "munin")
+				newTransactionalStorage = new Storage.Managed.TransactionalStorage(ravenConfiguration, () => { });
+			else if (storageType == "voron")
+				newTransactionalStorage = new Storage.Voron.TransactionalStorage(ravenConfiguration, () => { });
+			else
+				newTransactionalStorage = new Storage.Esent.TransactionalStorage(ravenConfiguration, () => { });
+
+			newTransactionalStorage.Initialize(new DummyUuidGenerator(), documentCodecs ?? new OrderedPartCollection<AbstractDocumentCodec>());
 			return newTransactionalStorage;
 		}
 
@@ -262,12 +288,12 @@ namespace Raven.Tests.Helpers
 			new RavenDocumentsByEntityName().Execute(documentStore.DatabaseCommands, documentStore.Conventions);
 		}
 
-		public static void WaitForIndexing(IDocumentStore store, string db = null)
+		public static void WaitForIndexing(IDocumentStore store, string db = null,TimeSpan? timeout = null)
 		{
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-			Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, TimeSpan.FromMinutes(1)));
+            Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(10)));
 		}
 
 		public static void WaitForIndexing(DocumentDatabase db)
@@ -313,7 +339,7 @@ namespace Raven.Tests.Helpers
 					return true;
 				}
 				return false;
-			}, TimeSpan.FromMinutes(15));
+			}, Debugger.IsAttached ? TimeSpan.FromMinutes(120) : TimeSpan.FromMinutes(15));
 			Assert.True(done);
 		}
 
@@ -353,46 +379,30 @@ namespace Raven.Tests.Helpers
 			Assert.True(done);
 		}
 
-		public static void WaitForUserToContinueTheTest(EmbeddableDocumentStore documentStore, bool debug = true)
+		public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true)
 		{
 			if (debug && Debugger.IsAttached == false)
 				return;
 
-			documentStore.SetStudioConfigToAllowSingleDb();
+		    var embeddableDocumentStore = documentStore as EmbeddableDocumentStore;
+		    HttpServer server = null;
+            string url = documentStore.Url;
+		    if (embeddableDocumentStore != null)
+		    {
+                embeddableDocumentStore.SetStudioConfigToAllowSingleDb();
+                embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
+                server = new HttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.DocumentDatabase);
+                server.StartListening();
+                url = embeddableDocumentStore.Configuration.ServerUrl;
+		    }
 
-			documentStore.DatabaseCommands.Put("Pls Delete Me", null,
+		    documentStore.DatabaseCommands.Put("Pls Delete Me", null,
+		        RavenJObject.FromObject(new {StackTrace = new StackTrace(true)}),
+		        new RavenJObject());
 
-											   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }),
-											   new RavenJObject());
-
-			documentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
-			using (var server = new HttpServer(documentStore.Configuration, documentStore.DocumentDatabase))
+			using (server)
 			{
-				server.StartListening();
-				Process.Start(documentStore.Configuration.ServerUrl); // start the server
-
-				do
-				{
-					Thread.Sleep(100);
-				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && (debug == false || Debugger.IsAttached));
-			}
-		}
-
-		protected void WaitForUserToContinueTheTest(bool debug = true)
-		{
-			if (debug && Debugger.IsAttached == false)
-				return;
-
-			using (var documentStore = new DocumentStore
-			{
-				Url = "http://localhost:8079"
-			})
-			{
-				documentStore.Initialize();
-				documentStore.DatabaseCommands.Put("Pls Delete Me", null,
-												   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }), new RavenJObject());
-
-				Process.Start(documentStore.Url); // start the server
+				Process.Start(url); // start the server
 
 				do
 				{

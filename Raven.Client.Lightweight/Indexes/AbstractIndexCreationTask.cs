@@ -21,6 +21,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Indexes
 {
+	using System.Net;
+
 	/// <summary>
 	/// Base class for creating indexes
 	/// </summary>
@@ -188,14 +190,6 @@ namespace Raven.Client.Indexes
 			store.ExecuteIndex(this);
 		}
 
-        /// <summary>
-        /// Executes the index creation against the specified document store.
-        /// </summary>
-        public Task ExecuteAsync(IDocumentStore store)
-        {
-            return store.ExecuteIndexAsync(this);
-        }
-
 		/// <summary>
 		/// Executes the index creation against the specified document database using the specified conventions
 		/// </summary>
@@ -225,8 +219,8 @@ namespace Raven.Client.Indexes
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
 			return asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true)
-				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, url) =>
-					client.DirectPutIndexAsync(IndexName, indexDefinition, true, url)))
+				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, operationMetadata) =>
+					client.DirectPutIndexAsync(IndexName, indexDefinition, true, operationMetadata)))
 				.Unwrap();
 		}
 	}
@@ -428,7 +422,7 @@ namespace Raven.Client.Indexes
 
 		internal async Task UpdateIndexInReplicationAsync(IAsyncDatabaseCommands asyncDatabaseCommands,
 												   DocumentConvention documentConvention, 
-                                                    Func<AsyncServerClient, string, Task> action)
+                                                    Func<AsyncServerClient, OperationMetadata, Task> action)
 		{
 		    var asyncServerClient = asyncDatabaseCommands as AsyncServerClient;
 		    if (asyncServerClient == null)
@@ -443,7 +437,7 @@ namespace Raven.Client.Indexes
 		    var tasks = (
                          from replicationDestination in replicationDocument.Destinations
 		                 where !replicationDestination.Disabled && !replicationDestination.IgnoredClient
-		                 select action(asyncServerClient, GetReplicationUrl(replicationDestination))
+		                 select action(asyncServerClient, GetReplicationOperation(replicationDestination))
                          )
                          .ToArray();
 		    await Task.Factory.ContinueWhenAll(tasks, indexingTask =>
@@ -458,17 +452,19 @@ namespace Raven.Client.Indexes
 		    });
 		}
 
-	    private string GetReplicationUrl(ReplicationDestination replicationDestination)
+	    private OperationMetadata GetReplicationOperation(ReplicationDestination replicationDestination)
 		{
 			var replicationUrl = replicationDestination.ClientVisibleUrl ?? replicationDestination.Url;
-			return string.IsNullOrWhiteSpace(replicationDestination.Database)
+			var url = string.IsNullOrWhiteSpace(replicationDestination.Database)
 				? replicationUrl
 				: replicationUrl + "/databases/" + replicationDestination.Database;
+
+			return new OperationMetadata(url, replicationDestination.Username, replicationDestination.Password, replicationDestination.Domain, replicationDestination.ApiKey);
 		}
 
 #if !SILVERLIGHT && !NETFX_CORE
 		internal void UpdateIndexInReplication(IDatabaseCommands databaseCommands, DocumentConvention documentConvention,
-			Action<ServerClient, string> action)
+			Action<ServerClient, OperationMetadata> action)
 		{
 			var serverClient = databaseCommands as ServerClient;
 			if (serverClient == null)
@@ -487,7 +483,7 @@ namespace Raven.Client.Indexes
 				{
 					if (replicationDestination.Disabled || replicationDestination.IgnoredClient)
 						continue;
-					action(serverClient, GetReplicationUrl(replicationDestination));
+					action(serverClient, GetReplicationOperation(replicationDestination));
 				}
 				catch (Exception e)
 				{

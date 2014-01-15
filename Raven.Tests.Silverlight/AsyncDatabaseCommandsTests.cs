@@ -54,7 +54,7 @@ namespace Raven.Tests.Silverlight
 
 				var task = cmd
 					.ForDatabase(dbname)
-					.StartsWithAsync("Companies", 0, 25);
+					.StartsWithAsync("Companies", null, 0, 25);
 				yield return task;
 
 				Assert.AreEqual(1, task.Result.Length);

@@ -93,7 +93,7 @@ namespace Raven.Studio.Models
 
         private void LoadReplicationSources()
         {
-            ApplicationModel.DatabaseCommands.StartsWithAsync("Raven/Replication/Sources", 0, 1024)
+            ApplicationModel.DatabaseCommands.StartsWithAsync("Raven/Replication/Sources", null, 0, 1024)
                             .ContinueOnSuccessInTheUIThread(
                                 docs =>
                                 {

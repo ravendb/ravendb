@@ -21,6 +21,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Changes
 {
+	using Raven.Abstractions.Connection;
+
 	public class RemoteDatabaseChanges : IDatabaseChanges, IDisposable, IObserver<string>
 	{
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
@@ -36,12 +38,12 @@ namespace Raven.Client.Changes
 		private Timer clientSideHeartbeatTimer;
 #endif
 		private readonly string url;
-		private readonly ICredentials credentials;
+        private readonly OperationCredentials credentials;
 		private readonly HttpJsonRequestFactory jsonRequestFactory;
 		private readonly DocumentConvention conventions;
 		private readonly ReplicationInformer replicationInformer;
 		private readonly Action onDispose;
-		private readonly Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
+        private readonly Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync;
 		private readonly AtomicDictionary<LocalConnectionState> counters = new AtomicDictionary<LocalConnectionState>(StringComparer.OrdinalIgnoreCase);
 		private IDisposable connection;
 		private DateTime lastHeartbeat;
@@ -51,18 +53,19 @@ namespace Raven.Client.Changes
 
 		public RemoteDatabaseChanges(
 			string url,
+			string apiKey,
 			ICredentials credentials,
 			HttpJsonRequestFactory jsonRequestFactory,
 			DocumentConvention conventions,
 			ReplicationInformer replicationInformer,
 			Action onDispose,
-			Func<string, Etag, string[], string, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
+            Func<string, Etag, string[], OperationMetadata, Task<bool>> tryResolveConflictByUsingRegisteredConflictListenersAsync)
 		{
 			ConnectionStatusChanged = LogOnConnectionStatusChanged;
 			id = Interlocked.Increment(ref connectionCounter) + "/" +
 				 Base62Util.Base62Random();
 			this.url = url;
-			this.credentials = credentials;
+            this.credentials = new OperationCredentials(apiKey, credentials);
 			this.jsonRequestFactory = jsonRequestFactory;
 			this.conventions = conventions;
 			this.replicationInformer = replicationInformer;

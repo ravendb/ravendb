@@ -147,9 +147,6 @@
     <Content Include="App\widgets\virtualTable\column.js">
       <DependentUpon>column.ts</DependentUpon>
     </Content>
-    <Content Include="App\widgets\virtualTable\virtualRow.js">
-      <DependentUpon>row.ts</DependentUpon>
-    </Content>
     <Content Include="Content\bootstrap-theme.css" />
     <Content Include="Content\bootstrap-theme.min.css" />
     <Content Include="Content\bootstrap.css" />
@@ -784,6 +781,7 @@
     <Content Include="Scripts\knockout-postbox.min.js" />
     <Content Include="Scripts\moment.js" />
     <Content Include="Scripts\nprogress.js" />
+    <TypeScriptCompile Include="Scripts\typings\ace\ace.d.ts" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
@@ -1022,6 +1020,8 @@
     <TypeScriptCompile Include="App\commands\saveDocumentCommand.ts" />
     <Content Include="App\commands\saveDocumentCommand.js">
       <DependentUpon>saveDocumentCommand.ts</DependentUpon>
+    <Content Include="App\common\raven.js">
+      <DependentUpon>raven.ts</DependentUpon>
     </Content>
     <Content Include="App\main.js" />
     <TypeScriptCompile Include="App\models\collection.ts" />
@@ -1049,12 +1049,6 @@
     <Content Include="App\widgets\virtualTable\view.html" />
     <TypeScriptCompile Include="App\common\extensions.ts" />
     <Content Include="App\views\shell.html" />
-    <Content Include="Content\app.css">
-      <DependentUpon>app.less</DependentUpon>
-    </Content>
-    <Content Include="Content\app.min.css">
-      <DependentUpon>app.less</DependentUpon>
-    </Content>
     <Content Include="Content\images\checked.png" />
     <Content Include="Content\images\glyphicons-halflings-white.png" />
     <Content Include="Content\images\glyphicons-halflings.png" />

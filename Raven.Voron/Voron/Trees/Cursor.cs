@@ -1,23 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Voron.Trees
+﻿namespace Voron.Trees
 {
-    public class Cursor : IDisposable
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Linq;
+
+    public class Cursor 
     {
         public LinkedList<Page> Pages = new LinkedList<Page>();
-        private readonly Dictionary<long, Page> _pagesByNum = new Dictionary<long, Page>(); 
+        private readonly Dictionary<long, Page> _pagesByNum = new Dictionary<long, Page>();
+
+        private bool _anyOverrides;
 
         public void Update(LinkedListNode<Page> node, Page newVal)
         {
-            if (node.Value.PageNumber == newVal.PageNumber)
+            var oldPageNumber = node.Value.PageNumber;
+            var newPageNumber = newVal.PageNumber;
+
+            if (oldPageNumber == newPageNumber)
             {
-                _pagesByNum[node.Value.PageNumber] = newVal;
+                _pagesByNum[oldPageNumber] = newVal;
                 node.Value = newVal;
                 return;
             }
-            _pagesByNum[node.Value.PageNumber] = newVal;
-            _pagesByNum.Add(newVal.PageNumber, newVal);
+
+            _anyOverrides = true;
+            _pagesByNum[oldPageNumber] = newVal;
+            _pagesByNum.Add(newPageNumber, newVal);
             node.Value = newVal;
         }
 
@@ -60,31 +69,28 @@ namespace Voron.Trees
         public Page Pop()
         {
             if (Pages.Count == 0)
-            {
                 throw new InvalidOperationException("No page to pop");
-            }
-            Page p = Pages.First.Value;
+
+            var p = Pages.First.Value;
             Pages.RemoveFirst();
-            _pagesByNum.Remove(p.PageNumber);
+
+            var removedPrimary = _pagesByNum.Remove(p.PageNumber);
+            var removedSecondary = false;
+
+            if (_anyOverrides)
+            {
+                var pagesNumbersToRemove = new HashSet<long>();
+
+                foreach (var page in _pagesByNum.Where(page => page.Value.PageNumber == p.PageNumber))
+                    pagesNumbersToRemove.Add(page.Key);
+
+                foreach (var pageToRemove in pagesNumbersToRemove)
+                    removedSecondary |= _pagesByNum.Remove(pageToRemove);
+            }
+
+            Debug.Assert(removedPrimary || removedSecondary);
+
             return p;
-        }
-
-	    public Page GetPage(long p)
-	    {
-	        Page page;
-	        if (_pagesByNum.TryGetValue(p, out page))
-	            return page;
-	        return null;
-	    }
-
-        public void Dispose()
-        {
-        }
-
-        public void Clear()
-        {
-            _pagesByNum.Clear();
-            Pages.Clear();
         }
     }
 }

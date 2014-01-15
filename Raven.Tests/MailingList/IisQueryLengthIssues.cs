@@ -1,5 +1,8 @@
 using System;
+using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
+using Raven.Client;
 using Raven.Tests.Bugs.Identifiers;
 using System.Linq;
 using Xunit;
@@ -20,9 +23,7 @@ namespace Raven.Tests.MailingList
 			using (var store = NewDocumentStore())
 			{
 				var name = new string('x', 0x1000);
-				var exception = Assert.Throws<InvalidOperationException>(() => store.OpenSession().Query<User>().Where(u => u.FirstName == name).ToList());
-				
-				Assert.True(errorOptions.Any(s => exception.Message.Contains(s)));
+				Assert.Throws<InvalidOperationException>(() => store.OpenSession().Query<User>().Where(u => u.FirstName == name).ToList());
 			}
 		}
 
@@ -32,8 +33,7 @@ namespace Raven.Tests.MailingList
 			using (var store = NewDocumentStore())
 			{
 				var name = new string('x', 0x1000);
-				var exception = Assert.Throws<InvalidOperationException>(() => store.OpenSession().Query<User>("test").Where(u => u.FirstName == name).ToList());
-				Assert.True(errorOptions.Any(s => exception.Message.Contains(s)));
+				Assert.Throws<InvalidOperationException>(() => store.OpenSession().Query<User>("test").Where(u => u.FirstName == name).ToList());
 			}
 		}
 	}

@@ -44,20 +44,20 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 					session.SaveChanges();
 
 				}
-				SpinWait.SpinUntil(() =>
-					 store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey) != null, 10000);
+				SpinWait.SpinUntil(() => store.DatabaseCommands.Get(PeriodicBackupStatus.RavenDocumentKey) != null, 10000);
 
 			}
 
 			using (var store = NewDocumentStore())
 			{
-				var smugglerOptions = new SmugglerOptions
-				{
-					BackupPath = backupPath,
-                    Incremental = true,
-				};
 				var dataDumper = new DataDumper(store.DocumentDatabase);
-				dataDumper.ImportData(smugglerOptions).Wait();
+				dataDumper.ImportData(new SmugglerImportOptions
+				{
+					FromFile = backupPath,
+				}, new SmugglerOptions
+				{
+					Incremental = true,
+				}).Wait();
 
 				using (var session = store.OpenSession())
 				{
@@ -109,10 +109,12 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 			using (var store = NewDocumentStore())
 			{
 			    var dataDumper = new DataDumper(store.DocumentDatabase);
-				dataDumper.ImportData(new SmugglerOptions
+				dataDumper.ImportData(new SmugglerImportOptions
 				{
-				    BackupPath = backupPath,
-                    Incremental = true,
+				    FromFile = backupPath,
+				}, new SmugglerOptions
+				{
+					Incremental = true,
 				}).Wait();
 
 				using (var session = store.OpenSession())

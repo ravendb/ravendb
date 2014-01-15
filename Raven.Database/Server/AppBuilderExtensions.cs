@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -10,10 +11,13 @@ using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
 using Microsoft.Owin;
+using Newtonsoft.Json;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
+using Raven.Database.Server.RavenFS;
+using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
@@ -63,24 +67,33 @@ namespace Owin
 				}
 			}
 
-			app
-				//uncomment for debug 
-				.UseInterceptor()
-				.UseWebApi(CreateHttpCfg(options.Landlord, options.MixedModeRequestAuthorizer, options.RequestManager));
+#if DEBUG
+			app.UseInterceptor();
+#endif
+		
+			app.UseWebApi(CreateHttpCfg(options.Landlord, options.MixedModeRequestAuthorizer, options.RequestManager, options.FileSystem));
+			
 			return app;
 		}
 
-		private static HttpConfiguration CreateHttpCfg(DatabasesLandlord databasesLandlord, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, RequestManager requestManager)
+		private static HttpConfiguration CreateHttpCfg(DatabasesLandlord databasesLandlord, MixedModeRequestAuthorizer mixedModeRequestAuthorizer, RequestManager requestManager, RavenFileSystem fileSystem)
 		{
 			var cfg = new HttpConfiguration();
 			cfg.Properties[typeof(DatabasesLandlord)] = databasesLandlord;
 			cfg.Properties[typeof(MixedModeRequestAuthorizer)] = mixedModeRequestAuthorizer;
 			cfg.Properties[typeof(RequestManager)] = requestManager;
+			cfg.Properties[typeof (RavenFileSystem)] = fileSystem;
 			cfg.Formatters.Remove(cfg.Formatters.XmlFormatter);
+			cfg.Formatters.JsonFormatter.SerializerSettings.Converters.Add(new NaveValueCollectionJsonConverterOnlyForConfigFormatters());
 
 			cfg.Services.Replace(typeof(IAssembliesResolver), new MyAssemblyResolver());
 			cfg.Filters.Add(new RavenExceptionFilterAttribute());
 			cfg.MapHttpAttributeRoutes();
+
+			cfg.Routes.MapHttpRoute(
+				"RavenFs", "ravenfs/{controller}/{action}",
+				new {id = RouteParameter.Optional});
+
 			cfg.Routes.MapHttpRoute(
 				"API Default", "{controller}/{action}",
 				new { id = RouteParameter.Optional });
@@ -88,9 +101,11 @@ namespace Owin
 			cfg.Routes.MapHttpRoute(
 				"Database Route", "databases/{databaseName}/{controller}/{action}",
 				new { id = RouteParameter.Optional });
+
 			cfg.MessageHandlers.Add(new GZipToJsonAndCompressHandler());
 
 			cfg.Services.Replace(typeof(IHostBufferPolicySelector), new SelectiveBufferPolicySelector());
+			cfg.EnsureInitialized();
 			return cfg;
 		}
 
@@ -121,7 +136,7 @@ namespace Owin
 			{
 				if (HostingEnvironment.IsHosted)
 				{
-					if(DateTime.Now > new DateTime(2013,12,31))
+					if(DateTime.Now > new DateTime(2014,1,15))
 						throw new InvalidOperationException("This bug was supposed to be fixed by now");
 
 					return (response.Content is ChangesPushContent ||

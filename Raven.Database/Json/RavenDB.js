@@ -18,11 +18,7 @@ Array.prototype.Map = Array.prototype.Map || function (callback, thisArg) {
     //	throw new TypeError(" this is null or not defined");
     //}
 
-    var result = _.map(this, callback, thisArg);
-    for (var i = 0; i < result.length; ++i) {
-        this[i] = result[i];
-    }
-    return result;
+    return _.map(this, callback, thisArg);
 };
 
 Array.prototype.indexOf = Array.prototype.indexOf || function (value) {

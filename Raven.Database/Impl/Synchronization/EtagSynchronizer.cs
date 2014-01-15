@@ -97,7 +97,7 @@ namespace Raven.Database.Impl.Synchronization
 				transactionalStorage.Batch(
 					actions => actions.Lists.Set("Raven/Etag/Synchronization", type.ToString(), RavenJObject.FromObject(new
 					{
-						etag = GetEtagForPersistance()
+						etag = GetEtagForPersistence()
 					}), UuidType.EtagSynchronization));
 			}	
 		}
@@ -120,7 +120,7 @@ namespace Raven.Database.Impl.Synchronization
 			});
 		}
 
-		private Etag GetEtagForPersistance()
+		private Etag GetEtagForPersistence()
 		{
 			var result = synchronizationEtag;
 			if (currentEtag != null)

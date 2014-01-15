@@ -15,12 +15,12 @@ using System.Linq;
 
 namespace Raven.Abstractions.Smuggler
 {
-    public abstract class SmugglerOptionsBase
+    public class SmugglerOptions
     {
         private int batchSize;
 	    private TimeSpan timeout;
 
-	    public SmugglerOptionsBase()
+	    public SmugglerOptions()
         {
             Filters = new List<FilterSetting>();
             BatchSize = 1024;
@@ -28,6 +28,7 @@ namespace Raven.Abstractions.Smuggler
             Timeout = TimeSpan.FromSeconds(30);
             ShouldExcludeExpired = false;
             StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
+		    MaxStepsForTransformScript = 10*1000;
         }
 
         /// <summary>
@@ -138,43 +139,57 @@ namespace Raven.Abstractions.Smuggler
 				timeout = value;
 		    }
 	    }
-    }
 
-    public class SmugglerOptions : SmugglerOptionsBase
-	{
-		public SmugglerOptions()
-		{
-		}
-
-		/// <summary>
-		/// The path to write to when doing an export, or where to read from when doing an import.
-		/// </summary>
-		public string BackupPath { get; set; }
-
-        /// <summary>
-        /// The stream to write to when doing an export, or where to read from when doing an import.
-        /// </summary>
-        public Stream BackupStream { get; set; }
-        
         public bool Incremental { get; set; }
 
         public string TransformScript { get; set; }
 
-		public ItemType ItemTypeParser(string items)
-		{
-			if (String.IsNullOrWhiteSpace(items))
-			{
-				return ItemType.Documents | ItemType.Indexes | ItemType.Attachments;
-			}
-			return (ItemType)Enum.Parse(typeof(ItemType), items, ignoreCase: true);
-		}
-	}
+        /// <summary>
+        /// Maximum number of steps that transform script can have
+        /// </summary>
+        public int MaxStepsForTransformScript { get; set; }
+    }
 
-    public class SmugglerBetweenOptions : SmugglerOptionsBase
+    public class SmugglerBetweenOptions
     {
         public RavenConnectionStringOptions From { get; set; }
 
         public RavenConnectionStringOptions To { get; set; }
+
+		/// <summary>
+		/// You can give a key to the incremental last etag, in order to make incremental imports from a few export sources.
+		/// </summary>
+		public string IncrementalKey { get; set; }
+    }
+
+    public class SmugglerExportOptions
+    {
+        public RavenConnectionStringOptions From { get; set; }
+
+        /// <summary>
+        /// The path to write the export.
+        /// </summary>
+        public string ToFile { get; set; }
+
+        /// <summary>
+        /// The stream to write the export.
+        /// </summary>
+        public Stream ToStream { get; set; }
+    }
+
+    public class SmugglerImportOptions
+    {
+        public RavenConnectionStringOptions To { get; set; }
+
+        /// <summary>
+        /// The path to read from of the import data.
+        /// </summary>
+        public string FromFile { get; set; }
+
+        /// <summary>
+        /// The stream to read from of the import data.
+        /// </summary>
+        public Stream FromStream { get; set; }
     }
 
 	[Flags]
@@ -185,7 +200,7 @@ namespace Raven.Abstractions.Smuggler
 		Attachments = 0x4,
 		Transformers = 0x8,
 
-        RemoveAnalyzers = 0x8000
+        RemoveAnalyzers = 0x8000,
 	}
 
 	public class FilterSetting

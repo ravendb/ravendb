@@ -1,12 +1,11 @@
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Smuggler
 {
 	public interface ISmugglerApi
 	{
-        Task<ExportDataResult> ExportData(SmugglerOptions options, PeriodicBackupStatus backupStatus);
+        Task<ExportDataResult> ExportData(SmugglerExportOptions exportOptions, SmugglerOptions options);
 
-		Task ImportData(SmugglerOptions options);
+		Task ImportData(SmugglerImportOptions importOptions, SmugglerOptions options);
 	}
 }

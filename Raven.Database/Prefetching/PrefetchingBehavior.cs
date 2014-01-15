@@ -129,11 +129,14 @@ namespace Raven.Database.Prefetching
 			nextDocEtag = HandleEtagGapsIfNeeded(nextDocEtag);
 			bool hasDocs = false;
 
-			while (items.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && prefetchingQueue.TryPeek(out result) && nextDocEtag.CompareTo(result.Etag) >= 0)
+			while (items.Count < autoTuner.NumberOfItemsToIndexInSingleBatch && 
+				prefetchingQueue.TryPeek(out result) && 
+				nextDocEtag.CompareTo(result.Etag) >= 0)
 			{
 				// safe to do peek then dequeue because we are the only one doing the dequeues
-				// and here we are single threaded
-				prefetchingQueue.TryDequeue(out result);
+				// and here we are single threaded, but still, better to check
+				if (prefetchingQueue.TryDequeue(out result) == false)
+					continue;
 
 				if (result.Etag != nextDocEtag)
 					continue;

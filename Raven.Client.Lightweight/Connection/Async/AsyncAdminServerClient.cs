@@ -29,7 +29,7 @@ namespace Raven.Client.Connection.Async
 			RavenJObject doc;
 			var req = adminRequest.CreateDatabase(databaseDocument, out doc);
 
-			return req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
+			return req.WriteAsync(doc.ToString(Formatting.Indented));
 		}
 
 		public Task DeleteDatabaseAsync(string databaseName, bool hardDelete = false)
@@ -44,12 +44,12 @@ namespace Raven.Client.Connection.Async
 
 		public Task StopIndexingAsync()
 		{
-			return innerAsyncServerClient.ExecuteWithReplication("POST", operationUrl => adminRequest.StopIndexing(operationUrl).ExecuteRequestAsync());
+			return innerAsyncServerClient.ExecuteWithReplication("POST", operationMetadata => adminRequest.StopIndexing(operationMetadata.Url).ExecuteRequestAsync());
 		}
 
 		public Task StartIndexingAsync()
 		{
-			return innerAsyncServerClient.ExecuteWithReplication("POST", operationUrl => adminRequest.StartIndexing(operationUrl).ExecuteRequestAsync());
+			return innerAsyncServerClient.ExecuteWithReplication("POST", operationMetadata => adminRequest.StartIndexing(operationMetadata.Url).ExecuteRequestAsync());
 		}
 
 		public async Task<AdminStatistics> GetStatisticsAsync()
@@ -64,7 +64,7 @@ namespace Raven.Client.Connection.Async
 			RavenJObject backupSettings;
 			var request = adminRequest.StartBackup(backupLocation, databaseDocument, out backupSettings);
 
-			return request.ExecuteWriteAsync(backupSettings.ToString(Formatting.None));
+			return request.WriteAsync(backupSettings.ToString(Formatting.None));
 		}
 
 		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
@@ -72,14 +72,14 @@ namespace Raven.Client.Connection.Async
 			RavenJObject restoreSettings;
 			var request = adminRequest.StartRestore(restoreLocation, databaseLocation, databaseName, defrag, out restoreSettings);
 
-			return request.ExecuteWriteAsync(restoreSettings.ToString(Formatting.None));
+			return request.WriteAsync(restoreSettings.ToString(Formatting.None));
 		}
 
 		public Task<string> GetIndexingStatusAsync()
 		{
-			return innerAsyncServerClient.ExecuteWithReplication("GET", async operationUrl =>
+			return innerAsyncServerClient.ExecuteWithReplication("GET", async operationMetadata =>
 			{
-				var result = await adminRequest.IndexingStatus(operationUrl).ReadResponseJsonAsync();
+				var result = await adminRequest.IndexingStatus(operationMetadata.Url).ReadResponseJsonAsync();
 
 				return result.Value<string>("IndexingStatus");
 			});

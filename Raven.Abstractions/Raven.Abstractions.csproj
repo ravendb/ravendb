@@ -53,6 +53,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="System.Net.Http.WebRequest" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
@@ -99,6 +100,7 @@
     <Compile Include="Connection\HttpRequestHelper.cs" />
     <Compile Include="Connection\HttpResponseHeadersExtensions.cs" />
     <Compile Include="Connection\OAuthHelper.cs" />
+    <Compile Include="Connection\OperationCredentials.cs" />
     <Compile Include="Connection\WebRequestEventArgs.cs" />
     <Compile Include="Connection\WebResponseExtensions.cs" />
     <Compile Include="Data\AccessTokenBody.cs" />
@@ -108,6 +110,7 @@
     <Compile Include="Data\AlertsDocument.cs" />
     <Compile Include="Data\ApiKeyDefinition.cs" />
     <Compile Include="Data\AttachmentInformation.cs" />
+    <Compile Include="Data\FacetQuery.cs" />
     <Compile Include="Data\FailoverServers.cs" />
     <Compile Include="Data\HighlightedField.cs" />
     <Compile Include="Data\BulkInsertOptions.cs" />
@@ -264,6 +267,7 @@
     <Compile Include="SystemTime.cs" />
     <Compile Include="Util\AsyncEnumeratorBridge.cs" />
     <Compile Include="Util\AsyncManualResetEvent.cs" />
+    <Compile Include="Util\AsyncReaderWriterLock.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />

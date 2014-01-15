@@ -11,6 +11,7 @@ using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Server;
+using Raven.Database.Server.RavenFS;
 using Raven.Database.Server.WebApi;
 using Raven.Database.Util;
 using Raven.Server.Discovery;
@@ -126,6 +127,7 @@ namespace Raven.Server
 			}
 
 			public RequestManager RequestManager { get { return options.RequestManager; } }
+			public RavenFileSystem FileSystem { get { return options.FileSystem; } }
 		}
 	}
 
@@ -138,5 +140,6 @@ namespace Raven.Server
 		Task<DocumentDatabase> GetDatabaseInternal(string databaseName);
 
 		RequestManager RequestManager { get; }
+		RavenFileSystem FileSystem { get; }
 	}
 }

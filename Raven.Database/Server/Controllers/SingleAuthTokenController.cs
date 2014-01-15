@@ -4,7 +4,7 @@ using Raven.Database.Server.Security;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class SingleAuthTokenController : RavenApiController
+	public class SingleAuthTokenController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("singleAuthToken")]

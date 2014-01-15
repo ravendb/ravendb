@@ -56,55 +56,78 @@ namespace Performance.Comparison.SQLite
                          Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
         }
 
+        public override List<PerformanceRecord> WriteParallelSequential(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            return WriteParallel(string.Format("[SQLite] parallel sequential write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
+        }
+
         public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data, PerfTracker perfTracker)
         {
             return Write(string.Format("[SQLite] random write ({0} items)", Constants.ItemsPerTransaction), data,
                          Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
         }
 
+        public override List<PerformanceRecord> WriteParallelRandom(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            return WriteParallel(string.Format("[SQLite] parallel random write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
+        }
+
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return Read(string.Format("[SQLite] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
         public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return ReadParallel(string.Format("[SQLite] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker, numberOfThreads);
         }
 
-        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker)
+        public override PerformanceRecord ReadRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker)
         {
             return Read(string.Format("[SQLite] random read ({0} items)", Constants.ReadItems), randomIds, perfTracker);
         }
 
-        public override PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads)
+        public override PerformanceRecord ReadParallelRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker, int numberOfThreads)
         {
             return ReadParallel(string.Format("[SQLite] parallel random read ({0} items)", Constants.ReadItems), randomIds, perfTracker, numberOfThreads);
         }
 
         private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker)
         {
-            byte[] valueToWrite = null;
-
             NewDatabase();
 
-            var random = new Random();
-            var value = new byte[data.Max(x => x.ValueSize)];
-            random.NextBytes(value);
+            var enumerator = data.GetEnumerator();
+            return WriteInternal(operation, enumerator, itemsPerTransaction, numberOfTransactions, perfTracker);
+        }
 
-            var records = new List<PerformanceRecord>();
+        private List<PerformanceRecord> WriteParallel(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            NewDatabase();
 
+            return ExecuteWriteWithParallel(
+                data,
+                numberOfTransactions,
+                itemsPerTransaction,
+                numberOfThreads,
+                (enumerator, itmsPerTransaction, nmbrOfTransactions) => WriteInternal(operation, enumerator, itmsPerTransaction, nmbrOfTransactions, perfTracker),
+                out elapsedMilliseconds);
+        }
+
+        private List<PerformanceRecord> WriteInternal(string operation, IEnumerator<TestData> enumerator, long itemsPerTransaction, long numberOfTransactions, PerfTracker perfTracker)
+        {
             var sw = new Stopwatch();
-
+            byte[] valueToWrite = null;
+            var records = new List<PerformanceRecord>();
             using (var connection = new SQLiteConnection(connectionString))
             {
                 connection.Open();
 
-                var enumerator = data.GetEnumerator();
                 sw.Restart();
                 for (var transactions = 0; transactions < numberOfTransactions; transactions++)
                 {
@@ -123,22 +146,23 @@ namespace Performance.Comparison.SQLite
                                 command.Parameters.Add("@value", DbType.Binary, valueToWrite.Length).Value = valueToWrite;
 
                                 var affectedRows = command.ExecuteNonQuery();
-                                perfTracker.Increment();
                                 Debug.Assert(affectedRows == 1);
                             }
                         }
 
                         tx.Commit();
                     }
+
                     sw.Stop();
+                    perfTracker.Record(sw.ElapsedMilliseconds);
 
                     records.Add(new PerformanceRecord
-                    {
-                        Operation = operation,
-                        Time = DateTime.Now,
-                        Duration = sw.ElapsedMilliseconds,
-                        ProcessedItems = itemsPerTransaction
-                    });
+                            {
+                                Operation = operation,
+                                Time = DateTime.Now,
+                                Duration = sw.ElapsedMilliseconds,
+                                ProcessedItems = itemsPerTransaction
+                            });
                 }
 
                 sw.Stop();
@@ -147,13 +171,19 @@ namespace Performance.Comparison.SQLite
             return records;
         }
 
-        private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
+        private PerformanceRecord Read(string operation, IEnumerable<uint> ids, PerfTracker perfTracker)
         {
             var sw = Stopwatch.StartNew();
 
-            ReadInternal(ids, perfTracker, connectionString);
+            using (var connection = new SQLiteConnection(connectionString))
+            {
+                sw.Restart();
 
-            sw.Stop();
+                connection.Open();
+                ReadInternal(ids, perfTracker, connection);
+
+                sw.Stop();
+            }
 
             return new PerformanceRecord
                 {
@@ -164,66 +194,44 @@ namespace Performance.Comparison.SQLite
                 };
         }
 
-        private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker, int numberOfThreads)
+        private PerformanceRecord ReadParallel(string operation, IEnumerable<uint> ids, PerfTracker perfTracker, int numberOfThreads)
         {
-            var countdownEvent = new CountdownEvent(numberOfThreads);
-
-            var sw = Stopwatch.StartNew();
-
-            for (int i = 0; i < numberOfThreads; i++)
-            {
-                ThreadPool.QueueUserWorkItem(
-                    state =>
-                    {
-                        ReadInternal(ids, perfTracker, connectionString);
-
-                        countdownEvent.Signal();
-                    });
-            }
-
-            countdownEvent.Wait();
-            sw.Stop();
-
-            return new PerformanceRecord
-            {
-                Operation = operation,
-                Time = DateTime.Now,
-                Duration = sw.ElapsedMilliseconds,
-                ProcessedItems = ids.Count() * numberOfThreads
-            };
-        }
-
-        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, string connectionString)
-        {
-            var buffer = new byte[4096];
-
             using (var connection = new SQLiteConnection(connectionString))
             {
                 connection.Open();
 
-                using (var tx = connection.BeginTransaction())
-                {
-                    foreach (var id in ids)
-                    {
-                        using (var command = new SQLiteCommand("SELECT Value FROM Items WHERE ID = " + id, connection))
-                        {
-                            using (var reader = command.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    long bytesRead;
-                                    long fieldOffset = 0;
+                return ExecuteReadWithParallel(operation, ids, numberOfThreads, () => ReadInternal(ids, perfTracker, connection));
+            }
+        }
 
-                                    while ((bytesRead = reader.GetBytes(0, fieldOffset, buffer, 0, buffer.Length)) > 0)
-                                    {
-                                        fieldOffset += bytesRead;
-                                    }
-                                    perfTracker.Increment();
-                                }
+        private static long ReadInternal(IEnumerable<uint> ids, PerfTracker perfTracker, SQLiteConnection connection)
+        {
+            var buffer = new byte[4096];
+
+            using (var tx = connection.BeginTransaction())
+            {
+                long v = 0;
+                var sw = Stopwatch.StartNew();
+                foreach (var id in ids)
+                {
+                    using (var command = new SQLiteCommand("SELECT Value FROM Items WHERE ID = " + id, connection))
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            long bytesRead;
+                            long fieldOffset = 0;
+
+                            while ((bytesRead = reader.GetBytes(0, fieldOffset, buffer, 0, buffer.Length)) > 0)
+                            {
+                                fieldOffset += bytesRead;
+                                v += bytesRead;
                             }
                         }
                     }
                 }
+                perfTracker.Record(sw.ElapsedMilliseconds);
+                return v;
             }
         }
     }

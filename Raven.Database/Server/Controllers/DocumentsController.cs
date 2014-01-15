@@ -13,7 +13,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class DocumentsController : RavenApiController
+	public class DocumentsController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("docs")]
@@ -34,13 +34,21 @@ namespace Raven.Database.Server.Controllers
 
 			var startsWith = GetQueryStringValue("startsWith");
 			HttpResponseMessage msg;
+		    int nextPageStart = GetNextPageStart();
 			if (string.IsNullOrEmpty(startsWith))
 				msg = GetMessageWithObject(Database.GetDocuments(GetStart(), GetPageSize(Database.Configuration.MaxPageSize),
 					GetEtagFromQueryString()));
 			else
-				msg = GetMessageWithObject(Database.GetDocumentsWithIdStartingWith(startsWith, GetQueryStringValue("matches"), null,
-					GetStart(), GetPageSize(Database.Configuration.MaxPageSize)));
-			WriteHeaders(new RavenJObject(), lastDocEtag, msg);
+			{
+                msg = GetMessageWithObject(Database.GetDocumentsWithIdStartingWith(startsWith, GetQueryStringValue("matches"), GetQueryStringValue("exclude"),
+				                                                                   GetStart(), GetPageSize(Database.Configuration.MaxPageSize), ref nextPageStart));
+			}
+
+			WriteHeaders(new RavenJObject
+			             {
+				             { Constants.NextPageStart, nextPageStart }
+			             }, lastDocEtag, msg);
+
 			return msg;
 		}
 
@@ -51,20 +59,19 @@ namespace Raven.Database.Server.Controllers
 		{
 			var json = await ReadJsonAsync();
 			var id = Database.Put(null, Etag.Empty, json,
-								  InnerHeaders.FilterHeaders(),
+								  InnerHeaders.FilterHeadersToObject(),
 								  GetRequestTransaction());
 
 			return GetMessageWithObject(id);
 		}
 
 		[HttpHead]
-		[Route("docs/{*id}")]
-		[Route("databases/{databaseName}/docs/{*id}")]
-		public HttpResponseMessage DocHead(string id)
+		[Route("docs/{*docId}")]
+		[Route("databases/{databaseName}/docs/{*docId}")]
+		public HttpResponseMessage DocHead(string docId)
 		{
 			var msg = GetEmptyMessage();
 			msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
-			var docId = id;
 			var transactionInformation = GetRequestTransaction();
 			var documentMetadata = Database.GetDocumentMetadata(docId, transactionInformation);
 			if (documentMetadata == null)
@@ -92,11 +99,10 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpGet]
-		[Route("docs/{*id}")]
-		[Route("databases/{databaseName}/docs/{*id}")]
-		public HttpResponseMessage DocGet(string id)
+		[Route("docs/{*docId}")]
+		[Route("databases/{databaseName}/docs/{*docId}")]
+		public HttpResponseMessage DocGet(string docId)
 		{
-			var docId = id;
 			var msg = GetEmptyMessage();
 			if (string.IsNullOrEmpty(GetHeader("If-None-Match")))
 				return GetDocumentDirectly(docId, msg);
@@ -127,32 +133,29 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpDelete]
-		[Route("docs/{*id}")]
-		[Route("databases/{databaseName}/docs/{*id}")]
-		public HttpResponseMessage DocDelete(string id)
+		[Route("docs/{*docId}")]
+		[Route("databases/{databaseName}/docs/{*docId}")]
+		public HttpResponseMessage DocDelete(string docId)
 		{
-			var docId = id;
 			Database.Delete(docId, GetEtag(), GetRequestTransaction());
 			return GetEmptyMessage(HttpStatusCode.NoContent);
 		}
 
 		[HttpPut]
-		[Route("docs/{*id}")]
-		[Route("databases/{databaseName}/docs/{*id}")]
-		public async Task<HttpResponseMessage> DocPut(string id)
+		[Route("docs/{*docId}")]
+		[Route("databases/{databaseName}/docs/{*docId}")]
+		public async Task<HttpResponseMessage> DocPut(string docId)
 		{
-			var docId = id;
 			var json = await ReadJsonAsync();
-			var putResult = Database.Put(docId, GetEtag(), json, InnerHeaders.FilterHeaders(), GetRequestTransaction());
+			var putResult = Database.Put(docId, GetEtag(), json, InnerHeaders.FilterHeadersToObject(), GetRequestTransaction());
 			return GetMessageWithObject(putResult, HttpStatusCode.Created);
 		}
 
 		[HttpPatch]
-		[Route("docs/{*id}")]
-		[Route("databases/{databaseName}/docs/{*id}")]
-		public async Task<HttpResponseMessage> DocPatch(string id)
+		[Route("docs/{*docId}")]
+		[Route("databases/{databaseName}/docs/{*docId}")]
+		public async Task<HttpResponseMessage> DocPatch(string docId)
 		{
-			var docId = id;
 			var patchRequestJson = await ReadJsonArrayAsync();
 			var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
 			var patchResult = Database.ApplyPatch(docId, GetEtag(), patchRequests, GetRequestTransaction());
@@ -160,11 +163,10 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpEval]
-		[Route("docs/{*id}")]
-		[Route("databases/{databaseName}/docs/{*id}")]
-		public async Task<HttpResponseMessage> DocEval(string id)
+		[Route("docs/{*docId}")]
+		[Route("databases/{databaseName}/docs/{*docId}")]
+		public async Task<HttpResponseMessage> DocEval(string docId)
 		{
-			var docId = id;
 			var advPatchRequestJson = await ReadJsonObjectAsync<RavenJObject>();
 			var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
 			bool testOnly;
@@ -205,7 +207,7 @@ namespace Raven.Database.Server.Controllers
 					return GetEmptyMessage(HttpStatusCode.NotFound);
 				case PatchResult.Patched:
 					var msg = GetMessageWithObject(new { Patched = true, Debug = debug });
-					msg.Headers.Add("Location", Database.Configuration.GetFullUrl("/docs/" + docId));
+					msg.Headers.Location = Database.Configuration.GetFullUrl("docs/" + docId);
 					return msg;
 				case PatchResult.Tested:
 					return GetMessageWithObject(new

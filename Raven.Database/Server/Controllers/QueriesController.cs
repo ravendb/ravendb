@@ -11,7 +11,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class QueriesController : RavenApiController
+	public class QueriesController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("queries")]

@@ -10,15 +10,22 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Extensions;
 using Xunit;
+using Raven.Database.Extensions;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bundles.Encryption
 {
 	public class EncryptionBackupAndRestore : RavenTest
 	{
-		[Fact]
-		public async Task CanRestoreAnEncryptedDatabase()
-		{
-			using (var store = NewRemoteDocumentStore(requestedStorage: "esent"))
+		[Theory]
+		[InlineData("voron")]
+		[InlineData("esent")]
+		public async Task CanRestoreAnEncryptedDatabase(string storageEngineTypeName)
+		{			
+			IOExtensions.DeleteDirectory(@"~\Databases\Db1".ToFullPath());
+			IOExtensions.DeleteDirectory(@"~\Databases\Db2".ToFullPath());
+
+			using (var store = NewRemoteDocumentStore(requestedStorage: storageEngineTypeName, runInMemory: false))
 			{
 				var db1 = new DatabaseDocument
 				{

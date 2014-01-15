@@ -34,11 +34,13 @@ using Raven.Client.WinRT.MissingFromWinRT;
 
 namespace Raven.Client.Document
 {
+	using Raven.Abstractions.Connection;
+
 	/// <summary>
 	/// The set of conventions used by the <see cref="DocumentStore"/> which allow the users to customize
 	/// the way the Raven client API behaves
 	/// </summary>
-	public class DocumentConvention
+	public class DocumentConvention : Convention
 	{
 		public delegate IEnumerable<object> ApplyReduceFunctionFunc(
 			Type indexType,
@@ -46,7 +48,6 @@ namespace Raven.Client.Document
 			IEnumerable<object> results,
 			Func<Func<IEnumerable<object>, IEnumerable>> generateTransformResults);
 
-		private Dictionary<Type, PropertyInfo> idPropertyCache = new Dictionary<Type, PropertyInfo>();
 		private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
 
 #if !SILVERLIGHT && !NETFX_CORE
@@ -167,13 +168,6 @@ namespace Raven.Client.Document
 			return tag + id;
 		}
 
-
-		/// <summary>
-		/// How should we behave in a replicated environment when we can't 
-		/// reach the primary node and need to failover to secondary node(s).
-		/// </summary>
-		public FailoverBehavior FailoverBehavior { get; set; }
-
 		/// <summary>
 		/// Register an action to customize the json serializer used by the <see cref="DocumentStore"/>
 		/// </summary>
@@ -184,22 +178,11 @@ namespace Raven.Client.Document
 		/// </summary>
 		public bool DisableProfiling { get; set; }
 
-		/// <summary>
-		/// Enable multipule async operations
-		/// </summary>
-		public bool AllowMultipuleAsyncOperations { get; set; }
-
 		///<summary>
 		/// A list of type converters that can be used to translate the document key (string)
 		/// to whatever type it is that is used on the entity, if the type isn't already a string
 		///</summary>
 		public List<ITypeConverter> IdentityTypeConvertors { get; set; }
-
-		/// <summary>
-		/// Gets or sets the identity parts separator used by the HiLo generators
-		/// </summary>
-		/// <value>The identity parts separator.</value>
-		public string IdentityPartsSeparator { get; set; }
 
 		/// <summary>
 		/// Gets or sets the default max number of requests per session.
@@ -325,61 +308,6 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Gets the identity property.
-		/// </summary>
-		/// <param name="type">The type.</param>
-		/// <returns></returns>
-		public PropertyInfo GetIdentityProperty(Type type)
-		{
-			PropertyInfo info;
-			var currentIdPropertyCache = idPropertyCache;
-			if (currentIdPropertyCache.TryGetValue(type, out info))
-				return info;
-
-			// we want to ignore nested entities from index creation tasks
-			if(type.IsNested && type.DeclaringType != null && 
-				typeof(AbstractIndexCreationTask).IsAssignableFrom(type.DeclaringType))
-			{
-				idPropertyCache = new Dictionary<Type, PropertyInfo>(currentIdPropertyCache)
-				{
-					{type, null}
-				};
-				return null;
-			}
-
-			var identityProperty = GetPropertiesForType(type).FirstOrDefault(FindIdentityProperty);
-
-			if (identityProperty != null && identityProperty.DeclaringType != type)
-			{
-				var propertyInfo = identityProperty.DeclaringType.GetProperty(identityProperty.Name);
-				identityProperty = propertyInfo ?? identityProperty;
-			}
-
-			idPropertyCache = new Dictionary<Type, PropertyInfo>(currentIdPropertyCache)
-			{
-				{type, identityProperty}
-			};
-
-			return identityProperty;
-		}
-
-		private static IEnumerable<PropertyInfo> GetPropertiesForType(Type type)
-		{
-			foreach (var propertyInfo in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
-			{
-				yield return propertyInfo;
-			}
-
-			foreach (var @interface in type.GetInterfaces())
-			{
-				foreach (var propertyInfo in GetPropertiesForType(@interface))
-				{
-					yield return propertyInfo;
-				}
-			}
-		}
-
-		/// <summary>
 		/// Gets or sets the function to find the clr type of a document.
 		/// </summary>
 		public Func<string, RavenJObject, RavenJObject, string> FindClrType { get; set; }
@@ -418,17 +346,6 @@ namespace Raven.Client.Document
 		/// given the indexed document type, the index name, the current path and the property path.
 		/// </summary>
 		public Func<Type, string, string, string, string> FindPropertyNameForDynamicIndex { get; set; }
-
-		/// <summary>
-		/// Whatever or not RavenDB should cache the request to the specified url.
-		/// </summary>
-		public Func<string, bool> ShouldCacheRequest { get; set; }
-
-		/// <summary>
-		/// Gets or sets the function to find the identity property.
-		/// </summary>
-		/// <value>The find identity property.</value>
-		public Func<PropertyInfo, bool> FindIdentityProperty { get; set; }
 
 		/// <summary>
 		/// Get or sets the function to get the identity property name from the entity name
@@ -591,28 +508,6 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// Handles unauthenticated responses, usually by authenticating against the oauth server
-		/// </summary>
-		public Func<HttpWebResponse, Action<HttpWebRequest>> HandleUnauthorizedResponse { get; set; }
-
-		/// <summary>
-		/// Handles forbidden responses
-		/// </summary>
-		public Func<HttpWebResponse, Action<HttpWebRequest>> HandleForbiddenResponse { get; set; }
-
-		/// <summary>
-		/// Begins handling of unauthenticated responses, usually by authenticating against the oauth server
-		/// in async manner
-		/// </summary>
-		public Func<HttpResponseMessage, Task<Action<HttpClient>>> HandleUnauthorizedResponseAsync { get; set; }
-
-		/// <summary>
-		/// Begins handling of forbidden responses
-		/// in async manner
-		/// </summary>
-		public Func<HttpResponseMessage, Task<Action<HttpClient>>> HandleForbiddenResponseAsync { get; set; }
-
-		/// <summary>
 		/// When RavenDB needs to convert between a string id to a value type like int or guid, it calls
 		/// this to perform the actual work
 		/// </summary>
@@ -653,19 +548,6 @@ namespace Raven.Client.Document
 		/// this to inject your own replication / failover logic.
 		/// </summary>
 		public Func<string, ReplicationInformer> ReplicationInformerFactory { get; set; }
-
-
-		public FailoverBehavior FailoverBehaviorWithoutFlags
-		{
-			get { return FailoverBehavior & (~FailoverBehavior.ReadFromAllServers); }
-		}
-
-		/// <summary>
-		/// The maximum amount of time that we will wait before checking
-		/// that a failed node is still up or not.
-		/// Default: 5 minutes
-		/// </summary>
-		public TimeSpan MaxFailoverCheckPeriod { get; set; }
 
 		public int IncrementRequestCount()
 		{

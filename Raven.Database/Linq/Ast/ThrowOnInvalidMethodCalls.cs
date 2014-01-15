@@ -135,6 +135,9 @@ You should be calling OrderBy on the QUERY, not on the index, if you want to spe
 
 		private void HandleGroupBy(SimpleType simpleType)
 		{
+			if (string.IsNullOrEmpty(groupByIdentifier))
+				return;
+
 			var initializer = simpleType.Ancestors.OfType<VariableInitializer>().Single();
 			var rootExpression = (InvocationExpression)initializer.Initializer;
 

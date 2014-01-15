@@ -3,6 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Diagnostics;
+using System.Threading.Tasks;
+using Lucene.Net.Search;
+
 namespace Raven.Database.Storage.Voron.StorageActions
 {
 	using System;
@@ -177,8 +181,42 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
 		public System.Collections.Generic.IEnumerable<TaskMetadata> GetPendingTasksForDebug()
 		{
-			//TODO : write implementation _before_ finishing merge of Voron stuff into 3.0
-			throw new NotImplementedException();
+			if(!HasTasks)
+				yield break;
+
+			using (var taskIterator = tableStorage.Tasks.Iterate(Snapshot, writeBatch))
+			{
+				if(!taskIterator.Seek(Slice.BeforeAllKeys))
+					yield break;
+
+				do
+				{
+					ushort version;
+					var taskData = LoadJson(tableStorage.Tasks, taskIterator.CurrentKey, writeBatch, out version); 
+					if (taskData == null) 
+							throw new InvalidOperationException("Retrieved a pending task object, but was unable to parse it. This is probably a data corruption or a bug.");
+
+						TaskMetadata pendingTasksForDebug;
+						try
+						{
+							pendingTasksForDebug = new TaskMetadata
+							{
+								Id = Etag.Parse(taskData.Value<byte[]>("id")),
+								AddedTime = DateTime.Parse(taskData.Value<string>("time")),
+								Type = taskData.Value<string>("type"),
+								IndexId = taskData.Value<int>("index")
+							};
+						}
+						catch (Exception e)
+						{
+							throw new InvalidOperationException("The pending task record was parsed, but contained invalid values. See more details at inner exception.",e);
+						}
+
+						yield return pendingTasksForDebug;
+				} while (taskIterator.MoveNext());
+			}
+			
+
 		}
 	}
 }

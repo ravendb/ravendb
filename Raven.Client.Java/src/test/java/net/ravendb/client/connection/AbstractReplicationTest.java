@@ -3,6 +3,7 @@ package net.ravendb.client.connection;
 import java.util.UUID;
 
 import net.ravendb.abstractions.closure.Functions;
+import net.ravendb.abstractions.connection.OperationCredentials;
 import net.ravendb.abstractions.replication.ReplicationDestination;
 import net.ravendb.abstractions.replication.ReplicationDocument;
 import net.ravendb.abstractions.replication.ReplicationDestination.TransitiveReplicationOptions;
@@ -29,7 +30,7 @@ public abstract class AbstractReplicationTest extends RavenDBAwareTests{
   public void init() {
     super.init();
 
-    serverClient2 = new ServerClient(DEFAULT_SERVER_URL_2, convention,
+    serverClient2 = new ServerClient(DEFAULT_SERVER_URL_2, convention, new OperationCredentials(),
       new Functions.StaticFunction1<String, ReplicationInformer>(replicationInformer), null, factory,
       UUID.randomUUID(), new IDocumentConflictListener[0]);
 
@@ -38,8 +39,8 @@ public abstract class AbstractReplicationTest extends RavenDBAwareTests{
 
   @BeforeClass
   public static void startServerBefore() throws Exception {
-    startServer(DEFAULT_SERVER_PORT_1);
-    startServer(DEFAULT_SERVER_PORT_2);
+    startServer(DEFAULT_SERVER_PORT_1, true);
+    startServer(DEFAULT_SERVER_PORT_2, true);
   }
 
   @AfterClass

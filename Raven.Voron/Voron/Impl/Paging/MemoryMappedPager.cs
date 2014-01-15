@@ -1,118 +1,221 @@
-﻿using System;
-using System.IO;
-using System.IO.MemoryMappedFiles;
-using System.Runtime.InteropServices;
-using Microsoft.Win32.SafeHandles;
-using Voron.Trees;
-
-namespace Voron.Impl
+﻿namespace Voron.Impl.Paging
 {
-	public unsafe class MemoryMapPager : AbstractPager
-	{
-		private readonly FileStream _fileStream;
-		private readonly FileInfo _fileInfo;
+	using System;
+	using System.ComponentModel;
+	using System.Diagnostics;
+	using System.IO;
+	using System.IO.MemoryMappedFiles;
+	using System.Runtime.InteropServices;
 
-		[DllImport("kernel32.dll", SetLastError = true)]
-		[return: MarshalAs(UnmanagedType.Bool)]
-		extern static bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
+	using Microsoft.Win32.SafeHandles;
+
+	using Voron.Trees;
+	using Voron.Util;
+
+	public unsafe class Win32MemoryMapPager : AbstractPager
+    {
+        private readonly NativeFileAccess access;
+        private readonly FileInfo _fileInfo;
+        private readonly SafeFileHandle _handle;
+        private long _length;
+        private readonly FileStream _fileStream;
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
-		public MemoryMapPager(string file)
-		{
-			_fileInfo = new FileInfo(file);
-			var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
-			_fileStream = _fileInfo.Open(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
-			if (noData)
-			{
-				NumberOfAllocatedPages = 0;
-			}
-			else
-			{
-				NumberOfAllocatedPages = _fileInfo.Length / PageSize;
-				PagerState.Release();
-				PagerState = CreateNewPagerState();
-			}
-		}
 
-		public override void AllocateMorePages(Transaction tx, long newLength)
-		{
-			if (newLength < _fileStream.Length)
-				throw new ArgumentException("Cannot set the legnth to less than the current length");
+        [DllImport("kernel32.dll")]
+        static extern bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
 
-			if (newLength == _fileStream.Length)
-				return;
+        [DllImport("kernel32.dll")]
+        static extern IntPtr GetCurrentProcess();
 
-			// need to allocate memory again
-			_fileStream.SetLength(newLength);
-			PagerState.Release(); // when the last transaction using this is over, will dispose it
-			PagerState newPager = CreateNewPagerState();
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool PrefetchVirtualMemory(IntPtr hProcess, UIntPtr NumberOfEntries, WIN32_MEMORY_RANGE_ENTRY* VirtualAddresses, ulong Flags);
 
-			if (tx != null) // we only pass null during startup, and we don't need it there
-			{
-				newPager.AddRef(); // one for the current transaction
-				tx.AddPagerState(newPager);
-			}
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private class MEMORYSTATUSEX
+        {
+            public uint dwLength;
+            public uint dwMemoryLoad;
+            public ulong ullTotalPhys;
+            public ulong ullAvailPhys;
+            public ulong ullTotalPageFile;
+            public ulong ullAvailPageFile;
+            public ulong ullTotalVirtual;
+            public ulong ullAvailVirtual;
+            public ulong ullAvailExtendedVirtual;
+            public MEMORYSTATUSEX()
+            {
+                this.dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX));
+            }
+        }
 
-			PagerState = newPager;
-			NumberOfAllocatedPages = newPager.Accessor.Capacity / PageSize;
-		}
 
-		private PagerState CreateNewPagerState()
-		{
-			var mmf = MemoryMappedFile.CreateFromFile(_fileStream, Guid.NewGuid().ToString(), _fileStream.Length,
-													  MemoryMappedFileAccess.ReadWrite, null, HandleInheritability.None, true);
-			var accessor = mmf.CreateViewAccessor();
-			byte* p = null;
-			accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        static extern bool GlobalMemoryStatusEx([In, Out] MEMORYSTATUSEX lpBuffer);
 
-			var newPager = new PagerState
-			{
-				Accessor = accessor,
-				File = mmf,
-				Base = p
-			};
-			newPager.AddRef(); // one for the pager
-			return newPager;
-		}
+        static readonly Version win8version = new Version(6, 2, 9200, 0);
 
-		public override byte* AcquirePagePointer(long pageNumber)
-		{
-			return PagerState.Base + (pageNumber * PageSize);
-		}
+        [StructLayout(LayoutKind.Sequential)]
+        private struct WIN32_MEMORY_RANGE_ENTRY
+        {
+            public byte* VirtualAddress;
+            public IntPtr NumberOfBytes;
+        }
 
-		public override void Sync()
-		{
-             FlushFileBuffers(_fileStream.SafeFileHandle);
-		}
+        public Win32MemoryMapPager(string file,
+            NativeFileAttributes options = NativeFileAttributes.Normal,
+            NativeFileAccess access = NativeFileAccess.GenericRead | NativeFileAccess.GenericWrite)
+        {
+            this.access = access;
+            _fileInfo = new FileInfo(file);
+            var noData = _fileInfo.Exists == false || _fileInfo.Length == 0;
+            _handle = NativeFileMethods.CreateFile(file, access, NativeFileShare.Read | NativeFileShare.Write | NativeFileShare.Delete, IntPtr.Zero,
+                NativeFileCreationDisposition.OpenAlways, options, IntPtr.Zero);
+	        if (_handle.IsInvalid)
+	        {
+		        var lastWin32ErrorCode = Marshal.GetLastWin32Error();
+		        throw new IOException("Failed to open file storage of Win32MemoryMapPager",new Win32Exception(lastWin32ErrorCode));
+	        }
 
-		public override void Write(Page page, long? pageNumber)
-		{
-		    var startPage = pageNumber ?? page.PageNumber;
+	        _fileStream = new FileStream(_handle, FileAccess.ReadWrite);
 
-			var toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
+            if (noData)
+            {
+                NumberOfAllocatedPages = 0;
+            }
+            else
+            {
+                NumberOfAllocatedPages = _fileInfo.Length / PageSize;
+                PagerState.Release();
+                PagerState = CreateNewPagerState();
 
-			WriteDirect(page, startPage, toWrite);
-		}
+                TryPrefetchingData();
+            }
+        }
 
-	    public override void WriteDirect(Page start, long pagePosition, int pagesToWrite)
-	    {
-            NativeMethods.memcpy(PagerState.Base + pagePosition * PageSize, start.Base, pagesToWrite * PageSize);
-	    }
+        private void TryPrefetchingData()
+        {
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT || Environment.OSVersion.Version < win8version)
+                return; // this is limited to windows 8 or higher
+            var lpBuffer = new MEMORYSTATUSEX();
+            if (GlobalMemoryStatusEx(lpBuffer) == false)
+                return;
 
-	    public override void Dispose()
-		{
-			base.Dispose();
-			if (PagerState != null)
-			{
-				PagerState.Release();
-				PagerState = null;
-			}
-			_fileStream.Dispose();
-			if(DeleteOnClose)
-				_fileInfo.Delete();
-		}
-	}
+            if (lpBuffer.dwMemoryLoad > 75)
+                return; // system loaded, let just load on demand
+
+            var size = Math.Min(_fileInfo.Length, (long)lpBuffer.ullAvailPhys);
+
+            var entries = stackalloc WIN32_MEMORY_RANGE_ENTRY[1];
+            entries[0].NumberOfBytes = new IntPtr(size);
+            entries[0].VirtualAddress = PagerState.MapBase;
+
+            if(PrefetchVirtualMemory(GetCurrentProcess(), new UIntPtr(1), entries, 0)== false)
+                throw new Win32Exception();
+        }
+
+        public override void AllocateMorePages(Transaction tx, long newLength)
+        {
+            if (newLength < _length)
+                throw new ArgumentException("Cannot set the legnth to less than the current length");
+
+            if (newLength == _length)
+                return;
+
+            // need to allocate memory again
+            NativeFileMethods.SetFileLength(_handle, newLength);
+
+            Debug.Assert(_fileStream.Length == newLength);
+
+            _length = newLength;
+            PagerState.Release(); // when the last transaction using this is over, will dispose it
+            PagerState newPager = CreateNewPagerState();
+
+            if (tx != null) // we only pass null during startup, and we don't need it there
+            {
+                newPager.AddRef(); // one for the current transaction
+                tx.AddPagerState(newPager);
+            }
+
+            PagerState = newPager;
+            NumberOfAllocatedPages = newLength / PageSize;
+        }
+
+        private PagerState CreateNewPagerState()
+        {
+            var memoryMappedFileAccess = access == NativeFileAccess.GenericRead ? MemoryMappedFileAccess.Read : MemoryMappedFileAccess.ReadWrite;
+            var mmf = MemoryMappedFile.CreateFromFile(_fileStream, null, _fileStream.Length,
+                memoryMappedFileAccess,
+                null, HandleInheritability.None, true);
+            var accessor = mmf.CreateViewAccessor(0, _fileStream.Length, memoryMappedFileAccess);
+            byte* p = null;
+            accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
+
+            var newPager = new PagerState(this)
+            {
+                Accessor = accessor,
+                File = mmf,
+                MapBase = p
+            };
+            newPager.AddRef(); // one for the pager
+            return newPager;
+        }
+
+        protected override string GetSourceName()
+        {
+            if (_fileInfo == null)
+                return "Unknown";
+            return "MemMap: " + _fileInfo.Name;
+        }
+
+        public override byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null)
+        {
+            return (pagerState ?? PagerState).MapBase + (pageNumber * PageSize);
+        }
+
+        public override void Sync()
+        {
+            if(FlushViewOfFile(PagerState.MapBase, new IntPtr(PagerState.Accessor.Capacity)) == false)
+                    throw new Win32Exception();
+            if (FlushFileBuffers(_handle) == false)
+                throw new Win32Exception();
+        }
+
+        public override int Write(Page page, long? pageNumber)
+        {
+            var startPage = pageNumber ?? page.PageNumber;
+
+            var toWrite = page.IsOverflow ? GetNumberOfOverflowPages(page.OverflowSize) : 1;
+
+            return WriteDirect(page, startPage, toWrite);
+        }
+
+        public override string ToString()
+        {
+            return _fileInfo.Name;
+        }
+
+        public override int WriteDirect(Page start, long pagePosition, int pagesToWrite)
+        {
+	        var toCopy = pagesToWrite*PageSize;
+            NativeMethods.memcpy(PagerState.MapBase + pagePosition * PageSize, start.Base, toCopy);
+
+	        return toCopy;
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            _fileStream.Dispose();
+            _handle.Close();
+            if (DeleteOnClose)
+                _fileInfo.Delete();
+        }
+    }
 }

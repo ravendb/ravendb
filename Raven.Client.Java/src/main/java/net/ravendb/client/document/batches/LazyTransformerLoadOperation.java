@@ -1,5 +1,10 @@
 package net.ravendb.client.document.batches;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+
 import net.ravendb.abstractions.data.GetRequest;
 import net.ravendb.abstractions.data.GetResponse;
 import net.ravendb.abstractions.data.MultiLoadResult;
@@ -12,16 +17,16 @@ import net.ravendb.client.utils.UrlUtils;
 public class LazyTransformerLoadOperation<T> implements ILazyOperation {
 
   private Class<T> clazz;
-  private String key;
+  private String[] ids;
   private String transformer;
   private LoadTransformerOperation loadTransformerOperation;
   private boolean singleResult;
   private Object result;
   private boolean requiresRetry;
 
-  public LazyTransformerLoadOperation(Class<T> clazz, String key, String transformer, LoadTransformerOperation loadTransformerOperation, boolean singleResult) {
+  public LazyTransformerLoadOperation(Class<T> clazz, String[] ids, String transformer, LoadTransformerOperation loadTransformerOperation, boolean singleResult) {
     this.clazz = clazz;
-    this.key = key;
+    this.ids = ids;
     this.transformer = transformer;
     this.loadTransformerOperation = loadTransformerOperation;
     this.singleResult = singleResult;
@@ -29,8 +34,16 @@ public class LazyTransformerLoadOperation<T> implements ILazyOperation {
 
   @Override
   public GetRequest createRequest() {
-    String path = "/queries/" + UrlUtils.escapeDataString(key) + "&transformer" + transformer;
-    return new GetRequest(path);
+    List<String> tokens = new ArrayList<>();
+    for (String id: ids) {
+      tokens.add("id=" + UrlUtils.escapeDataString(id));
+    }
+    String query = "?" + StringUtils.join(tokens, "&");
+    if (StringUtils.isNotEmpty(transformer)) {
+      query += "&transformer=" + transformer;
+    }
+
+    return new GetRequest("/queries/", query);
   }
 
   @Override

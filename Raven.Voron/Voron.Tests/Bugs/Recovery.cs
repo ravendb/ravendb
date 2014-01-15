@@ -1,4 +1,7 @@
-﻿namespace Voron.Tests.Bugs
+﻿using Voron.Impl;
+using Voron.Impl.Paging;
+
+namespace Voron.Tests.Bugs
 {
 	using System;
 	using System.Collections.Generic;
@@ -276,7 +279,7 @@
 			DeleteDirectory(path);
 
 			var options = StorageEnvironmentOptions.ForPath(path);
-			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
 
 			using (var env = new StorageEnvironment(options))
 			{
@@ -306,7 +309,7 @@
 			var expectedString = Encoding.UTF8.GetString(buffer);
 
 			options = StorageEnvironmentOptions.ForPath(path);
-			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
 
 			using (var env = new StorageEnvironment(options))
 			{
@@ -325,16 +328,12 @@
 
 					for (var i = 0; i < count; i++)
 					{
-						var read = aTree.Read(tx, "a" + i);
-						Assert.NotNull(read);
-
-						using (var reader = new StreamReader(read.Stream))
-						{
-							Assert.Equal(expectedString, reader.ReadToEnd());
-						}
+					    var read = aTree.Read(tx, "a" + i);
+					    Assert.NotNull(read);
+					    Assert.Equal(expectedString, read.Reader.ToStringValue());
 					}
 
-					using (var iterator = bTree.MultiRead(tx, "a"))
+				    using (var iterator = bTree.MultiRead(tx, "a"))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
 

@@ -39,6 +39,8 @@ namespace Raven.Database.Indexing
 
         public override object GetValue(string name)
         {
+            var result = base.GetValue(name);
+           
             if (name == Constants.Metadata)
             {
                 if (parentDoc == null)
@@ -46,9 +48,18 @@ namespace Raven.Database.Indexing
                     if (TryLoadParentDoc() == false)
                         return new DynamicNullObject();
                 }
-                return parentDoc[name];
+                var metadata = parentDoc[name].Inner as RavenJObject;
+                var indexMetadata = result as IDynamicJsonObject;
+                if (metadata == null || indexMetadata == null)
+                    return parentDoc[name];
+
+                foreach (var item in indexMetadata.Inner)
+                {
+                    metadata[item.Key] = item.Value;
+                }
+                return metadata;
             }
-            var result = base.GetValue(name);
+
             if (result is DynamicNullObject == false)
                 return result;
 

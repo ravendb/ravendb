@@ -12,7 +12,7 @@ namespace Raven.Munin.Tests.Bugs
 	using Raven.Abstractions.Util.Encryptors;
 	using Raven.Tests.Helpers;
 
-	public class MultiThreadedWrites : IDisposable
+	public class MultiThreadedWrites
 	{
 		public MultiThreadedWrites()
 		{
@@ -76,11 +76,6 @@ namespace Raven.Munin.Tests.Bugs
 		private static void Log(string format, params object[] args)
 		{
 			Trace.WriteLine(String.Format(format, args));
-		}
-
-		public void Dispose()
-		{
-			Encryptor.Dispose();
 		}
 	}
 }

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
+using Raven.Database.Config;
 using Xunit;
 
 namespace Raven.Tests.Bundles.Replication.Issues
@@ -30,7 +31,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			}
 		}
 
-		protected override void ConfigureServer(Database.Config.RavenConfiguration serverConfiguration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
 		{
 			serverConfiguration.RunInMemory = false;
 			serverConfiguration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true;

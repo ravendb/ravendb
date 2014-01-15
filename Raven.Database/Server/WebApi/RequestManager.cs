@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.Impl;
 using Raven.Database.Impl.Clustering;
 using Raven.Database.Server.Controllers;
@@ -26,11 +27,10 @@ namespace Raven.Database.Server.WebApi
 		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
 		private readonly TimeSpan frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
 
-		private readonly DateTime startUpTime = SystemTime.UtcNow;
 		private DateTime lastWriteRequest;
 		private bool disposed;
-		private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
-
+		//private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
+		private readonly AsyncReaderWriterLock disposerLock = new AsyncReaderWriterLock();
 		private int physicalRequestsCount;
 		private bool initialized;
 
@@ -66,8 +66,7 @@ namespace Raven.Database.Server.WebApi
 
 		public void Dispose()
 		{
-			disposerLock.EnterWriteLock();
-			try
+			using(disposerLock.WriteLock())
 			{
 				disposed = true;
 				var exceptionAggregator = new ExceptionAggregator(Logger, "Could not properly dispose of HttpServer");
@@ -78,18 +77,11 @@ namespace Raven.Database.Server.WebApi
 						serverTimer.Dispose();
 				});
 			}
-			finally
-			{
-				disposerLock.ExitWriteLock();
-			}
 		}
 
-		public async Task HandleActualRequest(RavenApiController controller, Func<Task> action)
+		public async Task HandleActualRequest(RavenDbApiController controller, Func<Task> action)
 		{
-			var isReadLockHeld = disposerLock.IsReadLockHeld;
-			if (isReadLockHeld == false)
-				disposerLock.EnterReadLock();
-			try
+			using(await disposerLock.ReadLockAsync())
 			{
 				if (disposed)
 					return;
@@ -120,15 +112,11 @@ namespace Raven.Database.Server.WebApi
 					}
 				}
 			}
-			finally
-			{
-				if (isReadLockHeld == false)
-					disposerLock.ExitReadLock();
-			}
+			
 		}
 
 		// Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
-		public void AddAccessControlHeaders(RavenApiController controller, HttpResponseMessage msg)
+		public void AddAccessControlHeaders(RavenDbApiController controller, HttpResponseMessage msg)
 		{
 			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlAllowOrigin))
 				return;
@@ -158,7 +146,7 @@ namespace Raven.Database.Server.WebApi
 			}
 		}
 
-		private bool SetupRequestToProperDatabase(RavenApiController controller)
+		private bool SetupRequestToProperDatabase(RavenDbApiController controller)
 		{
 			var onBeforeRequest = BeforeRequest;
 			var tenantId = controller.DatabaseName;
@@ -299,7 +287,7 @@ namespace Raven.Database.Server.WebApi
 			Interlocked.Decrement(ref physicalRequestsCount);
 		}
 
-		private void FinalizeRequestProcessing(RavenApiController controller, Stopwatch sw, bool ravenUiRequest)
+		private void FinalizeRequestProcessing(RavenDbApiController controller, Stopwatch sw, bool ravenUiRequest)
 		{
 			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
 			try

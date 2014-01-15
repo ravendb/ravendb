@@ -14,6 +14,7 @@
         private readonly string _path;
 
         private readonly Configurator _configurator;
+        private string _database;
 
         public override string StorageName
         {
@@ -28,12 +29,7 @@
         {
             _path = Path.Combine(path, "esent");
             _configurator = new Configurator();
-        }
-
-        ~EsentTest()
-        {
-            if (Directory.Exists(_path))
-                Directory.Delete(_path, true);
+            _database = Path.Combine(_path, "edbtest.db");
         }
 
         public Instance CreateInstance(bool delete = true)
@@ -61,10 +57,10 @@
         private Session OpenSession(JET_INSTANCE instance, out Table table, out JET_COLUMNID primaryColumnId, out JET_COLUMNID secondaryColumnId)
         {
             var session = new Session(instance);
-            Api.JetAttachDatabase2(session, "edbtest.db", 0, AttachDatabaseGrbit.None);
+            Api.JetAttachDatabase2(session, _database, 0, AttachDatabaseGrbit.None);
 
             JET_DBID dbid;
-            Api.JetOpenDatabase(session, "edbtest.db", null, out dbid, OpenDatabaseGrbit.None);
+            Api.JetOpenDatabase(session, _database, null, out dbid, OpenDatabaseGrbit.None);
 
             table = OpenSchema(session, dbid, out primaryColumnId, out secondaryColumnId);
 
@@ -86,7 +82,7 @@
             using (var session = new Session(instance))
             {
                 JET_DBID dbid;
-                Api.JetCreateDatabase(session, "edbtest.db", null, out dbid, CreateDatabaseGrbit.OverwriteExisting);
+                Api.JetCreateDatabase(session, _database, null, out dbid, CreateDatabaseGrbit.OverwriteExisting);
 
                 using (var tx = new Transaction(session))
                 {
@@ -99,7 +95,7 @@
 
                     var secondaryColumn = new JET_COLUMNDEF
                     {
-                        coltyp = JET_coltyp.Binary
+                        coltyp = JET_coltyp.LongBinary,
                     };
 
                     JET_COLUMNID primaryColumnId;
@@ -128,105 +124,141 @@
                          Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
         }
 
+        public override List<PerformanceRecord> WriteParallelSequential(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            return WriteParallel(string.Format("[Esent] parallel sequential write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
+        }
+
         public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data, PerfTracker perfTracker)
         {
             return Write(string.Format("[Esent] random write ({0} items)", Constants.ItemsPerTransaction), data,
                          Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
         }
 
+        public override List<PerformanceRecord> WriteParallelRandom(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            return WriteParallel(string.Format("[Esent] parallel random write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
+        }
+
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return Read(string.Format("[Esent] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
         public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return ReadParallel(string.Format("[Esent] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker, numberOfThreads);
         }
 
-        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker)
+        public override PerformanceRecord ReadRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker)
         {
             return Read(string.Format("[Esent] random read ({0} items)", Constants.ReadItems), randomIds, perfTracker);
         }
 
-        public override PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads)
+        public override PerformanceRecord ReadParallelRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker, int numberOfThreads)
         {
             return ReadParallel(string.Format("[Esent] parallel random read ({0} items)", Constants.ReadItems), randomIds, perfTracker, numberOfThreads);
         }
 
         private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker)
         {
-            byte[] valueToWrite = null;
-            var records = new List<PerformanceRecord>();
-
             using (var instance = CreateInstance())
             {
-                var sw = new Stopwatch();
-
                 var enumerator = data.GetEnumerator();
-
-                Table table;
-                JET_COLUMNID primaryColumnId;
-                JET_COLUMNID secondaryColumnId;
-                using (var session = OpenSession(instance, out table, out primaryColumnId, out secondaryColumnId))
-                {
-                    for (var transactions = 0; transactions < numberOfTransactions; transactions++)
-                    {
-                        sw.Restart();
-
-                        using (var tx = new Transaction(session))
-                        {
-                            for (var i = 0; i < itemsPerTransaction; i++)
-                            {
-                                enumerator.MoveNext();
-
-                                valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
-                                Api.JetPrepareUpdate(session, table, JET_prep.Insert);
-                                Api.SetColumn(session, table, primaryColumnId, enumerator.Current.Id);
-                                Api.SetColumn(session, table, secondaryColumnId, valueToWrite);
-                                Api.JetUpdate(session, table);
-                                perfTracker.Increment();
-
-                            }
-
-                            tx.Commit(CommitTransactionGrbit.None);
-                        }
-
-                        sw.Stop();
-
-                        records.Add(
-                            new PerformanceRecord
-                                {
-                                    Operation = operation,
-                                    Time = DateTime.Now,
-                                    Duration = sw.ElapsedMilliseconds,
-                                    ProcessedItems = itemsPerTransaction,
-                                });
-                    }
-
-                    sw.Stop();
-                }
-
-                return records;
+                return WriteInternal(operation, enumerator, itemsPerTransaction, numberOfTransactions, perfTracker, instance);
             }
         }
 
-        private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
+        private List<PerformanceRecord> WriteParallel(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            using (var instance = CreateInstance())
+            {
+                return ExecuteWriteWithParallel(
+                data,
+                numberOfTransactions,
+                itemsPerTransaction,
+                numberOfThreads,
+                (enumerator, itmsPerTransaction, nmbrOfTransactions) => WriteInternal(operation, enumerator, itmsPerTransaction, nmbrOfTransactions, perfTracker, instance),
+                out elapsedMilliseconds);
+            }
+        }
+
+        private List<PerformanceRecord> WriteInternal(
+            string operation,
+            IEnumerator<TestData> enumerator,
+            long itemsPerTransaction,
+            long numberOfTransactions,
+            PerfTracker perfTracker,
+            Instance instance)
+        {
+            byte[] valueToWrite = null;
+            var records = new List<PerformanceRecord>();
+            var sw = new Stopwatch();
+
+            Table table;
+            JET_COLUMNID primaryColumnId;
+            JET_COLUMNID secondaryColumnId;
+            using (var session = OpenSession(instance, out table, out primaryColumnId, out secondaryColumnId))
+            {
+                for (var transactions = 0; transactions < numberOfTransactions; transactions++)
+                {
+                    sw.Restart();
+                    long v = 0;
+                    using (var tx = new Transaction(session))
+                    {
+                        for (var i = 0; i < itemsPerTransaction; i++)
+                        {
+                            enumerator.MoveNext();
+                            var testData = enumerator.Current;
+                            valueToWrite = GetValueToWrite(valueToWrite, testData.ValueSize);
+                            v += valueToWrite.Length;
+                            Api.JetPrepareUpdate(session, table, JET_prep.Insert);
+                            Api.SetColumn(session, table, primaryColumnId, testData.Id);
+                            Api.SetColumn(session, table, secondaryColumnId, valueToWrite);
+                            Api.JetUpdate(session, table);
+                        }
+
+                        tx.Commit(CommitTransactionGrbit.None);
+                    }
+
+                    sw.Stop();
+                    perfTracker.Record(sw.ElapsedMilliseconds);
+                    records.Add(
+                        new PerformanceRecord
+                            {
+                                Bytes = v,
+                                Operation = operation,
+                                Time = DateTime.Now,
+                                Duration = sw.ElapsedMilliseconds,
+                                ProcessedItems = itemsPerTransaction,
+                            });
+                }
+
+                sw.Stop();
+            }
+
+            return records;
+        }
+
+        private PerformanceRecord Read(string operation, IEnumerable<uint> ids, PerfTracker perfTracker)
         {
             using (var instance = CreateInstance(delete: false))
             {
                 var sw = Stopwatch.StartNew();
 
-                ReadInternal(ids, perfTracker, instance);
+                var bytes = ReadInternal(ids, perfTracker, instance);
 
                 sw.Stop();
 
                 return new PerformanceRecord
                            {
+                               Bytes = bytes,
                                Operation = operation,
                                Time = DateTime.Now,
                                Duration = sw.ElapsedMilliseconds,
@@ -235,57 +267,38 @@
             }
         }
 
-        private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker, int numberOfThreads)
+        private PerformanceRecord ReadParallel(string operation, IEnumerable<uint> ids, PerfTracker perfTracker, int numberOfThreads)
         {
-            var countdownEvent = new CountdownEvent(numberOfThreads);
-
             using (var instance = CreateInstance(delete: false))
             {
-                var sw = Stopwatch.StartNew();
-
-                for (int i = 0; i < numberOfThreads; i++)
-                {
-                    ThreadPool.QueueUserWorkItem(
-                        state =>
-                        {
-                            ReadInternal(ids, perfTracker, instance);
-
-                            countdownEvent.Signal();
-                        });
-                }
-
-                countdownEvent.Wait();
-                sw.Stop();
-
-                return new PerformanceRecord
-                {
-                    Operation = operation,
-                    Time = DateTime.Now,
-                    Duration = sw.ElapsedMilliseconds,
-                    ProcessedItems = ids.Count() * numberOfThreads
-                };
+                return ExecuteReadWithParallel(operation, ids, numberOfThreads, () => ReadInternal(ids, perfTracker, instance));
             }
         }
 
-        private void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, Instance instance)
+        private long ReadInternal(IEnumerable<uint> ids, PerfTracker perfTracker, Instance instance)
         {
             Table table;
             JET_COLUMNID primaryColumnId;
             JET_COLUMNID secondaryColumnId;
             using (var session = OpenSession(instance, out table, out primaryColumnId, out secondaryColumnId))
             {
+                var sw = Stopwatch.StartNew();
                 Api.JetSetCurrentIndex(session, table, "by_key");
-
+                long v = 0;
                 foreach (var id in ids)
                 {
+                    Api.MoveBeforeFirst(session, table);
                     Api.MakeKey(session, table, id, MakeKeyGrbit.NewKey);
                     Api.JetSeek(session, table, SeekGrbit.SeekEQ);
 
                     var value = Api.RetrieveColumn(session, table, secondaryColumnId);
-                    perfTracker.Increment();
+
+                    v += value.Length;
 
                     Debug.Assert(value != null);
                 }
+                perfTracker.Record(sw.ElapsedMilliseconds);
+                return v;
             }
         }
     }

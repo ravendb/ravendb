@@ -74,6 +74,7 @@ namespace Raven.Tests.MultiGet
 					session.Store(new User());
 					session.SaveChanges();
 				}
+
 				using (var session = store.OpenSession())
 				{
 					var result1 = session.Advanced.Lazily.Load<User>("users/1", "users/2");
@@ -88,7 +89,6 @@ namespace Raven.Tests.MultiGet
 						Assert.NotNull(session.Advanced.GetMetadataFor(user));
 					}
 				}
-
 			}
 		}
 

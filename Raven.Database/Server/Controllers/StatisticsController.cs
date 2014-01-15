@@ -3,7 +3,7 @@ using System.Web.Http;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class StatisticsController : RavenApiController
+	public class StatisticsController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("stats")]

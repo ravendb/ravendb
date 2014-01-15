@@ -2,173 +2,206 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Voron.Impl.Paging;
 using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
-	public unsafe class JournalReader
-	{
-		private readonly IVirtualPager _pager;
-		private long _lastSyncedPage;
-		private long _writePage;
-		private long _readingPage;
-		private readonly long _startPage;
-		private readonly TransactionHeader* _previous;
-		private readonly Dictionary<long, long> _transactionPageTranslation = new Dictionary<long, long>();
+    public unsafe class JournalReader
+    {
+        private readonly IVirtualPager _pager;
+        private readonly IVirtualPager _recoveryPager;
 
-		public bool RequireHeaderUpdate { get; private set; }
+        private readonly long _lastSyncedTransactionId;
+        private long _readingPage;
 
-		public bool EncounteredStopCondition { get; private set; }
+        private readonly Dictionary<long, JournalFile.PagePosition> _transactionPageTranslation = new Dictionary<long, JournalFile.PagePosition>();
+        private int _recoveryPage;
 
-		public long WritePage
-		{
-			get { return _writePage; }
-		}
+        public bool RequireHeaderUpdate { get; private set; }
 
-		public long LastSyncedPage
-		{
-			get { return _lastSyncedPage; }
-		}
+        public long NextWritePage
+        {
+            get { return _readingPage; }
+        }
 
-		public JournalReader(IVirtualPager pager, long startPage, TransactionHeader* previous)
-		{
-			RequireHeaderUpdate = false;
-			_pager = pager;
-			_readingPage = startPage;
-			_startPage = startPage;
-			_previous = previous;
-			LastTransactionHeader = previous;
+        public JournalReader(IVirtualPager pager, IVirtualPager recoveryPager, long lastSyncedTransactionId, TransactionHeader* previous)
+        {
+            RequireHeaderUpdate = false;
+            _pager = pager;
+            _recoveryPager = recoveryPager;
+            _lastSyncedTransactionId = lastSyncedTransactionId;
+            _readingPage = 0;
+            _recoveryPage = 0;
+            LastTransactionHeader = previous;
+        }
 
-		}
+        public TransactionHeader* LastTransactionHeader { get; private set; }
 
-		public TransactionHeader* LastTransactionHeader { get; private set; }
+        public bool ReadOneTransaction(StorageEnvironmentOptions options,bool checkCrc = true)
+        {
+            if (_readingPage >= _pager.NumberOfAllocatedPages)
+                return false;
 
-		public bool ReadOneTransaction(Func<TransactionHeader, bool> stopReadingCondition = null, bool checkCrc = true)
-		{
-			if (_readingPage >= _pager.NumberOfAllocatedPages)
-				return false;
+            TransactionHeader* current;
+            if (!TryReadAndValidateHeader(options, out current))
+                return false;
 
-			TransactionHeader* current;
-			if (!TryReadAndValidateHeader(out current)) return false;
+            var compressedPages = (current->CompressedSize / AbstractPager.PageSize) + (current->CompressedSize % AbstractPager.PageSize == 0 ? 0 : 1);
 
-			if (stopReadingCondition != null && !stopReadingCondition(*current))
-			{
-				_readingPage--; // if the read tx header does not fulfill our condition we have to move back the read index to allow read it again later if needed
-				EncounteredStopCondition = true;
-				return false;
-			}
+            if (current->TransactionId <= _lastSyncedTransactionId)
+            {
+	            LastTransactionHeader = current;
+                _readingPage += compressedPages;
+                return true; // skipping
+            }
 
-			uint crc = 0;
-			var writePageBeforeCrcCheck = _writePage;
-			var lastSyncedPageBeforeCrcCheck = _lastSyncedPage;
-			var readingPageBeforeCrcCheck = _readingPage;
+	        if (checkCrc)
+	        {
+		        uint crc = Crc.Value(_pager.AcquirePagePointer(_readingPage), 0, compressedPages * AbstractPager.PageSize);
 
-			for (var i = 0; i < current->PageCount; i++)
-			{
-				Debug.Assert(_pager.Disposed == false);
-
-				var page = _pager.Read(_readingPage);
-
-				_transactionPageTranslation[page.PageNumber] = _readingPage;
-
-				if (page.IsOverflow)
+				if (crc != current->Crc)
 				{
-					var numOfPages = _pager.GetNumberOfOverflowPages(page.OverflowSize);
-					_readingPage += numOfPages;
+					RequireHeaderUpdate = true;
+					options.InvokeRecoveryError(this, "Invalid CRC signature for transaction " + current->TransactionId, null);
 
-					if(checkCrc)
-						crc = Crc.Extend(crc, page.Base, 0, numOfPages * _pager.PageSize);
+					return false;
 				}
-				else
-				{
-					_readingPage++;
-					if (checkCrc)
-						crc = Crc.Extend(crc, page.Base, 0, _pager.PageSize);
-				}
+	        }
 
-				_lastSyncedPage = _readingPage - 1;
-				_writePage = _lastSyncedPage + 1;
-			}
+            _recoveryPager.EnsureContinuous(null, _recoveryPage, (current->PageCount + current->OverflowPageCount) + 1);
+            var dataPage = _recoveryPager.AcquirePagePointer(_recoveryPage);
 
-			if (checkCrc && crc != current->Crc)
-			{
-				RequireHeaderUpdate = true;
+            NativeMethods.memset(dataPage, 0, (current->PageCount + current->OverflowPageCount) * AbstractPager.PageSize);
+            try
+            {
+                LZ4.Decode64(_pager.AcquirePagePointer(_readingPage), current->CompressedSize, dataPage, current->UncompressedSize, true);
+            }
+            catch (Exception e)
+            {
+                options.InvokeRecoveryError(this, "Could not de-compress, invalid data", e);
+                RequireHeaderUpdate = true;
 
-				//undo changes to those variables if CRC doesn't match
-				_writePage = writePageBeforeCrcCheck;
-				_lastSyncedPage = lastSyncedPageBeforeCrcCheck;
-				_readingPage = readingPageBeforeCrcCheck;
+                return false;   
+            }
 
-				return false;
-			}
+            var tempTransactionPageTranslaction = new Dictionary<long, JournalFile.PagePosition>();
 
-			//update CurrentTransactionHeader _only_ if the CRC check is passed
-			LastTransactionHeader = current;
+            for (var i = 0; i < current->PageCount; i++)
+            {
+                Debug.Assert(_pager.Disposed == false);
+                Debug.Assert(_recoveryPager.Disposed == false);
+
+                var page = _recoveryPager.Read(_recoveryPage);
+
+				 tempTransactionPageTranslaction[page.PageNumber] = new JournalFile.PagePosition
+                {
+                    JournalPos = _recoveryPage,
+                    TransactionId = current->TransactionId
+                };
+
+                if (page.IsOverflow)
+                {
+                    var numOfPages = _recoveryPager.GetNumberOfOverflowPages(page.OverflowSize);
+                    _recoveryPage += numOfPages;
+                }
+                else
+                {
+                    _recoveryPage++;
+                }
+            }
+
+            _readingPage += compressedPages;
+
+            LastTransactionHeader = current;
 			
-			return true;
-		}
+            foreach (var pagePosition in tempTransactionPageTranslaction)
+            {
+                _transactionPageTranslation[pagePosition.Key] = pagePosition.Value;
+            }
 
-		public void RecoverAndValidateConditionally(Func<TransactionHeader, bool> stopConditionFunc)
+            return true;
+        }
+
+        public void RecoverAndValidate(StorageEnvironmentOptions options)
+        {
+            while (ReadOneTransaction(options))
+            {
+            }
+        }
+
+        public Dictionary<long, JournalFile.PagePosition> TransactionPageTranslation
+        {
+            get { return _transactionPageTranslation; }
+        }
+
+        private bool TryReadAndValidateHeader(StorageEnvironmentOptions options,out TransactionHeader* current)
+        {
+            current = (TransactionHeader*)_pager.Read(_readingPage).Base;
+
+            if (current->HeaderMarker != Constants.TransactionHeaderMarker)
+            {
+                // not a transaction page, 
+
+                // if the header marker is zero, we are probably in the area at the end of the log file, and have no additional log records
+                // to read from it. This can happen if the next transaction was too big to fit in the current log file. We stop reading
+                // this log file and move to the next one. 
+
+				RequireHeaderUpdate = current->HeaderMarker != 0;
+                if (RequireHeaderUpdate)
+                {
+                    options.InvokeRecoveryError(this,
+                        "Transaction " + current->TransactionId +
+                        " header marker was set to garbage value, file is probably corrupted", null);
+                }
+
+                return false;
+            }
+
+            ValidateHeader(current, LastTransactionHeader);
+
+            if (current->TxMarker.HasFlag(TransactionMarker.Commit) == false)
+            {
+                // uncommitted transaction, probably
+                RequireHeaderUpdate = true;
+                options.InvokeRecoveryError(this,
+                        "Transaction " + current->TransactionId +
+                        " was not committed", null);
+                return false;
+            }
+
+            _readingPage++;
+            return true;
+        }
+
+        private void ValidateHeader(TransactionHeader* current, TransactionHeader* previous)
 		{
-			_readingPage = _startPage;
-			LastTransactionHeader = _previous;
-			while (ReadOneTransaction(stopConditionFunc, checkCrc: false))
+			if (current->TransactionId < 0)
+				throw new InvalidDataException("Transaction id cannot be less than 0 (Tx: " + current->TransactionId + " )");
+			if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
+				throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
+			if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Crc == 0)
+				throw new InvalidDataException("Committed and not empty transaction checksum can't be equal to 0");
+			if (current->Compressed)
 			{
-			}			
+				if (current->CompressedSize <= 0)
+					throw new InvalidDataException("Compression error in transaction.");
+			} else
+				throw new InvalidDataException("Uncompressed transactions are not supported.");
+
+			if (previous == null)
+				return;
+
+			if (current->TransactionId != 1 &&
+				// 1 is a first storage transaction which does not increment transaction counter after commit
+				current->TransactionId - previous->TransactionId != 1)
+				throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) +
+											   ", got:" + current->TransactionId);
 		}
 
-		public void RecoverAndValidate()
+		public override string ToString()
 		{
-			while (ReadOneTransaction())
-			{
-			}
+			return _pager.ToString();
 		}
-
-		public Dictionary<long, long> TransactionPageTranslation
-		{
-			get { return _transactionPageTranslation; }
-		}
-
-		private bool TryReadAndValidateHeader(out TransactionHeader* current)
-		{
-			current = (TransactionHeader*)_pager.Read(_readingPage).Base;
-
-			if (current->HeaderMarker != Constants.TransactionHeaderMarker)
-			{
-			    RequireHeaderUpdate = true;
-				return false; // not a transaction page
-			}
-
-			ValidateHeader(current, LastTransactionHeader);
-
-			if (current->TxMarker.HasFlag(TransactionMarker.Commit) == false)
-			{
-			    // uncommitted transaction, probably
-			    RequireHeaderUpdate = true;
-				return false;
-			}
-
-			_readingPage++;
-			return true;
-		}
-
-		private void ValidateHeader(TransactionHeader* current, TransactionHeader* previous)
-		{
-		    if (current->TransactionId < 0)
-		        throw new InvalidDataException("Transaction id cannot be less than 0 (Tx: " + current->TransactionId + " )");
-		    if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
-		        throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
-		    if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Crc == 0)
-		        throw new InvalidDataException("Committed and not empty transaction checksum can't be equal to 0");
-
-		    if (previous == null)
-		        return;
-		    
-            if (current->TransactionId != 1 &&
-		        // 1 is a first storage transaction which does not increment transaction counter after commit
-		        current->TransactionId - previous->TransactionId != 1)
-		        throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) +
-		                                       ", got:" + current->TransactionId);
-		}
-	}
+    }
 }

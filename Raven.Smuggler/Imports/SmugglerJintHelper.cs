@@ -26,7 +26,7 @@ namespace Raven.Smuggler.Imports
 					.AllowClr(false)
 					.SetDebugMode(false)
 					.SetMaxRecursions(50)
-					.SetMaxSteps(10 * 1000);
+					.SetMaxSteps(options.MaxStepsForTransformScript);
 
 				jint.Run(string.Format(@"
 					function Transform(docInner){{

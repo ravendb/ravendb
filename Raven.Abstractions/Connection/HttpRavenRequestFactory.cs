@@ -25,7 +25,7 @@ namespace Raven.Abstractions.Connection
 				return;
 			}
 
-			var webRequestEventArgs = new WebRequestEventArgs { Request = request };
+			var webRequestEventArgs = new WebRequestEventArgs { Request = request, Credentials = new OperationCredentials(options.ApiKey, options.Credentials)};
 
 			AbstractAuthenticator existingAuthenticator;
 			if (authenticators.TryGetValue(GetCacheKey(options), out existingAuthenticator))
@@ -34,8 +34,8 @@ namespace Raven.Abstractions.Connection
 			}
 			else
 			{
-				var basicAuthenticator = new BasicAuthenticator(options.ApiKey, enableBasicAuthenticationOverUnsecuredHttp: false);
-				var securedAuthenticator = new SecuredAuthenticator(options.ApiKey);
+				var basicAuthenticator = new BasicAuthenticator(enableBasicAuthenticationOverUnsecuredHttp: false);
+				var securedAuthenticator = new SecuredAuthenticator();
 
 				basicAuthenticator.ConfigureRequest(this, webRequestEventArgs);
 				securedAuthenticator.ConfigureRequest(this, webRequestEventArgs);
@@ -72,13 +72,13 @@ namespace Raven.Abstractions.Connection
 				{
 					if (useBasicAuthenticator)
 					{
-						return new BasicAuthenticator(options.ApiKey, enableBasicAuthenticationOverUnsecuredHttp: false);
+						return new BasicAuthenticator(enableBasicAuthenticationOverUnsecuredHttp: false);
 					}
 
-					return new SecuredAuthenticator(options.ApiKey);
+					return new SecuredAuthenticator();
 				});
 
-			return authenticator.DoOAuthRequest(oauthSource);
+			return authenticator.DoOAuthRequest(oauthSource, options.ApiKey);
 		}
 	}
 }

@@ -1,181 +1,202 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Voron.Trees;
+using Voron.Util;
 
-namespace Voron.Impl
+namespace Voron.Impl.Paging
 {
-	public unsafe abstract class AbstractPager : IVirtualPager
-	{
-		protected int MinIncreaseSize { get { return 16 * PageSize; } }
+    public unsafe abstract class AbstractPager : IVirtualPager
+    {
+        protected int MinIncreaseSize { get { return 16 * PageSize; } }
 
-		private long _increaseSize;
-		private DateTime _lastIncrease;
-		private IntPtr _tempPage;
-		public PagerState PagerState { get; protected set; }
+        private long _increaseSize;
+        private DateTime _lastIncrease;
 
-		protected AbstractPager()
-		{
-			_increaseSize = MinIncreaseSize;
-			MaxNodeSize = 1024;
-			Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
-			PageMaxSpace = PageSize - Constants.PageHeaderSize;
-			PageMinSpace = (int)(PageMaxSpace * 0.33);
-			PagerState = new PagerState();
-			_tempPage = Marshal.AllocHGlobal(PageSize);
-			PagerState.AddRef();
-		}
+        public PagerState PagerState
+        {
+	        get
+	        {
+				Debug.Assert(Disposed == false);
 
-		public int PageMaxSpace { get; private set; }
-		public int MaxNodeSize { get; private set; }
-		public int PageMinSpace { get; private set; }
-		public bool DeleteOnClose { get; set; }
+				return _pagerState;
+	        }
+            set
+            {
+				Debug.Assert(Disposed == false);
+				
+				_source = GetSourceName();
+                _pagerState = value;
+            }
+        }
 
-		public int PageSize
-		{
-			get { return 4096; }
-		}
+        private string _source;
+        protected AbstractPager()
+        {
+            _increaseSize = MinIncreaseSize;
+            MaxNodeSize = 1024;
+            Debug.Assert((PageSize - Constants.PageHeaderSize) / Constants.MinKeysInPage >= 1024);
+            PageMinSpace = (int)(PageMaxSpace * 0.33);
+            PagerState = new PagerState(this);
+          
+            PagerState.AddRef();
+        }
 
-		public long NumberOfAllocatedPages { get; protected set; }
+        public int MaxNodeSize { get; private set; }
+        public int PageMinSpace { get; private set; }
 
-		public Page Read(long pageNumber)
-		{
+        public bool DeleteOnClose { get; set; }
+
+        public const int PageSize = 4096;
+        public static int PageMaxSpace = PageSize - Constants.PageHeaderSize;
+        private PagerState _pagerState;
+        private readonly ConcurrentBag<Task> _tasks = new ConcurrentBag<Task>();
+
+        public long NumberOfAllocatedPages { get; protected set; }
+
+        public Page Read(long pageNumber, PagerState pagerState = null)
+        {
+			Debug.Assert(Disposed == false);
+			
 			if (pageNumber + 1 > NumberOfAllocatedPages)
-			{
-				throw new InvalidOperationException("Cannot increase size of the pager");
-			}
+            {
+                throw new InvalidOperationException("Cannot get page number " + pageNumber +
+                                                    " because number of allocated pages is " + NumberOfAllocatedPages);
+            }
 
-			return new Page(AcquirePagePointer(pageNumber), PageMaxSpace);
-		}
+            return new Page(AcquirePagePointer(pageNumber, pagerState), _source);
+        }
 
-		public virtual Page GetWritable(long pageNumber)
-		{
+        protected abstract string GetSourceName();
+
+        public virtual Page GetWritable(long pageNumber)
+        {
+			Debug.Assert(Disposed == false);
+			
 			if (pageNumber + 1 > NumberOfAllocatedPages)
-			{
-				throw new InvalidOperationException("Cannot get page number " + pageNumber +
-													" because number of allocated pages is " + NumberOfAllocatedPages);
-			}
+            {
+                throw new InvalidOperationException("Cannot get page number " + pageNumber +
+                                                    " because number of allocated pages is " + NumberOfAllocatedPages);
+            }
 
-			return new Page(AcquirePagePointer(pageNumber), PageMaxSpace);
-		}
+            return new Page(AcquirePagePointer(pageNumber), _source);
+        }
 
-		public abstract byte* AcquirePagePointer(long pageNumber);
-		
+        public abstract byte* AcquirePagePointer(long pageNumber, PagerState pagerState = null);
+
         public abstract void Sync();
 
-		public virtual PagerState TransactionBegan()
-		{
-			var state = PagerState;
-			state.AddRef();
-			return state;
-		}
+        public virtual PagerState TransactionBegan()
+        {
+			Debug.Assert(Disposed == false);
 
-		public void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages)
-		{
+            var state = PagerState;
+            state.AddRef();
+            return state;
+        }
+
+        public bool WillRequireExtension(long requestedPageNumber, int numberOfPages)
+        {
+			Debug.Assert(Disposed == false);
+			
+			return requestedPageNumber + numberOfPages > NumberOfAllocatedPages;
+        }
+
+        public void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages)
+        {
+			Debug.Assert(Disposed == false);
+
 			if (requestedPageNumber + numberOfPages <= NumberOfAllocatedPages)
-				return;
+                return;
 
-			// this ensure that if we want to get a range that is more than the current expansion
-			// we will increase as much as needed in one shot
-			var minRequested = (requestedPageNumber + numberOfPages) * PageSize;
-			var allocationSize = Math.Max(NumberOfAllocatedPages * PageSize, PageSize);
-			while (minRequested > allocationSize)
-			{
-				allocationSize = GetNewLength(allocationSize);
-			}
+            // this ensure that if we want to get a range that is more than the current expansion
+            // we will increase as much as needed in one shot
+            var minRequested = (requestedPageNumber + numberOfPages) * PageSize;
+            var allocationSize = Math.Max(NumberOfAllocatedPages * PageSize, PageSize);
+            while (minRequested > allocationSize)
+            {
+                allocationSize = GetNewLength(allocationSize);
+            }
 
-			AllocateMorePages(tx, allocationSize);
+            AllocateMorePages(tx, allocationSize);
 
-		}
+        }
 
-		public bool ShouldGoToOverflowPage(int len)
-		{
+        public bool ShouldGoToOverflowPage(int len)
+        {
+			Debug.Assert(Disposed == false);
+			
 			return len + Constants.PageHeaderSize > MaxNodeSize;
-		}
+        }
 
-		public int GetNumberOfOverflowPages(int overflowSize)
-		{
+        public int GetNumberOfOverflowPages(int overflowSize)
+        {
+			Debug.Assert(Disposed == false);
+			
 			overflowSize += Constants.PageHeaderSize;
-			return (overflowSize / PageSize) + (overflowSize % PageSize == 0 ? 0 : 1);
-		}
+            return (overflowSize / PageSize) + (overflowSize % PageSize == 0 ? 0 : 1);
+        }
 
-		public abstract void Write(Page page, long? pageNumber);
+        public abstract int Write(Page page, long? pageNumber);
 
-		public bool Disposed { get; private set; }
+        public bool Disposed { get; private set; }
 
-		public virtual void Dispose()
-		{
-			if (_tempPage != IntPtr.Zero)
-			{
-				Marshal.FreeHGlobal(_tempPage);
-				_tempPage = IntPtr.Zero;
-			}
+        public virtual void Dispose()
+        {
+            if (PagerState != null)
+            {
+                PagerState.Release();
+                PagerState = null;
+            }
 
-			Disposed = true;
-		}
+            Task.WaitAll(_tasks.ToArray());
 
-		public abstract void AllocateMorePages(Transaction tx, long newLength);
+            Disposed = true;
+        }
 
-		public Page TempPage
-		{
-			get
-			{
-				return new Page((byte*)_tempPage.ToPointer(), PageMaxSpace)
-				{
-					Upper = (ushort)PageSize,
-					Lower = (ushort)Constants.PageHeaderSize,
-					Flags = 0,
-				};
-			}
-		}
+        public abstract void AllocateMorePages(Transaction tx, long newLength);
 
-		private long GetNewLength(long current)
-		{
-			DateTime now = DateTime.UtcNow;
-			if (_lastIncrease == DateTime.MinValue)
-			{
-				_lastIncrease = now;
-				return MinIncreaseSize;
-			}
-			TimeSpan timeSinceLastIncrease = (now - _lastIncrease);
-			if (timeSinceLastIncrease.TotalSeconds < 30)
-			{
-				_increaseSize = Math.Min(_increaseSize * 2, current + current / 4);
-			}
-			else if (timeSinceLastIncrease.TotalMinutes > 2)
-			{
-				_increaseSize = Math.Max(MinIncreaseSize, _increaseSize / 2);
-			}
-			_lastIncrease = now;
-			// At any rate, we won't do an increase by over 25% of current size, to prevent huge empty spaces
-			// 
-			// The reasoning behind this is that we want to make sure that we increase in size very slowly at first
-			// because users tend to be sensitive to a lot of "wasted" space. 
-			// We also consider the fact that small increases in small files would probably result in cheaper costs, and as
-			// the file size increases, we will reserve more & more from the OS.
-			// This also plays avoids "I added 300 records and the file size is 64MB" problems that occur when we are too
-			// eager to reserve space
-			var actualIncrease = Math.Min(_increaseSize, current / 4);
+        private long GetNewLength(long current)
+        {
+            DateTime now = DateTime.UtcNow;
+            if (_lastIncrease == DateTime.MinValue)
+            {
+                _lastIncrease = now;
+                return MinIncreaseSize;
+            }
+            TimeSpan timeSinceLastIncrease = (now - _lastIncrease);
+            if (timeSinceLastIncrease.TotalSeconds < 30)
+            {
+                _increaseSize = Math.Min(_increaseSize * 2, current + current / 4);
+            }
+            else if (timeSinceLastIncrease.TotalMinutes > 2)
+            {
+                _increaseSize = Math.Max(MinIncreaseSize, _increaseSize / 2);
+            }
+            _lastIncrease = now;
+            // At any rate, we won't do an increase by over 25% of current size, to prevent huge empty spaces
+            // 
+            // The reasoning behind this is that we want to make sure that we increase in size very slowly at first
+            // because users tend to be sensitive to a lot of "wasted" space. 
+            // We also consider the fact that small increases in small files would probably result in cheaper costs, and as
+            // the file size increases, we will reserve more & more from the OS.
+            // This also plays avoids "I added 300 records and the file size is 64MB" problems that occur when we are too
+            // eager to reserve space
+            var actualIncrease = Math.Min(_increaseSize, current / 4);
 
             // we then want to get the next power of two number, to get pretty file size
-            return NearestPowerOfTwo(current + actualIncrease);
-		}
+			return current + Utils.NearestPowerOfTwo(actualIncrease);
+        }
 
+        public abstract int WriteDirect(Page start, long pagePosition, int pagesToWrite);
 
-	    public static long NearestPowerOfTwo(long v)
-	    {
-	        v--;
-	        v |= v >> 1;
-	        v |= v >> 2;
-	        v |= v >> 4;
-	        v |= v >> 8;
-	        v |= v >> 16;
-	        v++;
-	        return v;
+        public override abstract string ToString();
 
-	    }
-
-	    public abstract void WriteDirect(Page start, long pagePosition, int pagesToWrite);
-	}
+        public void RegisterDisposal(Task run)
+        {
+            _tasks.Add(run);
+        }
+    }
 }

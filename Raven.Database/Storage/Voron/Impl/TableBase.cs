@@ -129,7 +129,7 @@ namespace Raven.Database.Storage.Voron.Impl
 
 							do
 							{
-								results.Add(subtreeKeyPrefix + iterator.CurrentKey + " " + results.Count , new StreamReader(multiIterator.CreateStreamForCurrent()).ReadToEnd());
+								results.Add(subtreeKeyPrefix + iterator.CurrentKey + " " + results.Count , new StreamReader(multiIterator.CreateReaderForCurrent().AsStream()).ReadToEnd());
 							} while (multiIterator.MoveNext());
 
 						}
@@ -137,7 +137,7 @@ namespace Raven.Database.Storage.Voron.Impl
 					}
 
 					if(!isMultiTreeKey)
-						results.Add(iterator.CurrentKey.ToString(), new StreamReader(iterator.CreateStreamForCurrent()).ReadToEnd());
+						results.Add(iterator.CurrentKey.ToString(), new StreamReader(iterator.CreateReaderForCurrent().AsStream()).ReadToEnd());
 
 				} while (iterator.MoveNext());
 

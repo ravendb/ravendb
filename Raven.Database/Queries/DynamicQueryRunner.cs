@@ -80,6 +80,7 @@ namespace Raven.Database.Queries
 			var indexQuery = new IndexQuery
 			{
 				Cutoff = query.Cutoff,
+                WaitForNonStaleResultsAsOfNow = query.WaitForNonStaleResultsAsOfNow,
 				PageSize = query.PageSize,
 				Query = realQuery,
 				Start = query.Start,

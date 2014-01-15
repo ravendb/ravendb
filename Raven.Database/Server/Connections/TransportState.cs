@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Client.RavenFS;
 using Raven.Database.Server.Controllers;
 
 namespace Raven.Database.Server.Connections
@@ -72,6 +73,17 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
+		public event Action<object, Notification> OnNotification = delegate { };
+
+		public void Send(Notification notification)
+		{
+			OnNotification(this, notification);
+			foreach (var connectionState in connections)
+			{
+				connectionState.Value.Send(notification);
+			}
+		}
+
 		public event Action<object, BulkInsertChangeNotification> OnBulkInsertChangeNotification = delegate { };
 
 		public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
@@ -94,7 +106,7 @@ namespace Raven.Database.Server.Connections
 			}
 		}
 
-		public ConnectionState For(string id, RavenApiController controller = null)
+		public ConnectionState For(string id, RavenDbApiController controller = null)
 		{
 			return connections.GetOrAdd(id, _ =>
 			{

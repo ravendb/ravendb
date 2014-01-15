@@ -7,7 +7,7 @@ using Raven.Abstractions.Extensions;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class StaticController : RavenApiController
+	public class StaticController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("static/")]
@@ -87,24 +87,22 @@ namespace Raven.Database.Server.Controllers
 					return;
 				}
 
+				result.Content = new StaticHeadContent(attachmentAndHeaders.Size);
 				WriteHeaders(attachmentAndHeaders.Metadata, attachmentAndHeaders.Etag, result);
-				//TODO: set length
-				//context.Response.ContentLength64 = attachmentAndHeaders.Size;
 			});
 
 			return result;
 		}
 
 		[HttpPut]
-		[Route("static/{*id}")]
-		[Route("databases/{databaseName}/static/{*id}")]
-		public async Task<HttpResponseMessage> StaticPut(string id)
+		[Route("static/{*filename}")]
+		[Route("databases/{databaseName}/static/{*filename}")]
+		public async Task<HttpResponseMessage> StaticPut(string filename)
 		{
-			var filename = id;
-
 			var newEtag = Database.PutStatic(filename, GetEtag(), await InnerRequest.Content.ReadAsStreamAsync(), InnerHeaders.FilterHeadersAttachment());
 
-			var msg = GetEmptyMessage(HttpStatusCode.NoContent);
+			var msg = GetEmptyMessage(HttpStatusCode.Created);
+			msg.Headers.Location = Database.Configuration.GetFullUrl("static/" + filename);
 
 			WriteETag(newEtag, msg);
 			return msg;

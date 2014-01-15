@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using Raven.Client.Embedded;
+using Raven.Client.Indexes;
 using Xunit;
 
 namespace Raven.Tests.Bugs
@@ -18,58 +20,121 @@ namespace Raven.Tests.Bugs
 			public string Name { get; set; }
 		}
 
-		[Fact]
-		public void ScoreShouldBeAValidFloatValue()
-		{
-			var blogOne = new Blog
-			{
-				Title = "one",
-				Category = "Ravens",
-				Tags = new[]
+        private class SampleDataTransformer : AbstractTransformerCreationTask<Blog>
+        {
+            public SampleDataTransformer()
+            {
+                TransformResults = results => from result in results
+                                              select new BlogScore
+                                              {
+                                                  Title = result.Title,
+                                                  Score = MetadataFor(result).Value<float>("Temp-Index-Score")
+                                              };
+            }
+        }
+
+        private class BlogScore
+        {
+            public string Title { get; set; }
+            public float Score { get; set; }
+        }
+
+	    private EmbeddableDocumentStore SetupSampleData()
+	    {
+            var blogOne = new Blog
+            {
+                Title = "one",
+                Category = "Ravens",
+                Tags = new[]
 				{
 					new BlogTag {Name = "Birds"}
 				}
-			};
-			var blogTwo = new Blog
-			{
-				Title = "two",
-				Category = "Rhinos",
-				Tags = new[]
+            };
+            var blogTwo = new Blog
+            {
+                Title = "two",
+                Category = "Rhinos",
+                Tags = new[]
 				{
 					new BlogTag {Name = "Mammals"}
 				}
-			};
-			var blogThree = new Blog
-			{
-				Title = "three",
-				Category = "Rhinos",
-				Tags = new[]
+            };
+            var blogThree = new Blog
+            {
+                Title = "three",
+                Category = "Rhinos",
+                Tags = new[]
 				{
 					new BlogTag {Name = "Mammals"}
 				}
-			};
+            };
 
-			using (var store = NewDocumentStore())
-			{
-				using (var s = store.OpenSession())
-				{
-					s.Store(blogOne);
-					s.Store(blogTwo);
-					s.Store(blogThree);
-					s.SaveChanges();
-				}
+            var store = NewDocumentStore();
+            using (var s = store.OpenSession())
+            {
+                s.Store(blogOne);
+                s.Store(blogTwo);
+                s.Store(blogThree);
+                s.SaveChanges();
+            }
 
-				using (var s = store.OpenSession())
+            return store;
+	    }
+
+	    [Fact]
+		public void ScoreShouldBeAValidFloatValue()
+		{
+            using (var store = SetupSampleData())
+            {
+				using (var session = store.OpenSession())
 				{
-					var result = s.Query<Blog>()
+					var result = session.Query<Blog>()
 						.Customize(x => x.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5)))
 						.First(x => x.Tags.Any(y => y.Name == "Birds"));
 
-					var metadata = s.Advanced.GetMetadataFor(result);
+					var metadata = session.Advanced.GetMetadataFor(result);
 					var score = metadata.Value<float>("Temp-Index-Score");
 					Assert.True(score > 0f);
 				}
 			}
 		}
+
+        [Fact]
+        public void ScoreShouldBeAValidDoubleValue()
+        {
+            using (var store = SetupSampleData())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Query<Blog>()
+                            .Customize(x => x.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5)))
+                            .FirstOrDefault(x => x.Title == "one");
+
+                    var metadata = session.Advanced.GetMetadataFor(result);
+                    var score = metadata.Value<double>("Temp-Index-Score");
+                    Assert.True(score > 0d);
+                }
+            }
+        }
+
+        [Fact]
+        public void ScoreShouldBeAValidFloatValueInTransformer()
+        {
+            using (var store = SetupSampleData())
+            {
+                new SampleDataTransformer().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Query<Blog>()
+                            .Customize(x => x.WaitForNonStaleResultsAsOfNow())
+                            .TransformWith<SampleDataTransformer, BlogScore>()
+                            .FirstOrDefault(x => x.Title == "one");
+
+                    var score = result.Score;
+                    Assert.True(score > 0f);
+                }
+            }
+        }
 	}
 }

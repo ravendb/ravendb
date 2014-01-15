@@ -5,7 +5,7 @@ using System.Web.Http;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class IdentityController : RavenApiController
+	public class IdentityController : RavenDbApiController
 	{
 		[HttpPost][Route("identity/next")]
 		public HttpResponseMessage IdentityNextPost()

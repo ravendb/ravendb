@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
+using Voron.Impl;
+using Voron.Impl.Paging;
 using Xunit;
 
 namespace Voron.Tests.Journal
@@ -14,7 +16,7 @@ namespace Voron.Tests.Journal
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
 			options.ManualFlushing = true;
-			options.MaxLogFileSize = 3 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 3 * AbstractPager.PageSize;
 		}
 
 		[Fact]
@@ -50,7 +52,7 @@ namespace Voron.Tests.Journal
 
 				var readResult = txr.State.Root.Read(txr, "items/1");
 
-				var readData = readResult.Stream.ReadData();
+			    var readData = readResult.Reader.ReadBytes(readResult.Reader.Length);
 
 				for (int i = 0; i < 3000; i++)
 				{

@@ -7,13 +7,16 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using Raven.Tests.Bundles.MoreLikeThis;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -28,16 +31,20 @@ namespace Raven.Tests.Issues
 			BackupDir = NewDataPath("BackupDatabase");
 		}
 
-		[Fact]
-		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt()
+		[Theory]
+		[InlineData("esent")]
+		[InlineData("voron")] //TODO : investigate Voron issue --> access violation exception when this runs
+		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
 		{
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{
-				DataDirectory = DataDir,
+				DataDirectory = DataDir,				
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+				DefaultStorageTypeName = storageName,
 				Settings =
 				{
-					{"Raven/Esent/CircularLog", "false"}
+					{"Raven/Esent/CircularLog", "false"},
+					{"Raven/Voron/AllowIncrementalBackups", "true"}
 				}
 			}))
 			{
@@ -49,14 +56,15 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(db);
 
-				db.StartBackup(BackupDir, false, new DatabaseDocument());
+				var databaseDocument = new DatabaseDocument();
+				db.StartBackup(BackupDir, false, databaseDocument);
 				WaitForBackup(db, true);
 
 				db.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
 				WaitForIndexing(db);
 
-				db.StartBackup(BackupDir, true, new DatabaseDocument());
+				db.StartBackup(BackupDir, true, databaseDocument);
 				WaitForBackup(db, true);
 
 			}
@@ -78,11 +86,11 @@ namespace Raven.Tests.Issues
 				sb.ToString());
 
 			using (var db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}))
-			{
+			{				
 				db.SpinBackgroundWorkers();
 				QueryResult queryResult;
 				do
-				{
+				{					
 					queryResult = db.Query("Raven/DocumentsByEntityName", new IndexQuery
 					{
 						Query = "Tag:[[Users]]",
@@ -105,11 +113,14 @@ namespace Raven.Tests.Issues
 			BackupDir = NewDataPath("BackupDatabase");
 		}
 
-		[Fact]
-		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt()
+		[Theory]
+		[InlineData("esent")]
+		//[InlineData("voron")] 
+		public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
 		{
 			using (var db = new DocumentDatabase(new RavenConfiguration
 			{
+				DefaultStorageTypeName = storageName,
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 			}))

@@ -48,6 +48,20 @@ namespace Jint.Native {
         public override JsObject Construct(JsInstance[] parameters, Type[] genericArgs, IJintVisitor visitor) {
             JsArray array = New();
 
+            if (parameters.Length == 1 && parameters[0].Class == CLASS_NUMBER)
+            {
+                var num = parameters[0].ToNumber();
+                if (Math.Abs(num - (int) num) > 0 || num < 0 || num >= int.MaxValue)
+                {
+                    throw new JsException(Global.RangeErrorClass.New("Invalid array length"));
+                }
+                for (int i = 0; i < num; i++)
+                {
+                    array.put(i, JsUndefined.Instance);
+                }
+                return array;
+            }
+
             for (int i = 0; i < parameters.Length; i++)
                 array.put(i, parameters[i]); // fast versin since it avoids a type conversion
 
@@ -519,7 +533,7 @@ namespace Jint.Native {
             while (k < len) {
                 JsInstance result = null;
                 if (target.TryGetProperty(k.ToString(), out result)) {
-                    if (JsInstance.StrictlyEquals(Global, result, searchParameter) == Global.BooleanClass.True) {
+                    if (JsInstance.StrictlyEquals(Global, result, searchParameter).ToBoolean() == Global.BooleanClass.True.ToBoolean()) {
                         return Global.NumberClass.New(k);
                     }
                 }

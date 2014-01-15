@@ -162,7 +162,7 @@ public class FacetAdvancedAPITest {
   private Date makeDate(int year, int month, int day) {
     Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
     cal.set(year, month - 1, day);
-    cal.set(Calendar.HOUR, 0);
+    cal.set(Calendar.HOUR_OF_DAY, 0);
     cal.set(Calendar.MINUTE, 0);
     cal.set(Calendar.SECOND, 0);
     cal.set(Calendar.MILLISECOND, 0);

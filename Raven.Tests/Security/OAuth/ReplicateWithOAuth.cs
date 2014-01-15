@@ -14,7 +14,7 @@ namespace Raven.Tests.Security.OAuth
 	{
 		private const string apiKey = "test/ThisIsMySecret";
 
-		protected override void ConfigureStore(DocumentStore store)
+		protected override void ModifyStore(DocumentStore store)
 		{
 			store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
 			store.Credentials = null;

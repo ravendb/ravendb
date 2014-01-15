@@ -14,6 +14,8 @@ using Raven.Client.Extensions;
 
 namespace Raven.Tests.Security.OAuth
 {
+	using Raven.Abstractions.Connection;
+
 	public class ApiKey : RemoteClientTest
 	{
 		private const string apiKey = "test/ThisIsMySecret";
@@ -115,10 +117,10 @@ namespace Raven.Tests.Security.OAuth
 					ApiKey = "dbadmin/ThisIsMySecret"
 				}.Initialize())
 				{
-					store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/admin/changeDbId", "POST", null, store.Conventions))
+					store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/admin/changeDbId", "POST", new OperationCredentials("dbadmin/ThisIsMySecret", null), store.Conventions))
 						.ExecuteRequest();// can do admin stuff
 
-					var httpJsonRequest = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/debug/user-info", "GET", null, store.Conventions));
+					var httpJsonRequest = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url + "/databases/test/debug/user-info", "GET", new OperationCredentials("dbadmin/ThisIsMySecret", null), store.Conventions));
 
 					var json = (RavenJObject)httpJsonRequest.ReadResponseJson();
 

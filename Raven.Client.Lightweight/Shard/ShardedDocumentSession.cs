@@ -446,6 +446,18 @@ namespace Raven.Client.Shard
 			return lazyValue;
 		}
 
+		internal Lazy<int> AddLazyCountOperation(ILazyOperation operation, IList<IDatabaseCommands> cmds)
+		{
+			pendingLazyOperations.Add(Tuple.Create(operation, cmds));
+			var lazyValue = new Lazy<int>(() =>
+			{
+				ExecuteAllPendingLazyOperations();
+				return operation.QueryResult.TotalResults;
+			});
+
+			return lazyValue;
+		}
+
 		/// <summary>
 		/// Loads the specified entity with the specified id after applying
 		/// conventions on the provided id to get the real document id.
@@ -751,7 +763,7 @@ namespace Raven.Client.Shard
 			}
 		}
 
-		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null)
+		public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null)
 		{
 			IncrementRequestCount();
 			var shards = GetCommandsToOperateOn(new ShardRequestData
@@ -774,7 +786,7 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Not supported for sharded session");
 		}
 
-		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude)
+		Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation)
 		{
 			IncrementRequestCount();
 			var cmds = GetCommandsToOperateOn(new ShardRequestData
@@ -783,7 +795,7 @@ namespace Raven.Client.Shard
 				Keys = { keyPrefix }
 			});
 
-			var lazyLoadOperation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this);
+			var lazyLoadOperation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, null);
 
 			return AddLazyOperation<T[]>(lazyLoadOperation, null, cmds);
 		}
@@ -828,14 +840,19 @@ namespace Raven.Client.Shard
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
-		public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue)
+		public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
 		{
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
 		}
 
-		public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue)
+		public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
 		{
 			throw new NotSupportedException("Streams are currently not supported by sharded document store");
+		}
+
+		public FacetResults[] MultiFacetedSearch(params FacetQuery[] queries)
+		{
+			throw new NotSupportedException("Multi faceted searching is currently not supported by sharded document store");
 		}
 	}
 }

@@ -132,14 +132,28 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Gets documents for the specified key prefix
 		/// </summary>
-		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, bool metadataOnly = false, string exclude = null)
+		public JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
 		{
 			pageSize = Math.Min(pageSize, database.Configuration.MaxPageSize);
 
 			// metadata only is NOT supported for embedded, nothing to save on the data transfers, so not supporting 
 			// this
 
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, start, pageSize);
+			var actualStart = start;
+			var nextPageStart = 0;
+
+			var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+			if (nextPage)
+			{
+				actualStart = pagingInformation.NextPageStart;
+				nextPageStart = actualStart;
+			}
+
+			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart, pageSize, ref nextPageStart);
+
+			if (pagingInformation != null)
+				pagingInformation.Fill(start, pageSize, nextPageStart);
+
 			return SerializationHelper.RavenJObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<RavenJObject>()).ToArray();
 		}
 
@@ -555,7 +569,8 @@ namespace Raven.Client.Embedded
 
 				var key = header;
 
-				if(DateTime.Now > new DateTime(2013,11,30))
+				// Need to be removed when we remove the embedded.
+				if(DateTime.Now > new DateTime(2014,2,1))
 					throw new Exception("This is an ugly code that was supposed to be fixed by this time");
 				if (sort == SortOptions.Long && key.EndsWith("_Range"))
 				{
@@ -602,6 +617,8 @@ namespace Raven.Client.Embedded
 							});
 							
 						}
+
+					    return 0;
 					}
 					catch (Exception e)
 					{
@@ -627,7 +644,7 @@ namespace Raven.Client.Embedded
 		/// Streams the documents by etag OR starts with the prefix and match the matches
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
-        public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude)
+        public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation = null)
 		{
 			if(fromEtag != null && startsWith != null)
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
@@ -649,24 +666,39 @@ namespace Raven.Client.Embedded
 						}
 						else
 						{
+                            var actualStart = start;
+                            var nextPageStart = 0;
+
+                            var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+                            if (nextPage)
+                            {
+                                actualStart = pagingInformation.NextPageStart;
+                                nextPageStart = actualStart;
+                            }
+
 							database.GetDocumentsWithIdStartingWith(
 								startsWith,
 								matches,
                                 exclude,
-								start,
+								actualStart,
 								pageSize,
+								ref nextPageStart,
 								items.Add);
+
+						    return nextPageStart;
 						}
 					}
 					catch (ObjectDisposedException)
 					{
 					}
 				}
+
+			    return 0;
 			});
-			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
+			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task, start, pageSize, pagingInformation), items.Dispose);
 		}
 
-		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task task)
+		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task<int> task, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null)
 		{
 			try
 			{
@@ -678,6 +710,11 @@ namespace Raven.Client.Embedded
 						break;
 					yield return ravenJObject;
 				}
+
+			    var nextPageStart = task.Result;
+
+                if (pagingInformation != null)
+                    pagingInformation.Fill(start, pageSize, nextPageStart);
 			}
 			finally
 			{
@@ -883,14 +920,6 @@ namespace Raven.Client.Embedded
 		}
 
 		/// <summary>
-		/// Get the low level  bulk insert operation
-		/// </summary>
-		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
-		{
-			return new EmbeddedBulkInsertOperation(database, options, changes);
-		}
-
-		/// <summary>
 		/// Perform a set based update using the specified index, not allowing the operation
 		/// if the index is stale
 		/// </summary>
@@ -1035,7 +1064,31 @@ namespace Raven.Client.Embedded
 			return database.ExecuteGetTermsQuery( index, query, facetSetupDoc, start, pageSize );
 		}
 
-        /// <summary>
+		/// <summary>
+		/// Sends a multiple faceted queries in a single request and calculates the facet results for each of them
+		/// </summary>
+		/// <param name="facetedQueries">List of queries</param>
+		public FacetResults[] GetMultiFacets(FacetQuery[] facetedQueries)
+		{
+			CurrentOperationContext.Headers.Value = OperationsHeaders;
+
+			return
+				facetedQueries.Select(
+					facetedQuery =>
+					{
+						if (facetedQuery.FacetSetupDoc != null)
+							return database.ExecuteGetTermsQuery(facetedQuery.IndexName, facetedQuery.Query, facetedQuery.FacetSetupDoc,
+							                                     facetedQuery.PageStart, facetedQuery.PageSize);
+						if (facetedQuery.Facets != null)
+							return database.ExecuteGetTermsQuery(facetedQuery.IndexName, facetedQuery.Query, facetedQuery.Facets,
+							                                     facetedQuery.PageStart,
+							                                     facetedQuery.PageSize);
+
+						throw new InvalidOperationException("Missing a facet setup document or a list of facets");
+					}).ToArray();
+		}
+
+		/// <summary>
         /// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
         /// </summary>
         /// <param name="index">Name of the index</param>

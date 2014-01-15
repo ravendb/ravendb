@@ -34,7 +34,9 @@
                 Directory.Delete(_path, true);
         }
 
-        private LightningEnvironment NewEnvironment(bool delete = true)
+		public enum rndseq { RND = 0, SEQ = 1 }
+
+        private LightningEnvironment NewEnvironment(out LightningDatabase db, bool delete = true)
         {
             if (delete && Directory.Exists(_path))
                 Directory.Delete(_path, true);
@@ -47,6 +49,9 @@
                               MapSize = 1024 * 1024 * 1024 * (long)10
                           };
             env.Open();
+            var tx = env.BeginTransaction();
+            db = tx.OpenDatabase();
+			tx.Commit();
 
             return env;
         }
@@ -54,94 +59,137 @@
         public override List<PerformanceRecord> WriteSequential(IEnumerable<TestData> data, PerfTracker perfTracker)
         {
             return Write(string.Format("[LMDB] sequential write ({0} items)", Constants.ItemsPerTransaction), data,
-                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, rndseq.SEQ);
+        }
+
+        public override List<PerformanceRecord> WriteParallelSequential(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            return WriteParallel(string.Format("[LMDB] parallel sequential write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, rndseq.RND, numberOfThreads, out elapsedMilliseconds);
         }
 
         public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data, PerfTracker perfTracker)
         {
             return Write(string.Format("[LMDB] random write ({0} items)", Constants.ItemsPerTransaction), data,
-                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, rndseq.RND);
+        }
+
+        public override List<PerformanceRecord> WriteParallelRandom(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            return WriteParallel(string.Format("[LMDB] parallel random write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, rndseq.RND, numberOfThreads, out elapsedMilliseconds);
         }
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return Read(string.Format("[LMDB] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
         public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return ReadParallel(string.Format("[LMDB] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker, numberOfThreads);
         }
 
-        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker)
+        public override PerformanceRecord ReadRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker)
         {
             return Read(string.Format("[LMDB] random read ({0} items)", Constants.ReadItems), randomIds, perfTracker);
         }
 
-        public override PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads)
+        public override PerformanceRecord ReadParallelRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker, int numberOfThreads)
         {
             return ReadParallel(string.Format("[LMDB] parallel random read ({0} items)", Constants.ReadItems), randomIds, perfTracker, numberOfThreads);
         }
 
-        private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker)
+        private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker, rndseq Rflag)
+        {
+			LightningDatabase db;
+            using (var env = NewEnvironment(out db))
+            {
+                var enumerator = data.GetEnumerator();
+                return WriteInternal(operation, enumerator, itemsPerTransaction, numberOfTransactions, perfTracker, Rflag, env, db);
+            }
+        }
+
+        private List<PerformanceRecord> WriteParallel(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker, rndseq Rflag, int numberOfThreads, out long elapsedMilliseconds)
+        {
+			LightningDatabase db;
+            using (var env = NewEnvironment(out db))
+            {
+                return ExecuteWriteWithParallel(
+                data,
+                numberOfTransactions,
+                itemsPerTransaction,
+                numberOfThreads,
+                (enumerator, itmsPerTransaction, nmbrOfTransactions) => WriteInternal(operation, enumerator, itmsPerTransaction, nmbrOfTransactions, perfTracker, Rflag, env, db),
+                out elapsedMilliseconds);
+            }
+        }
+
+        private List<PerformanceRecord> WriteInternal(
+            string operation,
+            IEnumerator<TestData> enumerator,
+            long itemsPerTransaction,
+            long numberOfTransactions,
+            PerfTracker perfTracker,
+			rndseq Rflag,
+            LightningEnvironment env,
+			LightningDatabase db)
         {
             byte[] valueToWrite = null;
             var records = new List<PerformanceRecord>();
+            var sw = new Stopwatch();
+			LightningDB.PutOptions putflags = LightningDB.PutOptions.None;
 
-            using (var env = NewEnvironment())
+			if (Rflag == rndseq.SEQ)
+				putflags = LightningDB.PutOptions.AppendData;
+
+            for (var transactions = 0; transactions < numberOfTransactions; transactions++)
             {
-                var sw = new Stopwatch();
+                sw.Restart();
 
-                var enumerator = data.GetEnumerator();
-
-                for (var transactions = 0; transactions < numberOfTransactions; transactions++)
+                using (var tx = env.BeginTransaction())
                 {
-                    sw.Restart();
-
-                    using (var tx = env.BeginTransaction())
-                    using (var db = tx.OpenDatabase())
+                    for (var i = 0; i < itemsPerTransaction; i++)
                     {
-                        for (var i = 0; i < itemsPerTransaction; i++)
-                        {
-                            enumerator.MoveNext();
+                        enumerator.MoveNext();
 
-                            valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
+                        valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
 
-                            tx.Put(db, Encoding.UTF8.GetBytes(enumerator.Current.Id.ToString("0000000000000000")), valueToWrite);
-                            perfTracker.Increment();
-                        }
-
-                        tx.Commit();
+                        tx.Put(db, Encoding.UTF8.GetBytes(enumerator.Current.Id.ToString("0000000000000000")), valueToWrite, putflags);
                     }
 
-                    sw.Stop();
-
-                    records.Add(new PerformanceRecord
-                    {
-                        Operation = operation,
-                        Time = DateTime.Now,
-                        Duration = sw.ElapsedMilliseconds,
-                        ProcessedItems = itemsPerTransaction
-                    });
+                    tx.Commit();
                 }
 
                 sw.Stop();
+                perfTracker.Record(sw.ElapsedMilliseconds);
+
+                records.Add(new PerformanceRecord
+                                {
+                                    Operation = operation, 
+                                    Time = DateTime.Now, 
+                                    Duration = sw.ElapsedMilliseconds, 
+                                    ProcessedItems = itemsPerTransaction
+                                });
             }
+
+            sw.Stop();
 
             return records;
         }
 
-        private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
+        private PerformanceRecord Read(string operation, IEnumerable<uint> ids, PerfTracker perfTracker)
         {
-            using (var env = NewEnvironment(delete: false))
+			LightningDatabase db;
+            using (var env = NewEnvironment(out db, delete: false))
             {
                 var sw = Stopwatch.StartNew();
 
-                ReadInternal(ids, perfTracker, env);
+                ReadInternal(ids, perfTracker, env, db);
 
                 sw.Stop();
 
@@ -155,49 +203,29 @@
             }
         }
 
-        private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker, int numberOfThreads)
+        private PerformanceRecord ReadParallel(string operation, IEnumerable<uint> ids, PerfTracker perfTracker, int numberOfThreads)
         {
-            var countdownEvent = new CountdownEvent(numberOfThreads);
-
-            using (var env = NewEnvironment(delete: false))
+			LightningDatabase db;
+            using (var env = NewEnvironment(out db, delete: false))
             {
-                var sw = Stopwatch.StartNew();
-
-                for (int i = 0; i < numberOfThreads; i++)
-                {
-                    ThreadPool.QueueUserWorkItem(
-                        state =>
-                            {
-                                ReadInternal(ids, perfTracker, env);
-
-                                countdownEvent.Signal();
-                            });
-                }
-
-                countdownEvent.Wait();
-                sw.Stop();
-
-                return new PerformanceRecord
-                {
-                    Operation = operation,
-                    Time = DateTime.Now,
-                    Duration = sw.ElapsedMilliseconds,
-                    ProcessedItems = ids.Count() * numberOfThreads
-                };
+                return ExecuteReadWithParallel(operation, ids, numberOfThreads, () => ReadInternal(ids, perfTracker, env, db));
             }
         }
 
-        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, LightningEnvironment env)
+        private static long ReadInternal(IEnumerable<uint> ids, PerfTracker perfTracker, LightningEnvironment env,
+			LightningDatabase db)
         {
-            using (var tx = env.BeginTransaction())
-            using (var db = tx.OpenDatabase())
+            using (var tx = env.BeginTransaction(LightningDB.TransactionBeginFlags.ReadOnly))
+			using (var cursor = new LightningCursor(db, tx))
             {
+                long v = 0;
                 foreach (var id in ids)
                 {
-                    var value = tx.Get(db, Encoding.UTF8.GetBytes(id.ToString("0000000000000000")));
-                    perfTracker.Increment();
-                    Debug.Assert(value != null);
+                    var value = cursor.MoveTo(Encoding.UTF8.GetBytes(id.ToString("0000000000000000")));
+                    v += value.Value.Length;
+                    //Debug.Assert(value != null);
                 }
+                return v;
             }
         }
     }

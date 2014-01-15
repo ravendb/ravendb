@@ -261,7 +261,7 @@ namespace Raven.Client.Linq
 		/// Register the query as a lazy query in the session and return a lazy
 		/// instance that will evaluate the query only when needed
 		/// </summary>
-		public Lazy<IEnumerable<S>> Lazily<S>(Expression expression, Action<IEnumerable<S>> onEval )
+		public Lazy<IEnumerable<S>> Lazily<S>(Expression expression, Action<IEnumerable<S>> onEval)
 		{
 			var processor = GetQueryProviderProcessor<S>();
 			var query = processor.GetLuceneQueryFor(expression);
@@ -283,6 +283,17 @@ namespace Raven.Client.Linq
 				query = query.SelectFields<S>(FieldsToFetch.ToArray(), renamedFields);
 
 			return query.Lazily(onEval);
+		}
+
+		/// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public Lazy<int> CountLazily<S>(Expression expression)
+		{
+			var processor = GetQueryProviderProcessor<S>();
+			var query = processor.GetLuceneQueryFor(expression);
+			return query.CountLazily();
 		}
 
 		protected virtual RavenQueryProviderProcessor<S> GetQueryProviderProcessor<S>()

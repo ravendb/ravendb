@@ -15,18 +15,61 @@ using Raven.Database.Queries;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class FacetsController : RavenApiController
+	public class FacetsController : RavenDbApiController
 	{
-		[HttpGet][Route("facets/{*id}")]
+		[HttpGet]
+		[Route("facets/{*id}")]
+        [Route("databases/{databaseName}/facets/{*id}")]
 		public async Task<HttpResponseMessage> FacetsGet(string id)
 		{
 			return await Facets(id, "GET");
 		}
 
-		[HttpPost][Route("facets/{*id}")]
+		[HttpPost]
+		[Route("facets/{*id}")]
+        [Route("databases/{databaseName}/facets/{*id}")]
 		public async Task<HttpResponseMessage> FacetsPost(string id)
 		{
 			return await Facets(id, "POST");
+		}
+
+		[HttpPost]
+		[Route("facets/multisearch")]
+		[Route("databases/{databaseName}/facets/multisearch")]
+		public async Task<HttpResponseMessage> MultiSearch()
+		{
+			var str = await ReadStringAsync();
+			var facetedQueries = JsonConvert.DeserializeObject<FacetQuery[]>(str);
+
+			try
+			{
+				var results =
+					facetedQueries.Select(
+						facetedQuery =>
+						{
+							if (facetedQuery.FacetSetupDoc != null)
+								return Database.ExecuteGetTermsQuery(facetedQuery.IndexName, facetedQuery.Query, facetedQuery.FacetSetupDoc,
+																	 facetedQuery.PageStart, facetedQuery.PageSize);
+							if (facetedQuery.Facets != null)
+								return Database.ExecuteGetTermsQuery(facetedQuery.IndexName, facetedQuery.Query, facetedQuery.Facets,
+								                              facetedQuery.PageStart,
+								                              facetedQuery.PageSize);
+
+							throw new InvalidOperationException("Missing a facet setup document or a list of facets");
+						}).ToArray();
+
+				return GetMessageWithObject(results);
+			}
+			catch (Exception ex)
+			{
+				if (ex is ArgumentException || ex is InvalidOperationException)
+				{
+					throw new BadRequestException(ex.Message, ex);
+				}
+
+				throw;
+			}
+
 		}
 
 		private Etag etag;

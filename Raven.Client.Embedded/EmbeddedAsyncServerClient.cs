@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -12,114 +11,27 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Replication;
 using Raven.Abstractions.Util;
+using Raven.Client.Changes;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Connection.Profiling;
+using Raven.Client.Document;
+using Raven.Database;
 using Raven.Database.Data;
-using Raven.Database.Server;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Embedded
 {
 	internal class EmbeddedAsyncServerClient : IAsyncDatabaseCommands, IAsyncInfoDatabaseCommands, IAsyncGlobalAdminDatabaseCommands
 	{
+		private readonly DocumentDatabase documentDatabase;
 		private readonly IDatabaseCommands databaseCommands;
 
-		public EmbeddedAsyncServerClient(IDatabaseCommands databaseCommands)
+		public EmbeddedAsyncServerClient(DocumentDatabase documentDatabase, IDatabaseCommands databaseCommands)
 		{
+			this.documentDatabase = documentDatabase;
 			this.databaseCommands = databaseCommands;
-			OperationsHeaders = new DictionaryWrapper(databaseCommands.OperationsHeaders);
-		}
-
-		internal class DictionaryWrapper : IDictionary<string, string>
-		{
-			private readonly NameValueCollection inner;
-
-			public DictionaryWrapper(NameValueCollection inner)
-			{
-				this.inner = inner;
-			}
-
-			public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
-			{
-				return (from string key in inner select new KeyValuePair<string, string>(key, inner[key])).GetEnumerator();
-			}
-
-			IEnumerator IEnumerable.GetEnumerator()
-			{
-				return GetEnumerator();
-			}
-
-			public void Add(KeyValuePair<string, string> item)
-			{
-				inner.Add(item.Key, item.Value);
-			}
-
-			public void Clear()
-			{
-				inner.Clear();
-			}
-
-			public bool Contains(KeyValuePair<string, string> item)
-			{
-				return inner[item.Key] == item.Value;
-			}
-
-			public void CopyTo(KeyValuePair<string, string>[] array, int arrayIndex)
-			{
-				throw new NotImplementedException();
-			}
-
-			public bool Remove(KeyValuePair<string, string> item)
-			{
-				inner.Remove(item.Key);
-				return true;
-			}
-
-			public int Count { get { return inner.Count; } }
-			public bool IsReadOnly { get { return false; } }
-			public bool ContainsKey(string key)
-			{
-				return inner[key] != null;
-			}
-
-			public void Add(string key, string value)
-			{
-				inner.Add(key, value);
-			}
-
-			public bool Remove(string key)
-			{
-				inner.Remove(key);
-				return true;
-			}
-
-			public bool TryGetValue(string key, out string value)
-			{
-				value = inner[key];
-				return value != null;
-			}
-
-			public string this[string key]
-			{
-				get { return inner[key]; }
-				set { inner[key] = value; }
-			}
-
-			public ICollection<string> Keys
-			{
-				get
-				{
-					return inner.Cast<string>().ToList();
-				}
-			}
-			public ICollection<string> Values
-			{
-				get
-				{
-					return inner.Cast<string>().Select(x => inner[x]).ToList();
-				}
-			}
+			OperationsHeaders = databaseCommands.OperationsHeaders;
 		}
 
 		public void Dispose()
@@ -131,8 +43,7 @@ namespace Raven.Client.Embedded
 			get { return databaseCommands.ProfilingInformation; }
 		}
 
-		public IDictionary<string, string> OperationsHeaders { get; set; }
-
+		public NameValueCollection OperationsHeaders { get; set; }
 
 		public Task<JsonDocument> GetAsync(string key)
 		{
@@ -149,13 +60,8 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<JsonDocument[]>(databaseCommands.GetDocuments(start, pageSize, metadataOnly));
 		}
 
-	    public Task<JsonDocument[]> GetDocumentsAsync(Etag fromEtag, int pageSize, bool metadataOnly = false)
+		public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 	    {
-            return new CompletedTask<JsonDocument[]>(databaseCommands.GetDocuments(fromEtag, pageSize, metadataOnly));
-	    }
-
-	    public Task<QueryResult> QueryAsync(string index, IndexQuery query, string[] includes, bool metadataOnly = false)
-		{
 			return new CompletedTask<QueryResult>(databaseCommands.Query(index, query, includes, metadataOnly));
 		}
 
@@ -216,15 +122,10 @@ namespace Raven.Client.Embedded
 			return new CompletedTask();
 		}
 
-		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete)
-		{
-			return DeleteByIndexAsync(indexName, queryToDelete, false);
-		}
-
-		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
+		public Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
 			databaseCommands.DeleteByIndex(indexName, queryToDelete, allowStale);
-			return new CompletedTask();
+			return new CompletedTask<Operation>();
 		}
 
 		public Task DeleteTransformerAsync(string name)
@@ -281,17 +182,17 @@ namespace Raven.Client.Embedded
 
 		public IAsyncDatabaseCommands ForDatabase(string database)
 		{
-			return new EmbeddedAsyncServerClient(databaseCommands.ForDatabase(database));
+			return new EmbeddedAsyncServerClient(documentDatabase, databaseCommands.ForDatabase(database));
 		}
 
 		public IAsyncDatabaseCommands ForSystemDatabase()
 		{
-			return new EmbeddedAsyncServerClient(databaseCommands.ForSystemDatabase());
+			return new EmbeddedAsyncServerClient(documentDatabase, databaseCommands.ForSystemDatabase());
 		}
 
 		public IAsyncDatabaseCommands With(ICredentials credentialsForSession)
 		{
-			return new EmbeddedAsyncServerClient(databaseCommands.With(credentialsForSession));
+			return new EmbeddedAsyncServerClient(documentDatabase, databaseCommands.With(credentialsForSession));
 		}
 
 		public Task<DatabaseStatistics> GetStatisticsAsync()
@@ -335,6 +236,11 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<Attachment>(databaseCommands.GetAttachment(key));
 		}
 
+		public Task<Attachment> HeadAttachmentAsync(string key)
+		{
+			return new CompletedTask<Attachment>(databaseCommands.HeadAttachment(key));			
+		}
+
 		public Task DeleteAttachmentAsync(string key, Etag etag)
 		{
 			databaseCommands.DeleteAttachment(key, etag);
@@ -356,21 +262,23 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<GetResponse[]>(databaseCommands.MultiGet(requests));
 		}
 
-		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
+		public Task<Operation> UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
 		{
-			databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch);
-			return new CompletedTask();
+		    return new CompletedTask<Operation>(databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch));
 		}
 
-		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+		public Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
-			databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
-			return new CompletedTask();
+            return new CompletedTask<Operation>(databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch, allowStale));
 		}
 
-		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null)
-		{
+		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null ) {
 			return new CompletedTask<FacetResults>(databaseCommands.GetFacets(index, query, facetSetupDoc, start, pageSize));
+		}
+
+		public Task<FacetResults[]> GetMultiFacetsAsync(FacetQuery[] facetedQueries)
+		{
+			return new CompletedTask<FacetResults[]>(databaseCommands.GetMultiFacets(facetedQueries));
 		}
 
 		public Task<FacetResults> GetFacetsAsync(string index, IndexQuery query, List<Facet> facets, int start = 0, int? pageSize = null)
@@ -392,47 +300,42 @@ namespace Raven.Client.Embedded
 
 		public Task<BuildNumber> GetBuildNumberAsync()
 		{
-			// No sync equivalent on IDatabaseCommands.
-			throw new NotSupportedException();
+			return new CompletedTask<BuildNumber>(databaseCommands.GetBuildNumber());			
 		}
 
-		// TODO arek
 		public Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument)
 		{
 			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
-		// TODO arek
 		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false)
 		{
 			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
-		// TODO arek
 		public Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null)
 		{
 			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
-		//TODO arek
 		public Task<string> GetIndexingStatusAsync()
 		{
 			// No sync equivalent on IDatabaseCommands.
 			throw new NotSupportedException();
 		}
 
-		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize, bool metadataOnly = false, string exclude = null)
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null, bool metadataOnly = false, string exclude = null)
 		{
 			// Should add a 'matches' parameter? Setting to null for now.
-			return new CompletedTask<JsonDocument[]>(databaseCommands.StartsWith(keyPrefix, null, start, pageSize, metadataOnly, exclude));
+			return new CompletedTask<JsonDocument[]>(databaseCommands.StartsWith(keyPrefix, matches, start, pageSize, pagingInformation, metadataOnly, exclude));
 		}
 
-		public void ForceReadFromMaster()
+		public IDisposable ForceReadFromMaster()
 		{
-			databaseCommands.ForceReadFromMaster();
+			return databaseCommands.ForceReadFromMaster();
 		}
 
 		public Task<JsonDocumentMetadata> HeadAsync(string key)
@@ -449,13 +352,77 @@ namespace Raven.Client.Embedded
 		}
 
 		public Task<IAsyncEnumerator<RavenJObject>> StreamDocsAsync(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0,
-									int pageSize = 2147483647)
+									int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null)
 		{
-			var streamDocs = databaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize);
+			var streamDocs = databaseCommands.StreamDocs(fromEtag, startsWith, matches, start, pageSize, exclude, pagingInformation);
 			return new CompletedTask<IAsyncEnumerator<RavenJObject>>(new AsyncEnumeratorBridge<RavenJObject>(streamDocs));
 
 		}
 
+		/// <summary>
+		/// Get the low level  bulk insert operation
+		/// </summary>
+		public ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes)
+		{
+			return new EmbeddedBulkInsertOperation(documentDatabase, options, changes);
+		}
+
+		public Task DeleteAsync(string key, Etag etag)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public string UrlFor(string documentKey)
+	    {
+	        return databaseCommands.UrlFor(documentKey);
+	    }
+
+	    public HttpJsonRequest CreateReplicationAwareRequest(string currentServerUrl, string requestUrl, string method,
+	        bool disableRequestCompression = false)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Task UpdateAttachmentMetadataAsync(string key, Etag etag, RavenJObject metadata)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Task<IAsyncEnumerator<Attachment>> GetAttachmentHeadersStartingWithAsync(string idPrefix, int start, int pageSize)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Task CommitAsync(string txId)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Task RollbackAsync(string txId)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Task PrepareTransactionAsync(string txId)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests,
+	        bool allowStale = false)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Task<MultiLoadResult> MoreLikeThisAsync(MoreLikeThisQuery query)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public Task<long> NextIdentityForAsync(string name)
+	    {
+	        throw new NotImplementedException();
+	    }
 
 		#region IAsyncGlobalAdminDatabaseCommands
 

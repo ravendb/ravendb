@@ -80,7 +80,7 @@ namespace Raven.Database.Server.Security
 			var oneTimeToken = context.Request.Headers["Single-Use-Auth-Token"];
 			if (string.IsNullOrEmpty(oneTimeToken) == false)
 			{
-				return AuthorizeUsingleUseAuthToken(context, oneTimeToken);
+				return AuthorizeSingleUseAuthToken(context, oneTimeToken);
 			}
 
 			var authHeader = context.Request.Headers["Authorization"];
@@ -94,7 +94,7 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.Authorize(context, IgnoreDb.Urls.Contains(requestUrl));
 		}
 
-		public bool TryAuthorize(RavenApiController controller, out HttpResponseMessage msg)
+		public bool TryAuthorize(RavenDbApiController controller, out HttpResponseMessage msg)
 		{
 			var requestUrl = controller.GetRequestUrl();
 			if (NeverSecret.Urls.Contains(requestUrl))
@@ -113,7 +113,7 @@ namespace Raven.Database.Server.Security
 			var oneTimeToken = controller.GetHeader("Single-Use-Auth-Token");
 			if (string.IsNullOrEmpty(oneTimeToken) == false)
 			{
-				return TryAuthorizeUsingleUseAuthToken(controller, oneTimeToken, out msg);
+				return TryAuthorizeSingleUseAuthToken(controller, oneTimeToken, out msg);
 			}
 
 			var authHeader = controller.GetHeader("Authorization");
@@ -127,7 +127,7 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.TryAuthorize(controller, IgnoreDb.Urls.Contains(requestUrl), out msg);
 		}
 
-		private bool AuthorizeUsingleUseAuthToken(IHttpContext context, string token)
+		private bool AuthorizeSingleUseAuthToken(IHttpContext context, string token)
 		{
 			OneTimeToken value;
 			if (singleUseAuthTokens.TryRemove(token, out value) == false)
@@ -167,7 +167,7 @@ namespace Raven.Database.Server.Security
 			return true;
 		}
 
-		private bool TryAuthorizeUsingleUseAuthToken(RavenApiController controller, string token, out HttpResponseMessage msg)
+		private bool TryAuthorizeSingleUseAuthToken(RavenDbApiController controller, string token, out HttpResponseMessage msg)
 		{
 			OneTimeToken value;
 			if (singleUseAuthTokens.TryRemove(token, out value) == false)
@@ -224,7 +224,7 @@ namespace Raven.Database.Server.Security
 			return windowsRequestAuthorizer.GetUser(context);
 		}
 
-		public IPrincipal GetUser(RavenApiController controller)
+		public IPrincipal GetUser(RavenDbApiController controller)
 		{
 			var hasApiKey = "True".Equals(controller.GetQueryStringValue("Has-Api-Key"), StringComparison.CurrentCultureIgnoreCase);
 			var authHeader = controller.GetHeader("Authorization");
@@ -252,7 +252,7 @@ namespace Raven.Database.Server.Security
 			return approved;
 		}
 
-		public List<string> GetApprovedDatabases(IPrincipal user, RavenApiController controller, string[] databases)
+		public List<string> GetApprovedDatabases(IPrincipal user, RavenDbApiController controller, string[] databases)
 		{
 			var authHeader = controller.GetHeader("Authorization");
 
@@ -298,7 +298,7 @@ namespace Raven.Database.Server.Security
 			return tokenString;
 		}
 
-		public string GenerateSingleUseAuthToken(DocumentDatabase db, IPrincipal user, RavenApiController controller)
+		public string GenerateSingleUseAuthToken(DocumentDatabase db, IPrincipal user, RavenDbApiController controller)
 		{
 			var token = new OneTimeToken
 			{

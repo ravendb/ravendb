@@ -244,8 +244,8 @@ namespace Raven.Database.Server
 							TotalDatabaseSize = totalDatabaseSize,
 							TotalDatabaseHumaneSize = DatabaseSize.Humane(totalDatabaseSize),
 							CountOfDocuments = documentDatabase.Database.Statistics.CountOfDocuments,
-							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.RequestsPerSecond, 2),
-							ConcurrentRequests = documentDatabase.Database.WorkContext.ConcurrentRequests,
+							RequestsPerSecond = Math.Round(documentDatabase.Database.WorkContext.PerformanceCounters.RequestsPerSecond.NextValue(), 2),
+							ConcurrentRequests = (int)documentDatabase.Database.WorkContext.PerformanceCounters.ConcurrentRequests.NextValue(),
 							DatabaseTransactionVersionSizeInMB = ConvertBytesToMBs(documentDatabase.Database.TransactionalStorage.GetDatabaseTransactionVersionSizeInBytes()),
 						}
 				};
@@ -807,7 +807,7 @@ namespace Raven.Database.Server
 			}
 			finally
 			{
-				CurrentDatabase.WorkContext.DecrementConcurrentRequestsCounter();
+				CurrentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Decrement();
 				ResetThreadLocalState();
 				if (onResponseEnd != null)
 					onResponseEnd();
@@ -871,8 +871,8 @@ namespace Raven.Database.Server
 		protected void OnDispatchingRequest(IHttpContext ctx)
 		{
 			ctx.Response.AddHeader("Raven-Server-Build", DocumentDatabase.BuildVersion);
-			CurrentDatabase.WorkContext.IncrementRequestsPerSecCounter();
-			CurrentDatabase.WorkContext.IncrementConcurrentRequestsCounter();
+			CurrentDatabase.WorkContext.PerformanceCounters.RequestsPerSecond.Increment();
+			CurrentDatabase.WorkContext.PerformanceCounters.ConcurrentRequests.Increment();
 		}
 
 		public DocumentDatabase CurrentDatabase
@@ -1074,7 +1074,8 @@ namespace Raven.Database.Server
 				{
 					var numberOfAllowedDbs = int.Parse(maxDatabases);
 
-					var databases = SystemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, numberOfAllowedDbs).ToList();
+					int nextPageStart = 0;
+					var databases = SystemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, numberOfAllowedDbs, ref nextPageStart).ToList();
 					if (databases.Count >= numberOfAllowedDbs)
 						throw new InvalidOperationException(
 							"You have reached the maximum number of databases that you can have according to your license: " + numberOfAllowedDbs + Environment.NewLine +

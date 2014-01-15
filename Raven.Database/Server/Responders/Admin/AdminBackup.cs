@@ -3,7 +3,6 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
 using System.Security.Principal;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -41,6 +40,7 @@ namespace Raven.Database.Server.Responders.Admin
 				if (jsonDocument != null)
 				{
 					backupRequest.DatabaseDocument = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
+					server.Unprotect(backupRequest.DatabaseDocument);
 				}
 			}
 			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);

@@ -20,7 +20,7 @@ namespace Raven.Tests.Bundles.Replication
 			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
 
 			Assert.Equal(1, serverClient.ReplicationInformer.ReplicationDestinationsUrls.Count());
-			Assert.Equal(store3.Url, serverClient.ReplicationInformer.ReplicationDestinationsUrls[0]);
+			Assert.Equal(store3.Url, serverClient.ReplicationInformer.ReplicationDestinationsUrls[0].Url);
 		}
 
 		[Fact]
@@ -37,7 +37,7 @@ namespace Raven.Tests.Bundles.Replication
 			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
 
 			Assert.Equal(1, serverClient.ReplicationInformer.ReplicationDestinationsUrls.Count());
-			Assert.Equal(store3.Url, serverClient.ReplicationInformer.ReplicationDestinationsUrls[0]);
+			Assert.Equal(store3.Url, serverClient.ReplicationInformer.ReplicationDestinationsUrls[0].Url);
 		}
 	}
 }

@@ -212,7 +212,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 			while (true)
 			{
-				var docs = docDb.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, skip, 128);
+				int nextPageStart = skip; // will trigger rapid pagination
+				var docs = docDb.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, skip, 128, ref nextPageStart);
 				if (docs.Length == 0)
 				{
 					notifications.TryAdd(null, 15 * 1000); // marker to stop notify this
@@ -1045,7 +1046,8 @@ namespace Raven.Bundles.Replication.Tasks
 				task.Wait();
 			}
 
-			prefetchingBehavior.Dispose();
+			if (prefetchingBehavior != null)
+				prefetchingBehavior.Dispose();
 		}
 		private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 	}

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using Voron.Debugging;
 
 namespace Voron.Tests.Bugs
 {
@@ -42,14 +43,14 @@ namespace Voron.Tests.Bugs
 			{
 				inputData.Add(RandomString(1024));
 			}
-			
+
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
 				var tree = tx.GetTree("foo");
 				for (int index = 0; index < inputData.Count; index++)
 				{
 					var keyString = inputData[index];
-					Assert.DoesNotThrow(() => tree.Add(tx, keyString, new MemoryStream(new byte[] {1, 2, 3, 4})));
+					Assert.DoesNotThrow(() => tree.Add(tx, keyString, new MemoryStream(new byte[] { 1, 2, 3, 4 })));
 				}
 
 				tx.Commit();
@@ -60,8 +61,7 @@ namespace Voron.Tests.Bugs
 		public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
 		{
 			var ids = ReadIds("data.txt");
-
-			using (var env = new StorageEnvironment(StorageEnvironmentOptions.GetInMemory()))
+			var env = Env;
 			{
 				var rand = new Random();
 				var testBuffer = new byte[79];
@@ -72,6 +72,7 @@ namespace Voron.Tests.Bugs
 				var addedIds = new List<string>();
 				foreach (var id in ids) // 244276974/13/250/2092845878 -> 8887 iteration
 				{
+					
 					using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 					{
 						foreach (var treeName in trees)
@@ -89,6 +90,42 @@ namespace Voron.Tests.Bugs
 
 				ValidateRecords(env, trees, ids);
 			}
+		}
+
+		[Fact]
+		public void PageSplitter_SmallRun()
+		{
+			var ids = ReadIds("data.txt", 35);
+			var env = Env;
+			var rand = new Random();
+			var testBuffer = new byte[79];
+			rand.NextBytes(testBuffer);
+
+			var trees = CreateTrees(env, 1, "tree");
+
+			var addedIds = new List<string>();
+			foreach (var id in ids) // 244276974/13/250/2092845878 -> 8887 iteration
+			{
+				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
+				{
+					foreach (var treeName in trees)
+					{
+						var tree = tx.GetTree(treeName);
+
+						tree.Add(tx, id, new MemoryStream(testBuffer));
+
+						var readResult = tree.Read(tx, id);
+						
+						Assert.NotNull(readResult);
+					}
+
+					tx.Commit();
+
+					addedIds.Add(id);
+				}
+			}
+
+			ValidateRecords(env, trees, ids);
 		}
 
 		[Fact]
@@ -110,7 +147,7 @@ namespace Voron.Tests.Bugs
 					{
 						foreach (var treeName in trees)
 						{
-						    var tree = tx.GetTree(treeName);
+							var tree = tx.GetTree(treeName);
 							tree.Add(tx, id, new MemoryStream(testBuffer));
 						}
 
@@ -139,13 +176,18 @@ namespace Voron.Tests.Bugs
 						{
 							keys.Add(iterator.CurrentKey.ToString());
 							Assert.True(ids.Contains(iterator.CurrentKey.ToString()));
-							Assert.NotNull(snapshot.Read(tree, iterator.CurrentKey));
+						    var readResult = snapshot.Read(tree, iterator.CurrentKey);
+						    if (readResult == null)
+						    {
+						        
+						    }
+						    Assert.NotNull(readResult);
 
 							count++;
 						}
 						while (iterator.MoveNext());
 
-                        Assert.Equal(ids.Count, snapshot.Transaction.GetTree(tree).State.EntriesCount);
+						Assert.Equal(ids.Count, snapshot.Transaction.GetTree(tree).State.EntriesCount);
 						Assert.Equal(ids.Count, count);
 						Assert.Equal(ids.Count, keys.Count);
 					}
@@ -153,7 +195,7 @@ namespace Voron.Tests.Bugs
 			}
 		}
 
-		private static IList<string> ReadIds(string fileName)
+		private static IList<string> ReadIds(string fileName, int maxSize = int.MaxValue)
 		{
 			using (var reader = new StreamReader("Bugs/Data/" + fileName))
 			{
@@ -161,7 +203,7 @@ namespace Voron.Tests.Bugs
 
 				var results = new List<string>();
 
-				while (!string.IsNullOrEmpty(line = reader.ReadLine()))
+				while (!string.IsNullOrEmpty(line = reader.ReadLine()) && results.Count < maxSize)
 				{
 					results.Add(line.Trim());
 				}

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,12 +12,13 @@ using Raven.Database.Backup;
 using Raven.Database.Extensions;
 using Raven.Database.Storage.Voron.Impl;
 using Raven.Json.Linq;
+using Voron;
+using Voron.Impl.Backup;
 
 namespace Raven.Database.Storage.Voron.Backup
 {
     public class BackupOperation
     {
-        private const string VORON_BACKUP_FILENAME = "RavenDB.Voron.Backup";
         private string backupFilePath;
         private readonly DocumentDatabase database;
         private readonly string backupSourceDirectory;
@@ -24,21 +26,24 @@ namespace Raven.Database.Storage.Voron.Backup
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
         private string backupDestinationDirectory;
-        private readonly TableStorage storage;
+	    private readonly StorageEnvironment env;
         private bool incrementalBackup;
+	    private readonly DatabaseDocument databaseDocument;
 
-        public BackupOperation(DocumentDatabase database,string backupSourceDirectory,string backupDestinationDirectory, TableStorage storage, bool incrementalBackup)
+	    public BackupOperation(DocumentDatabase database, string backupSourceDirectory, string backupDestinationDirectory, StorageEnvironment env, bool incrementalBackup, DatabaseDocument databaseDocument)
         {
-            if (database == null) throw new ArgumentNullException("database");
-            if (backupSourceDirectory == null) throw new ArgumentNullException("backupSourceDirectory");
+			if (databaseDocument == null) throw new ArgumentNullException("databaseDocument");
+			if (database == null) throw new ArgumentNullException("database");
+			if (backupSourceDirectory == null) throw new ArgumentNullException("backupSourceDirectory");
             if (backupDestinationDirectory == null) throw new ArgumentNullException("backupDestinationDirectory");
-            if (storage == null) throw new ArgumentNullException("storage");
+            if (env == null) throw new ArgumentNullException("env");
 
             this.database = database;
             this.backupSourceDirectory = backupSourceDirectory;
             this.backupDestinationDirectory = backupDestinationDirectory;
-            this.storage = storage;
+			this.env = env;
             this.incrementalBackup = incrementalBackup;
+			this.databaseDocument = databaseDocument;
         }
 
         public void Execute()
@@ -47,7 +52,7 @@ namespace Raven.Database.Storage.Voron.Backup
             {
                 string incrementalTag = null;
                 backupDestinationDirectory = backupDestinationDirectory.ToFullPath();
-                backupFilePath = Path.Combine(backupDestinationDirectory.Trim(), VORON_BACKUP_FILENAME);
+                backupFilePath = Path.Combine(backupDestinationDirectory.Trim(), BackupMethods.Filename);
 
                 UpdateBackupStatus(string.Format("Started backup process. Backing up data to file path = '{0}'", backupFilePath),BackupStatus.BackupMessageSeverity.Informational);
                 if (Directory.Exists(backupDestinationDirectory) && File.Exists(backupFilePath))
@@ -57,7 +62,7 @@ namespace Raven.Database.Storage.Voron.Backup
 
                     incrementalTag = SystemTime.UtcNow.ToString("Inc yyyy-MM-dd hh-mm-ss");
                     backupDestinationDirectory = Path.Combine(backupDestinationDirectory, incrementalTag);
-                    backupFilePath = Path.Combine(backupDestinationDirectory.Trim(), VORON_BACKUP_FILENAME);
+					backupFilePath = Path.Combine(backupDestinationDirectory.Trim(), BackupMethods.Filename);
                 }
                 else
                 {
@@ -77,25 +82,28 @@ namespace Raven.Database.Storage.Voron.Backup
                                         Path.Combine(backupSourceDirectory, "Temp" + Guid.NewGuid().ToString("N")), incrementalBackup)
 				};
 
-                database.IndexStorage.Backup(backupDestinationDirectory, incrementalTag);
+                database.IndexStorage.Backup(backupDestinationDirectory, null);				
 
+                var progressNotifier = new ProgressNotifier();
                 foreach (var directoryBackup in directoryBackups)
                 {
                     directoryBackup.Notify += UpdateBackupStatus;
-                    directoryBackup.Prepare();
+                    var backupSize = directoryBackup.Prepare();
+                    progressNotifier.TotalBytes += backupSize;
                 }
 
                 foreach (var directoryBackup in directoryBackups)
                 {
-                    directoryBackup.Execute();
+                    directoryBackup.Execute(progressNotifier);
                 }
 
                 UpdateBackupStatus(string.Format("Finished indexes backup. Executing data backup.."), BackupStatus.BackupMessageSeverity.Informational);
-                using (var backupFileStream = new FileStream(backupFilePath, FileMode.CreateNew))
-                {
-                    storage.ExecuteBackup(backupFileStream);
-                }
-            }
+				ExecuteBackup(backupFilePath,incrementalBackup);
+
+				if (databaseDocument != null)
+					File.WriteAllText(Path.Combine(backupDestinationDirectory, "Database.Document"), RavenJObject.FromObject(databaseDocument).ToString());
+
+			}
             catch (AggregateException e)
             {
                 var ne = e.ExtractSingleInnerException();
@@ -112,6 +120,40 @@ namespace Raven.Database.Storage.Voron.Backup
                 CompleteBackup();
             }
         }
+
+		private void ExecuteBackup(string backupPath, bool isIncrementalBackup)
+		{
+			if (String.IsNullOrWhiteSpace(backupPath)) throw new ArgumentNullException("backupPath");
+
+			if (isIncrementalBackup)
+				BackupMethods.Incremental.ToFile(env, backupPath);
+			else
+				BackupMethods.Full.ToFile(env, backupPath);
+		}
+
+	    private void CopyAll(DirectoryInfo source, DirectoryInfo target)
+		{
+			// Check if the target directory exists, if not, create it.
+			if (Directory.Exists(target.FullName) == false)
+			{
+				Directory.CreateDirectory(target.FullName);
+			}
+
+			// Copy each file into it's new directory.
+			foreach (FileInfo fi in source.GetFiles())
+			{
+				Console.WriteLine(@"Copying {0}\{1}", target.FullName, fi.Name);
+				fi.CopyTo(Path.Combine(target.ToString(), fi.Name), true);
+			}
+
+			// Copy each subdirectory using recursion.
+			foreach (DirectoryInfo diSourceSubDir in source.GetDirectories())
+			{
+				DirectoryInfo nextTargetSubDir =
+					target.CreateSubdirectory(diSourceSubDir.Name);
+				CopyAll(diSourceSubDir, nextTargetSubDir);
+			}
+		}
 
         private void CompleteBackup()
         {

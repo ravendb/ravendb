@@ -42,6 +42,7 @@ namespace Raven.Studio.Commands
 		private void DeleteDocuments(IList<string> documentIds)
 		{
 			var deleteCommandDatas = documentIds
+                .Distinct()
 				.Select(id => new DeleteCommandData{Key = id})
 				.Cast<ICommandData>()
 				.ToArray();

@@ -212,8 +212,8 @@ namespace Raven.Studio.Models
 			if (HtmlPage.Document.DocumentUri.Scheme == "file")
 			{
 				if (HtmlPage.Document.DocumentUri.Query.Contains("fiddler"))
-					return "http://localhost.fiddler:8080";
-				return "http://localhost:8080";
+					return "http://localhost.fiddler:8091";
+                return "http://localhost:8091";
 			}
 
 			var localPath = HtmlPage.Document.DocumentUri.LocalPath;

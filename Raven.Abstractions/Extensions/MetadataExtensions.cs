@@ -123,8 +123,8 @@ namespace Raven.Abstractions.Extensions
 		/// Filters the headers from unwanted headers
 		/// </summary>
 		/// <param name="self">The self.</param>
-		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeaders(this RavenJObject self)
+		/// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		public static RavenJObject FilterHeadersToObject(this RavenJObject self)
 		{
 			if (self == null)
 				return null;
@@ -147,7 +147,7 @@ namespace Raven.Abstractions.Extensions
 #if SILVERLIGHT
 		public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
 		{
-			var filterHeaders = self.FilterHeaders();
+			var filterHeaders = self.FilterHeadersToObject();
 			if (self.ContainsKey("Content-Type"))
 				filterHeaders["Content-Type"] = self["Content-Type"].FirstOrDefault();
 			return filterHeaders;
@@ -156,8 +156,8 @@ namespace Raven.Abstractions.Extensions
 		/// <summary>
 		/// Filters the headers from unwanted headers
 		/// </summary>
-		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeaders(this NameValueCollection self)
+		/// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		public static RavenJObject FilterHeadersToObject(this NameValueCollection self)
 		{
 			var metadata = new RavenJObject();
 			foreach (var header in self.Headers)
@@ -178,7 +178,7 @@ namespace Raven.Abstractions.Extensions
 
 		public static RavenJObject FilterHeadersAttachment(this IDictionary<string, IList<string>> self)
 		{
-			var filterHeaders = self.FilterHeaders();
+			var filterHeaders = self.FilterHeadersToObject();
 			if (self.ContainsKey("Content-Type"))
 				filterHeaders["Content-Type"] = self["Content-Type"].FirstOrDefault();
 			return filterHeaders;
@@ -187,8 +187,8 @@ namespace Raven.Abstractions.Extensions
 		/// <summary>
 		/// Filters the headers from unwanted headers
 		/// </summary>
-		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeaders(this IDictionary<string, IList<string>> self)
+		/// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		public static RavenJObject FilterHeadersToObject(this IDictionary<string, IList<string>> self)
 		  {
 			  var metadata = new RavenJObject();
 			foreach (var header in self)
@@ -209,7 +209,7 @@ namespace Raven.Abstractions.Extensions
 #else
 		public static RavenJObject FilterHeadersAttachment(this NameValueCollection self)
 		{
-			var filterHeaders = self.FilterHeaders();
+			var filterHeaders = self.FilterHeadersToObject();
 			if (self["Content-Type"] != null)
 				filterHeaders["Content-Type"] = self["Content-Type"];
 			return filterHeaders;
@@ -219,8 +219,8 @@ namespace Raven.Abstractions.Extensions
 		/// Filters the headers from unwanted headers
 		/// </summary>
 		/// <param name="self">The self.</param>
-		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeaders(this NameValueCollection self)
+		/// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		public static RavenJObject FilterHeadersToObject(this NameValueCollection self)
 		{
 			var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
 			foreach (string header in self)
@@ -252,7 +252,7 @@ namespace Raven.Abstractions.Extensions
 
 		public static RavenJObject FilterHeadersAttachment(this HttpHeaders self)
 		{
-			var filterHeaders = self.FilterHeaders();
+			var filterHeaders = self.FilterHeadersToObject();
 
 			string contentType = self.GetFirstValue("Content-Type");
 			if (contentType != null)
@@ -265,8 +265,8 @@ namespace Raven.Abstractions.Extensions
 		/// Filters the headers from unwanted headers
 		/// </summary>
 		/// <param name="self">The self.</param>
-		/// <returns></returns>public static RavenJObject FilterHeaders(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
-		public static RavenJObject FilterHeaders(this HttpHeaders self)
+		/// <returns></returns>public static RavenJObject FilterHeadersToObject(this System.Collections.Specialized.NameValueCollection self, bool isServerDocument)
+		public static RavenJObject FilterHeadersToObject(this HttpHeaders self)
 		{
 			var metadata = new RavenJObject(StringComparer.OrdinalIgnoreCase);
 			foreach (var a in self)

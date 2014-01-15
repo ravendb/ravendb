@@ -1,4 +1,9 @@
-﻿namespace Raven.Database.Storage.Voron.Impl
+﻿using System.Linq;
+using Amazon.ImportExport.Model;
+using Microsoft.Isam.Esent.Interop;
+
+
+namespace Raven.Database.Storage.Voron.Impl
 {
 	using System;
 	using System.IO;
@@ -8,46 +13,44 @@
 	using global::Voron;
 	using global::Voron.Impl;
 
-	public class MemoryMapPersistanceSource : IPersistanceSource
+	public class MemoryMapPersistenceSource : IPersistenceSource
 	{
-		private readonly InMemoryRavenConfiguration configuration;
-	    private const string PAGER_FILENAME = "Raven.voron";
 
 		private readonly string directoryPath;
 
-		private readonly string filePath;
 
-		public MemoryMapPersistanceSource(InMemoryRavenConfiguration configuration)
+		public MemoryMapPersistenceSource(InMemoryRavenConfiguration configuration)
 		{
-			this.configuration = configuration;
+			if(configuration == null)
+				throw new ArgumentNullException("configuration");
+
+			var allowIncrementalBackupsSetting = configuration.Settings["Raven/Voron/AllowIncrementalBackups"] ?? "false";
+
+			if (!allowIncrementalBackupsSetting.Equals("true",StringComparison.OrdinalIgnoreCase) &&
+				!allowIncrementalBackupsSetting.Equals("false", StringComparison.OrdinalIgnoreCase))
+				throw new ArgumentException("Raven/Voron/AllowIncrementalBackups settings key contains invalid value");
+
+
 			directoryPath = configuration.DataDirectory ?? AppDomain.CurrentDomain.BaseDirectory;
-            filePath = directoryPath;
-		    var filePathFolder = new DirectoryInfo(filePath);
+			var filePathFolder = new DirectoryInfo(directoryPath);
 		    if (filePathFolder.Exists == false)
 		        filePathFolder.Create();
 
-			Initialize();
+			Initialize(Convert.ToBoolean(allowIncrementalBackupsSetting));
 		}
 
 		public StorageEnvironmentOptions Options { get; private set; }
 
 		public bool CreatedNew { get; private set; }
 
-		private void Initialize()
+		private void Initialize(bool allowIncrementalBackups)
 		{
-		    var storageFilePath = Path.Combine(filePath, PAGER_FILENAME);
+			CreatedNew = Directory.EnumerateFileSystemEntries(directoryPath).Any() == false;
 
-			if (Directory.Exists(directoryPath))
+			Options = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(directoryPath)
 			{
-				CreatedNew = !File.Exists(storageFilePath);
-			}
-			else
-			{
-				Directory.CreateDirectory(directoryPath);
-				CreatedNew = true;
-			}
-
-		    Options = new StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions(storageFilePath);
+				IncrementalBackupEnabled = allowIncrementalBackups
+			};
 		}
 
 		public void Dispose()

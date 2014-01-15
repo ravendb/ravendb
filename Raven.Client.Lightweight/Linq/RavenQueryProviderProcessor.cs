@@ -106,7 +106,7 @@ namespace Raven.Client.Linq
 			{
 				switch (expression.NodeType)
 				{
-                  	case ExpressionType.MemberAccess:
+					case ExpressionType.MemberAccess:
 						VisitMemberAccess((MemberExpression) expression, true);
 						break;
 					case ExpressionType.Not:
@@ -140,21 +140,20 @@ namespace Raven.Client.Linq
 						}
 						else
 						{
-						    var lambdaExpression = expression as LambdaExpression;
-						    if (lambdaExpression != null)
-						    {
-						        var body = lambdaExpression.Body;
-						        if (body.NodeType == ExpressionType.Constant && ((ConstantExpression)body).Value is bool)
-						        {
-						            throw new ArgumentException("Constants expressions such as Where(x => true) are not allowed in the RavenDB queries");
-						        }
-						        VisitExpression(body);
-						    }
+							var lambdaExpression = expression as LambdaExpression;
+							if (lambdaExpression != null)
+							{
+								var body = lambdaExpression.Body;
+								if (body.NodeType == ExpressionType.Constant && ((ConstantExpression)body).Value is bool)
+								{
+									throw new ArgumentException("Constants expressions such as Where(x => true) are not allowed in the RavenDB queries");
+								}
+								VisitExpression(body);
+							}
 						}
-				        break;
+						break;
 				}
 			}
-
 		}
 
 		private void VisitBinaryExpression(BinaryExpression expression)
@@ -836,11 +835,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				case "Search":
 					VisitSearch(expression);
-
 					break;
 				case "OrderByScore":
-					luceneQuery.AddOrder (Constants.TemporaryScoreValue, true);
-					VisitExpression (expression.Arguments[0]);
+					luceneQuery.AddOrder(Constants.TemporaryScoreValue, true);
+					VisitExpression(expression.Arguments[0]);
 					break;
 				case "Intersect":
 					VisitExpression(expression.Arguments[0]);
@@ -850,8 +848,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
 				case "In":
 					var memberInfo = GetMember(expression.Arguments[0]);
 					var objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
-					luceneQuery.WhereIn(memberInfo.Path, ((IEnumerable) objects).Cast<object>());
-
+					luceneQuery.WhereIn(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
+					break;
+				case "ContainsAny":
+					memberInfo = GetMember(expression.Arguments[0]);
+					objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
+					luceneQuery.ContainsAny(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
+					break;
+				case "ContainsAll":
+					memberInfo = GetMember(expression.Arguments[0]);
+					objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
+					luceneQuery.ContainsAll(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
 					break;
 				default:
 				{
@@ -978,8 +985,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				case "Any":
 				{
-					if(negated)
+					if (negated)
 						throw new InvalidOperationException("Cannot process negated Any(), see RavenDB-732 http://issues.hibernatingrhinos.com/issue/RavenDB-732");
+
 					if (expression.Arguments.Count == 1 && expression.Arguments[0].Type == typeof(string))
 					{
 						luceneQuery.OpenSubclause();
@@ -1300,6 +1308,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
 					break;
 				case ExpressionType.Parameter: // want the full thing, so just pass it on.
 					break;
+                    //for example .Select(product => product.Properties["VendorName"])
+                case ExpressionType.Call:
+			        var expressionInfo = GetMember(body);
+                    AddToFieldsToFetch(expressionInfo.Path, null);
+			        break;
 
 				default:
 					throw new NotSupportedException("Node not supported: " + body.NodeType);
@@ -1333,7 +1346,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				FieldsToFetch.Add(docField);
 			}
-			if (docField != renamedField)
+            if (renamedField != null && docField != renamedField)
 			{
 				if (identityProperty == null)
 				{
@@ -1508,7 +1521,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				afterQueryExecuted(queryResult);
 			}
-
 			return executeQuery;
 		}
 #endif

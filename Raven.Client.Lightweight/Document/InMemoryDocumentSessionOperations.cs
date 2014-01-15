@@ -466,6 +466,11 @@ more responsive application.
                 if (entityType == typeof (RavenJObject))
                     return documentFound.CloneToken();
 
+				foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
+				{
+					extendedDocumentConversionListener.BeforeConversionToEntity(id, documentFound, metadata);
+				}
+
                 var defaultValue = GetDefaultValue(entityType);
                 var entity = defaultValue;
                 EnsureNotReadVetoed(metadata);
@@ -502,6 +507,11 @@ more responsive application.
                 {
                     documentConversionListener.DocumentToEntity(id, entity, documentFound, metadata);
                 }
+
+				foreach (var extendedDocumentConversionListener in listeners.ExtendedConversionListeners)
+				{
+					extendedDocumentConversionListener.AfterConversionToEntity(id, documentFound, metadata, entity);
+				}
 
                 return entity;
             }
@@ -643,7 +653,7 @@ more responsive application.
             }
         }
 
-        private static void EnsureNotReadVetoed(RavenJObject metadata)
+		internal void EnsureNotReadVetoed(RavenJObject metadata)
         {
             var readVeto = metadata["Raven-Read-Veto"] as RavenJObject;
             if (readVeto == null)

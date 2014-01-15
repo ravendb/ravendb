@@ -87,6 +87,26 @@ namespace Raven.Client
 			return ravenQueryInspector.GetFacets(facetSetupDoc, start, pageSize );
 		}
 
+		/// <summary>
+		/// Transforms the query to the facet query that will allow you to execute multi faceted search
+		/// </summary>
+		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">>Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static FacetQuery ToFacetQuery<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null)
+		{
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+			return new FacetQuery
+			{
+				IndexName = ravenQueryInspector.IndexQueried,
+				Query = ravenQueryInspector.GetIndexQuery(false),
+				FacetSetupDoc = facetSetupDoc,
+				PageStart = start,
+				PageSize = pageSize
+			};
+		}
+
+
         /// <summary>
         /// Query the facets results for this query using the specified list of facets with the given start and pageSize
         /// </summary>
@@ -104,6 +124,30 @@ namespace Raven.Client
 
             return ravenQueryInspector.GetFacets(facetsList, start, pageSize);
         }
+
+		/// <summary>
+		/// Query the facets results for this query using the specified list of facets with the given start and pageSize
+		/// </summary>
+		/// <param name="facets">List of facets</param>
+		/// <param name="start">Start index for paging</param>
+		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
+		public static FacetQuery ToFacetQuery<T>(this IQueryable<T> queryable, IEnumerable<Facet> facets, int start = 0, int? pageSize = null)
+		{
+			var facetsList = facets.ToList();
+
+			if (!facetsList.Any())
+				throw new ArgumentException("Facets must contain at least one entry", "facets");
+
+			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+			return new FacetQuery
+			{
+				IndexName = ravenQueryInspector.IndexQueried,
+				Query = ravenQueryInspector.GetIndexQuery(false),
+				Facets = facetsList,
+				PageStart = start,
+				PageSize = pageSize
+			};
+		}
 
 		/// <summary>
 		/// Query the facets results for this query using the specified facet document with the given start and pageSize
@@ -143,7 +187,7 @@ namespace Raven.Client
 		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		public static Lazy<FacetResults> ToFacetsLazy<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
+		public static Lazy<FacetResults> ToFacetsLazy<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			var query = ravenQueryInspector.GetIndexQuery(isAsync: false);
@@ -219,7 +263,7 @@ namespace Raven.Client
 		/// <param name="facetSetupDoc">Name of the FacetSetup document</param>
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
-		public static Task<FacetResults> ToFacetsAsync<T>( this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
+		public static Task<FacetResults> ToFacetsAsync<T>(this IQueryable<T> queryable, string facetSetupDoc, int start = 0, int? pageSize = null )
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)queryable);
 			return ravenQueryInspector.GetFacetsAsync(facetSetupDoc, start, pageSize );
@@ -398,6 +442,19 @@ namespace Raven.Client
 				throw new ArgumentException("You can only use Raven Queryable with Lazily");
 
 			return provider.Lazily(source.Expression, onEval);
+		}
+
+        /// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public static Lazy<int> CountLazily<T>(this IRavenQueryable<T> source)
+		{
+			var provider = source.Provider as IRavenQueryProvider;
+			if (provider == null)
+				throw new ArgumentException("You can only use Raven Queryable with LazyCount");
+
+			return provider.CountLazily<T>(source.Expression);
 		}
 
 		/// <summary>

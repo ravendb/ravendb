@@ -1,5 +1,6 @@
 ﻿using Raven.Abstractions.Data;
 using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Xunit;
@@ -36,8 +37,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
-				var bulkInsertOperation = new RemoteBulkInsertOperation(new BulkInsertOptions(),
-																		(ServerClient)store.DatabaseCommands, store.Changes());
+				var bulkInsertOperation = new RemoteBulkInsertOperation(new BulkInsertOptions(), (AsyncServerClient)store.AsyncDatabaseCommands, store.Changes());
 				bulkInsertOperation.Dispose();
 			}
 		}
@@ -47,7 +47,7 @@ namespace Raven.Tests.Issues
 		{
 			using (var store = NewRemoteDocumentStore())
 			{
-				using (var op = new RemoteBulkInsertOperation(new BulkInsertOptions(), (ServerClient)store.DatabaseCommands, store.Changes()))
+				using (var op = new RemoteBulkInsertOperation(new BulkInsertOptions(), (AsyncServerClient)store.AsyncDatabaseCommands, store.Changes()))
 				{
 					op.Write("items/1", new RavenJObject(), new RavenJObject());
 				}
@@ -55,7 +55,7 @@ namespace Raven.Tests.Issues
 				using (var op = new RemoteBulkInsertOperation(new BulkInsertOptions
 				{
 					CheckForUpdates = true
-				}, (ServerClient)store.DatabaseCommands, store.Changes()))
+				}, (AsyncServerClient)store.AsyncDatabaseCommands, store.Changes()))
 				{
 					op.Write("items/1", new RavenJObject(), new RavenJObject());
 				}
@@ -71,7 +71,7 @@ namespace Raven.Tests.Issues
 				using (var op = new RemoteBulkInsertOperation(new BulkInsertOptions
 				{
 					CheckReferencesInIndexes = true
-				}, (ServerClient)store.DatabaseCommands, store.Changes()))
+				}, (AsyncServerClient)store.AsyncDatabaseCommands, store.Changes()))
 				{
 					op.Write("items/1", new RavenJObject(), new RavenJObject());
 				}
@@ -84,7 +84,7 @@ namespace Raven.Tests.Issues
 			using (var store = NewRemoteDocumentStore())
 			{
 				var bulkInsertOperation = new RemoteBulkInsertOperation(new BulkInsertOptions(),
-																		(ServerClient)store.DatabaseCommands, store.Changes());
+																		(AsyncServerClient)store.AsyncDatabaseCommands, store.Changes());
 				bulkInsertOperation.Write("test", new RavenJObject(), new RavenJObject { { "test", "passed" } });
 				bulkInsertOperation.Dispose();
 
@@ -98,7 +98,7 @@ namespace Raven.Tests.Issues
 			using (var store = NewRemoteDocumentStore())
 			{
 				var bulkInsertOperation = new RemoteBulkInsertOperation(new BulkInsertOptions(),
-																		(ServerClient)store.DatabaseCommands, store.Changes());
+																		(AsyncServerClient)store.AsyncDatabaseCommands, store.Changes());
 				bulkInsertOperation.Write("one", new RavenJObject(), new RavenJObject { { "test", "passed" } });
 				bulkInsertOperation.Write("two", new RavenJObject(), new RavenJObject { { "test", "passed" } });
 				bulkInsertOperation.Dispose();
@@ -114,7 +114,7 @@ namespace Raven.Tests.Issues
 			using (var store = NewRemoteDocumentStore())
 			{
 				var bulkInsertOperation = new RemoteBulkInsertOperation(new BulkInsertOptions { BatchSize = 2 },
-																		(ServerClient)store.DatabaseCommands, store.Changes());
+																		(AsyncServerClient)store.AsyncDatabaseCommands, store.Changes());
 				bulkInsertOperation.Write("one", new RavenJObject(), new RavenJObject { { "test", "passed" } });
 				bulkInsertOperation.Write("two", new RavenJObject(), new RavenJObject { { "test", "passed" } });
 				bulkInsertOperation.Write("three", new RavenJObject(), new RavenJObject { { "test", "passed" } });

@@ -18,40 +18,47 @@ namespace Voron.Impl.FileHeaders
         /// </summary>
         [FieldOffset(8)]
         public int Version;
+
+		/// <summary>
+		/// Incremented on every header modification
+		/// </summary>
+		[FieldOffset(12)]
+		public long HeaderRevision;
+
         /// <summary>
         /// The transaction id that committed this page
         /// </summary>
-        [FieldOffset(12)]
+        [FieldOffset(20)]
         public long TransactionId;
 
         /// <summary>
         /// The last used page number for this file
         /// </summary>
-        [FieldOffset(20)]
+        [FieldOffset(28)]
         public long LastPageNumber;
 
         /// <summary>
         /// The root node for free space
         /// </summary>
-        [FieldOffset(28)] 
+        [FieldOffset(36)] 
         public TreeRootHeader FreeSpace;
 
         /// <summary>
         /// The root node for the main tree
         /// </summary>
-        [FieldOffset(90)]
+        [FieldOffset(98)]
         public TreeRootHeader Root;
 
         /// <summary>
         /// Information about the journal log info
         /// </summary>
-        [FieldOffset(152)] 
+        [FieldOffset(160)] 
         public JournalInfo Journal;
 
 		/// <summary>
 		/// Information about an incremental backup
 		/// </summary>
-	    [FieldOffset(192)] 
+	    [FieldOffset(188)] 
 		public IncrementalBackupInfo IncrementalBackup;
     }
 }

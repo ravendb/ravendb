@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Utilities;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
@@ -128,7 +129,7 @@ namespace Raven.Json.Linq
 				// HACK
 				return (U)(object)token;
 			}
-			if (token == null)
+			if (token == null || token.Type == JTokenType.Null)
 				return default(U);
 
 			var value = token as RavenJValue;
@@ -176,7 +177,21 @@ namespace Raven.Json.Linq
 
 				return default(U);
 			}
-			return (U)System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
+
+			if (value.Value == null && typeof(U).IsValueType)
+				throw new InvalidOperationException("value.Value == null and conversion target type is not nullable");
+
+			try
+			{
+				return (U) System.Convert.ChangeType(value.Value, targetType, CultureInfo.InvariantCulture);
+			}
+			catch (Exception e)
+			{
+				if (value.Value != null)
+					throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined and does not implement IConvertible. ", value.Value.GetType()),e);
+				
+				throw new InvalidOperationException(string.Format("Unable to find suitable conversion for {0} since it is not predefined ", value),e);
+			}
 		}
 	}
 }

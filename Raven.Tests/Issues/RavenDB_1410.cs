@@ -74,15 +74,14 @@ namespace Raven.Tests.Issues
 
 
 				//stream query with no existing index/only dynamic index should throw no index exist exception
-				Assert.Throws<InvalidOperationException>(() =>
+				var exception = Assert.Throws<AggregateException>(() =>
 				{
 					session.Advanced.Stream(query);
 				});
-				
+
+				Assert.IsType<InvalidOperationException>(exception.GetBaseException());
 			}
-
 		}
-
 
 		[Fact]
 		public void Stream_Should_Not_Throw_Invalid_Index_If_Index_Specified_In_Query()

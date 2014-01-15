@@ -171,15 +171,17 @@ but the attachment itself was found. Data corruption?", key));
 			if (!attachmentsTable.Contains(snapshot, dataKey, writeBatch))
 				return null;
 
-			using (var dataReadResult = attachmentsTable.Read(snapshot, dataKey, writeBatch))
-			{
-				if (dataReadResult == null) return null;
-				Etag currentEtag;
-				var headers = ReadAttachmentMetadata(metadataKey, out currentEtag);
-				if (headers == null) //precaution --> should never be null at this stage
-					throw new InvalidDataException("The attachment exists, but failed reading metadata. Data corruption?");				
+			var dataReadResult = attachmentsTable.Read(snapshot, dataKey, writeBatch);
+			if (dataReadResult == null) return null;
 
-				var attachment = new Attachment()
+			Etag currentEtag;
+			var headers = ReadAttachmentMetadata(metadataKey, out currentEtag);
+			if (headers == null) //precaution --> should never be null at this stage
+				throw new InvalidDataException("The attachment exists, but failed reading metadata. Data corruption?");
+
+			using (var stream = dataReadResult.Reader.AsStream())
+			{
+				var attachment = new Attachment
 				{
 					Key = key,
 					Etag = currentEtag,
@@ -192,13 +194,12 @@ but the attachment itself was found. Data corruption?", key));
 							throw new InvalidOperationException("Something is very wrong here. Storage actions define invalid attachment storage actions object");
 
 						var attachmentDataStream = attachmentStorageActions.GetAttachmentStream(dataKey);
-												
 						return attachmentDataStream;
 					},
-					Size = (int)dataReadResult.Stream.Length
+					Size = (int) stream.Length
 				};
 
-				logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key, dataReadResult.Stream.Length);
+				logger.Debug("Fetched document attachment (key = '{0}', attachment size = {1})", key, stream.Length);
 				return attachment;
 			}
 		}
@@ -209,7 +210,7 @@ but the attachment itself was found. Data corruption?", key));
 				return new MemoryStream();
 
 			var dataReadResult = attachmentsTable.Read(snapshot, dataKey, writeBatch);
-			return dataReadResult.Stream;
+			return dataReadResult.Reader.AsStream();
 		}
 
 		public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)
@@ -231,7 +232,7 @@ but the attachment itself was found. Data corruption?", key));
 						yield break;
 
 					string key;
-					using (var keyStream = iter.CreateStreamForCurrent())
+					using (var keyStream = iter.CreateReaderForCurrent().AsStream())
 						key = keyStream.ReadStringWithoutPrefix();
 
 					var attachmentInfo = AttachmentInfoByKey(key);
@@ -272,7 +273,7 @@ but the attachment itself was found. Data corruption?", key));
 					if (!EtagUtil.IsGreaterThan(attachmentEtag, value)) continue;
 
 					string key;
-					using (var keyStream = iter.CreateStreamForCurrent())
+					using (var keyStream = iter.CreateReaderForCurrent().AsStream())
 						key = keyStream.ReadStringWithoutPrefix();
 
 					var attachmentInfo = AttachmentInfoByKey(key);
@@ -348,22 +349,28 @@ but the attachment itself was found. Data corruption?", key));
 
 		private Etag ReadCurrentEtag(string metadataKey)
 		{
-			using (var metadataReadResult = attachmentsTable.Read(snapshot, metadataKey, writeBatch))
-				return metadataReadResult == null ? null : metadataReadResult.Stream.ReadEtag();
+			var metadataReadResult = attachmentsTable.Read(snapshot, metadataKey, writeBatch);
+			if (metadataReadResult == null)
+				return null;
+			using (var stream = metadataReadResult.Reader.AsStream())
+			{
+				return stream.ReadEtag();
+			}
 		}
 
 		private RavenJObject ReadAttachmentMetadata(string metadataKey, out Etag etag)
 		{
-			using (var metadataReadResult = attachmentsTable.Read(snapshot, metadataKey, writeBatch))
+			var metadataReadResult = attachmentsTable.Read(snapshot, metadataKey, writeBatch);
+			if (metadataReadResult == null) //precaution
 			{
-				if (metadataReadResult == null) //precaution
-				{
-					etag = null;
-					return null;
-				}
+				etag = null;
+				return null;
+			}
 
-				etag = metadataReadResult.Stream.ReadEtag();
-				var metadata = metadataReadResult.Stream.ToJObject();
+			using (var stream = metadataReadResult.Reader.AsStream())
+			{
+				etag = stream.ReadEtag();
+				var metadata = stream.ToJObject();
 				return metadata;
 			}
 		}

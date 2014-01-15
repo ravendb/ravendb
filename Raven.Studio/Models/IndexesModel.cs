@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.Expression.Interactivity.Core;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
 using Raven.Studio.Commands;
 using Raven.Studio.Infrastructure;
 using Raven.Abstractions.Extensions;
@@ -25,6 +24,8 @@ namespace Raven.Studio.Models
 		private string currentDatabase;
 		private string currentSearch;
 
+		public Observable<bool> UseGrouping { get; set; }
+
 		public IndexesModel()
 		{
 			ModelUrl = "/indexes";
@@ -33,23 +34,16 @@ namespace Raven.Studio.Models
 																	   "/indexes";
 			Indexes = new ObservableCollection<IndexItem>();
 			GroupedIndexes = new ObservableCollection<Group>();
+			UseGrouping = new Observable<bool> {Value = true};
 			SearchText = new Observable<string>();
 			SearchText.PropertyChanged += (sender, args) => TimerTickedAsync();
 		}
 
 		public override Task TimerTickedAsync()
 		{
-            // NOTE: I don't know how to Silverlight - Rob
 			return DatabaseCommands
-				.GetIndexesAsync(0, int.MaxValue)
-				.ContinueOnSuccessInTheUIThread((indexes) =>
-				{
-				    DatabaseCommands
-				        .GetStatisticsAsync()
-				        .ContinueOnSuccessInTheUIThread((stats) => {
-                            UpdateGroupedIndexList(indexes, stats);
-				        });
-				});
+				.GetStatisticsAsync()
+				.ContinueOnSuccessInTheUIThread(UpdateGroupedIndexList);
 		}
 
 		public IndexItem ItemSelection
@@ -109,18 +103,29 @@ namespace Raven.Studio.Models
 		}
 
 		public Observable<string> SearchText { get; set; }
+		public ICommand ToggleGrouping
+		{
+			get
+			{
+				return new ActionCommand(() =>
+				{
+					UseGrouping.Value = !UseGrouping.Value;
+					GroupedIndexes.Clear();
+					TimerTickedAsync();
+				});
+			}
+		}
 
-		private void UpdateGroupedIndexList(IndexDefinition[] indexes, DatabaseStatistics statistics)
+		private void UpdateGroupedIndexList(DatabaseStatistics statistics)
 		{
 			Indexes.Clear();
-			
 			if(string.IsNullOrWhiteSpace(SearchText.Value))
-                Indexes.AddRange(statistics.Indexes.Where(stats => stats != null).Select(stats => new IndexItem { Name = stats.PublicName, GroupName = GetIndexGroup(stats), IndexStats = stats }));
-			else
 				Indexes.AddRange(statistics.Indexes.Where(stats => stats != null)
-					.Where(stats => stats.PublicName.IndexOf(SearchText.Value, StringComparison.InvariantCultureIgnoreCase) != -1)
-                    .Select(stats => new IndexItem { Name = stats.PublicName, GroupName = GetIndexGroup(stats), IndexStats = stats }));
-
+					.Select(stats => new IndexItem { Name = stats.PublicName, GroupName = GetIndexGroup(stats), IndexStats = stats }));
+			else
+				Indexes.AddRange(statistics.Indexes
+					.Where(stats => stats != null && stats.PublicName.IndexOf(SearchText.Value, StringComparison.InvariantCultureIgnoreCase) != -1)
+					.Select(stats => new IndexItem { Name = stats.PublicName, GroupName = GetIndexGroup(stats), IndexStats = stats }));
 			
 			CleanGroupIndexes();
 			foreach (var indexItem in Indexes)
@@ -156,10 +161,17 @@ namespace Raven.Studio.Models
 
 		private string GetIndexGroup(IndexStats index)
 		{
+			if (UseGrouping.Value == false)
+				return "Indexes";
 			if (index.ForEntityName == null)
 				return "Others";
 			if (index.ForEntityName.Count == 1)
-				return index.ForEntityName.First();
+			{
+				var first = index.ForEntityName.First();
+				if (first != null)
+					return first;
+			}
+
 			return "Others";
 		}
 

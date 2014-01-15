@@ -60,14 +60,21 @@
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Net.Http.WebRequest" />
-    <Reference Include="System.Reactive.Core">
-      <HintPath>..\packages\Rx-Core.2.1.30214.0\lib\Net45\System.Reactive.Core.dll</HintPath>
+    <Reference Include="System.Reactive.Core, Version=2.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-Core.2.2.2\lib\net45\System.Reactive.Core.dll</HintPath>
     </Reference>
-    <Reference Include="System.Reactive.Interfaces">
-      <HintPath>..\packages\Rx-Interfaces.2.1.30214.0\lib\Net45\System.Reactive.Interfaces.dll</HintPath>
+    <Reference Include="System.Reactive.Interfaces, Version=2.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Rx-Interfaces.2.2.2\lib\net45\System.Reactive.Interfaces.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Transactions" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Http, Version=5.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.0.0\lib\net45\System.Web.Http.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
@@ -83,6 +90,7 @@
     <Compile Include="Connection\Async\AsyncAdminServerClient.cs" />
     <Compile Include="Connection\ConnectionOptions.cs" />
     <Compile Include="Connection\CompressedStreamContent.cs" />
+    <Compile Include="Connection\HttpContentExtentions.cs" />
     <Compile Include="Connection\Operation.cs" />
     <Compile Include="Connection\NameValueCollectionExtensions.cs" />
     <Compile Include="Document\Batches\LazyMoreLikeThisOperation.cs" />
@@ -95,9 +103,63 @@
     <Compile Include="Document\DTC\VolatileOnlyTransactionRecoveryStorage.cs" />
     <Compile Include="Document\ReplicationBehavior.cs" />
     <Compile Include="Document\SessionOperations\LoadTransformerOperation.cs" />
+    <Compile Include="Convention.cs" />
     <Compile Include="Indexes\RavenMethodAttribute.cs" />
     <Compile Include="Linq\AggregationQuery.cs" />
     <Compile Include="Linq\DynamicAggregationQuery.cs" />
+    <Compile Include="RavenFS\AsyncExtensions.cs" />
+    <Compile Include="RavenFS\Changes\ImmutableList.cs" />
+    <Compile Include="RavenFS\Changes\IServerNotifications.cs" />
+    <Compile Include="RavenFS\Changes\NotificationSubject.cs" />
+    <Compile Include="RavenFS\Changes\ServerNotifications.cs" />
+    <Compile Include="RavenFS\Changes\TaskErrorExtensions.cs" />
+    <Compile Include="RavenFS\ConfigChange.cs" />
+    <Compile Include="RavenFS\ConflictDetected.cs" />
+    <Compile Include="RavenFS\ConflictItem.cs" />
+    <Compile Include="RavenFS\ConflictNotification.cs" />
+    <Compile Include="RavenFS\ConflictResolutionStrategy.cs" />
+    <Compile Include="RavenFS\ConflictResolved.cs" />
+    <Compile Include="RavenFS\Connections\FileConvention.cs" />
+    <Compile Include="RavenFS\Connections\ReplicationInformer.cs" />
+    <Compile Include="RavenFS\Connections\ReplicationInformerLocalCache.cs" />
+    <Compile Include="RavenFS\DestinationSyncResult.cs" />
+    <Compile Include="RavenFS\ExceptionExtensions.cs" />
+    <Compile Include="RavenFS\FileChange.cs" />
+    <Compile Include="RavenFS\FileInfo.cs" />
+    <Compile Include="RavenFS\FilesSortOptions.cs" />
+    <Compile Include="RavenFS\FileStatus.cs" />
+    <Compile Include="RavenFS\Heartbeat.cs" />
+    <Compile Include="RavenFS\HistoryItem.cs" />
+    <Compile Include="RavenFS\ListenableStream.cs" />
+    <Compile Include="RavenFS\ListPage.cs" />
+    <Compile Include="RavenFS\NameValueCollectionJsonConverter.cs" />
+    <Compile Include="RavenFS\Notification.cs" />
+    <Compile Include="RavenFS\Abstructions\SynchronizationConstants.cs" />
+    <Compile Include="RavenFS\NotificationJSonUtilities.cs" />
+    <Compile Include="RavenFS\RavenFileSystemClient.cs" />
+    <Compile Include="RavenFS\RdcStats.cs" />
+    <Compile Include="RavenFS\ServerStats.cs" />
+    <Compile Include="RavenFS\Shard\DefaultShardResolutionStrategy.cs" />
+    <Compile Include="RavenFS\Shard\IShardAccessStrategy.cs" />
+    <Compile Include="RavenFS\Shard\IShardResolutionStrategy.cs" />
+    <Compile Include="RavenFS\Shard\SequentialShardAccessStrategy.cs" />
+    <Compile Include="RavenFS\Shard\ShardedRavenFileSystemClient.cs" />
+    <Compile Include="RavenFS\Shard\ShardPagingInfo.cs" />
+    <Compile Include="RavenFS\Shard\ShardRequestData.cs" />
+    <Compile Include="RavenFS\Shard\ShardStrategy.cs" />
+    <Compile Include="RavenFS\Signature.cs" />
+    <Compile Include="RavenFS\SignatureManifest.cs" />
+    <Compile Include="RavenFS\SourceSynchronizationInformation.cs" />
+    <Compile Include="RavenFS\StringUtils.cs" />
+    <Compile Include="RavenFS\SynchronizationConfirmation.cs" />
+    <Compile Include="RavenFS\SynchronizationDetails.cs" />
+    <Compile Include="RavenFS\SynchronizationException.cs" />
+    <Compile Include="RavenFS\SynchronizationReport.cs" />
+    <Compile Include="RavenFS\SynchronizationType.cs" />
+    <Compile Include="RavenFS\SynchronizationUpdate.cs" />
+    <Compile Include="RavenFS\UploadFailed.cs" />
+    <Compile Include="RavenFS\Util\TaskExtensions.cs" />
+    <Compile Include="RavenPagingInformation.cs" />
     <Compile Include="Shard\ShardedRavenQueryInspector.cs" />
     <Compile Include="Spatial\SpatialCriteria.cs" />
     <Compile Include="Spatial\SpatialCriteriaFactory.cs" />
@@ -276,7 +338,7 @@
     <Compile Include="Util\Inflector.cs" />
     <Compile Include="Util\LastEtagHolder.cs" />
     <Compile Include="Util\ObjectReferenceEqualityComparer.cs" />
-    <Compile Include="Util\NoSyncronizationContext.cs" />
+    <Compile Include="Util\NoSynchronizationContext.cs" />
     <Compile Include="Util\SimpleCache.cs" />
     <Compile Include="Util\Types.cs" />
     <Compile Include="WhereEqualsParams.cs" />
@@ -285,6 +347,7 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">

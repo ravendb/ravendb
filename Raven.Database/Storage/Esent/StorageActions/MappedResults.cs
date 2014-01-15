@@ -158,7 +158,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete)
+		public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete)
 		{
 			if (itemsToDelete == null)
 				return null;
@@ -167,7 +167,7 @@ namespace Raven.Storage.Esent.StorageActions
 			var result = new ScheduledReductionInfo();
 			
 			var currentEtagBinary = Guid.Empty.ToByteArray();
-			foreach (OptimizedDeleter reader in itemsToDelete)
+			foreach (OptimizedDeleter reader in itemsToDelete.Where(x => x != null))
 			{
 				foreach (var sortedBookmark in reader.GetSortedBookmarks())
 				{
@@ -227,6 +227,7 @@ namespace Raven.Storage.Esent.StorageActions
 			} while (Api.TryMoveNext(Session, ScheduledReductions));
 		}
 
+
 		public IEnumerable<MappedResultInfo> GetItemsToReduce(GetItemsToReduceParams getItemsToReduceParams)
 		{
 			Api.JetSetCurrentIndex(session, ScheduledReductions, "by_view_level_and_hashed_reduce_key_and_bucket");
@@ -256,7 +257,7 @@ namespace Raven.Storage.Esent.StorageActions
 				}
 				else
 				{
-					reader = (OptimizedDeleter)getItemsToReduceParams.ItemsToDelete[0];
+					reader = (OptimizedDeleter)getItemsToReduceParams.ItemsToDelete.First();
 				}
 				do
 				{

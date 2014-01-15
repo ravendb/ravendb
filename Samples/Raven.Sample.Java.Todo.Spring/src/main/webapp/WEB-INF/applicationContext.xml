@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context" xmlns:jee="http://www.springframework.org/schema/jee"
+    xsi:schemaLocation="
+           http://www.springframework.org/schema/beans           http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+           http://www.springframework.org/schema/context         http://www.springframework.org/schema/context/spring-context-4.0.xsd">
+
+    <context:annotation-config/>
+
+    <!-- Initialize DocumentStore -->
+    <bean id="documentStore" class="net.ravendb.client.document.DocumentStore" init-method="initialize">
+        <constructor-arg value="http://localhost:8080/"/>
+        <constructor-arg value="crud"/>
+    </bean>
+
+    <!-- Initialize TodoByTitleIndex -->
+    <bean id="titleIndex" class="net.ravendb.todomvc.TodoByTitleIndex"/>
+
+    <bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+        <property name="targetObject" ref="documentStore"/>
+        <property name="targetMethod" value="executeIndex"/>
+        <property name="arguments" ref="titleIndex"/>
+    </bean>
+</beans>

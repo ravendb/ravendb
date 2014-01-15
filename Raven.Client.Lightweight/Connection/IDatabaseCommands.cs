@@ -45,7 +45,7 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Retrieves documents for the specified key prefix
 		/// </summary>
-		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize,  bool metadataOnly = false, string exclude = null);
+		JsonDocument[] StartsWith(string keyPrefix, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null,  bool metadataOnly = false, string exclude = null);
 
 		/// <summary>
 		/// Retrieves the document for the specified key
@@ -75,17 +75,6 @@ namespace Raven.Client.Connection
 		/// This is primarily useful for administration of a database
 		/// </remarks>
 		JsonDocument[] GetDocuments(int start, int pageSize, bool metadataOnly = false);
-
-        /// <summary>
-        /// Get documents from server
-        /// </summary>
-        /// <param name="fromEtag">The ETag of the first document to start with</param>
-        /// <param name="pageSize">Size of the page.</param>
-        /// <param name="metadataOnly">Load just the document metadata</param>
-        /// <remarks>
-        /// This is primarily useful for administration of a database
-        /// </remarks>
-        JsonDocument[] GetDocuments(Etag fromEtag, int pageSize, bool metadataOnly = false);
 
 		/// <summary>
 		/// Puts the document in the database with the specified key
@@ -241,7 +230,7 @@ namespace Raven.Client.Connection
 		/// Streams the documents by etag OR starts with the prefix and match the matches
 		/// Will return *all* results, regardless of the number of itmes that might be returned.
 		/// </summary>
-		IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null);
+		IEnumerator<RavenJObject> StreamDocs(Etag fromEtag = null, string startsWith = null, string matches = null, int start = 0, int pageSize = int.MaxValue, string exclude = null, RavenPagingInformation pagingInformation = null);
 
 		/// <summary>
 		/// Deletes the specified index
@@ -342,6 +331,12 @@ namespace Raven.Client.Connection
 		/// <param name="start">Start index for paging</param>
 		/// <param name="pageSize">Paging PageSize. If set, overrides Facet.MaxResults</param>
 		FacetResults GetFacets( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null );
+
+		/// <summary>
+		/// Sends a multiple faceted queries in a single request and calculates the facet results for each of them
+		/// </summary>
+		/// <param name="facetedQueries">List of queries</param>
+		FacetResults[] GetMultiFacets(FacetQuery[] facetedQueries);
 
         /// <summary>
         /// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
@@ -454,13 +449,6 @@ namespace Raven.Client.Connection
 		/// </summary>
 		IDisposable ForceReadFromMaster();
 
-#if !NETFX_CORE
-
-		/// <summary>
-		/// Get the low level  bulk insert operation
-		/// </summary>
-		ILowLevelBulkInsertOperation GetBulkInsertOperation(BulkInsertOptions options, IDatabaseChanges changes);
-#endif
 		/// <summary>
 		/// Gets the transformers from the server
 		/// </summary>

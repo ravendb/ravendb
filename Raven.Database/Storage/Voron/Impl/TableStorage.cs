@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Voron.Impl.Backup;
+
 namespace Raven.Database.Storage.Voron.Impl
 {
 	using System;
@@ -16,42 +18,33 @@ namespace Raven.Database.Storage.Voron.Impl
 
 	public class TableStorage : IDisposable
 	{
-		private readonly IPersistanceSource persistanceSource;
+		private readonly IPersistenceSource persistenceSource;
 
 		private readonly StorageEnvironment env;
 
-		public TableStorage(IPersistanceSource persistanceSource)
+		public TableStorage(IPersistenceSource persistenceSource)
 		{
-			if(persistanceSource == null)
-				throw new ArgumentNullException("persistanceSource");
+			if(persistenceSource == null)
+				throw new ArgumentNullException("persistenceSource");
 
-			this.persistanceSource = persistanceSource;
+			this.persistenceSource = persistenceSource;
 			
-			Debug.Assert(persistanceSource.Options != null);
-			env = new StorageEnvironment(persistanceSource.Options);
+			Debug.Assert(persistenceSource.Options != null);
+			env = new StorageEnvironment(persistenceSource.Options);
 
 			Initialize();
 			CreateSchema();
-		}
-
-		public void ExecuteBackup(Stream outputStream)
-		{
-			if (outputStream == null) throw new ArgumentNullException("outputStream");
-			if (!outputStream.CanWrite) throw new ArgumentException("must be writable stream", "outputStream");
-
-			throw new NotImplementedException("not yet implemented");
-			//env.Backup(outputStream);
-		}
+		}		
 
 		internal Dictionary<string, object> GenerateReportOnStorage()
 		{
 			var reportData = new Dictionary<string, object>
 	        {
-	            {"MaxNodeSize", persistanceSource.Options.DataPager.MaxNodeSize},
-	            {"NumberOfAllocatedPages", persistanceSource.Options.DataPager.NumberOfAllocatedPages},
-	            {"PageMaxSpace", persistanceSource.Options.DataPager.PageMaxSpace},
-	            {"PageMinSpace", persistanceSource.Options.DataPager.PageMinSpace},
-	            {"PageSize", persistanceSource.Options.DataPager.PageSize},
+	            {"MaxNodeSize", persistenceSource.Options.DataPager.MaxNodeSize},
+	            {"NumberOfAllocatedPages", persistenceSource.Options.DataPager.NumberOfAllocatedPages},
+	           // {"PageMaxSpace", persistenceSource.Options.DataPager.PageMaxSpace},
+	            {"PageMinSpace", persistenceSource.Options.DataPager.PageMinSpace},
+	           // {"PageSize", persistenceSource.Options.DataPager.PageSize},
                 {"Documents", GetEntriesCount(Documents)},
                 {"Indexes", GetEntriesCount(IndexingStats)},
                 {"Attachments", GetEntriesCount(Attachments)},
@@ -98,6 +91,14 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public Table General { get; private set; }
 
+		public StorageEnvironment Environment
+		{
+			get
+			{
+				return env;
+			}
+		}
+
 		public void Write(WriteBatch writeBatch)
 		{
 			env.Writer.Write(writeBatch);
@@ -129,11 +130,11 @@ namespace Raven.Database.Storage.Voron.Impl
 
 			var tree = tx.GetTree(table.TableName);
 
-			var path = Path.Combine(Environment.CurrentDirectory, "test-tree.dot");
+			var path = Path.Combine(System.Environment.CurrentDirectory, "test-tree.dot");
 			var rootPageNumber = tree.State.RootPageNumber;
 			TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
 
-			var output = Path.Combine(Environment.CurrentDirectory, "output.svg");
+			var output = Path.Combine(System.Environment.CurrentDirectory, "output.svg");
 			var p = Process.Start(@"c:\Program Files (x86)\Graphviz2.32\bin\dot.exe", "-Tsvg  " + path + " -o " + output);
 			p.WaitForExit();
 			Process.Start(output);
@@ -141,8 +142,8 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public void Dispose()
 		{
-			if (persistanceSource != null)
-				persistanceSource.Dispose();
+			if (persistenceSource != null)
+				persistenceSource.Dispose();
 
 			if (env != null)
 				env.Dispose();
@@ -307,5 +308,6 @@ namespace Raven.Database.Storage.Voron.Impl
 			General = new Table(Tables.General.TableName);
 			ReduceStats = new Table(Tables.ReduceStats.TableName);
 		}
+
 	}
 }

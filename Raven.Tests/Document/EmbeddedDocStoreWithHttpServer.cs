@@ -16,10 +16,8 @@ namespace Raven.Tests.Document
 					Port = 8079
 				},
 				RunInMemory = true
-			})
+            }.Initialize())
 			{
-				store.Initialize();
-				WaitForUserToContinueTheTest();
 				var value = store.DatabaseCommands.Get("Raven/StudioConfig").DataAsJson.Value<bool>("WarnWhenUsingSystemDatabase");
 				Assert.False(value);
 			}

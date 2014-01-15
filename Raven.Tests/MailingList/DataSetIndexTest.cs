@@ -31,7 +31,7 @@ namespace Raven.Tests.MailingList
 					CreateDataSet(session, "stations/energy", "EX");
 				}
 
-                WaitForUserToContinueTheTest();
+                WaitForUserToContinueTheTest(store);
 
 				using (var session = store.OpenSession())
 				{

@@ -13,6 +13,8 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
+	using Raven.Abstractions.Connection;
+
 	public class ReplicationBehavior
 	{
 		[Fact]
@@ -22,10 +24,7 @@ namespace Raven.Tests.Issues
 			{
 				ReplicationDestinations =
 					{
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:2"
-						},
+						new OperationMetadata("http://localhost:2")
 					}
 			};
 
@@ -33,10 +32,10 @@ namespace Raven.Tests.Issues
 			for (int i = 0; i < 5000; i++)
 			{
 				var req = i + 1;
-				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", req, 1, url =>
+				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), req, 1, url =>
 				{
-					urlsTried.Add(Tuple.Create(req, url));
-					if (url.EndsWith("1"))
+					urlsTried.Add(Tuple.Create(req, url.Url));
+					if (url.Url.EndsWith("1"))
 						throw new WebException("bad", WebExceptionStatus.ConnectFailure);
 
 					return 1;
@@ -57,18 +56,9 @@ namespace Raven.Tests.Issues
 			{
 				ReplicationDestinations =
 					{
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:2"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:3"
-						},
-						new ReplicationDestinationData
-						{
-							Url = "http://localhost:4"
-						},
+						new OperationMetadata("http://localhost:2"),
+						new OperationMetadata("http://localhost:3"),
+						new OperationMetadata("http://localhost:4"),
 					}
 			};
 
@@ -76,9 +66,9 @@ namespace Raven.Tests.Issues
 			for (int i = 0; i < 10; i++)
 			{
 				var req = i + 1;
-				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", req, req, url =>
+				replicationInformer.ExecuteWithReplication("GET", "http://localhost:1", new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials), req, req, url =>
 				{
-					urlsTried.Add(Tuple.Create(req, url));
+					urlsTried.Add(Tuple.Create(req, url.Url));
 					return 1;
 				});
 			}

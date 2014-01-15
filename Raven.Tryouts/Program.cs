@@ -1,9 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Tests.Bugs;
+using Raven.Tests.Bugs.Iulian;
 using Raven.Tests.Indexes;
+using Raven.Tests.Issues;
 using Raven.Tests.MultiGet;
 using Raven.Tests.Notifications;
+using Raven.Tests.Storage;
 using Raven.Tests.Track;
+using Raven.Tests.Views;
+using Voron.Tests.Journal;
+using Voron.Tests.Trees;
 
 namespace Raven.Tryouts
 {
@@ -11,13 +18,13 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			for (int i = 0; i < 100; i++)
+			for (int i = 0; i < 10000; i++)
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-                using (var x = new MultiGetProfiling())
+				using (var x = new CanReadEntityWithUrlId())
 				{
-					x.CanProfileFullyAggressivelyCached();
+					x.Can_Load_entities_with_id_containing_url();
 				}
 			}
 			

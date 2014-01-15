@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Voron.Trees
@@ -13,6 +14,8 @@ namespace Voron.Trees
 		bool MoveNext();
 		bool MovePrev();
 		bool Skip(int count);
-		Stream CreateStreamForCurrent();
+		ValueReader CreateReaderForCurrent();
+
+		IEnumerable<string> DumpValues();
 	}
 }

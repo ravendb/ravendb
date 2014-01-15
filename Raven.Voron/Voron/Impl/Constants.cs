@@ -25,5 +25,7 @@ namespace Voron.Impl
 
 		public const string RootTreeName = "Root";
 		public const string FreeSpaceTreeName = "Free Space";
+
+		public const string DatabaseFilename = "Raven.voron";
 	}
 }

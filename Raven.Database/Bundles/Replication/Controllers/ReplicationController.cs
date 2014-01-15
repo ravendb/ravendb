@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.Replication;
 using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Plugins;
@@ -213,7 +214,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		{
 			string src;
 			string dbid;
-			var result =  GetValuesForLastEtag(out src, out dbid);
+			var result = GetValuesForLastEtag(out src, out dbid);
 			if (result != null)
 				return result;
 
@@ -238,10 +239,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 					sourceReplicationInformation.ServerInstanceId = serverInstanceId;
 				}
 
-				//var currentEtag = GetQueryStringValue("currentEtag");
-				//TODO: log
-				//log.Debug("Got replication last etag request from {0}: [Local: {1} Remote: {2}]", src,
-				//		  sourceReplicationInformation.LastDocumentEtag, currentEtag);
+				var currentEtag = GetQueryStringValue("currentEtag");
+				Log.Debug(() => string.Format("Got replication last etag request from {0}: [Local: {1} Remote: {2}]", src, sourceReplicationInformation.LastDocumentEtag, currentEtag));
 				return GetMessageWithObject(sourceReplicationInformation);
 			}
 		}

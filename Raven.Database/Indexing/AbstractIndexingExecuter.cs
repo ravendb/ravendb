@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
@@ -92,6 +93,10 @@ namespace Raven.Database.Indexing
                     catch (Exception e)
                     {
                         foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
+#if DEBUG
+						if(Debugger.IsAttached)
+							Debugger.Break();
+#endif
                         Log.ErrorException("Failed to execute indexing", e);
                         if (IsEsentOutOfMemory(e))
                         {
@@ -242,10 +247,10 @@ namespace Raven.Database.Indexing
                 context.UpdateFoundWork();
                 context.CancellationToken.ThrowIfCancellationRequested();
 
-                using (context.IndexDefinitionStorage.CurrentlyIndexing())
-                {
-               ExecuteIndexingWork(indexesToWorkOn, synchronizationEtag);
-            }
+				using (context.IndexDefinitionStorage.CurrentlyIndexing())
+				{
+					ExecuteIndexingWork(indexesToWorkOn, synchronizationEtag);
+				}
 
             return true;
         }

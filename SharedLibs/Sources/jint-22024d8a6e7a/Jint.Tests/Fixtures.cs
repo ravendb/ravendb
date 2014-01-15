@@ -955,6 +955,21 @@ var fakeButton = new Test.FakeButton();");
         }
 
         [TestMethod]
+        public void ShouldHandleArrayIndexOf()
+        {
+
+            var jint = new JintEngine()
+            .SetDebugMode(true)
+            .SetFunction("assert", new Action<object, object>(Assert.AreEqual))
+            .SetFunction("print", new Action<string>(System.Console.WriteLine));
+
+            jint.Run(@"
+                var days = ['mon', 'tue', 'wed'];
+                assert(1, days.indexOf('tue'));            
+            ");
+        }
+
+        [TestMethod]
         public void ClrNullShouldBeConverted() {
 
             var jint = new JintEngine()

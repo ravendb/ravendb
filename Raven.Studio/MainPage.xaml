@@ -388,7 +388,7 @@
                                  Content="Replication Statistics" 
                                  Visibility="{Binding Server.Value.SelectedDatabase.Value.HasReplication, Converter={StaticResource BooleanToVisibility}}"
                                  Command="{StaticResource NavigateToCommand}"
-                                 CommandParameter="/replicationStatistics"
+                                 CommandParameter="/status?id=replication"
                                  Style="{StaticResource HyperlinkButton_FooterLinks}"/>
 
 					<HyperlinkButton toolkit:DockPanel.Dock="Left"

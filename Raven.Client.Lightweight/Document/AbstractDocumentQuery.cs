@@ -56,7 +56,6 @@ namespace Raven.Client.Document
 			typeof (T)
 		};
 
-
 		static Dictionary<Type, Func<object, string>> implicitStringsCache = new Dictionary<Type, Func<object, string>>();
 
 		/// <summary>
@@ -86,9 +85,9 @@ namespace Raven.Client.Document
 
 		private int currentClauseDepth;
 
-	    protected KeyValuePair<string, string> lastEquality;
+		protected KeyValuePair<string, string> lastEquality;
 
-        protected Dictionary<string, RavenJToken> queryInputs = new Dictionary<string, RavenJToken>();
+		protected Dictionary<string, RavenJToken> queryInputs = new Dictionary<string, RavenJToken>();
 
 		/// <summary>
 		///   The list of fields to project directly from the results
@@ -166,6 +165,10 @@ namespace Raven.Client.Document
 		/// Should we wait for non stale results
 		/// </summary>
 		protected bool theWaitForNonStaleResults;
+        /// <summary>
+        /// Should we wait for non stale results as of now?
+        /// </summary>
+	    protected bool theWaitForNonStaleResultsAsOfNow;
 		/// <summary>
 		/// The paths to include when loading the query
 		/// </summary>
@@ -351,6 +354,7 @@ namespace Raven.Client.Document
 			start = other.start;
 			timeout = other.timeout;
 			theWaitForNonStaleResults = other.theWaitForNonStaleResults;
+		    theWaitForNonStaleResultsAsOfNow = other.theWaitForNonStaleResultsAsOfNow;
 			includes = other.includes;
 			queryListeners = other.queryListeners;
 			queryStats = other.queryStats;
@@ -667,7 +671,7 @@ namespace Raven.Client.Document
 
         protected void ClearSortHints(IAsyncDatabaseCommands dbCommands)
         {
-            foreach (var key in dbCommands.OperationsHeaders.Keys.Where(key => key.StartsWith("SortHint")).ToArray())
+            foreach (var key in dbCommands.OperationsHeaders.AllKeys.Where(key => key.StartsWith("SortHint")).ToArray())
             {
                 dbCommands.OperationsHeaders.Remove(key);
             }
@@ -712,6 +716,24 @@ namespace Raven.Client.Document
 			return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
 		}
 
+		/// <summary>
+		/// Register the query as a lazy-count query in the session and return a lazy
+		/// instance that will evaluate the query only when needed
+		/// </summary>
+		public virtual Lazy<int> CountLazily()
+		{
+			var headers = new Dictionary<string, string>();
+			if (queryOperation == null)
+			{
+				ExecuteBeforeQueryListeners();
+				queryOperation = InitializeQueryOperation((key, val) => headers[key] = val);
+			}
+
+			var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, includes);
+			lazyQueryOperation.SetHeaders(headers);
+
+			return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
+		}
 #endif
 
 		/// <summary>
@@ -1106,7 +1128,6 @@ If you really want to do in memory filtering on the data returned from the query
 			}
 
 			return whereParams.FieldName;
-
 		}
 
 		///<summary>
@@ -1152,9 +1173,9 @@ If you really want to do in memory filtering on the data returned from the query
 			AppendSpaceIfNeeded(queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false);
 			NegateIfNeeded();
 
-            var list = UnpackEnumerable(values).ToList();
+			var list = UnpackEnumerable(values).ToList();
 
-			if(list.Count == 0)
+			if (list.Count == 0)
 			{
 				queryText.Append("@emptyIn<")
 					.Append(fieldName)
@@ -1493,6 +1514,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public void WaitForNonStaleResultsAsOfNow()
 		{
 			theWaitForNonStaleResults = true;
+		    theWaitForNonStaleResultsAsOfNow = true;
 			cutoff = SystemTime.UtcNow;
 			timeout = DefaultTimeout;
 		}
@@ -1594,6 +1616,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public void WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
 		{
 			theWaitForNonStaleResults = true;
+		    theWaitForNonStaleResultsAsOfNow = true;
 			cutoff = SystemTime.UtcNow;
 			timeout = waitTimeout;
 		}
@@ -1739,6 +1762,7 @@ If you really want to do in memory filtering on the data returned from the query
 					PageSize = pageSize ?? 128,
 					Start = start,
 					Cutoff = cutoff,
+                    WaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
 					CutoffEtag = cutoffEtag,
 					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 					FieldsToFetch = fieldsToFetch,
@@ -1766,6 +1790,7 @@ If you really want to do in memory filtering on the data returned from the query
 				Start = start,
 				Cutoff = cutoff,
 				CutoffEtag = cutoffEtag,
+                WaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
 				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 				FieldsToFetch = fieldsToFetch,
 				DefaultField = defaultField,
@@ -2024,7 +2049,7 @@ If you really want to do in memory filtering on the data returned from the query
 		}
 
 		/// <summary>
-		///   The last term that we asked the query to use equals on
+		/// The last term that we asked the query to use equals on
 		/// </summary>
 		public KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false)
 		{
@@ -2034,6 +2059,51 @@ If you really want to do in memory filtering on the data returned from the query
 		public void Intersect()
 		{
 			queryText.Append(Constants.IntersectSeparator);
+		}
+
+		public void ContainsAny(string fieldName, IEnumerable<object> values)
+		{
+			ContainsAnyAllProcessor(fieldName, values, "OR");
+		}
+
+		public void ContainsAll(string fieldName, IEnumerable<object> values)
+		{
+			ContainsAnyAllProcessor(fieldName, values, "AND");
+		}
+
+		private void ContainsAnyAllProcessor(string fieldName, IEnumerable<object> values, string seperator)
+		{
+			AppendSpaceIfNeeded(queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false);
+			NegateIfNeeded();
+
+			var list = UnpackEnumerable(values).ToList();
+			if (list.Count == 0)
+			{
+				return;
+			}
+
+			var first = true;
+			queryText.Append("(");
+			foreach (var value in list)
+			{
+				if (first == false)
+				{
+					queryText.Append(" " + seperator + " ");
+				}
+				first = false;
+				var whereParams = new WhereParams
+				{
+					AllowWildcards = true,
+					IsAnalyzed = true,
+					FieldName = fieldName,
+					Value = value
+				};
+				EnsureValidFieldName(whereParams);
+				queryText.Append(fieldName)
+						 .Append(":")
+						 .Append(TransformToEqualValue(whereParams));
+			}
+			queryText.Append(")");
 		}
 
 		public void AddRootType(Type type)

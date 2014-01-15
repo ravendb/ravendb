@@ -105,6 +105,7 @@ namespace Raven.Client.Document
 				cutoff = cutoff,
 				queryStats = queryStats,
 				theWaitForNonStaleResults = theWaitForNonStaleResults,
+                theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
 				isDistinct = isDistinct,
@@ -196,6 +197,11 @@ namespace Raven.Client.Document
 
 #if !NETFX_CORE
 		public override Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
+		{
+			throw new NotSupportedException("Lazy in not supported with the async API");
+		}
+
+		public override Lazy<int> CountLazily()
 		{
 			throw new NotSupportedException("Lazy in not supported with the async API");
 		}

@@ -34,7 +34,8 @@ namespace Raven.Tests.Storage
 	            RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 	            Settings =
 	            {
-	                {"Raven/Esent/CircularLog", "false"}
+	                {"Raven/Esent/CircularLog", "false"},
+					{"Raven/Voron/AllowIncrementalBackups", "true"}
 	            }
 	        });
 	        db.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
@@ -73,7 +74,8 @@ namespace Raven.Tests.Storage
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
                 Settings =
 	            {
-	                {"Raven/Esent/CircularLog", "false"}
+	                {"Raven/Esent/CircularLog", "false"},
+					{"Raven/Voron/AllowIncrementalBackups", "true"}
 	            }
 
 			}, BackupDir, DataDir, s => { }, defrag: true);
@@ -130,7 +132,8 @@ namespace Raven.Tests.Storage
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
                 Settings =
 	            {
-	                {"Raven/Esent/CircularLog", "false"}
+	                {"Raven/Esent/CircularLog", "false"},
+					{"Raven/Voron/AllowIncrementalBackups", "true"}
 	            }
 
             }, BackupDir, DataDir, s => { }, defrag: true);
@@ -160,13 +163,14 @@ namespace Raven.Tests.Storage
 
         }
 
-        [Fact]
-        public void IncrementalBackupWithCircularLogThrows()
+		[Theory]
+		[PropertyData("Storages")]
+		public void IncrementalBackupWithCircularLogOrVoronIncrementalBackupsNotEnabledThrows(string storageName)
 		{
 			db = new DocumentDatabase(new RavenConfiguration
 			{
                 RunInMemory = false,
-                DefaultStorageTypeName = "esent",
+				DefaultStorageTypeName = storageName,
 				DataDirectory = DataDir,
 				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
 			});

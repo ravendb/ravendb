@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Database.Indexing;
+using Raven.Database.Linq;
 
 namespace Raven.Database.Queries
 {
@@ -27,6 +28,9 @@ namespace Raven.Database.Queries
 			var results = new FacetResults();
 			var defaultFacets = new Dictionary<string, Facet>();
 			var rangeFacets = new Dictionary<string, List<ParsedRange>>();
+
+            var viewGenerator = database.IndexDefinitionStorage.GetViewGenerator(index);
+            Index.AssertQueryDoesNotContainFieldsThatAreNotIndexed(indexQuery, viewGenerator);
 
 			foreach (var facet in facets)
 			{
@@ -343,12 +347,20 @@ namespace Raven.Database.Queries
 					case SortOptions.StringVal:
 						return term.Text;
 					case SortOptions.Int:
+		                if (IsStringNumber(term))
+			                return term.Text;
 						return NumericUtils.PrefixCodedToInt(term.Text).ToString(CultureInfo.InvariantCulture);
 					case SortOptions.Long:
+						if (IsStringNumber(term))
+							return term.Text;
 						return NumericUtils.PrefixCodedToLong(term.Text).ToString(CultureInfo.InvariantCulture);
 					case SortOptions.Double:
+						if (IsStringNumber(term))
+							return term.Text;
 						return NumericUtils.PrefixCodedToDouble(term.Text).ToString(CultureInfo.InvariantCulture);
 					case SortOptions.Float:
+						if (IsStringNumber(term))
+							return term.Text;
 						return NumericUtils.PrefixCodedToFloat(term.Text).ToString(CultureInfo.InvariantCulture);
 					case SortOptions.Byte:
 					case SortOptions.Short:
@@ -356,6 +368,13 @@ namespace Raven.Database.Queries
 						throw new ArgumentException("Can't get range name from sort option" + sortOptions);
 				}
 			}
+
+	        private bool IsStringNumber(Term term)
+	        {
+				if (term == null || string.IsNullOrEmpty(term.Text))
+			        return false;
+		        return char.IsDigit(term.Text[0]);
+	        }
 
 			private void CompleteFacetCalculationsStage2()
 			{

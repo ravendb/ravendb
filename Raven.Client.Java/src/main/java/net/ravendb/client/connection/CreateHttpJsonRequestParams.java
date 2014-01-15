@@ -6,10 +6,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import net.ravendb.abstractions.connection.OperationCredentials;
 import net.ravendb.abstractions.data.HttpMethods;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.client.connection.profiling.IHoldProfilingInformation;
-import net.ravendb.client.document.DocumentConvention;
+import net.ravendb.client.document.Convention;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpRequest;
@@ -26,10 +27,11 @@ public class CreateHttpJsonRequestParams implements Serializable {
   private boolean avoidCachingRequest;
   private HttpMethods method;
   private RavenJObject metadata;
-  private DocumentConvention convention;
+  private Convention convention;
+  private OperationCredentials credentials;
   private boolean disableRequestCompression;
 
-  public CreateHttpJsonRequestParams(IHoldProfilingInformation owner, String url, HttpMethods method, RavenJObject metadata, DocumentConvention convention) {
+  public CreateHttpJsonRequestParams(IHoldProfilingInformation owner, String url, HttpMethods method, RavenJObject metadata, OperationCredentials credentials, Convention convention) {
     super();
 
     this.method = method;
@@ -90,7 +92,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
   /**
    * @return the convention
    */
-  public DocumentConvention getConvention() {
+  public Convention getConvention() {
     return convention;
   }
 
@@ -114,6 +116,14 @@ public class CreateHttpJsonRequestParams implements Serializable {
    */
   public IHoldProfilingInformation getOwner() {
     return owner;
+  }
+
+  public OperationCredentials getCredentials() {
+    return credentials;
+  }
+
+  public void setCredentials(OperationCredentials credentials) {
+    this.credentials = credentials;
   }
 
   /**
@@ -152,7 +162,7 @@ public class CreateHttpJsonRequestParams implements Serializable {
   /**
    * @param convention the convention to set
    */
-  public void setConvention(DocumentConvention convention) {
+  public void setConvention(Convention convention) {
     this.convention = convention;
   }
 

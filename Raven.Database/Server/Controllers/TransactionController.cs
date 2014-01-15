@@ -5,7 +5,7 @@ using Raven.Abstractions.Data;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class TransactionController : RavenApiController
+	public class TransactionController : RavenDbApiController
 	{
 		[HttpPost]
 		[Route("transaction/rollback")]

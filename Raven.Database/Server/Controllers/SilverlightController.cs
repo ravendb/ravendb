@@ -9,7 +9,7 @@ using Raven.Database.Plugins.Builtins;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class SilverlightController : RavenApiController
+	public class SilverlightController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("silverlight/ensureStartup")]

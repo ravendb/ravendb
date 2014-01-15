@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Voron.Impl;
 
@@ -19,7 +20,7 @@ namespace Voron.Trees
 
 		public int GetCurrentDataSize()
 		{
-			return NodeHeader.GetDataSize(_tx, Current);
+			throw new NotSupportedException("There is no value for single entry iterator");
 		}
 
 		public Slice CurrentKey
@@ -73,9 +74,14 @@ namespace Voron.Trees
 			throw new NotSupportedException("There is only one entry in single entry iterator");
 		}
 
-		public Stream CreateStreamForCurrent()
+		public ValueReader CreateReaderForCurrent()
 		{
-			return NodeHeader.Stream(_tx, Current);
+			throw new NotSupportedException("There is no value for single entry iterator");
+		}
+
+		public IEnumerable<string> DumpValues()
+		{
+			yield return CurrentKey.ToString();
 		}
 
 		public void Dispose()

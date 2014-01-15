@@ -6,179 +6,211 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Security;
 using System.Threading;
+using System.Threading.Tasks;
+using Voron.Impl.Paging;
 using Voron.Trees;
 using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
-	public unsafe class JournalFile : IDisposable
-	{
-		private readonly IVirtualPager _pager;
-		private ImmutableDictionary<long, long> _pageTranslationTable = ImmutableDictionary<long, long>.Empty;
-		private long _writePage;
-		private bool _disposed;
+    public unsafe class JournalFile : IDisposable
+    {
+        private readonly IJournalWriter _journalWriter;
+        private long _writePage;
+        private bool _disposed;
+        private int _refs;
+        private readonly PageTable _pageTranslationTable = new PageTable();
+        private readonly List<PagePosition> _unusedPages = new List<PagePosition>();
+        private readonly object _locker = new object();
 
-		public JournalFile(IVirtualPager pager, long logNumber)
-		{
-			Number = logNumber;
-			_pager = pager;
-			_writePage = 0;
-		}
+        public class PagePosition
+        {
+            public long ScratchPos;
+            public long JournalPos;
+            public long TransactionId;
+        }
 
-		public override string ToString()
-		{
-			return string.Format("Number: {0}", Number);
-		}
+        public JournalFile(IJournalWriter journalWriter, long journalNumber)
+        {
+            Number = journalNumber;
+            _journalWriter = journalWriter;
+            _writePage = 0;
+        }
 
-		public JournalFile(IVirtualPager pager, long logNumber, long lastSyncedPage)
-			: this(pager, logNumber)
-		{
-			_writePage = lastSyncedPage + 1;
-		}
+        public override string ToString()
+        {
+            return string.Format("Number: {0}", Number);
+        }
+
+        public JournalFile(IJournalWriter journalWriter, long journalNumber, long lastSyncedPage)
+            : this(journalWriter, journalNumber)
+        {
+            _writePage = lastSyncedPage + 1;
+        }
 
 #if DEBUG
-		private readonly StackTrace _st = new StackTrace(true);
+        private readonly StackTrace _st = new StackTrace(true);
 #endif
 
-		~JournalFile()
-		{
-			Dispose();
+        ~JournalFile()
+        {
+            Dispose();
 
 #if DEBUG
-			Trace.WriteLine(
-				"Disposing a journal file from finalizer! It should be diposed by using JournalFile.Release() instead!. Log file number: " +
-				Number + ". Number of references: " + _refs + " " + _st);
+            Trace.WriteLine(
+                "Disposing a journal file from finalizer! It should be diposed by using JournalFile.Release() instead!. Log file number: " +
+                Number + ". Number of references: " + _refs + " " + _st);
 #endif
-		}
+        }
 
-		internal long WritePagePosition
-		{
-			get { return _writePage; }
-		}
+        internal long WritePagePosition
+        {
+            get { return _writePage; }
+        }
 
-		public long Number { get; private set; }
-
-		public IEnumerable<long> GetModifiedPages(long? lastLogPageSyncedWithDataFile)
-		{
-			if (lastLogPageSyncedWithDataFile == null)
-				return _pageTranslationTable.Keys;
-
-			return _pageTranslationTable.Where(x => x.Value > lastLogPageSyncedWithDataFile).Select(x => x.Key);
-		}
-		public TransactionHeader* LastTransactionHeader { get; private set; }
-
-		public long AvailablePages
-		{
-			get { return _pager.NumberOfAllocatedPages - _writePage; }
-		}
-
-		internal IVirtualPager Pager
-		{
-			get { return _pager; }
-		}
-
-		public ImmutableDictionary<long, long> PageTranslationTable
-		{
-			get { return _pageTranslationTable; }
-		}
-
-		public bool RequireHeaderUpdate { get; private set; }
-
-	    public Page ReadPage(long pageNumber)
-		{
-			long logPageNumber;
-
-			if (_pageTranslationTable.TryGetValue(pageNumber, out logPageNumber))
-				return _pager.Read(logPageNumber);
-
-			return null;
-		}
+        public long Number { get; private set; }
 
 
-		public void DeleteOnClose()
-		{
-			_pager.DeleteOnClose = true;
-		}
+        public long AvailablePages
+        {
+            get { return _journalWriter.NumberOfAllocatedPages - _writePage; }
+        }
 
-		private int _refs;
+        internal IJournalWriter JournalWriter
+        {
+            get { return _journalWriter; }
+        }
 
-		public void Release()
-		{
-			if (Interlocked.Decrement(ref _refs) != 0)
-				return;
+        public PageTable PageTranslationTable
+        {
+            get { return _pageTranslationTable; }
+        }
 
-			Dispose();
-		}
+        public void Release()
+        {
+            if (Interlocked.Decrement(ref _refs) != 0)
+                return;
 
-		public void AddRef()
-		{
-			Interlocked.Increment(ref _refs);
-		}
+            Dispose();
+        }
 
-		public void Dispose()
-		{
-			DisposeWithoutClosingPager();
-			_pager.Dispose();
+        public void AddRef()
+        {
+            Interlocked.Increment(ref _refs);
+        }
 
-		}
+        public void Dispose()
+        {
+            DisposeWithoutClosingPager();
+            _journalWriter.Dispose();
+        }
 
-		public LogSnapshot GetSnapshot()
-		{
-			return new LogSnapshot
-			{
-				File = this,
-				PageTranslations = _pageTranslationTable
-			};
-		}
+        public JournalSnapshot GetSnapshot()
+        {
+            var lastTxId = _pageTranslationTable.GetLastSeenTransaction();
+            return new JournalSnapshot
+            {
+                Number = Number,
+                AvailablePages = AvailablePages,
+                PageTranslationTable = _pageTranslationTable,
+                LastTransaction = lastTxId
+            };
+        }
 
-		public TransactionHeader* RecoverAndValidate(long startRead, TransactionHeader* lastTxHeader)
-		{
-			var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
-			logFileReader.RecoverAndValidate();
-			RequireHeaderUpdate = logFileReader.RequireHeaderUpdate;
-			
-			_pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
-			_writePage = logFileReader.WritePage;
-			LastTransactionHeader = logFileReader.LastTransactionHeader;
+        public void DisposeWithoutClosingPager()
+        {
+            if (_disposed)
+                return;
 
-			return logFileReader.LastTransactionHeader;
-		}
+            GC.SuppressFinalize(this);
 
-		public TransactionHeader* RecoverAndValidateConditionally(long startRead, TransactionHeader* lastTxHeader,Func<TransactionHeader,bool> stopConditionFunc)
-		{
-			var logFileReader = new JournalReader(_pager, startRead, lastTxHeader);
-			logFileReader.RecoverAndValidateConditionally(stopConditionFunc);
-			RequireHeaderUpdate = logFileReader.RequireHeaderUpdate;
+            _disposed = true;
+        }
 
-			_pageTranslationTable = _pageTranslationTable.SetItems(logFileReader.TransactionPageTranslation);
-			_writePage = logFileReader.WritePage;
-			LastTransactionHeader = logFileReader.LastTransactionHeader;
+        public bool ReadTransaction(long pos, TransactionHeader* txHeader)
+        {
+            return _journalWriter.Read(pos, (byte*)txHeader, sizeof(TransactionHeader));
+        }
 
-			return logFileReader.LastTransactionHeader;
-		}
+        public void Write(Transaction tx, byte*[] pages)
+        {
+            var txPages = tx.GetTransactionPages();
 
+            var ptt = new Dictionary<long, PagePosition>();
+            var unused = new List<PagePosition>();
+            var writePagePos = _writePage;
 
-		public void DisposeWithoutClosingPager()
-		{
-			if (_disposed)
-				return;
+            UpdatePageTranslationTable(tx, txPages, unused, ptt);
 
-			GC.SuppressFinalize(this);
+            lock (_locker)
+            {
+                _writePage += pages.Length;
+                _pageTranslationTable.SetItems(tx, ptt);
+                _unusedPages.AddRange(unused);
+            }
 
-			_disposed = true;
-		}
+            _journalWriter.WriteGather(writePagePos * AbstractPager.PageSize, pages);
+        }
 
-	    public void Write(Transaction tx, int numberOfPages)
+	    private unsafe void UpdatePageTranslationTable(Transaction tx, List<PageFromScratchBuffer> txPages, List<PagePosition> unused, Dictionary<long, PagePosition> ptt)
 	    {
-	        _pager.WriteDirect(tx.GetFirstScratchPage(), _writePage ,numberOfPages);
-	        _pageTranslationTable = _pageTranslationTable.SetItems(
-                tx.PageTranslations.Select(kvp => new KeyValuePair<long,long>(kvp.Key, kvp.Value + _writePage))
-	            );
-	        _writePage += numberOfPages;
+		    for (int index = 1; index < txPages.Count; index++)
+		    {
+			    var txPage = txPages[index];
+			    var scratchPage = tx.Environment.ScratchBufferPool.ReadPage(txPage.PositionInScratchBuffer);
+			    var pageNumber = ((PageHeader*)scratchPage.Base)->PageNumber;
+			    PagePosition value;
+			    if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
+			    {
+				    unused.Add(value);
+			    }
+
+			    ptt[pageNumber] = new PagePosition
+			    {
+				    ScratchPos = txPage.PositionInScratchBuffer,
+				    JournalPos = -1, // needed only during recovery and calculated there
+				    TransactionId = tx.Id
+			    };
+		    }
 	    }
-	}
+
+
+        public void InitFrom(JournalReader journalReader)
+        {
+            _writePage = journalReader.NextWritePage;
+        }
+
+        public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
+
+        public void FreeScratchPagesOlderThan(StorageEnvironment env, long lastSyncedTransactionId)
+        {
+            List<KeyValuePair<long, PagePosition>> unusedPages;
+
+            List<PagePosition> unusedAndFree;
+            lock (_locker)
+            {
+                unusedAndFree = _unusedPages.FindAll(position => position.TransactionId < lastSyncedTransactionId);
+                _unusedPages.RemoveAll(position => position.TransactionId < lastSyncedTransactionId);
+
+                unusedPages = _pageTranslationTable.AllPagesOlderThan(lastSyncedTransactionId);
+                _pageTranslationTable.Remove(unusedPages.Select(x => x.Key), lastSyncedTransactionId);
+            }
+
+            foreach (var unusedScratchPage in unusedAndFree)
+            {
+                env.ScratchBufferPool.Free(unusedScratchPage.ScratchPos);
+            }
+
+            foreach (var unusedScratchPage in unusedPages)
+            {
+                env.ScratchBufferPool.Free(unusedScratchPage.Value.ScratchPos);
+            }
+        }
+    }
 }

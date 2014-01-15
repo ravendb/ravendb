@@ -4,12 +4,15 @@ using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Responders;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Xunit;
 using System.Linq;
 
 namespace Raven.Tests.Bundles.Replication.Issues
 {
+	using Raven.Abstractions.Connection;
+
 	public abstract class RavenDB677 : ReplicationBase
 	{
 		 [Fact]
@@ -28,7 +31,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			                                                                   servers[0].SystemDatabase.ServerUrl +
 																			   "admin/replication/purge-tombstones?docEtag=" + last,
 			                                                                   "POST",
-			                                                                   CredentialCache.DefaultCredentials,
+																			   new OperationCredentials(null, CredentialCache.DefaultCredentials),
 			                                                                   store1.Conventions);
 			 store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();
 
@@ -58,7 +61,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 																			   servers[0].SystemDatabase.ServerUrl +
 																			   "admin/replication/purge-tombstones?docEtag=" + last,
 																			   "POST",
-																			   CredentialCache.DefaultCredentials,
+																			   new OperationCredentials(null, CredentialCache.DefaultCredentials),
 																			   store1.Conventions);
 			 store1.JsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams).ExecuteRequest();
 
@@ -72,7 +75,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
 	public class RavenDb677_Munin : RavenDB677
 	{
-		protected override void ConfigureServer(Database.Config.RavenConfiguration serverConfiguration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
 		{
 			serverConfiguration.DefaultStorageTypeName = "munin";
 		}
@@ -80,7 +83,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
 	public class RavenDb677_Voron : RavenDB677
 	{
-		protected override void ConfigureServer(Database.Config.RavenConfiguration serverConfiguration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
 		{
 			serverConfiguration.DefaultStorageTypeName = "voron";
 		}
@@ -88,7 +91,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 
 	public class RavenDb677_Esent : RavenDB677
 	{
-		protected override void ConfigureServer(Database.Config.RavenConfiguration serverConfiguration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
 		{
 			serverConfiguration.DefaultStorageTypeName = "esent";
 			serverConfiguration.RunInMemory = false;

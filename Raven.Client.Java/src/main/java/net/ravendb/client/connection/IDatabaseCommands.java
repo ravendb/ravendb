@@ -9,11 +9,13 @@ import java.util.Map;
 import net.ravendb.abstractions.basic.Reference;
 import net.ravendb.abstractions.commands.ICommandData;
 import net.ravendb.abstractions.data.Attachment;
+import net.ravendb.abstractions.data.AttachmentInformation;
 import net.ravendb.abstractions.data.BatchResult;
 import net.ravendb.abstractions.data.BulkInsertOptions;
 import net.ravendb.abstractions.data.DatabaseStatistics;
 import net.ravendb.abstractions.data.Etag;
 import net.ravendb.abstractions.data.Facet;
+import net.ravendb.abstractions.data.FacetQuery;
 import net.ravendb.abstractions.data.FacetResults;
 import net.ravendb.abstractions.data.GetRequest;
 import net.ravendb.abstractions.data.GetResponse;
@@ -34,6 +36,7 @@ import net.ravendb.abstractions.indexing.IndexDefinition;
 import net.ravendb.abstractions.indexing.TransformerDefinition;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.abstractions.json.linq.RavenJToken;
+import net.ravendb.client.RavenPagingInformation;
 import net.ravendb.client.changes.IDatabaseChanges;
 import net.ravendb.client.connection.profiling.IHoldProfilingInformation;
 import net.ravendb.client.document.ILowLevelBulkInsertOperation;
@@ -71,10 +74,10 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @param matches
    * @param start
    * @param pageSize
-   * @param metadataOnly
    * @return
    */
   public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize) throws ServerClientException;
+
 
   /**
    * Retrieves documents for the specified key prefix
@@ -97,6 +100,17 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @return
    */
   public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly, String exclude);
+
+  /**
+   * Retrieves documents for the specified key prefix
+   * @param keyPrefix
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @param metadataOnly
+   * @return
+   */
+  public List<JsonDocument> startsWith(String keyPrefix, String matches, int start, int pageSize, boolean metadataOnly, String exclude, RavenPagingInformation pagingInformation);
 
   /**
    * Retrieves the document for the specified key
@@ -290,7 +304,7 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @param indexDef
    * @return
    */
-  public String putTransformer(String name, TransformerDefinition indexDef);
+  public String putTransformer(String name, TransformerDefinition transformerDef);
 
   /**
    * Puts the index.
@@ -425,6 +439,19 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
   public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize, String exclude);
 
   /**
+   * Streams the documents by etag OR starts with the prefix and match the matches
+   * Will return *all* results, regardless of the number of items that might be returned.
+   * @param fromEtag
+   * @param startsWith
+   * @param matches
+   * @param start
+   * @param pageSize
+   * @param pagingInformation
+   * @return
+   */
+  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize, String exclude, RavenPagingInformation pagingInformation);
+
+  /**
    * Delete index
    * @param name
    */
@@ -535,6 +562,13 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @return
    */
   public List<String> getTerms(String index, String field, String fromValue, int pageSize);
+
+  /**
+   * Sends a multiple faceted queries in a single request and calculates the facet results for each of them
+   * @param facetedQueries
+   * @return
+   */
+  public FacetResults[] getMultiFacets(FacetQuery[] facetedQueries);
 
   /**
    *  Using the given Index, calculate the facets as per the specified doc with the given start and pageSize
@@ -718,6 +752,8 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    */
   public void deleteTransformer(String name);
 
+  public AttachmentInformation[] getAttachments(Etag startEtag, int batchSize);
+
   /**
    * Tries to resolve conflict using registered listeners
    * @param key
@@ -727,7 +763,7 @@ public interface IDatabaseCommands extends IHoldProfilingInformation {
    * @return
    */
   public Boolean tryResolveConflictByUsingRegisteredListeners(String key, Etag etag, String[] conflictedIds,
-    String opUrl);
+    OperationMetadata opUrl);
 
 
 }

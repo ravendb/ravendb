@@ -31,7 +31,7 @@ namespace Raven.Tests.MailingList
 
 					var foundDocs = session.Query<TestDoc>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Where(doc => doc.Name.In(nameList)).ToList();
 
-					WaitForUserToContinueTheTest();
+					WaitForUserToContinueTheTest(store);
 
 					session.Query<TestDoc>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Where(doc => doc.Name.In(nameList)).ToList();
 					Assert.True(foundDocs.Count == nameList.Count);

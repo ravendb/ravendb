@@ -340,5 +340,15 @@ namespace Raven.Client.Document
 		void AddRootType(Type type);
 	    void SetResultTransformer(string resultsTransformer);
 		void Distinct();
+
+        /// <summary>
+        /// Performs a query matching ANY of the provided values against the given field (OR)
+        /// </summary>
+        void ContainsAny(string fieldName, IEnumerable<object> values);
+
+        /// <summary>
+        /// Performs a query matching ALL of the provided values against the given field (AND)
+        /// </summary>
+        void ContainsAll(string fieldName, IEnumerable<object> values);
 	}
 }

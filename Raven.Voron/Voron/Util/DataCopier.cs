@@ -4,7 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Diagnostics;
 using System.IO;
+using Voron.Impl;
+using Voron.Impl.Journal;
+using Voron.Impl.Paging;
 
 namespace Voron.Util
 {
@@ -27,6 +32,28 @@ namespace Voron.Util
 					output.Write(_buffer, 0, read);
 				}
 			}
+		}
+
+		public void ToStream(JournalFile journal, long startPage, long pagesToCopy, Stream output)
+		{
+			var maxNumOfPagesToCopyAtOnce = _buffer.Length/AbstractPager.PageSize;
+			var page = startPage;
+
+			fixed (byte* ptr = _buffer)
+			{
+				while (pagesToCopy > 0)
+				{
+					var pageCount = Math.Min(maxNumOfPagesToCopyAtOnce, pagesToCopy);
+					var bytesCount = (int) (pageCount*AbstractPager.PageSize);
+
+					journal.JournalWriter.Read(page, ptr, bytesCount);
+					output.Write(_buffer, 0, bytesCount);
+					page += pageCount;
+					pagesToCopy -= pageCount;
+				}
+			}
+
+			Debug.Assert(pagesToCopy == 0);
 		}
 	}
 }

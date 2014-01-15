@@ -22,7 +22,7 @@ namespace Performance.Comparison.SQLServer
         public SqlServerTest(byte[] buffer)
             : base(buffer)
         {
-            connectionString = @"Data Source=localhost\LOCAL2012;Initial Catalog=VoronTests;Integrated Security=true";
+            connectionString = @"Data Source=localhost\sqlexpress;Initial Catalog=VoronTests;Integrated Security=true";
         }
 
         public override string StorageName { get { return "SQL Server"; } }
@@ -50,55 +50,80 @@ namespace Performance.Comparison.SQLServer
                          Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
         }
 
+        public override List<PerformanceRecord> WriteParallelSequential(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            return WriteParallel(string.Format("[SQL Server] parallel sequential write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
+        }
+
         public override List<PerformanceRecord> WriteRandom(IEnumerable<TestData> data, PerfTracker perfTracker)
         {
             return Write(string.Format("[SQL Server] random write ({0} items)", Constants.ItemsPerTransaction), data,
                          Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker);
         }
 
+        public override List<PerformanceRecord> WriteParallelRandom(IEnumerable<TestData> data, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            return WriteParallel(string.Format("[SQL Server] parallel random write ({0} items)", Constants.ItemsPerTransaction), data,
+                         Constants.ItemsPerTransaction, Constants.WriteTransactions, perfTracker, numberOfThreads, out elapsedMilliseconds);
+        }
+
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return Read(string.Format("[SQL Server] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
         public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x);
 
             return ReadParallel(string.Format("[SQL Server] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker, numberOfThreads);
         }
 
-        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker)
+        public override PerformanceRecord ReadRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker)
         {
             return Read(string.Format("[SQL Server] random read ({0} items)", Constants.ReadItems), randomIds, perfTracker);
         }
 
-        public override PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads)
+        public override PerformanceRecord ReadParallelRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker, int numberOfThreads)
         {
             return ReadParallel(string.Format("[SQL Server] parallel random read ({0} items)", Constants.ReadItems), randomIds, perfTracker, numberOfThreads);
         }
 
         private List<PerformanceRecord> Write(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker)
         {
-            byte[] valueToWrite = null;
-
             NewDatabase();
 
-            var random = new Random();
-            var value = new byte[data.Max(x => x.ValueSize)];
-            random.NextBytes(value);
+            var enumerator = data.GetEnumerator();
 
-            var records = new List<PerformanceRecord>();
+            return WriteInternal(operation, enumerator, itemsPerTransaction, numberOfTransactions, perfTracker);
+        }
 
+        private List<PerformanceRecord> WriteParallel(string operation, IEnumerable<TestData> data, int itemsPerTransaction, int numberOfTransactions, PerfTracker perfTracker, int numberOfThreads, out long elapsedMilliseconds)
+        {
+            NewDatabase();
+
+            return ExecuteWriteWithParallel(
+                data,
+                numberOfTransactions,
+                itemsPerTransaction,
+                numberOfThreads,
+                (enumerator, itmsPerTransaction, nmbrOfTransactions) => WriteInternal(operation, enumerator, itmsPerTransaction, nmbrOfTransactions, perfTracker),
+                out elapsedMilliseconds);
+        }
+
+        private List<PerformanceRecord> WriteInternal(string operation, IEnumerator<TestData> enumerator, long itemsPerTransaction, long numberOfTransactions, PerfTracker perfTracker)
+        {
             var sw = new Stopwatch();
+            byte[] valueToWrite = null;
+            var records = new List<PerformanceRecord>();
 
             using (var connection = new SqlConnection(connectionString))
             {
                 connection.Open();
 
-                var enumerator = data.GetEnumerator();
                 sw.Restart();
                 for (var transactions = 0; transactions < numberOfTransactions; transactions++)
                 {
@@ -118,22 +143,23 @@ namespace Performance.Comparison.SQLServer
                                 command.Parameters.Add("@value", SqlDbType.Binary, valueToWrite.Length).Value = valueToWrite;
 
                                 var affectedRows = command.ExecuteNonQuery();
-                                perfTracker.Increment();
                                 Debug.Assert(affectedRows == 1);
                             }
                         }
 
                         tx.Commit();
+                        perfTracker.Record(sw.ElapsedMilliseconds);
                     }
+
                     sw.Stop();
 
                     records.Add(new PerformanceRecord
-                    {
-                        Operation = operation,
-                        Time = DateTime.Now,
-                        Duration = sw.ElapsedMilliseconds,
-                        ProcessedItems = itemsPerTransaction
-                    });
+                                    {
+                                        Operation = operation,
+                                        Time = DateTime.Now,
+                                        Duration = sw.ElapsedMilliseconds,
+                                        ProcessedItems = itemsPerTransaction
+                                    });
                 }
 
                 sw.Stop();
@@ -142,7 +168,7 @@ namespace Performance.Comparison.SQLServer
             return records;
         }
 
-        private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
+        private PerformanceRecord Read(string operation, IEnumerable<uint> ids, PerfTracker perfTracker)
         {
             var sw = Stopwatch.StartNew();
 
@@ -160,36 +186,12 @@ namespace Performance.Comparison.SQLServer
 
         }
 
-        private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker, int numberOfThreads)
+        private PerformanceRecord ReadParallel(string operation, IEnumerable<uint> ids, PerfTracker perfTracker, int numberOfThreads)
         {
-            var countdownEvent = new CountdownEvent(numberOfThreads);
-
-            var sw = Stopwatch.StartNew();
-
-            for (int i = 0; i < numberOfThreads; i++)
-            {
-                ThreadPool.QueueUserWorkItem(
-                    state =>
-                    {
-                        ReadInternal(ids, perfTracker, connectionString);
-
-                        countdownEvent.Signal();
-                    });
-            }
-
-            countdownEvent.Wait();
-            sw.Stop();
-
-            return new PerformanceRecord
-            {
-                Operation = operation,
-                Time = DateTime.Now,
-                Duration = sw.ElapsedMilliseconds,
-                ProcessedItems = ids.Count() * numberOfThreads
-            };
+            return ExecuteReadWithParallel(operation, ids, numberOfThreads, () => ReadInternal(ids, perfTracker, connectionString));
         }
 
-        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, string connectionString)
+        private static long ReadInternal(IEnumerable<uint> ids, PerfTracker perfTracker, string connectionString)
         {
             using (var connection = new SqlConnection(connectionString))
             {
@@ -199,6 +201,8 @@ namespace Performance.Comparison.SQLServer
 
                 using (var tx = connection.BeginTransaction())
                 {
+                    long v = 0;
+                    var sw = Stopwatch.StartNew();
                     foreach (var id in ids)
                     {
                         using (var command = new SqlCommand("SELECT Value FROM Items WHERE ID = " + id, connection))
@@ -214,12 +218,14 @@ namespace Performance.Comparison.SQLServer
                                     while ((bytesRead = reader.GetBytes(0, fieldOffset, buffer, 0, buffer.Length)) > 0)
                                     {
                                         fieldOffset += bytesRead;
+                                        v += bytesRead;
                                     }
-                                    perfTracker.Increment();
                                 }
                             }
                         }
                     }
+                    perfTracker.Record(sw.ElapsedMilliseconds);
+                    return v;
                 }
             }
         }

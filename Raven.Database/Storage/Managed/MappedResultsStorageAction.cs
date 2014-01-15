@@ -130,7 +130,7 @@ namespace Raven.Storage.Managed
 			});
 		}
 
-		public ScheduledReductionInfo DeleteScheduledReduction(List<object> itemsToDelete)
+		public ScheduledReductionInfo DeleteScheduledReduction(IEnumerable<object> itemsToDelete)
 		{
 			var result = new ScheduledReductionInfo();
 			var hasResult = false;

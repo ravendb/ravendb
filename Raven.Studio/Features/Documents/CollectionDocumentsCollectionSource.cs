@@ -46,7 +46,7 @@ namespace Raven.Studio.Features.Documents
         {
 			if (CollectionName == "0")
 			{
-				return ApplicationModel.DatabaseCommands.StartsWithAsync("Raven/", start, 1024)
+				return ApplicationModel.DatabaseCommands.StartsWithAsync("Raven/", null, start, 1024)
 					.ContinueWith(t =>
 					{
 						var docs = (IList<ViewableDocument>)t.Result.Select(x => new ViewableDocument(x)).ToArray();

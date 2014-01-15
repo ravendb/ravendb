@@ -5,6 +5,7 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.ravendb.abstractions.data.Constants;
 import net.ravendb.abstractions.data.MultiLoadResult;
 import net.ravendb.abstractions.json.linq.RavenJArray;
 import net.ravendb.abstractions.json.linq.RavenJObject;
@@ -16,12 +17,12 @@ import net.ravendb.client.document.DocumentSession;
 public class LoadTransformerOperation {
   private DocumentSession documentSession;
   private final String transformer;
-  private int count;
+  private String[] ids;
 
-  public LoadTransformerOperation(DocumentSession documentSession, String transformer, int count) {
+  public LoadTransformerOperation(DocumentSession documentSession, String transformer, String[] ids) {
     this.documentSession = documentSession;
     this.transformer = transformer;
-    this.count = count;
+    this.ids = ids;
   }
 
   @SuppressWarnings("unchecked")
@@ -41,6 +42,7 @@ public class LoadTransformerOperation {
           List<RavenJObject> values = result.value(RavenJArray.class, "$values").values(RavenJObject.class);
           List<Object> innerTypes = new ArrayList<>();
           for (RavenJObject value: values) {
+            ensureNotReadVetoed(value);
             innerTypes.add(documentSession.getConventions().createSerializer().readValue(value.toString(), innerType));
           }
           Object[] innerArray = (Object[]) Array.newInstance(innerType, innerTypes.size());
@@ -56,26 +58,40 @@ public class LoadTransformerOperation {
       }
 
     } else {
-      List<RavenJObject> results = multiLoadResult.getResults();
+      List<T> items = parseResults(clazz, multiLoadResult.getResults());
 
-      List<T> items = new ArrayList<>();
-
-      try {
-        for (RavenJObject object : results) {
-          for (RavenJToken token : object.value(RavenJArray.class, "$values")) {
-            items.add(documentSession.getConventions().createSerializer().readValue(token.toString(), clazz));
-          }
-        }
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-
-      if (items.size() > count) {
+      if (items.size() > ids.length) {
         throw new IllegalStateException(String.format("A load was attempted with transformer %s, and more " +
             "than one item was returned per entity - please use %s[] as the projection type instead of %s",
             transformer, clazz.getSimpleName(), clazz.getSimpleName()));
       }
       return (T[]) items.toArray();
     }
+  }
+
+  private <T> List<T> parseResults(Class<T> clazz, List<RavenJObject> results) {
+
+
+    List<T> items = new ArrayList<>();
+    try {
+      for (RavenJObject object : results) {
+        ensureNotReadVetoed(object);
+        for (RavenJToken token : object.value(RavenJArray.class, "$values")) {
+          items.add(documentSession.getConventions().createSerializer().readValue(token.toString(), clazz));
+        }
+      }
+
+      return items;
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private boolean ensureNotReadVetoed(RavenJObject result) {
+    RavenJObject metadata = result.value(RavenJObject.class, Constants.METADATA);
+    if (metadata != null) {
+      documentSession.ensureNotReadVetoed(metadata); //this will throw on read veto
+    }
+    return true;
   }
 }

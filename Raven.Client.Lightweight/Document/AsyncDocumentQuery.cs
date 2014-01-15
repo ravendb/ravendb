@@ -158,7 +158,7 @@ namespace Raven.Client.Document
 		}
 
 		/// <summary>
-		/// 	Matches exact value
+		/// Matches exact value
 		/// </summary>
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(WhereParams whereParams)
 		{
@@ -712,6 +712,7 @@ namespace Raven.Client.Document
 											cutoffEtag = cutoffEtag,
 											queryStats = queryStats,
 											theWaitForNonStaleResults = theWaitForNonStaleResults,
+                                            theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
 											sortByHints = sortByHints,
 											orderByFields = orderByFields,
 											isDistinct = isDistinct,
@@ -871,6 +872,42 @@ namespace Raven.Client.Document
 		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Intersect()
 		{
 			Intersect();
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ContainsAny(string fieldName, IEnumerable<object> values)
+		{
+			ContainsAny(fieldName, values);
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ANY of the provided values against the given field (OR)
+		/// </summary>
+		public IAsyncDocumentQuery<T> ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+		{
+			ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ContainsAll(string fieldName, IEnumerable<object> values)
+		{
+			ContainsAll(fieldName, values);
+			return this;
+		}
+
+		/// <summary>
+		/// Performs a query matching ALL of the provided values against the given field (AND)
+		/// </summary>
+		public IAsyncDocumentQuery<T> ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+		{
+			ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
 			return this;
 		}
 

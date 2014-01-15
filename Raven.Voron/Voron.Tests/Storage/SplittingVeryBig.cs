@@ -1,4 +1,7 @@
-﻿namespace Voron.Tests.Storage
+﻿using Voron.Impl;
+using Voron.Impl.Paging;
+
+namespace Voron.Tests.Storage
 {
 	using System;
 	using System.IO;
@@ -9,7 +12,7 @@
 	{
 		protected override void Configure(StorageEnvironmentOptions options)
 		{
-			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
 		}
 
 		[Fact]
@@ -33,14 +36,12 @@
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				var read = tx.GetTree("tree").Read(tx, "key1");
-				Assert.NotNull(read);
+			    var read = tx.GetTree("tree").Read(tx, "key1");
+			    Assert.NotNull(read);
 
-				using (var reader = new BinaryReader(read.Stream))
-				{
-					Assert.Equal(buffer.Length, read.Stream.Length);
-					Assert.Equal(buffer, reader.ReadBytes((int)read.Stream.Length));
-				}
+			    var reader = read.Reader;
+			    Assert.Equal(buffer.Length, read.Reader.Length);
+			    Assert.Equal(buffer, reader.ReadBytes(read.Reader.Length));
 			}
 		}
 
@@ -54,7 +55,7 @@
 			random.NextBytes(buffer);
 
 			var options = StorageEnvironmentOptions.ForPath("test2.data");
-			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
 
 			using (var env = new StorageEnvironment(options))
 			{
@@ -72,7 +73,7 @@
 			}
 
 			options = StorageEnvironmentOptions.ForPath("test2.data");
-			options.MaxLogFileSize = 10 * options.DataPager.PageSize;
+			options.MaxLogFileSize = 10 * AbstractPager.PageSize;
 
 			using (var env = new StorageEnvironment(options))
 			{
@@ -87,10 +88,9 @@
 					var read = tx.GetTree("tree").Read(tx, "key1");
 					Assert.NotNull(read);
 
-					using (var reader = new BinaryReader(read.Stream))
 					{
-						Assert.Equal(buffer.Length, read.Stream.Length);
-						Assert.Equal(buffer, reader.ReadBytes((int)read.Stream.Length));
+						Assert.Equal(buffer.Length, read.Reader.Length);
+						Assert.Equal(buffer, read.Reader.ReadBytes(read.Reader.Length));
 					}
 				}
 			}

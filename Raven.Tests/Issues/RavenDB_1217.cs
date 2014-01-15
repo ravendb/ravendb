@@ -4,7 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using System.Net;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Xunit;
@@ -19,9 +21,15 @@ namespace Raven.Tests.Issues
 			using (var documentStore = new DocumentStore { ConnectionStringName = "FailoverServers" })
 			{
 				Assert.NotNull(documentStore.FailoverServers);
-				Assert.Equal("http://localhost:8078", documentStore.FailoverServers.ForDefaultDatabase[0]);
-				Assert.Equal("http://localhost:8077/databases/test", documentStore.FailoverServers.ForDefaultDatabase[1]);
-				Assert.Equal("http://localhost:8076", documentStore.FailoverServers.GetForDatabase("Northwind")[0]);
+				Assert.Equal("http://localhost:8078", documentStore.FailoverServers.ForDefaultDatabase[0].Url);
+				Assert.Equal("http://localhost:8077", documentStore.FailoverServers.ForDefaultDatabase[1].Url);
+				Assert.Equal("test", documentStore.FailoverServers.ForDefaultDatabase[1].Database);
+				Assert.Equal("http://localhost:8076", documentStore.FailoverServers.GetForDatabase("Northwind")[0].Url);
+				Assert.Equal("http://localhost:8075", documentStore.FailoverServers.ForDefaultDatabase[2].Url);
+				Assert.Equal("user", documentStore.FailoverServers.ForDefaultDatabase[2].Username);
+				Assert.Equal("secret", documentStore.FailoverServers.ForDefaultDatabase[2].Password);
+				Assert.Equal("http://localhost:8074", documentStore.FailoverServers.ForDefaultDatabase[3].Url);
+				Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", documentStore.FailoverServers.ForDefaultDatabase[3].ApiKey);
 			}
 		}
 
@@ -36,9 +44,14 @@ namespace Raven.Tests.Issues
 				serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
 				var servers = serverClient.ReplicationInformer.ReplicationDestinations; 
 
-				Assert.Equal(2, servers.Count);
+				Assert.Equal(4, servers.Count);
 				Assert.Equal("http://localhost:8078", servers[0].Url);
-				Assert.Equal("http://localhost:8077/databases/test", servers[1].Url);
+				Assert.Equal("http://localhost:8077/databases/test/", servers[1].Url);
+				Assert.Equal("http://localhost:8075", servers[2].Url);
+				Assert.Equal("user", (servers[2].Credentials.Credentials as NetworkCredential).UserName);
+				Assert.Equal("secret", (servers[2].Credentials.Credentials as NetworkCredential).Password);
+				Assert.Equal("http://localhost:8074", servers[3].Url);
+				Assert.Equal("d5723e19-92ad-4531-adad-8611e6e05c8a", servers[3].Credentials.ApiKey);
 
 				// for Northwind database configured in App.config
 				serverClient = (ServerClient) store.DatabaseCommands.ForDatabase("Northwind");
@@ -61,12 +74,16 @@ namespace Raven.Tests.Issues
 				{
 					ForDefaultDatabase = new[]
 					{
-						"http://localhost:8078",
-						"http://localhost:8077/databases/test"
+						new ReplicationDestination { Url = "http://localhost:8078", ApiKey = "apikey"},
+						new ReplicationDestination { Url = "http://localhost:8077/", Database = "test", Username = "user", Password = "secret"}
 					},
-					ForDatabases = new Dictionary<string, string[]>
+					ForDatabases = new Dictionary<string, ReplicationDestination[]>
 					{
-						{"Northwind", new [] {"http://localhost:8076"}}
+						{"Northwind", new []
+										{
+											new ReplicationDestination { Url = "http://localhost:8076"}
+										}
+						}
 					}
 				}
 			}.Initialize())
@@ -79,7 +96,10 @@ namespace Raven.Tests.Issues
 
 				Assert.Equal(2, servers.Count);
 				Assert.Equal("http://localhost:8078", servers[0].Url);
-				Assert.Equal("http://localhost:8077/databases/test", servers[1].Url);
+				Assert.Equal("apikey", servers[0].Credentials.ApiKey);
+				Assert.Equal("http://localhost:8077/databases/test/", servers[1].Url);
+				Assert.Equal("user", (servers[1].Credentials.Credentials as NetworkCredential).UserName);
+				Assert.Equal("secret", (servers[1].Credentials.Credentials as NetworkCredential).Password);
 
 				// for Northwind database
 				serverClient = (ServerClient)store.DatabaseCommands.ForDatabase("Northwind");

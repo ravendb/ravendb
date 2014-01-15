@@ -7,13 +7,14 @@ using Raven.Database.Server.Connections;
 namespace Raven.Database.Server.Controllers
 {
 	[RoutePrefix("")]
-	public class ChangesController : RavenApiController
+	public class ChangesController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("changes/config")]
 		[Route("databases/{databaseName}/changes/config")]
-		public HttpResponseMessage ChangeConfigGet()
+		public HttpResponseMessage GetChangeConfig()
 		{
+			var value = GetQueryStringValue("value");
 			var id = GetQueryStringValue("id");
 			if (string.IsNullOrEmpty(id))
 			{
@@ -102,6 +103,46 @@ namespace Raven.Database.Server.Controllers
 			{
 				connectionState.UnwatchBulkInsert(name);
 			}
+			else if (Match(cmd, "watch-conflicts"))
+			{
+				connectionState.WatchConflicts();
+			}
+			else if (Match(cmd, "unwatch-conflicts"))
+			{
+				connectionState.UnwatchConflicts();
+			}
+			else if (Match(cmd, "watch-sync"))
+			{
+				connectionState.WatchSync();
+			}
+			else if (Match(cmd, "unwatch-sync"))
+			{
+				connectionState.UnwatchSync();
+			}
+			else if (Match(cmd, "watch-folder"))
+			{
+				connectionState.WatchFolder(value);
+			}
+			else if (Match(cmd, "unwatch-folder"))
+			{
+				connectionState.UnwatchFolder(value);
+			}
+			else if (Match(cmd, "watch-cancellations"))
+			{
+				connectionState.WatchCancellations();
+			}
+			else if (Match(cmd, "unwatch-cancellations"))
+			{
+				connectionState.UnwatchCancellations();
+			}
+			else if (Match(cmd, "watch-config"))
+			{
+				connectionState.WatchConfig();
+			}
+			else if (Match(cmd, "unwatch-config"))
+			{
+				connectionState.UnwatchConfig();
+			}
 			else
 			{
 				return GetMessageWithObject(new
@@ -116,7 +157,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet]
 		[Route("changes/events")]
 		[Route("databases/{databaseName}/changes/events")]
-		public HttpResponseMessage ChangesEvents()
+		public HttpResponseMessage GetChangesEvents()
 		{
 			var eventsTransport = new ChangesPushContent(this);
 			Database.TransportState.Register(eventsTransport);

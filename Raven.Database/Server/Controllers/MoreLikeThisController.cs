@@ -8,7 +8,7 @@ using Raven.Database.Queries;
 
 namespace Raven.Database.Server.Controllers
 {
-	public class MoreLikeThisController : RavenApiController
+	public class MoreLikeThisController : RavenDbApiController
 	{
 		[HttpGet]
 		[Route("morelikethis/{*id}")]

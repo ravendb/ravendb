@@ -6,7 +6,7 @@ using System.Web.Http.Controllers;
 
 namespace Raven.Database.Server.Controllers
 {
-	public abstract class BundlesApiController : RavenApiController
+	public abstract class BundlesApiController : RavenDbApiController
 	{
 		public abstract string BundleName { get; }
 

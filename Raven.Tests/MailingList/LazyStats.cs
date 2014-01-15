@@ -25,13 +25,16 @@ namespace Raven.Tests.MailingList
 					});
 					session.SaveChanges();
 				}
+
 				using (var session = store.OpenSession())
 				{
 					session.Query<User>()
 						.Customize(x => x.WaitForNonStaleResults())
 						.Take(15).ToList();
-					RavenQueryStatistics stats;
 
+					Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+					RavenQueryStatistics stats;
 					var query = session.Query<User>().Statistics(out stats)
 						.Customize(x => x.WaitForNonStaleResults())
 						.Where(x => x.FirstName == "Ayende");
@@ -41,7 +44,7 @@ namespace Raven.Tests.MailingList
 					var enumerable = results.Value; //force evaluation
 					Assert.Equal(1, enumerable.Count());
 					Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
-					Assert.True(stats.TotalResults > 0);
+					Assert.Equal(1, stats.TotalResults);
 				}
 			}
 		}
@@ -60,13 +63,16 @@ namespace Raven.Tests.MailingList
 					});
 					session.SaveChanges();
 				}
+
 				using (var session = store.OpenSession())
 				{
 					session.Query<User>()
 						.Customize(x => x.WaitForNonStaleResults())
 						.Take(15).ToList();
-					RavenQueryStatistics stats;
 
+					Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+					RavenQueryStatistics stats;
 					var query = session.Query<User>().Statistics(out stats)
 						.Customize(x => x.WaitForNonStaleResults())
 						.Where(x => x.FirstName == "Ayende");
@@ -76,11 +82,10 @@ namespace Raven.Tests.MailingList
 					var enumerable = results.Value; //force evaluation
 					Assert.Equal(1, enumerable.Count());
 					Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
-					Assert.True(stats.TotalResults > 0);
+					Assert.Equal(1, stats.TotalResults);
 				}
 			}
 		}
-
 
 		[Fact]
 		public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex_NonLazy()
@@ -116,7 +121,6 @@ namespace Raven.Tests.MailingList
 				}
 			}
 		}
-
 
 		[Fact]
 		public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstStaticIndex()
@@ -190,8 +194,6 @@ namespace Raven.Tests.MailingList
 				}
 			}
 		}
-
-		
 	}
 
 	public class User

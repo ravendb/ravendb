@@ -24,7 +24,7 @@ namespace Raven.Studio.Features.Tasks
 
 		public SmugglerTaskSectionModel()
 		{
-			Options = new Observable<SmugglerOptions> {Value = new SmugglerOptions()};
+			Options = new Observable<SmugglerOptions>();
 			Filters = new ObservableCollection<InternalFilterSetting>();
 			IncludeDocuments = new Observable<bool> {Value = true};
 			IncludeIndexes = new Observable<bool> {Value = true};
