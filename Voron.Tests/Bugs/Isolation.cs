@@ -9,7 +9,7 @@
         [Fact]
         public void ScratchPagesShouldNotBeReleasedUntilNotUsed()
         {
-            var directory = "Test";
+            var directory = "Test2";
 
             if (Directory.Exists(directory))
                 Directory.Delete(directory, true);
