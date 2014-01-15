@@ -285,6 +285,7 @@
     <Compile Include="Issues\RavenDB_1497.cs" />
     <Compile Include="Issues\RavenDB_1520.cs" />
     <Compile Include="Issues\RavenDB_1539.cs" />
+    <Compile Include="Issues\RavenDB_1561.cs" />
     <Compile Include="Issues\RavenDB_1560.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
@@ -1615,6 +1616,7 @@
     </None>
     <None Include="App.config">
       <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <EmbeddedResource Include="DefaultLogging.config" />
     <EmbeddedResource Include="MailingList\MapReduceIssue\MvcMusicStore_Dump.json" />

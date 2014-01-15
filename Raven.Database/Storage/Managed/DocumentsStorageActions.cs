@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -116,7 +117,8 @@ namespace Raven.Storage.Managed
 				.Skip(start)
 				.TakeWhile(x => x.Value<string>("key").StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase))
 				.Select(result => DocumentByKey(result.Value<string>("key"), null))
-				.Take(take);
+				.Take(take)
+				.Where(result => result != null); //filter DocumentByKeyInternal() null results
 		}
 
 		public long GetDocumentsCount()
@@ -297,7 +299,7 @@ namespace Raven.Storage.Managed
 			var isUpdate = readResult != null;
 
 			if (isUpdate && checkForUpdates == false)
-				throw new ConcurrencyException("Cannot insert document " + key + " because it already exists");
+				throw new ConcurrencyException("Illegal duplicate key " + key);
 
 			Etag existingEtag = null;
 			if(isUpdate)

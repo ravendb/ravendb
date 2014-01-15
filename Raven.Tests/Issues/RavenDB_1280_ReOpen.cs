@@ -4,11 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bugs
 {
@@ -20,12 +22,14 @@ namespace Raven.Tests.Bugs
             configuration.MaxNumberOfItemsToReduceInSingleBatch = 50;
         }
 
-        [Fact]
-        public void Can_Index_With_Missing_LoadDocument_References()
+        [Theory]
+		[InlineData("voron")]
+		[InlineData("esent")]
+		public void Can_Index_With_Missing_LoadDocument_References(string storageTypeName)
         {
             const int iterations = 8000;
 
-            using (var store = NewRemoteDocumentStore())
+			using (var store = NewRemoteDocumentStore(requestedStorage: storageTypeName))
             {
                 new EmailIndex().Execute(store);
 
@@ -39,7 +43,7 @@ namespace Raven.Tests.Bugs
                 });
                 
                 // Test that the indexing can complete, without being in an infinite indexing run due to touches to documents increasing the etag.
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
+                WaitForIndexing(store, timeout: Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(45));
             }
         }
 

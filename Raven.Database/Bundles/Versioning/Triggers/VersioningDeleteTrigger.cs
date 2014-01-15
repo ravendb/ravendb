@@ -7,7 +7,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Diagnostics;
 using System.Threading;
+using Microsoft.VisualBasic.Logging;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Versioning.Data;
 using Raven.Database.Plugins;
@@ -56,6 +58,7 @@ namespace Raven.Bundles.Versioning.Triggers
 		{
 			var versioningConfig = Database.GetDocumentVersioningConfiguration(versionInformer.Value[key]);
 	
+			
 			if (versioningConfig == null || !versioningConfig.PurgeOnDelete)
 				return;
 
@@ -67,10 +70,10 @@ namespace Raven.Bundles.Versioning.Triggers
 					if (revisionChildren.Count == 0)
 						break;
 
+					Debug.Assert(revisionChildren.All(rev => rev != null),"One ore more revision records are null. This should not be happening");
+
 					foreach (var revisionChild in revisionChildren)
-					{
 						Database.Delete(revisionChild.Key, null, transactionInformation);
-					}
 				}
 			});
 		}
