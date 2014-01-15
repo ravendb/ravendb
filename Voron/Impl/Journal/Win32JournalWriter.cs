@@ -170,6 +170,7 @@ namespace Voron.Impl.Journal
 		public bool Disposed { get; private set; }
 
 		[DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAsAttribute(UnmanagedType.Bool)]
 		private static extern bool WriteFileGather(
 			SafeFileHandle hFile,
 			FileSegmentElement* aSegmentArray,
