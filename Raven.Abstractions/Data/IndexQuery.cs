@@ -97,6 +97,11 @@ namespace Raven.Abstractions.Data
 		/// <value>The cutoff.</value>
 		public DateTime? Cutoff { get; set; }
 
+        /// <summary>
+        /// Get or sets the WaitForNonStaleResultsAsOfNow
+        /// </summary>
+        public bool WaitForNonStaleResultsAsOfNow { get; set; }
+
 		/// <summary>
 		/// Gets or sets the cutoff etag
 		/// </summary>
@@ -264,6 +269,10 @@ namespace Raven.Abstractions.Data
 			{
 				path.Append("&cutOffEtag=").Append(CutoffEtag);
 			}
+            if (WaitForNonStaleResultsAsOfNow)
+            {
+                path.Append("&waitForNonStaleResultsAsOfNow=true");
+            }
 
 		    HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
             HighlighterPreTags.ApplyIfNotNull(tag=>path.Append("&preTags=").Append(tag));
@@ -329,6 +338,7 @@ namespace Raven.Abstractions.Data
                    Equals(FieldsToFetch, other.FieldsToFetch) && 
                    Equals(SortedFields, other.SortedFields) && 
                    Cutoff.Equals(other.Cutoff) && 
+                   WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
                    Equals(CutoffEtag, other.CutoffEtag) && 
                    String.Equals(DefaultField, other.DefaultField) && 
                    DefaultOperator == other.DefaultOperator && 
@@ -362,6 +372,7 @@ namespace Raven.Abstractions.Data
                 hashCode = (hashCode * 397) ^ (FieldsToFetch != null ? FieldsToFetch.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (SortedFields != null ? SortedFields.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ Cutoff.GetHashCode();
+                hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
                 hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (DefaultField != null ? DefaultField.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (int)DefaultOperator;

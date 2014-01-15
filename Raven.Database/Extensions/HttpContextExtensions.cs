@@ -100,6 +100,7 @@ namespace Raven.Database.Extensions
 				SkipTransformResults = context.GetSkipTransformResults(),
 				FieldsToFetch = context.Request.QueryString.GetValues("fetch"),
 				DefaultField = context.Request.QueryString["defaultField"],
+                WaitForNonStaleResultsAsOfNow = context.GetWaitForNonStaleResultsAsOfNow(),
 
 				DefaultOperator =
 					string.Equals(context.Request.QueryString["operator"], "AND", StringComparison.OrdinalIgnoreCase) ?

@@ -133,6 +133,7 @@ namespace Raven.Client.Document
 				cutoffEtag = cutoffEtag,
 				queryStats = queryStats,
 				theWaitForNonStaleResults = theWaitForNonStaleResults,
+                theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
 				sortByHints = sortByHints,
 				orderByFields = orderByFields,
 				isDistinct = isDistinct,
@@ -869,7 +870,7 @@ namespace Raven.Client.Document
 			this.SetHighlighterTags(preTags, postTags);
 			return this;
 		}
-
+        
 		/// <summary>
 		/// Instructs the query to wait for non stale results as of now.
 		/// </summary>

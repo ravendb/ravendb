@@ -165,6 +165,10 @@ namespace Raven.Client.Document
 		/// Should we wait for non stale results
 		/// </summary>
 		protected bool theWaitForNonStaleResults;
+        /// <summary>
+        /// Should we wait for non stale results as of now?
+        /// </summary>
+	    protected bool theWaitForNonStaleResultsAsOfNow;
 		/// <summary>
 		/// The paths to include when loading the query
 		/// </summary>
@@ -350,6 +354,7 @@ namespace Raven.Client.Document
 			start = other.start;
 			timeout = other.timeout;
 			theWaitForNonStaleResults = other.theWaitForNonStaleResults;
+		    theWaitForNonStaleResultsAsOfNow = other.theWaitForNonStaleResultsAsOfNow;
 			includes = other.includes;
 			queryListeners = other.queryListeners;
 			queryStats = other.queryStats;
@@ -1509,6 +1514,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public void WaitForNonStaleResultsAsOfNow()
 		{
 			theWaitForNonStaleResults = true;
+		    theWaitForNonStaleResultsAsOfNow = true;
 			cutoff = SystemTime.UtcNow;
 			timeout = DefaultTimeout;
 		}
@@ -1610,6 +1616,7 @@ If you really want to do in memory filtering on the data returned from the query
 		public void WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
 		{
 			theWaitForNonStaleResults = true;
+		    theWaitForNonStaleResultsAsOfNow = true;
 			cutoff = SystemTime.UtcNow;
 			timeout = waitTimeout;
 		}
@@ -1755,6 +1762,7 @@ If you really want to do in memory filtering on the data returned from the query
 					PageSize = pageSize ?? 128,
 					Start = start,
 					Cutoff = cutoff,
+                    WaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
 					CutoffEtag = cutoffEtag,
 					SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 					FieldsToFetch = fieldsToFetch,
@@ -1782,6 +1790,7 @@ If you really want to do in memory filtering on the data returned from the query
 				Start = start,
 				Cutoff = cutoff,
 				CutoffEtag = cutoffEtag,
+                WaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow,
 				SortedFields = orderByFields.Select(x => new SortedField(x)).ToArray(),
 				FieldsToFetch = fieldsToFetch,
 				DefaultField = defaultField,

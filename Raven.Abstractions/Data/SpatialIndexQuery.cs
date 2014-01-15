@@ -49,6 +49,7 @@ namespace Raven.Abstractions.Data
 			Query = query.Query;
 			Start = query.Start;
 			Cutoff = query.Cutoff;
+	        WaitForNonStaleResultsAsOfNow = query.WaitForNonStaleResultsAsOfNow;
 			PageSize = query.PageSize;
 			FieldsToFetch = query.FieldsToFetch;
 			SortedFields = query.SortedFields;
