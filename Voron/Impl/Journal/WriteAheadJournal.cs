@@ -558,7 +558,7 @@ namespace Voron.Impl.Journal
 				}
 				foreach (var journalFile in unusedJournalFiles)
 				{
-                    journalFile.FreeScratchPagesOlderThan(txw, long.MaxValue);
+					journalFile.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId);
 				}
 			}
 
