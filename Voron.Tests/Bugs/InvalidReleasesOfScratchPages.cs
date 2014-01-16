@@ -46,11 +46,11 @@ namespace Voron.Tests.Bugs
 
 			var taskWorkTime = TimeSpan.FromSeconds(60);
 
+			var writeTime = Stopwatch.StartNew();
+
 			var writeParallelTask = Task.Factory.StartNew(
 				() =>
 				{
-					var writeTime = Stopwatch.StartNew();
-
 					Parallel.For(
 						0,
 						numberOfWriteThreads,
@@ -75,15 +75,15 @@ namespace Voron.Tests.Bugs
 				},
 				TaskCreationOptions.LongRunning);
 
+			var readTime = Stopwatch.StartNew();
 			readParallelTask = Task.Factory.StartNew(
 				() =>
 					{
-						return Parallel.For(
+						Parallel.For(
 							0,
 							numberOfReadThreads,
 							i =>
 								{
-									var readTime = Stopwatch.StartNew();
 									var random = new Random(i);
 
 									while (readTime.Elapsed < taskWorkTime)
