@@ -34,6 +34,7 @@ namespace Voron.Impl.Journal
             public long ScratchPos;
             public long JournalPos;
             public long TransactionId;
+	        public long JournalNumber;
         }
 
         public JournalFile(IJournalWriter journalWriter, long journalNumber)
@@ -175,7 +176,8 @@ namespace Voron.Impl.Journal
 			    {
 				    ScratchPos = txPage.PositionInScratchBuffer,
 				    JournalPos = -1, // needed only during recovery and calculated there
-				    TransactionId = tx.Id
+				    TransactionId = tx.Id,
+					JournalNumber = Number
 			    };
 		    }
 	    }

@@ -379,7 +379,7 @@ namespace Voron.Impl.Journal
 
 					Debug.Assert(jrnls.First().Number >= _lastSyncedJournal);
 
-					var pagesToWrite = new Dictionary<long, long>();
+					var pagesToWrite = new Dictionary<long, JournalFile.PagePosition>();
 
 					long lastProcessedJournal = -1;
 					long previousJournalMaxTransactionId = -1;
@@ -398,7 +398,17 @@ namespace Voron.Impl.Journal
 								// we cannot write this yet, there is a read transaction that might be looking at this
 								// however, we _aren't_ going to be writing this to the data file, since that would be a 
 								// waste, we would just overwrite that value in the next flush anyway
-								pagesToWrite.Remove(pagePosition.Key);
+								JournalFile.PagePosition existingPagePosition;
+								if (pagesToWrite.TryGetValue(pagePosition.Key, out existingPagePosition) &&
+								    pagePosition.Value.JournalNumber == existingPagePosition.JournalNumber) 
+								{
+									// remove the page only when it comes from the same journal
+									// otherwise we can damage the journal's page translation table (PTT)
+									// because the existing overwrite in a next journal can be filtered out
+									// so we wouldn't write any page to the data file
+									pagesToWrite.Remove(pagePosition.Key);
+								}
+
 								continue;
 							}
 
@@ -416,7 +426,7 @@ namespace Voron.Impl.Journal
 
 
 							lastProcessedJournal = journalFile.Number;
-							pagesToWrite[pagePosition.Key] = pagePosition.Value.ScratchPos;
+							pagesToWrite[pagePosition.Key] = pagePosition.Value;
 
 							lastFlushedTransactionId = currentJournalMaxTransactionId;
 						}
@@ -495,7 +505,9 @@ namespace Voron.Impl.Journal
 				}
 			}
 
-			private void ApplyPagesToDataFileFromScratch(Dictionary<long, long> pagesToWrite, Transaction transaction, bool alreadyInWriteTx)
+			public Dictionary<long, int> writtenPages = new Dictionary<long, int>(); 
+
+			private void ApplyPagesToDataFileFromScratch(Dictionary<long, JournalFile.PagePosition> pagesToWrite, Transaction transaction, bool alreadyInWriteTx)
 			{
 				var scratchBufferPool = _waj._env.ScratchBufferPool;
 				var scratchPagerState = scratchBufferPool.PagerState;
@@ -504,7 +516,7 @@ namespace Voron.Impl.Journal
 				try
 				{
 					var sortedPages = pagesToWrite.OrderBy(x => x.Key)
-													.Select(x => scratchBufferPool.ReadPage(x.Value, scratchPagerState))
+													.Select(x => scratchBufferPool.ReadPage(x.Value.ScratchPos, scratchPagerState))
 													.ToList();
 
 					var last = sortedPages.Last();
