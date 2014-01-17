@@ -112,13 +112,33 @@
                             </div>
                             <div class="panel-body">
                                 <div class="col-md-6">
-                                    <label class="control-label col-md-5">Storage</label>
-                                    <div class="col-md-7">
+                                    <label class="control-label col-md-3">Storage</label>
+                                    <div class="col-md-9">
                                         <select class="form-control" data-bind="options: ['Yes', 'No'], value: stores"></select>
+                                    </div>
+                                    <label class="control-label col-md-3">Sort</label>
+                                    <div class="col-md-9">
+                                        <select class="form-control" data-bind="options: ['None', 'String', 'Int', 'Float', 'Long', 'Double', 'Short', 'Custom', 'Byte', 'StringVal'], value: sort"></select>
+                                    </div>
+                                    <label class="control-label col-md-3">Term Vector</label>
+                                    <div class="col-md-9">
+                                        <select class="form-control" data-bind="options: ['No', 'Yes', 'WithPositions', 'WithOffsets', 'WithPositionsAndOffsets'], value: termVector"></select>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-
+                                    <label class="control-label col-md-3">Indexing</label>
+                                    <div class="col-md-9">
+                                        <select class="form-control" data-bind="options: ['No', 'Analyzed', 'NotAnalyzed', 'Default'], value: indexing"></select>
+                                    </div>
+                                    <label class="control-label col-md-3" data-bind="visible: indexing() === 'Analyzed'">Analyzer</label>
+                                    <div class="col-md-9" data-bind="visible: indexing() === 'Analyzed'">
+                                        <input type="text" class="form-control" data-bind="value: analyzer, attr: { title: analyzer }" />
+                                    </div>
+                                    <label class="control-label col-md-3">Suggestion</label>
+                                    <div class="col-md-9">                                        
+                                        <select class="form-control" title="The suggestion distance algorithm" data-bind="options: ['None', 'Default', 'Levenshtein', 'JaroWinkler', 'NGram'], value: suggestionDistance"></select>
+                                        <input type="number" class="form-control" title="The suggestion accuracy" step="0.1" min="0.0" max="1.0" data-bind="value: suggestionAccuracy, visible: suggestionDistance() !== 'None'" />
+                                    </div>
                                 </div>
                             </div>
                         </div>

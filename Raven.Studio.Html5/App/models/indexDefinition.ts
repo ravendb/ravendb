@@ -44,24 +44,24 @@ class indexDefinition {
         this.luceneFields(this.parseFields());
     }
 
-    private parseFields() {
-        var luceneFields = this.fields().map<luceneField>(fieldName => {
-            return {
-                name: fieldName,
-                analyzer: this.analyzers ? this.analyzers[fieldName] : null,
-                indexing: this.indexes ? this.indexes[fieldName] : "Default",
-                sort: this.sortOptions ? this.sortOptions[fieldName] : "None",
-                stores: this.stores ? this.stores[fieldName] : "No",
-                suggestion: this.suggestions ? this.suggestions[fieldName] : "None",
-                termVector: this.termVectors ? this.termVectors[fieldName] : "No"
-            };
-        });
+    private parseFields(): luceneField[] {
+        var propOrDefault = <T>(obj: any, prop: string, defaultValue: T) => ko.observable<T>(!obj || !obj[prop] ? defaultValue : obj[prop]);
 
-        // If we have any field (besides name), then it's a Lucene field that will show up in the UI.
-        // Otherwise, it's just a field tracked by Raven.
-        return luceneFields.filter(f =>
-            f.analyzer != null || f.indexing != null || f.sort != null ||
-            f.stores != null || f.suggestion != null || f.termVector != null);
+        return this.fields()
+            .filter(name => this.analyzers[name] != null || this.indexes[name] != null || this.sortOptions[name] != null || this.stores[name] != null || this.suggestions[name] != null || this.termVectors[name] != null) // A field is configured and shows up in the index edit UI as a field when it appears in one of the aforementioned objects.
+            .map<luceneField>(fieldName => {
+                var suggestion = this.suggestions && this.suggestions[fieldName] ? this.suggestions[fieldName] : null;
+                return {
+                    name: ko.observable(fieldName),
+                    analyzer: propOrDefault<string>(this.analyzers, fieldName, null),
+                    indexing: propOrDefault<string>(this.indexes, fieldName, "Default"),
+                    sort: propOrDefault<string>(this.sortOptions, fieldName, "None"),
+                    stores: propOrDefault<string>(this.stores, fieldName, "No"),
+                    suggestionDistance: propOrDefault<string>(suggestion, 'Distance', 'None'),
+                    suggestionAccuracy: propOrDefault<number>(suggestion, 'Accuracy', 0.5),
+                    termVector: propOrDefault(this.termVectors, fieldName, "No")
+                };
+            });        
     }
 }
 

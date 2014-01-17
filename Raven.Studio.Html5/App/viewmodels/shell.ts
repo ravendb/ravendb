@@ -41,7 +41,7 @@ class shell {
 
     activate() {
         NProgress.set(.8);
-		router.map([
+        router.map([
 			{ route: ['', 'databases'],	    title: 'Databases',		moduleId: 'viewmodels/databases',		nav: false },
             { route: 'documents',		    title: 'Documents',		moduleId: 'viewmodels/documents',		nav: true,	hash: appUrl.forCurrentDatabase().documents },
 			{ route: 'indexes*details',		title: 'Indexes',		moduleId: 'viewmodels/indexes',			nav: true,  hash: appUrl.forCurrentDatabase().indexes },

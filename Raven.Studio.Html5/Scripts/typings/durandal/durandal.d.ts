@@ -1380,8 +1380,8 @@ interface DurandalNavigationOptions {
 interface DurandalRouteConfiguration {
     title?: string;
     moduleId?: string;
-    hash?: any; // Can be string or ko.observable<string>
-    route?: any; // Can be a string or an array of strings
+    hash?: any;
+    route?: any;
     routePattern?: RegExp;
     isActive?: KnockoutComputed<boolean>;
     nav:any;

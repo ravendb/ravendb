@@ -1,9 +1,10 @@
 interface luceneField {
-    name: string;
-    stores: string;
-    indexing: string;
-    sort: string;
-    analyzer: string;
-    suggestion: string;
-    termVector: string;
+    name: KnockoutObservable<string>;
+    stores: KnockoutObservable<string>;
+    indexing: KnockoutObservable<string>;
+    sort: KnockoutObservable<string>;
+    analyzer: KnockoutObservable<string>;
+    suggestionDistance: KnockoutObservable<string>;
+    suggestionAccuracy: KnockoutObservable<number>;
+    termVector: KnockoutObservable<string>;
 }
