@@ -311,6 +311,8 @@ namespace Voron.Impl.Journal
 				{
 					logFile.Dispose();
 				}
+
+				_journalApplicator.Dispose();
 			}
 			else
 			{
@@ -347,7 +349,7 @@ namespace Voron.Impl.Journal
 			CurrentFile = null;
 		}
 
-		public class JournalApplicator
+		public class JournalApplicator : IDisposable
 		{
 			private const long DelayedDataFileSynchronizationBytesLimit = 2L*1024*1024*1024;
 			private readonly TimeSpan DelayedDataFileSynchronizationTimeLimit = TimeSpan.FromMinutes(1);
@@ -631,6 +633,18 @@ namespace Voron.Impl.Journal
 
 						_waj._updateLogInfo(header);
 					});
+			}
+
+			public void Dispose()
+			{
+				foreach (var journalFile in _journalsToDelete)
+				{
+					// we need to release all unused journals 
+					// however here we don't force them to DeleteOnClose
+					// because we didn't synced the data file yet
+					// and we will need them on a next database recovery
+					journalFile.Value.Release();
+				}
 			}
 		}
 
