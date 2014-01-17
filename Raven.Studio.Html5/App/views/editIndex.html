@@ -145,6 +145,71 @@
                     </div>
                 </div>
             </div>
+
+            <div class="form-group" data-bind="visible: spatialFields().length > 0">
+                <label class="col-sm-1 control-label">
+                    Spatial Fields
+                </label>
+                <div class="col-md-5" data-bind="foreach: spatialFields, visible: spatialFields().length > 0">
+                    <div>
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <div class="col-md-11">
+                                    <input type="text" class="form-control" data-bind="value: name" title="Name of the spatial field to configure" placeholder="spatial field name" />
+                                </div>
+                                <div>
+                                    <button type="button" class="close" aria-hidden="true" title="Remove this spatial field from the index">&times;</button>
+                                </div>
+                                <div class="clearfix"></div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="col-md-6">
+                                    <label class="control-label col-md-3">Type</label>
+                                    <div class="col-md-9">
+                                        <select class="form-control" data-bind="options: ['Geography', 'Cartesian'], value: type"></select>
+                                    </div>
+                                    <label class="control-label col-md-3">Strategy</label>
+                                    <div class="col-md-9">
+                                        <select class="form-control" data-bind="options: availableStrategies, value: strategy"></select>
+                                    </div>
+                                    <label class="control-label col-md-3">Min X</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" data-bind="value: minX" />
+                                    </div>
+                                    <label class="control-label col-md-3">Max X</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" data-bind="value: maxX" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="control-label col-md-7" data-bind="visible: canSpecifyUnits">Circle Radius Units</label>
+                                    <div class="col-md-5" data-bind="visible: canSpecifyUnits">
+                                        <select class="form-control" data-bind="options: ['Kilometers', 'Miles'], value: circleRadiusUnits"></select>
+                                    </div>
+                                    <label class="control-label col-md-7" data-bind="visible: canSpecifyTreeLevel">Max Tree Level</label>
+                                    <div class="col-md-5" data-bind="visible: canSpecifyTreeLevel">
+                                        <input type="number" class="form-control" data-bind="value: maxTreeLevel" />
+                                    </div>
+                                    <label class="control-label col-md-7">Min Y</label>
+                                    <div class="col-md-5">
+                                        <input type="number" class="form-control" data-bind="value: minY" />
+                                    </div>
+                                    <label class="control-label col-md-7">Max Y</label>
+                                    <div class="col-md-5">
+                                        <input type="number" class="form-control" data-bind="value: maxY" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="control-label col-md-3">Precision</label>
+                                    <div class="col-md-5">
+                                        <p class="form-control-static" style="white-space: nowrap" data-bind="text: precision"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </form>
     </div>
 </section>

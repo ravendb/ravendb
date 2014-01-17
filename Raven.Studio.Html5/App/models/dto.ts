@@ -215,7 +215,22 @@ interface indexDefinitionDto {
     Fields: string[];
     Suggestions: any;
     TermVectors: any;
-    SpatialIndexes: any;
+    SpatialIndexes: any; // This will be an object with zero or more properties, each property being the name of one of the .Fields, its value being of type spatialIndexDto.
     InternalFieldsMapping: any;
     Type: string;
+}
+
+/*
+ * Represents a spatial field of an index. Shows up in the Edit Index view when the index has spatial fields defined.
+*/
+interface spatialIndexFieldDto {
+    Type: string;
+    Strategy: string;
+    CircleRadiusUnits: string;
+    MaxTreeLevel: number;
+    MinX: number;
+    MaxX: number;
+    MinY: number;
+    MaxY: number;
+    Units: string;
 }

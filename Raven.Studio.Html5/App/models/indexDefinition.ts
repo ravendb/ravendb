@@ -1,3 +1,6 @@
+import luceneField = require("models/luceneField");
+import spatialIndexField = require("models/spatialIndexField");
+
 class indexDefinition {
     analyzers: any;
     fields = ko.observableArray<string>();
@@ -21,6 +24,7 @@ class indexDefinition {
     // Stored as multiple luceneFields for the sake of data binding.
     // Each luceneField corresponds to a Field box in the index editor UI.
     luceneFields = ko.observableArray<luceneField>();
+    spatialFields = ko.observableArray<spatialIndexField>();
 
     constructor(dto: indexDefinitionDto) {
         this.analyzers = dto.Analyzers;
@@ -42,26 +46,33 @@ class indexDefinition {
         this.transformResults(dto.TransformResults);
 
         this.luceneFields(this.parseFields());
+        this.spatialFields(this.parseSpatialFields());
+
+        // If the a spatial's strategy is changed, we may need to reset to the default maxTreeLevel.
+        this.spatialFields().forEach(f => f.strategy.subscribe(newStrategy => {
+            if (newStrategy === "GeohashPrefixTree") {
+                f.maxTreeLevel(9);
+            } else if (newStrategy === "QuadPrefixTree") {
+                f.maxTreeLevel(23);
+            }
+        }));
     }
 
     private parseFields(): luceneField[] {
-        var propOrDefault = <T>(obj: any, prop: string, defaultValue: T) => ko.observable<T>(!obj || !obj[prop] ? defaultValue : obj[prop]);
-
         return this.fields()
             .filter(name => this.analyzers[name] != null || this.indexes[name] != null || this.sortOptions[name] != null || this.stores[name] != null || this.suggestions[name] != null || this.termVectors[name] != null) // A field is configured and shows up in the index edit UI as a field when it appears in one of the aforementioned objects.
-            .map<luceneField>(fieldName => {
-                var suggestion = this.suggestions && this.suggestions[fieldName] ? this.suggestions[fieldName] : null;
-                return {
-                    name: ko.observable(fieldName),
-                    analyzer: propOrDefault<string>(this.analyzers, fieldName, null),
-                    indexing: propOrDefault<string>(this.indexes, fieldName, "Default"),
-                    sort: propOrDefault<string>(this.sortOptions, fieldName, "None"),
-                    stores: propOrDefault<string>(this.stores, fieldName, "No"),
-                    suggestionDistance: propOrDefault<string>(suggestion, 'Distance', 'None'),
-                    suggestionAccuracy: propOrDefault<number>(suggestion, 'Accuracy', 0.5),
-                    termVector: propOrDefault(this.termVectors, fieldName, "No")
-                };
+            .map(fieldName => {
+                var suggestion: any = this.suggestions && this.suggestions[fieldName] ? this.suggestions[fieldName] : {};
+                return new luceneField(fieldName, this.stores[fieldName], this.indexes[fieldName], this.sortOptions[fieldName], this.analyzers[fieldName], suggestion['Distance'], suggestion['Accuracy'], this.termVectors[fieldName]);
             });        
+    }
+
+    private parseSpatialFields(): spatialIndexField[] {
+        // The spatial fields are stored as properties on the .spatialIndexes object.
+        // The property names will be one of the .fields.
+        return this.fields()
+            .filter(fieldName => this.spatialIndexes && this.spatialIndexes[fieldName])
+            .map(fieldName => new spatialIndexField(fieldName, this.spatialIndexes[fieldName]));
     }
 }
 
