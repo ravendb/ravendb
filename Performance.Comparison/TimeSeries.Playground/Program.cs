@@ -15,7 +15,7 @@ namespace TimeSeries.Playground
         static void Main(string[] args)
         {
 			if(Directory.Exists(@".\dts"))
-				Directory.Delete(@".\dts");
+				Directory.Delete(@".\dts", true);
             var dts = new DateTimeSeries(@".\dts");
 			//using (var parser = new TextFieldParser(@"D:\TimeSeries.csv"))
 			//{
