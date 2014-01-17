@@ -58,13 +58,17 @@ namespace Voron.Impl.Journal
 
 			EnsureSegmentsSize(pages);
 
+		
 			_nativeOverlapped->OffsetLow = (int) (position & 0xffffffff);
 			_nativeOverlapped->OffsetHigh = (int) (position >> 32);
 			_nativeOverlapped->EventHandle = _manualResetEvent.SafeWaitHandle.DangerousGetHandle();
 
 			for (int i = 0; i < pages.Length; i++)
 			{
-				_segments[i].Buffer = pages[i];
+				if(IntPtr.Size == 4)
+					_segments[i].Alignment = (ulong) pages[i];
+				else
+					_segments[i].Buffer = pages[i];
 			}
 			_segments[pages.Length].Buffer = null; // null terminating
 
