@@ -582,6 +582,38 @@ more responsive application.
             knownMissingIds.Add(value.Key);
         }
 
+        /// <summary>
+        /// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
+        /// WARNING: This method will not call beforeDelete listener!
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The entity.</param>
+        public void Delete<T>(ValueType id)
+        {
+            Delete(Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+        }
+
+        /// <summary>
+        /// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
+        /// WARNING: This method will not call beforeDelete listener!
+        /// </summary>
+        /// <param name="id"></param>
+        public void Delete(string id)
+        {
+            knownMissingIds.Add(id);
+            object entity;
+            if (entitiesByKey.TryGetValue(id, out entity))
+            {
+                // find if entity was changed on session or just inserted
+                if (EntityChanged(entity, entitiesAndMetadata[entity]))
+                {
+                    throw new InvalidOperationException("Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
+                }
+                entitiesByKey.Remove(id);
+                entitiesAndMetadata.Remove(entity);
+            }
+            Defer(new DeleteCommandData { Key = id });
+        }
 
         /// <summary>
         /// Converts the json document to an entity.
@@ -730,6 +762,9 @@ more responsive application.
                 // Store it back into the Id field so the client has access to to it                    
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
             }
+
+            if (deferedCommands.Any(c => c.GetType() == typeof(DeleteCommandData) && c.Key == id))
+                throw new InvalidOperationException("Can't store object, which was deleted in this session.");
 
             // we make the check here even if we just generated the key
             // users can override the key generation behavior, and we need
