@@ -23,7 +23,7 @@ namespace Voron
     {
         private readonly StorageEnvironmentOptions _options;
 
-        private readonly ConcurrentList<Transaction> _activeTransactions = new ConcurrentList<Transaction>();
+        private readonly ConcurrentSet<Transaction> _activeTransactions = new ConcurrentSet<Transaction>();
 
         private readonly IVirtualPager _dataPager;
         internal readonly SliceComparer _sliceComparer;
@@ -423,7 +423,7 @@ namespace Voron
 
         internal void TransactionCompleted(Transaction tx)
         {
-            if (_activeTransactions.Remove(tx) == false)
+            if (_activeTransactions.TryRemove(tx) == false)
                 return;
 
             if (tx.Flags != (TransactionFlags.ReadWrite))
