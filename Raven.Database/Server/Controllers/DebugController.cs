@@ -13,7 +13,9 @@ using System.Web.Http.Controllers;
 using System.Web.Http.Routing;
 using System.Web.Routing;
 using Raven.Abstractions.Data;
+using Raven.Client.Util;
 using Raven.Database.Extensions;
+using Raven.Database.Indexing;
 using Raven.Database.Linq;
 using Raven.Database.Linq.Ast;
 using Raven.Database.Server.Abstractions;
@@ -305,6 +307,35 @@ namespace Raven.Database.Server.Controllers
 			}
 
 			return GetMessageWithObject(routes);
+		}
+
+		[HttpGet]
+		[Route("debug/currently-indexing")]
+		[Route("databases/{databaseName}/debug/currently-indexing")]
+		public async Task<HttpResponseMessage> CurrentlyIndexing()
+		{
+			var indexingWork = Database.IndexingExecuter.GetCurrentlyProcessingIndexes();
+			var reduceWork = Database.ReducingExecuter.GetCurrentlyProcessingIndexes();
+
+			var uniqueIndexesBeingProcessed = indexingWork.Union(reduceWork).Distinct(new Index.IndexByIdEqualityComparer()).ToList();
+
+			return GetMessageWithObject(new
+			{
+				NumberOfCurrentlyWorkingIndexes = uniqueIndexesBeingProcessed.Count,
+				Indexes = uniqueIndexesBeingProcessed.Select(x => new
+				{
+					IndexName = x.PublicName,
+					IsMapReduce = x.IsMapReduce,
+					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new { p.Operation, NumberOfProcessingItems = p.InputCount}),
+					LastMapRate =  string.Format("{0:0.0000} ms/doc", x.TimePerDoc),
+					Priority = x.Priority,
+					OverallIndexingRate = x.GetIndexingPerformance().Where(ip => ip.Duration != TimeSpan.Zero).GroupBy(y => y.Operation).Select(g => new
+					{
+						Operation = g.Key,
+						Rate = string.Format("{0:0.0000} ms/doc", g.Sum(z => z.Duration.TotalMilliseconds) / g.Sum(z => z.InputCount))
+					})
+				})
+			});
 		}
 	}
 
