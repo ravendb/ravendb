@@ -136,9 +136,6 @@ namespace Owin
 			{
 				if (HostingEnvironment.IsHosted)
 				{
-					if(DateTime.Now > new DateTime(2014,1,15))
-						throw new InvalidOperationException("This bug was supposed to be fixed by now");
-
 					return (response.Content is ChangesPushContent ||
 						response.Content is PushStreamContent ||
 						response.Content is MultiGetController.MultiGetContent) == false;

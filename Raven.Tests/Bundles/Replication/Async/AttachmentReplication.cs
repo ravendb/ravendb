@@ -11,6 +11,7 @@ using Raven.Json.Linq;
 using Xunit;
 using Raven.Abstractions.Extensions;
 using System;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Bundles.Replication.Async
 {
@@ -103,11 +104,13 @@ namespace Raven.Tests.Bundles.Replication.Async
 			Assert.Null(store2.DatabaseCommands.GetAttachment("ayende"));
 		}
 
-		[Fact]
-		public void When_replicating_and_an_attachment_is_already_there_will_result_in_conflict()
+		[Theory]
+		[InlineData("esent")]
+		//[InlineData("voron")]
+		public void When_replicating_and_an_attachment_is_already_there_will_result_in_conflict(string storageType)
 		{
-			var store1 = CreateStore();
-			var store2 = CreateStore();
+			var store1 = CreateStore(requestedStorageType:storageType);
+			var store2 = CreateStore(requestedStorageType: storageType);
 
 			store1.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 2 }), new RavenJObject());
 			store2.DatabaseCommands.PutAttachment("ayende", null, new MemoryStream(new byte[] { 3 }), new RavenJObject());
