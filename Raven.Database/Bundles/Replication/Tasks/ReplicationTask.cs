@@ -56,6 +56,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private DocumentDatabase docDb;
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 		private bool firstTimeFoundNoReplicationDocument = true;
+        private bool wrongReplicationSourceAlertSent = false;
 		private readonly ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
 
 		public ConcurrentDictionary<string, DestinationStats> DestinationStats
@@ -952,17 +953,26 @@ namespace Raven.Bundles.Replication.Tasks
 
 			if (jsonDeserialization.Source != docDb.TransactionalStorage.Id.ToString())
 			{
-				docDb.AddAlert(new Alert
-				{
-					AlertLevel = AlertLevel.Error,
-					CreatedAt = SystemTime.UtcNow,
-					Message = "Source of the ReplicationDestinations document is not the same as the database it is located in",
-					Title = "Wrong replication source: " + jsonDeserialization.Source + " instead of " + docDb.Name,
-					UniqueKey = "Wrong source: " + jsonDeserialization.Source + ", " + docDb.TransactionalStorage.Id.ToString()
-				});
+			    if (!wrongReplicationSourceAlertSent)
+			    {
+			        var dbName = string.IsNullOrEmpty(docDb.Name) ? "<system>" : docDb.Name;
 
-				return new ReplicationStrategy[0];
+			        docDb.AddAlert(new Alert
+			            {
+			                AlertLevel = AlertLevel.Error,
+			                CreatedAt = SystemTime.UtcNow,
+			                Message = "Source of the ReplicationDestinations document is not the same as the database it is located in",
+                            Title = "Wrong replication source: " + jsonDeserialization.Source + " instead of " + docDb.TransactionalStorage.Id + " in database " + dbName,
+			                UniqueKey = "Wrong source: " + jsonDeserialization.Source + ", " + docDb.TransactionalStorage.Id
+			            });
+
+                    wrongReplicationSourceAlertSent = true;
+			    }
+
+			    return new ReplicationStrategy[0];
 			}
+
+            wrongReplicationSourceAlertSent = false;
 
 			return jsonDeserialization
 				.Destinations
