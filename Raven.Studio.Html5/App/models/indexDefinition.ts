@@ -19,6 +19,7 @@ class indexDefinition {
     suggestions: any;
     termVectors: any;
     transformResults = ko.observable<string>();
+    type: string;
 
     // This is an amalgamation of several properties from the index (Fields, Stores, Indexes, SortOptions, Analyzers, Suggestions, TermVectors) 
     // Stored as multiple luceneFields for the sake of data binding.
@@ -44,18 +45,47 @@ class indexDefinition {
         this.suggestions = dto.Suggestions;
         this.termVectors = dto.TermVectors;
         this.transformResults(dto.TransformResults);
+        this.type = dto.Type;
 
         this.luceneFields(this.parseFields());
         this.spatialFields(this.parseSpatialFields());
+    }
 
-        // If the a spatial's strategy is changed, we may need to reset to the default maxTreeLevel.
-        this.spatialFields().forEach(f => f.strategy.subscribe(newStrategy => {
-            if (newStrategy === "GeohashPrefixTree") {
-                f.maxTreeLevel(9);
-            } else if (newStrategy === "QuadPrefixTree") {
-                f.maxTreeLevel(23);
-            }
-        }));
+    toDto(): indexDefinitionDto {
+        return {
+            Analyzers: this.makeFieldObject(f => f.indexing() === "Analyzed", f => f.analyzer()),
+            Fields: this.fields(),
+            Indexes: this.makeFieldObject(f => f.indexing() !== "Default", f => f.indexing()),
+            InternalFieldsMapping: this.internalFieldsMapping,
+            IsCompiled: this.isCompiled,
+            IsMapReduce: this.isMapReduce,
+            LockMode: this.lockMode,
+            Map: this.map(),
+            Maps: this.maps().map(m => m()),
+            Name: this.name(),
+            Reduce: this.reduce(),
+            SortOptions: this.makeFieldObject(f => f.sort() !== "None", f => f.sort()),
+            SpatialIndexes: this.makeSpatialIndexesObject(),
+            Stores: this.makeFieldObject(f => f.stores() === "Yes", f => f.stores()),
+            Suggestions: this.makeFieldObject(f => f.suggestionDistance() !== "None", f => f.toSuggestionDto()),
+            TermVectors: this.makeFieldObject(f => f.termVector() !== "No", f => f.termVector()),
+            TransformResults: this.transformResults(),
+            Type: this.type
+        };
+    }
+
+    private makeSpatialIndexesObject(): any {
+        var spatialIndexesObj = {};
+        this.spatialFields().forEach(f => spatialIndexesObj[f.name()] = f.toDto());
+        return spatialIndexesObj;
+    }
+
+    private makeFieldObject(filter: (field: luceneField) => boolean, selector: (field: luceneField) => any): any {
+        var obj = {};
+        this.luceneFields()
+            .filter(filter)
+            .forEach(f => obj[f.name()] = selector(f));
+        return obj;
     }
 
     private parseFields(): luceneField[] {

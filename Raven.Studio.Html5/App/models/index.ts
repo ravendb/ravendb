@@ -1,4 +1,5 @@
 import appUrl = require("common/appUrl");
+import indexPriority = require("models/indexPriority");
 
 class index {
     name: string;
@@ -28,6 +29,14 @@ class index {
     isDisabled = ko.observable(false);
     editUrl: KnockoutComputed<string>;
 
+    static priorityNormal = "Normal";
+    static priorityIdle = "Idle";
+    static priorityDisabled = "Disabled";
+    static priorityAbandoned = "Abandoned";
+    static priorityIdleForced = "Idle,Forced";
+    static priorityDisabledForced = "Disabled,Forced";
+    static priorityAbandonedForced = "Abandoned,Forced";
+
     constructor(dto: indexStatisticsDto) {
         this.createdTimestamp = dto.CreatedTimestamp;
         this.docsCount = dto.DocsCount;
@@ -51,10 +60,34 @@ class index {
         this.reduceIndexingSuccesses = dto.ReduceIndexingSuccesses;
         this.touchCount = dto.TouchCount;
 
-        this.isAbandoned(this.priority && this.priority.indexOf("Abandoned") !== -1);
-        this.isDisabled(this.priority && this.priority.indexOf("Disabled") !== -1);
-        this.isIdle(this.priority && this.priority.indexOf("Idle") !== -1);
+        this.isAbandoned(this.priority && this.priority.indexOf(index.priorityAbandoned) !== -1);
+        this.isDisabled(this.priority && this.priority.indexOf(index.priorityDisabled) !== -1);
+        this.isIdle(this.priority && this.priority.indexOf(index.priorityIdle) !== -1);
         this.editUrl = appUrl.forCurrentDatabase().editIndex(encodeURIComponent(this.name));
+    }
+
+    static priorityFromString(priority: string): indexPriority {
+        switch (priority) {
+            case index.priorityIdle: return indexPriority.idle;
+            case index.priorityDisabled: return indexPriority.disabled;
+            case index.priorityAbandoned: return indexPriority.abandoned;
+            case index.priorityIdleForced: return indexPriority.idleForced;
+            case index.priorityDisabledForced: return indexPriority.disabledForced;
+            case index.priorityAbandonedForced: return indexPriority.abandonedForced;
+            default: return indexPriority.normal;
+        }
+    }
+
+    static priorityToString(priority: indexPriority): string {
+        switch (priority) {
+            case indexPriority.abandoned: return index.priorityAbandoned;
+            case indexPriority.abandonedForced: return index.priorityAbandonedForced;
+            case indexPriority.disabled: return index.priorityDisabled;
+            case indexPriority.disabledForced: return index.priorityDisabledForced;
+            case indexPriority.idle: return index.priorityIdle;
+            case indexPriority.idleForced: return index.priorityIdleForced;
+            default: return index.priorityNormal;
+        }
     }
 }
 

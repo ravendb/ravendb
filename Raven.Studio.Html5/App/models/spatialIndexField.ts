@@ -13,8 +13,9 @@ class spatialIndexField {
     availableStrategies = ko.observableArray<string>();
     canSpecifyUnits: KnockoutComputed<boolean>;
     canSpecifyTreeLevel: KnockoutComputed<boolean>;
+    canSpecifyCoordinates: KnockoutComputed<boolean>;
 
-    private static strategyGeo = "GeohashPrefix";
+    private static strategyGeo = "GeohashPrefixTree";
     private static strategyBounding = "BoundingBox";
     private static strategyQuad = "QuadPrefixTree";
     private static typeGeo = "Geography";
@@ -24,7 +25,6 @@ class spatialIndexField {
         this.name(fieldName);
         this.type(dto.Type);
         this.strategy(dto.Strategy);
-        this.circleRadiusUnits(dto.CircleRadiusUnits);
         this.maxTreeLevel(dto.MaxTreeLevel);
         this.minX(dto.MinX);
         this.maxX(dto.MaxX);
@@ -32,12 +32,27 @@ class spatialIndexField {
         this.maxY(dto.MaxY);
         this.units(dto.Units);
 
-        this.availableStrategies(this.fetchAvailableStrategies());
+        this.availableStrategies(this.getAvailableStrategies());
         this.canSpecifyUnits = ko.computed(() => this.type() === spatialIndexField.typeGeo);
         this.canSpecifyTreeLevel = ko.computed(() => this.strategy() !== spatialIndexField.strategyBounding);
         this.precision = ko.computed(() => this.getPrecisionString());
+        this.canSpecifyCoordinates = ko.computed(() => this.type() === spatialIndexField.typeCart);
         this.type.subscribe(newType => this.resetCoordinates());
-        this.type.subscribe(() => this.availableStrategies(this.fetchAvailableStrategies()));
+        this.type.subscribe(() => this.availableStrategies(this.getAvailableStrategies()));
+        this.strategy.subscribe(newStrategy => this.updateMaxTreeLevelFromStrategy(newStrategy));
+    }
+
+    toDto(): spatialIndexFieldDto {
+        return {
+            Type: this.type(),
+            Strategy: this.strategy(),
+            MaxTreeLevel: this.maxTreeLevel(),
+            MinX: this.minX(),
+            MaxX: this.maxX(),
+            MinY: this.minY(),
+            MaxY: this.maxY(),
+            Units: this.units()
+        };
     }
 
     private resetCoordinates() {
@@ -98,11 +113,19 @@ class spatialIndexField {
         }
     }
 
-    private fetchAvailableStrategies(): string[] {
+    private getAvailableStrategies(): string[] {
         if (this.type() === spatialIndexField.typeGeo) {
             return [spatialIndexField.strategyGeo, spatialIndexField.strategyQuad, spatialIndexField.strategyBounding];
         } else {
             return [spatialIndexField.strategyQuad, spatialIndexField.strategyBounding];
+        }
+    }
+
+    private updateMaxTreeLevelFromStrategy(strategy: string) {
+        if (strategy === spatialIndexField.strategyGeo) {
+            this.maxTreeLevel(9);
+        } else if (strategy === spatialIndexField.strategyQuad) {
+            this.maxTreeLevel(23);
         }
     }
 }

@@ -226,11 +226,15 @@ interface indexDefinitionDto {
 interface spatialIndexFieldDto {
     Type: string;
     Strategy: string;
-    CircleRadiusUnits: string;
     MaxTreeLevel: number;
     MinX: number;
     MaxX: number;
     MinY: number;
     MaxY: number;
     Units: string;
+}
+
+interface spatialIndexSuggestionDto {
+    Distance: string;
+    Accuracy: number;
 }

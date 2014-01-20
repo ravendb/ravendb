@@ -1,7 +1,7 @@
 ﻿<section>
     <div class="btn-toolbar">
         <div class="btn-group">
-            <button class="btn btn-primary">
+            <button class="btn btn-primary" data-bind="click: save">
                 <i class="fa fa-save"></i>
             </button>
         </div>
@@ -23,15 +23,15 @@
 
         <div class="btn-group">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                <span data-bind="text: priorityText"></span>
+                <span data-bind="text: priorityLabel"></span>
                 <span class="caret"></span>
             </button>
 
             <ul class="dropdown-menu">
-                <li><a href="#">Normal</a></li>
-                <li><a href="#">Idle</a></li>
-                <li><a href="#">Disabled</a></li>
-                <li><a href="#">Abandoned</a></li>
+                <li data-bind="click: normalPriority"><a href="#">Normal</a></li>
+                <li data-bind="click: idlePriority"><a href="#">Idle</a></li>
+                <li data-bind="click: disabledPriority"><a href="#">Disabled</a></li>
+                <li data-bind="click: abandonedPriority"><a href="#">Abandoned</a></li>
             </ul>
         </div>
 
@@ -98,7 +98,7 @@
                 <label class="col-sm-1 control-label">
                     Fields
                 </label>
-                <div class="col-md-5" data-bind="foreach: luceneFields">
+                <div class="col-md-10" data-bind="foreach: luceneFields">
                     <div>
                         <div class="panel panel-default">
                             <div class="panel-heading">
@@ -150,7 +150,7 @@
                 <label class="col-sm-1 control-label">
                     Spatial Fields
                 </label>
-                <div class="col-md-5" data-bind="foreach: spatialFields, visible: spatialFields().length > 0">
+                <div class="col-md-10" data-bind="foreach: spatialFields, visible: spatialFields().length > 0">
                     <div>
                         <div class="panel panel-default">
                             <div class="panel-heading">
@@ -174,11 +174,15 @@
                                     </div>
                                     <label class="control-label col-md-3">Min X</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" data-bind="value: minX" />
+                                        <input type="number" class="form-control" data-bind="value: minX, enable: canSpecifyCoordinates" />
                                     </div>
                                     <label class="control-label col-md-3">Max X</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" data-bind="value: maxX" />
+                                        <input type="number" class="form-control" data-bind="value: maxX, enable: canSpecifyCoordinates" />
+                                    </div>
+                                    <label class="control-label col-md-3">Precision</label>
+                                    <div class="col-md-9">
+                                        <p class="form-control-static" style="white-space: nowrap" data-bind="text: precision"></p>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -192,17 +196,11 @@
                                     </div>
                                     <label class="control-label col-md-7">Min Y</label>
                                     <div class="col-md-5">
-                                        <input type="number" class="form-control" data-bind="value: minY" />
+                                        <input type="number" class="form-control" data-bind="value: minY, enable: canSpecifyCoordinates" />
                                     </div>
                                     <label class="control-label col-md-7">Max Y</label>
                                     <div class="col-md-5">
-                                        <input type="number" class="form-control" data-bind="value: maxY" />
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="control-label col-md-3">Precision</label>
-                                    <div class="col-md-5">
-                                        <p class="form-control-static" style="white-space: nowrap" data-bind="text: precision"></p>
+                                        <input type="number" class="form-control" data-bind="value: maxY, enable: canSpecifyCoordinates" />
                                     </div>
                                 </div>
                             </div>

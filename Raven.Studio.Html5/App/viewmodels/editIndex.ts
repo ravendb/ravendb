@@ -1,14 +1,17 @@
 import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
 import index = require("models/index");
 import indexDefinition = require("models/indexDefinition");
+import indexPriority = require("models/indexPriority");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
+import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
 
 class editIndex extends activeDbViewModelBase { 
 
     isCreatingNewIndex = ko.observable(false);
-    priority = ko.observable("");
-    priorityText: KnockoutComputed<string>;
+    priority = ko.observable<indexPriority>();
+    priorityLabel: KnockoutComputed<string>;
+    priorityFriendlyName: KnockoutComputed<string>;
     editedIndex = ko.observable<indexDefinition>();
     hasExistingReduce: KnockoutComputed<string>;
     hasExistingTransform: KnockoutComputed<string>;
@@ -16,7 +19,8 @@ class editIndex extends activeDbViewModelBase {
     constructor() {
         super();
 
-        this.priorityText = ko.computed(() => this.priority() ? "Priority: " + this.priority() : "Priority");
+        this.priorityFriendlyName = ko.computed(() => this.getPriorityFriendlyName());
+        this.priorityLabel = ko.computed(() => this.priorityFriendlyName() ? "Priority: " + this.priorityFriendlyName() : "Priority");
         this.hasExistingReduce = ko.computed(() => this.editedIndex() && this.editedIndex().reduce());
         this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
     }
@@ -30,6 +34,7 @@ class editIndex extends activeDbViewModelBase {
             this.fetchIndexToEdit(indexToEditName);
             this.fetchIndexPriority(indexToEditName);
         } else {
+            this.priority(indexPriority.normal);
             this.editedIndex(this.createNewIndexDefinition());
         }
     }
@@ -50,7 +55,7 @@ class editIndex extends activeDbViewModelBase {
         $("#indexTransformLabel").popover({
             html: true,
             trigger: 'hover',
-            content: '<span class="text-danger">Deprecated.</span> Index Transform has been replaced with <span class="text-info">Result Transformers</span>.<br/><br/>The Transform function allows you to change the shape of individual result documents before the server returns them. It uses LINQ query syntax.<br/><br/>Example:<pre><span class="code-keyword">from</span> order <span class="code-keyword">in</span> orders<br/><span class="code-keyword">let</span> region = Database.Load(result.RegionId)<br/><span class="code-keyword">select new</span><br/>{<br/>   result.Date,<br/>   result.Amount,<br/>   Region = region.Name,<br/>   Manager = region.Manager<br/>}</pre>'
+            content: '<span class="text-danger">Deprecated.</span> Index Transform has been replaced with <strong>Result Transformers</strong>.<br/><br/>The Transform function allows you to change the shape of individual result documents before the server returns them. It uses LINQ query syntax.<br/><br/>Example:<pre><span class="code-keyword">from</span> order <span class="code-keyword">in</span> orders<br/><span class="code-keyword">let</span> region = Database.Load(result.RegionId)<br/><span class="code-keyword">select new</span><br/>{<br/>   result.Date,<br/>   result.Amount,<br/>   Region = region.Name,<br/>   Manager = region.Manager<br/>}</pre>'
         });
     }
 
@@ -67,13 +72,53 @@ class editIndex extends activeDbViewModelBase {
                 var lowerIndexName = indexName.toLowerCase();
                 var matchingIndex = stats.Indexes.first(i => i.Name.toLowerCase() === lowerIndexName);
                 if (matchingIndex) {
-                    this.priority(matchingIndex.Priority);
+                    var priorityWithoutWhitespace = matchingIndex.Priority.replace(", ", ",");
+                    this.priority(index.priorityFromString(priorityWithoutWhitespace));
                 }
             });
     }
 
     createNewIndexDefinition(): indexDefinition {
         return null;
+    }
+
+    save() {
+        var index = this.editedIndex().toDto();
+        var saveCommand = new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase());
+        saveCommand.execute();
+    }
+
+    idlePriority() {
+        this.priority(indexPriority.idleForced);
+    }
+
+    disabledPriority() {
+        this.priority(indexPriority.disabledForced);
+    }
+
+    abandonedPriority() {
+        this.priority(indexPriority.abandonedForced);
+    }
+
+    normalPriority() {
+        this.priority(indexPriority.normal);
+    }
+
+    getPriorityFriendlyName(): string {
+        // Instead of showing things like "Idle,Forced", just show Idle.
+        
+        var priority = this.priority();
+        if (priority === indexPriority.idleForced) {
+            return index.priorityToString(indexPriority.idle);
+        }
+        if (priority === indexPriority.disabledForced) {
+            return index.priorityToString(indexPriority.disabled);
+        }
+        if (priority === indexPriority.abandonedForced) {
+            return index.priorityToString(indexPriority.abandoned);
+        }
+
+        return index.priorityToString(priority);
     }
 }
 

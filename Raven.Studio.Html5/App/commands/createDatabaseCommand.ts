@@ -14,13 +14,12 @@ class createDatabaseCommand extends commandBase {
 
         this.reportInfo("Creating " + this.databaseName);
 
-        // TODO: include selected bundles from UI.
         var databaseDoc = {
             "Settings": {
                 "Raven/DataDir": "~\\Databases\\" + this.databaseName,
                 "Raven/ActiveBundles": this.activeBundles.join(";")
             },
-            "SecuredSettings": {},
+            "SecuredSettings": {}, // TODO: based on the selected bundles, we may need to include additional settings here
             "Disabled": false
         };
 

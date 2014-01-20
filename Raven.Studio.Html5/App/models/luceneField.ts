@@ -18,6 +18,13 @@ class luceneField {
         this.suggestionDistance(suggestionDistance);
         this.termVector(termVector);
     }
+
+    toSuggestionDto(): spatialIndexSuggestionDto {
+        return {
+            Distance: this.suggestionDistance(),
+            Accuracy: this.suggestionAccuracy()
+        };
+    }
 }
 
 export = luceneField; 
