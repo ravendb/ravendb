@@ -135,27 +135,28 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		private bool TryMoveTableRecords(Table table, int start, bool backward)
-		{
-			if (start <= 0)
-				return false;
-			if (backward)
-				start *= -1;
-			try
-			{
-				Api.JetMove(session, table, start, MoveGrbit.None);
-			}
-			catch (EsentErrorException e)
-			{
-				if (e.Error == JET_err.NoCurrentRecord)
-				{
-					return true;
-				}
-				throw;
-			}
-			return false;
-		}
-
+        private bool TryMoveTableRecords(Table table, int start, bool backward)
+        {
+            if (start <= 0)
+                return false;
+            if (start == int.MaxValue)
+                return true;
+            if (backward)
+                start *= -1;
+            try
+            {
+                Api.JetMove(session, table, start, MoveGrbit.None);
+            }
+            catch (EsentErrorException e)
+            {
+                if (e.Error == JET_err.NoCurrentRecord)
+                {
+                    return true;
+                }
+                throw;
+            }
+            return false;
+        }
 
 		private JsonDocument ReadCurrentDocument()
 		{

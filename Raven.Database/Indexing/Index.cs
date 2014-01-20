@@ -21,6 +21,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
+using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -40,6 +41,7 @@ using Raven.Database.Util;
 using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
 using Document = Lucene.Net.Documents.Document;
+using Field = Lucene.Net.Documents.Field;
 using Task = System.Threading.Tasks.Task;
 using Version = Lucene.Net.Util.Version;
 
@@ -402,7 +404,8 @@ namespace Raven.Database.Indexing
 						{
 							if (locker.Obtain() == false)
 							{
-								throw new InvalidOperationException(string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
+			                    throw new InvalidOperationException(
+			                        string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
 																				  indexId));
 							}
 
@@ -431,6 +434,10 @@ namespace Raven.Database.Indexing
 						locker.Release();
 					}
 				}
+			    catch (Exception e)
+			    {
+			        throw new InvalidOperationException("Could not properly write to index " + name, e);
+			    }
 				finally
 				{
 					currentlyIndexDocuments.Clear();
@@ -910,7 +917,7 @@ namespace Raven.Database.Indexing
 					RavenJObject[] termsDocs;
 					using (parent.GetSearcherAndTermsDocs(out indexSearcher, out termsDocs))
 					{
-						var luceneQuery = ApplyIndexTriggers(GetLuceneQuery());
+                        var luceneQuery = GetLuceneQuery();
 
 						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
 						totalResults.Value = search.TotalHits;
@@ -941,7 +948,7 @@ namespace Raven.Database.Indexing
 					IndexSearcher indexSearcher;
 					using (parent.GetSearcher(out indexSearcher))
 					{
-						var luceneQuery = ApplyIndexTriggers(GetLuceneQuery());
+						var luceneQuery = GetLuceneQuery();
 
 
 						int start = indexQuery.Start;
@@ -1106,7 +1113,7 @@ namespace Raven.Database.Indexing
 						int intersectMatches = 0, skippedResultsInCurrentLoop = 0;
 						int previousBaseQueryMatches = 0, currentBaseQueryMatches = 0;
 
-						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0], indexQuery));
+                        var firstSubLuceneQuery = GetLuceneQuery(subQueries[0], indexQuery);
 
 						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
 						var search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
@@ -1128,7 +1135,7 @@ namespace Raven.Database.Indexing
 
 							for (int i = 1; i < subQueries.Length; i++)
 							{
-								var luceneSubQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[i], indexQuery));
+								var luceneSubQuery = GetLuceneQuery(subQueries[i], indexQuery);
 								indexSearcher.Search(luceneSubQuery, null, intersectionCollector);
 							}
 
@@ -1253,7 +1260,7 @@ namespace Raven.Database.Indexing
 						DisposeAnalyzerAndFriends(toDispose, searchAnalyzer);
 					}
 				}
-				return luceneQuery;
+				return ApplyIndexTriggers(luceneQuery);
 			}
 
 			private static void DisposeAnalyzerAndFriends(List<Action> toDispose, RavenPerFieldAnalyzerWrapper analyzer)

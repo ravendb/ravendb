@@ -41,6 +41,8 @@ namespace Raven.Database.Config
 				new IntegerSetting(settings["Raven/MaxIndexWritesBeforeRecreate"], 256 * 1024);
 			MaxIndexOutputsPerDocument = 
 				new IntegerSetting(settings["Raven/MaxIndexOutputsPerDocument"], 15);
+			DisablePerformanceCounters =
+				new BooleanSetting(settings["Raven/DisablePerformanceCounters"], false);
 
 			MaxNumberOfItemsToIndexInSingleBatch =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"],
@@ -254,5 +256,7 @@ namespace Raven.Database.Config
 		public IntegerSetting MaxIndexWritesBeforeRecreate { get; private set; }
 
 		public IntegerSetting MaxIndexOutputsPerDocument { get; private set; }
+    
+        public BooleanSetting DisablePerformanceCounters { get; set; }
 	}
 }

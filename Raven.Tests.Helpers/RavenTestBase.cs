@@ -42,6 +42,7 @@ namespace Raven.Tests.Helpers
 
 		public RavenTestBase()
 		{
+            Environment.SetEnvironmentVariable(Constants.RavenDefaultQueryTimeout, "30");
 			CommonInitializationUtil.Initialize();
 		}
 
@@ -293,7 +294,7 @@ namespace Raven.Tests.Helpers
 			var databaseCommands = store.DatabaseCommands;
 			if (db != null)
 				databaseCommands = databaseCommands.ForDatabase(db);
-            Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(10)));
+            Assert.True(SpinWait.SpinUntil(() => databaseCommands.GetStatistics().StaleIndexes.Length == 0, timeout ?? TimeSpan.FromSeconds(20)));
 		}
 
 		public static void WaitForIndexing(DocumentDatabase db)
@@ -411,6 +412,29 @@ namespace Raven.Tests.Helpers
 			}
 		}
 
+		protected void WaitForUserToContinueTheTest(bool debug = true, string url = null)
+		{
+			if (debug && Debugger.IsAttached == false)
+				return;
+
+			using (var documentStore = new DocumentStore
+			{
+				Url = url ?? "http://localhost:8079"
+			})
+			{
+				documentStore.Initialize();
+				documentStore.DatabaseCommands.Put("Pls Delete Me", null,
+												   RavenJObject.FromObject(new { StackTrace = new StackTrace(true) }), new RavenJObject());
+
+				Process.Start(documentStore.Url); // start the server
+
+				do
+				{
+					Thread.Sleep(100);
+				} while (documentStore.DatabaseCommands.Get("Pls Delete Me") != null && (debug == false || Debugger.IsAttached));
+			}
+		}
+
 		protected void ClearDatabaseDirectory(string dataDir)
 		{
 			bool isRetry = false;
@@ -430,6 +454,8 @@ namespace Raven.Tests.Helpers
 					GC.Collect();
 					GC.WaitForPendingFinalizers();
 					isRetry = true;
+
+                    Thread.Sleep(2500);
 				}
 			}
 		}

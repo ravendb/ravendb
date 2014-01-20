@@ -34,7 +34,7 @@ namespace Raven.Bundles.Replication.Tasks
 				return false;
 			}
 
-			if (metadata.Value<string>(Constants.RavenReplicationSource) == destinationId) // prevent replicating back to source
+			if (OriginsFromDestination(destinationId, metadata)) // prevent replicating back to source
 			{
 				log.Debug("Will not replicate document '{0}' to '{1}' because the destination server is the same server it originated from", key, destinationId); 
 				return false;
@@ -54,6 +54,11 @@ namespace Raven.Bundles.Replication.Tasks
 			log.Debug("Will replicate '{0}' to '{1}'", key, destinationId);
 			return true;
 
+		}
+
+		public bool OriginsFromDestination(string destinationId, RavenJObject metadata)
+		{
+			return metadata.Value<string>(Constants.RavenReplicationSource) == destinationId;
 		}
 
 		public bool IsSystemDocumentId(string key)

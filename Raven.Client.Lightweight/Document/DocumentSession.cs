@@ -589,6 +589,8 @@ namespace Raven.Client.Document
 
 		private static IEnumerator<StreamResult<T>> YieldQuery<T>(IDocumentQuery<T> query, IEnumerator<RavenJObject> enumerator)
 		{
+		    using (enumerator)
+		    {
 			var queryOperation = ((DocumentQuery<T>)query).InitializeQueryOperation(null);
 			queryOperation.DisableEntitiesTracking = true;
 			while (enumerator.MoveNext())
@@ -615,6 +617,7 @@ namespace Raven.Client.Document
 					Metadata = meta
 				};
 			}
+		}
 		}
 
 		public IEnumerator<StreamResult<T>> Stream<T>(Etag fromEtag, int start = 0, int pageSize = Int32.MaxValue, RavenPagingInformation pagingInformation = null)
@@ -649,6 +652,7 @@ namespace Raven.Client.Document
 					Metadata = document.Metadata
 				};
 			}
+		}
 		}
 
 		/// <summary>

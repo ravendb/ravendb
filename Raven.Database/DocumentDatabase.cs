@@ -2069,7 +2069,7 @@ namespace Raven.Database
 
 		                    if (addedDocs >= pageSize) 
                                 break;
-		                }
+                        }
 
 		                actualStart += pageSize;
 		            }
@@ -2610,6 +2610,10 @@ namespace Raven.Database
 				{
 					return new FileInfo(file).Length;
 				}
+	            catch (UnauthorizedAccessException)
+	            {
+		            return 0;
+	            }
 				catch (FileNotFoundException)
 				{
 					return 0;

@@ -85,20 +85,20 @@ namespace Raven.Client.Extensions
 
 			serverClient.ForceReadFromMaster();
 
-			var get = await serverClient.GetAsync(doc.Id);
+			var get = await serverClient.GetAsync(doc.Id).ConfigureAwat(false);
 			if (get != null)
 				return;
 
 			try
 			{
-				await serverClient.GlobalAdmin.CreateDatabaseAsync(doc);
+				await serverClient.GlobalAdmin.CreateDatabaseAsync(doc).ConfigureAwait(false);
 			}
 			catch (Exception)
 			{
 				if (ignoreFailures == false)
 					throw;
 			}
-			await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention());
+            await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention()).ConfigureAwait(false);
 		}
 
 		[Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists instead.")]
