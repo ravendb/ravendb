@@ -12,4 +12,6 @@ interface computedAppUrls {
     indexErrors: KnockoutComputed<string>;
     replicationStats: KnockoutComputed<string>;
     userInfo: KnockoutComputed<string>;
+    databaseSettings: KnockoutComputed<string>;
+    periodicBackup: KnockoutComputed<string>;
 }

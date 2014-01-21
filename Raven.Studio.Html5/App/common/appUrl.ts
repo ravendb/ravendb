@@ -23,6 +23,8 @@ class appUrl {
         indexErrors: ko.computed(() => appUrl.forIndexErrors(appUrl.currentDatabase())),
         replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
         userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
+        databaseSettings: ko.computed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
+        periodicBackup: ko.computed(() => appUrl.forPeriodicBackup(appUrl.currentDatabase())),
 	};
 
     static forDatabases(): string {
@@ -73,6 +75,24 @@ class appUrl {
 
     static forUserInfo(db: database = appUrl.getDatabase()): string {
         return "#status/userInfo?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forApiKeys(): string {
+        // Doesn't take a database, because API keys always works against the system database only.
+        return "#settings/apiKeys";
+    }
+
+    static forWindowsAuth(): string {
+        // Doesn't take a database, because API keys always works against the system database only.
+        return "#settings/windowsAuth";
+    }
+
+    static forDatabaseSettings(db: database): string {
+        return "#settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forPeriodicBackup(db: database): string {
+        return "#settings/periodicBackup?" + appUrl.getEncodedDbPart(db);
     }
 
 	static forDocuments(collection?: string, db: database = appUrl.getDatabase()): string {
@@ -158,6 +178,26 @@ class appUrl {
         }
 
         return window.location.protocol + "//" + window.location.host;
+    }
+
+    /**
+    * Gets the address for the current page but for the specified database.
+    */
+    static forCurrentPage(db: database) {
+        var routerInstruction = router.activeInstruction();
+        if (routerInstruction) {
+            var dbNameInAddress = routerInstruction.queryParams ? routerInstruction.queryParams['database'] : null;
+            var isDifferentDbInAddress = !dbNameInAddress || dbNameInAddress !== db.name.toLowerCase();
+            if (isDifferentDbInAddress) {
+                var existingAddress = window.location.hash;
+                var existingDbQueryString = dbNameInAddress ? "database=" + encodeURIComponent(dbNameInAddress) : null;
+                var newDbQueryString = "database=" + encodeURIComponent(db.name);
+                var newUrlWithDatabase = existingDbQueryString ?
+                    existingAddress.replace(existingDbQueryString, newDbQueryString) :
+                    existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + "database=" + encodeURIComponent(db.name);
+                return newUrlWithDatabase;
+            }
+        }
     }
 
 	/**
