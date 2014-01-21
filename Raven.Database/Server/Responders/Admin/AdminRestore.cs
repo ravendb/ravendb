@@ -161,9 +161,13 @@ namespace Raven.Database.Server.Responders.Admin
 
 			documentDataDir = databaseLocation;
 
-			if (documentDataDir.StartsWith("~/") && documentDataDir.StartsWith(@"~\"))
+			if (!documentDataDir.StartsWith("~/") && !documentDataDir.StartsWith(@"~\"))
 			{
-				documentDataDir = "~\\" + documentDataDir.TrimStart(new char[] { '/', '\\' });
+				documentDataDir = "~\\" + documentDataDir.TrimStart(new char[] {'/', '\\'});
+			}
+			else if (documentDataDir.StartsWith("~/") || documentDataDir.StartsWith(@"~\"))
+			{
+				documentDataDir = "~\\" + documentDataDir.Substring(2);
 			}
 
 			return Path.Combine(baseDataPath, documentDataDir.Substring(2));
