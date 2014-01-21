@@ -29,7 +29,23 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
 				incrementalBackup = false;
 
-		    backupRequest.DatabaseDocument.Id = Database.Name;
+            if (backupRequest.DatabaseDocument == null && Database.Name != null)
+            {
+                if (Database.Name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
+                {
+                    backupRequest.DatabaseDocument = new DatabaseDocument { Id = Constants.SystemDatabase };
+                }
+                else
+                {
+                    var jsonDocument = DatabasesLandlord.SystemDatabase.Get("Raven/Databases/" + Database.Name, null);
+                    if (jsonDocument != null)
+                    {
+                        backupRequest.DatabaseDocument = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
+                        DatabasesLandlord.Unprotect(backupRequest.DatabaseDocument);
+                        backupRequest.DatabaseDocument.Id = Database.Name;
+                    }
+                }
+            }
 
 			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
 
