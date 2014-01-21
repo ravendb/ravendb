@@ -18,7 +18,7 @@ namespace FreeDB.Playground
             x.Start();
 
             //var sp = Stopwatch.StartNew();
-            //var freedbQueries = new FreeDbQueries("FreeDb");
+			var freedbQueries = new FreeDbQueries("FreeDb");
             //Console.WriteLine(sp.Elapsed);
             //sp.Restart();
             //foreach (var disk in freedbQueries.FindByAlbumTitle("Vitalogy"))

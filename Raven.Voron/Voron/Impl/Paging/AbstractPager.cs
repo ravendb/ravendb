@@ -27,7 +27,7 @@ namespace Voron.Impl.Paging
             {
 				Debug.Assert(Disposed == false);
 				
-				_source = GetSourceName();
+                _source = GetSourceName();
                 _pagerState = value;
             }
         }
@@ -60,7 +60,7 @@ namespace Voron.Impl.Paging
         {
 			Debug.Assert(Disposed == false);
 			
-			if (pageNumber + 1 > NumberOfAllocatedPages)
+            if (pageNumber + 1 > NumberOfAllocatedPages)
             {
                 throw new InvalidOperationException("Cannot get page number " + pageNumber +
                                                     " because number of allocated pages is " + NumberOfAllocatedPages);
@@ -75,7 +75,7 @@ namespace Voron.Impl.Paging
         {
 			Debug.Assert(Disposed == false);
 			
-			if (pageNumber + 1 > NumberOfAllocatedPages)
+            if (pageNumber + 1 > NumberOfAllocatedPages)
             {
                 throw new InvalidOperationException("Cannot get page number " + pageNumber +
                                                     " because number of allocated pages is " + NumberOfAllocatedPages);
@@ -101,14 +101,14 @@ namespace Voron.Impl.Paging
         {
 			Debug.Assert(Disposed == false);
 			
-			return requestedPageNumber + numberOfPages > NumberOfAllocatedPages;
+            return requestedPageNumber + numberOfPages > NumberOfAllocatedPages;
         }
 
         public void EnsureContinuous(Transaction tx, long requestedPageNumber, int numberOfPages)
         {
 			Debug.Assert(Disposed == false);
 
-			if (requestedPageNumber + numberOfPages <= NumberOfAllocatedPages)
+            if (requestedPageNumber + numberOfPages <= NumberOfAllocatedPages)
                 return;
 
             // this ensure that if we want to get a range that is more than the current expansion
@@ -128,14 +128,14 @@ namespace Voron.Impl.Paging
         {
 			Debug.Assert(Disposed == false);
 			
-			return len + Constants.PageHeaderSize > MaxNodeSize;
+            return len + Constants.PageHeaderSize > MaxNodeSize;
         }
 
         public int GetNumberOfOverflowPages(int overflowSize)
         {
 			Debug.Assert(Disposed == false);
 			
-			overflowSize += Constants.PageHeaderSize;
+            overflowSize += Constants.PageHeaderSize;
             return (overflowSize / PageSize) + (overflowSize % PageSize == 0 ? 0 : 1);
         }
 

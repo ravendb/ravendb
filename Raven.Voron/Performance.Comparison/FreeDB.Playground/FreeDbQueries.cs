@@ -46,8 +46,8 @@ namespace FreeDB.Playground
 		{
 			using (var tx = _storageEnvironment.NewTransaction(TransactionFlags.Read))
 			{
-				var dix = tx.GetTree(treeIndexName);
-				var albums = tx.GetTree("albums");
+				var dix = _storageEnvironment.State.GetTree(tx,treeIndexName);
+				var albums = _storageEnvironment.State.GetTree(tx,"albums");
 
 				using (var multiValueIterator = dix.Iterate(tx))
 				{
@@ -80,8 +80,8 @@ namespace FreeDB.Playground
 		{
 			using (var tx = _storageEnvironment.NewTransaction(TransactionFlags.Read))
 			{
-				var dix = tx.GetTree("ix_diskids");
-				var albums = tx.GetTree("albums");
+				var dix = _storageEnvironment.State.GetTree(tx,"ix_diskids");
+				var albums = _storageEnvironment.State.GetTree(tx,"albums");
 
 				using (var it = dix.MultiRead(tx, diskId))
 				{

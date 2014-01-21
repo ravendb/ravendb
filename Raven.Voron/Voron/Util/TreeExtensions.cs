@@ -7,21 +7,21 @@ namespace Voron
 {
 	public static class TreeExtensions
 	{
-		public static Tree GetTree(this StorageEnvironmentState state,string treeName,Transaction tx)
+		public static Tree GetTree(this StorageEnvironmentState state, Transaction tx, string treeName)
 		{			
 			if (String.IsNullOrEmpty(treeName))
-				throw new InvalidOperationException("Cannot fetch tree with empty name");			
+				throw new InvalidOperationException("Cannot fetch tree with empty name");
 
-			Tree tree;
+            if (treeName.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase))
+                return state.Root;
 
-			if (state.Trees.TryGetValue(treeName, out tree))
+            if (treeName.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
+                return state.FreeSpaceRoot;
+
+		    Tree tree = tx.ReadTree(treeName);
+
+			if (tree != null)
 				return tree;
-
-			if (treeName.Equals(Constants.RootTreeName, StringComparison.InvariantCultureIgnoreCase))
-				return state.Root;
-
-			if (treeName.Equals(Constants.FreeSpaceTreeName, StringComparison.InvariantCultureIgnoreCase))
-				return state.FreeSpaceRoot;
 
 			throw new InvalidOperationException("No such tree: " + treeName);			
 		}
