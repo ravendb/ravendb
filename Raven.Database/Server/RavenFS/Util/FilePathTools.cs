@@ -9,5 +9,10 @@
 
 			return filePath;
 		}
+
+        public static string MakeSureEndsWithSlash(string filePath)
+        {
+            return filePath.TrimEnd('\\') + "\\";
+        }
 	}
 }

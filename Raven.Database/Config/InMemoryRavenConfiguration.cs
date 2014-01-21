@@ -22,6 +22,7 @@ using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
+using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -597,7 +598,7 @@ namespace Raven.Database.Config
 		public string DataDirectory
 		{
 			get { return dataDirectory; }
-			set { dataDirectory = value == null ? null : value.ToFullPath(); }
+			set { dataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
 		}
 
 		/// <summary>
@@ -608,7 +609,7 @@ namespace Raven.Database.Config
 		public string FileSystemDataDirectory
 		{
 			get { return fileSystemDataDirectory; }
-			set { fileSystemDataDirectory = value == null ? null : value.ToFullPath(); }
+			set { fileSystemDataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
 		}
 
 		/// <summary>
