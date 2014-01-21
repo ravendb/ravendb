@@ -11,8 +11,8 @@ class deleteDatabaseCommand extends commandBase {
         this.reportInfo("Deleting " + this.databaseName + "...");
 
         var url = "/admin/databases/" + encodeURIComponent(this.databaseName) + "?hard-delete=" + this.isHardDelete;
-        var deleteTask = this.del(url, null, this.systemDb);
-        deleteTask.fail((response) => this.reportError("Failed to create database", JSON.stringify(response)));
+        var deleteTask = this.del(url, null, this.systemDb, { dataType: undefined });
+        deleteTask.fail((response) => this.reportError("Failed to delete database", JSON.stringify(response)));
         deleteTask.done(() => this.reportSuccess("Deleted " + this.databaseName));
         return deleteTask;
     }
