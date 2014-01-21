@@ -90,6 +90,7 @@ class commandBase {
             cache: false,
             url: appUrl.forDatabaseQuery(database) + relativeUrl,
             data: args,
+            dataType: 'json',
             contentType: contentType, 
             type: method,
             headers: undefined
