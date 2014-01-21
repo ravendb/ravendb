@@ -91,7 +91,7 @@ namespace Raven.Database.Indexing
 		private bool forceWriteToDisk;
 
 		public TimeSpan LastIndexingDuration { get; set; }
-		public long TimePerDoc { get; set; }
+		public double TimePerDoc { get; set; }
 		public Task CurrentMapIndexingTask { get; set; }
 
 		protected Index(Directory directory, int id, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
@@ -1404,6 +1404,11 @@ namespace Raven.Database.Indexing
 			return currentlyIndexing.Values.Concat(indexingPerformanceStats).ToArray();
 		}
 
+		public IndexingPerformanceStats[] GetCurrentIndexingPerformance()
+		{
+			return currentlyIndexing.Values.ToArray();
+		}
+
 		public void Backup(string backupDirectory, string path, string incrementalTag)
 		{
 			if (directory is RAMDirectory)
@@ -1615,5 +1620,18 @@ namespace Raven.Database.Indexing
 					PublicName, numberOfAlreadyProducedOutputs, sourceDocumentId, maxNumberOfIndexOutputs));
         }
 
+
+		internal class IndexByIdEqualityComparer : IEqualityComparer<Index>
+		{
+			public bool Equals(Index x, Index y)
+			{
+				return x.IndexId == y.IndexId;
+			}
+
+			public int GetHashCode(Index obj)
+			{
+				return obj.IndexId.GetHashCode();
+			}
+		}
 	}
 }

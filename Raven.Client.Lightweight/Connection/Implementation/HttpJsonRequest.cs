@@ -65,6 +65,7 @@ namespace Raven.Client.Connection
 		private Stopwatch sp = Stopwatch.StartNew();
 		internal bool ShouldCacheRequest;
 		private Stream postedStream;
+	    private RavenJToken postedToken;
 		private bool writeCalled;
 		public static readonly string ClientVersion = typeof(HttpJsonRequest).Assembly.GetName().Version.ToString();
 		private bool disabledAuthRetries;
@@ -422,10 +423,14 @@ namespace Raven.Client.Connection
 			httpClient = newHttpClient;
 			isRequestSentToServer = false;
 
-			if (postedData == null)
-				return;
-
-			await WriteAsync(postedData);
+			if (postedData != null)
+			{
+                await WriteAsync(postedData);
+			}
+            if (postedToken != null)
+            {
+                await WriteAsync(postedToken);
+            }
 		}
 
 		private async Task<RavenJToken> ReadJsonInternalAsync()
@@ -621,6 +626,20 @@ namespace Raven.Client.Connection
 				return (IObservable<string>)observableLineStream;
 			});
 		}
+
+        public async Task WriteAsync(RavenJToken tokenToWrite)
+        {
+            postedToken = tokenToWrite;
+            writeCalled = true;
+            await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url)
+                {
+                        Content = new JsonContent(tokenToWrite),
+                        Headers =
+                            {
+                                TransferEncodingChunked = true
+                            }
+                });
+        }
 
 		public async Task WriteAsync(Stream streamToWrite)
 		{

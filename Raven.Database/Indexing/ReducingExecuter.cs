@@ -43,6 +43,7 @@ namespace Raven.Database.Indexing
 			var singleStepReduceKeys = mappedResultsInfo.Where(x => x.OperationTypeToPerform == ReduceType.SingleStep).Select(x => x.ReduceKey).ToArray();
 			var multiStepsReduceKeys = mappedResultsInfo.Where(x => x.OperationTypeToPerform == ReduceType.MultiStep).Select(x => x.ReduceKey).ToArray();
 
+			currentlyProcessedIndexes.TryAdd(indexToWorkOn.IndexId, indexToWorkOn.Index);
 			try
 			{
 				if (singleStepReduceKeys.Length > 0)
@@ -74,6 +75,9 @@ namespace Raven.Database.Indexing
 						actions.Indexing.UpdateLastReduced(indexToWorkOn.Index.indexId, latest.Etag, latest.Timestamp);
 					});
 				}
+
+				Index _;
+				currentlyProcessedIndexes.TryRemove(indexToWorkOn.IndexId, out _);
 			}
 		}
 

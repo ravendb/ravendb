@@ -43,6 +43,7 @@ using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Listeners;
+using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Json.Linq;
@@ -581,7 +582,7 @@ namespace Raven.Client.Connection.Async
 			ErrorResponseException responseException;
 			try
 			{
-				await request.WriteAsync(document.ToString());
+				await request.WriteAsync(document);
 				var result = await request.ReadResponseJsonAsync();
 				return convention.CreateSerializer().Deserialize<PutResult>(new RavenJTokenReader(result));
 			}
@@ -830,7 +831,7 @@ namespace Raven.Client.Connection.Async
 				jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, "POST",metadata , credentials, convention)
 															 .AddOperationHeaders(OperationsHeaders));
 
-			await request.WriteAsync(new RavenJArray(uniqueIds).ToString(Formatting.None));
+			await request.WriteAsync(new RavenJArray(uniqueIds));
 			var responseResult = await request.ReadResponseJsonAsync();
 			return await CompleteMultiGetAsync(operationMetadata, keys, includes, responseResult);
 		}
@@ -1390,12 +1391,11 @@ namespace Raven.Client.Connection.Async
 												HandleReplicationStatusChanges);
 
 				var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
-				var data = jArray.ToString(Formatting.None, Default.Converters);
 
 				ErrorResponseException responseException;
 				try
 				{
-					await req.WriteAsync(data);
+					await req.WriteAsync(jArray);
 					var response = (RavenJArray)await req.ReadResponseJsonAsync();
 					return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
 				}
