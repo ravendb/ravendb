@@ -16,7 +16,9 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Web
 {
-	public class ForwardToRavenRespondersFactory : IHttpHandlerFactory
+    using Raven.Web.Utils;
+
+    public class ForwardToRavenRespondersFactory : IHttpHandlerFactory
 	{
 		internal static DocumentDatabase database;
 		internal static HttpServer server;
@@ -68,10 +70,7 @@ namespace Raven.Web
 			var reqUrl = UrlExtension.GetRequestUrlFromRawUrl(context.Request.RawUrl, database.Configuration);
 
 			if (HttpServer.ChangesQuery.IsMatch(reqUrl))
-			{
-				return new ChangesCurrentDatabaseForwardingHandler(server);
-			}
-
+				return new ChangesCurrentDatabaseForwardingHandler(server, ShutdownDetector.Instance.Token);
 
 			return new ForwardToRavenResponders(server);
 		}
@@ -115,6 +114,7 @@ namespace Raven.Web
 					throw;
 				}
 
+                ShutdownDetector.Instance.Initialize();
 				HostingEnvironment.RegisterObject(new ReleaseRavenDBWhenAppDomainIsTornDown());
 			}
 		}
