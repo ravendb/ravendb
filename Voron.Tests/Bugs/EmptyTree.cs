@@ -18,7 +18,7 @@ namespace Voron.Tests.Bugs
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var treeIterator = tx.GetTree("events").Iterate(tx);
+                var treeIterator = tx.Environment.State.GetTree(tx,"events").Iterate(tx);
 
                 Assert.False(treeIterator.Seek(Slice.AfterAllKeys));
 
@@ -43,7 +43,7 @@ namespace Voron.Tests.Bugs
 
                     using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                     {
-                        tx.GetTree("events").Add(tx, "test", new MemoryStream(0));
+                        tx.Environment.State.GetTree(tx,"events").Add(tx, "test", new MemoryStream(0));
 
                         tx.Commit();
                     }
@@ -60,7 +60,7 @@ namespace Voron.Tests.Bugs
 
                     using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
                     {
-                        var tree = tx.GetTree("events");
+                        var tree = tx.Environment.State.GetTree(tx,"events");
                         var readResult = tree.Read(tx, "test");
                         Assert.NotNull(readResult);
 

@@ -27,13 +27,13 @@ namespace Voron.Tests
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.GetTree("foo").MultiAdd(tx, "ChildTreeKey", new Slice(buffer));
+				tx.Environment.State.GetTree(tx,"foo").MultiAdd(tx, "ChildTreeKey", new Slice(buffer));
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				using (var fetchedDataIterator = tx.GetTree("foo").MultiRead(tx, "ChildTreeKey"))
+				using (var fetchedDataIterator = tx.Environment.State.GetTree(tx,"foo").MultiRead(tx, "ChildTreeKey"))
 				{
 					fetchedDataIterator.Seek(Slice.BeforeAllKeys);
 
@@ -131,19 +131,19 @@ namespace Voron.Tests
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.GetTree("foo").MultiAdd(tx, "ChildTreeKey", new Slice(buffer));
+				tx.Environment.State.GetTree(tx,"foo").MultiAdd(tx, "ChildTreeKey", new Slice(buffer));
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.GetTree("foo").MultiDelete(tx, "ChildTreeKey", new Slice(buffer));
+				tx.Environment.State.GetTree(tx,"foo").MultiDelete(tx, "ChildTreeKey", new Slice(buffer));
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-				Assert.Equal(typeof(EmptyIterator), tx.GetTree("foo").MultiRead(tx, "ChildTreeKey").GetType());
+				Assert.Equal(typeof(EmptyIterator), tx.Environment.State.GetTree(tx,"foo").MultiRead(tx, "ChildTreeKey").GetType());
 			}
 		}
 
@@ -200,10 +200,10 @@ namespace Voron.Tests
 			{
 				for (int i = 0; i < INPUT_COUNT; i++)
 				{
-					tx.GetTree("foo").MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
+					tx.Environment.State.GetTree(tx,"foo").MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
 				}
 
-				tx.GetTree("foo").MultiDelete(tx, CHILDTREE_KEY, inputData[indexToDelete]);
+				tx.Environment.State.GetTree(tx,"foo").MultiDelete(tx, CHILDTREE_KEY, inputData[indexToDelete]);
 				tx.Commit();
 			}
 
@@ -235,7 +235,7 @@ namespace Voron.Tests
 			{
 				for (int i = 0; i < INPUT_COUNT; i++)
 				{
-					tx.GetTree("foo").MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
+					tx.Environment.State.GetTree(tx,"foo").MultiAdd(tx, CHILDTREE_KEY, inputData[i]);
 				}
 				tx.Commit();
 			}
@@ -244,7 +244,7 @@ namespace Voron.Tests
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.GetTree("foo").MultiDelete(tx, CHILDTREE_KEY, inputData[indexToDelete]);
+				tx.Environment.State.GetTree(tx,"foo").MultiDelete(tx, CHILDTREE_KEY, inputData[indexToDelete]);
 				tx.Commit();
 			}
 
@@ -343,7 +343,7 @@ namespace Voron.Tests
 		{
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-			    var targetTree = tx.GetTree(treeName);
+			    var targetTree = Env.State.GetTree(tx, treeName);
 
 				int fetchedEntryCount = 0;
 				var inputEntryCount = inputData.Count;
