@@ -312,7 +312,7 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet]
 		[Route("debug/currently-indexing")]
 		[Route("databases/{databaseName}/debug/currently-indexing")]
-		public async Task<HttpResponseMessage> CurrentlyIndexing()
+		public HttpResponseMessage CurrentlyIndexing()
 		{
 			var indexingWork = Database.IndexingExecuter.GetCurrentlyProcessingIndexes();
 			var reduceWork = Database.ReducingExecuter.GetCurrentlyProcessingIndexes();
@@ -336,6 +336,22 @@ namespace Raven.Database.Server.Controllers
 					})
 				})
 			});
+		}
+
+		[HttpGet]
+		[Route("debug/request-tracing")]
+		[Route("databases/{databaseName}/debug/request-tracing")]
+		public HttpResponseMessage RequestTracing()
+		{
+			return GetMessageWithObject(RequestManager.GetRecentRequests(DatabaseName).Select(x => new
+			{
+				Uri = x.RequestUri,
+				Method = x.HttpMethod,
+				StatusCode = x.ResponseStatusCode,
+				RequestHeaders = x.Headers.AllKeys.Select(k => new { Name = k, Values = x.Headers.GetValues(k)}),
+				ExecutionTime = string.Format("{0} ms", x.Stopwatch.ElapsedMilliseconds),
+				AdditionalInfo = x.CustomInfo ?? string.Empty
+			}));
 		}
 	}
 
