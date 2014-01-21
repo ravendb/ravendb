@@ -7,6 +7,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
@@ -17,7 +18,7 @@ namespace Voron.Impl.Backup
 	public unsafe class FullBackup
 	{
 		public void ToFile(StorageEnvironment env, string backupPath, CompressionLevel compression = CompressionLevel.Optimal)
-		{
+		{			
 			var dataPager = env.Options.DataPager;
 			var copier = new DataCopier(AbstractPager.PageSize * 16);
 			Transaction txr = null;
@@ -72,15 +73,18 @@ namespace Voron.Impl.Backup
 					}
 
 					// data file backup
-					var dataPart = package.CreateEntry("db.voron", compression);
+					var dataPart = package.CreateEntry(Constants.DatabaseFilename, compression);
 					Debug.Assert(dataPart != null);
 
-					using (var dataStream = dataPart.Open())
+					if (allocatedPages > 0) //only true if dataPager is still empty at backup start
 					{
-						// now can copy everything else
-						var firstDataPage = dataPager.Read(0);
+						using (var dataStream = dataPart.Open())
+						{
+							// now can copy everything else
+							var firstDataPage = dataPager.Read(0);
 
-						copier.ToStream(firstDataPage.Base, AbstractPager.PageSize*allocatedPages, dataStream);
+							copier.ToStream(firstDataPage.Base, AbstractPager.PageSize*allocatedPages, dataStream);
+						}
 					}
 
 					try

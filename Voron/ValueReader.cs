@@ -38,8 +38,8 @@ namespace Voron
 
 	    public Stream AsStream()
 	    {
-	        if (_buffer != null)
-	            return new MemoryStream(_buffer, false);
+		    if (_val == null)
+			    return new MemoryStream(_buffer, writable: false);
 		    return new UnmanagedMemoryStream(_val, _len, _len, FileAccess.Read);
 	    }
 
@@ -119,6 +119,5 @@ namespace Voron
                 stream.Write(buffer, 0, read);
             }
         }
-
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Voron.Impl;
 
@@ -76,6 +77,11 @@ namespace Voron.Trees
 		public ValueReader CreateReaderForCurrent()
 		{
 			throw new NotSupportedException("There is no value for single entry iterator");
+		}
+
+		public IEnumerable<string> DumpValues()
+		{
+			yield return CurrentKey.ToString();
 		}
 
 		public void Dispose()

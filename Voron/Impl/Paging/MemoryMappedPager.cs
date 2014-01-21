@@ -1,15 +1,17 @@
-﻿using System;
+﻿namespace Voron.Impl.Paging
+{
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
+
 using Microsoft.Win32.SafeHandles;
+
 using Voron.Trees;
 using Voron.Util;
 
-namespace Voron.Impl.Paging
-{
     public unsafe class Win32MemoryMapPager : AbstractPager
     {
         private readonly FileInfo _fileInfo;
