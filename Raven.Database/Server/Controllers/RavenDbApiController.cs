@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -38,20 +39,15 @@ namespace Raven.Database.Server.Controllers
 			var result = new HttpResponseMessage();
 			if (InnerRequest.Method.Method != "OPTIONS")
 			{
-				try
+				result = await RequestManager.HandleActualRequest(this, async () =>
 				{
-					await RequestManager.HandleActualRequest(this, async () =>
-					{
-						SetHeaders();
-						result = await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
-					});
-				}
-				catch (HttpException httpException)
-				{
-					result = GetMessageWithObject(new {Error = httpException.Message}, HttpStatusCode.ServiceUnavailable);
-				}
+					SetHeaders();
+					return await ExecuteActualRequest(controllerContext, cancellationToken, authorizer);
+				}, httpException => GetMessageWithObject(new {Error = httpException.Message}, HttpStatusCode.ServiceUnavailable));
 			}
+
 			RequestManager.AddAccessControlHeaders(this, result);
+
 			return result;
 		}
 
@@ -210,6 +206,19 @@ namespace Raven.Database.Server.Controllers
 
 				return database.Result;
 			}
+		}
+
+		public StringBuilder CustomRequestTraceInfo { get; private set; }
+
+		public void AddRequestTraceInfo(string info)
+		{
+			if(string.IsNullOrEmpty(info))
+				return;
+
+			if (CustomRequestTraceInfo == null)
+				CustomRequestTraceInfo = new StringBuilder(info);
+			else
+				CustomRequestTraceInfo.Append(info);
 		}
 
 		protected bool EnsureSystemDatabase()

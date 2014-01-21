@@ -3,14 +3,14 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-
+using System.IO.Compression;
 #if SILVERLIGHT
 using Ionic.Zlib;
 #else
-using System.IO.Compression;
+
 #endif
 
-namespace Raven.Client.Connection
+namespace Raven.Abstractions.Connection
 {
 	public class CompressedStringContent : HttpContent
 	{

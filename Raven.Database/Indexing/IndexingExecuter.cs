@@ -223,7 +223,7 @@ namespace Raven.Database.Indexing
 						}
 
 						indexToWorkOn.Index.LastIndexingDuration = sp.Elapsed;
-						indexToWorkOn.Index.TimePerDoc = sp.ElapsedMilliseconds / Math.Max(1, indexToWorkOn.Batch.Docs.Count);
+						indexToWorkOn.Index.TimePerDoc = (double) sp.ElapsedMilliseconds / Math.Max(1, indexToWorkOn.Batch.Docs.Count);
 						indexToWorkOn.Index.CurrentMapIndexingTask = null;
 
 						return done;
@@ -323,6 +323,8 @@ namespace Raven.Database.Indexing
 
 		private void HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified)
 		{
+			currentlyProcessedIndexes.TryAdd(batchForIndex.IndexId, batchForIndex.Index);
+
 			try
 			{
 				transactionalStorage.Batch(actions => IndexDocuments(actions, batchForIndex.IndexId, batchForIndex.Batch));
@@ -345,6 +347,9 @@ namespace Raven.Database.Indexing
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed documents
 										   actions.Indexing.UpdateLastIndexed(batchForIndex.Index.indexId, lastEtag, lastModified));
+
+				Index _;
+				currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
 			}
 		}
 
