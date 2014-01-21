@@ -85,7 +85,7 @@ namespace Raven.Client.Extensions
 
 			serverClient.ForceReadFromMaster();
 
-			var get = await serverClient.GetAsync(doc.Id).ConfigureAwat(false);
+			var get = await serverClient.GetAsync(doc.Id).ConfigureAwait(false);
 			if (get != null)
 				return;
 

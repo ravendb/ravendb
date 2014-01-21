@@ -130,20 +130,20 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
 		/// </summary>
-		public void Dispose()
-		{
-			if (disposed)
-				return;
+        public void Dispose()
+        {
+            if (disposed)
+                return;
 
-if(subscribtion != null)
-subscribtion.Dispose();
+            if (subscription != null)
+                subscription.Dispose();
 
-			using (NoSynchronizationContext.Scope())
-			{
-				var disposeAsync = DisposeAsync().ConfigureAwait(false);
-				disposeAsync.GetAwaiter().GetResult();
-			}
-		}
+            using (NoSynchronizationContext.Scope())
+            {
+                var disposeAsync = DisposeAsync().ConfigureAwait(false);
+                disposeAsync.GetAwaiter().GetResult();
+            }
+        }
 
 		/// <summary>
 		/// Operation Id

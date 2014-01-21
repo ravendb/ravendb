@@ -653,7 +653,6 @@ namespace Raven.Client.Document
 				};
 			}
 		}
-		}
 
 		/// <summary>
 		/// Saves all the changes to the Raven server.

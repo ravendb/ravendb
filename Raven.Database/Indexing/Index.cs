@@ -436,7 +436,7 @@ namespace Raven.Database.Indexing
 				}
 			    catch (Exception e)
 			    {
-			        throw new InvalidOperationException("Could not properly write to index " + name, e);
+			        throw new InvalidOperationException("Could not properly write to index " + indexId, e);
 			    }
 				finally
 				{

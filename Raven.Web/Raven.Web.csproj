@@ -63,7 +63,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Startup.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
@@ -81,12 +80,6 @@
     <Compile Include="..\CommonAssemblyInfo.cs">
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
-    <Compile Include="BootStrapper.cs" />
-    <Compile Include="ChangesCurrentDatabaseForwardingHandler.cs" />
-    <Compile Include="ForwardToRavenResponders.cs" />
-    <Compile Include="ForwardToRavenRespondersFactory.cs" />
-    <Compile Include="Utils\ShutdownDetector.cs" />
-    <Compile Include="Utils\UnsafeIISMethods.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">

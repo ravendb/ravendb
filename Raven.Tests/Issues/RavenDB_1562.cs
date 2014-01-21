@@ -40,10 +40,10 @@ namespace Raven.Tests.Issues
             SecondaryDocumentStore = CreateStore();
         }
 
-        protected override void ConfigureServer(Database.Config.RavenConfiguration serverConfiguration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            serverConfiguration.RunInMemory = false;
-            serverConfiguration.DefaultStorageTypeName = GetDefaultStorageType("esent");
+            configuration.RunInMemory = false;
+            configuration.DefaultStorageTypeName = GetDefaultStorageType("esent");
         }
 
         public override void Dispose()
@@ -265,7 +265,7 @@ namespace Raven.Tests.Issues
             doc.Remove("Id");
 
             var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id));
-            req.Write(doc.ToString(Formatting.Indented));
+            req.WriteAsync(doc.ToString(Formatting.Indented)).Wait();
             req.ExecuteRequest();
 
         }
