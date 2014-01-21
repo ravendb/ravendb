@@ -46,7 +46,42 @@
                  Value="[RAVEN_LICENSE_FILE_PATH]"
                  SelectionLanguage="XSLPattern"
                  Sequence="4" />
-      </Component>
+		  <util:XmlFile Id="SetDataDir"
+				   Action="setValue"
+				   Permanent="yes"
+				   ElementPath="/configuration/appSettings/add[\[]@key='Raven/DataDir'[\]]"
+				   Name="value"
+				   File="[#Raven.Server.exe.config]"
+				   Value="[RAVEN_DATA_DIR]"
+				   SelectionLanguage="XSLPattern"
+				   Sequence="5" />
+		  <util:XmlFile Id="AddEmptyIndexStoragePathSetting"
+				   Action="createElement"
+				   Permanent="yes"
+				   ElementPath="/configuration/appSettings"
+				   Name="add"
+				   File="[#Raven.Server.exe.config]"
+				   SelectionLanguage="XSLPattern"
+				   Sequence="6" />
+		  <util:XmlFile Id="AddIndexStoragePath"
+				   Action="setValue"
+				   Permanent="yes"
+				   ElementPath="/configuration/appSettings/add[\[]not(@key)[\]] "
+				   Name="key"
+				   Value="Raven/IndexStoragePath"
+				   File="[#Raven.Server.exe.config]"
+				   SelectionLanguage="XSLPattern"
+				   Sequence="7" />
+		  <util:XmlFile Id="SetIndexStoragePath"
+				   Action="setValue"
+				   Permanent="yes"
+				   ElementPath="/configuration/appSettings/add[\[]@key='Raven/IndexStoragePath'[\]]"
+				   Name="value"
+			       File="[#Raven.Server.exe.config]"
+				   Value="[RAVEN_INDEX_DIR]"
+				   SelectionLanguage="XSLPattern"
+				   Sequence="8" />
+	  </Component>
       <Component Id="PersistServiceValues" Guid="{54DE475A-D1B2-4536-9598-A77AA3BC0264}" >
         <RegistryKey Root="HKLM" Key="Software\[Manufacturer]\[ProductName]" >
           <RegistryValue Type="string" Name="SERVICE_NAME" Value="[SERVICE_NAME]"  />
