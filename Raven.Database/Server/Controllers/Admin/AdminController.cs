@@ -28,7 +28,9 @@ namespace Raven.Database.Server.Controllers.Admin
 			bool incrementalBackup;
 			if (bool.TryParse(incrementalString, out incrementalBackup) == false)
 				incrementalBackup = false;
-			
+
+		    backupRequest.DatabaseDocument.Id = Database.Name;
+
 			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
 
 			return GetEmptyMessage(HttpStatusCode.Created);		
@@ -50,6 +52,8 @@ namespace Raven.Database.Server.Controllers.Admin
 			if (EnsureSystemDatabase() == false)
 				return GetMessageWithString("Restore is only possiable from the system database", HttpStatusCode.BadRequest);
 
+            var restoreStatus = new List<string>();
+
 			var restoreRequest = await ReadJsonObjectAsync<RestoreRequest>();
 
 			DatabaseDocument databaseDocument = null;
@@ -69,6 +73,9 @@ namespace Raven.Database.Server.Controllers.Admin
 				var errorMessage = (databaseDocument == null || String.IsNullOrWhiteSpace(databaseDocument.Id))
 								? "Database.Document file is invalid - database name was not found and not supplied in the request (Id property is missing or null). This is probably a bug - should never happen."
 								: "A database name must be supplied if the restore location does not contain a valid Database.Document file";
+
+                restoreStatus.Add(errorMessage);
+                DatabasesLandlord.SystemDatabase.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null, RavenJObject.FromObject(new { restoreStatus }), new RavenJObject(), null);
 
 				return GetMessageWithString(errorMessage,HttpStatusCode.BadRequest);
 			}
@@ -101,7 +108,6 @@ namespace Raven.Database.Server.Controllers.Admin
 			string documentDataDir;
 			ravenConfiguration.DataDirectory = ResolveTenantDataDirectory(restoreRequest.DatabaseLocation, databaseName, out documentDataDir);
 
-			var restoreStatus = new List<string>();
 			DatabasesLandlord.SystemDatabase.Delete(RestoreStatus.RavenRestoreStatusDocumentKey, null, null);
 			var defrag = "true".Equals(GetQueryStringValue("defrag"), StringComparison.InvariantCultureIgnoreCase);
 
