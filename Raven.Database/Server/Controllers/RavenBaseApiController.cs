@@ -264,7 +264,14 @@ namespace Raven.Database.Server.Controllers
 		{
 			if (msg.Content == null)
 				msg.Content = new JsonContent();
-			msg.Content.Headers.Add(key, value);
+
+            // Ensure we haven't already appended these values.
+            IEnumerable<string> existingValues;
+            var hasExistingHeaderAppended = msg.Content.Headers.TryGetValues(key, out existingValues) && existingValues.Any(v => v == value);
+            if (!hasExistingHeaderAppended)
+            {
+                msg.Content.Headers.Add(key, value);
+            }
 		}
 
 		private string GetDateString(RavenJToken token, string format)
