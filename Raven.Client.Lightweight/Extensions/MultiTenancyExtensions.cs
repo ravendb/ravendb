@@ -148,7 +148,7 @@ namespace Raven.Client.Extensions
 
 			serverClient.ForceReadFromMaster();
 
-			var get = await serverClient.GetAsync(docId);
+            var get = await serverClient.GetAsync(docId).ConfigureAwait(false);
 			if (get != null)
 				return;
 
@@ -156,14 +156,14 @@ namespace Raven.Client.Extensions
 			req.Write(doc.ToString(Formatting.Indented));
 			try
 			{
-				await req.ExecuteRequestAsync();
+                await req.ExecuteRequestAsync().ConfigureAwait(false);
 			}
 			catch (Exception)
 			{
 				if (ignoreFailures)
 					return;
 			}
-			await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention());
+            await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention()).ConfigureAwait(false);
 		}
 
 		public static Task CreateDatabaseAsync(this IAsyncDatabaseCommands self, DatabaseDocument databaseDocument, bool ignoreFailures = false)

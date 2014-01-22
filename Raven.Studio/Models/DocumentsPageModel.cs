@@ -190,7 +190,7 @@ namespace Raven.Studio.Models
 
 		private void RefreshCollectionsList()
 		{
-			DatabaseCommands.GetTermsCount(CollectionsIndex, "Tag", "", 100)
+			DatabaseCommands.GetTermsCount(CollectionsIndex, "Tag", "", 1024)
 				.ContinueOnSuccess(collections =>
 				                   	{
 										var collectionModels = 
@@ -215,10 +215,10 @@ namespace Raven.Studio.Models
 		private void AfterUpdate(IEnumerable<CollectionModel> collectionDocumentsCount)
 		{
             // update documents count
-		    var nameToCount = collectionDocumentsCount.ToDictionary(i => i.Name, i => i.Count);
+		    var nameToCount = collectionDocumentsCount.ToLookup(i => i.Name, i => i.Count);
 		    foreach (var collectionModel in Collections)
 		    {
-		        collectionModel.Count = nameToCount[collectionModel.Name];
+		        collectionModel.Count = nameToCount[collectionModel.Name].Sum();
 		    }
 
 		    initialSelectedCollectionName = initialSelectedCollectionName ?? "";

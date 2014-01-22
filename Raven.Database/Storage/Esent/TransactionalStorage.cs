@@ -195,6 +195,8 @@ namespace Raven.Storage.Esent
 
         public long GetDatabaseTransactionVersionSizeInBytes()
         {
+            if (configuration.DisablePerformanceCounters)
+                return -4;
             if (getDatabaseTransactionVersionSizeInBytesErrorValue != 0)
                 return getDatabaseTransactionVersionSizeInBytesErrorValue;
 

@@ -365,14 +365,14 @@ namespace Raven.Tests.Helpers
 			}
 		}
 
-		protected void WaitForUserToContinueTheTest(bool debug = true)
+		protected void WaitForUserToContinueTheTest(bool debug = true, string url = null)
 		{
 			if (debug && Debugger.IsAttached == false)
 				return;
 
 			using (var documentStore = new DocumentStore
 			{
-				Url = "http://localhost:8079"
+				Url = url ?? "http://localhost:8079"
 			})
 			{
 				documentStore.Initialize();

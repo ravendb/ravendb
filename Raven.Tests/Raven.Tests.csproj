@@ -218,6 +218,7 @@
     <Compile Include="Bugs\ConcurrencyTests.cs" />
     <Compile Include="Bugs\NullableDateTimeOffsetFromDateTimeParse.cs" />
     <Compile Include="Bugs\RawQueryShouldGoThroughAnalysis.cs" />
+    <Compile Include="Faceted\LazyFacets.cs" />
     <Compile Include="Issues\RavenDB1508.cs" />
     <Compile Include="Issues\RavenDB1519.cs" />
     <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
@@ -226,6 +227,7 @@
     <Compile Include="Bugs\Facets\FacetErrors.cs" />
     <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
     <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
+    <Compile Include="Issues\RavenDB_1304.cs" />
     <Compile Include="Issues\RavenDB_1379.cs" />
     <Compile Include="Issues\RavenDB_1470.cs" />
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
@@ -234,6 +236,10 @@
     <Compile Include="Issues\RavenDB_1497.cs" />
     <Compile Include="Issues\RavenDB_1520.cs" />
     <Compile Include="Issues\RavenDB_1539.cs" />
+    <Compile Include="Issues\RavenDB_1553.cs" />
+    <Compile Include="Issues\RavenDB_1555.cs" />
+    <Compile Include="Issues\RavenDB_1562.cs" />
+    <Compile Include="Issues\ReplicationAlerts.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\In.cs" />

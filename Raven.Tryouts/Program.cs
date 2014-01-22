@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Document;
+using Raven.Json.Linq;
 using Raven.Tests.Indexes;
 using Raven.Tests.Issues;
 using Raven.Tests.Notifications;
@@ -11,16 +13,29 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			for (int i = 0; i < 1000; i++)
-			{
-				Console.WriteLine(i);
-				Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new RavenDB_1493())
-				{
-					x.ConsistencyTest();
-				}
-			}
-			
+            //for (int i = 0; i < 1000; i++)
+            //{
+            //    Console.WriteLine(i);
+            //    Environment.SetEnvironmentVariable("run", i.ToString("000"));
+            //    using (var x = new RavenDB_1493())
+            //    {
+            //        x.ConsistencyTest();
+            //    }
+            //}
+		    using (var store = new DocumentStore
+		    {
+		        Url = "http://localhost:8080",
+		        DefaultDatabase = "test2"
+		    }.Initialize())
+		    {
+		        for (int i = 0; i < 256; i++)
+		        {
+		            store.DatabaseCommands.Put("docs/" + Guid.NewGuid() , null, new RavenJObject(), new RavenJObject
+		            {
+		                {"Raven-Entity-Name", string.Format("{0:000}",i)}
+		            });
+		        }
+		    }
 		}
 	}
 

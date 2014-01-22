@@ -12,18 +12,26 @@ using Raven.Database.Server.Abstractions;
 
 namespace Raven.Web
 {
-	public class ChangesCurrentDatabaseForwardingHandler : IHttpAsyncHandler
+    using System.Threading;
+
+    public class ChangesCurrentDatabaseForwardingHandler : IHttpAsyncHandler
 	{
 		private readonly HttpServer server;
 
-		public ChangesCurrentDatabaseForwardingHandler(HttpServer server)
+        private readonly CancellationToken token;
+
+		public ChangesCurrentDatabaseForwardingHandler(HttpServer server, CancellationToken token)
 		{
 			this.server = server;
+		    this.token = token;
 		}
 
 		public Task ProcessRequestAsync(HttpContext context)
 		{
 			var tcs = new TaskCompletionSource<object>();
+
+		    token.Register(tcs.SetCanceled);
+
 			server.HandleChangesRequest(new HttpContextAdapter(HttpContext.Current, server.Configuration), ()=> tcs.TrySetResult(null))
 				.ContinueWith(task =>
 				              	{

@@ -49,8 +49,8 @@ namespace Raven.Client.Document.Batches
 			return new GetRequest
 			{
 				Url = "/facets/" + index,
-				Query = string.Format("&query={0}&facetStart={1}&facetPageSize={2}&{3}",
-										query.Query,
+				Query = string.Format("{0}&facetStart={1}&facetPageSize={2}&{3}",
+										query.GetMinimalQueryString(),
 										start,
 										pageSize,
 										addition)
