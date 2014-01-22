@@ -35,7 +35,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
                     }
                 }, 1);
             }
-            SchemaCreator.UpdateVersion(session, dbid, "4.7");
+            SchemaCreator.UpdateVersion(session, dbid, "4.8");
         }
     }
 }
