@@ -242,9 +242,11 @@ namespace Raven.Abstractions.Smuggler
 			var reportInterval = TimeSpan.FromSeconds(2);
 			var errorcount = 0;
 			ShowProgress("Exporting Documents");
-
+			
 			while (true)
+
 			{
+				bool hasDocs = false;
 				using (var documents = await GetDocuments(lastEtag))
 				{
 					var watch = Stopwatch.StartNew();					
@@ -261,8 +263,9 @@ namespace Raven.Abstractions.Smuggler
 							continue;
 						document.WriteTo(jsonWriter);
 						totalCount++;
-						
-						if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+						hasDocs = true;
+
+						if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
 						{
 							ShowProgress("Exported {0} documents", totalCount);
 							lastReport = SystemTime.UtcNow;
@@ -274,6 +277,9 @@ namespace Raven.Abstractions.Smuggler
 					}
 				}
 
+				if (hasDocs)
+					continue;
+
 				// The server can filter all the results. In this case, we need to try to go over with the next batch.
 				// Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
 				var databaseStatistics = await GetStats();
@@ -282,7 +288,7 @@ namespace Raven.Abstractions.Smuggler
 				{
 					lastEtag = EtagUtil.Increment(lastEtag, SmugglerOptions.BatchSize);
 					ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
-
+					
 					continue;
 				}
 
