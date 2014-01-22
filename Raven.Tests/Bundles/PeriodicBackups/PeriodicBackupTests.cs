@@ -25,7 +25,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 			public string Name { get; set; }
 		}
 
-		[Fact(Skip = "not yet impleented at Voron")]
+		[Fact]
 		public void CanBackupToDirectory()
 		{
 			var backupPath = NewDataPath("BackupFolder");
@@ -67,7 +67,7 @@ namespace Raven.Tests.Bundles.PeriodicBackups
 			IOExtensions.DeleteDirectory(backupPath);
 		}
 
-		[Fact(Skip = "not yet implemented in Voron")]
+		[Fact]
 		public void CanBackupToDirectory_MultipleBackups()
 		{
 			var backupPath = NewDataPath("BackupFolder");

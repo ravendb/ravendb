@@ -17,6 +17,22 @@ namespace Raven.Database.Extensions
 	{
 		const int retries = 10;
 
+        public static void DeleteFile(string file)
+        {
+            try
+            {
+                File.Delete(file);
+            }
+            catch (IOException)
+            {
+
+            }
+            catch (UnauthorizedAccessException)
+            {
+                
+            }
+        }
+
 		public static void DeleteDirectory(string directory)
 		{
 			for (int i = 0; i < retries; i++)
