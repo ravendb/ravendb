@@ -5,7 +5,6 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
             this.displayName = "documents";
             this.collections = ko.observableArray();
             this.selectedCollection = ko.observable().subscribeTo("ActivateCollection").distinctUntilChanged();
-            this.collectionColors = [];
             this.currentCollectionPagedItems = ko.observable();
             this.subscriptions = [];
             this.ravenDb = new raven();

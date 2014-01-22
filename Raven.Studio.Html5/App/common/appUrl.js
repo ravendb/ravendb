@@ -3,6 +3,10 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
     var appUrl = (function () {
         function appUrl() {
         }
+        appUrl.forDatabases = function () {
+            return "#databases";
+        };
+
         /**
         * Gets the URL for edit document.
         * @param id The ID of the document to edit, or null to edit a new document.
@@ -64,12 +68,39 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
             return "#documents?" + collectionPart + databasePart;
         };
 
+        appUrl.forIndexes = function (db) {
+            if (typeof db === "undefined") { db = appUrl.getDatabase(); }
+            var databasePart = appUrl.getEncodedDbPart(db);
+            return "#indexes?" + databasePart;
+        };
+
+        appUrl.forNewIndex = function (db) {
+            var databasePart = appUrl.getEncodedDbPart(db);
+            return "#indexes/edit?" + databasePart;
+        };
+
+        appUrl.forEditIndex = function (indexName, db) {
+            var databasePart = appUrl.getEncodedDbPart(db);
+            var indexNamePart = "/" + indexName;
+            return "#indexes/edit" + indexNamePart + databasePart;
+        };
+
+        appUrl.forQuery = function (db) {
+            var databasePart = appUrl.getEncodedDbPart(db);
+            return "#query?" + databasePart;
+        };
+
         appUrl.forDatabaseQuery = function (db) {
             if (db && !db.isSystem) {
                 return appUrl.baseUrl + "/databases/" + db.name;
             }
 
             return this.baseUrl;
+        };
+
+        appUrl.forExport = function (db) {
+            var databasePart = appUrl.getEncodedDbPart(db);
+            return "#tasks/export?" + databasePart;
         };
 
         /**
@@ -133,6 +164,20 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
         appUrl.currentDbComputeds = {
             documents: ko.computed(function () {
                 return appUrl.forDocuments(null, appUrl.currentDatabase());
+            }),
+            indexes: ko.computed(function () {
+                return appUrl.forIndexes(appUrl.currentDatabase());
+            }),
+            newIndex: ko.computed(function () {
+                return appUrl.forNewIndex(appUrl.currentDatabase());
+            }),
+            editIndex: function (indexName) {
+                return ko.computed(function () {
+                    return appUrl.forEditIndex(indexName, appUrl.currentDatabase());
+                });
+            },
+            query: ko.computed(function () {
+                return appUrl.forQuery(appUrl.currentDatabase());
             }),
             status: ko.computed(function () {
                 return appUrl.forStatus(appUrl.currentDatabase());
