@@ -142,13 +142,22 @@ namespace Raven.Database.Indexing
 							indexImplementation.Priority = indexStats.Priority;
 						}
 
-
 						var read = accessor.Lists.Read("Raven/Indexes/QueryTime", fixedName);
 						if (read == null)
+						{
+							if(IsIdleAutoIndex(indexImplementation))
+								indexImplementation.MarkQueried(); // prevent index abandoning right after startup
+
 							return;
+						}
 
 						var dateTime = read.Data.Value<DateTime>("LastQueryTime");
-						indexImplementation.MarkQueried(dateTime);
+
+						if(IsIdleAutoIndex(indexImplementation) && SystemTime.UtcNow - dateTime > configuration.TimeToWaitBeforeRunningAbandonedIndexes)
+							indexImplementation.MarkQueried(); // prevent index abandoning right after startup
+						else
+							indexImplementation.MarkQueried(dateTime);
+						
 						if (dateTime > latestPersistedQueryTime)
 							latestPersistedQueryTime = dateTime;
 					});
@@ -175,6 +184,11 @@ namespace Raven.Database.Indexing
 				}
 			}
 			indexes.TryAdd(fixedName, indexImplementation);
+		}
+
+		private static bool IsIdleAutoIndex(Index index)
+		{
+			return index.name.StartsWith("Auto/") && index.Priority == IndexingPriority.Idle;
 		}
 
 		private void TryResettingIndex(string indexName, IndexDefinition indexDefinition)
@@ -1041,7 +1055,7 @@ namespace Raven.Database.Indexing
 		{
 			// relatively young index, haven't been queried for a while already
 			// can be safely removed, probably
-			if (age < 90 && lastQuery < 30)
+			if (age < 90 && lastQuery > 30)
 			{
                 accessor.Indexing.DeleteIndex(thisItem.Name, documentDatabase.WorkContext.CancellationToken);
 				return;
