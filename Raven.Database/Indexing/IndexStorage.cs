@@ -740,12 +740,7 @@ namespace Raven.Database.Indexing
 			return new Index.IndexQueryOperation(value, query, _ => false, fieldsToFetch, indexQueryTriggers).GetLuceneQuery();
 		}
 
-		public IEnumerable<IndexQueryResult> Query(
-			string index,
-			IndexQuery query,
-			Func<IndexQueryResult, bool> shouldIncludeInResults,
-			FieldsToFetch fieldsToFetch,
-			OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers)
+		public IEnumerable<IndexQueryResult> Query(string index, IndexQuery query, Func<IndexQueryResult, bool> shouldIncludeInResults, FieldsToFetch fieldsToFetch, OrderedPartCollection<AbstractIndexQueryTrigger> indexQueryTriggers, CancellationToken token)
 		{
 			Index value;
 			if (indexes.TryGetValue(index, out value) == false)
@@ -782,10 +777,10 @@ namespace Raven.Database.Indexing
 
 			var indexQueryOperation = new Index.IndexQueryOperation(value, query, shouldIncludeInResults, fieldsToFetch, indexQueryTriggers);
 			if (query.Query != null && query.Query.Contains(Constants.IntersectSeparator))
-				return indexQueryOperation.IntersectionQuery();
+				return indexQueryOperation.IntersectionQuery(token);
 
 
-			return indexQueryOperation.Query();
+			return indexQueryOperation.Query(token);
 		}
 
 		public IEnumerable<RavenJObject> IndexEntires(

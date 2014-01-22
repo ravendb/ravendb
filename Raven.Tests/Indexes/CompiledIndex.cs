@@ -54,7 +54,7 @@ namespace Raven.Tests.Indexes
 				queryResult = db.Query("Compiled/View", new IndexQuery
 				{
 					Query = "CustomerId:users/ayende"
-				});
+				}, CancellationToken.None);
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);
@@ -126,7 +126,7 @@ namespace Raven.Tests.Indexes
 			QueryResult queryResult = null;
 			for (int i = 0; i < 500; i++)
 			{
-				queryResult = db.Query("Aggregates/ShoppingCart", new IndexQuery());
+				queryResult = db.Query("Aggregates/ShoppingCart", new IndexQuery(), CancellationToken.None);
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
 				else

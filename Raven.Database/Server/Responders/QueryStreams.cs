@@ -10,6 +10,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
@@ -55,8 +56,10 @@ namespace Raven.Database.Server.Responders
 					// of them aren't going to be relevant for other ops, so we are going to skip
 					// the cache for that, to avoid filling it up very quickly
 					using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
+					using (var cts = new CancellationTokenSource())
 					{
-						Database.Query(index, query, information =>
+						var timeout = cts.TimeoutAfter(Settings.DatbaseOperationTimeout);
+						Database.Query(index, query, cts.Token, information =>
 						{
 							context.Response.AddHeader("Raven-Result-Etag", information.ResultEtag.ToString());
 							context.Response.AddHeader("Raven-Index-Etag", information.IndexEtag.ToString());
@@ -64,13 +67,17 @@ namespace Raven.Database.Server.Responders
 							context.Response.AddHeader("Raven-Index", information.Index);
 							context.Response.AddHeader("Raven-Total-Results", information.TotalResults.ToString(CultureInfo.InvariantCulture));
 							context.Response.AddHeader("Raven-Index-Timestamp",
-							                           information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
-							                                                               CultureInfo.InvariantCulture));
+													   information.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite,
+																						   CultureInfo.InvariantCulture));
 
 							if (isHeadRequest)
 								return;
 							writer.WriteHeader();
-						}, writer.Write);
+						}, o =>
+						{
+							timeout.Delay();
+							writer.Write(o);
+						});
 					}
 				}
 			}

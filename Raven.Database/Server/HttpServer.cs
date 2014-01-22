@@ -201,7 +201,7 @@ namespace Raven.Database.Server
 			if (@event.Database != SystemDatabase)
 				return; // we ignore anything that isn't from the root db
 
-			logger.Info("Shutting down database {0} because the tenant database has been removed", @event.Name);
+			logger.Info("Shutting down database {0} because the tenant database has been updated or removed", @event.Name);
 			CleanupDatabase(@event.Name, skipIfActive: false);
 		}
 
@@ -330,7 +330,7 @@ namespace Raven.Database.Server
 
 									try
 									{
-										logger.Info("Delyaed shut down database {0} because we are shutting down the server", task.Result.Name);
+										logger.Info("Delayed shut down database {0} because we are shutting down the server", task.Result.Name);
 										task.Result.Dispose();
 									}
 									catch (Exception e)

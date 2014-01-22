@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Threading;
+
 namespace Raven.Tests.Issues
 {
 	using System;
@@ -63,7 +65,7 @@ namespace Raven.Tests.Issues
 					Start = 0,
 					Cutoff = SystemTime.UtcNow,
 					Query = "Name:Arek"
-				});
+				}, CancellationToken.None);
 
 				WaitForIndexing(db);
 

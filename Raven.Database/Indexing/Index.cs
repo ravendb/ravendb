@@ -925,7 +925,7 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			public IEnumerable<IndexQueryResult> Query()
+			public IEnumerable<IndexQueryResult> Query(CancellationToken token)
 			{
 				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
@@ -965,6 +965,7 @@ namespace Raven.Database.Indexing
 							int moreRequired;
 							do
 							{
+								token.ThrowIfCancellationRequested(); 
 								search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
 								moreRequired = recorder.RecordResultsAlreadySeenForDistinctQuery(search, adjustStart, pageSize, ref start);
 								pageSize += moreRequired * 2;
@@ -1067,7 +1068,7 @@ namespace Raven.Database.Indexing
 				return luceneQuery;
 			}
 
-			public IEnumerable<IndexQueryResult> IntersectionQuery()
+			public IEnumerable<IndexQueryResult> IntersectionQuery(CancellationToken token)
 			{
 				using (IndexStorage.EnsureInvariantCulture())
 				{
@@ -1094,6 +1095,7 @@ namespace Raven.Database.Indexing
 
 						do
 						{
+							token.ThrowIfCancellationRequested();
 							if (skippedResultsInCurrentLoop > 0)
 							{
 								// We get here because out first attempt didn't get enough docs (after INTERSECTION was calculated)
