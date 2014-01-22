@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Controllers;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
@@ -264,7 +265,14 @@ namespace Raven.Database.Server.Controllers
 		{
 			if (msg.Content == null)
 				msg.Content = new JsonContent();
-			msg.Content.Headers.Add(key, value);
+
+            // Ensure we haven't already appended these values.
+            IEnumerable<string> existingValues;
+            var hasExistingHeaderAppended = msg.Content.Headers.TryGetValues(key, out existingValues) && existingValues.Any(v => v == value);
+            if (!hasExistingHeaderAppended)
+            {
+                msg.Content.Headers.Add(key, value);
+            }
 		}
 
 		private string GetDateString(RavenJToken token, string format)

@@ -12,6 +12,7 @@ using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
 using Microsoft.Owin;
 using Newtonsoft.Json;
+using Raven.Abstractions.Connection;
 using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;

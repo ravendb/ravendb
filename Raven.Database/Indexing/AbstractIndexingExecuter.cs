@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -23,6 +24,7 @@ namespace Raven.Database.Indexing
         protected int workCounter;
         protected int lastFlushedWorkCounter;
         protected BaseBatchSizeAutoTuner autoTuner;
+		protected ConcurrentDictionary<int, Index> currentlyProcessedIndexes = new ConcurrentDictionary<int, Index>(); 
 
         protected AbstractIndexingExecuter(WorkContext context)
         {
@@ -254,6 +256,11 @@ namespace Raven.Database.Indexing
 
             return true;
         }
+
+		public Index[] GetCurrentlyProcessingIndexes()
+		{
+			return currentlyProcessedIndexes.Values.ToArray();
+		}
 
         protected abstract IndexToWorkOn GetIndexToWorkOn(IndexStats indexesStat);
 

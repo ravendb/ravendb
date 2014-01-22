@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
@@ -8,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
 using Raven.Database.Impl;
@@ -26,6 +30,8 @@ namespace Raven.Database.Server.WebApi
 		private static readonly ILog Logger = LogManager.GetCurrentClassLogger();
 		private readonly TimeSpan maxTimeDatabaseCanBeIdle;
 		private readonly TimeSpan frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
+		private readonly ConcurrentDictionary<string, ConcurrentQueue<LogHttpRequestStatsParams>> tracedRequests =
+			new ConcurrentDictionary<string, ConcurrentQueue<LogHttpRequestStatsParams>>();
 
 		private DateTime lastWriteRequest;
 		private bool disposed;
@@ -79,32 +85,39 @@ namespace Raven.Database.Server.WebApi
 			}
 		}
 
-		public async Task HandleActualRequest(RavenDbApiController controller, Func<Task> action)
+		public async Task<HttpResponseMessage> HandleActualRequest(RavenDbApiController controller,
+		                                                           Func<Task<HttpResponseMessage>> action,
+		                                                           Func<HttpException, HttpResponseMessage> onHttpException)
 		{
-			using(await disposerLock.ReadLockAsync())
+			HttpResponseMessage response = null;
+
+			using (await disposerLock.ReadLockAsync())
 			{
 				if (disposed)
-					return;
+					return new HttpResponseMessage();
 
-				if (IsWriteRequest(controller.InnerRequest))
-				{
-					lastWriteRequest = SystemTime.UtcNow;
-				}
-
-				var sw = Stopwatch.StartNew();
+				Stopwatch sw = Stopwatch.StartNew();
 				try
 				{
+					if (IsWriteRequest(controller.InnerRequest))
+					{
+						lastWriteRequest = SystemTime.UtcNow;
+					}
+
 					if (SetupRequestToProperDatabase(controller))
 					{
-						await action();
+						response = await action();
 					}
+				}
+				catch (HttpException httpException)
+				{
+					response = onHttpException(httpException);
 				}
 				finally
 				{
-
 					try
 					{
-						FinalizeRequestProcessing(controller, sw, ravenUiRequest: false/*TODO: check*/);
+						FinalizeRequestProcessing(controller, response, sw, ravenUiRequest: false /*TODO: check*/);
 					}
 					catch (Exception e)
 					{
@@ -112,7 +125,8 @@ namespace Raven.Database.Server.WebApi
 					}
 				}
 			}
-			
+
+			return response;
 		}
 
 		// Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
@@ -287,7 +301,7 @@ namespace Raven.Database.Server.WebApi
 			Interlocked.Decrement(ref physicalRequestsCount);
 		}
 
-		private void FinalizeRequestProcessing(RavenDbApiController controller, Stopwatch sw, bool ravenUiRequest)
+		private void FinalizeRequestProcessing(RavenDbApiController controller, HttpResponseMessage response, Stopwatch sw, bool ravenUiRequest)
 		{
 			LogHttpRequestStatsParams logHttpRequestStatsParam = null;
 			try
@@ -296,8 +310,10 @@ namespace Raven.Database.Server.WebApi
 					sw,
 					GetHeaders(controller.InnerHeaders), //TODO: request.Headers,
 					controller.InnerRequest.Method.Method,
-					500, // TODO: responseCode,
-					controller.InnerRequest.RequestUri.PathAndQuery);
+					response != null ? (int) response.StatusCode : 500,
+					controller.InnerRequest.RequestUri.PathAndQuery,
+					controller.CustomRequestTraceInfo != null ? controller.CustomRequestTraceInfo.ToString() : null
+					);
 			}
 			catch (Exception e)
 			{
@@ -310,8 +326,38 @@ namespace Raven.Database.Server.WebApi
 			sw.Stop();
 
 			LogHttpRequestStats(logHttpRequestStatsParam, controller.DatabaseName);
+
+			TraceRequest(logHttpRequestStatsParam, controller.DatabaseName);
+
 			//TODO: log
 			//OutputSavedLogItems(logger);
+		}
+
+		private void TraceRequest(LogHttpRequestStatsParams requestLog, string databaseName)
+		{
+			if (string.IsNullOrWhiteSpace(databaseName))
+				databaseName = Constants.SystemDatabase;
+
+			var traces = tracedRequests.GetOrAdd(databaseName, new ConcurrentQueue<LogHttpRequestStatsParams>());
+
+			LogHttpRequestStatsParams _;
+			while (traces.Count > 50 && traces.TryDequeue(out _))
+			{
+			}
+
+			traces.Enqueue(requestLog);
+		}
+
+		public IEnumerable<LogHttpRequestStatsParams> GetRecentRequests(string databaseName)
+		{
+			if (string.IsNullOrWhiteSpace(databaseName))
+				databaseName = Constants.SystemDatabase;
+
+			ConcurrentQueue<LogHttpRequestStatsParams> queue;
+			if (tracedRequests.TryGetValue(databaseName, out queue) == false)
+				return Enumerable.Empty<LogHttpRequestStatsParams>();
+
+			return queue.ToArray().Reverse();
 		}
 
 		private NameValueCollection GetHeaders(HttpHeaders innerHeaders)
