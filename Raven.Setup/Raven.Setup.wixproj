@@ -22,6 +22,7 @@
     <IntermediateOutputPath>obj\$(Configuration)\</IntermediateOutputPath>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Components\CopyLicenseFile.wxs" />
     <Compile Include="Components\IIS\IISConfiguration_CreateWebSite.wxs" />
     <Compile Include="Components\IIS\IISConfiguration_ExistingWebSite.wxs" />
     <Compile Include="Components\IIS\Setup.wxs" />
