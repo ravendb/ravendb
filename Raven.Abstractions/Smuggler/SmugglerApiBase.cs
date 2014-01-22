@@ -243,6 +243,7 @@ namespace Raven.Abstractions.Smuggler
 
 			while (true)
 			{
+				bool hasDocs = false;
 				using (var documents = await GetDocuments(lastEtag))
 				{
 					var sw = Stopwatch.StartNew();					
@@ -259,7 +260,8 @@ namespace Raven.Abstractions.Smuggler
 							continue;
 						document.WriteTo(jsonWriter);
 						totalCount++;
-						
+						hasDocs = true;
+
 						if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
 						{
 							ShowProgress("Exported {0} documents", totalCount);
@@ -271,6 +273,9 @@ namespace Raven.Abstractions.Smuggler
 						sw.Start();
 					}
 				}
+
+				if(hasDocs)
+					continue;				
 
 				// The server can filter all the results. In this case, we need to try to go over with the next batch.
 				// Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
