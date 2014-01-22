@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -39,7 +40,19 @@ namespace Raven.Bundles.Replication.Responders
 			TInternal existingItem;
 			Etag existingEtag;
 			bool deleted;
-			var existingMetadata = TryGetExisting(id, out existingItem, out existingEtag, out deleted);
+
+			RavenJObject existingMetadata;
+
+			try
+			{
+				existingMetadata = TryGetExisting(id, out existingItem, out existingEtag, out deleted);
+			}
+			catch (Exception e)
+			{
+				log.Error("Replication - fetching existing item failed. (key = {0})", id);
+				throw new InvalidOperationException("Replication - fetching existing item failed. (key = " + id + ")", e);
+			}
+
 			if (existingMetadata == null)
 			{
 				log.Debug("New item {0} replicated successfully from {1}", id, Src);
@@ -93,7 +106,6 @@ namespace Raven.Bundles.Replication.Responders
 			else
 			{
 				log.Debug("Existing item {0} is in conflict with replicated version from {1}, marking item as conflicted", id, Src);
-
 				// we have a new conflict
 				// move the existing doc to a conflict and create a conflict document
 				var existingDocumentConflictId = id + "/conflicts/" + HashReplicationIdentifier(existingEtag);
@@ -101,7 +113,7 @@ namespace Raven.Bundles.Replication.Responders
 				createdConflict = CreateConflict(id, newDocumentConflictId, existingDocumentConflictId, existingItem,
 					existingMetadata);
 			}
-
+			
 			Database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
 				Database.RaiseNotifications(new ReplicationConflictNotification()
 				                            {

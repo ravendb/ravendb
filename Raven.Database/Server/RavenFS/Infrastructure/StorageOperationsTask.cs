@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
@@ -175,13 +176,16 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 
 		public Task CleanupDeletedFilesAsync()
 		{
-			IList<DeleteFileOperation> filesToDelete = null;
+			var filesToDelete = new List<DeleteFileOperation>();
 
 			storage.Batch(
 				accessor =>
 				filesToDelete =
 				accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, 10).Select(
 					config => config.AsObject<DeleteFileOperation>()).ToList());
+
+			if(filesToDelete.Count == 0)
+				return Task.FromResult<object>(null);
 
 			var tasks = new List<Task>();
 
@@ -240,13 +244,19 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 
 		public Task ResumeFileRenamingAsync()
 		{
-			IList<RenameFileOperation> filesToRename = null;
+			var filesToRename = new List<RenameFileOperation>();
 
 			storage.Batch(
 				accessor =>
-				filesToRename =
-				accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.RenameOperationConfigPrefix, 0, 10).Select(
-					config => config.AsObject<RenameFileOperation>()).ToList());
+				{
+					var renameOpConfigs =
+						accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.RenameOperationConfigPrefix, 0, 10);
+
+					filesToRename = renameOpConfigs.Select(config => config.AsObject<RenameFileOperation>()).ToList();
+				});
+
+			if (filesToRename.Count == 0)
+				return Task.FromResult<object>(null);
 
 			var tasks = new List<Task>();
 

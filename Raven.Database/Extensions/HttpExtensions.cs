@@ -381,6 +381,13 @@ namespace Raven.Database.Extensions
 			}
 		}
 
+        public static bool GetWaitForNonStaleResultsAsOfNow(this IHttpContext context)
+        {
+            bool result;
+            bool.TryParse(context.Request.QueryString["waitForNonStaleResultsAsOfNow"], out result);
+            return result;
+        }
+
 		public static bool GetSkipTransformResults(this IHttpContext context)
 		{
 			bool result;

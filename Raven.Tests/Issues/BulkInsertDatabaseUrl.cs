@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Connection;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Xunit;
 
@@ -19,7 +20,7 @@ namespace Raven.Tests.Issues
 				using (var store = new DocumentStore {Url = "http://localhost:8079/databases/my-db-name"}.Initialize())
 				using (var bulkInsert = store.BulkInsert())
 				{
-					Assert.Equal("http://localhost:8079/databases/my-db-name", ((ServerClient) bulkInsert.DatabaseCommands).Url);
+					Assert.Equal("http://localhost:8079/databases/my-db-name", ((AsyncServerClient) bulkInsert.DatabaseCommands).Url);
 				}
 			}
 		}

@@ -362,7 +362,14 @@ namespace Raven.Client.Connection
 		/// <returns></returns>
 		public QueryResult Query(string index, IndexQuery query, string[] includes, bool metadataOnly = false, bool indexEntriesOnly = false)
 		{
-			return asyncServerClient.QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly).ResultUnwrap();
+			try
+			{
+				return asyncServerClient.QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly).ResultUnwrap();
+			}
+			catch (Exception e)
+			{
+				throw new InvalidOperationException("Query failed. See inner exception for details.",e);
+			}
 		}
 
 		/// <summary>

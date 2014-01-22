@@ -148,8 +148,9 @@ namespace Raven.Json.Linq
 
 			if (IsSnapshot == false && unsafeVal != null)
 			{
-				if (unsafeVal.IsSnapshot == false && unsafeVal.Type != JTokenType.Object)
-					unsafeVal.EnsureCannotBeChangeAndEnableSnapshotting();
+			    if (unsafeVal.IsSnapshot == false)
+                    unsafeVal.EnsureCannotBeChangeAndEnableSnapshotting();
+                LocalChanges[key] = unsafeVal = unsafeVal.CreateSnapshot();
 			}
 
 			value = unsafeVal;
