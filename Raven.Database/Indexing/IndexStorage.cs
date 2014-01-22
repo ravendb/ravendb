@@ -1041,7 +1041,7 @@ namespace Raven.Database.Indexing
 		{
 			// relatively young index, haven't been queried for a while already
 			// can be safely removed, probably
-			if (age < 90 && lastQuery < 30)
+			if (age < 90 && lastQuery > 30)
 			{
                 accessor.Indexing.DeleteIndex(thisItem.Name, documentDatabase.WorkContext.CancellationToken);
 				return;
