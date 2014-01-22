@@ -482,14 +482,18 @@ namespace Raven.Database.Server
 
 			var databasesToCleanup = databaseLastRecentlyUsed
 				.Where(x => (SystemTime.UtcNow - x.Value) > maxTimeDatabaseCanBeIdle)
-				.Select(x => x.Key)
+				.Select(x => x)
 				.ToArray();
 
 			foreach (var db in databasesToCleanup)
 			{
+				logger.Info("Shutting down database {0}, because it has been idle for {1}",
+					db.Key,
+					(SystemTime.UtcNow - db.Value));
+
 				// intentionally inside the loop, so we get better concurrency overall
 				// since shutting down a database can take a while
-				CleanupDatabase(db, skipIfActive: true);
+				CleanupDatabase(db.Key, skipIfActive: true);
 
 			}
 		}
@@ -521,7 +525,7 @@ namespace Raven.Database.Server
 
 				var database = databaseTask.Result;
 				if (skipIfActive &&
-					(SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 10)
+					(SystemTime.UtcNow - database.WorkContext.LastWorkTime) < maxTimeDatabaseCanBeIdle)
 				{
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
 					// wait with unloading this database until it hasn't done indexing for a while.
@@ -530,6 +534,11 @@ namespace Raven.Database.Server
 				}
 				try
 				{
+					logger.Info("Shutting down database {0}. Last work time: {1}, skipIfActive: {2}", 
+						database.Name,
+						database.WorkContext.LastWorkTime,
+						skipIfActive
+						);
 					database.Dispose();
 				}
 				catch (Exception e)
