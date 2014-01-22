@@ -201,6 +201,7 @@ namespace Raven.Database.Server
 			if (@event.Database != SystemDatabase)
 				return; // we ignore anything that isn't from the root db
 
+			logger.Info("Shutting down database {0} because the tenant database has been removed", @event.Name);
 			CleanupDatabase(@event.Name, skipIfActive: false);
 		}
 
@@ -329,6 +330,7 @@ namespace Raven.Database.Server
 
 									try
 									{
+										logger.Info("Delyaed shut down database {0} because we are shutting down the server", task.Result.Name);
 										task.Result.Dispose();
 									}
 									catch (Exception e)
@@ -339,6 +341,7 @@ namespace Raven.Database.Server
 							}
 							else if (dbTask.Status == TaskStatus.RanToCompletion)
 							{
+								logger.Info("Shutting down database {0} because we are shutting down the server", dbTask.Result.Name); 
 								exceptionAggregator.Execute(dbTask.Result.Dispose);
 							}
 							// there is no else, the db is probably faulted
@@ -482,14 +485,18 @@ namespace Raven.Database.Server
 
 			var databasesToCleanup = databaseLastRecentlyUsed
 				.Where(x => (SystemTime.UtcNow - x.Value) > maxTimeDatabaseCanBeIdle)
-				.Select(x => x.Key)
+				.Select(x => x)
 				.ToArray();
 
 			foreach (var db in databasesToCleanup)
 			{
+				logger.Info("Shutting down database {0}, because it has been idle for {1}",
+					db.Key,
+					(SystemTime.UtcNow - db.Value));
+
 				// intentionally inside the loop, so we get better concurrency overall
 				// since shutting down a database can take a while
-				CleanupDatabase(db, skipIfActive: true);
+				CleanupDatabase(db.Key, skipIfActive: true);
 
 			}
 		}
@@ -521,7 +528,8 @@ namespace Raven.Database.Server
 
 				var database = databaseTask.Result;
 				if (skipIfActive &&
-					(SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 10)
+					((SystemTime.UtcNow - database.WorkContext.LastWorkTime) < maxTimeDatabaseCanBeIdle || 
+					database.IndexDefinitionStorage.IsCurrentlyIndexing()))
 				{
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
 					// wait with unloading this database until it hasn't done indexing for a while.
@@ -530,6 +538,11 @@ namespace Raven.Database.Server
 				}
 				try
 				{
+					logger.Info("Shutting down database {0}. Last work time: {1}, skipIfActive: {2}", 
+						database.Name,
+						database.WorkContext.LastWorkTime,
+						skipIfActive
+						);
 					database.Dispose();
 				}
 				catch (Exception e)
@@ -1014,6 +1027,7 @@ namespace Raven.Database.Server
 				throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed");
 			try
 			{
+				logger.Info("Shutting down database {0} because we have been ordered to lock the db", tenantId);
 				CleanupDatabase(tenantId, false);
 				actionToTake();
 			}

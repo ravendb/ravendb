@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
 	[CLSCompliant(false)]
 	public class SchemaCreator
 	{
-		public const string SchemaVersion = "4.7";
+		public const string SchemaVersion = "4.8";
 		private readonly Session session;
 
 		public SchemaCreator(Session session)
@@ -315,13 +315,19 @@ namespace Raven.Storage.Esent
 							  szIndexName = "by_etag",
 							  szKey = "+etag\0\0",
 							  grbit = CreateIndexGrbit.IndexDisallowNull
-						  },
-						  new JET_INDEXCREATE
-						  {
-							  szIndexName = "by_key",
-							  szKey = "+key\0\0",
-							  grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
 						  });
+		    Api.JetCreateIndex2(session, tableid, new[]
+		    {
+		        new JET_INDEXCREATE
+		        {
+		            szIndexName = "by_key",
+                    cbKey = 6,
+                    cbKeyMost = SystemParameters.KeyMost,
+                    cbVarSegMac = SystemParameters.KeyMost,
+		            szKey = "+key\0\0",
+		            grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+		        }
+		    }, 1);
 		}
 
 		void CreateIndexes(JET_TABLEID tableid, params JET_INDEXCREATE[] indexes)

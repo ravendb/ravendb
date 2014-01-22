@@ -227,6 +227,7 @@
     <Compile Include="Bugs\Facets\FacetErrors.cs" />
     <Compile Include="Bugs\Facets\FacetsCreationTest.cs" />
     <Compile Include="Bugs\Facets\DateTimeFacets.cs" />
+    <Compile Include="Issues\RavenDB_1304.cs" />
     <Compile Include="Issues\RavenDB_1379.cs" />
     <Compile Include="Issues\RavenDB_1470.cs" />
     <Compile Include="Bugs\TransformerThatReturnAnArray.cs" />
@@ -235,6 +236,7 @@
     <Compile Include="Issues\RavenDB_1497.cs" />
     <Compile Include="Issues\RavenDB_1520.cs" />
     <Compile Include="Issues\RavenDB_1539.cs" />
+    <Compile Include="Issues\RavenDB_1553.cs" />
     <Compile Include="Issues\RavenDB_1555.cs" />
     <Compile Include="Issues\RavenDB_1562.cs" />
     <Compile Include="Issues\ReplicationAlerts.cs" />
