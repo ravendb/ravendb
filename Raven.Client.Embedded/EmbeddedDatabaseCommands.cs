@@ -119,7 +119,7 @@ namespace Raven.Client.Embedded
 			// metadata only is NOT supported for embedded, nothing to save on the data transfers, so not supporting 
 			// this
 
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, start, pageSize);
+			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, start, pageSize, CancellationToken.None);
 			return SerializationHelper.RavenJObjectsToJsonDocuments(documentsWithIdStartingWith.OfType<RavenJObject>()).ToArray();
 		}
 
@@ -577,7 +577,8 @@ namespace Raven.Client.Embedded
 						if (string.IsNullOrEmpty(startsWith))
 						{
 							database.GetDocuments(start, pageSize, fromEtag,
-							                      items.Add);
+								CancellationToken.None,
+								items.Add);
 						}
 						else
 						{
@@ -587,6 +588,7 @@ namespace Raven.Client.Embedded
                                 exclude,
 								start,
 								pageSize,
+								CancellationToken.None,
 								items.Add);
 						}
 					}
@@ -693,7 +695,7 @@ namespace Raven.Client.Embedded
 			// As this is embedded we don't care for the metadata only value
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database
-				.GetDocuments(start, pageSize, null)
+				.GetDocuments(start, pageSize, null, CancellationToken.None)
 				.Cast<RavenJObject>()
 				.ToJsonDocuments()
 				.ToArray();

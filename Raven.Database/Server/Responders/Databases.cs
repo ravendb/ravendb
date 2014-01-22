@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Principal;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
@@ -40,7 +41,8 @@ namespace Raven.Database.Server.Responders
 
 			List<string> approvedDatabases = null;
 			var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, context.GetStart(),
-																		context.GetPageSize(Database.Configuration.MaxPageSize));
+																		context.GetPageSize(Database.Configuration.MaxPageSize),
+																		CancellationToken.None);
 			var data = databases
 				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
 				.ToArray();

@@ -1754,14 +1754,14 @@ namespace Raven.Database
 
         }
 
-        public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize)
+        public RavenJArray GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, CancellationToken token)
         {
             var list = new RavenJArray();
-            GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, list.Add);
+			GetDocumentsWithIdStartingWith(idPrefix, matches, exclude, start, pageSize, token, list.Add);
             return list;
         }
 
-        public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, Action<RavenJObject> addDoc)
+        public void GetDocumentsWithIdStartingWith(string idPrefix, string matches, string exclude, int start, int pageSize, CancellationToken token, Action<RavenJObject> addDoc)
         {
             if (idPrefix == null)
                 throw new ArgumentNullException("idPrefix");
@@ -1784,6 +1784,7 @@ namespace Raven.Database
 
                         foreach (var doc in docs)
                         {
+							token.ThrowIfCancellationRequested();
                             docCount++;
                             var keyTest = doc.Key.Substring(idPrefix.Length);
 
@@ -1816,14 +1817,14 @@ namespace Raven.Database
                 });
         }
 
-        public RavenJArray GetDocuments(int start, int pageSize, Etag etag)
+        public RavenJArray GetDocuments(int start, int pageSize, Etag etag, CancellationToken token)
         {
             var list = new RavenJArray();
-            GetDocuments(start, pageSize, etag, list.Add);
+            GetDocuments(start, pageSize, etag, token, list.Add);
             return list;
         }
 
-        public void GetDocuments(int start, int pageSize, Etag etag, Action<RavenJObject> addDocument)
+        public void GetDocuments(int start, int pageSize, Etag etag, CancellationToken token, Action<RavenJObject> addDocument)
         {
             TransactionalStorage.Batch(actions =>
             {
@@ -1838,6 +1839,7 @@ namespace Raven.Database
                     foreach (var doc in documents)
                     {
                         docCount++;
+						token.ThrowIfCancellationRequested();
                         if (etag != null)
                             etag = doc.Etag;
                         DocumentRetriever.EnsureIdInMetadata(doc);

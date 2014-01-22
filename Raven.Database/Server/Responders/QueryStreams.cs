@@ -57,8 +57,8 @@ namespace Raven.Database.Server.Responders
 					// the cache for that, to avoid filling it up very quickly
 					using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 					using (var cts = new CancellationTokenSource())
+					using(var timeout = cts.TimeoutAfter(Settings.DatbaseOperationTimeout))
 					{
-						var timeout = cts.TimeoutAfter(Settings.DatbaseOperationTimeout);
 						Database.Query(index, query, cts.Token, information =>
 						{
 							context.Response.AddHeader("Raven-Result-Etag", information.ResultEtag.ToString());
