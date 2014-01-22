@@ -201,6 +201,7 @@ namespace Raven.Database.Server
 			if (@event.Database != SystemDatabase)
 				return; // we ignore anything that isn't from the root db
 
+			logger.Info("Shutting down database {0} because the tenant database has been removed", @event.Name);
 			CleanupDatabase(@event.Name, skipIfActive: false);
 		}
 
@@ -329,6 +330,7 @@ namespace Raven.Database.Server
 
 									try
 									{
+										logger.Info("Delyaed shut down database {0} because we are shutting down the server", task.Result.Name);
 										task.Result.Dispose();
 									}
 									catch (Exception e)
@@ -339,6 +341,7 @@ namespace Raven.Database.Server
 							}
 							else if (dbTask.Status == TaskStatus.RanToCompletion)
 							{
+								logger.Info("Shutting down database {0} because we are shutting down the server", dbTask.Result.Name); 
 								exceptionAggregator.Execute(dbTask.Result.Dispose);
 							}
 							// there is no else, the db is probably faulted
@@ -525,7 +528,8 @@ namespace Raven.Database.Server
 
 				var database = databaseTask.Result;
 				if (skipIfActive &&
-					(SystemTime.UtcNow - database.WorkContext.LastWorkTime) < maxTimeDatabaseCanBeIdle)
+					((SystemTime.UtcNow - database.WorkContext.LastWorkTime) < maxTimeDatabaseCanBeIdle || 
+					database.IndexDefinitionStorage.IsCurrentlyIndexing()))
 				{
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
 					// wait with unloading this database until it hasn't done indexing for a while.
@@ -1023,6 +1027,7 @@ namespace Raven.Database.Server
 				throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed");
 			try
 			{
+				logger.Info("Shutting down database {0} because we have been ordered to lock the db", tenantId);
 				CleanupDatabase(tenantId, false);
 				actionToTake();
 			}
