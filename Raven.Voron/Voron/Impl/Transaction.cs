@@ -15,7 +15,6 @@ namespace Voron.Impl
 {
 	public unsafe class Transaction : IDisposable
 	{
-		private const int NumberOfRecentlyFoundPagesPerTree = 16;
 		private const int PagesTakenByHeader = 1;
 		private readonly IVirtualPager _dataPager;
 		private readonly StorageEnvironment _env;
@@ -31,8 +30,6 @@ namespace Voron.Impl
 		private readonly IDictionary<Tree, RecentlyFoundPages> _recentlyFoundPages = new Dictionary<Tree, RecentlyFoundPages>();
 
 		internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
-
-		private List<string> _deletedTrees;
 
 		public TransactionFlags Flags { get; private set; }
 
@@ -57,8 +54,9 @@ namespace Voron.Impl
 		private int _overflowPagesInTransaction;
 		private TransactionHeader* _txHeader;
 		private readonly List<PageFromScratchBuffer> _transactionPages = new List<PageFromScratchBuffer>();
+	    private readonly Dictionary<string, Tree> _trees = new Dictionary<string, Tree>();
 
-		public bool Committed { get; private set; }
+	    public bool Committed { get; private set; }
 
 		public bool RolledBack { get; private set; }
 
@@ -80,6 +78,10 @@ namespace Voron.Impl
 			_freeSpaceHandling = freeSpaceHandling;
 			Flags = flags;
 
+            var scratchPagerState = env.ScratchBufferPool.PagerState;
+            scratchPagerState.AddRef();
+            _pagerStates.Add(scratchPagerState);
+
 			if (flags.HasFlag(TransactionFlags.ReadWrite) == false)
 			{
 				_state = env.State;
@@ -88,10 +90,6 @@ namespace Voron.Impl
 			}
 
 			_state = env.State.Clone();
-
-			var scratchPagerState = env.ScratchBufferPool.PagerState;
-			scratchPagerState.AddRef();
-			_pagerStates.Add(scratchPagerState);
 
 			InitTransactionHeader();
 
@@ -128,18 +126,32 @@ namespace Voron.Impl
 				_state.Root.State.InWriteTransaction = true;
 			if (_state.FreeSpaceRoot != null)
 				_state.FreeSpaceRoot.State.InWriteTransaction = true;
-			foreach (var tree in _state.Trees)
+			foreach (var tree in Trees)
 			{
-				tree.Value.State.InWriteTransaction = true;
+				tree.State.InWriteTransaction = true;
 			}
 		}
 
-		public Tree GetTree(string treeName)
+		public Tree ReadTree(string treeName)
 		{
-			return State.GetTree(treeName, this);
+		    Tree tree;
+		    if (_trees.TryGetValue(treeName, out tree))
+		        return tree;
+
+            var header = (TreeRootHeader*)State.Root.DirectRead(this, treeName);
+		    if (header != null)
+		    {
+		        tree = Tree.Open(this, _env.SliceComparer, header);
+		        tree.Name = treeName;
+		        _trees.Add(treeName, tree);
+		        return tree;
+		    }
+
+		    _trees.Add(treeName, null);
+		    return null;
 		}
 
-		public Page ModifyPage(long num, Page page)
+	    public Page ModifyPage(long num, Page page)
 		{
 			_env.AssertFlushingNotFailed();
 
@@ -235,7 +247,10 @@ namespace Voron.Impl
 			return page;
 		}
 
-
+	    public IEnumerable<Tree> Trees
+	    {
+            get { return _trees.Values; }
+	    }
 
 		internal int GetNumberOfFreePages(NodeHeader* node)
 		{
@@ -265,24 +280,16 @@ namespace Voron.Impl
 
 			FlushAllMultiValues();
 
-			if (_deletedTrees != null)
-			{
-				foreach (var deletedTree in _deletedTrees)
-				{
-					State.RemoveTree(deletedTree);
-				}
-			}
-
 			State.Root.State.InWriteTransaction = false;
 			State.FreeSpaceRoot.State.InWriteTransaction = false;
 
-			foreach (var treeKvp in State.Trees)
+			foreach (var tree in Trees)
 			{
-				treeKvp.Value.State.InWriteTransaction = false;
-				var treeState = treeKvp.Value.State;
+				tree.State.InWriteTransaction = false;
+				var treeState = tree.State;
 				if (treeState.IsModified)
 				{
-					var treePtr = (TreeRootHeader*)State.Root.DirectAdd(this, treeKvp.Key, sizeof(TreeRootHeader));
+					var treePtr = (TreeRootHeader*)State.Root.DirectAdd(this, tree.Name, sizeof(TreeRootHeader));
 					treeState.CopyTo(treePtr);
 				}
 			}
@@ -320,7 +327,7 @@ namespace Voron.Impl
 
 			foreach (var pageFromScratch in _transactionPages)
 			{
-				_env.ScratchBufferPool.Free(pageFromScratch.PositionInScratchBuffer);
+				_env.ScratchBufferPool.Free(pageFromScratch.PositionInScratchBuffer, -1);
 			}
 
 			RolledBack = true;
@@ -368,7 +375,7 @@ namespace Voron.Impl
 		internal void UpdateRootsIfNeeded(Tree root, Tree freeSpace)
 		{
 			//can only happen during initial transaction that creates Root and FreeSpaceRoot trees
-			if (State.Root == null && State.FreeSpaceRoot == null && State.Trees.Count == 0)
+			if (State.Root == null && State.FreeSpaceRoot == null)
 			{
 				State.Root = root;
 				State.FreeSpaceRoot = freeSpace;
@@ -411,11 +418,9 @@ namespace Voron.Impl
 			return _multiValueTrees.Remove(keyToRemove);
 		}
 
-		public void DeletedTree(string name)
+		public bool RemoveTree(string name)
 		{
-			if (_deletedTrees == null)
-				_deletedTrees = new List<string>();
-			_deletedTrees.Add(name);
+		    return _trees.Remove(name);
 		}
 
 
@@ -455,5 +460,15 @@ namespace Voron.Impl
 
 			pages.Add(foundPage);
 		}
+
+	    public void AddTree(string name, Tree tree)
+	    {
+	        Tree value;
+	        if (_trees.TryGetValue(name, out value) && value != null)
+	        {
+	            throw new InvalidOperationException("Tree already exists: " + name);
+	        }
+	        _trees[name] = tree;
+	    }
 	}
 }
