@@ -685,7 +685,7 @@ namespace Raven.Abstractions.Smuggler
 				return;
 			}
 
-			var smugglerVersion = FileVersionInfo.GetVersionInfo(typeof(SmugglerApiBase).Assembly.Location).ProductVersion;
+            var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetEmbeddedAssemblyLocationFor<SmugglerApiBase>()).ProductVersion;
 
 			var subServerVersion = serverVersion.Substring(0, 3);
 			var subSmugglerVersion = smugglerVersion.Substring(0, 3);

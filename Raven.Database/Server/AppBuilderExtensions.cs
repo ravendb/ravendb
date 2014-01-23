@@ -1,6 +1,7 @@
 ﻿using System;
 using System.CodeDom;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
@@ -10,10 +11,16 @@ using System.Web.Hosting;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using System.Web.Http.Hosting;
+
+using Lucene.Net.Documents;
+
 using Microsoft.Owin;
 using Newtonsoft.Json;
+
+using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Database.Config;
+using Raven.Database.Linq;
 using Raven.Database.Server;
 using Raven.Database.Server.Connections;
 using Raven.Database.Server.Controllers;
@@ -68,6 +75,8 @@ namespace Owin
 				}
 			}
 
+            AssemblyExtractor.ExtractEmbeddedAssemblies();
+
 #if DEBUG
 			app.UseInterceptor();
 #endif
@@ -109,6 +118,8 @@ namespace Owin
 			cfg.EnsureInitialized();
 			return cfg;
 		}
+
+        
 
 		private class MyAssemblyResolver : IAssembliesResolver
 		{

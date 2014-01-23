@@ -2516,13 +2516,16 @@ namespace Raven.Database
 			}
 		}
 
-		private static int GetBuildVersion()
-		{
-			var fileVersionInfo = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location);
-			if (fileVersionInfo.FilePrivatePart != 0)
-				return fileVersionInfo.FilePrivatePart;
-			return fileVersionInfo.FileBuildPart;
-		}
+        private static int GetBuildVersion()
+        {
+            var location = AssemblyHelper.GetEmbeddedAssemblyLocationFor<DocumentDatabase>();
+
+            var fileVersionInfo = FileVersionInfo.GetVersionInfo(location);
+            if (fileVersionInfo.FilePrivatePart != 0)
+                return fileVersionInfo.FilePrivatePart;
+
+            return fileVersionInfo.FileBuildPart;
+        }
 
 		private volatile bool disposed;
 		private readonly ValidateLicense validateLicense;
@@ -2548,8 +2551,11 @@ namespace Raven.Database
 		{
 			get
 			{
-				return productVersion ??
-					   (productVersion = FileVersionInfo.GetVersionInfo(typeof(DocumentDatabase).Assembly.Location).ProductVersion);
+                if (!string.IsNullOrEmpty(productVersion))
+                    return productVersion;
+
+                productVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetEmbeddedAssemblyLocationFor<DocumentDatabase>()).ProductVersion;
+			    return productVersion;
 			}
 		}
 
