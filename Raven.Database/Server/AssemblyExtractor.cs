@@ -13,14 +13,13 @@ using System.Reflection;
 using Lucene.Net.Documents;
 
 using Raven.Abstractions;
+using Raven.Abstractions.Util;
 using Raven.Database.Linq;
 
 namespace Raven.Database.Server
 {
     public static class AssemblyExtractor
     {
-        private const string AssembliesPath = "Assemblies\\";
-
         private const string AssemblySuffix = ".dll";
 
         private const string CompressedAssemblySuffix = AssemblySuffix + ".zip";
@@ -29,45 +28,20 @@ namespace Raven.Database.Server
         {
             var assemblies = new HashSet<string> { 
                 typeof(SystemTime).Assembly.GetName().Name, 
-                typeof(AbstractViewGenerator).Assembly.GetName().Name, 
                 typeof(Field).Assembly.GetName().Name 
             };
 
-            InitializeDirectoryAndCleanup();
-
             var assembly = Assembly.GetExecutingAssembly();
+            var assemblyLocation = Path.GetDirectoryName(assembly.Location);
             var assembliesToExtract = FindAssembliesToExtract(assembly, assemblies);
 
-            Extract(assembly, assembliesToExtract);
-
-            foreach (var assemblyToExtract in assembliesToExtract) 
-                assemblies.Remove(assemblyToExtract.Value.Name);
-
-            if (assemblies.Count == 0)
-                return;
-
-            assembly = GetEntryAssembly(assembly);
-            assembliesToExtract = FindAssembliesToExtract(assembly, assemblies);
-
-            Extract(assembly, assembliesToExtract);
+            Extract(assembly, assembliesToExtract, assemblyLocation);
 
             foreach (var assemblyToExtract in assembliesToExtract)
                 assemblies.Remove(assemblyToExtract.Value.Name);
 
             if (assemblies.Count != 0)
                 throw new InvalidOperationException("Not all embedded assemblies were extracted. Probably a bug.");
-        }
-
-        private static Assembly GetEntryAssembly(Assembly executingAssembly)
-        {
-            var assembly = Assembly.GetEntryAssembly();
-            if (assembly != null)
-                return assembly;
-
-            var path = AppDomain.CurrentDomain.RelativeSearchPath;
-            var splits = executingAssembly.CodeBase.Split('/');
-
-            return Assembly.LoadFile(Path.Combine(path, splits.Last()));
         }
 
         private static Dictionary<string, AssemblyToExtract> FindAssembliesToExtract(Assembly currentAssembly, HashSet<string> assembliesToFind)
@@ -97,16 +71,18 @@ namespace Raven.Database.Server
             return assembliesToExtract;
         }
 
-        private static void Extract(Assembly assemblyToExtractFrom, IEnumerable<KeyValuePair<string, AssemblyToExtract>> assembliesToExtract)
+        private static void Extract(Assembly assemblyToExtractFrom, IEnumerable<KeyValuePair<string, AssemblyToExtract>> assembliesToExtract, string location)
         {
             foreach (var assemblyToExtract in assembliesToExtract)
             {
                 using (var stream = assemblyToExtractFrom.GetManifestResourceStream(assemblyToExtract.Key))
                 {
-                    if (stream == null) 
+                    if (stream == null)
                         throw new InvalidOperationException("Could not extract assembly " + assemblyToExtract.Key + " from resources.");
 
-                    var assemblyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AssembliesPath, assemblyToExtract.Value.Name + AssemblySuffix);
+                    var assemblyPath = Path.Combine(location, assemblyToExtract.Value.Name + AssemblySuffix);
+                    if (File.Exists(assemblyPath))
+                        File.Delete(assemblyPath);
 
                     if (assemblyToExtract.Value.Compressed)
                     {
@@ -118,23 +94,9 @@ namespace Raven.Database.Server
                     {
                         using (var file = File.Create(assemblyPath))
                             stream.CopyTo(file);
-                    }   
+                    }
                 }
             }
-        }
-
-        private static void InitializeDirectoryAndCleanup()
-        {
-            var fullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AssembliesPath);
-
-            if (!Directory.Exists(fullPath))
-            {
-                Directory.CreateDirectory(fullPath);
-                return;
-            }
-
-            foreach (var file in Directory.GetFiles(fullPath))
-                File.Delete(file);
         }
 
         private class AssemblyToExtract

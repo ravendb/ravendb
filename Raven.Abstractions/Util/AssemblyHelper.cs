@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.IO;
+using System.Reflection;
 
 namespace Raven.Abstractions.Util
 {
@@ -32,21 +33,20 @@ namespace Raven.Abstractions.Util
             return location;
         }
 
-        public static string GetExtractedAssemblyLocationFor<T>()
+        public static string GetExtractedAssemblyLocationFor<T>(Assembly executingAssembly)
         {
-            return GetExtractedAssemblyLocationFor(typeof(T));
+            return GetExtractedAssemblyLocationFor(typeof(T), executingAssembly);
         }
 
-        public static string GetExtractedAssemblyLocationFor(Type type)
+        public static string GetExtractedAssemblyLocationFor(Type type, Assembly executingAssembly)
         {
 #if SILVERLIGHT
             return type.Assembly.Location;
 #else
-            var assemblyPath = "Assemblies";
+            var path = Path.GetDirectoryName(executingAssembly.Location);
             var name = type.Assembly.GetName().Name;
 
-            var path = assemblyPath + "/" + name + ".dll";
-            return Path.GetFullPath(path);
+            return Path.Combine(path, name + ".dll");
 #endif
         }
     }

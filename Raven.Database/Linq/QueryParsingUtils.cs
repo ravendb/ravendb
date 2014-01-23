@@ -412,11 +412,13 @@ namespace Raven.Database.Linq
 		                                        string basePath, string indexFilePath)
 		{
 			var provider = new CSharpCodeProvider(new Dictionary<string, string> {{"CompilerVersion", "v4.0"}});
+		    var currentAssembly = typeof(QueryParsingUtils).Assembly;
+
 			var assemblies = new HashSet<string>
 			{
-                AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(SystemTime)),
-                AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(AbstractViewGenerator)),
-                AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(Field)),
+                AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(SystemTime), currentAssembly),
+                AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(Field), currentAssembly),
+                typeof(AbstractViewGenerator).Assembly.Location,
 				typeof (NameValueCollection).Assembly.Location,
 				typeof (Enumerable).Assembly.Location,
 				typeof (Binder).Assembly.Location,
