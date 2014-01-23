@@ -198,11 +198,14 @@ namespace Raven.Abstractions.Connection
 							{
 								ravenJObject = RavenJObject.Parse(error);
 							}
-							catch { }
+							catch
+							{
+								ravenJObject = null; //make intent bit more clear
+							}
+
 							e.Data["original-value"] = error;
-							if (ravenJObject == null)
-								throw;
-							throw new WebException("Error: " + ravenJObject.Value<string>("Error"), e)
+							throw new WebException("Error: " +
+								((ravenJObject != null) ? ravenJObject.Value<string>("Error") : error), e)
 							{
 								Data = {{"original-value", error}}
 							};

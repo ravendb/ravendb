@@ -69,11 +69,14 @@
     <Compile Include="Backups\Full.cs" />
     <Compile Include="Backups\Incremental.cs" />
     <Compile Include="Bugs\ChecksumMismatchAfterRecovery.cs" />
+    <Compile Include="Bugs\MemoryAccess.cs" />
     <Compile Include="Bugs\FlushingToDataFile.cs" />
+    <Compile Include="Bugs\PagesFilteredOutByJournalApplicator.cs" />
     <Compile Include="Bugs\IndexPointToNonLeafPageTests.cs" />
     <Compile Include="Bugs\Isolation.cs" />
     <Compile Include="Bugs\LargeValues.cs" />
     <Compile Include="Bugs\MultiAdds.cs" />
+    <Compile Include="Bugs\PageTableIssue.cs" />
     <Compile Include="Bugs\RecoveryMultipleJournals.cs" />
     <Compile Include="Bugs\RecoveryWithManualFlush.cs" />
     <Compile Include="Bugs\Snapshots.cs" />
@@ -81,6 +84,7 @@
     <Compile Include="Bugs\EmptyTree.cs" />
     <Compile Include="Bugs\PageSplitter.cs" />
     <Compile Include="Bugs\Recovery.cs" />
+    <Compile Include="Bugs\InvalidReleasesOfScratchPages.cs" />
     <Compile Include="Bugs\TreeRebalancer.cs" />
     <Compile Include="Bugs\Versioning.cs" />
     <Compile Include="Bugs\UpdateLastItem.cs" />
