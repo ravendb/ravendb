@@ -19,7 +19,7 @@ namespace Raven.Database.Server
 {
     public static class AssemblyExtractor
     {
-        private const string AssembliesPath = "Assemblies";
+        private const string AssembliesPath = "Assemblies\\";
 
         private const string AssemblySuffix = ".dll";
 
@@ -33,11 +33,46 @@ namespace Raven.Database.Server
                 typeof(Field).Assembly.GetName().Name 
             };
 
-            var entryAssembly = Assembly.GetEntryAssembly();
-            var resources = entryAssembly.GetManifestResourceNames();
-
             InitializeDirectoryAndCleanup();
 
+            var assembly = Assembly.GetExecutingAssembly();
+            var assembliesToExtract = FindAssembliesToExtract(assembly, assemblies);
+
+            Extract(assembly, assembliesToExtract);
+
+            foreach (var assemblyToExtract in assembliesToExtract) 
+                assemblies.Remove(assemblyToExtract.Value.Name);
+
+            if (assemblies.Count == 0)
+                return;
+
+            assembly = GetEntryAssembly(assembly);
+            assembliesToExtract = FindAssembliesToExtract(assembly, assemblies);
+
+            Extract(assembly, assembliesToExtract);
+
+            foreach (var assemblyToExtract in assembliesToExtract)
+                assemblies.Remove(assemblyToExtract.Value.Name);
+
+            if (assemblies.Count != 0)
+                throw new InvalidOperationException("Not all embedded assemblies were extracted. Probably a bug.");
+        }
+
+        private static Assembly GetEntryAssembly(Assembly executingAssembly)
+        {
+            var assembly = Assembly.GetEntryAssembly();
+            if (assembly != null)
+                return assembly;
+
+            var path = AppDomain.CurrentDomain.RelativeSearchPath;
+            var splits = executingAssembly.CodeBase.Split('/');
+
+            return Assembly.LoadFile(Path.Combine(path, splits.Last()));
+        }
+
+        private static Dictionary<string, AssemblyToExtract> FindAssembliesToExtract(Assembly currentAssembly, HashSet<string> assembliesToFind)
+        {
+            var resources = currentAssembly.GetManifestResourceNames();
             var assembliesToExtract = new Dictionary<string, AssemblyToExtract>();
 
             foreach (var resource in resources)
@@ -47,23 +82,19 @@ namespace Raven.Database.Server
 
                 var compressed = false;
 
-                var assembly = assemblies.FirstOrDefault(x => resource.EndsWith(x + CompressedAssemblySuffix, StringComparison.InvariantCultureIgnoreCase));
-                if (assembly != null) 
+                var assembly = assembliesToFind.FirstOrDefault(x => resource.EndsWith(x + CompressedAssemblySuffix, StringComparison.InvariantCultureIgnoreCase));
+                if (assembly != null)
                     compressed = true;
                 else
-                    assembly = assemblies.FirstOrDefault(x => resource.EndsWith(x + AssemblySuffix, StringComparison.InvariantCultureIgnoreCase));
+                    assembly = assembliesToFind.FirstOrDefault(x => resource.EndsWith(x + AssemblySuffix, StringComparison.InvariantCultureIgnoreCase));
 
                 if (assembly == null)
                     continue;
 
-                assembliesToExtract.Add(resource, new AssemblyToExtract
-                                                  {
-                                                      Compressed = compressed,
-                                                      Name = assembly
-                                                  });
+                assembliesToExtract.Add(resource, new AssemblyToExtract { Compressed = compressed, Name = assembly });
             }
 
-            Extract(entryAssembly, assembliesToExtract);
+            return assembliesToExtract;
         }
 
         private static void Extract(Assembly assemblyToExtractFrom, IEnumerable<KeyValuePair<string, AssemblyToExtract>> assembliesToExtract)
@@ -75,7 +106,7 @@ namespace Raven.Database.Server
                     if (stream == null) 
                         throw new InvalidOperationException("Could not extract assembly " + assemblyToExtract.Key + " from resources.");
 
-                    var assemblyPath = AssembliesPath + "/" + assemblyToExtract.Value.Name + AssemblySuffix;
+                    var assemblyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AssembliesPath, assemblyToExtract.Value.Name + AssemblySuffix);
 
                     if (assemblyToExtract.Value.Compressed)
                     {
@@ -94,13 +125,15 @@ namespace Raven.Database.Server
 
         private static void InitializeDirectoryAndCleanup()
         {
-            if (!Directory.Exists(AssembliesPath))
+            var fullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AssembliesPath);
+
+            if (!Directory.Exists(fullPath))
             {
-                Directory.CreateDirectory(AssembliesPath);
+                Directory.CreateDirectory(fullPath);
                 return;
             }
 
-            foreach (var file in Directory.GetFiles(AssembliesPath))
+            foreach (var file in Directory.GetFiles(fullPath))
                 File.Delete(file);
         }
 

@@ -10,12 +10,12 @@ namespace Raven.Abstractions.Util
 {
     public static class AssemblyHelper
     {
-        public static string GetEmbeddedAssemblyLocationFor<T>()
+        public static string GetAssemblyLocationFor<T>()
         {
-            return GetEmbeddedAssemblyLocationFor(typeof(T));
+            return GetAssemblyLocationFor(typeof(T));
         }
 
-        public static string GetEmbeddedAssemblyLocationFor(Type type)
+        public static string GetAssemblyLocationFor(Type type)
         {
             var assembly = type.Assembly;
             var location = assembly.Location;

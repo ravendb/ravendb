@@ -2518,7 +2518,7 @@ namespace Raven.Database
 
         private static int GetBuildVersion()
         {
-            var location = AssemblyHelper.GetEmbeddedAssemblyLocationFor<DocumentDatabase>();
+            var location = AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>();
 
             var fileVersionInfo = FileVersionInfo.GetVersionInfo(location);
             if (fileVersionInfo.FilePrivatePart != 0)
@@ -2554,7 +2554,7 @@ namespace Raven.Database
                 if (!string.IsNullOrEmpty(productVersion))
                     return productVersion;
 
-                productVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetEmbeddedAssemblyLocationFor<DocumentDatabase>()).ProductVersion;
+                productVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<DocumentDatabase>()).ProductVersion;
 			    return productVersion;
 			}
 		}
