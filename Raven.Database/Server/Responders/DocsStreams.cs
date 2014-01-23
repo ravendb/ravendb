@@ -68,6 +68,7 @@ namespace Raven.Database.Server.Responders
 									doc =>
 									{
 										timeout.Delay();
+                                        Database.WorkContext.UpdateFoundWork();
 										doc.WriteTo(writer);
 									});
 							}

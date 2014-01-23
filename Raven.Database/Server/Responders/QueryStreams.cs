@@ -76,6 +76,7 @@ namespace Raven.Database.Server.Responders
 						}, o =>
 						{
 							timeout.Delay();
+                            Database.WorkContext.UpdateFoundWork();
 							writer.Write(o);
 						});
 					}
