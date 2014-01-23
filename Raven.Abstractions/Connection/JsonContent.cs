@@ -3,11 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -18,6 +18,8 @@ namespace Raven.Abstractions.Connection
 {
 	public class JsonContent : HttpContent
 	{
+		private static readonly Encoding DefaultEncoding = new UTF8Encoding(false);
+
 		public JsonContent(RavenJToken data = null)
 		{
 			Data = data;
@@ -29,8 +31,6 @@ namespace Raven.Abstractions.Connection
 
 		protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
 		{
-
-
 		    if (HasNoData())
 		        return new CompletedTask<bool>(true);
 
@@ -39,7 +39,7 @@ namespace Raven.Abstractions.Connection
 			else
 				Headers.ContentType = new MediaTypeHeaderValue("application/javascript") {CharSet = "utf-8"};
 
-			var writer = new StreamWriter(stream);
+			var writer = new StreamWriter(stream, DefaultEncoding);
 			if (string.IsNullOrEmpty(Jsonp) == false)
 			{
 				writer.Write(Jsonp);
