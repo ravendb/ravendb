@@ -8,6 +8,8 @@ namespace Raven.Bundles.Replication.Plugins
 	[InheritedExport]
 	public abstract class AbstractDocumentReplicationConflictResolver
 	{
-		public abstract bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument);
+		public abstract bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc,
+		                                Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave,
+		                                out RavenJObject documentToSave);
 	}
 }

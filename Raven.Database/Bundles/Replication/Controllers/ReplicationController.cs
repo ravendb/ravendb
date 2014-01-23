@@ -14,6 +14,7 @@ using Raven.Bundles.Replication.Data;
 using Raven.Bundles.Replication.Plugins;
 using Raven.Bundles.Replication.Responders;
 using Raven.Bundles.Replication.Tasks;
+using Raven.Database.Bundles.Replication.Plugins;
 using Raven.Database.Server.Controllers;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -37,7 +38,28 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		{
 			get
 			{
-				return Database.Configuration.Container.GetExportedValues<AbstractDocumentReplicationConflictResolver>();
+				var exported = Database.Configuration.Container.GetExportedValues<AbstractDocumentReplicationConflictResolver>();
+
+				var config = GetReplicationConfig();
+
+				if (config == null || config.DocumentConflictResolution == StraightforwardConflictResolution.None)
+					return exported;
+
+				var withConfiguredResolvers = exported.ToList();
+
+				switch (config.DocumentConflictResolution)
+				{
+					case StraightforwardConflictResolution.ResolveToLocal:
+						withConfiguredResolvers.Add(LocalDocumentReplicationConflictResolver.Instance);
+						break;
+					case StraightforwardConflictResolution.ResolveToRemote:
+						withConfiguredResolvers.Add(RemoteDocumentReplicationConflictResolver.Instance);
+						break;
+					default:
+						throw new ArgumentOutOfRangeException("config.DocumentConflictResolution");
+				}
+
+				return withConfiguredResolvers;
 			}
 		}
 
@@ -45,7 +67,28 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		{
 			get
 			{
-				return Database.Configuration.Container.GetExportedValues<AbstractAttachmentReplicationConflictResolver>();				
+				var exported = Database.Configuration.Container.GetExportedValues<AbstractAttachmentReplicationConflictResolver>();
+
+				var config = GetReplicationConfig();
+
+				if (config == null || config.AttachmentConflictResolution == StraightforwardConflictResolution.None)
+					return exported;
+
+				var withConfiguredResolvers = exported.ToList();
+
+				switch (config.AttachmentConflictResolution)
+				{
+					case StraightforwardConflictResolution.ResolveToLocal:
+						withConfiguredResolvers.Add(LocalAttachmentReplicationConflictResolver.Instance);
+						break;
+					case StraightforwardConflictResolution.ResolveToRemote:
+						withConfiguredResolvers.Add(RemoteAttachmentReplicationConflictResolver.Instance);
+						break;
+					default:
+						throw new ArgumentOutOfRangeException("config.AttachmentConflictResolution");
+				}
+
+				return withConfiguredResolvers;
 			}
 		}
 
@@ -376,6 +419,26 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				ReplicationConflictResolvers = AttachmentReplicationConflictResolvers,
 				Src = src
 			}.Replicate(id, metadata, data);
+		}
+
+		private ReplicationConfig GetReplicationConfig()
+		{
+			var configDoc = Database.Get(Constants.RavenReplicationConfig, null);
+
+			if (configDoc == null)
+				return null;
+
+			ReplicationConfig config;
+			try
+			{
+				config = configDoc.DataAsJson.JsonDeserialization<ReplicationConfig>();
+				return config;
+			}
+			catch (Exception e)
+			{
+				Log.Warn("Could not deserialize a replication config", e);
+				return null;
+			}
 		}
 	}
 }

@@ -109,10 +109,20 @@ namespace Raven.Bundles.Replication.Responders
 
 		}
 
-		protected override bool TryResolveConflict(string id, RavenJObject metadata, RavenJObject document, JsonDocument existing)
+		protected override bool TryResolveConflict(string id, RavenJObject metadata, RavenJObject document, JsonDocument existing, out RavenJObject metadataToSave,
+										out RavenJObject documentToSave)
 		{
-			return ReplicationConflictResolvers.Any(
-					replicationConflictResolver => replicationConflictResolver.TryResolve(id, metadata, document, existing, key => Actions.Documents.DocumentByKey(key, null)));
+			foreach (var replicationConflictResolver in ReplicationConflictResolvers)
+			{
+				if (replicationConflictResolver.TryResolve(id, metadata, document, existing, key => Actions.Documents.DocumentByKey(key, null),
+														   out metadataToSave, out documentToSave))
+					return true;
+			}
+
+			metadataToSave = null;
+			documentToSave = null;
+
+			return false;
 		}
 	}
 }

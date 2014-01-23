@@ -13,26 +13,36 @@
 	[InheritedExport(typeof(AbstractDocumentReplicationConflictResolver))]
 	public class DefaultDocumentReplicationConflictResolver : AbstractDocumentReplicationConflictResolver
 	{
-		public override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc, Func<string, JsonDocument> getDocument)
+		public override bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc,
+		                                Func<string, JsonDocument> getDocument, out RavenJObject metadataToSave,
+		                                out RavenJObject documentToSave)
 		{
 			var existingDocumentIsInConflict = existingDoc.Metadata[Constants.RavenReplicationConflict] != null;
 			var existingDocumentIsDeleted = existingDoc.Metadata[Constants.RavenDeleteMarker] != null
-											&& existingDoc.Metadata[Constants.RavenDeleteMarker].Value<bool>();
+			                                && existingDoc.Metadata[Constants.RavenDeleteMarker].Value<bool>();
+
+			metadataToSave = null;
+			documentToSave = null;
 
 			if (existingDocumentIsInConflict && existingDocumentIsDeleted == false)
 			{
 				var conflictIds =
 					existingDoc.DataAsJson.Value<RavenJArray>("Conflicts")
-					.Select(x => x.Value<string>())
-					.ToArray();
+					           .Select(x => x.Value<string>())
+					           .ToArray();
 
 				if (conflictIds.Length == 0) return false;
 
-				return
-					conflictIds
-					.Select(getDocument)
-					.Where(x => x != null)
-					.All(doc => Historian.IsDirectChildOfCurrent(metadata, doc.Metadata));
+				if (conflictIds
+					    .Select(getDocument)
+					    .Where(x => x != null)
+					    .All(doc => Historian.IsDirectChildOfCurrent(metadata, doc.Metadata)) == false)
+					return false;
+
+				metadataToSave = metadata;
+				documentToSave = document;
+
+				return true;
 			}
 
 			return false;
