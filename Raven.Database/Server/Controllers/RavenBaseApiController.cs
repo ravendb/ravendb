@@ -131,7 +131,7 @@ namespace Raven.Database.Server.Controllers
 		private Encoding GetRequestEncoding()
 		{
 			if (InnerRequest.Content.Headers.ContentType == null || string.IsNullOrWhiteSpace(InnerRequest.Content.Headers.ContentType.CharSet))
-				return Encoding.GetEncoding("ISO-8859-1");
+				return Encoding.GetEncoding(Constants.DefaultRequestEncoding);
 			return Encoding.GetEncoding(InnerRequest.Content.Headers.ContentType.CharSet);
 		}
 
