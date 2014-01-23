@@ -1013,9 +1013,6 @@
     <TypeScriptCompile Include="App\common\alertArgs.ts" />
     <TypeScriptCompile Include="App\common\raven.ts" />
     <TypeScriptCompile Include="App\commands\saveDocumentCommand.ts" />
-    <Content Include="App\common\raven.js">
-      <DependentUpon>raven.ts</DependentUpon>
-    </Content>
     <Content Include="App\main.js" />
     <TypeScriptCompile Include="App\models\collection.ts" />
     <TypeScriptCompile Include="App\models\collectionInfo.ts" />

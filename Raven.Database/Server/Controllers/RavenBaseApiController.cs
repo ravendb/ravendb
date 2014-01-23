@@ -348,7 +348,6 @@ namespace Raven.Database.Server.Controllers
 			return resMsg;
 		}
 
-		private static readonly Encoding DefaultEncoding = new UTF8Encoding(false);
 		public HttpResponseMessage WriteData(RavenJObject data, RavenJObject headers, Etag etag, HttpStatusCode status = HttpStatusCode.OK, HttpResponseMessage msg = null)
 		{
 			if (msg == null)
