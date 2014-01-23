@@ -490,7 +490,7 @@ namespace Raven.Database.Server
 
 			foreach (var db in databasesToCleanup)
 			{
-				logger.Info("Shutting down database {0}, because it has been idle for {1}",
+				logger.Info("Database {0}, had no incoming requests idle for {1}, trying to shut it down",
 					db.Key,
 					(SystemTime.UtcNow - db.Value));
 
@@ -527,10 +527,16 @@ namespace Raven.Database.Server
 				}
 
 				var database = databaseTask.Result;
-				if (skipIfActive &&
-					((SystemTime.UtcNow - database.WorkContext.LastWorkTime) < maxTimeDatabaseCanBeIdle || 
-					database.IndexDefinitionStorage.IsCurrentlyIndexing()))
-				{
+			    var isCurrentlyIndexing = database.IndexDefinitionStorage.IsCurrentlyIndexing();
+			    var lastWorkTime = database.WorkContext.LastWorkTime;
+			    if (skipIfActive &&
+					((SystemTime.UtcNow - lastWorkTime) < maxTimeDatabaseCanBeIdle || 
+					isCurrentlyIndexing))
+			    {
+			        logger.Info(
+			            "Will not be shutting down database {0} because is is doing work, last work at {1}, indexing: {2}",
+			            lastWorkTime,
+			            isCurrentlyIndexing);
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
 					// wait with unloading this database until it hasn't done indexing for a while.
 					// This prevent us from shutting down big databases that have been left alone to do indexing work.
@@ -540,7 +546,7 @@ namespace Raven.Database.Server
 				{
 					logger.Info("Shutting down database {0}. Last work time: {1}, skipIfActive: {2}", 
 						database.Name,
-						database.WorkContext.LastWorkTime,
+						lastWorkTime,
 						skipIfActive
 						);
 					database.Dispose();
