@@ -31,10 +31,10 @@ namespace Raven.Tests.Bundles.Replication
 		protected int PortRangeStart = 8079;
 		protected int RetriesCount = 500;
 
-		public DocumentStore CreateStore(bool enableCompressionBundle = false, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false,string requestedStorageType = "esent")
+		public DocumentStore CreateStore(bool enableCompressionBundle = false, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false,string requestedStorageType = "esent", bool useFiddler = false)
 		{
 			var port = PortRangeStart - stores.Count;
-			return CreateStoreAtPort(port, enableCompressionBundle, configureStore, anonymousUserAccessMode, enableAuthorization, requestedStorageType);
+			return CreateStoreAtPort(port, enableCompressionBundle, configureStore, anonymousUserAccessMode, enableAuthorization, requestedStorageType,useFiddler);
 		}
 
         public EmbeddableDocumentStore CreateEmbeddableStore(bool enableCompressionBundle = false,
@@ -44,8 +44,8 @@ namespace Raven.Tests.Bundles.Replication
 			return CreateEmbeddableStoreAtPort(port, enableCompressionBundle, anonymousUserAccessMode,requestedStorageType);
 		}
 
-		private DocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, 
-			Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false,string storeTypeName = "esent")
+		private DocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false,
+			Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false, string storeTypeName = "esent", bool useFiddler = false)
         {
 	        var ravenDbServer = GetNewServer(port,
 				requestedStorage: storeTypeName,
@@ -57,7 +57,7 @@ namespace Raven.Tests.Bundles.Replication
 				EnableAuthentication(ravenDbServer.SystemDatabase);
 			}
 
-			var documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, configureStore: configureStore);
+			var documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, configureStore: configureStore, fiddler: useFiddler);
 
 			ConfigureDatabase(ravenDbServer.SystemDatabase);
 
