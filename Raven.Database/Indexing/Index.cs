@@ -1359,7 +1359,8 @@ namespace Raven.Database.Indexing
 
 						Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
 						var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
-						if (alreadyReturned.Add(indexQueryResult.Projection) == false)
+						if (indexQueryResult.Projection.Count > 0 && // we don't consider empty projections to be relevant for distinct operations
+                            alreadyReturned.Add(indexQueryResult.Projection) == false)
 						{
 							min++; // we found a duplicate
 							itemsSkipped++;
