@@ -28,7 +28,7 @@ namespace Raven.Database.Server
         {
             var assemblies = new HashSet<string> { 
                 typeof(SystemTime).Assembly.GetName().Name, 
-                typeof(Field).Assembly.GetName().Name 
+                //typeof(Field).Assembly.GetName().Name 
             };
 
             var assembly = Assembly.GetExecutingAssembly();

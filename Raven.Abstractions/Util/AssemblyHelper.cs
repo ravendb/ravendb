@@ -1,4 +1,5 @@
-﻿// -----------------------------------------------------------------------
+﻿#if !SILVERLIGHT
+// -----------------------------------------------------------------------
 //  <copyright file="AssemblyHelper.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -40,14 +41,11 @@ namespace Raven.Abstractions.Util
 
         public static string GetExtractedAssemblyLocationFor(Type type, Assembly executingAssembly)
         {
-#if SILVERLIGHT
-            return type.Assembly.Location;
-#else
             var path = Path.GetDirectoryName(executingAssembly.Location);
             var name = type.Assembly.GetName().Name;
 
             return Path.Combine(path, name + ".dll");
-#endif
         }
     }
 }
+#endif

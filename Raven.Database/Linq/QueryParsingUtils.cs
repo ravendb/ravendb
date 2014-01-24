@@ -417,8 +417,8 @@ namespace Raven.Database.Linq
 			var assemblies = new HashSet<string>
 			{
                 AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(SystemTime), currentAssembly),
-                AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(Field), currentAssembly),
-                typeof(AbstractViewGenerator).Assembly.Location,
+                //AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(Field), currentAssembly),
+                typeof (AbstractViewGenerator).Assembly.Location,
 				typeof (NameValueCollection).Assembly.Location,
 				typeof (Enumerable).Assembly.Location,
 				typeof (Binder).Assembly.Location,
