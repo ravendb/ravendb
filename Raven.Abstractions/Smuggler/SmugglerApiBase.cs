@@ -31,7 +31,7 @@ namespace Raven.Abstractions.Smuggler
 		private readonly Stopwatch stopwatch = Stopwatch.StartNew();
 
 		protected abstract Task<RavenJArray> GetIndexes(int totalCount);
-		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag);
+		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit);
 		protected abstract Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag);
 		protected abstract Task<RavenJArray> GetTransformers(int start);
 
@@ -244,55 +244,60 @@ namespace Raven.Abstractions.Smuggler
 			ShowProgress("Exporting Documents");
 			
 			while (true)
-
 			{
 				bool hasDocs = false;
-				using (var documents = await GetDocuments(lastEtag))
-				{
-					var watch = Stopwatch.StartNew();					
 
-					while (await documents.MoveNextAsync())
-					{
-						var document = documents.Current;
-						lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+			    if (options.Limit - totalCount > 0)
+			    {
+			        var maxRecords = options.Limit - totalCount;
+                    using (var documents = await GetDocuments(lastEtag, maxRecords))
+			        {
+			            var watch = Stopwatch.StartNew();
 
-						if (!options.MatchFilters(document))
-							continue;
+			            while (await documents.MoveNextAsync())
+			            {
+                            hasDocs = true;
+			                var document = documents.Current;
+			                lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
 
-						if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
-							continue;
-						document.WriteTo(jsonWriter);
-						totalCount++;
-						hasDocs = true;
+			                if (!options.MatchFilters(document))
+			                    continue;
 
-						if (totalCount % 1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
-						{
-							ShowProgress("Exported {0} documents", totalCount);
-							lastReport = SystemTime.UtcNow;
-						}
+			                if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
+			                    continue;
+			                document.WriteTo(jsonWriter);
+			                totalCount++;
 
-						if (watch.ElapsedMilliseconds > 100)
-							errorcount++;
-						watch.Start();
-					}
-				}
+			                if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+			                {
+			                    ShowProgress("Exported {0} documents", totalCount);
+			                    lastReport = SystemTime.UtcNow;
+			                }
 
-				if (hasDocs)
-					continue;
+			                if (watch.ElapsedMilliseconds > 100)
+			                    errorcount++;
+			                watch.Start();
+			            }
+			        }
 
-				// The server can filter all the results. In this case, we need to try to go over with the next batch.
-				// Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
-				var databaseStatistics = await GetStats();
-				var lastEtagComparable = new ComparableByteArray(lastEtag);
-				if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
-				{
-					lastEtag = EtagUtil.Increment(lastEtag, SmugglerOptions.BatchSize);
-					ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
-					
-					continue;
-				}
 
-				ShowProgress("Done with reading documents, total: {0}", totalCount);
+			        if (hasDocs)
+			            continue;
+
+			        // The server can filter all the results. In this case, we need to try to go over with the next batch.
+			        // Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
+			        var databaseStatistics = await GetStats();
+			        var lastEtagComparable = new ComparableByteArray(lastEtag);
+			        if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
+			        {
+                        lastEtag = EtagUtil.Increment(lastEtag, 1);
+			            ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
+
+			            continue;
+			        }
+			    }
+
+			    ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 				return lastEtag;
 			}
 		}
