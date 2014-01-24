@@ -32,7 +32,7 @@ namespace Raven.Client.Embedded
 		}
 
 		private RavenConfiguration configuration;
-		private HttpServer httpServer;
+		private OwinHttpServer httpServer;
 		private bool wasDisposed;
 
 		/// <summary>
@@ -198,7 +198,6 @@ namespace Raven.Client.Embedded
 				DataDirectory = embeddedRavenConnectionStringOptions.DataDirectory;
 
 			RunInMemory = embeddedRavenConnectionStringOptions.RunInMemory;
-
 		}
 
 
@@ -223,16 +222,18 @@ namespace Raven.Client.Embedded
 					ResourceManagerId = Guid.NewGuid(); // avoid conflicts
 				}
 				configuration.SetSystemDatabase();
-				DocumentDatabase = new DocumentDatabase(configuration);
-				DocumentDatabase.SpinBackgroundWorkers();
+
 				if (UseEmbeddedHttpServer)
 				{
 					SetStudioConfigToAllowSingleDb();
-					httpServer = new HttpServer(configuration, DocumentDatabase);
-					httpServer.StartListening();
+					httpServer = new OwinHttpServer(configuration);
+					DocumentDatabase = httpServer.Options.SystemDatabase;
 				}
 				else // we need to setup our own idle timer
 				{
+					DocumentDatabase = new DocumentDatabase(configuration);
+					DocumentDatabase.SpinBackgroundWorkers();
+
 					idleTimer = new Timer(state =>
 					{
 						try
@@ -297,7 +298,7 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Expose the internal http server, if used
 		/// </summary>
-		public HttpServer HttpServer
+		public OwinHttpServer HttpServer
 		{
 			get { return httpServer; }
 		}

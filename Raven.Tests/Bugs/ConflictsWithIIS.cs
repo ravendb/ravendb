@@ -9,6 +9,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
+	//related to issue http://issues.hibernatingrhinos.com/issue/RavenDB-1450
 	public class ConflictsWithIIS : IisExpressTestClient
 	{
 		public class DeviceStatusRecord

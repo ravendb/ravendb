@@ -58,13 +58,13 @@ namespace Raven.Client.Extensions
 			}
 		}
 
-		[Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists instead.")]
+		[Obsolete("The method was moved to be under the GlobalAdmin property. Use the store.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists instead.")]
 		public static void EnsureDatabaseExists(this IDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
 			self.GlobalAdmin.EnsureDatabaseExists(name, ignoreFailures);
 		}
 
-		[Obsolete("The method was moved to be under the Admin property. Use the store.DatabaseCommands.Admin.CreateDatabase instead.")]
+		[Obsolete("The method was moved to be under the GlobalAdmin property. Use the store.DatabaseCommands.GlobalAdmin.CreateDatabase instead.")]
 		public static void CreateDatabase(this IDatabaseCommands self, DatabaseDocument databaseDocument)
 		{
 			self.GlobalAdmin.CreateDatabase(databaseDocument);

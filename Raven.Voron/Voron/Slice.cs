@@ -193,6 +193,17 @@ namespace Voron
 			}
 		}
 
+        public void CopyTo(byte[] dest)
+        {
+            if (_array == null)
+            {
+                fixed(byte* p = dest)
+                    NativeMethods.memcpy(p, _pointer, _pointerSize);
+                return;
+            }
+            Buffer.BlockCopy(_array,0, dest, 0, _array.Length);
+        }
+
 		public void Set(NodeHeader* node)
 		{
 			Set((byte*)node + Constants.NodeHeaderSize, node->KeySize);

@@ -15,11 +15,11 @@ namespace Raven.Abstractions.Data
 		}
 
 		public const string RavenEtagSynchronization = "Raven/Etag/Synchronization";
-		
+
 		public const string RavenClientPrimaryServerUrl = "Raven-Client-Primary-Server-Url";
 		public const string RavenClientPrimaryServerLastCheck = "Raven-Client-Primary-Server-LastCheck";
 		public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
-		
+
 		public const string RavenShardId = "Raven-Shard-Id";
 		public const string RavenAuthenticatedUser = "Raven-Authenticated-User";
 		public const string LastModified = "Last-Modified";
@@ -62,16 +62,16 @@ namespace Raven.Abstractions.Data
 		public const string InDatabaseKeyVerificationDocumentName = "Raven/Encryption/Verification";
 		public static readonly RavenJObject InDatabaseKeyVerificationDocumentContents;
 
-		public const int DefaultGeneratedEncryptionKeyLength = 256 / 8;
-		public const int MinimumAcceptableEncryptionKeyLength = 64 / 8;
+		public const int DefaultGeneratedEncryptionKeyLength = 256/8;
+		public const int MinimumAcceptableEncryptionKeyLength = 64/8;
 
 		public const int DefaultKeySizeToUseInActualEncryptionInBits = 128;
 		public const int Rfc2898Iterations = 1000;
 
-		public const int DefaultIndexFileBlockSize = 12 * 1024;
+		public const int DefaultIndexFileBlockSize = 12*1024;
 
 #if !NETFX_CORE
-		public static readonly Type DefaultCryptoServiceProvider = typeof(System.Security.Cryptography.AesManaged);
+		public static readonly Type DefaultCryptoServiceProvider = typeof (System.Security.Cryptography.AesManaged);
 #endif
 
 		//Quotas
@@ -112,6 +112,11 @@ namespace Raven.Abstractions.Data
 		public const string RavenClientVersion = "Raven-Client-Version";
 
 		public const string NextPageStart = "Next-Page-Start";
+
+		/// <summary>
+		/// if no encoding information in headers of incoming request, this encoding is assumed
+		/// </summary>
+		public const string DefaultRequestEncoding = "UTF-8";
 
 #if DEBUG
 		public const int EnterLockTimeout = 10000;
