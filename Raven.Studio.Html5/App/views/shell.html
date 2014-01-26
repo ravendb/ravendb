@@ -42,7 +42,7 @@
                     </a>
                     <ul class="dropdown-menu" data-bind="foreach: databases">
                         <li>
-                            <a href="#" data-bind="text: name, click: activate"></a>
+                            <a href="#" data-bind="text: name, click: $root.selectDatabase.bind($root, $data)"></a>
                         </li>
                     </ul>
                 </li>

@@ -339,6 +339,18 @@ namespace Raven.Client.Silverlight.Connection
 				throw new ErrorResponseException(Response);
 		}
 
+        public async Task WriteAsync(RavenJToken tokenToWrite)
+        {
+            writeCalled = true;
+            Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url)
+            {
+                Content = new JsonContent(tokenToWrite)
+            });
+
+            if (Response.IsSuccessStatusCode == false)
+                throw new ErrorResponseException(Response);
+        }
+
 
 		/// <summary>
 		/// Begins the write operation

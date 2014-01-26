@@ -17,9 +17,12 @@ class saveDocumentCommand extends commandBase {
             'Raven-Clr-Type': this.document.__metadata.ravenClrType,
             'If-None-Match': this.document.__metadata.etag
         };
+        var jQueryOptions: JQueryAjaxSettings = {
+            headers: <any>customHeaders
+        };
         var args = JSON.stringify(this.document.toDto());
         var url = "/docs/" + this.id;
-        var saveTask = this.put(url, args, this.db, customHeaders);
+        var saveTask = this.put(url, args, this.db, jQueryOptions);
 
         saveTask.done(() => this.reportSuccess("Saved " + this.id));
         saveTask.fail((response) => this.reportError("Failed to save " + this.id, JSON.stringify(response)));

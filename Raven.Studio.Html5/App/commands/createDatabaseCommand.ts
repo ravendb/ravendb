@@ -24,7 +24,7 @@ class createDatabaseCommand extends commandBase {
         };
 
         var url = "/admin/databases/" + this.databaseName;
-        var createTask = this.put(url, JSON.stringify(databaseDoc), null);
+        var createTask = this.put(url, JSON.stringify(databaseDoc), null, { dataType: undefined });
         createTask.done(() => this.reportSuccess(this.databaseName + " created"));
         createTask.fail((response) => this.reportError("Failed to create database", JSON.stringify(response)));
 

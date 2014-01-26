@@ -49,7 +49,7 @@ interface databaseStatisticsDto {
 }
 
 interface indexStatisticsDto {
-    Name: string;
+    PublicName: string;
     IndexingAttempts: number;
     IndexingSuccesses: number;
     IndexingErrors: number;

@@ -176,13 +176,16 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 
 		public Task CleanupDeletedFilesAsync()
 		{
-			IList<DeleteFileOperation> filesToDelete = null;
+			var filesToDelete = new List<DeleteFileOperation>();
 
 			storage.Batch(
 				accessor =>
 				filesToDelete =
 				accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, 10).Select(
 					config => config.AsObject<DeleteFileOperation>()).ToList());
+
+			if(filesToDelete.Count == 0)
+				return Task.FromResult<object>(null);
 
 			var tasks = new List<Task>();
 
@@ -241,21 +244,21 @@ namespace Raven.Database.Server.RavenFS.Infrastructure
 
 		public Task ResumeFileRenamingAsync()
 		{
-			IList<RenameFileOperation> filesToRename = null;
+			var filesToRename = new List<RenameFileOperation>();
 
 			storage.Batch(
 				accessor =>
 				{
-					var configsThatStartWithPrefix =
+					var renameOpConfigs =
 						accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.RenameOperationConfigPrefix, 0, 10);
 
-					filesToRename = configsThatStartWithPrefix.Select(config => config.AsObject<RenameFileOperation>()).ToList();
+					filesToRename = renameOpConfigs.Select(config => config.AsObject<RenameFileOperation>()).ToList();
 				});
 
-			var tasks = new List<Task>();
+			if (filesToRename.Count == 0)
+				return Task.FromResult<object>(null);
 
-			if(filesToRename == null)
-				throw new InvalidOperationException("Files to rename list is null. This should never happen.");
+			var tasks = new List<Task>();
 
 			foreach (var item in filesToRename)
 			{

@@ -136,6 +136,12 @@ namespace Raven.Database
 			get { return indexingExecuter; }
 		}
 
+		private ReducingExecuter reducingExecuter;
+		public ReducingExecuter ReducingExecuter
+		{
+			get { return reducingExecuter; }
+		}
+
 		private readonly DatabaseEtagSynchronizer etagSynchronizer;
 		public DatabaseEtagSynchronizer EtagSynchronizer
 		{
@@ -673,8 +679,11 @@ namespace Raven.Database
 			indexingBackgroundTask = Task.Factory.StartNew(
 				indexingExecuter.Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+
+			reducingExecuter = new ReducingExecuter(workContext);
+
 			reducingBackgroundTask = Task.Factory.StartNew(
-				new ReducingExecuter(workContext).Execute,
+				reducingExecuter.Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 
@@ -689,8 +698,11 @@ namespace Raven.Database
 			indexingBackgroundTask = Task.Factory.StartNew(
 				indexingExecuter.Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
+
+			reducingExecuter = new ReducingExecuter(workContext);
+
 			reducingBackgroundTask = Task.Factory.StartNew(
-				new ReducingExecuter(workContext).Execute,
+				reducingExecuter.Execute,
 				CancellationToken.None, TaskCreationOptions.LongRunning, backgroundTaskScheduler);
 		}
 

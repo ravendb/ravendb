@@ -13,9 +13,8 @@ using Raven.Abstractions.Util;
 #if SILVERLIGHT
 using System.Net.Browser;
 using Raven.Client.Changes;
-
-#endif
 using Raven.Client.Connection;
+#endif
 
 namespace Raven.Abstractions.OAuth
 {

@@ -24,6 +24,9 @@ class commandBase {
 
     reportError(title: string, details?: string) {
         this.reportProgress(alertType.danger, title, details);
+        if (details && console && console.log && typeof console.log === "function") {
+            console.log(details);
+        }
     }
 
     reportSuccess(title: string, details?: string) {
@@ -59,22 +62,22 @@ class commandBase {
         }
     }
 
-    put(relativeUrl: string, args: any, database?: database, customHeaders?: any): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "PUT", database, customHeaders);
+    put(relativeUrl: string, args: any, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "PUT", database, options);
     }
 
     /*
      * Performs a DELETE rest call.
     */
-    del(relativeUrl: string, args: any, database?: database, customHeaders?: any): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "DELETE", database, customHeaders);
+    del(relativeUrl: string, args: any, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "DELETE", database, options);
     }
 
-    post(relativeUrl: string, args: any, database?: database, customHeaders?: any): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "POST", database, customHeaders);
+    post(relativeUrl: string, args: any, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
+        return this.ajax(relativeUrl, args, "POST", database, options);
     }
 
-    private ajax(relativeUrl: string, args: any, method: string, database?: database, customHeaders?: any): JQueryPromise<any> {
+    private ajax(relativeUrl: string, args: any, method: string, database?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
         // ContentType:
         //
         // Can't use application/json in cross-domain requests, otherwise it 
@@ -86,20 +89,23 @@ class commandBase {
         var contentType = method === "GET" ?
             "text/plain; charset=utf-8" :
             "application/json; charset=utf-8";
-        var options = {
+        var defaultOptions = {
             cache: false,
             url: appUrl.forDatabaseQuery(database) + relativeUrl,
             data: args,
+            dataType: "json",
             contentType: contentType, 
             type: method,
             headers: undefined
         };
-
-        if (customHeaders) {
-            options.headers = customHeaders;
+        
+        if (options) {
+            for (var prop in options) {
+                defaultOptions[prop] = options[prop];
+            }
         }
 
-        return $.ajax(options);
+        return $.ajax(defaultOptions);
     }
 
     private reportProgress(type: alertType, title: string, details?: string) {

@@ -158,6 +158,13 @@ class shell {
         }
     }
 
+    selectDatabase(db: database) {
+        db.activate();
+
+        var updatedUrl = appUrl.forCurrentPage(db);
+        router.navigate(updatedUrl);
+    }
+
     fetchBuildVersion() {
         new getBuildVersionCommand()
             .execute()
