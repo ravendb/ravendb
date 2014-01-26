@@ -212,6 +212,7 @@ namespace Raven.Client.Embedded
 			if (string.IsNullOrEmpty(DataDirectory) == false && string.IsNullOrEmpty(DefaultDatabase) == false)
 				throw new InvalidOperationException("You cannot specify DefaultDatabase value when the DataDirectory has been set, running in Embedded mode, the Default Database is not a valid option.");
 
+
 			if (configuration != null && Url == null)
 			{
 				configuration.PostInit();
