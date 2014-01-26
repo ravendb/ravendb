@@ -29,6 +29,8 @@ namespace Raven.Tests.MailingList
 						.Customize(x=>x.WaitForNonStaleResults())
 						.Where(x => x.IntType > 0)
 						.ToList();
+
+					WaitForUserToContinueTheTest(ds);
 					Assert.True(entities.Count > 0);
 				}
 			}

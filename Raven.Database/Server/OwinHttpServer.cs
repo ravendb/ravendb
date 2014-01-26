@@ -16,10 +16,10 @@ namespace Raven.Database.Server
 		private readonly Startup startup;
 		private static readonly byte[] NotFoundBody = Encoding.UTF8.GetBytes("Route invalid");
 
-		public OwinHttpServer(InMemoryRavenConfiguration config)
+		public OwinHttpServer(InMemoryRavenConfiguration config, DocumentDatabase db = null)
 		{
 			//TODO DH: configuration.ServerUrl doesn't bind properly
-			startup = new Startup(config);
+			startup = new Startup(config, db);
 			server = WebApp.Start("http://+:" + config.Port, app =>
 			{
 				var listener = (HttpListener) app.Properties["System.Net.HttpListener"];

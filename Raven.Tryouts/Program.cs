@@ -23,9 +23,9 @@ namespace Raven.Tryouts
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new Jalchr2())
+				using (var x = new WhereClauseTest())
 				{
-					x.Streaming_documents_will_respect_the_sorting_order();
+					x.ATest();
 				}
 			}
 			
