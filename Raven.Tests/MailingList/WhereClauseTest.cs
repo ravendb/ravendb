@@ -30,7 +30,6 @@ namespace Raven.Tests.MailingList
 						.Where(x => x.IntType > 0)
 						.ToList();
 
-					WaitForUserToContinueTheTest(ds);
 					Assert.True(entities.Count > 0);
 				}
 			}

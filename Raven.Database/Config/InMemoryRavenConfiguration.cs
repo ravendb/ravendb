@@ -243,8 +243,6 @@ namespace Raven.Database.Config
 			Catalog.Catalogs.Clear();
 
 			Catalog.Catalogs.Add(new BundlesFilteredCatalog(catalog, bundles));
-
-			var exportedValues = Container.GetExportedValues<IStartupTask>().ToArray();
 		}
 
 		public List<string> ActiveBundles

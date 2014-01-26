@@ -23,11 +23,8 @@ namespace Raven.Database.Server
 			server = WebApp.Start("http://+:" + config.Port, app =>
 			{
 				var listener = (HttpListener) app.Properties["System.Net.HttpListener"];
-				/*foreach (var configureHttpListener in ConfigureHttpListeners)
-				{
-					configureHttpListener.Value.Configure(listener, config);
-				}*/
-				new WindowsAuthConfigureHttpListener().Configure(listener, config);
+				if (listener != null)
+					new WindowsAuthConfigureHttpListener().Configure(listener, config);
 				startup.Configuration(app);
 				app.Use(async (context, _) =>
 				{
@@ -37,9 +34,6 @@ namespace Raven.Database.Server
 				});
 			});
 		}
-
-		[ImportMany]
-		public OrderedPartCollection<IConfigureHttpListener> ConfigureHttpListeners { get; set; }
 
 		// Would prefer not to expose this.
 		public RavenDBOptions Options
