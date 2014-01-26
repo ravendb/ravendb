@@ -210,10 +210,10 @@ namespace Raven.Client.Embedded
 			return new CompletedTask();
 		}
 
-		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
+		public Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
-			databaseCommands.DeleteByIndex(indexName, queryToDelete, allowStale);
-			return new CompletedTask();
+			var deleteByIndex = databaseCommands.DeleteByIndex(indexName, queryToDelete, allowStale);
+			return new CompletedTask<Operation>(deleteByIndex);
 		}
 
 		public Task DeleteTransformerAsync(string name)
@@ -334,16 +334,16 @@ namespace Raven.Client.Embedded
 			return new CompletedTask<GetResponse[]>(databaseCommands.MultiGet(requests));
 		}
 
-		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
+		public Task<Operation> UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
 		{
-			databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch);
-			return new CompletedTask();
+			var updateByIndex = databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch);
+			return new CompletedTask<Operation>(updateByIndex)	;
 		}
 
-		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+		public Task<Operation> UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
-			databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
-			return new CompletedTask();
+			var updateByIndex = databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
+			return new CompletedTask<Operation>(updateByIndex);
 		}
 
 		public Task<FacetResults> GetFacetsAsync( string index, IndexQuery query, string facetSetupDoc, int start = 0, int? pageSize = null ) {

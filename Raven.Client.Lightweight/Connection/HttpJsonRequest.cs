@@ -114,7 +114,7 @@ namespace Raven.Client.Connection
 			webRequest.Headers.Remove("Authorization");
 		}
 
-		public Task ExecuteRequestAsync()
+		public Task<RavenJToken> ExecuteRequestAsync()
 		{
 			return ReadResponseJsonAsync();
 		}
@@ -853,7 +853,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		public Task ExecuteWriteAsync(string data)
+		public Task<RavenJToken> ExecuteWriteAsync(string data)
 		{
 			try
 			{
@@ -862,11 +862,11 @@ namespace Raven.Client.Connection
 			}
 			catch (Exception e)
 			{
-				return new CompletedTask(e);
+				return new CompletedTask<RavenJToken>(e);
 			}
 		}
 
-		public Task ExecuteWriteAsync(byte[] data)
+		public Task<RavenJToken> ExecuteWriteAsync(byte[] data)
 		{
 			try
 			{
@@ -875,7 +875,7 @@ namespace Raven.Client.Connection
 			}
 			catch (Exception e)
 			{
-				return new CompletedTask(e);
+				return new CompletedTask<RavenJToken>(e);
 			}
 		}
 

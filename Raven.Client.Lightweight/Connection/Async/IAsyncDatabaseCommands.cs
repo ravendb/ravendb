@@ -145,7 +145,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToDelete">The query to delete.</param>
 		/// <param name="allowStale">if set to <c>true</c> allow the operation while the index is stale.</param>
-		Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale);
+		Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale);
 
 		/// <summary>
 		/// Deletes the transformer definition for the specified name asynchronously
@@ -306,7 +306,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="indexName">Name of the index.</param>
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
-		Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch);
+		Task<Operation> UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch);
 
 		/// <summary>
 		/// Perform a set based update using the specified index
@@ -315,7 +315,7 @@ namespace Raven.Client.Connection.Async
 		/// <param name="queryToUpdate">The query to update.</param>
 		/// <param name="patch">The patch request to use (using JavaScript)</param>
 		/// <param name="allowStale">if set to <c>true</c> [allow stale].</param>
-		Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
+		Task<Operation> UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale);
 
 		/// <summary>
 		/// Using the given Index, calculate the facets as per the specified doc with the given start and pageSize

@@ -199,9 +199,11 @@
     <Compile Include="Bugs\AdHocProjections.cs" />
     <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
     <Compile Include="Bugs\AggressiveCaching.cs" />
+    <Compile Include="Bugs\AggressiveCachingEmbedded.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
+    <Compile Include="Bugs\AsyncSetBasedOps.cs" />
     <Compile Include="Bugs\Attachments.cs" />
     <Compile Include="Bugs\BackwardCompatibility.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
