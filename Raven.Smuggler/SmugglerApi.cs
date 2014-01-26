@@ -225,11 +225,18 @@ namespace Raven.Smuggler
 
 		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
 		{
-			int totalCount = 0;
+			var totalCount = 0;
 			while (true)
 			{
+                if (SmugglerOptions.Limit - totalCount <= 0)
+                {
+                    ShowProgress("Done with reading attachments, total: {0}", totalCount);
+                    return lastEtag;
+                }
+
+                var maxRecords = Math.Min(SmugglerOptions.Limit - totalCount, SmugglerOptions.BatchSize);
 				RavenJArray attachmentInfo = null;
-				var request = CreateRequest("/static/?pageSize=" + SmugglerOptions.BatchSize + "&etag=" + lastEtag);
+				var request = CreateRequest("/static/?pageSize=" + maxRecords + "&etag=" + lastEtag);
 				request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new JsonTextReader(reader)));
 
 				if (attachmentInfo.Length == 0)
@@ -238,7 +245,7 @@ namespace Raven.Smuggler
 					var lastEtagComparable = new ComparableByteArray(lastEtag);
 					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
 					{
-						lastEtag = EtagUtil.Increment(lastEtag, SmugglerOptions.BatchSize);
+						lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
 						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
 						continue;
 					}

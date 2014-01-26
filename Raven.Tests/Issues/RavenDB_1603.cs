@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.ComponentModel.Composition.Hosting;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -304,9 +305,6 @@ namespace Raven.Tests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-
-        //TODO: test for empty export
-
         private static void InsertHidenUsers(IDocumentStore store, int amount)
         {
             for (var i = 0; i < amount; i++)
@@ -315,6 +313,101 @@ namespace Raven.Tests.Issues
                 {
                     hidden = true
                 }));
+            }
+        }
+
+        [Fact]
+        public async Task CanDumpAttachments()
+        {
+            var backupPath = NewDataPath("BackupFolder");
+            using (var store = NewDocumentStore())
+            {
+                InsertAttachments(store, 328);
+
+                var options = new SmugglerOptions
+                {
+                    BackupPath = backupPath,
+                    BatchSize = 100
+                };
+                var dumper = new DataDumper(store.DocumentDatabase, options);
+                var backupStatus = new PeriodicBackupStatus();
+                await dumper.ExportData(null, null, true, backupStatus);
+            }
+
+            VerifyDump(backupPath, store =>
+            {
+                using (var session = store.OpenSession())
+                {
+                    Assert.Equal(328, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count());
+                }
+            });
+            IOExtensions.DeleteDirectory(backupPath);
+        }
+
+        [Fact]
+        public async Task CanDumpAttachmentsWithLimit()
+        {
+            var backupPath = NewDataPath("BackupFolder");
+            using (var store = NewDocumentStore())
+            {
+                InsertAttachments(store, 328);
+
+                var options = new SmugglerOptions
+                {
+                    BackupPath = backupPath,
+                    BatchSize = 100,
+                    Limit = 206
+                };
+                var dumper = new DataDumper(store.DocumentDatabase, options);
+                var backupStatus = new PeriodicBackupStatus();
+                await dumper.ExportData(null, null, true, backupStatus);
+            }
+
+            VerifyDump(backupPath, store =>
+            {
+                using (var session = store.OpenSession())
+                {
+                    Assert.Equal(206, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count());
+                }
+            });
+            IOExtensions.DeleteDirectory(backupPath);
+        }
+
+        [Fact]
+        public async Task CanDumpAttachmentsEmpty()
+        {
+            var backupPath = NewDataPath("BackupFolder");
+            using (var store = NewDocumentStore())
+            {
+                var options = new SmugglerOptions
+                {
+                    BackupPath = backupPath,
+                    BatchSize = 100,
+                    Limit = 206
+                };
+                var dumper = new DataDumper(store.DocumentDatabase, options);
+                var backupStatus = new PeriodicBackupStatus();
+                await dumper.ExportData(null, null, true, backupStatus);
+            }
+
+            VerifyDump(backupPath, store =>
+            {
+                using (var session = store.OpenSession())
+                {
+                    Assert.Equal(0, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count());
+                }
+            });
+            IOExtensions.DeleteDirectory(backupPath);
+        }
+
+        private void InsertAttachments(EmbeddableDocumentStore store, int amount)
+        {
+            var counter = 0;
+            var data = new byte[] {1, 2, 3, 4};
+            for (var i = 0; i < amount; i++)
+            {
+                var documentKey = "users/" + (++counter);
+                store.DatabaseCommands.PutAttachment(documentKey, null, new MemoryStream(data),new RavenJObject());
             }
         }
     }
