@@ -12,6 +12,7 @@ namespace Raven.Client.Connection
 		private readonly AsyncServerClient asyncServerClient;
 		private readonly long id;
 		private readonly RavenJToken state;
+		private readonly bool done;
 
 #if !SILVERLIGHT && !NETFX_CORE
 		private readonly ServerClient client;
@@ -27,6 +28,7 @@ namespace Raven.Client.Connection
 		{
 			this.id = id;
 			this.state = state;
+			this.done = true;
 		}
 
 		public Operation(AsyncServerClient asyncServerClient, long id)
@@ -38,6 +40,8 @@ namespace Raven.Client.Connection
 
 		public async Task<RavenJToken> WaitForCompletionAsync()
 		{
+			if (done)
+				return state;
 			if (asyncServerClient == null)
 				throw new InvalidOperationException("Cannot use WaitForCompletionAsync() when the operation was executed syncronously");
 
@@ -61,6 +65,8 @@ namespace Raven.Client.Connection
 #if !SILVERLIGHT && !NETFX_CORE
 		public RavenJToken WaitForCompletion()
 		{
+			if (done)
+				return state;
 			if (client == null)
 				throw new InvalidOperationException("Cannot use WaitForCompletion() when the operation was executed asyncronously");
 
