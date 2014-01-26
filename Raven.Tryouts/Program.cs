@@ -4,8 +4,10 @@ using Raven.Tests.Bugs;
 using Raven.Tests.Bugs.Iulian;
 using Raven.Tests.Indexes;
 using Raven.Tests.Issues;
+using Raven.Tests.MailingList;
 using Raven.Tests.MultiGet;
 using Raven.Tests.Notifications;
+using Raven.Tests.Patching;
 using Raven.Tests.Storage;
 using Raven.Tests.Track;
 using Raven.Tests.Views;
@@ -18,13 +20,13 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			for (int i = 0; i < 10000; i++)
+			for (int i = 0; i < 2; i++)
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new CanReadEntityWithUrlId())
+				using (var x = new AdvancedPatching())
 				{
-					x.Can_Load_entities_with_id_containing_url();
+					x.ShouldThrowConcurrencyExceptionIfNonCurrentEtagWasSpecified();
 				}
 			}
 			

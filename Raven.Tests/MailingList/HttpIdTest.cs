@@ -11,7 +11,6 @@ namespace Raven.Tests.MailingList
 	public class HttpIdTest : RavenTestBase
 	{
 		[Fact]
-		//[TimeBombedFact(2014, 3, 1)]
 		public void CanLoadIdWithHttp()
 		{
 			using (var store = NewRemoteDocumentStore())
