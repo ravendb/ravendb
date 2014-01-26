@@ -4,6 +4,7 @@ using Raven.Tests.Bugs;
 using Raven.Tests.Bugs.Iulian;
 using Raven.Tests.Indexes;
 using Raven.Tests.Issues;
+using Raven.Tests.MailingList;
 using Raven.Tests.MultiGet;
 using Raven.Tests.Notifications;
 using Raven.Tests.Storage;
@@ -18,13 +19,13 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			for (int i = 0; i < 10000; i++)
+			for (int i = 0; i < 2; i++)
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new CanReadEntityWithUrlId())
+				using (var x = new Jalchr2())
 				{
-					x.Can_Load_entities_with_id_containing_url();
+					x.Streaming_documents_will_respect_the_sorting_order();
 				}
 			}
 			
