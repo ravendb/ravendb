@@ -2,6 +2,8 @@ import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
 import index = require("models/index");
 import indexDefinition = require("models/indexDefinition");
 import indexPriority = require("models/indexPriority");
+import luceneField = require("models/luceneField");
+import spatialIndexField = require("models/spatialIndexField");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
@@ -15,6 +17,7 @@ class editIndex extends activeDbViewModelBase {
     editedIndex = ko.observable<indexDefinition>();
     hasExistingReduce: KnockoutComputed<string>;
     hasExistingTransform: KnockoutComputed<string>;
+    hasMultipleMaps: KnockoutComputed<boolean>;
 
     constructor() {
         super();
@@ -23,6 +26,7 @@ class editIndex extends activeDbViewModelBase {
         this.priorityLabel = ko.computed(() => this.priorityFriendlyName() ? "Priority: " + this.priorityFriendlyName() : "Priority");
         this.hasExistingReduce = ko.computed(() => this.editedIndex() && this.editedIndex().reduce());
         this.hasExistingTransform = ko.computed(() => this.editedIndex() && this.editedIndex().transformResults());
+        this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
     }
 
     activate(indexToEditName: string) {
@@ -119,6 +123,52 @@ class editIndex extends activeDbViewModelBase {
         }
 
         return index.priorityToString(priority);
+    }
+
+    addMap() {
+        this.editedIndex().maps.push(ko.observable<string>());
+    }
+
+    addReduce() {
+        if (!this.hasExistingReduce()) {
+            this.editedIndex().reduce(" ");
+        }
+    }
+
+    addTransform() {
+        if (!this.hasExistingTransform()) {
+            this.editedIndex().transformResults(" ");
+        }
+    }
+
+    addField() {
+        var field = new luceneField("");
+        this.editedIndex().luceneFields.push(field);
+    }
+
+    addSpatialField() {
+        var field = spatialIndexField.empty();
+        this.editedIndex().spatialFields.push(field);
+    }
+
+    removeMap(mapIndex: number) {
+        this.editedIndex().maps.splice(mapIndex, 1);
+    }
+
+    removeReduce() {
+        this.editedIndex().reduce(null);
+    }
+
+    removeTransform() {
+        this.editedIndex().transformResults(null);
+    }
+
+    removeLuceneField(fieldIndex: number) {
+        this.editedIndex().luceneFields.splice(fieldIndex, 1);
+    }
+
+    removeSpatialField(fieldIndex: number) {
+        this.editedIndex().spatialFields.splice(fieldIndex, 1);
     }
 }
 

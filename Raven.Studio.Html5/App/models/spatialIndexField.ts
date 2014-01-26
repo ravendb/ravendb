@@ -55,6 +55,20 @@ class spatialIndexField {
         };
     }
 
+    static empty(): spatialIndexField {
+        var dto: spatialIndexFieldDto = {
+            Type: spatialIndexField.typeGeo,
+            MaxTreeLevel: 9,
+            MinX: -180,
+            MaxX: 180,
+            MinY: -90,
+            MaxY: 90,
+            Strategy: spatialIndexField.strategyGeo,
+            Units: "Kilometers"
+        };
+        return new spatialIndexField("", dto);
+    }
+
     private resetCoordinates() {
         this.minX(-180);
         this.maxX(180);
