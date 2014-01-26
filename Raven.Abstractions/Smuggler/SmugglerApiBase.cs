@@ -286,11 +286,12 @@ namespace Raven.Abstractions.Smuggler
 
 			        // The server can filter all the results. In this case, we need to try to go over with the next batch.
 			        // Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
+                    // (This code provides support for legacy RavenDB version: 1.0)
 			        var databaseStatistics = await GetStats();
 			        var lastEtagComparable = new ComparableByteArray(lastEtag);
 			        if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
 			        {
-                        lastEtag = EtagUtil.Increment(lastEtag, 1);
+                        lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
 			            ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
 
 			            continue;
