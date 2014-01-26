@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Tests.Bugs;
 using Raven.Tests.Bugs.Iulian;
+using Raven.Tests.Faceted;
 using Raven.Tests.Indexes;
 using Raven.Tests.Issues;
 using Raven.Tests.MailingList;
@@ -11,8 +12,6 @@ using Raven.Tests.Patching;
 using Raven.Tests.Storage;
 using Raven.Tests.Track;
 using Raven.Tests.Views;
-using Voron.Tests.Journal;
-using Voron.Tests.Trees;
 
 namespace Raven.Tryouts
 {
@@ -20,13 +19,13 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-			for (int i = 0; i < 2; i++)
+			for (int i = 0; i < 10000; i++)
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new AdvancedPatching())
+				using (var x = new FacetedIndex())
 				{
-					x.ShouldThrowConcurrencyExceptionIfNonCurrentEtagWasSpecified();
+					x.CanPerformFacetedSearch_Embedded();
 				}
 			}
 			
