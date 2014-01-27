@@ -901,7 +901,9 @@ namespace Raven.Database
 								RaiseNotifications(new DocumentChangeNotification
 								{
 									Id = key,
-									Type = DocumentChangeTypes.Put,
+									Type = DocumentChangeTypes.Put,		
+									TypeName = metadata.Value<string>(Constants.RavenClrType),
+									CollectionName = metadata.Value<string>(Constants.RavenEntityName),
 									Etag = newEtag,
 								}, metadata);
 							});
@@ -1150,6 +1152,9 @@ namespace Raven.Database
 								{
 									Id = key,
 									Type = DocumentChangeTypes.Delete,
+									TypeName = metadataVar.Value<string>(Constants.RavenClrType),
+									CollectionName = metadataVar.Value<string>(Constants.RavenEntityName)
+									
 								}, metadataVar);
 							});
 
