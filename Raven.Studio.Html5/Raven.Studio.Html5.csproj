@@ -113,6 +113,7 @@
     <TypeScriptCompile Include="App\viewmodels\deleteDatabaseConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteIndexesConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\dialogViewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\editDocument.ts" />
     <TypeScriptCompile Include="App\viewmodels\editIndex.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexErrors.ts" />

@@ -1,7 +1,10 @@
 ﻿/// <reference path="../../../Scripts/typings/knockout.postbox/knockout-postbox.d.ts" />
 /// <reference path="../../../Scripts/typings/durandal/durandal.d.ts" />
 
+import router = require("plugins/router");
 import widget = require("plugins/widget");
+import app = require("durandal/app");
+
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import document = require("models/document");
@@ -10,7 +13,6 @@ import database = require("models/database");
 import pagedResultSet = require("common/pagedResultSet"); 
 import deleteDocuments = require("viewmodels/deleteDocuments");
 import copyDocuments = require("viewmodels/copyDocuments");
-import app = require("durandal/app");
 import row = require("widgets/virtualTable/row");
 import column = require("widgets/virtualTable/column");
 
@@ -28,6 +30,7 @@ class ctor {
     virtualRowCount = ko.observable(0);
     grid: JQuery;
     gridSelector: string;
+    focusableGridSelector: string;
     collections: KnockoutObservableArray<collection>;
     columns = ko.observableArray<column>([
         new column("__IsChecked", 38),
@@ -36,7 +39,7 @@ class ctor {
     gridViewport: JQuery;
     scrollThrottleTimeoutHandle = 0;
     firstVisibleRow: row = null;
-    selectedIndices = ko.observableArray();
+    selectedIndices: KnockoutObservableArray<number>;
     memoizedCollectionColorFetcher: Function;
 
     constructor() {
@@ -45,6 +48,14 @@ class ctor {
 
     activate(settings: any) {
         var docsSource: KnockoutObservable<pagedList> = settings.documentsSource;
+        this.items = docsSource();
+        this.collections = settings.collections;
+        this.viewportHeight(settings.height);
+        this.gridSelector = settings.gridSelector;
+        this.focusableGridSelector = this.gridSelector + " .ko-grid";
+        this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
+        this.selectedIndices = settings.selectedIndices;
+
         docsSource.subscribe(list => {
             this.recycleRows().forEach(r => {
                 r.resetCells();
@@ -56,12 +67,6 @@ class ctor {
             this.gridViewport.scrollTop(0);
             this.onGridScrolled();
         });
-
-        this.items = docsSource();
-        this.collections = settings.collections;
-        this.viewportHeight(settings.height);
-        this.gridSelector = settings.gridSelector;
-        this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
     }
 
     // Attached is called by Durandal when the view is attached to the DOM.
@@ -116,14 +121,20 @@ class ctor {
         var desiredRowCount = this.calculateRecycleRowCount();
         this.recycleRows(this.createRecycleRows(desiredRowCount));
         this.ensureRowsCoverViewport();
-        this.loadRowData();
-        
+        this.loadRowData();        
     }
 
     setupKeyboardShortcuts() {
-        jwerty.key("delete", e => {
+        this.setupKeyboardShortcut("DELETE", () => this.deleteSelectedDocs());
+        this.setupKeyboardShortcut("F2", () => this.editLastSelectedDoc());
+        this.setupKeyboardShortcut("Ctrl+C,D", () => this.copySelectedDocs());
+        this.setupKeyboardShortcut("Ctrl+C,I", () => this.copySelectedDocIds());
+    }
+
+    setupKeyboardShortcut(keys: string, handler: () => void) {
+        jwerty.key(keys, e => {
             e.preventDefault();
-            this.deleteSelectedDocs();
+            handler();
         }, this, this.gridSelector);
     }
 
@@ -165,6 +176,16 @@ class ctor {
             rowAtIndex.fillCells(rowData);
             rowAtIndex.collectionClass(this.getCollectionClassFromDocument(rowData));
             rowAtIndex.editUrl(appUrl.forEditDoc(rowData.getId(), rowData.__metadata.ravenEntityName, rowIndex));
+        }
+    }
+
+    editLastSelectedDoc() {
+        var selectedDoc = this.getSelectedDocs(1).first();
+        if (selectedDoc) {
+            var id = selectedDoc.getId();
+            var collectionName = this.items.collectionName;
+            var itemIndex = this.selectedIndices().first();
+            router.navigate(appUrl.forEditDoc(id, collectionName, itemIndex));
         }
     }
 
@@ -310,8 +331,21 @@ class ctor {
             this.selectedIndices.removeAll(toggledIndices);
         }
 
-        // Update the physical checked state of the rows.
-        this.recycleRows().forEach(r => r.isChecked(this.selectedIndices().indexOf(r.rowIndex()) !== -1));
+        this.recycleRows().forEach(r => r.isChecked(this.selectedIndices().contains(r.rowIndex())));
+    }
+
+    selectNone() {
+        this.selectedIndices([]);
+        this.recycleRows().forEach(r => r.isChecked(false));
+    }
+
+    selectAll() {
+        var allIndices = [];
+        for (var i = 0; i < this.items.totalResultCount(); i++) {
+            allIndices.push(i);
+        }
+        this.selectedIndices(allIndices);
+        this.recycleRows().forEach(r => r.isChecked(true));
     }
 
     getRowIndicesRange(firstRowIndex: number, secondRowIndex: number): Array<number> {
@@ -336,7 +370,7 @@ class ctor {
 
     showCopyDocDialog(idsOnly: boolean) {
         var selectedDocs = this.getSelectedDocs();
-        var copyDocumentsVm = new copyDocuments(selectedDocs);
+        var copyDocumentsVm = new copyDocuments(selectedDocs, this.focusableGridSelector);
         copyDocumentsVm.isCopyingDocs(idsOnly === false);
         app.showDialog(copyDocumentsVm);
     }
@@ -352,8 +386,16 @@ class ctor {
 
     deleteSelectedDocs() {
         var documents = this.getSelectedDocs();
-        var deleteDocsVm = new deleteDocuments(documents);
+        var deleteDocsVm = new deleteDocuments(documents, this.focusableGridSelector);
         app.showDialog(deleteDocsVm);
+    }
+
+    private focusGridAfterDialogDismissal() {
+        // This appears to be a bug in durandal:
+        // After showing a dialog, the focus doesn't return to the previously-focused element.
+        // Since we use shortcut keys on the grid, we need to bring the focus back to the grid.
+        // Calling it immediately doesn't work because the 
+        setTimeout(() => $(".ko-grid").focus(), 1);
     }
 }
 

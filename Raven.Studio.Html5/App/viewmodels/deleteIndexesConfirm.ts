@@ -2,12 +2,15 @@ import index = require("models/index");
 import deleteIndexCommand = require("commands/deleteIndexCommand");
 import dialog = require("plugins/dialog");
 import database = require("models/database");
+import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
-class deleteIndexesConfirm {
+class deleteIndexesConfirm extends dialogViewModelBase {
 
     public deleteTask = $.Deferred();
 
     constructor(private indexes: index[], private db: database) {
+        super();
+
         if (!indexes || indexes.length === 0) {
             throw new Error("Indexes must not be null or empty.");
         }

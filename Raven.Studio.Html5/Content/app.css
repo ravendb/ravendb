@@ -1,4 +1,4 @@
-html,
+﻿html,
 body {
   height: 100%;
 }
@@ -73,9 +73,6 @@ body {
 }
 .database-page .databases-container .database.system-database {
   background-color: rgba(192, 192, 192, 0.21);
-}
-.document-collections {
-  margin-top: 40px;
 }
 .document-collections li {
   outline: none;
@@ -171,6 +168,9 @@ body {
   position: absolute;
   z-index: 9999;
 }
+.documents-page {
+  margin-top: 10px;
+}
 .documents-page .collection-color-strip {
   height: 20px;
   width: 4px;
@@ -181,8 +181,6 @@ body {
   position: absolute;
   right: 0;
   left: 0;
-  bottom: 0;
-  top: 0;
 }
 .ko-grid:focus {
   outline: 0;
@@ -347,3 +345,4 @@ footer ul {
     margin-bottom: 0;
   }
 }
+/*# sourceMappingURL=app.css.map */

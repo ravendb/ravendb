@@ -45,6 +45,11 @@ class appUrl {
 		return "#edit?" + docIdUrlPart + databaseUrlPart + pagedListInfo;
     }
 
+    static forNewDoc(db: database): string {
+        var databaseUrlPart = appUrl.getEncodedDbPart(db);
+        return "#edit?" + databaseUrlPart;
+    }
+
 	/**
 	* Gets the URL for status page.
 	* @param database The database to use in the URL. If null, the current database will be used.

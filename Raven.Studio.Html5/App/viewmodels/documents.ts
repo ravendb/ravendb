@@ -9,6 +9,7 @@ import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
 import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import virtualTable = require("widgets/virtualTable/viewModel");
 
 class documents extends activeDbViewModelBase {
 
@@ -17,11 +18,17 @@ class documents extends activeDbViewModelBase {
     selectedCollection = ko.observable<collection>().subscribeTo("ActivateCollection").distinctUntilChanged();
     allDocumentsCollection: collection;
     collectionToSelectName: string;
-    private currentCollectionPagedItems = ko.observable<pagedList>();
+    currentCollectionPagedItems = ko.observable<pagedList>();
+    selectedDocumentIndices = ko.observableArray<number>();
+    isSelectAll = ko.observable(false);
+    hasAnyDocumentsSelected: KnockoutComputed<boolean>;
+
+    static gridSelector = "#documentsGrid";
 
     constructor() {
         super();
         this.selectedCollection.subscribe(c => this.selectedCollectionChanged(c));
+        this.hasAnyDocumentsSelected = ko.computed(() => this.selectedDocumentIndices().length > 0);
     }
 
     activate(args) {
@@ -39,6 +46,11 @@ class documents extends activeDbViewModelBase {
         // TypeScript doesn't know about Bootstrap-Context menu, so we cast jQuery as any.
         (<any>$('.document-collections li')).contextmenu({
             target: '#collections-context-menu'
+        });
+
+        $(".use-bootstrap-tooltip").tooltip({
+            delay: { show: 600, hide: 100 },
+            container: 'body'
         });
     }
 
@@ -112,6 +124,58 @@ class documents extends activeDbViewModelBase {
         return new getCollectionsCommand(db)
             .execute()
             .done(results => this.collectionsLoaded(results, db));
+    }
+
+    newDocument() {
+        router.navigate(appUrl.forNewDoc(this.activeDatabase()));
+    }
+
+    toggleSelectAll() {
+        this.isSelectAll.toggle();
+
+        var docsGrid = this.getDocumentsGrid();
+        if (docsGrid && this.isSelectAll()) {
+            docsGrid.selectAll();
+        } else if (docsGrid && !this.isSelectAll()) {
+            docsGrid.selectNone();
+        }        
+    }
+
+    editSelectedDoc() {
+        var grid = this.getDocumentsGrid();
+        if (grid) {
+            grid.editLastSelectedDoc();
+        }
+    }
+
+    deleteSelectedDocs() {
+        var grid = this.getDocumentsGrid();
+        if (grid) {
+            grid.deleteSelectedDocs();
+        }
+    }
+
+    copySelectedDocs() {
+        var grid = this.getDocumentsGrid();
+        if (grid) {
+            grid.copySelectedDocs();
+        }
+    }
+
+    copySelectedDocIds() {
+        var grid = this.getDocumentsGrid();
+        if (grid) {
+            grid.copySelectedDocIds();
+        }
+    }
+
+    getDocumentsGrid(): virtualTable {
+        var gridContents = $(documents.gridSelector).children()[0];
+        if (gridContents) {
+            return ko.dataFor(gridContents);
+        }
+
+        return null;
     }
 }
 

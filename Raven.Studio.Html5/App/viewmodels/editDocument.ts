@@ -1,4 +1,4 @@
-/// <reference path="../../Scripts/typings/ace/ace.amd.d.ts" />
+﻿/// <reference path="../../Scripts/typings/ace/ace.amd.d.ts" />
 
 import app = require("durandal/app");
 import sys = require("durandal/system");
@@ -31,6 +31,8 @@ class editDocument extends activeDbViewModelBase {
     docsList = ko.observable<pagedList>();
     docEditor: AceAjax.Editor;
     databaseForEditedDoc: database;
+
+    static editDocSelector = "#editDocumentContainer";
 
     constructor() {
         super();
@@ -106,10 +108,15 @@ class editDocument extends activeDbViewModelBase {
     attached() {
         this.initializeDocEditor();
         this.setupKeyboardShortcuts();
+
+        $(".use-bootstrap-tooltip").tooltip({
+            container: "body",
+            delay: { show: 600, hide: 100 }
+        });
     }
 
     deactivate() {
-        $("#editDocumentContainer").unbind('keydown.jwerty');
+        $(editDocument.editDocSelector).unbind('keydown.jwerty');
     }
 
     initializeDocEditor() {
@@ -122,26 +129,24 @@ class editDocument extends activeDbViewModelBase {
         this.updateDocEditorText();
     }
 
-    setupKeyboardShortcuts() {
-        jwerty.key("ctrl+alt+s", e => {
-            e.preventDefault();
-            this.saveDocument();
-        }, this, "#editDocumentContainer");
+    setupKeyboardShortcuts() {        
+        this.createKeyboardShortcut("alt+s", () => this.saveDocument());
+        this.createKeyboardShortcut("alt+r", () => this.refreshDocument());
+        this.createKeyboardShortcut("shift+d", () => this.isEditingMetadata(false));
+        this.createKeyboardShortcut("shift+m", () => this.isEditingMetadata(true));
+        this.createKeyboardShortcut("home", () => this.firstDocument());
+        this.createKeyboardShortcut("end", () => this.lastDocument());
+        this.createKeyboardShortcut("alt+←", () => this.previousDocumentOrLast());
+        this.createKeyboardShortcut("alt+→", () => this.nextDocumentOrFirst());
+        this.createKeyboardShortcut("alt+[", () => this.formatDocument());
+        this.createKeyboardShortcut("delete", () => this.deleteDocument());
+    }
 
-        jwerty.key("ctrl+alt+r", e => {
+    private createKeyboardShortcut(keys: string, handler: () => void) {
+        jwerty.key(keys, e => {
             e.preventDefault();
-            this.refreshDocument();
-        }, this, "#editDocumentContainer");
-
-        jwerty.key("ctrl+alt+d", e => {
-            e.preventDefault();
-            this.isEditingMetadata(false);
-        });
-
-        jwerty.key("ctrl+alt+m", e => {
-            e.preventDefault();
-            this.isEditingMetadata(true);
-        });
+            handler();
+        }, this, editDocument.editDocSelector);
     }
 
     editNewDocument() {
@@ -210,11 +215,12 @@ class editDocument extends activeDbViewModelBase {
     refreshDocument() {
         var meta = this.metadata();
         if (!this.isCreatingNewDocument()) {
+            var docId = this.editedDocId();
             this.document(null);
             this.documentText(null);
             this.metadataText(null);
             this.userSpecifiedId('');
-            this.loadDocument(this.editedDocId());
+            this.loadDocument(docId);
         } else {
             this.editNewDocument();
         }
@@ -224,12 +230,16 @@ class editDocument extends activeDbViewModelBase {
         var doc = this.document();
         if (doc) {
             var viewModel = new deleteDocuments([doc]);
-            viewModel.deletionTask.done(() => {
-                this.nextDocumentOrFirst();
-
-            });
-            app.showDialog(viewModel);
+            viewModel.deletionTask.done(() => this.nextDocumentOrFirst());
+            app.showDialog(viewModel, editDocument.editDocSelector);
         }
+    }
+
+    formatDocument() {
+        var docText = this.documentText();
+        var tempDoc = JSON.parse(docText);
+        var formatted = this.stringify(tempDoc);
+        this.documentText(formatted);
     }
 
     nextDocumentOrFirst() {
