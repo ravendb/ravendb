@@ -217,7 +217,7 @@ namespace Raven.Bundles.Replication.Tasks
 			while (true)
 			{
 				int nextPageStart = skip; // will trigger rapid pagination
-				var docs = docDb.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, skip, 128, ref nextPageStart);
+				var docs = docDb.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, skip, 128, CancellationToken.None, ref nextPageStart);
 				if (docs.Length == 0)
 				{
 					notifications.TryAdd(null, 15 * 1000); // marker to stop notify this

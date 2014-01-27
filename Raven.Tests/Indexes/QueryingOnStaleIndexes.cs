@@ -43,7 +43,7 @@ namespace Raven.Tests.Indexes
 			{
 				PageSize = 2,
 				Start = 0,
-			}).IsStale);
+			}, CancellationToken.None).IsStale);
 		}
 
 		[Fact]
@@ -57,7 +57,7 @@ namespace Raven.Tests.Indexes
 				{
 					PageSize = 2,
 					Start = 0,
-				});
+				}, CancellationToken.None);
 				if (queryResult.IsStale == false)
 					break;
 				Thread.Sleep(100);
@@ -67,7 +67,7 @@ namespace Raven.Tests.Indexes
 			{
 				PageSize = 2,
 				Start = 0,
-			}).IsStale);
+			}, CancellationToken.None).IsStale);
 
 			db.StopBackgroundWorkers();
 
@@ -78,14 +78,14 @@ namespace Raven.Tests.Indexes
 			{
 				PageSize = 2,
 				Start = 0,
-			}).IsStale);
+			}, CancellationToken.None).IsStale);
 
 			Assert.False(db.Query("Raven/DocumentsByEntityName", new IndexQuery
 			{
 				PageSize = 2,
 				Start = 0,
 				Cutoff = SystemTime.UtcNow.AddHours(-1)
-			}).IsStale);
+			}, CancellationToken.None).IsStale);
 		}
 		
 	}

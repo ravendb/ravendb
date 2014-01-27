@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Threading;
 using Raven.Client.Embedded;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions;
@@ -45,6 +46,7 @@ namespace Raven.Tests.Storage
 			db.Put("Raven/Databases/Db", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 			db.Put("Raven/Database", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 
+			var dbs = db.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, 10, CancellationToken.None);
 			int nextPageStart = 0;
 			var dbs = db.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, 10, ref nextPageStart);
 
@@ -56,7 +58,7 @@ namespace Raven.Tests.Storage
 		{
 			db.Put(" ", null, new RavenJObject { { "a", "b" } }, new RavenJObject(), null);
 
-			var doc = db.GetDocuments(0, 10, null)
+			var doc = db.GetDocuments(0, 10, null, CancellationToken.None)
 				.OfType<RavenJObject>()
 				.Single();
 			var id = doc["@metadata"].Value<string>("@id");

@@ -1,8 +1,13 @@
-define(["require", "exports", "durandal/app", "plugins/router", "common/appUrl", "common/raven", "models/database", "viewmodels/createDatabase", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand"], function(require, exports, app, router, appUrl, raven, database, createDatabase, getDatabaseStatsCommand, getDatabasesCommand) {
+define(["require", "exports", "durandal/app", "plugins/router", "common/appUrl", "models/database", "viewmodels/createDatabase", "commands/getDatabaseStatsCommand", "commands/getDatabasesCommand", "viewmodels/deleteDatabaseConfirm"], function(require, exports, app, router, appUrl, database, createDatabase, getDatabaseStatsCommand, getDatabasesCommand, deleteDatabaseConfirm) {
     var databases = (function () {
         function databases() {
+            var _this = this;
             this.databases = ko.observableArray();
-            this.ravenDb = new raven();
+            this.searchText = ko.observable("");
+            this.selectedDatabase = ko.observable();
+            this.searchText.subscribe(function (s) {
+                return _this.filterDatabases(s);
+            });
         }
         databases.prototype.activate = function (navigationArgs) {
             var _this = this;
@@ -57,11 +62,42 @@ define(["require", "exports", "durandal/app", "plugins/router", "common/appUrl",
                 return d.isSelected(d === db);
             });
             db.activate();
+            this.selectedDatabase(db);
         };
 
         databases.prototype.goToDocuments = function (db) {
             // TODO: use appUrl for this.
             router.navigate("#documents?database=" + db.name);
+        };
+
+        databases.prototype.filterDatabases = function (filter) {
+            var filterLower = filter.toLowerCase();
+            this.databases().forEach(function (d) {
+                var isMatch = !filter || d.name.toLowerCase().indexOf(filterLower) >= 0;
+                d.isVisible(isMatch);
+            });
+        };
+
+        databases.prototype.deleteSelectedDatabase = function () {
+            var _this = this;
+            var db = this.selectedDatabase();
+            var systemDb = this.databases.first(function (db) {
+                return db.isSystem;
+            });
+            if (db && systemDb) {
+                var confirmDeleteVm = new deleteDatabaseConfirm(db, systemDb);
+                confirmDeleteVm.deleteTask.done(function () {
+                    return _this.onDatabaseDeleted(db);
+                });
+                app.showDialog(confirmDeleteVm);
+            }
+        };
+
+        databases.prototype.onDatabaseDeleted = function (db) {
+            this.databases.remove(db);
+            if (this.selectedDatabase() === db) {
+                this.selectedDatabase(null);
+            }
         };
         return databases;
     })();

@@ -105,7 +105,7 @@ select new {
 	                Query = query,
 	                Start = 0,
 	                PageSize = 10
-	            });
+	            }, CancellationToken.None);
 	            if (q.IsStale)
 	                Thread.Sleep(100);
 	        } while (q.IsStale && count++ < 100);

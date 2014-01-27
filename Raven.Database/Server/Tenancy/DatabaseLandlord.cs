@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -306,7 +307,7 @@ namespace Raven.Database.Server.Tenancy
 					var numberOfAllowedDbs = int.Parse(maxDatabases);
 
 					int nextPageStart = 0;
-					var databases = systemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, numberOfAllowedDbs, ref nextPageStart).ToList();
+					var databases = systemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, numberOfAllowedDbs, CancellationToken.None, ref nextPageStart).ToList();
 					if (databases.Count >= numberOfAllowedDbs)
 						throw new InvalidOperationException(
 							"You have reached the maximum number of databases that you can have according to your license: " + numberOfAllowedDbs + Environment.NewLine +

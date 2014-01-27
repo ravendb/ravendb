@@ -20,6 +20,8 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Prefetching
 {
+	using Util;
+
 	public class PrefetchingBehavior : IDisposable
 	{
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
@@ -29,7 +31,7 @@ namespace Raven.Database.Prefetching
 			new ConcurrentDictionary<string, HashSet<Etag>>(StringComparer.InvariantCultureIgnoreCase);
 
 		private readonly ReaderWriterLockSlim updatedDocumentsLock = new ReaderWriterLockSlim();
-		private readonly HashSet<Etag> updatedDocuments = new HashSet<Etag>();
+		private readonly SortedKeyList<Etag> updatedDocuments = new SortedKeyList<Etag>();
 
 		private readonly ConcurrentDictionary<Etag, FutureIndexBatch> futureIndexBatches =
 			new ConcurrentDictionary<Etag, FutureIndexBatch>();
@@ -373,11 +375,9 @@ namespace Raven.Database.Prefetching
 
 		public void CleanupDocuments(Etag lastIndexedEtag)
 		{
-			var highest = new ComparableByteArray(lastIndexedEtag);
-
 			foreach (var docToRemove in documentsToRemove)
 			{
-				if (docToRemove.Value.All(etag => highest.CompareTo(etag) > 0) == false)
+				if (docToRemove.Value.All(etag => lastIndexedEtag.CompareTo(etag) > 0) == false)
 					continue;
 
 				HashSet<Etag> _;
@@ -387,7 +387,7 @@ namespace Raven.Database.Prefetching
 			updatedDocumentsLock.EnterWriteLock();
 			try
 			{
-				updatedDocuments.RemoveWhere(x => highest.CompareTo(x) >= 0);
+				updatedDocuments.RemoveSmallerOrEqual(lastIndexedEtag);
 			}
 			finally
 			{
@@ -395,7 +395,7 @@ namespace Raven.Database.Prefetching
 			}
 
 			JsonDocument result;
-			while (prefetchingQueue.TryPeek(out result) && highest.CompareTo(result.Etag) >= 0)
+			while (prefetchingQueue.TryPeek(out result) && lastIndexedEtag.CompareTo(result.Etag) >= 0)
 			{
 				prefetchingQueue.TryDequeue(out result);
 			}
@@ -459,7 +459,10 @@ namespace Raven.Database.Prefetching
 			updatedDocumentsLock.EnterReadLock();
 			try
 			{
-				while (updatedDocuments.Contains(nextEtag))
+				var enumerator = updatedDocuments.GetEnumerator();
+
+				// here we relay on the fact that the updated docs collection is sorted
+				while (enumerator.MoveNext() && enumerator.Current.CompareTo(nextEtag) == 0)
 				{
 					nextEtag = EtagUtil.Increment(nextEtag, 1);
 				}

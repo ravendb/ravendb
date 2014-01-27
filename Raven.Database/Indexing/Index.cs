@@ -936,7 +936,7 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			public IEnumerable<IndexQueryResult> Query()
+			public IEnumerable<IndexQueryResult> Query(CancellationToken token)
 			{
 			    if (parent.Priority.HasFlag(IndexingPriority.Error))
 			        throw new IndexDisabledException("The index has been disabled due to errors");
@@ -976,6 +976,7 @@ namespace Raven.Database.Indexing
 							int moreRequired = 0;
 							do
 							{
+								token.ThrowIfCancellationRequested(); 
 								search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
 
 								if (recorder != null)
@@ -1095,7 +1096,7 @@ namespace Raven.Database.Indexing
 				return luceneQuery;
 			}
 
-			public IEnumerable<IndexQueryResult> IntersectionQuery()
+			public IEnumerable<IndexQueryResult> IntersectionQuery(CancellationToken token)
 			{
 				using (IndexStorage.EnsureInvariantCulture())
 				{
@@ -1122,6 +1123,7 @@ namespace Raven.Database.Indexing
 
 						do
 						{
+							token.ThrowIfCancellationRequested();
 							if (skippedResultsInCurrentLoop > 0)
 							{
 								// We get here because out first attempt didn't get enough docs (after INTERSECTION was calculated)
@@ -1385,7 +1387,8 @@ namespace Raven.Database.Indexing
 
 						Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
 						var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
-						if (alreadyReturned.Add(indexQueryResult.Projection) == false)
+						if (indexQueryResult.Projection.Count > 0 && // we don't consider empty projections to be relevant for distinct operations
+                            alreadyReturned.Add(indexQueryResult.Projection) == false)
 						{
 							min++; // we found a duplicate
 							itemsSkipped++;

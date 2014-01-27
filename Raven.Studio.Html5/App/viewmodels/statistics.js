@@ -4,7 +4,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "viewmodels/activeDbViewModelBase", "commands/getDatabaseStatsCommand", "models/database", "moment"], function(require, exports, activeDbViewModelBase, getDatabaseStatsCommand, database, moment) {
+define(["require", "exports", "commands/getDatabaseStatsCommand", "models/database", "moment"], function(require, exports, getDatabaseStatsCommand, database, moment) {
     var statistics = (function (_super) {
         __extends(statistics, _super);
         function statistics() {
