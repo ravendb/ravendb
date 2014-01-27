@@ -4,14 +4,17 @@
 // </copyright>
 //-----------------------------------------------------------------------
 #if !SILVERLIGHT
+using System;
 using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
@@ -105,62 +108,88 @@ namespace Raven.Client.Document
 			return GetDocumentAsync(databaseCommands)
 				.ContinueWith(task =>
 				{
+					JsonDocument document;
 					try
 					{
-						JsonDocument document;
-						try
-						{
-							document = task.Result;
-						}
-						catch (ConflictException e)
-						{
-							// resolving the conflict by selecting the highest number
-							var highestMax = e.ConflictedVersionIds
-								.Select(conflictedVersionId => databaseCommands.GetAsync(conflictedVersionId)
-								                               	.ContinueWith(t => GetMaxFromDocument(t.Result, minNextMax)))
-								.AggregateAsync(Enumerable.Max);
-
-							return highestMax
-								.ContinueWith(t => PutDocumentAsync(databaseCommands, new JsonDocument
-								{
-									Etag = e.Etag,
-									Metadata = new RavenJObject(),
-									DataAsJson = RavenJObject.FromObject(new {Max = t.Result}),
-									Key = HiLoDocumentKey
-								}))
-								.Unwrap()
-								.ContinueWithTask(() => GetNextRangeAsync(databaseCommands));
-						}
-
-						long min, max;
-						if (document == null)
-						{
-							min = minNextMax + 1;
-							max = minNextMax + capacity;
-							document = new JsonDocument
-							{
-								Etag = Etag.Empty,
-								// sending empty etag means - ensure the that the document does NOT exists
-								Metadata = new RavenJObject(),
-								DataAsJson = RavenJObject.FromObject(new {Max = max}),
-								Key = HiLoDocumentKey
-							};
-						}
-						else
-						{
-							var oldMax = GetMaxFromDocument(document, minNextMax);
-							min = oldMax + 1;
-							max = oldMax + capacity;
-
-							document.DataAsJson["Max"] = max;
-						}
-
-						return PutDocumentAsync(databaseCommands, document).WithResult(new RangeValue(min, max));
+						document = task.Result;
 					}
-					catch (ConcurrencyException)
+					catch (AggregateException e)
 					{
-						return GetNextMaxAsyncInner(databaseCommands);
+						var conflictEx = HandleInnerExceptionAs<ConflictException>(e);
+
+						// resolving the conflict by selecting the highest number
+						var highestMax = conflictEx.ConflictedVersionIds
+							.Select(conflictedVersionId => databaseCommands.GetAsync(conflictedVersionId)
+															.ContinueWith(t => GetMaxFromDocument(t.Result, minNextMax)))
+							.AggregateAsync(Enumerable.Max);
+
+						return highestMax
+							.ContinueWith(t => PutDocumentAsync(databaseCommands, new JsonDocument
+							{
+								Etag = conflictEx.Etag,
+								Metadata = new RavenJObject(),
+								DataAsJson = RavenJObject.FromObject(new { Max = t.Result }),
+								Key = HiLoDocumentKey
+							}))
+							.Unwrap()
+							.ContinueWith(t =>
+							{
+								try
+								{
+									t.AssertNotFailed();
+									return GetNextRangeAsync(databaseCommands);
+								}
+								catch (AggregateException ex)
+								{
+									HandleInnerExceptionAs<ConcurrencyException>(ex);
+
+									// PutDocumentAsync failed; try the whole thing again
+									return GetNextMaxAsyncInner(databaseCommands);
+								}
+							})
+							.Unwrap();
 					}
+
+					long min, max;
+					if (document == null)
+					{
+						min = minNextMax + 1;
+						max = minNextMax + capacity;
+						document = new JsonDocument
+						{
+							Etag = Etag.Empty,
+							// sending empty etag means - ensure the that the document does NOT exists
+							Metadata = new RavenJObject(),
+							DataAsJson = RavenJObject.FromObject(new { Max = max }),
+							Key = HiLoDocumentKey
+						};
+					}
+					else
+					{
+						var oldMax = GetMaxFromDocument(document, minNextMax);
+						min = oldMax + 1;
+						max = oldMax + capacity;
+
+						document.DataAsJson["Max"] = max;
+					}
+
+					return PutDocumentAsync(databaseCommands, document)
+						.ContinueWith(t =>
+						{
+							try
+							{
+								t.AssertNotFailed();
+								return CompletedTask.With(new RangeValue(min, max));
+							}
+							catch (AggregateException ex)
+							{
+								HandleInnerExceptionAs<ConcurrencyException>(ex);
+
+								// PutDocumentAsync failed; try the whole thing again
+								return GetNextMaxAsyncInner(databaseCommands);
+							}
+						})
+						.Unwrap();
 				}).Unwrap();
 		}
 
@@ -195,6 +224,39 @@ namespace Raven.Client.Document
 					}
 					return jsonDocument;
 				});
+		}
+
+		/// <summary> Handles the Aggregate exception expecting a specified inner exception.</summary>
+		/// <typeparam name="T"> The type of the inner exception that is expected.</typeparam>
+		/// <param name="exception"> The Aggregrate exception to handle.</param>
+		/// <returns> The inner exception of specified type.</returns>
+		/// <exception cref="AggregateException"> An exception contained by this System.AggregateException was not handled.</exception>
+		public static T HandleInnerExceptionAs<T>(AggregateException exception) where T : Exception
+		{
+			var handled = default(T);
+
+			exception.Handle(
+				ex =>
+				{
+					var aggEx = ex as AggregateException;
+					if (aggEx != null)
+					{
+						handled = HandleInnerExceptionAs<T>(aggEx);
+						return true;
+					}
+
+					var expected = ex as T;
+					if (expected != null)
+					{
+						handled = expected;
+						return true;
+					}
+
+					// This will cause the Handle method to throw an AggregateException.
+					return false;
+				});
+
+			return handled;
 		}
 	}
 }
