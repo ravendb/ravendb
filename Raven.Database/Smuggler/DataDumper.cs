@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -37,36 +38,46 @@ namespace Raven.Database.Smuggler
 		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			var totalCount = 0;
-			while (true)
-			{
-                if (SmugglerOptions.Limit - totalCount <= 0)
-                {
-                    ShowProgress("Done with reading attachments, total: {0}", totalCount);
-                    return lastEtag;
-                }
-			    var maxRecords = Math.Min(SmugglerOptions.Limit - totalCount, SmugglerOptions.BatchSize);
-			    var array = GetAttachments(totalCount, lastEtag, maxRecords);
-			    if (array.Length == 0)
-			    {
-			        var databaseStatistics = await GetStats();
-			        if (lastEtag == null) lastEtag = Etag.Empty;
-			        if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
-			        {
-			            lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
-			            ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
-			            continue;
-			        }
-			        ShowProgress("Done with reading attachments, total: {0}", totalCount);
-			        return lastEtag;
-			    }
-			    totalCount += array.Length;
-			    ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", array.Length, totalCount);
-			    foreach (var item in array)
-			    {
-			        item.WriteTo(jsonWriter);
-			    }
-			    lastEtag = Etag.Parse(array.Last().Value<string>("Etag"));
-			}
+		    try
+		    {
+
+		        while (true)
+		        {
+		            if (SmugglerOptions.Limit - totalCount <= 0)
+		            {
+		                ShowProgress("Done with reading attachments, total: {0}", totalCount);
+		                return lastEtag;
+		            }
+		            var maxRecords = Math.Min(SmugglerOptions.Limit - totalCount, SmugglerOptions.BatchSize);
+		            var array = GetAttachments(totalCount, lastEtag, maxRecords);
+		            if (array.Length == 0)
+		            {
+		                var databaseStatistics = await GetStats();
+		                if (lastEtag == null) lastEtag = Etag.Empty;
+		                if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
+		                {
+		                    lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
+		                    ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}",
+		                                 lastEtag);
+		                    continue;
+		                }
+		                ShowProgress("Done with reading attachments, total: {0}", totalCount);
+		                return lastEtag;
+		            }
+		            totalCount += array.Length;
+		            ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", array.Length, totalCount);
+		            foreach (var item in array)
+		            {
+		                item.WriteTo(jsonWriter);
+		            }
+		            lastEtag = Etag.Parse(array.Last().Value<string>("Etag"));
+		        }
+		    }
+		    catch (WebException e)
+		    {
+                ShowProgress("Got WebException during smuggler export. Exception: {0}. Exiting with last succesfully processed etag: {1}", e.Message, lastEtag);
+                return lastEtag;
+		    }
 		}
 
 		protected override Task<RavenJArray> GetTransformers(int start)

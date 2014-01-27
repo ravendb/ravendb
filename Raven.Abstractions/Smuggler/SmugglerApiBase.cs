@@ -11,6 +11,7 @@ using Ionic.Zlib;
 #endif
 
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -247,56 +248,62 @@ namespace Raven.Abstractions.Smuggler
 			{
 				bool hasDocs = false;
 
-			    if (options.Limit - totalCount > 0)
-			    {
-			        var maxRecords = options.Limit - totalCount;
-                    using (var documents = await GetDocuments(lastEtag, maxRecords))
+                try {
+                    var maxRecords = options.Limit - totalCount;
+                    if (maxRecords > 0)
 			        {
-			            var watch = Stopwatch.StartNew();
-
-			            while (await documents.MoveNextAsync())
+			            using (var documents = await GetDocuments(lastEtag, maxRecords))
 			            {
-                            hasDocs = true;
-			                var document = documents.Current;
-			                lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+			                var watch = Stopwatch.StartNew();
 
-			                if (!options.MatchFilters(document))
-			                    continue;
-
-			                if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
-			                    continue;
-			                document.WriteTo(jsonWriter);
-			                totalCount++;
-
-			                if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+			                while (await documents.MoveNextAsync())
 			                {
-			                    ShowProgress("Exported {0} documents", totalCount);
-			                    lastReport = SystemTime.UtcNow;
+			                    hasDocs = true;
+			                    var document = documents.Current;
+			                    lastEtag = Etag.Parse(document.Value<RavenJObject>("@metadata").Value<string>("@etag"));
+
+			                    if (!options.MatchFilters(document))
+			                        continue;
+
+			                    if (options.ShouldExcludeExpired && options.ExcludeExpired(document))
+			                        continue;
+			                    document.WriteTo(jsonWriter);
+			                    totalCount++;
+
+			                    if (totalCount%1000 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
+			                    {
+			                        ShowProgress("Exported {0} documents", totalCount);
+			                        lastReport = SystemTime.UtcNow;
+			                    }
+
+			                    if (watch.ElapsedMilliseconds > 100)
+			                        errorcount++;
+			                    watch.Start();
 			                }
-
-			                if (watch.ElapsedMilliseconds > 100)
-			                    errorcount++;
-			                watch.Start();
 			            }
-			        }
+			        
+			            if (hasDocs)
+			                continue;
 
+			            // The server can filter all the results. In this case, we need to try to go over with the next batch.
+			            // Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
+                        // (This code provides support for legacy RavenDB version: 1.0)
+			            var databaseStatistics = await GetStats();
+			            var lastEtagComparable = new ComparableByteArray(lastEtag);
+			            if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
+			            {
+                            lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
+			                ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
 
-			        if (hasDocs)
-			            continue;
-
-			        // The server can filter all the results. In this case, we need to try to go over with the next batch.
-			        // Note that if the ETag' server restarts number is not the same, this won't guard against an infinite loop.
-                    // (This code provides support for legacy RavenDB version: 1.0)
-			        var databaseStatistics = await GetStats();
-			        var lastEtagComparable = new ComparableByteArray(lastEtag);
-			        if (lastEtagComparable.CompareTo(databaseStatistics.LastDocEtag) < 0)
-			        {
-                        lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
-			            ShowProgress("Got no results but didn't get to the last doc etag, trying from: {0}", lastEtag);
-
-			            continue;
-			        }
+			                continue;
+			            }
+                    }
 			    }
+                catch (WebException e)
+                {
+                    ShowProgress("Got WebException during smuggler export. Exception: {0}. Exiting with last succesfully processed etag: {1}", e.Message, lastEtag);
+                    return lastEtag;
+                }
 
 			    ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
 				return lastEtag;
