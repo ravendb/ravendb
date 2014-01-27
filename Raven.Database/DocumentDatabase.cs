@@ -2318,6 +2318,8 @@ namespace Raven.Database
 						}
 						catch (ConcurrencyException)
 						{
+							if (TransactionalStorage.IsAlreadyInBatch)
+								throw;
 							if (retries-- > 0)
 							{
 								shouldRetry = true;

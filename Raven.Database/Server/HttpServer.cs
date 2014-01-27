@@ -87,9 +87,6 @@ namespace Raven.Database.Server
 			get { return Thread.VolatileRead(ref physicalRequestsCount); }
 		}
 
-		[ImportMany]
-		public OrderedPartCollection<IConfigureHttpListener> ConfigureHttpListeners { get; set; }
-
 		public InMemoryRavenConfiguration Configuration
 		{
 			get
@@ -361,10 +358,6 @@ namespace Raven.Database.Server
             var uri = prefix + (SystemConfiguration.HostName ?? "+") + ":" + SystemConfiguration.Port + virtualDirectory;
 			listener.Prefixes.Add(uri);
 
-			foreach (var configureHttpListener in ConfigureHttpListeners)
-			{
-				configureHttpListener.Value.Configure(listener, SystemConfiguration);
-			}
 
 			Init();
 			listener.Start();
