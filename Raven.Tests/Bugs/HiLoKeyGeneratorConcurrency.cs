@@ -1,11 +1,15 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
+using Raven.Client.Connection.Async;
 using Raven.Client.Document;
+using Raven.Client.Exceptions;
+using Raven.Json.Linq;
+using Rhino.Mocks;
 using Xunit;
 using Xunit.Sdk;
 
@@ -69,6 +73,125 @@ namespace Raven.Tests.Bugs
 			{
 				var gen = new AsyncHiLoKeyGenerator("When_async_generating_lots_of_keys_concurrently_there_are_no_clashes", 2);
 				Test(() => gen.NextIdAsync(store.AsyncDatabaseCommands).Result, 1, GeneratedIdCount);
+			}
+		}
+
+		[Fact]
+		public void AsyncGeneration_RetryOnConcurencyEx()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				var calls = 0;
+
+				var mockedDbCommands = MockRepository.GenerateMock<IAsyncDatabaseCommands>();
+				mockedDbCommands.Stub(c => c.GetAsync(Arg<string[]>.Is.Anything, Arg<string[]>.Is.Anything, Arg<string>.Is.Anything, Arg<Dictionary<string, RavenJToken>>.Is.Anything, Arg<bool>.Is.Anything))
+								.Return(null)
+								.WhenCalled(m => { m.ReturnValue = store.AsyncDatabaseCommands.GetAsync((string[])m.Arguments[0], (string[])m.Arguments[1], (string)m.Arguments[2], (Dictionary<string, RavenJToken>)m.Arguments[3], (bool)m.Arguments[4]); });
+
+				mockedDbCommands.Stub(c => c.PutAsync(Arg<string>.Is.Anything, Arg<Raven.Abstractions.Data.Etag>.Is.Anything, Arg<RavenJObject>.Is.Anything, Arg<RavenJObject>.Is.Anything))
+								.Return(null)
+								.WhenCalled(
+									m =>
+									{
+										calls++;
+										if (calls == 1)
+										{
+											var taskSource = new TaskCompletionSource<PutResult>();
+											taskSource.SetException(new ConcurrencyException());
+											m.ReturnValue = taskSource.Task;
+										}
+										else
+										{
+											m.ReturnValue = store.AsyncDatabaseCommands.PutAsync((string)m.Arguments[0], (Raven.Abstractions.Data.Etag)m.Arguments[1], (RavenJObject)m.Arguments[2], (RavenJObject)m.Arguments[3]);
+										}
+
+									});
+
+				var gen = new AsyncHiLoKeyGenerator("Async retries on ConcurencyException", 2);
+				gen.NextIdAsync(mockedDbCommands).Wait();
+
+				Assert.Equal(2, calls);
+			}
+		}
+
+		[Fact]
+		public void AsyncGeneration_RetryOnConcurencyExWithConflicts()
+		{
+			using (GetNewServer())
+			using (var store = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			}.Initialize())
+			{
+				var document = new JsonDocument
+				{
+					Etag = Guid.Empty,
+					Metadata = new RavenJObject(),
+					DataAsJson = RavenJObject.FromObject(new { Max = 0 }),
+					Key = "Raven/Hilo/SomeDocument"
+				};
+
+				// Create a document that will be used to resolve the conflicts.
+				store.AsyncDatabaseCommands.PutAsync(document.Key, document.Etag, document.DataAsJson, document.Metadata).Wait();
+
+				var callsToGetAsync = 0;
+				var callsToPutAsync = 0;
+
+				var mockedDbCommands = MockRepository.GenerateMock<IAsyncDatabaseCommands>();
+
+				mockedDbCommands.Stub(c => c.GetAsync(Arg<string>.Is.Anything))
+								.Return(null)
+								.WhenCalled(m => { m.ReturnValue = store.AsyncDatabaseCommands.GetAsync((string)m.Arguments[0]); });
+
+				mockedDbCommands.Stub(c => c.GetAsync(Arg<string[]>.Is.Anything, Arg<string[]>.Is.Anything, Arg<string>.Is.Anything, Arg<Dictionary<string, RavenJToken>>.Is.Anything, Arg<bool>.Is.Anything))
+								.Return(null)
+								.WhenCalled(m =>
+								{
+									callsToGetAsync++;
+									if (callsToGetAsync == 1)
+									{
+										var taskSource = new TaskCompletionSource<MultiLoadResult>();
+										taskSource.SetException(new ConflictException(false)
+										{
+											ConflictedVersionIds = new[] { document.Key },
+											Etag = Guid.Empty
+										});
+										m.ReturnValue = taskSource.Task;
+									}
+									else
+									{
+										m.ReturnValue = store.AsyncDatabaseCommands.GetAsync((string[])m.Arguments[0], (string[])m.Arguments[1], (string)m.Arguments[2], (Dictionary<string, RavenJToken>)m.Arguments[3], (bool)m.Arguments[4]);
+									}
+								});
+
+				mockedDbCommands.Stub(c => c.PutAsync(Arg<string>.Is.Anything, Arg<Raven.Abstractions.Data.Etag>.Is.Anything, Arg<RavenJObject>.Is.Anything, Arg<RavenJObject>.Is.Anything))
+								.Return(null)
+								.WhenCalled(
+									m =>
+									{
+										callsToPutAsync++;
+										if (callsToPutAsync == 1)
+										{
+											var taskSource = new TaskCompletionSource<PutResult>();
+											taskSource.SetException(new ConcurrencyException());
+											m.ReturnValue = taskSource.Task;
+										}
+										else
+										{
+											m.ReturnValue = store.AsyncDatabaseCommands.PutAsync((string)m.Arguments[0], (Raven.Abstractions.Data.Etag)m.Arguments[1], (RavenJObject)m.Arguments[2], (RavenJObject)m.Arguments[3]);
+										}
+
+									});
+
+				var gen = new AsyncHiLoKeyGenerator("Async retries on ConcurencyException", 2);
+				gen.NextIdAsync(mockedDbCommands).Wait();
+
+				Assert.Equal(2, callsToGetAsync);
+				Assert.Equal(2, callsToPutAsync);
 			}
 		}
 
