@@ -385,14 +385,13 @@ namespace Raven.Tests.Helpers
 				return;
 
 		    var embeddableDocumentStore = documentStore as EmbeddableDocumentStore;
-		    HttpServer server = null;
+			OwinHttpServer server = null;
             string url = documentStore.Url;
 		    if (embeddableDocumentStore != null)
 		    {
                 embeddableDocumentStore.SetStudioConfigToAllowSingleDb();
                 embeddableDocumentStore.Configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
-                server = new HttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.DocumentDatabase);
-                server.StartListening();
+                server = new OwinHttpServer(embeddableDocumentStore.Configuration, embeddableDocumentStore.DocumentDatabase);
                 url = embeddableDocumentStore.Configuration.ServerUrl;
 		    }
 

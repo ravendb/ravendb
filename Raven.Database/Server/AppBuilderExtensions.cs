@@ -135,12 +135,6 @@ namespace Owin
 
 			public bool UseBufferedOutputStream(HttpResponseMessage response)
 			{
-				if (HostingEnvironment.IsHosted)
-				{
-					return (response.Content is ChangesPushContent ||
-						response.Content is PushStreamContent ||
-						response.Content is MultiGetController.MultiGetContent) == false;
-				}
 				return (response.Content is ChangesPushContent ||
 						response.Content is StreamsController.StreamQueryContent ||
 						response.Content is StreamContent ||

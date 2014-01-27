@@ -77,7 +77,7 @@
                         }
                         while (iterator.MoveNext());
 
-                        Assert.Equal(ids.Count, snapshot.Transaction.GetTree(tree).State.EntriesCount);
+                        Assert.Equal(ids.Count, snapshot.Transaction.Environment.State.GetTree(snapshot.Transaction,tree).State.EntriesCount);
                         Assert.Equal(ids.Count, count);
                         Assert.Equal(ids.Count, keys.Count);
                     }

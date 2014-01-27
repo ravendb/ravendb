@@ -114,7 +114,7 @@ namespace Voron.Tests
 			if (name == null)
 				RenderAndShow(tx, tx.State.Root, showEntries);
 			else
-				RenderAndShow(tx, tx.GetTree(name), showEntries);
+				RenderAndShow(tx, tx.Environment.State.GetTree(tx,name), showEntries);
 		}
 
 		protected void RenderAndShow(Transaction tx, Tree root, int showEntries = 25)
@@ -122,7 +122,7 @@ namespace Voron.Tests
 			if (Debugger.IsAttached == false)
 				return;
 			var path = Path.Combine(Environment.CurrentDirectory, "test-tree.dot");
-			var rootPageNumber = tx.GetTree(root.Name).State.RootPageNumber;
+			var rootPageNumber = tx.Environment.State.GetTree(tx,root.Name).State.RootPageNumber;
 			TreeDumper.Dump(tx, path, tx.GetReadOnlyPage(rootPageNumber), showEntries);
 
 			var output = Path.Combine(Environment.CurrentDirectory, "output.svg");

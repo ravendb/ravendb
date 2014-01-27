@@ -150,6 +150,7 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							{
 								StartDocsEtag = localBackupStatus.LastDocsEtag,
 								StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag,
+								Incremental = true,
 							});
 
 							// No-op if nothing has changed

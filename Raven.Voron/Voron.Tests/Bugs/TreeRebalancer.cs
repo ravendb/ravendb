@@ -20,7 +20,7 @@
 					{
 						foreach (var multiTreeName in multiTrees)
 						{
-						    var multiTree = tx.GetTree(multiTreeName);
+						    var multiTree = tx.Environment.State.GetTree(tx,multiTreeName);
 							var id = Guid.NewGuid().ToString();
 
 							addedIds.Add("test/0/user-" + i, id);
@@ -31,7 +31,7 @@
 
 					foreach (var multiTreeName in multiTrees)
 					{
-                        var multiTree = tx.GetTree(multiTreeName);
+                        var multiTree = tx.Environment.State.GetTree(tx,multiTreeName);
 						multiTree.MultiAdd(tx, "test/0/user-50", Guid.NewGuid().ToString());
 					}
 
@@ -45,7 +45,7 @@
 					{
                         foreach (var multiTreeName in multiTrees)
                         {
-                            var multiTree = tx.GetTree(multiTreeName);
+                            var multiTree = tx.Environment.State.GetTree(tx,multiTreeName);
 					
 							multiTree.MultiDelete(tx, "test/0/user-" + i, addedIds["test/0/user-" + i]);
 						}
@@ -66,7 +66,7 @@
 
                         foreach (var multiTreeName in multiTrees)
                         {
-                            var multiTree = tx.GetTree(multiTreeName);
+                            var multiTree = tx.Environment.State.GetTree(tx,multiTreeName);
 					
 							multiTree.MultiDelete(tx, "test/0/user-" + i, addedIds["test/0/user-" + i]);
 						}
