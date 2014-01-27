@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -399,6 +400,7 @@ namespace Raven.Json.Linq
 					var selfObj = (RavenJObject)cur.Item2;
 					foreach (var kvp in selfObj.Properties)
 					{
+						Debug.Assert(kvp.Key != null,"This is probably a bug : RavenJToken property key should not be null in this code-path");
 						stack.Push(Tuple.Create(cur.Item1 ^ (397 * kvp.Key.GetHashCode()), kvp.Value));
 					}
 				}
