@@ -13,8 +13,7 @@ using System.Reflection;
 using Lucene.Net.Documents;
 
 using Raven.Abstractions;
-using Raven.Abstractions.Util;
-using Raven.Database.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Database.Server
 {
@@ -28,12 +27,15 @@ namespace Raven.Database.Server
         {
             var assemblies = new HashSet<string> { 
                 typeof(SystemTime).Assembly.GetName().Name, 
-                //typeof(Field).Assembly.GetName().Name 
+                typeof(Field).Assembly.GetName().Name 
             };
 
             var assembly = Assembly.GetExecutingAssembly();
-            var assemblyLocation = Path.GetDirectoryName(assembly.Location);
+            var assemblyLocation = Path.Combine(Path.GetDirectoryName(assembly.Location), Constants.AssembliesDirectoryName + "\\");
             var assembliesToExtract = FindAssembliesToExtract(assembly, assemblies);
+
+            if (!Directory.Exists(assemblyLocation))
+                Directory.CreateDirectory(assemblyLocation);
 
             Extract(assembly, assembliesToExtract, assemblyLocation);
 

@@ -8,6 +8,8 @@ using System;
 using System.IO;
 using System.Reflection;
 
+using Raven.Abstractions.Data;
+
 namespace Raven.Abstractions.Util
 {
     public static class AssemblyHelper
@@ -44,7 +46,7 @@ namespace Raven.Abstractions.Util
             var path = Path.GetDirectoryName(executingAssembly.Location);
             var name = type.Assembly.GetName().Name;
 
-            return Path.Combine(path, name + ".dll");
+            return Path.Combine(path, Constants.AssembliesDirectoryName + "\\", name + ".dll");
         }
     }
 }

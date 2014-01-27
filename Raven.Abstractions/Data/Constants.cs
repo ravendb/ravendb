@@ -121,5 +121,7 @@ namespace Raven.Abstractions.Data
 #if DEBUG
 		public const int EnterLockTimeout = 10000;
 #endif
+
+	    public const string AssembliesDirectoryName = "Assemblies";
 	}
 }
