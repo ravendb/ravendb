@@ -17,6 +17,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
@@ -475,7 +476,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		private static readonly string EmbeddedLastChangedDate =
-			File.GetLastWriteTime(typeof(HttpExtensions).Assembly.Location).Ticks.ToString("G");
+            File.GetLastWriteTime(AssemblyHelper.GetAssemblyLocationFor(typeof(HttpExtensions))).Ticks.ToString("G");
 
 		private static string GetContentType(string docPath)
 		{

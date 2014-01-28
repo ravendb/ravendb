@@ -16,6 +16,7 @@
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\ravendb\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+	<FodyPath>..\packages\Fody.1.14.0</FodyPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -79,6 +80,7 @@
     <Content Include="..\Raven.Server\favicon.ico">
       <Link>favicon.ico</Link>
     </Content>
+    <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Raven.Database\RavenDB.snk">
@@ -108,11 +110,10 @@
     </PostBuildEvent>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
+  <Import Project="$(SolutionDir)\Imports\Fody\Fody.targets" />
   <Target Name="BeforeBuild">
+    <Copy SourceFiles="$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml" DestinationFiles="$(MSBuildProjectDirectory)\FodyWeavers.xml" Condition="Exists('$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml')" />
   </Target>
   <Target Name="AfterBuild">
   </Target>
-  -->
 </Project>
