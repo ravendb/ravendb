@@ -27,80 +27,78 @@ namespace Raven.Database.Server.Controllers
 {
 	public class StreamsController : RavenDbApiController
 	{
-		[HttpGet]
-		[Route("streams/docs")]
-		[Route("databases/{databaseName}/streams/docs")]
-		public HttpResponseMessage StreamDocsGet()
-		{
+        [HttpGet]
+        [Route("streams/docs")]
+        [Route("databases/{databaseName}/streams/docs")]
+        public HttpResponseMessage StreamDocsGet()
+        {
+            var start = GetStart();
+            var etag = GetEtagFromQueryString();
+            var startsWith = GetQueryStringValue("startsWith");
+            var pageSize = GetPageSize(int.MaxValue);
+            var matches = GetQueryStringValue("matches");
+            var nextPageStart = GetNextPageStart();
+            if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
+                pageSize = int.MaxValue;
+
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new PushStreamContent((stream, content, transportContext) =>
+                    StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart))
+                {
+                    Headers =
+                    {
+                        ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" }
+                    }
+                }
+            };
+        }
+
+        private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart)
+        {
             using (var cts = new CancellationTokenSource())
             using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+            using (var writer = new JsonTextWriter(new StreamWriter(stream)))
             {
-                var start = GetStart();
-                var etag = GetEtagFromQueryString();
-                var startsWith = GetQueryStringValue("startsWith");
-                var pageSize = GetPageSize(int.MaxValue);
-                var matches = GetQueryStringValue("matches");
-                var nextPageStart = GetNextPageStart();
-                if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
-                    pageSize = int.MaxValue;
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
+                writer.WriteStartArray();
 
-                return new HttpResponseMessage(HttpStatusCode.OK)
+                Database.TransactionalStorage.Batch(accessor =>
                 {
-                    Content = new PushStreamContent((stream, content, transportContext) =>
-                        StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, cts.Token, timeout))
+                    // we may be sending a LOT of documents to the user, and most 
+                    // of them aren't going to be relevant for other ops, so we are going to skip
+                    // the cache for that, to avoid filling it up very quickly
+                    using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
                     {
-                        Headers =
-                        {
-                            ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" }
-                        }
-                    }
-                };
-            }
-		}
-
-		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, CancellationToken token, CancellationTokenSourceExtensions.CancellationTimeout timeout)
-		{
-			using (var writer = new JsonTextWriter(new StreamWriter(stream)))
-			{
-				writer.WriteStartObject();
-				writer.WritePropertyName("Results");
-				writer.WriteStartArray();
-
-				Database.TransactionalStorage.Batch(accessor =>
-				{
-					// we may be sending a LOT of documents to the user, and most 
-					// of them aren't going to be relevant for other ops, so we are going to skip
-					// the cache for that, to avoid filling it up very quickly
-					using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
-					{
-						if (string.IsNullOrEmpty(startsWith))
-							Database.GetDocuments(start, pageSize, etag, token, doc =>
-							{
+                        if (string.IsNullOrEmpty(startsWith))
+                            Database.GetDocuments(start, pageSize, etag, cts.Token, doc =>
+                            {
                                 timeout.Delay();
-							    doc.WriteTo(writer);
-							});
-						else
-						{
-						    var nextPageStartInternal = nextPageStart;
+                                doc.WriteTo(writer);
+                            });
+                        else
+                        {
+                            var nextPageStartInternal = nextPageStart;
 
-                            Database.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, token, ref nextPageStartInternal, doc =>
+                            Database.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, cts.Token, ref nextPageStartInternal, doc =>
                             {
                                 timeout.Delay();
                                 doc.WriteTo(writer);
                             });
 
-						    nextPageStart = nextPageStartInternal;
-						}
-					}
-				});
+                            nextPageStart = nextPageStartInternal;
+                        }
+                    }
+                });
 
-				writer.WriteEndArray();
+                writer.WriteEndArray();
                 writer.WritePropertyName("NextPageStart");
                 writer.WriteValue(nextPageStart);
-				writer.WriteEndObject();
-				writer.Flush();
-			}
-		}
+                writer.WriteEndObject();
+                writer.Flush();
+            }
+        }
 
 		[HttpGet]
 		[Route("streams/query/{*id}")]
