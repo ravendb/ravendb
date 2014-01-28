@@ -112,8 +112,14 @@ namespace Raven.Client.Connection
 				}
 
 				httpClient.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
-				httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "utf-8" });
 			}
+
+#if DEBUG
+			if (Debugger.IsAttached)
+			{
+				Timeout = TimeSpan.FromMinutes(5);
+			}
+#endif
 
 			headers.Add("Raven-Client-Version", ClientVersion);
 			WriteMetadata(requestParams.Metadata);
