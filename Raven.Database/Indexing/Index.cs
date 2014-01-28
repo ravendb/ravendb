@@ -20,7 +20,6 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
-using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -40,7 +39,6 @@ using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
 using Document = Lucene.Net.Documents.Document;
 using Field = Lucene.Net.Documents.Field;
-using Task = System.Threading.Tasks.Task;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -82,10 +80,6 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 		private bool forceWriteToDisk;
-
-		public TimeSpan LastIndexingDuration { get; set; }
-		public long TimePerDoc { get; set; }
-		public Task CurrentMapIndexingTask { get; set; }
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
@@ -184,18 +178,6 @@ namespace Raven.Database.Indexing
 				}
 
 				disposed = true;
-				var task = CurrentMapIndexingTask;
-				if (task != null)
-				{
-					try
-					{
-						task.Wait();
-					}
-					catch (Exception e)
-					{
-						logIndexing.Warn("Error while closing the index (could not wait for current indexing task)", e);
-					}
-				}
 
 				foreach (var indexExtension in indexExtensions)
 				{
