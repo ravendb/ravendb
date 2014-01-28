@@ -215,39 +215,36 @@ namespace Raven.Client.Embedded
 
 			if (configuration != null && Url == null)
 			{
-				configuration.PostInit();
-				if (configuration.RunInMemory || configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
-				{
-					ResourceManagerId = Guid.NewGuid(); // avoid conflicts
-				}
-				configuration.SetSystemDatabase();
-				DocumentDatabase = new DocumentDatabase(configuration);
-				DocumentDatabase.SpinBackgroundWorkers();
+                configuration.PostInit();
+                if (configuration.RunInMemory || configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction)
+                {
+                    ResourceManagerId = Guid.NewGuid(); // avoid conflicts
+                }
+                configuration.SetSystemDatabase();
+                DocumentDatabase = new DocumentDatabase(configuration);
+                DocumentDatabase.SpinBackgroundWorkers();
 
-				if (UseEmbeddedHttpServer)
-				{
-					SetStudioConfigToAllowSingleDb();
-					httpServer = new OwinHttpServer(configuration, DocumentDatabase);
-				}
+                if (UseEmbeddedHttpServer)
+                {
+                    SetStudioConfigToAllowSingleDb();
+                    httpServer = new OwinHttpServer(configuration, DocumentDatabase);
+                }
 
-				// need to set out own idle timer
-					idleTimer = new Timer(state =>
-					{
-						try
-						{
-							DocumentDatabase.RunIdleOperations();
-						}
-						catch (Exception e)
-						{
-							log.WarnException("Error during database idle operations", e);
-						}
-					}, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-				databaseCommandsGenerator =
-					() => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId, listeners.ConflictListeners);
-				asyncDatabaseCommandsGenerator = () => new EmbeddedAsyncServerClient(DocumentDatabase, DatabaseCommands);
-				}
-				databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId, listeners.ConflictListeners);
-				asyncDatabaseCommandsGenerator = () => new EmbeddedAsyncServerClient(DocumentDatabase, DatabaseCommands);
+                // need to set out own idle timer
+                idleTimer = new Timer(state =>
+                {
+                    try
+                    {
+                        DocumentDatabase.RunIdleOperations();
+                    }
+                    catch (Exception e)
+                    {
+                        log.WarnException("Error during database idle operations", e);
+                    }
+                }, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+
+                databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId, listeners.ConflictListeners);
+                asyncDatabaseCommandsGenerator = () => new EmbeddedAsyncServerClient(DocumentDatabase, DatabaseCommands);
 			}
 			else
 			{
