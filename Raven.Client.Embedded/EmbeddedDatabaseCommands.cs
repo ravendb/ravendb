@@ -1383,7 +1383,7 @@ namespace Raven.Client.Embedded
 				var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 				throw new ConflictException("Conflict detected on " + attachment.Key +
-											", conflict must be resolved before the attachement will be accessible", true)
+											", conflict must be resolved before the attachment will be accessible", true)
 				{
 					Etag = attachment.Etag,
 					ConflictedVersionIds = conflictIds

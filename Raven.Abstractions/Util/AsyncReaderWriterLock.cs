@@ -20,9 +20,6 @@ namespace Raven.Abstractions.Util
 		private TaskCompletionSource<Releaser> waitingReaders = new TaskCompletionSource<Releaser>();
 
 		private int readersWaitCount;
-		private int readersLockCount;
-
-	    private bool isWriteLockHeld;
 
 		public AsyncReaderWriterLock()
 		{
@@ -35,13 +32,17 @@ namespace Raven.Abstractions.Util
 #endif
 		}
 
-	    public Task<Releaser> ReadLockAsync()
+		public int ReadersLockCount { get; private set; }
+
+		public bool IsWriteLockHeld { get; private set; }
+
+		public Task<Releaser> ReadLockAsync()
 	    {
 		    lock (waitingWriters)
 		    {
-			    if (!isWriteLockHeld && readersLockCount >= 0 && waitingWriters.Count == 0)
+			    if (!IsWriteLockHeld && ReadersLockCount >= 0 && waitingWriters.Count == 0)
 			    {
-				    readersLockCount++;
+				    ReadersLockCount++;
 				    return readerReleaser;
 			    }
 			    
@@ -50,13 +51,20 @@ namespace Raven.Abstractions.Util
 		    }
 	    }
 
+		public Releaser ReadLock()
+		{
+			var releaserTask = ReadLockAsync();
+			releaserTask.Wait();
+			return releaserTask.Result;
+		}
+
 	    public Task<Releaser> WriteLockAsync()
 	    {
 			lock (waitingWriters)
 			{
-				if (readersLockCount == 0)
+				if (ReadersLockCount == 0)
 				{
-					isWriteLockHeld = true;
+					IsWriteLockHeld = true;
 					return writerReleaser;
 				}
 				
@@ -70,9 +78,9 @@ namespace Raven.Abstractions.Util
 		{
 			lock (waitingWriters)
 			{
-				if (readersLockCount == 0)
+				if (ReadersLockCount == 0)
 				{
-					isWriteLockHeld = true;
+					IsWriteLockHeld = true;
 					writerReleaser.Wait();
 					
 					return writerReleaser.Result;
@@ -102,14 +110,14 @@ namespace Raven.Abstractions.Util
 				else if (readersWaitCount > 0)//if no waiting writing locks - let all waiting read locks through
 				{
 					readLocksToAcquire = waitingReaders;
-					readersLockCount = readersWaitCount;
+					ReadersLockCount = readersWaitCount;
 					readersWaitCount = 0;
 					waitingReaders = new TaskCompletionSource<Releaser>();
 				}
 				else 
 				{
-					isWriteLockHeld = false;
-					readersLockCount = 0;
+					IsWriteLockHeld = false;
+					ReadersLockCount = 0;
 				}
 			}
 			
@@ -123,11 +131,11 @@ namespace Raven.Abstractions.Util
 
 			lock (waitingWriters)
 			{
-				if (readersLockCount > 0) readersLockCount--;
+				if (ReadersLockCount > 0) ReadersLockCount--;
 
-				if (!isWriteLockHeld && readersLockCount == 0 && waitingWriters.Count > 0)
+				if (!IsWriteLockHeld && ReadersLockCount == 0 && waitingWriters.Count > 0)
 				{
-					isWriteLockHeld = true;
+					IsWriteLockHeld = true;
 					writeLockToAquire = waitingWriters.Dequeue();
 				}
 			}

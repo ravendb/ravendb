@@ -901,7 +901,9 @@ namespace Raven.Database
 								RaiseNotifications(new DocumentChangeNotification
 								{
 									Id = key,
-									Type = DocumentChangeTypes.Put,
+									Type = DocumentChangeTypes.Put,		
+									TypeName = metadata.Value<string>(Constants.RavenClrType),
+									CollectionName = metadata.Value<string>(Constants.RavenEntityName),
 									Etag = newEtag,
 								}, metadata);
 							});
@@ -1150,6 +1152,9 @@ namespace Raven.Database
 								{
 									Id = key,
 									Type = DocumentChangeTypes.Delete,
+									TypeName = (metadataVar != null) ? metadataVar.Value<string>(Constants.RavenClrType) : null,
+									CollectionName = (metadataVar != null) ? metadataVar.Value<string>(Constants.RavenEntityName) : null
+									
 								}, metadataVar);
 							});
 
@@ -2318,6 +2323,8 @@ namespace Raven.Database
 						}
 						catch (ConcurrencyException)
 						{
+							if (TransactionalStorage.IsAlreadyInBatch)
+								throw;
 							if (retries-- > 0)
 							{
 								shouldRetry = true;
