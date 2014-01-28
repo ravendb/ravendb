@@ -176,13 +176,16 @@ namespace Raven.Database.Server.Controllers
 
 		public static string GetQueryStringValue(HttpRequestMessage req, string key)
 		{
-			return req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
+			var value = req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
+			if (value != null)
+				value = Uri.UnescapeDataString(value);
+			return value;
 		}
 
 		public string[] GetQueryStringValues(string key)
 		{
 			var items = InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key == key);
-			return items.Select(pair => pair.Value).ToArray();
+			return items.Select(pair => (pair.Value != null) ? Uri.UnescapeDataString(pair.Value) : null ).ToArray();
 		}
 
 		public Etag GetEtagFromQueryString()
