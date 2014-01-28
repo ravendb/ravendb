@@ -166,7 +166,7 @@ namespace Raven.Tests.Linq
 			var q = indexedUsers.Where(user => !user.Name.Any());
 
 			var exception = Assert.Throws<InvalidOperationException>(() => q.ToString());
-			Assert.Equal("Cannot process negated Any(), see RavenDB-732 http://issues.hibernatingrhinos.com/issue/RavenDB-732", exception.InnerException.Message);
+			Assert.Equal("Cannot process negated Any(), see RavenDB-732 http://issues.hibernatingrhinos.com/issue/RavenDB-732", exception.Message);
 		}
 
 		[Fact]
