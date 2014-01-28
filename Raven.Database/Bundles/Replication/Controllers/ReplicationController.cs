@@ -181,8 +181,6 @@ namespace Raven.Database.Bundles.Replication.Controllers
 		}
 
 		[HttpGet]
-		[Route("replication/info")]
-		[Route("databases/{databaseName}/replication/info")]
 		[HttpPost]
 		[Route("replication/info")]
 		[Route("databases/{databaseName}/replication/info")]
