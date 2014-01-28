@@ -1444,9 +1444,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				VisitExpression(expression);
 			}
-			catch (Exception e)
+			catch (ArgumentException e)
 			{
-				throw new InvalidOperationException("Could not understand expression: " + expression  , e);
+				throw new ArgumentException("Could not understand expression: " + expression, e);
+			}
+			catch (NotSupportedException e)
+			{
+				throw new NotSupportedException("Could not understand expression: " + expression, e);
 			}
 
 			if (customizeQuery != null)
@@ -1468,10 +1472,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			{
 				VisitExpression(expression);
 			}
-			catch (Exception e)
+			catch (ArgumentException e)
 			{
-				throw new InvalidOperationException("Could not understand expression: " + expression, e);
+				throw new ArgumentException("Could not understand expression: " + expression, e);
 			}
+			catch (NotSupportedException e)
+			{
+				throw new NotSupportedException("Could not understand expression: " + expression, e);
+			}
+
 
 			if (customizeQuery != null)
 				customizeQuery((IDocumentQueryCustomization) asyncLuceneQuery);
