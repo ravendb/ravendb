@@ -1446,13 +1446,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}
 			catch (Exception e)
 			{
-				throw new InvalidOperationException("Could not understand expression: " + expression  , e)
-				{
-					Data =
-					{
-						{"Expression", expression}
-					}
-				};
+				throw new InvalidOperationException("Could not understand expression: " + expression  , e);
 			}
 
 			if (customizeQuery != null)
@@ -1476,13 +1470,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			}
 			catch (Exception e)
 			{
-				throw new InvalidOperationException("Could not understand expression: " + expression, e)
-				{
-					Data =
-					{
-						{"Expression", expression}
-					}
-				};
+				throw new InvalidOperationException("Could not understand expression: " + expression, e);
 			}
 
 			if (customizeQuery != null)
