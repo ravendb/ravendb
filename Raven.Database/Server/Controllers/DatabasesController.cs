@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
@@ -37,7 +38,7 @@ namespace Raven.Database.Server.Controllers
 		    var start = GetStart();
 			var nextPageStart = start; // will trigger rapid pagination
 			var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, start,
-																	GetPageSize(Database.Configuration.MaxPageSize), ref nextPageStart);
+																	GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
 			var data = databases
 				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
 				.ToArray();

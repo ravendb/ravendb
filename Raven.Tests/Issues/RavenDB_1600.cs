@@ -69,11 +69,11 @@ namespace Raven.Tests.Issues
 
 				WaitForIndexing(db);
 
-				var autoIdexes = db.Statistics.Indexes.Where(x => x.Name.StartsWith("Auto")).ToList();
+				var autoIdexes = db.Statistics.Indexes.Where(x => x.PublicName.StartsWith("Auto")).ToList();
 
 				Assert.True(autoIdexes.Count > 0);
 
-				autoIdexes.ForEach(x => db.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(x.Name, IndexingPriority.Idle)));
+                autoIdexes.ForEach(x => db.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(x.Id, IndexingPriority.Idle)));
 				
 				db.StartBackup(BackupDir, false, new DatabaseDocument());
 				WaitForBackup(db, true);
@@ -91,7 +91,7 @@ namespace Raven.Tests.Issues
 				db.SpinBackgroundWorkers();
 				db.RunIdleOperations();
 
-				var autoIndexes = db.Statistics.Indexes.Where(x => x.Name.StartsWith("Auto")).ToList();
+                var autoIndexes = db.Statistics.Indexes.Where(x => x.PublicName.StartsWith("Auto")).ToList();
 
 				Assert.True(autoIndexes.Count > 0);
 

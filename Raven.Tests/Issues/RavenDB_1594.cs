@@ -95,9 +95,20 @@ namespace Raven.Tests.Issues
 
 			using (var destStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: storageTypeName, databaseName: "DestDB"))
 			{
-				var smugglerApi = new SmugglerApi(new SmugglerOptions(),
-					new RavenConnectionStringOptions {Url = destStore.Url, DefaultDatabase = "DestDB"});
-				await smugglerApi.ImportData(new SmugglerOptions {BackupPath = backupFolder.FullName}, true);
+                var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
+                                              {
+                                                  Url = destStore.Url,
+                                                  DefaultDatabase = "DestDB"
+                                              });
+
+			    await smugglerApi.ImportData(new SmugglerImportOptions
+			                                 {
+			                                     FromFile = backupFolder.FullName
+			                                 }, 
+                                             new SmugglerOptions
+                                             {
+                                                 Incremental = true
+                                             });
 
 				using (var session = destStore.OpenSession())
 				{

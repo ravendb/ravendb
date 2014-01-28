@@ -139,7 +139,6 @@ namespace Raven.Client.Embedded
 			// metadata only is NOT supported for embedded, nothing to save on the data transfers, so not supporting 
 			// this
 
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, start, pageSize, CancellationToken.None);
 			var actualStart = start;
 			var nextPageStart = 0;
 
@@ -150,7 +149,7 @@ namespace Raven.Client.Embedded
 				nextPageStart = actualStart;
 			}
 
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart, pageSize, ref nextPageStart);
+			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart, pageSize, CancellationToken.None, ref nextPageStart);
 
 			if (pagingInformation != null)
 				pagingInformation.Fill(start, pageSize, nextPageStart);
@@ -605,7 +604,6 @@ namespace Raven.Client.Embedded
 						// the cache for that, to avoid filling it up very quickly
 						using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 						{
-							database.Query(index, query, CancellationToken.None, information =>
 							database.TransactionalStorage.Batch(accessor =>
 							{
 								using (var op = new DocumentDatabase.DatabaseQueryOperation(database, index, query, accessor))
@@ -617,7 +615,6 @@ namespace Raven.Client.Embedded
 									op.Execute(items.Add);
 								}	
 							});
-							
 						}
 
 					    return 0;
@@ -834,7 +831,7 @@ namespace Raven.Client.Embedded
             // As this is embedded we don't care for the metadata only value
             CurrentOperationContext.Headers.Value = OperationsHeaders;
             return database
-                .GetDocuments(0, pageSize, fromEtag)
+                .GetDocuments(0, pageSize, fromEtag, CancellationToken.None)
                 .Cast<RavenJObject>()
                 .ToJsonDocuments()
                 .ToArray();
@@ -972,8 +969,7 @@ namespace Raven.Client.Embedded
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var databaseBulkOperations = new DatabaseBulkOperations(database, RavenTransactionAccessor.GetTransactionInformation(), CancellationToken.None, null);
-			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
+			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation, CancellationToken.None, null);
 			var state = databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
 			return new Operation(0, state);
 		}

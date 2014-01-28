@@ -7,12 +7,14 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Storage;
 using Raven.Imports.Newtonsoft.Json;
@@ -28,29 +30,33 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/streams/docs")]
 		public HttpResponseMessage StreamDocsGet()
 		{
-			var start = GetStart();
-			var etag = GetEtagFromQueryString();
-			var startsWith = GetQueryStringValue("startsWith");
-			var pageSize = GetPageSize(int.MaxValue);
-			var matches = GetQueryStringValue("matches");
-		    var nextPageStart = GetNextPageStart();
-			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
-				pageSize = int.MaxValue;
+            using (var cts = new CancellationTokenSource())
+            using (var timeout = cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+            {
+                var start = GetStart();
+                var etag = GetEtagFromQueryString();
+                var startsWith = GetQueryStringValue("startsWith");
+                var pageSize = GetPageSize(int.MaxValue);
+                var matches = GetQueryStringValue("matches");
+                var nextPageStart = GetNextPageStart();
+                if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
+                    pageSize = int.MaxValue;
 
-			return new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = new PushStreamContent((stream, content, transportContext) =>
-					StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart))
-				{
-					Headers =
-					{
-						ContentType = new MediaTypeHeaderValue("application/json"){CharSet = "utf-8"}
-					}
-				}
-			};
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new PushStreamContent((stream, content, transportContext) =>
+                        StreamToClient(stream, startsWith, start, pageSize, etag, matches, nextPageStart, cts.Token, timeout))
+                    {
+                        Headers =
+                        {
+                            ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" }
+                        }
+                    }
+                };
+            }
 		}
 
-		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart)
+		private void StreamToClient(Stream stream, string startsWith, int start, int pageSize, Etag etag, string matches, int nextPageStart, CancellationToken token, CancellationTokenSourceExtensions.CancellationTimeout timeout)
 		{
 			using (var writer = new JsonTextWriter(new StreamWriter(stream)))
 			{
@@ -66,12 +72,20 @@ namespace Raven.Database.Server.Controllers
 					using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 					{
 						if (string.IsNullOrEmpty(startsWith))
-							Database.GetDocuments(start, pageSize, etag, doc => doc.WriteTo(writer));
+							Database.GetDocuments(start, pageSize, etag, token, doc =>
+							{
+                                timeout.Delay();
+							    doc.WriteTo(writer);
+							});
 						else
 						{
 						    var nextPageStartInternal = nextPageStart;
 
-                            Database.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, ref nextPageStartInternal, doc => doc.WriteTo(writer));
+                            Database.GetDocumentsWithIdStartingWith(startsWith, matches, null, start, pageSize, token, ref nextPageStartInternal, doc =>
+                            {
+                                timeout.Delay();
+                                doc.WriteTo(writer);
+                            });
 
 						    nextPageStart = nextPageStartInternal;
 						}
@@ -91,41 +105,43 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/streams/query/{*id}")]
 		public HttpResponseMessage SteamQueryGet(string id)
 		{
-			var msg = GetEmptyMessage();
+            using (var cts = new CancellationTokenSource())
+            using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+            {
+                var msg = GetEmptyMessage();
 
-			var index = id;
-			var query = GetIndexQuery(int.MaxValue);
-			if (string.IsNullOrEmpty(GetQueryStringValue("pageSize")))
-				query.PageSize = int.MaxValue;
-			var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
-			if (isHeadRequest)
-				query.PageSize = 0;
+                var index = id;
+                var query = GetIndexQuery(int.MaxValue);
+                if (string.IsNullOrEmpty(GetQueryStringValue("pageSize"))) query.PageSize = int.MaxValue;
+                var isHeadRequest = InnerRequest.Method == HttpMethod.Head;
+                if (isHeadRequest) query.PageSize = 0;
 
-			var accessor = Database.TransactionalStorage.CreateAccessor();
+                var accessor = Database.TransactionalStorage.CreateAccessor();
 
-			try
-			{
-				var queryOp = new DocumentDatabase.DatabaseQueryOperation(Database, index, query, accessor);
-				queryOp.Init();
+                try
+                {
+                    var queryOp = new DocumentDatabase.DatabaseQueryOperation(Database, index, query, accessor);
+                    queryOp.Init();
 
-				msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor);
-				msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
-				msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
-				msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
-				msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStable ? "true" : "false");
-				msg.Headers.Add("Raven-Index", queryOp.Header.Index);
-				msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
-				msg.Headers.Add("Raven-Index-Timestamp",
-					queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
+                    msg.Content = new StreamQueryContent(InnerRequest, queryOp, accessor);
+                    msg.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
+                    msg.Headers.Add("Raven-Result-Etag", queryOp.Header.ResultEtag.ToString());
+                    msg.Headers.Add("Raven-Index-Etag", queryOp.Header.IndexEtag.ToString());
+                    msg.Headers.Add("Raven-Is-Stale", queryOp.Header.IsStable ? "true" : "false");
+                    msg.Headers.Add("Raven-Index", queryOp.Header.Index);
+                    msg.Headers.Add("Raven-Total-Results", queryOp.Header.TotalResults.ToString(CultureInfo.InvariantCulture));
+                    msg.Headers.Add(
+                        "Raven-Index-Timestamp", queryOp.Header.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite, CultureInfo.InvariantCulture));
 
-			}
-			catch (Exception)
-			{
-				accessor.Dispose();
-				throw;
-			}
+                }
+                catch (Exception)
+                {
+                    accessor.Dispose();
+                    throw;
+                }
 
-			return msg;
+                return msg;
+            }
 		}
 
 		public class StreamQueryContent : HttpContent
