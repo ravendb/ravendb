@@ -1,22 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Web.UI.WebControls.WebParts;
-using Lucene.Net.Store;
+﻿using System.Reflection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
-using Raven.Client.Extensions;
-using Raven.Database.Bundles.PeriodicBackups;
+using Raven.Client.Document;
 using Raven.Database.Config;
-using Raven.Json.Linq;
+using Raven.Server;
 using Raven.Smuggler;
+using Raven.Tests.Bundles.Versioning;
 using Raven.Tests.Helpers;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Extensions;
 
@@ -24,6 +21,40 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_1594 : RavenTestBase
 	{
+		protected readonly string path;
+		protected readonly DocumentStore documentStore;
+		private readonly RavenDbServer ravenDbServer;
+		private bool closed = false;
+
+		public RavenDB_1594()
+		{
+			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(Versioning)).CodeBase);
+			path = Path.Combine(path, "TestDb").Substring(6);
+			Raven.Database.Extensions.IOExtensions.DeleteDirectory(path);
+			var config = new Raven.Database.Config.RavenConfiguration
+			             	{
+			             		Port = 8079,
+			             		RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+			             		DataDirectory = path,
+								Settings = { { "Raven/ActiveBundles", "PeriodicBackup" } },
+			             	};
+			config.PostInit();
+			ravenDbServer = new RavenDbServer(config);
+			documentStore = new DocumentStore
+			{
+				Url = "http://localhost:8079"
+			};
+			documentStore.Initialize();
+		}
+
+		public override void Dispose()
+		{
+			documentStore.Dispose();
+			ravenDbServer.Dispose();
+
+			base.Dispose();
+		}
+
 		public class DummyDataEntry
 		{
 			public string Id { get; set; }
@@ -36,93 +67,70 @@ namespace Raven.Tests.Issues
 			configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup";
 		}
 
-		[Theory]
-		[InlineData("esent")]
-		//[InlineData("munin")]
-		public async Task PeriodicBackup_should_export_all_relevant_documents(string storageTypeName)
+		[Fact]
+		public async Task PeriodicBackup_should_export_all_relevant_documents()
 		{
 			var existingData = new List<DummyDataEntry>();
 			var backupFolder = new DirectoryInfo(Path.GetTempPath() + "\\periodic_backup_" + Guid.NewGuid());
 			if (!backupFolder.Exists)
 				backupFolder.Create();
 
-			using (var store = NewRemoteDocumentStore(runInMemory: false, requestedStorage: storageTypeName))
+			documentStore.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
 			{
-				store.DatabaseCommands.CreateDatabase(new DatabaseDocument
+				Id = "SourceDB",
+				Settings =
 				{
-					Id = "SourceDB",
-					Settings =
-					{
-						{"Raven/ActiveBundles", "PeriodicBackup"},
-						{"Raven/DataDir", "~\\Databases\\SourceDB"}
-					}
-				});
+					{"Raven/ActiveBundles", "PeriodicBackup"},
+					{"Raven/DataDir", "~\\Databases\\SourceDB"}
+				}
+			});
 
-				store.DatabaseCommands.CreateDatabase(new DatabaseDocument
-				{
-					Id = "DestDB",
-					Settings = {{"Raven/DataDir", "~\\Databases\\DestDB"}}
-				});
-
+			documentStore.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
+			{
+				Id = "DestDB",
+				Settings = {{"Raven/DataDir", "~\\Databases\\DestDB"}}
+			});
+			//setup periodic backup
+			using (var session = documentStore.OpenSession("SourceDB"))
+			{
+				session.Store(new PeriodicBackupSetup {LocalFolderName = backupFolder.FullName, IntervalMilliseconds = 500},
+					PeriodicBackupSetup.RavenDocumentKey);
+				session.SaveChanges();
 			}
 
-			using(var ravenServer = GetNewServer(runInMemory:false,requestedStorage:storageTypeName))
-			using (var srcStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: storageTypeName,ravenDbServer:ravenServer, databaseName: "SourceDB"))
+			//now enter dummy data
+			using (var session = documentStore.OpenSession())
 			{
-				//setup periodic backup
-				using (var session = srcStore.OpenSession("SourceDB"))
+				for (int i = 0; i < 10000; i++)
 				{
-					session.Store(new PeriodicBackupSetup { LocalFolderName = backupFolder.FullName, IntervalMilliseconds = 500 },
-						PeriodicBackupSetup.RavenDocumentKey);
-
-					session.SaveChanges();
+					var dummyDataEntry = new DummyDataEntry {Id = "Dummy/" + i, Data = "Data-" + i};
+					existingData.Add(dummyDataEntry);
+					session.Store(dummyDataEntry);
 				}
-
-				//now enter dummy data
-				using (var session = srcStore.OpenSession())
-				{
-					for (int i = 0; i < 10000; i++)
-					{
-						var dummyDataEntry = new DummyDataEntry {Id = "Dummy/" + i, Data = "Data-" + i};
-						existingData.Add(dummyDataEntry);
-						session.Store(dummyDataEntry);
-					}
-					session.SaveChanges();
-				}
-			
-				Thread.Sleep(10000);
+				session.SaveChanges();
 			}
 
-			using (var destStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: storageTypeName, databaseName: "DestDB"))
+			Thread.Sleep(10000);
+
+			var smugglerApi =
+				new SmugglerApi(new RavenConnectionStringOptions {Url = documentStore.Url, DefaultDatabase = "DestDB"});
+			await
+				smugglerApi.ImportData(new SmugglerImportOptions {FromFile = backupFolder.FullName},
+					new SmugglerOptions {Incremental = true});
+
+			using (var session = documentStore.OpenSession())
 			{
-                var smugglerApi = new SmugglerApi(new RavenConnectionStringOptions
-                                              {
-                                                  Url = destStore.Url,
-                                                  DefaultDatabase = "DestDB"
-                                              });
-
-			    await smugglerApi.ImportData(new SmugglerImportOptions
-			                                 {
-			                                     FromFile = backupFolder.FullName
-			                                 }, 
-                                             new SmugglerOptions
-                                             {
-                                                 Incremental = true
-                                             });
-
-				using (var session = destStore.OpenSession())
+				var fetchedData = new List<DummyDataEntry>();
+				using (var streamingQuery = session.Advanced.Stream<DummyDataEntry>("Dummy/"))
 				{
-					var fetchedData = new List<DummyDataEntry>();
-					using (var streamingQuery = session.Advanced.Stream<DummyDataEntry>("Dummy/"))
-					{
-						while (streamingQuery.MoveNext())
-							fetchedData.Add(streamingQuery.Current.Document);
-					}
-
-					Assert.Equal(existingData.Count, fetchedData.Count);
-					Assert.True(existingData.Select(row => row.Data).ToHashSet().SetEquals(fetchedData.Select(row => row.Data)));
+					while (streamingQuery.MoveNext())
+						fetchedData.Add(streamingQuery.Current.Document);
 				}
+
+				Assert.Equal(existingData.Count, fetchedData.Count);
+				Assert.True(existingData.Select(row => row.Data).ToHashSet().SetEquals(fetchedData.Select(row => row.Data)));
 			}
+
 		}
 	}
 }

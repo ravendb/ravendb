@@ -902,6 +902,8 @@ namespace Raven.Database
 								{
 									Id = key,
 									Type = DocumentChangeTypes.Put,
+									TypeName = metadata.Value<string>(Constants.RavenClrType),
+									CollectionName = metadata.Value<string>(Constants.RavenEntityName),
 									Etag = newEtag,
 								}, metadata);
 							});
@@ -1150,6 +1152,9 @@ namespace Raven.Database
 								{
 									Id = key,
 									Type = DocumentChangeTypes.Delete,
+									TypeName = (metadataVar != null) ? metadataVar.Value<string>(Constants.RavenClrType) : null,
+									CollectionName = (metadataVar != null) ? metadataVar.Value<string>(Constants.RavenEntityName) : null
+									
 								}, metadataVar);
 							});
 
@@ -1458,17 +1463,17 @@ namespace Raven.Database
 								headerInfo(new QueryHeaderInformation
 								{
 								Index = indexName,
-									IsStable = stale,
-									ResultEtag = resultEtag,
-									IndexTimestamp = indexTimestamp.Item1,
-									IndexEtag = indexTimestamp.Item2,
-									TotalResults = query.TotalSize.Value
-								});
-							}
-							using (new CurrentTransformationScope(docRetriever))
+								IsStable = stale,
+								ResultEtag = resultEtag,
+								IndexTimestamp = indexTimestamp.Item1,
+								IndexEtag = indexTimestamp.Item2,
+								TotalResults = query.TotalSize.Value
+							});
+						}
+						using (new CurrentTransformationScope(docRetriever))
+						{
+							foreach (var result in results)
 							{
-								foreach (var result in results)
-								{
 									cancellationToken.ThrowIfCancellationRequested();
 									onResult(result);
 								}
@@ -2325,6 +2330,8 @@ namespace Raven.Database
 						}
 						catch (ConcurrencyException)
 						{
+							if (TransactionalStorage.IsAlreadyInBatch)
+								throw;
 							if (retries-- > 0)
 							{
 								shouldRetry = true;

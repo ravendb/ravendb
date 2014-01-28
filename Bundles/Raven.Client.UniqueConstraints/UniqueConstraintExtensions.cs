@@ -55,6 +55,7 @@ namespace Raven.Client.UniqueConstraints
 
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
 			bool isDef = Attribute.IsDefined(body.Member, typeof(UniqueConstraintAttribute));
+			bool isDef = Attribute.IsDefined(body.Member, typeof(UniqueConstraintAttribute));
 
 			if (isDef == false)
 			{

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
@@ -125,7 +124,7 @@ namespace Raven.Tests.MailingList
 
 				WaitForIndexing(store);
 
-				var queryResultWithIncludes = store.DocumentDatabase.Query("Raven/DocumentsByEntityName", new IndexQuery(), CancellationToken.None);
+				var queryResultWithIncludes = store.DocumentDatabase.Query("Raven/DocumentsByEntityName", new IndexQuery());
 
 				Assert.Equal(12, queryResultWithIncludes.TotalResults);
 			}

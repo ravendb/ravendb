@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition.Hosting;
-using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
@@ -45,7 +44,7 @@ namespace Raven.Tests.Triggers
 			QueryResult queryResult;
 			do
 			{
-				queryResult = store.DocumentDatabase.Query("test", new IndexQuery { Start = 0, PageSize = 2, Query = "Project:RavenDB" }, CancellationToken.None);
+				queryResult = store.DocumentDatabase.Query("test", new IndexQuery { Start = 0, PageSize = 2, Query = "Project:RavenDB" });
 			} while (queryResult.IsStale);
 
 			var indexToDataTable = store.DocumentDatabase.IndexUpdateTriggers.OfType<IndexToDataTable>().Single();

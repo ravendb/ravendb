@@ -84,6 +84,38 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
+		public void ForDocumentsInCollectionEmbedded3()
+		{
+			using (var store = NewDocumentStore())
+			{
+				var person = new Person();
+				using (var session = store.OpenSession())
+				{
+					session.Store(person);
+					session.Store(new User());
+					session.SaveChanges();
+				}
+				var list = new BlockingCollection<DocumentChangeNotification>();
+
+				store.Changes()
+					.ForDocumentsInCollection<Person>()
+					.Subscribe(list.Add);
+				using (var session = store.OpenSession())
+				{
+					session.Delete(session.Load<Person>(person.Id));
+					session.SaveChanges();
+				}
+
+				DocumentChangeNotification documentChangeNotification;
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(2)));
+
+				Assert.Equal("people/1", documentChangeNotification.Id);
+				Assert.Equal("People", documentChangeNotification.CollectionName);
+				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Delete);
+			}
+		}
+
+		[Fact]
 		public void ForDocumentsInCollectionRemote1()
 		{
 			using (var store = NewRemoteDocumentStore())
@@ -138,6 +170,43 @@ namespace Raven.Tests.Issues
 				Assert.Equal("people/1", documentChangeNotification.Id);
 				Assert.Equal("People", documentChangeNotification.CollectionName);
 				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
+			}
+		}
+
+		[Fact]
+		public void ForDocumentsInCollectionRemote3()
+		{
+			var user = new User();
+			using (var store = NewRemoteDocumentStore())
+			{
+				using (var session = store.OpenSession())
+				{
+					session.Store(new Person());
+					session.Store(user);
+					session.SaveChanges();
+				}
+
+				var list = new BlockingCollection<DocumentChangeNotification>();
+
+				var taskObservable = store.Changes();
+				taskObservable.Task.Wait();
+				var observableWithTask = taskObservable.ForDocumentsInCollection("users");
+				observableWithTask.Task.Wait();
+				observableWithTask.Subscribe(list.Add);
+
+				using (var session = store.OpenSession())
+				{
+					var userToDelete = session.Load<User>(user.Id);
+					session.Delete(userToDelete);
+					session.SaveChanges();
+				}
+
+				DocumentChangeNotification documentChangeNotification;
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(3)));
+
+				Assert.Equal("users/1", documentChangeNotification.Id);
+				Assert.Equal("Users", documentChangeNotification.CollectionName);
+				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Delete);
 			}
 		}
 
@@ -226,9 +295,45 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void ForDocumentsOfTypeRemote1()
+		public void ForDocumentsOfTypeEmbedded4()
 		{
 			using (var store = NewDocumentStore())
+			{
+				var person = new Person();
+				using (var session = store.OpenSession())
+				{
+					session.Store(person);
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				var list = new BlockingCollection<DocumentChangeNotification>();
+
+				store.Changes()
+					.ForDocumentsOfType<Person>()
+					.Subscribe(list.Add);
+
+				using (var session = store.OpenSession())
+				{
+					var personToDelete = session.Load<Person>(person.Id);
+					session.Delete(personToDelete);
+					session.SaveChanges();
+				}
+
+				DocumentChangeNotification documentChangeNotification;
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(2)));
+
+				Assert.Equal("people/1", documentChangeNotification.Id);
+				Assert.Equal("People", documentChangeNotification.CollectionName);
+				Assert.Equal(ReflectionUtil.GetFullNameWithoutVersionInformation(typeof(Person)), documentChangeNotification.TypeName);
+				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Delete);
+			}
+		}
+
+		[Fact]
+		public void ForDocumentsOfTypeRemote1()
+		{
+			using (var store = NewRemoteDocumentStore(requestedStorage:"esent",fiddler:true))
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();
 
@@ -258,7 +363,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ForDocumentsOfTypeRemote2()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewRemoteDocumentStore())
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();
 
@@ -288,7 +393,7 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void ForDocumentsOfTypeRemote3()
 		{
-			using (var store = NewDocumentStore())
+			using (var store = NewRemoteDocumentStore())
 			{
 				var list = new BlockingCollection<DocumentChangeNotification>();
 
@@ -312,6 +417,44 @@ namespace Raven.Tests.Issues
 				Assert.Equal("People", documentChangeNotification.CollectionName);
 				Assert.Equal(ReflectionUtil.GetFullNameWithoutVersionInformation(typeof(Person)), documentChangeNotification.TypeName);
 				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
+			}
+		}
+
+		[Fact]
+		public void ForDocumentsOfTypeRemote4()
+		{
+			using (var store = NewRemoteDocumentStore())
+			{
+				var person = new Person();
+				using (var session = store.OpenSession())
+				{
+					session.Store(person);
+					session.Store(new User());
+					session.SaveChanges();
+				}
+
+				var list = new BlockingCollection<DocumentChangeNotification>();
+
+				var taskObservable = store.Changes();
+				taskObservable.Task.Wait();
+				var observableWithTask = taskObservable.ForDocumentsOfType<Person>();
+				observableWithTask.Task.Wait();
+				observableWithTask.Subscribe(list.Add);
+
+				using (var session = store.OpenSession())
+				{
+					var personToDelete = session.Load<Person>(person.Id);
+					session.Delete(personToDelete);
+					session.SaveChanges();
+				}
+
+				DocumentChangeNotification documentChangeNotification;
+				Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(2)));
+
+				Assert.Equal("people/1", documentChangeNotification.Id);
+				Assert.Equal("People", documentChangeNotification.CollectionName);
+				Assert.Equal(ReflectionUtil.GetFullNameWithoutVersionInformation(typeof(Person)), documentChangeNotification.TypeName);
+				Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Delete);
 			}
 		}
 	}

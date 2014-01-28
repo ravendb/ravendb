@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using System.Security.Policy;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -478,20 +479,21 @@ namespace Raven.Client.Changes
 		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(string typeName)
 		{
 			if (typeName == null) throw new ArgumentNullException("typeName");
+			var encodedTypeName = Uri.EscapeDataString(typeName);
 
 			var counter = counters.GetOrAdd("types/" + typeName, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
 				{
 					watchedTypes.TryAdd(typeName);
-					return Send("watch-type", typeName);
+					return Send("watch-type", encodedTypeName);
 				});
 
 				return new LocalConnectionState(
 					() =>
 					{
 						watchedTypes.TryRemove(typeName);
-						Send("unwatch-type", typeName);
+						Send("unwatch-type", encodedTypeName);
 						counters.Remove("types/" + typeName);
 					},
 					documentSubscriptionTask);

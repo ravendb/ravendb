@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Linq;
-using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
@@ -63,7 +62,7 @@ namespace Raven.Tests.Queries
 			   Start = 0,
 			   Cutoff = SystemTime.UtcNow,
 			   Query = "Title.Length:3 AND Category:Rhinos"
-		   }, CancellationToken.None);
+		   });
 
 			Assert.Equal(1, results.Results.Count);
 			Assert.Equal("two", results.Results[0].Value<string>("Title"));
@@ -100,21 +99,21 @@ namespace Raven.Tests.Queries
 				Start = 0,
 				Cutoff = SystemTime.UtcNow,
 				Query = "Title.Length:3 AND Category:Rhinos"
-			}, CancellationToken.None);
+			});
 			db.ExecuteDynamicQuery(null, new IndexQuery()
 			{
 				PageSize = 128,
 				Start = 0,
 				Cutoff = SystemTime.UtcNow,
 				Query = "Title.Length:3 AND Category:Rhinos"
-			}, CancellationToken.None);
+			});
 			db.ExecuteDynamicQuery(null, new IndexQuery()
 			{
 				PageSize = 128,
 				Start = 0,
 				Cutoff = SystemTime.UtcNow,
 				Query = "Category:Rhinos AND Title.Length:3"
-			}, CancellationToken.None);
+			});
 
 			Assert.True(db.Statistics.CountOfIndexes == initialIndexCount + 1);
 						
@@ -132,7 +131,7 @@ namespace Raven.Tests.Queries
 					Start = 0,
 					Cutoff = SystemTime.UtcNow,
 					Query = "Title.Length:3 AND Category:Rhinos"
-				}, CancellationToken.None);
+				});
 		  
 
 			var autoIndexName = db.IndexDefinitionStorage.IndexNames.Where(x => x.StartsWith("Auto")).SingleOrDefault();
@@ -170,7 +169,7 @@ namespace Raven.Tests.Queries
 					Start = 0,
 					Cutoff = SystemTime.UtcNow,
 					Query = "Title.Length_Range:[0x00000004 TO 0x00000009]"
-				}, CancellationToken.None);
+				});
 
 			Assert.Equal(1, results.TotalResults);
 		}
@@ -213,7 +212,7 @@ namespace Raven.Tests.Queries
 				Start = 0,
 				Cutoff = SystemTime.UtcNow,
 				Query = "Tags,Name:[[birds]]"
-			}, CancellationToken.None);
+			});
 
 			Assert.Equal(1, results.Results.Count);
 			Assert.Equal("one", results.Results[0].Value<string>("Title"));
@@ -252,7 +251,7 @@ namespace Raven.Tests.Queries
 				Start = 0,
 				Cutoff = SystemTime.UtcNow,
 				Query = "User.Name:rob"
-			}, CancellationToken.None);
+			});
 
 			Assert.Equal(1, results.Results.Count);
 			Assert.Equal("three", results.Results[0].Value<string>("Title"));
@@ -280,7 +279,7 @@ namespace Raven.Tests.Queries
 				Cutoff = SystemTime.UtcNow,
 				Query = "Tags,Name:[[birds]]",
 				FieldsToFetch = new string[] { "Title", "Category" }
-			}, CancellationToken.None);
+			});
 
 			Assert.Equal(1, results.Results.Count);
 			Assert.Equal("one", results.Results[0].Value<string>("Title"));

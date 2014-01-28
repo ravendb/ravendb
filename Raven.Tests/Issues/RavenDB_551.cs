@@ -97,7 +97,6 @@ namespace Raven.Tests.Issues
 		{
 			public string Id { get; set; }
 		}
-
 		[Fact]
 	 	public void CanGetErrorOnOptimisticDeleteInTransaction()
 		{

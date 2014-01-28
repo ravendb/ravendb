@@ -131,7 +131,7 @@ namespace Raven.Database.Server.Controllers
 		private Encoding GetRequestEncoding()
 		{
 			if (InnerRequest.Content.Headers.ContentType == null || string.IsNullOrWhiteSpace(InnerRequest.Content.Headers.ContentType.CharSet))
-				return Encoding.GetEncoding("ISO-8859-1");
+				return Encoding.GetEncoding(Constants.DefaultRequestEncoding);
 			return Encoding.GetEncoding(InnerRequest.Content.Headers.ContentType.CharSet);
 		}
 
@@ -265,7 +265,14 @@ namespace Raven.Database.Server.Controllers
 		{
 			if (msg.Content == null)
 				msg.Content = new JsonContent();
-			msg.Content.Headers.Add(key, value);
+
+            // Ensure we haven't already appended these values.
+            IEnumerable<string> existingValues;
+            var hasExistingHeaderAppended = msg.Content.Headers.TryGetValues(key, out existingValues) && existingValues.Any(v => v == value);
+            if (!hasExistingHeaderAppended)
+            {
+                msg.Content.Headers.Add(key, value);
+            }
 		}
 
 		private string GetDateString(RavenJToken token, string format)
@@ -341,7 +348,6 @@ namespace Raven.Database.Server.Controllers
 			return resMsg;
 		}
 
-		private static readonly Encoding DefaultEncoding = new UTF8Encoding(false);
 		public HttpResponseMessage WriteData(RavenJObject data, RavenJObject headers, Etag etag, HttpStatusCode status = HttpStatusCode.OK, HttpResponseMessage msg = null)
 		{
 			if (msg == null)

@@ -20,6 +20,26 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet]
 		[Route("docs")]
 		[Route("databases/{databaseName}/docs")]
+		public HttpResponseMessage DocsGet([FromUri] string id)
+		{
+			if (string.IsNullOrEmpty(id))
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
+			return DocGet(id);
+		}
+
+		[HttpHead]
+		[Route("docs")]
+		[Route("databases/{databaseName}/docs")]
+		public HttpResponseMessage DocsHead([FromUri] string id)
+		{
+			if (string.IsNullOrEmpty(id))
+				return GetEmptyMessage(HttpStatusCode.BadRequest);
+			return DocHead(id);
+		}
+
+		[HttpGet]
+		[Route("docs")]
+		[Route("databases/{databaseName}/docs")]
 		public HttpResponseMessage DocsGet()
 		{
 		    using (var cts = new CancellationTokenSource())

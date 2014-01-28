@@ -108,7 +108,7 @@ namespace Raven.Database.Storage.Voron.Impl
 		{
 			using (var tx = env.NewTransaction(TransactionFlags.Read))
 			{
-			    return env.State.GetTree(tx, table.TableName).State.EntriesCount;
+				return tx.State.GetTree(tx,table.TableName).State.EntriesCount;
 			}
 		}
 
@@ -128,7 +128,7 @@ namespace Raven.Database.Storage.Voron.Impl
 			if (Debugger.IsAttached == false)
 				return;
 
-		    var tree = env.State.GetTree(tx, table.TableName);
+			var tree = tx.State.GetTree(tx, table.TableName);
 
 			var path = Path.Combine(System.Environment.CurrentDirectory, "test-tree.dot");
 			var rootPageNumber = tree.State.RootPageNumber;
