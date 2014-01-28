@@ -1,5 +1,6 @@
 #if !NETFX_CORE
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -17,6 +18,7 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
 using Raven.Abstractions.Util;
@@ -104,6 +106,8 @@ namespace Raven.Abstractions.Smuggler
 #endif
 			await DetectServerSupportedFeatures();
 
+		    SmugglerExportException lastException = null;
+
 			bool ownedStream = stream == null;
 			try
 			{
@@ -132,21 +136,39 @@ namespace Raven.Abstractions.Smuggler
 					jsonWriter.WriteStartArray();
 					if (options.OperateOnTypes.HasFlag(ItemType.Documents))
 					{
-						options.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.LastDocsEtag);
+					    try
+					    {
+					        options.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.LastDocsEtag);
+					    }
+					    catch (SmugglerExportException e)
+					    {
+					        options.LastDocsEtag = e.LastEtag;
+					        e.File = file;
+					        lastException = e;
+					    }
 					}
 					jsonWriter.WriteEndArray();
 
 					jsonWriter.WritePropertyName("Attachments");
 					jsonWriter.WriteStartArray();
-					if (options.OperateOnTypes.HasFlag(ItemType.Attachments))
+					if (options.OperateOnTypes.HasFlag(ItemType.Attachments) && lastException == null)
 					{
-						options.LastAttachmentEtag = await ExportAttachments(jsonWriter, options.LastAttachmentEtag);
+					    try
+					    {
+					        options.LastAttachmentEtag = await ExportAttachments(jsonWriter, options.LastAttachmentEtag);
+					    }
+					    catch (SmugglerExportException e)
+					    {
+					        options.LastAttachmentEtag = e.LastEtag;
+					        e.File = file;
+					        lastException = e;
+					    }
 					}
 					jsonWriter.WriteEndArray();
 
 					jsonWriter.WritePropertyName("Transformers");
 					jsonWriter.WriteStartArray();
-					if (options.OperateOnTypes.HasFlag(ItemType.Transformers))
+					if (options.OperateOnTypes.HasFlag(ItemType.Transformers) && lastException == null)
 					{
 						await ExportTransformers(jsonWriter);
 					}
@@ -160,6 +182,9 @@ namespace Raven.Abstractions.Smuggler
 				if (incremental && lastEtagsFromFile)
 					WriteLastEtagsFromFile(options);
 #endif
+
+			    if (lastException != null)
+			        throw lastException;
 				return file;
 			}
 			finally
@@ -299,10 +324,14 @@ namespace Raven.Abstractions.Smuggler
 			            }
                     }
 			    }
-                catch (WebException e)
+                catch (Exception e)
                 {
-                    ShowProgress("Got WebException during smuggler export. Exception: {0}. Exiting with last succesfully processed etag: {1}", e.Message, lastEtag);
-                    return lastEtag;
+                    ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
+                    ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
+                    throw new SmugglerExportException(e.Message)
+                    {
+                        LastEtag = lastEtag,
+                    };
                 }
 
 			    ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);

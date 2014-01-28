@@ -4,11 +4,16 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition.Hosting;
 using System.IO;
+using System.IO.Compression;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;
 using Raven.Client.Document;
@@ -25,6 +30,106 @@ using System.Linq;
 
 namespace Raven.Tests.Issues
 {
+
+    public class PortForwarder
+    {
+        private readonly int listenPort;
+        private readonly int targetPort;
+        private Func<int, bool> shouldThrow;
+        private readonly CancellationTokenSource cancellationTokenSource;
+        private TcpListener server;
+
+        public PortForwarder(int listenPort, int targetPort, Func<int, bool> shouldThrow)
+        {
+            this.listenPort = listenPort;
+            this.targetPort = targetPort;
+            this.shouldThrow = shouldThrow;
+            cancellationTokenSource = new CancellationTokenSource();
+        }
+
+        public void Stop()
+        {
+            server.Stop();
+            cancellationTokenSource.Cancel();
+        }
+
+        public void Forward()
+        {
+            var localAddr = IPAddress.Parse("127.0.0.1");
+            server = new TcpListener(localAddr, listenPort);
+            server.Start();
+
+            Task.Run(() =>
+            {
+                var token = cancellationTokenSource.Token;
+                while (true)
+                {
+                    var tcpClient = server.AcceptTcpClient();
+                    Task.Run(() => HandleClient(tcpClient));
+                }
+            });
+        }
+
+        private void HandleClient(TcpClient tcpClient)
+        {
+            var incomingStream = tcpClient.GetStream();
+
+            // now connect to target
+
+            var targetClient = new TcpClient("127.0.0.1", targetPort);
+            var targetStream = targetClient.GetStream();
+
+            var readTask = Task.Run(async () =>
+            {
+                var buffer = new byte[4096];
+                var totalRead = 0;
+                var token = cancellationTokenSource.Token;
+                while (true)
+                {
+                    var read = await incomingStream.ReadAsync(buffer, 0, 4096, token);
+                    if (read == 0)
+                    {
+                        tcpClient.Close();
+                        break;
+                    }
+                    totalRead += read;
+                    if (shouldThrow(totalRead))
+                    {
+                        incomingStream.Close();
+                        targetStream.Close();
+                    }
+                    await targetStream.WriteAsync(buffer, 0, read, token);
+                    targetStream.Flush();
+                }
+            });
+
+            var writeTask = Task.Run(async () =>
+            {
+                var token = cancellationTokenSource.Token;
+                var buffer = new byte[4096];
+                var totalRead = 0;
+                while (true)
+                {
+                    var read = await targetStream.ReadAsync(buffer, 0, 4096, token);
+                    if (read == 0)
+                    {
+                        targetClient.Close();
+                    }
+                    totalRead += read;
+                    if (shouldThrow(totalRead))
+                    {
+                        incomingStream.Close();
+                        targetStream.Close();
+                    }
+                    await incomingStream.WriteAsync(buffer, 0, read, token);
+                    incomingStream.Flush();
+                }
+            });
+
+            Task.WaitAll(readTask, writeTask);
+        }
+    }
+
     public class RavenDB_1603 : RavenTest
     {
         public class User
@@ -38,7 +143,6 @@ namespace Raven.Tests.Issues
             public string Name { get; set; }
             public string Id { get; set; }
         }
-
         protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
             configuration.Container = new CompositionContainer(new TypeCatalog(
@@ -314,7 +418,7 @@ namespace Raven.Tests.Issues
                     for (var j = 0; j < 25; j++)
                     {
                         counter++;
-                        session.Store(new User { Name = "USer #" + counter });
+                        session.Store(new User { Name = "User #" + counter });
                     }
                     session.SaveChanges();
                 }
@@ -587,10 +691,7 @@ namespace Raven.Tests.Issues
                 await dumper.ExportData(null, null, true, backupStatus);
             }
 
-            VerifyDump(backupPath, store =>
-            {
-                Assert.Equal(328, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count());
-            });
+            VerifyDump(backupPath, store => Assert.Equal(328, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
             IOExtensions.DeleteDirectory(backupPath);
         }
 
@@ -613,10 +714,7 @@ namespace Raven.Tests.Issues
                 await dumper.ExportData(null, null, true, backupStatus);
             }
 
-            VerifyDump(backupPath, store =>
-            {
-                Assert.Equal(206, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count());
-            });
+            VerifyDump(backupPath, store => Assert.Equal(206, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
             IOExtensions.DeleteDirectory(backupPath);
         }
 
@@ -642,10 +740,7 @@ namespace Raven.Tests.Issues
                 await dumper.ExportData(null, null, true, backupStatus);
             }
 
-            VerifyDump(backupPath, store =>
-            {
-                Assert.Equal(206, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count());
-            });
+            VerifyDump(backupPath, store => Assert.Equal(206, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
             IOExtensions.DeleteDirectory(backupPath);
         }
 
@@ -708,6 +803,79 @@ namespace Raven.Tests.Issues
             {
                 var documentKey = "users/" + (++counter);
                 store.DatabaseCommands.PutAttachment(documentKey, null, new MemoryStream(data), new RavenJObject());
+            }
+        }
+
+
+        [Fact]
+        public async Task CanHandleExceptionsGracefully_Dumper()
+        {
+            var backupPath = NewDataPath("BackupFolder");
+            var server = GetNewServer();
+
+            var alreadyReset = false;
+
+            var forwarder = new PortForwarder(8070, 8079, bytes =>
+            {
+                if (alreadyReset == false && bytes > 10000)
+                {
+                    alreadyReset = true;
+                    return true;
+                }
+                return false;
+            });
+            forwarder.Forward();
+            try
+            {
+                using (var store = new DocumentStore
+                {
+                    Url = "http://localhost:8079"
+                }.Initialize())
+                {
+                    InsertUsers(store, 0, 2000);
+                }
+
+                var options = new SmugglerOptions
+                {
+                    Limit = 1500,
+                    BackupPath = backupPath,
+                };
+                var dumper = new SmugglerApi(options, new RavenConnectionStringOptions
+                {
+                    Url = "http://localhost:8070",
+                });
+
+                var allDocs = new List<RavenJObject>();
+
+                var memoryStream = new MemoryStream();
+                Assert.Throws<AggregateException>(() => dumper.ExportData(memoryStream, null, true).Wait());
+
+                memoryStream.Position = 0;
+                using (var stream = new GZipStream(memoryStream, CompressionMode.Decompress))
+                {
+                    var chunk1 = RavenJToken.TryLoad(stream) as RavenJObject;
+                    var doc1 = chunk1["Docs"] as RavenJArray;
+                    allDocs.AddRange(doc1.Values<RavenJObject>());
+                }
+
+                var memoryStream2 = new MemoryStream();
+                await dumper.ExportData(memoryStream2, null, true);
+                memoryStream2.Position = 0;
+                using (var stream = new GZipStream(memoryStream2, CompressionMode.Decompress))
+                {
+                    var chunk2 = RavenJToken.TryLoad(stream) as RavenJObject;
+                    var doc2 = chunk2["Docs"] as RavenJArray;
+                    allDocs.AddRange(doc2.Values<RavenJObject>());
+                }
+
+                Assert.Equal(2000, allDocs.Count(d => (d.Value<string>("Name") ?? String.Empty).StartsWith("User")));
+                
+                IOExtensions.DeleteDirectory(backupPath);
+            }
+            finally
+            {
+                forwarder.Stop();
+                server.Dispose();
             }
         }
     }

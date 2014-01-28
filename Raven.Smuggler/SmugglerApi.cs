@@ -228,51 +228,60 @@ namespace Raven.Smuggler
 			var totalCount = 0;
 			while (true)
 			{
-                if (SmugglerOptions.Limit - totalCount <= 0)
-                {
-                    ShowProgress("Done with reading attachments, total: {0}", totalCount);
+			    try
+			    {
+			        if (SmugglerOptions.Limit - totalCount <= 0)
+			        {
+			            ShowProgress("Done with reading attachments, total: {0}", totalCount);
+			            return lastEtag;
+			        }
+
+			        var maxRecords = Math.Min(SmugglerOptions.Limit - totalCount, SmugglerOptions.BatchSize);
+			        RavenJArray attachmentInfo = null;
+			        var request = CreateRequest("/static/?pageSize=" + maxRecords + "&etag=" + lastEtag);
+			        request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new JsonTextReader(reader)));
+
+			        if (attachmentInfo.Length == 0)
+			        {
+			            var databaseStatistics = await GetStats();
+			            var lastEtagComparable = new ComparableByteArray(lastEtag);
+			            if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
+			            {
+			                lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
+			                ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
+			                continue;
+			            }
+			            ShowProgress("Done with reading attachments, total: {0}", totalCount);
+			            return lastEtag;
+			        }
+
+			        totalCount += attachmentInfo.Length;
+			        ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachmentInfo.Length,
+			                     totalCount);
+			        foreach (var item in attachmentInfo)
+			        {
+			            ShowProgress("Downloading attachment: {0}", item.Value<string>("Key"));
+
+			            byte[] attachmentData = null;
+			            var requestData = CreateRequest("/static/" + item.Value<string>("Key"));
+			            requestData.ExecuteRequest(reader => attachmentData = reader.ReadData());
+
+			            new RavenJObject
+			            {
+			                {"Data", attachmentData},
+			                {"Metadata", item.Value<RavenJObject>("Metadata")},
+			                {"Key", item.Value<string>("Key")}
+			            }
+			                .WriteTo(jsonWriter);
+			        }
+
+			        lastEtag = Etag.Parse(attachmentInfo.Last().Value<string>("Etag"));
+			    }
+			    catch (Exception e)
+			    {
+                    ShowProgress("Got Exception during smuggler export. Exception: {0}. Exiting with last succesfully processed etag: {1}", e.Message, lastEtag);
                     return lastEtag;
-                }
-
-                var maxRecords = Math.Min(SmugglerOptions.Limit - totalCount, SmugglerOptions.BatchSize);
-				RavenJArray attachmentInfo = null;
-				var request = CreateRequest("/static/?pageSize=" + maxRecords + "&etag=" + lastEtag);
-				request.ExecuteRequest(reader => attachmentInfo = RavenJArray.Load(new JsonTextReader(reader)));
-
-				if (attachmentInfo.Length == 0)
-				{
-					var databaseStatistics = await GetStats();
-					var lastEtagComparable = new ComparableByteArray(lastEtag);
-					if (lastEtagComparable.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
-					{
-						lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
-						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
-						continue;
-					}
-					ShowProgress("Done with reading attachments, total: {0}", totalCount);
-					return lastEtag;
-				}
-
-				totalCount += attachmentInfo.Length;
-				ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachmentInfo.Length, totalCount);
-				foreach (var item in attachmentInfo)
-				{
-					ShowProgress("Downloading attachment: {0}", item.Value<string>("Key"));
-
-					byte[] attachmentData = null;
-					var requestData = CreateRequest("/static/" + item.Value<string>("Key"));
-					requestData.ExecuteRequest(reader => attachmentData = reader.ReadData());
-
-					new RavenJObject
-						{
-							{"Data", attachmentData},
-							{"Metadata", item.Value<RavenJObject>("Metadata")},
-							{"Key", item.Value<string>("Key")}
-						}
-						.WriteTo(jsonWriter);
-				}
-
-				lastEtag = Etag.Parse(attachmentInfo.Last().Value<string>("Etag"));
+			    }
 			}
 		}
 

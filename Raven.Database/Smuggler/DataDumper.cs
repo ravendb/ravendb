@@ -38,10 +38,9 @@ namespace Raven.Database.Smuggler
 		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			var totalCount = 0;
-		    try
+		    while (true)
 		    {
-
-		        while (true)
+		        try
 		        {
 		            if (SmugglerOptions.Limit - totalCount <= 0)
 		            {
@@ -72,11 +71,11 @@ namespace Raven.Database.Smuggler
 		            }
 		            lastEtag = Etag.Parse(array.Last().Value<string>("Etag"));
 		        }
-		    }
-		    catch (WebException e)
-		    {
-                ShowProgress("Got WebException during smuggler export. Exception: {0}. Exiting with last succesfully processed etag: {1}", e.Message, lastEtag);
-                return lastEtag;
+		        catch (Exception e)
+		        {
+                    ShowProgress("Got Exception during smuggler export. Exception: {0}. Exiting with last succesfully processed etag: {1}", e.Message, lastEtag);
+                    return lastEtag;
+		        }
 		    }
 		}
 
