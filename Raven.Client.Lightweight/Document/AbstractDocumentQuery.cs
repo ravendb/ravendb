@@ -1120,6 +1120,16 @@ If you really want to do in memory filtering on the data returned from the query
 			queryText.Append(transformToEqualValue);
 		}
 
+		private string EnsureValidFieldName(string fieldName)
+		{
+			if (rootTypes.Select(rootType => theSession.Conventions.GetIdentityProperty(rootType))
+				.Any(identityProperty => identityProperty != null && identityProperty.Name == fieldName))
+			{
+				return Constants.DocumentIdFieldName;
+			}
+			return fieldName;
+		}
+
 		private string EnsureValidFieldName(WhereParams whereParams)
 		{
 			if (theSession == null || theSession.Conventions == null || whereParams.IsNestedPath || isMapReduce)
@@ -1182,18 +1192,20 @@ If you really want to do in memory filtering on the data returned from the query
 			AppendSpaceIfNeeded(queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false);
 			NegateIfNeeded();
 
+			fieldName = EnsureValidFieldName(fieldName);
+
             var list = UnpackEnumerable(values).ToList();
 
 			if(list.Count == 0)
 			{
 				queryText.Append("@emptyIn<")
-					.Append(fieldName)
+					.Append(RavenQuery.EscapeField(fieldName))
 					.Append(">:(no-results)");
 				return;
 			}
 
 			queryText.Append("@in<")
-				.Append(fieldName)
+				.Append(RavenQuery.EscapeField(fieldName))
 				.Append(">:(");
 
 			var first = true;
