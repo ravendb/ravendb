@@ -1,11 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Threading;
+using Lucene.Net.Index;
+using Lucene.Net.Store;
+using NetTopologySuite.GeometriesGraph.Index;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Tests.Indexes;
 using Raven.Tests.Issues;
 using Raven.Tests.Notifications;
 using Raven.Tests.Track;
+using SpellChecker.Net.Search.Spell;
 
 namespace Raven.Tryouts
 {
@@ -13,28 +19,34 @@ namespace Raven.Tryouts
 	{
 		private static void Main(string[] args)
 		{
-            //for (int i = 0; i < 1000; i++)
-            //{
-            //    Console.WriteLine(i);
-            //    Environment.SetEnvironmentVariable("run", i.ToString("000"));
-            //    using (var x = new RavenDB_1493())
-            //    {
-            //        x.ConsistencyTest();
-            //    }
-            //}
-		    using (var store = new DocumentStore
+		    var ramDirectory = new RAMDirectory();
+		    var spellChecker = new SpellChecker.Net.Search.Spell.SpellChecker(ramDirectory);
+		    var ms = new MemoryStream();
+		    var sw = new StreamWriter(ms);
+            sw.WriteLine("Book");
+            sw.WriteLine("Bath");
+            sw.WriteLine("Bed");
+            sw.WriteLine("Make");
+            sw.WriteLine("Model");
+            sw.WriteLine("Vacum");
+            sw.WriteLine("Wending machine");
+            sw.Flush();
+		    ms.Position = 0;
+            spellChecker.setStringDistance(new JaroWinklerDistance());
+            spellChecker.SetAccuracy(0.3f);
+            spellChecker.IndexDictionary(new PlainTextDictionary(ms), CancellationToken.None);
+
+		    var indexReader = IndexReader.Open(ramDirectory, true);
+		    var termEnum = indexReader.Terms();
+		    while (termEnum.Next())
 		    {
-		        Url = "http://localhost:8080",
-		        DefaultDatabase = "test2"
-		    }.Initialize())
+		        Console.WriteLine(termEnum.Term);
+		    }
+
+		    var suggestSimilar = spellChecker.SuggestSimilar("both", 10);
+		    foreach (var s in suggestSimilar)
 		    {
-		        for (int i = 0; i < 256; i++)
-		        {
-		            store.DatabaseCommands.Put("docs/" + Guid.NewGuid() , null, new RavenJObject(), new RavenJObject
-		            {
-		                {"Raven-Entity-Name", string.Format("{0:000}",i)}
-		            });
-		        }
+		        Console.WriteLine(s);
 		    }
 		}
 	}

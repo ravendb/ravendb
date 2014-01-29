@@ -15,25 +15,48 @@ namespace Raven.Database.Indexing
     public class IndexedTerms
     {
         public static void ReadEntriesForFields(
-            IndexSearcherHolder.IndexSearcherHoldingState state,
-            HashSet<string> fieldsToRead,
-            HashSet<int> docIds,
-            Func<Term, double> convert,
-            Action<Term, double, int> onTermFound)
+                IndexSearcherHolder.IndexSearcherHoldingState state,
+                HashSet<string> fieldsToRead,
+                HashSet<int> docIds,
+                Func<Term, double> convert,
+                Action<Term, double, int> onTermFound)
         {
-            IndexReader reader = state.IndexSearcher.IndexReader;
+            var reader = state.IndexSearcher.IndexReader;
 
             var readFromCache = new Dictionary<string, HashSet<int>>();
 
             state.Lock.EnterReadLock();
             try
             {
-                ReadFieldsFromCache(state, fieldsToRead, docIds, convert, onTermFound, readFromCache);
+                foreach (var field in fieldsToRead)
+                {
+                    var read = new HashSet<int>();
+                    readFromCache[field] = read;
+                    foreach (var docId in docIds)
+                    {
+                        foreach (var val in state.GetFromCache(field, docId))
+                        {
+                            read.Add(docId);
+
+                            double converted;
+                            if (val.Val == null)
+                            {
+                                val.Val = converted = convert(val.Term);
+                            }
+                            else
+                            {
+                                converted = val.Val.Value;
+                            }
+                            onTermFound(val.Term, converted, docId);
+                        }
+                    }
+                }
             }
             finally
             {
                 state.Lock.ExitReadLock();
             }
+
 
             foreach (var kvp in readFromCache)
             {
@@ -45,12 +68,35 @@ namespace Raven.Database.Indexing
 
             if (fieldsToRead.Count == 0)
                 return;
-
+            
             state.Lock.EnterWriteLock();
             try
             {
-                readFromCache.Clear();
-                ReadFieldsFromCache(state, fieldsToRead, docIds, convert, onTermFound, readFromCache);
+
+                foreach (var field in fieldsToRead)
+                {
+                    var read = readFromCache[field];
+                    foreach (var docId in docIds)
+                    {
+                        foreach (var val in state.GetFromCache(field, docId))
+                        {
+                            if(read.Add(docId) == false)
+                                continue;
+
+                            double converted;
+                            if (val.Val == null)
+                            {
+                                val.Val = converted = convert(val.Term);
+                            }
+                            else
+                            {
+                                converted = val.Val.Value;
+                            }
+                            onTermFound(val.Term, converted, docId);
+                        }
+                    }
+                }
+
                 foreach (var kvp in readFromCache)
                 {
                     if (kvp.Value.Count == docIds.Count)
@@ -61,14 +107,13 @@ namespace Raven.Database.Indexing
 
                 if (fieldsToRead.Count == 0)
                     return;
-
-                using (TermDocs termDocs = reader.TermDocs())
+                using (var termDocs = reader.TermDocs())
                 {
-                    foreach (string field in fieldsToRead)
+                    foreach (var field in fieldsToRead)
                     {
-                        HashSet<int> read = readFromCache[field];
-                        var shouldReset = new HashSet<Tuple<string, int>>();
-                        using (TermEnum termEnum = reader.Terms(new Term(field)))
+                        var read = readFromCache[field];
+						var shouldReset = new HashSet<Tuple<string, int>>();
+                        using (var termEnum = reader.Terms(new Term(field)))
                         {
                             do
                             {
@@ -78,26 +123,26 @@ namespace Raven.Database.Indexing
                                 if (LowPrecisionNumber(termEnum.Term))
                                     continue;
 
-
-                                int totalDocCountIncludedDeletes = termEnum.DocFreq();
+                                    
+                                var totalDocCountIncludedDeletes = termEnum.DocFreq();
                                 termDocs.Seek(termEnum.Term);
 
                                 while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
                                 {
                                     totalDocCountIncludedDeletes -= 1;
                                     if (read.Contains(termDocs.Doc))
-                                        continue;
+										continue;
                                     if (reader.IsDeleted(termDocs.Doc))
-                                        continue;
+										continue;
                                     if (docIds.Contains(termDocs.Doc) == false)
-                                        continue;
+										continue;
 
-                                    if (shouldReset.Add(Tuple.Create(field, termDocs.Doc)))
-                                    {
-                                        state.ResetInCache(field, termDocs.Doc);
-                                    }
+									if (shouldReset.Add(Tuple.Create(field, termDocs.Doc)))
+									{
+										state.ResetInCache(field, termDocs.Doc);
+									}
 
-                                    double d = convert(termEnum.Term);
+                                    var d = convert(termEnum.Term);
                                     state.SetInCache(field, termDocs.Doc, termEnum.Term, d);
                                     onTermFound(termEnum.Term, d, termDocs.Doc);
                                 }
@@ -112,57 +157,39 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private static void ReadFieldsFromCache(IndexSearcherHolder.IndexSearcherHoldingState state,
-            HashSet<string> fieldsToRead, HashSet<int> docIds,
-            Func<Term, double> convert, Action<Term, double, int> onTermFound,
-            Dictionary<string, HashSet<int>> readFromCache)
-        {
-            foreach (string field in fieldsToRead)
-            {
-                var read = new HashSet<int>();
-                readFromCache[field] = read;
-                foreach (int docId in docIds)
-                {
-                    foreach (
-                        IndexSearcherHolder.IndexSearcherHoldingState.CacheVal val in state.GetFromCache(field, docId))
-                    {
-                        read.Add(docId);
-
-                        double converted;
-                        if (val.Val == null)
-                        {
-                            val.Val = converted = convert(val.Term);
-                        }
-                        else
-                        {
-                            converted = val.Val.Value;
-                        }
-                        onTermFound(val.Term, converted, docId);
-                    }
-                }
-            }
-        }
-
 
         public static void ReadEntriesForFields(
-            IndexSearcherHolder.IndexSearcherHoldingState state,
-            HashSet<string> fieldsToRead,
-            HashSet<int> docIds,
-            Action<Term, int> onTermFound)
+              IndexSearcherHolder.IndexSearcherHoldingState state,
+              HashSet<string> fieldsToRead,
+              HashSet<int> docIds,
+              Action<Term, int> onTermFound)
         {
-            IndexReader reader = state.IndexSearcher.IndexReader;
+            var reader = state.IndexSearcher.IndexReader;
 
             var readFromCache = new Dictionary<string, HashSet<int>>();
 
             state.Lock.EnterReadLock();
             try
             {
-                ReadFieldsFromCache(state, fieldsToRead, docIds, onTermFound, readFromCache);
+                foreach (var field in fieldsToRead)
+                {
+                    var read = new HashSet<int>();
+                    readFromCache[field] = read;
+                    foreach (var docId in docIds)
+                    {
+                        foreach (var term in state.GetTermsFromCache(field, docId))
+                        {
+                            read.Add(docId);
+                            onTermFound(term, docId);
+                        }
+                    }
+                }
             }
             finally
             {
                 state.Lock.ExitReadLock();
             }
+
 
             foreach (var kvp in readFromCache)
             {
@@ -178,8 +205,20 @@ namespace Raven.Database.Indexing
             state.Lock.EnterWriteLock();
             try
             {
-                readFromCache.Clear();
-                ReadFieldsFromCache(state, fieldsToRead, docIds, onTermFound, readFromCache);
+                foreach (var field in fieldsToRead)
+                {
+                    var read = readFromCache[field];
+                    foreach (var docId in docIds)
+                    {
+                        foreach (var term in state.GetTermsFromCache(field, docId))
+                        {
+                            if(read.Add(docId) == false)
+                                continue;
+                            onTermFound(term, docId);
+                        }
+                    }
+                }
+
                 foreach (var kvp in readFromCache)
                 {
                     if (kvp.Value.Count == docIds.Count)
@@ -187,16 +226,18 @@ namespace Raven.Database.Indexing
                         fieldsToRead.Remove(kvp.Key); // already read all of it
                     }
                 }
+
                 if (fieldsToRead.Count == 0)
                     return;
 
-                using (TermDocs termDocs = reader.TermDocs())
+
+                using (var termDocs = reader.TermDocs())
                 {
-                    foreach (string field in fieldsToRead)
+                    foreach (var field in fieldsToRead)
                     {
-                        HashSet<int> read = readFromCache[field];
-                        var shouldReset = new HashSet<Tuple<string, int>>();
-                        using (TermEnum termEnum = reader.Terms(new Term(field)))
+                        var read = readFromCache[field];
+	                    var shouldReset = new HashSet<Tuple<string, int>>();
+                        using (var termEnum = reader.Terms(new Term(field)))
                         {
                             do
                             {
@@ -207,7 +248,7 @@ namespace Raven.Database.Indexing
                                     continue;
 
 
-                                int totalDocCountIncludedDeletes = termEnum.DocFreq();
+                                var totalDocCountIncludedDeletes = termEnum.DocFreq();
                                 termDocs.Seek(termEnum.Term);
 
                                 while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
@@ -220,7 +261,7 @@ namespace Raven.Database.Indexing
                                     if (docIds.Contains(termDocs.Doc) == false)
                                         continue;
 
-                                    if (shouldReset.Add(Tuple.Create(field, termDocs.Doc)))
+									if (shouldReset.Add(Tuple.Create(field,termDocs.Doc)))
                                     {
                                         state.ResetInCache(field, termDocs.Doc);
                                     }
@@ -239,25 +280,6 @@ namespace Raven.Database.Indexing
             }
         }
 
-        private static void ReadFieldsFromCache(IndexSearcherHolder.IndexSearcherHoldingState state,
-            HashSet<string> fieldsToRead, HashSet<int> docIds,
-            Action<Term, int> onTermFound, Dictionary<string, HashSet<int>> readFromCache)
-        {
-            foreach (string field in fieldsToRead)
-            {
-                var read = new HashSet<int>();
-                readFromCache[field] = read;
-                foreach (int docId in docIds)
-                {
-                    foreach (Term term in state.GetTermsFromCache(field, docId))
-                    {
-                        read.Add(docId);
-                        onTermFound(term, docId);
-                    }
-                }
-            }
-        }
-
         private static bool LowPrecisionNumber(Term term)
         {
             if (term.Field.EndsWith("_Range") == false)
@@ -272,25 +294,24 @@ namespace Raven.Database.Indexing
 
         public static RavenJObject[] ReadAllEntriesFromIndex(IndexReader reader)
         {
-            if (reader.MaxDoc > 128*1024)
+            if (reader.MaxDoc > 128 * 1024)
             {
-                throw new InvalidOperationException("Refusing to extract all index entires from an index with " +
-                                                    reader.MaxDoc +
+                throw new InvalidOperationException("Refusing to extract all index entires from an index with " + reader.MaxDoc +
                                                     " entries, because of the probable time / memory costs associated with that." +
                                                     Environment.NewLine +
                                                     "Viewing Index Entries are a debug tool, and should not be used on indexes of this size. You might want to try Luke, instead.");
             }
             var results = new RavenJObject[reader.MaxDoc];
-            using (TermDocs termDocs = reader.TermDocs())
-            using (TermEnum termEnum = reader.Terms())
+            using (var termDocs = reader.TermDocs())
+            using (var termEnum = reader.Terms())
             {
                 while (termEnum.Next())
                 {
-                    Term term = termEnum.Term;
+                    var term = termEnum.Term;
                     if (term == null)
                         break;
 
-                    string text = term.Text;
+                    var text = term.Text;
 
                     termDocs.Seek(termEnum);
                     for (int i = 0; i < termEnum.DocFreq() && termDocs.Next(); i++)
@@ -298,7 +319,7 @@ namespace Raven.Database.Indexing
                         RavenJObject result = results[termDocs.Doc];
                         if (result == null)
                             results[termDocs.Doc] = result = new RavenJObject();
-                        string propertyName = term.Field;
+                        var propertyName = term.Field;
                         if (propertyName.EndsWith("_ConvertToJson") ||
                             propertyName.EndsWith("_IsArray"))
                             continue;
@@ -307,14 +328,14 @@ namespace Raven.Database.Indexing
                             switch (result[propertyName].Type)
                             {
                                 case JTokenType.Array:
-                                    ((RavenJArray) result[propertyName]).Add(text);
+                                    ((RavenJArray)result[propertyName]).Add(text);
                                     break;
                                 case JTokenType.String:
                                     result[propertyName] = new RavenJArray
-                                    {
-                                        result[propertyName],
-                                        text
-                                    };
+									{
+										result[propertyName],
+										text
+									};
                                     break;
                                 default:
                                     throw new ArgumentException("No idea how to handle " + result[propertyName].Type);
@@ -329,5 +350,6 @@ namespace Raven.Database.Indexing
             }
             return results;
         }
+
     }
 }
