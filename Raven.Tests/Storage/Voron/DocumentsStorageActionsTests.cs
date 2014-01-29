@@ -450,15 +450,7 @@ using Raven.Database.Plugins;
 		[PropertyData("Storages")]
 		public void DocumentStorage_InsertDocument_Twice_WithCheckForUpdatesFalse_ExceptionThrown(string requestedStorage)
 		{
-			Type expectedException = null;
-			if (requestedStorage == "voron")
-			{
-				expectedException = typeof(ApplicationException);
-			}
-			else if (requestedStorage == "esent")
-			{
-				expectedException = typeof(EsentKeyDuplicateException);
-			}
+			var expectedException = typeof(ConcurrencyException);	
 
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
