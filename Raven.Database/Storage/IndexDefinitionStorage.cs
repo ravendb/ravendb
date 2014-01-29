@@ -32,6 +32,7 @@ namespace Raven.Database.Storage
         private const string IndexDefDir = "IndexDefinitions";
 
         private readonly ReaderWriterLockSlim currentlyIndexingLock = new ReaderWriterLockSlim();
+		public long currentlyIndexing;
 
         private readonly ConcurrentDictionary<int, AbstractViewGenerator> indexCache =
             new ConcurrentDictionary<int, AbstractViewGenerator>();
@@ -370,11 +371,21 @@ namespace Raven.Database.Storage
             return new DisposableAction(currentlyIndexingLock.ExitWriteLock);
         }
 
+
+	    public bool IsCurrentlyIndexing()
+	    {
+		    return Interlocked.Read(ref currentlyIndexing) != 0;
+	    }
+
         public IDisposable CurrentlyIndexing()
         {
             currentlyIndexingLock.EnterReadLock();
-
-            return new DisposableAction(currentlyIndexingLock.ExitReadLock);
+	        Interlocked.Increment(ref currentlyIndexing);
+            return new DisposableAction(() =>
+            {
+	            currentlyIndexingLock.ExitReadLock();
+	            Interlocked.Decrement(ref currentlyIndexing);
+            });
         }
 
         public void RemoveTransformer(string name)

@@ -144,8 +144,74 @@
     <Compile Include="..\Raven.Client.Lightweight\Changes\*.cs">
       <Link>Changes\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Connection\*.cs">
-      <Link>Connection\%(FileName)</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\AdminRequestCreator.cs">
+      <Link>Connection\AdminRequestCreator</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\AdminServerClient.cs">
+      <Link>Connection\AdminServerClient</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\CachedRequest.cs">
+      <Link>Connection\CachedRequest</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\CompressedStreamContent.cs">
+      <Link>Connection\CompressedStreamContent</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ConnectionOptions.cs">
+      <Link>Connection\ConnectionOptions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\CreateHttpJsonRequestParams.cs">
+      <Link>Connection\CreateHttpJsonRequestParams</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\DocumentConventionJsonExtensions.cs">
+      <Link>Connection\DocumentConventionJsonExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\HttpContentExtentions.cs">
+      <Link>Connection\HttpContentExtentions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\HttpExtensions.cs">
+      <Link>Connection\HttpExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\IDatabaseCommands.cs">
+      <Link>Connection\IDatabaseCommands</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\IRavenQueryInspector.cs">
+      <Link>Connection\IRavenQueryInspector</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\JsonLuceneDateTimeConverter.cs">
+      <Link>Connection\JsonLuceneDateTimeConverter</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\MultiGetOperation.cs">
+      <Link>Connection\MultiGetOperation</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\NameValueCollectionExtensions.cs">
+      <Link>Connection\NameValueCollectionExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ObservableLineStream.cs">
+      <Link>Connection\ObservableLineStream</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\Operation.cs">
+      <Link>Connection\Operation</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\RavenTransactionAccessor.cs">
+      <Link>Connection\RavenTransactionAccessor</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\RavenUrlExtensions.cs">
+      <Link>Connection\RavenUrlExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformer.cs">
+      <Link>Connection\ReplicationInformer</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ReplicationInformerCache.cs">
+      <Link>Connection\ReplicationInformerCache</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\SerializationHelper.cs">
+      <Link>Connection\SerializationHelper</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ServerClient.cs">
+      <Link>Connection\ServerClient</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Connection\ServerHash.cs">
+      <Link>Connection\ServerHash</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Connection\Async\AsyncAdminServerClient.cs">
       <Link>Connection\Async\AsyncAdminServerClient</Link>
@@ -165,8 +231,104 @@
     <Compile Include="..\Raven.Client.Lightweight\Converters\*.cs">
       <Link>Converters\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Document\*.cs">
-      <Link>Document\%(FileName)</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AbstractDocumentQuery.cs">
+      <Link>Document\AbstractDocumentQuery</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncDocumentQuery.cs">
+      <Link>Document\AsyncDocumentQuery</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncHiLoKeyGenerator.cs">
+      <Link>Document\AsyncHiLoKeyGenerator</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncMultiDatabaseHiLoKeyGenerator.cs">
+      <Link>Document\AsyncMultiDatabaseHiLoKeyGenerator</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncMultiLoaderWithInclude.cs">
+      <Link>Document\AsyncMultiLoaderWithInclude</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncMultiTypeHiLoKeyGenerator.cs">
+      <Link>Document\AsyncMultiTypeHiLoKeyGenerator</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\AsyncShardedDocumentQuery.cs">
+      <Link>Document\AsyncShardedDocumentQuery</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\BulkInsertOperation.cs">
+      <Link>Document\BulkInsertOperation</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\DefaultRavenContractResolver.cs">
+      <Link>Document\DefaultRavenContractResolver</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\DocumentConvention.cs">
+      <Link>Document\DocumentConvention</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\DocumentQuery.cs">
+      <Link>Document\DocumentQuery</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\DocumentSession.cs">
+      <Link>Document\DocumentSession</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\DocumentSessionListeners.cs">
+      <Link>Document\DocumentSessionListeners</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\DocumentStore.cs">
+      <Link>Document\DocumentStore</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\EntityToJson.cs">
+      <Link>Document\EntityToJson</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\FailoverBehavior.cs">
+      <Link>Document\FailoverBehavior</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\GenerateEntityIdOnTheClient.cs">
+      <Link>Document\GenerateEntityIdOnTheClient</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\HiLoKeyGenerator.cs">
+      <Link>Document\HiLoKeyGenerator</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\HiLoKeyGeneratorBase.cs">
+      <Link>Document\HiLoKeyGeneratorBase</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\IAbstractDocumentQuery.cs">
+      <Link>Document\IAbstractDocumentQuery</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\IAsyncLoaderWithInclude.cs">
+      <Link>Document\IAsyncLoaderWithInclude</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\ILoaderWithInclude.cs">
+      <Link>Document\ILoaderWithInclude</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\InMemoryDocumentSessionOperations.cs">
+      <Link>Document\InMemoryDocumentSessionOperations</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\MultiDatabaseHiLoGenerator.cs">
+      <Link>Document\MultiDatabaseHiLoGenerator</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\MultiLoaderWithInclude.cs">
+      <Link>Document\MultiLoaderWithInclude</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\MultiTypeHiLoKeyGenerator.cs">
+      <Link>Document\MultiTypeHiLoKeyGenerator</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\OpenSessionOptions.cs">
+      <Link>Document\OpenSessionOptions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\RavenClientEnlistment.cs">
+      <Link>Document\RavenClientEnlistment</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\RavenLoadConfiguration.cs">
+      <Link>Document\RavenLoadConfiguration</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\ReflectionUtil.cs">
+      <Link>Document\ReflectionUtil</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\RemoteBulkInsertOperation.cs">
+      <Link>Document\RemoteBulkInsertOperation</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\ReplicationBehavior.cs">
+      <Link>Document\ReplicationBehavior</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Document\ShardedDocumentQuery.cs">
+      <Link>Document\ShardedDocumentQuery</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Document\Async\*.cs">
       <Link>Document\Async\%(FileName)</Link>
@@ -186,11 +348,62 @@
     <Compile Include="..\Raven.Client.Lightweight\Exceptions\*.cs">
       <Link>Exeptions\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Extensions\*.cs">
-      <Link>Extentions\%(FileName)</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\DatabaseCommandsExtensions.cs">
+      <Link>Extentions\DatabaseCommandsExtensions</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Indexes\*.cs">
-      <Link>Indexes\%(FileName)</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\MultiDatabase.cs">
+      <Link>Extentions\MultiDatabase</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\MultiTenancyExtensions.cs">
+      <Link>Extentions\MultiTenancyExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\ParallelExtensions.cs">
+      <Link>Extentions\ParallelExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\StringExtensions.cs">
+      <Link>Extentions\StringExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Extensions\TaskExtensions2.cs">
+      <Link>Extentions\TaskExtensions2</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractGenericIndexCreationTask.cs">
+      <Link>Indexes\AbstractGenericIndexCreationTask</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractIndexCreationTask.cs">
+      <Link>Indexes\AbstractIndexCreationTask</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractMultiMapIndexCreationTask.cs">
+      <Link>Indexes\AbstractMultiMapIndexCreationTask</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\AbstractResultsTransformer.cs">
+      <Link>Indexes\AbstractResultsTransformer</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\ExpressionOperatorPrecedence.cs">
+      <Link>Indexes\ExpressionOperatorPrecedence</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\ExpressionOperatorPrecedenceExtension.cs">
+      <Link>Indexes\ExpressionOperatorPrecedenceExtension</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\ExpressionStringBuilder.cs">
+      <Link>Indexes\ExpressionStringBuilder</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\IClientSideDatabase.cs">
+      <Link>Indexes\IClientSideDatabase</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexCreation.cs">
+      <Link>Indexes\IndexCreation</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionBuilder.cs">
+      <Link>Indexes\IndexDefinitionBuilder</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\IndexDefinitionHelper.cs">
+      <Link>Indexes\IndexDefinitionHelper</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\RavenDocumentsByEntityName.cs">
+      <Link>Indexes\RavenDocumentsByEntityName</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Indexes\RavenMethodAttribute.cs">
+      <Link>Indexes\RavenMethodAttribute</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Linq\*.cs">
       <Link>Linq\%(FileName)</Link>
@@ -204,8 +417,53 @@
     <Compile Include="..\Raven.Client.Lightweight\PublicExtensions\*.cs">
       <Link>PublicExtentions\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Client.Lightweight\Shard\*.cs">
-      <Link>Shard\%(FileName)</Link>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\AsyncShardedDocumentSession.cs">
+      <Link>Shard\AsyncShardedDocumentSession</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\AsyncShardedHiloKeyGenerator.cs">
+      <Link>Shard\AsyncShardedHiloKeyGenerator</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\BaseShardedDocumentSession.cs">
+      <Link>Shard\BaseShardedDocumentSession</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\DefaultShardResolutionStrategy.cs">
+      <Link>Shard\DefaultShardResolutionStrategy</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\IShardAccessStrategy.cs">
+      <Link>Shard\IShardAccessStrategy</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\IShardResolutionStrategy.cs">
+      <Link>Shard\IShardResolutionStrategy</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ParallelShardAccessStrategy.cs">
+      <Link>Shard\ParallelShardAccessStrategy</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\SequentialShardAccessStrategy.cs">
+      <Link>Shard\SequentialShardAccessStrategy</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDatabaseChanges.cs">
+      <Link>Shard\ShardedDatabaseChanges</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDocumentSession.cs">
+      <Link>Shard\ShardedDocumentSession</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedDocumentStore.cs">
+      <Link>Shard\ShardedDocumentStore</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedHiloKeyGenerator.cs">
+      <Link>Shard\ShardedHiloKeyGenerator</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedObservableWithTask.cs">
+      <Link>Shard\ShardedObservableWithTask</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardedRavenQueryInspector.cs">
+      <Link>Shard\ShardedRavenQueryInspector</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardRequestData.cs">
+      <Link>Shard\ShardRequestData</Link>
+    </Compile>
+    <Compile Include="..\Raven.Client.Lightweight\Shard\ShardStrategy.cs">
+      <Link>Shard\ShardStrategy</Link>
     </Compile>
     <Compile Include="..\Raven.Client.Lightweight\Spatial\*.cs">
       <Link>Imports\Spatial\%(FileName)</Link>
@@ -243,8 +501,38 @@
     <Compile Include="..\Raven.Abstractions\Json\*.cs">
       <Link>Abstructions\Json\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Json\Linq\*.cs">
-      <Link>Abstructions\Json\Linq\%(FileName)</Link>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\DictionaryWithParentSnapshot.cs">
+      <Link>Abstructions\Json\Linq\DictionaryWithParentSnapshot</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\Extensions.cs">
+      <Link>Abstructions\Json\Linq\Extensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJArray.cs">
+      <Link>Abstructions\Json\Linq\RavenJArray</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJObject.cs">
+      <Link>Abstructions\Json\Linq\RavenJObject</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJPath.cs">
+      <Link>Abstructions\Json\Linq\RavenJPath</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJsonConvert.cs">
+      <Link>Abstructions\Json\Linq\RavenJsonConvert</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJToken.cs">
+      <Link>Abstructions\Json\Linq\RavenJToken</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJTokenEqualityComparer.cs">
+      <Link>Abstructions\Json\Linq\RavenJTokenEqualityComparer</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJTokenReader.cs">
+      <Link>Abstructions\Json\Linq\RavenJTokenReader</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJTokenWriter.cs">
+      <Link>Abstructions\Json\Linq\RavenJTokenWriter</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Json\Linq\RavenJValue.cs">
+      <Link>Abstructions\Json\Linq\RavenJValue</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Json\Utilities\*.cs">
       <Link>Abstructions\Json\Utilities\%(FileName)</Link>

@@ -45,6 +45,9 @@ namespace Raven.Bundles.Replication.Tasks
 			public int Value;
 		}
 
+		public const int SystemDocsLimitForRemoteEtagUpdate = 15;
+		public const int DestinationDocsLimitForRemoteEtagUpdate = 15;
+
 		public readonly ConcurrentQueue<Task> activeTasks = new ConcurrentQueue<Task>();
 
 		private readonly ConcurrentDictionary<string, DestinationStats> destinationStats =
@@ -53,6 +56,7 @@ namespace Raven.Bundles.Replication.Tasks
 		private DocumentDatabase docDb;
 		private readonly static ILog log = LogManager.GetCurrentClassLogger();
 		private bool firstTimeFoundNoReplicationDocument = true;
+        private bool wrongReplicationSourceAlertSent = false;
 		private readonly ConcurrentDictionary<string, IntHolder> activeReplicationTasks = new ConcurrentDictionary<string, IntHolder>();
 
 		public ConcurrentDictionary<string, DestinationStats> DestinationStats
@@ -213,7 +217,7 @@ namespace Raven.Bundles.Replication.Tasks
 			while (true)
 			{
 				int nextPageStart = skip; // will trigger rapid pagination
-				var docs = docDb.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, skip, 128, ref nextPageStart);
+				var docs = docDb.GetDocumentsWithIdStartingWith(Constants.RavenReplicationSourcesBasePath, null, null, skip, 128, CancellationToken.None, ref nextPageStart);
 				if (docs.Length == 0)
 				{
 					notifications.TryAdd(null, 15 * 1000); // marker to stop notify this
@@ -418,7 +422,8 @@ namespace Raven.Bundles.Replication.Tasks
 				{
 					// we don't notify remote server about updates to system docs, see: RavenDB-715
 					if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments == 0 ||
-						documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > 15)
+						documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > SystemDocsLimitForRemoteEtagUpdate  ||
+						documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromDestination > DestinationDocsLimitForRemoteEtagUpdate) // see RavenDB-1555
 					{
 						SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
 					}
@@ -649,6 +654,7 @@ namespace Raven.Bundles.Replication.Tasks
 			public DateTime LastLastModified { get; set; }
 			public RavenJArray Documents { get; set; }
 			public int CountOfFilteredDocumentsWhichAreSystemDocuments { get; set; }
+			public int CountOfFilteredDocumentsWhichOriginFromDestination { get; set; }
 		}
 
 		private JsonDocumentsToReplicate GetJsonDocuments(SourceReplicationInformation destinationsReplicationInformationForSource, ReplicationStrategy destination)
@@ -695,6 +701,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 						docsSinceLastReplEtag += docsToReplicate.Count;
 						result.CountOfFilteredDocumentsWhichAreSystemDocuments += docsToReplicate.Count(doc => destination.IsSystemDocumentId(doc.Key));
+						result.CountOfFilteredDocumentsWhichOriginFromDestination +=
+							docsToReplicate.Count(doc => destination.OriginsFromDestination(destinationId, doc.Metadata));
 
 						if (docsToReplicate.Count > 0)
 						{
@@ -941,17 +949,26 @@ namespace Raven.Bundles.Replication.Tasks
 
 			if (jsonDeserialization.Source != docDb.TransactionalStorage.Id.ToString())
 			{
-				docDb.AddAlert(new Alert
-				{
-					AlertLevel = AlertLevel.Error,
-					CreatedAt = SystemTime.UtcNow,
-					Message = "Source of the ReplicationDestinations document is not the same as the database it is located in",
-					Title = "Wrong replication source: " + jsonDeserialization.Source + " instead of " + docDb.Name,
-					UniqueKey = "Wrong source: " + jsonDeserialization.Source + ", " + docDb.TransactionalStorage.Id.ToString()
-				});
+			    if (!wrongReplicationSourceAlertSent)
+			    {
+			        var dbName = string.IsNullOrEmpty(docDb.Name) ? "<system>" : docDb.Name;
 
-				return new ReplicationStrategy[0];
+			        docDb.AddAlert(new Alert
+			            {
+			                AlertLevel = AlertLevel.Error,
+			                CreatedAt = SystemTime.UtcNow,
+			                Message = "Source of the ReplicationDestinations document is not the same as the database it is located in",
+                            Title = "Wrong replication source: " + jsonDeserialization.Source + " instead of " + docDb.TransactionalStorage.Id + " in database " + dbName,
+			                UniqueKey = "Wrong source: " + jsonDeserialization.Source + ", " + docDb.TransactionalStorage.Id
+			            });
+
+                    wrongReplicationSourceAlertSent = true;
+			    }
+
+			    return new ReplicationStrategy[0];
 			}
+
+            wrongReplicationSourceAlertSent = false;
 
 			return jsonDeserialization
 				.Destinations

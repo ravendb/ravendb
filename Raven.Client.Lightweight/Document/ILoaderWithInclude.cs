@@ -21,21 +21,21 @@ namespace Raven.Client.Document
 		/// </summary>
 		/// <param name="path">The path.</param>
 		/// <returns></returns>
-		MultiLoaderWithInclude<T> Include(string path);
+		ILoaderWithInclude<T> Include(string path);
 
 		/// <summary>
 		/// Includes the specified path.
 		/// </summary>
 		/// <param name="path">The path.</param>
 		/// <returns></returns>
-		MultiLoaderWithInclude<T> Include(Expression<Func<T, object>> path);
+		ILoaderWithInclude<T> Include(Expression<Func<T, object>> path);
 
 		/// <summary>
 		/// Includes the specified path.
 		/// </summary>
 		/// <param name="path">The path.</param>
 		/// <returns></returns>
-		MultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path);
+		ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path);
 
 		/// <summary>
 		/// Loads the specified ids.

@@ -25,6 +25,7 @@ namespace Raven.Client.Embedded
 		private readonly BulkInsertOptions options;
 		BlockingCollection<JsonDocument> queue;
 		private Task doBulkInsert;
+	    private IDisposable subscription;
 		private bool disposed;
 
 		/// <summary>
@@ -55,7 +56,7 @@ namespace Raven.Client.Embedded
 
 		private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
 		{
-			changes
+			subscription = changes
 				.ForBulkInsert(OperationId)
 				.Subscribe(this);
 		}
@@ -129,17 +130,20 @@ namespace Raven.Client.Embedded
 		/// <summary>
 		/// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
 		/// </summary>
-		public void Dispose()
-		{
-			if (disposed)
-				return;
+        public void Dispose()
+        {
+            if (disposed)
+                return;
 
-			using (NoSynchronizationContext.Scope())
-			{
-				var disposeAsync = DisposeAsync().ConfigureAwait(false);
-				disposeAsync.GetAwaiter().GetResult();
-			}
-		}
+            if (subscription != null)
+                subscription.Dispose();
+
+            using (NoSynchronizationContext.Scope())
+            {
+                var disposeAsync = DisposeAsync().ConfigureAwait(false);
+                disposeAsync.GetAwaiter().GetResult();
+            }
+        }
 
 		/// <summary>
 		/// Operation Id

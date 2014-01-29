@@ -4,10 +4,12 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Database.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 using Raven.Json.Linq;
 
@@ -40,36 +42,45 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/docs")]
 		public HttpResponseMessage DocsGet()
 		{
-			long documentsCount = 0;
-			var lastDocEtag = Etag.Empty;
-			Database.TransactionalStorage.Batch(accessor =>
-			{
-				lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
-				documentsCount = accessor.Documents.GetDocumentsCount();
-			});
+		    using (var cts = new CancellationTokenSource())
+		    using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+		    {
+		        long documentsCount = 0;
+		        var lastDocEtag = Etag.Empty;
+		        Database.TransactionalStorage.Batch(
+		            accessor =>
+		            {
+		                lastDocEtag = accessor.Staleness.GetMostRecentDocumentEtag();
+		                documentsCount = accessor.Documents.GetDocumentsCount();
+		            });
 
-			lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
-			if (MatchEtag(lastDocEtag))
-				return GetEmptyMessage(HttpStatusCode.NotModified);
+		        lastDocEtag = lastDocEtag.HashWith(BitConverter.GetBytes(documentsCount));
+		        if (MatchEtag(lastDocEtag)) return GetEmptyMessage(HttpStatusCode.NotModified);
 
-			var startsWith = GetQueryStringValue("startsWith");
-			HttpResponseMessage msg;
-		    int nextPageStart = GetNextPageStart();
-			if (string.IsNullOrEmpty(startsWith))
-				msg = GetMessageWithObject(Database.GetDocuments(GetStart(), GetPageSize(Database.Configuration.MaxPageSize),
-					GetEtagFromQueryString()));
-			else
-			{
-                msg = GetMessageWithObject(Database.GetDocumentsWithIdStartingWith(startsWith, GetQueryStringValue("matches"), GetQueryStringValue("exclude"),
-				                                                                   GetStart(), GetPageSize(Database.Configuration.MaxPageSize), ref nextPageStart));
-			}
+		        var startsWith = GetQueryStringValue("startsWith");
+		        HttpResponseMessage msg;
+		        int nextPageStart = GetNextPageStart();
+		        if (string.IsNullOrEmpty(startsWith))
+		            msg = GetMessageWithObject(
+		                Database.GetDocuments(GetStart(), GetPageSize(Database.Configuration.MaxPageSize), GetEtagFromQueryString(), cts.Token));
+		        else
+		        {
+		            msg =
+		                GetMessageWithObject(
+		                    Database.GetDocumentsWithIdStartingWith(
+		                        startsWith,
+		                        GetQueryStringValue("matches"),
+		                        GetQueryStringValue("exclude"),
+		                        GetStart(),
+		                        GetPageSize(Database.Configuration.MaxPageSize),
+		                        cts.Token,
+		                        ref nextPageStart));
+		        }
 
-			WriteHeaders(new RavenJObject
-			             {
-				             { Constants.NextPageStart, nextPageStart }
-			             }, lastDocEtag, msg);
+		        WriteHeaders(new RavenJObject { { Constants.NextPageStart, nextPageStart } }, lastDocEtag, msg);
 
-			return msg;
+		        return msg;
+		    }
 		}
 
 		[HttpPost]

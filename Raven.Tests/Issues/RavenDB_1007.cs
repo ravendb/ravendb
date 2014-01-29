@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Mono.CSharp;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
@@ -95,7 +96,7 @@ namespace Raven.Tests.Issues
 					{
 						Query = "Tag:[[Users]]",
 						PageSize = 10
-					});
+					}, CancellationToken.None);
 				} while (queryResult.IsStale);
 				Assert.Equal(3, queryResult.Results.Count);
 			}
@@ -163,7 +164,7 @@ namespace Raven.Tests.Issues
 					{
 						Query = "Tag:[[Users]]",
 						PageSize = 10
-					});
+					}, CancellationToken.None);
 				} while (queryResult.IsStale);
 				Assert.Equal(3, queryResult.Results.Count);
 			}

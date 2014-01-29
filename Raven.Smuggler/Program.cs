@@ -15,6 +15,7 @@ using Raven.Abstractions.Smuggler;
 
 namespace Raven.Smuggler
 {
+    using System.Linq;
 	using System.Net.Sockets;
 
 	public class Program
@@ -50,12 +51,11 @@ namespace Raven.Smuggler
 			    },
 			    {
 				    "metadata-filter:{=}", "Filter documents by a metadata property." + Environment.NewLine +
-				                           "Usage example: Raven-Entity-Name=Posts",
-				    (key, val) => options.Filters.Add(new FilterSetting
+			            			                       "Usage example: Raven-Entity-Name=Posts, or Raven-Entity-Name=Posts,Persons for multiple document types", (key, val) => options.Filters.Add(new FilterSetting
 				    {
 					    Path = "@metadata." + key,
 					    ShouldMatch = true,
-					    Values = new List<string> {val}
+															   Values = val.Split(',').ToList()
 				    })
 			    },
 			    {
@@ -65,7 +65,7 @@ namespace Raven.Smuggler
 				    {
 					    Path = "@metadata." + key,
 					    ShouldMatch = false,
-					    Values = new List<string> {val}
+															   Values = val.Split(',').ToList()
 				    })
 			    },
 			    {
@@ -75,7 +75,7 @@ namespace Raven.Smuggler
 				    {
 					    Path = key,
 					    ShouldMatch = true,
-					    Values = new List<string> {val}
+													  Values = val.Split(',').ToList()
 				    })
 			    },
 			    {
@@ -85,7 +85,7 @@ namespace Raven.Smuggler
 				    {
 					    Path = key,
 					    ShouldMatch = false,
-					    Values = new List<string> {val}
+													  Values = val.Split(',').ToList()
 				    })
 			    },
 			    {

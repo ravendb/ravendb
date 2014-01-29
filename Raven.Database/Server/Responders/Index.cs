@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -451,9 +452,13 @@ namespace Raven.Database.Server.Responders
         private void GetIndexQueryResult(IHttpContext context, string index)
         {
             Etag indexEtag;
-            var queryResult = ExecuteQuery(context, index, out indexEtag);
-
-            if (queryResult == null)
+            QueryResultWithIncludes queryResult;
+	        using (var cts = new CancellationTokenSource())
+	        {
+		        cts.TimeoutAfter(Settings.DatbaseOperationTimeout);
+		        queryResult = ExecuteQuery(context, index, cts.Token, out indexEtag);
+	        }
+	        if (queryResult == null)
                 return;
 
             var includes = context.Request.QueryString.GetValues("include") ?? new string[0];
@@ -507,15 +512,15 @@ namespace Raven.Database.Server.Responders
             context.Write(viewGenerator.SourceCode);
         }
 
-        private QueryResultWithIncludes ExecuteQuery(IHttpContext context, string index, out Etag indexEtag)
+        private QueryResultWithIncludes ExecuteQuery(IHttpContext context, string index, CancellationToken token, out Etag indexEtag)
         {
             var indexQuery = context.GetIndexQueryFromHttpContext(Database.Configuration.MaxPageSize);
             RewriteDateQueriesFromOldClients(context, indexQuery);
 
             var sp = Stopwatch.StartNew();
             var result = index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) || index.Equals("dynamic", StringComparison.OrdinalIgnoreCase) ?
-                PerformQueryAgainstDynamicIndex(context, index, indexQuery, out indexEtag) :
-                PerformQueryAgainstExistingIndex(context, index, indexQuery, out indexEtag);
+                PerformQueryAgainstDynamicIndex(context, index, indexQuery, token, out indexEtag) :
+                PerformQueryAgainstExistingIndex(context, index, indexQuery, token, out indexEtag);
 
             sp.Stop();
 
@@ -566,7 +571,7 @@ namespace Raven.Database.Server.Responders
             indexQuery.Query = builder.ToString();
         }
 
-        private QueryResultWithIncludes PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, out Etag indexEtag)
+        private QueryResultWithIncludes PerformQueryAgainstExistingIndex(IHttpContext context, string index, IndexQuery indexQuery, CancellationToken token, out Etag indexEtag)
         {
             indexEtag = Database.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
             if (context.MatchEtag(indexEtag))
@@ -576,12 +581,12 @@ namespace Raven.Database.Server.Responders
                 return null;
             }
 
-            var queryResult = Database.Query(index, indexQuery);
+            var queryResult = Database.Query(index, indexQuery, token);
             indexEtag = Database.GetIndexEtag(index, queryResult.ResultEtag, indexQuery.ResultsTransformer);
             return queryResult;
         }
 
-        private QueryResultWithIncludes PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, out Etag indexEtag)
+        private QueryResultWithIncludes PerformQueryAgainstDynamicIndex(IHttpContext context, string index, IndexQuery indexQuery, CancellationToken token, out Etag indexEtag)
         {
             string entityName;
             var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
@@ -612,7 +617,7 @@ namespace Raven.Database.Server.Responders
                 return null;
             }
 
-            var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
+            var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery, token);
 
             // have to check here because we might be getting the index etag just 
             // as we make a switch from temp to auto, and we need to refresh the etag

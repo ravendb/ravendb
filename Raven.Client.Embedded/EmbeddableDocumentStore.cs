@@ -232,19 +232,19 @@ namespace Raven.Client.Embedded
 				}
 
 				// need to set out own idle timer
-					idleTimer = new Timer(state =>
-					{
-						try
-						{
-							DocumentDatabase.RunIdleOperations();
-						}
-						catch (Exception e)
-						{
-							log.WarnException("Error during database idle operations", e);
-						}
-					}, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-				databaseCommandsGenerator =
-					() => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId, listeners.ConflictListeners);
+                idleTimer = new Timer(state =>
+                {
+                    try
+                    {
+                        DocumentDatabase.RunIdleOperations();
+                    }
+                    catch (Exception e)
+                    {
+                        log.WarnException("Error during database idle operations", e);
+                    }
+                }, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+				
+                databaseCommandsGenerator = () => new EmbeddedDatabaseCommands(DocumentDatabase, Conventions, currentSessionId, listeners.ConflictListeners);
 				asyncDatabaseCommandsGenerator = () => new EmbeddedAsyncServerClient(DocumentDatabase, DatabaseCommands);
 			}
 			else

@@ -42,7 +42,16 @@ namespace Raven.Database.Server.Controllers
 					}
 				}
 
-				await ExecuteRequests(results, requests);
+			    DatabasesLandlord.SystemConfiguration.ConcurrentMultiGetRequests.Wait();
+			    try
+			    {
+                    await ExecuteRequests(results, requests);
+			    }
+			    finally
+			    {
+                    DatabasesLandlord.SystemConfiguration.ConcurrentMultiGetRequests.Release();
+			    }
+				
 				var result = new HttpResponseMessage(HttpStatusCode.OK)
 				{
 					Content = new MultiGetContent(results)

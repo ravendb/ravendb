@@ -135,27 +135,28 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		private bool TryMoveTableRecords(Table table, int start, bool backward)
-		{
-			if (start <= 0)
-				return false;
-			if (backward)
-				start *= -1;
-			try
-			{
-				Api.JetMove(session, table, start, MoveGrbit.None);
-			}
-			catch (EsentErrorException e)
-			{
-				if (e.Error == JET_err.NoCurrentRecord)
-				{
-					return true;
-				}
-				throw;
-			}
-			return false;
-		}
-
+        private bool TryMoveTableRecords(Table table, int start, bool backward)
+        {
+            if (start <= 0)
+                return false;
+            if (start == int.MaxValue)
+                return true;
+            if (backward)
+                start *= -1;
+            try
+            {
+                Api.JetMove(session, table, start, MoveGrbit.None);
+            }
+            catch (EsentErrorException e)
+            {
+                if (e.Error == JET_err.NoCurrentRecord)
+                {
+                    return true;
+                }
+                throw;
+            }
+            return false;
+        }
 
 		private JsonDocument ReadCurrentDocument()
 		{
@@ -378,19 +379,6 @@ namespace Raven.Storage.Esent.StorageActions
 				Api.JetSetCurrentIndex(session, Documents, "by_key");
 				Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 				var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
-				if (isUpdate && byteCount >= 127)
-				{
-					// need to check for keys > 127 
-					var keyFromDb = Api.RetrieveColumnAsString(session, Documents,
-															   tableColumnsCache.DocumentsColumns["key"]);
-
-					if (string.Equals(keyFromDb, key, StringComparison.OrdinalIgnoreCase) == false)
-					{
-						throw new NotSupportedException("Got a request to update a document with id [" + key + "] that matches already existing document [" + keyFromDb +
-							"] in the first 127 chars. Unfortunately, Esent doesn't allow such keys and this isn't supported.");
-					}
-
-				}
 
 				Etag existingEtag = null;
 				if (isUpdate)

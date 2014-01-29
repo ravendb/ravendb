@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading;
 
 using Raven.Json.Linq;
 
@@ -32,7 +33,7 @@ namespace Raven.Tests.Issues
 		        int nextPageStart = 0;
 		        var fetchedDocuments = documentStore
                     .DocumentDatabase
-                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, 0, 4, ref nextPageStart)
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, 0, 4, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
                 var foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -49,7 +50,7 @@ namespace Raven.Tests.Issues
 		        nextPageStart = 0;
                 fetchedDocuments = documentStore
                     .DocumentDatabase
-					.GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, 4, 4, ref nextPageStart)
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, 4, 4, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
                 foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -66,7 +67,7 @@ namespace Raven.Tests.Issues
 				nextPageStart = 0;
                 fetchedDocuments = documentStore
                     .DocumentDatabase
-					.GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, 8, 4, ref nextPageStart)
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, 8, 4, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
                 foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -102,7 +103,7 @@ namespace Raven.Tests.Issues
 				int nextPageStart = 0;
 				var fetchedDocuments = documentStore
 					.DocumentDatabase
-					.GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, nextPageStart, 4, ref nextPageStart)
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, nextPageStart, 4, CancellationToken.None, ref nextPageStart)
 					.ToList();
 
 				var foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -118,7 +119,7 @@ namespace Raven.Tests.Issues
 
 				fetchedDocuments = documentStore
 					.DocumentDatabase
-					.GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, nextPageStart, 4, ref nextPageStart)
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, nextPageStart, 4, CancellationToken.None, ref nextPageStart)
 					.ToList();
 
 				foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -134,7 +135,7 @@ namespace Raven.Tests.Issues
 
 				fetchedDocuments = documentStore
 					.DocumentDatabase
-					.GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, nextPageStart, 4, ref nextPageStart)
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, string.Empty, nextPageStart, 4, CancellationToken.None, ref nextPageStart)
 					.ToList();
 
 				foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -170,7 +171,7 @@ namespace Raven.Tests.Issues
 	            int nextPageStart = 0;
 	            var fetchedDocuments = documentStore
                     .DocumentDatabase
-					.GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 0, 2, ref nextPageStart)
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 0, 2, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
                 var foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -185,7 +186,7 @@ namespace Raven.Tests.Issues
 	            nextPageStart = 0;
                 fetchedDocuments = documentStore
                     .DocumentDatabase
-					.GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 2, 2, ref nextPageStart)
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 2, 2, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
                 foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -200,7 +201,7 @@ namespace Raven.Tests.Issues
 				nextPageStart = 0;
                 fetchedDocuments = documentStore
                     .DocumentDatabase
-					.GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 4, 2, ref nextPageStart)
+                    .GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 4, 2, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
                 foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -236,7 +237,7 @@ namespace Raven.Tests.Issues
 	            int nextPageStart = 0;
 	            var fetchedDocuments = documentStore
                     .DocumentDatabase
-					.GetDocumentsWithIdStartingWith("FooBar", "1*", string.Empty, 0, 2, ref nextPageStart)
+                    .GetDocumentsWithIdStartingWith("FooBar", "1*", string.Empty, 0, 2, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
                 var foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -250,7 +251,7 @@ namespace Raven.Tests.Issues
 				nextPageStart = 0;
                 fetchedDocuments = documentStore
                     .DocumentDatabase
-					.GetDocumentsWithIdStartingWith("FooBar", "1*", string.Empty, 2, 1, ref nextPageStart)
+                    .GetDocumentsWithIdStartingWith("FooBar", "1*", string.Empty, 2, 1, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
                 foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -263,7 +264,7 @@ namespace Raven.Tests.Issues
 				nextPageStart = 0;
                 fetchedDocuments = documentStore
                     .DocumentDatabase
-					.GetDocumentsWithIdStartingWith("FooBar", "1*", string.Empty, 3, 10, ref nextPageStart)
+                    .GetDocumentsWithIdStartingWith("FooBar", "1*", string.Empty, 3, 10, CancellationToken.None, ref nextPageStart)
                     .ToList();
 
                 foundDocKeys = fetchedDocuments.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -296,7 +297,7 @@ namespace Raven.Tests.Issues
 				documentStore.DocumentDatabase.Put("FooBar8", null, new RavenJObject(), new RavenJObject(), null);
 
 				int nextPageStart = 0;
-				var fetchedDocuments = documentStore.DocumentDatabase.GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 0, 4, ref nextPageStart);
+                var fetchedDocuments = documentStore.DocumentDatabase.GetDocumentsWithIdStartingWith("FooBar", string.Empty, "1*", 0, 4, CancellationToken.None, ref nextPageStart);
 
 				var documentsList = fetchedDocuments.ToList();
 				var foundDocKeys = documentsList.Select(doc => doc.Value<RavenJObject>("@metadata"))
@@ -330,7 +331,7 @@ namespace Raven.Tests.Issues
 				documentStore.DocumentDatabase.Put("FooBarKK", null, new RavenJObject(), new RavenJObject(), null);
 
 				int nextPageStart = 0;
-				var fetchedDocuments = documentStore.DocumentDatabase.GetDocumentsWithIdStartingWith("FooBar", string.Empty, "*A", 2, 4, ref nextPageStart);
+                var fetchedDocuments = documentStore.DocumentDatabase.GetDocumentsWithIdStartingWith("FooBar", string.Empty, "*A", 2, 4, CancellationToken.None, ref nextPageStart);
 
 				var documentsList = fetchedDocuments.ToList();
 				var foundDocKeys = documentsList.Select(doc => doc.Value<RavenJObject>("@metadata"))

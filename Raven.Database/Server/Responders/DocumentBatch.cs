@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
@@ -34,27 +35,31 @@ namespace Raven.Database.Server.Responders
 
 		public override void Respond(IHttpContext context)
 		{
-			var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(context));
-			switch (context.Request.HttpMethod)
-			{                
-				case "POST":
-					Batch(context);
-					break;
-				case "DELETE":
-					OnBulkOperation(context, databaseBulkOperations.DeleteByIndex);
-					break;
-				case "PATCH":
-					var patchRequestJson = context.ReadJsonArray();
-					var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
-					OnBulkOperation(context, (index, query, allowStale) =>
-						databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale));
-					break;
-				case "EVAL":
-					var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
-					var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
-					OnBulkOperation(context, (index, query, allowStale) =>
-						databaseBulkOperations.UpdateByIndex(index, query, advPatch, allowStale));
-					break;
+			using (var cts = new CancellationTokenSource())
+			{
+				var timeout = cts.TimeoutAfter(Settings.DatbaseOperationTimeout);
+				var databaseBulkOperations = new DatabaseBulkOperations(Database, GetRequestTransaction(context), cts.Token, timeout);
+				switch (context.Request.HttpMethod)
+				{
+					case "POST":
+						Batch(context);
+						break;
+					case "DELETE":
+						OnBulkOperation(context, databaseBulkOperations.DeleteByIndex);
+						break;
+					case "PATCH":
+						var patchRequestJson = context.ReadJsonArray();
+						var patchRequests = patchRequestJson.Cast<RavenJObject>().Select(PatchRequest.FromJson).ToArray();
+						OnBulkOperation(context, (index, query, allowStale) =>
+							databaseBulkOperations.UpdateByIndex(index, query, patchRequests, allowStale));
+						break;
+					case "EVAL":
+						var advPatchRequestJson = context.ReadJsonObject<RavenJObject>();
+						var advPatch = ScriptedPatchRequest.FromJson(advPatchRequestJson);
+						OnBulkOperation(context, (index, query, allowStale) =>
+							databaseBulkOperations.UpdateByIndex(index, query, advPatch, allowStale));
+						break;
+				}
 			}
 		}
 

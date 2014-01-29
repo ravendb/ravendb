@@ -73,14 +73,14 @@ namespace Raven.Client.Document.Async
 		{
 			var queryInspector = (IRavenQueryProvider)query.Provider;
 			var indexQuery = queryInspector.ToAsyncLuceneQuery<T>(query.Expression);
-			return await StreamAsync(indexQuery, queryHeaderInformation);
+            return await StreamAsync(indexQuery, queryHeaderInformation).ConfigureAwait(false);
 		}
 
 		public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, Reference<QueryHeaderInformation> queryHeaderInformation)
 		{
 			var ravenQueryInspector = ((IRavenQueryInspector)query);
 			var indexQuery = ravenQueryInspector.GetIndexQuery(true);
-			var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation);
+            var enumerator = await AsyncDatabaseCommands.StreamQueryAsync(ravenQueryInspector.AsyncIndexQueried, indexQuery, queryHeaderInformation).ConfigureAwait(false);
 			var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation(null);
 			queryOperation.DisableEntitiesTracking = true;
 
@@ -101,7 +101,7 @@ namespace Raven.Client.Document.Async
 
 		private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(Etag fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation = null)
 		{
-			var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, pagingInformation: pagingInformation);
+			var enumerator = await AsyncDatabaseCommands.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, pagingInformation: pagingInformation).ConfigureAwait(false);
 			return new DocsYieldStream<T>(this, enumerator);
 		}
 
@@ -123,7 +123,7 @@ namespace Raven.Client.Document.Async
 
 			public async Task<bool> MoveNextAsync()
 			{
-				if (await enumerator.MoveNextAsync() == false)
+                if (await enumerator.MoveNextAsync().ConfigureAwait(false) == false)
 					return false;
 
 				SetCurrent();
@@ -386,13 +386,13 @@ namespace Raven.Client.Document.Async
 		public async Task<T> LoadAsync<TTransformer, T>(string id) where TTransformer : AbstractTransformerCreationTask, new()
 		{
 			var transformer = new TTransformer();
-			var result = await LoadAsyncInternal<T>(new[] { id }, null, transformer.TransformerName);
+            var result = await LoadAsyncInternal<T>(new[] { id }, null, transformer.TransformerName).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
 		public async Task<T> LoadAsync<TTransformer, T>(string id, Action<ILoadConfiguration> configure) where TTransformer : AbstractTransformerCreationTask, new()
 		{
-			var result = await LoadAsync<TTransformer, T>(new[] { id }.AsEnumerable(), configure);
+            var result = await LoadAsync<TTransformer, T>(new[] { id }.AsEnumerable(), configure).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
@@ -401,7 +401,7 @@ namespace Raven.Client.Document.Async
 			var transformer = new TTransformer();
 			var ravenLoadConfiguration = new RavenLoadConfiguration();
 			configure(ravenLoadConfiguration);
-			var result = await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer.TransformerName, ravenLoadConfiguration.QueryInputs);
+            var result = await LoadAsyncInternal<TResult>(ids.ToArray(), null, transformer.TransformerName, ravenLoadConfiguration.QueryInputs).ConfigureAwait(false);
 			return result;
 		}
 
@@ -424,7 +424,7 @@ namespace Raven.Client.Document.Async
 			{
 				// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
 				// With a single Id
-				var arrayOfArrays = (await AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs))
+                var arrayOfArrays = (await AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs).ConfigureAwait(false))
 											.Results
 											.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
 											.Select(values =>
@@ -444,7 +444,7 @@ namespace Raven.Client.Document.Async
 				return arrayOfArrays;
 			}
 
-			var getResponse = (await this.AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs));
+            var getResponse = (await this.AsyncDatabaseCommands.GetAsync(ids, includePaths, transformer, queryInputs).ConfigureAwait(false));
 			var items = new List<T>();
 			foreach (var result in getResponse.Results)
 			{
@@ -493,7 +493,7 @@ namespace Raven.Client.Document.Async
 				multiLoadOperation.LogOperation();
 				using (multiLoadOperation.EnterMultiLoadContext())
 				{
-					result = await AsyncDatabaseCommands.GetAsync(ids, includePaths);
+                    result = await AsyncDatabaseCommands.GetAsync(ids, includePaths).ConfigureAwait(false);
 				}
 			} while (multiLoadOperation.SetResult(result));
 			return multiLoadOperation.Complete<T>();

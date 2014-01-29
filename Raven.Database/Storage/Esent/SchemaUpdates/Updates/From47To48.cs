@@ -24,25 +24,42 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Storage.Esent.SchemaUpdates.Updates
 {
-	public class From47To48 : ISchemaUpdate
-	{
-	    private InMemoryRavenConfiguration configuration;
-	    public string FromSchemaVersion { get { return "4.7"; } }
+    public class From47To48 : ISchemaUpdate
+    {
+        private InMemoryRavenConfiguration configuration;
 
-		public void Init(IUuidGenerator generator, InMemoryRavenConfiguration configuration)
-		{
-		    this.configuration = configuration;
-		}
+        public string FromSchemaVersion { get { return "4.7"; } }
 
-		public void Update(Session session, JET_DBID dbid, Action<string> output)
-		{
+        public void Init(IUuidGenerator generator, InMemoryRavenConfiguration configuration)
+        {
+            this.configuration = configuration;
+        }
+
+        public void Update(Session session, JET_DBID dbid, Action<string> output)
+        {
+            using (var tbl = new Table(session, dbid, "documents", OpenTableGrbit.None))
+            {
+                Api.JetDeleteIndex(session, tbl, "by_key");
+                Api.JetCreateIndex2(session, tbl, new[]
+                {
+                    new JET_INDEXCREATE
+                    {
+                        szIndexName = "by_key",
+                        cbKey = 6,
+                        cbKeyMost = SystemParameters.KeyMost,
+                        cbVarSegMac = SystemParameters.KeyMost,
+                        szKey = "+key\0\0",
+                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                    }
+                }, 1);
+            }
 
             // So first we allocate ids and crap
             // and write that to disk in a safe manner
             // I might want to look at keeping a list of written files to delete if it all goes tits up at any point
-		    var filesToDelete = new List<string>();
-		    var nameToIds = new Dictionary<string, int>();
-		    var indexDefPath = Path.Combine(configuration.DataDirectory, "IndexDefinitions");
+            var filesToDelete = new List<string>();
+            var nameToIds = new Dictionary<string, int>();
+            var indexDefPath = Path.Combine(configuration.DataDirectory, "IndexDefinitions");
 
             var indexDefinitions = Directory.GetFiles(indexDefPath, "*.index")
                                         .Select(x => { filesToDelete.Add(x); return x; })
@@ -53,39 +70,39 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
                                         .Select(index => JsonConvert.DeserializeObject<TransformerDefinition>(File.ReadAllText(index), Default.Converters))
                                         .ToArray();
 
-		  int maxIndexId = 0;
+            int maxIndexId = 0;
 
-		    for (var i = 0; i < indexDefinitions.Length; i++)
-		    {
-		        var definition = indexDefinitions[i];
-		        definition.IndexId = i;
-		        nameToIds[definition.Name] = definition.IndexId;
-		        var path = Path.Combine(indexDefPath, definition.IndexId + ".index");
+            for (var i = 0; i < indexDefinitions.Length; i++)
+            {
+                var definition = indexDefinitions[i];
+                definition.IndexId = i;
+                nameToIds[definition.Name] = definition.IndexId;
+                var path = Path.Combine(indexDefPath, definition.IndexId + ".index");
 
                 // TODO: This can fail, rollback
                 File.WriteAllText(path, JsonConvert.SerializeObject(definition, Formatting.Indented, Default.Converters));
 
                 var indexDirectory = FixupIndexName(definition.Name, configuration.IndexStoragePath);
-		        var oldStorageDirectory = Path.Combine(configuration.IndexStoragePath, MonoHttpUtility.UrlEncode(indexDirectory));
+                var oldStorageDirectory = Path.Combine(configuration.IndexStoragePath, MonoHttpUtility.UrlEncode(indexDirectory));
                 var newStorageDirectory = Path.Combine(configuration.IndexStoragePath, definition.IndexId.ToString());
 
                 // TODO: This can fail, rollback
                 Directory.Move(oldStorageDirectory, newStorageDirectory);
-            maxIndexId = i;
-		    }
+                maxIndexId = i;
+            }
 
-		    for (var i = 0; i < transformDefinitions.Length; i++)
-		    {
-		        var definition = transformDefinitions[i];
-		        definition.IndexId = maxIndexId = indexDefinitions.Length + i;
-		        nameToIds[definition.Name] = definition.IndexId;
-		        var path = Path.Combine(indexDefPath, definition.IndexId + ".transform");
+            for (var i = 0; i < transformDefinitions.Length; i++)
+            {
+                var definition = transformDefinitions[i];
+                definition.IndexId = maxIndexId = indexDefinitions.Length + i;
+                nameToIds[definition.Name] = definition.IndexId;
+                var path = Path.Combine(indexDefPath, definition.IndexId + ".transform");
 
                 // TODO: This can file, rollback
                 File.WriteAllText(path, JsonConvert.SerializeObject(definition, Formatting.Indented, Default.Converters));
-		    }
+            }
 
-		    var tablesAndColumns = new[]
+            var tablesAndColumns = new[]
 		    {
 		        new {table = "scheduled_reductions", column = "view"},
 		        new {table = "mapped_results", column = "view"},
@@ -99,7 +116,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 		        new {table = "indexes_stats_reduce", column = "key"}
 		    };
 
-            foreach(var item in tablesAndColumns)
+            foreach (var item in tablesAndColumns)
             {
                 // If it's the primary key we need to be a bit clever
                 // cos we can't just rename this and copy data over
@@ -182,7 +199,7 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
                                     insert.Save();
                                 }
 
-                                if (rows++%10000 == 0)
+                                if (rows++ % 10000 == 0)
                                 {
                                     output("Processed " + (rows - 1) + " rows in " + item.table);
                                     continue;
@@ -199,29 +216,34 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
                 {
                     // We can do an in-place update
                     Api.JetCommitTransaction(session, CommitTransactionGrbit.None);
-                    using (var sr = new Table(session, dbid, item.table, OpenTableGrbit.None)) {
+                    using (var sr = new Table(session, dbid, item.table, OpenTableGrbit.None))
+                    {
                         Api.JetRenameColumn(session, sr, item.column, item.column + "_old", RenameColumnGrbit.None);
                         JET_COLUMNID columnid;
-                        Api.JetAddColumn(session, sr, item.column, new JET_COLUMNDEF {
+                        Api.JetAddColumn(session, sr, item.column, new JET_COLUMNDEF
+                        {
                             coltyp = JET_coltyp.Long,
                             grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
                         }, null, 0, out columnid);
 
-                    Api.JetBeginTransaction2(session, BeginTransactionGrbit.None);
+                        Api.JetBeginTransaction2(session, BeginTransactionGrbit.None);
 
                         var rows = 0;
                         Api.MoveBeforeFirst(session, sr);
-                        while (Api.TryMoveNext(session, sr)) {
+                        while (Api.TryMoveNext(session, sr))
+                        {
                             var viewNameId = Api.GetTableColumnid(session, sr, item.column + "_old");
                             var viewIdId = Api.GetTableColumnid(session, sr, item.column);
 
-                            using (var update = new Update(session, sr, JET_prep.Replace)) {
+                            using (var update = new Update(session, sr, JET_prep.Replace))
+                            {
                                 var viewName = Api.RetrieveColumnAsString(session, sr, viewNameId, Encoding.Unicode);
                                 Api.SetColumn(session, sr, viewIdId, nameToIds[viewName]);
                                 update.Save();
                             }
 
-                            if (rows++ % 10000 == 0) {
+                            if (rows++ % 10000 == 0)
+                            {
                                 output("Processed " + (rows - 1) + " rows in " + item.table);
                                 continue;
                             }
@@ -247,32 +269,32 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
                         Api.JetBeginTransaction2(session, BeginTransactionGrbit.None);
                     }
                 }
-              UpdateLastIdentityForIndexes(session, dbid, maxIndexId+1);
+                UpdateLastIdentityForIndexes(session, dbid, maxIndexId + 1);
             }
 
 
             filesToDelete.ForEach(File.Delete);
             SchemaCreator.UpdateVersion(session, dbid, "4.8");
-		}
+        }
 
-	  private void UpdateLastIdentityForIndexes(Session session, JET_DBID dbid, int lastIdentity)
-	  {
-	    using (var sr = new Table(session, dbid, "identity_table", OpenTableGrbit.None))
-	    {
-	      Api.JetSetCurrentIndex(session, sr, "by_key");
-	      Api.MakeKey(session, sr, "IndexId", Encoding.Unicode, MakeKeyGrbit.NewKey);
-	      using (var update = new Update(session, sr, Api.TrySeek(session, sr, SeekGrbit.SeekEQ) ? JET_prep.Replace : JET_prep.Insert))
-	      {
-          var keyId = Api.GetTableColumnid(session, sr, "key");
-          var valId = Api.GetTableColumnid(session, sr, "val");
-	        Api.SetColumn(session, sr, keyId, "IndexId", Encoding.Unicode);
-	        Api.SetColumn(session, sr, valId, lastIdentity);
-	        update.Save();
-	      }
-	    }
-	  }
+        private void UpdateLastIdentityForIndexes(Session session, JET_DBID dbid, int lastIdentity)
+        {
+            using (var sr = new Table(session, dbid, "identity_table", OpenTableGrbit.None))
+            {
+                Api.JetSetCurrentIndex(session, sr, "by_key");
+                Api.MakeKey(session, sr, "IndexId", Encoding.Unicode, MakeKeyGrbit.NewKey);
+                using (var update = new Update(session, sr, Api.TrySeek(session, sr, SeekGrbit.SeekEQ) ? JET_prep.Replace : JET_prep.Insert))
+                {
+                    var keyId = Api.GetTableColumnid(session, sr, "key");
+                    var valId = Api.GetTableColumnid(session, sr, "val");
+                    Api.SetColumn(session, sr, keyId, "IndexId", Encoding.Unicode);
+                    Api.SetColumn(session, sr, valId, lastIdentity);
+                    update.Save();
+                }
+            }
+        }
 
-	  public static string FixupIndexName(string index, string path)
+        public static string FixupIndexName(string index, string path)
         {
             if (index.EndsWith("=")) //allready encoded
                 return index;
@@ -298,5 +320,5 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
             }
             return index;
         }
-	}
+    }
 }

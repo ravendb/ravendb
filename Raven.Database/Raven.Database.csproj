@@ -124,11 +124,11 @@
     </Reference>
     <Reference Include="Microsoft.Owin, Version=2.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Owin.2.1.0-rc1\lib\net45\Microsoft.Owin.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Owin.2.1.0\lib\net45\Microsoft.Owin.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Owin.Hosting, Version=2.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.Owin.Hosting.2.1.0-rc1\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Owin.Hosting.2.1.0\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Microsoft.WindowsAzure.Configuration, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -186,6 +186,7 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Net.Http.Formatting, Version=5.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.1.0-rc1\lib\net45\System.Net.Http.Formatting.dll</HintPath>
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.1.0\lib\net45\System.Net.Http.Formatting.dll</HintPath>
     </Reference>
     <Reference Include="System.Net.Http.WebRequest" />
@@ -215,11 +216,12 @@
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Http, Version=5.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.1.0-rc1\lib\net45\System.Web.Http.dll</HintPath>
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.1.0\lib\net45\System.Web.Http.dll</HintPath>
     </Reference>
     <Reference Include="System.Web.Http.Owin, Version=5.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Microsoft.AspNet.WebApi.Owin.5.1.0-rc1\lib\net45\System.Web.Http.Owin.dll</HintPath>
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Owin.5.1.0\lib\net45\System.Web.Http.Owin.dll</HintPath>
     </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
@@ -270,6 +272,7 @@
     <Compile Include="Bundles\SqlReplication\SqlReplicationScriptedJsonPatcher.cs" />
     <Compile Include="Bundles\SqlReplication\SqlReplicationStatistics.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
+    <Compile Include="Extensions\CancellationTokenSource.cs" />
     <Compile Include="Impl\DTC\EsentInFlightTransactionalState.cs" />
     <Compile Include="Impl\DTC\EsentTransactionContext.cs" />
     <Compile Include="Impl\DTC\MuninInFlightTransactionalState.cs" />
@@ -926,7 +929,6 @@
     <Compile Include="Storage\Esent\SchemaCreator.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\ISchemaUpdate.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\SchemaUpdaterHelper.cs" />
-    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From47To48.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From42To43.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From41To42.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From39To40.cs" />
@@ -938,6 +940,9 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From44To45.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From45To46.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From46To47.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From47To48.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Storage\Esent\StorageActionsAccessor.cs" />
     <Compile Include="Storage\Esent\StorageActions\Documents.cs" />
     <Compile Include="Storage\Esent\StorageActions\DocumentStorageActions.cs" />
@@ -1050,6 +1055,7 @@
     <Compile Include="Util\PerformanceCounterWrapper.cs" />
     <Compile Include="Util\PortUtil.cs" />
     <Compile Include="Util\SequentialUuidGenerator.cs" />
+    <Compile Include="Util\SortedKeyList.cs" />
     <Compile Include="Util\Streams\BufferPool.cs" />
     <Compile Include="Util\Streams\BufferPoolStream.cs" />
     <Compile Include="Util\Streams\PartialStream.cs" />

@@ -234,7 +234,11 @@ namespace Raven.Client.Indexes
 			}
 			if (instance != null)
 			{
+				if (ShouldParantesisMemberExpression(instance))
+					Out("(");
 				Visit(instance);
+				if (ShouldParantesisMemberExpression(instance))
+					Out(")");
 				Out("." + name);
 			}
 			else
@@ -249,6 +253,18 @@ namespace Raven.Client.Indexes
 				}
 
 				Out(member.DeclaringType.Name + "." + name);
+			}
+		}
+
+		private static bool ShouldParantesisMemberExpression(Expression instance)
+		{
+			switch (instance.NodeType)
+			{
+				case ExpressionType.Parameter:
+				case ExpressionType.MemberAccess:
+					return false;
+				default:
+					return true;
 			}
 		}
 
@@ -919,9 +935,13 @@ namespace Raven.Client.Indexes
 		{
 			if (type.IsGenericType)
 			{
+				if (TypeExistsOnServer(type) == false)
+					throw new InvalidOperationException("Cannot make use of type " + type + " because it is a generic type that doesn't exists on the server");
 				var typeDefinition = type.GetGenericTypeDefinition();
-				var sb = new StringBuilder(typeDefinition.FullName, 0);
-				sb.Length = typeDefinition.FullName.IndexOf('`');
+				var sb = new StringBuilder(typeDefinition.FullName, 0)
+				{
+					Length = typeDefinition.FullName.IndexOf('`')
+				};
 				sb.Replace('+', '.');
 				sb.Append("<");
 
@@ -1015,7 +1035,10 @@ namespace Raven.Client.Indexes
 			{
 				return "byte?";
 			}
-
+			if (type.IsEnum)
+			{
+				return "string";
+			}
 			if (type.FullName == "System.Object")
 			{
 				return "object";

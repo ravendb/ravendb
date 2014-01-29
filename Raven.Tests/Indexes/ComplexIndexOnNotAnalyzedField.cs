@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
@@ -52,7 +53,7 @@ namespace Raven.Tests.Indexes
 				{
 					Query = "Partner:companies/49",
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			Assert.Equal("Hibernating Rhinos", queryResult.Results[0].Value<string>("Name"));

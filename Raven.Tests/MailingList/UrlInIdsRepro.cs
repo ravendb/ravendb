@@ -33,6 +33,7 @@ namespace Raven.Tests.MailingList
 		}
 
 		[Fact]
+		//[TimeBombedFact(2013, 12, 31)]
 		public void CanSaveAndRetrieveTestOpenId()
 		{
 			using (var store = NewRemoteDocumentStore())
