@@ -244,6 +244,7 @@
     <Compile Include="Issues\RavenDB_1555.cs" />
     <Compile Include="Issues\RavenDB_1562.cs" />
     <Compile Include="Issues\RavenDB_1600.cs" />
+    <Compile Include="Issues\RavenDB_1603.cs" />
     <Compile Include="Issues\ReplicationAlerts.cs" />
     <Compile Include="Issues\RavenDB_1594.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
