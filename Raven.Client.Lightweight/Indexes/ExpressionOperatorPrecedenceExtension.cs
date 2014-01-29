@@ -18,7 +18,7 @@ namespace Raven.Client.Indexes
 			if (outer == ExpressionOperatorPrecedence.ParenthesisNotNeeded || inner == ExpressionOperatorPrecedence.ParenthesisNotNeeded)
 				return false;
 
-			return outer > inner;
+			return outer >= inner;
 		}
 	}
 }

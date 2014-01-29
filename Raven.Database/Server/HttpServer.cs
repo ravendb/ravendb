@@ -49,7 +49,11 @@ namespace Raven.Database.Server
 	{
 		private readonly DateTime startUpTime = SystemTime.UtcNow;
 		private DateTime lastWriteRequest;
-		private const int MaxConcurrentRequests = 10 * 1024;
+		
+		// Important! this value is syncronized with the max sessions number in esent
+		// since we cannot have more reqquests in the system than we have sessions for them
+		// and we also need to allow sessions for background operations and for multi get requests
+		private const int MaxConcurrentRequests = 512;
 		public DocumentDatabase SystemDatabase { get; private set; }
 		public InMemoryRavenConfiguration SystemConfiguration { get; private set; }
 		readonly MixedModeRequestAuthorizer requestAuthorizer;
@@ -195,6 +199,7 @@ namespace Raven.Database.Server
 			if (@event.Database != SystemDatabase)
 				return; // we ignore anything that isn't from the root db
 
+			logger.Info("Shutting down database {0} because the tenant database has been updated or removed", @event.Name);
 			CleanupDatabase(@event.Name, skipIfActive: false);
 		}
 
@@ -275,7 +280,12 @@ namespace Raven.Database.Server
 
 		public void Dispose()
 		{
-			disposerLock.EnterWriteLock();
+			bool hasWriteLock = true;
+			if (disposerLock.TryEnterWriteLock(TimeSpan.FromMinutes(2)) == false)
+			{
+				hasWriteLock = false;
+				logger.Warn("After waiting for 2 minutes for disposer lock, giving up. Will do rude disposal");
+			}
 			try
 			{
 				TenantDatabaseModified.Occured -= TenantDatabaseRemoved;
@@ -318,6 +328,7 @@ namespace Raven.Database.Server
 
 									try
 									{
+										logger.Info("Delayed shut down database {0} because we are shutting down the server", task.Result.Name);
 										task.Result.Dispose();
 									}
 									catch (Exception e)
@@ -328,6 +339,7 @@ namespace Raven.Database.Server
 							}
 							else if (dbTask.Status == TaskStatus.RanToCompletion)
 							{
+								logger.Info("Shutting down database {0} because we are shutting down the server", dbTask.Result.Name); 
 								exceptionAggregator.Execute(dbTask.Result.Dispose);
 							}
 							// there is no else, the db is probably faulted
@@ -344,7 +356,8 @@ namespace Raven.Database.Server
 			}
 			finally
 			{
-				disposerLock.ExitWriteLock();
+				if (hasWriteLock)
+					disposerLock.ExitWriteLock();
 			}
 		}
 
@@ -466,14 +479,18 @@ namespace Raven.Database.Server
 
 			var databasesToCleanup = databaseLastRecentlyUsed
 				.Where(x => (SystemTime.UtcNow - x.Value) > maxTimeDatabaseCanBeIdle)
-				.Select(x => x.Key)
+				.Select(x => x)
 				.ToArray();
 
 			foreach (var db in databasesToCleanup)
 			{
+				logger.Info("Database {0}, had no incoming requests idle for {1}, trying to shut it down",
+					db.Key,
+					(SystemTime.UtcNow - db.Value));
+
 				// intentionally inside the loop, so we get better concurrency overall
 				// since shutting down a database can take a while
-				CleanupDatabase(db, skipIfActive: true);
+				CleanupDatabase(db.Key, skipIfActive: true);
 
 			}
 		}
@@ -504,9 +521,16 @@ namespace Raven.Database.Server
 				}
 
 				var database = databaseTask.Result;
+			    var isCurrentlyIndexing = database.IndexDefinitionStorage.IsCurrentlyIndexing();
+			    var lastWorkTime = database.WorkContext.LastWorkTime;
 				if (skipIfActive &&
-					(SystemTime.UtcNow - database.WorkContext.LastWorkTime).TotalMinutes < 10)
+					((SystemTime.UtcNow - lastWorkTime) < maxTimeDatabaseCanBeIdle || 
+					isCurrentlyIndexing))
 				{
+			        logger.Info(
+			            "Will not be shutting down database {0} because is is doing work, last work at {1}, indexing: {2}",
+			            lastWorkTime,
+			            isCurrentlyIndexing);
 					// this document might not be actively working with user, but it is actively doing indexes, we will 
 					// wait with unloading this database until it hasn't done indexing for a while.
 					// This prevent us from shutting down big databases that have been left alone to do indexing work.
@@ -514,6 +538,11 @@ namespace Raven.Database.Server
 				}
 				try
 				{
+					logger.Info("Shutting down database {0}. Last work time: {1}, skipIfActive: {2}", 
+						database.Name,
+						lastWorkTime,
+						skipIfActive
+						);
 					database.Dispose();
 				}
 				catch (Exception e)
@@ -625,7 +654,15 @@ namespace Raven.Database.Server
 		{
 			var isReadLockHeld = disposerLock.IsReadLockHeld;
 			if (isReadLockHeld == false)
-				disposerLock.EnterReadLock();
+			{
+				if (disposerLock.TryEnterReadLock(TimeSpan.FromSeconds(10)) == false)
+				{
+					ctx.SetStatusToNotAvailable();
+					ctx.FinalizeResponse();
+					logger.Warn("Could not enter disposer lock, probably disposing server, aborting request");
+					return;
+				}
+			}
 			try
 			{
 				if (disposed)
@@ -990,6 +1027,7 @@ namespace Raven.Database.Server
 				throw new InvalidOperationException("Database '" + tenantId + "' is currently locked and cannot be accessed");
 			try
 			{
+				logger.Info("Shutting down database {0} because we have been ordered to lock the db", tenantId);
 				CleanupDatabase(tenantId, false);
 				actionToTake();
 			}
@@ -1068,7 +1106,7 @@ namespace Raven.Database.Server
 					var numberOfAllowedDbs = int.Parse(maxDatabases);
 
 					int nextPageStart = 0;
-					var databases = SystemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, numberOfAllowedDbs, ref nextPageStart).ToList();
+					var databases = SystemDatabase.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, 0, numberOfAllowedDbs, CancellationToken.None, ref nextPageStart).ToList();
 					if (databases.Count >= numberOfAllowedDbs)
 						throw new InvalidOperationException(
 							"You have reached the maximum number of databases that you can have according to your license: " + numberOfAllowedDbs + Environment.NewLine +

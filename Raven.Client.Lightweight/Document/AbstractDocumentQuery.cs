@@ -264,12 +264,18 @@ namespace Raven.Client.Document
 		protected Action<QueryResult> afterQueryExecutedCallback;
 		protected Etag cutoffEtag;
 
+	    private int? _defaultTimeout;
+
 		private TimeSpan DefaultTimeout
 		{
 			get
 			{
 				if (Debugger.IsAttached) // increase timeout if we are debugging
 					return TimeSpan.FromMinutes(15);
+
+                if (_defaultTimeout.HasValue)
+                    return TimeSpan.FromSeconds(_defaultTimeout.Value);
+
 				return TimeSpan.FromSeconds(15);
 			}
 		}
@@ -318,6 +324,15 @@ namespace Raven.Client.Document
 
 			conventions = theSession == null ? new DocumentConvention() : theSession.Conventions;
 			linqPathProvider = new LinqPathProvider(conventions);
+
+#if !SILVERLIGHT
+		    var timeoutAsString = Environment.GetEnvironmentVariable(Constants.RavenDefaultQueryTimeout);
+		    int defaultTimeout;
+		    if (!string.IsNullOrEmpty(timeoutAsString) && int.TryParse(timeoutAsString, out defaultTimeout))
+		    {
+		        _defaultTimeout = defaultTimeout;
+		    }
+#endif
 
 			if(conventions.DefaultQueryingConsistency == ConsistencyOptions.AlwaysWaitForNonStaleResultsAsOfLastWrite)
 			{

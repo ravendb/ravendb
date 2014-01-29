@@ -25,7 +25,7 @@ namespace Raven.Database.Queries
 			documentDatabase = database;
 		}
 
-		public QueryResultWithIncludes ExecuteDynamicQuery(string entityName, IndexQuery query)
+		public QueryResultWithIncludes ExecuteDynamicQuery(string entityName, IndexQuery query, CancellationToken token)
 		{
 			// Create the map
 			var map = DynamicQueryMapping.Create(documentDatabase, query, entityName);
@@ -39,7 +39,7 @@ namespace Raven.Database.Queries
 			// We explicitly do NOT want to update the field names of FieldsToFetch - that reads directly from the document
 			//UpdateFieldsInArray(map, query.FieldsToFetch);
 			
-			return ExecuteActualQuery(query, map, touchTemporaryIndexResult, realQuery);
+			return ExecuteActualQuery(query, map, touchTemporaryIndexResult, realQuery, token);
 		}
 
 		private static void UpdateFieldNamesForSortedFields(IndexQuery query, DynamicQueryMapping map)
@@ -53,7 +53,7 @@ namespace Raven.Database.Queries
 			}
 		}
 
-		private QueryResultWithIncludes ExecuteActualQuery(IndexQuery query, DynamicQueryMapping map, Tuple<string, bool> touchTemporaryIndexResult, string realQuery)
+		private QueryResultWithIncludes ExecuteActualQuery(IndexQuery query, DynamicQueryMapping map, Tuple<string, bool> touchTemporaryIndexResult, string realQuery, CancellationToken token)
 		{
 			// Perform the query until we have some results at least
 			QueryResultWithIncludes result;
@@ -61,7 +61,7 @@ namespace Raven.Database.Queries
 			while (true)
 			{
 				var indexQuery = CreateIndexQuery(query, map, realQuery);
-				result = documentDatabase.Query(map.IndexName, indexQuery);
+				result = documentDatabase.Query(map.IndexName, indexQuery, token);
 
 				if (!touchTemporaryIndexResult.Item2 ||
 					!result.IsStale ||

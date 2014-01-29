@@ -146,7 +146,7 @@ namespace Raven.Client.Shard
 
 		public async Task<T> LoadAsync<TTransformer, T>(string id) where TTransformer : AbstractTransformerCreationTask, new()
 		{
-			var result = await LoadAsyncInternal<T>(new[] { id }, null, new TTransformer().TransformerName);
+            var result = await LoadAsyncInternal<T>(new[] { id }, null, new TTransformer().TransformerName).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
@@ -154,7 +154,7 @@ namespace Raven.Client.Shard
 		{
 			var ravenLoadConfiguration = new RavenLoadConfiguration();
 			configure(ravenLoadConfiguration);
-			var result = await LoadAsyncInternal<T>(new[] { id }, null, new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs);
+            var result = await LoadAsyncInternal<T>(new[] { id }, null, new TTransformer().TransformerName, ravenLoadConfiguration.QueryInputs).ConfigureAwait(false);
 			return result.FirstOrDefault();
 		}
 
@@ -197,11 +197,11 @@ namespace Raven.Client.Shard
 						multiLoadOperation.LogOperation();
 						using (multiLoadOperation.EnterMultiLoadContext())
 						{
-							multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths);
+                            multiLoadResult = await dbCmd.GetAsync(currentShardIds, includePaths).ConfigureAwait(false);
 						}
 					} while (multiLoadOperation.SetResult(multiLoadResult));
 					return multiLoadOperation;
-				});
+                }).ConfigureAwait(false);
 				foreach (var multiLoadOperation in multiLoadOperations)
 				{
 					var loadResults = multiLoadOperation.Complete<T>();
@@ -250,7 +250,7 @@ namespace Raven.Client.Shard
 							{
 								// Returns array of arrays, public APIs don't surface that yet though as we only support Transform
 								// With a single Id
-								var arrayOfArrays = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, queryInputs))
+                                var arrayOfArrays = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, queryInputs).ConfigureAwait(false))
 															.Results
 															.Select(x => x.Value<RavenJArray>("$values").Cast<RavenJObject>())
 															.Select(values =>
@@ -281,7 +281,7 @@ namespace Raven.Client.Shard
 						new ShardRequestData { EntityType = typeof(T), Keys = currentShardIds.ToList() },
 						async (dbCmd, i) =>
 						{
-							var items = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, queryInputs))
+                            var items = (await dbCmd.GetAsync(currentShardIds, includePaths, transformer, queryInputs).ConfigureAwait(false))
 								.Results
 								.SelectMany(x => x.Value<RavenJArray>("$values").ToArray())
 								.Select(JsonExtensions.ToJObject)
@@ -304,7 +304,7 @@ namespace Raven.Client.Shard
 							}
 
 							return items;
-						});
+                        }).ConfigureAwait(false);
 
 				foreach (var shardResult in shardResults)
 				{

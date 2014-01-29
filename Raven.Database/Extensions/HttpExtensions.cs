@@ -32,7 +32,7 @@ namespace Raven.Database.Extensions
 		static readonly Regex findCharset = new Regex(@"charset=([\w-]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
 		private static readonly string EmbeddedLastChangedDate =
-			File.GetLastWriteTime(typeof(HttpExtensions).Assembly.Location).Ticks.ToString("G");
+			File.GetLastWriteTime(AssemblyHelper.GetAssemblyLocationFor(typeof(HttpExtensions))).Ticks.ToString("G");
 
 		private static readonly Encoding defaultEncoding = new UTF8Encoding(false);
 

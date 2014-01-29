@@ -74,7 +74,7 @@ namespace Raven.Tests.Spatial
 					SpatialRelation = SpatialRelation.Within,
 					SpatialFieldName = Constants.DefaultSpatialFieldName,
 					SortedFields = new[] { new SortedField("__distance"), }
-				});
+				}, CancellationToken.None);
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);
@@ -122,7 +122,7 @@ namespace Raven.Tests.Spatial
 				{
 					Query = "Tag:[[Event]]",
 					SortedFields = new[] { new SortedField("__distance"), }
-				});
+				}, CancellationToken.None);
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);
@@ -178,7 +178,7 @@ namespace Raven.Tests.Spatial
 						new SortedField("__distance"), 
 						new SortedField("Venue"),
 					}
-				});
+				}, CancellationToken.None);
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);
@@ -241,7 +241,7 @@ namespace Raven.Tests.Spatial
 						new SortedField("Venue"),
 						new SortedField("__distance"), 
 					}
-				});
+				}, CancellationToken.None);
 				if (queryResult.IsStale)
 					Thread.Sleep(100);
 			} while (queryResult.IsStale);

@@ -15,6 +15,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Logging;
 using Raven.Database;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 
 namespace Raven.Bundles.Expiration
@@ -78,9 +79,10 @@ namespace Raven.Bundles.Expiration
 					const int pageSize = 1024;
 
 					QueryResultWithIncludes queryResult;
-
+					using(var cts = new CancellationTokenSource())
 					using (Database.DisableAllTriggersForCurrentThread())
 					{
+						cts.TimeoutAfter(TimeSpan.FromMinutes(5));
 						queryResult = Database.Query(RavenDocumentsByExpirationDate, new IndexQuery
 						{
 							Start = start,
@@ -88,7 +90,7 @@ namespace Raven.Bundles.Expiration
 							Cutoff = currentTime,
 							Query = query,
 							FieldsToFetch = new[] { "__document_id" }
-						});
+						}, cts.Token);
 					}
 
 					if(queryResult.Results.Count == 0)

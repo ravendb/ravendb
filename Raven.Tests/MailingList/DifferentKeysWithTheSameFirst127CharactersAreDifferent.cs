@@ -31,7 +31,7 @@ namespace Raven.Tests.Bugs
                         Name = "b"
                     });
 
-                    Assert.Throws<NotSupportedException>(() => session.SaveChanges());
+                    session.SaveChanges();
                 }
             }
         }

@@ -277,8 +277,8 @@ namespace Raven.Database.Data
 					Field = fieldName,
 					FieldType = sortOptions.Value
 				});
-				addField(fieldName);
 			}
+
 
 			return sortInfo.ToArray();
 		}

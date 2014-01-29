@@ -68,7 +68,8 @@ namespace Raven.Bundles.Replication.Responders
 				{
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
-						Source = src
+						Source = src,
+						ServerInstanceId = serverInstanceId
 					};
 				}
 				else

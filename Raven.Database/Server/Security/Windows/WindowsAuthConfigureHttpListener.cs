@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Raven.Database.Server.Security.Windows
 {
-	public class WindowsAuthConfigureHttpListener 
+	public class WindowsAuthConfigureHttpListener
 	{
 		public static Regex IsAdminRequest = new Regex(@"(^/admin)|(^/databases/[\w\.\-_]+/admin)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 

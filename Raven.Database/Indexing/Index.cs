@@ -21,6 +21,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
+using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
@@ -40,6 +41,7 @@ using Raven.Database.Util;
 using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
 using Document = Lucene.Net.Documents.Document;
+using Field = Lucene.Net.Documents.Field;
 using Task = System.Threading.Tasks.Task;
 using Version = Lucene.Net.Util.Version;
 
@@ -402,7 +404,8 @@ namespace Raven.Database.Indexing
 						{
 							if (locker.Obtain() == false)
 							{
-								throw new InvalidOperationException(string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
+			                    throw new InvalidOperationException(
+			                        string.Format("Could not obtain the 'writing-to-index' lock of '{0}' index",
 																				  indexId));
 							}
 
@@ -431,6 +434,10 @@ namespace Raven.Database.Indexing
 						locker.Release();
 					}
 				}
+			    catch (Exception e)
+			    {
+			        throw new InvalidOperationException("Could not properly write to index " + indexId, e);
+			    }
 				finally
 				{
 					currentlyIndexDocuments.Clear();
@@ -910,7 +917,7 @@ namespace Raven.Database.Indexing
 					RavenJObject[] termsDocs;
 					using (parent.GetSearcherAndTermsDocs(out indexSearcher, out termsDocs))
 					{
-						var luceneQuery = ApplyIndexTriggers(GetLuceneQuery());
+                        var luceneQuery = GetLuceneQuery();
 
 						TopDocs search = ExecuteQuery(indexSearcher, luceneQuery, indexQuery.Start, indexQuery.PageSize, indexQuery);
 						totalResults.Value = search.TotalHits;
@@ -929,7 +936,7 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			public IEnumerable<IndexQueryResult> Query()
+			public IEnumerable<IndexQueryResult> Query(CancellationToken token)
 			{
 			    if (parent.Priority.HasFlag(IndexingPriority.Error))
 			        throw new IndexDisabledException("The index has been disabled due to errors");
@@ -941,7 +948,7 @@ namespace Raven.Database.Indexing
 					IndexSearcher indexSearcher;
 					using (parent.GetSearcher(out indexSearcher))
 					{
-						var luceneQuery = ApplyIndexTriggers(GetLuceneQuery());
+						var luceneQuery = GetLuceneQuery();
 
 
 						int start = indexQuery.Start;
@@ -969,6 +976,7 @@ namespace Raven.Database.Indexing
 							int moreRequired = 0;
 							do
 							{
+								token.ThrowIfCancellationRequested(); 
 								search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
 
 								if (recorder != null)
@@ -1088,7 +1096,7 @@ namespace Raven.Database.Indexing
 				return luceneQuery;
 			}
 
-			public IEnumerable<IndexQueryResult> IntersectionQuery()
+			public IEnumerable<IndexQueryResult> IntersectionQuery(CancellationToken token)
 			{
 				using (IndexStorage.EnsureInvariantCulture())
 				{
@@ -1106,7 +1114,7 @@ namespace Raven.Database.Indexing
 						int intersectMatches = 0, skippedResultsInCurrentLoop = 0;
 						int previousBaseQueryMatches = 0, currentBaseQueryMatches = 0;
 
-						var firstSubLuceneQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[0], indexQuery));
+                        var firstSubLuceneQuery = GetLuceneQuery(subQueries[0], indexQuery);
 
 						//Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
 						var search = ExecuteQuery(indexSearcher, firstSubLuceneQuery, 0, pageSizeBestGuess, indexQuery);
@@ -1115,6 +1123,7 @@ namespace Raven.Database.Indexing
 
 						do
 						{
+							token.ThrowIfCancellationRequested();
 							if (skippedResultsInCurrentLoop > 0)
 							{
 								// We get here because out first attempt didn't get enough docs (after INTERSECTION was calculated)
@@ -1128,7 +1137,7 @@ namespace Raven.Database.Indexing
 
 							for (int i = 1; i < subQueries.Length; i++)
 							{
-								var luceneSubQuery = ApplyIndexTriggers(GetLuceneQuery(subQueries[i], indexQuery));
+								var luceneSubQuery = GetLuceneQuery(subQueries[i], indexQuery);
 								indexSearcher.Search(luceneSubQuery, null, intersectionCollector);
 							}
 
@@ -1253,7 +1262,7 @@ namespace Raven.Database.Indexing
 						DisposeAnalyzerAndFriends(toDispose, searchAnalyzer);
 					}
 				}
-				return luceneQuery;
+				return ApplyIndexTriggers(luceneQuery);
 			}
 
 			private static void DisposeAnalyzerAndFriends(List<Action> toDispose, RavenPerFieldAnalyzerWrapper analyzer)
@@ -1378,7 +1387,8 @@ namespace Raven.Database.Indexing
 
 						Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
 						var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
-						if (alreadyReturned.Add(indexQueryResult.Projection) == false)
+						if (indexQueryResult.Projection.Count > 0 && // we don't consider empty projections to be relevant for distinct operations
+                            alreadyReturned.Add(indexQueryResult.Projection) == false)
 						{
 							min++; // we found a duplicate
 							itemsSkipped++;
