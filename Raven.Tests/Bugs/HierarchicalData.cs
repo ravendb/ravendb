@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Threading;
+
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Embedded;
@@ -57,7 +59,7 @@ select new { comment.Text }"
 				queryResult = db.Query("test", new IndexQuery
 				{
 					Query = "Text:abc"
-				});
+                }, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			Assert.Equal(1, queryResult.Results.Count);

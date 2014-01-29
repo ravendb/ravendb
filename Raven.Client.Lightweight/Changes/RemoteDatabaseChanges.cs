@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using System.Security.Policy;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -104,7 +105,7 @@ namespace Raven.Client.Changes
 			IObservable<string> serverEvents = null;
 			try
 			{
-				serverEvents = await jsonRequestFactory.CreateHttpJsonRequest(requestParams).ServerPullAsync();
+                serverEvents = await jsonRequestFactory.CreateHttpJsonRequest(requestParams).ServerPullAsync().ConfigureAwait(false);
 			}
 			catch (Exception e)
 			{
@@ -128,8 +129,8 @@ namespace Raven.Client.Changes
 
 			if (retry)
 			{
-				await Time.Delay(TimeSpan.FromSeconds(15));
-				await EstablishConnection();
+                await Time.Delay(TimeSpan.FromSeconds(15)).ConfigureAwait(false);
+                await EstablishConnection().ConfigureAwait(false);
 				return;
 			}
 			if (disposed)
@@ -149,19 +150,19 @@ namespace Raven.Client.Changes
 #endif
 
 			if (watchAllDocs)
-				await Send("watch-docs", null);
+                await Send("watch-docs", null).ConfigureAwait(false);
 
 			if (watchAllIndexes)
-				await Send("watch-indexes", null);
+                await Send("watch-indexes", null).ConfigureAwait(false);
 
 			foreach (var watchedDoc in watchedDocs)
 			{
-				await Send("watch-doc", watchedDoc);
+                await Send("watch-doc", watchedDoc).ConfigureAwait(false);
 			}
 
 			foreach (var watchedPrefix in watchedPrefixes)
 			{
-				await Send("watch-prefix", watchedPrefix);
+                await Send("watch-prefix", watchedPrefix).ConfigureAwait(false);
 			}
 
 			foreach (var watchedCollection in watchedCollections)
@@ -176,12 +177,12 @@ namespace Raven.Client.Changes
 
 			foreach (var watchedIndex in watchedIndexes)
 			{
-				await Send("watch-indexes", watchedIndex);
+                await Send("watch-indexes", watchedIndex).ConfigureAwait(false);
 			}
 
 			foreach (var watchedBulkInsert in watchedBulkInserts)
 			{
-				await Send("watch-bulk-operation", watchedBulkInsert);
+                await Send("watch-bulk-operation", watchedBulkInsert).ConfigureAwait(false);
 			}
 
 		}
@@ -351,10 +352,12 @@ namespace Raven.Client.Changes
 
 			var counter = counters.GetOrAdd("bulk-operations/" + id, s =>
 			{
+                watchedBulkInserts.TryAdd(id);
 				var documentSubscriptionTask = AfterConnection(() =>
 				{
-					watchedBulkInserts.TryAdd(id);
-					return Send("watch-bulk-operation", id);
+                    if (watchedBulkInserts.Contains(id)) // might have been removed in the meantime
+                        return Send("watch-bulk-operation", id);
+                    return Task;
 				});
 
 				return new LocalConnectionState(
@@ -476,20 +479,21 @@ namespace Raven.Client.Changes
 		public IObservableWithTask<DocumentChangeNotification> ForDocumentsOfType(string typeName)
 		{
 			if (typeName == null) throw new ArgumentNullException("typeName");
+			var encodedTypeName = Uri.EscapeDataString(typeName);
 
 			var counter = counters.GetOrAdd("types/" + typeName, s =>
 			{
 				var documentSubscriptionTask = AfterConnection(() =>
 				{
 					watchedTypes.TryAdd(typeName);
-					return Send("watch-type", typeName);
+					return Send("watch-type", encodedTypeName);
 				});
 
 				return new LocalConnectionState(
 					() =>
 					{
 						watchedTypes.TryRemove(typeName);
-						Send("unwatch-type", typeName);
+						Send("unwatch-type", encodedTypeName);
 						counters.Remove("types/" + typeName);
 					},
 					documentSubscriptionTask);

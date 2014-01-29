@@ -337,7 +337,7 @@ namespace Raven.Tests.Document
 			{
 				s.Store(new
 				        	{
-				        		Language = "Fran�ais", //Note the �
+				        		Language = "Français", //Note the ç
 				        		Type = "Feats"
 				        	});
 				s.SaveChanges();
@@ -346,7 +346,7 @@ namespace Raven.Tests.Document
 			using (var s = documentStore.OpenSession())
 			{
 				var query = s.Advanced.LuceneQuery<object>("my_index")
-					.Where("Type:Feats AND Language:Fran�ais")
+					.Where("Type:Feats AND Language:Français")
 					.WaitForNonStaleResults();
 				query.ToArray();
 
@@ -368,7 +368,7 @@ namespace Raven.Tests.Document
 			{
 				s.Store(new
 				        	{
-				        		Language = "Fran�ais", //Note the �
+								Language = "Français", //Note the ç
 				        		Type = "Feats"
 				        	});
 				s.SaveChanges();
@@ -377,7 +377,7 @@ namespace Raven.Tests.Document
 			using (var s = documentStore.OpenSession())
 			{
 				var query = s.Advanced.LuceneQuery<RavenJObject>("my_index")
-					.Where("Type:Feats AND Language:Fran�ais")
+					.Where("Type:Feats AND Language:Français")
 					.SelectFields<RavenJObject>("Value")
 					.WaitForNonStaleResults();
 				var first = query.First();

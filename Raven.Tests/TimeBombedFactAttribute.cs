@@ -13,7 +13,7 @@ namespace Raven.Tests
 {
 	public class TimeBombedFactAttribute : FactAttribute
 	{
-		public TimeBombedFactAttribute(int year, int month, int day)
+		public TimeBombedFactAttribute(int year, int month, int day, string msg)
 		{
 			SkipUntil = new DateTime(year, month, day);
 		}

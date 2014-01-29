@@ -41,6 +41,8 @@ namespace Raven.Database.Config
 				new IntegerSetting(settings["Raven/MaxIndexWritesBeforeRecreate"], 256 * 1024);
 			MaxIndexOutputsPerDocument = 
 				new IntegerSetting(settings["Raven/MaxIndexOutputsPerDocument"], 15);
+			DisablePerformanceCounters =
+				new BooleanSetting(settings["Raven/DisablePerformanceCounters"], false);
 
 			MaxNumberOfItemsToIndexInSingleBatch =
 				new IntegerSettingWithMin(settings["Raven/MaxNumberOfItemsToIndexInSingleBatch"],
@@ -117,6 +119,8 @@ namespace Raven.Database.Config
 				                    TimeSpanArgumentType.FromParse);
             
 			TimeToWaitBeforeRunningIdleIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningIdleIndexes"], TimeSpan.FromMinutes(10), TimeSpanArgumentType.FromParse);
+            
+			DatbaseOperationTimeout = new TimeSpanSetting(settings["Raven/DatbaseOperationTimeout"], TimeSpan.FromMinutes(5), TimeSpanArgumentType.FromParse);
             
 			TimeToWaitBeforeMarkingAutoIndexAsIdle = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle"], TimeSpan.FromHours(1), TimeSpanArgumentType.FromParse);
 
@@ -254,5 +258,8 @@ namespace Raven.Database.Config
 		public IntegerSetting MaxIndexWritesBeforeRecreate { get; private set; }
 
 		public IntegerSetting MaxIndexOutputsPerDocument { get; private set; }
+    
+        public BooleanSetting DisablePerformanceCounters { get; set; }
+		public TimeSpanSetting DatbaseOperationTimeout { get; private set; }
 	}
 }

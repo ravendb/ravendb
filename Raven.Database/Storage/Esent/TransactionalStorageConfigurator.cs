@@ -14,7 +14,7 @@ namespace Raven.Storage.Esent
 {
 	public class TransactionalStorageConfigurator
 	{
-		public const int MaxSessions = 256;
+		public const int MaxSessions = 1024;
 
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly TransactionalStorage transactionalStorage;

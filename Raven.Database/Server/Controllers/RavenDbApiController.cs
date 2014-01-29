@@ -339,7 +339,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				SortOptions sort;
 				Enum.TryParse(GetHeader(header.Key), true, out sort);
-				result.Add(header.Key, sort);
+				result.Add(Uri.UnescapeDataString(header.Key), sort);
 			}
 
 			return result;

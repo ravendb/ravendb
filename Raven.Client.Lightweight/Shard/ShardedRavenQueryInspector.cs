@@ -66,7 +66,7 @@ namespace Raven.Client.Shard
 				IndexName = IndexQueried,
 				EntityType = typeof(T),
 				Query = indexQuery
-			}, (commands, i) => commands.GetFacetsAsync(IndexQueried, indexQuery, facets, start, pageSize));
+            }, (commands, i) => commands.GetFacetsAsync(IndexQueried, indexQuery, facets, start, pageSize)).ConfigureAwait(false);
 
 			return MergeFacets(results);
 		}
@@ -79,7 +79,7 @@ namespace Raven.Client.Shard
 				IndexName = IndexQueried,
 				EntityType = typeof(T),
 				Query = indexQuery
-			}, (commands, i) => commands.GetFacetsAsync(IndexQueried, indexQuery, facetSetupDoc, start, pageSize));
+            }, (commands, i) => commands.GetFacetsAsync(IndexQueried, indexQuery, facetSetupDoc, start, pageSize)).ConfigureAwait(false);
 
 			return MergeFacets(results);
 		}

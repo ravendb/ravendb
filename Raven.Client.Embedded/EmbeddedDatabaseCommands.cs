@@ -149,7 +149,7 @@ namespace Raven.Client.Embedded
 				nextPageStart = actualStart;
 			}
 
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart, pageSize, ref nextPageStart);
+			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart, pageSize, CancellationToken.None, ref nextPageStart);
 
 			if (pagingInformation != null)
 				pagingInformation.Fill(start, pageSize, nextPageStart);
@@ -523,11 +523,11 @@ namespace Raven.Client.Embedded
 				string entityName = null;
 				if (index.StartsWith("dynamic/"))
 					entityName = index.Substring("dynamic/".Length);
-				queryResult = database.ExecuteDynamicQuery(entityName, query.Clone());
+				queryResult = database.ExecuteDynamicQuery(entityName, query.Clone(), CancellationToken.None);
 			}
 			else
 			{
-				queryResult = database.Query(index, query.Clone());
+				queryResult = database.Query(index, query.Clone(),CancellationToken.None);
 			}
 			
 			var loadedIds = new HashSet<string>(
@@ -615,7 +615,6 @@ namespace Raven.Client.Embedded
 									op.Execute(items.Add);
 								}	
 							});
-							
 						}
 
 					    return 0;
@@ -662,6 +661,7 @@ namespace Raven.Client.Embedded
 						if (string.IsNullOrEmpty(startsWith))
 						{
 							database.GetDocuments(start, pageSize, fromEtag,
+								CancellationToken.None,
 							                      items.Add);
 						}
 						else
@@ -682,6 +682,7 @@ namespace Raven.Client.Embedded
                                 exclude,
 								actualStart,
 								pageSize,
+								CancellationToken.None,
 								ref nextPageStart,
 								items.Add);
 
@@ -810,7 +811,7 @@ namespace Raven.Client.Embedded
 			// As this is embedded we don't care for the metadata only value
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database
-				.GetDocuments(start, pageSize, null)
+				.GetDocuments(start, pageSize, null, CancellationToken.None)
 				.Cast<RavenJObject>()
 				.ToJsonDocuments()
 				.ToArray();
@@ -830,7 +831,7 @@ namespace Raven.Client.Embedded
             // As this is embedded we don't care for the metadata only value
             CurrentOperationContext.Headers.Value = OperationsHeaders;
             return database
-                .GetDocuments(0, pageSize, fromEtag)
+                .GetDocuments(0, pageSize, fromEtag, CancellationToken.None)
                 .Cast<RavenJObject>()
                 .ToJsonDocuments()
                 .ToArray();
@@ -953,7 +954,7 @@ namespace Raven.Client.Embedded
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
+			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation, CancellationToken.None, null);
 			var state = databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
 			return new Operation(0, state);
 		}
@@ -968,7 +969,7 @@ namespace Raven.Client.Embedded
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
+			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation, CancellationToken.None, null);
 			var state = databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
 			return new Operation(0, state);
 		}
@@ -993,7 +994,7 @@ namespace Raven.Client.Embedded
 		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
+			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation, CancellationToken.None, null);
 			var state = databaseBulkOperations.DeleteByIndex(indexName, queryToDelete, allowStale);
 			return new Operation(0, state);
 		}
@@ -1383,7 +1384,7 @@ namespace Raven.Client.Embedded
 				var conflictIds = conflictsDoc.Value<RavenJArray>("Conflicts").Select(x => x.Value<string>()).ToArray();
 
 				throw new ConflictException("Conflict detected on " + attachment.Key +
-											", conflict must be resolved before the attachement will be accessible", true)
+											", conflict must be resolved before the attachment will be accessible", true)
 				{
 					Etag = attachment.Etag,
 					ConflictedVersionIds = conflictIds

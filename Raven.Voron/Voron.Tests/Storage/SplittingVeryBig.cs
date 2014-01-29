@@ -30,13 +30,13 @@ namespace Voron.Tests.Storage
 
 			using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 			{
-				tx.GetTree("tree").Add(tx, "key1", new MemoryStream(buffer));
+				tx.Environment.State.GetTree(tx,"tree").Add(tx, "key1", new MemoryStream(buffer));
 				tx.Commit();
 			}
 
 			using (var tx = Env.NewTransaction(TransactionFlags.Read))
 			{
-			    var read = tx.GetTree("tree").Read(tx, "key1");
+			    var read = tx.Environment.State.GetTree(tx,"tree").Read(tx, "key1");
 			    Assert.NotNull(read);
 
 			    var reader = read.Reader;
@@ -67,7 +67,7 @@ namespace Voron.Tests.Storage
 
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					tx.GetTree("tree").Add(tx, "key1", new MemoryStream(buffer));
+					tx.Environment.State.GetTree(tx,"tree").Add(tx, "key1", new MemoryStream(buffer));
 					tx.Commit();
 				}
 			}
@@ -85,7 +85,7 @@ namespace Voron.Tests.Storage
 
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
-					var read = tx.GetTree("tree").Read(tx, "key1");
+					var read = tx.Environment.State.GetTree(tx,"tree").Read(tx, "key1");
 					Assert.NotNull(read);
 
 					{

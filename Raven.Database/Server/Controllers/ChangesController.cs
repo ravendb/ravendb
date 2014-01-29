@@ -24,7 +24,9 @@ namespace Raven.Database.Server.Controllers
 				}, HttpStatusCode.BadRequest);
 			}
 
-			var name = GetQueryStringValue("value");
+			
+			var name = (!String.IsNullOrEmpty(value)) ? Uri.UnescapeDataString(value) : String.Empty;
+
 			var connectionState = Database.TransportState.For(id, this);
 			var cmd = GetQueryStringValue("command");
 			if (Match(cmd, "disconnect"))

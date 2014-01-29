@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Performance.Comparison", "Performance.Comparison\Performance.Comparison.csproj", "{D36A1A7B-A5E9-4613-B91D-37943DC817DA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Voron", "..\Voron\Voron.csproj", "{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}"
@@ -13,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{74C9BC
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FreeDB.Playground", "FreeDB.Playground\FreeDB.Playground.csproj", "{ED517294-60D1-4BB8-B662-ACB1F55F0AC3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeSeries.Playground", "TimeSeries.Playground\TimeSeries.Playground.csproj", "{B9EDB7AC-5FDA-4B51-B2B3-DBDF3B259692}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -32,6 +36,10 @@ Global
 		{ED517294-60D1-4BB8-B662-ACB1F55F0AC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ED517294-60D1-4BB8-B662-ACB1F55F0AC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ED517294-60D1-4BB8-B662-ACB1F55F0AC3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9EDB7AC-5FDA-4B51-B2B3-DBDF3B259692}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9EDB7AC-5FDA-4B51-B2B3-DBDF3B259692}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9EDB7AC-5FDA-4B51-B2B3-DBDF3B259692}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9EDB7AC-5FDA-4B51-B2B3-DBDF3B259692}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

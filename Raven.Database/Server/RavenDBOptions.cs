@@ -16,16 +16,24 @@ namespace Raven.Database.Server
 		private readonly RequestManager requestManager;
 		private readonly Task<RavenFileSystem> fileSystem;
 
-		public RavenDBOptions(InMemoryRavenConfiguration configuration)
+		public RavenDBOptions(InMemoryRavenConfiguration configuration, DocumentDatabase db = null)
 		{
 			if (configuration == null)
 				throw new ArgumentNullException("configuration");
 
-			systemDatabase = new DocumentDatabase(configuration);
+			
 			try
 			{
 				HttpEndpointRegistration.RegisterHttpEndpointTarget();
-				systemDatabase.SpinBackgroundWorkers();
+				if (db == null)
+				{
+					systemDatabase = new DocumentDatabase(configuration);
+					systemDatabase.SpinBackgroundWorkers();
+				}
+				else
+				{
+					systemDatabase = db;
+				}
 				var transportState = systemDatabase.TransportState;
 				fileSystem = Task.Run(() => new RavenFileSystem(configuration, transportState));
 				databasesLandlord = new DatabasesLandlord(systemDatabase);
@@ -35,7 +43,8 @@ namespace Raven.Database.Server
 			}
 			catch
 			{
-				systemDatabase.Dispose();
+				if (systemDatabase != null)
+					systemDatabase.Dispose();
 				throw;
 			}
 		}

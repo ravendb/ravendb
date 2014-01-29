@@ -9,13 +9,6 @@ namespace Voron
 {
     public class StorageEnvironmentState
     {
-        private Dictionary<string, Tree> _trees = new Dictionary<string, Tree>(StringComparer.OrdinalIgnoreCase);
-
-		public Dictionary<string, Tree> Trees
-        {
-            get { return _trees; }
-        }
-
         public Tree Root { get; set; }
         public Tree FreeSpaceRoot { get; set; }
 
@@ -34,21 +27,10 @@ namespace Voron
         {
             return new StorageEnvironmentState()
                 {
-                    _trees = _trees.ToDictionary(x => x.Key, x => x.Value.Clone(), StringComparer.OrdinalIgnoreCase),
                     Root = Root != null ? Root.Clone() : null,
                     FreeSpaceRoot = FreeSpaceRoot != null ? FreeSpaceRoot.Clone() : null,
                     NextPageNumber = NextPageNumber
                 };
-        }
-
-        public void RemoveTree(string name)
-        {
-            _trees.Remove(name);
-        }
-
-        public void AddTree(string name, Tree tree)
-        {
-            _trees.Add(name, tree);
         }
     }
 }

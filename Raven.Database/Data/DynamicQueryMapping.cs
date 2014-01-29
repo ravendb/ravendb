@@ -267,12 +267,18 @@ namespace Raven.Database.Data
 				return new DynamicSortInfo[0];
 			foreach (var sortOptions in indexQuery.SortHints)
 			{
+				var key = sortOptions.Key;
+				var fieldName = 
+					key.EndsWith("_Range") ?
+						  key.Substring("SortHint-".Length, key.Length - "SortHint-".Length - "_Range".Length)
+						: key.Substring("SortHint-".Length);
 				sortInfo.Add(new DynamicSortInfo
 				{
-					Field = sortOptions.Key.Substring("SortHint-".Length),
+					Field = fieldName,
 					FieldType = sortOptions.Value
 				});
 			}
+
 
 			return sortInfo.ToArray();
 		}

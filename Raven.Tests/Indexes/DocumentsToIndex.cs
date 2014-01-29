@@ -68,7 +68,7 @@ namespace Raven.Tests.Indexes
 					Query = "some:val",
 					Start = 0,
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -99,7 +99,7 @@ namespace Raven.Tests.Indexes
 				{
 					Start = 0,
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -116,7 +116,7 @@ namespace Raven.Tests.Indexes
 				{
 					Start = 0,
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -149,7 +149,7 @@ select new{project_name = prj.name}
 					Query = "project_name:raven",
 					Start = 0,
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -183,7 +183,7 @@ select new{project_name = prj.name, project_num = prj.num}
 					Query = "+project_name:raven +project_num:6",
 					Start = 0,
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -225,7 +225,7 @@ select new{project_name = prj.name, project_num = prj.num}
 					Query = "some:val",
 					Start = 0,
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -267,7 +267,7 @@ select new{project_name = prj.name, project_num = prj.num}
 					Query = "other:var",
 					Start = 0,
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -299,7 +299,7 @@ select new{project_name = prj.name, project_num = prj.num}
 					Query = "other:var",
 					Start = 0,
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -335,7 +335,7 @@ select new{project_name = prj.name, project_num = prj.num}
 					Query = "other:var",
 					Start = 0,
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -368,7 +368,7 @@ select new{project_name = prj.name, project_num = prj.num}
 					Query = "Region:[[A]]",
 					Start = 0,
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);

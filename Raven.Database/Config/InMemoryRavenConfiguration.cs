@@ -12,6 +12,7 @@ using System.ComponentModel.Composition.Primitives;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Raven.Abstractions.Data;
@@ -21,6 +22,7 @@ using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Server;
+using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -99,6 +101,8 @@ namespace Raven.Database.Config
 			MaxIndexWritesBeforeRecreate = ravenSettings.MaxIndexWritesBeforeRecreate.Value;
 			MaxIndexOutputsPerDocument = ravenSettings.MaxIndexOutputsPerDocument.Value;
 
+			DisablePerformanceCounters = ravenSettings.DisablePerformanceCounters.Value;
+
 			MaxNumberOfItemsToIndexInSingleBatch = ravenSettings.MaxNumberOfItemsToIndexInSingleBatch.Value;
 
 			var initialNumberOfItemsToIndexInSingleBatch = Settings["Raven/InitialNumberOfItemsToIndexInSingleBatch"];
@@ -150,6 +154,8 @@ namespace Raven.Database.Config
 			}
 
 			CreateAutoIndexesForAdHocQueriesIfNeeded = ravenSettings.CreateAutoIndexesForAdHocQueriesIfNeeded.Value;
+
+			DatbaseOperationTimeout = ravenSettings.DatbaseOperationTimeout.Value;
 
 			TimeToWaitBeforeRunningIdleIndexes = ravenSettings.TimeToWaitBeforeRunningIdleIndexes.Value;
 			TimeToWaitBeforeMarkingAutoIndexAsIdle = ravenSettings.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value;
@@ -218,6 +224,18 @@ namespace Raven.Database.Config
 			PostInit();
 		}
 
+        /// <summary>
+        /// This limits the number of concurrent multi get requests,
+        /// Note that this plays with the max number of requests allowed as well as the max number
+        /// of sessions
+        /// </summary>
+        public SemaphoreSlim ConcurrentMultiGetRequests = new SemaphoreSlim(192);
+
+		/// <summary>
+		/// The time to wait before canceling a database operation such as load (many) or query
+		/// </summary>
+		public TimeSpan DatbaseOperationTimeout { get; private set; }
+
 		public TimeSpan TimeToWaitBeforeRunningIdleIndexes { get; private set; }
 
 		public TimeSpan TimeToWaitBeforeRunningAbandonedIndexes { get; private set; }
@@ -243,8 +261,6 @@ namespace Raven.Database.Config
 			Catalog.Catalogs.Clear();
 
 			Catalog.Catalogs.Add(new BundlesFilteredCatalog(catalog, bundles));
-
-			var exportedValues = Container.GetExportedValues<IStartupTask>().ToArray();
 		}
 
 		public List<string> ActiveBundles
@@ -587,7 +603,7 @@ namespace Raven.Database.Config
 		public string DataDirectory
 		{
 			get { return dataDirectory; }
-			set { dataDirectory = value == null ? null : value.ToFullPath(); }
+			set { dataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
 		}
 
 		/// <summary>
@@ -598,7 +614,7 @@ namespace Raven.Database.Config
 		public string FileSystemDataDirectory
 		{
 			get { return fileSystemDataDirectory; }
-			set { fileSystemDataDirectory = value == null ? null : value.ToFullPath(); }
+			set { fileSystemDataDirectory = value == null ? null : FilePathTools.MakeSureEndsWithSlash(value.ToFullPath()); }
 		}
 
 		/// <summary>
@@ -820,6 +836,11 @@ namespace Raven.Database.Config
 		/// Default value: 15. In order to disable this check set value to -1.
 		/// </summary>
 		public int MaxIndexOutputsPerDocument { get; set; }
+
+		/// <summary>
+		/// If True then no PerformanceCounters will be used. Default: false
+		/// </summary>
+		public bool DisablePerformanceCounters { get; set; }
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]

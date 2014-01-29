@@ -433,7 +433,7 @@ namespace Raven.Client.Connection.Async
 								Key = key,
 								Patches = patches,
 							}
-					});
+					}).ConfigureAwait(false);
 			if (!ignoreMissing && batchResults[0].PatchResult != null &&
 				batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
 				throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
@@ -456,7 +456,7 @@ namespace Raven.Client.Connection.Async
 								Patches = patches,
 								Etag = etag
 							}
-					});
+					}).ConfigureAwait(false);
 			return batchResults[0].AdditionalData;
 		}
 
@@ -479,7 +479,7 @@ namespace Raven.Client.Connection.Async
 								PatchesIfMissing = patchesToDefault,
 								Metadata = defaultMetadata
 							}
-					});
+					}).ConfigureAwait(false);
 			return batchResults[0].AdditionalData;
 		}
 
@@ -498,7 +498,7 @@ namespace Raven.Client.Connection.Async
 					Key = key,
 					Patch = patch,
 				}
-			});
+			}).ConfigureAwait(false);
 			if (!ignoreMissing && batchResults[0].PatchResult != null &&
 				batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
 				throw new DocumentDoesNotExistsException("Document with key " + key + " does not exist.");
@@ -521,7 +521,7 @@ namespace Raven.Client.Connection.Async
 					Patch = patch,
 					Etag = etag
 				}
-			});
+			}).ConfigureAwait(false);
 			return batchResults[0].AdditionalData;
 		}
 
@@ -544,7 +544,7 @@ namespace Raven.Client.Connection.Async
 					PatchIfMissing = patchDefault,
 					Metadata = defaultMetadata
 				}
-			});
+			}).ConfigureAwait(false);
 			return batchResults[0].AdditionalData;
 		}
 
@@ -736,7 +736,7 @@ namespace Raven.Client.Connection.Async
 
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
-			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/docs/" + Uri.EscapeDataString(key)), "GET", metadata, credentials, convention);
+			var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, (operationMetadata.Url + "/docs?id=" + Uri.EscapeDataString(key)), "GET", metadata, credentials, convention);
 			var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders))
 			                                .AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -1114,7 +1114,7 @@ namespace Raven.Client.Connection.Async
 																						 "GET", credentials, convention));
 			request.AddOperationHeaders(OperationsHeaders);
 
-			var result = await request.ReadResponseJsonAsync();
+            var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 			return convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(result));
 		}
 
@@ -1719,10 +1719,10 @@ namespace Raven.Client.Connection.Async
 
 			
 			request.RemoveAuthorizationHeader();
-			var token = await GetSingleAuthToken();
+            var token = await GetSingleAuthToken().ConfigureAwait(false);
 			try
 			{
-				token = await ValidateThatWeCanUseAuthenticateTokens(token);
+                token = await ValidateThatWeCanUseAuthenticateTokens(token).ConfigureAwait(false);
 			}
 			catch (Exception e)
 			{
@@ -1732,7 +1732,7 @@ namespace Raven.Client.Connection.Async
 			}
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
 
-			var response = await request.ExecuteRawResponseAsync();
+			var response = await request.ExecuteRawResponseAsync().ConfigureAwait(false);
 			queryHeaderInfo.Value = new QueryHeaderInformation
 			{
 				Index = response.Headers.GetFirstValue("Raven-Index"),
@@ -1774,14 +1774,13 @@ namespace Raven.Client.Connection.Async
 
             private async Task InitAsync()
             {
-                if (await reader.ReadAsync() == false || reader.TokenType != JsonToken.StartObject)
+                if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.StartObject)
                     throw new InvalidOperationException("Unexpected data at start of stream");
 
-                if (await reader.ReadAsync() == false || reader.TokenType != JsonToken.PropertyName ||
-                    Equals("Results", reader.Value) == false)
+                if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.PropertyName || Equals("Results", reader.Value) == false)
                     throw new InvalidOperationException("Unexpected data at stream 'Results' property name");
 
-                if (await reader.ReadAsync() == false || reader.TokenType != JsonToken.StartArray)
+                if (await reader.ReadAsync().ConfigureAwait(false) == false || reader.TokenType != JsonToken.StartArray)
                     throw new InvalidOperationException("Unexpected data at 'Results', could not find start results array");
             }
 
@@ -1807,7 +1806,7 @@ namespace Raven.Client.Connection.Async
                     wasInitialized = true;
                 }
 
-                if (await reader.ReadAsync() == false)
+                if (await reader.ReadAsync().ConfigureAwait(false) == false)
                     throw new InvalidOperationException("Unexpected end of data");
 
                 if (reader.TokenType == JsonToken.EndArray)
@@ -1819,7 +1818,7 @@ namespace Raven.Client.Connection.Async
                     return false;
                 }
 
-                Current = (RavenJObject)await RavenJToken.ReadFromAsync(reader);
+                Current = (RavenJObject)await RavenJToken.ReadFromAsync(reader).ConfigureAwait(false);
                 return true;
             }
 
@@ -1895,11 +1894,11 @@ namespace Raven.Client.Connection.Async
 
 			request.RemoveAuthorizationHeader();
 
-			var token = await GetSingleAuthToken();
+            var token = await GetSingleAuthToken().ConfigureAwait(false);
 
 			try
 			{
-				token = await ValidateThatWeCanUseAuthenticateTokens(token);
+                token = await ValidateThatWeCanUseAuthenticateTokens(token).ConfigureAwait(false);
 			}
 			catch (Exception e)
 			{
@@ -2200,7 +2199,7 @@ namespace Raven.Client.Connection.Async
 			if (metadata.Value<int>("@Http-Status-Code") == 409)
 			{
 				var etag = HttpExtensions.EtagHeaderToEtag(metadata.Value<string>("@etag"));
-				var e = await TryResolveConflictOrCreateConcurrencyException(operationMetadata, metadata.Value<string>("@id"), docResult, etag);
+                var e = await TryResolveConflictOrCreateConcurrencyException(operationMetadata, metadata.Value<string>("@id"), docResult, etag).ConfigureAwait(false);
 				if (e != null)
 					throw e;
 				return true;
@@ -2274,7 +2273,7 @@ namespace Raven.Client.Connection.Async
 			bool requiresRetry = false;
 			foreach (var docResult in docResults)
 			{
-				requiresRetry |= await AssertNonConflictedDocumentAndCheckIfNeedToReload(operationMetadata, docResult);
+                requiresRetry |= await AssertNonConflictedDocumentAndCheckIfNeedToReload(operationMetadata, docResult).ConfigureAwait(false);
 			}
 			if (!requiresRetry)
 				return currentResult;
@@ -2285,7 +2284,7 @@ namespace Raven.Client.Connection.Async
 			resolvingConflictRetries = true;
 			try
 			{
-				return await nextTry();
+                return await nextTry().ConfigureAwait(false);
 			}
 			finally
 			{
@@ -2336,7 +2335,7 @@ namespace Raven.Client.Connection.Async
 		{
 			var tokenRequest = CreateRequest("/singleAuthToken", "GET", disableRequestCompression: true);
 
-			var response = await tokenRequest.ReadResponseJsonAsync();
+            var response = await tokenRequest.ReadResponseJsonAsync().ConfigureAwait(false);
 			return response.Value<string>("Token");
 		}
 
@@ -2346,7 +2345,7 @@ namespace Raven.Client.Connection.Async
 
 			request.DisableAuthentication();
 			request.AddOperationHeader("Single-Use-Auth-Token", token);
-			var result = await request.ReadResponseJsonAsync();
+            var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 			return result.Value<string>("Token");
 		}
 
@@ -2366,7 +2365,7 @@ namespace Raven.Client.Connection.Async
 				throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
 
 			var dbname = databaseDocument.Id.Replace("Raven/Databases/", "");
-			MultiDatabase.AssertValidDatabaseName(dbname);
+            MultiDatabase.AssertValidName(dbname);
 			var doc = RavenJObject.FromObject(databaseDocument);
 			doc.Remove("Id");
 

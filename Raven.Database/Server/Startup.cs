@@ -7,9 +7,9 @@ namespace Raven.Database.Server
 	{
 		private readonly RavenDBOptions options;
 
-		public Startup(InMemoryRavenConfiguration config)
+		public Startup(InMemoryRavenConfiguration config, DocumentDatabase db = null)
 		{
-			options = new RavenDBOptions(config);
+			options = new RavenDBOptions(config, db);
 		}
 
 		//Would prefer not to expose this

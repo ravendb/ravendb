@@ -20,6 +20,8 @@ using Raven.Database.Indexing;
 
 namespace Raven.Database.Prefetching
 {
+	using Util;
+
 	public class PrefetchingBehavior : IDisposable
 	{
 		private static readonly ILog log = LogManager.GetCurrentClassLogger();
@@ -28,8 +30,8 @@ namespace Raven.Database.Prefetching
 		private readonly ConcurrentDictionary<string, HashSet<Etag>> documentsToRemove =
 			new ConcurrentDictionary<string, HashSet<Etag>>(StringComparer.InvariantCultureIgnoreCase);
 
-		private readonly ConcurrentDictionary<string, HashSet<Etag>> updatedDocuments =
-			new ConcurrentDictionary<string, HashSet<Etag>>(StringComparer.InvariantCultureIgnoreCase);
+		private readonly ReaderWriterLockSlim updatedDocumentsLock = new ReaderWriterLockSlim();
+		private readonly SortedKeyList<Etag> updatedDocuments = new SortedKeyList<Etag>();
 
 		private readonly ConcurrentDictionary<Etag, FutureIndexBatch> futureIndexBatches =
 			new ConcurrentDictionary<Etag, FutureIndexBatch>();
@@ -137,6 +139,10 @@ namespace Raven.Database.Prefetching
 				// and here we are single threaded, but still, better to check
 				if (prefetchingQueue.TryDequeue(out result) == false)
 					continue;
+
+                // this shouldn't happen, but... 
+                if(result == null)
+                    continue;
 
 				if (result.Etag != nextDocEtag)
 					continue;
@@ -369,28 +375,27 @@ namespace Raven.Database.Prefetching
 
 		public void CleanupDocuments(Etag lastIndexedEtag)
 		{
-			var highest = new ComparableByteArray(lastIndexedEtag);
-
 			foreach (var docToRemove in documentsToRemove)
 			{
-				if (docToRemove.Value.All(etag => highest.CompareTo(etag) > 0) == false)
+				if (docToRemove.Value.All(etag => lastIndexedEtag.CompareTo(etag) > 0) == false)
 					continue;
 
 				HashSet<Etag> _;
 				documentsToRemove.TryRemove(docToRemove.Key, out _);
 			}
 
-			foreach (var updatedDocs in updatedDocuments)
+			updatedDocumentsLock.EnterWriteLock();
+			try
 			{
-				if (updatedDocs.Value.All(etag => highest.CompareTo(etag) > 0) == false)
-					continue;
-
-				HashSet<Etag> _;
-				updatedDocuments.TryRemove(updatedDocs.Key, out _);
+				updatedDocuments.RemoveSmallerOrEqual(lastIndexedEtag);
+			}
+			finally
+			{
+				updatedDocumentsLock.ExitWriteLock();
 			}
 
 			JsonDocument result;
-			while (prefetchingQueue.TryPeek(out result) && highest.CompareTo(result.Etag) >= 0)
+			while (prefetchingQueue.TryPeek(out result) && lastIndexedEtag.CompareTo(result.Etag) >= 0)
 			{
 				prefetchingQueue.TryDequeue(out result);
 			}
@@ -410,8 +415,15 @@ namespace Raven.Database.Prefetching
 
 		public void AfterUpdate(string key, Etag etagBeforeUpdate)
 		{
-			updatedDocuments.AddOrUpdate(key, s => new HashSet<Etag> { etagBeforeUpdate },
-										  (s, set) => new HashSet<Etag>(set) { etagBeforeUpdate });
+			updatedDocumentsLock.EnterWriteLock();
+			try
+			{
+			    updatedDocuments.Add(etagBeforeUpdate);
+			}
+			finally
+			{
+				updatedDocumentsLock.ExitWriteLock();
+			}
 		}
 
 		public bool ShouldSkipDeleteFromIndex(JsonDocument item)
@@ -444,9 +456,20 @@ namespace Raven.Database.Prefetching
 
 		private Etag SkipUpdatedEtags(Etag nextEtag)
 		{
-			while (updatedDocuments.Any(x => x.Value.Contains(nextEtag)))
+			updatedDocumentsLock.EnterReadLock();
+			try
 			{
-				nextEtag = EtagUtil.Increment(nextEtag, 1);
+				var enumerator = updatedDocuments.GetEnumerator();
+
+				// here we relay on the fact that the updated docs collection is sorted
+				while (enumerator.MoveNext() && enumerator.Current.CompareTo(nextEtag) == 0)
+				{
+					nextEtag = EtagUtil.Increment(nextEtag, 1);
+				}
+			}
+			finally
+			{
+				updatedDocumentsLock.ExitReadLock();
 			}
 
 			return nextEtag;

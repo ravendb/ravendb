@@ -17,6 +17,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
+using Raven.Abstractions.Util;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
@@ -131,7 +132,7 @@ namespace Raven.Database.Server.Controllers
 		private Encoding GetRequestEncoding()
 		{
 			if (InnerRequest.Content.Headers.ContentType == null || string.IsNullOrWhiteSpace(InnerRequest.Content.Headers.ContentType.CharSet))
-				return Encoding.GetEncoding("ISO-8859-1");
+				return Encoding.GetEncoding(Constants.DefaultRequestEncoding);
 			return Encoding.GetEncoding(InnerRequest.Content.Headers.ContentType.CharSet);
 		}
 
@@ -176,13 +177,16 @@ namespace Raven.Database.Server.Controllers
 
 		public static string GetQueryStringValue(HttpRequestMessage req, string key)
 		{
-			return req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
+			var value = req.GetQueryNameValuePairs().Where(pair => pair.Key == key).Select(pair => pair.Value).FirstOrDefault();
+			if (value != null)
+				value = Uri.UnescapeDataString(value);
+			return value;
 		}
 
 		public string[] GetQueryStringValues(string key)
 		{
 			var items = InnerRequest.GetQueryNameValuePairs().Where(pair => pair.Key == key);
-			return items.Select(pair => pair.Value).ToArray();
+			return items.Select(pair => (pair.Value != null) ? Uri.UnescapeDataString(pair.Value) : null ).ToArray();
 		}
 
 		public Etag GetEtagFromQueryString()
@@ -348,7 +352,6 @@ namespace Raven.Database.Server.Controllers
 			return resMsg;
 		}
 
-		private static readonly Encoding DefaultEncoding = new UTF8Encoding(false);
 		public HttpResponseMessage WriteData(RavenJObject data, RavenJObject headers, Etag etag, HttpStatusCode status = HttpStatusCode.OK, HttpResponseMessage msg = null)
 		{
 			if (msg == null)
@@ -473,7 +476,7 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		private static readonly string EmbeddedLastChangedDate =
-			File.GetLastWriteTime(typeof(HttpExtensions).Assembly.Location).Ticks.ToString("G");
+            File.GetLastWriteTime(AssemblyHelper.GetAssemblyLocationFor(typeof(HttpExtensions))).Ticks.ToString("G");
 
 		private static string GetContentType(string docPath)
 		{

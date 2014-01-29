@@ -27,7 +27,7 @@ namespace Raven.Database.Bundles.SqlReplication
 		private readonly DbTransaction tx;
 		private readonly List<Func<DbParameter, String, Boolean>> stringParserList;
 
-		private static ILog log = LogManager.GetCurrentClassLogger();
+		private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
 		bool hadErrors;
 

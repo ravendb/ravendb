@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Security.Principal;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -36,12 +37,20 @@ namespace Raven.Database.Server.Responders.Admin
 				incrementalBackup = false;
 			if (backupRequest.DatabaseDocument == null && Database.Name != null)
 			{
+				if (Database.Name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
+				{
+					backupRequest.DatabaseDocument = new DatabaseDocument {Id = Constants.SystemDatabase};
+				}
+				else
+				{
 				var jsonDocument = SystemDatabase.Get("Raven/Databases/" + Database.Name, null);
 				if (jsonDocument != null)
 				{
 					backupRequest.DatabaseDocument = jsonDocument.DataAsJson.JsonDeserialization<DatabaseDocument>();
 					server.Unprotect(backupRequest.DatabaseDocument);
+						backupRequest.DatabaseDocument.Id = Database.Name;
 				}
+			}
 			}
 			Database.StartBackup(backupRequest.BackupLocation, incrementalBackup, backupRequest.DatabaseDocument);
 			context.SetStatusToCreated(BackupStatus.RavenBackupStatusDocumentKey);

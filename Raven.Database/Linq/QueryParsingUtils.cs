@@ -25,6 +25,7 @@ using Lucene.Net.Documents;
 using Microsoft.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.MEF;
+using Raven.Abstractions.Util;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Indexing;
@@ -411,22 +412,29 @@ namespace Raven.Database.Linq
 		                                        string basePath, string indexFilePath)
 		{
 			var provider = new CSharpCodeProvider(new Dictionary<string, string> {{"CompilerVersion", "v4.0"}});
+		    var currentAssembly = typeof(QueryParsingUtils).Assembly;
+
+		    var assembliesToLoad = new Dictionary<string, string>();
+
 			var assemblies = new HashSet<string>
 			{
-				typeof (SystemTime).Assembly.Location,
-				typeof (AbstractViewGenerator).Assembly.Location,
+                AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(SystemTime), currentAssembly),
+                AssemblyHelper.GetExtractedAssemblyLocationFor(typeof(Field), currentAssembly),
+                typeof (AbstractViewGenerator).Assembly.Location,
 				typeof (NameValueCollection).Assembly.Location,
 				typeof (Enumerable).Assembly.Location,
 				typeof (Binder).Assembly.Location,
-				typeof (Field).Assembly.Location,
 			};
-			foreach (var extension in extensions)
-			{
-				foreach (var assembly in extension.Value.GetAssembliesToReference())
-				{
-					assemblies.Add(assembly);
-				}
-			}
+
+			foreach (var assembly in extensions.SelectMany(extension => extension.Value.GetAssembliesToReference()))
+			    assemblies.Add(assembly);
+
+		    foreach (var assembly in assemblies)
+		    {
+		        var dll = Path.GetFileNameWithoutExtension(assembly);
+		        assembliesToLoad[dll] = assembly;
+		    }
+
 			var compilerParameters = new CompilerParameters
 			{
 				GenerateExecutable = false,
@@ -437,9 +445,9 @@ namespace Raven.Database.Linq
 			if (basePath != null)
 				compilerParameters.TempFiles = new TempFileCollection(basePath, false);
 
-			foreach (var assembly in assemblies)
+			foreach (var assembly in assembliesToLoad)
 			{
-				compilerParameters.ReferencedAssemblies.Add(assembly);
+				compilerParameters.ReferencedAssemblies.Add(assembly.Value);
 			}
 
 			CompilerResults compileAssemblyFromFile;

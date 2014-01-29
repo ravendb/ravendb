@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Principal;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
@@ -39,6 +40,9 @@ namespace Raven.Database.Server.Responders
 			// If admin, show all dbs
 
 			List<string> approvedDatabases = null;
+			var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, context.GetStart(),
+																		context.GetPageSize(Database.Configuration.MaxPageSize),
+																		CancellationToken.None);
 		    var start = context.GetStart();
             var nextPageStart = start; // will trigger rapid pagination
 			var databases = Database.GetDocumentsWithIdStartingWith("Raven/Databases/", null, null, start,
