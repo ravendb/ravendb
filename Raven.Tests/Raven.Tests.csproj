@@ -302,7 +302,6 @@
     <Compile Include="Issues\ReplicationAlerts.cs" />
     <Compile Include="Issues\RavenDB_1539.cs" />
     <Compile Include="Issues\RavenDB_1557.cs" />
-    <Compile Include="Issues\RavenDB_1594.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\In.cs" />
