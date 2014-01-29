@@ -318,34 +318,6 @@
 			};
 		}
 
-		public AddDocumentResult PutDocumentMetadata(string key, RavenJObject metadata)
-		{
-			if (string.IsNullOrEmpty(key))
-				throw new ArgumentNullException("key");
-
-			var lowerKey = CreateKey(key);
-			if (!metadataIndex.Contains(Snapshot, lowerKey, writeBatch))
-			{
-				throw new InvalidOperationException("Updating document metadata is only valid for existing documents, but " + key +
-																	" does not exists");
-			}
-
-			var newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
-
-			var savedAt = SystemTime.UtcNow;
-
-			var isUpdated = PutDocumentMetadataInternal(key, metadata, newEtag, savedAt);
-
-			logger.Debug("PutDocumentMetadata() - {0} document metadata with dataKey = '{1}'", isUpdated ? "Updated" : "Added", key);
-
-			return new AddDocumentResult
-			{
-				SavedAt = savedAt,
-				Etag = newEtag,
-				Updated = isUpdated
-			};
-		}
-
 		private bool PutDocumentMetadataInternal(string key, RavenJObject metadata, Etag newEtag, DateTime savedAt)
 		{
 			return WriteDocumentMetadata(new JsonDocumentMetadata
