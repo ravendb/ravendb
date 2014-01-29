@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using Lucene.Net.Documents;
@@ -25,6 +26,7 @@ namespace Raven.Database.Queries
 
         public FacetResults GetFacets(string index, IndexQuery indexQuery, List<Facet> facets, int start = 0, int? pageSize = null)
         {
+            var sp = Stopwatch.StartNew();
             var results = new FacetResults();
             var defaultFacets = new Dictionary<string, Facet>();
             var rangeFacets = new Dictionary<string, List<ParsedRange>>();
@@ -71,7 +73,7 @@ namespace Raven.Database.Queries
 
             var queryForFacets = new QueryForFacets(database, index, defaultFacets, rangeFacets, indexQuery, results, start, pageSize);
             queryForFacets.Execute();
-
+            results.Duration = sp.Elapsed;
             return results;
         }
 
