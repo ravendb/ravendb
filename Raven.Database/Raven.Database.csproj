@@ -231,6 +231,10 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Backup\ProgressNotifier.cs" />
+    <Compile Include="Bundles\Replication\Plugins\LocalAttachmentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\Replication\Plugins\RemoteAttachmentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\Replication\Plugins\RemoteDocumentReplicationConflictResolver.cs" />
+    <Compile Include="Bundles\Replication\Plugins\LocalDocumentReplicationConflictResolver.cs" />
     <Compile Include="Server\AppBuilderExtensions.cs" />
     <Compile Include="Backup\DirectoryBackup.cs" />
     <Compile Include="Bundles\PeriodicBackups\PeriodicBackupTask.cs" />

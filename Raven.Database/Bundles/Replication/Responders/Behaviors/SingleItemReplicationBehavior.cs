@@ -87,9 +87,11 @@ namespace Raven.Bundles.Replication.Responders
 				return;
 			}
 
-			if (TryResolveConflict(id, metadata, incoming, existingItem))
+			RavenJObject resolvedMetadataToSave;
+			TExternal resolvedItemToSave;
+			if (TryResolveConflict(id, metadata, incoming, existingItem, out resolvedMetadataToSave, out resolvedItemToSave))
 			{
-				AddWithoutConflict(id, existingEtag, metadata, incoming);
+				AddWithoutConflict(id, existingEtag, resolvedMetadataToSave, resolvedItemToSave);
 				return;
 			}
 
@@ -235,7 +237,8 @@ namespace Raven.Bundles.Replication.Responders
 			out bool deleted);
 
 		protected abstract bool TryResolveConflict(string id, RavenJObject metadata, TExternal document,
-			TInternal existing);
+			TInternal existing, out RavenJObject resolvedMetadataToSave,
+										out TExternal resolvedItemToSave);
 
 
 		private static string HashReplicationIdentifier(RavenJObject metadata)

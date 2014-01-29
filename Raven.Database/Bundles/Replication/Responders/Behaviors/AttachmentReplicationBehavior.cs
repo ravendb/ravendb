@@ -119,10 +119,20 @@ namespace Raven.Bundles.Replication.Responders
 
 		}
 
-		protected override bool TryResolveConflict(string id, RavenJObject metadata, byte[] data, Attachment existing)
+		protected override bool TryResolveConflict(string id, RavenJObject metadata, byte[] data, Attachment existing, out RavenJObject metadataToSave,
+										out byte[] dataToSave)
 		{
-			return ReplicationConflictResolvers.Any(replicationConflictResolver =>
-			                                        replicationConflictResolver.TryResolve(id, metadata, data, existing, Actions.Attachments.GetAttachment));
+			foreach (var replicationConflictResolver in ReplicationConflictResolvers)
+			{
+				if (replicationConflictResolver.TryResolve(id, metadata, data, existing, Actions.Attachments.GetAttachment,
+				                                           out metadataToSave, out dataToSave))
+					return true;
+			}
+
+			metadataToSave = null;
+			dataToSave = null;
+
+			return false;
 		}
 	}
 }
