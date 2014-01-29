@@ -9,6 +9,8 @@ using Voron.Impl.Journal;
 
 namespace Voron.Util
 {
+	using System.Diagnostics;
+
 	/// <summary>
 	/// This class assumes a single writer and many readers
 	/// </summary>
@@ -36,7 +38,6 @@ namespace Voron.Util
 		public void SetItems(Transaction tx, Dictionary<long, JournalFile.PagePosition> items)
 		{
 			UpdateMaxSeenTxId(tx);
-			var oldestTransaction = tx.Environment.OldestTransaction;
 			foreach (var item in items)
 			{
 				var copy = item;
@@ -48,7 +49,7 @@ namespace Voron.Util
 				{
 					Transaction = tx.Id,
 					Value = copy.Value
-				}).RemoveWhile(value => value.Transaction < oldestTransaction));
+				}));
 			}
 		}
 
@@ -62,22 +63,20 @@ namespace Voron.Util
 			_maxSeenTransaction = tx.Id;
 		}
 
-		public void Remove(Transaction tx, IEnumerable<long> pages)
+		public void Remove(IEnumerable<long> pages, long lastSyncedTransactionId)
 		{
-			UpdateMaxSeenTxId(tx);
-			var deleteMarker = new PageValue {Transaction = tx.Id};
-			var oldestTransaction = tx.Environment.OldestTransaction;
 			foreach (var page in pages)
 			{
 				ImmutableAppendOnlyList<PageValue> list;
 				if (_values.TryGetValue(page, out list) == false)
 					continue;
 
-				var newList = list
-					.RemoveWhile(value => value.Transaction < oldestTransaction)
-					.Append(deleteMarker);
+				var newList = list.RemoveWhile(value => value.Transaction <= lastSyncedTransactionId);
 
-				_values.AddOrUpdate(page, newList, (l, values) => newList);
+				if (newList.Count != 0)
+					_values.AddOrUpdate(page, newList, (l, values) => newList);
+				else
+					_values.TryRemove(page, out list);
 			}
 		}
 
@@ -95,8 +94,10 @@ namespace Voron.Util
 
 				if (it.Transaction > tx.Id)
 					continue;
+
 				value = it.Value;
-				return it.Value != null;
+				Debug.Assert(value != null);
+				return true;
 			}
 
 			// all the current values are _after_ this transaction started, so it sees nothing
@@ -116,7 +117,7 @@ namespace Voron.Util
 			return _values.Where(x =>
 			{
 				var val = x.Value[x.Value.Count - 1];
-				return val.Value != null && val.Value.TransactionId < oldestActiveTransaction;
+				return val.Value.TransactionId < oldestActiveTransaction;
 			}).Select(x => new KeyValuePair<long, JournalFile.PagePosition>(x.Key, x.Value[x.Value.Count - 1].Value))
 				.ToList();
 
@@ -150,8 +151,8 @@ namespace Voron.Util
 					var val = value.Value[i];
 					if (val.Transaction > latestTxId)
 						continue;
-					if (val.Value != null)
-						yield return new KeyValuePair<long, JournalFile.PagePosition>(value.Key, val.Value);
+
+					yield return new KeyValuePair<long, JournalFile.PagePosition>(value.Key, val.Value);
 					break;
 				}
 			}

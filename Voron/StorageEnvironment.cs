@@ -23,15 +23,16 @@ namespace Voron
     {
         private readonly StorageEnvironmentOptions _options;
 
-        private readonly ConcurrentDictionary<long, Transaction> _activeTransactions =
-            new ConcurrentDictionary<long, Transaction>();
+        private readonly ConcurrentSet<Transaction> _activeTransactions = new ConcurrentSet<Transaction>();
 
         private readonly IVirtualPager _dataPager;
         internal readonly SliceComparer _sliceComparer;
 
         private readonly WriteAheadJournal _journal;
         private readonly SemaphoreSlim _txWriter = new SemaphoreSlim(1);
-        private readonly AsyncManualResetEvent _flushWriter = new AsyncManualResetEvent();
+		private readonly ManualResetEventSlim _flushWriter = new ManualResetEventSlim();
+
+        private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
 
         private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -174,12 +175,10 @@ namespace Voron
 
         public long OldestTransaction
         {
-            get { return _activeTransactions.Keys.OrderBy(x => x).FirstOrDefault(); }
-        }
-
-        public IEnumerable<Tree> Trees
-        {
-            get { return State.Trees.Select(x => x.Value); }
+            get
+            {
+                return Math.Min(_activeTransactions.OrderBy(x => x.Id).Select(x => x.Id).FirstOrDefault(), _transactionsCounter);
+            }
         }
 
         public long NextPageNumber
@@ -233,9 +232,9 @@ namespace Voron
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot create a new newRootTree with a read only transaction");
 
-            Tree tree;
-            if (tx.State.Trees.TryGetValue(name, out tree) == false)
-                return;
+	        Tree tree = tx.ReadTree(name);
+	        if (tree == null)
+	            return;
 
             foreach (var page in tree.AllPages(tx))
             {
@@ -244,7 +243,7 @@ namespace Voron
 
             tx.State.Root.Delete(tx, name);
 
-            tx.DeletedTree(name);
+            tx.RemoveTree(name);
         }
 
         public unsafe Tree CreateTree(Transaction tx, string name)
@@ -252,8 +251,8 @@ namespace Voron
             if (tx.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot create a new tree with a read only transaction");
 
-            Tree tree;
-            if (tx.State.Trees.TryGetValue(name, out tree))
+            Tree tree = tx.ReadTree(name);
+            if (tree != null)
                 return tree;
 
             Slice key = name;
@@ -264,7 +263,7 @@ namespace Voron
             {
                 tree = Tree.Open(tx, _sliceComparer, header);
                 tree.Name = name;
-                tx.State.AddTree(name, tree);
+                tx.AddTree(name, tree);
                 return tree;
             }
 
@@ -274,7 +273,7 @@ namespace Voron
 
             tree.State.CopyTo((TreeRootHeader*)space);
             tree.State.IsModified = true;
-            tx.State.AddTree(name, tree);
+            tx.AddTree(name, tree);
 
 			if(IsDebugRecording)
 				DebugJournal.RecordAction(DebugActionType.CreateTree, Slice.Empty,name,Stream.Null);
@@ -304,8 +303,10 @@ namespace Voron
                             {
                                 _flushingTask.Wait();
                             }
-                            catch (TaskCanceledException)
+                            catch (AggregateException ae)
                             {
+	                            if (ae.InnerException is OperationCanceledException == false)
+		                            throw ae.InnerException;
                             }
                             break;
                     }
@@ -345,11 +346,9 @@ namespace Voron
             bool txLockTaken = false;
             try
             {
-                long txId = _transactionsCounter;
                 if (flags == (TransactionFlags.ReadWrite))
                 {
                     _txWriter.Wait();
-                    txId = _transactionsCounter + 1;
                     txLockTaken = true;
 
 					if (_endOfDiskSpace != null)
@@ -361,10 +360,24 @@ namespace Voron
 							_flushingTask = FlushWritesToDataFileAsync();
 							_endOfDiskSpace = null;
 						}
+                    }
                 }
+
+                long txId;
+                Transaction tx;
+
+                _txCommit.EnterReadLock();
+                try
+                {
+                    txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
+                    tx = new Transaction(this, txId, flags, _freeSpaceHandling);
                 }
-                var tx = new Transaction(this, txId, flags, _freeSpaceHandling);
-                _activeTransactions.TryAdd(txId, tx);
+                finally
+                {
+                    _txCommit.ExitReadLock();
+                }
+
+                _activeTransactions.Add(tx);
                 var state = _dataPager.TransactionBegan();
                 tx.AddPagerState(state);
 
@@ -383,32 +396,40 @@ namespace Voron
             }
         }
 
-        private void TransactionAfterCommit(long txId)
+        private void TransactionAfterCommit(Transaction tx)
         {
-            Transaction tx;
-	        if (_activeTransactions.TryGetValue(txId, out tx) == false)
+            if (_activeTransactions.Contains(tx) == false)
 		        return;
-	        if (tx.FlushedToJournal)
-		        return;
+	        
+            _txCommit.EnterWriteLock();
+            try
+            {
+                if (tx.Committed && tx.FlushedToJournal)
+                    _transactionsCounter = tx.Id;
 
-	        Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, tx.GetTransactionPages().Count);
+                State = tx.State;
+            }
+            finally
+            {
+                _txCommit.ExitWriteLock();
+            }
+
+            if (tx.FlushedToJournal == false)
+                return;
+
+            Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, tx.GetTransactionPages().Count);
 			_flushWriter.Set();
         }
 
-        internal void TransactionCompleted(long txId)
+        internal void TransactionCompleted(Transaction tx)
         {
-            Transaction tx;
-            if (_activeTransactions.TryRemove(txId, out tx) == false)
+            if (_activeTransactions.TryRemove(tx) == false)
                 return;
 
             if (tx.Flags != (TransactionFlags.ReadWrite))
                 return;
-            if (tx.Committed && tx.FlushedToJournal)
-            {
-                _transactionsCounter = txId;
-            }
+            
             _txWriter.Release();
-
         }
 
         public Dictionary<string, List<long>> AllPages(Transaction tx)
@@ -420,9 +441,9 @@ namespace Voron
 					{"Free Pages", _freeSpaceHandling.AllPages(tx)}
 				};
 
-            foreach (var tree in State.Trees)
+            foreach (var tree in tx.Trees)
             {
-                results.Add(tree.Key, tree.Value.AllPages(tx));
+                results.Add(tree.Name, tree.AllPages(tx));
             }
 
             return results;
@@ -439,49 +460,47 @@ namespace Voron
                 };
         }
 
-        public void SetStateAfterTransactionCommit(StorageEnvironmentState state)
+        private Task FlushWritesToDataFileAsync()
         {
-            State = state;
-        }
+	        return Task.Factory.StartNew(() =>
+		        {
+			        while (_cancellationTokenSource.IsCancellationRequested == false)
+			        {
+				        _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-        private async Task FlushWritesToDataFileAsync()
-        {
-            while (_cancellationTokenSource.IsCancellationRequested == false)
-            {
-                _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+				        var hasWrites = _flushWriter.Wait(_options.IdleFlushTimeout);
 
-                var hasWrites = await _flushWriter.WaitAsync(_options.IdleFlushTimeout);
+				        _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+				        if (hasWrites)
+					        _flushWriter.Reset();
 
-                if (hasWrites)
-                    _flushWriter.Reset();
+				        var sizeOfUnflushedTransactionsInJournalFile =
+					        Thread.VolatileRead(ref _sizeOfUnflushedTransactionsInJournalFile);
+				        if (sizeOfUnflushedTransactionsInJournalFile == 0)
+					        continue;
 
-	            var sizeOfUnflushedTransactionsInJournalFile = Thread.VolatileRead(ref _sizeOfUnflushedTransactionsInJournalFile);
-                if (sizeOfUnflushedTransactionsInJournalFile == 0)
-                    continue;
+				        if (hasWrites == false ||
+				            sizeOfUnflushedTransactionsInJournalFile >= _options.MaxNumberOfPagesInJournalBeforeFlush)
+				        {
+					        Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, -sizeOfUnflushedTransactionsInJournalFile);
 
-                if (hasWrites == false ||
-                    sizeOfUnflushedTransactionsInJournalFile >= _options.MaxNumberOfPagesInJournalBeforeFlush)
-                {
-	                Interlocked.Add(ref _sizeOfUnflushedTransactionsInJournalFile, -sizeOfUnflushedTransactionsInJournalFile);
+					        // we either reached our the max size we allow in the journal file before flush flushing (and therefor require a flush)
+					        // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
+					        // while there isn't any other activity going on.
 
-                    // we either reached our the max size we allow in the journal file before flush flushing (and therefor require a flush)
-                    // we didn't have a write in the idle timeout (default: 5 seconds), this is probably a good time to try and do a proper flush
-                    // while there isn't any other activity going on.
-
-                    using (var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction))
-                        journalApplicator.ApplyLogsToDataFile();
-                }
-            }
+					        _journal.Applicator.ApplyLogsToDataFile(OldestTransaction);
+				        }
+			        }
+		        }, TaskCreationOptions.LongRunning);
         }
 
         public void FlushLogToDataFile(Transaction tx = null)
         {
             if (_options.ManualFlushing == false)
                 throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
-            using (var journalApplicator = new WriteAheadJournal.JournalApplicator(_journal, OldestTransaction))
-                journalApplicator.ApplyLogsToDataFile(tx);
+
+           _journal.Applicator.ApplyLogsToDataFile(OldestTransaction, tx);
         }
 
         public void AssertFlushingNotFailed()

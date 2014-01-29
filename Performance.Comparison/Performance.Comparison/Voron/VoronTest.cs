@@ -69,24 +69,24 @@ namespace Performance.Comparison.Voron
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x);
 
             return Read(string.Format("[Voron] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
         public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x);
 
             return ReadParallel(string.Format("[Voron] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker, numberOfThreads);
         }
 
-        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker)
+        public override PerformanceRecord ReadRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker)
         {
             return Read(string.Format("[Voron] random read ({0} items)", Constants.ReadItems), randomIds, perfTracker);
         }
 
-        public override PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads)
+        public override PerformanceRecord ReadParallelRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker, int numberOfThreads)
         {
             return ReadParallel(string.Format("[Voron] parallel random read ({0} items)", Constants.ReadItems), randomIds, perfTracker, numberOfThreads);
         }
@@ -96,7 +96,6 @@ namespace Performance.Comparison.Voron
             NewStorage();
 
 	        var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(dataPath);
-	        storageEnvironmentOptions.ManualFlushing = true;
 	        using (var env = new StorageEnvironment(storageEnvironmentOptions))
             {
                 var enumerator = data.GetEnumerator();
@@ -135,6 +134,7 @@ namespace Performance.Comparison.Voron
             for (var b = 0; b < numberOfBatches; b++)
             {
                 sw.Restart();
+                long v = 0;
                 using (var batch = new WriteBatch())
                 {
                     for (var i = 0; i < itemsPerBatch; i++)
@@ -142,7 +142,7 @@ namespace Performance.Comparison.Voron
                         enumerator.MoveNext();
 
                         valueToWrite = GetValueToWrite(valueToWrite, enumerator.Current.ValueSize);
-
+                        v += valueToWrite.Length;
                         batch.Add(enumerator.Current.Id.ToString("0000000000000000"), new MemoryStream(valueToWrite), "Root");
                     }
 
@@ -154,6 +154,7 @@ namespace Performance.Comparison.Voron
 
                 records.Add(new PerformanceRecord
                 {
+                    Bytes = v,
                     Operation = operation,
                     Time = DateTime.Now,
                     Duration = sw.ElapsedMilliseconds,
@@ -207,7 +208,7 @@ namespace Performance.Comparison.Voron
             return records;
         }
 
-        private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
+        private PerformanceRecord Read(string operation, IEnumerable<uint> ids, PerfTracker perfTracker)
         {
             var options = StorageEnvironmentOptions.ForPath(dataPath);
             options.ManualFlushing = true;
@@ -218,12 +219,13 @@ namespace Performance.Comparison.Voron
 
                 var sw = Stopwatch.StartNew();
 
-                ReadInternal(ids, perfTracker, env);
+                var v = ReadInternal(ids, perfTracker, env);
 
                 sw.Stop();
 
                 return new PerformanceRecord
                 {
+                    Bytes = v,
                     Operation = operation,
                     Time = DateTime.Now,
                     Duration = sw.ElapsedMilliseconds,
@@ -232,7 +234,7 @@ namespace Performance.Comparison.Voron
             }
         }
 
-        private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker, int numberOfThreads)
+        private PerformanceRecord ReadParallel(string operation, IEnumerable<uint> ids, PerfTracker perfTracker, int numberOfThreads)
         {
             var options = StorageEnvironmentOptions.ForPath(dataPath);
             options.ManualFlushing = true;
@@ -245,24 +247,27 @@ namespace Performance.Comparison.Voron
             }
         }
 
-        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, StorageEnvironment env)
+        private static long ReadInternal(IEnumerable<uint> ids, PerfTracker perfTracker, StorageEnvironment env)
         {
             var ms = new byte[4096];
 
             using (var tx = env.NewTransaction(TransactionFlags.Read))
             {
                 var sw = Stopwatch.StartNew();
+                long v = 0;
                 foreach (var id in ids)
                 {
                     var key = id.ToString("0000000000000000");
                     var readResult = tx.State.Root.Read(tx, key);
-                    while (readResult.Reader.Read(ms, 0, ms.Length) > 0)
+                    int reads = 0;
+                    while ((reads = readResult.Reader.Read(ms, 0, ms.Length)) > 0)
                     {
-					    	
-	                }
+                        v += reads;
+                    }
 	             
                 }
                 perfTracker.Record(sw.ElapsedMilliseconds);
+                return v;
             }
         }
     }

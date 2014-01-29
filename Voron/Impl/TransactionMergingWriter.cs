@@ -18,10 +18,10 @@ namespace Voron.Impl
     {
         private readonly StorageEnvironment _env;
 
-        private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites;
+        private readonly ConcurrentQueue<OutstandingWrite> _pendingWrites = new ConcurrentQueue<OutstandingWrite>();
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-        private readonly ManualResetEventSlim _hasWritesEvent = new ManualResetEventSlim();
         private readonly ManualResetEventSlim _stopWrites = new ManualResetEventSlim();
+        private readonly ManualResetEventSlim _hasWrites = new ManualResetEventSlim();
         private readonly DebugJournal _debugJournal;
         private readonly ConcurrentQueue<ManualResetEventSlim> _eventsBuffer = new ConcurrentQueue<ManualResetEventSlim>();
 
@@ -38,10 +38,11 @@ namespace Voron.Impl
         internal TransactionMergingWriter(StorageEnvironment env, DebugJournal debugJournal = null)
         {
             _env = env;
-            _pendingWrites = new ConcurrentQueue<OutstandingWrite>();
             _stopWrites.Set();
             _debugJournal = debugJournal;
-            _backgroundTask = new Lazy<Task>(() => Task.Run(() => BackgroundWriter(), _cancellationTokenSource.Token));
+            _backgroundTask = new Lazy<Task>(() => Task.Factory.StartNew(BackgroundWriter, _cancellationTokenSource.Token,
+                                                                         TaskCreationOptions.LongRunning,
+                                                                         TaskScheduler.Current));
         }
 
         public IDisposable StopWrites()
@@ -61,7 +62,8 @@ namespace Voron.Impl
             using (var mine = new OutstandingWrite(batch, this))
             {
                 _pendingWrites.Enqueue(mine);
-                _hasWritesEvent.Set();
+
+                _hasWrites.Set();
 
                 mine.Wait();
             }
@@ -78,19 +80,19 @@ namespace Voron.Impl
 
         private void BackgroundWriter()
         {
+            var self = this;
             var cancellationToken = _cancellationTokenSource.Token;
             while (cancellationToken.IsCancellationRequested == false)
             {
                 _stopWrites.Wait(cancellationToken);
-                _hasWritesEvent.Reset();
+                _hasWrites.Reset();
 
                 OutstandingWrite write;
-                while (_pendingWrites.TryPeek(out write))
+                while (_pendingWrites.TryDequeue(out write))
                 {
                     HandleActualWrites(write);
                 }
 
-                _hasWritesEvent.Wait(cancellationToken);
             }
         }
 
@@ -104,69 +106,53 @@ namespace Voron.Impl
                 {
                     HandleOperations(tx, writes.SelectMany(x => x.Batch.Operations));
 
-                    tx.Commit().ContinueWith(task =>
+                    try
                     {
-                        if (task.IsFaulted)
-                        {
-                            HandleWriteFailure(writes, mine, task.Exception);
-                        }
-                        else
-                        {
-                            if (ShouldRecordToDebugJournal)
-                                _debugJournal.Flush();
+                        tx.Commit();
+                        if (ShouldRecordToDebugJournal)
+                            _debugJournal.Flush();
 
-                            foreach (var write in writes)
-                                write.Completed();
+                        foreach (var write in writes)
+                            write.Completed();
+                    }
+                    catch (Exception e)
+                    {
+                        // if we have an error duing the commit, we can't recover, just fail them all.
+                        foreach (var write in writes)
+                        {
+                            write.Errored(e);
                         }
-                    });
-                }        
+                    }
+                }
             }
             catch (Exception e)
             {
                 HandleWriteFailure(writes, mine, e);
             }
-            finally
-            {
-                Finalize(writes);
-            }
         }
 
         private void HandleWriteFailure(List<OutstandingWrite> writes, OutstandingWrite mine, Exception e)
         {
-	        if (writes == null || writes.Count == 0)
-	        {
-				mine.Errored(e);
-		        throw new InvalidOperationException("Couldn't get items to write", e);
-	        }
+            if (writes == null || writes.Count == 0)
+            {
+                mine.Errored(e);
+                throw new InvalidOperationException("Couldn't get items to write", e);
+            }
 
-	        if (writes.Count == 1)
+            if (writes.Count == 1)
             {
                 writes[0].Errored(e);
-				return;
+                return;
             }
 
             SplitWrites(writes);
-        }
-
-        private void Finalize(IEnumerable<OutstandingWrite> writes)
-        {
-            if (writes == null)
-                return;
-            Debug.Assert(_pendingWrites.Count > 0);
-            foreach (var write in writes)
-            {
-                Debug.Assert(_pendingWrites.Peek() == write);
-
-                OutstandingWrite pendingWrite;
-                _pendingWrites.TryDequeue(out pendingWrite);
-            }
         }
 
         private void HandleOperations(Transaction tx, IEnumerable<WriteBatch.BatchOperation> operations)
         {
             foreach (var g in operations.GroupBy(x => x.TreeName))
             {
-                var tree = tx.State.GetTree(g.Key, tx);
+                var tree = tx.State.GetTree(tx, g.Key);
                 // note that the ordering is done purely for performance reasons
                 // we rely on the fact that there can be only a single operation per key in
                 // each batch, and that we don't make any guarantees regarding ordering between
@@ -206,68 +192,49 @@ namespace Voron.Impl
 
         private void SplitWrites(List<OutstandingWrite> writes)
         {
-	        for (var index = 0; index < writes.Count; index++)
-	        {
-		        var write = writes[index];
-		        try
-		        {
-			        using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
-			        {
-				        HandleOperations(tx, write.Batch.Operations);
-				        tx.Commit().ContinueWith(
-					        task =>
-						        {
-							        if (task.IsFaulted)
-							        {
-								        write.Errored(task.Exception);
-							        }
-							        else
-							        {
-								        write.Completed();
-							        }
-						        });
-			        }
-		        }
-		        catch (Exception e)
-		        {
-			        write.Errored(e);
-		        }
-	        }
+            for (var index = 0; index < writes.Count; index++)
+            {
+                var write = writes[index];
+                try
+                {
+                    using (var tx = _env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        HandleOperations(tx, write.Batch.Operations);
+                        tx.Commit();
+                        write.Completed();
+                    }
+                }
+                catch (Exception e)
+                {
+                    write.Errored(e);
+                }
+            }
         }
 
-	    private List<OutstandingWrite> BuildBatchGroup(OutstandingWrite mine)
+        private List<OutstandingWrite> BuildBatchGroup(OutstandingWrite mine)
         {
             // Allow the group to grow up to a maximum size, but if the
             // original write is small, limit the growth so we do not slow
             // down the small write too much.
             long maxSize = 16 * 1024 * 1024; // 16 MB by default
             if (mine.Size < 128 * 1024)
-                maxSize = mine.Size + (1024 * 1024);
+                maxSize = (1024 * 1024); // 1 MB if small
 
-            var list = new List<OutstandingWrite>();
-            var indexOfMine = -1;
-            var index = 0;
+            var list = new List<OutstandingWrite> { mine };
 
-            foreach (var write in _pendingWrites)
+            maxSize -= mine.Size;
+
+            while (true)
             {
                 if (maxSize <= 0)
                     break;
 
-                if (write == mine)
-                {
-                    indexOfMine = index;
-                    continue;
-                }
-
-                list.Add(write);
-
-                maxSize -= write.Size;
-                index++;
+                OutstandingWrite item;
+                if (_pendingWrites.TryDequeue(out item) == false)
+                    break;
+                list.Add(item);
+                maxSize -= item.Size;
             }
-
-            Debug.Assert(indexOfMine >= 0);
-
-            list.Insert(indexOfMine, mine);
 
             return list;
         }
@@ -302,22 +269,22 @@ namespace Voron.Impl
 
             public void Errored(Exception e)
             {
-	            var wasSet = _completed.IsSet;
+                var wasSet = _completed.IsSet;
 
                 _exception = e;
                 _completed.Set();
 
-				if (wasSet)
-					throw new InvalidOperationException("This should not happen.");
+                if (wasSet)
+                    throw new InvalidOperationException("This should not happen.");
             }
 
             public void Completed()
             {
-				var wasSet = _completed.IsSet;
+                var wasSet = _completed.IsSet;
                 _completed.Set();
 
-				if (wasSet)
-					throw new InvalidOperationException("This should not happen.");
+                if (wasSet)
+                    throw new InvalidOperationException("This should not happen.");
             }
 
             public void Wait()
@@ -333,8 +300,8 @@ namespace Voron.Impl
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
-            _hasWritesEvent.Set();
             _stopWrites.Set();
+            _hasWrites.Set();
 
             try
             {
@@ -357,8 +324,8 @@ namespace Voron.Impl
                 {
                     manualResetEventSlim.Dispose();
                 }
-                _hasWritesEvent.Dispose();
                 _stopWrites.Dispose();
+                _hasWrites.Dispose();
             }
         }
     }

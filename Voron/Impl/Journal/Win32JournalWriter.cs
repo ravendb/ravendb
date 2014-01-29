@@ -3,35 +3,28 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Voron.Impl.Paging;
+using Voron.Util;
 
 namespace Voron.Impl.Journal
 {
-	public unsafe class Win32FileJournalWriter: IJournalWriter
+	/// <summary>
+	/// This class assumes only a single writer at any given point in time
+	/// This require _external_ syncornization
+	/// </summary>
+	public unsafe class Win32FileJournalWriter : IJournalWriter
 	{
+		private const int ErrorIOPending = 997;
+		private const int ErrorSuccess = 0;
+		private const int ErrorHandleEof = 38;
 		private readonly string _filename;
 		private readonly SafeFileHandle _handle;
+		private readonly ManualResetEvent _manualResetEvent;
 		private SafeFileHandle _readHandle;
-
-		[DllImport("kernel32.dll")]
-		static extern bool WriteFileGather(
-			SafeFileHandle hFile,
-			FileSegmentElement* aSegmentArray,
-			uint nNumberOfBytesToWrite,
-			IntPtr lpReserved,
-			NativeOverlapped* lpOverlapped);
-
-
-		[StructLayout(LayoutKind.Explicit, Size = 8)]
-		public struct FileSegmentElement
-		{
-			[FieldOffset(0)]
-			public byte* Buffer;
-			[FieldOffset(0)]
-			public UInt64 Alignment;
-		}
+		private FileSegmentElement* _segments;
+		private int _segmentsSize;
+		private NativeOverlapped* _nativeOverlapped;
 
 		public Win32FileJournalWriter(string filename, long journalSize)
 		{
@@ -47,127 +40,108 @@ namespace Voron.Impl.Journal
 			NativeFileMethods.SetFileLength(_handle, journalSize);
 
 			NumberOfAllocatedPages = journalSize/AbstractPager.PageSize;
+			_manualResetEvent = new ManualResetEvent(false);
 
-			if (ThreadPool.BindHandle(_handle) == false)
-				throw new InvalidOperationException("Could not bind the handle to the thread pool");
+			_nativeOverlapped = (NativeOverlapped*) Marshal.AllocHGlobal(sizeof (NativeOverlapped));
+
+			_nativeOverlapped->InternalLow = IntPtr.Zero;
+			_nativeOverlapped->InternalHigh = IntPtr.Zero;
+
 		}
 
-		private const int ErrorIOPending = 997;
-		private const int ErrorSuccess = 0;
-		private const int ErrorOperationAborted = 995;
-		private const int ErrorHandleEof = 38;
-
-		public Task WriteGatherAsync(long position, byte*[] pages)
+		public void WriteGather(long position, byte*[] pages)
 		{
 			if (Disposed)
 				throw new ObjectDisposedException("Win32JournalWriter");
 
-			var tcs = new TaskCompletionSource<object>();
-			var mre = new ManualResetEvent(false);
-			var allocHGlobal = Marshal.AllocHGlobal(sizeof(FileSegmentElement) * (pages.Length + 1));
-			var nativeOverlapped = CreateNativeOverlapped(position, tcs, allocHGlobal, mre);
-			var array = (FileSegmentElement*)allocHGlobal.ToPointer();
+			_manualResetEvent.Reset();
+
+			EnsureSegmentsSize(pages);
+
+		
+			_nativeOverlapped->OffsetLow = (int) (position & 0xffffffff);
+			_nativeOverlapped->OffsetHigh = (int) (position >> 32);
+			_nativeOverlapped->EventHandle = _manualResetEvent.SafeWaitHandle.DangerousGetHandle();
+
 			for (int i = 0; i < pages.Length; i++)
 			{
-				array[i].Buffer = pages[i];
+				if(IntPtr.Size == 4)
+					_segments[i].Alignment = (ulong) pages[i];
+				else
+					_segments[i].Buffer = pages[i];
 			}
-			array[pages.Length].Buffer = null;// null terminating
+			_segments[pages.Length].Buffer = null; // null terminating
 
-		    WriteFileGather(_handle, array, (uint) pages.Length*4096, IntPtr.Zero, nativeOverlapped);
-		    return HandleResponse(nativeOverlapped, tcs, allocHGlobal);
+			WriteFileGather(_handle, _segments, (uint) pages.Length*4096, IntPtr.Zero, _nativeOverlapped);
+			switch (Marshal.GetLastWin32Error())
+			{
+				case ErrorSuccess:
+				case ErrorIOPending:
+					_manualResetEvent.WaitOne();
+					break;
+				default:
+					throw new Win32Exception(Marshal.GetLastWin32Error());
+			}
+		}
+
+		private void EnsureSegmentsSize(byte*[] pages)
+		{
+			if (_segmentsSize >= pages.Length + 1)
+				return;
+
+			_segmentsSize = (int) Utils.NearestPowerOfTwo(pages.Length + 1);
+
+			if (_segments != null)
+				Marshal.FreeHGlobal((IntPtr) _segments);
+
+			_segments = (FileSegmentElement*) (Marshal.AllocHGlobal(_segmentsSize*sizeof (FileSegmentElement)));
 		}
 
 		public long NumberOfAllocatedPages { get; private set; }
-	    public bool DeleteOnClose { get; set; }
+		public bool DeleteOnClose { get; set; }
 
-	    public IVirtualPager CreatePager()
+		public IVirtualPager CreatePager()
 		{
 			return new Win32MemoryMapPager(_filename);
 		}
 
-	    public bool Read(long pageNumber, byte* buffer, int count)
-	    {
-		    if (_readHandle == null)
-		    {
-			    _readHandle = NativeFileMethods.CreateFile(_filename,
-				    NativeFileAccess.GenericRead, 
-					NativeFileShare.Write | NativeFileShare.Read | NativeFileShare.Delete, 
-					IntPtr.Zero,
-				    NativeFileCreationDisposition.OpenExisting, 
-					NativeFileAttributes.Normal, 
-					IntPtr.Zero);
-		    }
-			
-	        var position = pageNumber*AbstractPager.PageSize;
-	        var overlapped = new Overlapped((int) (position & 0xffffffff), (int) (position >> 32), IntPtr.Zero, null);
-	        var nativeOverlapped = overlapped.Pack(null, null);
-	        try
-	        {
-	            while (count >0)
-	            {
-                    int read;
-		            if (NativeFileMethods.ReadFile(_readHandle, buffer, count, out read, nativeOverlapped) == false)
-		            {
-			            var lastWin32Error = Marshal.GetLastWin32Error();
-			            if (lastWin32Error == ErrorHandleEof)
-				            return false;
-			            throw new Win32Exception(lastWin32Error);
-		            }
-	                count -= read;
-	                buffer += read;
-	            }
-		        return true;
-	        }
-	        finally
-	        {
-	            Overlapped.Free(nativeOverlapped);
-	        }
-	    }
-
-		private static Task HandleResponse(NativeOverlapped* nativeOverlapped, TaskCompletionSource<object> tcs, IntPtr memoryToFree)
+		public bool Read(long pageNumber, byte* buffer, int count)
 		{
-			var lastWin32Error = Marshal.GetLastWin32Error();
-			switch (lastWin32Error)
+			if (_readHandle == null)
 			{
-                case ErrorSuccess:
-			    case ErrorIOPending:
-			        return tcs.Task;
+				_readHandle = NativeFileMethods.CreateFile(_filename,
+					NativeFileAccess.GenericRead,
+					NativeFileShare.Write | NativeFileShare.Read | NativeFileShare.Delete,
+					IntPtr.Zero,
+					NativeFileCreationDisposition.OpenExisting,
+					NativeFileAttributes.Normal,
+					IntPtr.Zero);
 			}
 
-			Overlapped.Free(nativeOverlapped);
-			if (memoryToFree != IntPtr.Zero)
-				Marshal.FreeHGlobal(memoryToFree);
-			throw new Win32Exception(lastWin32Error);
-		}
-
-		private static NativeOverlapped* CreateNativeOverlapped(long position, TaskCompletionSource<object> tcs, IntPtr memoryToFree, ManualResetEvent manualResetEvent)
-		{
-			var o = new Overlapped((int)(position & 0xffffffff), (int)(position >> 32), manualResetEvent.SafeWaitHandle.DangerousGetHandle(), null);
-			var nativeOverlapped = o.Pack((code, bytes, overlap) =>
+			long position = pageNumber*AbstractPager.PageSize;
+			var overlapped = new Overlapped((int) (position & 0xffffffff), (int) (position >> 32), IntPtr.Zero, null);
+			NativeOverlapped* nativeOverlapped = overlapped.Pack(null, null);
+			try
 			{
-				try
+				while (count > 0)
 				{
-					switch (code)
+					int read;
+					if (NativeFileMethods.ReadFile(_readHandle, buffer, count, out read, nativeOverlapped) == false)
 					{
-						case ErrorSuccess:
-							tcs.TrySetResult(null);
-							break;
-						case ErrorOperationAborted:
-							tcs.TrySetCanceled();
-							break;
-						default:
-							tcs.TrySetException(new Win32Exception((int)code));
-							break;
+						int lastWin32Error = Marshal.GetLastWin32Error();
+						if (lastWin32Error == ErrorHandleEof)
+							return false;
+						throw new Win32Exception(lastWin32Error);
 					}
+					count -= read;
+					buffer += read;
 				}
-				finally
-				{
-					Overlapped.Free(overlap);
-					if (memoryToFree != IntPtr.Zero)
-						Marshal.FreeHGlobal(memoryToFree);
-				}
-			}, null);
-			return nativeOverlapped;
+				return true;
+			}
+			finally
+			{
+				Overlapped.Free(nativeOverlapped);
+			}
 		}
 
 		public void Dispose()
@@ -177,17 +151,47 @@ namespace Voron.Impl.Journal
 			if (_readHandle != null)
 				_readHandle.Close();
 			_handle.Close();
-		    if (DeleteOnClose)
-		    {
-		        File.Delete(_filename);
-		    }
+			if (_nativeOverlapped != null)
+			{
+				Marshal.FreeHGlobal((IntPtr) _nativeOverlapped);
+				_nativeOverlapped = null;
+			}
+			if (_segments != null)
+			{
+				Marshal.FreeHGlobal((IntPtr) _segments);
+				_segments = null;
+			}
+
+			if(_manualResetEvent != null)
+				_manualResetEvent.Dispose();
+
+			if (DeleteOnClose)
+			{
+				File.Delete(_filename);
+			}
 		}
 
 		public bool Disposed { get; private set; }
 
+		[DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAsAttribute(UnmanagedType.Bool)]
+		private static extern bool WriteFileGather(
+			SafeFileHandle hFile,
+			FileSegmentElement* aSegmentArray,
+			uint nNumberOfBytesToWrite,
+			IntPtr lpReserved,
+			NativeOverlapped* lpOverlapped);
+
 		~Win32FileJournalWriter()
 		{
-			_handle.Close();
+			Dispose();
+		}
+
+		[StructLayout(LayoutKind.Explicit, Size = 8)]
+		public struct FileSegmentElement
+		{
+			[FieldOffset(0)] public byte* Buffer;
+			[FieldOffset(0)] public UInt64 Alignment;
 		}
 	}
 }

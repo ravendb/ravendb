@@ -35,7 +35,7 @@
                             tx.State.Root.Add(tx, enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
                         }
 
-                        tx.Commit().Wait();
+                        tx.Commit();
                     }
 
                     if (transactions == 50)
@@ -77,7 +77,7 @@
                         }
                         while (iterator.MoveNext());
 
-                        Assert.Equal(ids.Count, snapshot.Transaction.GetTree(tree).State.EntriesCount);
+                        Assert.Equal(ids.Count, snapshot.Transaction.Environment.State.GetTree(snapshot.Transaction,tree).State.EntriesCount);
                         Assert.Equal(ids.Count, count);
                         Assert.Equal(ids.Count, keys.Count);
                     }

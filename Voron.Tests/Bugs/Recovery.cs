@@ -63,7 +63,7 @@ namespace Voron.Tests.Bugs
 
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
-					var tree = tx.GetTree("tree");
+					var tree = tx.Environment.State.GetTree(tx,"tree");
 
 					for (var i = 0; i < 100; i++)
 					{
@@ -95,7 +95,7 @@ namespace Voron.Tests.Bugs
 				{
 					for (var i = 0; i < 10000; i++)
 					{
-						tx.GetTree("tree").Add(tx, "a" + i, new MemoryStream());
+						tx.Environment.State.GetTree(tx,"tree").Add(tx, "a" + i, new MemoryStream());
 					}
 				}
 			}
@@ -127,8 +127,8 @@ namespace Voron.Tests.Bugs
 				{
 					for (var i = 0; i < 10000; i++)
 					{
-						tx.GetTree("atree").Add(tx, "a" + i, new MemoryStream());
-						tx.GetTree("btree").MultiAdd(tx, "a" + i, "a" + i);
+						tx.Environment.State.GetTree(tx,"atree").Add(tx, "a" + i, new MemoryStream());
+						tx.Environment.State.GetTree(tx,"btree").MultiAdd(tx, "a" + i, "a" + i);
 					}
 				}
 			}
@@ -186,8 +186,8 @@ namespace Voron.Tests.Bugs
 
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
-					var aTree = tx.GetTree("atree");
-					var bTree = tx.GetTree("btree");
+					var aTree = tx.Environment.State.GetTree(tx,"atree");
+					var bTree = tx.Environment.State.GetTree(tx,"btree");
 
 					for (var i = 0; i < 1000; i++)
 					{
@@ -250,8 +250,8 @@ namespace Voron.Tests.Bugs
 
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
-					var aTree = tx.GetTree("atree");
-					var bTree = tx.GetTree("btree");
+					var aTree = tx.Environment.State.GetTree(tx,"atree");
+					var bTree = tx.Environment.State.GetTree(tx,"btree");
 
 					for (var i = 0; i < 1000; i++)
 					{
@@ -293,8 +293,8 @@ namespace Voron.Tests.Bugs
 
 				using (var tx = env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					var aTree = tx.GetTree("atree");
-					var bTree = tx.GetTree("btree");
+					var aTree = tx.Environment.State.GetTree(tx,"atree");
+					var bTree = tx.Environment.State.GetTree(tx,"btree");
 
 					for (var i = 0; i < count; i++)
 					{
@@ -323,8 +323,8 @@ namespace Voron.Tests.Bugs
 
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
-					var aTree = tx.GetTree("atree");
-					var bTree = tx.GetTree("btree");
+					var aTree = tx.Environment.State.GetTree(tx,"atree");
+					var bTree = tx.Environment.State.GetTree(tx,"btree");
 
 					for (var i = 0; i < count; i++)
 					{

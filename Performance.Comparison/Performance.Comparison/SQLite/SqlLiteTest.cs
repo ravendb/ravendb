@@ -76,24 +76,24 @@ namespace Performance.Comparison.SQLite
 
         public override PerformanceRecord ReadSequential(PerfTracker perfTracker)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return Read(string.Format("[SQLite] sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker);
         }
 
         public override PerformanceRecord ReadParallelSequential(PerfTracker perfTracker, int numberOfThreads)
         {
-            var sequentialIds = Enumerable.Range(0, Constants.ReadItems);
+			var sequentialIds = Enumerable.Range(0, Constants.ReadItems).Select(x => (uint)x); ;
 
             return ReadParallel(string.Format("[SQLite] parallel sequential read ({0} items)", Constants.ReadItems), sequentialIds, perfTracker, numberOfThreads);
         }
 
-        public override PerformanceRecord ReadRandom(IEnumerable<int> randomIds, PerfTracker perfTracker)
+        public override PerformanceRecord ReadRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker)
         {
             return Read(string.Format("[SQLite] random read ({0} items)", Constants.ReadItems), randomIds, perfTracker);
         }
 
-        public override PerformanceRecord ReadParallelRandom(IEnumerable<int> randomIds, PerfTracker perfTracker, int numberOfThreads)
+        public override PerformanceRecord ReadParallelRandom(IEnumerable<uint> randomIds, PerfTracker perfTracker, int numberOfThreads)
         {
             return ReadParallel(string.Format("[SQLite] parallel random read ({0} items)", Constants.ReadItems), randomIds, perfTracker, numberOfThreads);
         }
@@ -171,7 +171,7 @@ namespace Performance.Comparison.SQLite
             return records;
         }
 
-        private PerformanceRecord Read(string operation, IEnumerable<int> ids, PerfTracker perfTracker)
+        private PerformanceRecord Read(string operation, IEnumerable<uint> ids, PerfTracker perfTracker)
         {
             var sw = Stopwatch.StartNew();
 
@@ -194,7 +194,7 @@ namespace Performance.Comparison.SQLite
                 };
         }
 
-        private PerformanceRecord ReadParallel(string operation, IEnumerable<int> ids, PerfTracker perfTracker, int numberOfThreads)
+        private PerformanceRecord ReadParallel(string operation, IEnumerable<uint> ids, PerfTracker perfTracker, int numberOfThreads)
         {
             using (var connection = new SQLiteConnection(connectionString))
             {
@@ -204,12 +204,13 @@ namespace Performance.Comparison.SQLite
             }
         }
 
-        private static void ReadInternal(IEnumerable<int> ids, PerfTracker perfTracker, SQLiteConnection connection)
+        private static long ReadInternal(IEnumerable<uint> ids, PerfTracker perfTracker, SQLiteConnection connection)
         {
             var buffer = new byte[4096];
 
             using (var tx = connection.BeginTransaction())
             {
+                long v = 0;
                 var sw = Stopwatch.StartNew();
                 foreach (var id in ids)
                 {
@@ -224,11 +225,13 @@ namespace Performance.Comparison.SQLite
                             while ((bytesRead = reader.GetBytes(0, fieldOffset, buffer, 0, buffer.Length)) > 0)
                             {
                                 fieldOffset += bytesRead;
+                                v += bytesRead;
                             }
                         }
                     }
                 }
                 perfTracker.Record(sw.ElapsedMilliseconds);
+                return v;
             }
         }
     }

@@ -72,7 +72,7 @@ namespace Voron.Impl.Journal
 			_buffers = ImmutableAppendOnlyList<Buffer>.Empty;
 		}
 
-		public Task WriteGatherAsync(long position, byte*[] pages)
+		public void WriteGather(long position, byte*[] pages)
 		{
 			_locker.EnterWriteLock();
 			try
@@ -97,8 +97,6 @@ namespace Voron.Impl.Journal
 				{
 					NativeMethods.memcpy(buffer.Pointer + (index * AbstractPager.PageSize), pages[index], AbstractPager.PageSize);
 				}
-
-				return Task.FromResult(1);
 			}
 			finally
 			{

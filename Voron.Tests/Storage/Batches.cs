@@ -19,7 +19,7 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.Environment.State.GetTree(tx,"tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -46,7 +46,7 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.Environment.State.GetTree(tx,"tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -73,7 +73,7 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.Environment.State.GetTree(tx,"tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -102,7 +102,7 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.Environment.State.GetTree(tx,"tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -128,7 +128,7 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.Environment.State.GetTree(tx,"tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -161,7 +161,7 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.Environment.State.GetTree(tx,"tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
@@ -188,14 +188,14 @@
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
                 Env.CreateTree(tx, "tree");
-                tx.GetTree("tree").Add(tx, "foo1", StreamFor("foo1"));
+                tx.Environment.State.GetTree(tx,"tree").Add(tx, "foo1", StreamFor("foo1"));
 
                 tx.Commit();
             }
 
             using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
             {
-                tx.GetTree("tree").Add(tx, "foo1", StreamFor("updated foo1"));
+                tx.Environment.State.GetTree(tx,"tree").Add(tx, "foo1", StreamFor("updated foo1"));
 
                 tx.Commit();
             }
@@ -302,7 +302,7 @@
                 Env.CreateTree(tx, "tree1");
                 Env.CreateTree(tx, "tree2");
 
-                await tx.Commit();
+                tx.Commit();
             }
 
             await Task.WhenAll(Task.Run(() => Env.Writer.Write(batch1)), Task.Run(() => Env.Writer.Write(batch2)));
@@ -311,9 +311,9 @@
             {
                 for (int i = 0; i < numberOfItems; i++)
                 {
-                    var result = tx.GetTree("tree1").Read(tx, "key/" + i).Reader.ToStringValue();
+                    var result = tx.Environment.State.GetTree(tx,"tree1").Read(tx, "key/" + i).Reader.ToStringValue();
                     Assert.Equal(i.ToString(CultureInfo.InvariantCulture), result);
-                    result = tx.GetTree("tree2").Read(tx, "yek/" + i).Reader.ToStringValue();
+                    result = tx.Environment.State.GetTree(tx,"tree2").Read(tx, "yek/" + i).Reader.ToStringValue();
                     Assert.Equal(i.ToString(CultureInfo.InvariantCulture), result);
                 }
             }
@@ -339,9 +339,9 @@
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var result = tx.GetTree("tree1").Read(tx, "key/1").Reader.ToStringValue();
+                var result = tx.Environment.State.GetTree(tx,"tree1").Read(tx, "key/1").Reader.ToStringValue();
                 Assert.Equal("tree1", result);
-                result = tx.GetTree("tree2").Read(tx, "key/1").Reader.ToStringValue();
+                result = tx.Environment.State.GetTree(tx,"tree2").Read(tx, "key/1").Reader.ToStringValue();
                 Assert.Equal("tree2", result);
             }
         }
@@ -378,9 +378,9 @@
 
                 using (var tx = Env.NewTransaction(TransactionFlags.Read))
                 {
-                    var result = tx.GetTree("tree1").Read(tx, "key/1").Reader.ToStringValue();
+                    var result = tx.Environment.State.GetTree(tx,"tree1").Read(tx, "key/1").Reader.ToStringValue();
                     Assert.Equal("tree1", result);
-                    result = tx.GetTree("tree3").Read(tx, "key/1").Reader.ToStringValue();
+                    result = tx.Environment.State.GetTree(tx,"tree3").Read(tx, "key/1").Reader.ToStringValue();
                     Assert.Equal("tree3", result);
                 }
             }
@@ -429,10 +429,10 @@
 
             using (var tx = Env.NewTransaction(TransactionFlags.Read))
             {
-                var result = tx.GetTree("tree1").Read(tx, "key/1").Reader.ToStringValue();
+                var result = tx.Environment.State.GetTree(tx,"tree1").Read(tx, "key/1").Reader.ToStringValue();
                 Assert.Equal("tree1", result);
 
-                result = tx.GetTree("tree3").Read(tx, "key/1").Reader.ToStringValue();
+                result = tx.Environment.State.GetTree(tx,"tree3").Read(tx, "key/1").Reader.ToStringValue();
                 Assert.Equal("tree3", result);
             }
         }

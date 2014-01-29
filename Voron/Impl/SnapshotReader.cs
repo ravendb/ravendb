@@ -56,9 +56,34 @@
 			return tree.GetDataSize(Transaction, key);
 		}
 
-		public bool Contains(string treeName, Slice key, WriteBatch writeBatch = null)
+		public bool Contains(string treeName, Slice key, out ushort? version, WriteBatch writeBatch = null)
 		{
-			return ReadVersion(treeName, key, writeBatch) > 0;
+			if (writeBatch != null)
+			{
+				WriteBatch.BatchOperationType operationType;
+				Stream stream;
+				if (writeBatch.TryGetValue(treeName, key, out stream, out version, out operationType))
+				{
+					switch (operationType)
+					{
+						case WriteBatch.BatchOperationType.Add:
+							return true;
+						case WriteBatch.BatchOperationType.Delete:
+							return false;
+						default:
+							throw new ArgumentOutOfRangeException(operationType.ToString());
+					}
+				}
+			}
+
+			var tree = GetTree(treeName);
+			var readVersion = tree.ReadVersion(Transaction, key);
+
+			var exists = readVersion > 0;
+
+			version = exists ? (ushort?)readVersion : null;
+
+			return exists;
 		}
 
 		public ushort ReadVersion(string treeName, Slice key, WriteBatch writeBatch = null)
@@ -102,7 +127,7 @@
 
 		private Tree GetTree(string treeName)
 		{
-			var tree = treeName == null ? Transaction.State.Root : Transaction.State.GetTree(treeName, Transaction);
+			var tree = treeName == null ? Transaction.State.Root : Transaction.State.GetTree(Transaction, treeName);
 			return tree;
 		}	
 	}

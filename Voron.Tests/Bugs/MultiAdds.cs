@@ -54,7 +54,7 @@ namespace Voron.Tests.Bugs
 
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					var tree = tx.GetTree("foo");
+					var tree = tx.Environment.State.GetTree(tx,"foo");
 					foreach (var buffer in inputData)
 					{						
 						Assert.DoesNotThrow(() => tree.MultiAdd(tx, "ChildTreeKey", new Slice(buffer)));
@@ -64,7 +64,7 @@ namespace Voron.Tests.Bugs
 				
 				using (var tx = Env.NewTransaction(TransactionFlags.ReadWrite))
 				{
-					var tree = tx.GetTree("foo");
+					var tree = tx.Environment.State.GetTree(tx,"foo");
 					for (int i = 0; i < inputData.Count; i++)
 					{
 						var buffer = inputData[i];
@@ -124,7 +124,7 @@ namespace Voron.Tests.Bugs
 
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
-					var tree = tx.GetTree("multi");
+					var tree = tx.Environment.State.GetTree(tx,"multi");
 					using (var iterator = tree.MultiRead(tx, "0"))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
@@ -152,7 +152,7 @@ namespace Voron.Tests.Bugs
 
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
-					var tree = tx.GetTree("multi");
+					var tree = tx.Environment.State.GetTree(tx,"multi");
 					using (var iterator = tree.MultiRead(tx, "0"))
 					{
 						Assert.True(iterator.Seek(Slice.BeforeAllKeys));
@@ -189,7 +189,7 @@ namespace Voron.Tests.Bugs
 
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
-					var tree = tx.GetTree("multitree0");
+					var tree = tx.Environment.State.GetTree(tx,"multitree0");
 					using (var it = tree.MultiRead(tx, "key"))
 					{
 						Assert.True(it.Seek(Slice.BeforeAllKeys));
@@ -235,7 +235,7 @@ namespace Voron.Tests.Bugs
 				{
 					foreach (var treeName in trees)
 					{
-					    var tree = tx.GetTree(treeName);
+					    var tree = tx.Environment.State.GetTree(tx,treeName);
 						using (var iterator = tree.MultiRead(tx, (j % 10).ToString()))
 						{
 							Assert.True(iterator.Seek(Slice.BeforeAllKeys));

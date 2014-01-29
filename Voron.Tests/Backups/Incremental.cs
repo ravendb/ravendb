@@ -52,9 +52,10 @@ namespace Voron.Tests.Backups
 			var options = StorageEnvironmentOptions.ForPath(_restoredStoragePath);
 			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
+            BackupMethods.Incremental.Restore(options, new[] { _incrementalBackupFile(0) });
+
 			using (var env = new StorageEnvironment(options))
 			{
-				BackupMethods.Incremental.Restore(env, _incrementalBackupFile(0));
 
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
@@ -118,12 +119,15 @@ namespace Voron.Tests.Backups
 			var options = StorageEnvironmentOptions.ForPath(_restoredStoragePath);
 			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
+            BackupMethods.Incremental.Restore(options, new[]
+            {
+                _incrementalBackupFile(0),
+                _incrementalBackupFile(1),
+                _incrementalBackupFile(2)
+            });
+
 			using (var env = new StorageEnvironment(options))
 			{
-				BackupMethods.Incremental.Restore(env, _incrementalBackupFile(0));
-				BackupMethods.Incremental.Restore(env, _incrementalBackupFile(1));
-				BackupMethods.Incremental.Restore(env, _incrementalBackupFile(2));
-
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
 					for (int i = 0; i < 1000; i++)
@@ -182,11 +186,14 @@ namespace Voron.Tests.Backups
 			var options = StorageEnvironmentOptions.ForPath(_restoredStoragePath);
 			options.MaxLogFileSize = Env.Options.MaxLogFileSize;
 
+            BackupMethods.Incremental.Restore(options, new[]
+            {
+                _incrementalBackupFile(0),
+                _incrementalBackupFile(1)
+            });
+
 			using (var env = new StorageEnvironment(options))
 			{
-				BackupMethods.Incremental.Restore(env, _incrementalBackupFile(0));
-				BackupMethods.Incremental.Restore(env, _incrementalBackupFile(1));
-
 				using (var tx = env.NewTransaction(TransactionFlags.Read))
 				{
 					for (int i = 0; i < 10; i++)
