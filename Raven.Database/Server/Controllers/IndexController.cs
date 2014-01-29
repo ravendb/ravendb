@@ -16,6 +16,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Queries;
@@ -315,23 +316,22 @@ namespace Raven.Database.Server.Controllers
 
 			sp.Stop();
 
-			//TODO: log
-			//context.Log(log => log.Debug(() =>
-			//{
-			//	var sb = new StringBuilder("\tQuery: ")
-			//		.Append(indexQuery.Query)
-			//		.AppendLine();
-			//	sb.Append("\t").AppendFormat("Time: {0:#,#;;0} ms", sp.ElapsedMilliseconds).AppendLine();
+			Log.Debug(() =>
+			{
+				var sb = new StringBuilder("\tQuery: ")
+					.Append(indexQuery.Query)
+					.AppendLine();
+				sb.Append("\t").AppendFormat("Time: {0:#,#;;0} ms", sp.ElapsedMilliseconds).AppendLine();
 
-			//	if (result == null)
-			//		return sb.ToString();
+				if (result == null)
+					return sb.ToString();
 
-			//	sb.Append("\tIndex: ")
-			//		.AppendLine(result.IndexName);
-			//	sb.Append("\t").AppendFormat("Results: {0:#,#;;0} returned out of {1:#,#;;0} total.", result.Results.Count, result.TotalResults).AppendLine();
+				sb.Append("\tIndex: ")
+					.AppendLine(result.IndexName);
+				sb.Append("\t").AppendFormat("Results: {0:#,#;;0} returned out of {1:#,#;;0} total.", result.Results.Count, result.TotalResults).AppendLine();
 
-			//	return sb.ToString();
-			//}));
+				return sb.ToString();
+			});
 
 			return result;
 		}

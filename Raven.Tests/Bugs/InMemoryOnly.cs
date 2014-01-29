@@ -13,7 +13,7 @@ namespace Raven.Tests.Bugs
 {
 	public class InMemoryOnly
 	{
-		[Fact]
+		[TimeBombedFact(2014, 3, 15, "Waiting for RavenDB-1611 issue to be fixed")]
 		public void InMemoryDoesNotCreateDataDir()
 		{
 			IOExtensions.DeleteDirectory("Data");
@@ -28,10 +28,8 @@ namespace Raven.Tests.Bugs
 					Port = 8079,
 					RunInMemory = true
 				}
-			})
+			}.Initialize())
 			{
-				store.Initialize();
-
 				Assert.False(Directory.Exists("Data"));
 			}
 		}

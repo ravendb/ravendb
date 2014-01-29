@@ -20,17 +20,87 @@ namespace Raven.Database.Server.Controllers
 		[HttpGet]
 		[Route("facets/{*id}")]
         [Route("databases/{databaseName}/facets/{*id}")]
-		public async Task<HttpResponseMessage> FacetsGet(string id)
+		public async Task<HttpResponseMessage> FacetsGet(string index)
 		{
-			return await Facets(id, "GET");
+			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
+			var facetStart = GetFacetStart();
+			var facetPageSize = GetFacetPageSize();
+
+			var facetSetupDoc = GetFacetSetupDoc();
+			Etag etag;
+			List<Facet> facets;
+			if (string.IsNullOrEmpty(facetSetupDoc))
+			{
+				var facetsJson = GetQueryStringValue("facets");
+				if (string.IsNullOrEmpty(facetsJson) == false)
+					return TryGetFacetsFromString(index, out etag, out facets, facetsJson);
+			}
+
+			var jsonDocument = Database.Get(facetSetupDoc, null);
+			if (jsonDocument == null)
+			{
+				return GetMessageWithString("Could not find facet document: " + facetSetupDoc, HttpStatusCode.NotFound);
+			}
+
+			etag = GetFacetsEtag(jsonDocument, index);
+
+			facets = jsonDocument.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
+
+			if (facets == null || !facets.Any())
+				return GetMessageWithString("No facets found in facets setup document:" + facetSetupDoc, HttpStatusCode.NotFound);
+
+			if (MatchEtag(etag))
+				return GetEmptyMessage(HttpStatusCode.NotModified);
+
+			try
+			{
+				return GetMessageWithObject(Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize), HttpStatusCode.OK, etag);
+			}
+			catch (Exception ex)
+			{
+				if (ex is ArgumentException || ex is InvalidOperationException)
+				{
+					throw new BadRequestException(ex.Message, ex);
+				}
+
+				throw;
+			}
 		}
 
 		[HttpPost]
 		[Route("facets/{*id}")]
         [Route("databases/{databaseName}/facets/{*id}")]
-		public async Task<HttpResponseMessage> FacetsPost(string id)
+		public async Task<HttpResponseMessage> FacetsPost(string index)
 		{
-			return await Facets(id, "POST");
+			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
+			var facetStart = GetFacetStart();
+			var facetPageSize = GetFacetPageSize();
+
+			Etag etag;
+			List<Facet> facets;
+			var msg = TryGetFacetsFromString(index, out etag, out facets, await ReadStringAsync());
+			if (msg.StatusCode != HttpStatusCode.OK)
+				return msg;
+
+			if (MatchEtag(etag))
+			{
+				msg.StatusCode = HttpStatusCode.NotModified;
+				return msg;
+			}
+
+			try
+			{
+				return GetMessageWithObject(Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize), HttpStatusCode.OK, etag);
+			}
+			catch (Exception ex)
+			{
+				if (ex is ArgumentException || ex is InvalidOperationException)
+				{
+					throw new BadRequestException(ex.Message, ex);
+				}
+
+				throw;
+			}
 		}
 
 		[HttpPost]
@@ -70,78 +140,6 @@ namespace Raven.Database.Server.Controllers
 				throw;
 			}
 
-		}
-
-		private Etag etag;
-
-		private async Task<HttpResponseMessage> Facets(string index, string method)
-		{
-			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
-			var facetStart = GetFacetStart();
-			var facetPageSize = GetFacetPageSize();
-
-			var msg = await TryGetFacets(index, method);
-			if (msg.StatusCode != HttpStatusCode.OK)
-				return msg;
-
-			if (MatchEtag(etag))
-			{
-				msg.StatusCode = HttpStatusCode.NotModified;
-				return msg;
-			}
-
-			try
-			{
-				return GetMessageWithObject(Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize), HttpStatusCode.OK, etag);
-			}
-			catch (Exception ex)
-			{
-				if (ex is ArgumentException || ex is InvalidOperationException)
-				{
-					throw new BadRequestException(ex.Message, ex);
-				}
-
-				throw;
-			}
-		}
-
-		private List<Facet> facets; 
-		private async Task<HttpResponseMessage> TryGetFacets(string index, string method)
-		{
-			etag = null;
-			facets = null;
-			switch (method)
-			{
-				case "GET":
-					var facetSetupDoc = GetFacetSetupDoc();
-					if (string.IsNullOrEmpty(facetSetupDoc))
-					{
-						var facetsJson = GetQueryStringValue("facets");
-						if (string.IsNullOrEmpty(facetsJson) == false)
-							return TryGetFacetsFromString(index, out etag, out facets, facetsJson);
-					}
-
-					var jsonDocument = Database.Get(facetSetupDoc, null);
-					if (jsonDocument == null)
-					{
-						return GetMessageWithString("Could not find facet document: " + facetSetupDoc, HttpStatusCode.NotFound);
-					}
-
-					etag = GetFacetsEtag(jsonDocument, index);
-
-					facets = jsonDocument.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
-
-					if (facets == null || !facets.Any())
-						return GetMessageWithString("No facets found in facets setup document:" + facetSetupDoc, HttpStatusCode.NotFound);
-					break;
-				case "POST":
-					return TryGetFacetsFromString(index, out etag, out facets, await ReadStringAsync());
-				default:
-					return GetMessageWithString("No idea how to handle this request", HttpStatusCode.BadRequest);
-
-			}
-
-			return GetEmptyMessage();
 		}
 
 		private HttpResponseMessage TryGetFacetsFromString(string index, out Etag etag, out List<Facet> facets, string facetsJson)
