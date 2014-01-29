@@ -67,8 +67,11 @@ namespace Raven.Database.Extensions
 				var doc = database.Get(patchCommandData.Key, patchCommandData.TransactionInformation);
 				if (doc != null)
 				{
-					patchCommandData.Metadata = doc.Metadata;
-					patchCommandData.Etag = doc.Etag;
+					database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
+					{
+						patchCommandData.Metadata = doc.Metadata;
+						patchCommandData.Etag = doc.Etag;
+					});
 				}
 				return;
 			}
@@ -93,8 +96,11 @@ namespace Raven.Database.Extensions
 				var doc = database.Get(advPatchCommandData.Key, advPatchCommandData.TransactionInformation);
 				if (doc != null)
 				{
-					advPatchCommandData.Metadata = doc.Metadata;
-					advPatchCommandData.Etag = doc.Etag;
+					database.TransactionalStorage.ExecuteImmediatelyOrRegisterForSynchronization(() =>
+					{
+						advPatchCommandData.Metadata = doc.Metadata;
+						advPatchCommandData.Etag = doc.Etag;
+					});
 				}
 				return;
 			}

@@ -247,9 +247,11 @@
     <Compile Include="Bugs\AdHocProjections.cs" />
     <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
     <Compile Include="Bugs\AggressiveCaching.cs" />
+    <Compile Include="Bugs\AggressiveCachingEmbedded.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
+    <Compile Include="Bugs\AsyncSetBasedOps.cs" />
     <Compile Include="Bugs\Attachments.cs" />
     <Compile Include="Bugs\BackwardCompatibility.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
@@ -269,6 +271,8 @@
     <Compile Include="Issues\RavenDB_1305.cs" />
     <Compile Include="Issues\RavenDB_1443 .cs" />
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
+    <Compile Include="Bugs\DynamicId.cs" />
+    <Compile Include="Bugs\EtagIssue.cs" />
     <Compile Include="Bugs\RavenDB_1532.cs" />
     <Compile Include="Bugs\ConcurrencyTests.cs" />
     <Compile Include="Bugs\NullableDateTimeOffsetFromDateTimeParse.cs" />
@@ -291,7 +295,6 @@
     <Compile Include="Issues\RavenDB_1533.cs" />
     <Compile Include="Issues\RavenDB_1561.cs" />
     <Compile Include="Issues\RavenDB_1560.cs" />
-    <Compile Include="Issues\RavenDB_1594.cs" />
     <Compile Include="Issues\RavenDB_1595.cs" />
     <Compile Include="Issues\RDBQA_4.cs" />
     <Compile Include="Issues\RavenDB_1553.cs" />

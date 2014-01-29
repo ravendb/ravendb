@@ -415,8 +415,8 @@ namespace Raven.Storage.Managed
 						throw new ConcurrencyException(op + " attempted on document '" + key +
 													   "' using a non current etag")
 						{
-							ActualETag = etag,
-							ExpectedETag = existingEtag
+							ActualETag = existingEtag,
+							ExpectedETag = etag
 						};
 					}
 				}

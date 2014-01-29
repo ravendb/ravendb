@@ -1448,7 +1448,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
 			luceneQuery = (IAbstractDocumentQuery<T>) q;
 		    luceneQuery.SetResultTransformer(resultsTransformer);
-			VisitExpression(expression);
+			try
+			{
+				VisitExpression(expression);
+			}
+			catch (ArgumentException e)
+			{
+				throw new ArgumentException("Could not understand expression: " + expression, e);
+			}
+			catch (NotSupportedException e)
+			{
+				throw new NotSupportedException("Could not understand expression: " + expression, e);
+			}
 
 			if (customizeQuery != null)
 				customizeQuery((IDocumentQueryCustomization) luceneQuery);
@@ -1465,7 +1476,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
 			var asyncLuceneQuery = queryGenerator.AsyncQuery<T>(indexName, isMapReduce);
 			asyncLuceneQuery.SetResultTransformer(resultsTransformer);
 			luceneQuery = (IAbstractDocumentQuery<T>) asyncLuceneQuery;
-			VisitExpression(expression);
+			try
+			{
+				VisitExpression(expression);
+			}
+			catch (ArgumentException e)
+			{
+				throw new ArgumentException("Could not understand expression: " + expression, e);
+			}
+			catch (NotSupportedException e)
+			{
+				throw new NotSupportedException("Could not understand expression: " + expression, e);
+			}
+
 
 			if (customizeQuery != null)
 				customizeQuery((IDocumentQueryCustomization) asyncLuceneQuery);

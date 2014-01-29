@@ -133,9 +133,9 @@ namespace Raven.Client.Silverlight.Connection
 			return RavenJToken.Parse(result);
 		}
 
-		public Task ExecuteRequestAsync()
+		public Task<RavenJToken> ExecuteRequestAsync()
 		{
-			return ReadResponseStringAsync();
+			return ReadResponseJsonAsync();
 		}
 
 		private bool isRequestSentToServer;

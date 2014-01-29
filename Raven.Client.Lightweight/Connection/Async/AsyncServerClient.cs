@@ -349,10 +349,6 @@ namespace Raven.Client.Connection.Async
 																		.ExecuteRequestAsync());
 		}
 
-		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete)
-		{
-			return DeleteByIndexAsync(indexName, queryToDelete, false);
-		}
 
 		public Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
