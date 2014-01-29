@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
@@ -255,7 +256,6 @@ namespace Raven.Smuggler
 			            return lastEtag;
 			        }
 
-			        totalCount += attachmentInfo.Length;
 			        ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", attachmentInfo.Length,
 			                     totalCount);
 			        foreach (var item in attachmentInfo)
@@ -273,14 +273,19 @@ namespace Raven.Smuggler
 			                {"Key", item.Value<string>("Key")}
 			            }
 			                .WriteTo(jsonWriter);
+			            totalCount++;
+                        lastEtag = Etag.Parse(item.Value<string>("Etag"));
 			        }
-
-			        lastEtag = Etag.Parse(attachmentInfo.Last().Value<string>("Etag"));
+			        
 			    }
 			    catch (Exception e)
 			    {
-                    ShowProgress("Got Exception during smuggler export. Exception: {0}. Exiting with last succesfully processed etag: {1}", e.Message, lastEtag);
-                    return lastEtag;
+                    ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
+                    ShowProgress("Done with reading attachments, total: {0}", totalCount, lastEtag);
+                    throw new SmugglerExportException(e.Message, e)
+                    {
+                        LastEtag = lastEtag,
+                    };
 			    }
 			}
 		}

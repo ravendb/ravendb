@@ -328,7 +328,7 @@ namespace Raven.Abstractions.Smuggler
                 {
                     ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
                     ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
-                    throw new SmugglerExportException(e.Message)
+                    throw new SmugglerExportException(e.Message, e)
                     {
                         LastEtag = lastEtag,
                     };

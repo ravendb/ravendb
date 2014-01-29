@@ -13,12 +13,10 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Embedded;
-using Raven.Database;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.Smuggler;
@@ -35,11 +33,11 @@ namespace Raven.Tests.Issues
     {
         private readonly int listenPort;
         private readonly int targetPort;
-        private Func<int, bool> shouldThrow;
+        private Func<int, byte[], int, int, bool> shouldThrow;
         private readonly CancellationTokenSource cancellationTokenSource;
         private TcpListener server;
 
-        public PortForwarder(int listenPort, int targetPort, Func<int, bool> shouldThrow)
+        public PortForwarder(int listenPort, int targetPort, Func<int, byte[], int, int, bool> shouldThrow)
         {
             this.listenPort = listenPort;
             this.targetPort = targetPort;
@@ -93,7 +91,7 @@ namespace Raven.Tests.Issues
                         break;
                     }
                     totalRead += read;
-                    if (shouldThrow(totalRead))
+                    if (shouldThrow(totalRead, buffer,0, read))
                     {
                         incomingStream.Close();
                         targetStream.Close();
@@ -116,7 +114,7 @@ namespace Raven.Tests.Issues
                         targetClient.Close();
                     }
                     totalRead += read;
-                    if (shouldThrow(totalRead))
+                    if (shouldThrow(totalRead, buffer, 0, read))
                     {
                         incomingStream.Close();
                         targetStream.Close();
@@ -522,10 +520,7 @@ namespace Raven.Tests.Issues
                 }
             }
 
-            VerifyDump(backupPath, store =>
-            {
-                Assert.Equal(0, store.DocumentDatabase.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count());
-            });
+            VerifyDump(backupPath, store => Assert.Equal(0, store.DocumentDatabase.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
 
             IOExtensions.DeleteDirectory(backupPath);
         }
@@ -549,10 +544,7 @@ namespace Raven.Tests.Issues
                 await dumper.ExportData(null, null, true, backupStatus);
             }
 
-            VerifyDump(backupPath, store =>
-            {
-                Assert.Equal(0, store.DocumentDatabase.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count());
-            });
+            VerifyDump(backupPath, store => Assert.Equal(0, store.DocumentDatabase.GetDocuments(0, int.MaxValue, null, CancellationToken.None).Count()));
 
             IOExtensions.DeleteDirectory(backupPath);
         }
@@ -663,10 +655,7 @@ namespace Raven.Tests.Issues
                 await dumper.ExportData(null, null, true, backupStatus);
             }
 
-            VerifyDump(backupPath, store =>
-            {
-                Assert.Equal(328, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count());
-            });
+            VerifyDump(backupPath, store => Assert.Equal(328, store.DatabaseCommands.GetAttachmentHeadersStartingWith("user", 0, 500).Count()));
             IOExtensions.DeleteDirectory(backupPath);
         }
 
@@ -795,7 +784,7 @@ namespace Raven.Tests.Issues
             IOExtensions.DeleteDirectory(backupPath);
         }
 
-        private void InsertAttachments(IDocumentStore store, int amount)
+        private static void InsertAttachments(IDocumentStore store, int amount)
         {
             var counter = 0;
             var data = new byte[] { 1, 2, 3, 4 };
@@ -808,16 +797,16 @@ namespace Raven.Tests.Issues
 
 
         [Fact]
-        public async Task CanHandleExceptionsGracefully_Dumper()
+        public async Task CanHandleDocumentExceptionsGracefully_Smuggler()
         {
             var backupPath = NewDataPath("BackupFolder");
             var server = GetNewServer();
 
             var alreadyReset = false;
 
-            var forwarder = new PortForwarder(8070, 8079, bytes =>
+            var forwarder = new PortForwarder(8070, 8079, (totalRead, bytes, offset, count) =>
             {
-                if (alreadyReset == false && bytes > 10000)
+                if (alreadyReset == false && totalRead > 10000)
                 {
                     alreadyReset = true;
                     return true;
@@ -878,5 +867,80 @@ namespace Raven.Tests.Issues
                 server.Dispose();
             }
         }
+
+        [Fact]
+        public async Task CanHandleAttachmentExceptionsGracefully_Smuggler()
+        {
+            var backupPath = NewDataPath("BackupFolder");
+            var server = GetNewServer();
+
+            var resetCount = 0;
+
+            var forwarder = new PortForwarder(8070, 8079, (totalRead, bytes, offset, count) =>
+            {
+                var payload = System.Text.Encoding.UTF8.GetString(bytes, offset, count);
+                //reset count is requred as raven can retry attachment download
+                if (payload.Contains("GET /static/users/678 ") && resetCount < 5)
+                {
+                    resetCount++;
+                    return true;
+                }
+                return false;
+            });
+            forwarder.Forward();
+            try
+            {
+                using (var store = new DocumentStore
+                {
+                    Url = "http://localhost:8079"
+                }.Initialize())
+                {
+                    InsertAttachments(store, 2000);
+                }
+
+                var options = new SmugglerOptions
+                {
+                    Limit = 1500,
+                    BackupPath = backupPath,
+                };
+                var dumper = new SmugglerApi(options, new RavenConnectionStringOptions
+                {
+                    Url = "http://localhost:8070",
+                });
+
+                var allAttachments = new List<RavenJObject>();
+
+                var memoryStream = new MemoryStream();
+                Assert.Throws<AggregateException>(() => dumper.ExportData(memoryStream, null, true).Wait());
+
+                memoryStream.Position = 0;
+                using (var stream = new GZipStream(memoryStream, CompressionMode.Decompress))
+                {
+                    var chunk1 = RavenJToken.TryLoad(stream) as RavenJObject;
+                    var att1 = chunk1["Attachments"] as RavenJArray;
+                    allAttachments.AddRange(att1.Values<RavenJObject>());
+                }
+
+                var memoryStream2 = new MemoryStream();
+                await dumper.ExportData(memoryStream2, null, true);
+                memoryStream2.Position = 0;
+                using (var stream = new GZipStream(memoryStream2, CompressionMode.Decompress))
+                {
+                    var chunk2 = RavenJToken.TryLoad(stream) as RavenJObject;
+                    var attr2 = chunk2["Attachments"] as RavenJArray;
+                    allAttachments.AddRange(attr2.Values<RavenJObject>());
+                }
+
+                Assert.Equal(2000, allAttachments.Count());
+
+                IOExtensions.DeleteDirectory(backupPath);
+            }
+            finally
+            {
+                forwarder.Stop();
+                server.Dispose();
+            }
+        }
+        
     }
 }
