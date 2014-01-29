@@ -77,7 +77,7 @@ namespace Raven.Tests.Bundles.Replication
 			}
 		}
 
-		[Fact]
+		[TimeBombedFact(2014, 2, 10, "RavenDB-1613")]
 		public void ShouldThrowConflictExceptionForQueryingConflictedDocument()
 		{
 			using (var store1 = CreateEmbeddableStore())
