@@ -18,9 +18,9 @@ namespace Raven.Database.Server.Controllers
 	public class FacetsController : RavenDbApiController
 	{
 		[HttpGet]
-		[Route("facets/{*id}")]
-        [Route("databases/{databaseName}/facets/{*id}")]
-		public async Task<HttpResponseMessage> FacetsGet(string index)
+		[Route("facets/{*indexId}")]
+		[Route("databases/{databaseName}/facets/{*indexId}")]
+		public async Task<HttpResponseMessage> FacetsGet(string indexId)
 		{
 			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
 			var facetStart = GetFacetStart();
@@ -33,7 +33,7 @@ namespace Raven.Database.Server.Controllers
 			{
 				var facetsJson = GetQueryStringValue("facets");
 				if (string.IsNullOrEmpty(facetsJson) == false)
-					return TryGetFacetsFromString(index, out etag, out facets, facetsJson);
+					return TryGetFacetsFromString(indexId, out etag, out facets, facetsJson);
 			}
 
 			var jsonDocument = Database.Get(facetSetupDoc, null);
@@ -42,7 +42,7 @@ namespace Raven.Database.Server.Controllers
 				return GetMessageWithString("Could not find facet document: " + facetSetupDoc, HttpStatusCode.NotFound);
 			}
 
-			etag = GetFacetsEtag(jsonDocument, index);
+			etag = GetFacetsEtag(jsonDocument, indexId);
 
 			facets = jsonDocument.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
 
@@ -54,7 +54,7 @@ namespace Raven.Database.Server.Controllers
 
 			try
 			{
-				return GetMessageWithObject(Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize), HttpStatusCode.OK, etag);
+				return GetMessageWithObject(Database.ExecuteGetTermsQuery(indexId, indexQuery, facets, facetStart, facetPageSize), HttpStatusCode.OK, etag);
 			}
 			catch (Exception ex)
 			{
@@ -68,9 +68,9 @@ namespace Raven.Database.Server.Controllers
 		}
 
 		[HttpPost]
-		[Route("facets/{*id}")]
-        [Route("databases/{databaseName}/facets/{*id}")]
-		public async Task<HttpResponseMessage> FacetsPost(string index)
+		[Route("facets/{*indexId}")]
+		[Route("databases/{databaseName}/facets/{*indexId}")]
+		public async Task<HttpResponseMessage> FacetsPost(string indexId)
 		{
 			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
 			var facetStart = GetFacetStart();
@@ -78,7 +78,7 @@ namespace Raven.Database.Server.Controllers
 
 			Etag etag;
 			List<Facet> facets;
-			var msg = TryGetFacetsFromString(index, out etag, out facets, await ReadStringAsync());
+			var msg = TryGetFacetsFromString(indexId, out etag, out facets, await ReadStringAsync());
 			if (msg.StatusCode != HttpStatusCode.OK)
 				return msg;
 
@@ -90,7 +90,7 @@ namespace Raven.Database.Server.Controllers
 
 			try
 			{
-				return GetMessageWithObject(Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize), HttpStatusCode.OK, etag);
+				return GetMessageWithObject(Database.ExecuteGetTermsQuery(indexId, indexQuery, facets, facetStart, facetPageSize), HttpStatusCode.OK, etag);
 			}
 			catch (Exception ex)
 			{
