@@ -11,7 +11,7 @@ class deleteCollection {
     private deletionStarted = false;
 
     constructor(private collection: collection) {
-        super();
+        //super();
     }
 
     deleteCollection() {

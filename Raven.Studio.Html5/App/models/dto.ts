@@ -238,3 +238,14 @@ interface spatialIndexSuggestionDto {
     Distance: string;
     Accuracy: number;
 }
+
+interface periodicBackupSetupDto {
+    '@metadata': documentMetadataDto;
+    GlacierVaultName: string;
+    S3BucketName: string;
+    AwsRegionEndpoint: string;
+    AzureStorageContainer: string;
+    LocalFolderName: string;
+    IntervalMilliseconds: number;
+    FullBackupIntervalMilliseconds: number;
+}
