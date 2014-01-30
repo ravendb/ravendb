@@ -1293,8 +1293,20 @@ namespace Raven.Client.Connection.Async
 				try
 				{
 					var result = (RavenJObject)await request.ReadResponseJsonAsync();
-					return SerializationHelper.ToQueryResult(result, request.ResponseHeaders.GetEtagHeader(),
+					var queryResult = SerializationHelper.ToQueryResult(result, request.ResponseHeaders.GetEtagHeader(),
 																									 request.ResponseHeaders.Get("Temp-Request-Time"));
+
+					var docResults = queryResult.Results.Concat(queryResult.Includes);
+					return await RetryOperationBecauseOfConflict(operationMetadata, docResults, queryResult,
+													() => QueryAsync(index, query, includes, metadataOnly, indexEntriesOnly),
+													conflictedResultId =>
+												   new ConflictException(
+													   "Conflict detected on " +
+													   conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+													   ", conflict must be resolved before the document will be accessible", true)
+												   {
+													   ConflictedVersionIds = new[] { conflictedResultId }
+												   });
 				}
 				catch (ErrorResponseException e)
 				{
@@ -2185,7 +2197,8 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		private async Task<bool> AssertNonConflictedDocumentAndCheckIfNeedToReload(OperationMetadata operationMetadata, RavenJObject docResult)
+		private async Task<bool> AssertNonConflictedDocumentAndCheckIfNeedToReload(OperationMetadata operationMetadata, RavenJObject docResult,
+																					Func<string, ConflictException> onConflictedQueryResult = null)
 		{
 			if (docResult == null)
 				return (false);
@@ -2202,6 +2215,10 @@ namespace Raven.Client.Connection.Async
 				return true;
 
 			}
+
+			if (metadata.Value<bool>(Constants.RavenReplicationConflict) && onConflictedQueryResult != null)
+				throw onConflictedQueryResult(metadata.Value<string>("@id"));
+
 			return (false);
 		}
 
@@ -2265,12 +2282,12 @@ namespace Raven.Client.Connection.Async
 		}
 
 		private async Task<T> RetryOperationBecauseOfConflict<T>(OperationMetadata operationMetadata, IEnumerable<RavenJObject> docResults,
-																 T currentResult, Func<Task<T>> nextTry)
+																 T currentResult, Func<Task<T>> nextTry, Func<string, ConflictException> onConflictedQueryResult = null)
 		{
 			bool requiresRetry = false;
 			foreach (var docResult in docResults)
 			{
-                requiresRetry |= await AssertNonConflictedDocumentAndCheckIfNeedToReload(operationMetadata, docResult).ConfigureAwait(false);
+                requiresRetry |= await AssertNonConflictedDocumentAndCheckIfNeedToReload(operationMetadata, docResult, onConflictedQueryResult).ConfigureAwait(false);
 			}
 			if (!requiresRetry)
 				return currentResult;
