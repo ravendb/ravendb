@@ -32,10 +32,12 @@ namespace Raven.Database.Server.Controllers
                 var facetsJson = GetQueryStringValue("facets");
                 if (string.IsNullOrEmpty(facetsJson) == false)
                 {
-                    var msg = TryGetFacetsFromString(id, facetsJson, out facets, out etag);
-                    if (msg != null)
-                        return msg;
-                    additionalEtagBytes = Encoding.UTF8.GetBytes(facetsJson);
+					additionalEtagBytes = Encoding.UTF8.GetBytes(facetsJson);
+					etag = GetFacetsEtag(id, additionalEtagBytes);
+
+					var msg = TryGetFacetsFromString(facetsJson, out facets);
+					if (msg != null)
+						return msg;
                 }
             }
             else
@@ -48,6 +50,7 @@ namespace Raven.Database.Server.Controllers
                 additionalEtagBytes = jsonDocument.Etag.ToByteArray();
                 facets = jsonDocument.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
             }
+
             if (MatchEtag(etag))
             {
                 return GetEmptyMessage(HttpStatusCode.NotFound);
@@ -65,9 +68,8 @@ namespace Raven.Database.Server.Controllers
         public async Task<HttpResponseMessage> FacetsPost(string id)
         {
             List<Facet> facets;
-            Etag _;
             var facetsJson = await ReadStringAsync();
-            var msg = TryGetFacetsFromString(id, facetsJson, out facets, out _);
+            var msg = TryGetFacetsFromString(facetsJson, out facets);
             if (msg != null)
                 return msg;
             return await ExecuteFacetsQuery(id, facets, Encoding.UTF8.GetBytes(facetsJson));
@@ -99,20 +101,18 @@ namespace Raven.Database.Server.Controllers
             return GetMessageWithObject(results);
         }
 
-        private async Task<HttpResponseMessage> ExecuteFacetsQuery(string index, List<Facet> facets, byte[] additioneEtagBytes)
+        private async Task<HttpResponseMessage> ExecuteFacetsQuery(string index, List<Facet> facets, byte[] additionalEtagBytes)
         {
             var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
             var facetStart = GetFacetStart();
             var facetPageSize = GetFacetPageSize();
-            var indexEtag = GetFacetsEtag(index, additioneEtagBytes);
+            var indexEtag = GetFacetsEtag(index, additionalEtagBytes);
             var results = Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize);
             return GetMessageWithObject(results, HttpStatusCode.OK, indexEtag);
         }
 
-        private HttpResponseMessage TryGetFacetsFromString(string index, string facetsJson, out List<Facet> facets, out Etag etag)
+        private HttpResponseMessage TryGetFacetsFromString(string facetsJson, out List<Facet> facets)
         {
-            etag = GetFacetsEtag(index, Encoding.UTF8.GetBytes(facetsJson));
-
             facets = JsonConvert.DeserializeObject<List<Facet>>(facetsJson);
 
             if (facets == null || !facets.Any())
