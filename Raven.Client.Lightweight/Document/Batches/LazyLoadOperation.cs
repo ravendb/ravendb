@@ -25,9 +25,13 @@ namespace Raven.Client.Document.Batches
 
 		public GetRequest CreateRequest()
 		{
-			string path = "/docs?id=" + Uri.EscapeDataString(key);
-
-			return new GetRequest {Url = path};
+			const string path = "/docs";
+			var query = "id=" + Uri.EscapeDataString(key);
+			return new GetRequest
+			{
+				Url = path,
+				Query = query
+			};
 		}
 
 		public object Result { get; set; }
