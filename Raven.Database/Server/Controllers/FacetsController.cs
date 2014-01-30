@@ -51,7 +51,7 @@ namespace Raven.Database.Server.Controllers
 			var etag = GetFacetsEtag(id, additionalEtagBytes);
             if (MatchEtag(etag))
             {
-                return GetEmptyMessage(HttpStatusCode.NotFound);
+                return GetEmptyMessage(HttpStatusCode.NotModified);
             }
 
             if (facets == null || !facets.Any())
