@@ -53,7 +53,7 @@ namespace Raven.Tests.MailingList
 
 				//Act
 				FacetResults result = ExecuteTest(store);
-
+                WaitForUserToContinueTheTest();
 				//Assert
 				CheckResults(result);
 			}
