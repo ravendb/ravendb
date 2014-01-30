@@ -208,9 +208,13 @@ namespace Raven.Database.Indexing
 			if (itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
 			{
 				var sentArrayField = false;
-				int count = 1;
+			    int totalCount = 0;
+                int count = 1;
+                
 				foreach (var itemToIndex in itemsToIndex)
 				{
+				    totalCount++;
+
 					if (nestedArray == false && !Equals(storage, Field.Store.NO) && sentArrayField == false)
 					{
 						sentArrayField = true;
@@ -227,7 +231,9 @@ namespace Raven.Database.Indexing
 						multipleItemsSameFieldCount.RemoveAt(multipleItemsSameFieldCount.Count - 1);
 					}
 				}
-				yield break;
+
+			    if (totalCount != 0) 
+                    yield break;
 			}
 
 			if (Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED) ||

@@ -200,21 +200,24 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
                 foreach (var fieldable in document.GetFields())
                 {
                     var stringValue = GetStringValue(fieldable);
+                    RavenJToken token;
+                    var isJson = RavenJToken.TryParse(stringValue, out token);
+
                     RavenJToken value;
                     if (ravenJObject.TryGetValue(fieldable.Name, out value) == false)
                     {
-                        ravenJObject[fieldable.Name] = stringValue;
+                        ravenJObject[fieldable.Name] = isJson ? token : stringValue;
                     }
                     else
                     {
                         var ravenJArray = value as RavenJArray;
                         if (ravenJArray != null)
                         {
-                            ravenJArray.Add(stringValue);
+                            ravenJArray.Add(isJson ? token : stringValue);
                         }
                         else
                         {
-                            ravenJArray = new RavenJArray { value, stringValue };
+                            ravenJArray = new RavenJArray { value, isJson ? token : stringValue };
                             ravenJObject[fieldable.Name] = ravenJArray;
                         }
                     }
