@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
@@ -16,7 +17,7 @@ namespace Raven.Database.Server.Responders
 
 		public override string[] SupportedVerbs
 		{
-			get { return new[] {"GET"}; }
+			get { return new[] { "GET" }; }
 		}
 
 		public override void Respond(IHttpContext context)
@@ -25,7 +26,9 @@ namespace Raven.Database.Server.Responders
 			{
 				context.Response.ContentType = "application/json; charset=utf-8";
 
+				using (var cts = new CancellationTokenSource())
 				using (var writer = new JsonTextWriter(new StreamWriter(context.Response.OutputStream)))
+				using (var timeout = cts.TimeoutAfter(Settings.DatbaseOperationTimeout))
 				{
 					writer.WriteStartObject();
 					writer.WritePropertyName("Results");
@@ -46,17 +49,28 @@ namespace Raven.Database.Server.Responders
 							if (string.IsNullOrEmpty(startsWith))
 							{
 								Database.GetDocuments(context.GetStart(), pageSize, context.GetEtagFromQueryString(),
-								                      doc => doc.WriteTo(writer));
+									cts.Token,
+									doc =>
+									{
+										timeout.Delay();
+										doc.WriteTo(writer);
+									});
 							}
 							else
 							{
 								Database.GetDocumentsWithIdStartingWith(
 									startsWith,
 									context.Request.QueryString["matches"],
-                                    context.Request.QueryString["exclude"],
+									context.Request.QueryString["exclude"],
 									context.GetStart(),
 									pageSize,
-									doc => doc.WriteTo(writer));
+									cts.Token,
+									doc =>
+									{
+										timeout.Delay();
+                                        Database.WorkContext.UpdateFoundWork();
+										doc.WriteTo(writer);
+									});
 							}
 						}
 					});

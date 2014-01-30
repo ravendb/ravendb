@@ -205,7 +205,7 @@ namespace Raven.Tests.Linq
 			var q = indexedUsers.Where(user => user.Name.Any(char.IsUpper));
 
 			var exception = Assert.Throws<NotSupportedException>(() => q.ToString());
-			Assert.Contains("Method not supported", exception.Message);
+			Assert.Contains("Method not supported", exception.InnerException.Message);
 		}
 
 		[Fact]

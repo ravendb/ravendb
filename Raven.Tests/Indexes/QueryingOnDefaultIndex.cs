@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
@@ -45,7 +46,7 @@ namespace Raven.Tests.Indexes
 				{
 					Query = "Tag:[[Users]]",
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			Assert.Equal("ayende@ayende.com", queryResult.Results[0].Value<string>("email"));
@@ -73,7 +74,7 @@ namespace Raven.Tests.Indexes
 					Start = 0,
 					PageSize = 2,
 					SortedFields = new [] { new SortedField("__document_id"), }
-				});
+				}, CancellationToken.None);
 			} while (queryResultPageOne.IsStale);
 			do
 			{
@@ -83,7 +84,7 @@ namespace Raven.Tests.Indexes
 					Start = 1,
 					PageSize = 2,
 					SortedFields = new [] { new SortedField("__document_id"), }
-				});
+				}, CancellationToken.None);
 			} while (queryResultPageTwo.IsStale);
 
 			do
@@ -94,7 +95,7 @@ namespace Raven.Tests.Indexes
 					Start = 2,
 					PageSize = 2,
 					SortedFields = new []{new SortedField("__document_id"), }
-				});
+				}, CancellationToken.None);
 			} while (queryResultPageThree.IsStale);
 
 			// Page one

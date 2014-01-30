@@ -229,9 +229,7 @@ namespace Raven.Database.Indexing
                         continue;
                     var indexToWorkOn = GetIndexToWorkOn(indexesStat);
                     var index = context.IndexStorage.GetIndexInstance(indexesStat.Name);
-                    if (index == null || // not there
-                        index.CurrentMapIndexingTask != null)
-                        // busy doing indexing work already, not relevant for this batch
+                    if (index == null) // not there
                         continue;
 
                     indexToWorkOn.Index = index;

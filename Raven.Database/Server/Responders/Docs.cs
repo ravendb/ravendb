@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Security.Cryptography;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Database.Extensions;
@@ -48,16 +49,22 @@ namespace Raven.Database.Server.Responders
 					{
 						context.WriteHeaders(new RavenJObject(), lastDocEtag);
 
-						var startsWith = context.Request.QueryString["startsWith"];
-						if (string.IsNullOrEmpty(startsWith))
-							context.WriteJson(Database.GetDocuments(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize), context.GetEtagFromQueryString()));
-						else
-							context.WriteJson(Database.GetDocumentsWithIdStartingWith(
-								startsWith,
-								context.Request.QueryString["matches"],
-                                context.Request.QueryString["exclude"],
-								context.GetStart(),
-								context.GetPageSize(Database.Configuration.MaxPageSize)));
+						using (var cts = new CancellationTokenSource())
+						{
+							cts.TimeoutAfter(Settings.DatbaseOperationTimeout);
+
+							var startsWith = context.Request.QueryString["startsWith"];
+							if (string.IsNullOrEmpty(startsWith))
+								context.WriteJson(Database.GetDocuments(context.GetStart(), context.GetPageSize(Database.Configuration.MaxPageSize), context.GetEtagFromQueryString(), cts.Token));
+							else
+								context.WriteJson(Database.GetDocumentsWithIdStartingWith(
+									startsWith,
+									context.Request.QueryString["matches"],
+									context.Request.QueryString["exclude"],
+									context.GetStart(),
+									context.GetPageSize(Database.Configuration.MaxPageSize), 
+									cts.Token));
+						}
 					}
 					break;
 				case "POST":

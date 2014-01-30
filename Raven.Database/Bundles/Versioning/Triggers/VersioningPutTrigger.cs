@@ -6,6 +6,7 @@
 using System;
 using System.ComponentModel.Composition;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Bundles.Versioning.Data;
@@ -132,7 +133,7 @@ namespace Raven.Bundles.Versioning.Triggers
 
 			while (true)
 			{
-				var docs = Database.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize);
+				var docs = Database.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize, CancellationToken.None);
 				if (!docs.Any())
 					break;
 

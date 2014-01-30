@@ -113,6 +113,8 @@ namespace Raven.Database.Config
 				                    TimeSpanArgumentType.FromParse);
             
 			TimeToWaitBeforeRunningIdleIndexes = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeRunningIdleIndexes"], TimeSpan.FromMinutes(10), TimeSpanArgumentType.FromParse);
+
+			DatbaseOperationTimeout = new TimeSpanSetting(settings["Raven/DatbaseOperationTimeout"], TimeSpan.FromMinutes(5), TimeSpanArgumentType.FromParse);
             
 			TimeToWaitBeforeMarkingAutoIndexAsIdle = new TimeSpanSetting(settings["Raven/TimeToWaitBeforeMarkingAutoIndexAsIdle"], TimeSpan.FromHours(1), TimeSpanArgumentType.FromParse);
 
@@ -248,5 +250,6 @@ namespace Raven.Database.Config
 		public BooleanSetting PreventAutomaticSuggestionCreation { get; set; }
     
         public BooleanSetting DisablePerformanceCounters { get; set; }
-    }
+		public TimeSpanSetting DatbaseOperationTimeout { get; private set; }
+	}
 }

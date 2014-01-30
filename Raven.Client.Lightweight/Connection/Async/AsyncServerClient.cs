@@ -447,9 +447,9 @@ namespace Raven.Client.Connection.Async
 																		.ExecuteRequestAsync());
 		}
 
-		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
+		public async Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
-			return ExecuteWithReplication("DELETE", operationMetadata =>
+			RavenJToken op = await ExecuteWithReplication("DELETE", operationMetadata =>
 			{
 				string path = queryToDelete.GetIndexQueryUrl(operationMetadata.Url, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 				var request = jsonRequestFactory.CreateHttpJsonRequest(
@@ -473,6 +473,8 @@ namespace Raven.Client.Connection.Async
 						return task;
 					}).Unwrap();
 			});
+
+			return new Operation(this, op.Value<long>("OperationId"));
 		}
 
 		public Task DeleteTransformerAsync(string name)
@@ -898,15 +900,15 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
+		public Task<Operation> UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
 			var requestData = RavenJObject.FromObject(patch).ToString(Formatting.Indented);
 			return UpdateByIndexImpl(indexName, queryToUpdate, allowStale, requestData, "EVAL");
 		}
 
-		private Task UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
+		private async Task<Operation> UpdateByIndexImpl(string indexName, IndexQuery queryToUpdate, bool allowStale, String requestData, String method)
 		{
-			return ExecuteWithReplication(method, operationMetadata =>
+			RavenJToken reponse = await ExecuteWithReplication(method, operationMetadata =>
 			{
 				string path = queryToUpdate.GetIndexQueryUrl(operationMetadata.Url, indexName, "bulk_docs") + "&allowStale=" + allowStale;
 
@@ -915,6 +917,7 @@ namespace Raven.Client.Connection.Async
 				request.AddOperationHeaders(OperationsHeaders);
 				return request.ExecuteWriteAsync(requestData);
 			});
+			return new Operation(this, reponse.Value<long>("OperationId"));
 		}
 
 		/// <summary>
@@ -1188,7 +1191,7 @@ namespace Raven.Client.Connection.Async
 			});
 		}
 
-		public Task UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
+		public Task<Operation> UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
 		{
 			return UpdateByIndex(indexName, queryToUpdate, patch, false);
 		}
@@ -1903,15 +1906,6 @@ namespace Raven.Client.Connection.Async
 			}
 		}
 
-		private Task ExecuteWithReplication(string method, Func<OperationMetadata, Task> operation)
-		{
-			// Convert the Func<string, Task> to a Func<string, Task<object>>
-			return ExecuteWithReplication(method, u => operation(u).ContinueWith<object>(t =>
-			{
-				t.AssertNotFailed();
-				return null;
-			}));
-		}
 
 		private volatile bool currentlyExecuting;
 		private bool resolvingConflict;

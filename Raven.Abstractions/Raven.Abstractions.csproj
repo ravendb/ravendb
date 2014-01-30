@@ -652,6 +652,7 @@
     <Compile Include="Data\UuidType.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
+    <Compile Include="Exceptions\SmugglerExportException.cs" />
     <Compile Include="Exceptions\TransformCompilationException.cs" />
     <Compile Include="Exceptions\IndexCompilationException.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />

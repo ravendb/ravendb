@@ -72,6 +72,41 @@ namespace Raven.Database.Indexing
             state.Lock.EnterWriteLock();
             try
             {
+
+                foreach (var field in fieldsToRead)
+                {
+                    var read = readFromCache[field];
+                    foreach (var docId in docIds)
+                    {
+                        foreach (var val in state.GetFromCache(field, docId))
+                        {
+                            if(read.Add(docId) == false)
+                                continue;
+
+                            double converted;
+                            if (val.Val == null)
+                            {
+                                val.Val = converted = convert(val.Term);
+                            }
+                            else
+                            {
+                                converted = val.Val.Value;
+                            }
+                            onTermFound(val.Term, converted, docId);
+                        }
+                    }
+                }
+
+                foreach (var kvp in readFromCache)
+                {
+                    if (kvp.Value.Count == docIds.Count)
+                    {
+                        fieldsToRead.Remove(kvp.Key); // already read all of it
+                    }
+                }
+
+                if (fieldsToRead.Count == 0)
+                    return;
                 using (var termDocs = reader.TermDocs())
                 {
                     foreach (var field in fieldsToRead)
@@ -170,6 +205,32 @@ namespace Raven.Database.Indexing
             state.Lock.EnterWriteLock();
             try
             {
+                foreach (var field in fieldsToRead)
+                {
+                    var read = readFromCache[field];
+                    foreach (var docId in docIds)
+                    {
+                        foreach (var term in state.GetTermsFromCache(field, docId))
+                        {
+                            if(read.Add(docId) == false)
+                                continue;
+                            onTermFound(term, docId);
+                        }
+                    }
+                }
+
+                foreach (var kvp in readFromCache)
+                {
+                    if (kvp.Value.Count == docIds.Count)
+                    {
+                        fieldsToRead.Remove(kvp.Key); // already read all of it
+                    }
+                }
+
+                if (fieldsToRead.Count == 0)
+                    return;
+
+
                 using (var termDocs = reader.TermDocs())
                 {
                     foreach (var field in fieldsToRead)

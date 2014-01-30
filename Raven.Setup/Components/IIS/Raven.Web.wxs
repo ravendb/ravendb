@@ -14,32 +14,6 @@
         <Condition><![CDATA[IISMAJORVERSION >= "#7"]]></Condition>
         <File Id='web.config' Name='web.config' DiskId='1' Source='$(var.SolutionDir)\DefaultConfigs\Web.config'>
         </File>
-        <util:XmlFile Id="AddEmptySettingIIS"
-                 Action="createElement"
-                 Permanent="yes"
-                 ElementPath="/configuration/appSettings"
-                 Name="add"
-                 File="[#web.config]"
-                 SelectionLanguage="XSLPattern"
-                 Sequence="2" />
-        <util:XmlFile Id="AddRavenLicensePathKeyIIS"
-                 Action="setValue"
-                 Permanent="yes"
-                 ElementPath="/configuration/appSettings/add[\[]not(@key)[\]] "
-                 Name="key"
-                 Value="Raven/LicensePath"
-                 File="[#web.config]"
-                 SelectionLanguage="XSLPattern"
-                 Sequence="3" />
-        <util:XmlFile Id="SetLicenseFilePathIIS"
-                 Action="setValue"
-                 Permanent="yes"
-                 ElementPath="/configuration/appSettings/add[\[]@key='Raven/LicensePath'[\]]"
-                 Name="value"
-                 File="[#web.config]"
-                 Value="[RAVEN_LICENSE_FILE_PATH]"
-                 SelectionLanguage="XSLPattern"
-                 Sequence="4" />
 		  <util:XmlFile Id="SetDataDirIIS"
 				   Action="setValue"
 				   Permanent="yes"
@@ -80,32 +54,6 @@
         <Condition><![CDATA[IISMAJORVERSION < "#7"]]></Condition>
         <File Id='web_iis6.config' Name='web.config' DiskId='1' Source='$(var.SolutionDir)\DefaultConfigs\Web_IIS6.config'>
         </File>
-        <util:XmlFile Id="AddEmptySettingIIS6"
-                 Action="createElement"
-                 Permanent="yes"
-                 ElementPath="/configuration/appSettings"
-                 Name="add"
-                 File="[#web_iis6.config]"
-                 SelectionLanguage="XSLPattern"
-                 Sequence="2" />
-        <util:XmlFile Id="AddRavenLicensePathKeyIIS6"
-                 Action="setValue"
-                 Permanent="yes"
-                 ElementPath="/configuration/appSettings/add[\[]not(@key)[\]] "
-                 Name="key"
-                 Value="Raven/LicensePath"
-                 File="[#web_iis6.config]"
-                 SelectionLanguage="XSLPattern"
-                 Sequence="3" />
-        <util:XmlFile Id="SetLicenseFilePathIIS6"
-                 Action="setValue"
-                 Permanent="yes"
-                 ElementPath="/configuration/appSettings/add[\[]@key='Raven/LicensePath'[\]]"
-                 Name="value"
-                 File="[#web_iis6.config]"
-                 Value="[RAVEN_LICENSE_FILE_PATH]"
-                 SelectionLanguage="XSLPattern"
-                 Sequence="4" />
 		  <util:XmlFile Id="SetDataDirIIS6"
 				   Action="setValue"
 				   Permanent="yes"

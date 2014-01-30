@@ -15,7 +15,8 @@ using Raven.Abstractions.Smuggler;
 
 namespace Raven.Smuggler
 {
-	using System.Net.Sockets;
+    using System.Linq;
+    using System.Net.Sockets;
 
 	public class Program
 	{
@@ -48,11 +49,11 @@ namespace Raven.Smuggler
 			            			},
 			            		{
 			            			"metadata-filter:{=}", "Filter documents by a metadata property." + Environment.NewLine +
-			            			                       "Usage example: Raven-Entity-Name=Posts", (key, val) => options.Filters.Add(new FilterSetting
+			            			                       "Usage example: Raven-Entity-Name=Posts, or Raven-Entity-Name=Posts,Persons for multiple document types", (key, val) => options.Filters.Add(new FilterSetting
 			            			                       {
 				            			                       Path = "@metadata." + key,
 															   ShouldMatch = true,
-															   Values = new List<string>{val}
+															   Values = val.Split(',').ToList()
 			            			                       })
 			            			},
 								{
@@ -61,7 +62,7 @@ namespace Raven.Smuggler
 			            			                       {
 				            			                       Path = "@metadata." + key,
 															   ShouldMatch = false,
-															   Values = new List<string>{val}
+															   Values = val.Split(',').ToList()
 			            			                       })
 			            			},
 			            		{
@@ -70,7 +71,7 @@ namespace Raven.Smuggler
 			            			              {
 													  Path = key,
 													  ShouldMatch = true,
-													  Values = new List<string>{val}
+													  Values = val.Split(',').ToList()
 			            			              })
 			            			},
 								{
@@ -79,7 +80,7 @@ namespace Raven.Smuggler
 			            			              {
 													  Path = key,
 													  ShouldMatch = false,
-													  Values = new List<string>{val}
+													  Values = val.Split(',').ToList()
 			            			              })
 			            			},
 			            		{
@@ -101,6 +102,7 @@ namespace Raven.Smuggler
 								{"incremental", "States usage of incremental operations", _ => incremental = true },
 								{"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _=> waitForIndexing=true},
                                 {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true },
+                                {"limit:", "Reads at most VALUE documents/attachments.", s => options.Limit = int.Parse(s)},
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
 			            	};
 		}
@@ -160,60 +162,61 @@ namespace Raven.Smuggler
 
 			try
 			{
-				switch (action)
-				{
-					case SmugglerAction.Import:
-						smugglerApi.ImportData(options, incremental).Wait();
-						if (waitForIndexing)
-							smugglerApi.WaitForIndexing(options).Wait();
-						break;
-					case SmugglerAction.Export:
-						smugglerApi.ExportData(null, options, incremental).Wait();
-						break;
-				}
+			    switch (action)
+			    {
+			        case SmugglerAction.Import:
+			            smugglerApi.ImportData(options, incremental).Wait();
+			            if (waitForIndexing)
+			                smugglerApi.WaitForIndexing(options).Wait();
+			            break;
+			        case SmugglerAction.Export:
+			            smugglerApi.ExportData(null, options, incremental).Wait();
+			            break;
+			    }
+
 			}
 			catch (AggregateException ex)
 			{
-				var exception = ex.ExtractSingleInnerException();
-				var e = exception as WebException;
-				if (e != null)
-				{
+			    var exception = ex.ExtractSingleInnerException();
+			    var e = exception as WebException;
+			    if (e != null)
+			    {
 
-					if (e.Status == WebExceptionStatus.ConnectFailure)
-					{
-						Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url);
-						var socketException = e.InnerException as SocketException;
-						if (socketException != null)
-						{
-							Console.WriteLine("Details: {0}", socketException.Message);
-							Console.WriteLine("Socket Error Code: {0}", socketException.SocketErrorCode);
-						}
+			        if (e.Status == WebExceptionStatus.ConnectFailure)
+			        {
+			            Console.WriteLine("Error: {0} {1}", e.Message, connectionStringOptions.Url);
+			            var socketException = e.InnerException as SocketException;
+			            if (socketException != null)
+			            {
+			                Console.WriteLine("Details: {0}", socketException.Message);
+			                Console.WriteLine("Socket Error Code: {0}", socketException.SocketErrorCode);
+			            }
 
-						Environment.Exit((int)e.Status);
-					}
+			            Environment.Exit((int) e.Status);
+			        }
 
-					var httpWebResponse = e.Response as HttpWebResponse;
-					if (httpWebResponse == null)
-						throw;
-					Console.WriteLine("Error: " + e.Message);
-					Console.WriteLine("Http Status Code: " + httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription);
+			        var httpWebResponse = e.Response as HttpWebResponse;
+			        if (httpWebResponse == null)
+			            throw;
+			        Console.WriteLine("Error: " + e.Message);
+			        Console.WriteLine("Http Status Code: " + httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription);
 
-					using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
-					{
-						string line;
-						while ((line = reader.ReadLine()) != null)
-						{
-							Console.WriteLine(line);
-						}
-					}
+			        using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
+			        {
+			            string line;
+			            while ((line = reader.ReadLine()) != null)
+			            {
+			                Console.WriteLine(line);
+			            }
+			        }
 
-					Environment.Exit((int)httpWebResponse.StatusCode);
-				}
-				else
-				{
-					Console.WriteLine(ex);
-					Environment.Exit(-1);
-				}
+			        Environment.Exit((int) httpWebResponse.StatusCode);
+			    }
+			    else
+			    {
+			        Console.WriteLine(ex);
+			        Environment.Exit(-1);
+			    }
 			}
 		}
 

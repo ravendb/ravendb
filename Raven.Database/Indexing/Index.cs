@@ -20,7 +20,6 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
-using Mono.CSharp;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -40,7 +39,6 @@ using Raven.Json.Linq;
 using Directory = Lucene.Net.Store.Directory;
 using Document = Lucene.Net.Documents.Document;
 using Field = Lucene.Net.Documents.Field;
-using Task = System.Threading.Tasks.Task;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Database.Indexing
@@ -82,10 +80,6 @@ namespace Raven.Database.Indexing
 		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 		private bool forceWriteToDisk;
-
-		public TimeSpan LastIndexingDuration { get; set; }
-		public long TimePerDoc { get; set; }
-		public Task CurrentMapIndexingTask { get; set; }
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
@@ -184,18 +178,6 @@ namespace Raven.Database.Indexing
 				}
 
 				disposed = true;
-				var task = CurrentMapIndexingTask;
-				if (task != null)
-				{
-					try
-					{
-						task.Wait();
-					}
-					catch (Exception e)
-					{
-						logIndexing.Warn("Error while closing the index (could not wait for current indexing task)", e);
-					}
-				}
 
 				foreach (var indexExtension in indexExtensions)
 				{
@@ -925,7 +907,7 @@ namespace Raven.Database.Indexing
 				}
 			}
 
-			public IEnumerable<IndexQueryResult> Query()
+			public IEnumerable<IndexQueryResult> Query(CancellationToken token)
 			{
 				parent.MarkQueried();
 				using (IndexStorage.EnsureInvariantCulture())
@@ -965,6 +947,7 @@ namespace Raven.Database.Indexing
 							int moreRequired;
 							do
 							{
+								token.ThrowIfCancellationRequested(); 
 								search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery);
 								moreRequired = recorder.RecordResultsAlreadySeenForDistinctQuery(search, adjustStart, pageSize, ref start);
 								pageSize += moreRequired * 2;
@@ -1067,7 +1050,7 @@ namespace Raven.Database.Indexing
 				return luceneQuery;
 			}
 
-			public IEnumerable<IndexQueryResult> IntersectionQuery()
+			public IEnumerable<IndexQueryResult> IntersectionQuery(CancellationToken token)
 			{
 				using (IndexStorage.EnsureInvariantCulture())
 				{
@@ -1094,6 +1077,7 @@ namespace Raven.Database.Indexing
 
 						do
 						{
+							token.ThrowIfCancellationRequested();
 							if (skippedResultsInCurrentLoop > 0)
 							{
 								// We get here because out first attempt didn't get enough docs (after INTERSECTION was calculated)
@@ -1357,7 +1341,8 @@ namespace Raven.Database.Indexing
 
 						Document document = indexSearcher.Doc(search.ScoreDocs[i].Doc);
 						var indexQueryResult = parent.RetrieveDocument(document, fieldsToFetch, search.ScoreDocs[i]);
-						if (alreadyReturned.Add(indexQueryResult.Projection) == false)
+						if (indexQueryResult.Projection.Count > 0 && // we don't consider empty projections to be relevant for distinct operations
+                            alreadyReturned.Add(indexQueryResult.Projection) == false)
 						{
 							min++; // we found a duplicate
 							itemsSkipped++;

@@ -103,7 +103,7 @@ namespace Raven.Tests.Bugs
 
 			Assert.Throws<IndexDisabledException>(() =>
 			{
-				var queryResult = db.Query("test", new IndexQuery { Query = "User:Ayende" });
+				var queryResult = db.Query("test", new IndexQuery { Query = "User:Ayende" }, CancellationToken.None);
 			});
 		}
 
@@ -131,7 +131,7 @@ namespace Raven.Tests.Bugs
 				{
 					Query = "Tag:[[Foos]]",
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			Assert.Equal(1, queryResult.TotalResults);

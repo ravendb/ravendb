@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Indexes;
@@ -83,7 +84,7 @@ namespace Raven.Tests.Storage
 				{
 					Query = "Tag:[[Users]]",
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 			Assert.Equal(1, queryResult.Results.Count);
 		}
@@ -100,7 +101,7 @@ namespace Raven.Tests.Storage
 				{
 					Query = "Tag:[[Users]]",
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 			Assert.Equal(1, queryResult.Results.Count);
 
@@ -118,7 +119,7 @@ namespace Raven.Tests.Storage
 			{
 				Query = "Tag:[[Users]]",
 				PageSize = 10
-			});
+			}, CancellationToken.None);
 			Assert.Equal(1, queryResult.Results.Count);
 		}
 
@@ -134,7 +135,7 @@ namespace Raven.Tests.Storage
 				{
 					Query = "Tag:[[Users]]",
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 			Assert.Equal(1, queryResult.Results.Count);
 

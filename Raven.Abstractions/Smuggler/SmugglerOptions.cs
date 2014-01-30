@@ -30,6 +30,7 @@ namespace Raven.Abstractions.Smuggler
 			Timeout = 30 * 1000; // 30 seconds
 			BatchSize = 1024;
 			ShouldExcludeExpired = false;
+		    Limit = int.MaxValue;
 			LastAttachmentEtag = LastDocsEtag = Etag.Empty;
 		    MaxStepsForTransformScript = 10*1000;
 		}
@@ -43,6 +44,8 @@ namespace Raven.Abstractions.Smuggler
 
 		public Etag LastDocsEtag { get; set; }
 		public Etag LastAttachmentEtag { get; set; }
+
+        public int Limit { get; set; }
 
 		/// <summary>
 		/// Specify the types to operate on. You can specify more than one type by combining items with the OR parameter.

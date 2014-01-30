@@ -76,7 +76,7 @@ namespace Raven.Tests.Indexes
 					Query = "f:val",
 					Start = 0,
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -123,7 +123,7 @@ namespace Raven.Tests.Indexes
 					Query = "f:val",
 					Start = 0,
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);
@@ -159,7 +159,7 @@ namespace Raven.Tests.Indexes
 					Query = "f:val",
 					Start = 0,
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 				if (docs.IsStale)
 					Thread.Sleep(100);
 			} while (docs.IsStale);

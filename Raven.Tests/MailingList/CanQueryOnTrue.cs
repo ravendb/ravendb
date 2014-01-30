@@ -27,7 +27,7 @@ namespace Raven.Tests.MailingList
                     var e = Assert.Throws<ArgumentException>(
                         () => s.Query<Item>().Where(_ => true).Where(x => x.Name == "oren").ToList());
 
-                    Assert.Equal("Constants expressions such as Where(x => true) are not allowed in the RavenDB queries",e.Message);
+                    Assert.Equal("Constants expressions such as Where(x => true) are not allowed in the RavenDB queries",e.InnerException.Message);
                 }
             }
         }

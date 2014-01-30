@@ -6,6 +6,7 @@
 
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database;
@@ -60,7 +61,7 @@ namespace Raven.Tests.Triggers
 		{
 			db.Put("abc", null, new RavenJObject(), RavenJObject.Parse("{'name': 'abC'}"), null);
 
-			var jsonDocument = db.GetDocuments(0, 25, null).First();
+			var jsonDocument = db.GetDocuments(0, 25, null, CancellationToken.None).First();
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
 				jsonDocument.Value<RavenJObject>("@metadata").Value<RavenJObject>("Raven-Read-Veto").Value<string>("Reason"));
@@ -79,7 +80,7 @@ namespace Raven.Tests.Triggers
 				{
 					Query = "name:abC",
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			Assert.Equal("Upper case characters in the 'name' property means the document is a secret!",
@@ -100,7 +101,7 @@ namespace Raven.Tests.Triggers
 					Query = "name:abc",
 					PageSize = 10,
 					FieldsToFetch = new[] { "__document_id" }
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			Assert.Equal(1, queryResult.Results.Count);
@@ -114,7 +115,7 @@ namespace Raven.Tests.Triggers
 					Query = "name:abC",
 					PageSize = 10,
 					FieldsToFetch = new[] { "__document_id" }
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			Assert.Equal(0, queryResult.Results.Count);
@@ -136,7 +137,7 @@ namespace Raven.Tests.Triggers
 			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), RavenJObject.Parse("{'hidden': true}"), null);
 
 
-			Assert.Empty(db.GetDocuments(0, 25, null));
+			Assert.Empty(db.GetDocuments(0, 25, null, CancellationToken.None));
 		}
 
 		[Fact]
@@ -152,7 +153,7 @@ namespace Raven.Tests.Triggers
 				{
 					Query = "name:abC",
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			Assert.Empty(queryResult.Results);
@@ -174,7 +175,7 @@ namespace Raven.Tests.Triggers
 				queryResult = db.Query("ByName", new IndexQuery
 				{
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			Assert.Equal(7, queryResult.Results.Count);
@@ -197,7 +198,7 @@ namespace Raven.Tests.Triggers
 				{
 					PageSize = 3,
 					SortedFields = new[] { new SortedField("__document_id"), }
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			Assert.Equal(3, queryResult.Results.Count);
@@ -223,7 +224,7 @@ namespace Raven.Tests.Triggers
 				{
 					PageSize = 3,
 					SortedFields = new[] { new SortedField("__document_id"), }
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			queryResult = db.Query("ByName", new IndexQuery
@@ -231,7 +232,7 @@ namespace Raven.Tests.Triggers
 				PageSize = 3,
 				Start = queryResult.SkippedResults + queryResult.Results.Count,
 				SortedFields = new[] { new SortedField("__document_id"), }
-			});
+			}, CancellationToken.None);
 
 			Assert.Equal(3, queryResult.Results.Count);
 			var array = queryResult.Results.Select(x => int.Parse(x["@metadata"].Value<string>("@id"))).OrderBy(x => x).ToArray();
@@ -257,7 +258,7 @@ namespace Raven.Tests.Triggers
 			db.Put("abc", null, RavenJObject.Parse("{'name': 'abc'}"), new RavenJObject(), null);
 
 
-			Assert.Equal("ABC", db.GetDocuments(0, 10, null).First().Value<string>("name"));
+			Assert.Equal("ABC", db.GetDocuments(0, 10, null, CancellationToken.None).First().Value<string>("name"));
 		}
 
 		[Fact]
@@ -273,7 +274,7 @@ namespace Raven.Tests.Triggers
 				{
 					Query = "name:abC",
 					PageSize = 10
-				});
+				}, CancellationToken.None);
 			} while (queryResult.IsStale);
 
 			Assert.Equal("ABC", queryResult.Results[0].Value<string>("name"));

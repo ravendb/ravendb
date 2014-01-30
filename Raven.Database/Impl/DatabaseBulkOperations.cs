@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Threading;
+using Raven.Database.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
@@ -19,11 +21,15 @@ namespace Raven.Database.Impl
 	{
 		private readonly DocumentDatabase database;
 		private readonly TransactionInformation transactionInformation;
+		private readonly CancellationToken token;
+		private readonly CancellationTokenSourceExtensions.CancellationTimeout timeout;
 
-		public DatabaseBulkOperations(DocumentDatabase database, TransactionInformation transactionInformation)
+		public DatabaseBulkOperations(DocumentDatabase database, TransactionInformation transactionInformation, CancellationToken token, CancellationTokenSourceExtensions.CancellationTimeout timeout)
 		{
 			this.database = database;
 			this.transactionInformation = transactionInformation;
+			this.token = token;
+			this.timeout = timeout;
 		}
 
 		public RavenJArray DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
@@ -70,7 +76,7 @@ namespace Raven.Database.Impl
 			};
 
 			bool stale;
-			var queryResults = database.QueryDocumentIds(index, bulkIndexQuery, out stale);
+			var queryResults = database.QueryDocumentIds(index, bulkIndexQuery, token, out stale);
 
 			if (stale && allowStale == false)
 			{
@@ -83,6 +89,8 @@ namespace Raven.Database.Impl
 			{
 				while (true)
 				{
+					if (timeout != null)
+						timeout.Delay();
 					var batchCount = 0;
 					database.TransactionalStorage.Batch(actions =>
 					{
