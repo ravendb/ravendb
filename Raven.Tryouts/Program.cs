@@ -1,17 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Tests.Bugs;
-using Raven.Tests.Bugs.Iulian;
+
 using Raven.Tests.Faceted;
-using Raven.Tests.Indexes;
-using Raven.Tests.Issues;
-using Raven.Tests.MailingList;
-using Raven.Tests.MultiGet;
-using Raven.Tests.Notifications;
-using Raven.Tests.Patching;
-using Raven.Tests.Storage;
-using Raven.Tests.Track;
-using Raven.Tests.Views;
 
 namespace Raven.Tryouts
 {

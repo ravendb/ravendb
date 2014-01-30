@@ -28,6 +28,7 @@ namespace Raven.Abstractions.Smuggler
             Timeout = TimeSpan.FromSeconds(30);
             ShouldExcludeExpired = false;
             StartAttachmentsEtag = StartDocsEtag = Etag.Empty;
+            Limit = int.MaxValue;
 		    MaxStepsForTransformScript = 10*1000;
         }
 
@@ -61,6 +62,8 @@ namespace Raven.Abstractions.Smuggler
         /// Usage example: OperateOnTypes = ItemType.Indexes | ItemType.Transformers | ItemType.Documents | ItemType.Attachments.
         /// </summary>
         public ItemType OperateOnTypes { get; set; }
+
+        public int Limit { get; set; }
 
         /// <summary>
         /// Filters to use to filter the documents that we will export/import.

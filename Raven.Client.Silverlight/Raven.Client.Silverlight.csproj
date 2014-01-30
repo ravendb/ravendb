@@ -555,8 +555,17 @@
     <Compile Include="..\Raven.Abstractions\Replication\*.cs">
       <Link>Abstructions\Replication\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Smuggler\*.cs">
-      <Link>Abstructions\Smuggler\%(FileName)</Link>
+    <Compile Include="..\Raven.Abstractions\Smuggler\ISmugglerApi.cs">
+      <Link>Abstructions\Smuggler\ISmugglerApi</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Smuggler\SmugglerAction.cs">
+      <Link>Abstructions\Smuggler\SmugglerAction</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Smuggler\SmugglerApiBase.cs">
+      <Link>Abstructions\Smuggler\SmugglerApiBase</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Smuggler\SmugglerOptions.cs">
+      <Link>Abstructions\Smuggler\SmugglerOptions</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Spatial\*.cs">
       <Link>Abstructions\Spatial\%(FileName)</Link>
