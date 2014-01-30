@@ -824,7 +824,7 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 		    var ere = e as ErrorResponseException ?? e.InnerException as ErrorResponseException;
 		    if (ere != null)
 		    {
-		        if (IsServerDown(ere.Response.StatusCode, out timeout))
+		        if (IsServerDown(ere.StatusCode, out timeout))
 		            return true;
 		    }
 

@@ -68,7 +68,7 @@ namespace Raven.Tests.MailingList
 		{
 			return new DocumentStore
 			{
-				Url = string.Format("http://localhost:{0}/", port),
+				Url = string.Format("http://localhost.fiddler:{0}/", port),
 				Conventions =
 				{
 					FailoverBehavior = FailoverBehavior.FailImmediately

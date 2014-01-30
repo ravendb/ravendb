@@ -168,7 +168,7 @@ namespace Raven.Client.Silverlight.Connection
 
 
 			if (Response.IsSuccessStatusCode == false)
-				throw new ErrorResponseException(Response);
+				throw ErrorResponseException.FromResponseMessage(Response);
 
 			return await ReadStringInternal();
 			;
@@ -225,7 +225,7 @@ namespace Raven.Client.Silverlight.Connection
 									   .AddUrlIfFaulting(new Uri(Url));
 			SetResponseHeaders(Response);
 			if (Response.IsSuccessStatusCode == false)
-				throw new ErrorResponseException(Response);
+				throw ErrorResponseException.FromResponseMessage(Response);
 
 			// TODO: Use RetryIfNeedTo(task, ReadResponseBytesAsync)
 			return ConvertStreamToBytes(await Response.GetResponseStreamWithHttpDecompression());
@@ -336,7 +336,7 @@ namespace Raven.Client.Silverlight.Connection
 												});
 
 			if (Response.IsSuccessStatusCode == false)
-				throw new ErrorResponseException(Response);
+				throw ErrorResponseException.FromResponseMessage(Response);
 		}
 
         public async Task WriteAsync(RavenJToken tokenToWrite)
@@ -348,7 +348,7 @@ namespace Raven.Client.Silverlight.Connection
             });
 
             if (Response.IsSuccessStatusCode == false)
-                throw new ErrorResponseException(Response);
+                throw ErrorResponseException.FromResponseMessage(Response);
         }
 
 
@@ -366,7 +366,7 @@ namespace Raven.Client.Silverlight.Connection
 			});
 
 			if (Response.IsSuccessStatusCode == false)
-				throw new ErrorResponseException(Response);
+				throw ErrorResponseException.FromResponseMessage(Response);
 		}
 
 		/// <summary>
@@ -440,7 +440,7 @@ namespace Raven.Client.Silverlight.Connection
 					Response.StatusCode == HttpStatusCode.NotFound ||
 					Response.StatusCode == HttpStatusCode.Conflict)
 				{
-					throw new ErrorResponseException(Response);
+					throw ErrorResponseException.FromResponseMessage(Response);
 				}
 
 				using (var sr = new StreamReader(await Response.GetResponseStreamWithHttpDecompression()))
@@ -448,7 +448,7 @@ namespace Raven.Client.Silverlight.Connection
 					var readToEnd = sr.ReadToEnd();
 
 					if (string.IsNullOrWhiteSpace(readToEnd))
-						throw new ErrorResponseException(Response);
+						throw ErrorResponseException.FromResponseMessage(Response);
 
 					RavenJObject ravenJObject;
 					try
@@ -469,7 +469,7 @@ namespace Raven.Client.Silverlight.Connection
 					}
 					if (Response.StatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
 					{
-						throw new BadRequestException(ravenJObject.Value<string>("Message"), new ErrorResponseException(Response));
+						throw new BadRequestException(ravenJObject.Value<string>("Message"), ErrorResponseException.FromResponseMessage(Response));
 					}
 					if (ravenJObject.ContainsKey("Error"))
 					{
