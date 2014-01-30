@@ -111,7 +111,14 @@ namespace Raven.Storage.Esent.StorageActions
 			logger.Debug("Attachment with key '{0}' was deleted", key);
 		}
 
-		public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)
+	    public long GetAttachmentsCount()
+	    {
+            if (Api.TryMoveFirst(session, Details))
+                return Api.RetrieveColumnAsInt32(session, Details, tableColumnsCache.DetailsColumns["attachment_count"]).Value;
+            return 0;
+	    }
+
+	    public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)
 		{
 			Api.JetSetCurrentIndex(session, Files, "by_etag");
 			Api.MoveAfterLast(session, Files);

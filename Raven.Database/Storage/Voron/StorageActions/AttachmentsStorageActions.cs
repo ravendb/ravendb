@@ -26,7 +26,10 @@ namespace Raven.Database.Storage.Voron.StorageActions
 		private readonly WriteBatch writeBatch;
 		private readonly SnapshotReader snapshot;
 		private readonly IUuidGenerator uuidGenerator;
-		private readonly Raven.Storage.Voron.TransactionalStorage transactionalStorage;
+
+	    private readonly TableStorage tableStorage;
+
+	    private readonly Raven.Storage.Voron.TransactionalStorage transactionalStorage;
 
 		private static readonly ILog logger = LogManager.GetCurrentClassLogger();
 
@@ -34,13 +37,15 @@ namespace Raven.Database.Storage.Voron.StorageActions
 										 WriteBatch writeBatch, 
 										 SnapshotReader snapshot, 
 									     IUuidGenerator uuidGenerator, 
+                                         TableStorage tableStorage,
 										 Raven.Storage.Voron.TransactionalStorage transactionalStorage)
 		{
 			this.attachmentsTable = attachmentsTable;
 			this.writeBatch = writeBatch;
 			this.snapshot = snapshot;
 			this.uuidGenerator = uuidGenerator;
-			this.transactionalStorage = transactionalStorage;
+		    this.tableStorage = tableStorage;
+		    this.transactionalStorage = transactionalStorage;
 		}
 
 		public Etag AddAttachment(string key, Etag etag, Stream data, RavenJObject headers)
@@ -204,7 +209,12 @@ but the attachment itself was found. Data corruption?", key));
 			}
 		}
 
-		internal Stream GetAttachmentStream(string dataKey)
+	    public long GetAttachmentsCount()
+	    {
+            return tableStorage.GetEntriesCount(tableStorage.Attachments);
+	    }
+
+	    internal Stream GetAttachmentStream(string dataKey)
 		{
 			if (!attachmentsTable.Contains(snapshot, dataKey, writeBatch))
 				return new MemoryStream();
