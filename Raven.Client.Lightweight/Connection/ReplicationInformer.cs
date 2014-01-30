@@ -544,9 +544,9 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex].Url, currentRequest, method, false))
 					{
 						var tuple = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true);
-						if (tuple.Item1)
-							return tuple.Item2;
-						timeoutThrown = tuple.Item3;
+						if (tuple.Success)
+							return tuple.Result;
+						timeoutThrown = tuple.WasTimeout;
 					}
 				}
 			}
@@ -554,16 +554,16 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 			if (ShouldExecuteUsing(primaryOperation.Url, currentRequest, method, true))
 			{
 				var tuple = await TryOperationAsync(operation, primaryOperation, null, !timeoutThrown && localReplicationDestinations.Count > 0);
-				if (tuple.Item1)
-					return tuple.Item2;
-				timeoutThrown = tuple.Item3;
+				if (tuple.Success)
+					return tuple.Result;
+				timeoutThrown = tuple.WasTimeout;
 
 				if (!timeoutThrown && IsFirstFailure(primaryOperation.Url))
 				{
 					tuple = await TryOperationAsync(operation, primaryOperation, null, localReplicationDestinations.Count > 0);
-					if (tuple.Item1)
-						return tuple.Item2;
-					timeoutThrown = tuple.Item3;
+					if (tuple.Success)
+						return tuple.Result;
+					timeoutThrown = tuple.WasTimeout;
 				}
 				IncrementFailureCount(primaryOperation.Url);
 			}
@@ -575,16 +575,16 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 					continue;
 
 				var tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, !timeoutThrown);
-				if (tuple.Item1)
-					return tuple.Item2;
-				timeoutThrown = tuple.Item3;
+				if (tuple.Success)
+					return tuple.Result;
+				timeoutThrown = tuple.WasTimeout;
 
 				if (!timeoutThrown && IsFirstFailure(replicationDestination.Url))
 				{
 					tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1);
-					if (tuple.Item1)
-						return tuple.Item2;
-					timeoutThrown = tuple.Item3;
+					if (tuple.Success)
+						return tuple.Result;
+					timeoutThrown = tuple.WasTimeout;
 				}
 				IncrementFailureCount(replicationDestination.Url);
 			}
@@ -594,36 +594,71 @@ There is a high probability of a network problem preventing access to all the re
 Failed to get in touch with any of the " + (1 + localReplicationDestinations.Count) + " Raven instances.");
 		}
 
-		protected virtual async Task<Tuple<bool, T, bool>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata, OperationMetadata primaryOperationMetadata, bool avoidThrowing)
-		{
-			var tryWithPrimaryCredentials = IsFirstFailure(operationMetadata.Url) && primaryOperationMetadata != null;
+	    protected class AsyncOperationResult<T>
+	    {
+	        public T Result;
+	        public bool WasTimeout;
+	        public bool Success;
+	    }
 
-			try
-			{
-				var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata);
-				ResetFailureCount(operationMetadata.Url);
-				var wasTimeout = false;
-				return Tuple.Create(true, result, wasTimeout);
-			}
-			catch (Exception e)
-			{
-				var webException = e as WebException;
-				if (webException == null || tryWithPrimaryCredentials == false || operationMetadata.Credentials.HasCredentials() == false)
-				{
-					if (avoidThrowing == false)
-						throw;
-					
-					var result = default(T);
-					bool wasTimeout;
-					if (IsServerDown(e, out wasTimeout))
-					{
-						return Tuple.Create(false, result, wasTimeout);
-					}
-					throw;
-				}
-			}
-			return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing);
-		}
+        protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata, OperationMetadata primaryOperationMetadata, bool avoidThrowing)
+        {
+            var tryWithPrimaryCredentials = IsFirstFailure(operationMetadata.Url) && primaryOperationMetadata != null;
+            bool shouldTryAgain = false;
+
+            try
+            {
+
+                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata);
+                ResetFailureCount(operationMetadata.Url);
+                return new AsyncOperationResult<T>
+                {
+                    Result = result,
+                    Success = true
+                };
+            }
+            catch (Exception e)
+            {
+                var ae = e as AggregateException;
+                WebException webException;
+                if (ae != null)
+                {
+                    webException = ae.ExtractSingleInnerException() as WebException;
+                }
+                else
+                {
+                    webException = e as WebException;
+                }
+                if (tryWithPrimaryCredentials && operationMetadata.Credentials.HasCredentials() && webException != null)
+                {
+                    IncrementFailureCount(operationMetadata.Url);
+
+                    var response = webException.Response as HttpWebResponse;
+                    if (response != null && response.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        shouldTryAgain = true;
+                    }
+                }
+
+                if (shouldTryAgain == false)
+                {
+                    if (avoidThrowing == false)
+                        throw;
+
+                    bool wasTimeout;
+                    if (IsServerDown(e, out wasTimeout))
+                    {
+                        return new AsyncOperationResult<T>
+                        {
+                            Success = false,
+                            WasTimeout = wasTimeout
+                        };
+                    }
+                    throw;
+                }
+            }
+            return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing);
+        }
 
 		protected class ExecuteWithReplicationState<T>
 		{
