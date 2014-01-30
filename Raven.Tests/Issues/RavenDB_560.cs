@@ -96,7 +96,7 @@ namespace Raven.Tests.Issues
 
 				Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
 
-				server1.Dispose();
+				StopServer(server1);
 
 				// Fail few times so we will be sure that client does not try its primary url
 				for (int i = 0; i < 2; i++)
@@ -112,7 +112,6 @@ namespace Raven.Tests.Issues
 				server1 = CreateServer(8001, server1DataDir);
 
 				Assert.NotNull(store1.DatabaseCommands.Get("items/1"));
-
 
 				while (true)
 				{
@@ -173,7 +172,7 @@ namespace Raven.Tests.Issues
 
 				Assert.Equal(0, replicationInformerForDatabase.GetFailureCount(db1Url));
 
-				server1.Dispose();
+                StopServer(server1);
 
 				// Fail few times so we will be sure that client does not try its primary url
 				for (int i = 0; i < 2; i++)
@@ -214,6 +213,12 @@ namespace Raven.Tests.Issues
 		{
 			return GetNewServer(port, dataDirectory, activeBundles: "replication", requestedStorage: "esent");
 		}
+
+        private void StopServer(RavenDbServer server)
+        {
+            server.Dispose();
+            Thread.Sleep(1000); // just to prevent Raven-Client-Primary-Server-LastCheck to have same second
+        }
 
 		public override void Dispose()
 		{
