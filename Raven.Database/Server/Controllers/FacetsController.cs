@@ -72,7 +72,15 @@ namespace Raven.Database.Server.Controllers
             var msg = TryGetFacetsFromString(facetsJson, out facets);
             if (msg != null)
                 return msg;
-            return await ExecuteFacetsQuery(id, facets, Encoding.UTF8.GetBytes(facetsJson));
+
+	        var additionalEtagBytes = Encoding.UTF8.GetBytes(facetsJson);
+	        var etag = GetFacetsEtag(id, additionalEtagBytes);
+			if (MatchEtag(etag))
+			{
+				return GetEmptyMessage(HttpStatusCode.NotModified);
+			}
+
+            return await ExecuteFacetsQuery(id, facets, additionalEtagBytes);
         }
 
         [HttpPost]
