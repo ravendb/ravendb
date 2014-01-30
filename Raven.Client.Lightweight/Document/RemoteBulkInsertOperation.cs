@@ -260,13 +260,9 @@ namespace Raven.Client.Document
 				errorResponse = e;
 			}
 
-			using (var stream = await errorResponse.Response.GetResponseStreamWithHttpDecompression())
-			{
-				var conflicts = new StreamReader(stream);
-				var conflictsDocument = RavenJObject.Load(new RavenJsonTextReader(conflicts));
+            var conflictsDocument = RavenJObject.Load(new RavenJsonTextReader(new StringReader(errorResponse.ResponseString)));
 
-				throw new ConcurrencyException(conflictsDocument.Value<string>("Error"));
-			}
+		    throw new ConcurrencyException(conflictsDocument.Value<string>("Error"));
 		}
 
 		private Task<RavenJToken> GetOperationStatus(long operationId)

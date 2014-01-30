@@ -173,7 +173,7 @@ namespace Raven.Client.Connection
 			return await ReadJsonInternalAsync();
 		}
 
-		private async Task<RavenJToken> SendRequestInternal(Func<HttpRequestMessage> getRequestMessage)
+        private async Task<RavenJToken> SendRequestInternal(Func<HttpRequestMessage> getRequestMessage, bool readErrorString = true)
 		{
 			if (isRequestSentToServer)
 				throw new InvalidOperationException("Request was already sent to the server, cannot retry request.");
@@ -195,7 +195,7 @@ namespace Raven.Client.Connection
 				}
 
 				// throw the conflict exception
-				return await CheckForErrorsAndReturnCachedResultIfAnyAsync();
+				return await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString);
 			});
 		}
 
@@ -263,7 +263,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync()
+		private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync(bool readErrorString)
 		{
 			if (Response.IsSuccessStatusCode == false)
 			{
@@ -282,7 +282,7 @@ namespace Raven.Client.Connection
 						PostedData = postedData
 					});
 
-					throw new ErrorResponseException(Response);
+                    throw ErrorResponseException.FromResponseMessage(Response, readErrorString);
 				}
 
 				if (Response.StatusCode == HttpStatusCode.NotModified
@@ -327,7 +327,7 @@ namespace Raven.Client.Connection
 					});
 
 					if (string.IsNullOrWhiteSpace(readToEnd))
-						throw new ErrorResponseException(Response);
+						throw ErrorResponseException.FromResponseMessage(Response);
 
 					RavenJObject ravenJObject;
 					try
@@ -348,7 +348,7 @@ namespace Raven.Client.Connection
 					}
 					if (Response.StatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
 					{
-						throw new BadRequestException(ravenJObject.Value<string>("Message"), new ErrorResponseException(Response));
+						throw new BadRequestException(ravenJObject.Value<string>("Message"), ErrorResponseException.FromResponseMessage(Response));
 					}
 					if (ravenJObject.ContainsKey("Error"))
 					{
@@ -375,7 +375,7 @@ namespace Raven.Client.Connection
 
 		public async Task<byte[]> ReadResponseBytesAsync()
 		{
-			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url));
+			await SendRequestInternal(() => new HttpRequestMessage(new HttpMethod(Method), Url), readErrorString: false);
 
 			using (var stream = await Response.GetResponseStreamWithHttpDecompression())
 			{
@@ -624,7 +624,7 @@ namespace Raven.Client.Connection
 				Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url), HttpCompletionOption.ResponseHeadersRead);
 				SetResponseHeaders(Response);
 
-				await CheckForErrorsAndReturnCachedResultIfAnyAsync();
+			    await CheckForErrorsAndReturnCachedResultIfAnyAsync(readErrorString: true);
 
 				var stream = await Response.GetResponseStreamWithHttpDecompression();
 				var observableLineStream = new ObservableLineStream(stream, () => Response.Dispose());

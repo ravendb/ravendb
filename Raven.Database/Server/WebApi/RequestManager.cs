@@ -97,22 +97,28 @@ namespace Raven.Database.Server.WebApi
 					return new HttpResponseMessage();
 
 				Stopwatch sw = Stopwatch.StartNew();
-				try
-				{
-					if (IsWriteRequest(controller.InnerRequest))
-					{
-						lastWriteRequest = SystemTime.UtcNow;
-					}
+			    try
+			    {
+			        if (IsWriteRequest(controller.InnerRequest))
+			        {
+			            lastWriteRequest = SystemTime.UtcNow;
+			        }
 
-					if (SetupRequestToProperDatabase(controller))
-					{
-						response = await action();
-					}
-				}
-				catch (HttpException httpException)
-				{
-					response = onHttpException(httpException);
-				}
+			        if (SetupRequestToProperDatabase(controller))
+			        {
+			            response = await action();
+			        }
+			    }
+			    catch (HttpException httpException)
+			    {
+			        response = onHttpException(httpException);
+			    }
+			    catch (Exception e)
+			    {
+			        Console.WriteLine(e);
+                    Debugger.Break();
+			        throw;
+			    }
 				finally
 				{
 					try

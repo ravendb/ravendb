@@ -265,8 +265,16 @@ namespace Raven.Client.Connection
 			if (string.IsNullOrEmpty(headers["ETag"])) 
 				return;
 
-			var clone = data.CloneToken();
-			clone.EnsureCannotBeChangeAndEnableSnapshotting();
+			RavenJToken clone;
+		    if (data == null)
+		    {
+		        clone = null;
+		    }
+		    else
+		    {
+		        clone = data.CloneToken();
+                clone.EnsureCannotBeChangeAndEnableSnapshotting();
+		    }
 
 			cache.Set(url, new CachedRequest
 			{
