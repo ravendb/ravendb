@@ -742,7 +742,7 @@ namespace Raven.Client.Connection.Async
 			return ExecuteWithReplication("GET", operationMetadata => DirectGetAsync(operationMetadata, key));
 		}
 
-		public Task<JsonDocument> DirectGetAsync(OperationMetadata operationMetadata, string key)
+		public async Task<JsonDocument> DirectGetAsync(OperationMetadata operationMetadata, string key)
 		{
 			var metadata = new RavenJObject();
 			AddTransactionInformation(metadata);
@@ -751,46 +751,37 @@ namespace Raven.Client.Connection.Async
 
 			request.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
-			return request.ReadResponseJsonAsync()
-				.ContinueWith(task =>
-				{
-					try
-					{
-						var requestJson = task.Result;
-						var docKey = request.ResponseHeaders[Constants.DocumentIdFieldName] ?? key;
-						docKey = Uri.UnescapeDataString(docKey);
-						request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
-						var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson,
-																								  request.ResponseHeaders,
-																								  request.ResponseStatusCode);
-						return (Task<JsonDocument>)new CompletedTask<JsonDocument>(deserializeJsonDocument);
-					}
-					catch (AggregateException e)
-					{
-						var we = e.ExtractSingleInnerException() as WebException;
-						if (we == null)
-							throw;
-						var httpWebResponse = we.Response as HttpWebResponse;
-						if (httpWebResponse == null)
-							throw;
-						if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-							return new CompletedTask<JsonDocument>((JsonDocument)null);
-						if (httpWebResponse.StatusCode == HttpStatusCode.Conflict)
-						{
-							var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
-							var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
+			HttpWebResponse httpWebResponse;
+			try
+			{
+				var requestJson = await request.ReadResponseJsonAsync();
+				var docKey = request.ResponseHeaders[Constants.DocumentIdFieldName] ?? key;
+				docKey = Uri.UnescapeDataString(docKey);
+				request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
+				var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson,
+					request.ResponseHeaders,
+					request.ResponseStatusCode);
+				return deserializeJsonDocument;
+			}
+			catch (WebException we)
+			{
+				httpWebResponse = we.Response as HttpWebResponse;
+				if (httpWebResponse == null)
+					throw;
+				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+					return null;
+				if (httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+					throw;
+			}
 
-							return TryResolveConflictOrCreateConcurrencyException(operationMetadata, key, conflictsDoc, httpWebResponse.GetEtagHeader())
-								.ContinueWith(conflictTask =>
-								{
-									if (conflictTask.Result != null)
-										throw conflictTask.Result;
-									return DirectGetAsync(operationMetadata, key);
-								}).Unwrap();
-						}
-						throw;
-					}
-				}).Unwrap();
+			var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
+			var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
+
+			var conflictException = await TryResolveConflictOrCreateConcurrencyException(operationMetadata, key, conflictsDoc, httpWebResponse.GetEtagHeader());
+			if (conflictException != null)
+				throw conflictException;
+
+			return await DirectGetAsync(operationMetadata, key);
 		}
 
 		/// <summary>

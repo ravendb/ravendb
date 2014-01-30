@@ -43,7 +43,7 @@ namespace Raven.Tests.Bundles.Replication
 			return CreateEmbeddableStoreAtPort(port, enableCompressionBundle, removeDataDirectory, configureStore, anonymousUserAccessMode);
 		}
 
-        private IDocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false)
+        private DocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false)
 		{
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var serverConfiguration = new RavenConfiguration
