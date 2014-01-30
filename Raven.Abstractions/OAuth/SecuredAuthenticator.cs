@@ -158,98 +158,70 @@ namespace Raven.Abstractions.OAuth
 		}
 #endif
 
-		public Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string apiKey)
+		public async Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string oauthSource, string apiKey)
 		{
-			return DoOAuthRequestAsync(baseUrl, oauthSource, null, null, null, apiKey, 0);
-		}
+			string serverRSAExponent = null;
+			string serverRSAModulus = null;
+			string challenge = null;
 
-		private async Task<Action<HttpWebRequest>> DoOAuthRequestAsync(string baseUrl, string oauthSource, string serverRsaExponent, string serverRsaModulus, string challenge, string apiKey, int tries)
-		{
-			if (oauthSource == null) throw new ArgumentNullException("oauthSource");
-
-			var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRsaExponent, serverRsaModulus, challenge, apiKey);
-			var authRequest = authRequestTuple.Item1;
-
-			if (authRequestTuple.Item2 != null)
+			// Note that at two tries will be needed in the normal case.
+			// The first try will get back a challenge,
+			// the second try will try authentication. If something goes wrong server-side though
+			// (e.g. the server was just rebooted or the challenge timed out for some reason), we
+			// might get a new challenge back, so we try a third time just in case.
+			int tries = 0;
+			while (true)
 			{
-			    using (var stream = await Task<Stream>.Factory.FromAsync(authRequest.BeginGetRequestStream, authRequest.EndGetRequestStream, null))
-			    using (var writer = new StreamWriter(stream))
-			    {
-			        writer.Write(authRequestTuple.Item2);
-			    }
+				tries++;
+				var authRequestTuple = PrepareOAuthRequest(oauthSource, serverRSAExponent, serverRSAModulus, challenge, apiKey);
+				var authRequest = authRequestTuple.Item1;
+				if (authRequestTuple.Item2 != null)
+				{
+					using (var stream = await authRequest.GetRequestStreamAsync())
+					using (var writer = new StreamWriter(stream))
+					{
+						writer.Write(authRequestTuple.Item2);
+					}
+				}
+
+				try
+				{
+					using (var authResponse = await authRequest.GetResponseAsync())
+					using (var stream = authResponse.GetResponseStreamWithHttpDecompression())
+					using (var reader = new StreamReader(stream))
+					{
+						CurrentOauthToken = "Bearer " + reader.ReadToEnd();
+						return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", CurrentOauthToken));
+					}
+				}
+				catch (WebException ex)
+				{
+					if (tries > 2)
+						// We've already tried three times and failed
+						throw;
+
+					var authResponse = ex.Response as HttpWebResponse;
+					if (authResponse == null || authResponse.StatusCode != HttpStatusCode.PreconditionFailed)
+						throw;
+
+					var header = authResponse.Headers["WWW-Authenticate"];
+					if (string.IsNullOrEmpty(header) || !header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey))
+						throw;
+
+					authResponse.Close();
+
+					var challengeDictionary = OAuthHelper.ParseDictionary(header.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());
+					serverRSAExponent = challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent);
+					serverRSAModulus = challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus);
+					challenge = challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge);
+
+					if (string.IsNullOrEmpty(serverRSAExponent) || string.IsNullOrEmpty(serverRSAModulus) || string.IsNullOrEmpty(challenge))
+					{
+						throw new InvalidOperationException("Invalid response from server, could not parse raven authentication information: " + header);
+					}
+				}
 			}
-
-
-		    WebResponse webResponse;
-		    try
-		    {
-		        webResponse =
-		            await Task<WebResponse>.Factory.FromAsync(authRequest.BeginGetResponse, authRequest.EndGetResponse, null);
-		    }
-		    catch (SecurityException e)
-		    {
-		        throw new WebException(
-		            "Could not contact server.\r\nGot security error because RavenDB wasn't able to contact the database to get ClientAccessPolicy.xml permission.",
-		            e)
-		        {
-		            Data = {{"Url", authRequest.RequestUri}}
-		        };
-		    }
-		    catch (Exception e)
-		    {
-		        e.Data["Url"] = authRequest.RequestUri;
-		        throw;
-
-		    }
-		    string header;
-            try
-            {
-                using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
-                using (var reader = new StreamReader(stream))
-                {
-                    var currentOauthToken = "Bearer " + reader.ReadToEnd();
-                    CurrentOauthToken = currentOauthToken;
-#if SILVERLIGHT
-                    BrowserCookieToAllowUserToUseStandardRequests(baseUrl, currentOauthToken);
-#endif
-                    return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", CurrentOauthToken));
-                }
-            }
-            catch (AggregateException ae)
-            {
-                var ex = ae.ExtractSingleInnerException() as WebException;
-
-                if (tries > 2 || ex == null)
-                    // We've already tried three times and failed
-                    throw;
-
-
-
-                var authResponse = ex.Response as HttpWebResponse;
-                if (authResponse == null || authResponse.StatusCode != HttpStatusCode.PreconditionFailed)
-                    throw;
-
-                header = authResponse.Headers["Www-Authenticate"];
-                if (string.IsNullOrEmpty(header) || !header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey))
-                    throw;
-
-#if !NETFX_CORE
-                authResponse.Close();
-#endif
-
-            }
-
-              var challengeDictionary =
-                    OAuthHelper.ParseDictionary(header.Substring(OAuthHelper.Keys.WWWAuthenticateHeaderKey.Length).Trim());
-
-                return await DoOAuthRequestAsync(baseUrl, oauthSource,
-                                           challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAExponent),
-                                           challengeDictionary.GetOrDefault(OAuthHelper.Keys.RSAModulus),
-                                           challengeDictionary.GetOrDefault(OAuthHelper.Keys.Challenge),
-                                           apiKey,
-                                           tries + 1);
 		}
-
 #if SILVERLIGHT
 		private void BrowserCookieToAllowUserToUseStandardRequests(string baseUrl, string currentOauthToken)
 		{

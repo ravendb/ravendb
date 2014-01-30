@@ -569,7 +569,7 @@ namespace Raven.Client.Document
 				if (string.IsNullOrEmpty(oauthSource))
 					oauthSource = this.Url + "/OAuth/API-Key";
 
-				return securedAuthenticator.DoOAuthRequestAsync(Url, oauthSource, credentials.ApiKey);
+				return securedAuthenticator.DoOAuthRequestAsync(oauthSource, credentials.ApiKey);
 			};
 
 		}

@@ -150,7 +150,7 @@ namespace Raven.Client.Connection
 				{
 					if (writeCalled == false)
 						webRequest.ContentLength = 0;
-                    return await ReadJsonInternalAsync(webRequest.GetResponseAsync()).ConfigureAwait(false);
+                    return await ReadJsonInternalAsync(webRequest).ConfigureAwait(false);
 				}
 				catch (WebException e)
 				{
@@ -388,12 +388,12 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private async Task<RavenJToken> ReadJsonInternalAsync(Task<WebResponse> responseTask)
+		private async Task<RavenJToken> ReadJsonInternalAsync(WebRequest responseTask)
 		{
 			WebResponse response;
 			try
 			{
-                response = await responseTask.ConfigureAwait(false);
+                response = await responseTask.GetResponseAsync().ConfigureAwait(false);
 				sp.Stop();
 			}
 			catch (WebException e)

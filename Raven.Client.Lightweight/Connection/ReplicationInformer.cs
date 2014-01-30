@@ -634,7 +634,7 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
                     IncrementFailureCount(operationMetadata.Url);
 
                     var response = webException.Response as HttpWebResponse;
-                    if (response != null && response.StatusCode == HttpStatusCode.Unauthorized)
+                    if (response != null && (response.StatusCode == HttpStatusCode.Unauthorized))
                     {
                         shouldTryAgain = true;
                     }
