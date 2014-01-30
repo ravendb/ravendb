@@ -291,8 +291,10 @@
     <Compile Include="Issues\RavenDB_1533.cs" />
     <Compile Include="Issues\RavenDB_1561.cs" />
     <Compile Include="Issues\RavenDB_1560.cs" />
+    <Compile Include="Issues\RavenDB_1565.cs" />
     <Compile Include="Issues\RavenDB_1594.cs" />
     <Compile Include="Issues\RavenDB_1595.cs" />
+    <Compile Include="Issues\RavenDB_1610.cs" />
     <Compile Include="Issues\RDBQA_4.cs" />
     <Compile Include="Issues\RavenDB_1553.cs" />
     <Compile Include="Issues\RavenDB_1555.cs" />
@@ -301,7 +303,6 @@
     <Compile Include="Issues\ReplicationAlerts.cs" />
     <Compile Include="Issues\RavenDB_1539.cs" />
     <Compile Include="Issues\RavenDB_1557.cs" />
-    <Compile Include="Issues\RavenDB_1594.cs" />
     <Compile Include="LicenseValidatorTest.cs" />
     <Compile Include="Linq\GroupByAndDocumentId.cs" />
     <Compile Include="Linq\In.cs" />
