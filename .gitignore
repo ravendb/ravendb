@@ -1,6 +1,7 @@
 [Bb]in
 [Oo]bj
 *resharper.user
+*/FodyWeavers.xml
 build/
 [Hh]elp/
 *.suo
