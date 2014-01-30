@@ -768,7 +768,7 @@ namespace Raven.Client.Connection.Async
 
 		private async Task<JsonDocument> ResolveConflict(string httpResponse, Etag etag, OperationMetadata operationMetadata, string key)
 		{
-			var conflicts = new StreamReader(httpResponse);
+			var conflicts = new StringReader(httpResponse);
 			var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));
 			var result =
 				await TryResolveConflictOrCreateConcurrencyException(operationMetadata, key, conflictsDoc, etag);
