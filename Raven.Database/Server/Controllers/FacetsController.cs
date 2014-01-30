@@ -23,7 +23,6 @@ namespace Raven.Database.Server.Controllers
         public async Task<HttpResponseMessage> FacetsGet(string id)
         {
             List<Facet> facets = null;
-            Etag etag = null;
             byte[] additionalEtagBytes = null;
            
             var facetSetupDoc = GetQueryStringValue("facetDoc") ;
@@ -32,31 +31,33 @@ namespace Raven.Database.Server.Controllers
                 var facetsJson = GetQueryStringValue("facets");
                 if (string.IsNullOrEmpty(facetsJson) == false)
                 {
-                    var msg = TryGetFacetsFromString(id, facetsJson, out facets, out etag);
-                    if (msg != null)
-                        return msg;
-                    additionalEtagBytes = Encoding.UTF8.GetBytes(facetsJson);
+					additionalEtagBytes = Encoding.UTF8.GetBytes(facetsJson);
+
+					var msg = TryGetFacetsFromString(facetsJson, out facets);
+					if (msg != null)
+						return msg;
                 }
             }
             else
             {
                 var jsonDocument = Database.Get(facetSetupDoc, null);
-                if (jsonDocument == null)
-                {
-                    return GetMessageWithString("Could not find facet document: " + facetSetupDoc, HttpStatusCode.NotFound);
-                }
-                additionalEtagBytes = jsonDocument.Etag.ToByteArray();
+	            if (jsonDocument == null)
+		            return GetMessageWithString("Could not find facet document: " + facetSetupDoc, HttpStatusCode.NotFound);
+
+	            additionalEtagBytes = jsonDocument.Etag.ToByteArray();
                 facets = jsonDocument.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
             }
+
+			var etag = GetFacetsEtag(id, additionalEtagBytes);
             if (MatchEtag(etag))
             {
-                return GetEmptyMessage(HttpStatusCode.NotFound);
+                return GetEmptyMessage(HttpStatusCode.NotModified);
             }
 
             if (facets == null || !facets.Any())
                 return GetMessageWithString("No facets found in facets setup document:" + facetSetupDoc, HttpStatusCode.NotFound);
 
-            return await ExecuteFacetsQuery(id, facets, additionalEtagBytes);
+            return await ExecuteFacetsQuery(id, facets, etag);
         }
 
         [HttpPost]
@@ -65,12 +66,18 @@ namespace Raven.Database.Server.Controllers
         public async Task<HttpResponseMessage> FacetsPost(string id)
         {
             List<Facet> facets;
-            Etag _;
             var facetsJson = await ReadStringAsync();
-            var msg = TryGetFacetsFromString(id, facetsJson, out facets, out _);
+            var msg = TryGetFacetsFromString(facetsJson, out facets);
             if (msg != null)
                 return msg;
-            return await ExecuteFacetsQuery(id, facets, Encoding.UTF8.GetBytes(facetsJson));
+
+	        var etag = GetFacetsEtag(id, Encoding.UTF8.GetBytes(facetsJson));
+			if (MatchEtag(etag))
+			{
+				return GetEmptyMessage(HttpStatusCode.NotModified);
+			}
+
+            return await ExecuteFacetsQuery(id, facets, etag);
         }
 
         [HttpPost]
@@ -99,20 +106,17 @@ namespace Raven.Database.Server.Controllers
             return GetMessageWithObject(results);
         }
 
-        private async Task<HttpResponseMessage> ExecuteFacetsQuery(string index, List<Facet> facets, byte[] additioneEtagBytes)
+		private async Task<HttpResponseMessage> ExecuteFacetsQuery(string index, List<Facet> facets, Etag indexEtag)
         {
             var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
             var facetStart = GetFacetStart();
             var facetPageSize = GetFacetPageSize();
-            var indexEtag = GetFacetsEtag(index, additioneEtagBytes);
             var results = Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize);
             return GetMessageWithObject(results, HttpStatusCode.OK, indexEtag);
         }
 
-        private HttpResponseMessage TryGetFacetsFromString(string index, string facetsJson, out List<Facet> facets, out Etag etag)
+        private HttpResponseMessage TryGetFacetsFromString(string facetsJson, out List<Facet> facets)
         {
-            etag = GetFacetsEtag(index, Encoding.UTF8.GetBytes(facetsJson));
-
             facets = JsonConvert.DeserializeObject<List<Facet>>(facetsJson);
 
             if (facets == null || !facets.Any())
