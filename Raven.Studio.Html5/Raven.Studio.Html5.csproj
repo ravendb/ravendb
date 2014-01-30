@@ -127,8 +127,9 @@
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
     <TypeScriptCompile Include="App\viewmodels\userInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\statistics.ts" />
-    <Content Include="App\commands\getPeriodicBackupSetupCommand.ts" />
-    <Content Include="App\models\periodicBackupSetup.ts" />
+    <TypeScriptCompile Include="App\commands\getPeriodicBackupSetupCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getDatabaseSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\models\periodicBackupSetup.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\copyDocuments.html" />

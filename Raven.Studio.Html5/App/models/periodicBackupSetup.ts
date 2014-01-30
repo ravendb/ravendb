@@ -1,11 +1,19 @@
+import document = require("models/document");
+
 class periodicBackupSetup {
 
+    unsupported = ko.observable<boolean>(false);
     activated = ko.observable<boolean>(false);
 
     type = ko.observable<string>();
     mainValue = ko.observable<string>();
 
+    awsAccessKey = ko.observable<string>();
+    awsSecretKey = ko.observable<string>();
     awsRegionEndpoint = ko.observable<string>();
+
+    azureStorageAccount = ko.observable<string>();
+    azureStorageKey = ko.observable<string>();
 
     incrementalBackupInterval = ko.observable();
     incrementalBackupIntervalUnit = ko.observable();
@@ -65,6 +73,14 @@ class periodicBackupSetup {
         this.activatePeriodicBackup();
     }
 
+    fromDatabaseSettings(dbSettings: document) {
+        var dto = dbSettings.toDto();
+        this.awsAccessKey(dto['Settings']['Raven/AWSAccessKey']);
+        this.awsSecretKey(dto['SecuredSettings']['Raven/AWSSecretKey']);
+        this.azureStorageAccount(dto['Settings']['Raven/AzureStorageAccount']);
+        this.azureStorageKey(dto['SecuredSettings']['Raven/AzureStorageKey']);
+    }
+
     activatePeriodicBackup() {
         this.activated(true);
     }
@@ -91,24 +107,24 @@ class periodicBackupSetup {
             this.type(this.AZURE_STORAGE);
             this.mainValue(dto.AzureStorageContainer);
         }
-        console.log("setupFields: " + count);
-        if (count > 1) {
-            //TODO: throw error
-        }
+        this.unsupported(count > 1);
     }
 
     private prepareBackupInterval(milliseconds) {
-        var seconds = milliseconds / 1000;
-        var minutes = seconds / 60;
-        var hours = minutes / 60;
-        if (this.isValidTimeValue(hours)) {
-            var days = hours / 24;
-            if (this.isValidTimeValue(days)) {
-                return [days, this.TU_DAYS];
+        if (milliseconds) {
+            var seconds = milliseconds / 1000;
+            var minutes = seconds / 60;
+            var hours = minutes / 60;
+            if (this.isValidTimeValue(hours)) {
+                var days = hours / 24;
+                if (this.isValidTimeValue(days)) {
+                    return [days, this.TU_DAYS];
+                }
+                return [hours, this.TU_HOURS];
             }
-            return [hours, this.TU_HOURS];
+            return [minutes, this.TU_MINUTES];
         }
-        return [minutes, this.TU_MINUTES];
+        return [];
     }
 
     private isValidTimeValue(value: number): boolean {

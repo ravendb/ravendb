@@ -1,6 +1,8 @@
 import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
 import getPeriodicBackupSetupCommand = require("commands/getPeriodicBackupSetupCommand");
+import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 import periodicBackupSetup = require("models/periodicBackupSetup");
+
 
 class periodicBackup extends activeDbViewModelBase {
 
@@ -9,20 +11,26 @@ class periodicBackup extends activeDbViewModelBase {
     activate() {
         this.setup(new periodicBackupSetup);
         this.fetchPeriodicBackupSetup();
+        this.fetchPeriodicBackupAccountsSettings();
     }
 
     fetchPeriodicBackupSetup() {
-        console.log("fetchPeriodicBackupSetup START");
         var db = this.activeDatabase();
         if (db) {
-            console.log("fetchPeriodicBackupSetup DB");
             new getPeriodicBackupSetupCommand(db)
                 .execute()
                 .done((result: periodicBackupSetupDto) => this.setup().fromDto(result));
         }
-        console.log("fetchPeriodicBackupSetup END");
     }
 
+    fetchPeriodicBackupAccountsSettings() {
+        var db = this.activeDatabase();
+        if (db) {
+            new getDatabaseSettingsCommand(db)
+                .execute()
+                .done(document => this.setup().fromDatabaseSettings(document));
+        }
+    }
 }
 
 export = periodicBackup; 
