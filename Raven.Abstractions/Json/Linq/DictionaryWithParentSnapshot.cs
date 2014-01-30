@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using System.Linq;
 
@@ -41,6 +42,8 @@ namespace Raven.Json.Linq
 
 		public void Add(string key, RavenJToken value)
 		{
+			Debug.Assert(!String.IsNullOrWhiteSpace(key),"key must _never_ be null/empty/whitespace");
+
 			if (IsSnapshot)
 				throw new InvalidOperationException(snapshotMsg ?? "Cannot modify a snapshot, this is probably a bug");
 
@@ -129,7 +132,7 @@ namespace Raven.Json.Linq
 		}
 
 		public bool TryGetValue(string key, out RavenJToken value)
-		{
+		{			
 			value = null;
 			RavenJToken unsafeVal;
 			if (localChanges != null && localChanges.TryGetValue(key, out unsafeVal))
@@ -137,7 +140,7 @@ namespace Raven.Json.Linq
 				if (unsafeVal == DeletedMarker)
 					return false;
 
-				value = unsafeVal;
+				value = unsafeVal;				
 				return true;
 			}
 
@@ -148,13 +151,12 @@ namespace Raven.Json.Linq
 
 			if (IsSnapshot == false && unsafeVal != null)
 			{
-			    if (unsafeVal.IsSnapshot == false)
+				if (unsafeVal.IsSnapshot == false && unsafeVal.Type != JTokenType.Object)
                     unsafeVal.EnsureCannotBeChangeAndEnableSnapshotting();
-                LocalChanges[key] = unsafeVal = unsafeVal.CreateSnapshot();
+                //LocalChanges[key] = unsafeVal = unsafeVal.CreateSnapshot();
 			}
 
 			value = unsafeVal;
-
 			return true;
 		}
 
@@ -174,7 +176,7 @@ namespace Raven.Json.Linq
 		public RavenJToken this[string key]
 		{
 			get
-			{
+			{			
 				RavenJToken token;
 				if (TryGetValue(key, out token))
 					return token;
