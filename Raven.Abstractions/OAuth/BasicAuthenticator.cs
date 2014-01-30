@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Security;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
@@ -25,25 +26,37 @@ namespace Raven.Abstractions.OAuth
 		}
 
 
-		public Task<Action<HttpWebRequest>> HandleOAuthResponseAsync(string oauthSource, string apiKey)
+		public async Task<Action<HttpWebRequest>> HandleOAuthResponseAsync(string oauthSource, string apiKey)
 		{
 			var authRequest = PrepareOAuthRequest(oauthSource, apiKey);
-			return Task<WebResponse>.Factory.FromAsync(authRequest.BeginGetResponse, authRequest.EndGetResponse, null)
-				.AddUrlIfFaulting(authRequest.RequestUri)
-				.ConvertSecurityExceptionToServerNotFound()
-				.ContinueWith(task =>
-				{
+		    WebResponse webResponse;
+		    try
+		    {
+		        webResponse =
+		            await Task<WebResponse>.Factory.FromAsync(authRequest.BeginGetResponse, authRequest.EndGetResponse, null);
+		    }
+		    catch (SecurityException e)
+		    {
+		        throw new WebException(
+		            "Could not contact server.\r\nGot security error because RavenDB wasn't able to contact the database to get ClientAccessPolicy.xml permission.",
+		            e);
+		    }
+		    catch (Exception e)
+		    {
+		        e.Data["Url"] = authRequest.RequestUri;
+		        throw;
+		    }
 #if SILVERLIGHT
-					using(var stream = task.Result.GetResponseStream())
+            using (var stream = webResponse.GetResponseStream())
 #else
-					using (var stream = task.Result.GetResponseStreamWithHttpDecompression())
+			using (var stream = webResponse.GetResponseStreamWithHttpDecompression())
 #endif
-					using (var reader = new StreamReader(stream))
-					{
-						CurrentOauthToken = "Bearer " + reader.ReadToEnd();
-						return (Action<HttpWebRequest>) (request => SetHeader(request.Headers, "Authorization", CurrentOauthToken));
-					}
-				});
+            using (var reader = new StreamReader(stream))
+            {
+                CurrentOauthToken = "Bearer " + reader.ReadToEnd();
+                return (Action<HttpWebRequest>)(request => SetHeader(request.Headers, "Authorization", CurrentOauthToken));
+            }
+
 		}
 
 #if !SILVERLIGHT && !NETFX_CORE

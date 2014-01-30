@@ -752,27 +752,27 @@ namespace Raven.Client.Connection.Async
 			request.AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
 			HttpWebResponse httpWebResponse;
-			try
-			{
-				var requestJson = await request.ReadResponseJsonAsync();
-				var docKey = request.ResponseHeaders[Constants.DocumentIdFieldName] ?? key;
-				docKey = Uri.UnescapeDataString(docKey);
-				request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
-				var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson,
-					request.ResponseHeaders,
-					request.ResponseStatusCode);
-				return deserializeJsonDocument;
-			}
-			catch (WebException we)
-			{
-				httpWebResponse = we.Response as HttpWebResponse;
-				if (httpWebResponse == null)
-					throw;
-				if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
-					return null;
-				if (httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-					throw;
-			}
+		    try
+		    {
+		        var requestJson = await request.ReadResponseJsonAsync();
+		        var docKey = request.ResponseHeaders[Constants.DocumentIdFieldName] ?? key;
+		        docKey = Uri.UnescapeDataString(docKey);
+		        request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
+		        var deserializeJsonDocument = SerializationHelper.DeserializeJsonDocument(docKey, requestJson,
+		            request.ResponseHeaders,
+		            request.ResponseStatusCode);
+		        return deserializeJsonDocument;
+		    }
+		    catch (WebException we)
+		    {
+		        httpWebResponse = we.Response as HttpWebResponse;
+		        if (httpWebResponse == null)
+		            throw;
+		        if (httpWebResponse.StatusCode == HttpStatusCode.NotFound)
+		            return null;
+		        if (httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+		            throw;
+		    }
 
 			var conflicts = new StreamReader(httpWebResponse.GetResponseStreamWithHttpDecompression());
 			var conflictsDoc = RavenJObject.Load(new RavenJsonTextReader(conflicts));

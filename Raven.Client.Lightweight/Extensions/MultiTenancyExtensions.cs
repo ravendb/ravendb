@@ -87,38 +87,42 @@ namespace Raven.Client.Extensions
 		///<summary>
 		/// Ensures that the database exists, creating it if needed
 		///</summary>
-		public static Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
+		public static async Task EnsureDatabaseExistsAsync(this IAsyncDatabaseCommands self, string name, bool ignoreFailures = false)
 		{
-			var serverClient = self.ForSystemDatabase() as AsyncServerClient;
-			if (serverClient == null)
-				throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
+		    var serverClient = self.ForSystemDatabase() as AsyncServerClient;
+		    if (serverClient == null)
+		        throw new InvalidOperationException("Ensuring database existence requires a Server Client but got: " + self);
 
-			serverClient.ForceReadFromMaster();
-			
-			var doc = MultiDatabase.CreateDatabaseDocument(name);
-			var docId = "Raven/Databases/" + name;
+		    serverClient.ForceReadFromMaster();
 
-			return serverClient.GetAsync(docId)
-				.ContinueWith(get =>
-				{
-					if (get.Result != null)
-						return get;
+		    var doc = MultiDatabase.CreateDatabaseDocument(name);
+		    var docId = "Raven/Databases/" + name;
 
+            try
+            {
+                if (await serverClient.GetAsync(docId) != null)
+                    return;
 
-					return (Task)serverClient.PutAsync(docId, null, doc, new RavenJObject());
-				})
-				.Unwrap()
-				.ContinueWith(x=>
-				{
-					if (ignoreFailures == false)
-						x.Wait(); // will throw on error
+                var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(name), "PUT");
+                await req.ExecuteWriteAsync(doc.ToString(Formatting.Indented));
+            }
+            catch (Exception)
+            {
+                if (ignoreFailures == false)
+                    throw;
+            }
 
-					var observedException = x.Exception;
-					GC.KeepAlive(observedException);
-				});
+            try
+            {
+                await new RavenDocumentsByEntityName().ExecuteAsync(serverClient.ForDatabase(name), new DocumentConvention());
+            }
+            catch (Exception)
+            {
+                // we really don't care if this fails, and it might, if the user doesn't have permissions on the new db
+            }
 		}
 
-		public static Task CreateDatabaseAsync(this IAsyncDatabaseCommands self, DatabaseDocument databaseDocument, bool ignoreFailures = false)
+	    public static Task CreateDatabaseAsync(this IAsyncDatabaseCommands self, DatabaseDocument databaseDocument, bool ignoreFailures = false)
 		{
 			var serverClient = self.ForSystemDatabase() as AsyncServerClient;
 			if (serverClient == null)
