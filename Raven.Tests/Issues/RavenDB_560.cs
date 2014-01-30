@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Bundles.Replication.Tasks;
 using System.Linq;
 using System.Threading;
@@ -217,7 +218,7 @@ namespace Raven.Tests.Issues
         private void StopServer(RavenDbServer server)
         {
             server.Dispose();
-            Thread.Sleep(1000); // just to prevent Raven-Client-Primary-Server-LastCheck to have same second
+            SystemTime.UtcDateTime = () => DateTime.UtcNow.AddSeconds(4); // just to prevent Raven-Client-Primary-Server-LastCheck to have same second
         }
 
 		public override void Dispose()

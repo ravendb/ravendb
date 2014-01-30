@@ -202,11 +202,6 @@ namespace Raven.Tests.Issues
 			return server;
 		}
 
-		private void StopServer(RavenDbServer server)
-		{
-			server.Dispose();
-		}
-
 		private RavenDbServer StartServer(RavenDbServer server)
 		{
 			return this.CreateServer(server.SystemDatabase.Configuration.Port, server.SystemDatabase.Configuration.DataDirectory, removeDataDirectory: false);
