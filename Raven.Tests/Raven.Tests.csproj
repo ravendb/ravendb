@@ -743,6 +743,7 @@
     <Compile Include="MailingList\AmbiguousMatchExceptionTest.cs" />
     <Compile Include="MailingList\Apo\Lazy.cs" />
     <Compile Include="MailingList\AsyncSpatial.cs" />
+    <Compile Include="MailingList\AsyncSpatialTest.cs" />
     <Compile Include="MailingList\AutoGenIndexLinqQuery.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\BooleanAndDateTimeNullables.cs" />
@@ -758,6 +759,7 @@
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults2.cs" />
     <Compile Include="MailingList\ChangeTrackingDoesntWorkForDecimalsWithSmallChanges.cs" />
     <Compile Include="MailingList\Chirea.cs" />
+    <Compile Include="MailingList\AsyncShouldThrowConcurrencyException.cs" />
     <Compile Include="MailingList\CoalescingOperatorWithStringARray.cs" />
     <Compile Include="MailingList\ComplexIndexMerge.cs" />
     <Compile Include="MailingList\CompoundOrQueryWithOrderByDescending .cs" />

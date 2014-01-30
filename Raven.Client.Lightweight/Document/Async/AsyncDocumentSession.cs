@@ -345,23 +345,17 @@ namespace Raven.Client.Document.Async
 			return CompleteLoadAsync<T>(id, loadOperation);
 		}
 
-		private Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
+		private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
 		{
 			loadOperation.LogOperation();
 			using (loadOperation.EnterLoadContext())
 			{
-				return AsyncDatabaseCommands.GetAsync(id)
-											.ContinueWith(task =>
-											{
-												if (task.IsFaulted)
-													task.Wait(); // will throw.
+				var result = await AsyncDatabaseCommands.GetAsync(id);
 
-												if (loadOperation.SetResult(task.Result) == false)
-													return Task.Factory.StartNew(() => loadOperation.Complete<T>());
+				if (loadOperation.SetResult(result) == false)
+					return loadOperation.Complete<T>();
 
-												return CompleteLoadAsync<T>(id, loadOperation);
-											})
-											.Unwrap();
+				return await CompleteLoadAsync<T>(id, loadOperation);
 			}
 		}
 
@@ -500,45 +494,21 @@ namespace Raven.Client.Document.Async
 		/// Begins the async save changes operation
 		/// </summary>
 		/// <returns></returns>
-		public Task SaveChangesAsync()
+		public async Task SaveChangesAsync()
 		{
+			await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges();
 
-			return asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges()
-											 .ContinueWith(keysTask =>
-											 {
-												 keysTask.AssertNotFailed();
+			using (EntityToJson.EntitiesToJsonCachingScope())
+			{
+				var data = PrepareForSaveChanges();
+				if (data.Commands.Count == 0)
+					return;
 
-												 var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
-												 try
-												 {
-													 var data = PrepareForSaveChanges();
-													 if (data.Commands.Count == 0)
-													 {
-														 cachingScope.Dispose();
-														 return new CompletedTask();
-													 }
+				IncrementRequestCount();
 
-													 IncrementRequestCount();
-
-													 return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
-																				 .ContinueWith(task =>
-																				 {
-																					 try
-																					 {
-																						 UpdateBatchResults(task.Result, data);
-																					 }
-																					 finally
-																					 {
-																						 cachingScope.Dispose();
-																					 }
-																				 });
-												 }
-												 catch
-												 {
-													 cachingScope.Dispose();
-													 throw;
-												 }
-											 }).Unwrap();
+				var result = await AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray());
+				UpdateBatchResults(result, data);
+			}
 		}
 
 		/// <summary>
