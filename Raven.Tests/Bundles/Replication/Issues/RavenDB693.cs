@@ -31,7 +31,7 @@ namespace Raven.Tests.Bundles.Replication.Issues
 			 TellFirstInstanceToReplicateToSecondInstance();
 			 WaitForReplication(store2, "marker");
 
-			 ((DocumentStore) store2).RegisterListener(new ClientSideConflictResolution());
+			 store2.RegisterListener(new ClientSideConflictResolution());
 
 			 var jsonDocument = store2.DatabaseCommands.Get("ayende");
 
