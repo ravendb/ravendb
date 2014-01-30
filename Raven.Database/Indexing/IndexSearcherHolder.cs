@@ -136,11 +136,10 @@ namespace Raven.Database.Indexing
                 return GetFromCache(field, doc).Select(cacheVal => cacheVal.Term);
             }
 
-            public void ResetInCache(string field, int doc)
+            public bool IsInCache(string field)
             {
-                cache.GetOrAdd(field).GetOrAdd(doc).Clear();
+                return cache.ContainsKey(field);
             }
-
             public void SetInCache(string field, int doc, Term term, double? val = null)
             {
                 cache.GetOrAdd(field).GetOrAdd(doc).Add(new CacheVal
@@ -187,6 +186,7 @@ namespace Raven.Database.Indexing
                     disposed.Value.Set();
             }
 
+
             [MethodImpl(MethodImplOptions.Synchronized)]
             public RavenJObject[] GetOrCreateTerms()
             {
@@ -197,8 +197,6 @@ namespace Raven.Database.Indexing
                 readEntriesFromIndex = IndexedTerms.ReadAllEntriesFromIndex(indexReader);
                 return readEntriesFromIndex;
             }
-
-
         }
     }
 }
