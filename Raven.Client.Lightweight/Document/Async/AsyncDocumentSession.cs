@@ -345,23 +345,17 @@ namespace Raven.Client.Document.Async
 			return CompleteLoadAsync<T>(id, loadOperation);
 		}
 
-		private Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
+		private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation)
 		{
 			loadOperation.LogOperation();
 			using (loadOperation.EnterLoadContext())
 			{
-				return AsyncDatabaseCommands.GetAsync(id)
-											.ContinueWith(task =>
-											{
-												if (task.IsFaulted)
-													task.Wait(); // will throw.
+				var result = await AsyncDatabaseCommands.GetAsync(id);
 
-												if (loadOperation.SetResult(task.Result) == false)
-													return Task.Factory.StartNew(() => loadOperation.Complete<T>());
+				if (loadOperation.SetResult(result) == false)
+					return loadOperation.Complete<T>();
 
-												return CompleteLoadAsync<T>(id, loadOperation);
-											})
-											.Unwrap();
+				return await CompleteLoadAsync<T>(id, loadOperation);
 			}
 		}
 

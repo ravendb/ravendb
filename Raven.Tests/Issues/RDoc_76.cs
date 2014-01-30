@@ -123,7 +123,7 @@ namespace Raven.Tests.Issues
 		}
 
 		[Fact]
-		public void ThrowInvalidOperationExceptionIfConventionExistsForOtherTypeOfOperationButDoesntForCurrentType()
+		public async void ThrowInvalidOperationExceptionIfConventionExistsForOtherTypeOfOperationButDoesntForCurrentType()
 		{
 			var exception = Assert.Throws<InvalidOperationException>(() =>
 			{
@@ -142,7 +142,7 @@ namespace Raven.Tests.Issues
 
 			Assert.Equal("Id convention for synchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for asynchronous operation exists.", exception.Message);
 
-			exception = Assert.Throws<InvalidOperationException>(() =>
+			exception = await AssertAsync.Throws<InvalidOperationException>(async () =>
 			{
 				using (var store = NewRemoteDocumentStore())
 				{
@@ -152,7 +152,7 @@ namespace Raven.Tests.Issues
 					{
 						session.Store(new Bedroom {Sth = "3"});
 
-						session.SaveChangesAsync().Wait();
+						await session.SaveChangesAsync();
 					}
 				}
 			});
