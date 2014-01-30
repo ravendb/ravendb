@@ -17,10 +17,9 @@ namespace Raven.Tests.Faceted
     public class LazyFacets : RavenTest
     {
         [Theory]
-        [PropertyData("Storages")]
-        public void Default_operator_not_honoured_remote_store_ToFacetsLazy_another_name(string storage)
+        public void Default_operator_not_honoured_remote_store_ToFacetsLazy()
         {
-            using (var store = NewRemoteDocumentStore(requestedStorage: storage))
+            using (var store = NewRemoteDocumentStore())
             {
                 var facetSetup = new FacetSetup
                 {

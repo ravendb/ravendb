@@ -613,6 +613,7 @@ namespace Raven.Client.Embedded
 									waitForHeaders.Set();
 									setWaitHandle = false;
 									op.Execute(items.Add);
+                                    items.CompleteAdding();
 								}	
 							});
 						}
@@ -635,7 +636,11 @@ namespace Raven.Client.Embedded
 				}, TaskCreationOptions.LongRunning);
 				waitForHeaders.Wait();
 				queryHeaderInfo = localQueryHeaderInfo;
-				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
+				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), () =>
+				{
+				    items.CompleteAdding();
+				    items.Dispose();
+				});
 			}
 		}
 
@@ -687,7 +692,7 @@ namespace Raven.Client.Embedded
 				                nextPageStart = actualStart;
 				            }
 
-				     
+
 				            database.GetDocumentsWithIdStartingWith(
 				                startsWith,
 				                matches,
@@ -703,6 +708,10 @@ namespace Raven.Client.Embedded
 				    }
 				    catch (ObjectDisposedException)
 				    {
+				    }
+				    finally
+				    {
+				        items.CompleteAdding();
 				    }
 				}
 
@@ -722,10 +731,19 @@ namespace Raven.Client.Embedded
 			{
                 while (items.IsCompleted == false)
 				{
-					var ravenJObject = items.Take();
-					if (ravenJObject == null)
-						break;
-					yield return ravenJObject;
+                    RavenJObject obj;
+                    try
+                    {
+                        obj = items.Take();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        if (items.IsCompleted == false)
+                            throw;
+                        yield break;
+                    }
+                    yield return obj;
+
 				}
 
 			    var nextPageStart = task.Result;
