@@ -10,15 +10,17 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Faceted
 {
     public class LazyFacets : RavenTest
     {
-        [Fact]
-        public void Default_operator_not_honoured_remote_store_ToFacetsLazy()
+        [Theory]
+        [PropertyData("Storages")]
+        public void Default_operator_not_honoured_remote_store_ToFacetsLazy_another_name(string storage)
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = NewRemoteDocumentStore(requestedStorage: storage))
             {
                 var facetSetup = new FacetSetup
                 {
