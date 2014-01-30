@@ -500,45 +500,21 @@ namespace Raven.Client.Document.Async
 		/// Begins the async save changes operation
 		/// </summary>
 		/// <returns></returns>
-		public Task SaveChangesAsync()
+		public async Task SaveChangesAsync()
 		{
+			await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges();
 
-			return asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges()
-											 .ContinueWith(keysTask =>
-											 {
-												 keysTask.AssertNotFailed();
+			using (EntityToJson.EntitiesToJsonCachingScope())
+			{
+				var data = PrepareForSaveChanges();
+				if (data.Commands.Count == 0)
+					return;
 
-												 var cachingScope = EntityToJson.EntitiesToJsonCachingScope();
-												 try
-												 {
-													 var data = PrepareForSaveChanges();
-													 if (data.Commands.Count == 0)
-													 {
-														 cachingScope.Dispose();
-														 return new CompletedTask();
-													 }
+				IncrementRequestCount();
 
-													 IncrementRequestCount();
-
-													 return AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray())
-																				 .ContinueWith(task =>
-																				 {
-																					 try
-																					 {
-																						 UpdateBatchResults(task.Result, data);
-																					 }
-																					 finally
-																					 {
-																						 cachingScope.Dispose();
-																					 }
-																				 });
-												 }
-												 catch
-												 {
-													 cachingScope.Dispose();
-													 throw;
-												 }
-											 }).Unwrap();
+				var result = await AsyncDatabaseCommands.BatchAsync(data.Commands.ToArray());
+				UpdateBatchResults(result, data);
+			}
 		}
 
 		/// <summary>

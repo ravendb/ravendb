@@ -1317,7 +1317,7 @@ namespace Raven.Client.Connection.Async
 		/// <returns></returns>
 		public Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas)
 		{
-			return ExecuteWithReplication("POST", operationMetadata =>
+			return ExecuteWithReplication("POST", async operationMetadata =>
 			{
 				var metadata = new RavenJObject();
 				AddTransactionInformation(metadata);
@@ -1329,33 +1329,21 @@ namespace Raven.Client.Connection.Async
 				var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 				var data = jArray.ToString(Formatting.None);
 
-				return req.WriteAsync(data)
-							.ContinueWith(writeTask =>
-							{
-								writeTask.Wait(); // throw
-								return req.ReadResponseJsonAsync();
-							})
-					.Unwrap()
-					.ContinueWith(task =>
-					{
-						RavenJArray response;
-						try
-						{
-							response = (RavenJArray)task.Result;
-						}
-						catch (AggregateException e)
-						{
-							var we = e.ExtractSingleInnerException() as WebException;
-							if (we == null)
-								throw;
-							var httpWebResponse = we.Response as HttpWebResponse;
-							if (httpWebResponse == null ||
-								httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-								throw;
-							throw ThrowConcurrencyException(we);
-						}
-						return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
-					});
+				await req.WriteAsync(data);
+				RavenJArray response;
+				try
+				{
+					response = (RavenJArray) (await req.ReadResponseJsonAsync());
+				}
+				catch (WebException we)
+				{
+					var httpWebResponse = we.Response as HttpWebResponse;
+					if (httpWebResponse == null ||
+					    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+						throw;
+					throw ThrowConcurrencyException(we);
+				}
+				return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
 			});
 		}
 
@@ -1911,7 +1899,7 @@ namespace Raven.Client.Connection.Async
 		private bool resolvingConflict;
 		private bool resolvingConflictRetries;
 
-		private Task<T> ExecuteWithReplication<T>(string method, Func<OperationMetadata, Task<T>> operation)
+		private async Task<T> ExecuteWithReplication<T>(string method, Func<OperationMetadata, Task<T>> operation)
 		{
 			var currentRequest = Interlocked.Increment(ref requestCount);
 			if (currentlyExecuting && convention.AllowMultipuleAsyncOperations == false)
@@ -1920,17 +1908,11 @@ namespace Raven.Client.Connection.Async
 			currentlyExecuting = true;
 			try
 			{
-				return replicationInformer.ExecuteWithReplicationAsync(method, Url, credentials, currentRequest, readStripingBase, operation)
-					.ContinueWith(task =>
-					{
-						currentlyExecuting = false;
-						return task;
-					}).Unwrap();
+				return await replicationInformer.ExecuteWithReplicationAsync(method, Url, credentials, currentRequest, readStripingBase, operation);
 			}
-			catch (Exception)
+			finally
 			{
 				currentlyExecuting = false;
-				throw;
 			}
 		}
 
