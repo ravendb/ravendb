@@ -325,42 +325,6 @@ namespace Raven.Storage.Esent.StorageActions
 			etagTouches.Add(preTouchEtag, afterTouchEtag);
 		}
 
-		public AddDocumentResult PutDocumentMetadata(string key, RavenJObject metadata)
-		{
-			Api.JetSetCurrentIndex(session, Documents, "by_key");
-			Api.MakeKey(session, Documents, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
-			var isUpdate = Api.TrySeek(session, Documents, SeekGrbit.SeekEQ);
-			if (isUpdate == false)
-				throw new InvalidOperationException("Updating document metadata is only valid for existing documents, but " + key +
-													" does not exists");
-
-			Etag newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
-			DateTime savedAt = SystemTime.UtcNow;
-			using (var update = new Update(session, Documents, JET_prep.Replace))
-			{
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["etag"], newEtag.TransformToValueForEsentSorting());
-				Api.SetColumn(session, Documents, tableColumnsCache.DocumentsColumns["last_modified"], savedAt.ToBinary());
-
-				using (var columnStream = new ColumnStream(session, Documents, tableColumnsCache.DocumentsColumns["metadata"]))
-				{
-					columnStream.SetLength(0); // always updating here
-					using (Stream stream = new BufferedStream(columnStream))
-					{
-						metadata.WriteTo(stream);
-						stream.Flush();
-					}
-				}
-
-				update.Save();
-			}
-			return new AddDocumentResult
-			{
-				Etag = newEtag,
-				SavedAt = savedAt,
-				Updated = true
-			};
-		}
-
 		public void IncrementDocumentCount(int value)
 		{
 			if (Api.TryMoveFirst(session, Details))

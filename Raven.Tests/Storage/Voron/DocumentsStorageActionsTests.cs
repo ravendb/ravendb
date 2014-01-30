@@ -512,30 +512,6 @@ using Raven.Database.Plugins;
 			}
 		}
 
-
-		[Theory]
-		[PropertyData("Storages")]
-		public void DocumentStorage_PutDocumentMetadata_NonExistingKey_ExceptionThrown(string requestedStorage)
-		{
-			using (var storage = NewTransactionalStorage(requestedStorage))
-			{
-				Assert.Throws<InvalidOperationException>(() => storage.Batch(mutator => mutator.Documents.PutDocumentMetadata("Foo", new RavenJObject())));
-			}
-		}
-
-		//this test makes sure that document.contains internal check works properly
-		[Theory]
-		[PropertyData("Storages")]
-		public void DocumentStorage_PutDocumentMetadata_WrongKey_ExceptionThrown(string requestedStorage)
-		{
-			using (var storage = NewTransactionalStorage(requestedStorage))
-			{
-				storage.Batch(mutator => mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "Data" })));
-
-				Assert.Throws<InvalidOperationException>(() => storage.Batch(mutator => mutator.Documents.PutDocumentMetadata("Foo2", new RavenJObject())));
-			}
-		}
-
 		[Theory]
 		[PropertyData("Storages")]
 		public void DocumentStorage_DocumentAdd_DocumentByDifferentKey_NullReturned(string requestedStorage)

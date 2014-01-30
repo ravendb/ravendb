@@ -47,9 +47,12 @@ namespace Raven.Abstractions.Connection
 
 			if (response.Content != null)
 			{
-				var readAsStringAsync = response.Content.ReadAsStringAsync();
-				if (readAsStringAsync != null && readAsStringAsync.IsCompleted)
-					sb.AppendLine(readAsStringAsync.Result);
+                var readAsStringAsync = response.GetResponseStreamWithHttpDecompression();
+			    if (readAsStringAsync.IsCompleted)
+			    {
+			        using (var streamReader = new StreamReader(readAsStringAsync.Result))
+			            sb.AppendLine(streamReader.ReadToEnd());
+			    }
 			}
 			return sb.ToString();
 		}
