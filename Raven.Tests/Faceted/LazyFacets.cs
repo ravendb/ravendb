@@ -20,7 +20,6 @@ namespace Raven.Tests.Faceted
         {
             using (var store = NewRemoteDocumentStore())
             {
-
                 var facetSetup = new FacetSetup
                 {
                     Id = "Facets",
@@ -44,15 +43,9 @@ namespace Raven.Tests.Faceted
                 }
 
                 new Foos().Execute(store);
+                
+                WaitForIndexing(store);
 
-                try
-                {
-                    WaitForIndexing(store);
-                }
-                catch
-                {
-
-                }
 
                 using (var session = store.OpenSession())
                 {
