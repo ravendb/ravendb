@@ -23,7 +23,6 @@ namespace Raven.Database.Server.Controllers
         public async Task<HttpResponseMessage> FacetsGet(string id)
         {
             List<Facet> facets = null;
-            Etag etag = null;
             byte[] additionalEtagBytes = null;
            
             var facetSetupDoc = GetQueryStringValue("facetDoc") ;
@@ -33,7 +32,6 @@ namespace Raven.Database.Server.Controllers
                 if (string.IsNullOrEmpty(facetsJson) == false)
                 {
 					additionalEtagBytes = Encoding.UTF8.GetBytes(facetsJson);
-					etag = GetFacetsEtag(id, additionalEtagBytes);
 
 					var msg = TryGetFacetsFromString(facetsJson, out facets);
 					if (msg != null)
@@ -43,14 +41,14 @@ namespace Raven.Database.Server.Controllers
             else
             {
                 var jsonDocument = Database.Get(facetSetupDoc, null);
-                if (jsonDocument == null)
-                {
-                    return GetMessageWithString("Could not find facet document: " + facetSetupDoc, HttpStatusCode.NotFound);
-                }
-                additionalEtagBytes = jsonDocument.Etag.ToByteArray();
+	            if (jsonDocument == null)
+		            return GetMessageWithString("Could not find facet document: " + facetSetupDoc, HttpStatusCode.NotFound);
+
+	            additionalEtagBytes = jsonDocument.Etag.ToByteArray();
                 facets = jsonDocument.DataAsJson.JsonDeserialization<FacetSetup>().Facets;
             }
 
+			var etag = GetFacetsEtag(id, additionalEtagBytes);
             if (MatchEtag(etag))
             {
                 return GetEmptyMessage(HttpStatusCode.NotFound);
@@ -59,7 +57,7 @@ namespace Raven.Database.Server.Controllers
             if (facets == null || !facets.Any())
                 return GetMessageWithString("No facets found in facets setup document:" + facetSetupDoc, HttpStatusCode.NotFound);
 
-            return await ExecuteFacetsQuery(id, facets, additionalEtagBytes);
+            return await ExecuteFacetsQuery(id, facets, etag);
         }
 
         [HttpPost]
@@ -73,14 +71,13 @@ namespace Raven.Database.Server.Controllers
             if (msg != null)
                 return msg;
 
-	        var additionalEtagBytes = Encoding.UTF8.GetBytes(facetsJson);
-	        var etag = GetFacetsEtag(id, additionalEtagBytes);
+	        var etag = GetFacetsEtag(id, Encoding.UTF8.GetBytes(facetsJson));
 			if (MatchEtag(etag))
 			{
 				return GetEmptyMessage(HttpStatusCode.NotModified);
 			}
 
-            return await ExecuteFacetsQuery(id, facets, additionalEtagBytes);
+            return await ExecuteFacetsQuery(id, facets, etag);
         }
 
         [HttpPost]
@@ -109,12 +106,11 @@ namespace Raven.Database.Server.Controllers
             return GetMessageWithObject(results);
         }
 
-        private async Task<HttpResponseMessage> ExecuteFacetsQuery(string index, List<Facet> facets, byte[] additionalEtagBytes)
+		private async Task<HttpResponseMessage> ExecuteFacetsQuery(string index, List<Facet> facets, Etag indexEtag)
         {
             var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
             var facetStart = GetFacetStart();
             var facetPageSize = GetFacetPageSize();
-            var indexEtag = GetFacetsEtag(index, additionalEtagBytes);
             var results = Database.ExecuteGetTermsQuery(index, indexQuery, facets, facetStart, facetPageSize);
             return GetMessageWithObject(results, HttpStatusCode.OK, indexEtag);
         }
