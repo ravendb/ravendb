@@ -5,7 +5,7 @@ import collection = require("models/collection");
 import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
-class deleteCollection {
+class deleteCollection extends dialogViewModelBase {
 
     public deletionTask = $.Deferred();
     private deletionStarted = false;
