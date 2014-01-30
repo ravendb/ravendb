@@ -12,6 +12,8 @@ using Xunit;
 
 namespace Raven.Tests.Bundles.Replication
 {
+	using Client.Indexes;
+
 	public class ConflictsInEmbeddableStore : ReplicationBase
 	{
 		[Fact]
@@ -77,12 +79,53 @@ namespace Raven.Tests.Bundles.Replication
 			}
 		}
 
-		[TimeBombedFact(2014, 2, 10, "RavenDB-1613")]
+		[Fact]
 		public void ShouldThrowConflictExceptionForQueryingConflictedDocument()
 		{
 			using (var store1 = CreateEmbeddableStore())
 			using (var store2 = CreateEmbeddableStore())
 			{
+				new RavenDocumentsByEntityName().Execute(store2);
+
+				using (var session = store1.OpenSession())
+				{
+					session.Store(new Company());
+					session.SaveChanges();
+				}
+
+				using (var session = store2.OpenSession())
+				{
+					session.Store(new Company());
+					session.SaveChanges();
+				}
+
+				store1.DatabaseCommands.Put("marker", null, new RavenJObject(), new RavenJObject());
+
+				TellFirstInstanceToReplicateToSecondInstance();
+
+				WaitForReplication(store2, "marker");
+
+				var conflictException = Assert.Throws<ConflictException>(() =>
+				{
+					using (var session = store2.OpenSession())
+					{
+						session.Query<Company>().Customize(x => x.WaitForNonStaleResults()).ToList();
+					}
+				});
+
+				Assert.Equal("Conflict detected on companies/1, conflict must be resolved before the document will be accessible",
+							 conflictException.Message);
+			}
+		}
+
+		[Fact]
+		public void ShouldThrowConflictExceptionForQueryingConflictedDocument_RemoteStore()
+		{
+			using (var store1 = CreateStore())
+			using (var store2 = CreateStore())
+			{
+				new RavenDocumentsByEntityName().Execute(store2);
+
 				using (var session = store1.OpenSession())
 				{
 					session.Store(new Company());

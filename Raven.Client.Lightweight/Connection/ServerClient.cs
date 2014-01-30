@@ -1,3 +1,4 @@
+using Raven.Client.Exceptions;
 using Raven.Database.Data;
 #if !SILVERLIGHT && !NETFX_CORE
 //-----------------------------------------------------------------------
@@ -368,6 +369,9 @@ namespace Raven.Client.Connection
 			}
 			catch (Exception e)
 			{
+				if (e is ConflictException)
+					throw;
+				
 				throw new InvalidOperationException("Query failed. See inner exception for details.",e);
 			}
 		}
