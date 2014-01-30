@@ -508,7 +508,15 @@ namespace Raven.Client.Embedded
 
 			var docResults = queryResult.Results.Concat(queryResult.Includes);
 			return RetryOperationBecauseOfConflict(docResults, queryResult,
-			                                       () => Query(index, query, includes, metadataOnly, indexEntriesOnly));
+												   () => Query(index, query, includes, metadataOnly, indexEntriesOnly),
+												   conflictedResultId =>
+												   new ConflictException(
+													   "Conflict detected on " +
+													   conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+													   ", conflict must be resolved before the document will be accessible", true)
+												   {
+													   ConflictedVersionIds = new[] { conflictedResultId }
+												   });
 		}
 
 		/// <summary>
@@ -1189,9 +1197,11 @@ namespace Raven.Client.Embedded
 			get { return profilingInformation; }
 		}
 
-		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
+		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry,
+													Func<string, ConflictException> onConflictedQueryResult = null)
 		{
-			bool requiresRetry = docResults.Aggregate(false, (current, docResult) => current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult));
+			bool requiresRetry = docResults.Aggregate(false, (current, docResult) =>
+														current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult, onConflictedQueryResult));
 			if (!requiresRetry)
 				return currentResult;
 
@@ -1277,7 +1287,7 @@ namespace Raven.Client.Embedded
 			return false;
 		}
 
-		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult)
+		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult, Func<string, ConflictException> onConflictedQueryResult = null)
 		{
 			if (docResult == null)
 				return false;
@@ -1292,6 +1302,10 @@ namespace Raven.Client.Embedded
 					return true;
 				throw concurrencyException;
 			}
+
+			if (metadata.Value<bool>(Constants.RavenReplicationConflict) && onConflictedQueryResult != null)
+				throw onConflictedQueryResult(metadata.Value<string>("@id"));
+
 			return false;
 		}
 

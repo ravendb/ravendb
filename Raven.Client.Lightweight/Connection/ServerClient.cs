@@ -1263,7 +1263,17 @@ namespace Raven.Client.Connection
 			var directQuery = SerializationHelper.ToQueryResult(json, request.GetEtagHeader(), request.ResponseHeaders["Temp-Request-Time"]);
 			var docResults = directQuery.Results.Concat(directQuery.Includes);
 			return RetryOperationBecauseOfConflict(docResults, directQuery,
-				() => DirectQuery(index, query, operationMetadata, includes, metadataOnly, includeEntries));
+			                                       () =>
+			                                       DirectQuery(index, query, operationMetadata, includes, metadataOnly,
+			                                                   includeEntries),
+			                                       conflictedResultId =>
+			                                       new ConflictException(
+				                                       "Conflict detected on " +
+				                                       conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+				                                       ", conflict must be resolved before the document will be accessible", true)
+			                                       {
+				                                       ConflictedVersionIds = new[] {conflictedResultId}
+			                                       });
 		}
 
 		/// <summary>
@@ -1374,9 +1384,11 @@ namespace Raven.Client.Connection
 			return RetryOperationBecauseOfConflict(docResults, multiLoadResult, () => DirectGet(ids, operationMetadata, includes, transformer, queryInputs, metadataOnly));
 		}
 
-		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
+		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry, 
+													Func<string, ConflictException> onConflictedQueryResult = null)
 		{
-			bool requiresRetry = docResults.Aggregate(false, (current, docResult) => current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult));
+			bool requiresRetry = docResults.Aggregate(false, (current, docResult) => 
+														current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult, onConflictedQueryResult));
 			if (!requiresRetry)
 				return currentResult;
 
@@ -1394,7 +1406,7 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult)
+		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult, Func<string, ConflictException> onConflictedQueryResult = null)
 		{
 			if (docResult == null)
 				return false;
@@ -1409,6 +1421,10 @@ namespace Raven.Client.Connection
 					return true;
 				throw concurrencyException;
 			}
+
+			if(metadata.Value<bool>(Constants.RavenReplicationConflict) && onConflictedQueryResult != null)
+				throw onConflictedQueryResult(metadata.Value<string>("@id"));
+
 			return false;
 		}
 
