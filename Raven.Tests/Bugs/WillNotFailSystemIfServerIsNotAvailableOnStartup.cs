@@ -40,8 +40,7 @@ namespace Raven.Tests.Bugs
 			{
 				using (var session = store.OpenAsyncSession())
 				{
-					var aggregateException = await AssertAsync.Throws<AggregateException>(async () => await session.LoadAsync<User>("user/1"));
-					Assert.IsType<WebException>(aggregateException.Flatten().InnerException);
+					await AssertAsync.Throws<WebException>(async () => await session.LoadAsync<User>("user/1"));
 				}
 
 				using (GetNewServer())
