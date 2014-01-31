@@ -13,14 +13,8 @@ class getDatabaseSettingsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<document> {
-
-        var documentResult = $.Deferred();
-        var result = this.query("/admin/databases/" + this.db.name, null);
-        result.fail(response => documentResult.fail(response));
-        result.done((queryResult: queryResultDto) => {
-            documentResult.resolve(new document(queryResult));
-        });
-        return documentResult;
+        var resultsSelector = (queryResult: queryResultDto) => new document(queryResult);
+        return this.query("/admin/databases/" + this.db.name, null, null, resultsSelector);
     }
 }
 
