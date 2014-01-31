@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Fragment>
+    <Component Id="CopyLicenseFile" Guid="{CEB58DF6-EA46-4F34-B770-0E93B5A93596}" Directory="INSTALLFOLDER">
+      <Condition><![CDATA[RAVEN_LICENSE_FILE_PATH AND RAVEN_TARGET_ENVIRONMENT = "PRODUCTION"]]></Condition>
+        <RemoveFile Id="RemoveLicensexml" Name="license.xml" On="uninstall" Directory="INSTALLFOLDER" />
+        <CopyFile Id="Licensexml" SourceProperty="RAVEN_LICENSE_FILE_PATH" DestinationDirectory="INSTALLFOLDER" DestinationName="license.xml" />
+    </Component>
+	</Fragment>
+</Wix>

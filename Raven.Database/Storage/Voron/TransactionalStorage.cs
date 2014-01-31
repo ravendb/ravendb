@@ -1,9 +1,10 @@
 ﻿using System.Linq;
+using Raven.Abstractions.Exceptions;
 using Raven.Database;
 using Raven.Database.Storage;
 using Raven.Database.Storage.Voron;
 using Raven.Database.Storage.Voron.Backup;
-using Voron;
+using VoronExceptions = Voron.Exceptions;
 using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Storage.Voron
@@ -117,13 +118,20 @@ namespace Raven.Storage.Voron
 			disposerLock.EnterReadLock();
 			try
 			{
+				ExecuteBatch(action);
+			}
+			catch (Exception e)
+			{
 				if (disposed)
 				{
 					Trace.WriteLine("TransactionalStorage.Batch was called after it was disposed, call was ignored.");
 					return; // this may happen if someone is calling us from the finalizer thread, so we can't even throw on that
 				}
 
-				ExecuteBatch(action);
+				if (e.InnerException is VoronExceptions.ConcurrencyException)
+					throw new ConcurrencyException("Concurrent modification to the same document are not allowed", e.InnerException);
+
+				throw;
 			}
 			finally
 			{

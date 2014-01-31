@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -69,7 +70,7 @@ namespace Raven.Database.Smuggler
 		{
 			const int dummy = 0;
 
-			var enumerator = database.GetDocuments(dummy, SmugglerOptions.BatchSize, lastEtag)
+			var enumerator = database.GetDocuments(dummy, SmugglerOptions.BatchSize, lastEtag, CancellationToken.None)
 				.ToList()
 				.Cast<RavenJObject>()
 				.GetEnumerator();

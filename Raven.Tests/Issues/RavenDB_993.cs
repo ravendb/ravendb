@@ -35,21 +35,8 @@ namespace Raven.Tests.Issues
 			server1 = CreateServer(8111, "D1");
 			server2 = CreateServer(8112, "D2");
 
-			store1 = new DocumentStore
-			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8111"
-			};
-
-			store1.Initialize();
-
-			store2 = new DocumentStore
-			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8112"
-			};
-
-			store2.Initialize();
+			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false);
+			store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind", runInMemory: false);
 
 			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
@@ -61,7 +48,7 @@ namespace Raven.Tests.Issues
 			store2.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
 				{
-					Id = "Northwind",
+					Id = "Northwind",					
 					Settings = { { "Raven/ActiveBundles", "replication" }, { "Raven/DataDir", @"~\D2\N" } }
 				});
 
@@ -91,21 +78,8 @@ namespace Raven.Tests.Issues
 			server1 = CreateServer(8111, "D1");
 			server2 = CreateServer(8112, "D2");
 
-			store1 = new DocumentStore
-			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8111"
-			};
-
-			store1.Initialize();
-
-			store2 = new DocumentStore
-			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8112"
-			};
-
-			store2.Initialize();
+			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false);
+			store2 = NewRemoteDocumentStore(false, server2, databaseName: "Northwind", runInMemory: false);
 
 			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
@@ -146,13 +120,7 @@ namespace Raven.Tests.Issues
 		{
 			server1 = CreateServer(8111, "D1");
 
-			store1 = new DocumentStore
-			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8111"
-			};
-
-			store1.Initialize();
+			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false);
 
 			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
@@ -180,18 +148,13 @@ namespace Raven.Tests.Issues
 			Assert.Equal(-2, result[0].Value<int>("Code"));
 		}
 
+		//note - this test _will_ fail if fiddler is active during the test (DNS lookup)
 		[Fact]
 		public void InvalidUrlTest()
 		{
 			server1 = CreateServer(8111, "D1");
 
-			store1 = new DocumentStore
-			{
-				DefaultDatabase = "Northwind",
-				Url = "http://localhost:8111"
-			};
-
-			store1.Initialize();
+			store1 = NewRemoteDocumentStore(false, server1, databaseName: "Northwind", runInMemory: false);
 
 			store1.DatabaseCommands.GlobalAdmin.CreateDatabase(
 				new DatabaseDocument
@@ -228,38 +191,20 @@ namespace Raven.Tests.Issues
 			Assert.Equal(-1, result[0].Value<int>("Code"));
 		}
 
-		private RavenDbServer CreateServer(int port, string dataDirectory, bool removeDataDirectory = true)
-		{
+		private RavenDbServer CreateServer(int port, string dataDirectory, bool removeDataDirectory = true,string storageType = "esent",bool runInFidler = false)
+		{			
 			Raven.Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 
-			var serverConfiguration = new Raven.Database.Config.RavenConfiguration
-			{
-				Settings = { { "Raven/ActiveBundles", "replication" } },
-                AnonymousUserAccessMode = Raven.Database.Server.AnonymousUserAccessMode.Admin,
-				DataDirectory = dataDirectory,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-				RunInMemory = false,
-				Port = port,
-				DefaultStorageTypeName = "esent"
-			};
-
 			if (removeDataDirectory)
-				IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
+				IOExtensions.DeleteDirectory(dataDirectory);
 
-			var server = new RavenDbServer(serverConfiguration);
-			serverConfiguration.PostInit();
-
+			var server = GetNewServer(port, dataDirectory, false, storageType,activeBundles: "replication");			
 			return server;
-		}
-
-		private void StopServer(RavenDbServer server)
-		{
-			server.Dispose();
 		}
 
 		private RavenDbServer StartServer(RavenDbServer server)
 		{
-			return this.CreateServer(server.SystemDatabase.Configuration.Port, server.SystemDatabase.Configuration.DataDirectory, false);
+			return this.CreateServer(server.SystemDatabase.Configuration.Port, server.SystemDatabase.Configuration.DataDirectory, removeDataDirectory: false);
 		}
 
 		public override void Dispose()

@@ -80,7 +80,15 @@ namespace Raven.Database.Server.Responders
 			var request = requests[i];
 			if (request == null)
 				return;
-			server.HandleActualRequest(contexts[i]);
+		    ravenHttpConfiguration.ConcurrentMultiGetRequests.Wait();
+		    try
+		    {
+		        server.HandleActualRequest(contexts[i]);
+		    }
+		    finally 
+            {
+                ravenHttpConfiguration.ConcurrentMultiGetRequests.Release();
+		    }
 			results[i] = contexts[i].Complete();
 		}
 

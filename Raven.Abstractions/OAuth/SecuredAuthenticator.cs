@@ -237,10 +237,10 @@ namespace Raven.Abstractions.OAuth
 				{
 					// We've already tried three times and failed
 					if (tries >= 3)
-						throw new ErrorResponseException(response);
+						throw ErrorResponseException.FromResponseMessage(response);
 
 					if (response.StatusCode != HttpStatusCode.PreconditionFailed)
-						throw new ErrorResponseException(response);
+						throw ErrorResponseException.FromResponseMessage(response);
 
 					var header = response.Headers.GetFirstValue("WWW-Authenticate");
 					if (header == null || header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey) == false)

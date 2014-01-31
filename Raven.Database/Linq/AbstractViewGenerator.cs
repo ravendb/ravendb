@@ -35,6 +35,9 @@ namespace Raven.Database.Linq
 		private readonly HashSet<string> mapFields = new HashSet<string>();
 		private readonly HashSet<string> reduceFields = new HashSet<string>();
 
+// ReSharper disable once InconsistentNaming
+		protected DynamicNullObject __dynamic_null = new DynamicNullObject();
+
 		private static readonly Regex selectManyOrFrom = new Regex(@"( (?<!^)\s from \s ) | ( \.SelectMany\( )",
 		                                                           RegexOptions.Compiled |
 		                                                           RegexOptions.IgnorePatternWhitespace);
@@ -144,6 +147,11 @@ namespace Raven.Database.Linq
 			return new AttachmentForIndexing(key);
 		}
 
+        // Required for RavenDB-1519
+	    protected dynamic LoadDocument<TIGnored>(object item)
+	    {
+	        return LoadDocument(item);
+	    }
 		protected dynamic LoadDocument(object item)
 		{
 			if (CurrentIndexingScope.Current == null)

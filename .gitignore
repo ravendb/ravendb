@@ -1,6 +1,7 @@
 [Bb]in
 [Oo]bj
 *resharper.user
+*/FodyWeavers.xml
 build/
 [Hh]elp/
 *.suo
@@ -60,3 +61,4 @@ Raven.Studio.Html5/App/widgets/virtualTable/*.js
 Raven.Studio.Html5/App/widgets/virtualTable/*.js.map
 Raven.Studio.Html5/Content/app.min.css
 Raven.Studio.Html5/Content/app.less.map
+/Raven.Web/Assemblies

@@ -80,7 +80,7 @@ namespace Raven.Client.Document
 #if !MONO
 		private void SubscribeToBulkInsertNotifications(IDatabaseChanges changes)
 		{
-			changes
+            subscription = changes
 				.ForBulkInsert(OperationId)
 				.Subscribe(this);
 		}
@@ -260,13 +260,9 @@ namespace Raven.Client.Document
 				errorResponse = e;
 			}
 
-			using (var stream = await errorResponse.Response.GetResponseStreamWithHttpDecompression())
-			{
-				var conflicts = new StreamReader(stream);
-				var conflictsDocument = RavenJObject.Load(new RavenJsonTextReader(conflicts));
+            var conflictsDocument = RavenJObject.Load(new RavenJsonTextReader(new StringReader(errorResponse.ResponseString)));
 
-				throw new ConcurrencyException(conflictsDocument.Value<string>("Error"));
-			}
+		    throw new ConcurrencyException(conflictsDocument.Value<string>("Error"));
 		}
 
 		private Task<RavenJToken> GetOperationStatus(long operationId)
@@ -275,6 +271,7 @@ namespace Raven.Client.Document
 		}
 
 		private volatile bool disposed;
+        private IDisposable subscription;
 
 		private long responseOperationId;
 
@@ -284,7 +281,12 @@ namespace Raven.Client.Document
 				return;
 			disposed = true;
 			queue.Add(null);
-
+            if (subscription != null)
+            {
+                subscription.Dispose();
+               
+            }
+           
 			// The first await call in this method MUST call ConfigureAwait(false) in order to avoid DEADLOCK when this code is called by synchronize code, like Dispose().
 			await operationTask.ConfigureAwait(false);
 			operationTask.AssertNotFailed();

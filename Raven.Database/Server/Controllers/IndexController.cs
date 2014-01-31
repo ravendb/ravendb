@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Abstractions;
@@ -15,7 +16,9 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Logging;
 using Raven.Database.Data;
+using Raven.Database.Extensions;
 using Raven.Database.Queries;
 using Raven.Database.Server.Responders;
 using Raven.Database.Server.WebApi.Attributes;
@@ -47,20 +50,24 @@ namespace Raven.Database.Server.Controllers
 		[Route("databases/{databaseName}/indexes/{*id}")]
 		public HttpResponseMessage IndexGet(string id)
 		{
-			var index = id;
-			if (string.IsNullOrEmpty(GetQueryStringValue("definition")) == false)
-				return GetIndexDefinition(index);
+            using (var cts = new CancellationTokenSource())
+            using (cts.TimeoutAfter(DatabasesLandlord.SystemConfiguration.DatbaseOperationTimeout))
+            {
+                var index = id;
+                if (string.IsNullOrEmpty(GetQueryStringValue("definition")) == false) 
+                    return GetIndexDefinition(index);
 
-			if (string.IsNullOrEmpty(GetQueryStringValue("source")) == false)
-				return GetIndexSource(index);
+                if (string.IsNullOrEmpty(GetQueryStringValue("source")) == false) 
+                    return GetIndexSource(index);
 
-			if (string.IsNullOrEmpty(GetQueryStringValue("debug")) == false)
-				return DebugIndex(index);
+                if (string.IsNullOrEmpty(GetQueryStringValue("debug")) == false) 
+                    return DebugIndex(index);
 
-			if (string.IsNullOrEmpty(GetQueryStringValue("explain")) == false)
-				return GetExplanation(index);
+                if (string.IsNullOrEmpty(GetQueryStringValue("explain")) == false) 
+                    return GetExplanation(index);
 
-			return GetIndexQueryResult(index);
+                return GetIndexQueryResult(index, cts.Token);
+            }
 		}
 
 		[HttpPut]
@@ -267,11 +274,11 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(explanations);
 		}
 
-		private HttpResponseMessage GetIndexQueryResult(string index)
+		private HttpResponseMessage GetIndexQueryResult(string index, CancellationToken token)
 		{
 			Etag indexEtag;
 			var msg = GetEmptyMessage();
-			var queryResult = ExecuteQuery(index, out indexEtag, msg);
+			var queryResult = ExecuteQuery(index, out indexEtag, msg, token);
 
 			if (queryResult == null)
 				return msg;
@@ -297,40 +304,39 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(queryResult, HttpStatusCode.OK, indexEtag);
 		}
 
-		private QueryResultWithIncludes ExecuteQuery(string index, out Etag indexEtag, HttpResponseMessage msg)
+		private QueryResultWithIncludes ExecuteQuery(string index, out Etag indexEtag, HttpResponseMessage msg, CancellationToken token)
 		{
 			var indexQuery = GetIndexQuery(Database.Configuration.MaxPageSize);
 			RewriteDateQueriesFromOldClients(indexQuery);
 
 			var sp = Stopwatch.StartNew();
 			var result = index.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) || index.Equals("dynamic", StringComparison.OrdinalIgnoreCase) ?
-				PerformQueryAgainstDynamicIndex(index, indexQuery, out indexEtag, msg) :
-				PerformQueryAgainstExistingIndex(index, indexQuery, out indexEtag, msg);
+				PerformQueryAgainstDynamicIndex(index, indexQuery, out indexEtag, msg, token) :
+				PerformQueryAgainstExistingIndex(index, indexQuery, out indexEtag, msg, token);
 
 			sp.Stop();
 
-			//TODO: log
-			//context.Log(log => log.Debug(() =>
-			//{
-			//	var sb = new StringBuilder("\tQuery: ")
-			//		.Append(indexQuery.Query)
-			//		.AppendLine();
-			//	sb.Append("\t").AppendFormat("Time: {0:#,#;;0} ms", sp.ElapsedMilliseconds).AppendLine();
+			Log.Debug(() =>
+			{
+				var sb = new StringBuilder("\tQuery: ")
+					.Append(indexQuery.Query)
+					.AppendLine();
+				sb.Append("\t").AppendFormat("Time: {0:#,#;;0} ms", sp.ElapsedMilliseconds).AppendLine();
 
-			//	if (result == null)
-			//		return sb.ToString();
+				if (result == null)
+					return sb.ToString();
 
-			//	sb.Append("\tIndex: ")
-			//		.AppendLine(result.IndexName);
-			//	sb.Append("\t").AppendFormat("Results: {0:#,#;;0} returned out of {1:#,#;;0} total.", result.Results.Count, result.TotalResults).AppendLine();
+				sb.Append("\tIndex: ")
+					.AppendLine(result.IndexName);
+				sb.Append("\t").AppendFormat("Results: {0:#,#;;0} returned out of {1:#,#;;0} total.", result.Results.Count, result.TotalResults).AppendLine();
 
-			//	return sb.ToString();
-			//}));
+				return sb.ToString();
+			});
 
 			return result;
 		}
 
-		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(string index, IndexQuery indexQuery, out Etag indexEtag, HttpResponseMessage msg)
+		private QueryResultWithIncludes PerformQueryAgainstExistingIndex(string index, IndexQuery indexQuery, out Etag indexEtag, HttpResponseMessage msg, CancellationToken token)
 		{
 			indexEtag = Database.GetIndexEtag(index, null, indexQuery.ResultsTransformer);
 			if (MatchEtag(indexEtag))
@@ -340,12 +346,12 @@ namespace Raven.Database.Server.Controllers
 				return null;
 			}
 
-			var queryResult = Database.Query(index, indexQuery);
+			var queryResult = Database.Query(index, indexQuery, token);
 			indexEtag = Database.GetIndexEtag(index, queryResult.ResultEtag, indexQuery.ResultsTransformer);
 			return queryResult;
 		}
 
-		private QueryResultWithIncludes PerformQueryAgainstDynamicIndex(string index, IndexQuery indexQuery, out Etag indexEtag, HttpResponseMessage msg)
+		private QueryResultWithIncludes PerformQueryAgainstDynamicIndex(string index, IndexQuery indexQuery, out Etag indexEtag, HttpResponseMessage msg, CancellationToken token)
 		{
 			string entityName;
 			var dynamicIndexName = GetDynamicIndexName(index, indexQuery, out entityName);
@@ -382,7 +388,7 @@ namespace Raven.Database.Server.Controllers
 				return null;
 			}
 
-			var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery);
+			var queryResult = Database.ExecuteDynamicQuery(entityName, indexQuery, token);
 
 			// have to check here because we might be getting the index etag just 
 			// as we make a switch from temp to auto, and we need to refresh the etag

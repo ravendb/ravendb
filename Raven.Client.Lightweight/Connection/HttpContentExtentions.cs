@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Specialized;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -16,7 +17,11 @@ namespace Raven.Client.Connection
 			}
 			else if(contentType != string.Empty)
 			{
-				httpContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+				MediaTypeHeaderValue mediaTypeHeader;
+				if (!MediaTypeHeaderValue.TryParse(contentType, out mediaTypeHeader)) //otherwise on constructor parameter such as 'application/json; charset=utf-8' will throw
+					throw new ArgumentException("not recognized mime type in Content-Type header");	
+
+				httpContent.Headers.ContentType = mediaTypeHeader;
 			}
 
 			return httpContent;

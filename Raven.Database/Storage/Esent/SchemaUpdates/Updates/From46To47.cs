@@ -34,7 +34,6 @@ namespace Raven.Storage.Esent.SchemaUpdates.Updates
 					                            szIndexName = "by_view_level_and_hashed_reduce_key_and_bucket",
 					                            szKey = "+view\0+level\0+hashed_reduce_key\0+bucket\0\0",
 				                            });
-
 			}
 
 			SchemaCreator.UpdateVersion(session, dbid, "4.7");

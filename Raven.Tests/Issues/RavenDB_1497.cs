@@ -130,7 +130,7 @@ namespace Raven.Tests.Issues
 						Query = "Name:*",
 						Start = 0,
 						PageSize = 10
-					});
+					}, CancellationToken.None);
 
 					Assert.Equal(2, docs.Results.Count);
 
@@ -139,7 +139,7 @@ namespace Raven.Tests.Issues
 						Query = "Name:*",
 						Start = 0,
 						PageSize = 10
-					});
+					}, CancellationToken.None);
 
 					Assert.Equal(2, docs.Results.Count);
 

@@ -450,15 +450,7 @@ using Raven.Database.Plugins;
 		[PropertyData("Storages")]
 		public void DocumentStorage_InsertDocument_Twice_WithCheckForUpdatesFalse_ExceptionThrown(string requestedStorage)
 		{
-			Type expectedException = null;
-			if (requestedStorage == "voron")
-			{
-				expectedException = typeof(ApplicationException);
-			}
-			else if (requestedStorage == "esent")
-			{
-				expectedException = typeof(EsentKeyDuplicateException);
-			}
+			var expectedException = typeof(ConcurrencyException);	
 
 			using (var storage = NewTransactionalStorage(requestedStorage))
 			{
@@ -517,30 +509,6 @@ using Raven.Database.Plugins;
 				JsonDocumentMetadata metadata = null;
 				storage.Batch(viewer => metadata = viewer.Documents.DocumentMetadataByKey("Foo", null));
 				Assert.Null(metadata);
-			}
-		}
-
-
-		[Theory]
-		[PropertyData("Storages")]
-		public void DocumentStorage_PutDocumentMetadata_NonExistingKey_ExceptionThrown(string requestedStorage)
-		{
-			using (var storage = NewTransactionalStorage(requestedStorage))
-			{
-				Assert.Throws<InvalidOperationException>(() => storage.Batch(mutator => mutator.Documents.PutDocumentMetadata("Foo", new RavenJObject())));
-			}
-		}
-
-		//this test makes sure that document.contains internal check works properly
-		[Theory]
-		[PropertyData("Storages")]
-		public void DocumentStorage_PutDocumentMetadata_WrongKey_ExceptionThrown(string requestedStorage)
-		{
-			using (var storage = NewTransactionalStorage(requestedStorage))
-			{
-				storage.Batch(mutator => mutator.Documents.AddDocument("Foo", null, RavenJObject.FromObject(new { Name = "Bar" }), RavenJObject.FromObject(new { Meta = "Data" })));
-
-				Assert.Throws<InvalidOperationException>(() => storage.Batch(mutator => mutator.Documents.PutDocumentMetadata("Foo2", new RavenJObject())));
 			}
 		}
 

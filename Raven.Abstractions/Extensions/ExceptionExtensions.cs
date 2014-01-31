@@ -54,21 +54,12 @@ namespace Raven.Abstractions.Extensions
 				: firstLine;
 		}
 
-		public static async Task<string> TryReadResponseIfWebException(this ErrorResponseException e)
-		{
-			using (var reader = new StreamReader(await e.Response.GetResponseStreamWithHttpDecompression()))
-			{
-				var response = reader.ReadToEnd();
-				return response;
-			}
-		}
-
 		public static async Task<string> TryReadResponseIfWebException(this AggregateException e)
 		{
 			var errorResponseException = e.ExtractSingleInnerException() as ErrorResponseException;
 			if (errorResponseException != null)
 			{
-				return await TryReadResponseIfWebException(errorResponseException);
+			    return errorResponseException.ResponseString;
 			}
 			return string.Empty;
 		}
@@ -117,7 +108,7 @@ namespace Raven.Abstractions.Extensions
 
 		public static async Task<T> TryReadErrorResponseObject<T>(this ErrorResponseException ex, T protoTypeObject = null) where T : class
 		{
-			var response = await TryReadResponseIfWebException(ex);
+			var response = ex.ResponseString;
 			if (string.IsNullOrEmpty(response))
 				return null;
 

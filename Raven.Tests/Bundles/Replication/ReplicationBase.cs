@@ -26,23 +26,23 @@ using System.Linq;
 
 namespace Raven.Tests.Bundles.Replication
 {
-	public class ReplicationBase : RavenTest
-	{
-		protected int PortRangeStart = 8079;
-		protected int RetriesCount = 500;
+    public class ReplicationBase : RavenTest
+    {
+        protected int PortRangeStart = 8079;
+        protected int RetriesCount = 500;
 
 		public DocumentStore CreateStore(bool enableCompressionBundle = false, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false,string requestedStorageType = "esent", bool useFiddler = false)
-		{
-			var port = PortRangeStart - stores.Count;
+        {
+            var port = PortRangeStart - stores.Count;
 			return CreateStoreAtPort(port, enableCompressionBundle, configureStore, anonymousUserAccessMode, enableAuthorization, requestedStorageType,useFiddler);
-		}
+        }
 
         public EmbeddableDocumentStore CreateEmbeddableStore(bool enableCompressionBundle = false,
 			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, string requestedStorageType = "esent")
-		{
-			var port = PortRangeStart - stores.Count;
+        {
+            var port = PortRangeStart - stores.Count;
 			return CreateEmbeddableStoreAtPort(port, enableCompressionBundle, anonymousUserAccessMode,requestedStorageType);
-		}
+        }
 
 		private DocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false,
 			Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false, string storeTypeName = "esent", bool useFiddler = false)
@@ -52,21 +52,21 @@ namespace Raven.Tests.Bundles.Replication
 				activeBundles: "replication" + (enableCompressionBundle ? ";compression" : string.Empty),
 				enableAuthentication: anonymousUserAccessMode == AnonymousUserAccessMode.None);
 
-			if (enableAuthorization)
-			{
+            if (enableAuthorization)
+            {
 				EnableAuthentication(ravenDbServer.SystemDatabase);
-			}
+            }
 
 			var documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, configureStore: configureStore, fiddler: useFiddler);
 
 			ConfigureDatabase(ravenDbServer.SystemDatabase);
 
-			return documentStore;
-		}
+            return documentStore;
+        }
 
 		private EmbeddableDocumentStore CreateEmbeddableStoreAtPort(int port, bool enableCompressionBundle = false, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All, string storeTypeName = "esent")
-		{
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
+        {
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var store = NewDocumentStore(port: port,
 				requestedStorage:storeTypeName,
 				activeBundles: "replication" + (enableCompressionBundle ? ";compression" : string.Empty),
@@ -74,93 +74,93 @@ namespace Raven.Tests.Bundles.Replication
 			return store;
 		}
 
-		protected virtual void ConfigureDatabase(DocumentDatabase database)
-		{
-			
-		}
+        protected virtual void ConfigureDatabase(DocumentDatabase database)
+        {
 
-		public void StopDatabase(int index)
-		{
-			var previousServer = servers[index];
-			previousServer.Dispose();
-		}
+        }
 
-		public void StartDatabase(int index)
-		{
-			var previousServer = servers[index];
+        public void StopDatabase(int index)
+        {
+            var previousServer = servers[index];
+            previousServer.Dispose();
+        }
+
+        public void StartDatabase(int index)
+        {
+            var previousServer = servers[index];
 
 			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.SystemDatabase.Configuration.Port);
-			var serverConfiguration = new RavenConfiguration
-			{
-				Settings = { { "Raven/ActiveBundles", "replication" } },
+            var serverConfiguration = new RavenConfiguration
+            {
+                Settings = { { "Raven/ActiveBundles", "replication" } },
                 AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
 				DataDirectory = previousServer.SystemDatabase.Configuration.DataDirectory,
-				RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
+                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
 				RunInMemory = previousServer.SystemDatabase.Configuration.RunInMemory,
 				Port = previousServer.SystemDatabase.Configuration.Port,
-				UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
-				DefaultStorageTypeName = GetDefaultStorageType()
-			};
+                UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
+                DefaultStorageTypeName = GetDefaultStorageType()
+            };
 			ModifyConfiguration(serverConfiguration);
 
-			serverConfiguration.PostInit();
-			var ravenDbServer = new RavenDbServer(serverConfiguration);
+            serverConfiguration.PostInit();
+            var ravenDbServer = new RavenDbServer(serverConfiguration);
 
-			servers[index] = ravenDbServer;
-		}
+            servers[index] = ravenDbServer;
+        }
 
-		public IDocumentStore ResetDatabase(int index, bool enableAuthentication = false)
-		{
-			stores[index].Dispose();
+        public IDocumentStore ResetDatabase(int index, bool enableAuthentication = false)
+        {
+            stores[index].Dispose();
 
-			var previousServer = servers[index];
-			previousServer.Dispose();
+            var previousServer = servers[index];
+            previousServer.Dispose();
 			IOExtensions.DeleteDirectory(previousServer.SystemDatabase.Configuration.DataDirectory);
 
 			return CreateStoreAtPort(previousServer.SystemDatabase.Configuration.Port, enableAuthentication);
-		}
+        }
 
 		protected void TellFirstInstanceToReplicateToSecondInstance(string apiKey = null, string username = null, string password = null, string domain = null)
-		{
+        {
 			TellInstanceToReplicateToAnotherInstance(0, 1, apiKey, username, password, domain);
-		}
+        }
 
 		protected void TellSecondInstanceToReplicateToFirstInstance(string apiKey = null, string username = null, string password = null, string domain = null)
-		{
+        {
 			TellInstanceToReplicateToAnotherInstance(1, 0, apiKey, username, password, domain);
-		}
+        }
 
 		protected void TellInstanceToReplicateToAnotherInstance(int src, int dest, string apiKey = null, string username = null, string password = null, string domain = null)
-		{
+        {
 			RunReplication(stores[src], stores[dest], apiKey: apiKey, username: username, password: password, domain: domain);
-		}
+        }
 
-		protected void RunReplication(IDocumentStore source, IDocumentStore destination,
-			TransitiveReplicationOptions transitiveReplicationBehavior = TransitiveReplicationOptions.None,
-			bool disabled = false,
-			bool ignoredClient = false,
-			string apiKey = null,
+        protected void RunReplication(IDocumentStore source, IDocumentStore destination,
+            TransitiveReplicationOptions transitiveReplicationBehavior = TransitiveReplicationOptions.None,
+            bool disabled = false,
+            bool ignoredClient = false,
+            string apiKey = null,
 			string db = null,
 			string username = null,
 			string password = null,
 			string domain = null)
-		{
-			Console.WriteLine("Replicating from {0} to {1} with db = {2}.", source.Url, destination.Url, db ?? Constants.SystemDatabase);
-			using (var session = source.OpenSession(db))
-			{
-				var replicationDestination = new ReplicationDestination
-				{
-					Url = destination is EmbeddableDocumentStore ? 
-							"http://localhost:" + (destination as EmbeddableDocumentStore).Configuration.Port :
-							destination.Url.Replace("localhost", "ipv4.fiddler"),
-					TransitiveReplicationBehavior = transitiveReplicationBehavior,
-					Disabled = disabled,
+        {
+            Console.WriteLine("Replicating from {0} to {1} with db = {2}.", source.Url, destination.Url, db ?? Constants.SystemDatabase);
+            using (var session = source.OpenSession(db))
+            {
+                var replicationDestination = new ReplicationDestination
+                {
+                    Url = destination is EmbeddableDocumentStore ?
+                            "http://localhost:" + (destination as EmbeddableDocumentStore).Configuration.Port :
+                            destination.Url.Replace("localhost", "ipv4.fiddler"),
+                    TransitiveReplicationBehavior = transitiveReplicationBehavior,
+                    Disabled = disabled,
 					IgnoredClient = ignoredClient,
-				};
-				if (db != null)
-					replicationDestination.Database = db;
-				if (apiKey != null)
-					replicationDestination.ApiKey = apiKey;
+                };
+                if (db != null)
+                    replicationDestination.Database = db;
+                if (apiKey != null)
+                    replicationDestination.ApiKey = apiKey;
 				if (username != null)
 				{
 					replicationDestination.Username = username;
@@ -168,25 +168,25 @@ namespace Raven.Tests.Bundles.Replication
 					replicationDestination.Domain = domain;
 				}
 
-				SetupDestination(replicationDestination);
-				session.Store(new ReplicationDocument
-				{
-					Destinations = { replicationDestination }
-				}, "Raven/Replication/Destinations");
-				session.SaveChanges();
-			}
-		}
+                SetupDestination(replicationDestination);
+                session.Store(new ReplicationDocument
+                {
+                    Destinations = { replicationDestination }
+                }, "Raven/Replication/Destinations");
+                session.SaveChanges();
+            }
+        }
 
-		protected virtual void SetupDestination(ReplicationDestination replicationDestination)
-		{
+        protected virtual void SetupDestination(ReplicationDestination replicationDestination)
+        {
 
-		}
+        }
 
-		protected void SetupReplication(IDatabaseCommands source, params string[] urls)
-		{
-			Assert.NotEmpty(urls);
+        protected void SetupReplication(IDatabaseCommands source, params string[] urls)
+        {
+            Assert.NotEmpty(urls);
             SetupReplication(source, urls.Select(url => new RavenJObject { { "Url", url } }));
-		}
+        }
 
         protected void SetupReplication(IDatabaseCommands source, IEnumerable<RavenJObject> destinations)
         {
@@ -200,151 +200,151 @@ namespace Raven.Tests.Bundles.Replication
                        }, new RavenJObject());
         }
 
-		protected void RemoveReplication(IDatabaseCommands source)
-		{
-			source.Put(
-				Constants.RavenReplicationDestinations,
-				null,
-				new RavenJObject 
+        protected void RemoveReplication(IDatabaseCommands source)
+        {
+            source.Put(
+                Constants.RavenReplicationDestinations,
+                null,
+                new RavenJObject 
 				{
 					                 {
 						                 "Destinations", new RavenJArray()
 					                 } 
 				},
-				new RavenJObject());
-		}
+                new RavenJObject());
+        }
 
-		protected TDocument WaitForDocument<TDocument>(IDocumentStore store2, string expectedId) where TDocument : class
-		{
-			TDocument document = null;
+        protected TDocument WaitForDocument<TDocument>(IDocumentStore store2, string expectedId) where TDocument : class
+        {
+            TDocument document = null;
 
-			for (int i = 0; i < RetriesCount; i++)
-			{
-				using (var session = store2.OpenSession())
-				{
-					document = session.Load<TDocument>(expectedId);
-					if (document != null)
-						break;
-					Thread.Sleep(100);
-				}
-			}
-			try
-			{
-				Assert.NotNull(document);
-			}
-			catch (Exception ex)
-			{
-				using (var session = store2.OpenSession())
-				{
-					Thread.Sleep(TimeSpan.FromSeconds(10));
+            for (int i = 0; i < RetriesCount; i++)
+            {
+                using (var session = store2.OpenSession())
+                {
+                    document = session.Load<TDocument>(expectedId);
+                    if (document != null)
+                        break;
+                    Thread.Sleep(100);
+                }
+            }
+            try
+            {
+                Assert.NotNull(document);
+            }
+            catch (Exception ex)
+            {
+                using (var session = store2.OpenSession())
+                {
+                    Thread.Sleep(TimeSpan.FromSeconds(10));
 
-					document = session.Load<TDocument>(expectedId);
-					if (document == null)
-						throw;
+                    document = session.Load<TDocument>(expectedId);
+                    if (document == null)
+                        throw;
 
-					throw new Exception("WaitForDocument failed, but after waiting 10 seconds more, WaitForDocument succeed. Do we have a race condition here?", ex);
-				}
-			}
-			return document;
-		}
+                    throw new Exception("WaitForDocument failed, but after waiting 10 seconds more, WaitForDocument succeed. Do we have a race condition here?", ex);
+                }
+            }
+            return document;
+        }
 
-		protected Attachment WaitForAttachment(IDocumentStore store2, string expectedId)
-		{
-			Attachment attachment = null;
+        protected Attachment WaitForAttachment(IDocumentStore store2, string expectedId)
+        {
+            Attachment attachment = null;
 
-			for (int i = 0; i < RetriesCount; i++)
-			{
-				attachment = store2.DatabaseCommands.GetAttachment(expectedId);
-				if (attachment != null)
-					break;
-				Thread.Sleep(100);
-			}
-			try
-			{
-				Assert.NotNull(attachment);
-			}
-			catch (Exception ex)
-			{
-				Thread.Sleep(TimeSpan.FromSeconds(10));
+            for (int i = 0; i < RetriesCount; i++)
+            {
+                attachment = store2.DatabaseCommands.GetAttachment(expectedId);
+                if (attachment != null)
+                    break;
+                Thread.Sleep(100);
+            }
+            try
+            {
+                Assert.NotNull(attachment);
+            }
+            catch (Exception ex)
+            {
+                Thread.Sleep(TimeSpan.FromSeconds(10));
 
-				attachment = store2.DatabaseCommands.GetAttachment(expectedId);
-				if (attachment == null) throw;
+                attachment = store2.DatabaseCommands.GetAttachment(expectedId);
+                if (attachment == null) throw;
 
-				throw new Exception(
-					"WaitForDocument failed, but after waiting 10 seconds more, WaitForDocument succeed. Do we have a race condition here?",
-					ex);
-			}
-			return attachment;
-		}
+                throw new Exception(
+                    "WaitForDocument failed, but after waiting 10 seconds more, WaitForDocument succeed. Do we have a race condition here?",
+                    ex);
+            }
+            return attachment;
+        }
 
-		protected void WaitForDocument(IDatabaseCommands commands, string expectedId)
-		{
-			for (int i = 0; i < RetriesCount; i++)
-			{
-				if (commands.Head(expectedId) != null)
-					break;
-				Thread.Sleep(100);
-			}
+        protected void WaitForDocument(IDatabaseCommands commands, string expectedId)
+        {
+            for (int i = 0; i < RetriesCount; i++)
+            {
+                if (commands.Head(expectedId) != null)
+                    break;
+                Thread.Sleep(100);
+            }
 
-			var jsonDocumentMetadata = commands.Head(expectedId);
+            var jsonDocumentMetadata = commands.Head(expectedId);
 
-			Assert.NotNull(jsonDocumentMetadata);
-		}
+            Assert.NotNull(jsonDocumentMetadata);
+        }
 
-		protected void WaitForReplication(IDocumentStore store, string id, string db = null, Etag changedSince = null)
-		{
-			for (int i = 0; i < RetriesCount; i++)
-			{
-				using (var session = store.OpenSession(db))
-				{
-					var e = session.Load<object>(id);
-					if (e == null)
-					{
-						if (changedSince != null)
-						{
-							if (session.Advanced.GetEtagFor(e) != changedSince)
-								break;
-						}
-						Thread.Sleep(100);
-						continue;
-					}
-					
-					break;
-				}
-			}
-		}
+        protected void WaitForReplication(IDocumentStore store, string id, string db = null, Etag changedSince = null)
+        {
+            for (int i = 0; i < RetriesCount; i++)
+            {
+                using (var session = store.OpenSession(db))
+                {
+                    var e = session.Load<object>(id);
+                    if (e == null)
+                    {
+                        if (changedSince != null)
+                        {
+                            if (session.Advanced.GetEtagFor(e) != changedSince)
+                                break;
+                        }
+                        Thread.Sleep(100);
+                        continue;
+                    }
 
-		protected void WaitForReplication(IDocumentStore store, Func<IDocumentSession, bool>  predicate, string db = null)
-		{
-			for (int i = 0; i < RetriesCount; i++)
-			{
-				using (var session = store.OpenSession(new OpenSessionOptions
-				{
-					Database = db,
-					ForceReadFromMaster = true
-				}))
-				{
-					if (predicate(session))
-						return;
-					Thread.Sleep(100);
-				}
-			}
-		}
+                    break;
+                }
+            }
+        }
 
-		protected class ClientSideConflictResolution : IDocumentConflictListener
-		{
-			public bool TryResolveConflict(string key, JsonDocument[] conflictedDocs, out JsonDocument resolvedDocument)
-			{
-				resolvedDocument = new JsonDocument
-				{
-					DataAsJson = new RavenJObject
+        protected void WaitForReplication(IDocumentStore store, Func<IDocumentSession, bool> predicate, string db = null)
+        {
+            for (int i = 0; i < RetriesCount; i++)
+            {
+                using (var session = store.OpenSession(new OpenSessionOptions
+                {
+                    Database = db,
+                    ForceReadFromMaster = true
+                }))
+                {
+                    if (predicate(session))
+                        return;
+                    Thread.Sleep(100);
+                }
+            }
+        }
+
+        protected class ClientSideConflictResolution : IDocumentConflictListener
+        {
+            public bool TryResolveConflict(string key, JsonDocument[] conflictedDocs, out JsonDocument resolvedDocument)
+            {
+                resolvedDocument = new JsonDocument
+                {
+                    DataAsJson = new RavenJObject
 					{
 						{"Name", string.Join(" ", conflictedDocs.Select(x => x.DataAsJson.Value<string>("Name")).OrderBy(x => x))}
 					},
-					Metadata = new RavenJObject()
-				};
-				return true;
-			}
-		}
-	}
+                    Metadata = new RavenJObject()
+                };
+                return true;
+            }
+        }
+    }
 }

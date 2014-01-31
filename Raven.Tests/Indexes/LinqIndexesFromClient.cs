@@ -104,6 +104,27 @@ namespace Raven.Tests.Indexes
 		}
 
 		[Fact]
+		public void With_parantesis()
+		{
+			IndexDefinition generated = new IndexDefinitionBuilder<User, Named>
+			{
+				Map = users => from user in users
+							   where user.Location == "Tel Aviv"
+							   select new { Age = user.Age - (20 - user.Age) },
+				Stores = { { user => user.Name, FieldStorage.Yes } }
+			}.ToIndexDefinition(new DocumentConvention());
+			var original = new IndexDefinition
+			{
+				Stores = { { "Name", FieldStorage.Yes } },
+				Map = @"docs.Users.Where(user => user.Location == ""Tel Aviv"").Select(user => new {
+    Age = user.Age - (20 - user.Age)
+})"
+			};
+
+			Assert.Equal(original.Map, generated.Map);
+		}
+
+		[Fact]
 		public void Convert_using_id()
 		{
 			IndexDefinition generated = new IndexDefinitionBuilder<User, Named>

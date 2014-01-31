@@ -82,7 +82,7 @@ select new {
 						Query = "blog_id:3",
 						Start = 0,
 						PageSize = 10
-					});
+					}, CancellationToken.None);
 					Thread.Sleep(100);
 				} while (q.IsStale);
 			}

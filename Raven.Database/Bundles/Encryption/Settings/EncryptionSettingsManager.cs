@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -122,7 +123,7 @@ namespace Raven.Bundles.Encryption.Settings
 			int index = 0;
 			while (true)
 			{
-				var array = database.GetDocuments(index, index + pageSize, null);
+				var array = database.GetDocuments(index, index + pageSize, null, CancellationToken.None);
 				if (array.Length == 0)
 				{
 					// We've gone over all the documents in the database, and none of them are encrypted.

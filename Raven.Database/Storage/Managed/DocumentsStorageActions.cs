@@ -260,12 +260,6 @@ namespace Raven.Storage.Managed
 			return true;
 		}
 
-		public AddDocumentResult PutDocumentMetadata(string key, RavenJObject metadata)
-		{
-			var documentByKey = DocumentByKey(key, null);
-			return AddDocument(key, documentByKey.Etag, documentByKey.DataAsJson, metadata);
-		}
-
 		public void TouchDocument(string key, out Etag preTouchEtag, out Etag afterTouchEtag)
 		{
 			var documentByKey = DocumentByKey(key, null);

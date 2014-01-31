@@ -149,7 +149,7 @@ namespace Raven.Client.Embedded
 				nextPageStart = actualStart;
 			}
 
-			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart, pageSize, ref nextPageStart);
+			var documentsWithIdStartingWith = database.GetDocumentsWithIdStartingWith(keyPrefix, matches, exclude, actualStart, pageSize, CancellationToken.None, ref nextPageStart);
 
 			if (pagingInformation != null)
 				pagingInformation.Fill(start, pageSize, nextPageStart);
@@ -523,11 +523,11 @@ namespace Raven.Client.Embedded
 				string entityName = null;
 				if (index.StartsWith("dynamic/"))
 					entityName = index.Substring("dynamic/".Length);
-				queryResult = database.ExecuteDynamicQuery(entityName, query.Clone());
+				queryResult = database.ExecuteDynamicQuery(entityName, query.Clone(), CancellationToken.None);
 			}
 			else
 			{
-				queryResult = database.Query(index, query.Clone());
+				queryResult = database.Query(index, query.Clone(),CancellationToken.None);
 			}
 			
 			var loadedIds = new HashSet<string>(
@@ -552,7 +552,15 @@ namespace Raven.Client.Embedded
 
 			var docResults = queryResult.Results.Concat(queryResult.Includes);
 			return RetryOperationBecauseOfConflict(docResults, queryResult,
-			                                       () => Query(index, query, includes, metadataOnly, indexEntriesOnly));
+												   () => Query(index, query, includes, metadataOnly, indexEntriesOnly),
+												   conflictedResultId =>
+												   new ConflictException(
+													   "Conflict detected on " +
+													   conflictedResultId.Substring(0, conflictedResultId.IndexOf("/conflicts/", StringComparison.InvariantCulture)) +
+													   ", conflict must be resolved before the document will be accessible", true)
+												   {
+													   ConflictedVersionIds = new[] { conflictedResultId }
+												   });
 		}
 
 		private void UpdateQueryFromHeaders(IndexQuery query, NameValueCollection headers)
@@ -613,9 +621,9 @@ namespace Raven.Client.Embedded
 									waitForHeaders.Set();
 									setWaitHandle = false;
 									op.Execute(items.Add);
+                                    items.CompleteAdding();
 								}	
 							});
-							
 						}
 
 					    return 0;
@@ -636,7 +644,11 @@ namespace Raven.Client.Embedded
 				}, TaskCreationOptions.LongRunning);
 				waitForHeaders.Wait();
 				queryHeaderInfo = localQueryHeaderInfo;
-				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
+				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), () =>
+				{
+				    items.CompleteAdding();
+				    items.Dispose();
+				});
 			}
 		}
 
@@ -650,6 +662,17 @@ namespace Raven.Client.Embedded
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
 
 			var items = new BlockingCollection<RavenJObject>(1024);
+            Action<RavenJObject> addItem = o =>
+            {
+                try
+                {
+                    items.Add(o);
+                }
+                catch (InvalidOperationException e)
+                {
+                    throw new ObjectDisposedException("items", e);
+                }
+            };
 			var task = Task.Factory.StartNew(() =>
 			{
 				// we may be sending a LOT of documents to the user, and most 
@@ -657,58 +680,78 @@ namespace Raven.Client.Embedded
 				// the cache for that, to avoid filling it up very quickly
 				using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 				{
-					try
-					{
-						if (string.IsNullOrEmpty(startsWith))
-						{
-							database.GetDocuments(start, pageSize, fromEtag,
-							                      items.Add);
-						}
-						else
-						{
-                            var actualStart = start;
-                            var nextPageStart = 0;
+				    try
+				    {
+				        if (string.IsNullOrEmpty(startsWith))
+				        {
+				            database.GetDocuments(start, pageSize, fromEtag,
+				                CancellationToken.None,
+				                addItem);
+				        }
+				        else
+				        {
+				            var actualStart = start;
+				            var nextPageStart = 0;
 
-                            var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
-                            if (nextPage)
-                            {
-                                actualStart = pagingInformation.NextPageStart;
-                                nextPageStart = actualStart;
-                            }
+				            var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+				            if (nextPage)
+				            {
+				                actualStart = pagingInformation.NextPageStart;
+				                nextPageStart = actualStart;
+				            }
 
-							database.GetDocumentsWithIdStartingWith(
-								startsWith,
-								matches,
-                                exclude,
-								actualStart,
-								pageSize,
-								ref nextPageStart,
-								items.Add);
 
-						    return nextPageStart;
-						}
-					}
-					catch (ObjectDisposedException)
-					{
-					}
+				            database.GetDocumentsWithIdStartingWith(
+				                startsWith,
+				                matches,
+				                exclude,
+				                actualStart,
+				                pageSize,
+				                CancellationToken.None,
+				                ref nextPageStart,
+				                addItem);
+
+				            return nextPageStart;
+				        }
+				    }
+				    catch (ObjectDisposedException)
+				    {
+				    }
+				    finally
+				    {
+				        items.CompleteAdding();
+				    }
 				}
 
 			    return 0;
 			});
-			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task, start, pageSize, pagingInformation), items.Dispose);
+			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task, start, pageSize, pagingInformation),
+			    () =>
+			    {
+                    items.CompleteAdding();
+			        items.Dispose();
+			    });
 		}
 
 		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task<int> task, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null)
 		{
 			try
 			{
-				task.ContinueWith(_ => items.Add(null));
-				while (true)
+                while (items.IsCompleted == false)
 				{
-					var ravenJObject = items.Take();
-					if (ravenJObject == null)
-						break;
-					yield return ravenJObject;
+                    RavenJObject obj;
+                    try
+                    {
+                        obj = items.Take();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        if (items.IsCompleted == false)
+                            throw;
+                        yield break;
+                    }
+                    yield return obj;
+
 				}
 
 			    var nextPageStart = task.Result;
@@ -810,7 +853,7 @@ namespace Raven.Client.Embedded
 			// As this is embedded we don't care for the metadata only value
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
 			return database
-				.GetDocuments(start, pageSize, null)
+				.GetDocuments(start, pageSize, null, CancellationToken.None)
 				.Cast<RavenJObject>()
 				.ToJsonDocuments()
 				.ToArray();
@@ -830,7 +873,7 @@ namespace Raven.Client.Embedded
             // As this is embedded we don't care for the metadata only value
             CurrentOperationContext.Headers.Value = OperationsHeaders;
             return database
-                .GetDocuments(0, pageSize, fromEtag)
+                .GetDocuments(0, pageSize, fromEtag, CancellationToken.None)
                 .Cast<RavenJObject>()
                 .ToJsonDocuments()
                 .ToArray();
@@ -953,7 +996,7 @@ namespace Raven.Client.Embedded
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, PatchRequest[] patchRequests, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
+			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation, CancellationToken.None, null);
 			var state = databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patchRequests, allowStale);
 			return new Operation(0, state);
 		}
@@ -968,7 +1011,7 @@ namespace Raven.Client.Embedded
 		public Operation UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
+			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation, CancellationToken.None, null);
 			var state = databaseBulkOperations.UpdateByIndex(indexName, queryToUpdate, patch, allowStale);
 			return new Operation(0, state);
 		}
@@ -993,7 +1036,7 @@ namespace Raven.Client.Embedded
 		public Operation DeleteByIndex(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
 			CurrentOperationContext.Headers.Value = OperationsHeaders;
-			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation);
+			var databaseBulkOperations = new DatabaseBulkOperations(database, TransactionInformation, CancellationToken.None, null);
 			var state = databaseBulkOperations.DeleteByIndex(indexName, queryToDelete, allowStale);
 			return new Operation(0, state);
 		}
@@ -1340,9 +1383,11 @@ namespace Raven.Client.Embedded
 			get { return profilingInformation; }
 		}
 
-		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry)
+		private T RetryOperationBecauseOfConflict<T>(IEnumerable<RavenJObject> docResults, T currentResult, Func<T> nextTry,
+													Func<string, ConflictException> onConflictedQueryResult = null)
 		{
-			bool requiresRetry = docResults.Aggregate(false, (current, docResult) => current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult));
+			bool requiresRetry = docResults.Aggregate(false, (current, docResult) =>
+														current | AssertNonConflictedDocumentAndCheckIfNeedToReload(docResult, onConflictedQueryResult));
 			if (!requiresRetry)
 				return currentResult;
 
@@ -1428,7 +1473,7 @@ namespace Raven.Client.Embedded
 			return false;
 		}
 
-		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult)
+		private bool AssertNonConflictedDocumentAndCheckIfNeedToReload(RavenJObject docResult, Func<string, ConflictException> onConflictedQueryResult = null)
 		{
 			if (docResult == null)
 				return false;
@@ -1443,6 +1488,10 @@ namespace Raven.Client.Embedded
 					return true;
 				throw concurrencyException;
 			}
+
+			if (metadata.Value<bool>(Constants.RavenReplicationConflict) && onConflictedQueryResult != null)
+				throw onConflictedQueryResult(metadata.Value<string>("@id"));
+
 			return false;
 		}
 

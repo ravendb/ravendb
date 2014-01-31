@@ -191,10 +191,9 @@ namespace Raven.Tests.MultiGet
 		[Fact]
 		public void CanProfileFullyAggressivelyCached()
 		{
-			using (GetNewServer())
-			using (var store = new DocumentStore { Url = "http://localhost:8079" })
+			using (var server = GetNewServer())
+			using (var store = NewRemoteDocumentStore(ravenDbServer:server,fiddler:true))
 			{
-				store.Initialize();
 				store.InitializeProfiling();
 
 				using (var session = store.OpenSession())

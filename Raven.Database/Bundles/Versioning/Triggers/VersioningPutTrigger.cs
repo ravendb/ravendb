@@ -6,6 +6,7 @@
 using System;
 using System.ComponentModel.Composition;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Bundles.Versioning.Data;
@@ -132,7 +133,7 @@ namespace Raven.Bundles.Versioning.Triggers
 			while (true)
 			{
 				int nextPageStart = start; // will trigger rapid pagination
-				var docs = Database.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize, ref nextPageStart);
+				var docs = Database.GetDocumentsWithIdStartingWith(key + "/revisions/", null, null, start, pageSize, CancellationToken.None, ref nextPageStart);
 				if (!docs.Any())
 					break;
 

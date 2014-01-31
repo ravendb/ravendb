@@ -30,7 +30,7 @@ namespace Raven.Client.Connection
 
 			while (true)
 			{
-				var status = await asyncServerClient.GetOperationStatusAsync(id);
+                var status = await asyncServerClient.GetOperationStatusAsync(id).ConfigureAwait(false);
 				if (status == null)
 					return null;
 				if (status.Value<bool>("Completed"))
@@ -39,7 +39,7 @@ namespace Raven.Client.Connection
 #if SILVERLIGHT
 				await TaskEx.Delay(500);
 #else
-				await Task.Delay(500);
+				await Task.Delay(500).ConfigureAwait(false);
 #endif
 
 			}

@@ -23,9 +23,9 @@ namespace Raven.Tryouts
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new FacetedIndex())
+				using (var x = new LazyFacets())
 				{
-					x.CanPerformFacetedSearch_Embedded();
+                    //x.Default_operator_not_honoured_remote_store_ToFacetsLazy();
 				}
 			}
 			

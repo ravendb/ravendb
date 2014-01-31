@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Connection
 {
@@ -12,7 +13,7 @@ namespace Raven.Abstractions.Connection
 #endif
 	public class ErrorResponseException : Exception
 	{
-		public HttpResponseMessage Response { get; private set; }
+	    public HttpResponseMessage Response { get; private set; }
 
 		public HttpStatusCode StatusCode
 		{
@@ -29,30 +30,58 @@ namespace Raven.Abstractions.Connection
 			Response = response;
 		}
 
+	    public ErrorResponseException(ErrorResponseException e, string message)
+            :base(message)
+	    {
+	        Response = e.Response;
+	        ResponseString = e.ResponseString;
+	    }
+
         public ErrorResponseException(HttpResponseMessage response, string msg)
             : base(msg)
         {
             Response = response;
         }
 
-		public ErrorResponseException(HttpResponseMessage response)
-			:base(GenerateMessage(response))
-        {
-            Response = response;
-        }
-
-		private static string GenerateMessage(HttpResponseMessage response)
+	    public static ErrorResponseException FromResponseMessage(HttpResponseMessage response, bool readErrorString = true)
 		{
 			var sb = new StringBuilder("Status code: ").Append(response.StatusCode).AppendLine();
 
-			if (response.Content != null)
+	        string responseString = null;
+            if (readErrorString && response.Content != null)
 			{
-				var readAsStringAsync = response.Content.ReadAsStringAsync();
-				if (readAsStringAsync != null && readAsStringAsync.IsCompleted)
-					sb.AppendLine(readAsStringAsync.Result);
+                var readAsStringAsync = response.GetResponseStreamWithHttpDecompression();
+			    if (readAsStringAsync.IsCompleted)
+			    {
+			        using (var streamReader = new StreamReader(readAsStringAsync.Result))
+			        {
+			            responseString = streamReader.ReadToEnd();
+			            sb.AppendLine(responseString);
+			        }
+			    }
 			}
-			return sb.ToString();
+            return new ErrorResponseException(response, sb.ToString())
+            {
+                ResponseString = responseString
+            };
 		}
+
+	    public string ResponseString { get; private set; }
+
+	    public Etag Etag
+	    {
+	        get
+	        {
+	            if (Response.Headers.ETag == null)
+	                return null;
+                var responseHeader = Response.Headers.ETag.Tag;
+
+	            if (responseHeader[0] == '\"')
+                    return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
+
+                return Etag.Parse(responseHeader);
+	        }
+	    }
 
 #if !NETFX_CORE && !SILVERLIGHT
 		protected ErrorResponseException(

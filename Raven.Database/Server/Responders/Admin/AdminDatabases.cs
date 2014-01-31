@@ -4,11 +4,13 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using Raven.Abstractions.Data;
 using Raven.Database.Server.Abstractions;
 using Raven.Database.Extensions;
+using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 using System.Linq;
 using Raven.Abstractions.Extensions;
@@ -40,26 +42,39 @@ namespace Raven.Database.Server.Responders.Admin
 			switch (context.Request.HttpMethod)
 			{
 				case "GET":
-					var document = Database.Get(docKey, null);
-					if (document == null)
+					if (db.Equals(Constants.SystemDatabase,StringComparison.OrdinalIgnoreCase))
 					{
-						context.SetStatusToNotFound();
-						return;
+						//fetch fake (empty) system database document
+						var systemDatabaseDocument = new DatabaseDocument { Id = Constants.SystemDatabase };
+						var serializedDatabaseDocument = RavenJObject.FromObject(systemDatabaseDocument);
+
+						context.WriteJson(serializedDatabaseDocument);
 					}
-					dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
-					dbDoc.Id = db;	
-					server.Unprotect(dbDoc);
+					else
+					{
+						dbDoc = GetDatabaseDocument(context, docKey, db);
 					context.WriteJson(dbDoc);
+					}
+
 					break;
 				case "PUT":
+					if (!db.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
+					{
 					dbDoc = context.ReadJsonObject<DatabaseDocument>();
 					server.Protect(dbDoc);
 					var json = RavenJObject.FromObject(dbDoc);
 					json.Remove("Id");
 
 					Database.Put(docKey, null, json, context.Request.Headers.FilterHeadersToObject(), null);
+					}
+					else
+					{
+						context.SetStatusToForbidden(); //forbidden to edit system database document
+					}
 					break;
 				case "DELETE":
+					if (!db.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
+					{
 					var configuration = server.CreateTenantConfiguration(db);
 					var databasedocument = Database.Get(docKey, null);
 
@@ -79,8 +94,28 @@ namespace Raven.Database.Server.Responders.Admin
 								IOExtensions.DeleteDirectory(dbDoc.Settings[Constants.RavenLogsPath]);
 						}	
 					}
+					}
+					else
+					{
+						context.SetStatusToForbidden(); //forbidden to delete system database document
+					}
 					break;
 			}
+		}
+
+		private DatabaseDocument GetDatabaseDocument(IHttpContext context, string docKey, string db)
+		{
+			var document = Database.Get(docKey, null);
+			if (document == null)
+			{
+				context.SetStatusToNotFound();
+				return null;
+	}
+
+			var dbDoc = document.DataAsJson.JsonDeserialization<DatabaseDocument>();
+			dbDoc.Id = db;
+			server.Unprotect(dbDoc);
+			return dbDoc;
 		}
 	}
 }
