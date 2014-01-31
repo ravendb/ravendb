@@ -141,7 +141,7 @@ class appUrl {
 
     static forTerms(index: string, db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#indexes/terms/" + encodeURIComponent(index) + databasePart;
+        return "#indexes/terms/" + encodeURIComponent(index) + "?" + databasePart;
     }
 
 	/**

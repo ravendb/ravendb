@@ -13,6 +13,12 @@ class getIndexTermsCommand extends commandBase {
             pageSize: 1024
         };
         var url = "/terms/" + this.indexName + this.urlEncodeArgs(urlArgs);
-        return this.query(url, null, this.db);
+        var result = this.query(url, null, this.db);
+        result.done(foo => {
+            //debugger;
+        });
+        return result;
     }
 } 
+
+export = getIndexTermsCommand;
