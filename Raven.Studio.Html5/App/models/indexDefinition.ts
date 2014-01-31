@@ -74,6 +74,29 @@ class indexDefinition {
         };
     }
 
+    static empty(): indexDefinition {
+        return new indexDefinition({
+            Analyzers: {},
+            Fields: [],
+            Indexes: {},
+            InternalFieldsMapping: {},
+            IsCompiled: false,
+            IsMapReduce: false,
+            LockMode: "Unlock",
+            Map: " ",
+            Maps: [" "],
+            Name: "",
+            Reduce: null,
+            SortOptions: {},
+            SpatialIndexes: {},
+            Stores: {},
+            Suggestions: {},
+            TermVectors: {},
+            TransformResults: null,
+            Type: "Map"
+        });
+    }
+
     private makeSpatialIndexesObject(): any {
         var spatialIndexesObj = {};
         this.spatialFields().forEach(f => spatialIndexesObj[f.name()] = f.toDto());

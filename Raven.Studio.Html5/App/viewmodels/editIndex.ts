@@ -88,13 +88,17 @@ class editIndex extends activeDbViewModelBase {
     }
 
     createNewIndexDefinition(): indexDefinition {
-        return null;
+        return indexDefinition.empty();
     }
 
     save() {
-        var index = this.editedIndex().toDto();
-        var saveCommand = new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase());
-        saveCommand.execute();
+        if (this.editedIndex().name()) {
+            var index = this.editedIndex().toDto();
+            var saveCommand = new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase());
+            saveCommand
+                .execute()
+                .done(() => this.isEditingExistingIndex(true));
+        }
     }
 
     idlePriority() {
