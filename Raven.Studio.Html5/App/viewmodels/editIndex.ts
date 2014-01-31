@@ -7,10 +7,11 @@ import spatialIndexField = require("models/spatialIndexField");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
+import appUrl = require("common/appUrl");
 
 class editIndex extends activeDbViewModelBase { 
 
-    isCreatingNewIndex = ko.observable(false);
+    isEditingExistingIndex = ko.observable(false);
     priority = ko.observable<indexPriority>();
     priorityLabel: KnockoutComputed<string>;
     priorityFriendlyName: KnockoutComputed<string>;
@@ -18,6 +19,8 @@ class editIndex extends activeDbViewModelBase {
     hasExistingReduce: KnockoutComputed<string>;
     hasExistingTransform: KnockoutComputed<string>;
     hasMultipleMaps: KnockoutComputed<boolean>;
+    termsUrl = ko.observable<string>();
+    statsUrl = ko.observable<string>();
 
     constructor() {
         super();
@@ -32,11 +35,13 @@ class editIndex extends activeDbViewModelBase {
     activate(indexToEditName: string) {
         super.activate(indexToEditName);
 
-        this.isCreatingNewIndex(indexToEditName == null);
+        this.isEditingExistingIndex(indexToEditName != null);
 
         if (indexToEditName) {
             this.fetchIndexToEdit(indexToEditName);
             this.fetchIndexPriority(indexToEditName);
+            this.termsUrl(appUrl.forTerms(indexToEditName, this.activeDatabase()));
+            this.statsUrl(appUrl.forStatus(this.activeDatabase()));
         } else {
             this.priority(indexPriority.normal);
             this.editedIndex(this.createNewIndexDefinition());

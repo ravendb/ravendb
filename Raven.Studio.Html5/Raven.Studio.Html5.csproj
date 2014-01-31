@@ -86,6 +86,7 @@
     <TypeScriptCompile Include="App\commands\getDocumentsByEntityNameCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentWithMetadataCommand.ts" />
     <TypeScriptCompile Include="App\commands\getIndexDefinitionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getIndexTermsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLicenseStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLogsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationStatsCommand.ts" />
@@ -119,6 +120,7 @@
     <TypeScriptCompile Include="App\viewmodels\indexErrors.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexes.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexesAll.ts" />
+    <TypeScriptCompile Include="App\viewmodels\indexTerms.ts" />
     <TypeScriptCompile Include="App\viewmodels\logs.ts" />
     <TypeScriptCompile Include="App\viewmodels\periodicBackup.ts" />
     <TypeScriptCompile Include="App\viewmodels\replicationStats.ts" />
@@ -141,6 +143,7 @@
     <Content Include="App\views\editIndex.html" />
     <Content Include="App\views\indexErrors.html" />
     <Content Include="App\views\indexes.html" />
+    <Content Include="App\views\indexTerms.html" />
     <Content Include="App\views\logs.html" />
     <Content Include="App\views\periodicBackup.html" />
     <Content Include="App\views\replicationStats.html" />

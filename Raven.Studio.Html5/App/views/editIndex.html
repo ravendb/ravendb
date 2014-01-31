@@ -35,15 +35,15 @@
             </ul>
         </div>
 
-        <div class="btn-group">
+        <div class="btn-group" data-bind="visible: isEditingExistingIndex">
             <a class="btn btn-default" title="Run the index">
                 <i class="fa fa-play"></i>
             </a>
-            <a class="btn btn-default" href="#" title="Navigate to index terms">Terms</a>
-            <a class="btn btn-default" href="#" title="Navigate to index stats">Stats</a>
+            <a class="btn btn-default" title="Navigate to index terms" data-bind="attr: { href: termsUrl }">Terms</a>
+            <a class="btn btn-default" title="Navigate to index stats" data-bind="attr: { href: statsUrl }">Stats</a>
         </div>
 
-        <div class="btn-group">
+        <div class="btn-group" data-bind="visible: isEditingExistingIndex">
             <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes">
                 <i class="fa fa-refresh"></i>
             </button>

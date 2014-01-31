@@ -24,7 +24,7 @@ class appUrl {
         replicationStats: ko.computed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
         userInfo: ko.computed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
         databaseSettings: ko.computed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
-        periodicBackup: ko.computed(() => appUrl.forPeriodicBackup(appUrl.currentDatabase())),
+        periodicBackup: ko.computed(() => appUrl.forPeriodicBackup(appUrl.currentDatabase()))
 	};
 
     static forDatabases(): string {
@@ -137,6 +137,11 @@ class appUrl {
     static forExport(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#tasks/export?" + databasePart;
+    }
+
+    static forTerms(index: string, db: database): string {
+        var databasePart = appUrl.getEncodedDbPart(db);
+        return "#indexes/terms/" + encodeURIComponent(index) + databasePart;
     }
 
 	/**

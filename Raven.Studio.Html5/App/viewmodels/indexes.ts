@@ -13,14 +13,19 @@ class indexes extends activeDbViewModelBase {
 
         this.router = durandalRouter.createChildRouter()
             .map([
-                { route: 'indexes', moduleId: 'viewmodels/indexesAll', title: 'Index List', nav: true },
-                { route: 'indexes/edit(/:indexName)', moduleId: 'viewmodels/editIndex', title: 'Edit Index', nav: true }
+                { route: 'indexes', moduleId: 'viewmodels/indexesAll', title: 'Indexes', nav: true },
+                { route: 'indexes/edit(/:indexName)', moduleId: 'viewmodels/editIndex', title: 'Edit Index', nav: true },
+                { route: 'indexes/terms/:indexName', moduleId: 'viewmodels/indexTerms', title: 'Terms', nav: true }
             ])
             .buildNavigationModel();
 
         this.currentRouteTitle = ko.computed(() => {
             // Is there a better way to get the active route?
             var activeRoute = this.router.navigationModel().first(r => r.isActive());
+            if (activeRoute && activeRoute.title === "Indexes") {
+                return "All";
+            }
+
             return activeRoute != null ? activeRoute.title : "";
         });
     }
