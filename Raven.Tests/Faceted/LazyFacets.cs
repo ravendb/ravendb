@@ -7,17 +7,15 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.Faceted
 {
     public class LazyFacets : RavenTest
     {
-        [Theory]
-        public void Default_operator_not_honoured_remote_store_ToFacetsLazy()
+        [Fact]
+		public void Default_operator_not_honoured_remote_store_ToFacetsLazy()
         {
             using (var store = NewRemoteDocumentStore())
             {
