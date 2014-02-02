@@ -1,23 +1,20 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="T.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ReplicationAlerts.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.IO;
+using System.Linq;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
+using Raven.Json.Linq;
+using Raven.Smuggler;
+using Raven.Tests.Bundles.Replication;
+using Xunit;
+
 namespace Raven.Tests.Issues
 {
-    using System;
-    using System.IO;
-    using System.Linq;
-    using System.Threading.Tasks;
-
-    using Raven.Abstractions.Data;
-    using Raven.Abstractions.Smuggler;
-    using Raven.Json.Linq;
-    using Raven.Smuggler;
-    using Raven.Tests.Bundles.Replication;
-
-    using Xunit;
-
     public class ReplicationAlerts : ReplicationBase
     {
         public ReplicationAlerts()
