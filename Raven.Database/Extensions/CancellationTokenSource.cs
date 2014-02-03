@@ -20,6 +20,8 @@ namespace Raven.Database.Extensions
 			private readonly CancellationTokenSource source;
 			private readonly Timer timer;
 			private readonly long dueTime;
+			private bool isTimerDisposed;
+
 
 			public CancellationTimeout(CancellationTokenSource source, TimeSpan dueTime)
 			{
@@ -28,11 +30,13 @@ namespace Raven.Database.Extensions
 				if (dueTime < TimeSpan.Zero)
 					throw new ArgumentOutOfRangeException("dueTime");
 
+				isTimerDisposed = true;
 				this.source = source;
 				this.dueTime = (long) dueTime.TotalMilliseconds;
 				timer = new Timer(self =>
 				{
 					timer.Dispose();
+					isTimerDisposed = true;
 					try
 					{
 						this.source.Cancel();
@@ -45,7 +49,8 @@ namespace Raven.Database.Extensions
 
 			public void Delay()
 			{
-				timer.Change(dueTime,-1);
+				if(!isTimerDisposed)
+					timer.Change(dueTime, -1);
 			}
 
 			public void Dispose()

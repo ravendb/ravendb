@@ -198,7 +198,7 @@ namespace Raven.Tests.Issues
 
             var serverClient = databaseCommands.ForSystemDatabase() as ServerClient;
 
-            var httpJsonRequest = serverClient.CreateRequest("DELETE", relativeUrl);
+			var httpJsonRequest = serverClient.CreateRequest(relativeUrl, "DELETE");
             httpJsonRequest.ExecuteRequest();
         }
 
@@ -251,7 +251,7 @@ namespace Raven.Tests.Issues
 
             serverClient.ForceReadFromMaster();
 
-            if (serverClient.Get("Raven/Databases/" + databaseDocument.Id) != null)
+            if (serverClient.Get("Raven/Databases/" + Uri.EscapeDataString(databaseDocument.Id)) != null)
             {
                 return;
             }
@@ -264,7 +264,7 @@ namespace Raven.Tests.Issues
             var doc = RavenJObject.FromObject(databaseDocument);
             doc.Remove("Id");
 
-            var req = serverClient.CreateRequest("PUT", "/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id));
+			var req = serverClient.CreateRequest("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), "PUT");
             req.WriteAsync(doc.ToString(Formatting.Indented)).Wait();
             req.ExecuteRequest();
 

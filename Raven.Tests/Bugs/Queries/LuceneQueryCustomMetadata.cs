@@ -16,29 +16,27 @@ namespace Raven.Tests.Bugs.Queries
 		[Fact]
 		public void SuccessTest1()
 		{
-			using (IDocumentStore documentStore = new EmbeddableDocumentStore
+			using (var documentStore = new EmbeddableDocumentStore
 			{
 				RunInMemory = true
 			}.Initialize())
 			{
 				dynamic expando = new ExpandoObject();
 
-				using (IDocumentSession session = documentStore.OpenSession())
+				using (var session = documentStore.OpenSession())
 				{
 					session.Store(expando);
 
-					RavenJObject metadata =
-						session.Advanced.GetMetadataFor((ExpandoObject)expando);
+					var metadata = session.Advanced.GetMetadataFor((ExpandoObject)expando);
 
 					metadata[PropertyName] = RavenJToken.FromObject(true);
 
 					session.SaveChanges();
 				}
 
-				using (IDocumentSession session = documentStore.OpenSession())
+				using (var session = documentStore.OpenSession())
 				{
-					var loaded =
-						session.Load<dynamic>((string)expando.Id);
+					var loaded = session.Load<dynamic>((string)expando.Id);
 
 					RavenJObject metadata =
 						session.Advanced.GetMetadataFor((DynamicJsonObject)loaded);
