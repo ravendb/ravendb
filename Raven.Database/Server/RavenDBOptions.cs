@@ -89,12 +89,14 @@ namespace Raven.Database.Server
 
 		    try
 		    {
-                toDispose.Add(FileSystem);
+                toDispose.Add(FileSystem); // adding task result
 		    }
 		    catch (Exception e)
 		    {
                 errors.Add(e);
 		    }
+
+            toDispose.Add(fileSystem); // adding task
 
 		    foreach (var disposable in toDispose)
 		    {
