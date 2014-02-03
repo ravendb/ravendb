@@ -395,7 +395,7 @@ namespace Raven.Client.Connection
 		public IEnumerator<RavenJObject> StreamDocs(Etag fromEtag, string startsWith, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation = null)
 		{
 			return new AsycnEnumerableWrapper<RavenJObject>(
-					asyncServerClient.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude).Result);
+					asyncServerClient.StreamDocsAsync(fromEtag, startsWith, matches, start, pageSize, exclude ,pagingInformation).Result);
 			}
 
 		/// <summary>

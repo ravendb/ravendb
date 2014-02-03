@@ -579,7 +579,7 @@ namespace Raven.Client.Embedded
 
 				// Need to be removed when we remove the embedded.
 				if(DateTime.Now > new DateTime(2014,3,1))
-					throw new Exception("This is an ugly code that was supposed to be fixed by this time");
+                    throw new Exception("This is an ugly code that was supposed to be fixed by this time: RavenDB-1484");
 				if (sort == SortOptions.Long && key.EndsWith("_Range"))
 				{
 					key = key.Substring(0, key.Length - "_Range".Length);
@@ -675,6 +675,7 @@ namespace Raven.Client.Embedded
             };
 			var task = Task.Factory.StartNew(() =>
 			{
+				var disposed = false;
 				// we may be sending a LOT of documents to the user, and most 
 				// of them aren't going to be relevant for other ops, so we are going to skip
 				// the cache for that, to avoid filling it up very quickly
@@ -716,11 +717,12 @@ namespace Raven.Client.Embedded
 				    }
 				    catch (ObjectDisposedException)
 				    {
+					    disposed = true;
 				    }
 				    finally
 				    {
-						if(!items.IsAddingCompleted)
-							items.CompleteAdding();
+						if(disposed == false)
+							items.CompleteAdding(); 
 				    }
 				}
 
@@ -749,7 +751,7 @@ namespace Raven.Client.Embedded
                     {
                         if (items.IsCompleted == false)
                             throw;
-                        yield break;
+                        break;
                     }
                     yield return obj;
 

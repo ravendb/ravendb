@@ -16,7 +16,7 @@ namespace Raven.Tests.Faceted
 {
     public class LazyFacets : RavenTest
     {
-        [Theory]
+        [Fact]
         public void Default_operator_not_honoured_remote_store_ToFacetsLazy()
         {
             using (var store = NewRemoteDocumentStore())
