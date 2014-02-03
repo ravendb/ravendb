@@ -28,6 +28,12 @@ namespace Raven.Tests.Issues
                 File.Delete(DumpFile);
         }
 
+        protected override void ConfigureServer(Database.Config.RavenConfiguration serverConfiguration)
+        {
+            serverConfiguration.DefaultStorageTypeName = GetDefaultStorageType("esent");
+            serverConfiguration.RunInMemory = false;
+        }
+
         [Fact]
         public async Task ImportingReplicationDestinationsDocumentWithInvalidSourceShouldReportOneAlertOnly()
         {
