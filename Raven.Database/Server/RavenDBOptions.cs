@@ -81,7 +81,6 @@ namespace Raven.Database.Server
 			systemDatabase.Dispose();
 			requestManager.Dispose();
 			FileSystem.Dispose();
-			fileSystem.Dispose();
 		}
 
 		private class RavenServer : IRavenServer
