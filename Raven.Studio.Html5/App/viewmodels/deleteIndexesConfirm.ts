@@ -6,19 +6,22 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class deleteIndexesConfirm extends dialogViewModelBase {
 
-    public deleteTask = $.Deferred();
+    deleteTask = $.Deferred();
+    title: string;
 
-    constructor(private indexes: index[], private db: database) {
+    constructor(private indexNames: string[], private db: database) {
         super();
 
-        if (!indexes || indexes.length === 0) {
+        if (!indexNames || indexNames.length === 0) {
             throw new Error("Indexes must not be null or empty.");
         }
+
+        this.title = indexNames.length === 1 ? 'Delete index?' : 'Delete indexes?';
     }
 
     deleteIndexes() {
-        var deleteTasks = this.indexes
-            .map(i => new deleteIndexCommand(i, this.db).execute());
+        var deleteTasks = this.indexNames
+            .map(name => new deleteIndexCommand(name, this.db).execute());
 
         $.when(deleteTasks).done(() => this.deleteTask.resolve());
         dialog.close(this);

@@ -1,5 +1,5 @@
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import index = require("models/index");
 import appUrl = require("common/appUrl");
 import saveIndexLockModeCommand = require("commands/saveIndexLockModeCommand");
@@ -7,7 +7,7 @@ import saveIndexAsPersistentCommand = require("commands/saveIndexAsPersistentCom
 import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
 import app = require("durandal/app");
 
-class indexes extends activeDbViewModelBase {
+class indexes extends viewModelBase {
 
     indexGroups = ko.observableArray<{ entityName: string; indexes: KnockoutObservableArray<index> }>();
     queryUrl: KnockoutComputed<string>;
@@ -84,7 +84,7 @@ class indexes extends activeDbViewModelBase {
 
     promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
-            var deleteIndexesVm = new deleteIndexesConfirm(indexes, this.activeDatabase());
+            var deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
             app.showDialog(deleteIndexesVm);
             deleteIndexesVm.deleteTask.done(() => this.removeIndexesFromAllGroups(indexes));
         }

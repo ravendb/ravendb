@@ -1,9 +1,9 @@
 import durandalRouter = require("plugins/router");
 import database = require("models/database");
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 
-class indexes extends activeDbViewModelBase {
+class indexes extends viewModelBase {
     router: DurandalRootRouter;
     currentBreadcrumbTitle: KnockoutComputed<string>;
     indexesUrl = appUrl.forCurrentDatabase().indexes;

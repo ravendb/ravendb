@@ -8,10 +8,10 @@ import deleteCollection = require("viewmodels/deleteCollection");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import virtualTable = require("widgets/virtualTable/viewModel");
 
-class documents extends activeDbViewModelBase {
+class documents extends viewModelBase {
 
     displayName = "documents";
     collections = ko.observableArray<collection>();
@@ -48,10 +48,7 @@ class documents extends activeDbViewModelBase {
             target: '#collections-context-menu'
         });
 
-        $(".use-bootstrap-tooltip").tooltip({
-            delay: { show: 600, hide: 100 },
-            container: 'body'
-        });
+        this.useBootstrapTooltips();
     }
 
     collectionsLoaded(collections: Array<collection>, db: database) {

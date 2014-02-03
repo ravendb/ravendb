@@ -1,23 +1,23 @@
-﻿<section>
+﻿<section id="editIndex">
     <div class="btn-toolbar">
         <div class="btn-group">
-            <button class="btn btn-primary" data-bind="click: save">
+            <button class="btn btn-primary use-bootstrap-tooltip" data-bind="click: save" title="Save the index (Alt+S)" accesskey="S">
                 <i class="fa fa-save"></i>
             </button>
         </div>
 
         <div class="btn-group">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" accesskey="A">
                 <i class="fa fa-plus"></i>
                 Add
                 <span class="caret"></span>
             </button>
             <ul class="dropdown-menu">
-                <li data-bind="click: addMap"><a href="#">Map</a></li>
-                <li data-bind="click: addReduce, visible: !hasExistingReduce()"><a href="#">Reduce</a></li>
-                <li data-bind="click: addField"><a href="#">Field</a></li>
-                <li data-bind="click: addTransform, visible: !hasExistingTransform()" title="Transform - deprecated. Use Result Transformers instead"><a class="text-muted" href="#">Transform</a></li>
-                <li data-bind="click: addSpatialField"><a href="#">Spatial Field</a></li>
+                <li class="use-bootstrap-tooltip" data-bind="click: addMap" title="Add a map function (Alt+M)" accesskey="M"><a href="#">Map</a></li>
+                <li class="use-bootstrap-tooltip" data-bind="click: addReduce, visible: !hasExistingReduce()" title="Add a reduce function (Alt+R)" accesskey="R"><a href="#">Reduce</a></li>
+                <li class="use-bootstrap-tooltip" data-bind="click: addField" title="Add a field (Alt+F)" accesskey="F"><a href="#">Field</a></li>
+                <li class="use-bootstrap-tooltip" data-bind="click: addTransform, visible: !hasExistingTransform()" title="Add a transform function (Alt+T) - deprecated. Use Result Transformers instead" accesskey="T"><a class="text-muted" href="#">Transform</a></li>
+                <li class="use-bootstrap-tooltip" data-bind="click: addSpatialField" title="Add a spatial field (Alt+P)" accesskey="P"><a href="#">Spatial Field</a></li>
             </ul>
         </div>
 
@@ -36,18 +36,18 @@
         </div>
 
         <div class="btn-group" data-bind="visible: isEditingExistingIndex">
-            <a class="btn btn-default" title="Run the index">
+            <a class="btn btn-default use-bootstrap-tooltip" title="Query the index (Alt+Q)" accesskey="Q" data-bind="attr: { href: queryUrl }">
                 <i class="fa fa-play"></i>
             </a>
-            <a class="btn btn-default" title="Navigate to index terms" data-bind="attr: { href: termsUrl }">Terms</a>
-            <a class="btn btn-default" title="Navigate to index stats" data-bind="attr: { href: statsUrl }">Stats</a>
+            <a class="btn btn-default use-bootstrap-tooltip" title="Navigate to index terms" data-bind="attr: { href: termsUrl }">Terms</a>
+            <a class="btn btn-default use-bootstrap-tooltip" title="Navigate to index stats" data-bind="attr: { href: statsUrl }">Stats</a>
         </div>
 
         <div class="btn-group" data-bind="visible: isEditingExistingIndex">
-            <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes">
+            <button class="btn btn-default use-bootstrap-tooltip" title="Refresh from server, discarding any unsaved changes" data-bind="click: refreshIndex">
                 <i class="fa fa-refresh"></i>
             </button>
-            <button class="btn btn-danger" title="Delete index">
+            <button class="btn btn-danger use-bootstrap-tooltip" title="Delete index" data-bind="click: deleteIndex">
                 <i class="fa fa-trash-o"></i>
             </button>
         </div>
@@ -74,9 +74,9 @@
                 <div data-bind="foreach: maps" class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <textarea class="form-control" rows="5" placeholder="from order in docs.Orders where order.IsShipped select new { order.Amount }" data-bind="value: $data"></textarea>
+                            <pre class="form-control map" data-bind="aceEditor: { code: $data }"></pre>
                         </div>
-                        <button type="button" class="close pull-left" data-bind="visible: $index() !== 0 || $root.hasMultipleMaps(), click: $root.removeMap.bind($root, $index())" aria-hidden="true" title="Remove this map from the index">&times;</button>
+                        <button type="button" class="close pull-left use-bootstrap-tooltip" data-bind="visible: $index() !== 0 || $root.hasMultipleMaps(), click: $root.removeMap.bind($root, $index())" aria-hidden="true" title="Remove this map from the index">&times;</button>
                     </div>
                     <br />
                 </div>
@@ -89,7 +89,7 @@
                 <div class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <textarea class="form-control" id="indexReduce" rows="8" placeholder="Reduce" data-bind="value: reduce"></textarea>
+                            <pre class="form-control map" data-bind="aceEditor: { code: reduce }"></pre>
                         </div>
                         <button type="button" class="close pull-left" data-bind="click: $root.removeReduce.bind($root)" aria-hidden="true" title="Remove the Reduce function from the index">&times;</button>
                     </div>
@@ -103,7 +103,7 @@
                 <div class="col-md-11">
                     <div class="row">
                         <div class="col-md-11">
-                            <textarea class="form-control" id="indexTransform" rows="5" placeholder="Transform" data-bind="value: transformResults"></textarea>
+                            <pre class="form-control map" data-bind="aceEditor: { code: transformResults }"></pre>
                         </div>
                         <button type="button" class="close pull-left" data-bind="click: $root.removeTransform.bind($root)" aria-hidden="true" title="Remove Transform Results from the index">&times;</button>
                     </div>
@@ -118,10 +118,10 @@
                         <div class="panel panel-default">
                             <div class="panel-heading">
                                 <div class="col-md-11">
-                                    <input type="text" class="form-control" data-bind="value: name" title="Name of the field to configure" placeholder="FieldName" />
+                                    <input type="text" class="form-control use-bootstrap-tooltip" data-bind="value: name" title="Name of the field to configure" placeholder="FieldName" />
                                 </div>
                                 <div>
-                                    <button type="button" class="close" data-bind="click: $root.removeLuceneField.bind($root, $index())" aria-hidden="true" title="Remove this field from the index">&times;</button>
+                                    <button type="button" class="close use-bootstrap-tooltip" data-bind="click: $root.removeLuceneField.bind($root, $index())" aria-hidden="true" title="Remove this field from the index">&times;</button>
                                 </div>
                                 <div class="clearfix"></div>
                             </div>
@@ -170,10 +170,10 @@
                         <div class="panel panel-default">
                             <div class="panel-heading">
                                 <div class="col-md-11">
-                                    <input type="text" class="form-control" data-bind="value: name" title="Name of the spatial field to configure" placeholder="spatial field name" />
+                                    <input type="text" class="form-control use-bootstrap-tooltip" data-bind="value: name" title="Name of the spatial field to configure" placeholder="spatial field name" />
                                 </div>
                                 <div>
-                                    <button type="button" class="close" data-bind="click: $root.removeSpatialField.bind($root, $index())" aria-hidden="true" title="Remove this spatial field from the index">&times;</button>
+                                    <button type="button" class="close use-bootstrap-tooltip" data-bind="click: $root.removeSpatialField.bind($root, $index())" aria-hidden="true" title="Remove this spatial field from the index">&times;</button>
                                 </div>
                                 <div class="clearfix"></div>
                             </div>

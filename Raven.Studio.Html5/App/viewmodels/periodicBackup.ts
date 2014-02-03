@@ -1,10 +1,10 @@
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import getPeriodicBackupSetupCommand = require("commands/getPeriodicBackupSetupCommand");
 import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 import periodicBackupSetup = require("models/periodicBackupSetup");
 
 
-class periodicBackup extends activeDbViewModelBase {
+class periodicBackup extends viewModelBase {
 
     setup = ko.observable<periodicBackupSetup>();
 

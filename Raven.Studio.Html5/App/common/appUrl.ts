@@ -121,9 +121,10 @@ class appUrl {
         return "#indexes/edit/" + indexName + "?" + databasePart;
     }
 
-    static forQuery(db: database): string {
+    static forQuery(db: database, indexToQuery?: string): string {
         var databasePart = appUrl.getEncodedDbPart(db);
-        return "#query?" + databasePart;
+        var indexPart = indexToQuery ? "/" + encodeURIComponent(indexToQuery) : "";
+        return "#query" + indexPart + "?" + databasePart;
     }
 
     static forDatabaseQuery(db: database) {

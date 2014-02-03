@@ -1,8 +1,8 @@
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import getIndexTermsCommand = require("commands/getIndexTermsCommand");
 import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand");
 
-class indexTerms extends activeDbViewModelBase {
+class indexTerms extends viewModelBase {
 
     fields = ko.observableArray<{ name: string; terms: KnockoutObservableArray<string>; }>();
 

@@ -14,9 +14,9 @@ import deleteDocuments = require("viewmodels/deleteDocuments");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 
-class editDocument extends activeDbViewModelBase {
+class editDocument extends viewModelBase {
 
     document = ko.observable<document>();
     metadata: KnockoutComputed<documentMetadata>;
@@ -108,11 +108,7 @@ class editDocument extends activeDbViewModelBase {
     attached() {
         this.initializeDocEditor();
         this.setupKeyboardShortcuts();
-
-        $(".use-bootstrap-tooltip").tooltip({
-            container: "body",
-            delay: { show: 600, hide: 100 }
-        });
+        this.useBootstrapTooltips();
     }
 
     deactivate() {

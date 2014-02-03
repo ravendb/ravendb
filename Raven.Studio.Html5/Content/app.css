@@ -1,4 +1,4 @@
-﻿html,
+html,
 body {
   height: 100%;
 }
@@ -176,6 +176,9 @@ body {
   width: 4px;
   display: inline-block;
   vertical-align: middle;
+}
+#editIndex .map {
+  height: 120px;
 }
 .ko-grid {
   position: absolute;

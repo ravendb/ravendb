@@ -1,4 +1,4 @@
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import index = require("models/index");
 import indexDefinition = require("models/indexDefinition");
 import indexPriority = require("models/indexPriority");
@@ -8,8 +8,11 @@ import getIndexDefinitionCommand = require("commands/getIndexDefinitionCommand")
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import saveIndexDefinitionCommand = require("commands/saveIndexDefinitionCommand");
 import appUrl = require("common/appUrl");
+import deleteIndexesConfirm = require("viewmodels/deleteIndexesConfirm");
+import dialog = require("plugins/dialog");
+import acedEditorBindingHandler = require("common/aceEditorBindingHandler");
 
-class editIndex extends activeDbViewModelBase { 
+class editIndex extends viewModelBase { 
 
     isEditingExistingIndex = ko.observable(false);
     priority = ko.observable<indexPriority>();
@@ -21,9 +24,12 @@ class editIndex extends activeDbViewModelBase {
     hasMultipleMaps: KnockoutComputed<boolean>;
     termsUrl = ko.observable<string>();
     statsUrl = ko.observable<string>();
+    queryUrl = ko.observable<string>();
 
     constructor() {
         super();
+
+        acedEditorBindingHandler.install();
 
         this.priorityFriendlyName = ko.computed(() => this.getPriorityFriendlyName());
         this.priorityLabel = ko.computed(() => this.priorityFriendlyName() ? "Priority: " + this.priorityFriendlyName() : "Priority");
@@ -34,33 +40,50 @@ class editIndex extends activeDbViewModelBase {
 
     activate(indexToEditName: string) {
         super.activate(indexToEditName);
-
+        
         this.isEditingExistingIndex(indexToEditName != null);
 
         if (indexToEditName) {
-            this.fetchIndexToEdit(indexToEditName);
-            this.fetchIndexPriority(indexToEditName);
-            this.termsUrl(appUrl.forTerms(indexToEditName, this.activeDatabase()));
-            this.statsUrl(appUrl.forStatus(this.activeDatabase()));
+            this.editExistingIndex(indexToEditName);
         } else {
             this.priority(indexPriority.normal);
             this.editedIndex(this.createNewIndexDefinition());
         }
     }
 
+    editExistingIndex(indexName: string) {
+        this.fetchIndexToEdit(indexName);
+        this.fetchIndexPriority(indexName);
+        this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
+        this.statsUrl(appUrl.forStatus(this.activeDatabase()));
+        this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
+    }
+
     attached() {
+        this.addMapHelpPopover();
+        this.addReduceHelpPopover();
+        this.addTransformHelpPopover();
+
+        this.useBootstrapTooltips();
+    }
+
+    addMapHelpPopover() {
         $("#indexMapsLabel").popover({
             html: true,
             trigger: 'hover',
             content: 'Maps project the fields to search on or to group by. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> order <span class="code-keyword">in</span> docs.Orders<br/><span class="code-keyword">where</span> order.IsShipped<br/><span class="code-keyword">select new</span><br/>{</br>   order.Date, <br/>   order.Amount,<br/>   RegionId = order.Region.Id <br />}</pre>Each map function should project the same set of fields.',
         });
+    }
 
+    addReduceHelpPopover() {
         $("#indexReduceLabel").popover({
             html: true,
             trigger: 'hover',
             content: 'The Reduce function consolidates documents from the Maps stage into a smaller set of documents. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> result <span class="code-keyword">in</span> results<br/><span class="code-keyword">group</span> result <span class="code-keyword">by new</span> { result.RegionId, result.Date }<br/><span class="code-keyword">select new</span><br/>{<br/>  Date = g.Key.Date,<br/>  RegionId = g.Key.RegionId,<br/>  Amount = g.Sum(x => x.Amount)<br/>}</pre>The objects produced by the Reduce function should have the same fields as the inputs.',
         });
+    }
 
+    addTransformHelpPopover() {
         $("#indexTransformLabel").popover({
             html: true,
             trigger: 'hover',
@@ -97,7 +120,28 @@ class editIndex extends activeDbViewModelBase {
             var saveCommand = new saveIndexDefinitionCommand(index, this.priority(), this.activeDatabase());
             saveCommand
                 .execute()
-                .done(() => this.isEditingExistingIndex(true));
+                .done(() => {
+                    if (!this.isEditingExistingIndex()) {
+                        this.isEditingExistingIndex(true);
+                        this.editExistingIndex(index.Name);
+                    }
+                });
+        }
+    }
+
+    refreshIndex() {
+        var existingIndex = this.editedIndex();
+        if (existingIndex) {
+            this.editedIndex(null);
+            this.editExistingIndex(existingIndex.name());
+        }
+    }
+
+    deleteIndex() {
+        var index = this.editedIndex();
+        if (index) {
+            var deleteViewModel = new deleteIndexesConfirm([index.name()], this.activeDatabase());
+            dialog.show(deleteViewModel);
         }
     }
 
@@ -141,12 +185,14 @@ class editIndex extends activeDbViewModelBase {
     addReduce() {
         if (!this.hasExistingReduce()) {
             this.editedIndex().reduce(" ");
+            this.addReduceHelpPopover();
         }
     }
 
     addTransform() {
         if (!this.hasExistingTransform()) {
             this.editedIndex().transformResults(" ");
+            this.addTransformHelpPopover();
         }
     }
 
