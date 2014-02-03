@@ -64,6 +64,11 @@ namespace Raven.Smuggler
 			ConnectionStringOptions = connectionStringOptions;
 		}
 
+        protected override Task ExportDocumentsDeletion(SmugglerOptions options, JsonTextWriter jsonWriter, Etag startDocsEtag)
+        {
+            throw new NotImplementedException();
+        }
+
 		public override async Task ImportData(SmugglerImportOptions importOptions, SmugglerOptions options, Stream stream)
 		{
             SetSmugglerOptions(options);

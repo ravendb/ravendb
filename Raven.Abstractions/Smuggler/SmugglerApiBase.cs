@@ -39,6 +39,8 @@ namespace Raven.Abstractions.Smuggler
 		protected abstract Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit);
 		protected abstract Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag);
 		protected abstract Task<RavenJArray> GetTransformers(int start);
+        protected abstract Task ExportDocumentsDeletion(SmugglerOptions options, JsonTextWriter jsonWriter,
+                                                        Etag startDocsEtag);
 
 		protected abstract Task PutIndex(string indexName, RavenJToken index);
 		protected abstract Task PutAttachment(AttachmentExportInfo attachmentExportInfo);
@@ -185,6 +187,15 @@ namespace Raven.Abstractions.Smuggler
 						await ExportTransformers(jsonWriter);
 					}
 					jsonWriter.WriteEndArray();
+
+                    jsonWriter.WritePropertyName("DocsDeletions");
+                    jsonWriter.WriteStartArray();
+                    //TODO: do we really want to pass last docs etag?
+                    await ExportDocumentsDeletion(options, jsonWriter, options.StartDocsEtag);
+
+                    jsonWriter.WriteEndArray();
+
+                    //TODO: attachment deletion
 
 					jsonWriter.WriteEndObject();
 					streamWriter.Flush();

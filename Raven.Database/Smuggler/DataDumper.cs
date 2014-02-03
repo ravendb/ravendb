@@ -82,6 +82,29 @@ namespace Raven.Database.Smuggler
 		    }
 		}
 
+        protected override Task ExportDocumentsDeletion(SmugglerOptions options, JsonTextWriter jsonWriter, Etag startDocsEtag)
+        {
+            database.TransactionalStorage.Batch(accessor =>
+            {
+                //TODO: rewrite in fashion that is used in export documents 
+                var deletions =
+                    accessor.Lists.Read(Constants.RavenPeriodicBackupsDocsTombstones, startDocsEtag, null, int.MaxValue)
+                            .Select(x => new JsonDocument
+                            {
+                                Key = x.Key,
+                            })
+                            .OrderBy(x => x.Etag).Select(x => x.ToJson())
+                            .ToList();
+                foreach (var ravenObject in deletions)
+                {
+                    ravenObject.WriteTo(jsonWriter);
+                }
+
+            });
+            return new CompletedTask();
+
+        }
+
 		protected override Task<RavenJArray> GetTransformers(int start)
 		{
 			return new CompletedTask<RavenJArray>(database.GetTransformers(start, SmugglerOptions.BatchSize));
