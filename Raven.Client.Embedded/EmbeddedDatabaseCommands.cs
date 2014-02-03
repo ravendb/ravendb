@@ -751,7 +751,7 @@ namespace Raven.Client.Embedded
                     {
                         if (items.IsCompleted == false)
                             throw;
-                        yield break;
+                        break;
                     }
                     yield return obj;
 
