@@ -38,9 +38,9 @@ namespace Raven.Tests.Bugs.Queries
 				{
 					var loaded = session.Load<dynamic>((string)expando.Id);
 
-					RavenJObject metadata =
-						session.Advanced.GetMetadataFor((DynamicJsonObject)loaded);
-					RavenJToken token = metadata[PropertyName];
+					var metadata = session.Advanced.GetMetadataFor((DynamicJsonObject)loaded);
+
+					var token = metadata[PropertyName];
 
 					Assert.NotNull(token);
 					Assert.True(token.Value<bool>());
