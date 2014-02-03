@@ -16,6 +16,8 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Bundles.ScriptedIndexResults
 {
+    using System.Linq;
+
     [InheritedExport(typeof(AbstractIndexUpdateTrigger))]
     [ExportMetadata("Bundle", "ScriptedIndexResults")]
     public class ScriptedIndexResultsIndexTrigger : AbstractIndexUpdateTrigger
@@ -197,24 +199,43 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
                 var ravenJObject = new RavenJObject();
 
-                foreach (var fieldable in document.GetFields())
+                var fields = document.GetFields();
+                var arrayMarkers = fields
+                    .Where(x => x.Name.EndsWith("_IsArray"))
+                    .Select(x => x.Name)
+                    .ToList();
+
+                foreach (var fieldable in fields)
                 {
                     var stringValue = GetStringValue(fieldable);
+                    var isArrayMarker = fieldable.Name.EndsWith("_IsArray");
+                    var isArray = !isArrayMarker && arrayMarkers.Contains(fieldable.Name + "_IsArray");
+
+                    RavenJToken token;
+                    var isJson = RavenJToken.TryParse(stringValue, out token);
+
                     RavenJToken value;
                     if (ravenJObject.TryGetValue(fieldable.Name, out value) == false)
                     {
-                        ravenJObject[fieldable.Name] = stringValue;
+                        if (isArray)
+                            ravenJObject[fieldable.Name] = new RavenJArray { isJson ? token : stringValue };
+                        else if (isArrayMarker)
+                        {
+                            var fieldName = fieldable.Name.Substring(0, fieldable.Name.Length - 8);
+                            ravenJObject[fieldable.Name] = isJson ? token : stringValue;
+                            ravenJObject[fieldName] = new RavenJArray();
+                        }
+                        else
+                            ravenJObject[fieldable.Name] = isJson ? token : stringValue;
                     }
                     else
                     {
                         var ravenJArray = value as RavenJArray;
                         if (ravenJArray != null)
-                        {
-                            ravenJArray.Add(stringValue);
-                        }
+                            ravenJArray.Add(isJson ? token : stringValue);
                         else
                         {
-                            ravenJArray = new RavenJArray { value, stringValue };
+                            ravenJArray = new RavenJArray { value, isJson ? token : stringValue };
                             ravenJObject[fieldable.Name] = ravenJArray;
                         }
                     }
