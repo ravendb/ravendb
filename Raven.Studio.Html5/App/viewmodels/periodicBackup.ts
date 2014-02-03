@@ -2,14 +2,14 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getPeriodicBackupSetupCommand = require("commands/getPeriodicBackupSetupCommand");
 import getDatabaseSettingsCommand = require("commands/getDatabaseSettingsCommand");
 import periodicBackupSetup = require("models/periodicBackupSetup");
-
+import savePeriodicBackupSetupCommand = require("commands/savePeriodicBackupSetupCommand");
 
 class periodicBackup extends viewModelBase {
 
-    setup = ko.observable<periodicBackupSetup>();
+    backupSetup = ko.observable<periodicBackupSetup>();
 
     activate() {
-        this.setup(new periodicBackupSetup);
+        this.backupSetup(new periodicBackupSetup);
         this.fetchPeriodicBackupSetup();
         this.fetchPeriodicBackupAccountsSettings();
     }
@@ -19,7 +19,7 @@ class periodicBackup extends viewModelBase {
         if (db) {
             new getPeriodicBackupSetupCommand(db)
                 .execute()
-                .done((result: periodicBackupSetupDto) => this.setup().fromDto(result));
+                .done((result: periodicBackupSetupDto) => this.backupSetup().fromDto(result));
         }
     }
 
@@ -28,7 +28,18 @@ class periodicBackup extends viewModelBase {
         if (db) {
             new getDatabaseSettingsCommand(db)
                 .execute()
-                .done(document => this.setup().fromDatabaseSettings(document));
+                .done(document => this.backupSetup().fromDatabaseSettingsDto(document.toDto()));
+        }
+    }
+
+    activatePeriodicBackup() {
+        this.backupSetup().activated(true);
+    }
+
+    saveChanges() {
+        var db = this.activeDatabase();
+        if (db) {
+            new savePeriodicBackupSetupCommand(this.backupSetup(), db).execute();
         }
     }
 }

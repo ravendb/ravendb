@@ -1,5 +1,3 @@
-import document = require("models/document");
-
 class periodicBackupSetup {
 
     unsupported = ko.observable<boolean>(false);
@@ -20,6 +18,8 @@ class periodicBackupSetup {
 
     fullBackupInterval = ko.observable();
     fullBackupIntervalUnit = ko.observable();
+
+    private dbSettingsDto: documentDto;
 
     private FILE_SYSTEM = "fileSystem";
     private GLACIER_VAULT = "glacierVault";
@@ -52,6 +52,7 @@ class periodicBackupSetup {
             ) !== -1;
     }, this);
 
+
     additionalAzureInfoRequired = ko.computed(function () {
         return this.type() === this.AZURE_STORAGE;
     }, this);
@@ -70,19 +71,57 @@ class periodicBackupSetup {
         this.fullBackupInterval(full[0]);
         this.fullBackupIntervalUnit(full[1]);
 
-        this.activatePeriodicBackup();
-    }
-
-    fromDatabaseSettings(dbSettings: document) {
-        var dto = dbSettings.toDto();
-        this.awsAccessKey(dto['Settings']['Raven/AWSAccessKey']);
-        this.awsSecretKey(dto['SecuredSettings']['Raven/AWSSecretKey']);
-        this.azureStorageAccount(dto['Settings']['Raven/AzureStorageAccount']);
-        this.azureStorageKey(dto['SecuredSettings']['Raven/AzureStorageKey']);
-    }
-
-    activatePeriodicBackup() {
         this.activated(true);
+    }
+
+    toDto(): periodicBackupSetupDto {
+        return {
+            GlacierVaultName: this.prepareMainValue(this.GLACIER_VAULT),
+            S3BucketName: this.prepareMainValue(this.S3_BUCKET),
+            AwsRegionEndpoint: this.awsRegionEndpoint(),
+            AzureStorageContainer: this.prepareMainValue(this.AZURE_STORAGE),
+            LocalFolderName: this.prepareMainValue(this.FILE_SYSTEM),
+            IntervalMilliseconds: this.convertToMilliseconds(this.incrementalBackupInterval(), this.incrementalBackupIntervalUnit()),
+            FullBackupIntervalMilliseconds: this.convertToMilliseconds(this.fullBackupInterval(), this.fullBackupIntervalUnit()),
+        };
+    }
+
+    private prepareMainValue(expectedType: string): string {
+        return ((this.type() === expectedType) ? this.mainValue() : null);
+    }
+
+    private prepareRegionEndpoint() {
+
+    }
+
+    private convertToMilliseconds(value, unit): number {
+        if (value && unit) {
+            switch (unit) {
+                case this.TU_MINUTES:
+                    return value * 1000 * 60;
+                case this.TU_HOURS:
+                    return value * 1000 * 60 * 60;
+                case this.TU_DAYS:
+                    return value * 1000 * 60 * 60 * 24;
+            }
+        }
+        return null;
+    }
+
+    fromDatabaseSettingsDto(dbSettingsDto: documentDto) {
+        this.dbSettingsDto = dbSettingsDto;
+        this.awsAccessKey(dbSettingsDto['Settings']['Raven/AWSAccessKey']);
+        this.awsSecretKey(dbSettingsDto['SecuredSettings']['Raven/AWSSecretKey']);
+        this.azureStorageAccount(dbSettingsDto['Settings']['Raven/AzureStorageAccount']);
+        this.azureStorageKey(dbSettingsDto['SecuredSettings']['Raven/AzureStorageKey']);
+    }
+
+    toDatabaseSettingsDto(): documentDto {
+        this.dbSettingsDto['Settings']['Raven/AWSAccessKey'] = this.awsAccessKey();
+        this.dbSettingsDto['SecuredSettings']['Raven/AWSSecretKey'] = this.awsSecretKey();
+        this.dbSettingsDto['Settings']['Raven/AzureStorageAccount'] = this.azureStorageAccount();
+        this.dbSettingsDto['SecuredSettings']['Raven/AzureStorageKey'] = this.azureStorageKey();
+        return this.dbSettingsDto;
     }
 
     private setupTypeAndMainValue(dto: periodicBackupSetupDto) {
