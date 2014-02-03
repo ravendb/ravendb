@@ -13,6 +13,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Smuggler;
 using Raven.Client;
 using Raven.Client.Document;
@@ -25,6 +26,7 @@ using Raven.Json.Linq;
 using Raven.Smuggler;
 using Raven.Tests.Triggers;
 using Xunit;
+using Raven.Abstractions.Extensions;
 using System.Linq;
 
 namespace Raven.Tests.Issues
@@ -159,8 +161,11 @@ namespace Raven.Tests.Issues
                 var dumper = CreateDataDumper(store.DocumentDatabase);
                 await dumper.ExportData(new SmugglerExportOptions
                                         {
-                                            ToFile = backupPath
-                                        }, new SmugglerOptions());
+                                            ToFile = backupPath,
+                                        }, new SmugglerOptions
+                                        {
+                                            Incremental = true
+                                        });
             }
 
             VerifyDump(backupPath, store =>
@@ -186,7 +191,10 @@ namespace Raven.Tests.Issues
                 await dumper.ExportData(new SmugglerExportOptions
                                         {
                                             ToFile = backupPath
-                                        }, new SmugglerOptions());
+                                        }, new SmugglerOptions
+                                        {
+                                            Incremental = true
+                                        });
             }
 
             VerifyDump(backupPath, store =>
@@ -210,6 +218,7 @@ namespace Raven.Tests.Issues
                 var options = new SmugglerOptions
                               {
                                   Limit = 1500,
+                                  Incremental = true,
                                   Filters =
                                   {
                                       new FilterSetting
@@ -250,6 +259,7 @@ namespace Raven.Tests.Issues
                 var options = new SmugglerOptions
                               {
                                   Limit = 1500,
+                                  Incremental = true,
                                   Filters =
                                   {
                                       new FilterSetting
@@ -286,7 +296,10 @@ namespace Raven.Tests.Issues
                 dumper.ImportData(new SmugglerImportOptions
                                       {
                                           FromFile = backupPath
-                                      }, new SmugglerOptions()).Wait();
+                                      }, new SmugglerOptions
+                                      {
+                                          Incremental = true
+                                      }).Wait();
 
                 action(store);
             }
@@ -309,6 +322,7 @@ namespace Raven.Tests.Issues
                 var options = new SmugglerOptions
                 {
                     Limit = 5,
+                    Incremental = true,
                     Filters =
                 {
                     new FilterSetting
@@ -356,6 +370,7 @@ namespace Raven.Tests.Issues
                 var options = new SmugglerOptions
                               {
                                   Limit = 5,
+                                  Incremental = true,
                                   Filters =
                                   {
                                       new FilterSetting
@@ -370,7 +385,7 @@ namespace Raven.Tests.Issues
                 var dumper = CreateSmuggler("http://localhost:8079");
                 await dumper.ExportData(new SmugglerExportOptions
                                         {
-                                            ToFile = backupPath
+                                            ToFile = backupPath,
                                         }, options);
             }
 
@@ -737,31 +752,43 @@ namespace Raven.Tests.Issues
                     Incremental = true
                 };
 
-                var dumper = CreateSmuggler("http://localhost:8079");
+                var dumper = CreateSmuggler("http://localhost:8070");
 
                 var allDocs = new List<RavenJObject>();
 
-                var memoryStream = new MemoryStream();
-                Assert.Throws<AggregateException>(() => dumper.ExportData(new SmugglerExportOptions
-                                                                          {
-                                                                              ToStream = memoryStream
-                                                                          }, options).Wait());
+                ExportDataResult exportResult = null;
 
-                memoryStream.Position = 0;
-                using (var stream = new GZipStream(memoryStream, CompressionMode.Decompress))
+                try
+                {
+                    exportResult = dumper.ExportData(new SmugglerExportOptions
+                    {
+                        ToFile = backupPath
+                    }, options).Result;
+                    Assert.False(true, "Previous op should throw.");
+                }
+                catch (AggregateException e)
+                {
+                    var inner = (SmugglerExportException)e.ExtractSingleInnerException();
+                    exportResult = new ExportDataResult
+                    {
+                        FilePath = inner.File
+                    };
+                }
+
+                using (var fileSteam = new FileStream(exportResult.FilePath, FileMode.Open))
+                using (var stream = new GZipStream(fileSteam, CompressionMode.Decompress))
                 {
                     var chunk1 = RavenJToken.TryLoad(stream) as RavenJObject;
                     var doc1 = chunk1["Docs"] as RavenJArray;
                     allDocs.AddRange(doc1.Values<RavenJObject>());
                 }
 
-                var memoryStream2 = new MemoryStream();
-                await dumper.ExportData(new SmugglerExportOptions
+                exportResult = await dumper.ExportData(new SmugglerExportOptions
                 {
-                    ToStream = memoryStream2
+                    ToFile = backupPath
                 }, options);
-                memoryStream2.Position = 0;
-                using (var stream = new GZipStream(memoryStream2, CompressionMode.Decompress))
+                using (var fileStream = new FileStream(exportResult.FilePath, FileMode.Open))
+                using (var stream = new GZipStream(fileStream, CompressionMode.Decompress))
                 {
                     var chunk2 = RavenJToken.TryLoad(stream) as RavenJObject;
                     var doc2 = chunk2["Docs"] as RavenJArray;
@@ -814,31 +841,42 @@ namespace Raven.Tests.Issues
                     Limit = 1500,
                     Incremental = true
                 };
-                var dumper = CreateSmuggler("http://localhost:8079");
+                var dumper = CreateSmuggler("http://localhost:8070");
 
                 var allAttachments = new List<RavenJObject>();
 
-                var memoryStream = new MemoryStream();
-                Assert.Throws<AggregateException>(() => dumper.ExportData(new SmugglerExportOptions
+                ExportDataResult exportResult = null;
+                try
                 {
-                    ToStream = memoryStream
-                }, options).Wait());
+                    exportResult = dumper.ExportData(new SmugglerExportOptions
+                    {
+                        ToFile = backupPath
+                    }, options).Result;
+                    Assert.False(true, "Previous op should throw.");
+                }
+                catch (AggregateException e)
+                {
+                    var inner = (SmugglerExportException)e.ExtractSingleInnerException();
+                    exportResult = new ExportDataResult
+                    {
+                        FilePath = inner.File
+                    };
+                }
 
-                memoryStream.Position = 0;
-                using (var stream = new GZipStream(memoryStream, CompressionMode.Decompress))
+                using (var fileStream = new FileStream(exportResult.FilePath, FileMode.Open))
+                using (var stream = new GZipStream(fileStream, CompressionMode.Decompress))
                 {
                     var chunk1 = RavenJToken.TryLoad(stream) as RavenJObject;
                     var att1 = chunk1["Attachments"] as RavenJArray;
                     allAttachments.AddRange(att1.Values<RavenJObject>());
                 }
 
-                var memoryStream2 = new MemoryStream();
-                await dumper.ExportData(new SmugglerExportOptions
+                exportResult = await dumper.ExportData(new SmugglerExportOptions
                                         {
-                                            ToStream = memoryStream2
+                                            ToFile = backupPath
                                         }, options);
-                memoryStream2.Position = 0;
-                using (var stream = new GZipStream(memoryStream2, CompressionMode.Decompress))
+                using (var fileStream = new FileStream(exportResult.FilePath, FileMode.Open))
+                using (var stream = new GZipStream(fileStream, CompressionMode.Decompress))
                 {
                     var chunk2 = RavenJToken.TryLoad(stream) as RavenJObject;
                     var attr2 = chunk2["Attachments"] as RavenJArray;

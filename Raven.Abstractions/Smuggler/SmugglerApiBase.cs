@@ -61,7 +61,9 @@ namespace Raven.Abstractions.Smuggler
 
             var result = new ExportDataResult
             {
-				FilePath = exportOptions.ToFile
+				FilePath = exportOptions.ToFile,
+                LastAttachmentsEtag = options.StartAttachmentsEtag,
+                LastDocsEtag = options.StartDocsEtag
             };
 
 #if !SILVERLIGHT
@@ -75,7 +77,7 @@ namespace Raven.Abstractions.Smuggler
                         Directory.CreateDirectory(result.FilePath);
 				}
 
-				if (options.StartDocsEtag != Etag.Empty && options.StartAttachmentsEtag != Etag.Empty)
+				if (options.StartDocsEtag == Etag.Empty && options.StartAttachmentsEtag == Etag.Empty)
 				{
 					ReadLastEtagsFromFile(result);
 				}
@@ -133,12 +135,12 @@ namespace Raven.Abstractions.Smuggler
 					{
 					    try
 					    {
-                            result.LastDocsEtag = await ExportDocuments(options, jsonWriter, options.StartDocsEtag);
+                            result.LastDocsEtag = await ExportDocuments(options, jsonWriter, result.LastDocsEtag);
                         }
 					    catch (SmugglerExportException e)
 					    {
-					        options.StartDocsEtag = e.LastEtag;
-                            e.File = ownedStream ? null : result.FilePath;
+					        result.LastDocsEtag = e.LastEtag;
+                            e.File = ownedStream ? result.FilePath : null;
 					        lastException = e;
 					    }
 					}
@@ -150,12 +152,12 @@ namespace Raven.Abstractions.Smuggler
 					{
 					    try
 					{
-						result.LastAttachmentsEtag = await ExportAttachments(jsonWriter, options.StartAttachmentsEtag);
+						result.LastAttachmentsEtag = await ExportAttachments(jsonWriter, result.LastAttachmentsEtag);
 					}
 					    catch (SmugglerExportException e)
 					    {
-					        options.StartAttachmentsEtag = e.LastEtag;
-					        e.File = ownedStream ? null : result.FilePath;
+					        result.LastAttachmentsEtag = e.LastEtag;
+                            e.File = ownedStream ? result.FilePath : null;
 					        lastException = e;
 					    }
 					}
@@ -760,6 +762,12 @@ namespace Raven.Abstractions.Smuggler
 
     public class ExportDataResult
     {
+        public ExportDataResult()
+        {
+            LastDocsEtag = Etag.Empty;
+            LastAttachmentsEtag = Etag.Empty;
+        }
+
         public string FilePath { get; set; }
         public Etag LastDocsEtag { get; set; }
 
