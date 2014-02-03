@@ -240,7 +240,6 @@ interface spatialIndexSuggestionDto {
 }
 
 interface periodicBackupSetupDto {
-    '@metadata': documentMetadataDto;
     GlacierVaultName: string;
     S3BucketName: string;
     AwsRegionEndpoint: string;

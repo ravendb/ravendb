@@ -1,4 +1,4 @@
-﻿<section data-bind="with: setup">
+﻿<section data-bind="with: backupSetup">
     <div data-bind="slideVisible: unsupported">
         <div class="alert alert-danger">Too many periodic backup types found. This isn't a supported scenario for the UI.</div>
     </div>
@@ -8,7 +8,7 @@
                 <div class="collapse navbar-collapse">
                     <p class="navbar-text">There is no Periodic Backup set for this database.</p>
                     <form class="navbar-form navbar-right">
-                        <button type="button" class="btn btn-primary" data-bind="click: activatePeriodicBackup"><i class="fa fa-unlock"></i> Activate Periodic Backup</button>
+                        <button type="button" class="btn btn-primary" data-bind="click: $root.activatePeriodicBackup.bind($root)"><i class="fa fa-unlock"></i> Activate Periodic Backup</button>
                     </form>
                 </div>
             </nav>
@@ -31,7 +31,7 @@
             <div class="form-group" data-bind="slideVisible: additionalAwsInfoRequired">
                 <label for="awsSecretKey" class="col-sm-3 control-label">AWS Secret Key:</label>
                 <div class="col-sm-3">
-                    <input id="awsSecretKey" type="password" class="form-control" data-bind="value: awsSecretKey" />
+                    <input id="awsSecretKey" type="password" autocomplete="off" class="form-control" data-bind="value: awsSecretKey" />
                 </div>
             </div>
             <div class="form-group" data-bind="slideVisible: additionalAwsInfoRequired">
@@ -49,7 +49,7 @@
             <div class="form-group" data-bind="slideVisible: additionalAzureInfoRequired">
                 <label for="azureStorageKey" class="col-sm-3 control-label">Azure Storage Key:</label>
                 <div class="col-sm-3">
-                    <input id="azureStorageKey" type="password" class="form-control" data-bind="value: azureStorageKey" />
+                    <input id="azureStorageKey" type="password" autocomplete="off" class="form-control" data-bind="value: azureStorageKey" />
                 </div>
             </div>
             <div class="form-group">
@@ -72,7 +72,7 @@
             </div>
             <div class="form-group">
                 <div class="col-sm-offset-3 col-sm-6">
-                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Save Changes</button>
+                    <button type="submit" class="btn btn-primary" data-bind="click: $root.saveChanges.bind($root)"><i class="fa fa-save"></i> Save Changes</button>
                 </div>
             </div>
         </form>
