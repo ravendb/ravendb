@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Database.Config;
 using Raven.Database.Server.RavenFS;
@@ -76,11 +77,40 @@ namespace Raven.Database.Server
 
 		public void Dispose()
 		{
-			mixedModeRequestAuthorizer.Dispose();
-			databasesLandlord.Dispose();
-			systemDatabase.Dispose();
-			requestManager.Dispose();
-			FileSystem.Dispose();
+		    var toDispose = new List<IDisposable>
+		                    {
+		                        mixedModeRequestAuthorizer, 
+                                databasesLandlord, 
+                                systemDatabase, 
+                                requestManager
+		                    };
+
+            var errors = new List<Exception>();
+
+		    try
+		    {
+                toDispose.Add(FileSystem);
+		    }
+		    catch (Exception e)
+		    {
+                errors.Add(e);
+		    }
+
+		    foreach (var disposable in toDispose)
+		    {
+                try
+                {
+                    if (disposable != null)
+                        disposable.Dispose();
+                }
+                catch (Exception e)
+                {
+                    errors.Add(e);
+                }
+		    }
+
+			if (errors.Count != 0)
+                throw new AggregateException(errors);
 		}
 
 		private class RavenServer : IRavenServer
