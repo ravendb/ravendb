@@ -39,7 +39,7 @@ namespace Raven.Abstractions.Connection
             Response = response;
         }
 
-	    public static ErrorResponseException FromResponseMessage(HttpResponseMessage response, bool readErrorString = true)
+        public static ErrorResponseException FromResponseMessage(HttpResponseMessage response, bool readErrorString = true)
 		{
 			var sb = new StringBuilder("Status code: ").Append(response.StatusCode).AppendLine();
 

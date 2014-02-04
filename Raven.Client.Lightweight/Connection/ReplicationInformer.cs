@@ -635,21 +635,20 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
             catch (Exception e)
             {
                 var ae = e as AggregateException;
-                WebException webException;
+                ErrorResponseException errorResponseException;
                 if (ae != null)
                 {
-                    webException = ae.ExtractSingleInnerException() as WebException;
+                    errorResponseException = ae.ExtractSingleInnerException() as ErrorResponseException;
                 }
                 else
                 {
-                    webException = e as WebException;
+                    errorResponseException = e as ErrorResponseException;
                 }
-                if (tryWithPrimaryCredentials && operationMetadata.Credentials.HasCredentials() && webException != null)
+                if (tryWithPrimaryCredentials && operationMetadata.Credentials.HasCredentials() && errorResponseException != null)
                 {
                     IncrementFailureCount(operationMetadata.Url);
 
-                    var response = webException.Response as HttpWebResponse;
-                    if (response != null && (response.StatusCode == HttpStatusCode.Unauthorized))
+                    if (errorResponseException.StatusCode == HttpStatusCode.Unauthorized)
                     {
                         shouldTryAgain = true;
                     }
