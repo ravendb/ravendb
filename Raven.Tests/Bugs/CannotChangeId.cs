@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class CannotChangeId
+	public class CannotChangeId : RavenTest
 	{
 		public class Item
 		{
@@ -15,7 +15,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void StandardConvention_ModifiedProperty()
 		{
-			using(var store = new EmbeddableDocumentStore{RunInMemory = true}.Initialize())
+			using(var store = NewDocumentStore())
 			{
 				using(var session = store.OpenSession())
 				{
@@ -39,7 +39,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void StandardConvention_ModifiedJustId()
 		{
-			using (var store = new EmbeddableDocumentStore { RunInMemory = true }.Initialize())
+			using (var store = NewDocumentStore())
 			{
 				using (var session = store.OpenSession())
 				{
@@ -62,14 +62,10 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void NameConvention_ModifiedProperty()
 		{
-			using (var store = new EmbeddableDocumentStore
+			using (var store = NewDocumentStore(configureStore: documentStore =>
 			{
-				RunInMemory = true,
-				Conventions =
-					{
-						FindIdentityProperty = info => info.Name == "Name"
-					}
-			}.Initialize())
+				documentStore.Conventions.FindIdentityProperty = info => info.Name == "Name";
+			}))
 			{
 				using (var session = store.OpenSession())
 				{
@@ -93,14 +89,10 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void NameConvention_ModifiedJustId()
 		{
-			using (var store = new EmbeddableDocumentStore
+			using (var store = NewDocumentStore(configureStore: documentStore =>
 			{
-				RunInMemory = true,
-				Conventions =
-				{
-					FindIdentityProperty = info => info.Name == "Name"
-				}
-			}.Initialize())
+				documentStore.Conventions.FindIdentityProperty = info => info.Name == "Name";
+			}))
 			{
 				using (var session = store.OpenSession())
 				{

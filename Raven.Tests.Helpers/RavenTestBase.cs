@@ -64,7 +64,8 @@ namespace Raven.Tests.Helpers
 			bool enableAuthentication = false,
 			string activeBundles = null,
 			int? port = null,
-			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin)
+			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin,
+			Action<DocumentStore> configureStore = null)
 		{
 			var storageType = GetDefaultStorageType(requestedStorage);
 			var dataDirectory = dataDir ?? NewDataPath();
@@ -96,6 +97,8 @@ namespace Raven.Tests.Helpers
 			{
 				ModifyStore(documentStore);
 				ModifyConfiguration(documentStore.Configuration);
+				if (configureStore != null) 
+					configureStore(documentStore);
 
 				documentStore.Initialize();
 
