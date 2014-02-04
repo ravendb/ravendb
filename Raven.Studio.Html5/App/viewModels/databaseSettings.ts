@@ -1,4 +1,3 @@
-
 class databaseSettings {
     
     activate() {
