@@ -28,10 +28,10 @@ namespace Raven.Tests.Issues
                 File.Delete(DumpFile);
         }
 
-        protected override void ConfigureServer(Database.Config.RavenConfiguration serverConfiguration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            serverConfiguration.DefaultStorageTypeName = GetDefaultStorageType("esent");
-            serverConfiguration.RunInMemory = false;
+            configuration.DefaultStorageTypeName = GetDefaultStorageType("esent");
+            configuration.RunInMemory = false;
         }
 
         [Fact]

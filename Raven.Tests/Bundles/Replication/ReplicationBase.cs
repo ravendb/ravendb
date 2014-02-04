@@ -44,19 +44,13 @@ namespace Raven.Tests.Bundles.Replication
 			return CreateEmbeddableStoreAtPort(port, enableCompressionBundle, anonymousUserAccessMode,requestedStorageType);
         }
 
-        private DocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false, bool removeDataDirectory = true, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false)
-		{
-			NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
-			var serverConfiguration = new RavenConfiguration
-									  {
-										  Settings = { { "Raven/ActiveBundles", "replication" + (enableCompressionBundle ? ";compression" : string.Empty) } },
-										  AnonymousUserAccessMode = anonymousUserAccessMode,
-										  DataDirectory = "Data #" + stores.Count,
-										  RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-										  RunInMemory = true,
-										  Port = port,
-										  DefaultStorageTypeName = GetDefaultStorageType()
-									  };
+        private DocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false,
+            Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false, string storeTypeName = "esent", bool useFiddler = false)
+        {
+            var ravenDbServer = GetNewServer(port,
+                requestedStorage: storeTypeName,
+                activeBundles: "replication" + (enableCompressionBundle ? ";compression" : string.Empty),
+                enableAuthentication: anonymousUserAccessMode == AnonymousUserAccessMode.None);
 
             if (enableAuthorization)
             {
