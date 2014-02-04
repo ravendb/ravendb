@@ -1,4 +1,3 @@
-
 class databaseSettings {
     
     activate() {
@@ -6,4 +5,4 @@ class databaseSettings {
 
 }
 
-export = databaseSettings;
+export = databaseSettings; 

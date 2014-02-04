@@ -239,8 +239,8 @@ namespace Raven.Abstractions.OAuth
 				if (response.IsSuccessStatusCode == false)
 				{
 					// We've already tried three times and failed
-					if (tries >= 3)
-						throw ErrorResponseException.FromResponseMessage(response);
+                    if (tries >= 3)
+                        throw ErrorResponseException.FromResponseMessage(response);
 
 					if (response.StatusCode != HttpStatusCode.PreconditionFailed)
 						throw ErrorResponseException.FromResponseMessage(response);

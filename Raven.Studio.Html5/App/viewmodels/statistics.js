@@ -4,7 +4,7 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", "commands/getDatabaseStatsCommand", "models/database", "moment"], function(require, exports, getDatabaseStatsCommand, database, moment) {
+define(["require", "exports", "viewmodels/viewModelBase", "commands/getDatabaseStatsCommand", "models/database", "moment"], function(require, exports, viewModelBase, getDatabaseStatsCommand, database, moment) {
     var statistics = (function (_super) {
         __extends(statistics, _super);
         function statistics() {
@@ -58,7 +58,7 @@ define(["require", "exports", "commands/getDatabaseStatsCommand", "models/databa
             return aspnetJsonDate;
         };
         return statistics;
-    })(activeDbViewModelBase);
+    })(viewModelBase);
 
     
     return statistics;

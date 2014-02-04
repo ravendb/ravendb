@@ -46,6 +46,11 @@ class databases {
         if (results.length < 20) {
             results.forEach(db => this.fetchStats(db));
         }
+
+        // If we have no databases, show the "create a new database" screen.
+        if (results.length === 0) {
+            this.newDatabase();
+        }
     }
 
     newDatabase() {

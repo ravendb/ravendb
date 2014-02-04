@@ -2,13 +2,16 @@ import document = require("models/document");
 import dialog = require("plugins/dialog");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
 import collection = require("models/collection");
+import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
-class copyDocuments {
+class copyDocuments extends dialogViewModelBase {
 
     isCopyingDocs = ko.observable(true);
     documentsOrIdsText: KnockoutComputed<string>;
 
-    constructor(documents: Array<document>) {
+    constructor(documents: Array<document>, elementToFocusOnDismissal?: string) {
+        super(elementToFocusOnDismissal);
+
         this.documentsOrIdsText = ko.computed(() => {
             var prettifySpacing = 4;
             if (this.isCopyingDocs()) {
@@ -20,6 +23,7 @@ class copyDocuments {
     }
 
     attached() {
+        super.attached();
         this.selectText();
 
         jwerty.key("CTRL+C, enter", e => {
@@ -51,4 +55,4 @@ class copyDocuments {
     }
 }
 
-export = copyDocuments;
+export = copyDocuments; 

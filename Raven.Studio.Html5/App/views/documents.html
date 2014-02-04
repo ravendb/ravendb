@@ -1,9 +1,8 @@
 ﻿<div class="documents-page">
     <div class="row">
         <div class="col-md-2">
-            <br />
-            <ul class="nav nav-pills nav-stacked document-collections affix" data-bind="foreach: collections">
-                <li data-bind="event: { mousedown: $parent.activateCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
+            <ul class="nav nav-pills nav-stacked document-collections" data-bind="foreach: collections">
+                <li data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }, visible: documentCount() > 0 || isAllDocuments || isSystemDocuments">
                     <a href="javascript:void(0)">
                         <div class="collection-color-strip" data-bind="css: colorClass"></div>
                         <span data-bind="text: name"></span>
@@ -13,8 +12,55 @@
             </ul>
         </div>
         <div class="col-md-10">
-            <br />
-            <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: currentCollectionPagedItems, collections: collections, gridSelector: '#documentsGrid', height: 500 }"></div>
+            <div class="row">
+                <div class="btn-toolbar" role="toolbar">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default" data-bind="click: toggleSelectAll" title="Select all or none">
+                            <img data-bind="attr: { src: isSelectAll() ? 'content/images/checked.png' : 'content/images/unchecked.png' }" />
+                        </button>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary use-bootstrap-tooltip" accesskey="n" data-bind="click: newDocument" title="Create new document (Alt+N)">
+                            <i class="fa fa-plus"></i>
+                        </button>
+                    </div>
+                    <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected">
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: editSelectedDoc" title="Edit selected document (F2)">
+                            <i class="fa fa-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: deleteSelectedDocs" title="Delete selected documents (DEL)">
+                            <i class="fa fa-trash-o"></i>
+                        </button>
+                    </div>
+                    <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected">
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: copySelectedDocs" title="Copy documents (Ctrl+C, D)">
+                            <i class="fa fa-copy"></i>
+                        </button>
+                        <button type="button" class="btn btn-default use-bootstrap-tooltip" data-bind="click: copySelectedDocIds" title="Copy IDs (Ctrl+C, I)">
+                            <i class="fa fa-clipboard"></i>
+                        </button>
+                    </div>
+
+                    <!--TODO: can we let the user select columns?-->
+                    <!--<div class="btn-group">
+                        <button type="button" class="btn btn-default dropdown-toggle use-bootstrap-tooltip" data-toggle="dropdown" title="Choose columns">
+                            <i class="fa fa-columns"></i>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="#">
+                                    <input type="checkbox" />
+                                    <span>Id</span>
+                                    <i class="fa fa-chevron-circle-up pull-right"></i>
+                                    <i class="fa fa-chevron-circle-down pull-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>-->
+                </div>
+            </div>
+            <div id="documentsGrid" data-bind="widget: { kind: 'virtualTable', documentsSource: currentCollectionPagedItems, collections: collections, selectedIndices: selectedDocumentIndices, gridSelector: '#documentsGrid', height: 500 }"></div>
         </div>
     </div>
 </div>

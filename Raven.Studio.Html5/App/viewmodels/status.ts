@@ -1,9 +1,9 @@
 import durandalRouter = require("plugins/router");
 import database = require("models/database");
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 
-class status extends activeDbViewModelBase {
+class status extends viewModelBase {
 
     router: DurandalRootRouter;
     currentRouteTitle: KnockoutComputed<string>;

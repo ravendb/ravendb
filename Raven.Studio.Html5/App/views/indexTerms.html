@@ -1,0 +1,16 @@
+﻿<div class="panel-group" id="accordion" data-bind="foreach: fields, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title">
+                <a data-toggle="collapse" data-parent="#accordion" data-bind="text: name, attr: { href: '#termCollapse' + $index() }"></a>
+            </h4>
+        </div>
+        <div class="panel-collapse collapse" data-bind="attr: { id: 'termCollapse' + $index() }">
+            <div class="panel-body">
+                <ul class="list-group" data-bind="foreach: terms">
+                    <li class="list-group-item" data-bind="text: $data"></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

@@ -50,6 +50,20 @@ class document {
         };
         return new document(<any>emptyDto);
     }
+
+    public static getEntityNameFromId(id: string): string {
+        if (!id) {
+            return null;
+        }
+
+        // TODO: is there a better/more reliable way to do this?
+        var slashIndex = id.lastIndexOf('/');
+        if (slashIndex >= 1) {
+            return id.substring(0, slashIndex);
+        }
+
+        return id;
+    }
 }
 
 export = document;

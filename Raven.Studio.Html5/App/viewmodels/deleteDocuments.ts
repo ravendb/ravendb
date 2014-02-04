@@ -2,14 +2,17 @@ import document = require("models/document");
 import dialog = require("plugins/dialog");
 import deleteDocumentsCommand = require("commands/deleteDocumentsCommand");
 import appUrl = require("common/appUrl");
+import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
-class deleteDocuments {
+class deleteDocuments extends dialogViewModelBase {
 
     private documents = ko.observableArray<document>();
     private deletionStarted = false;
     public deletionTask = $.Deferred(); // Gives consumers a way to know when the async delete operation completes.
 
-    constructor(documents: Array<document>) {
+    constructor(documents: Array<document>, elementToFocusOnDismissal?: string) {
+        super(elementToFocusOnDismissal);
+
         if (documents.length === 0) {
             throw new Error("Must have at least one document to delete.");
         }

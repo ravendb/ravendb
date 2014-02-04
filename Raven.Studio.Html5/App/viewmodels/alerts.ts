@@ -1,6 +1,6 @@
 import app = require("durandal/app");
 import getAlertsCommand = require("commands/getAlertsCommand");
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import database = require("models/database");
 import moment = require("moment");
@@ -9,7 +9,7 @@ import document = require("models/document");
 import alert = require("models/alert");
 import saveAlertsCommand = require("commands/saveAlertsCommand");
 
-class alerts extends activeDbViewModelBase {
+class alerts extends viewModelBase {
 
     alertDoc = ko.observable<alertContainerDto>();
     allAlerts = ko.observableArray<alert>();

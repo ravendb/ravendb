@@ -210,3 +210,14 @@ arrayPrototype.distinct = function () {
 
     return distinctElements;
 }
+
+ko.bindingHandlers['slideVisible'] = {
+    init: function (element, valueAccessor) {
+        var value = valueAccessor();
+        jQuery(element).toggle(ko.unwrap(value));
+    },
+    update: function (element, valueAccessor) {
+        var value = valueAccessor();
+        ko.unwrap(value) ? jQuery(element).slideDown() : jQuery(element).slideUp();
+    }
+};

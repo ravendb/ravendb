@@ -202,7 +202,7 @@ namespace Raven.Smuggler
                                 try
                                 {
                                     ShowProgress("Get documents from " + lastEtag);
-                                    var documents = await ((AsyncServerClient)exportStore.AsyncDatabaseCommands).GetDocumentsInternalAsync(null, lastEtag, options.BatchSize);
+                                    var documents = await ((AsyncServerClient)exportStore.AsyncDatabaseCommands).GetDocumentsInternalAsync(null, lastEtag, options.BatchSize, null);
                                     foreach (RavenJObject document in documents)
                                     {
                                         var metadata = document.Value<RavenJObject>("@metadata");

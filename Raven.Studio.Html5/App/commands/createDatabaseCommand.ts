@@ -14,18 +14,17 @@ class createDatabaseCommand extends commandBase {
 
         this.reportInfo("Creating " + this.databaseName);
 
-        // TODO: include selected bundles from UI.
         var databaseDoc = {
             "Settings": {
                 "Raven/DataDir": "~\\Databases\\" + this.databaseName,
                 "Raven/ActiveBundles": this.activeBundles.join(";")
             },
-            "SecuredSettings": {},
+            "SecuredSettings": {}, // TODO: based on the selected bundles, we may need to include additional settings here
             "Disabled": false
         };
 
         var url = "/admin/databases/" + this.databaseName;
-        var createTask = this.put(url, JSON.stringify(databaseDoc), null);
+        var createTask = this.put(url, JSON.stringify(databaseDoc), null, { dataType: undefined });
         createTask.done(() => this.reportSuccess(this.databaseName + " created"));
         createTask.fail((response) => this.reportError("Failed to create database", JSON.stringify(response)));
 
