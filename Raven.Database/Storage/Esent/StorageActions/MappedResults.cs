@@ -517,6 +517,10 @@ namespace Raven.Storage.Esent.StorageActions
 
 			do
 			{
+				var indexFromDb = Api.RetrieveColumnAsInt32(session, MappedResults, tableColumnsCache.MappedResultsColumns["view"]);
+				if (indexId != indexFromDb)
+					break;
+
 				var reduceKey = Api.RetrieveColumnAsString(session, MappedResults, tableColumnsCache.MappedResultsColumns["reduce_key"]);
 				deletedReduceKeys.Add(reduceKey);
 
