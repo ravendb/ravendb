@@ -46,9 +46,9 @@ namespace Raven.Studio.Features.Smuggler
 		    return (RavenJArray)await request.ReadResponseJsonAsync();
 		}
 
-		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
+		protected override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit)
 		{
-			return commands.StreamDocsAsync(lastEtag);
+			return commands.StreamDocsAsync(lastEtag, pageSize:limit);
 		}
 
 		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)

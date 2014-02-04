@@ -553,18 +553,19 @@ public class RemoteDatabaseChanges implements IDatabaseChanges, AutoCloseable, I
     if (typeName == null) {
       throw new IllegalArgumentException("TypeName name is null");
     }
+    final String encodedTypeName = UrlUtils.escapeDataString(typeName);
 
     LocalConnectionState counter = counters.getOrAdd("types/" + typeName, new Function1<String, LocalConnectionState>() {
       @Override
       public LocalConnectionState apply(String s) {
         watchedTypes.add(typeName);
-        send("watch-type", typeName);
+        send("watch-type", encodedTypeName);
 
         return new LocalConnectionState(new Action0() {
           @Override
           public void apply() {
             watchedTypes.remove(typeName);
-            send("unwatch-type", typeName);
+            send("unwatch-type", encodedTypeName);
             counters.remove("types/" + typeName);
           }
         });

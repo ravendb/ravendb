@@ -18,21 +18,21 @@ public interface ILoaderWithInclude {
    * @param path
    * @return
    */
-  public MultiLoaderWithInclude include(String path);
+  public ILoaderWithInclude include(String path);
 
   /**
    * Includes the specified path.
    * @param path
    * @return
    */
-  public MultiLoaderWithInclude include(Path<?> path);
+  public ILoaderWithInclude include(Path<?> path);
 
   /**
    * Includes the specified path.
    * @param path
    * @return
    */
-  public MultiLoaderWithInclude include(Class<?> targetClass, Path<?> path);
+  public ILoaderWithInclude include(Class<?> targetClass, Path<?> path);
 
   /**
    * Loads the specified ids.

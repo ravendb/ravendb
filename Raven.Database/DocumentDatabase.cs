@@ -940,9 +940,16 @@ namespace Raven.Database
 
 			foreach (var referencing in actions.Indexing.GetDocumentsReferencing(key))
 			{
-				Etag preTouchEtag;
-				Etag afterTouchEtag;
-				actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+				Etag preTouchEtag = null;
+				Etag afterTouchEtag = null;
+				try
+				{
+					actions.Documents.TouchDocument(referencing, out preTouchEtag, out afterTouchEtag);
+				}
+				catch (ConcurrencyException)
+				{
+				}
+				
 				if (preTouchEtag == null || afterTouchEtag == null)
 					continue;
 
@@ -2075,7 +2082,8 @@ namespace Raven.Database
 		                    if (matchedDocs <= docsToSkip) 
                                 continue;
 
-		                    addDoc(document.ToJson());
+							token.ThrowIfCancellationRequested();
+							addDoc(document.ToJson());
 		                    addedDocs++;
 
 		                    if (addedDocs >= pageSize) 

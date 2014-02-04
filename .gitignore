@@ -63,3 +63,4 @@ Raven.Studio.Html5/Content/app.css
 Raven.Studio.Html5/Content/app.min.css
 Raven.Studio.Html5/Content/app.less.map
 /Raven.Web/Assemblies
+FodyWeavers.xml

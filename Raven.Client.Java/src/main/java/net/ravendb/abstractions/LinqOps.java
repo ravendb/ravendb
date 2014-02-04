@@ -36,6 +36,8 @@ public class LinqOps {
   public static final class Ops {
 
     public static final Operator<Boolean> EQ_NOT_IGNORE_CASE = new OperatorImpl<>("EQ_NOT_IGNORE_CASE");
+    public static final Operator<Boolean> CONTAINS_ANY = new OperatorImpl<>("CONTAINS_ANY");
+    public static final Operator<Boolean> CONTAINS_ALL = new OperatorImpl<>("CONTAINS_ALL");
 
   }
 

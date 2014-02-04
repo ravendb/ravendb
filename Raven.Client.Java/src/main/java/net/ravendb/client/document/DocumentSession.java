@@ -758,6 +758,21 @@ public class DocumentSession extends InMemoryDocumentSessionOperations implement
     return lazyValue;
   }
 
+  public Lazy<Integer> addLazyCountOperation(final ILazyOperation operation)
+  {
+      pendingLazyOperations.add(operation);
+
+      Lazy<Integer> lazyValue = new Lazy<>(new Function0<Integer>() {
+        @Override
+        public Integer apply() {
+          executeAllPendingLazyOperations();
+          return operation.getQueryResult().getTotalResults();
+        }
+      });
+      return lazyValue;
+  }
+
+
   /**
    * Register to lazily load documents and include
    */

@@ -33,7 +33,7 @@ public class AdminRequestCreator {
       throw new IllegalStateException("The Raven/DataDir setting is mandatory");
     }
     String dbname = databaseDocument.getId().replace("Raven/Databases/", "");
-    MultiDatabase.assertValidDatabaseName(dbname);
+    MultiDatabase.assertValidName(dbname);
     RavenJObject doc = RavenJObject.fromObject(databaseDocument);
     doc.remove("id");
     docRef.value = doc;

@@ -28,7 +28,7 @@ public class MultiLoaderWithInclude implements ILoaderWithInclude {
   }
 
   @Override
-  public MultiLoaderWithInclude include(Class<?> targetClass, Path<?> path) {
+  public ILoaderWithInclude include(Class<?> targetClass, Path<?> path) {
     Class< ? > type = path.getType();
     String fullId = session.getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(-1, targetClass, false);
     String id = ExpressionExtensions.toPropertyPath(path);
@@ -43,11 +43,11 @@ public class MultiLoaderWithInclude implements ILoaderWithInclude {
    * Includes the specified path.
    */
   @Override
-  public MultiLoaderWithInclude include(String path) {
+  public ILoaderWithInclude include(String path) {
     return include(path, Object.class);
   }
 
-  public MultiLoaderWithInclude include(String path, Class<?> type) {
+  public ILoaderWithInclude include(String path, Class<?> type) {
     includes.add(new Tuple<String, Class<?>>(path, type));
     return this;
   }
@@ -56,7 +56,7 @@ public class MultiLoaderWithInclude implements ILoaderWithInclude {
    * Includes the specified path
    */
   @Override
-  public MultiLoaderWithInclude include(Path<?> path) {
+  public ILoaderWithInclude include(Path<?> path) {
     return include(ExpressionExtensions.toPropertyPath(path));
   }
 

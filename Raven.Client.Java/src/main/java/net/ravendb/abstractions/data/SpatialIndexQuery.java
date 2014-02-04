@@ -64,6 +64,8 @@ public class SpatialIndexQuery extends IndexQuery {
     setQuery(query.getQuery());
     setStart(query.getStart());
     setCutoff(query.getCutoff());
+    setCutoffEtag(query.getCutoffEtag());
+    setWaitForNonStaleResultsAsOfNow(query.isWaitForNonStaleResultsAsOfNow());
     setPageSize(query.getPageSize());
     setFieldsToFetch(query.getFieldsToFetch());
     setSortedFields(query.getSortedFields());

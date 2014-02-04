@@ -108,8 +108,7 @@ namespace Raven.Client.Document
 
 		private void SetClrType(Type entityType, RavenJObject metadata)
 		{
-			if (
-				typeof (IDynamicMetaObjectProvider).IsAssignableFrom(entityType) ||
+			if (entityType == typeof(ExpandoObject) ||
 				entityType == typeof(DynamicJsonObject) ||
 				entityType == typeof(RavenJObject)) // dynamic types
 			{

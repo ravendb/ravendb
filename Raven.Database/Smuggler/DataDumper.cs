@@ -6,9 +6,11 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Smuggler;
@@ -35,30 +37,49 @@ namespace Raven.Database.Smuggler
 		protected override async Task<Etag> ExportAttachments(JsonTextWriter jsonWriter, Etag lastEtag)
 		{
 			var totalCount = 0;
-			while (true)
-			{
-				var array = GetAttachments(totalCount, lastEtag);
-				if (array.Length == 0)
-				{
-					var databaseStatistics = await GetStats();
-					if (lastEtag == null) lastEtag = Etag.Empty;
-					if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
-					{
-						lastEtag = EtagUtil.Increment(lastEtag, SmugglerOptions.BatchSize);
-						ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}", lastEtag);
-						continue;
-					}
-					ShowProgress("Done with reading attachments, total: {0}", totalCount);
-					return lastEtag;
-				}
-				totalCount += array.Length;
-				ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", array.Length, totalCount);
-				foreach (var item in array)
-				{
-					item.WriteTo(jsonWriter);
-				}
-				lastEtag = Etag.Parse(array.Last().Value<string>("Etag"));
-			}
+		    while (true)
+		    {
+		        try
+		        {
+		            if (SmugglerOptions.Limit - totalCount <= 0)
+		            {
+		                ShowProgress("Done with reading attachments, total: {0}", totalCount);
+		                return lastEtag;
+		            }
+		            var maxRecords = Math.Min(SmugglerOptions.Limit - totalCount, SmugglerOptions.BatchSize);
+		            var array = GetAttachments(totalCount, lastEtag, maxRecords);
+		            if (array.Length == 0)
+		            {
+		                var databaseStatistics = await GetStats();
+		                if (lastEtag == null) lastEtag = Etag.Empty;
+		                if (lastEtag.CompareTo(databaseStatistics.LastAttachmentEtag) < 0)
+		                {
+		                    lastEtag = EtagUtil.Increment(lastEtag, maxRecords);
+		                    ShowProgress("Got no results but didn't get to the last attachment etag, trying from: {0}",
+		                                 lastEtag);
+		                    continue;
+		                }
+		                ShowProgress("Done with reading attachments, total: {0}", totalCount);
+		                return lastEtag;
+		            }
+		            totalCount += array.Length;
+		            ShowProgress("Reading batch of {0,3} attachments, read so far: {1,10:#,#;;0}", array.Length, totalCount);
+		            foreach (var item in array)
+		            {
+		                item.WriteTo(jsonWriter);
+		            }
+		            lastEtag = Etag.Parse(array.Last().Value<string>("Etag"));
+		        }
+		        catch (Exception e)
+		        {
+                    ShowProgress("Got Exception during smuggler export. Exception: {0}. ", e.Message);
+                    ShowProgress("Done with reading attachments, total: {0}", totalCount, lastEtag);
+                    throw new SmugglerExportException(e.Message, e)
+                    {
+                        LastEtag = lastEtag,
+                    };
+		        }
+		    }
 		}
 
 		protected override Task<RavenJArray> GetTransformers(int start)
@@ -66,11 +87,11 @@ namespace Raven.Database.Smuggler
 			return new CompletedTask<RavenJArray>(database.GetTransformers(start, SmugglerOptions.BatchSize));
 		}
 
-		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag)
+		protected async override Task<IAsyncEnumerator<RavenJObject>> GetDocuments(Etag lastEtag, int limit)
 		{
 			const int dummy = 0;
 
-			var enumerator = database.GetDocuments(dummy, SmugglerOptions.BatchSize, lastEtag, CancellationToken.None)
+			var enumerator = database.GetDocuments(dummy, Math.Min(SmugglerOptions.BatchSize, limit), lastEtag, CancellationToken.None)
 				.ToList()
 				.Cast<RavenJObject>()
 				.GetEnumerator();
@@ -158,10 +179,10 @@ namespace Raven.Database.Smuggler
 			}
 		}
 
-		private RavenJArray GetAttachments(int start, Etag etag)
+		private RavenJArray GetAttachments(int start, Etag etag, int maxRecords)
 		{
 			var array = new RavenJArray();
-			var attachmentInfos = database.GetAttachments(start, 128, etag, null, 1024 * 1024 * 10);
+            var attachmentInfos = database.GetAttachments(start, maxRecords, etag, null, 1024 * 1024 * 10);
 
 			foreach (var attachmentInfo in attachmentInfos)
 			{

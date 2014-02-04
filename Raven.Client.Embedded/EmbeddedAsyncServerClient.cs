@@ -124,8 +124,8 @@ namespace Raven.Client.Embedded
 
 		public Task<Operation> DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
 		{
-			databaseCommands.DeleteByIndex(indexName, queryToDelete, allowStale);
-			return new CompletedTask<Operation>();
+			var deleteByIndex = databaseCommands.DeleteByIndex(indexName, queryToDelete, allowStale);
+			return new CompletedTask<Operation>(deleteByIndex);
 		}
 
 		public Task DeleteTransformerAsync(string name)
@@ -264,7 +264,8 @@ namespace Raven.Client.Embedded
 
 		public Task<Operation> UpdateByIndex(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch)
 		{
-		    return new CompletedTask<Operation>(databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch));
+			var updateByIndex = databaseCommands.UpdateByIndex(indexName, queryToUpdate, patch);
+			return new CompletedTask<Operation>(updateByIndex)	;
 		}
 
 		public Task<Operation> UpdateByIndexAsync(string indexName, IndexQuery queryToUpdate, ScriptedPatchRequest patch, bool allowStale)

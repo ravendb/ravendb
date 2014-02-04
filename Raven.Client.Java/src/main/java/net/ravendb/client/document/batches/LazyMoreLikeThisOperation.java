@@ -4,6 +4,7 @@ import net.ravendb.abstractions.data.GetRequest;
 import net.ravendb.abstractions.data.GetResponse;
 import net.ravendb.abstractions.data.MoreLikeThisQuery;
 import net.ravendb.abstractions.data.MultiLoadResult;
+import net.ravendb.abstractions.data.QueryResult;
 import net.ravendb.abstractions.json.linq.RavenJArray;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.abstractions.json.linq.RavenJToken;
@@ -15,10 +16,20 @@ public class LazyMoreLikeThisOperation<T> implements ILazyOperation {
   private final MultiLoadOperation multiLoadOperation;
   private final MoreLikeThisQuery query;
   private Class<T> clazz;
-
+  private QueryResult queryResult;
   private Object result;
   private boolean requiresRetry;
 
+
+  @Override
+  public QueryResult getQueryResult() {
+    return queryResult;
+  }
+
+
+  public void setQueryResult(QueryResult queryResult) {
+    this.queryResult = queryResult;
+  }
 
   @Override
   public Object getResult() {

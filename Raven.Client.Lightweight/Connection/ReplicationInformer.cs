@@ -537,6 +537,143 @@ namespace Raven.Client.Connection
 There is a high probability of a network problem preventing access to all the replicas.
 Failed to get in touch with any of the " + (1 + localReplicationDestinations.Count) + " Raven instances.");
 		}
+		#endregion
+
+		
+		public async Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation)
+		{
+			var timeoutThrown = false;
+
+			var localReplicationDestinations = ReplicationDestinationsUrls; // thread safe copy
+			var primaryOperation = new OperationMetadata(primaryUrl, primaryCredentials);
+
+			var shouldReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
+			if (shouldReadFromAllServers && method == "GET")
+			{
+				var replicationIndex = currentReadStripingBase % (localReplicationDestinations.Count + 1);
+				// if replicationIndex == destinations count, then we want to use the master
+				// if replicationIndex < 0, then we were explicitly instructed to use the master
+				if (replicationIndex < localReplicationDestinations.Count && replicationIndex >= 0)
+				{
+					// if it is failing, ignore that, and move to the master or any of the replicas
+					if (ShouldExecuteUsing(localReplicationDestinations[replicationIndex].Url, currentRequest, method, false))
+					{
+						var tuple = await TryOperationAsync(operation, localReplicationDestinations[replicationIndex], primaryOperation, true);
+						if (tuple.Success)
+							return tuple.Result;
+						timeoutThrown = tuple.WasTimeout;
+					}
+				}
+			}
+
+			if (ShouldExecuteUsing(primaryOperation.Url, currentRequest, method, true))
+			{
+				var tuple = await TryOperationAsync(operation, primaryOperation, null, !timeoutThrown && localReplicationDestinations.Count > 0);
+				if (tuple.Success)
+					return tuple.Result;
+				timeoutThrown = tuple.WasTimeout;
+
+				if (!timeoutThrown && IsFirstFailure(primaryOperation.Url))
+				{
+					tuple = await TryOperationAsync(operation, primaryOperation, null, localReplicationDestinations.Count > 0);
+					if (tuple.Success)
+						return tuple.Result;
+					timeoutThrown = tuple.WasTimeout;
+				}
+				IncrementFailureCount(primaryOperation.Url);
+			}
+
+			for (var i = 0; i < localReplicationDestinations.Count; i++)
+			{
+				var replicationDestination = localReplicationDestinations[i];
+				if (ShouldExecuteUsing(replicationDestination.Url, currentRequest, method, false) == false)
+					continue;
+
+				var tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, !timeoutThrown);
+				if (tuple.Success)
+					return tuple.Result;
+				timeoutThrown = tuple.WasTimeout;
+
+				if (!timeoutThrown && IsFirstFailure(replicationDestination.Url))
+				{
+					tuple = await TryOperationAsync(operation, replicationDestination, primaryOperation, localReplicationDestinations.Count > i + 1);
+					if (tuple.Success)
+						return tuple.Result;
+					timeoutThrown = tuple.WasTimeout;
+				}
+				IncrementFailureCount(replicationDestination.Url);
+			}
+			// this should not be thrown, but since I know the value of should...
+			throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
+There is a high probability of a network problem preventing access to all the replicas.
+Failed to get in touch with any of the " + (1 + localReplicationDestinations.Count) + " Raven instances.");
+		}
+
+	    protected class AsyncOperationResult<T>
+	    {
+	        public T Result;
+	        public bool WasTimeout;
+	        public bool Success;
+	    }
+
+        protected async virtual Task<AsyncOperationResult<T>> TryOperationAsync<T>(Func<OperationMetadata, Task<T>> operation, OperationMetadata operationMetadata, OperationMetadata primaryOperationMetadata, bool avoidThrowing)
+        {
+            var tryWithPrimaryCredentials = IsFirstFailure(operationMetadata.Url) && primaryOperationMetadata != null;
+            bool shouldTryAgain = false;
+
+            try
+            {
+
+                var result = await operation(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.Url, primaryOperationMetadata.Credentials) : operationMetadata);
+                ResetFailureCount(operationMetadata.Url);
+                return new AsyncOperationResult<T>
+                {
+                    Result = result,
+                    Success = true
+                };
+            }
+            catch (Exception e)
+            {
+                var ae = e as AggregateException;
+                WebException webException;
+                if (ae != null)
+                {
+                    webException = ae.ExtractSingleInnerException() as WebException;
+                }
+                else
+                {
+                    webException = e as WebException;
+                }
+                if (tryWithPrimaryCredentials && operationMetadata.Credentials.HasCredentials() && webException != null)
+                {
+                    IncrementFailureCount(operationMetadata.Url);
+
+                    var response = webException.Response as HttpWebResponse;
+                    if (response != null && (response.StatusCode == HttpStatusCode.Unauthorized))
+                    {
+                        shouldTryAgain = true;
+                    }
+                }
+
+                if (shouldTryAgain == false)
+                {
+                    if (avoidThrowing == false)
+                        throw;
+
+                    bool wasTimeout;
+                    if (IsServerDown(e, out wasTimeout))
+                    {
+                        return new AsyncOperationResult<T>
+                        {
+                            Success = false,
+                            WasTimeout = wasTimeout
+                        };
+                    }
+                    throw;
+                }
+            }
+            return await TryOperationAsync(operation, operationMetadata, primaryOperationMetadata, avoidThrowing);
+        }
 
 		protected virtual bool TryOperation<T>(Func<OperationMetadata, T> operation, OperationMetadata operationMetadata, OperationMetadata primaryOperationMetadata, bool avoidThrowing, out T result, out bool wasTimeout)
 		{
@@ -574,170 +711,6 @@ Failed to get in touch with any of the " + (1 + localReplicationDestinations.Cou
 				}
 				throw;
 			}
-		}
-		#endregion
-
-		#region ExecuteWithReplicationAsync
-
-		public Task<T> ExecuteWithReplicationAsync<T>(string method, string primaryUrl, OperationCredentials primaryCredentials, int currentRequest, int currentReadStripingBase, Func<OperationMetadata, Task<T>> operation)
-		{
-			return ExecuteWithReplicationAsync(new ExecuteWithReplicationState<T>(method, primaryUrl, primaryCredentials, currentRequest, currentReadStripingBase, operation));
-		}
-
-		private Task<T> ExecuteWithReplicationAsync<T>(ExecuteWithReplicationState<T> state)
-		{
-			var primaryOperation = new OperationMetadata(state.PrimaryUrl, state.PrimaryCredentials);
-
-			switch (state.State)
-			{
-				case ExecuteWithReplicationStates.Start:
-					state.ReplicationDestinations = ReplicationDestinationsUrls;
-
-					var shouldReadFromAllServers = conventions.FailoverBehavior.HasFlag(FailoverBehavior.ReadFromAllServers);
-					if (shouldReadFromAllServers && state.Method == "GET")
-					{
-						var replicationIndex = state.ReadStripingBase % (state.ReplicationDestinations.Count + 1);
-						// if replicationIndex == destinations count, then we want to use the master
-						// if replicationIndex < 0, then we were explicitly instructed to use the master
-						if (replicationIndex < state.ReplicationDestinations.Count && replicationIndex >= 0)
-						{
-							// if it is failing, ignore that, and move to the master or any of the replicas
-							if (ShouldExecuteUsing(state.ReplicationDestinations[replicationIndex].Url, state.CurrentRequest, state.Method, false))
-							{
-								return AttemptOperationAndOnFailureCallExecuteWithReplication(state.ReplicationDestinations[replicationIndex], primaryOperation,
-																							  state.With(ExecuteWithReplicationStates.AfterTryingWithStripedServer),
-																							  state.ReplicationDestinations.Count > state.LastAttempt + 1);
-							}
-						}
-					}
-
-					goto case ExecuteWithReplicationStates.AfterTryingWithStripedServer;
-				case ExecuteWithReplicationStates.AfterTryingWithStripedServer:
-
-					if (!ShouldExecuteUsing(state.PrimaryUrl, state.CurrentRequest, state.Method, true))
-						goto case ExecuteWithReplicationStates.TryAllServers; // skips both checks
-
-					return AttemptOperationAndOnFailureCallExecuteWithReplication(primaryOperation, null,
-																					state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrl),
-																					state.ReplicationDestinations.Count >
-																					state.LastAttempt + 1 && !state.TimeoutThrown);
-
-				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrl:
-					if (!state.TimeoutThrown && IsFirstFailure(state.PrimaryUrl))
-						return AttemptOperationAndOnFailureCallExecuteWithReplication(primaryOperation, null,
-																					  state.With(ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice),
-																					  state.ReplicationDestinations.Count > state.LastAttempt + 1);
-
-					goto case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice;
-				case ExecuteWithReplicationStates.AfterTryingWithDefaultUrlTwice:
-
-					IncrementFailureCount(state.PrimaryUrl);
-
-					goto case ExecuteWithReplicationStates.TryAllServers;
-				case ExecuteWithReplicationStates.TryAllServers:
-
-					// The following part (cases ExecuteWithReplicationStates.TryAllServers, and ExecuteWithReplicationStates.TryAllServersSecondAttempt)
-					// is a for loop, rolled out using goto and nested calls of the method in continuations
-					state.LastAttempt++;
-					if (state.LastAttempt >= state.ReplicationDestinations.Count)
-						goto case ExecuteWithReplicationStates.AfterTryingAllServers;
-
-					var destination = state.ReplicationDestinations[state.LastAttempt];
-					if (!ShouldExecuteUsing(destination.ToString(), state.CurrentRequest, state.Method, false))
-					{
-						// continue the next iteration of the loop
-						goto case ExecuteWithReplicationStates.TryAllServers;
-					}
-
-					return AttemptOperationAndOnFailureCallExecuteWithReplication(destination, primaryOperation,
-																				  state.With(ExecuteWithReplicationStates.TryAllServersSecondAttempt),
-																				  state.ReplicationDestinations.Count >
-																				  state.LastAttempt + 1 && !state.TimeoutThrown);
-				case ExecuteWithReplicationStates.TryAllServersSecondAttempt:
-					destination = state.ReplicationDestinations[state.LastAttempt];
-					if (!state.TimeoutThrown && IsFirstFailure(destination.Url))
-						return AttemptOperationAndOnFailureCallExecuteWithReplication(destination, primaryOperation,
-																					  state.With(ExecuteWithReplicationStates.TryAllServersFailedTwice),
-																					  state.ReplicationDestinations.Count > state.LastAttempt + 1);
-
-					goto case ExecuteWithReplicationStates.TryAllServersFailedTwice;
-				case ExecuteWithReplicationStates.TryAllServersFailedTwice:
-					IncrementFailureCount(state.ReplicationDestinations[state.LastAttempt].Url);
-
-					// continue the next iteration of the loop
-					goto case ExecuteWithReplicationStates.TryAllServers;
-
-				case ExecuteWithReplicationStates.AfterTryingAllServers:
-					throw new InvalidOperationException(@"Attempted to connect to master and all replicas have failed, giving up.
-There is a high probability of a network problem preventing access to all the replicas.
-Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Count) + " Raven instances.");
-
-				default:
-					throw new InvalidOperationException("Invalid ExecuteWithReplicationState " + state);
-			}
-		}
-
-		protected virtual Task<T> AttemptOperationAndOnFailureCallExecuteWithReplication<T>(OperationMetadata operationMetadata, OperationMetadata primaryOperationMetadata, ExecuteWithReplicationState<T> state, bool avoidThrowing)
-		{
-			var tryWithPrimaryCredentials = IsFirstFailure(operationMetadata.Url) && primaryOperationMetadata != null;
-
-			OperationMetadata operationMetadataToUse;
-			if (tryWithPrimaryCredentials)
-				operationMetadataToUse = new OperationMetadata(operationMetadata.Url,primaryOperationMetadata.Credentials);
-			else
-				operationMetadataToUse = operationMetadata;
-
-			Task<Task<T>> finalTask = state.Operation(operationMetadataToUse).ContinueWith(task =>
-			{
-				switch (task.Status)
-				{
-					case TaskStatus.RanToCompletion:
-						ResetFailureCount(operationMetadata.Url);
-						var tcs = new TaskCompletionSource<T>();
-						tcs.SetResult(task.Result);
-						return tcs.Task;
-
-					case TaskStatus.Canceled:
-						tcs = new TaskCompletionSource<T>();
-						tcs.SetCanceled();
-						return tcs.Task;
-
-					case TaskStatus.Faulted:
-						Debug.Assert(task.Exception != null);
-
-						if (task.Exception != null)
-						{
-							var aggregateException = task.Exception;
-							var webException = aggregateException.ExtractSingleInnerException() as WebException;
-
-							if (tryWithPrimaryCredentials && operationMetadata.Credentials.HasCredentials() && webException != null)
-							{
-								IncrementFailureCount(operationMetadata.Url);
-
-								var response = webException.Response as HttpWebResponse;
-								if (response != null && response.StatusCode == HttpStatusCode.Unauthorized)
-								{
-									return AttemptOperationAndOnFailureCallExecuteWithReplication(operationMetadata, primaryOperationMetadata, state, avoidThrowing);
-								}
-							}
-						}
-
-						bool timeoutThrown;
-						if (IsServerDown(task.Exception, out timeoutThrown) && avoidThrowing)
-						{
-							state.TimeoutThrown = timeoutThrown;
-							return ExecuteWithReplicationAsync(state);
-						}
-
-						tcs = new TaskCompletionSource<T>();
-						tcs.SetException(task.Exception);
-						return tcs.Task;
-
-					default:
-						throw new InvalidOperationException("Unknown task status in AttemptOperationAndOnFailureCallExecuteWithReplication");
-				}
-			});
-			return finalTask.Unwrap();
 		}
 
 		protected class ExecuteWithReplicationState<T>
@@ -784,8 +757,6 @@ Failed to get in touch with any of the " + (1 + state.ReplicationDestinations.Co
 			TryAllServersFailedTwice,
 			AfterTryingWithDefaultUrlTwice
 		}
-
-		#endregion
 
 		public bool IsHttpStatus(Exception e, params HttpStatusCode[] httpStatusCode)
 		{

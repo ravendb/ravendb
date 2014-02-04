@@ -177,6 +177,7 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
     documentQuery.cutoffEtag = cutoffEtag;
     documentQuery.queryStats = queryStats;
     documentQuery.theWaitForNonStaleResults = theWaitForNonStaleResults;
+    documentQuery.theWaitForNonStaleResultsAsOfNow = theWaitForNonStaleResultsAsOfNow;
     documentQuery.sortByHints = sortByHints;
     documentQuery.orderByFields = orderByFields;
     documentQuery.distinct = distinct;
@@ -353,6 +354,24 @@ public class DocumentQuery<T> extends AbstractDocumentQuery<T, DocumentQuery<T>>
   @Override
   public <TValue> IDocumentQuery<T> search(Path< ? > propertySelector, String searchTerms) {
     search(getMemberQueryPath(propertySelector), searchTerms);
+    return this;
+  }
+
+  /**
+   * Performs a query matching ANY of the provided values against the given field (OR)
+   */
+  @Override
+  public IDocumentQuery<T> containsAny(Path< ? > propertySelector, Collection<Object> values) {
+    containsAny(getMemberQueryPath(propertySelector), values);
+    return this;
+  }
+
+  /**
+   * Performs a query matching ALL of the provided values against the given field (AND)
+   */
+  @Override
+  public IDocumentQuery<T> containsAll(Path< ? > propertySelector, Collection<Object> values) {
+    containsAll(getMemberQueryPath(propertySelector), values);
     return this;
   }
 

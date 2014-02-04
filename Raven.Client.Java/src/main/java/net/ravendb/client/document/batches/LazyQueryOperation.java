@@ -21,6 +21,8 @@ public class LazyQueryOperation<T> implements ILazyOperation {
   private final Set<String> includes;
   private final Class<T> clazz;
 
+  private QueryResult queryResult;
+
   private Map<String, String> headers;
 
   private Object result;
@@ -32,6 +34,17 @@ public class LazyQueryOperation<T> implements ILazyOperation {
     this.afterQueryExecuted = afterQueryExecuted;
     this.includes = includes;
   }
+
+  @Override
+  public QueryResult getQueryResult() {
+    return queryResult;
+  }
+
+  public void setQueryResult(QueryResult queryResult) {
+    this.queryResult = queryResult;
+  }
+
+
 
   @Override
   public GetRequest createRequest() {
@@ -90,6 +103,7 @@ public class LazyQueryOperation<T> implements ILazyOperation {
     if (afterQueryExecuted != null)
       afterQueryExecuted.apply(queryResult);
     result = queryOperation.complete(clazz);
+    this.queryResult = queryResult;
   }
 
   @Override
