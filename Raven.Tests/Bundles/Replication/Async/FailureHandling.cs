@@ -46,7 +46,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 
 			TellInstanceToReplicateToAnotherInstance(1, 2);
 
-			var aggregateException = await AssertAsync.Throws<AggregateException>(async () =>
+            var conflictException = await AssertAsync.Throws<ConflictException>(async () =>
 			{
 				for (int i = 0; i < RetriesCount; i++)
 				{
@@ -57,8 +57,6 @@ namespace Raven.Tests.Bundles.Replication.Async
 					}
 				}
 			});
-
-			var conflictException = Assert.IsType<ConflictException>(aggregateException.Flatten().InnerException);
 
 			Assert.Equal("Conflict detected on companies/1, conflict must be resolved before the document will be accessible", conflictException.Message);
 		}

@@ -20,7 +20,7 @@ namespace Raven.Tests.Issues
 						                                          .Where(r => r.Items.Count(f => f == "foo") > 1)
 						                                          .ToList());
 					Assert.Equal("Could not understand expression: .Where(r => (r.Items.Count(f => (f == \"foo\")) > 1))", ae.Message);
-                    Assert.Equal("Not supported computation: r.Items.Count(f => (f == \"foo\")). You cannot use computation in RavenDB queries (only simple member expressions are allowed).",
+					Assert.Equal("Not supported computation: r.Items.Count(f => (f == \"foo\")). You cannot use computation in RavenDB queries (only simple member expressions are allowed).",
 						ae.InnerException.Message);
 				}
 			}
