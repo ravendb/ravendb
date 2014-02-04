@@ -582,7 +582,7 @@ public class HttpJsonRequest {
   /**
    * Remember to release resources in HttpResponse entity!
    */
-  public HttpResponse rawExecuteRequest() {
+  public CloseableHttpResponse rawExecuteRequest() {
     try {
       httpResponse = httpClient.execute(webRequest);
     } catch (Exception e) {

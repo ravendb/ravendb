@@ -31,6 +31,7 @@ import net.ravendb.abstractions.indexing.IndexDefinition;
 import net.ravendb.abstractions.indexing.SortOptions;
 import net.ravendb.abstractions.json.linq.RavenJArray;
 import net.ravendb.abstractions.json.linq.RavenJObject;
+import net.ravendb.abstractions.json.linq.RavenJToken;
 import net.ravendb.abstractions.json.linq.RavenJValue;
 import net.ravendb.client.RavenDBAwareTests;
 import net.ravendb.client.connection.IDatabaseCommands;
@@ -41,7 +42,6 @@ import net.ravendb.samples.Developer;
 import net.ravendb.samples.entities.Company;
 import net.ravendb.samples.entities.Employee;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.cglib.core.CollectionUtils;
 import org.mockito.cglib.core.Transformer;
@@ -92,7 +92,6 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
   }
 
   @Test
-  @Ignore("waiting for RavenDB-1229")
   public void testDeleteByIndex() throws Exception {
     try {
       createDb();
@@ -100,12 +99,11 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       insertSampleCompaniesEmployees(dbCommands);
 
       try {
-        dbCommands.deleteByIndex("noSuchIndex", new IndexQuery());
+        dbCommands.deleteByIndex("noSuchIndex", new IndexQuery()).waitForCompletion();
         fail();
       } catch (IllegalStateException e) {
         // ok
       }
-
 
       IndexDefinition indexDefinition = new IndexDefinition();
       indexDefinition.setMap("from c in docs.Companies where c.Name.StartsWith(\"T\") || c.Name.StartsWith(\"C\") select new {Name = c.Name}");
@@ -124,6 +122,8 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
     }
   }
 
+  //TODO: break during stream query and stream docs (using close method)
+
   @Test
   public void testStreamQuery() throws Exception {
     try {
@@ -138,13 +138,12 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
 
       IndexQuery query = new IndexQuery();
       Reference<QueryHeaderInformation> queryHeaderInfo = new Reference<>();
-      Iterator<RavenJObject> iterator = dbCommands.streamQuery("companies/simple", query, queryHeaderInfo);
-
       Set<String> companyNames = new HashSet<>();
-
-      while (iterator.hasNext()) {
-        RavenJObject ravenJObject = iterator.next();
-        companyNames.add(ravenJObject.value(String.class, "Name"));
+      try (RavenJObjectIterator iterator = dbCommands.streamQuery("companies/simple", query, queryHeaderInfo)) {
+        while (iterator.hasNext()) {
+          RavenJObject ravenJObject = iterator.next();
+          companyNames.add(ravenJObject.value(String.class, "Name"));
+        }
       }
 
       assertEquals(new HashSet<>(Arrays.asList("Coca Cola", "Twitter", "Google")), companyNames);
@@ -173,7 +172,7 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       }
 
 
-      Iterator<RavenJObject> streamDocs = dbCommands.streamDocs(null, "companies/", null, 0, Integer.MAX_VALUE);
+      RavenJObjectIterator streamDocs = dbCommands.streamDocs(null, "companies/", null, 0, Integer.MAX_VALUE);
       Set<String> companyNames = new HashSet<>();
 
       while (streamDocs.hasNext()) {
@@ -190,6 +189,8 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
         count++;
       }
 
+      dbCommands.get("123");
+
       assertEquals(2, count);
 
     } finally {
@@ -200,11 +201,11 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
   private static class CompaniesMapReduce extends AbstractIndexCreationTask {
     public CompaniesMapReduce() {
       map = "from c in docs.Companies " +
-      		"from e in c.Employees " +
-      		"select new { Name = e.Name, Count = 1}";
+        "from e in c.Employees " +
+        "select new { Name = e.Name, Count = 1}";
       reduce = "from result in results " +
-      		"group result by result.Name into g " +
-      		"select new { Name = g.Key, Count = g.Sum(x => x.Count) }";
+        "group result by result.Name into g " +
+        "select new { Name = g.Key, Count = g.Sum(x => x.Count) }";
     }
   }
 
@@ -324,7 +325,6 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
   }
 
   @Test
-  @Ignore("waiting for RavenDB-1560")
   public void testQueryWithIncludes() throws Exception {
     try {
       createDb();
@@ -428,7 +428,7 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
     }
   }
 
-  private void insertSampleDataWithIncludes(IDatabaseCommands dbCommands) {
+  private static void insertSampleDataWithIncludes(IDatabaseCommands dbCommands) {
 
     // create objects
     RavenJObject metaSchool = new RavenJObject();
@@ -456,24 +456,24 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
 
   private void insertSampleCompaniesEmployees(IDatabaseCommands dbCommands) {
     Company c1 = new Company("1", "Coca Cola", Arrays.asList(
-        new Employee("John", new ArrayList<String>(), new Date(), 100.0) )
-        , "US", 5000 );
+      new Employee("John", new ArrayList<String>(), new Date(), 100.0) )
+      , "US", 5000 );
 
     Company c2 = new Company("2", "Twitter",  Arrays.asList(
-        new Employee("Mark", Arrays.asList( "Java", "C#" ), new Date(), 100.0) ,
-        new Employee("Jonatan", Arrays.asList( "Java"), new Date(), 100.0) ,
-        new Employee("Greg", Arrays.asList( "C#"), new Date(), 100.0) )
-        , "US", 300);
+      new Employee("Mark", Arrays.asList( "Java", "C#" ), new Date(), 100.0) ,
+      new Employee("Jonatan", Arrays.asList( "Java"), new Date(), 100.0) ,
+      new Employee("Greg", Arrays.asList( "C#"), new Date(), 100.0) )
+      , "US", 300);
 
     Company c3 = new Company("3", "Google",  Arrays.asList(
-        new Employee("Taylor", Arrays.asList( "C#" ), new Date(), 100.0) ,
-        new Employee("Alice", new ArrayList<String>(), new Date(), 100.0) ,
-        new Employee("John", Arrays.asList( "C#"), new Date(), 100.0)
-        ), "US", 200000);
+      new Employee("Taylor", Arrays.asList( "C#" ), new Date(), 100.0) ,
+      new Employee("Alice", new ArrayList<String>(), new Date(), 100.0) ,
+      new Employee("John", Arrays.asList( "C#"), new Date(), 100.0)
+      ), "US", 200000);
 
 
     RavenJObject meta1 = new RavenJObject();
-    meta1.add(Constants.RAVEN_ENTITY_NAME, RavenJValue.fromObject("Companies"));
+    meta1.add(Constants.RAVEN_ENTITY_NAME, RavenJToken.fromObject("Companies"));
 
     dbCommands.put("companies/1", null, RavenJObject.fromObject(c1), meta1);
     dbCommands.put("companies/2", null, RavenJObject.fromObject(c2), meta1);
@@ -482,7 +482,6 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
   }
 
   @Test
-  @Ignore("waiting for RavenDB-1560")
   public void testCreateIndexAndQuery() throws Exception {
     try {
       createDb();
@@ -496,10 +495,10 @@ public class IndexAndQueryTest extends RavenDBAwareTests {
       d2.setId(15l);
 
       RavenJObject meta1 = new RavenJObject();
-      meta1.add(Constants.RAVEN_ENTITY_NAME, RavenJValue.fromObject("Developers"));
+      meta1.add(Constants.RAVEN_ENTITY_NAME, RavenJToken.fromObject("Developers"));
 
       RavenJObject meta2 = new RavenJObject();
-      meta2.add(Constants.RAVEN_ENTITY_NAME, RavenJValue.fromObject("Developers"));
+      meta2.add(Constants.RAVEN_ENTITY_NAME, RavenJToken.fromObject("Developers"));
 
       dbCommands.put("developers/1", null, RavenJObject.fromObject(d1), meta1);
       dbCommands.put("developers/2", null, RavenJObject.fromObject(d2), meta2);

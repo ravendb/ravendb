@@ -91,6 +91,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
@@ -1218,7 +1219,7 @@ public class ServerClient implements IDatabaseCommands {
   }
 
   @Override
-  public Iterator<RavenJObject> streamQuery(String index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo) {
+  public RavenJObjectIterator streamQuery(String index, IndexQuery query, Reference<QueryHeaderInformation> queryHeaderInfo) {
     ensureIsNotNullOrEmpty(index, "index");
     String path = query.getIndexQueryUrl(url, index, "streams/query", false);
     HttpJsonRequest request = jsonRequestFactory.createHttpJsonRequest(
@@ -1238,7 +1239,7 @@ public class ServerClient implements IDatabaseCommands {
     }
     request.addOperationHeader("Single-Use-Auth-Token", token);
 
-    HttpResponse webResponse = request.rawExecuteRequest();
+    CloseableHttpResponse webResponse = request.rawExecuteRequest();
 
     QueryHeaderInformation queryHeaderInformation = new QueryHeaderInformation();
     Map<String, String> headers = HttpJsonRequest.extractHeaders(webResponse.getAllHeaders());
@@ -1261,42 +1262,42 @@ public class ServerClient implements IDatabaseCommands {
   }
 
   @Override
-  public Iterator<RavenJObject> streamDocs() {
+  public RavenJObjectIterator streamDocs() {
     return streamDocs(null, null, null, 0, Integer.MAX_VALUE);
   }
 
   @Override
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag) {
+  public RavenJObjectIterator streamDocs(Etag fromEtag) {
     return streamDocs(fromEtag, null, null, 0, Integer.MAX_VALUE, null);
   }
 
   @Override
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith) {
+  public RavenJObjectIterator streamDocs(Etag fromEtag, String startsWith) {
     return streamDocs(fromEtag, startsWith, null, 0, Integer.MAX_VALUE, null);
   }
 
   @Override
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches) {
+  public RavenJObjectIterator streamDocs(Etag fromEtag, String startsWith, String matches) {
     return streamDocs(fromEtag, startsWith, matches, 0, Integer.MAX_VALUE, null);
   }
 
   @Override
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start) {
+  public RavenJObjectIterator streamDocs(Etag fromEtag, String startsWith, String matches, int start) {
     return streamDocs(fromEtag, startsWith, matches, start, Integer.MAX_VALUE, null);
   }
   @Override
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize) {
+  public RavenJObjectIterator streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize) {
     return streamDocs(fromEtag, startsWith, matches, start, pageSize, null);
   }
 
   @Override
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize, String exclude) {
+  public RavenJObjectIterator streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize, String exclude) {
     return streamDocs(fromEtag, startsWith, matches, start, pageSize, exclude, null);
   }
 
   @SuppressWarnings("null")
   @Override
-  public Iterator<RavenJObject> streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize, String exclude, RavenPagingInformation pagingInformation) {
+  public RavenJObjectIterator streamDocs(Etag fromEtag, String startsWith, String matches, int start, int pageSize, String exclude, RavenPagingInformation pagingInformation) {
     if (fromEtag != null && startsWith != null)
       throw new IllegalArgumentException("Either fromEtag or startsWith must be null, you can't specify both");
 
@@ -1354,11 +1355,11 @@ public class ServerClient implements IDatabaseCommands {
 
     request.addOperationHeader("Single-Use-Auth-Token", token);
 
-    HttpResponse webResponse = request.rawExecuteRequest();
+    CloseableHttpResponse webResponse = request.rawExecuteRequest();
     return yieldStreamResults(webResponse);
   }
 
-  private static Iterator<RavenJObject> yieldStreamResults(final HttpResponse webResponse) {
+  private static RavenJObjectIterator yieldStreamResults(final CloseableHttpResponse webResponse) {
     HttpEntity httpEntity = webResponse.getEntity();
     try {
       InputStream stream = httpEntity.getContent();
@@ -1373,7 +1374,7 @@ public class ServerClient implements IDatabaseCommands {
         throw new IllegalStateException("Unexpected data at 'Results', could not find start results array");
       }
 
-      return new RavenJObjectIterator(httpEntity, jsonParser);
+      return new RavenJObjectIterator(webResponse, jsonParser);
     } catch (IOException e) {
       throw new ServerClientException(e);
     }

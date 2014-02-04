@@ -200,14 +200,15 @@ public class ReplicationInformer implements AutoCloseable {
 
   protected <T> boolean tryOperation(Function1<OperationMetadata, T> operation, OperationMetadata operationMetadata, OperationMetadata primaryOperationMetadata, boolean avoidThrowing,
     Reference<T> result, Reference<Boolean> wasTimeout) {
+    boolean tryWithPrimaryCredentials = isFirstFailure(operationMetadata.getUrl()) && primaryOperationMetadata != null;
     try {
-      boolean tryWithPrimaryCredentials = isFirstFailure(operationMetadata.getUrl()) && primaryOperationMetadata != null;
 
       result.value = operation.apply(tryWithPrimaryCredentials ? new OperationMetadata(operationMetadata.getUrl(), primaryOperationMetadata.getCredentials()) : operationMetadata);
       resetFailureCount(operationMetadata.getUrl());
       wasTimeout.value = Boolean.FALSE;
       return true;
     } catch (Exception e) {
+      //if (tryWithPrimaryCredentials && operationMetadata.getCredentials().hasCredentials() )
       /* TODO
        * var webException = e as WebException;
                 if (tryWithPrimaryCredentials && operationMetadata.Credentials.HasCredentials() && webException != null)
