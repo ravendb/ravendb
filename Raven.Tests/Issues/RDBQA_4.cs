@@ -12,6 +12,26 @@ namespace Raven.Tests.Issues
 {
     public class RDBQA_4 : RavenTest
     {
+        const string groupsString = @"{
+                                     
+                    'Groups': [
+                    {
+                        'Name': 'g1',
+                        'Members': [
+                            { 'Name': 'John', 'Nick': 'yes60' },
+                            { 'Name': 'Smith', 'Nick': 'blacksmith' }
+                        ]
+                    },
+                    {
+                        'Name': 'g2',
+                        'Members': [
+                            { 'Name': 'Amy', 'Nick': 'amy1988' },
+                            { 'Name': 'Adele', 'Nick': 'music02' }
+                        ]
+                    }]
+                    }
+                    ";
+
         [Fact]
         public void Test()
         {
@@ -70,6 +90,80 @@ namespace Raven.Tests.Issues
                         Value = RavenJObject.Parse("{a:1}")
                     }
                 });
+
+                Assert.Equal(4, store.DatabaseCommands.Get("orders/1").DataAsJson.Value<RavenJArray>("Lines").Length);
+
+            }
+        }
+
+        [Fact]
+        public void TestInsertNested()
+        {
+            using (var store = NewDocumentStore())
+            {
+                store.DatabaseCommands.Put("groups/1", null, RavenJObject.Parse(groupsString), new RavenJObject());
+                
+                store.DatabaseCommands.Patch("groups/1", new[]
+                {
+                    new PatchRequest
+                    {
+                        Type = PatchCommandType.Modify,
+                        Name = "Groups",
+                        Position = 1,
+                        Nested = new[]
+                        {
+                            new PatchRequest
+                            {
+                                Type = PatchCommandType.Insert,
+                                Name = "Members",
+                                Value = RavenJToken.Parse("{  'Name' : 'Pinky', 'Nick': 'pinky' }")
+                            }
+                        }
+                    }
+                });
+
+                var groups = store.DatabaseCommands.Get("groups/1").DataAsJson;
+                var groupsInner = groups.Value<RavenJArray>("Groups");
+                Assert.Equal(2, groupsInner.Length);
+                var members = groupsInner[1].Value<RavenJArray>("Members");
+                Assert.Equal(3, members.Length);
+                Assert.Equal("Pinky", members[2].Value<string>("Name"));
+
+            }
+        }
+
+        [Fact]
+        public void TestRemoveNested()
+        {
+            using (var store = NewDocumentStore())
+            {
+                store.DatabaseCommands.Put("groups/1", null, RavenJObject.Parse(groupsString), new RavenJObject());
+
+                store.DatabaseCommands.Patch("groups/1", new[]
+                {
+                    new PatchRequest
+                    {
+                        Type = PatchCommandType.Modify,
+                        Name = "Groups",
+                        Position = 1,
+                        Nested = new[]
+                        {
+                            new PatchRequest
+                            {
+                                Type = PatchCommandType.Remove,
+                                Position = 0,
+                                Name = "Members",
+                            }
+                        }
+                    }
+                });
+
+                var groups = store.DatabaseCommands.Get("groups/1").DataAsJson;
+                var groupsInner = groups.Value<RavenJArray>("Groups");
+                Assert.Equal(2, groupsInner.Length);
+                var members = groupsInner[1].Value<RavenJArray>("Members");
+                Assert.Equal(1, members.Length);
+                Assert.Equal("Adele", members[0].Value<string>("Name"));
 
             }
         }

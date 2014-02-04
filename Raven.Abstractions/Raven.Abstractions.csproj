@@ -171,6 +171,7 @@
     <Compile Include="Data\UuidType.cs" />
     <Compile Include="Exceptions\BadRequestException.cs" />
     <Compile Include="Exceptions\DocumentDoesNotExistsException.cs" />
+    <Compile Include="Exceptions\SmugglerExportException.cs" />
     <Compile Include="Exceptions\TransformCompilationException.cs" />
     <Compile Include="Exceptions\IndexCompilationException.cs" />
     <Compile Include="Exceptions\IndexDisabledException.cs" />
@@ -270,7 +271,6 @@
     <Compile Include="Util\AssemblyHelper.cs" />
     <Compile Include="Util\AsyncEnumeratorBridge.cs" />
     <Compile Include="Util\AsyncManualResetEvent.cs" />
-    <Compile Include="Util\AsyncReaderWriterLock.cs" />
     <Compile Include="Util\AtomicDictionary.cs" />
     <Compile Include="Util\Base62Util.cs" />
     <Compile Include="Util\ComparableByteArray.cs" />

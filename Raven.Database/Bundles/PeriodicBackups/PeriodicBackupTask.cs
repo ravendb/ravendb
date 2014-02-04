@@ -10,6 +10,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Raven.Abstractions;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
@@ -146,15 +147,35 @@ namespace Raven.Database.Bundles.PeriodicBackups
 							var backupPath = localBackupConfigs.LocalFolderName ??
 							                 Path.Combine(documentDatabase.Configuration.DataDirectory, "PeriodicBackup-Temp");
 
-							var exportResult = await new DataDumper(documentDatabase).ExportData(new SmugglerExportOptions {ToFile = backupPath}, new SmugglerOptions
-							{
-								StartDocsEtag = localBackupStatus.LastDocsEtag,
-								StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag,
-							});
+							var dd = new DataDumper(documentDatabase);
+						    ExportDataResult result = null;
+						    string filePath;
+						    try
+						    {
+						        result = await dd.ExportData(new SmugglerExportOptions { ToFile = backupPath }, new SmugglerOptions
+						                                                                                          {
+						                                                                                              StartDocsEtag = localBackupStatus.LastDocsEtag,
+                                                                                                                      StartAttachmentsEtag = localBackupStatus.LastAttachmentsEtag
+						                                                                                          });
+						    }
+						    catch (SmugglerExportException e)
+						    {
+						        filePath = e.File;
+                                logger.ErrorException("Recoverable error when performing periodic backup", e);
+                                Database.AddAlert(new Alert
+                                {
+                                    AlertLevel = AlertLevel.Error,
+                                    CreatedAt = SystemTime.UtcNow,
+                                    Message = e.Message,
+                                    Title = "Recoverable Error in Periodic Backup",
+                                    Exception = e.ToString(),
+                                    UniqueKey = "Periodic Backup Error",
+                                });
+						    }
 
-							// No-op if nothing has changed
-                            if (exportResult.LastDocsEtag == localBackupStatus.LastDocsEtag &&
-                                exportResult.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag)
+						    // No-op if nothing has changed
+                            if (result.LastDocsEtag == localBackupStatus.LastDocsEtag &&
+                                result.LastAttachmentsEtag == localBackupStatus.LastAttachmentsEtag)
 							{
 								logger.Info("Periodic backup returned prematurely, nothing has changed since last backup");
 								return;
@@ -162,15 +183,15 @@ namespace Raven.Database.Bundles.PeriodicBackups
 
 							try
 							{
-								UploadToServer(exportResult.FilePath, localBackupConfigs);
+								UploadToServer(result.FilePath, localBackupConfigs);
 							}
 							finally
 							{
-                                IOExtensions.DeleteDirectory(exportResult.FilePath);
+                                IOExtensions.DeleteDirectory(result.FilePath);
 							}
 
-                            localBackupStatus.LastAttachmentsEtag = exportResult.LastAttachmentsEtag;
-                            localBackupStatus.LastDocsEtag = exportResult.LastDocsEtag;
+                            localBackupStatus.LastAttachmentsEtag = result.LastAttachmentsEtag;
+                            localBackupStatus.LastDocsEtag = result.LastDocsEtag;
 							localBackupStatus.LastBackup = SystemTime.UtcNow;
 
 							var ravenJObject = JsonExtensions.ToJObject(localBackupStatus);

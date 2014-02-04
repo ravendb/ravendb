@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Raven.Abstractions.Data
 {
@@ -8,6 +9,8 @@ namespace Raven.Abstractions.Data
 		/// A list of results for the facet.  One entry for each term/range as specified in the facet setup document.
 		/// </summary>
 		public Dictionary<string, FacetResult> Results { get; set; }
+
+        public TimeSpan Duration { get; set; }
 
 		public FacetResults()
 		{

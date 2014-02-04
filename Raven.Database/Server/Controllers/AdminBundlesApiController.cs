@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿using System;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +17,7 @@ namespace Raven.Database.Server.Controllers
 		{
 			InnerInitialization(controllerContext);
 			var config = DatabasesLandlord.CreateTenantConfiguration(DatabaseName);
-			if (config.ActiveBundles.Contains(BundleName) == false)
+			if (!config.ActiveBundles.Any(activeBundleName => activeBundleName.Equals(BundleName, StringComparison.InvariantCultureIgnoreCase)))
 			{
 				return GetMessageWithObject(new
 				{

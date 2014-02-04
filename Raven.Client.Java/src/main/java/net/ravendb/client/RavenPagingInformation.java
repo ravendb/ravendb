@@ -45,9 +45,4 @@ public class RavenPagingInformation {
   public int getNextPageStart() {
     return nextPageStart;
   }
-
-
-
-
-  //TODO:
 }

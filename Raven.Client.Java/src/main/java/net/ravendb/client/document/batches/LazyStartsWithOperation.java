@@ -7,6 +7,7 @@ import net.ravendb.abstractions.data.Constants;
 import net.ravendb.abstractions.data.GetRequest;
 import net.ravendb.abstractions.data.GetResponse;
 import net.ravendb.abstractions.data.JsonDocument;
+import net.ravendb.abstractions.data.QueryResult;
 import net.ravendb.abstractions.json.linq.RavenJArray;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.client.RavenPagingInformation;
@@ -25,6 +26,7 @@ public class LazyStartsWithOperation<T> implements ILazyOperation {
   private final InMemoryDocumentSessionOperations sessionOperations;
   private final RavenPagingInformation pagingInformation;
   private final Class<T> clazz;
+  private QueryResult queryResult;
 
   private Object result;
   private boolean requiresRetry;
@@ -60,6 +62,16 @@ public class LazyStartsWithOperation<T> implements ILazyOperation {
   @Override
   public Object getResult() {
     return result;
+  }
+
+  @Override
+  public QueryResult getQueryResult() {
+    return queryResult;
+  }
+
+
+  public void setQueryResult(QueryResult queryResult) {
+    this.queryResult = queryResult;
   }
 
   public void setResult(Object result) {

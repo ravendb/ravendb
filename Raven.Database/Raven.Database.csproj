@@ -1212,7 +1212,7 @@
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <Import Project="$(SolutionDir)\Imports\Fody\Fody.targets" />
   <Target Name="BeforeBuild">
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\Config\FodyWeavers.$(Configuration).xml" DestinationFiles="$(MSBuildProjectDirectory)\FodyWeavers.xml" Condition="Exists('$(MSBuildProjectDirectory)\Config\FodyWeavers.$(Configuration).xml')" />
+    <Copy SourceFiles="$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml" DestinationFiles="$(MSBuildProjectDirectory)\FodyWeavers.xml" Condition="Exists('$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml')" />
   </Target>
   <Target Name="AfterBuild">
   </Target>

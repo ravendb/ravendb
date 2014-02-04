@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Abstractions.Data;
@@ -107,7 +108,7 @@ namespace Raven.Client.Document
 
 		private void SetClrType(Type entityType, RavenJObject metadata)
 		{
-			if (
+			if (entityType == typeof(ExpandoObject) ||
 				entityType == typeof(DynamicJsonObject) ||
 				entityType == typeof(RavenJObject)) // dynamic types
 			{

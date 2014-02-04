@@ -20,6 +20,8 @@ namespace Raven.Tests.Bugs
 
 		public OverwriteDocuments()
 		{
+            IOExtensions.DeleteDirectory("HiLoData");
+
 			documentStore = new EmbeddableDocumentStore
 			                	{
 			                		Configuration =

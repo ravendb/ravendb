@@ -113,6 +113,7 @@ public class DatabaseStatistics {
   private int inMemoryIndexingQueueSize;
   private long approximateTaskCount;
   private long countOfDocuments;
+  private long countOfAttachments;
   private String[] staleIndexes;
   private int currentNumberOfItemsToIndexInSingleBatch;
   private int currentNumberOfItemsToReduceInSingleBatch;
@@ -131,6 +132,14 @@ public class DatabaseStatistics {
   }
   public long getApproximateTaskCount() {
     return approximateTaskCount;
+  }
+
+  public long getCountOfAttachments() {
+    return countOfAttachments;
+  }
+
+  public void setCountOfAttachments(long countOfAttachments) {
+    this.countOfAttachments = countOfAttachments;
   }
   public long getCountOfDocuments() {
     return countOfDocuments;

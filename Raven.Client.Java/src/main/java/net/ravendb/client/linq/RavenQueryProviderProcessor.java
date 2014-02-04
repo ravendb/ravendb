@@ -224,6 +224,10 @@ public class RavenQueryProviderProcessor<T> {
       visitContainsKey(expression);
     } else if (expression.getOperator().equals(Ops.CONTAINS_VALUE)) {
       visitContainsValue(expression);
+    } else if (expression.getOperator().equals(LinqOps.Ops.CONTAINS_ALL)) {
+      visitContainsAll(expression);
+    } else if (expression.getOperator().equals(LinqOps.Ops.CONTAINS_ANY)) {
+      visitContainsAny(expression);
     } else if (expression.getOperator().equals(Ops.IS_NULL)) {
       visitIsNull(expression);
     } else if (expression.getOperator().equals(Ops.STRING_IS_EMPTY)) {
@@ -244,6 +248,18 @@ public class RavenQueryProviderProcessor<T> {
     }
   }
 
+
+  private void visitContainsAny(Operation<Boolean> expression) {
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+    Object objects = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
+    luceneQuery.containsAny(memberInfo.getPath(), (Collection<Object>)objects);
+  }
+
+  private void visitContainsAll(Operation<Boolean> expression) {
+    ExpressionInfo memberInfo = getMember(expression.getArg(0));
+    Object objects = getValueFromExpression(expression.getArg(1), getMemberType(memberInfo));
+    luceneQuery.containsAll(memberInfo.getPath(), (Collection<Object>)objects);
+  }
 
   @SuppressWarnings("unchecked")
   private void visitIn(Operation<Boolean> expression) {

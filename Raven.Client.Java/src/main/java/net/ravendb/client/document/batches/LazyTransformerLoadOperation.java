@@ -8,6 +8,7 @@ import org.apache.commons.lang.StringUtils;
 import net.ravendb.abstractions.data.GetRequest;
 import net.ravendb.abstractions.data.GetResponse;
 import net.ravendb.abstractions.data.MultiLoadResult;
+import net.ravendb.abstractions.data.QueryResult;
 import net.ravendb.abstractions.json.linq.RavenJArray;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.client.document.sessionoperations.LoadTransformerOperation;
@@ -23,6 +24,18 @@ public class LazyTransformerLoadOperation<T> implements ILazyOperation {
   private boolean singleResult;
   private Object result;
   private boolean requiresRetry;
+  private QueryResult queryResult;
+
+
+  @Override
+  public QueryResult getQueryResult() {
+    return queryResult;
+  }
+
+
+  public void setQueryResult(QueryResult queryResult) {
+    this.queryResult = queryResult;
+  }
 
   public LazyTransformerLoadOperation(Class<T> clazz, String[] ids, String transformer, LoadTransformerOperation loadTransformerOperation, boolean singleResult) {
     this.clazz = clazz;

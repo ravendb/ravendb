@@ -184,4 +184,6 @@ public interface LinqExtensionsQueryable<T> {
 
   public IRavenQueryable<T> orderByScore();
 
+  public Lazy<Integer> countLazily();
+
 }

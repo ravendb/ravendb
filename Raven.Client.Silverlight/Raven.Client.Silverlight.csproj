@@ -480,8 +480,41 @@
     <Compile Include="..\Raven.Abstractions\Commands\*.cs">
       <Link>Abstructions\Commands\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Connection\*.cs">
-      <Link>Abstructions\Connection\%(FileName)</Link>
+    <Compile Include="..\Raven.Abstractions\Connection\CompressedStringContent.cs">
+      <Link>Abstructions\Connection\CompressedStringContent</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\CountingStream.cs">
+      <Link>Abstructions\Connection\CountingStream</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\ErrorResponseException.cs">
+      <Link>Abstructions\Connection\ErrorResponseException</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\HttpRavenRequest.cs">
+      <Link>Abstructions\Connection\HttpRavenRequest</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\HttpRavenRequestFactory.cs">
+      <Link>Abstructions\Connection\HttpRavenRequestFactory</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\HttpRequestHelper.cs">
+      <Link>Abstructions\Connection\HttpRequestHelper</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\HttpResponseHeadersExtensions.cs">
+      <Link>Abstructions\Connection\HttpResponseHeadersExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\JsonContent.cs">
+      <Link>Abstructions\Connection\JsonContent</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\OAuthHelper.cs">
+      <Link>Abstructions\Connection\OAuthHelper</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\OperationCredentials.cs">
+      <Link>Abstructions\Connection\OperationCredentials</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\WebRequestEventArgs.cs">
+      <Link>Abstructions\Connection\WebRequestEventArgs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
+      <Link>Abstructions\Connection\WebResponseExtensions</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\*.cs">
       <Link>Abstructions\Data\%(FileName)</Link>
@@ -489,8 +522,50 @@
     <Compile Include="..\Raven.Abstractions\Exceptions\*.cs">
       <Link>Abstructions\Exeptions\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Extensions\*.cs">
-      <Link>Abstructions\Extentions\%(FileName)</Link>
+    <Compile Include="..\Raven.Abstractions\Extensions\AttachmentExtensions.cs">
+      <Link>Abstructions\Extentions\AttachmentExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\Buffers.cs">
+      <Link>Abstructions\Extentions\Buffers</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\CharExtensions.cs">
+      <Link>Abstructions\Extentions\CharExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\ConcurrentDictionaryExtensions.cs">
+      <Link>Abstructions\Extentions\ConcurrentDictionaryExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\CryptoTransformExtensions.cs">
+      <Link>Abstructions\Extentions\CryptoTransformExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\DisposableAction.cs">
+      <Link>Abstructions\Extentions\DisposableAction</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\ExceptionExtensions.cs">
+      <Link>Abstructions\Extentions\ExceptionExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\ExpressionExtensions.cs">
+      <Link>Abstructions\Extentions\ExpressionExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\JsonDocumentExtensions.cs">
+      <Link>Abstructions\Extentions\JsonDocumentExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\JsonExtensions.cs">
+      <Link>Abstructions\Extentions\JsonExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\ListExtensions.cs">
+      <Link>Abstructions\Extentions\ListExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\MetadataExtensions.cs">
+      <Link>Abstructions\Extentions\MetadataExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\Reference.cs">
+      <Link>Abstructions\Extentions\Reference</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\StreamExtensions.cs">
+      <Link>Abstructions\Extentions\StreamExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Extensions\TaskExtensions.cs">
+      <Link>Abstructions\Extentions\TaskExtensions</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Extensions\Internal\*.cs">
       <Link>Abstructions\Extentions\Internal\%(FileName)</Link>
@@ -549,14 +624,29 @@
     <Compile Include="..\Raven.Abstractions\MEF\*.cs">
       <Link>Abstructions\MEF\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\OAuth\*.cs">
-      <Link>Abstructions\OAuth\%(FileName)</Link>
+    <Compile Include="..\Raven.Abstractions\OAuth\AbstractAuthenticator.cs">
+      <Link>Abstructions\OAuth\AbstractAuthenticator</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\OAuth\BasicAuthenticator.cs">
+      <Link>Abstructions\OAuth\BasicAuthenticator</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\OAuth\SecuredAuthenticator.cs">
+      <Link>Abstructions\OAuth\SecuredAuthenticator</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Replication\*.cs">
       <Link>Abstructions\Replication\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Smuggler\*.cs">
-      <Link>Abstructions\Smuggler\%(FileName)</Link>
+    <Compile Include="..\Raven.Abstractions\Smuggler\ISmugglerApi.cs">
+      <Link>Abstructions\Smuggler\ISmugglerApi</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Smuggler\SmugglerAction.cs">
+      <Link>Abstructions\Smuggler\SmugglerAction</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Smuggler\SmugglerApiBase.cs">
+      <Link>Abstructions\Smuggler\SmugglerApiBase</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Smuggler\SmugglerOptions.cs">
+      <Link>Abstructions\Smuggler\SmugglerOptions</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Spatial\*.cs">
       <Link>Abstructions\Spatial\%(FileName)</Link>

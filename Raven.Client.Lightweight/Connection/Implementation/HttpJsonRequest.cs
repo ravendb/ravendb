@@ -693,7 +693,7 @@ namespace Raven.Client.Connection
 		{
 			var rawRequestMessage = new HttpRequestMessage(new HttpMethod(Method), Url);
 			CopyHeadersToHttpRequestMessage(rawRequestMessage);
-			var response = await httpClient.SendAsync(rawRequestMessage);
+			var response = await httpClient.SendAsync(rawRequestMessage, HttpCompletionOption.ResponseHeadersRead);
 			await AssertNotFailingResponse(response);
 			return response;
 		}

@@ -45,7 +45,7 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 				}
 
-
+				WaitForIndexing(store);
 				using (var session = store.OpenSession())
 				{
 					var myGroupOfIds = new[] { id1, id3 };

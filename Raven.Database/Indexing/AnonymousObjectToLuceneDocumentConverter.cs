@@ -207,27 +207,24 @@ namespace Raven.Database.Indexing
 			var itemsToIndex = value as IEnumerable;
 			if (itemsToIndex != null && ShouldTreatAsEnumerable(itemsToIndex))
 			{
-				var sentArrayField = false;
-				int count = 1;
+                int count = 1;
+
+                if (nestedArray == false)
+                    yield return new Field(name + "_IsArray", "true", storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+
 				foreach (var itemToIndex in itemsToIndex)
 				{
-					if (nestedArray == false && !Equals(storage, Field.Store.NO) && sentArrayField == false)
-					{
-						sentArrayField = true;
-						yield return new Field(name + "_IsArray", "true", Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
-					}
+				    if (!CanCreateFieldsForNestedArray(itemToIndex, fieldIndexingOptions))
+				        continue;
 
-					if (CanCreateFieldsForNestedArray(itemToIndex, fieldIndexingOptions))
-					{
-						multipleItemsSameFieldCount.Add(count++);
-						foreach (var field in CreateFields(name, itemToIndex, storage, nestedArray: true, defaultTermVector: defaultTermVector, analyzed: analyzed))
-						{
-							yield return field;
-						}
-						multipleItemsSameFieldCount.RemoveAt(multipleItemsSameFieldCount.Count - 1);
-					}
+				    multipleItemsSameFieldCount.Add(count++);
+				    foreach (var field in CreateFields(name, itemToIndex, storage, nestedArray: true, defaultTermVector: defaultTermVector, analyzed: analyzed))
+				        yield return field;
+
+				    multipleItemsSameFieldCount.RemoveAt(multipleItemsSameFieldCount.Count - 1);
 				}
-				yield break;
+
+			    yield break;
 			}
 
 			if (Equals(fieldIndexingOptions, Field.Index.NOT_ANALYZED) ||

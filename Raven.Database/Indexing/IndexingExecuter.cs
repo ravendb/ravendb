@@ -173,157 +173,15 @@ namespace Raven.Database.Indexing
 			context.PerformanceCounters.IndexedPerSecond.IncrementBy(jsonDocs.Count);
 			var result = FilterIndexes(indexesToWorkOn, jsonDocs, lastEtag).ToList();
 
-			ExecuteAllInterleaved(result, index => HandleIndexingFor(index, lastEtag, lastModified));
+			BackgroundTaskExecuter.Instance.ExecuteAllInterleaved(context, result,
+																  index => HandleIndexingFor(index, lastEtag, lastModified));
 
 			return lastEtag;
 		}
 
-		SemaphoreSlim indexingSemaphore;
-		private ManualResetEventSlim indexingCompletedEvent;
-		readonly ConcurrentSet<System.Threading.Tasks.Task> pendingTasks = new ConcurrentSet<System.Threading.Tasks.Task>();
-
-		private void ExecuteAllInterleaved(IList<IndexingBatchForIndex> result, Action<IndexingBatchForIndex> action)
-		{
-			if (result.Count == 0)
-				return;
-			/*
-			This is EXPLICILTY not here, we always want to allow this to run additional indexes
-			if we still have free spots to run them from threading perspective.
-			 
-			if (result.Count == 1)
-			{
-				action(result[0]);
-				return;
-			}
-			*/
-
-			var maxNumberOfParallelIndexTasks = context.Configuration.MaxNumberOfParallelIndexTasks;
-
-			SortResultsMixedAccordingToTimePerDoc(result);
-
-			int isSlowIndex = 0;
-			var totalIndexingTime = Stopwatch.StartNew();
-			var tasks = new System.Threading.Tasks.Task[result.Count];
-			for (int i = 0; i < result.Count; i++)
-			{
-				var index = result[i];
-				var indexToWorkOn = index;
-
-				var sp = Stopwatch.StartNew();
-				var task = new System.Threading.Tasks.Task(() => action(indexToWorkOn));
-				indexToWorkOn.Index.CurrentMapIndexingTask = tasks[i] = task.ContinueWith(done =>
-				{
-					try
-					{
-						sp.Stop();
-
-						if (done.IsFaulted) // this observe the exception
-						{
-							Log.WarnException("Failed to execute indexing task", done.Exception);
-						}
-
-						indexToWorkOn.Index.LastIndexingDuration = sp.Elapsed;
-						indexToWorkOn.Index.TimePerDoc = (double) sp.ElapsedMilliseconds / Math.Max(1, indexToWorkOn.Batch.Docs.Count);
-						indexToWorkOn.Index.CurrentMapIndexingTask = null;
-
-						return done;
-					}
-					catch (ObjectDisposedException)
-					{
-						// nothing to do here, this may happen if the database is disposed
-						// while we have a long running task that didn't complete in time
-						return new CompletedTask();
-					}
-					finally
-					{
-						if (indexingSemaphore != null)
-							indexingSemaphore.Release();
-						if (indexingCompletedEvent != null)
-							indexingCompletedEvent.Set();
-						if (Thread.VolatileRead(ref isSlowIndex) != 0)
-						{
-							// we now need to notify the engine that the slow index(es) is done, and we need to resume its indexing
-							try
-							{
-								context.ShouldNotifyAboutWork(() => "Slow Index Completed Indexing Batch");
-								context.NotifyAboutWork();
-							}
-							catch (ObjectDisposedException)
-							{
-								// nothing to do here, this may happen if the database is disposed
-								// while we have a long running task
-							}
-						}
-					}
-				}).Unwrap();
-
-				indexingSemaphore.Wait();
-
-				task.Start(context.Database.BackgroundTaskScheduler);
-			}
-
-			// we only get here AFTER we finished scheduling all the indexes
-			// we wait until we have at least parallel / 2 spots opened (for the _next_ indexing batch) or 8, if we are 
-			// running on Enterprise / high end systems
-			int minIndexingSpots = Math.Min((maxNumberOfParallelIndexTasks / 2), 8);
-			while (indexingSemaphore.CurrentCount < minIndexingSpots)
-			{
-				indexingCompletedEvent.Wait();
-				indexingCompletedEvent.Reset();
-			}
-
-			// now we have the chance to start a new indexing batch with the old items, but we still
-			// want to wait for a bit to _avoid_ creating multiple batches if we can possibly avoid it.
-			// We will wait for 3/4 the time we waited so far, and a min of 15 seconds
-			var timeToWait = Math.Max((int)(totalIndexingTime.ElapsedMilliseconds / 4) * 3, 15000);
-			var totalWaitTime = Stopwatch.StartNew();
-			while (indexingSemaphore.CurrentCount < maxNumberOfParallelIndexTasks)
-			{
-				int timeout = timeToWait - (int)totalWaitTime.ElapsedMilliseconds;
-				if (timeout <= 0)
-					break;
-				indexingCompletedEvent.Reset();
-				indexingCompletedEvent.Wait(timeout);
-			}
-
-			var creatingNewBatch = indexingSemaphore.CurrentCount < maxNumberOfParallelIndexTasks;
-			if (creatingNewBatch == false)
-				return;
-
-			Interlocked.Increment(ref isSlowIndex);
-
-			if (Log.IsDebugEnabled == false)
-				return;
-
-			var slowIndexes = result.Where(x =>
-			{
-				var currentMapIndexingTask = x.Index.CurrentMapIndexingTask;
-				return currentMapIndexingTask != null && !currentMapIndexingTask.IsCompleted;
-			})
-				.Select(x => x.IndexId)
-				.ToArray();
-
-			Log.Debug("Indexing is now split because there are {0:#,#} slow indexes [{1}], memory usage may increase, and those indexing may experience longer stale times (but other indexes will be faster)",
-					 slowIndexes.Length,
-					 string.Join(", ", slowIndexes));
-		}
-
-		private static void SortResultsMixedAccordingToTimePerDoc(IList<IndexingBatchForIndex> result)
-		{
-			var orderedBy = result.OrderBy(x => x.Index.TimePerDoc).ToArray();
-			int startPos = 0, endPos = orderedBy.Length;
-			int resultPos = 0;
-			while (startPos < endPos)
-			{
-				result[resultPos++] = orderedBy[startPos++];
-				if (resultPos + 1 < result.Count)
-					result[resultPos++] = orderedBy[--endPos];
-			}
-		}
-
 		private void HandleIndexingFor(IndexingBatchForIndex batchForIndex, Etag lastEtag, DateTime lastModified)
 		{
-			currentlyProcessedIndexes.TryAdd(batchForIndex.IndexId, batchForIndex.Index);
+		    currentlyProcessedIndexes.TryAdd(batchForIndex.IndexId, batchForIndex.Index);
 
 			try
 			{
@@ -346,7 +204,7 @@ namespace Raven.Database.Indexing
 				transactionalStorage.Batch(actions =>
 					// whatever we succeeded in indexing or not, we have to update this
 					// because otherwise we keep trying to re-index failed documents
-										   actions.Indexing.UpdateLastIndexed(batchForIndex.Index.indexId, lastEtag, lastModified));
+										   actions.Indexing.UpdateLastIndexed(batchForIndex.IndexId, lastEtag, lastModified));
 
 				Index _;
 				currentlyProcessedIndexes.TryRemove(batchForIndex.IndexId, out _);
@@ -358,7 +216,7 @@ namespace Raven.Database.Indexing
 		{
 			public int IndexId { get; set; }
 
-			public Index Index { get; set; }
+            public Index Index { get; set; }
 
 			public Etag LastIndexedEtag { get; set; }
 
@@ -449,7 +307,7 @@ namespace Raven.Database.Indexing
 				{
 					Batch = batch,
 					IndexId = indexToWorkOn.IndexId,
-					Index = indexToWorkOn.Index,
+                    Index = indexToWorkOn.Index,
 					LastIndexedEtag = indexToWorkOn.LastIndexedEtag
 				};
 
@@ -510,29 +368,10 @@ namespace Raven.Database.Indexing
 		protected override void Dispose()
 		{
 			var exceptionAggregator = new ExceptionAggregator(Log, "Could not dispose of IndexingExecuter");
-			foreach (var pendingTask in pendingTasks)
-			{
-				exceptionAggregator.Execute(pendingTask.Wait);
-			}
-			pendingTasks.Clear();
 
 			exceptionAggregator.Execute(prefetchingBehavior.Dispose);
 
-			if (indexingCompletedEvent != null)
-				exceptionAggregator.Execute(indexingCompletedEvent.Dispose);
-			if (indexingSemaphore != null)
-				exceptionAggregator.Execute(indexingSemaphore.Dispose);
 			exceptionAggregator.ThrowIfNeeded();
-
-			indexingCompletedEvent = null;
-			indexingSemaphore = null;
 		}
-
-		protected override void Init()
-		{
-			indexingSemaphore = new SemaphoreSlim(context.Configuration.MaxNumberOfParallelIndexTasks);
-			indexingCompletedEvent = new ManualResetEventSlim(false);
-			base.Init();
 		}
     }
-}

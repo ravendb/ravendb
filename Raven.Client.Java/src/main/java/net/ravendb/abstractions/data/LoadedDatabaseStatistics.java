@@ -13,6 +13,7 @@ public class LoadedDatabaseStatistics {
   private long totalDatabaseSize;
   private String totalDatabaseHumaneSize;
   private long countOfDocuments;
+  private long countOfAttachments;
   private double requestsPerSecond;
   private int concurrentRequests;
   private double databaseTransactionVersionSizeInMB;
@@ -43,6 +44,14 @@ public class LoadedDatabaseStatistics {
 
   public String getTransactionalStorageSizeHumaneSize() {
     return transactionalStorageSizeHumaneSize;
+  }
+
+  public long getCountOfAttachments() {
+    return countOfAttachments;
+  }
+
+  public void setCountOfAttachments(long countOfAttachments) {
+    this.countOfAttachments = countOfAttachments;
   }
 
   public void setTransactionalStorageSizeHumaneSize(String transactionalStorageSizeHumaneSize) {

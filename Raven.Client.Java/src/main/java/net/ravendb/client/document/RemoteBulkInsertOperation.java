@@ -88,7 +88,7 @@ public class RemoteBulkInsertOperation implements ILowLevelBulkInsertOperation, 
   }
 
   private void subscribeToBulkInsertNotifications(IDatabaseChanges changes) {
-    changes.forBulkInsert(operationId).subscribe(this);
+     changes.forBulkInsert(operationId).subscribe(this);
   }
 
   private class BulkInsertEntity implements HttpEntity {
