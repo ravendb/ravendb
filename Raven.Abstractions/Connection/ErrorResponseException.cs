@@ -9,26 +9,16 @@ using Raven.Abstractions.Data;
 namespace Raven.Abstractions.Connection
 {
 #if !NETFX_CORE && !SILVERLIGHT
-	[Serializable]
+    [Serializable]
 #endif
-	public class ErrorResponseException : Exception
-	{
+    public class ErrorResponseException : Exception
+    {
 	    public HttpResponseMessage Response { get; private set; }
 
-		public HttpStatusCode StatusCode
-		{
-			get { return Response.StatusCode; }
-		}
-
-		public ErrorResponseException()
-		{
-		}
-
-		public ErrorResponseException(HttpResponseMessage response, string msg, Exception exception)
-             : base(msg, exception)
-		{
-			Response = response;
-		}
+        public HttpStatusCode StatusCode
+        {
+            get { return Response.StatusCode; }
+        }
 
 	    public ErrorResponseException(ErrorResponseException e, string message)
             :base(message)
@@ -36,6 +26,12 @@ namespace Raven.Abstractions.Connection
 	        Response = e.Response;
 	        ResponseString = e.ResponseString;
 	    }
+
+        public ErrorResponseException(HttpResponseMessage response, string msg, Exception exception)
+            : base(msg, exception)
+        {
+            Response = response;
+        }
 
         public ErrorResponseException(HttpResponseMessage response, string msg)
             : base(msg)
@@ -84,11 +80,12 @@ namespace Raven.Abstractions.Connection
 	    }
 
 #if !NETFX_CORE && !SILVERLIGHT
-		protected ErrorResponseException(
-			System.Runtime.Serialization.SerializationInfo info,
-			System.Runtime.Serialization.StreamingContext context) : base(info, context)
-		{
-		}
+        protected ErrorResponseException(
+            System.Runtime.Serialization.SerializationInfo info,
+            System.Runtime.Serialization.StreamingContext context)
+            : base(info, context)
+        {
+        }
 #endif
-	}
+    }
 }

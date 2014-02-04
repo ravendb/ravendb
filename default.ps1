@@ -370,6 +370,10 @@ task CreateDocs {
 	{
 	  return 
 	}
+
+	if ($global:uploadMode -ne "Stable"){
+		return; # this takes 8 minutes to run
+	}
 	 
 	# we expliclty allows this to fail
 	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Raven.Docs.shfbproj" /p:OutDir="$buildartifacts_dir\" }
@@ -606,6 +610,10 @@ task CreateNugetPackages -depends Compile {
 }
 
 task PublishSymbolSources -depends CreateNugetPackages {
+	
+	if ($global:uploadMode -ne "Stable"){
+		return; # this takes 20 minutes to run
+	}
 
 	$nuget_dir = "$buildartifacts_dir\NuGet"
 	

@@ -100,7 +100,7 @@ namespace Raven.Tests.Security.OAuth
 			var company = WaitForDocument<Company>(store2, "companies/1");
 			Assert.Equal("Hibernating Rhinos", company.Name);
 
-			var serverClient = ((ServerClient)store1.DatabaseCommands);
+			var serverClient = (ServerClient)store1.DatabaseCommands;
 			serverClient.ReplicationInformer.RefreshReplicationInformation(serverClient);
 
 			servers[0].Dispose();

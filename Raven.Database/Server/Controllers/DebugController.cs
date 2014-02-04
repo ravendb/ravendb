@@ -327,7 +327,6 @@ namespace Raven.Database.Server.Controllers
 					IndexName = x.PublicName,
 					IsMapReduce = x.IsMapReduce,
 					CurrentOperations = x.GetCurrentIndexingPerformance().Select(p => new { p.Operation, NumberOfProcessingItems = p.InputCount}),
-					LastMapRate =  string.Format("{0:0.0000} ms/doc", x.TimePerDoc),
 					Priority = x.Priority,
 					OverallIndexingRate = x.GetIndexingPerformance().Where(ip => ip.Duration != TimeSpan.Zero).GroupBy(y => y.Operation).Select(g => new
 					{

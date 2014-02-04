@@ -3,6 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Threading;
+
 namespace Raven.Tests.Issues
 {
     using System;
@@ -24,6 +26,12 @@ namespace Raven.Tests.Issues
         {
             if (File.Exists(DumpFile))
                 File.Delete(DumpFile);
+        }
+
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
+        {
+            configuration.DefaultStorageTypeName = GetDefaultStorageType("esent");
+            configuration.RunInMemory = false;
         }
 
         [Fact]
@@ -57,8 +65,15 @@ namespace Raven.Tests.Issues
             Assert.NotNull(store3.DatabaseCommands.Get("1"));
             Assert.NotNull(store3.DatabaseCommands.Get("2"));
 
-            var container = store3.DatabaseCommands.Get("Raven/Alerts");
-            Assert.NotNull(container);
+	        int retries = 5;
+	        JsonDocument container = null;
+			while (container == null && retries-- >0)
+	        {
+		        container = store3.DatabaseCommands.Get("Raven/Alerts");
+				if(container == null)
+					Thread.Sleep(100);
+	        }
+	        Assert.NotNull(container);
 
             var alerts = container.DataAsJson["Alerts"].Values<RavenJObject>()
                 .ToList();
