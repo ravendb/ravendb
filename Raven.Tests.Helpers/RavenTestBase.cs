@@ -27,6 +27,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
+using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -46,6 +47,11 @@ namespace Raven.Tests.Helpers
 		{
             Environment.SetEnvironmentVariable(Constants.RavenDefaultQueryTimeout, "30");
 			CommonInitializationUtil.Initialize();
+
+			// Make sure to delete the Data folder which we be used by tests that do not call the NewDataPath from whatever reason.
+			var dataFolder = FilePathTools.MakeSureEndsWithSlash(@"~\Data".ToFullPath());
+			ClearDatabaseDirectory(dataFolder);
+			pathsToDelete.Add(dataFolder);
 		}
 
 		protected string NewDataPath(string prefix = null)
