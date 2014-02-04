@@ -518,10 +518,7 @@ namespace Raven.Tests.Helpers
 						File.Exists(pathToDelete)	// Just in order to be sure we didn't created a file in that path, by mistake
 						)
 					{
-						if (errors.Count > 0)
-							throw new AggregateException(errors);
-						
-						throw new IOException(string.Format("We tried to delete the '{0}' directory, but failed", pathToDelete));
+						errors.Add(new IOException(string.Format("We tried to delete the '{0}' directory, but failed", pathToDelete)));
 					}
 				}
 			}
