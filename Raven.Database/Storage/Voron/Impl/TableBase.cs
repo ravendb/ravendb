@@ -77,7 +77,13 @@ namespace Raven.Database.Storage.Voron.Impl
 
 		public bool Contains(SnapshotReader snapshot, Slice key, WriteBatch writeBatch)
 		{
-			return snapshot.Contains(TableName, key, writeBatch);
+			ushort? version;
+			return Contains(snapshot, key, writeBatch, out version);
+		}
+
+		public bool Contains(SnapshotReader snapshot, Slice key, WriteBatch writeBatch, out ushort? version)
+		{
+			return snapshot.Contains(TableName, key, out version, writeBatch);
 		}
 
 		public int GetDataSize(SnapshotReader snapshot, Slice key)

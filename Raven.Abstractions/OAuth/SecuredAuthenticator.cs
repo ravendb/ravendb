@@ -236,14 +236,14 @@ namespace Raven.Abstractions.OAuth
                                                .AddUrlIfFaulting(new Uri(requestUri))
                                                .ConvertSecurityExceptionToServerNotFound();
 
-                if (response.IsSuccessStatusCode == false)
-                {
-                    // We've already tried three times and failed
-                    if (tries >= 3)
-                        throw ErrorResponseException.FromResponseMessage(response);
+				if (response.IsSuccessStatusCode == false)
+				{
+					// We've already tried three times and failed
+					if (tries >= 3)
+						throw ErrorResponseException.FromResponseMessage(response);
 
-                    if (response.StatusCode != HttpStatusCode.PreconditionFailed)
-                        throw ErrorResponseException.FromResponseMessage(response);
+					if (response.StatusCode != HttpStatusCode.PreconditionFailed)
+						throw ErrorResponseException.FromResponseMessage(response);
 
                     var header = response.Headers.GetFirstValue("WWW-Authenticate");
                     if (header == null || header.StartsWith(OAuthHelper.Keys.WWWAuthenticateHeaderKey) == false)

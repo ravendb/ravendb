@@ -480,8 +480,41 @@
     <Compile Include="..\Raven.Abstractions\Commands\*.cs">
       <Link>Abstructions\Commands\%(FileName)</Link>
     </Compile>
-    <Compile Include="..\Raven.Abstractions\Connection\*.cs">
-      <Link>Abstructions\Connection\%(FileName)</Link>
+    <Compile Include="..\Raven.Abstractions\Connection\CompressedStringContent.cs">
+      <Link>Abstructions\Connection\CompressedStringContent</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\CountingStream.cs">
+      <Link>Abstructions\Connection\CountingStream</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\ErrorResponseException.cs">
+      <Link>Abstructions\Connection\ErrorResponseException</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\HttpRavenRequest.cs">
+      <Link>Abstructions\Connection\HttpRavenRequest</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\HttpRavenRequestFactory.cs">
+      <Link>Abstructions\Connection\HttpRavenRequestFactory</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\HttpRequestHelper.cs">
+      <Link>Abstructions\Connection\HttpRequestHelper</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\HttpResponseHeadersExtensions.cs">
+      <Link>Abstructions\Connection\HttpResponseHeadersExtensions</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\JsonContent.cs">
+      <Link>Abstructions\Connection\JsonContent</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\OAuthHelper.cs">
+      <Link>Abstructions\Connection\OAuthHelper</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\OperationCredentials.cs">
+      <Link>Abstructions\Connection\OperationCredentials</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\WebRequestEventArgs.cs">
+      <Link>Abstructions\Connection\WebRequestEventArgs</Link>
+    </Compile>
+    <Compile Include="..\Raven.Abstractions\Connection\WebResponseExtensions.cs">
+      <Link>Abstructions\Connection\WebResponseExtensions</Link>
     </Compile>
     <Compile Include="..\Raven.Abstractions\Data\*.cs">
       <Link>Abstructions\Data\%(FileName)</Link>

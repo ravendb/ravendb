@@ -54,16 +54,7 @@ namespace Raven.Client.UniqueConstraints
 			if (values.Length == 0) { return new T[0]; }
 
 			var typeName = session.Advanced.DocumentStore.Conventions.GetTypeTagName(typeof(T));
-			bool isDef = Attribute.IsDefined(body.Member, typeof(UniqueConstraintAttribute));
-			bool isDef = Attribute.IsDefined(body.Member, typeof(UniqueConstraintAttribute));
-
-			if (isDef == false)
-			{
-				var msg = string.Format(
-					"You are calling LoadByUniqueConstraints on {0}.{1}, but you haven't marked this property with [UniqueConstraint]",
-					body.Member.DeclaringType.Name, propertyName);
-				throw new InvalidOperationException(msg);
-			}
+		
 			var constraintInfo = session.Advanced.DocumentStore.GetUniquePropertiesForType(typeof(T)).SingleOrDefault(ci => ci.Configuration.Name == propertyName);
 
 			if (constraintInfo != null)
@@ -108,6 +99,15 @@ namespace Raven.Client.UniqueConstraints
 	            var op = ((UnaryExpression) keySelector.Body).Operand;
 	            body = ((MemberExpression) op);
 	        }
+			bool isDef = Attribute.IsDefined(body.Member, typeof(UniqueConstraintAttribute));
+
+			if (isDef == false)
+			{
+				var msg = string.Format(
+					"You are calling LoadByUniqueConstraints on {0}.{1}, but you haven't marked this property with [UniqueConstraint]",
+					body.Member.DeclaringType.Name, body.Member.Name);
+				throw new InvalidOperationException(msg);
+			}
 	        return body;
 	    }
 

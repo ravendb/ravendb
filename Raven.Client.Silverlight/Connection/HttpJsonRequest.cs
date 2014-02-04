@@ -167,8 +167,8 @@ namespace Raven.Client.Silverlight.Connection
             }
 
 
-            if (Response.IsSuccessStatusCode == false)
-                throw ErrorResponseException.FromResponseMessage(Response);
+			if (Response.IsSuccessStatusCode == false)
+				throw ErrorResponseException.FromResponseMessage(Response);
 
             return await ReadStringInternal();
             ;
@@ -220,12 +220,12 @@ namespace Raven.Client.Silverlight.Connection
         {
             await WaitForTask;
 
-            Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url))
-                                                    .ConvertSecurityExceptionToServerNotFound()
-                                       .AddUrlIfFaulting(new Uri(Url));
-            SetResponseHeaders(Response);
-            if (Response.IsSuccessStatusCode == false)
-                throw ErrorResponseException.FromResponseMessage(Response);
+			Response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(Method), Url))
+													.ConvertSecurityExceptionToServerNotFound()
+									   .AddUrlIfFaulting(new Uri(Url));
+			SetResponseHeaders(Response);
+			if (Response.IsSuccessStatusCode == false)
+				throw ErrorResponseException.FromResponseMessage(Response);
 
             // TODO: Use RetryIfNeedTo(task, ReadResponseBytesAsync)
             return ConvertStreamToBytes(await Response.GetResponseStreamWithHttpDecompression());
@@ -335,9 +335,9 @@ namespace Raven.Client.Silverlight.Connection
                 Content = new CompressedStringContent(data, factory.DisableRequestCompression),
             });
 
-            if (Response.IsSuccessStatusCode == false)
-                throw ErrorResponseException.FromResponseMessage(Response);
-        }
+			if (Response.IsSuccessStatusCode == false)
+				throw ErrorResponseException.FromResponseMessage(Response);
+		}
 
         public async Task WriteAsync(RavenJToken tokenToWrite)
         {
@@ -365,9 +365,9 @@ namespace Raven.Client.Silverlight.Connection
                 Content = new CompressedStreamContent(stream, factory.DisableRequestCompression)
             });
 
-            if (Response.IsSuccessStatusCode == false)
-                throw ErrorResponseException.FromResponseMessage(Response);
-        }
+			if (Response.IsSuccessStatusCode == false)
+				throw ErrorResponseException.FromResponseMessage(Response);
+		}
 
         /// <summary>
         /// Adds the operation headers.
@@ -432,52 +432,52 @@ namespace Raven.Client.Silverlight.Connection
             }
         }
 
-        private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync()
-        {
-            if (Response.IsSuccessStatusCode == false)
-            {
-                if (Response.StatusCode == HttpStatusCode.Unauthorized ||
-                    Response.StatusCode == HttpStatusCode.NotFound ||
-                    Response.StatusCode == HttpStatusCode.Conflict)
-                {
-                    throw ErrorResponseException.FromResponseMessage(Response);
-                }
+		private async Task<RavenJToken> CheckForErrorsAndReturnCachedResultIfAnyAsync()
+		{
+			if (Response.IsSuccessStatusCode == false)
+			{
+				if (Response.StatusCode == HttpStatusCode.Unauthorized ||
+					Response.StatusCode == HttpStatusCode.NotFound ||
+					Response.StatusCode == HttpStatusCode.Conflict)
+				{
+					throw ErrorResponseException.FromResponseMessage(Response);
+				}
 
                 using (var sr = new StreamReader(await Response.GetResponseStreamWithHttpDecompression()))
                 {
                     var readToEnd = sr.ReadToEnd();
 
-                    if (string.IsNullOrWhiteSpace(readToEnd))
-                        throw ErrorResponseException.FromResponseMessage(Response);
+					if (string.IsNullOrWhiteSpace(readToEnd))
+						throw ErrorResponseException.FromResponseMessage(Response);
 
-                    RavenJObject ravenJObject;
-                    try
-                    {
-                        ravenJObject = RavenJObject.Parse(readToEnd);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new ErrorResponseException(Response, readToEnd, e);
-                    }
-                    if (ravenJObject.ContainsKey("IndexDefinitionProperty"))
-                    {
-                        throw new IndexCompilationException(ravenJObject.Value<string>("Message"))
-                        {
-                            IndexDefinitionProperty = ravenJObject.Value<string>("IndexDefinitionProperty"),
-                            ProblematicText = ravenJObject.Value<string>("ProblematicText")
-                        };
-                    }
-                    if (Response.StatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
-                    {
-                        throw new BadRequestException(ravenJObject.Value<string>("Message"), ErrorResponseException.FromResponseMessage(Response));
-                    }
-                    if (ravenJObject.ContainsKey("Error"))
-                    {
-                        var sb = new StringBuilder();
-                        foreach (var prop in ravenJObject)
-                        {
-                            if (prop.Key == "Error")
-                                continue;
+					RavenJObject ravenJObject;
+					try
+					{
+						ravenJObject = RavenJObject.Parse(readToEnd);
+					}
+					catch (Exception e)
+					{
+						throw new ErrorResponseException(Response, readToEnd, e);
+					}
+					if (ravenJObject.ContainsKey("IndexDefinitionProperty"))
+					{
+						throw new IndexCompilationException(ravenJObject.Value<string>("Message"))
+						{
+							IndexDefinitionProperty = ravenJObject.Value<string>("IndexDefinitionProperty"),
+							ProblematicText = ravenJObject.Value<string>("ProblematicText")
+						};
+					}
+					if (Response.StatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
+					{
+						throw new BadRequestException(ravenJObject.Value<string>("Message"), ErrorResponseException.FromResponseMessage(Response));
+					}
+					if (ravenJObject.ContainsKey("Error"))
+					{
+						var sb = new StringBuilder();
+						foreach (var prop in ravenJObject)
+						{
+							if (prop.Key == "Error")
+								continue;
 
                             sb.Append(prop.Key).Append(": ").AppendLine(prop.Value.ToString(Formatting.Indented));
                         }

@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Logging;
 using Raven.Abstractions.MEF;
 using Raven.Database;
 using Raven.Database.Config;
@@ -30,7 +31,7 @@ namespace Raven.Storage.Managed
 	{
 		private readonly ThreadLocal<IStorageActionsAccessor> current = new ThreadLocal<IStorageActionsAccessor>();
 		private readonly ThreadLocal<object> disableBatchNesting = new ThreadLocal<object>();
-
+	    private readonly ILog log = LogManager.GetCurrentClassLogger();
 		private readonly InMemoryRavenConfiguration configuration;
 		private readonly Action onCommit;
 		private TableStorage tableStorage;
@@ -66,9 +67,14 @@ namespace Raven.Storage.Managed
 
 		public void Dispose()
 		{
-			disposerLock.EnterWriteLock();
-			try
-			{
+            var tryEnterWriteLock = disposerLock.TryEnterWriteLock(TimeSpan.FromMinutes(2));
+            try
+            {
+                if (tryEnterWriteLock == false)
+                    log.Warn("After waiting for 2 minutes, could not aqcuire disposal lock, will force disposal anyway, pending transactions will all error");
+
+                if (disposed)
+                    return;
 				if (disposed)
 					return;
 				disposed = true;
@@ -83,9 +89,10 @@ namespace Raven.Storage.Managed
 					tableStorage.Dispose();
 			}
 			finally
-			{
-				disposerLock.ExitWriteLock();
-			}
+            {
+                if (tryEnterWriteLock)
+                    disposerLock.ExitWriteLock();
+            }
 		}
 
 		public Guid Id

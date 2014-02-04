@@ -7,7 +7,9 @@ namespace Raven.Database.Server.Controllers
 	[RoutePrefix("")]
 	public class OperationsController : RavenDbApiController
 	{
-		[HttpGet][Route("operation/status")]
+		[HttpGet]
+		[Route("operation/status")]
+		[Route("databases/{databaseName}/operation/status")]
 		public HttpResponseMessage OperationStatusGet()
 		{
 			var idStr = GetQueryStringValue("id");

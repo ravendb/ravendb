@@ -578,8 +578,8 @@ namespace Raven.Client.Embedded
 				var key = header;
 
 				// Need to be removed when we remove the embedded.
-				if(DateTime.Now > new DateTime(2014,2,1))
-					throw new Exception("This is an ugly code that was supposed to be fixed by this time");
+				if(DateTime.Now > new DateTime(2014,3,1))
+                    throw new Exception("This is an ugly code that was supposed to be fixed by this time: RavenDB-1484");
 				if (sort == SortOptions.Long && key.EndsWith("_Range"))
 				{
 					key = key.Substring(0, key.Length - "_Range".Length);
@@ -621,6 +621,7 @@ namespace Raven.Client.Embedded
 									waitForHeaders.Set();
 									setWaitHandle = false;
 									op.Execute(items.Add);
+                                    items.CompleteAdding();
 								}	
 							});
 						}
@@ -643,7 +644,11 @@ namespace Raven.Client.Embedded
 				}, TaskCreationOptions.LongRunning);
 				waitForHeaders.Wait();
 				queryHeaderInfo = localQueryHeaderInfo;
-				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), items.Dispose);
+				return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task), () =>
+				{
+				    items.CompleteAdding();
+				    items.Dispose();
+				});
 			}
 		}
 
@@ -657,67 +662,99 @@ namespace Raven.Client.Embedded
 				throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
 
 			var items = new BlockingCollection<RavenJObject>(1024);
+            Action<RavenJObject> addItem = o =>
+            {
+                try
+                {
+                    items.Add(o);
+                }
+                catch (InvalidOperationException e)
+                {
+                    throw new ObjectDisposedException("items", e);
+                }
+            };
 			var task = Task.Factory.StartNew(() =>
 			{
+				var disposed = false;
 				// we may be sending a LOT of documents to the user, and most 
 				// of them aren't going to be relevant for other ops, so we are going to skip
 				// the cache for that, to avoid filling it up very quickly
 				using (DocumentCacher.SkipSettingDocumentsInDocumentCache())
 				{
-					try
-					{
-						if (string.IsNullOrEmpty(startsWith))
-						{
-							database.GetDocuments(start, pageSize, fromEtag,
-								CancellationToken.None,
-							                      items.Add);
-						}
-						else
-						{
-                            var actualStart = start;
-                            var nextPageStart = 0;
+				    try
+				    {
+				        if (string.IsNullOrEmpty(startsWith))
+				        {
+				            database.GetDocuments(start, pageSize, fromEtag,
+				                CancellationToken.None,
+				                addItem);
+				        }
+				        else
+				        {
+				            var actualStart = start;
+				            var nextPageStart = 0;
 
-                            var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
-                            if (nextPage)
-                            {
-                                actualStart = pagingInformation.NextPageStart;
-                                nextPageStart = actualStart;
-                            }
+				            var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+				            if (nextPage)
+				            {
+				                actualStart = pagingInformation.NextPageStart;
+				                nextPageStart = actualStart;
+				            }
 
-							database.GetDocumentsWithIdStartingWith(
-								startsWith,
-								matches,
-                                exclude,
-								actualStart,
-								pageSize,
-								CancellationToken.None,
-								ref nextPageStart,
-								items.Add);
 
-						    return nextPageStart;
-						}
-					}
-					catch (ObjectDisposedException)
-					{
-					}
+				            database.GetDocumentsWithIdStartingWith(
+				                startsWith,
+				                matches,
+				                exclude,
+				                actualStart,
+				                pageSize,
+				                CancellationToken.None,
+				                ref nextPageStart,
+				                addItem);
+
+				            return nextPageStart;
+				        }
+				    }
+				    catch (ObjectDisposedException)
+				    {
+					    disposed = true;
+				    }
+				    finally
+				    {
+						if(disposed == false)
+							items.CompleteAdding(); 
+				    }
 				}
 
 			    return 0;
 			});
-			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task, start, pageSize, pagingInformation), items.Dispose);
+			return new DisposableEnumerator<RavenJObject>(YieldUntilDone(items, task, start, pageSize, pagingInformation),
+			    () =>
+			    {
+                    items.CompleteAdding();
+			        items.Dispose();
+			    });
 		}
 
 		private IEnumerator<RavenJObject> YieldUntilDone(BlockingCollection<RavenJObject> items, Task<int> task, int start = 0, int pageSize = 0, RavenPagingInformation pagingInformation = null)
 		{
 			try
 			{
-				task.ContinueWith(_ => items.Add(null));
-				while (true)
+                while (items.IsCompleted == false)
 				{
-					var ravenJObject = items.Take();
-					if (ravenJObject == null)
-						break;
-					yield return ravenJObject;
+                    RavenJObject obj;
+                    try
+                    {
+                        obj = items.Take();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        if (items.IsCompleted == false)
+                            throw;
+                        break;
+                    }
+                    yield return obj;
+
 				}
 
 			    var nextPageStart = task.Result;

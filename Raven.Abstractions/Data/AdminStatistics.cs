@@ -33,6 +33,7 @@ namespace Raven.Abstractions.Data
 		public long TotalDatabaseSize { get; set; }
 		public string TotalDatabaseHumaneSize { get; set; }
 		public long CountOfDocuments { get; set; }
+        public long CountOfAttachments { get; set; }
 		public double RequestsPerSecond { get; set; }
 		public int ConcurrentRequests { get; set; }
 		public decimal DatabaseTransactionVersionSizeInMB { get; set; }

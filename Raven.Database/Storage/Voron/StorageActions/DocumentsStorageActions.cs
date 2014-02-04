@@ -260,7 +260,8 @@
 
 			var lowerKey = CreateKey(key);
 
-			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch))
+			ushort? existingVersion;
+			if (!tableStorage.Documents.Contains(Snapshot, lowerKey, writeBatch, out existingVersion))
 			{
 				logger.Debug("Document with key '{0}' was not found, and considered deleted", key);
 				metadata = null;
@@ -280,7 +281,7 @@
 
 			deletedETag = etag != null ? existingEtag : documentMetadata.Etag;
 
-			tableStorage.Documents.Delete(writeBatch, lowerKey);
+			tableStorage.Documents.Delete(writeBatch, lowerKey, existingVersion);
 			metadataIndex.Delete(writeBatch, lowerKey);
 
 			tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag)
@@ -315,34 +316,6 @@
 				PrevEtag = existingEtag,
 				SavedAt = savedAt,
 				Updated = isUpdate
-			};
-		}
-
-		public AddDocumentResult PutDocumentMetadata(string key, RavenJObject metadata)
-		{
-			if (string.IsNullOrEmpty(key))
-				throw new ArgumentNullException("key");
-
-			var lowerKey = CreateKey(key);
-			if (!metadataIndex.Contains(Snapshot, lowerKey, writeBatch))
-			{
-				throw new InvalidOperationException("Updating document metadata is only valid for existing documents, but " + key +
-																	" does not exists");
-			}
-
-			var newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
-
-			var savedAt = SystemTime.UtcNow;
-
-			var isUpdated = PutDocumentMetadataInternal(key, metadata, newEtag, savedAt);
-
-			logger.Debug("PutDocumentMetadata() - {0} document metadata with dataKey = '{1}'", isUpdated ? "Updated" : "Added", key);
-
-			return new AddDocumentResult
-			{
-				SavedAt = savedAt,
-				Etag = newEtag,
-				Updated = isUpdated
 			};
 		}
 
@@ -483,8 +456,9 @@
 
 			var loweredKey = CreateKey(metadata.Key);
 
-			var isUpdate = metadataIndex.Contains(Snapshot, loweredKey, writeBatch);
-			metadataIndex.Add(writeBatch, loweredKey, metadataStream);
+			ushort? existingVersion;
+			var isUpdate = metadataIndex.Contains(Snapshot, loweredKey, writeBatch, out existingVersion);
+			metadataIndex.Add(writeBatch, loweredKey, metadataStream, existingVersion);
 
 			return isUpdate;
 		}
@@ -524,7 +498,8 @@
 			var keyByEtagDocumentIndex = tableStorage.Documents.GetIndex(Tables.Documents.Indices.KeyByEtag);
 			var loweredKey = CreateKey(key);
 
-			var isUpdate = tableStorage.Documents.Contains(Snapshot, loweredKey, writeBatch);
+			ushort? existingVersion;
+			var isUpdate = tableStorage.Documents.Contains(Snapshot, loweredKey, writeBatch, out existingVersion);
 			existingEtag = null;
 
 			if (isUpdate)
@@ -552,7 +527,7 @@
 			}
  
 			dataStream.Position = 0;
-			tableStorage.Documents.Add(writeBatch, loweredKey, dataStream); 
+			tableStorage.Documents.Add(writeBatch, loweredKey, dataStream, existingVersion); 
 
 			newEtag = uuidGenerator.CreateSequentialUuid(UuidType.Documents);
 			savedAt = SystemTime.UtcNow;

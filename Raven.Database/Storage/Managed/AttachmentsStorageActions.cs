@@ -107,7 +107,12 @@ namespace Raven.Storage.Managed
 			};
 		}
 
-		public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)
+	    public long GetAttachmentsCount()
+	    {
+	        return storage.Attachments.Count;
+	    }
+
+	    public IEnumerable<AttachmentInformation> GetAttachmentsByReverseUpdateOrder(int start)
 		{
 			return from key in storage.Attachments["ByEtag"].SkipFromEnd(start)
 				   let attachment = GetAttachment(key.Value<string>("key"))

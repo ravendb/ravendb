@@ -428,6 +428,7 @@ namespace Raven.Database
 
 					result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
 					result.CountOfDocuments = actions.Documents.GetDocumentsCount();
+                    result.CountOfAttachments = actions.Attachments.GetAttachmentsCount();
 					result.StaleIndexes = IndexStorage.Indexes
 													  .Where(indexId =>
 													  {
@@ -823,19 +824,6 @@ namespace Raven.Database
 			DocumentRetriever.EnsureIdInMetadata(document);
 			return new DocumentRetriever(null, ReadTriggers, inFlightTransactionalState)
 				.ProcessReadVetoes(document, transactionInformation, ReadOperation.Load);
-		}
-
-
-		public void PutDocumentMetadata(string key, RavenJObject metadata)
-		{
-			if (key == null)
-				throw new ArgumentNullException("key");
-			key = key.Trim();
-			TransactionalStorage.Batch(actions =>
-			{
-				actions.Documents.PutDocumentMetadata(key, metadata);
-				workContext.ShouldNotifyAboutWork(() => "PUT (metadata) " + key);
-			});
 		}
 
 		public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)

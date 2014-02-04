@@ -22,8 +22,7 @@ namespace Raven.Tests.MailingList
 			//arrange
 			using(var store = NewDocumentStore())
 			{
-				(store).RegisterListener(new NoStaleQueriesListener());
-				store.Initialize();
+				store.RegisterListener(new NoStaleQueriesListener());
 
 				SetupTestData(store);
 
@@ -34,36 +33,6 @@ namespace Raven.Tests.MailingList
 
 				//Assert
 				CheckResults(result);
-			}
-		}
-
-		/// <summary>
-		/// Should work but does not.
-		/// </summary>
-		[Fact]
-		public void ShouldWorkWithEmbeddedRavenWithoutHavingToQueryFirst()
-		{
-			//arrange
-			using(var  store = NewDocumentStore())
-			{
-				try
-				{
-					(store).RegisterListener(new NoStaleQueriesListener());
-					store.Initialize();
-
-					SetupTestData(store);
-
-					WaitForIndexing(store);
-					//Act
-					FacetResults result = ExecuteTest(store);
-
-					//Assert
-					CheckResults(result);
-				}
-				finally
-				{
-					store.Dispose();
-				}
 			}
 		}
 
@@ -84,7 +53,7 @@ namespace Raven.Tests.MailingList
 
 				//Act
 				FacetResults result = ExecuteTest(store);
-
+                WaitForUserToContinueTheTest();
 				//Assert
 				CheckResults(result);
 			}

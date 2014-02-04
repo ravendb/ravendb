@@ -46,7 +46,7 @@ namespace Raven.Tests
 			{
 				return new[]
                                        {
-                                                   new object[] { "munin" }, 
+                                                   new object[] { "voron" }, 
                                                    new object[] { "esent" }
                                        };
 			}
