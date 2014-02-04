@@ -1372,38 +1372,38 @@ namespace Raven.Client.Connection.Async
 		/// </summary>
 		/// <param name="commandDatas">The command data.</param>
 		/// <returns></returns>
-		public Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas)
-		{
-			return ExecuteWithReplication("POST", async operationMetadata =>
-			{
-				var metadata = new RavenJObject();
-				AddTransactionInformation(metadata);
-				var req =
-					jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", "POST",
-																							 metadata, credentials, convention)
-					.AddOperationHeaders(OperationsHeaders));
+        public Task<BatchResult[]> BatchAsync(ICommandData[] commandDatas)
+        {
+            return ExecuteWithReplication("POST", async operationMetadata =>
+            {
+                var metadata = new RavenJObject();
+                AddTransactionInformation(metadata);
+                var req =
+                    jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/bulk_docs", "POST",
+                                                                                             metadata, credentials, convention)
+                    .AddOperationHeaders(OperationsHeaders));
 
-				req.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
-												HandleReplicationStatusChanges);
+                req.AddReplicationStatusHeaders(url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior,
+                                                HandleReplicationStatusChanges);
 
-				var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
+                var jArray = new RavenJArray(commandDatas.Select(x => x.ToJson()));
 
-				ErrorResponseException responseException;
-				try
-				{
-					await req.WriteAsync(jArray);
-					var response = (RavenJArray)await req.ReadResponseJsonAsync();
-					return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
-				}
-				catch (ErrorResponseException e)
-				{
-					if (e.StatusCode != HttpStatusCode.Conflict)
-						throw;
-					responseException = e;
-				}
-				throw await FetchConcurrencyException(responseException);
-			});
-		}
+                ErrorResponseException responseException;
+                try
+                {
+                    await req.WriteAsync(jArray);
+                    var response = (RavenJArray)await req.ReadResponseJsonAsync();
+                    return convention.CreateSerializer().Deserialize<BatchResult[]>(new RavenJTokenReader(response));
+                }
+                catch (ErrorResponseException e)
+                {
+                    if (e.StatusCode != HttpStatusCode.Conflict)
+                        throw;
+                    responseException = e;
+                }
+                throw await FetchConcurrencyException(responseException);
+            });
+        }
 
 		private static async Task<ConcurrencyException> FetchConcurrencyException(ErrorResponseException e)
 		{
@@ -2173,10 +2173,7 @@ namespace Raven.Client.Connection.Async
 			currentlyExecuting = true;
 			try
 			{
-				return
-					await
-						replicationInformer.ExecuteWithReplicationAsync(method, url, credentials, currentRequest, readStripingBase,
-							operation);
+				return await replicationInformer.ExecuteWithReplicationAsync(method, Url, credentials, currentRequest, readStripingBase, operation);
 			}
 			finally
 			{

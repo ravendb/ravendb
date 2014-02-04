@@ -4,30 +4,38 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.Connection
 {
 #if !NETFX_CORE && !SILVERLIGHT
-	[Serializable]
+    [Serializable]
 #endif
-	public class ErrorResponseException : Exception
-	{
-		public HttpResponseMessage Response { get; private set; }
+    public class ErrorResponseException : Exception
+    {
+        public HttpResponseMessage Response { get; private set; }
 
-		public HttpStatusCode StatusCode
-		{
-			get { return Response.StatusCode; }
-		}
+        public HttpStatusCode StatusCode
+        {
+            get { return Response.StatusCode; }
+        }
 
-		public ErrorResponseException()
-		{
-		}
+        public ErrorResponseException()
+        {
+        }
 
-		public ErrorResponseException(HttpResponseMessage response, string msg, Exception exception)
-             : base(msg, exception)
-		{
-			Response = response;
-		}
+        public ErrorResponseException(HttpResponseMessage response, string msg, Exception exception)
+            : base(msg, exception)
+        {
+            Response = response;
+        }
+
+        public ErrorResponseException(ErrorResponseException e, string message)
+            : base(message)
+        {
+            Response = e.Response;
+            ResponseString = e.ResponseString;
+        }
 
         public ErrorResponseException(HttpResponseMessage response, string msg)
             : base(msg)
@@ -35,31 +43,53 @@ namespace Raven.Abstractions.Connection
             Response = response;
         }
 
-		public ErrorResponseException(HttpResponseMessage response)
-			:base(GenerateMessage(response))
+        public static ErrorResponseException FromResponseMessage(HttpResponseMessage response, bool readErrorString = true)
         {
-            Response = response;
+            var sb = new StringBuilder("Status code: ").Append(response.StatusCode).AppendLine();
+
+            string responseString = null;
+            if (readErrorString && response.Content != null)
+            {
+                var readAsStringAsync = response.GetResponseStreamWithHttpDecompression();
+                if (readAsStringAsync.IsCompleted)
+                {
+                    using (var streamReader = new StreamReader(readAsStringAsync.Result))
+                    {
+                        responseString = streamReader.ReadToEnd();
+                        sb.AppendLine(responseString);
+                    }
+                }
+            }
+            return new ErrorResponseException(response, sb.ToString())
+            {
+                ResponseString = responseString
+            };
         }
 
-		private static string GenerateMessage(HttpResponseMessage response)
-		{
-			var sb = new StringBuilder("Status code: ").Append(response.StatusCode).AppendLine();
+        public string ResponseString { get; private set; }
 
-			if (response.Content != null)
-			{
-				var readAsStringAsync = response.Content.ReadAsStringAsync();
-				if (readAsStringAsync != null && readAsStringAsync.IsCompleted)
-					sb.AppendLine(readAsStringAsync.Result);
-			}
-			return sb.ToString();
-		}
+        public Etag Etag
+        {
+            get
+            {
+                if (Response.Headers.ETag == null)
+                    return null;
+                var responseHeader = Response.Headers.ETag.Tag;
+
+                if (responseHeader[0] == '\"')
+                    return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
+
+                return Etag.Parse(responseHeader);
+            }
+        }
 
 #if !NETFX_CORE && !SILVERLIGHT
-		protected ErrorResponseException(
-			System.Runtime.Serialization.SerializationInfo info,
-			System.Runtime.Serialization.StreamingContext context) : base(info, context)
-		{
-		}
+        protected ErrorResponseException(
+            System.Runtime.Serialization.SerializationInfo info,
+            System.Runtime.Serialization.StreamingContext context)
+            : base(info, context)
+        {
+        }
 #endif
-	}
+    }
 }

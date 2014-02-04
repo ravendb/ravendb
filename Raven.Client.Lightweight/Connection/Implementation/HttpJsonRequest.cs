@@ -276,7 +276,7 @@ namespace Raven.Client.Connection
 						PostedData = postedData
 					});
 
-					throw new ErrorResponseException(Response);
+					throw ErrorResponseException.FromResponseMessage(Response);
 				}
 
 				if (Response.StatusCode == HttpStatusCode.NotModified
@@ -321,7 +321,7 @@ namespace Raven.Client.Connection
 					});
 
 					if (string.IsNullOrWhiteSpace(readToEnd))
-						throw new ErrorResponseException(Response);
+                        throw ErrorResponseException.FromResponseMessage(Response);
 
 					RavenJObject ravenJObject;
 					try
@@ -342,7 +342,7 @@ namespace Raven.Client.Connection
 					}
 					if (Response.StatusCode == HttpStatusCode.BadRequest && ravenJObject.ContainsKey("Message"))
 					{
-						throw new BadRequestException(ravenJObject.Value<string>("Message"), new ErrorResponseException(Response));
+						throw new BadRequestException(ravenJObject.Value<string>("Message"), ErrorResponseException.FromResponseMessage(Response));
 					}
 					if (ravenJObject.ContainsKey("Error"))
 					{

@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Lucene.Net.Index;
 using Lucene.Net.Util;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -28,6 +30,8 @@ namespace Raven.Database.Indexing
             state.Lock.EnterReadLock();
             try
             {
+                EnsureFieldsAreInCache(state, fieldsToRead, reader);
+
                 foreach (var field in fieldsToRead)
                 {
                     var read = new HashSet<int>();
@@ -54,106 +58,8 @@ namespace Raven.Database.Indexing
             }
             finally
             {
-                state.Lock.ExitReadLock();
-            }
-
-
-            foreach (var kvp in readFromCache)
-            {
-                if (kvp.Value.Count == docIds.Count)
-                {
-                    fieldsToRead.Remove(kvp.Key); // already read all of it
-                }
-            }
-
-            if (fieldsToRead.Count == 0)
-                return;
-            
-            state.Lock.EnterWriteLock();
-            try
-            {
-
-                foreach (var field in fieldsToRead)
-                {
-                    var read = readFromCache[field];
-                    foreach (var docId in docIds)
-                    {
-                        foreach (var val in state.GetFromCache(field, docId))
-                        {
-                            if(read.Add(docId) == false)
-                                continue;
-
-                            double converted;
-                            if (val.Val == null)
-                            {
-                                val.Val = converted = convert(val.Term);
-                            }
-                            else
-                            {
-                                converted = val.Val.Value;
-                            }
-                            onTermFound(val.Term, converted, docId);
-                        }
-                    }
-                }
-
-                foreach (var kvp in readFromCache)
-                {
-                    if (kvp.Value.Count == docIds.Count)
-                    {
-                        fieldsToRead.Remove(kvp.Key); // already read all of it
-                    }
-                }
-
-                if (fieldsToRead.Count == 0)
-                    return;
-                using (var termDocs = reader.TermDocs())
-                {
-                    foreach (var field in fieldsToRead)
-                    {
-                        var read = readFromCache[field];
-						var shouldReset = new HashSet<Tuple<string, int>>();
-                        using (var termEnum = reader.Terms(new Term(field)))
-                        {
-                            do
-                            {
-                                if (termEnum.Term == null || field != termEnum.Term.Field)
-                                    break;
-
-                                if (LowPrecisionNumber(termEnum.Term))
-                                    continue;
-
-                                    
-                                var totalDocCountIncludedDeletes = termEnum.DocFreq();
-                                termDocs.Seek(termEnum.Term);
-
-                                while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
-                                {
-                                    totalDocCountIncludedDeletes -= 1;
-                                    if (read.Contains(termDocs.Doc))
-										continue;
-                                    if (reader.IsDeleted(termDocs.Doc))
-										continue;
-                                    if (docIds.Contains(termDocs.Doc) == false)
-										continue;
-
-									if (shouldReset.Add(Tuple.Create(field, termDocs.Doc)))
-									{
-										state.ResetInCache(field, termDocs.Doc);
-									}
-
-                                    var d = convert(termEnum.Term);
-                                    state.SetInCache(field, termDocs.Doc, termEnum.Term, d);
-                                    onTermFound(termEnum.Term, d, termDocs.Doc);
-                                }
-                            } while (termEnum.Next());
-                        }
-                    }
-                }
-            }
-            finally
-            {
-                state.Lock.ExitWriteLock();
+                if (state.Lock.IsReadLockHeld)
+                    state.Lock.ExitReadLock();
             }
         }
 
@@ -166,20 +72,17 @@ namespace Raven.Database.Indexing
         {
             var reader = state.IndexSearcher.IndexReader;
 
-            var readFromCache = new Dictionary<string, HashSet<int>>();
-
             state.Lock.EnterReadLock();
             try
             {
+                EnsureFieldsAreInCache(state, fieldsToRead, reader);
+
                 foreach (var field in fieldsToRead)
                 {
-                    var read = new HashSet<int>();
-                    readFromCache[field] = read;
                     foreach (var docId in docIds)
                     {
                         foreach (var term in state.GetTermsFromCache(field, docId))
                         {
-                            read.Add(docId);
                             onTermFound(term, docId);
                         }
                     }
@@ -187,96 +90,62 @@ namespace Raven.Database.Indexing
             }
             finally
             {
-                state.Lock.ExitReadLock();
+                if (state.Lock.IsReadLockHeld)
+                    state.Lock.ExitReadLock();
             }
+        }
 
-
-            foreach (var kvp in readFromCache)
-            {
-                if (kvp.Value.Count == docIds.Count)
-                {
-                    fieldsToRead.Remove(kvp.Key); // already read all of it
-                }
-            }
-
-            if (fieldsToRead.Count == 0)
+        private static void EnsureFieldsAreInCache(IndexSearcherHolder.IndexSearcherHoldingState state, HashSet<string> fieldsToRead, IndexReader reader)
+        {
+            if (fieldsToRead.All(state.IsInCache))
                 return;
 
+            state.Lock.ExitReadLock();
             state.Lock.EnterWriteLock();
             try
             {
-                foreach (var field in fieldsToRead)
-                {
-                    var read = readFromCache[field];
-                    foreach (var docId in docIds)
-                    {
-                        foreach (var term in state.GetTermsFromCache(field, docId))
-                        {
-                            if(read.Add(docId) == false)
-                                continue;
-                            onTermFound(term, docId);
-                        }
-                    }
-                }
-
-                foreach (var kvp in readFromCache)
-                {
-                    if (kvp.Value.Count == docIds.Count)
-                    {
-                        fieldsToRead.Remove(kvp.Key); // already read all of it
-                    }
-                }
-
-                if (fieldsToRead.Count == 0)
-                    return;
-
-
-                using (var termDocs = reader.TermDocs())
-                {
-                    foreach (var field in fieldsToRead)
-                    {
-                        var read = readFromCache[field];
-	                    var shouldReset = new HashSet<Tuple<string, int>>();
-                        using (var termEnum = reader.Terms(new Term(field)))
-                        {
-                            do
-                            {
-                                if (termEnum.Term == null || field != termEnum.Term.Field)
-                                    break;
-
-                                if (LowPrecisionNumber(termEnum.Term))
-                                    continue;
-
-
-                                var totalDocCountIncludedDeletes = termEnum.DocFreq();
-                                termDocs.Seek(termEnum.Term);
-
-                                while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
-                                {
-                                    totalDocCountIncludedDeletes -= 1;
-                                    if (read.Contains(termDocs.Doc))
-                                        continue;
-                                    if (reader.IsDeleted(termDocs.Doc))
-                                        continue;
-                                    if (docIds.Contains(termDocs.Doc) == false)
-                                        continue;
-
-									if (shouldReset.Add(Tuple.Create(field,termDocs.Doc)))
-                                    {
-                                        state.ResetInCache(field, termDocs.Doc);
-                                    }
-
-                                    state.SetInCache(field, termDocs.Doc, termEnum.Term);
-                                    onTermFound(termEnum.Term, termDocs.Doc);
-                                }
-                            } while (termEnum.Next());
-                        }
-                    }
-                }
+                var fieldsNotInCache = fieldsToRead.Where(field => state.IsInCache(field) == false).ToList();
+                if (fieldsToRead.Count > 0)
+                    FillCache(state, fieldsNotInCache, reader);
             }
             finally
             {
                 state.Lock.ExitWriteLock();
+            }
+            state.Lock.EnterReadLock();
+        }
+
+        private static void FillCache(IndexSearcherHolder.IndexSearcherHoldingState state, List<string> fieldsToRead,IndexReader reader)
+        {
+            foreach (var field in fieldsToRead)
+            {
+                using (var termDocs = reader.TermDocs())
+                {
+                    using (var termEnum = reader.Terms(new Term(field)))
+                    {
+                        do
+                        {
+                            if (termEnum.Term == null || field != termEnum.Term.Field)
+                                break;
+
+                            if (LowPrecisionNumber(termEnum.Term))
+                                continue;
+
+
+                            var totalDocCountIncludedDeletes = termEnum.DocFreq();
+                            termDocs.Seek(termEnum.Term);
+
+                            while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
+                            {
+                                totalDocCountIncludedDeletes -= 1;
+                                if (reader.IsDeleted(termDocs.Doc))
+                                    continue;
+
+                                state.SetInCache(field, termDocs.Doc, termEnum.Term);
+                            }
+                        } while (termEnum.Next());
+                    }
+                }
             }
         }
 
