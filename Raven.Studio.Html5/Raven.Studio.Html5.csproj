@@ -123,7 +123,6 @@
     <TypeScriptCompile Include="App\viewmodels\indexesAll.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexTerms.ts" />
     <TypeScriptCompile Include="App\viewmodels\logs.ts" />
-    <TypeScriptCompile Include="App\viewmodels\periodicBackup.ts" />
     <TypeScriptCompile Include="App\viewmodels\replicationStats.ts" />
     <TypeScriptCompile Include="App\viewmodels\shell.ts" />
     <TypeScriptCompile Include="App\common\appUrl.ts" />
@@ -1062,9 +1061,6 @@
     <Content Include="App\views\shell.html" />
     <Content Include="Content\app.css">
       <DependentUpon>app.less</DependentUpon>
-    </Content>
-    <Content Include="Content\app.min.css">
-      <DependentUpon>app.css</DependentUpon>
     </Content>
     <Content Include="Content\images\checked.png" />
     <Content Include="Content\images\glyphicons-halflings-white.png" />

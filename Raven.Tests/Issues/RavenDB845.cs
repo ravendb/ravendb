@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	public class LastModifiedTests : RavenTestBase
+	public class RavenDB845 : RavenTestBase
 	{
 		public override void Dispose()
 		{

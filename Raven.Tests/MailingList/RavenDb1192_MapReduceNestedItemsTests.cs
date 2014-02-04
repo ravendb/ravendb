@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class MapReduceNestedItemsTests : RavenTestBase
+	public class RavenDb1192_MapReduceNestedItemsTests : RavenTestBase
 	{
 		[Fact]
 		public void Can_Reduce_Nested_List_Of_KeyValuePair_Objects()
