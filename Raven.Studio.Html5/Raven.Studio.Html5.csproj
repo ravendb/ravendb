@@ -85,6 +85,8 @@
     <TypeScriptCompile Include="App\commands\getDatabaseStatsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentsByEntityNameCommand.ts" />
     <TypeScriptCompile Include="App\commands\getDocumentWithMetadataCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getIndexDefinitionCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getIndexTermsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLicenseStatusCommand.ts" />
     <TypeScriptCompile Include="App\commands\getLogsCommand.ts" />
     <TypeScriptCompile Include="App\commands\getReplicationStatsCommand.ts" />
@@ -93,11 +95,17 @@
     <TypeScriptCompile Include="App\commands\saveAlertsCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexAsPersistentCommand.ts" />
     <TypeScriptCompile Include="App\commands\saveIndexLockModeCommand.ts" />
+    <TypeScriptCompile Include="App\commands\saveIndexDefinitionCommand.ts" />
+    <TypeScriptCompile Include="App\common\aceEditorBindingHandler.ts" />
     <TypeScriptCompile Include="App\common\dynamicHeightBindingHandler.ts" />
     <TypeScriptCompile Include="App\models\alert.ts" />
     <TypeScriptCompile Include="App\models\apiKey.ts" />
     <TypeScriptCompile Include="App\models\apiKeyDatabase.ts" />
     <TypeScriptCompile Include="App\models\index.ts" />
+    <TypeScriptCompile Include="App\models\indexDefinition.ts" />
+    <TypeScriptCompile Include="App\models\indexPriority.ts" />
+    <TypeScriptCompile Include="App\models\luceneField.ts" />
+    <TypeScriptCompile Include="App\models\spatialIndexField.ts" />
     <TypeScriptCompile Include="App\viewmodels\alerts.ts" />
     <TypeScriptCompile Include="App\viewmodels\apiKeys.ts" />
     <TypeScriptCompile Include="App\viewmodels\copyDocuments.ts" />
@@ -107,11 +115,13 @@
     <TypeScriptCompile Include="App\viewmodels\deleteDatabaseConfirm.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteDocuments.ts" />
     <TypeScriptCompile Include="App\viewmodels\deleteIndexesConfirm.ts" />
+    <TypeScriptCompile Include="App\viewmodels\dialogViewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\editDocument.ts" />
     <TypeScriptCompile Include="App\viewmodels\editIndex.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexErrors.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexes.ts" />
     <TypeScriptCompile Include="App\viewmodels\indexesAll.ts" />
+    <TypeScriptCompile Include="App\viewmodels\indexTerms.ts" />
     <TypeScriptCompile Include="App\viewmodels\logs.ts" />
     <TypeScriptCompile Include="App\viewmodels\periodicBackup.ts" />
     <TypeScriptCompile Include="App\viewmodels\replicationStats.ts" />
@@ -120,6 +130,10 @@
     <TypeScriptCompile Include="App\common\computedAppUrls.ts" />
     <TypeScriptCompile Include="App\viewmodels\userInfo.ts" />
     <TypeScriptCompile Include="App\viewmodels\statistics.ts" />
+    <TypeScriptCompile Include="App\commands\getPeriodicBackupSetupCommand.ts" />
+    <TypeScriptCompile Include="App\commands\getDatabaseSettingsCommand.ts" />
+    <TypeScriptCompile Include="App\models\periodicBackupSetup.ts" />
+    <TypeScriptCompile Include="App\commands\savePeriodicBackupSetupCommand.ts" />
     <Content Include="App\views\alerts.html" />
     <Content Include="App\views\apiKeys.html" />
     <Content Include="App\views\copyDocuments.html" />
@@ -131,12 +145,13 @@
     <Content Include="App\views\editIndex.html" />
     <Content Include="App\views\indexErrors.html" />
     <Content Include="App\views\indexes.html" />
+    <Content Include="App\views\indexTerms.html" />
     <Content Include="App\views\logs.html" />
     <Content Include="App\views\periodicBackup.html" />
     <Content Include="App\views\replicationStats.html" />
     <Content Include="App\views\settings.html" />
     <Content Include="App\views\userInfo.html" />
-    <TypeScriptCompile Include="App\viewmodels\activeDbViewModelBase.ts" />
+    <TypeScriptCompile Include="App\viewmodels\viewModelBase.ts" />
     <TypeScriptCompile Include="App\viewmodels\windowsAuth.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\row.ts" />
     <TypeScriptCompile Include="App\widgets\virtualTable\column.ts" />
@@ -771,11 +786,15 @@
     <TypeScriptCompile Include="Scripts\typings\jwerty\jwerty.d.ts" />
     <Content Include="Scripts\knockout-3.0.0.debug.js" />
     <Content Include="Scripts\knockout-3.0.0.js" />
+    <Content Include="Scripts\knockout-delegatedEvents.js" />
+    <Content Include="Scripts\knockout-delegatedEvents.min.js" />
     <Content Include="Scripts\knockout-postbox.js" />
     <Content Include="Scripts\knockout-postbox.min.js" />
+    <Content Include="Scripts\moment-with-langs.js" />
+    <Content Include="Scripts\moment-with-langs.min.js" />
     <Content Include="Scripts\moment.js" />
+    <Content Include="Scripts\moment.min.js" />
     <Content Include="Scripts\nprogress.js" />
-    <TypeScriptCompile Include="Scripts\typings\ace\ace.d.ts" />
     <Content Include="Scripts\r.js" />
     <Content Include="Scripts\require.js" />
     <Content Include="Scripts\typings\jwerty\jwerty.d.js" />
@@ -996,6 +1015,9 @@
     <Content Include="fonts\fontawesome-webfont.ttf" />
     <Content Include="fonts\fontawesome-webfont.eot" />
     <Content Include="fonts\FontAwesome.otf" />
+    <Content Include="Content\app.css.map">
+      <DependentUpon>app.css</DependentUpon>
+    </Content>
     <None Include="web.Debug.config">
       <DependentUpon>web.config</DependentUpon>
     </None>
@@ -1008,8 +1030,10 @@
     <TypeScriptCompile Include="App\common\dialogResult.ts" />
     <TypeScriptCompile Include="App\common\alertType.ts" />
     <TypeScriptCompile Include="App\common\alertArgs.ts" />
-    <TypeScriptCompile Include="App\common\raven.ts" />
     <TypeScriptCompile Include="App\commands\saveDocumentCommand.ts" />
+    <Content Include="App\commands\saveDocumentCommand.js">
+      <DependentUpon>saveDocumentCommand.ts</DependentUpon>
+    </Content>
     <Content Include="App\main.js" />
     <TypeScriptCompile Include="App\models\collection.ts" />
     <TypeScriptCompile Include="App\models\collectionInfo.ts" />
@@ -1036,6 +1060,12 @@
     <Content Include="App\widgets\virtualTable\view.html" />
     <TypeScriptCompile Include="App\common\extensions.ts" />
     <Content Include="App\views\shell.html" />
+    <Content Include="Content\app.css">
+      <DependentUpon>app.less</DependentUpon>
+    </Content>
+    <Content Include="Content\app.min.css">
+      <DependentUpon>app.css</DependentUpon>
+    </Content>
     <Content Include="Content\images\checked.png" />
     <Content Include="Content\images\glyphicons-halflings-white.png" />
     <Content Include="Content\images\glyphicons-halflings.png" />
@@ -1048,8 +1078,6 @@
     <Content Include="Scripts\jquery-2.0.3.js" />
     <Content Include="Scripts\jquery-2.0.3.min.js" />
     <Content Include="Scripts\jquery.appear-0.3.3.js" />
-    <Content Include="Scripts\knockout-delegatedEvents.js" />
-    <Content Include="Scripts\knockout-delegatedEvents.min.js" />
     <Content Include="Scripts\text.js" />
     <Content Include="Scripts\typings\durandal\durandal.d.ts" />
     <Content Include="weyland-config.js" />

@@ -2,8 +2,9 @@ import document = require("models/document");
 import dialog = require("plugins/dialog");
 import createDatabaseCommand = require("commands/createDatabaseCommand");
 import collection = require("models/collection");
+import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
-class createDatabase {
+class createDatabase extends dialogViewModelBase {
 
     public creationTask = $.Deferred();
     creationTaskStarted = false;
@@ -19,6 +20,7 @@ class createDatabase {
     isScriptedIndexBundleEnabled = ko.observable(false);
 
     constructor() {
+        super();
     }
 
     cancel() {

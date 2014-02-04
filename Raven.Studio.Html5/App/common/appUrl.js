@@ -1,4 +1,4 @@
-define(["require", "exports", "models/database", "common/pagedList"], function(require, exports, database, pagedList) {
+define(["require", "exports", "models/database", "common/pagedList", "plugins/router"], function(require, exports, database, pagedList, router) {
     // Helper class with static methods for generating app URLs.
     var appUrl = (function () {
         function appUrl() {
@@ -20,6 +20,11 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
             var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
             var pagedListInfo = collectionName && docIndexInCollection != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + docIndexInCollection : "";
             return "#edit?" + docIdUrlPart + databaseUrlPart + pagedListInfo;
+        };
+
+        appUrl.forNewDoc = function (db) {
+            var databaseUrlPart = appUrl.getEncodedDbPart(db);
+            return "#edit?" + databaseUrlPart;
         };
 
         /**
@@ -61,6 +66,24 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
             return "#status/userInfo?" + appUrl.getEncodedDbPart(db);
         };
 
+        appUrl.forApiKeys = function () {
+            // Doesn't take a database, because API keys always works against the system database only.
+            return "#settings/apiKeys";
+        };
+
+        appUrl.forWindowsAuth = function () {
+            // Doesn't take a database, because API keys always works against the system database only.
+            return "#settings/windowsAuth";
+        };
+
+        appUrl.forDatabaseSettings = function (db) {
+            return "#settings/databaseSettings?" + appUrl.getEncodedDbPart(db);
+        };
+
+        appUrl.forPeriodicBackup = function (db) {
+            return "#settings/periodicBackup?" + appUrl.getEncodedDbPart(db);
+        };
+
         appUrl.forDocuments = function (collection, db) {
             if (typeof db === "undefined") { db = appUrl.getDatabase(); }
             var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
@@ -81,13 +104,13 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
 
         appUrl.forEditIndex = function (indexName, db) {
             var databasePart = appUrl.getEncodedDbPart(db);
-            var indexNamePart = "/" + indexName;
-            return "#indexes/edit" + indexNamePart + databasePart;
+            return "#indexes/edit/" + indexName + "?" + databasePart;
         };
 
-        appUrl.forQuery = function (db) {
+        appUrl.forQuery = function (db, indexToQuery) {
             var databasePart = appUrl.getEncodedDbPart(db);
-            return "#query?" + databasePart;
+            var indexPart = indexToQuery ? "/" + encodeURIComponent(indexToQuery) : "";
+            return "#query" + indexPart + "?" + databasePart;
         };
 
         appUrl.forDatabaseQuery = function (db) {
@@ -101,6 +124,11 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
         appUrl.forExport = function (db) {
             var databasePart = appUrl.getEncodedDbPart(db);
             return "#tasks/export?" + databasePart;
+        };
+
+        appUrl.forTerms = function (index, db) {
+            var databasePart = appUrl.getEncodedDbPart(db);
+            return "#indexes/terms/" + encodeURIComponent(index) + "?" + databasePart;
         };
 
         /**
@@ -145,6 +173,24 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
             }
 
             return window.location.protocol + "//" + window.location.host;
+        };
+
+        /**
+        * Gets the address for the current page but for the specified database.
+        */
+        appUrl.forCurrentPage = function (db) {
+            var routerInstruction = router.activeInstruction();
+            if (routerInstruction) {
+                var dbNameInAddress = routerInstruction.queryParams ? routerInstruction.queryParams['database'] : null;
+                var isDifferentDbInAddress = !dbNameInAddress || dbNameInAddress !== db.name.toLowerCase();
+                if (isDifferentDbInAddress) {
+                    var existingAddress = window.location.hash;
+                    var existingDbQueryString = dbNameInAddress ? "database=" + encodeURIComponent(dbNameInAddress) : null;
+                    var newDbQueryString = "database=" + encodeURIComponent(db.name);
+                    var newUrlWithDatabase = existingDbQueryString ? existingAddress.replace(existingDbQueryString, newDbQueryString) : existingAddress + (window.location.hash.indexOf("?") >= 0 ? "&" : "?") + "database=" + encodeURIComponent(db.name);
+                    return newUrlWithDatabase;
+                }
+            }
         };
 
         /**
@@ -199,6 +245,12 @@ define(["require", "exports", "models/database", "common/pagedList"], function(r
             }),
             userInfo: ko.computed(function () {
                 return appUrl.forUserInfo(appUrl.currentDatabase());
+            }),
+            databaseSettings: ko.computed(function () {
+                return appUrl.forDatabaseSettings(appUrl.currentDatabase());
+            }),
+            periodicBackup: ko.computed(function () {
+                return appUrl.forPeriodicBackup(appUrl.currentDatabase());
             })
         };
         return appUrl;

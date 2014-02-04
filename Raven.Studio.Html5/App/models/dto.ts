@@ -49,7 +49,7 @@ interface databaseStatisticsDto {
 }
 
 interface indexStatisticsDto {
-    Name: string;
+    PublicName: string;
     IndexingAttempts: number;
     IndexingSuccesses: number;
     IndexingErrors: number;
@@ -193,4 +193,58 @@ interface replicationStatsDto {
     LastFailureTimestamp: string;
     FailureCount: number;
     LastError: string;
+}
+
+interface indexDefinitionContainerDto {
+    Index: indexDefinitionDto;
+}
+
+interface indexDefinitionDto {
+    Name: string;
+    LockMode: string;
+    Map: string;
+    Maps: string[];
+    Reduce: string;
+    TransformResults: string;
+    IsMapReduce: boolean;
+    IsCompiled: boolean;
+    Stores: any;
+    Indexes: any;
+    SortOptions: any;
+    Analyzers: any;
+    Fields: string[];
+    Suggestions: any;
+    TermVectors: any;
+    SpatialIndexes: any; // This will be an object with zero or more properties, each property being the name of one of the .Fields, its value being of type spatialIndexDto.
+    InternalFieldsMapping: any;
+    Type: string;
+}
+
+/*
+ * Represents a spatial field of an index. Shows up in the Edit Index view when the index has spatial fields defined.
+*/
+interface spatialIndexFieldDto {
+    Type: string;
+    Strategy: string;
+    MaxTreeLevel: number;
+    MinX: number;
+    MaxX: number;
+    MinY: number;
+    MaxY: number;
+    Units: string;
+}
+
+interface spatialIndexSuggestionDto {
+    Distance: string;
+    Accuracy: number;
+}
+
+interface periodicBackupSetupDto {
+    GlacierVaultName: string;
+    S3BucketName: string;
+    AwsRegionEndpoint: string;
+    AzureStorageContainer: string;
+    LocalFolderName: string;
+    IntervalMilliseconds: number;
+    FullBackupIntervalMilliseconds: number;
 }

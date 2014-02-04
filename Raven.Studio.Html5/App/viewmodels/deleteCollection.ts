@@ -3,13 +3,15 @@ import dialog = require("plugins/dialog");
 import deleteCollectionCommand = require("commands/deleteCollectionCommand");
 import collection = require("models/collection");
 import appUrl = require("common/appUrl");
+import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
-class deleteCollection {
+class deleteCollection extends dialogViewModelBase {
 
     public deletionTask = $.Deferred();
     private deletionStarted = false;
 
     constructor(private collection: collection) {
+        super();
     }
 
     deleteCollection() {

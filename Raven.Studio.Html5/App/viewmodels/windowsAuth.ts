@@ -5,4 +5,4 @@ class windowsAuth {
 
 }
 
-export = windowsAuth;
+export = windowsAuth; 

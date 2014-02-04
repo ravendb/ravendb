@@ -1,4 +1,4 @@
-// knockout-delegatedEvents 0.1.2 | (c) 2013 Ryan Niemeyer |  http://www.opensource.org/licenses/mit-license
+// knockout-delegatedEvents 0.1.3 | (c) 2014 Ryan Niemeyer |  http://www.opensource.org/licenses/mit-license
 ;(function(factory) {
     //CommonJS
     if (typeof require === "function" && typeof exports === "object" && typeof module === "object") {
@@ -14,72 +14,69 @@
     var prefix = "ko_delegated_";
     var createDelegatedHandler = function(eventName, root) {
         return function(event) {
-            var data, method, action, owner, matchingParent, command, result,
+            var data, method, context, action, owner, matchingParent, command, result,
                 el = event.target || event.srcElement,
-                context = ko.contextFor(el),
                 attr = "data-" + eventName,
                 key = prefix + eventName;
 
-            if (context) {
-                //loop until we either find an action, run out of elements, or hit the root element that has our delegated handler
-                while (!method && el) {
-                    method = el.getAttribute(attr) || ko.utils.domData.get(el, key);
-                    if (!method) {
-                        el = el !== root ? el.parentNode : null;
+            //loop until we either find an action, run out of elements, or hit the root element that has our delegated handler
+            while (!method && el) {
+                method = el.getAttribute(attr) || ko.utils.domData.get(el, key);
+                if (!method) {
+                    el = el !== root ? el.parentNode : null;
+                }
+            }
+
+            if (method) {
+                //get context of the element that actually held the action
+                context = ko.contextFor(el);
+
+                if (context) {
+                    data = context.$data;
+
+                    if (typeof method === "string") {
+                        //check defined actions
+                        if (method in actions) {
+                            command = actions[method];
+                            if (command) {
+                                action = typeof command === "function" ? command : command.action;
+                                owner = command.owner || data;
+                            }
+                        }
+                        //search for the action
+                        else if (data && data[method] && typeof data[method] === "function") {
+                            action = data[method];
+                            owner = data;
+                        }
+
+                        //search parents for the action
+                        if (!action) {
+                            matchingParent = ko.utils.arrayFirst(context.$parents, function(parent) {
+                                return parent[method] && typeof parent[method] === "function";
+                            });
+
+                            action = matchingParent && matchingParent[method];
+                            owner = matchingParent;
+                        }
+                    }
+                    //a binding handler was used to associate the element with a function
+                    else if (typeof method === "function") {
+                        action = method;
+                        owner = data;
                     }
                 }
 
-                if (method) {
-                    //get context of the element that actually held the action
-                    context = ko.contextFor(el);
+                //execute the action as KO normally would
+                if (action) {
+                    result = action.call(owner, data, event);
 
-                    if (context) {
-                        data = context.$data;
-
-                        if (typeof method === "string") {
-                            //check defined actions
-                            if (method in actions) {
-                                command = actions[method];
-                                if (command) {
-                                    action = typeof command === "function" ? command : command.action;
-                                    owner = command.owner || data;
-                                }
-                            }
-                            //search for the action
-                            else if (data && data[method] && typeof data[method] === "function") {
-                                action = data[method];
-                                owner = data;
-                            }
-
-                            //search parents for the action
-                            if (!action) {
-                                matchingParent = ko.utils.arrayFirst(context.$parents, function(parent) {
-                                    return parent[method] && typeof parent[method] === "function";
-                                });
-
-                                action = matchingParent && matchingParent[method];
-                                owner = matchingParent;
-                            }
+                    //prevent default action, if handler does not return true
+                    if (result !== true) {
+                        if (event.preventDefault) {
+                            event.preventDefault();
                         }
-                        //a binding handler was used to associate the element with a function
-                        else if (typeof method === "function") {
-                            action = method;
-                            owner = data;
-                        }
-                    }
-
-                    //execute the action as KO normally would
-                    if (action) {
-                        result = action.call(owner, data, event);
-
-                        //prevent default action, if handler returns true
-                        if (result !== true) {
-                            if (event.preventDefault) {
-                                event.preventDefault();
-                            }
-                            else {
-                                event.returnValue = false;
-                            }
+                        else {
+                            event.returnValue = false;
                         }
                     }
                 }
@@ -90,10 +87,12 @@
     //create a binding for an event to associate a function with the element
     var createDelegatedBinding = function(event) {
         var bindingName;
-        if (event) {
-            //capitalize first letter
-            bindingName = "delegated" + event.substr(0, 1).toUpperCase() + event.slice(1);
+        if (!event) {
+            return;
         }
+
+        //capitalize first letter
+        bindingName = "delegated" + event.substr(0, 1).toUpperCase() + event.slice(1);
 
         //create the binding, if it does not exist
         if (!ko.bindingHandlers[bindingName]) {

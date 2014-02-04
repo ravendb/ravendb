@@ -40,6 +40,11 @@ define(["require", "exports", "durandal/app", "plugins/router", "common/appUrl",
                     return _this.fetchStats(db);
                 });
             }
+
+            // If we have no databases, show the "create a new database" screen.
+            if (results.length === 0) {
+                this.newDatabase();
+            }
         };
 
         databases.prototype.newDatabase = function () {

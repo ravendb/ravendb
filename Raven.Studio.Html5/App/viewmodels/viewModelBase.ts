@@ -2,9 +2,9 @@ import appUrl = require("common/appUrl");
 import database = require("models/database");
 
 /*
- * Base view model class that keeps track of the currently selected database.
+ * Base view model class that provides basic view model services, such as tracking the active database, configuring BootStrap tooltips, and more.
 */
-class activeDbViewModelBase {
+class viewModelBase {
     activeDatabase = ko.observable<database>().subscribeTo("ActivateDatabase", true);
 
     activate(args) {
@@ -18,6 +18,13 @@ class activeDbViewModelBase {
     deactivate() {
         this.activeDatabase.unsubscribeFrom("ActivateDatabase");
     }
+
+    useBootstrapTooltips() {
+        $(".use-bootstrap-tooltip").tooltip({
+            delay: { show: 600, hide: 100 },
+            container: 'body'
+        });
+    }
 }
 
-export = activeDbViewModelBase;
+export = viewModelBase;

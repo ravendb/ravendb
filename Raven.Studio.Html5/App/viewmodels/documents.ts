@@ -5,47 +5,40 @@ import collection = require("models/collection");
 import database = require("models/database");
 import document = require("models/document");
 import deleteCollection = require("viewmodels/deleteCollection");
-import raven = require("common/raven");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import getCollectionsCommand = require("commands/getCollectionsCommand");
+import viewModelBase = require("viewmodels/viewModelBase");
+import virtualTable = require("widgets/virtualTable/viewModel");
 
-class documents {
+class documents extends viewModelBase {
 
     displayName = "documents";
-    ravenDb: raven;
     collections = ko.observableArray<collection>();
     selectedCollection = ko.observable<collection>().subscribeTo("ActivateCollection").distinctUntilChanged();
     allDocumentsCollection: collection;
     collectionToSelectName: string;
-    private currentCollectionPagedItems = ko.observable<pagedList>();
-    subscriptions: Array<KnockoutSubscription> = [];
+    currentCollectionPagedItems = ko.observable<pagedList>();
+    selectedDocumentIndices = ko.observableArray<number>();
+    isSelectAll = ko.observable(false);
+    hasAnyDocumentsSelected: KnockoutComputed<boolean>;
+
+    static gridSelector = "#documentsGrid";
 
     constructor() {
-        this.ravenDb = new raven();
+        super();
         this.selectedCollection.subscribe(c => this.selectedCollectionChanged(c));
+        this.hasAnyDocumentsSelected = ko.computed(() => this.selectedDocumentIndices().length > 0);
     }
 
     activate(args) {
-
-        var dbChangedSubscription = ko.postbox.subscribe("ActivateDatabase", (db: database) => this.databaseChanged(db));
-        this.subscriptions.push(dbChangedSubscription);
+        super.activate(args);
+        this.activeDatabase.subscribe((db: database) => this.databaseChanged(db));
 
         // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
         this.collectionToSelectName = args ? args.collection : null;
-
-        // See if we've got a database to select.
-        if (args && args.database) {
-            ko.postbox.publish("ActivateDatabaseWithName", args.database);
-        }
-
+        
         return this.fetchCollections(appUrl.getDatabase());
-    }
-
-    deactivate() {
-        // Unsubscribe when we leave the page.
-        // This is necessary, otherwise our subscriptions will keep the page alive in memory and otherwise screw with us.
-        this.subscriptions.forEach(s => s.dispose());
     }
 
     attached(view: HTMLElement, parent: HTMLElement) {
@@ -54,6 +47,8 @@ class documents {
         (<any>$('.document-collections li')).contextmenu({
             target: '#collections-context-menu'
         });
+
+        this.useBootstrapTooltips();
     }
 
     collectionsLoaded(collections: Array<collection>, db: database) {
@@ -98,8 +93,8 @@ class documents {
 
     databaseChanged(db: database) {
         if (db) {
-            // TODO: use appUrl here.
-            router.navigate("#documents?database=" + encodeURIComponent(db.name), false);
+            var documentsUrl = appUrl.forDocuments(null, db);
+            router.navigate(documentsUrl, false);
             this.fetchCollections(db);
         }
     }
@@ -116,17 +111,68 @@ class documents {
         }
     }
 
-    activateCollection(collection: collection) {
+    selectCollection(collection: collection) {
         collection.activate();
-        var collectionPart = "collection=" + encodeURIComponent(collection.name);
-        var databasePart = raven.activeDatabase() ? "&database=" + raven.activeDatabase().name : "";
-        router.navigate("#documents?" + collectionPart + databasePart, false);
+        var documentsWithCollectionUrl = appUrl.forDocuments(collection.name, this.activeDatabase());
+        router.navigate(documentsWithCollectionUrl, false);
     }
 
     fetchCollections(db: database): JQueryPromise<Array<collection>> {
         return new getCollectionsCommand(db)
             .execute()
             .done(results => this.collectionsLoaded(results, db));
+    }
+
+    newDocument() {
+        router.navigate(appUrl.forNewDoc(this.activeDatabase()));
+    }
+
+    toggleSelectAll() {
+        this.isSelectAll.toggle();
+
+        var docsGrid = this.getDocumentsGrid();
+        if (docsGrid && this.isSelectAll()) {
+            docsGrid.selectAll();
+        } else if (docsGrid && !this.isSelectAll()) {
+            docsGrid.selectNone();
+        }        
+    }
+
+    editSelectedDoc() {
+        var grid = this.getDocumentsGrid();
+        if (grid) {
+            grid.editLastSelectedDoc();
+        }
+    }
+
+    deleteSelectedDocs() {
+        var grid = this.getDocumentsGrid();
+        if (grid) {
+            grid.deleteSelectedDocs();
+        }
+    }
+
+    copySelectedDocs() {
+        var grid = this.getDocumentsGrid();
+        if (grid) {
+            grid.copySelectedDocs();
+        }
+    }
+
+    copySelectedDocIds() {
+        var grid = this.getDocumentsGrid();
+        if (grid) {
+            grid.copySelectedDocIds();
+        }
+    }
+
+    getDocumentsGrid(): virtualTable {
+        var gridContents = $(documents.gridSelector).children()[0];
+        if (gridContents) {
+            return ko.dataFor(gridContents);
+        }
+
+        return null;
     }
 }
 

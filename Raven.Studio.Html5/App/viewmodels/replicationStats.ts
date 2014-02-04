@@ -1,8 +1,8 @@
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import getReplicationStatsCommand = require("commands/getReplicationStatsCommand");
 import moment = require("moment");
 
-class replicationStats extends activeDbViewModelBase {
+class replicationStats extends viewModelBase {
 
     replStatsDoc = ko.observable<replicationStatsDocumentDto>();
     hasNoReplStatsAvailable = ko.observable(false);

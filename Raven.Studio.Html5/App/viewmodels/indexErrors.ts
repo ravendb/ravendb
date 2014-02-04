@@ -1,8 +1,8 @@
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import moment = require("moment");
 
-class indexErrors extends activeDbViewModelBase {
+class indexErrors extends viewModelBase {
 
     allIndexErrors = ko.observableArray<serverErrorDto>();
     hasFetchedErrors = ko.observable(false);

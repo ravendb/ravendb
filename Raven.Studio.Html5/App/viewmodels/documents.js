@@ -1,41 +1,39 @@
-define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "models/document", "viewmodels/deleteCollection", "common/raven", "common/pagedList", "common/appUrl", "commands/getCollectionsCommand"], function(require, exports, app, router, collection, database, document, deleteCollection, raven, pagedList, appUrl, getCollectionsCommand) {
-    var documents = (function () {
+var __extends = this.__extends || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    __.prototype = b.prototype;
+    d.prototype = new __();
+};
+define(["require", "exports", "durandal/app", "plugins/router", "models/collection", "models/database", "models/document", "viewmodels/deleteCollection", "common/pagedList", "common/appUrl", "commands/getCollectionsCommand", "viewmodels/viewModelBase", "widgets/virtualTable/viewModel"], function(require, exports, app, router, collection, database, document, deleteCollection, pagedList, appUrl, getCollectionsCommand, viewModelBase, virtualTable) {
+    var documents = (function (_super) {
+        __extends(documents, _super);
         function documents() {
             var _this = this;
+            _super.call(this);
             this.displayName = "documents";
             this.collections = ko.observableArray();
             this.selectedCollection = ko.observable().subscribeTo("ActivateCollection").distinctUntilChanged();
             this.currentCollectionPagedItems = ko.observable();
-            this.subscriptions = [];
-            this.ravenDb = new raven();
+            this.selectedDocumentIndices = ko.observableArray();
+            this.isSelectAll = ko.observable(false);
             this.selectedCollection.subscribe(function (c) {
                 return _this.selectedCollectionChanged(c);
+            });
+            this.hasAnyDocumentsSelected = ko.computed(function () {
+                return _this.selectedDocumentIndices().length > 0;
             });
         }
         documents.prototype.activate = function (args) {
             var _this = this;
-            var dbChangedSubscription = ko.postbox.subscribe("ActivateDatabase", function (db) {
+            _super.prototype.activate.call(this, args);
+            this.activeDatabase.subscribe(function (db) {
                 return _this.databaseChanged(db);
             });
-            this.subscriptions.push(dbChangedSubscription);
 
             // We can optionally pass in a collection name to view's URL, e.g. #/documents?collection=Foo&database="blahDb"
             this.collectionToSelectName = args ? args.collection : null;
 
-            // See if we've got a database to select.
-            if (args && args.database) {
-                ko.postbox.publish("ActivateDatabaseWithName", args.database);
-            }
-
             return this.fetchCollections(appUrl.getDatabase());
-        };
-
-        documents.prototype.deactivate = function () {
-            // Unsubscribe when we leave the page.
-            // This is necessary, otherwise our subscriptions will keep the page alive in memory and otherwise screw with us.
-            this.subscriptions.forEach(function (s) {
-                return s.dispose();
-            });
         };
 
         documents.prototype.attached = function (view, parent) {
@@ -44,6 +42,8 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
             $('.document-collections li').contextmenu({
                 target: '#collections-context-menu'
             });
+
+            this.useBootstrapTooltips();
         };
 
         documents.prototype.collectionsLoaded = function (collections, db) {
@@ -98,8 +98,8 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
 
         documents.prototype.databaseChanged = function (db) {
             if (db) {
-                // TODO: use appUrl here.
-                router.navigate("#documents?database=" + encodeURIComponent(db.name), false);
+                var documentsUrl = appUrl.forDocuments(null, db);
+                router.navigate(documentsUrl, false);
                 this.fetchCollections(db);
             }
         };
@@ -117,11 +117,10 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
             }
         };
 
-        documents.prototype.activateCollection = function (collection) {
+        documents.prototype.selectCollection = function (collection) {
             collection.activate();
-            var collectionPart = "collection=" + encodeURIComponent(collection.name);
-            var databasePart = raven.activeDatabase() ? "&database=" + raven.activeDatabase().name : "";
-            router.navigate("#documents?" + collectionPart + databasePart, false);
+            var documentsWithCollectionUrl = appUrl.forDocuments(collection.name, this.activeDatabase());
+            router.navigate(documentsWithCollectionUrl, false);
         };
 
         documents.prototype.fetchCollections = function (db) {
@@ -130,8 +129,61 @@ define(["require", "exports", "durandal/app", "plugins/router", "models/collecti
                 return _this.collectionsLoaded(results, db);
             });
         };
+
+        documents.prototype.newDocument = function () {
+            router.navigate(appUrl.forNewDoc(this.activeDatabase()));
+        };
+
+        documents.prototype.toggleSelectAll = function () {
+            this.isSelectAll.toggle();
+
+            var docsGrid = this.getDocumentsGrid();
+            if (docsGrid && this.isSelectAll()) {
+                docsGrid.selectAll();
+            } else if (docsGrid && !this.isSelectAll()) {
+                docsGrid.selectNone();
+            }
+        };
+
+        documents.prototype.editSelectedDoc = function () {
+            var grid = this.getDocumentsGrid();
+            if (grid) {
+                grid.editLastSelectedDoc();
+            }
+        };
+
+        documents.prototype.deleteSelectedDocs = function () {
+            var grid = this.getDocumentsGrid();
+            if (grid) {
+                grid.deleteSelectedDocs();
+            }
+        };
+
+        documents.prototype.copySelectedDocs = function () {
+            var grid = this.getDocumentsGrid();
+            if (grid) {
+                grid.copySelectedDocs();
+            }
+        };
+
+        documents.prototype.copySelectedDocIds = function () {
+            var grid = this.getDocumentsGrid();
+            if (grid) {
+                grid.copySelectedDocIds();
+            }
+        };
+
+        documents.prototype.getDocumentsGrid = function () {
+            var gridContents = $(documents.gridSelector).children()[0];
+            if (gridContents) {
+                return ko.dataFor(gridContents);
+            }
+
+            return null;
+        };
+        documents.gridSelector = "#documentsGrid";
         return documents;
-    })();
+    })(viewModelBase);
 
     
     return documents;
