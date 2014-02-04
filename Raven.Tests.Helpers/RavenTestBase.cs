@@ -9,6 +9,8 @@ using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Threading;
 using Raven.Abstractions.Data;
@@ -175,6 +177,8 @@ namespace Raven.Tests.Helpers
 			return defaultStorageType;
 		}
 
+	    protected bool checkPorts = false;
+
 		protected RavenDbServer GetNewServer(int port = 8079, 
 			string dataDirectory = null,
 			bool runInMemory = true, 
@@ -182,6 +186,7 @@ namespace Raven.Tests.Helpers
 			bool enableAuthentication = false,
 			string activeBundles = null)
 		{
+		    checkPorts = true;
 			if (dataDirectory != null)
 				pathsToDelete.Add(dataDirectory);
 
@@ -490,6 +495,9 @@ namespace Raven.Tests.Helpers
 			GC.Collect(2);
 			GC.WaitForPendingFinalizers();
 
+		    if (checkPorts)
+		        AssertPortsNotInUse(8079, 8078, 8077, 8076, 8075);
+
 			foreach (var pathToDelete in pathsToDelete)
 			{
 				try
@@ -505,6 +513,20 @@ namespace Raven.Tests.Helpers
 			if (errors.Count > 0)
 				throw new AggregateException(errors);
 		}
+
+        public static void AssertPortsNotInUse(params int[] ports)
+        {
+            IPGlobalProperties ipProperties = IPGlobalProperties.GetIPGlobalProperties();
+            IPEndPoint[] ipEndPoints = ipProperties.GetActiveTcpListeners();
+
+
+            foreach (IPEndPoint endPoint in ipEndPoints)
+            {
+                Assert.False(ports.Contains(endPoint.Port), "Port " + endPoint.Port  + " is in used but shouldn't be. Did we leak a connection?");    
+            }
+
+        }
+ 
 
 		protected static void PrintServerErrors(ServerError[] serverErrors)
 		{
