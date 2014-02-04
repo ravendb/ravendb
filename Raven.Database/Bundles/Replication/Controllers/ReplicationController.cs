@@ -271,7 +271,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
 				{
 					sourceReplicationInformation = new SourceReplicationInformation()
 					{
-						Source = src
+						Source = src,
+						ServerInstanceId = serverInstanceId
 					};
 				}
 				else
