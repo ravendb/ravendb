@@ -5,24 +5,21 @@ using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class tjbsb : RemoteClientTest
+	public class tjbsb : RavenTest
 	{
 		[Fact]
 		public void WorkWithoutTransaction()
 		{
-			using (var store = new EmbeddableDocumentStore
+			using (var store = NewDocumentStore())
 			{
-				RunInMemory = true
-			}.Initialize())
-			{
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					var user = new User { Id = "users/user@anywhere.com" };
 					session.Store(user);
 					session.SaveChanges();
 				}
 
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					var user = session.Load<User>("users/user@anywhere.com");
 					Assert.NotNull(user);
@@ -33,13 +30,10 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void WorkWithTransaction()
 		{
-			using (var store = new EmbeddableDocumentStore
-			{
-				RunInMemory = true
-			}.Initialize())
+			using (var store = NewDocumentStore())
 			{
 				using (var scope = new TransactionScope())
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					var user = new User { Id = "users/user@anywhere.com" };
 					session.Store(user);
@@ -47,7 +41,7 @@ namespace Raven.Tests.Bugs
 					scope.Complete();
 				}
 
-				using (IDocumentSession session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					session.Advanced.AllowNonAuthoritativeInformation = false;
 					var user = session.Load<User>("users/user@anywhere.com");
@@ -59,14 +53,11 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void WorkWithTransactionAndNoAllowNonAuthoritativeInformation()
 		{
-			using (var store = new EmbeddableDocumentStore
-			{
-				RunInMemory = true
-			}.Initialize())
+			using (var store = NewDocumentStore())
 			{
 				using (new TransactionScope())
 				{
-					using (IDocumentSession session = store.OpenSession())
+					using (var session = store.OpenSession())
 					{
 						var user = new User {Id = "users/user@anywhere.com"};
 						session.Store(user);
@@ -74,14 +65,12 @@ namespace Raven.Tests.Bugs
 					}
 
 					using(new TransactionScope(TransactionScopeOption.Suppress))
-					using (IDocumentSession session = store.OpenSession())
+					using (var session = store.OpenSession())
 					{
 						var user = session.Load<User>("users/user@anywhere.com");
 						Assert.Null(user);
 					}
 				}
-
-				
 			}
 		}
 	}

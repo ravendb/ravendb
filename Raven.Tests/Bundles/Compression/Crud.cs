@@ -48,7 +48,6 @@ namespace Raven.Tests.Bundles.Compression
 			var jsonDocument = documentStore.DatabaseCommands.Get("docs/1");
 			Assert.True(jsonDocument.Metadata.Value<bool>(Constants.RavenDocumentDoesNotExists));
 
-
 			AssertPlainTextIsNotSavedInDatabase_ExceptIndexes(FirstCompany);
 		}
 	}

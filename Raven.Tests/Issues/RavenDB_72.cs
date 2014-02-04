@@ -14,25 +14,20 @@ namespace Raven.Tests.Issues
 		[Fact]
 		public void CanWork()
 		{
-			using (var documentStore = new EmbeddableDocumentStore
-			{
-				RunInMemory = true
-			})
+			using (var store = NewDocumentStore())
 			{
 				const string searchQuery = "Doe";
 
-				documentStore.Initialize();
-
 				// Scan for all indexes inside the ASSEMBLY.
-				new Users_ByDisplayNameReversed().Execute(documentStore);
+				new Users_ByDisplayNameReversed().Execute(store);
 
 				// Seed some fake data.
-				CreateFakeData(documentStore);
+				CreateFakeData(store);
 
 				var xx = new string(searchQuery.Reverse().ToArray());
 
 				// Now lets do our query.
-				using (IDocumentSession documentSession = documentStore.OpenSession())
+				using (IDocumentSession documentSession = store.OpenSession())
 				{
 
 					var users = documentSession
@@ -46,7 +41,7 @@ namespace Raven.Tests.Issues
 				}
 
 
-				Assert.Empty(documentStore.DocumentDatabase.Statistics.Errors);
+				Assert.Empty(store.DocumentDatabase.Statistics.Errors);
 			}
 		}
 
@@ -71,18 +66,13 @@ namespace Raven.Tests.Issues
 				//Index(x => x.DisplayNameReversed, FieldIndexing.NotAnalyzed);
 			}
 
-			#region Nested type: Result
-
 			public class Result
 			{
 				public string Id { get; set; }
 				public string DisplayName { get; set; }
 				public string DisplayNameReversed { get; set; }
 			}
-
-			#endregion
 		}
-
 
 		private static void CreateFakeData(IDocumentStore documentStore)
 		{
@@ -93,16 +83,16 @@ namespace Raven.Tests.Issues
 
 			var users = new List<User>();
 			users.AddRange(new[]
-							   {
-								   new User {Id = null, DisplayName = "Fred Smith"},
-								   new User {Id = null, DisplayName = "Jane Doe"},
-								   new User {Id = null, DisplayName = "John Doe"},
-								   new User {Id = null, DisplayName = "Pure Krome"},
-								   new User {Id = null, DisplayName = "Ayende Rahien"},
-								   new User {Id = null, DisplayName = "Itamar Syn-Hershko"},
-								   new User {Id = null, DisplayName = "Oren Eini"},
-								   new User {Id = null, DisplayName = null} // <--- Assume this is an option field....
-							   });
+			{
+				new User {Id = null, DisplayName = "Fred Smith"},
+				new User {Id = null, DisplayName = "Jane Doe"},
+				new User {Id = null, DisplayName = "John Doe"},
+				new User {Id = null, DisplayName = "Pure Krome"},
+				new User {Id = null, DisplayName = "Ayende Rahien"},
+				new User {Id = null, DisplayName = "Itamar Syn-Hershko"},
+				new User {Id = null, DisplayName = "Oren Eini"},
+				new User {Id = null, DisplayName = null} // <--- Assume this is an option field....
+			});
 			using (IDocumentSession documentSession = documentStore.OpenSession())
 			{
 				foreach (User user in users)

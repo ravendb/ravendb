@@ -66,7 +66,7 @@ namespace Raven.Tests.Indexes
 		}
 
 		[Fact]
-		public void HighlightText_LineRerturnedShorterThenOriginal()
+		public void HighlightText_LineReturnedShorterThenOriginal()
 		{
 			var item = new SearchItem
 			{
