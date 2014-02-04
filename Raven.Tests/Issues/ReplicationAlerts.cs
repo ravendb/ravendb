@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Smuggler;
 using Raven.Json.Linq;
