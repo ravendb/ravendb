@@ -6,7 +6,6 @@ import app = require("durandal/app");
 import sys = require("durandal/system");
 
 import database = require("models/database");
-import raven = require("common/raven");
 import document = require("models/document");
 import appUrl = require("common/appUrl");
 import collection = require("models/collection");
@@ -42,11 +41,11 @@ class shell {
 
     activate() {
         NProgress.set(.8);
-		router.map([
+        router.map([
 			{ route: ['', 'databases'],	    title: 'Databases',		moduleId: 'viewmodels/databases',		nav: false },
             { route: 'documents',		    title: 'Documents',		moduleId: 'viewmodels/documents',		nav: true,	hash: appUrl.forCurrentDatabase().documents },
 			{ route: 'indexes*details',		title: 'Indexes',		moduleId: 'viewmodels/indexes',			nav: true,  hash: appUrl.forCurrentDatabase().indexes },
-			{ route: 'query',			    title: 'Query',			moduleId: 'viewmodels/query',			nav: true },
+            { route: 'query(/:indexName)',	title: 'Query',			moduleId: 'viewmodels/query',			nav: true },
 			{ route: 'tasks',			    title: 'Tasks',			moduleId: 'viewmodels/tasks',			nav: true },
 			{ route: 'settings*details',    title: 'Settings',		moduleId: 'viewmodels/settings',		nav: true,  hash: appUrl.forCurrentDatabase().settings },
             { route: 'status*details',	    title: 'Status',		moduleId: 'viewmodels/status',			nav: true,	hash: appUrl.forCurrentDatabase().status },
@@ -157,6 +156,13 @@ class shell {
                 .execute()
                 .done(result => db.statistics(result));
         }
+    }
+
+    selectDatabase(db: database) {
+        db.activate();
+
+        var updatedUrl = appUrl.forCurrentPage(db);
+        router.navigate(updatedUrl);
     }
 
     fetchBuildVersion() {

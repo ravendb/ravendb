@@ -1,13 +1,13 @@
 ﻿import app = require("durandal/app");
 import getLogsCommand = require("commands/getLogsCommand");
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import database = require("models/database");
 import moment = require("moment");
 import copyDocuments = require("viewmodels/copyDocuments");
 import document = require("models/document");
 
-class logs extends activeDbViewModelBase {
+class logs extends viewModelBase {
 
     allLogs = ko.observableArray<logDto>();
     filterLevel = ko.observable("All");

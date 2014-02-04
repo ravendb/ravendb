@@ -138,6 +138,7 @@ namespace Raven.Tests.Helpers
 				bool enableAuthentication = false,
 				Action<DocumentStore> configureStore = null)
 		{
+		    checkPorts = true;
 			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication);
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore

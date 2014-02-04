@@ -1,4 +1,4 @@
-/// <reference path="../../Scripts/typings/ace/ace.amd.d.ts" />
+﻿/// <reference path="../../Scripts/typings/ace/ace.amd.d.ts" />
 
 import app = require("durandal/app");
 import sys = require("durandal/system");
@@ -10,15 +10,14 @@ import database = require("models/database");
 import documentMetadata = require("models/documentMetadata");
 import collection = require("models/collection");
 import saveDocumentCommand = require("commands/saveDocumentCommand");
-import raven = require("common/raven");
 import deleteDocuments = require("viewmodels/deleteDocuments");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import getDocumentWithMetadataCommand = require("commands/getDocumentWithMetadataCommand");
+import viewModelBase = require("viewmodels/viewModelBase");
 
-class editDocument {
+class editDocument extends viewModelBase {
 
-    ravenDb: raven;
     document = ko.observable<document>();
     metadata: KnockoutComputed<documentMetadata>;
     documentText = ko.observable('');
@@ -33,8 +32,10 @@ class editDocument {
     docEditor: AceAjax.Editor;
     databaseForEditedDoc: database;
 
+    static editDocSelector = "#editDocumentContainer";
+
     constructor() {
-        this.ravenDb = new raven();
+        super();
         this.metadata = ko.computed(() => this.document() ? this.document().__metadata : null);
 
         this.document.subscribe(doc => {
@@ -74,9 +75,11 @@ class editDocument {
 
     activate(navigationArgs) {
 
+        super.activate(navigationArgs);
+
         // Find the database and collection we're supposed to load.
         // Used for paging through items.
-        this.databaseForEditedDoc = appUrl.getDatabase();
+        this.databaseForEditedDoc = this.activeDatabase();
         if (navigationArgs && navigationArgs.database) {
             ko.postbox.publish("ActivateDatabaseWithName", navigationArgs.database);
         }
@@ -105,10 +108,11 @@ class editDocument {
     attached() {
         this.initializeDocEditor();
         this.setupKeyboardShortcuts();
+        this.useBootstrapTooltips();
     }
 
     deactivate() {
-        $("#editDocumentContainer").unbind('keydown.jwerty');
+        $(editDocument.editDocSelector).unbind('keydown.jwerty');
     }
 
     initializeDocEditor() {
@@ -121,26 +125,24 @@ class editDocument {
         this.updateDocEditorText();
     }
 
-    setupKeyboardShortcuts() {
-        jwerty.key("ctrl+alt+s", e => {
-            e.preventDefault();
-            this.saveDocument();
-        }, this, "#editDocumentContainer");
+    setupKeyboardShortcuts() {        
+        this.createKeyboardShortcut("alt+s", () => this.saveDocument());
+        this.createKeyboardShortcut("alt+r", () => this.refreshDocument());
+        this.createKeyboardShortcut("shift+d", () => this.isEditingMetadata(false));
+        this.createKeyboardShortcut("shift+m", () => this.isEditingMetadata(true));
+        this.createKeyboardShortcut("home", () => this.firstDocument());
+        this.createKeyboardShortcut("end", () => this.lastDocument());
+        this.createKeyboardShortcut("alt+←", () => this.previousDocumentOrLast());
+        this.createKeyboardShortcut("alt+→", () => this.nextDocumentOrFirst());
+        this.createKeyboardShortcut("alt+[", () => this.formatDocument());
+        this.createKeyboardShortcut("delete", () => this.deleteDocument());
+    }
 
-        jwerty.key("ctrl+alt+r", e => {
+    private createKeyboardShortcut(keys: string, handler: () => void) {
+        jwerty.key(keys, e => {
             e.preventDefault();
-            this.refreshDocument();
-        }, this, "#editDocumentContainer");
-
-        jwerty.key("ctrl+alt+d", e => {
-            e.preventDefault();
-            this.isEditingMetadata(false);
-        });
-
-        jwerty.key("ctrl+alt+m", e => {
-            e.preventDefault();
-            this.isEditingMetadata(true);
-        });
+            handler();
+        }, this, editDocument.editDocSelector);
     }
 
     editNewDocument() {
@@ -180,7 +182,7 @@ class editDocument {
 
     attachReservedMetaProperties(id: string, target: documentMetadataDto) {
         target['@etag'] = '00000000-0000-0000-0000-000000000000';
-        target['Raven-Entity-Name'] = raven.getEntityNameFromId(id);
+        target['Raven-Entity-Name'] = document.getEntityNameFromId(id);
         target['@id'] = id;
     }
 
@@ -209,11 +211,12 @@ class editDocument {
     refreshDocument() {
         var meta = this.metadata();
         if (!this.isCreatingNewDocument()) {
+            var docId = this.editedDocId();
             this.document(null);
             this.documentText(null);
             this.metadataText(null);
             this.userSpecifiedId('');
-            this.loadDocument(this.editedDocId());
+            this.loadDocument(docId);
         } else {
             this.editNewDocument();
         }
@@ -223,12 +226,16 @@ class editDocument {
         var doc = this.document();
         if (doc) {
             var viewModel = new deleteDocuments([doc]);
-            viewModel.deletionTask.done(() => {
-                this.nextDocumentOrFirst();
-
-            });
-            app.showDialog(viewModel);
+            viewModel.deletionTask.done(() => this.nextDocumentOrFirst());
+            app.showDialog(viewModel, editDocument.editDocSelector);
         }
+    }
+
+    formatDocument() {
+        var docText = this.documentText();
+        var tempDoc = JSON.parse(docText);
+        var formatted = this.stringify(tempDoc);
+        this.documentText(formatted);
     }
 
     nextDocumentOrFirst() {
@@ -278,10 +285,8 @@ class editDocument {
     }
 
     navigateToCollection(collectionName: string) {
-        // TODO: use appUrl instead.
-        var databaseFragment = raven.activeDatabase() ? "&database=" + raven.activeDatabase().name : "";
-        var collectionFragment = collectionName ? "&collection=" + collectionName : "";
-        router.navigate("#documents?" + collectionFragment + databaseFragment);
+        var collectionUrl = appUrl.forDocuments(collectionName, this.activeDatabase());
+        router.navigate(collectionUrl);
     }
 
     navigateToDocuments() {

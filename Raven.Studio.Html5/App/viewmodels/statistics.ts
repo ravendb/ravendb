@@ -1,9 +1,9 @@
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/getDatabaseStatsCommand");
 import database = require("models/database");
 import moment = require("moment");
 
-class statistics extends activeDbViewModelBase {
+class statistics extends viewModelBase {
 
     stats = ko.observable<databaseStatisticsDto>();
 

@@ -48,7 +48,7 @@ class pagedList {
         }
     }
 
-    getCachedSliceOrNull(skip: number, take: number): Array<any> {
+    getCachedSliceOrNull(skip: number, take: number): any[] {
         for (var i = skip; i < skip + take; i++) {
             if (!this.items[i]) {
                 return null;
@@ -73,7 +73,7 @@ class pagedList {
         return deferred;
     }
 
-    getCachedItemsAt(indices: Array<number>): Array<any> {
+    getCachedItemsAt(indices: number[]): any[] {
         return indices
             .filter(index => this.items[index])
             .map(validIndex => this.items[validIndex]);

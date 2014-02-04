@@ -1,9 +1,9 @@
 import getUserInfoCommand = require("commands/getUserInfoCommand");
 import appUrl = require("common/appUrl");
 import database = require("models/database");
-import activeDbViewModelBase = require("viewmodels/activeDbViewModelBase");
+import viewModelBase = require("viewmodels/viewModelBase");
 
-class userInfo extends activeDbViewModelBase {
+class userInfo extends viewModelBase {
 
     data = ko.observable<userInfoDto>();
     
