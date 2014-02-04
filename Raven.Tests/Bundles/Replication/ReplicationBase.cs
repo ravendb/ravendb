@@ -31,6 +31,11 @@ namespace Raven.Tests.Bundles.Replication
         protected int PortRangeStart = 8079;
         protected int RetriesCount = 500;
 
+        public ReplicationBase()
+        {
+            checkPorts = true;
+        }
+
 		public DocumentStore CreateStore(bool enableCompressionBundle = false, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false,string requestedStorageType = "esent", bool useFiddler = false)
         {
             var port = PortRangeStart - stores.Count;
