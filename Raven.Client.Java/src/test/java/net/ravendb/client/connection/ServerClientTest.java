@@ -350,6 +350,8 @@ public class ServerClientTest extends RavenDBAwareTests {
       dbCommands.putAttachment(key, etag, is, new RavenJObject());
       is.close();
 
+      assertEquals(1l, dbCommands.getStatistics().getCountOfAttachments());
+
       Attachment a = dbCommands.getAttachment(key);
 
       RavenJObject meta = new RavenJObject();

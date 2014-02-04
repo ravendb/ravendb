@@ -34,6 +34,24 @@ public interface IDocumentSession extends AutoCloseable {
   public <T> void delete(T entity);
 
   /**
+   * Marks the specified entity for deletion. The entity will be deleted when IDocumentSession.saveChanges is called.
+   *  WARNING: This method will not call beforeDelete listener!
+   */
+  public <T> void delete(Class<T> clazz, Number id);
+
+  /**
+   * Marks the specified entity for deletion. The entity will be deleted when IDocumentSession.saveChanges is called.
+   *  WARNING: This method will not call beforeDelete listener!
+   */
+  public <T> void delete(Class<T> clazz, UUID id);
+
+  /**
+   * Marks the specified entity for deletion. The entity will be deleted when IDocumentSession.saveChanges is called.
+   *  WARNING: This method will not call beforeDelete listener!
+   */
+  public void delete(String id);
+
+  /**
    * Loads the specified entity with the specified id.
    * @param clazz
    * @param id

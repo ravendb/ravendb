@@ -44,6 +44,7 @@ public class IndexQuery {
   private SortedField[] sortedFields;
   private Date cutoff;
   private Etag cutoffEtag;
+  private boolean waitForNonStaleResultsAsOfNow;
   private String defaultField;
   private QueryOperator defaultOperator = QueryOperator.OR;
   private boolean skipTransformResults;
@@ -55,6 +56,16 @@ public class IndexQuery {
   private String resultsTransformer;
   private boolean disableCaching;
   private boolean explainScores;
+
+
+  public boolean isWaitForNonStaleResultsAsOfNow() {
+    return waitForNonStaleResultsAsOfNow;
+  }
+
+
+  public void setWaitForNonStaleResultsAsOfNow(boolean waitForNonStaleResultsAsOfNow) {
+    this.waitForNonStaleResultsAsOfNow = waitForNonStaleResultsAsOfNow;
+  }
 
   public String getResultsTransformer() {
     return resultsTransformer;
@@ -375,6 +386,9 @@ public class IndexQuery {
     }
     if (cutoffEtag != null) {
       path.append("&cutOffEtag=").append(cutoffEtag);
+    }
+    if (waitForNonStaleResultsAsOfNow) {
+      path.append("&waitForNonStaleResultsAsOfNow=true");
     }
     if (highlightedFields != null) {
       for( HighlightedField field: highlightedFields) {

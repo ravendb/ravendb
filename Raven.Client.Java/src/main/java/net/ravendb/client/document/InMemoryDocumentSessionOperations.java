@@ -424,7 +424,7 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
 
     if (!noTracking) {
       DocumentMetadata docMeta = new DocumentMetadata();
-      docMeta.setOriginalMetadata(document);
+      docMeta.setOriginalValue(document);
       docMeta.setMetadata(metadata);
       docMeta.setOriginalMetadata(metadata.cloneToken());
       docMeta.setEtag(HttpExtensions.etagHeaderToEtag(etag));
@@ -564,6 +564,42 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     knownMissingIds.add(value.getKey());
   }
 
+  /**
+   * Marks the specified entity for deletion. The entity will be deleted when IDocumentSession.saveChanges() is called.
+   * WARNING: This method will not call beforeDelete listener!
+   */
+  public <T> void delete(Class<T> clazz, Number id) {
+    delete(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false));
+  }
+
+  /**
+   * Marks the specified entity for deletion. The entity will be deleted when IDocumentSession.saveChanges() is called.
+   * WARNING: This method will not call beforeDelete listener!
+   */
+  public <T> void delete(Class<T> clazz, UUID id) {
+    delete(getConventions().getFindFullDocumentKeyFromNonStringIdentifier().find(id, clazz, false));
+  }
+
+  /**
+   * Marks the specified entity for deletion. The entity will be deleted when IDocumentSession.saveChanges() is called.
+   * WARNING: This method will not call beforeDelete listener!
+   */
+  public void delete(String id)
+  {
+      knownMissingIds.add(id);
+      Object entity;
+      if (entitiesByKey.containsKey(id)) {
+        entity = entitiesByKey.get(id);
+          // find if entity was changed on session or just inserted
+          if (entityChanged(entity, entitiesAndMetadata.get(entity))) {
+              throw new IllegalStateException("Can't delete changed entity using identifier. Use delete(T entity) instead.");
+          }
+          entitiesByKey.remove(id);
+          entitiesAndMetadata.remove(entity);
+      }
+      defer(new DeleteCommandData(id, null));
+  }
+
   public static void ensureNotReadVetoed(RavenJObject metadata) {
     RavenJToken readVetoToken = metadata.get("Raven-Read-Veto");
     if (readVetoToken instanceof RavenJObject) {
@@ -641,6 +677,12 @@ public abstract class InMemoryDocumentSessionOperations implements AutoCloseable
     } else {
       // Store it back into the Id field so the client has access to to it
       generateEntityIdOnTheClient.trySetIdentity(entity, id);
+    }
+
+    for (ICommandData command : deferedCommands) {
+      if (command instanceof DeleteCommandData && command.getKey().equals(id)) {
+        throw new IllegalStateException("Can't store object, which was deleted in this session.");
+      }
     }
 
     // we make the check here even if we just generated the key
