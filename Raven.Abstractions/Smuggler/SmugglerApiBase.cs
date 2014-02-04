@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 #if !NETFX_CORE
 using System;
 using System.Collections.Generic;
@@ -101,9 +102,17 @@ namespace Raven.Abstractions.Smuggler
 			if(options.Incremental)
 				throw new NotSupportedException("Incremental exports are not supported in SL.");
 #endif
-			await DetectServerSupportedFeatures();
+			try
+			{
+				await DetectServerSupportedFeatures();
+			}
+			catch (WebException e)
+			{				
+				ShowProgress("Failed to query server for supported features. Reason : " + e.Message);
+				SetLegacyMode(); //could not detect supported features, then run in legacy mode
+			}
 
-		    SmugglerExportException lastException = null;
+			SmugglerExportException lastException = null;
 
 			bool ownedStream = exportOptions.ToStream == null;
 			var stream = exportOptions.ToStream ?? File.Create(result.FilePath);
@@ -730,13 +739,11 @@ namespace Raven.Abstractions.Smuggler
 			var serverVersion = await GetVersion();
 			if (string.IsNullOrEmpty(serverVersion))
 			{
-				IsTransformersSupported = false;
-				IsDocsStreamingSupported = false;
-				ShowProgress("Server version is not available. Running in legacy mode which does not support transformers.");
+				SetLegacyMode();
 				return;
 			}
 
-            var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerApiBase>()).ProductVersion;
+			var smugglerVersion = FileVersionInfo.GetVersionInfo(AssemblyHelper.GetAssemblyLocationFor<SmugglerApiBase>()).ProductVersion;
 
 			var subServerVersion = serverVersion.Substring(0, 3);
 			var subSmugglerVersion = smugglerVersion.Substring(0, 3);
@@ -754,6 +761,13 @@ namespace Raven.Abstractions.Smuggler
 
 			IsTransformersSupported = true;
 			IsDocsStreamingSupported = true;
+		}
+
+		private void SetLegacyMode()
+		{
+			IsTransformersSupported = false;
+			IsDocsStreamingSupported = false;
+			ShowProgress("Server version is not available. Running in legacy mode which does not support transformers.");
 		}
 
 		public bool IsTransformersSupported { get; private set; }

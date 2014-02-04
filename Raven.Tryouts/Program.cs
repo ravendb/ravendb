@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 
 using Raven.Tests.Faceted;
+using Raven.Tests.Issues;
 
 namespace Raven.Tryouts
 {
@@ -13,9 +14,9 @@ namespace Raven.Tryouts
 			{
 				Console.WriteLine(i);
                 Environment.SetEnvironmentVariable("run", i.ToString("000"));
-				using (var x = new LazyFacets())
+				using (var x = new RavenDB_1603())
 				{
-                    //x.Default_operator_not_honoured_remote_store_ToFacetsLazy();
+					x.CanHandleAttachmentExceptionsGracefully_Smuggler();
 				}
 			}
 			
