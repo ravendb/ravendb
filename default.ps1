@@ -10,7 +10,7 @@ properties {
 	$tools_dir = "$base_dir\Tools"
 	$release_dir = "$base_dir\$global:configuration\"
 	$uploader = "..\Uploader\S3Uploader.exe"
-	$global:configuration = "Release"
+	$global:configuration = "Debug"
 	
 	$core_db_dlls = @(
         "$base_dir\Raven.Database\bin\$global:configuration\\Raven.Abstractions.???", 

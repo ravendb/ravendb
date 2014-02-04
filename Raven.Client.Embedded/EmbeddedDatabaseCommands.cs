@@ -643,6 +643,11 @@ namespace Raven.Client.Embedded
 
 						throw;
 					}
+					finally
+					{
+						if (!items.IsAddingCompleted)
+							items.CompleteAdding();
+					}
 				}, TaskCreationOptions.LongRunning);
 				waitForHeaders.Wait();
 				queryHeaderInfo = localQueryHeaderInfo;
