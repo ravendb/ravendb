@@ -34,13 +34,13 @@ namespace Raven.Database.Server.WebApi
 			new ConcurrentDictionary<string, ConcurrentQueue<LogHttpRequestStatsParams>>();
 
 		private DateTime lastWriteRequest;
-		private bool disposed;
-		//private readonly ReaderWriterLockSlim disposerLock = new ReaderWriterLockSlim();
-		private readonly AsyncReaderWriterLock disposerLock = new AsyncReaderWriterLock();
+	    private CancellationTokenSource cancellationTokenSource;
+	    private long concurrentRequests;
 		private int physicalRequestsCount;
 		private bool initialized;
+	    private CancellationToken cancellationToken;
 
-		public int NumberOfRequests
+	    public int NumberOfRequests
 		{
 			get { return Thread.VolatileRead(ref physicalRequestsCount); }
 		}
@@ -49,7 +49,8 @@ namespace Raven.Database.Server.WebApi
 
 		public RequestManager(DatabasesLandlord landlord)
 		{
-			this.landlord = landlord;
+		    cancellationTokenSource = new CancellationTokenSource();
+		    this.landlord = landlord;
 			int val;
 			if (int.TryParse(landlord.SystemConfiguration.Settings["Raven/Tenants/MaxIdleTimeForTenantDatabase"], out val) == false)
 				val = 900;
@@ -60,6 +61,7 @@ namespace Raven.Database.Server.WebApi
 			frequencyToCheckForIdleDatabases = TimeSpan.FromSeconds(val);
 
 			Init();
+		    cancellationToken = cancellationTokenSource.Token;
 		}
 
 		public void Init()
@@ -72,70 +74,64 @@ namespace Raven.Database.Server.WebApi
 
 		public void Dispose()
 		{
-			using(disposerLock.WriteLock())
-			{
-				disposed = true;
-				var exceptionAggregator = new ExceptionAggregator(Logger, "Could not properly dispose of HttpServer");
-				
-				exceptionAggregator.Execute(() =>
-				{
-					if (serverTimer != null)
-						serverTimer.Dispose();
-				});
-			}
+		    cancellationTokenSource.Cancel();
+            // we give it a second to actually complete all requests, but then we go ahead 
+            // and dispose anyway
+		    for (int i = 0; i < 10 && Interlocked.Read(ref concurrentRequests) > 0; i++)
+		    {
+		        Thread.Sleep(100);
+		    }
+		    var exceptionAggregator = new ExceptionAggregator(Logger, "Could not properly dispose of HttpServer");
+
+		    exceptionAggregator.Execute(() =>
+		    {
+		        if (serverTimer != null)
+		            serverTimer.Dispose();
+		    });
 		}
 
-		public async Task<HttpResponseMessage> HandleActualRequest(RavenDbApiController controller,
+	    public async Task<HttpResponseMessage> HandleActualRequest(RavenDbApiController controller,
 		                                                           Func<Task<HttpResponseMessage>> action,
 		                                                           Func<HttpException, HttpResponseMessage> onHttpException)
-		{
-			HttpResponseMessage response = null;
+	    {
+	        HttpResponseMessage response = null;
+            cancellationToken.ThrowIfCancellationRequested();
 
-			using (await disposerLock.ReadLockAsync())
-			{
-				if (disposed)
-					return new HttpResponseMessage();
+	        Stopwatch sw = Stopwatch.StartNew();
+	        try
+	        {
+	            Interlocked.Increment(ref concurrentRequests);
+	            if (IsWriteRequest(controller.InnerRequest))
+	            {
+	                lastWriteRequest = SystemTime.UtcNow;
+	            }
 
-				Stopwatch sw = Stopwatch.StartNew();
-			    try
-			    {
-			        if (IsWriteRequest(controller.InnerRequest))
-			        {
-			            lastWriteRequest = SystemTime.UtcNow;
-			        }
+	            if (SetupRequestToProperDatabase(controller))
+	            {
+	                response = await action();
+	            }
+	        }
+	        catch (HttpException httpException)
+	        {
+	            response = onHttpException(httpException);
+	        }
+	        finally
+	        {
+	            Interlocked.Decrement(ref concurrentRequests);
+	            try
+	            {
+	                FinalizeRequestProcessing(controller, response, sw, ravenUiRequest: false /*TODO: check*/);
+	            }
+	            catch (Exception e)
+	            {
+	                Logger.ErrorException("Could not finalize request properly", e);
+	            }
+	        }
 
-			        if (SetupRequestToProperDatabase(controller))
-			        {
-			            response = await action();
-			        }
-			    }
-			    catch (HttpException httpException)
-			    {
-			        response = onHttpException(httpException);
-			    }
-			    catch (Exception e)
-			    {
-			        Console.WriteLine(e);
-                    Debugger.Break();
-			        throw;
-			    }
-				finally
-				{
-					try
-					{
-						FinalizeRequestProcessing(controller, response, sw, ravenUiRequest: false /*TODO: check*/);
-					}
-					catch (Exception e)
-					{
-						Logger.ErrorException("Could not finalize request properly", e);
-					}
-				}
-			}
+	        return response;
+	    }
 
-			return response;
-		}
-
-		// Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
+	    // Cross-Origin Resource Sharing (CORS) is documented here: http://www.w3.org/TR/cors/
 		public void AddAccessControlHeaders(RavenDbApiController controller, HttpResponseMessage msg)
 		{
 			if (string.IsNullOrEmpty(landlord.SystemConfiguration.AccessControlAllowOrigin))
