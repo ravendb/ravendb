@@ -1210,10 +1210,10 @@
     </CreateItem>
   </Target>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <Import Project="$(SolutionDir)\Imports\Fody\Fody.targets" />
   <Target Name="BeforeBuild">
     <Copy SourceFiles="$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml" DestinationFiles="$(MSBuildProjectDirectory)\FodyWeavers.xml" Condition="Exists('$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml')" />
   </Target>
   <Target Name="AfterBuild">
   </Target>
+  <Import Project="Fody.targets" />
 </Project>
