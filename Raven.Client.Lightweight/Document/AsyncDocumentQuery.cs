@@ -360,7 +360,7 @@ namespace Raven.Client.Document
 		/// <param name = "value">The value.</param>
 		public IAsyncDocumentQuery<T> WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
 		{
-			WhereGreaterThanOrEqual(GetMemberQueryPath(propertySelector.Body), value);
+            WhereLessThanOrEqual(GetMemberQueryPath(propertySelector.Body), value);
 			return this;
 		}
 

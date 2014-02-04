@@ -105,7 +105,7 @@ namespace Raven.Tests.Linq
 		}
 
 		[Fact]
-		public void CannotCountNullArraysWithAnyIfThereIsNothingElseStoredInTheIndex()
+		public void EmptyArraysShouldBeCountedProperlyWhenUsingAny()
 		{
 			using (var store = NewDocumentStore())
 			{
@@ -119,7 +119,7 @@ namespace Raven.Tests.Linq
 				WaitForUserToContinueTheTest(store);
 				using (var session = store.OpenSession())
 				{
-					Assert.Equal(0, session.Query<TestDoc>().Customize(customization => customization.WaitForNonStaleResults()).Count(p => p.StringArray.Any() == false));
+					Assert.Equal(2, session.Query<TestDoc>().Customize(customization => customization.WaitForNonStaleResults()).Count(p => p.StringArray.Any() == false));
 				}
 			}
 		}
