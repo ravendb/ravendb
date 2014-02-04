@@ -14,67 +14,37 @@ namespace Raven.Abstractions.Extensions
 				task.Wait(); // would throw
 		}
 
-		public static Task<T> ConvertSecurityExceptionToServerNotFound<T>(this Task<T> parent)
-		{
-			return parent.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-				{
-					var exception = task.Exception.ExtractSingleInnerException();
-					if (exception is SecurityException)
-						throw new WebException("Could not contact server.\r\nGot security error because RavenDB wasn't able to contact the database to get ClientAccessPolicy.xml permission.", exception);
-				}
-				return task;
-			}).Unwrap();
-		}
-
-
-		public static Task<T> AddUrlIfFaulting<T>(this Task<T> parent, Uri uri)
-		{
-			return parent.ContinueWith(task =>
-			{
-				if (task.IsFaulted)
-				{
-					var e = task.Exception.ExtractSingleInnerException();
-					if (e != null)
-						e.Data["Url"] = uri;
-				}
-
-				return task;
-			})
-			             .Unwrap();
-		}
-
-#if !SILVERLIGHT && !NETFX_CORE
-        public static Task<T> MaterializeBadRequestAsException<T>(this Task<T> parent)
+        public static Task<T> ConvertSecurityExceptionToServerNotFound<T>(this Task<T> parent)
         {
-            return parent.ContinueWith(t =>
+            return parent.ContinueWith(task =>
             {
-                if (t.Exception != null)
+                if (task.IsFaulted)
                 {
-                    var we = t.Exception.ExtractSingleInnerException() as WebException;
-                    if (we == null || we.Response == null || ((HttpWebResponse)we.Response).StatusCode != HttpStatusCode.BadRequest)
-                        throw t.Exception;
-
-                    var error = we.TryReadErrorResponseObject(new {Message = ""});
-                    if (error != null && error.Message != null)
-                    {
-                        throw new BadRequestException(error.Message);
-                    }
-                    else
-                    {
-                        throw t.Exception;
-                    }
+                    var exception = task.Exception.ExtractSingleInnerException();
+                    if (exception is SecurityException)
+                        throw new WebException("Could not contact server.\r\nGot security error because RavenDB wasn't able to contact the database to get ClientAccessPolicy.xml permission.", exception);
                 }
-                else
-                {
-                    return t.Result;
-                }
-            });
+                return task;
+            }).Unwrap();
         }
-#endif
 
-		public static async Task<bool> WaitWithTimeout(this Task task, TimeSpan? timeout)
+	    public static Task<T> AddUrlIfFaulting<T>(this Task<T> parent, Uri uri)
+	    {
+	        return parent.ContinueWith(
+	            task =>
+	            {
+	                if (task.IsFaulted)
+	                {
+	                    var e = task.Exception.ExtractSingleInnerException();
+	                    if (e != null) 
+                            e.Data["Url"] = uri;
+	                }
+
+	                return task;
+	            }).Unwrap();
+	    }
+
+	    public static async Task<bool> WaitWithTimeout(this Task task, TimeSpan? timeout)
 		{
 			if (timeout == null)
 			{

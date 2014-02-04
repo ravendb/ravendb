@@ -8,6 +8,7 @@ import net.ravendb.abstractions.data.FacetResults;
 import net.ravendb.abstractions.data.GetRequest;
 import net.ravendb.abstractions.data.GetResponse;
 import net.ravendb.abstractions.data.IndexQuery;
+import net.ravendb.abstractions.data.QueryResult;
 import net.ravendb.abstractions.extensions.JsonExtensions;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.client.document.batches.ILazyOperation;
@@ -22,6 +23,7 @@ public class LazyFacetsOperation implements ILazyOperation {
   private final String index;
   private final List<Facet> facets;
   private final String facetSetupDoc;
+  private QueryResult queryResult;
   private final IndexQuery query;
   private final int start;
   private final Integer pageSize;
@@ -75,7 +77,7 @@ public class LazyFacetsOperation implements ILazyOperation {
 
     GetRequest getRequest = new GetRequest();
     getRequest.setUrl("/facets/" + index);
-    getRequest.setQuery(String.format("&query=%s&facetStart=%d&facetPageSize=%d&%s", query.getQuery(), start, pageSize, addition));
+    getRequest.setQuery(String.format("&query=%s&facetStart=%d&facetPageSize=%d&%s", query.getMinimalQueryString(), start, pageSize, addition));
     return getRequest;
   }
 
@@ -100,6 +102,16 @@ public class LazyFacetsOperation implements ILazyOperation {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public QueryResult getQueryResult() {
+    return queryResult;
+  }
+
+
+  public void setQueryResult(QueryResult queryResult) {
+    this.queryResult = queryResult;
   }
 
   @Override

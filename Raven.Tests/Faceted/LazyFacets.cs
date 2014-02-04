@@ -7,10 +7,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.Faceted
 {

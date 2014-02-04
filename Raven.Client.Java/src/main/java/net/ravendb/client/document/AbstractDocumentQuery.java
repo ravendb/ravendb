@@ -2,6 +2,7 @@ package net.ravendb.client.document;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.IDN;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -189,6 +190,11 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
    * Should we wait for non stale results
    */
   protected boolean theWaitForNonStaleResults;
+
+  /**
+   * Should we wait for non stale results as of now?
+   */
+  protected boolean theWaitForNonStaleResultsAsOfNow;
   /**
    * The paths to include when loading the query
    */
@@ -329,6 +335,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     start = other.start;
     timeout = other.timeout;
     theWaitForNonStaleResults = other.theWaitForNonStaleResults;
+    theWaitForNonStaleResultsAsOfNow = other.theWaitForNonStaleResultsAsOfNow;
     includes = other.includes;
     queryListeners = other.queryListeners;
     queryStats = other.queryStats;
@@ -617,6 +624,31 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
 
     return ((DocumentSession) theSession).addLazyOperation(lazyQueryOperation, onEval);
   }
+
+  /**
+   * Register the query as a lazy-count query in the session and return a lazy
+   * instance that will evaluate the query only when needed
+   */
+  public Lazy<Integer> countLazily() {
+    final Map<String, String> headers = new HashMap<>();
+      if (queryOperation == null)
+      {
+          executeBeforeQueryListeners();
+          initializeQueryOperation(new Action2<String, String>() {
+
+            @Override
+            public void apply(String first, String second) {
+              headers.put(first, second);
+            }
+          });
+      }
+
+      LazyQueryOperation<T> lazyQueryOperation = new LazyQueryOperation<>(clazz, queryOperation, afterQueryExecutedCallback, includes);
+      lazyQueryOperation.setHeaders(headers);
+
+      return ((DocumentSession)theSession).addLazyCountOperation(lazyQueryOperation);
+  }
+
 
   protected void executeBeforeQueryListeners() {
     for (IDocumentQueryListener documentQueryListener : queryListeners) {
@@ -1248,6 +1280,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> waitForNonStaleResultsAsOfNow() {
     theWaitForNonStaleResults = true;
+    theWaitForNonStaleResultsAsOfNow = true;
     cutoff = new Date();
     timeout = getDefaultTimeout();
     return (IDocumentQuery<T>) this;
@@ -1261,6 +1294,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
   @SuppressWarnings("unchecked")
   public IDocumentQuery<T> waitForNonStaleResultsAsOfNow(long waitTimeout) {
     theWaitForNonStaleResults = true;
+    theWaitForNonStaleResultsAsOfNow = true;
     cutoff = new Date();
     timeout = waitTimeout;
     return (IDocumentQuery<T>) this;
@@ -1388,6 +1422,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
       spatialIndexQuery.setStart(start);
       spatialIndexQuery.setCutoff(cutoff);
       spatialIndexQuery.setCutoffEtag(cutoffEtag);
+      spatialIndexQuery.setWaitForNonStaleResultsAsOfNow(theWaitForNonStaleResultsAsOfNow);
       List<SortedField> sortedFields =new ArrayList<>();
       for (String orderByField: orderByFields) {
         sortedFields.add(new SortedField(orderByField));
@@ -1422,6 +1457,7 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     indexQuery.setStart(start);
     indexQuery.setCutoff(cutoff);
     indexQuery.setCutoffEtag(cutoffEtag);
+    indexQuery.setWaitForNonStaleResultsAsOfNow(theWaitForNonStaleResultsAsOfNow);
     List<SortedField> sortedFields =new ArrayList<>();
     for (String orderByField: orderByFields) {
       sortedFields.add(new SortedField(orderByField));
@@ -1636,6 +1672,49 @@ public abstract class AbstractDocumentQuery<T, TSelf extends AbstractDocumentQue
     queryText.append(Constants.INTERSECT_SEPARATOR);
     return (IDocumentQuery<T>) this;
   }
+
+  @Override
+  public IDocumentQuery<T> containsAny(String fieldName, Collection<Object> values) {
+      containsAnyAllProcessor(fieldName, values, "OR");
+      return (IDocumentQuery<T>) this;
+  }
+
+  @Override
+  public IDocumentQuery<T> containsAll(String fieldName, Collection<Object> values) {
+      containsAnyAllProcessor(fieldName, values, "AND");
+      return (IDocumentQuery<T>) this;
+  }
+
+  private void containsAnyAllProcessor(String fieldName, Collection<Object> values, String seperator) {
+      appendSpaceIfNeeded(queryText.length() > 0 && !Character.isWhitespace(queryText.charAt(queryText.length() - 1)));
+      negateIfNeeded();
+
+      List<Object> list = new ArrayList<>(values);
+      if (list.isEmpty()) {
+          return;
+      }
+
+      boolean first = true;
+      queryText.append("(");
+      for (Object value : list) {
+          if (!first) {
+              queryText.append(" " + seperator + " ");
+          }
+          first = false;
+          WhereParams whereParams = new WhereParams();
+          whereParams.setAllowWildcards(true);
+          whereParams.setAnalyzed(true);
+          whereParams.setFieldName(fieldName);
+          whereParams.setValue(value);
+
+          ensureValidFieldName(whereParams);
+          queryText.append(fieldName)
+                   .append(":")
+                   .append(transformToEqualValue(whereParams));
+      }
+      queryText.append(")");
+  }
+
 
   @Override
   public void addRootType(Class<T> type) {

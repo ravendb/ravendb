@@ -208,6 +208,17 @@ public class RavenQueryProvider<T> implements IRavenQueryProvider {
     return query.lazily(onEval);
   }
 
+  /**
+   * Register the query as a lazy-count query in the session and return a lazy
+   * Register the query as a lazy-count query in the session and return a lazy
+   */
+  @Override
+  public <T> Lazy<Integer> countLazily(Class<T> clazz, Expression<?> expression) {
+      RavenQueryProviderProcessor<T> processor = getQueryProviderProcessor(clazz);
+      IDocumentQuery<T> query = processor.getLuceneQueryFor(expression);
+      return query.countLazily();
+  }
+
   @SuppressWarnings("unchecked")
   @Override
   public <S> IRavenQueryable<S> createQuery(Expression< ? > expression) {

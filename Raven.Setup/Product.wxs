@@ -5,9 +5,9 @@
 
   <!-- Set version based on build_number env. variable. -->
   <?ifdef env.BUILD_NUMBER ?>
-  <?define PRODUCTVERSION="2.5.$(env.BUILD_NUMBER)"?>
+  <?define PRODUCTVERSION="3.0.$(env.BUILD_NUMBER)"?>
   <?else?>
-  <?define PRODUCTVERSION="2.5.0"?>
+  <?define PRODUCTVERSION="3.0.0"?>
   <?endif?>
   
   <Product Id="*" Name="RavenDB" Language="1033" Version="$(var.PRODUCTVERSION)" Manufacturer="Hibernating Rhinos LTD" UpgradeCode="79a41e9e-dc99-4df8-9820-1de16e63c655">
@@ -54,7 +54,6 @@
       <ComponentRef Id='StoreInstallationPath' />
       <ComponentRef Id='Raven.Server' />
       <ComponentRef Id='Raven.Database.Service' />
-      <ComponentRef Id='Raven.Abstractions.Service' />
       <ComponentRef Id='PersistServiceValues' />
       <ComponentRef Id ="CopyLicenseFile"/>
     </Feature>
@@ -67,7 +66,6 @@
       <ComponentRef Id='StoreInstallationPath' />
       <ComponentRef Id='Raven.Web' />
       <ComponentRef Id='Raven.Database.Web' />
-      <ComponentRef Id='Raven.Abstractions.Web' />
       <ComponentRef Id='Raven.Web.Config.IIS_7_And_8' />
       <ComponentRef Id='Raven.Web.Config.IIS_6' />
       <ComponentRef Id="EnableASPNet4Extension" />

@@ -191,15 +191,39 @@ namespace Raven.Json.Linq
 		{
 			try
 			{
-				JsonReader jsonReader = new RavenJsonTextReader(new StringReader(json));
-
-				return Load(jsonReader);
+			    return ParseInternal(json);
 			}
 			catch (Exception e)
 			{
 				throw new JsonSerializationException("Could not parse: [" + json + "]", e);
 			}
 		}
+
+        /// <summary>
+        /// Load a <see cref="RavenJToken"/> from a string that contains JSON.
+        /// </summary>
+        /// <param name="json">A <see cref="String"/> that contains JSON.</param>
+        /// <param name="token">A <see cref="RavenJToken"/> populated from the string that contains JSON.</param>
+        /// <returns>Returns true if parsing was succesful. False otherwise.</returns>
+        public static bool TryParse(string json, out RavenJToken token)
+        {
+            try
+            {
+                token = ParseInternal(json);
+                return true;
+            }
+            catch (Exception)
+            {
+                token = null;
+                return false;
+            }
+        }
+
+        private static RavenJToken ParseInternal(string json)
+        {
+            JsonReader jsonReader = new RavenJsonTextReader(new StringReader(json));
+            return Load(jsonReader);
+        }
 
 		public static RavenJToken TryLoad(Stream stream)
 		{

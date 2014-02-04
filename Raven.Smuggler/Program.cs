@@ -111,7 +111,8 @@ namespace Raven.Smuggler
 			    {"key2|api-key2|apikey2:", "The API-key to use, when using OAuth. This parameter is used only in the between operation.", value => connectionStringOptions2.ApiKey = value},
 			    {"incremental", "States usage of incremental operations", _ => options.Incremental = true},
 			    {"wait-for-indexing", "Wait until all indexing activity has been completed (import only)", _ => waitForIndexing = true},
-			    {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true},
+                {"excludeexpired", "Excludes expired documents created by the expiration bundle", _ => options.ShouldExcludeExpired = true},
+                {"limit:", "Reads at most VALUE documents/attachments.", s => options.Limit = int.Parse(s)},
 			    {"h|?|help", v => PrintUsageAndExit(0)},
 		    };
 	    }
@@ -195,10 +196,10 @@ namespace Raven.Smuggler
 			}
 			catch (AggregateException ex)
 			{
-				var exception = ex.ExtractSingleInnerException();
-				var e = exception as WebException;
-				if (e != null)
-				{
+			    var exception = ex.ExtractSingleInnerException();
+			    var e = exception as WebException;
+			    if (e != null)
+			    {
 
 					if (e.Status == WebExceptionStatus.ConnectFailure)
 					{
@@ -210,31 +211,31 @@ namespace Raven.Smuggler
 							Console.WriteLine("Socket Error Code: {0}", socketException.SocketErrorCode);
 						}
 
-						Environment.Exit((int)e.Status);
-					}
+			            Environment.Exit((int) e.Status);
+			        }
 
-					var httpWebResponse = e.Response as HttpWebResponse;
-					if (httpWebResponse == null)
-						throw;
-					Console.WriteLine("Error: " + e.Message);
-					Console.WriteLine("Http Status Code: " + httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription);
+			        var httpWebResponse = e.Response as HttpWebResponse;
+			        if (httpWebResponse == null)
+			            throw;
+			        Console.WriteLine("Error: " + e.Message);
+			        Console.WriteLine("Http Status Code: " + httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription);
 
-					using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
-					{
-						string line;
-						while ((line = reader.ReadLine()) != null)
-						{
-							Console.WriteLine(line);
-						}
-					}
+			        using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
+			        {
+			            string line;
+			            while ((line = reader.ReadLine()) != null)
+			            {
+			                Console.WriteLine(line);
+			            }
+			        }
 
-					Environment.Exit((int)httpWebResponse.StatusCode);
-				}
-				else
-				{
-					Console.WriteLine(ex);
-					Environment.Exit(-1);
-				}
+			        Environment.Exit((int) httpWebResponse.StatusCode);
+			    }
+			    else
+			    {
+			        Console.WriteLine(ex);
+			        Environment.Exit(-1);
+			    }
 			}
 		}
 

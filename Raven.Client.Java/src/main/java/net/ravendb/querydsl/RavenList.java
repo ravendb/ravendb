@@ -1,7 +1,10 @@
 package net.ravendb.querydsl;
 
+import java.util.Collection;
+
 import net.ravendb.abstractions.LinqOps;
 
+import com.mysema.query.types.ConstantImpl;
 import com.mysema.query.types.Path;
 import com.mysema.query.types.PathMetadata;
 import com.mysema.query.types.expr.BooleanExpression;
@@ -40,6 +43,14 @@ public class RavenList<E, Q extends SimpleExpression<? super E>> extends ListPat
   @Deprecated
   public Q any() {
     throw new IllegalStateException("This method is deprecated. Use any(BooleanExpression) instead.");
+  }
+
+  public BooleanExpression containsAny(Collection<E> items) {
+    return BooleanOperation.create(LinqOps.Ops.CONTAINS_ANY, mixin, new ConstantImpl<>(items));
+  }
+
+  public BooleanExpression containsAll(Collection<E> items) {
+    return BooleanOperation.create(LinqOps.Ops.CONTAINS_ALL, mixin, new ConstantImpl<>(items));
   }
 
   public BooleanExpression any(BooleanExpression boolExpr) {

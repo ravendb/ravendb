@@ -1188,33 +1188,39 @@ If you really want to do in memory filtering on the data returned from the query
 			AppendSpaceIfNeeded(queryText.Length > 0 && char.IsWhiteSpace(queryText[queryText.Length - 1]) == false);
 			NegateIfNeeded();
 
+			var whereParams = new WhereParams
+			{
+				FieldName = fieldName
+			};
+			fieldName = EnsureValidFieldName(whereParams);
+
 			var list = UnpackEnumerable(values).ToList();
 
 			if (list.Count == 0)
 			{
 				queryText.Append("@emptyIn<")
-					.Append(fieldName)
+					.Append(RavenQuery.EscapeField(fieldName))
 					.Append(">:(no-results)");
 				return;
 			}
 
 			queryText.Append("@in<")
-				.Append(fieldName)
+				.Append(RavenQuery.EscapeField(fieldName))
 				.Append(">:(");
 
 			var first = true;
-			AddItemToInClause(fieldName, list, first);
+			AddItemToInClause(whereParams, list, first);
 			queryText.Append(") ");
 		}
 
-		private void AddItemToInClause(string fieldName, IEnumerable<object> list, bool first)
+		private void AddItemToInClause(WhereParams whereParams, IEnumerable<object> list, bool first)
 		{
 			foreach (var value in list)
 			{
 				var enumerable = value as IEnumerable;
 				if (enumerable != null && value is string == false)
 				{
-					AddItemToInClause(fieldName, enumerable.Cast<object>(), first);
+					AddItemToInClause(whereParams, enumerable.Cast<object>(), first);
 					return;
 				}
 				if (first == false)
@@ -1222,15 +1228,15 @@ If you really want to do in memory filtering on the data returned from the query
 					queryText.Append(",");
 				}
 				first = false;
-				var whereParams = new WhereParams
+				var nestedWhereParams = new WhereParams
 				{
 					AllowWildcards = true,
 					IsAnalyzed = true,
-					FieldName = fieldName,
+					FieldName = whereParams.FieldName,
+					FieldTypeForIdentifier = whereParams.FieldTypeForIdentifier,
 					Value = value
 				};
-				EnsureValidFieldName(whereParams);
-				queryText.Append(TransformToEqualValue(whereParams).Replace(",", "`,`"));
+				queryText.Append(TransformToEqualValue(nestedWhereParams).Replace(",", "`,`"));
 			}
 		}
 

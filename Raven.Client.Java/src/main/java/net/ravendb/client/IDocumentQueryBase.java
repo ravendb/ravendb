@@ -643,6 +643,26 @@ public interface IDocumentQueryBase<T, TSelf extends IDocumentQueryBase<T, TSelf
   public TSelf intersect();
 
   /**
+   * Performs a query matching ANY of the provided values against the given field (OR)
+   */
+  public TSelf containsAny(String fieldName, Collection<Object> values);
+
+  /**
+   * Performs a query matching ANY of the provided values against the given field (OR)
+   */
+  public TSelf containsAny(Path<?> propertySelector, Collection<Object> values);
+
+  /**
+   * Performs a query matching ALL of the provided values against the given field (AND)
+   */
+  public TSelf containsAll(String fieldName, Collection<Object> values);
+
+  /**
+   * Performs a query matching ALL of the provided values against the given field (AND)
+   */
+  public TSelf containsAll(Path<?> propertySelector, Collection<Object> values);
+
+  /**
    * Callback to get the results of the query
    * @param afterQueryExecuted
    */

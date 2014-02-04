@@ -247,9 +247,11 @@
     <Compile Include="Bugs\AdHocProjections.cs" />
     <Compile Include="Bugs\AfterDeletingTheIndexStopsBeingStale.cs" />
     <Compile Include="Bugs\AggressiveCaching.cs" />
+    <Compile Include="Bugs\AggressiveCachingEmbedded.cs" />
     <Compile Include="Bugs\AnalyzerPerField.cs" />
     <Compile Include="Bugs\AnonymousClasses.cs" />
     <Compile Include="Bugs\ArrayOfMaybeNull.cs" />
+    <Compile Include="Bugs\AsyncSetBasedOps.cs" />
     <Compile Include="Bugs\Attachments.cs" />
     <Compile Include="Bugs\BackwardCompatibility.cs" />
     <Compile Include="Bugs\BatchPatching.cs" />
@@ -269,10 +271,14 @@
     <Compile Include="Issues\RavenDB_1305.cs" />
     <Compile Include="Issues\RavenDB_1443 .cs" />
     <Compile Include="Bugs\CanPatchADocumentThatContainsBytes.cs" />
+    <Compile Include="Bugs\DynamicId.cs" />
+    <Compile Include="Bugs\EtagIssue.cs" />
     <Compile Include="Bugs\RavenDB_1532.cs" />
     <Compile Include="Bugs\ConcurrencyTests.cs" />
     <Compile Include="Bugs\NullableDateTimeOffsetFromDateTimeParse.cs" />
     <Compile Include="Bugs\RawQueryShouldGoThroughAnalysis.cs" />
+    <Compile Include="Bugs\SyncAsync.cs" />
+    <Compile Include="Bugs\TransformationsUnitTest.cs" />
     <Compile Include="Faceted\LazyFacets.cs" />
     <Compile Include="Issues\RavenDB1508.cs" />
     <Compile Include="Issues\RavenDB1519.cs" />
@@ -291,14 +297,18 @@
     <Compile Include="Issues\RavenDB_1533.cs" />
     <Compile Include="Issues\RavenDB_1561.cs" />
     <Compile Include="Issues\RavenDB_1560.cs" />
+    <Compile Include="Issues\RavenDB_1595.cs" />
+    <Compile Include="Issues\RavenDB_1603.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Issues\RavenDB_1565.cs" />
     <Compile Include="Issues\RavenDB_1594.cs" />
-    <Compile Include="Issues\RavenDB_1595.cs" />
     <Compile Include="Issues\RavenDB_1610.cs" />
     <Compile Include="Issues\RDBQA_4.cs" />
     <Compile Include="Issues\RavenDB_1553.cs" />
     <Compile Include="Issues\RavenDB_1555.cs" />
     <Compile Include="Issues\RavenDB_1562.cs" />
+    <Compile Include="Issues\RavenDB_1598_MappingComplexProperties.cs" />
     <Compile Include="Issues\RavenDB_1600.cs" />
     <Compile Include="Issues\ReplicationAlerts.cs" />
     <Compile Include="Issues\RavenDB_1539.cs" />
@@ -808,6 +818,7 @@
     <Compile Include="MailingList\AmbiguousMatchExceptionTest.cs" />
     <Compile Include="MailingList\Apo\Lazy.cs" />
     <Compile Include="MailingList\AsyncSpatial.cs" />
+    <Compile Include="MailingList\AsyncSpatialTest.cs" />
     <Compile Include="MailingList\AutoGenIndexLinqQuery.cs" />
     <Compile Include="MailingList\bikkies.cs" />
     <Compile Include="MailingList\BooleanAndDateTimeNullables.cs" />
@@ -823,6 +834,7 @@
     <Compile Include="MailingList\CanRetrieveFacetCountsOfQueryResults2.cs" />
     <Compile Include="MailingList\ChangeTrackingDoesntWorkForDecimalsWithSmallChanges.cs" />
     <Compile Include="MailingList\Chirea.cs" />
+    <Compile Include="MailingList\AsyncShouldThrowConcurrencyException.cs" />
     <Compile Include="MailingList\CoalescingOperatorWithStringARray.cs" />
     <Compile Include="MailingList\ComplexIndexMerge.cs" />
     <Compile Include="MailingList\CompoundOrQueryWithOrderByDescending .cs" />

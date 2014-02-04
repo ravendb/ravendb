@@ -283,7 +283,7 @@ public class ServerClient implements IDatabaseCommands {
     }
 
     RavenJObject metadata = new RavenJObject();
-    String actualUrl = operationMetadata.getUrl() + "/docs/" + UrlUtils.escapeDataString(key);
+    String actualUrl = operationMetadata.getUrl() + "/docs?id=" + UrlUtils.escapeDataString(key);
     if (StringUtils.isNotEmpty(transform)) {
       actualUrl += "?=" + UrlUtils.escapeDataString(transform);
     }
@@ -1497,7 +1497,7 @@ public class ServerClient implements IDatabaseCommands {
     String path = operationMetadata.getUrl() + "/queries/?";
 
     if (metadataOnly)
-      path += "&metadata-only=true";
+      path += "metadata-only=true&";
     if (includes != null && includes.length > 0) {
       List<String> tokens = new ArrayList<>();
       for (String include: includes) {

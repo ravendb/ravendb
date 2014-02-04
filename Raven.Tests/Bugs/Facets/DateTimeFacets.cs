@@ -154,7 +154,12 @@ namespace Raven.Tests.Bugs.Facets
                             .ToFacets(facetOldSchool);
 
 
-                         Assert.True(AreFacetsEquiv(facetResultsNew, facetResultsOldSchool));
+                        var areFacetsEquiv = AreFacetsEquiv(facetResultsNew, facetResultsOldSchool);
+                        if (areFacetsEquiv == false)
+                        {
+                            
+                        }
+                        Assert.True(areFacetsEquiv);
                     }
                 }
             }

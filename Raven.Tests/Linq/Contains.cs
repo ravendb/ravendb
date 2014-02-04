@@ -121,7 +121,7 @@ namespace Raven.Tests.Linq
 					{
 						session.Query<TestDoc>().FirstOrDefault(ar => ar.SomeProperty.Contains(otherDoc.SomeProperty));
 					});
-					Assert.Contains("Contains is not supported, doing a substring match", exception.Message);
+					Assert.Contains("Contains is not supported, doing a substring match", exception.InnerException.Message);
 				}
 			}
 		}

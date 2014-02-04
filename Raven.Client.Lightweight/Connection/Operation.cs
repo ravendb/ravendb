@@ -1,4 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Connection.Async;
 using Raven.Json.Linq;
 
@@ -9,11 +12,13 @@ namespace Raven.Client.Connection
 		private readonly AsyncServerClient asyncServerClient;
 		private readonly long id;
 		private readonly RavenJToken state;
+		private readonly bool done;
 
 		public Operation(long id, RavenJToken state)
 		{
 			this.id = id;
 			this.state = state;
+			this.done = true;
 		}
 
 		public Operation(AsyncServerClient asyncServerClient, long id)
@@ -25,8 +30,10 @@ namespace Raven.Client.Connection
 
 		public async Task<RavenJToken> WaitForCompletionAsync()
 		{
-			if (asyncServerClient == null)
+			if (done)
 				return state;
+			if (asyncServerClient == null)
+				throw new InvalidOperationException("Cannot use WaitForCompletionAsync() when the operation was executed syncronously");
 
 			while (true)
 			{

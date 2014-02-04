@@ -8,6 +8,13 @@ public class Skill {
   private String name;
   private Integer expPoints;
 
+  public Skill() {
+    super();
+  }
+  public Skill(String name) {
+    super();
+    this.name = name;
+  }
   public String getName() {
     return name;
   }
