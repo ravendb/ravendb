@@ -225,6 +225,11 @@ public class RavenQueryInspector<T> implements IRavenQueryable<T>, IRavenQueryIn
   }
 
   @Override
+  public Lazy<Integer> countLazily() {
+    return provider.countLazily(clazz, expression);
+  }
+
+  @Override
   @SuppressWarnings("unchecked")
   public <S> IRavenQueryable<S> as(Class<S> resultClass) {
     this.clazz = (Class<T>) resultClass;

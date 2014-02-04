@@ -6,6 +6,7 @@ import net.ravendb.abstractions.basic.SharpEnum;
 import net.ravendb.abstractions.data.Constants;
 import net.ravendb.abstractions.data.GetRequest;
 import net.ravendb.abstractions.data.GetResponse;
+import net.ravendb.abstractions.data.QueryResult;
 import net.ravendb.abstractions.data.SuggestionQuery;
 import net.ravendb.abstractions.data.SuggestionQueryResult;
 import net.ravendb.abstractions.json.linq.RavenJObject;
@@ -19,6 +20,18 @@ public class LazySuggestOperation implements ILazyOperation {
   private final SuggestionQuery suggestionQuery;
   private Object result;
   private boolean requiresRetry;
+  private QueryResult queryResult;
+
+
+  @Override
+  public QueryResult getQueryResult() {
+    return queryResult;
+  }
+
+
+  public void setQueryResult(QueryResult queryResult) {
+    this.queryResult = queryResult;
+  }
 
   @Override
   public Object getResult() {

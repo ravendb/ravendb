@@ -15,15 +15,24 @@ public class MultiDatabase {
   private static final String VALID_DB_NAME_CHARS = "[A-Za-z0-9_\\-\\.]+";
 
   public static DatabaseDocument createDatabaseDocument(String name) {
+    assertValidName(name);
+    if (name.equalsIgnoreCase(Constants.SYSTEM_DATABASE)) {
+      DatabaseDocument databaseDocument = new DatabaseDocument();
+      databaseDocument.setId(Constants.SYSTEM_DATABASE);
+      return databaseDocument;
+    }
     DatabaseDocument document = new DatabaseDocument();
     document.setId("Raven/Databases/" + name);
     document.getSettings().put("Raven/DataDir", "~\\Databases\\" + name);
     return document;
   }
 
-  public static void assertValidDatabaseName(String name) {
+  public static void assertValidName(String name) {
     if (name == null) {
       throw new IllegalArgumentException("name");
+    }
+    if (name.equalsIgnoreCase(Constants.SYSTEM_DATABASE)) {
+      return;
     }
     if (!name.matches(VALID_DB_NAME_CHARS)) {
       throw new IllegalStateException("Database name can only contain A-Z, a-z, 0-9, \"_\", \".\" or \"-\", but was: " + name);

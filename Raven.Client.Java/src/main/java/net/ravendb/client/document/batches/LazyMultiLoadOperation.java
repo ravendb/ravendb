@@ -7,6 +7,7 @@ import net.ravendb.abstractions.basic.Tuple;
 import net.ravendb.abstractions.data.GetRequest;
 import net.ravendb.abstractions.data.GetResponse;
 import net.ravendb.abstractions.data.MultiLoadResult;
+import net.ravendb.abstractions.data.QueryResult;
 import net.ravendb.abstractions.json.linq.RavenJArray;
 import net.ravendb.abstractions.json.linq.RavenJObject;
 import net.ravendb.abstractions.json.linq.RavenJToken;
@@ -22,6 +23,7 @@ public class LazyMultiLoadOperation<T> implements ILazyOperation {
   private final String transformer;
   private final Tuple<String, Class<?>>[] includes;
   private final Class<T> clazz;
+  private QueryResult queryResult;
 
   private Object result;
   private boolean requiresRetry;
@@ -32,6 +34,15 @@ public class LazyMultiLoadOperation<T> implements ILazyOperation {
     this.includes = includes;
     this.clazz = clazz;
     this.transformer = transformer;
+  }
+
+  @Override
+  public QueryResult getQueryResult() {
+    return queryResult;
+  }
+
+  public void setQueryResult(QueryResult queryResult) {
+    this.queryResult = queryResult;
   }
 
   @Override

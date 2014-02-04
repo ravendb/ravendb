@@ -77,6 +77,8 @@ public interface IRavenQueryProvider extends IQueryProvider {
    */
   public <T> Lazy<List<T>> lazily(Class<T> clazz, Expression<?> expression, Action1<List<T>> onEval);
 
+  public <T> Lazy<Integer> countLazily(Class<T> clazz, Expression<?> expression);
+
   /**
    * Set the fields to fetch
    * @return

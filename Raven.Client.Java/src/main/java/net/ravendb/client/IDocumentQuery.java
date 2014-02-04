@@ -66,6 +66,13 @@ public interface IDocumentQuery<T> extends IDocumentQueryBase<T, IDocumentQuery<
   public Lazy<List<T>> lazily();
 
   /**
+   * Register the query as a lazy-count query in the session and return a lazy
+   * instance that will evaluate the query only when needed.
+   * @return
+   */
+  public Lazy<Integer> countLazily();
+
+  /**
    * Register the query as a lazy query in the session and return a lazy
    * instance that will evaluate the query only when needed.
    * Also provide a function to execute when the value is evaluated

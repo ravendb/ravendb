@@ -392,4 +392,18 @@ public interface IAbstractDocumentQuery<T> {
 
   public IDocumentQuery<T> distinct();
 
+  /**
+   * Performs a query matching ANY of the provided values against the given field (OR)
+   * @param fieldName
+   * @param values
+   */
+  public IDocumentQuery<T> containsAny(String fieldName, Collection<Object> values);
+
+  /**
+   * Performs a query matching ALL of the provided values against the given field (AND)
+   * @param fieldName
+   * @param values
+   */
+  public IDocumentQuery<T> containsAll(String fieldName, Collection<Object> values);
+
 }
