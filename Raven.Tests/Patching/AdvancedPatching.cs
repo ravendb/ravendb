@@ -264,7 +264,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
 
             // With the custom fixes to Jint, these tests now pass (RavenDB-1536)
             Assert.Equal(date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), dateOutput);
-            Assert.Equal(dateOffset.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), dateOffsetOutput);
+            Assert.Equal(dateOffset.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), dateOffsetOutput);
         }
 
 		[Fact]
