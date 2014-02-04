@@ -27,6 +27,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
+using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -46,6 +47,11 @@ namespace Raven.Tests.Helpers
 		{
             Environment.SetEnvironmentVariable(Constants.RavenDefaultQueryTimeout, "30");
 			CommonInitializationUtil.Initialize();
+
+			// Make sure to delete the Data folder which we be used by tests that do not call the NewDataPath from whatever reason.
+			var dataFolder = FilePathTools.MakeSureEndsWithSlash(@"~\Data".ToFullPath());
+			ClearDatabaseDirectory(dataFolder);
+			pathsToDelete.Add(dataFolder);
 		}
 
 		protected string NewDataPath(string prefix = null)
@@ -64,7 +70,8 @@ namespace Raven.Tests.Helpers
 			bool enableAuthentication = false,
 			string activeBundles = null,
 			int? port = null,
-			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin)
+			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin,
+			Action<DocumentStore> configureStore = null)
 		{
 			var storageType = GetDefaultStorageType(requestedStorage);
 			var dataDirectory = dataDir ?? NewDataPath();
@@ -96,6 +103,8 @@ namespace Raven.Tests.Helpers
 			{
 				ModifyStore(documentStore);
 				ModifyConfiguration(documentStore.Configuration);
+				if (configureStore != null) 
+					configureStore(documentStore);
 
 				documentStore.Initialize();
 
@@ -508,6 +517,15 @@ namespace Raven.Tests.Helpers
 				catch (Exception e)
 				{
 					errors.Add(e);
+				}
+				finally
+				{
+					if (Directory.Exists(pathToDelete) || 
+						File.Exists(pathToDelete)	// Just in order to be sure we didn't created a file in that path, by mistake
+						)
+					{
+						errors.Add(new IOException(string.Format("We tried to delete the '{0}' directory, but failed", pathToDelete)));
+					}
 				}
 			}
 

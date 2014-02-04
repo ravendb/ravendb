@@ -1,27 +1,25 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="T.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="ReplicationAlerts.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
+using System.IO;
+using System.Linq;
 using System.Threading;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
+using Raven.Json.Linq;
+using Raven.Smuggler;
+using Raven.Tests.Bundles.Replication;
+using Xunit;
 
 namespace Raven.Tests.Issues
 {
-    using System;
-    using System.IO;
-    using System.Linq;
-    using System.Threading.Tasks;
-
-    using Raven.Abstractions.Data;
-    using Raven.Abstractions.Smuggler;
-    using Raven.Json.Linq;
-    using Raven.Smuggler;
-    using Raven.Tests.Bundles.Replication;
-
-    using Xunit;
-
     public class ReplicationAlerts : ReplicationBase
     {
+		protected string DumpFile = "dump.ravendump";
+
         public ReplicationAlerts()
         {
             if (File.Exists(DumpFile))
@@ -48,18 +46,18 @@ namespace Raven.Tests.Issues
             store1.DatabaseCommands.Put("1", null, new RavenJObject(), new RavenJObject());
             store1.DatabaseCommands.Put("2", null, new RavenJObject(), new RavenJObject());
 
-            var smuggler = new SmugglerApi(new RavenConnectionStringOptions
-                                       {
-                                           Url = store1.Url
-                                       });
+	        var smuggler = new SmugglerApi(new RavenConnectionStringOptions
+	        {
+		        Url = store1.Url
+	        });
 
             smuggler.ExportData(new SmugglerExportOptions { ToFile = DumpFile }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
             Assert.True(File.Exists(DumpFile));
 
-            smuggler = new SmugglerApi(new RavenConnectionStringOptions
-                                       {
-                                           Url = store3.Url
-                                       });
+	        smuggler = new SmugglerApi(new RavenConnectionStringOptions
+	        {
+		        Url = store3.Url
+	        });
             smuggler.ImportData(new SmugglerImportOptions { FromFile = DumpFile }, new SmugglerOptions()).Wait(TimeSpan.FromSeconds(15));
 
             Assert.NotNull(store3.DatabaseCommands.Get("1"));
@@ -82,7 +80,5 @@ namespace Raven.Tests.Issues
             var alert = alerts.First();
             Assert.True(alert["Title"].ToString().StartsWith("Wrong replication source:"));
         }
-
-        protected string DumpFile = "dump.ravendump";
     }
 }

@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class RavenDbSumTests : RavenTest
+	public class SumTests : RavenTest
 	{
 		public class Vacancy
 		{
@@ -59,12 +59,7 @@ namespace Raven.Tests.MailingList
 
 			public class ReduceResult
 			{
-				public string Id
-				{
-					get;
-					set
-;
-				}
+				public string Id { get; set; }
 				public int ApplicationCount { get; set; }
 				public string State { get; set; }
 			}
@@ -74,13 +69,7 @@ namespace Raven.Tests.MailingList
 
 		private readonly EmbeddableDocumentStore store;
 
-		public override void Dispose()
-		{
-			store.Dispose();
-			base.Dispose();
-		}
-
-		public RavenDbSumTests()
+		public SumTests()
 		{
 			store = NewDocumentStore();
 			new Vacancies_ApplicationCount().Execute(store);
@@ -128,6 +117,5 @@ namespace Raven.Tests.MailingList
 				Assert.Equal(results.First().ApplicationCount, 1);
 			}
 		}
-
 	}
 }

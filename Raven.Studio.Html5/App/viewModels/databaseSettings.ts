@@ -5,4 +5,4 @@ class databaseSettings {
 
 }
 
-export = databaseSettings; 
+export = databaseSettings;

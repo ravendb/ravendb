@@ -8,7 +8,7 @@ namespace Raven.Tests.Bugs.Embedded
 		[Fact]
 		public void WontCreateDirectory()
 		{
-			using (var embeddableDocumentStore = new EmbeddableDocumentStore()
+			using (var embeddableDocumentStore = new EmbeddableDocumentStore
 			{
 				Url = "http://localhost:8079"
 			})
@@ -21,12 +21,12 @@ namespace Raven.Tests.Bugs.Embedded
 		[Fact]
 		public void WontCreateDirectoryWhenSettingStorage()
 		{
-			using (var embeddableDocumentStore = new EmbeddableDocumentStore()
+			using (var embeddableDocumentStore = new EmbeddableDocumentStore
 			{
 				Configuration =
-					{
-						DefaultStorageTypeName = "voron"
-					},
+				{
+					DefaultStorageTypeName = "voron"
+				},
 				Url = "http://localhost:8079"
 			})
 			{
