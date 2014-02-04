@@ -90,10 +90,6 @@ class periodicBackupSetup {
         return ((this.type() === expectedType) ? this.mainValue() : null);
     }
 
-    private prepareRegionEndpoint() {
-
-    }
-
     private convertToMilliseconds(value, unit): number {
         if (value && unit) {
             switch (unit) {

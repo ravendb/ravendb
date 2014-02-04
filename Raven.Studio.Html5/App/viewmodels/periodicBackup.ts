@@ -10,8 +10,8 @@ class periodicBackup extends viewModelBase {
 
     activate() {
         this.backupSetup(new periodicBackupSetup);
-        this.fetchPeriodicBackupSetup();
         this.fetchPeriodicBackupAccountsSettings();
+        this.fetchPeriodicBackupSetup();
     }
 
     fetchPeriodicBackupSetup() {
