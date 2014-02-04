@@ -5,9 +5,8 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using Raven.Client;
-using Raven.Client.Embedded;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Linq;
 using Raven.Imports.Newtonsoft.Json;
 using Xunit;
