@@ -633,6 +633,8 @@ namespace Raven.Client.Embedded
 						if (setWaitHandle)
 							waitForHeaders.Set();
 
+                        items.CompleteAdding();
+
 						if (index.StartsWith("dynamic/", StringComparison.InvariantCultureIgnoreCase) &&
 							e is IndexDoesNotExistsException)
 						{
