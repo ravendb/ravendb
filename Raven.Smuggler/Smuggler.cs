@@ -13,6 +13,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Smuggler;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Document;
 using Raven.Client.Extensions;
@@ -197,12 +198,14 @@ namespace Raven.Smuggler
                             timeout = 30;
                         try
                         {
+                            var operationMetadata = new OperationMetadata(exportStore.Url, exportStore.Credentials, exportStore.ApiKey);
+
                             while (true)
                             {
                                 try
                                 {
                                     ShowProgress("Get documents from " + lastEtag);
-                                    var documents = await ((AsyncServerClient)exportStore.AsyncDatabaseCommands).GetDocumentsInternalAsync(null, lastEtag, options.BatchSize, null);
+                                    var documents = await ((AsyncServerClient)exportStore.AsyncDatabaseCommands).GetDocumentsInternalAsync(null, lastEtag, options.BatchSize, operationMetadata);
                                     foreach (RavenJObject document in documents)
                                     {
                                         var metadata = document.Value<RavenJObject>("@metadata");
