@@ -8,9 +8,11 @@ using Raven.Database.Util;
 
 namespace Raven.Database.Server.Controllers
 {
+	[Route("{action=logsget}")]
 	public class LogsController : RavenDbApiController
 	{
-		[HttpGet][Route("logs")]
+		[HttpGet]
+		[Route("logs")]
 		public HttpResponseMessage LogsGet()
 		{
 			var target = LogManager.GetTarget<DatabaseMemoryTarget>();

@@ -8,10 +8,12 @@ using Raven.Database.Util;
 namespace Raven.Database.Server.RavenFS.Controllers
 {
 	//TODO: check this class
-	public class LogsController : ApiController
+	[Route("{action=get}")]
+	[RoutePrefix("ravenfs")]
+	public class RavenFSLogsController : ApiController
 	{
 		[HttpGet]
-		[Route("ravenfs/logs")]
+		[Route("logs")]
 		public HttpResponseMessage Get(string type = null)
 		{
 			DatabaseMemoryTarget.BoundedMemoryTarget boundedMemoryTarget = null;
