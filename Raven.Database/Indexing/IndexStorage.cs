@@ -259,7 +259,7 @@ namespace Raven.Database.Indexing
 		                var key = Path.GetFileName(directory);
 		                var decodedKey = MonoHttpUtility.UrlDecode(key);
 		                var lastIndexOfDash = decodedKey.LastIndexOf('-');
-		                var accuracy = float.Parse(decodedKey.Substring(lastIndexOfDash + 1));
+		                var accuracy = float.Parse(decodedKey.Substring(lastIndexOfDash + 1),CultureInfo.InvariantCulture);
 		                var lastIndexOfDistance = decodedKey.LastIndexOf('-', lastIndexOfDash - 1);
 		                StringDistanceTypes distanceType;
 		                Enum.TryParse(decodedKey.Substring(lastIndexOfDistance + 1, lastIndexOfDash - lastIndexOfDistance - 1),

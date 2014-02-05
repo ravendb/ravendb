@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
@@ -41,7 +42,7 @@ namespace Raven.Database.Server.Controllers
 			if (int.TryParse(GetQueryStringValue("max"), out numOfSuggestions) == false)
 				numOfSuggestions = 10;
 
-			if (float.TryParse(GetQueryStringValue("accuracy"), out accuracy) == false)
+			if (float.TryParse(GetQueryStringValue("accuracy"),NumberStyles.AllowDecimalPoint,CultureInfo.InvariantCulture, out accuracy) == false)
 				accuracy = 0.5f;
 
 			bool popularity;

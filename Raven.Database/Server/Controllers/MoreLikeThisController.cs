@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
@@ -97,7 +98,7 @@ namespace Raven.Database.Server.Controllers
 		public static float? ToNullableFloat(this string value)
 		{
 			float ret;
-			if (value == null || !float.TryParse(value, out ret)) return null;
+			if (value == null || !float.TryParse(value,NumberStyles.Number, CultureInfo.InvariantCulture, out ret)) return null;
 			return ret;
 		}
 	}
