@@ -145,7 +145,8 @@ namespace Raven.Client.Document
                 queryInputs = queryInputs,
 				disableEntitiesTracking = disableEntitiesTracking,
 				disableCaching = disableCaching,
-                lastEquality = lastEquality
+                lastEquality = lastEquality,
+                defaultOperator = defaultOperator
 			};
 			return documentQuery;
 		}

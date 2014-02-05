@@ -1846,7 +1846,7 @@ If you really want to do in memory filtering on the data returned from the query
 #endif
 
 			);
-		private QueryOperator defaultOperator;
+	    protected QueryOperator defaultOperator;
 
 		/// <summary>
 		/// Perform a search for documents which fields that match the searchTerms.
