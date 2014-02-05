@@ -1,5 +1,6 @@
 using System.Linq;
 using Raven.Abstractions.Indexing;
+using Raven.Database.Config;
 using Raven.Tests.Bundles.Versioning;
 using Xunit;
 
@@ -7,9 +8,9 @@ namespace Raven.Tests.Bundles.Encryption
 {
 	public class WithoutEncryption : Encryption
 	{
-		protected override void ConfigureServer(Raven.Database.Config.RavenConfiguration ravenConfiguration)
+		protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
 		{
-			ravenConfiguration.Settings["Raven/ActiveBundles"] = "none";
+			configuration.Settings["Raven/ActiveBundles"] = "none";
 		}
 
 		[Fact]
@@ -61,8 +62,5 @@ namespace Raven.Tests.Bundles.Encryption
 					.ToList();
 			}
 		}
-		
-
-	
 	}
 }

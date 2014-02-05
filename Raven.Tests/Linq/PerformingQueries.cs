@@ -9,7 +9,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Abstractions.MEF;
-using Raven.Database.Indexing;
 using Raven.Database.Json;
 using Raven.Database.Linq;
 using Raven.Database.Plugins;

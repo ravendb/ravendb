@@ -1,16 +1,14 @@
-﻿using Raven.Client.Embedded;
-using Xunit;
+﻿using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class LazyLoadFromSessionCache
+	public class LazyLoadFromSessionCache : RavenTest
 	{
 		[Fact]
 		public void Stored_doc_can_be_lazy_loaded()
 		{
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var documentStore = NewDocumentStore())
 			{
-				documentStore.Initialize();
 				string id = "Id";
 				using (var session = documentStore.OpenSession())
 				{

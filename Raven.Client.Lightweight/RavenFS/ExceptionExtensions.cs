@@ -7,7 +7,6 @@ using System.Linq.Expressions;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Http;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Exceptions;
 using Raven.Imports.Newtonsoft.Json;

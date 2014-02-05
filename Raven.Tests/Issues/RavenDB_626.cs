@@ -8,7 +8,6 @@ namespace Raven.Tests.Issues
 {
 	public class RavenDB_626
 	{
-
 		[Fact]
 		public void Mixed()
 		{

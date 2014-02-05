@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class Vitaly
+	public class Vitaly : RavenTest
 	{
 		public class ActivityShot
 		{
@@ -19,11 +19,7 @@ namespace Raven.Tests.MailingList
 		{
 			public DateTime Date { get; set; }
 
-			public byte[][] Thumbnails
-			{
-				get;
-				set;
-			}
+			public byte[][] Thumbnails { get; set; }
 		}
 
 
@@ -55,25 +51,22 @@ namespace Raven.Tests.MailingList
 		public void Test()
 		{
 			var activityShot1 = new ActivityShot
-									{
-										Edited = new DateTime(2011, 1, 1),
-										Thumbnail = new byte[] { 1 }
-									};
+			{
+				Edited = new DateTime(2011, 1, 1),
+				Thumbnail = new byte[] {1}
+			};
 
 			var activityShot2 = new ActivityShot
-									{
-										Edited = new DateTime(2011, 10, 10),
-										Thumbnail = new byte[] { 2 }
-									};
-
-			using (var documentStore = new EmbeddableDocumentStore
-										   {
-											   RunInMemory = true
-										   }.Initialize())
 			{
-				new DailyActivityIndex().Execute(documentStore);	
+				Edited = new DateTime(2011, 10, 10),
+				Thumbnail = new byte[] {2}
+			};
 
-				using (var session = documentStore.OpenSession())
+			using (var store = NewDocumentStore())
+			{
+				new DailyActivityIndex().Execute(store);
+
+				using (var session = store.OpenSession())
 				{
 					session.Store(activityShot1);
 					session.Store(activityShot2);
@@ -81,12 +74,11 @@ namespace Raven.Tests.MailingList
 					session.SaveChanges();
 				}
 
-				using (var session = documentStore.OpenSession())
+				using (var session = store.OpenSession())
 				{
 					session.Query<DailyActivity, DailyActivityIndex>().Customize(x => x.WaitForNonStaleResults()).ToArray();
 				}
 			}
-
 		}
 	}
 }

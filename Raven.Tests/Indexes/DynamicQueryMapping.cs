@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Database;
 using Raven.Database.Config;
@@ -129,11 +128,9 @@ namespace Raven.Tests.Indexes
 				}
 			};
 
-
 			IndexDefinition definition = mapping.CreateIndexDefinition();
 
-			Assert.Equal(
-        "from doc in docs\r\nselect new { docTagsName = (from docTagsItem in ((IEnumerable<dynamic>)doc.Tags).DefaultIfEmpty() select docTagsItem.Name).ToArray() }",
+			Assert.Equal("from doc in docs\r\nselect new { docTagsName = (from docTagsItem in ((IEnumerable<dynamic>)doc.Tags).DefaultIfEmpty() select docTagsItem.Name).ToArray() }",
 				definition.Map);
 		}
 
@@ -142,7 +139,6 @@ namespace Raven.Tests.Indexes
 		public void CreateDefinitionSupportsNestedProperties()
 		{
 			var mapping = new Database.Data.DynamicQueryMapping
-
 			{
 				Items = new[]
 				{
@@ -153,7 +149,6 @@ namespace Raven.Tests.Indexes
 					}
 				}
 			};
-
 
 			IndexDefinition definition = mapping.CreateIndexDefinition();
 

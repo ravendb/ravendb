@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -27,6 +28,7 @@ using Raven.Database.Extensions;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
+using Raven.Database.Server.RavenFS.Util;
 using Raven.Database.Server.Security;
 using Raven.Database.Storage;
 using Raven.Json.Linq;
@@ -46,6 +48,11 @@ namespace Raven.Tests.Helpers
 		{
             Environment.SetEnvironmentVariable(Constants.RavenDefaultQueryTimeout, "30");
 			CommonInitializationUtil.Initialize();
+
+			// Make sure to delete the Data folder which we be used by tests that do not call the NewDataPath from whatever reason.
+			var dataFolder = FilePathTools.MakeSureEndsWithSlash(@"~\Data".ToFullPath());
+			ClearDatabaseDirectory(dataFolder);
+			pathsToDelete.Add(dataFolder);
 		}
 
 		protected string NewDataPath(string prefix = null)
@@ -64,10 +71,12 @@ namespace Raven.Tests.Helpers
 			bool enableAuthentication = false,
 			string activeBundles = null,
 			int? port = null,
-			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin)
+			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin,
+			Action<EmbeddableDocumentStore> configureStore = null,
+            [CallerMemberName] string databaseName = null)
 		{
 			var storageType = GetDefaultStorageType(requestedStorage);
-			var dataDirectory = dataDir ?? NewDataPath();
+			var dataDirectory = dataDir ?? NewDataPath(databaseName);
 			var documentStore = new EmbeddableDocumentStore
 			{
 				UseEmbeddedHttpServer = port.HasValue,
@@ -94,6 +103,8 @@ namespace Raven.Tests.Helpers
 
 			try
 			{
+				if (configureStore != null) 
+					configureStore(documentStore);
 				ModifyStore(documentStore);
 				ModifyConfiguration(documentStore.Configuration);
 
@@ -131,14 +142,15 @@ namespace Raven.Tests.Helpers
 		}
 
 		public DocumentStore
-			NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, string databaseName = null,
+			NewRemoteDocumentStore(bool fiddler = false, RavenDbServer ravenDbServer = null, [CallerMemberName] string databaseName = null,
 				bool runInMemory = true,
 				string dataDirectory = null,
 				string requestedStorage = null,
 				bool enableAuthentication = false,
 				Action<DocumentStore> configureStore = null)
 		{
-			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication);
+		    checkPorts = true;
+			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication, databaseName: databaseName);
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
@@ -147,9 +159,11 @@ namespace Raven.Tests.Helpers
 			};
 			stores.Add(store);
 			store.AfterDispose += (sender, args) => ravenDbServer.Dispose();
+
 			if (configureStore != null)
 				configureStore(store);
 			ModifyStore(store);
+
 			store.Initialize();
 			return store;
 		}
@@ -184,7 +198,9 @@ namespace Raven.Tests.Helpers
 			bool runInMemory = true, 
 			string requestedStorage = null,
 			bool enableAuthentication = false,
-			string activeBundles = null)
+			string activeBundles = null,
+			Action<RavenConfiguration> configureServer = null,
+            [CallerMemberName] string databaseName = null)
 		{
 		    checkPorts = true;
 			if (dataDirectory != null)
@@ -206,12 +222,15 @@ namespace Raven.Tests.Helpers
 				UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
 			};
 			
+            ravenConfiguration.Settings["Raven/StorageTypeName"] = ravenConfiguration.DefaultStorageTypeName;
 
 			if (activeBundles != null)
 			{
 				ravenConfiguration.Settings["Raven/ActiveBundles"] = activeBundles;
 			}
 
+			if (configureServer != null)
+				configureServer(ravenConfiguration);
 			ModifyConfiguration(ravenConfiguration);
 
 			ravenConfiguration.PostInit();
@@ -229,6 +248,7 @@ namespace Raven.Tests.Helpers
 					{
 						FailoverBehavior = FailoverBehavior.FailImmediately
 					},
+                    DefaultDatabase = databaseName
 				}.Initialize())
 				{
 					CreateDefaultIndexes(documentStore);
@@ -507,6 +527,15 @@ namespace Raven.Tests.Helpers
 				catch (Exception e)
 				{
 					errors.Add(e);
+				}
+				finally
+				{
+					if (Directory.Exists(pathToDelete) || 
+						File.Exists(pathToDelete)	// Just in order to be sure we didn't created a file in that path, by mistake
+						)
+					{
+						errors.Add(new IOException(string.Format("We tried to delete the '{0}' directory, but failed", pathToDelete)));
+					}
 				}
 			}
 

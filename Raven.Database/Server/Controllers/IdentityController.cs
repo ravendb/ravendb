@@ -7,7 +7,9 @@ namespace Raven.Database.Server.Controllers
 {
 	public class IdentityController : RavenDbApiController
 	{
-		[HttpPost][Route("identity/next")]
+		[HttpPost]
+        [Route("identity/next")]
+        [Route("databases/{databaseName}/identity/next")]
 		public HttpResponseMessage IdentityNextPost()
 		{
 			var name = GetQueryStringValue("name");
@@ -28,7 +30,9 @@ namespace Raven.Database.Server.Controllers
 			return GetMessageWithObject(new { Value = nextIdentityValue });
 		}
 
-		[HttpPost][Route("identity/seed")]
+		[HttpPost]
+        [Route("identity/seed")]
+        [Route("databases/{databaseName}/identity/seed")]
 		public HttpResponseMessage IdentitySeed()
 		{
 			var name = GetQueryStringValue("name");

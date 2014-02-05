@@ -1,21 +1,17 @@
-using Raven.Client.Embedded;
 using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class Build570
+	public class Build570 : RavenTest
 	{
 		[Fact]
-		public void DoesntFail()
+		public void DoesNotFail()
 		{
-			using(var store = new EmbeddableDocumentStore
+			using (var store = NewDocumentStore())
 			{
-				RunInMemory = true
-			}.Initialize())
-			{
-				using(var session = store.OpenSession())
+				using (var session = store.OpenSession())
 				{
-					session.Store(new Item{Name = "a"});
+					session.Store(new Item {Name = "a"});
 					session.SaveChanges();
 				}
 			}

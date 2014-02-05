@@ -5,15 +5,13 @@ using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Raven.Tests.MailingList;
 using Xunit;
 
 namespace Raven.Tests.Bugs
 {
-	public class EtagIssue : RavenTestBase
+	public class EtagIssue : RavenTest
 	{
 		#region Domain
 
@@ -232,7 +230,7 @@ namespace Raven.Tests.Bugs
 		[Fact]
 		public void ScriptedPatchShouldNotResultInConcurrencyExceptionForNewlyInsertedDocument()
 		{
-			using (EmbeddableDocumentStore store = NewDocumentStore())
+			using (var store = NewDocumentStore())
 			{
 				new UserProfileIndex().Execute(store);
 				store.RegisterListener(new Holt.NonStaleQueryListener());

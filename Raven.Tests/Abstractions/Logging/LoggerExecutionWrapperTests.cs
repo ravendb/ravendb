@@ -67,11 +67,11 @@ namespace Raven.Tests.Abstractions.Logging
 
 			public void Log<TException>(LogLevel logLevel, Func<string> messageFunc, TException exception) where TException : Exception
 			{
-				string message = messageFunc();
-				if (message != null)
+				string messageResult = messageFunc();
+				if (messageResult != null)
 				{
 					this.logLevel = logLevel;
-					this.message = messageFunc() ?? this.message;
+					this.message = messageResult;
 					this.exception = exception;
 				}
 			}

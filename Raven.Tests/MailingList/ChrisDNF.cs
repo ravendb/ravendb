@@ -12,17 +12,26 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-
-	public class ChrisDNF : IDisposable
+	public class ChrisDNF : RavenTest
 	{
+		protected readonly EmbeddableDocumentStore documentStore;
+
+		public ChrisDNF()
+		{
+			documentStore = NewDocumentStore();
+			documentStore.RegisterListener(new NoStaleQueriesAllowed());
+
+			new ActivityIndexes.Activity_ByCategoryId().Execute(documentStore);
+		}
+
 		[Fact]
 		public void Test()
 		{
 			using (var session = documentStore.OpenSession())
 			{
-				var category = new Category() { Color = "green", Name = "c1" };
+				var category = new Category { Color = "green", Name = "c1" };
 				session.Store(category);
-				var activity = new Activity() { Name = "a1", Category = category };
+				var activity = new Activity { Name = "a1", Category = category };
 				session.Store(activity);
 				session.SaveChanges();
 				category.Color = "yellow";
@@ -31,6 +40,7 @@ namespace Raven.Tests.MailingList
 				session.ClearStaleIndexes();
 				UpdateLinkedIndexes(category, new[] { "Activity/ByCategoryId" }, new[] { "Color" });
 			}
+
 			using (var session = documentStore.OpenSession())
 			{
 				var a2 = session.Load<Activity>("activities/1");
@@ -46,7 +56,7 @@ namespace Raven.Tests.MailingList
 			var prs = properties.Select(p =>
 			{
 				var d = new DynamicPropertyAccessor<T, string>(typeof(T).GetProperty(p));
-				return new PatchRequest()
+				return new PatchRequest
 				{
 					Type = PatchCommandType.Set,
 					Name = p,         // "Color"
@@ -54,7 +64,7 @@ namespace Raven.Tests.MailingList
 				};
 			}).ToArray();
 
-			var pr_outer = new PatchRequest()
+			var pr_outer = new PatchRequest
 			{
 				Type = PatchCommandType.Modify,
 				Name = dnfproperty,
@@ -67,39 +77,12 @@ namespace Raven.Tests.MailingList
 				documentStore.DatabaseCommands.UpdateByIndex(index, query, new PatchRequest[] { pr_outer }, false);
 		}
 
-
-		protected EmbeddableDocumentStore documentStore;
-
-		public ChrisDNF()
-		{
-			documentStore = new EmbeddableDocumentStore
-			{
-				RunInMemory = true
-			};
-			documentStore.RegisterListener(new NoStaleQueriesAllowed());
-			documentStore.Initialize();
-			
-			new ActivityIndexes.Activity_ByCategoryId().Execute(documentStore);	
-
-			AfterInit();
-		}
-
 		public class NoStaleQueriesAllowed : IDocumentQueryListener
 		{
 			public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
 			{
 				queryCustomization.WaitForNonStaleResults();
 			}
-		}
-
-		public virtual void Dispose()
-		{
-			documentStore.Dispose();
-		}
-
-		public virtual void AfterInit()
-		{
-
 		}
 	}
 

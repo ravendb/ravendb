@@ -324,7 +324,6 @@
     <Compile Include="Server\Controllers\RavenDbApiController.cs" />
     <Compile Include="Server\Controllers\RavenDbUiController.cs" />
     <Compile Include="Server\Controllers\SilverlightController.cs" />
-    <Compile Include="Server\Controllers\SimpleTestController.cs" />
     <Compile Include="Server\Controllers\SingleAuthTokenController.cs" />
     <Compile Include="Server\Controllers\StaticController.cs" />
     <Compile Include="Server\Controllers\StatisticsController.cs" />
@@ -339,7 +338,6 @@
     <Compile Include="Server\RavenFS\Controllers\ConfigController.cs" />
     <Compile Include="Server\RavenFS\Controllers\FilesController.cs" />
     <Compile Include="Server\RavenFS\Controllers\FoldersController.cs" />
-    <Compile Include="Server\RavenFS\Controllers\LogsController.cs" />
     <Compile Include="Server\RavenFS\Controllers\RavenFsApiController.cs" />
     <Compile Include="Server\RavenFS\Controllers\RdcController.cs" />
     <Compile Include="Server\RavenFS\Controllers\SearchController.cs" />
@@ -1210,10 +1208,10 @@
     </CreateItem>
   </Target>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <Import Project="$(SolutionDir)\Imports\Fody\Fody.targets" />
   <Target Name="BeforeBuild">
     <Copy SourceFiles="$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml" DestinationFiles="$(MSBuildProjectDirectory)\FodyWeavers.xml" Condition="Exists('$(SolutionDir)\Imports\Fody\Config\FodyWeavers.$(Configuration).xml')" />
   </Target>
   <Target Name="AfterBuild">
   </Target>
+  <Import Project="Fody.targets" />
 </Project>

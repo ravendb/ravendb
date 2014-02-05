@@ -211,17 +211,16 @@ namespace Raven.Client.Indexes
 		/// <summary>
 		/// Executes the index creation against the specified document store.
 		/// </summary>
-		public virtual Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
+		public virtual async Task ExecuteAsync(IAsyncDatabaseCommands asyncDatabaseCommands, DocumentConvention documentConvention)
 		{
 			Conventions = documentConvention;
 			var indexDefinition = CreateIndexDefinition();
+			
 			// This code take advantage on the fact that RavenDB will turn an index PUT
 			// to a noop of the index already exists and the stored definition matches
 			// the new definition.
-			return asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true)
-				.ContinueWith(task => UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, operationMetadata) =>
-					client.DirectPutIndexAsync(IndexName, indexDefinition, true, operationMetadata)))
-				.Unwrap();
+			await asyncDatabaseCommands.PutIndexAsync(IndexName, indexDefinition, true);
+			await UpdateIndexInReplicationAsync(asyncDatabaseCommands, documentConvention, (client, operationMetadata) => client.DirectPutIndexAsync(IndexName, indexDefinition, true, operationMetadata));				
 		}
 	}
 

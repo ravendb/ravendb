@@ -11,7 +11,7 @@ namespace Raven.Database.Server.Controllers
 	{
 		[HttpGet]
 		[Route("static/")]
-		[Route("database/{databaseName}/static/")]
+		[Route("databases/{databaseName}/static/")]
 		public HttpResponseMessage StaticGet()
 		{
 			var array = Database.GetAttachments(GetStart(),

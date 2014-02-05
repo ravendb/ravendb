@@ -29,6 +29,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
 
 		[HttpPost]
 		[Route("admin/replication/purge-tombstones")]
+        [Route("databases/{databaseName}/admin/replication/purge-tombstones")]
 		public HttpResponseMessage PurgeTombstones()
 		{
 			var docEtagStr = GetQueryStringValue("docEtag");

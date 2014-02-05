@@ -1,25 +1,22 @@
 using System.Dynamic;
 using System.Linq;
+using Mono.CSharp;
 using Raven.Abstractions.Linq;
 using Raven.Client.Embedded;
 using Raven.Json.Linq;
 using Raven.Client;
-using Raven.Database.Linq;
 using Xunit;
 
 namespace Raven.Tests.Bugs.Queries
 {
-	public class LuceneQueryCustomMetadata
+	public class LuceneQueryCustomMetadata : RavenTest
 	{
 		private const string PropertyName = "MyCustomProperty";
 
 		[Fact]
 		public void SuccessTest1()
 		{
-			using (var documentStore = new EmbeddableDocumentStore
-			{
-				RunInMemory = true
-			}.Initialize())
+			using (var documentStore = NewDocumentStore())
 			{
 				dynamic expando = new ExpandoObject();
 
@@ -51,14 +48,11 @@ namespace Raven.Tests.Bugs.Queries
 		[Fact]
 		public void SuccessTest2()
 		{
-			using (IDocumentStore documentStore = new EmbeddableDocumentStore
-			{
-				RunInMemory = true
-			}.Initialize())
+			using (var documentStore = NewDocumentStore())
 			{
 				dynamic expando = new ExpandoObject();
 
-				using (IDocumentSession session = documentStore.OpenSession())
+				using (var session = documentStore.OpenSession())
 				{
 					session.Store(expando);
 
@@ -70,7 +64,7 @@ namespace Raven.Tests.Bugs.Queries
 					session.SaveChanges();
 				}
 
-				using (IDocumentSession session = documentStore.OpenSession())
+				using (var session = documentStore.OpenSession())
 				{
 					dynamic loaded = session.Advanced.LuceneQuery<dynamic>()
 						.WhereEquals("@metadata.Raven-Entity-Name",
@@ -85,14 +79,11 @@ namespace Raven.Tests.Bugs.Queries
 		[Fact]
 		public void FailureTest()
 		{
-			using (IDocumentStore documentStore = new EmbeddableDocumentStore
-			{
-				RunInMemory = true
-			}.Initialize())
+			using (var documentStore = NewDocumentStore())
 			{
 				dynamic expando = new ExpandoObject();
 
-				using (IDocumentSession session = documentStore.OpenSession())
+				using (var session = documentStore.OpenSession())
 				{
 					session.Store(expando);
 
@@ -104,7 +95,7 @@ namespace Raven.Tests.Bugs.Queries
 					session.SaveChanges();
 				}
 
-				using (IDocumentSession session = documentStore.OpenSession())
+				using (var session = documentStore.OpenSession())
 				{
 					dynamic loaded =
 						session.Advanced.LuceneQuery<dynamic>().WhereEquals("@metadata." + PropertyName, true)

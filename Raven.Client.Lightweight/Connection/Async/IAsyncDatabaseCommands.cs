@@ -487,6 +487,11 @@ namespace Raven.Client.Connection.Async
 		/// Sends an async command to compact a database. During the compaction the specified database will be offline.
 		/// </summary>
 		Task CompactDatabaseAsync(string databaseName);
+
+        /// <summary>
+        /// Begins an async restore operation
+        /// </summary>
+        Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
 	}
 
 	public interface IAsyncAdminDatabaseCommands
@@ -505,11 +510,6 @@ namespace Raven.Client.Connection.Async
 		/// Begins an async backup operation
 		/// </summary>
 		Task StartBackupAsync(string backupLocation, DatabaseDocument databaseDocument);
-
-		/// <summary>
-		/// Begins an async restore operation
-		/// </summary>
-		Task StartRestoreAsync(string restoreLocation, string databaseLocation, string databaseName = null, bool defrag = false);
 
 		/// <summary>
 		/// Get the indexing status

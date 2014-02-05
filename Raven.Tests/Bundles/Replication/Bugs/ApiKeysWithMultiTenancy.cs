@@ -26,7 +26,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
             Authentication.EnableOnce();
 		}
 
-		protected override void ConfigureDatabase(Database.DocumentDatabase database)
+        protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)
 		{
 			database.Put("Raven/ApiKeys/test", null, RavenJObject.FromObject(new ApiKeyDefinition
 			{
@@ -37,6 +37,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
 				{
 					new DatabaseAccess {TenantId = "*", Admin = true},
 					new DatabaseAccess {TenantId = Constants.SystemDatabase, Admin = true},
+                    new DatabaseAccess {TenantId = databaseName, Admin = true}
 				}
 			}), new RavenJObject(), null);
 		}

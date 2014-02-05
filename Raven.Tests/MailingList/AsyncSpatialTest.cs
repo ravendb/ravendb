@@ -1,23 +1,18 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Extensions;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class IndexTests : RavenTestBase
+	public class AsyncSpatialTest : RavenTest
 	{
-
 		[Fact]
 		public async Task SpatialIndexTest()
 		{
-
 			using (var db = NewDocumentStore())
 			{
-
 				new Promos_Index().Execute(db);
 
 				using (var session = db.OpenAsyncSession())

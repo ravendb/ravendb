@@ -9,7 +9,6 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Data;
@@ -348,7 +347,7 @@ namespace Raven.Smuggler
 			return new CompletedTask();
 		}
 
-        [StringFormatMethod("format")]
+        // [StringFormatMethod("format")]
 		protected override void ShowProgress(string format, params object[] args)
 		{
 			Console.WriteLine(format, args);

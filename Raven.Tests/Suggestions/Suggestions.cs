@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Principal;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
@@ -22,7 +23,7 @@ namespace Raven.Tests.Suggestions
 
 		public Suggestions()
 		{
-			documentStore = NewDocumentStore();
+			documentStore = NewRemoteDocumentStore();
 
 			documentStore.DatabaseCommands.PutIndex("Test", new IndexDefinition
 			{

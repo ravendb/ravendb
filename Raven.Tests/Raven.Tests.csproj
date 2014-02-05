@@ -304,6 +304,7 @@
     <Compile Include="Issues\RavenDB_1565.cs" />
     <Compile Include="Issues\RavenDB_1594.cs" />
     <Compile Include="Issues\RavenDB_1610.cs" />
+    <Compile Include="Issues\RavenDB_1666.cs" />
     <Compile Include="Issues\RDBQA_4.cs" />
     <Compile Include="Issues\RavenDB_1553.cs" />
     <Compile Include="Issues\RavenDB_1555.cs" />
@@ -619,7 +620,7 @@
     <Compile Include="Bugs\ReuseQuery.cs" />
     <Compile Include="Bugs\SelectManyIssue.cs" />
     <Compile Include="Bugs\SelectManyOnNull.cs" />
-    <Compile Include="Bugs\SelectManyTests .cs" />
+    <Compile Include="Bugs\SelectManyTests.cs" />
     <Compile Include="Bugs\SerializingDates.cs" />
     <Compile Include="Bugs\SerializingEntities.cs" />
     <Compile Include="Bugs\SimonCropp.cs" />
@@ -931,7 +932,7 @@
     <Compile Include="MailingList\QueryOnItems.cs" />
     <Compile Include="MailingList\RacielRod.cs" />
     <Compile Include="MailingList\RavenCountTest.cs" />
-    <Compile Include="MailingList\RavenDB1192.cs" />
+    <Compile Include="MailingList\RavenDb1192_MapReduceNestedItemsTests.cs" />
     <Compile Include="MailingList\RavenDB1206.cs" />
     <Compile Include="MailingList\RavenDB669.cs" />
     <Compile Include="MailingList\RavenDbBugs.cs" />
@@ -939,7 +940,7 @@
     <Compile Include="MailingList\RavenDB_859.cs" />
     <Compile Include="MailingList\RavenCannotQueryAgainstFloatProperty.cs" />
     <Compile Include="MailingList\LateBoundValue.cs" />
-    <Compile Include="MailingList\RavenDB_Stream_SelectFields_Test.cs" />
+    <Compile Include="MailingList\StreamingTests.cs" />
     <Compile Include="MailingList\RavenDeserializationBug.cs" />
     <Compile Include="MailingList\RavenDynamicTests.cs" />
     <Compile Include="MailingList\Raven_json_serialization_fail_tests.cs" />
@@ -1211,7 +1212,7 @@
     <Compile Include="MailingList\Algirdas.cs" />
     <Compile Include="MailingList\Arun.cs" />
     <Compile Include="MailingList\Bassler.cs" />
-    <Compile Include="MailingList\Ben.cs" />
+    <Compile Include="MailingList\SumTests.cs" />
     <Compile Include="MailingList\Brett.cs" />
     <Compile Include="MailingList\BrianVallelunga.cs" />
     <Compile Include="MailingList\Bruno.cs" />
@@ -1573,6 +1574,7 @@
     <Compile Include="Triggers\ReadTriggers.cs" />
     <Compile Include="Triggers\RefuseBigAttachmentPutTrigger.cs" />
     <Compile Include="Triggers\VetoCapitalNamesPutTrigger.cs" />
+    <Compile Include="Utils\RavenInternalTestUtil.cs" />
     <Compile Include="Utils\SettingsDat.cs" />
     <Compile Include="Utils\SortedEtagsListTests.cs" />
     <Compile Include="Util\IISConfig.cs" />

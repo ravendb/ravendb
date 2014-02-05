@@ -1,25 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Database.Extensions;
+using Raven.Tests.Helpers;
 
 namespace Raven.Tests.Util
 {
-	using Raven.Tests.Helpers;
-
 	[CLSCompliant(false)]
-	public class RavenDBDriver : ProcessDriver, IDisposable
+	public class RavenDBDriver : ProcessDriver
 	{
-		readonly string _shardName;
-		readonly DocumentConvention _conventions;
-		readonly string _dataDir;
+		private readonly string _shardName;
+		private readonly DocumentConvention _conventions;
+		private readonly string _dataDir;
 
 		public string Url { get; private set; }
 
@@ -47,7 +42,7 @@ namespace Raven.Tests.Util
 				throw new Exception("Could not find Raven.server.exe.config");
 			}
 
-			StartProcess(exePath, "--ram --set=Raven/Port==8079 --msgBox --set=Raven/AnonymousAccess==Admin --set=Raven/Encryption/FIPS==" + SettingsHelper.UseFipsEncryptionAlgorithms);
+			StartProcess(exePath, string.Format("--ram --set=Raven/Port==8079 --msgBox --set=Raven/AnonymousAccess==Admin --set=Raven/Encryption/FIPS=={0} --set=Raven/DataDir=={1}", SettingsHelper.UseFipsEncryptionAlgorithms, _dataDir));
 
 			Match match = WaitForConsoleOutputMatching(@"^Server Url: (http://.*/)\s*$");
 
@@ -56,10 +51,10 @@ namespace Raven.Tests.Util
 
 		public IDocumentStore GetDocumentStore()
 		{
-			var documentStore = new DocumentStore()
+			var documentStore = new DocumentStore
 			{
 				Identifier = _shardName,
-				Url = this.Url,
+				Url = Url,
 				Conventions = _conventions
 			};
 

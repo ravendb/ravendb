@@ -4,13 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Util;
 using Raven.Database.Util;
 using Xunit;
 
 namespace Raven.Tests.Utils
 {
-	using Raven.Abstractions.Util;
-
 	public class SortedEtagsListTests
 	{
 		private Etag zero = Etag.Empty;

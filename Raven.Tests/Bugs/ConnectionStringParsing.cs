@@ -1,5 +1,4 @@
 using Raven.Abstractions.Data;
-using Raven.Client.Document;
 using Xunit;
 
 namespace Raven.Tests.Bugs

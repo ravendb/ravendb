@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class NullableGuidIndexTest
+	public class NullableGuidIndexTest : RavenTest
 	{
 		public class TestDocument
 		{
@@ -28,12 +28,8 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void Can_query_against_nullable_guid()
 		{
-			using (var store = new EmbeddableDocumentStore
+			using (var store = NewDocumentStore())
 			{
-				RunInMemory = true,
-			})
-			{
-				store.Initialize();
 				new TestDocumentIndex().Execute(store.DatabaseCommands, store.Conventions);
 
 				using (var session = store.OpenSession())

@@ -7,25 +7,25 @@ using System;
 using System.Linq;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
-using Raven.Database.Extensions;
 using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class Maverix2 : IDisposable
+	public class Maverix2 : RavenTest
 	{
+		private readonly string path;
+
 		public Maverix2()
 		{
-			IOExtensions.DeleteDirectory("Maverix");
+			path = NewDataPath("Maverix");
 		}
 
-		public static EmbeddableDocumentStore Store()
+		public EmbeddableDocumentStore Store()
 		{
-			var store = new EmbeddableDocumentStore { DataDirectory = "Maverix" };
+			var store = new EmbeddableDocumentStore { DataDirectory = path };
 			store.Initialize();
 			store.RegisterListener(new NonStaleQueryListener());
 
@@ -37,7 +37,7 @@ namespace Raven.Tests.MailingList
 		[Fact]
 		public void WithoutRestart()
 		{
-			TemplateTest template = new TemplateTest { };
+			var template = new TemplateTest();
 			using (var store = Store())
 			{
 				using (var session = store.OpenSession())
@@ -51,13 +51,12 @@ namespace Raven.Tests.MailingList
 					Assert.Equal(1, session.Query<TemplateTests_Search.ReduceResult, TemplateTests_Search>().Count());
 				}
 			}
-
 		}
 
 		[Fact]
 		public void WithRestart()
 		{
-			TemplateTest template = new TemplateTest { };
+			var template = new TemplateTest();
 			using (var store = Store())
 			{
 				using (var session = store.OpenSession())
@@ -65,7 +64,6 @@ namespace Raven.Tests.MailingList
 					session.Store(template);
 					session.SaveChanges();
 				}
-
 
 				using (var session = store.OpenSession())
 				{
@@ -89,11 +87,6 @@ namespace Raven.Tests.MailingList
 			{
 				customization.WaitForNonStaleResults();
 			}
-		}
-
-		public void Dispose()
-		{
-			IOExtensions.DeleteDirectory("Maverix");
 		}
 	}
 

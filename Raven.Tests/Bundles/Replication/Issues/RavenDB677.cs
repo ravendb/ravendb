@@ -73,14 +73,6 @@ namespace Raven.Tests.Bundles.Replication.Issues
 		 }
 	}
 
-	public class RavenDb677_Munin : RavenDB677
-	{
-		protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
-		{
-			serverConfiguration.DefaultStorageTypeName = "munin";
-		}
-	}
-
 	public class RavenDb677_Voron : RavenDB677
 	{
 		protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)

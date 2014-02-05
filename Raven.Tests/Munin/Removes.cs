@@ -20,8 +20,6 @@ namespace Raven.Munin.Tests
 		[Fact]
 		public void PutThenRemoveInSameTxWillResultInMissingValue()
 		{
-
-
 			Assert.True(Table.Put(RavenJToken.FromObject("123"), new byte[] { 1, 2, 4, 5 }));
 
 			Assert.True(Table.Remove(RavenJToken.FromObject("123")));
