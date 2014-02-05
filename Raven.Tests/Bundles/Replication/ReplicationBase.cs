@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -36,50 +37,52 @@ namespace Raven.Tests.Bundles.Replication
             checkPorts = true;
         }
 
-		public DocumentStore CreateStore(bool enableCompressionBundle = false, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false,string requestedStorageType = "esent", bool useFiddler = false)
+        public DocumentStore CreateStore(bool enableCompressionBundle = false, Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false, string requestedStorageType = "esent", bool useFiddler = false, [CallerMemberName] string databaseName = null)
         {
             var port = PortRangeStart - stores.Count;
-			return CreateStoreAtPort(port, enableCompressionBundle, configureStore, anonymousUserAccessMode, enableAuthorization, requestedStorageType,useFiddler);
+            return CreateStoreAtPort(port, enableCompressionBundle, configureStore, anonymousUserAccessMode, enableAuthorization, requestedStorageType, useFiddler, databaseName);
         }
 
         public EmbeddableDocumentStore CreateEmbeddableStore(bool enableCompressionBundle = false,
-			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, string requestedStorageType = "esent")
+			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, string requestedStorageType = "esent", [CallerMemberName] string databaseName = null)
         {
             var port = PortRangeStart - stores.Count;
-			return CreateEmbeddableStoreAtPort(port, enableCompressionBundle, anonymousUserAccessMode,requestedStorageType);
+            return CreateEmbeddableStoreAtPort(port, enableCompressionBundle, anonymousUserAccessMode, requestedStorageType, databaseName);
         }
 
         private DocumentStore CreateStoreAtPort(int port, bool enableCompressionBundle = false,
-            Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false, string storeTypeName = "esent", bool useFiddler = false)
+            Action<DocumentStore> configureStore = null, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, bool enableAuthorization = false, string storeTypeName = "esent", bool useFiddler = false, string databaseName = null)
         {
             var ravenDbServer = GetNewServer(port,
                 requestedStorage: storeTypeName,
                 activeBundles: "replication" + (enableCompressionBundle ? ";compression" : string.Empty),
-                enableAuthentication: anonymousUserAccessMode == AnonymousUserAccessMode.None);
+                enableAuthentication: anonymousUserAccessMode == AnonymousUserAccessMode.None,
+                databaseName: databaseName);
 
             if (enableAuthorization)
             {
 				EnableAuthentication(ravenDbServer.SystemDatabase);
             }
 
-			var documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, configureStore: configureStore, fiddler: useFiddler);
+			var documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, configureStore: configureStore, fiddler: useFiddler, databaseName: databaseName);
 
-			ConfigureDatabase(ravenDbServer.SystemDatabase);
+			ConfigureDatabase(ravenDbServer.SystemDatabase, databaseName: databaseName);
 
             return documentStore;
         }
 
-		private EmbeddableDocumentStore CreateEmbeddableStoreAtPort(int port, bool enableCompressionBundle = false, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All, string storeTypeName = "esent")
+		private EmbeddableDocumentStore CreateEmbeddableStoreAtPort(int port, bool enableCompressionBundle = false, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All, string storeTypeName = "esent", string databaseName = null)
         {
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 			var store = NewDocumentStore(port: port,
 				requestedStorage:storeTypeName,
 				activeBundles: "replication" + (enableCompressionBundle ? ";compression" : string.Empty),
-				anonymousUserAccessMode: anonymousUserAccessMode);
+				anonymousUserAccessMode: anonymousUserAccessMode,
+                databaseName: databaseName);
 			return store;
 		}
 
-        protected virtual void ConfigureDatabase(DocumentDatabase database)
+        protected virtual void ConfigureDatabase(DocumentDatabase database, string databaseName = null)
         {
 
         }
@@ -114,7 +117,7 @@ namespace Raven.Tests.Bundles.Replication
             servers[index] = ravenDbServer;
         }
 
-        public IDocumentStore ResetDatabase(int index, bool enableAuthentication = false)
+        public IDocumentStore ResetDatabase(int index, bool enableAuthentication = false, [CallerMemberName] string databaseName = null)
         {
             stores[index].Dispose();
 
@@ -122,7 +125,7 @@ namespace Raven.Tests.Bundles.Replication
             previousServer.Dispose();
 			IOExtensions.DeleteDirectory(previousServer.SystemDatabase.Configuration.DataDirectory);
 
-			return CreateStoreAtPort(previousServer.SystemDatabase.Configuration.Port, enableAuthentication);
+			return CreateStoreAtPort(previousServer.SystemDatabase.Configuration.Port, enableAuthentication, databaseName: databaseName);
         }
 
 		protected void TellFirstInstanceToReplicateToSecondInstance(string apiKey = null, string username = null, string password = null, string domain = null)
@@ -150,6 +153,8 @@ namespace Raven.Tests.Bundles.Replication
 			string password = null,
 			string domain = null)
         {
+            db = db ?? (destination is DocumentStore ? ((DocumentStore)destination).DefaultDatabase : null);
+
             Console.WriteLine("Replicating from {0} to {1} with db = {2}.", source.Url, destination.Url, db ?? Constants.SystemDatabase);
             using (var session = source.OpenSession(db))
             {
@@ -160,7 +165,7 @@ namespace Raven.Tests.Bundles.Replication
                             destination.Url.Replace("localhost", "ipv4.fiddler"),
                     TransitiveReplicationBehavior = transitiveReplicationBehavior,
                     Disabled = disabled,
-					IgnoredClient = ignoredClient,
+					IgnoredClient = ignoredClient
                 };
                 if (db != null)
                     replicationDestination.Database = db;

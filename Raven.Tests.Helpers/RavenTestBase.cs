@@ -150,7 +150,7 @@ namespace Raven.Tests.Helpers
 				Action<DocumentStore> configureStore = null)
 		{
 		    checkPorts = true;
-			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication);
+			ravenDbServer = ravenDbServer ?? GetNewServer(runInMemory: runInMemory, dataDirectory: dataDirectory, requestedStorage: requestedStorage, enableAuthentication: enableAuthentication, databaseName: databaseName);
 			ModifyServer(ravenDbServer);
 			var store = new DocumentStore
 			{
@@ -196,7 +196,8 @@ namespace Raven.Tests.Helpers
 			bool runInMemory = true, 
 			string requestedStorage = null,
 			bool enableAuthentication = false,
-			string activeBundles = null)
+			string activeBundles = null,
+            [CallerMemberName] string databaseName = null)
 		{
 		    checkPorts = true;
 			if (dataDirectory != null)
@@ -217,7 +218,8 @@ namespace Raven.Tests.Helpers
 				AnonymousUserAccessMode = enableAuthentication ? AnonymousUserAccessMode.None : AnonymousUserAccessMode.Admin,
 				UseFips = SettingsHelper.UseFipsEncryptionAlgorithms,
 			};
-			
+
+            ravenConfiguration.Settings["Raven/StorageTypeName"] = ravenConfiguration.DefaultStorageTypeName;
 
 			if (activeBundles != null)
 			{
@@ -241,9 +243,10 @@ namespace Raven.Tests.Helpers
 					{
 						FailoverBehavior = FailoverBehavior.FailImmediately
 					},
+                    DefaultDatabase = databaseName
 				}.Initialize())
 				{
-					CreateDefaultIndexes(documentStore);
+				    CreateDefaultIndexes(documentStore);
 				}
 			}
 			catch

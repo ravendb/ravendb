@@ -55,10 +55,10 @@ namespace Raven.Tests.Bundles.Encryption
 				WaitForBackup(store.DatabaseCommands.ForDatabase("Db1"), true);
 
 				await store.AsyncDatabaseCommands.GlobalAdmin.StartRestoreAsync(backupFolderDb1, @"~\Databases\Db2", "Db2");
-				WaitForRestore(store.DatabaseCommands);
-				WaitForDocument(store.DatabaseCommands, "Raven/Databases/Db2");
+				WaitForRestore(store.DatabaseCommands.ForSystemDatabase());
+				WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), "Raven/Databases/Db2");
 
-				using (var session = store.OpenAsyncSession())
+				using (var session = store.OpenAsyncSession(Constants.SystemDatabase))
 				{
 					var db2Settings = await session.LoadAsync<DatabaseDocument>("Raven/Databases/Db2");
 					Assert.NotEqual(db1.SecuredSettings["Raven/Encryption/Key"], db2Settings.SecuredSettings["Raven/Encryption/Key"]);

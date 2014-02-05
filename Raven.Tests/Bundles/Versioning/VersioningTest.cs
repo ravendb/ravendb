@@ -1,4 +1,6 @@
-﻿using Raven.Client.Document;
+﻿using System.Runtime.CompilerServices;
+
+using Raven.Client.Document;
 
 namespace Raven.Tests.Bundles.Versioning
 {
@@ -11,10 +13,10 @@ namespace Raven.Tests.Bundles.Versioning
 			documentStore = CreateDocumentStore(8079);
 		}
 
-		protected DocumentStore CreateDocumentStore(int port)
+		protected DocumentStore CreateDocumentStore(int port, [CallerMemberName]string databaseName = null)
 		{
-			var ravenDbServer = GetNewServer(activeBundles: "Versioning", port: port);
-			var store = NewRemoteDocumentStore(ravenDbServer: ravenDbServer);
+			var ravenDbServer = GetNewServer(activeBundles: "Versioning", port: port, databaseName: databaseName);
+			var store = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, databaseName: databaseName);
 
 			using (var session = store.OpenSession())
 			{
