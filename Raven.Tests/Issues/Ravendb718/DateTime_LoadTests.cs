@@ -1,10 +1,9 @@
 ﻿using System;
-using Raven.Client.Embedded;
 using Xunit;
 
 namespace Raven.Tests.Issues.Ravendb718
 {
-	public class DateTime_LoadTests
+	public class DateTime_LoadTests : RavenTest
 	{
 		[Fact]
 		public void DateTime_SavedAs_Local_LoadsAs_Unspecified()
@@ -28,14 +27,12 @@ namespace Raven.Tests.Issues.Ravendb718
 			DoTest(DateTime.UtcNow, DateTimeKind.Utc, DateTimeKind.Utc);
 		}
 
-		private static void DoTest(DateTime dt, DateTimeKind inKind, DateTimeKind outKind)
+		private void DoTest(DateTime dt, DateTimeKind inKind, DateTimeKind outKind)
 		{
 			Assert.Equal(inKind, dt.Kind);
 
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var documentStore = NewDocumentStore())
 			{
-				documentStore.Initialize();
-
 				using (var session = documentStore.OpenSession())
 				{
 					session.Store(new Foo { Id = "foos/1", DateTime = dt });

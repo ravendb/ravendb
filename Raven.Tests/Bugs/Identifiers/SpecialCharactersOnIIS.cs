@@ -6,9 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Security.Principal;
-using Raven.Client.Document;
 using Xunit;
 using Xunit.Extensions;
 using Xunit.Sdk;

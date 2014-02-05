@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Raven.Tests.Issues.Ravendb718
 {
-	public class DateTimeOffset_QueryDynamicTests
+	public class DateTimeOffset_QueryDynamicTests : RavenTest
 	{
 		[Fact]
 		public void DateTimeOffset_FromNow_OnDynamicIndex_Queries_WithCorrectOffset()
@@ -27,10 +27,8 @@ namespace Raven.Tests.Issues.Ravendb718
 
 		private void DoTest(DateTimeOffset dto)
 		{
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var documentStore = NewDocumentStore())
 			{
-				documentStore.Initialize();
-
 				using (var session = documentStore.OpenSession())
 				{
 					session.Store(new Foo { Id = "foos/1", DateTimeOffset = dto });

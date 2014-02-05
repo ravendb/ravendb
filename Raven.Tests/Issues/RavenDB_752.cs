@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
@@ -14,8 +15,6 @@ using Xunit;
 
 namespace Raven.Tests.Issues
 {
-	using Raven.Abstractions.Connection;
-
 	public class RavenDB_752
 	{
 		[Fact]

@@ -1,10 +1,9 @@
 ﻿using System;
-using Raven.Client.Embedded;
 using Xunit;
 
 namespace Raven.Tests.Issues.Ravendb718
 {
-	public class DateTimeOffset_LoadTests
+	public class DateTimeOffset_LoadTests : RavenTest
 	{
 		[Fact]
 		public void DateTimeOffset_FromNow_Loads_WithCorrectOffset()
@@ -26,10 +25,8 @@ namespace Raven.Tests.Issues.Ravendb718
 
 		private void DoTest(DateTimeOffset dto)
 		{
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var documentStore = NewDocumentStore())
 			{
-				documentStore.Initialize();
-
 				using (var session = documentStore.OpenSession())
 				{
 					session.Store(new Foo { Id = "foos/1", DateTimeOffset = dto });

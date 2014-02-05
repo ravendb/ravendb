@@ -3,54 +3,22 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.ComponentModel.Composition.Hosting;
-using System.IO;
-using System.Reflection;
+using Raven.Abstractions.Data;
 using Raven.Client.Document;
-using Raven.Client.Embedded;
-using Raven.Database.Extensions;
 using Raven.Database.Plugins;
 using Raven.Database.Server;
 using Raven.Json.Linq;
-using Raven.Tests.Document;
 using Xunit;
-using TransactionInformation = Raven.Abstractions.Data.TransactionInformation;
 
 namespace Raven.Tests.Bugs
 {
-	public class OperationHeaders : IDisposable
+	public class OperationHeaders : RavenTest
 	{
-		private readonly string path;
-
-		public OperationHeaders()
-		{
-			path = Path.GetDirectoryName(Assembly.GetAssembly(typeof(DocumentStoreServerTests)).CodeBase);
-			path = Path.Combine(path, "TestDb").Substring(6);
-			IOExtensions.DeleteDirectory(path);
-		}
-
-		public void Dispose()
-		{
-			IOExtensions.DeleteDirectory(path);
-		}
-
 		[Fact]
 		public void CanPassOperationHeadersUsingEmbedded()
 		{
-			using (var documentStore = new EmbeddableDocumentStore
-			{
-				Configuration = 
-				{
-					Catalog =
-						{
-							Catalogs = { new TypeCatalog(typeof(RecordOperationHeaders)) }
-						},
-					DataDirectory = path,
-					RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true
-				}
-
-			}.Initialize())
+			using (var documentStore = NewDocumentStore(configureStore: store => store.Configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof (RecordOperationHeaders)))))
 			{
 				RecordOperationHeaders.Hello = null;
 				using(var session = documentStore.OpenSession())

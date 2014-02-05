@@ -71,7 +71,7 @@ namespace Raven.Tests.Helpers
 			string activeBundles = null,
 			int? port = null,
 			AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin,
-			Action<DocumentStore> configureStore = null)
+			Action<EmbeddableDocumentStore> configureStore = null)
 		{
 			var storageType = GetDefaultStorageType(requestedStorage);
 			var dataDirectory = dataDir ?? NewDataPath();

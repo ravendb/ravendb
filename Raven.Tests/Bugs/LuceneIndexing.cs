@@ -1,8 +1,6 @@
 using System;
-using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
-using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Database.Indexing;
@@ -25,7 +23,6 @@ namespace Raven.Tests.Bugs
 				document.Add(new Field("Name", "MRS. SHABA", Field.Store.NO, Field.Index.ANALYZED_NO_NORMS));
 				writer.AddDocument(document);
 			}
-
 
 			var searcher = new IndexSearcher(dir, true);
 

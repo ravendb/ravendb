@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
 
 namespace Raven.Tests.Issues.Ravendb718
 {
-	public class DateTimeOffset_QueryTransformTests
+	public class DateTimeOffset_QueryTransformTests : RavenTest
 	{
 		[Fact]
 		public void DateTimeOffset_FromNow_OnTransformIndex_Queries_WithCorrectOffset()
@@ -27,11 +26,10 @@ namespace Raven.Tests.Issues.Ravendb718
 			DoTest(new DateTimeOffset(2012, 1, 1, 0, 0, 0, TimeSpan.FromHours(-10.5)));
 		}
 
-		private static void DoTest(DateTimeOffset dto)
+		private void DoTest(DateTimeOffset dto)
 		{
-			using (var documentStore = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var documentStore = NewDocumentStore())
 			{
-				documentStore.Initialize();
 				new FoosAndBars().Execute(documentStore);
 
 				using (var session = documentStore.OpenSession())

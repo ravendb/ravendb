@@ -7,7 +7,6 @@ using System;
 using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using Raven.Client.Document;
-using Raven.Client.Embedded;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -15,13 +14,12 @@ namespace Raven.Tests.Bugs
 {
 	public class RoundCrisis : IDisposable
 	{
-		private readonly DocumentStore _documentStore;
+		private readonly DocumentStore documentStore;
 
 		public RoundCrisis()
 		{
-			_documentStore = new EmbeddableDocumentStore {RunInMemory = true};
-			_documentStore.Initialize();
-			IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(PriceDocuments_ByDateBySource))), _documentStore);
+			documentStore = new DocumentStore();
+			IndexCreation.CreateIndexes(new CompositionContainer(new TypeCatalog(typeof(PriceDocuments_ByDateBySource))), documentStore);
 		}
 
 		[Fact]
@@ -29,7 +27,7 @@ namespace Raven.Tests.Bugs
 		{
 			var priceId = Guid.NewGuid();
 			CreateAndStoreProductPriceWithSameDateAndSameSource(priceId);
-			using (var storeSession = _documentStore.OpenSession())
+			using (var storeSession = documentStore.OpenSession())
 			{
 				var productPriceDocuments = storeSession.Query<PriceDocument, PriceDocuments_ByDateBySource>()
 					.Customize(x=>x.WaitForNonStaleResults())
@@ -51,7 +49,7 @@ namespace Raven.Tests.Bugs
 		{
 			var priceId = Guid.NewGuid();
 			CreateAndStorePriceWithWithDatesAndSources(priceId);
-			using (var storeSession = _documentStore.OpenSession())
+			using (var storeSession = documentStore.OpenSession())
 			{
 				var productPriceDocuments = storeSession.Query<PriceDocument, PriceDocuments_ByDateBySource>()
 						.Customize(x => x.WaitForNonStaleResults())
@@ -63,7 +61,7 @@ namespace Raven.Tests.Bugs
 
 		private void CreateAndStorePriceWithWithDatesAndSources(Guid productId)
 		{
-			using (var storeSession = _documentStore.OpenSession())
+			using (var storeSession = documentStore.OpenSession())
 			{
 				var sourceBla = "Bla";
 				var sourceFoo = "Foo";
@@ -119,7 +117,7 @@ namespace Raven.Tests.Bugs
 
 		private void CreateAndStoreProductPriceWithSameDateAndSameSource(Guid productId)
 		{
-			using (var storeSession = _documentStore.OpenSession())
+			using (var storeSession = documentStore.OpenSession())
 			{
 				var moody = "Moody";
 				var pricingDate = new DateTime(2011, 4, 1, 8, 0, 0);
@@ -149,8 +147,6 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		#region Nested type: PriceDocument
-
 		public class PriceDocument
 		{
 			public Guid PriceId { get; set; }
@@ -167,10 +163,6 @@ namespace Raven.Tests.Bugs
 
 			public string Id { get; set; }
 		}
-
-		#endregion
-
-		#region Nested type: PriceDocuments_ByDateBySource
 
 		public class PriceDocuments_ByDateBySource : AbstractIndexCreationTask<PriceDocument>
 		{
@@ -208,13 +200,9 @@ namespace Raven.Tests.Bugs
 			}
 		}
 
-		#endregion
-
-		
 		public void Dispose()
 		{
-			_documentStore.Dispose();
+			documentStore.Dispose();
 		}
 	}
 }
-

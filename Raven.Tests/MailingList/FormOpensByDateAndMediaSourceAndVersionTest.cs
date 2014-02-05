@@ -9,29 +9,23 @@ using Xunit;
 
 namespace Raven.Tests.MailingList
 {
-	public class FormOpensByDateAndMediaSourceAndVersionTest : IDisposable
+	public class FormOpensByDateAndMediaSourceAndVersionTest : RavenTest
 	{
-		private readonly IDocumentStore _documentStore;
+		private readonly IDocumentStore store;
 
 
 		public FormOpensByDateAndMediaSourceAndVersionTest()
 		{
-			_documentStore = new EmbeddableDocumentStore { RunInMemory = true }.Initialize();
-			_documentStore.DatabaseCommands.DisableAllCaching();
-
-			_documentStore.ExecuteIndex(new FormOpensByDateAndMediaSourceAndVersion());
-		}
-
-		public void Dispose()
-		{
-			_documentStore.Dispose();
+			store = NewDocumentStore();
+			store.DatabaseCommands.DisableAllCaching();
+			store.ExecuteIndex(new FormOpensByDateAndMediaSourceAndVersion());
 		}
 
 		[Fact]
 		public void ShouldWork()
 		{
 			InitData();
-			using (var session = _documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
 				var queryable = session.Query<CountByDateAndMediaSourceAndVersion_MapReduceResult>(
 					FormOpensByDateAndMediaSourceAndVersion.INDEX_NAME)
@@ -48,7 +42,7 @@ namespace Raven.Tests.MailingList
 			InitData();
 			IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
 			int value = 0;
-			using (var session = _documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
 				queryable =
 					session.Query<CountByDateAndMediaSourceAndVersion_MapReduceResult>(
@@ -65,7 +59,7 @@ namespace Raven.Tests.MailingList
 			InitData();
 			IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
 			int value = 0;
-			using (var session = _documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
 				queryable =
 					session.Query<CountByDateAndMediaSourceAndVersion_MapReduceResult>(
@@ -83,7 +77,7 @@ namespace Raven.Tests.MailingList
 			InitData();
 			IRavenQueryable<CountByDateAndMediaSourceAndVersion_MapReduceResult> queryable = null;
 			int value = 0;
-			using (var session = _documentStore.OpenSession())
+			using (var session = store.OpenSession())
 			{
 				queryable =
 					session.Query<CountByDateAndMediaSourceAndVersion_MapReduceResult>(
@@ -273,7 +267,7 @@ namespace Raven.Tests.MailingList
 				},
 			};
 
-			using (var documentSession = _documentStore.OpenSession())
+			using (var documentSession = store.OpenSession())
 			{
 				foreach (var click in list)
 				{

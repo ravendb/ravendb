@@ -5,22 +5,19 @@
 // -----------------------------------------------------------------------
 using System.Transactions;
 using Raven.Client;
-using Raven.Client.Embedded;
 using Xunit;
 
 namespace Raven.Tests.Bugs.DTC
 {
-	public class Embedded
+	public class Embedded : RavenTest
 	{
 		[Fact]
-		public void AllowNonAuthoratativeInformationAlwaysWorks()
+		public void AllowNonAuthoritativeInformationAlwaysWorks()
 		{
 			const int callCount = 10000;
 
-			using (IDocumentStore documentStore = new EmbeddableDocumentStore { RunInMemory = true })
+			using (var documentStore = NewDocumentStore())
 			{
-				documentStore.Initialize();
-
 				int documentId;
 
 				// create test document
