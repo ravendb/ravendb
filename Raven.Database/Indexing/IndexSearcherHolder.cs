@@ -7,17 +7,26 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Raven.Abstractions;
 using Raven.Abstractions.Logging;
+using Raven.Database.Tasks;
 using Raven.Json.Linq;
 using Raven.Abstractions.Extensions;
+using Task = System.Threading.Tasks.Task;
 
 namespace Raven.Database.Indexing
 {
     public class IndexSearcherHolder
     {
+        private readonly WorkContext context;
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         private volatile IndexSearcherHoldingState current;
+
+        public IndexSearcherHolder(WorkContext context)
+        {
+            this.context = context;
+        }
 
         public ManualResetEvent SetIndexSearcher(IndexSearcher searcher, bool wait)
         {
@@ -26,6 +35,22 @@ namespace Raven.Database.Indexing
 
             if (old == null)
                 return null;
+
+            // here we try to make sure that the actual facet cache is up to do when we update the index searcher.
+            // we use this to ensure that any facets that has been recently queried is warmed up and in the cache
+            if (context.Configuration.PrewarmFacetsOnIndexingMaxAge != TimeSpan.Zero)
+            {
+                var usedFacets = old.GetUsedFacets(context.Configuration.PrewarmFacetsOnIndexingMaxAge).ToArray();
+
+                if (usedFacets.Length > 0)
+                {
+                    var preFillCache = Task.Factory.StartNew(() =>
+                        IndexedTerms.PreFillCache(current, usedFacets, searcher.IndexReader)
+                        );
+                    preFillCache.Wait(context.Configuration.PrewarmFacetsSyncronousWaitTime);
+                }
+            }
+
 
             Interlocked.Increment(ref old.Usage);
             using (old)
@@ -99,6 +124,8 @@ namespace Raven.Database.Indexing
             private readonly Dictionary<string, Dictionary<int, List<CacheVal>>> cache =
                 new Dictionary<string, Dictionary<int, List<CacheVal>>>();
 
+            private readonly ConcurrentDictionary<string, DateTime> lastFacetQuery = new ConcurrentDictionary<string, DateTime>();
+
             private readonly ReaderWriterLockSlim rwls = new ReaderWriterLockSlim();
 
             public ReaderWriterLockSlim Lock
@@ -136,8 +163,16 @@ namespace Raven.Database.Indexing
                 return GetFromCache(field, doc).Select(cacheVal => cacheVal.Term);
             }
 
+            public IEnumerable<string> GetUsedFacets(TimeSpan tooOld)
+            {
+                var now = SystemTime.UtcNow;
+                return lastFacetQuery.Where(x => (now - x.Value) < tooOld).Select(x => x.Key);
+            }
+
             public bool IsInCache(string field)
             {
+                var now = SystemTime.UtcNow;
+                lastFacetQuery.AddOrUpdate(field, now, (s, time) => time > now ? time : now);
                 return cache.ContainsKey(field);
             }
             public void SetInCache(string field, int doc, Term term, double? val = null)

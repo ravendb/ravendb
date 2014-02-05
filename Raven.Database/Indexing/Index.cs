@@ -74,16 +74,17 @@ namespace Raven.Database.Indexing
 		private volatile bool disposed;
 		private RavenIndexWriter indexWriter;
 		private SnapshotDeletionPolicy snapshotter;
-		private readonly IndexSearcherHolder currentIndexSearcherHolder = new IndexSearcherHolder();
+		private readonly IndexSearcherHolder currentIndexSearcherHolder;
 
-		private ConcurrentDictionary<string, IndexingPerformanceStats> currentlyIndexing = new ConcurrentDictionary<string, IndexingPerformanceStats>();
+		private readonly ConcurrentDictionary<string, IndexingPerformanceStats> currentlyIndexing = new ConcurrentDictionary<string, IndexingPerformanceStats>();
 		private readonly ConcurrentQueue<IndexingPerformanceStats> indexingPerformanceStats = new ConcurrentQueue<IndexingPerformanceStats>();
 		private readonly static StopAnalyzer stopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 		private bool forceWriteToDisk;
 
 		protected Index(Directory directory, string name, IndexDefinition indexDefinition, AbstractViewGenerator viewGenerator, WorkContext context)
 		{
-			if (directory == null) throw new ArgumentNullException("directory");
+		    currentIndexSearcherHolder = new IndexSearcherHolder(this);
+		    if (directory == null) throw new ArgumentNullException("directory");
 			if (name == null) throw new ArgumentNullException("name");
 			if (indexDefinition == null) throw new ArgumentNullException("indexDefinition");
 			if (viewGenerator == null) throw new ArgumentNullException("viewGenerator");
@@ -385,6 +386,7 @@ namespace Raven.Database.Indexing
 
 			                itemsInfo = action(indexWriter, searchAnalyzer, stats);
 			                shouldRecreateSearcher = itemsInfo.ChangedDocs > 0;
+                            
 			                foreach (var indexExtension in indexExtensions.Values)
 			                {
 			                    indexExtension.OnDocumentsIndexed(currentlyIndexDocuments, searchAnalyzer);

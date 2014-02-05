@@ -34,6 +34,16 @@ namespace Raven.Database.Config
 			MemoryCacheLimitCheckInterval =
 				new TimeSpanSetting(settings["Raven/MemoryCacheLimitCheckInterval"], MemoryCache.Default.PollingInterval,
 				                    TimeSpanArgumentType.FromParse);
+            
+            PrewarmFacetsOnIndexingMaxAge =
+                new TimeSpanSetting(settings["Raven/PrewarmFacetsSyncronousWaitTime"], TimeSpan.FromSeconds(3),
+                                    TimeSpanArgumentType.FromParse);
+
+            PrewarmFacetsOnIndexingMaxAge =
+                new TimeSpanSetting(settings["Raven/PrewarmFacetsOnIndexingMaxAge"], TimeSpan.FromMinutes(10),
+                                    TimeSpanArgumentType.FromParse);
+			
+			
 			MaxIndexingRunLatency =
 				new TimeSpanSetting(settings["Raven/MaxIndexingRunLatency"], TimeSpan.FromMinutes(5),
 				                    TimeSpanArgumentType.FromParse);
@@ -164,7 +174,11 @@ namespace Raven.Database.Config
 
 		public TimeSpanSetting MaxIndexingRunLatency { get; private set; }
 
-		public IntegerSettingWithMin MaxNumberOfItemsToIndexInSingleBatch { get; private set; }
+        public TimeSpanSetting PrewarmFacetsOnIndexingMaxAge { get; private set; }
+
+        public TimeSpanSetting PrewarmFacetsSyncronousWaitTime { get; private set; }
+
+        public IntegerSettingWithMin MaxNumberOfItemsToIndexInSingleBatch { get; private set; }
 
 		public IntegerSetting AvailableMemoryForRaisingIndexBatchSizeLimit { get; private set; }
 

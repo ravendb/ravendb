@@ -14,7 +14,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Database.Indexing
 {
-    public class IndexedTerms
+    public static class IndexedTerms
     {
         public static void ReadEntriesForFields(
                 IndexSearcherHolder.IndexSearcherHoldingState state,
@@ -95,6 +95,22 @@ namespace Raven.Database.Indexing
             }
         }
 
+        public static void PreFillCache(IndexSearcherHolder.IndexSearcherHoldingState state, string[] fieldsToRead,
+            IndexReader reader)
+        {
+            state.Lock.EnterWriteLock();
+            try
+            {
+                if (fieldsToRead.All(state.IsInCache))
+                    return;
+                FillCache(state, fieldsToRead, reader);
+            }
+            finally
+            {
+                state.Lock.ExitWriteLock();
+            }
+        }
+
         private static void EnsureFieldsAreInCache(IndexSearcherHolder.IndexSearcherHoldingState state, HashSet<string> fieldsToRead, IndexReader reader)
         {
             if (fieldsToRead.All(state.IsInCache))
@@ -115,7 +131,7 @@ namespace Raven.Database.Indexing
             state.Lock.EnterReadLock();
         }
 
-        private static void FillCache(IndexSearcherHolder.IndexSearcherHoldingState state, List<string> fieldsToRead,IndexReader reader)
+        private static void FillCache(IndexSearcherHolder.IndexSearcherHoldingState state, IEnumerable<string> fieldsToRead,IndexReader reader)
         {
             foreach (var field in fieldsToRead)
             {
